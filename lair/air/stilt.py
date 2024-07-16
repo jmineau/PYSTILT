@@ -1,8 +1,5 @@
 """
-lair.uataq.stilt
-~~~~~~~~~~~~~~~~
-
-Module for preparing data for STILT runs & processing STILT output
+Stochastic Time-Inverted Lagrangian Transport (STILT) Model.
 """
 
 import datetime as dt
@@ -11,10 +8,11 @@ import numpy as np
 import os
 import pandas as pd
 import subprocess
+from typing import Union
 import xarray as xr
 
 from lair.config import STILT_DIR
-from lair.uataq import site_config
+#from lair.uataq import site_config
 from lair.utils.grid import add_latlon_ticks
 from lair.utils.plotter import log10formatter
 from lair.utils.records import Cacher
@@ -141,6 +139,9 @@ def fix_sim_links(old_out_dir, new_out_dir):
 
 
 class Receptors:
+    """
+    Receptors class for STILT simulations.
+    """
     # TODO what about multilocation receptors such as TRAX?
     def __init__(self, loc, times):
 
@@ -200,9 +201,24 @@ class Receptors:
 
 
 class Footprints:
+    """
+    Footprints class for STILT simulations.
 
-    def __init__(self, footprint_dir, subset=False, engine='rasterio',
-                 cache=False, reload_cache=False):
+    Attributes
+    ----------
+    footprint_dir : str
+        Directory containing footprint files.
+    files : list[str]
+        List of footprint files.
+    cache : bool | str
+        Whether to cache the footprints. If True, path to cache file.
+    foots : xarray.Dataset
+        Footprints dataset.
+    """
+
+    def __init__(self, footprint_dir: str, subset: list | bool=False,
+                 engine: str='rasterio', cache: str | bool=False,
+                 reload_cache: bool=False):
 
         assert os.path.exists(footprint_dir)  # make sure footprint dir exists
 
@@ -242,7 +258,24 @@ class Footprints:
                 f'resolution="{resolution}", bounds="{bounds}", '
                 f'dir="{self.footprint_dir}", cache="{self.cache}")')
 
-    def read(self, footprint_dir, subset, engine):
+    def read(self, footprint_dir: str, subset: bool | list, engine: str):
+        """
+        Read footprints from footprint_dir.
+
+        Parameters
+        ----------
+        footprint_dir : str
+            Directory containing footprint.
+        subset : list | bool
+            Bounds to subset the footprints. If False, no subsetting.
+        engine : str
+            Engine to use to read the footprints.
+
+        Returns
+        -------
+        foots : xarray.Dataset
+            Footprints dataset.
+        """
 
         def _preprocess(ds):
             filename = ds.encoding['source']
@@ -270,7 +303,7 @@ class Footprints:
 
         return foots
 
-    def _sub(self, ds, subset):
+    def _sub(self, ds, subset: list):
         if ds.rio.y_dim == 'y':
             y_slicer = slice(subset[3], subset[1])
         elif ds.rio.y_dim[:3].lower() == 'lat':
@@ -279,10 +312,31 @@ class Footprints:
         return ds.sel({ds.rio.x_dim: slice(subset[0], subset[2]),
                        ds.rio.y_dim: y_slicer})
 
-    def sub(self, subset):
+    def sub(self, subset: list[float]):
+        """
+        Subset the footprints.
+
+        Parameters
+        ----------
+        subset : list[float]
+            Bounds to subset the footprints.
+
+        Returns
+        -------
+        xr.Dataset
+            The subsetted footprints.
+        """
         return self._sub(self.foots, subset)
 
     def get_receptors_locs(self):
+        """
+        Get the locations of the receptors.
+
+        Returns
+        -------
+        list[dict]
+            list of dictionaries containing the locations of the receptors.
+        """
         assert len(self.files) >= 1
 
         sim_ids = [extract_simulation_id(file) for file in self.files]
@@ -303,13 +357,28 @@ class Footprints:
         return sim_locs
 
     @cached_property
-    def area(self):
+    def area(self) -> xr.DataArray:
+        """
+        Calculate the area of the footprints grid.
+
+        Returns
+        -------
+        xr.DataArray
+            Area of the footprints grid.
+        """
         from lair.utils.grid import area_DataArray
 
         return area_DataArray(self.foots)
 
-    def apply_weights(self):
-        
+    def apply_weights(self) -> xr.Dataset:
+        """
+        Apply cosine weights to the footprints.
+
+        Returns
+        -------
+        xr.Dataset
+            Footprints with cosine weights applied.
+        """
         weights = np.cos(np.deg2rad(self.foots[self.foots.rio.y_dim]))
         weighted = self.foots.weighted(weights)
         return weighted
@@ -324,8 +393,20 @@ class Footprints:
         pass
 
     @staticmethod
-    def get_files(footprint_dir):
-        '''Get footprint files in footprint dir'''
+    def get_files(footprint_dir)-> list[str]:
+        '''
+        Get footprint files in footprint dir.
+
+        Parameters
+        ----------
+        footprint_dir : str
+            Directory containing footprint files.
+
+        Returns
+        -------
+        list[str]
+            List of footprint files.
+        '''
         footprint_files = [os.path.join(footprint_dir, file)
                            for file in os.listdir(footprint_dir)
                            if file.endswith('foot.nc')]
@@ -333,13 +414,47 @@ class Footprints:
         return sorted(footprint_files)
 
     @staticmethod
-    def plot(foot, ax=None, crs=None, label_deci=1, tiler=None, tiler_zoom=9,
-             bounds=None, x_buff=0.1, y_buff=0.1, labelsize=None,
-             more_lon_ticks=0, more_lat_ticks=0):
+    def plot(foot: xr.DataArray, ax: Union['plt.Axes', None]=None, crs: Union['ccrs.CRS', None]=None, label_deci: int=1, tiler=None, tiler_zoom: int=9,
+             bounds=None, x_buff: float=0.1, y_buff: float=0.1, labelsize: int | None=None,
+             more_lon_ticks: int=0, more_lat_ticks: int=0) -> 'plt.Axes':
+        """
+        Plot footprints on cartopy axes.
+
+        Parameters
+        ----------
+        foot : xr.DataArray
+            Footprints to plot.
+        ax : plt.Axes, optional
+            Cartopy axes, by default None
+        crs : ccrs.CRS , optional
+            Cartopy CRS, by default None
+        label_deci : int, optional
+            Log 10 decimals, by default 1
+        tiler : cartopy.io.img_tiles.GoogleTiles,
+            Tiler to use for background map, by default None
+        tiler_zoom : int, optional
+            Zoom level of tiler, by default 9
+        bounds : list[float], optional
+            Bounds to plot, by default None
+        x_buff : float, optional
+            x buffer, by default 0.1
+        y_buff : float, optional
+            y buffer, by default 0.1
+        labelsize : int | None, optional
+            Label size, by default None
+        more_lon_ticks : int, optional
+            Number of additional longitude ticks, by default 0
+        more_lat_ticks : int, optional
+            Number of additional latitude ticks, by default 0
+
+        Returns
+        -------
+        plt.Axes
+            Cartopy axes.
+        """
         import cartopy.crs as ccrs
         from functools import partial
         from matplotlib.ticker import FuncFormatter as FFmt
-        import matplotlib.pyplot as plt
 
         if tiler is not None:
             crs = tiler.crs
@@ -378,7 +493,46 @@ class Footprints:
 
 
 class STILT:
-    def __init__(self, project, directory=None, symlink_dir=None):
+    """
+    STILT class for running STILT simulations.
+    
+    I don't think this is ready...
+
+    Attributes
+    ----------
+    project : str
+        Name of STILT project.
+    stilt_wd : str
+        Working directory of STILT project.
+    receptors : Receptors
+        Receptors instance.
+
+    Methods
+    -------
+    generate_receptors(loc, times)
+        Generate receptors.
+    get_sims(id_dir)
+        Get simulations.
+    get_missing_sims(receptors, id_dir)
+        Get missing simulations.
+    read_footprints(footprint_dir, subset, engine, cache, reload_cache)
+        Read footprints.
+    get_foots(footprint_dir, subset, engine, cache, reload_cache)
+        Get footprints.
+    """
+    def __init__(self, project: str, directory: str | None=None, symlink_dir: str | None=None):
+        """
+        Initialize STILT project.
+        
+        Parameters
+        ----------
+        project : str
+            Name of STILT project.
+        directory : str, optional
+            Directory to initialize project in, by default None
+        symlink_dir : str, optional
+            Directory to create symlink to STILT project, by default None
+        """
         self.project = project
         directory = directory or STILT_DIR or os.getcwd()
         self.stilt_wd = os.path.join(directory, self.project)
@@ -394,15 +548,29 @@ class STILT:
         return f'STILT(project="{self.project}")'
 
     def generate_receptors(self, loc, times):
+        'Generate receptors - not ready'
         self.receptors = Receptors(loc, times)
 
         return self.receptors
     
     def catalog_output(self, output_wd=None):
-        'Catalog STILT output'
+        #'Catalog STILT output' not sure what I was doing here
+        pass
         
-        
-    def get_sims(self, id_dir=None):
+    def get_sims(self, id_dir: str | None=None) -> pd.DataFrame:
+        """
+        Get simulations from STILT output directory.
+
+        Parameters
+        ----------
+        id_dir : str, optional
+            Directory containing simulations, by default None
+
+        Returns
+        -------
+        pd.DataFrame
+            Simulations.
+        """
         # id_dir is relative to stilt_wd/out
         id_dir = os.path.join(self.stilt_wd, 'out', id_dir or 'by-id')
         
@@ -418,7 +586,21 @@ class STILT:
         return sims
 
     def get_missing_sims(self, receptors: pd.DataFrame, id_dir=None):
-        '''Get missing simulations from STILT output directory'''
+        '''
+        Get missing simulations from STILT output directory.
+
+        Parameters
+        ----------
+        receptors : pd.DataFrame
+            Receptors used to generate simulations.
+        id_dir : str, optional
+            Directory containing simulations, by default None
+
+        Returns
+        -------
+        pd.DataFrame
+            Missing simulations.
+        '''
 
         # Get existing simulations
         existing_sims = self.get_sims(id_dir)
@@ -431,17 +613,58 @@ class STILT:
 
         return missing_sims
     
-    def read_footprints(self, footprint_dir=None, subset=False, engine='rasterio',
-                        cache=False, reload_cache=False):
-        
+    def read_footprints(self, footprint_dir: str | None=None, subset: bool | list=False, engine: str='rasterio',
+                        cache: bool | str=False, reload_cache: bool=False) -> Footprints:
+        """
+        _summary_
+
+        Parameters
+        ----------
+        footprint_dir : str, optional
+            Directory containing footprint files, by default None
+        subset : bool | list, optional
+            Bounds to subset the footprints, by default False
+        engine : str, optional
+            Engine to use to read the footprints, by default 'rasterio'
+        cache : bool | str, optional
+            Whether to cache the footprints. If True, path to cache file, by default False
+        reload_cache : bool, optional
+            Whether to reload the cache, by default False
+
+        Returns
+        -------
+        Footprints
+            Footprints instance.
+        """
+
         footprint_dir = os.path.join(self.stilt_wd, 'out', footprint_dir or 'footprints')
         
         footprints = Footprints(footprint_dir, subset, engine, cache, reload_cache)
         
         return footprints
 
-    def get_foots(self, footprint_dir=None, subset=False, engine='rasterio',
-                   cache=False, reload_cache=False):
+    def get_foots(self, footprint_dir: str | None=None, subset: bool | list=False, engine: str='rasterio',
+                        cache: bool | str=False, reload_cache: bool=False) -> xr.DataArray:
+        """
+        Get footprints from STILT output directory.
+
+        Parameters
+        ----------
+        footprint_dir : str | None, optional
+            Directory containing footprint files, by default None.
+        subset : bool | list, optional
+            Bounds to subset the footprints, by default False.
+        engine : str, optional
+            Engine to use to read the footprints, by default 'rasterio'.
+        cache : bool | str, optional
+            Whether to cache the footprints. If True, path to cache file, by default False.
+        reload_cache : bool, optional
+            Whether to reload the cache, by default False.
+        Returns
+        -------
+        xr.DataArray
+            Footprints.
+        """
         
         footprints = self.read_footprints(footprint_dir, subset, engine,
                                           cache, reload_cache)
@@ -449,14 +672,35 @@ class STILT:
         return footprints.foots
 
 
-def Lin2021(dCH4, footprints, weight=False, filter_sims=False):
-    '''Following this logic, we estimate the Basin-averaged CH4 emissions
+def Lin2021(dCH4: pd.Series, footprints: Footprints,
+            weight: bool=False, filter_sims: bool=False) -> pd.DataFrame:
+    '''
+    Estimate basin emissions using Lin et al. 2021 method.
+    
+    Following this logic, we estimate the Basin-averaged CH4 emissions
     Φ by dividing the CH4 enhancement measured at HPL by the total
     footprint integrating over all gridcells i within the Uinta Basin
     (defined as between 39.9N to 40.5N and 110.6W to 109W), where Φ at
     daily timescales was determined by dividing the ∆CH4 averaged over the
     afternoon (13:00–16:00 MST) by the total footprint averaged over the
-    same hours'''
+    same hours.
+
+    Parameters
+    ----------
+    dCH4 : pd.Series
+        Time series of CH4 enhancements.
+    footprints : Footprints
+        Footprints instance.
+    weight : bool, optional
+        Whether to weight the footprints by area, by default False
+    filter_sims : bool, optional
+        Whether to filter simulations, by default False.
+
+    Returns
+    -------
+    pd.DataFrame
+        Estimated emissions
+    '''
 
     if weight:
         # AREA WEIGHTED
