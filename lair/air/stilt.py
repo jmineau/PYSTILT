@@ -13,7 +13,7 @@ import xarray as xr
 
 from lair.config import STILT_DIR
 #from lair.uataq import site_config
-from lair.utils.grid import add_latlon_ticks
+from lair.utils.geo import add_latlon_ticks
 from lair.utils.plotter import log10formatter
 from lair.utils.records import Cacher
 
@@ -227,9 +227,9 @@ class Footprints:
 
         if cache:
             if cache is True:
+                from lair.config import CACHE_DIR  # TODO want project
                 cache = os.path.join(footprint_dir, 'footprints_cache.pkl')
-            self.read = Cacher(self.read, cache, reload=reload_cache,
-                               verbose=True)
+            self.read = Cacher(self.read, cache, reload=reload_cache)
         self.cache = cache
 
         self.foots = self.read(footprint_dir, subset, engine)
@@ -366,9 +366,9 @@ class Footprints:
         xr.DataArray
             Area of the footprints grid.
         """
-        from lair.utils.grid import area_DataArray
+        from lair.utils.geo import gridcell_area
 
-        return area_DataArray(self.foots)
+        return gridcell_area(self.foots)
 
     def apply_weights(self) -> xr.Dataset:
         """
