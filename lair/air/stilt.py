@@ -1,53 +1,60 @@
 """
 Stochastic Time-Inverted Lagrangian Transport (STILT) Model.
+
+Inspired by https://github.com/uataq/air-tracker-stiltctl
 """
 
 import datetime as dt
-from functools import cached_property
-import numpy as np
 import os
-import pandas as pd
 import subprocess
-from typing import Union
+from abc import ABC, abstractmethod
+from dataclasses import dataclass
+from functools import cached_property
+from pathlib import Path
+from typing import Any, Self
+
+import pandas as pd
+import pyarrow.parquet as pq
 import xarray as xr
 
-from lair.config import STILT_DIR
-#from lair.uataq import site_config
-from lair.utils.geo import add_latlon_ticks
-from lair.utils.plotter import log10formatter
-from lair.utils.records import Cacher
-
-# TODO I think the classes should be just Footprint and Receptor?
-#   and then STILT is a wrapper around those two classes?
-
-
-
-TIME_FORMAT = '%Y%m%d%H%M'
+# TODO:
+# - Support multiple receptors
+#   - ColumnReceptor
+# - Run stilt_cli.r from python
+#   - stilt_cli only runs one simulation at a time via simulation step
+#   - want to be able to access slurm, but seems hard to manipulate run_stilt.r
+# - Footprint inherit from BaseGrid
+#   - refactor from inventories.py
+# - Trajectory gif
+# - Footprint plot
 
 
-def init_project(project, repo='https://github.com/jmineau/stilt', branch='main'):
+def stilt_init(project: str | Path, branch='jmineau',
+               repo: str = 'https://github.com/jmineau/stilt'):
     '''
     Initialize STILT project
-    
+
     Python implementation of Rscript -e "uataq::stilt_init('project')"
 
     Parameters
     ----------
     project : str
-        Name/path of STILT project.
+        Name/path of STILT project. If path is not provided,
+        project will be created in current working directory.
+    branch : str, optional
+        Branch of STILT project repo. The default is jmineau.
     repo : str, optional
         URL of STILT project repo. The default is jmineau/stilt.
-    branch : str, optional
-        Branch of STILT project repo. The default is main.
     '''
-    
+
     # Extract project name and working directory
-    project_name = os.path.basename(project)
-    wd = os.path.dirname(project)
-    if wd == '':
-        wd = os.getcwd()
-        
-    if os.path.exists(project):
+    project = Path(project)
+    name = project.name
+    wd = project.parent
+    if wd == Path('.'):
+        wd = Path.cwd()
+
+    if project.exists():
         raise FileExistsError(f'{project} already exists')
 
     # Clone git repository
@@ -55,49 +62,15 @@ def init_project(project, repo='https://github.com/jmineau/stilt', branch='main'
     subprocess.check_call(cmd, shell=True)
 
     # Run setup executable
-    os.chdir(project)
-    os.chmod('setup', 0o755)
-    subprocess.check_call('./setup')
+    project.joinpath('setup').chmod(0o755)
+    subprocess.check_call('./setup', cwd=project)
 
     # Render run_stilt.r template with project name and working directory
-    with open('r/run_stilt.r') as f:
-        run_stilt = f.read()
-    run_stilt = run_stilt.replace('{{project}}', project_name)
-    run_stilt = run_stilt.replace('{{wd}}', wd)
-    with open('r/run_stilt.r', 'w') as f:
-        f.write(run_stilt)
-    os.chdir(wd)
-    
-
-def extract_simulation_id(simulation):
-    '''
-    Extract simulation id from simulation name
-
-    Parameters
-    ----------
-    simulation : str
-        Name of simulation.
-
-    Returns
-    -------
-    sim_id : dict
-        Dictionary with keys: time, lati, long, zagl.
-
-    '''
-    
-    simulation = os.path.basename(simulation)
-
-    if simulation.count('_') > 3:
-        simulation = '_'.join(simulation.split('_')[:4])
-
-    # Extract simulation id
-    run_time, long, lati, zagl = simulation.split('_')
-    sim_id = {'run_time': run_time,
-              'long': float(long),
-              'lati': float(lati),
-              'zagl': float(zagl)}
-
-    return sim_id
+    run_stilt_path = project.joinpath('r/run_stilt.r')
+    run_stilt = run_stilt_path.read_text()
+    run_stilt = run_stilt.replace('{{project}}', name)
+    run_stilt = run_stilt.replace('{{wd}}', str(wd))
+    run_stilt_path.write_text(run_stilt)
 
 
 def fix_sim_links(old_out_dir, new_out_dir):
@@ -133,602 +106,363 @@ def fix_sim_links(old_out_dir, new_out_dir):
                     # Remove old_link
                     os.remove(filepath)
 
+                    # TODO this should be a relative path
                     # Create new link to new_out_dir
                     new_link = os.path.join(new_out_dir, 'by-id', sim_id, file)
                     os.symlink(new_link, filepath)
 
 
-class Receptors:
-    """
-    Receptors class for STILT simulations.
-    """
-    # TODO what about multilocation receptors such as TRAX?
-    def __init__(self, loc, times):
+class _UniqueReceptorMeta(type):
+    _receptors = {}
 
-        self.data = self.generate(loc, times)
+    def __call__(cls, longitude, latitude, height, *args, **kwargs):
+        key = (longitude, latitude, height)
+        if key in cls._receptors:
+            print('Receptor already exists')
+            return cls._receptors[key]
+        print('Creating new receptor')
+        receptor = super().__call__(*key, *args, **kwargs)
+        cls._receptors[key] = receptor
+        return receptor
 
-    def generate(self, loc, times: pd.Series):
-        '''
-        Generate receptor dataframe when given a location and list of datetimes
-        '''
+class Receptor(metaclass=_UniqueReceptorMeta):
 
-        # Supply loc as SID or (lati, long, zagl)
-        if isinstance(loc, str):
-            lati, long, zagl = Receptors.get_site_location(loc)
+    stilt_mapper = {
+        'lati': 'latitude',
+        'long': 'longitude',
+        'zagl': 'height',
+    }
+
+    def __init__(self, longitude: Any, latitude: Any, height: Any,
+                 name: str | None = None):
+        print('Init receptor')
+        self.longitude = longitude
+        self.latitude = latitude
+        self.height = height
+        self.name = name
+
+        self.footprints = []  # ? keep track of footprints associated with receptor
+
+    @property
+    def id(self) -> str:
+        return f'{self.longitude}_{self.latitude}_{self.height}'
+
+    def __repr__(self) -> str:
+        return f'Receptor(longitude={self.longitude}, latitude={self.latitude}, height={self.height})'
+
+    def __str__(self) -> str:
+        x = self.name if self.name else self.id
+        return f'Receptor({x})'
+
+    def __eq__(self, other) -> bool:
+        if isinstance(other, Receptor):
+            return all([
+                self.longitude == other.longitude,
+                self.latitude == other.latitude,
+                self.height == other.height
+            ])
+        elif isinstance(other, (tuple, list)):
+            return all([
+                self.longitude == other[0],
+                self.latitude == other[1],
+                self.height == other[2]
+            ])
+        elif isinstance(other, str):
+            return other in {self.id, self.name} if self.name else self.id == other
+        return False
+
+    def __hash__(self) -> int:
+        return hash((self.longitude, self.latitude, self.height))
+
+
+class Trajectory:
+
+    def __init__(self, simulation_id: str,
+                 run_time: dt.datetime, params: dict,
+                 receptor: Receptor, particles: pd.DataFrame,
+                 particle_error: pd.DataFrame | None = None,
+                 error_params: dict | None = None):
+        self.simulation_id = simulation_id
+        self.run_time = run_time
+        self.params = params
+        self.receptor = receptor
+        self.particles = particles
+        self.particle_error = particle_error
+        self.error_params = error_params
+
+    @classmethod
+    def from_parquet(cls, file: str | Path) -> Self:
+        # Extract simulation ID from file name
+        simulation_id = Path(file).stem.replace('_traj', '')
+
+        # Read particle parquet data
+        particles = pd.read_parquet(file)
+        meta = pq.read_metadata(file).metadata
+
+        # Check for particle error data
+        err_cols = particles.columns.str.endswith('_err')
+        if any(err_cols):
+            # Split error columns from main data
+            particle_error = particles.loc[:, err_cols]
+            particles = particles.loc[:, ~err_cols]
+
+            # Extract error parameters
+            err_params = Trajectory._extract_meta(meta, 'err_param')
         else:
-            lati, long, zagl = loc
+            particle_error = None
+            err_params = None
 
-        N = len(times)  # number of receptors
+        # Build receptor object from metadata
+        receptor_meta = Trajectory._extract_meta(meta, 'receptor')
+        receptor = Receptor(
+            latitude = receptor_meta['lati'],
+            longitude = receptor_meta['long'],
+            height = receptor_meta['zagl']
+        )
 
-        receptors = pd.DataFrame({'run_time': times,
-                                  'long': [long] * N,
-                                  'lati': [lati] * N,
-                                  'zagl': [zagl] * N})
+        # Assign run time as attribute
+        run_time = dt.datetime.fromisoformat(receptor_meta['run_time'])
 
-        return receptors.sort_values('run_time')
+        # Extract trajectory parameters
+        params = Trajectory._extract_meta(meta, 'param')
 
-    def update(self, receptors):
-        '''
-        Update data with more receptors from a different Receptors instance
-        '''
-
-        assert type(receptors) == Receptors
-
-        self.data = pd.concat([self.data, receptors.data])
-
-        return None
-
-    def save(self, out_path):
-        self.data.set_index('run_time').to_csv(out_path)
-
-        return None
+        return cls(simulation_id, run_time, params, receptor, particles,
+                   particle_error, err_params)
 
     @staticmethod
-    def get_site_location(site):
-        # FIXME what about mobile sites
-        site_config = site_config.loc[site]
+    def _extract_meta(meta: dict, group: str
+                      ) -> dict[str, Any]:
+        def parse_val(v: bytes) -> Any:
+            val = v.decode()
+            try:
+                return int(val)
+            except ValueError:
+                try:
+                    return float(val)
+                except ValueError:
+                    val = {
+                        '.TRUE.': True,
+                        '.FALSE.': False,
+                        'NA': None
+                    }[val]
+                    return val
 
-        lati = site_config.lati.astype(float)
-        long = site_config.long.astype(float)
-        zagl = site_config.zagl.astype(float)
+        data = {}
+        for k, v in meta.items():
+            key = k.decode()
+            if key.startswith(group):
+                data[key.split(':')[1]] = parse_val(v)
 
-        return lati, long, zagl
+        return data
 
     @staticmethod
-    def nearest_mesowest(loc):
-        # TODO
-        pass
+    def _pivot(df: pd.DataFrame) -> xr.Dataset:
+        ds = xr.Dataset.from_dataframe(
+            df.set_index(['indx', 'time'])
+        )
+        return ds
+
+    def to_xarray(self, error: bool = False) -> xr.Dataset:
+        """
+        Convert trajectory data to xarray.Dataset
+        with time and particle index as coordinates.
+
+        Parameters
+        ----------
+        error : bool
+            Output particle error data if available.
+        """
+        if not error:
+            ds = self._pivot(self.particles)
+            ds.attrs = self.params
+        elif self.particle_error is not None:
+            ds = self._pivot(self.particle_error)
+            ds.attrs = self.error_params or {}
+        else:
+            raise ValueError('No error data available')
+
+        # TODO add receptor as coords?
+
+        return ds
 
 
-class Footprints:
+class Footprint:
     """
-    Footprints class for STILT simulations.
-
-    Attributes
-    ----------
-    footprint_dir : str
-        Directory containing footprint files.
-    files : list[str]
-        List of footprint files.
-    cache : bool | str
-        Whether to cache the footprints. If True, path to cache file.
-    foots : xarray.Dataset
-        Footprints dataset.
+    Footprint object containing STILT simulation footprint data.
     """
-
-    def __init__(self, footprint_dir: str, subset: list | bool=False,
-                 engine: str='rasterio', cache: str | bool=False,
-                 reload_cache: bool=False):
-
-        assert os.path.exists(footprint_dir)  # make sure footprint dir exists
-
-        self.footprint_dir = footprint_dir
-        self.files = None
-
-        if cache:
-            if cache is True:
-                from lair.config import CACHE_DIR  # TODO want project
-                cache = os.path.join(footprint_dir, 'footprints_cache.pkl')
-            self.read = Cacher(self.read, cache, reload=reload_cache)
-        self.cache = cache
-
-        self.foots = self.read(footprint_dir, subset, engine)
-        self.weighted = self.apply_weights()
-
-        self.receptor_locs = {}
+    def __init__(self, simulation_id: str,
+                 foot: xr.DataArray):
+        self.simulation_id = simulation_id
+        self.foot = foot
 
     def __repr__(self):
-        # TODO I think you should be able to recreate instance from repr
-        #   which probably isnt true here
-        # I think this should be __str__
-        from math import log10, floor
+        return f'Footprint({self.simulation_id})'
 
-        def round_to_1(x):
-            return round(x, -int(floor(log10(abs(x)))))
-
-        start = str(self.foots.run_time.values[0])[:10]
-        end = str(self.foots.run_time.values[-1])[:10]
-        time_range = f'{start} ~ {end}'
-
-        resolution = round_to_1(self.foots.rio.resolution()[0])
-        digits = len(str(resolution).split('.')[1])
-        bounds = [round(x, digits) for x in self.foots.rio.bounds()]
-
-        return (f'Footprints(time range="{time_range}", '
-                f'resolution="{resolution}", bounds="{bounds}", '
-                f'dir="{self.footprint_dir}", cache="{self.cache}")')
-
-    def read(self, footprint_dir: str, subset: bool | list, engine: str):
+    @classmethod
+    def from_netcdf(cls, file: str | Path) -> Self:
         """
-        Read footprints from footprint_dir.
+        Create Footprint object from netCDF file.
+        
+        Parameters
+        ----------
+        file : str | Path
+            Path to netCDF file.
+
+        Returns
+        -------
+        Footprint
+            Footprint object.
+        """
+        simulation_id = Path(file).stem.replace('_foot', '')
+        foot = xr.open_dataset(file).foot
+
+        return cls(simulation_id, foot)
+
+    def time_integrate(self, start: dt.datetime | None = None,
+                       end: dt.datetime | None = None) -> xr.DataArray:
+        """
+        Integrate footprint over time.
 
         Parameters
         ----------
-        footprint_dir : str
-            Directory containing footprint.
-        subset : list | bool
-            Bounds to subset the footprints. If False, no subsetting.
-        engine : str
-            Engine to use to read the footprints.
-
-        Returns
-        -------
-        foots : xarray.Dataset
-            Footprints dataset.
-        """
-
-        def _preprocess(ds):
-            filename = ds.encoding['source']
-            sim_id = extract_simulation_id(filename)
-            run_time = dt.datetime.strptime(sim_id['run_time'], TIME_FORMAT)
-
-            if subset:
-                ds = self._sub(ds, subset)
-
-            ds = ds.sum(dim='time')  # temporal sum
-            
-            # Create run_time dimension to concat footprints
-            ds = ds.expand_dims({'run_time': [run_time]})
-
-            return ds
-
-        print(f'Reading footprints from {footprint_dir}')
-
-        self.files = Footprints.get_files(footprint_dir)
-
-        processed_foots = [_preprocess(xr.open_dataset(file, engine=engine))
-                           for file in self.files]
-        foots = xr.concat(processed_foots, dim='run_time').foot
-        foots = foots.sortby('run_time')
-
-        return foots
-
-    def _sub(self, ds, subset: list):
-        if ds.rio.y_dim == 'y':
-            y_slicer = slice(subset[3], subset[1])
-        elif ds.rio.y_dim[:3].lower() == 'lat':
-            y_slicer = slice(subset[1], subset[3])
-
-        return ds.sel({ds.rio.x_dim: slice(subset[0], subset[2]),
-                       ds.rio.y_dim: y_slicer})
-
-    def sub(self, subset: list[float]):
-        """
-        Subset the footprints.
-
-        Parameters
-        ----------
-        subset : list[float]
-            Bounds to subset the footprints.
-
-        Returns
-        -------
-        xr.Dataset
-            The subsetted footprints.
-        """
-        return self._sub(self.foots, subset)
-
-    def get_receptors_locs(self):
-        """
-        Get the locations of the receptors.
-
-        Returns
-        -------
-        list[dict]
-            list of dictionaries containing the locations of the receptors.
-        """
-        assert len(self.files) >= 1
-
-        sim_ids = [extract_simulation_id(file) for file in self.files]
-
-        # TODO I feel like this could be down better
-        # Get sim_locs of all the files without time - list of dicts
-        sim_locs = [{'lati': sim_id['lati'],
-                     }
-                    for var in ['lati', 'long', 'zagl']
-                    for sim_id in sim_ids]
-
-        sim_locs = [{k: v for k, v in ID.items() if k != 'time'}
-                    for ID in sim_ids]
-
-        # remove duplicate locs
-        sim_locs = [dict(t) for t in {tuple(loc.items()) for loc in sim_locs}]
-
-        return sim_locs
-
-    @cached_property
-    def area(self) -> xr.DataArray:
-        """
-        Calculate the area of the footprints grid.
+        start : datetime, optional
+            Start time of integration. The default is None.
+        end : datetime, optional
+            End time of integration. The default is None.
 
         Returns
         -------
         xr.DataArray
-            Area of the footprints grid.
+            Time-integrated footprint
         """
-        from lair.utils.geo import gridcell_area
+        return self.foot.sel(time=slice(start, end)).sum('time')
 
-        return gridcell_area(self.foots)
 
-    def apply_weights(self) -> xr.Dataset:
-        """
-        Apply cosine weights to the footprints.
+class Simulation:
 
-        Returns
-        -------
-        xr.Dataset
-            Footprints with cosine weights applied.
-        """
-        weights = np.cos(np.deg2rad(self.foots[self.foots.rio.y_dim]))
-        weighted = self.foots.weighted(weights)
-        return weighted
+    def __init__(self, path: str | Path):
+        self.path = Path(path)
+        assert self.path.exists(), f'Simulation not found: {self.path}'
 
-    def validate_transport(self):
-        from synoptic.services import stations_timeseries
+        by_id_dir = Simulation.find_by_id_directory(self.path)
+        self.id = str(self.path.relative_to(by_id_dir))
 
-        # TODO
-        #   first lets just use the station closest to the receptor
-        #   later, we can try to combine all the stations within the STILT domain
+        self.run_time = self.control.pop('run_time')
+        receptors = self.control['receptors']
+        self.receptor = receptors[0]  # TODO: support multiple receptors
 
-        pass
+    def __repr__(self) -> str:
+        return f'Simulation({self.id})'
 
     @staticmethod
-    def get_files(footprint_dir)-> list[str]:
-        '''
-        Get footprint files in footprint dir.
+    def find_by_id_directory(path: Path) -> Path:
+        for parent in path.parents:
+            if parent.name == 'by-id':
+                return parent
+        raise FileNotFoundError('by-id directory not found in the path hierarchy')
 
-        Parameters
-        ----------
-        footprint_dir : str
-            Directory containing footprint files.
+    @cached_property
+    def control(self) -> dict[str, Any]:
+        """
+        Parse CONTROL file for simulation metadata.
 
         Returns
         -------
-        list[str]
-            List of footprint files.
-        '''
-        footprint_files = [os.path.join(footprint_dir, file)
-                           for file in os.listdir(footprint_dir)
-                           if file.endswith('foot.nc')]
-
-        return sorted(footprint_files)
-
-    @staticmethod
-    def plot(foot: xr.DataArray, ax: Union['plt.Axes', None]=None, crs: Union['ccrs.CRS', None]=None, label_deci: int=1, tiler=None, tiler_zoom: int=9,
-             bounds=None, x_buff: float=0.1, y_buff: float=0.1, labelsize: int | None=None,
-             more_lon_ticks: int=0, more_lat_ticks: int=0) -> 'plt.Axes':
+        dict
+            Dictionary of simulation metadata.
         """
-        Plot footprints on cartopy axes.
+        file = self.path / 'CONTROL'
 
-        Parameters
-        ----------
-        foot : xr.DataArray
-            Footprints to plot.
-        ax : plt.Axes, optional
-            Cartopy axes, by default None
-        crs : ccrs.CRS , optional
-            Cartopy CRS, by default None
-        label_deci : int, optional
-            Log 10 decimals, by default 1
-        tiler : cartopy.io.img_tiles.GoogleTiles,
-            Tiler to use for background map, by default None
-        tiler_zoom : int, optional
-            Zoom level of tiler, by default 9
-        bounds : list[float], optional
-            Bounds to plot, by default None
-        x_buff : float, optional
-            x buffer, by default 0.1
-        y_buff : float, optional
-            y buffer, by default 0.1
-        labelsize : int | None, optional
-            Label size, by default None
-        more_lon_ticks : int, optional
-            Number of additional longitude ticks, by default 0
-        more_lat_ticks : int, optional
-            Number of additional latitude ticks, by default 0
+        if not file.exists():
+            raise FileNotFoundError('CONTROL file not found. Has the simulation been ran?')
 
-        Returns
-        -------
-        plt.Axes
-            Cartopy axes.
-        """
-        import cartopy.crs as ccrs
-        from functools import partial
-        from matplotlib.ticker import FuncFormatter as FFmt
+        with file.open() as f:
+            lines = f.readlines()
 
-        if tiler is not None:
-            crs = tiler.crs
-            if ax is None:
-                fig, ax = plt.subplots(subplot_kw={'projection': crs})
-            ax.add_image(tiler, tiler_zoom)
-        elif crs is None:
-            crs = ccrs.PlateCarree()
+        control = {}
 
-        if ax is None:
-            fig, ax = plt.subplots(subplot_kw={'projection': crs})
+        control['run_time'] = dt.datetime.strptime(lines[0].strip(), '%y %m %d %H %M')
 
-        if bounds is None:
-            bounds = foot.rio.bounds()
-        extent = [bounds[0]-x_buff, bounds[2]+x_buff,
-                  bounds[1]-y_buff, bounds[3]+y_buff]
+        control['receptors'] = []
+        control['n_receptors'] = int(lines[1].strip())
+        cursor = 2
+        for i in range(cursor, cursor + control['n_receptors']):
+            lat, lon, zagl = map(float, lines[i].strip().split())
+            control['receptors'].append(Receptor(latitude=lat, longitude=lon, height=zagl))
 
-        label = r'footprint [ppm$ \left/ \frac{\mu mol}{m^2 s}\right.$]'
-        log10formatter_part = partial(log10formatter, deci=label_deci)
+        cursor += control['n_receptors']
+        control['n_hours'] = int(lines[cursor].strip())
+        control['w_option'] = int(lines[cursor + 1].strip())
+        control['z_top'] = float(lines[cursor + 2].strip())
 
-        np.log10(foot).plot(ax=ax, transform=ccrs.PlateCarree(), alpha=0.5,
-                            cmap='cool',
-                            cbar_kwargs={'orientation': 'vertical',
-                                         'pad': 0.03, 'label': label,
-                                         'format': FFmt(log10formatter_part)})
+        control['met_files'] = []
+        control['n_met_files'] = int(lines[cursor + 3].strip())
+        cursor += 4
+        for i in range(control['n_met_files']):
+            dir_index = cursor + (i * 2)
+            file_index = dir_index + 1
+            met_file = Path(lines[dir_index].strip()) / lines[file_index].strip()
+            control['met_files'].append(met_file)
 
-        add_latlon_ticks(ax, extent, x_rotation=30, labelsize=labelsize,
-                         more_lon_ticks=more_lon_ticks,
-                         more_lat_ticks=more_lat_ticks)
+        cursor += 3 + 2 * control['n_met_files']
+        control['emisshrs'] = float(lines[cursor].strip())
 
-        ax.set_extent(extent, crs=ccrs.PlateCarree())
-        ax.set(ylabel=None,
-               xlabel=None)
+        return control
 
-        return ax
+    @cached_property
+    def trajectory(self) -> Trajectory | None:
+        file = self.path / f'{self.id}_traj.parquet'
+        if not file.exists():
+            return None
+        return Trajectory.from_parquet(file)
+
+    @cached_property
+    def footprint(self) -> Footprint | None:
+        file = self.path / f'{self.id}_foot.nc'
+        if not file.exists():
+            return None
+        footprint = Footprint.from_netcdf(file)
+        footprint.foot = footprint.foot.expand_dims(run_time=[self.run_time],)
+                                                    # receptor=[self.receptor])
+                                                    # r_long=[self.receptor.longitude],
+                                                    # r_lati=[self.receptor.latitude],
+                                                    # r_zagl=[self.receptor.height])
+        return footprint
 
 
 class STILT:
-    """
-    STILT class for running STILT simulations.
-    
-    I don't think this is ready...
 
-    Attributes
-    ----------
-    project : str
-        Name of STILT project.
-    stilt_wd : str
-        Working directory of STILT project.
-    receptors : Receptors
-        Receptors instance.
+    def __init__(self, stilt_wd: str | Path,
+                 output_wd: str | Path | None = None):
+        self.stilt_wd = Path(stilt_wd)
+        self.output_wd = Path(output_wd) if output_wd else self.stilt_wd / 'out'
 
-    Methods
-    -------
-    generate_receptors(loc, times)
-        Generate receptors.
-    get_sims(id_dir)
-        Get simulations.
-    get_missing_sims(receptors, id_dir)
-        Get missing simulations.
-    read_footprints(footprint_dir, subset, engine, cache, reload_cache)
-        Read footprints.
-    get_foots(footprint_dir, subset, engine, cache, reload_cache)
-        Get footprints.
-    """
-    def __init__(self, project: str, directory: str | None=None, symlink_dir: str | None=None):
-        """
-        Initialize STILT project.
-        
-        Parameters
-        ----------
-        project : str
-            Name of STILT project.
-        directory : str, optional
-            Directory to initialize project in, by default None
-        symlink_dir : str, optional
-            Directory to create symlink to STILT project, by default None
-        """
-        self.project = project
-        directory = directory or STILT_DIR or os.getcwd()
-        self.stilt_wd = os.path.join(directory, self.project)
-
-        if not os.path.exists(self.stilt_wd):
-            print('Initializing STILT project...')
-            init_project(self.stilt_wd)
-            
-            if symlink_dir is not None:
-                os.symlink(self.stilt_wd, os.path.join(symlink_dir, 'STILT'))
-
-    def __repr__(self):
-        return f'STILT(project="{self.project}")'
-
-    def generate_receptors(self, loc, times):
-        'Generate receptors - not ready'
-        self.receptors = Receptors(loc, times)
-
-        return self.receptors
-    
-    def catalog_output(self, output_wd=None):
-        #'Catalog STILT output' not sure what I was doing here
-        pass
-        
-    def get_sims(self, id_dir: str | None=None) -> pd.DataFrame:
-        """
-        Get simulations from STILT output directory.
-
-        Parameters
-        ----------
-        id_dir : str, optional
-            Directory containing simulations, by default None
-
-        Returns
-        -------
-        pd.DataFrame
-            Simulations.
-        """
-        # id_dir is relative to stilt_wd/out
-        id_dir = os.path.join(self.stilt_wd, 'out', id_dir or 'by-id')
-        
-        sims = [extract_simulation_id(sim) for sim in os.listdir(id_dir)]
-        
-        # Convert to dataframe
-        sims = pd.DataFrame(sims)
-        # sims['run_time'] = sims['run_time'].astype(str)
-        # for column in ['lati', 'long', 'zagl']:
-        #     sims[column] = sims[column].astype(float)
-        sims['run_time'] = pd.to_datetime(sims['run_time'], format=TIME_FORMAT)
-        sims.sort_values('run_time', inplace=True)
+    @property
+    def simulations(self) -> dict[str, Simulation]:
+        sims = {}
+        for control_file in (self.output_wd / 'by-id').rglob('CONTROL'):
+            sim_dir = control_file.parent
+            sims[sim_dir.stem] = Simulation(sim_dir)
         return sims
 
-    def get_missing_sims(self, receptors: pd.DataFrame, id_dir=None):
-        '''
-        Get missing simulations from STILT output directory.
+    @property
+    def run_times(self) -> set[dt.datetime]:
+        return {sim.run_time for sim in self.simulations.values()}
 
-        Parameters
-        ----------
-        receptors : pd.DataFrame
-            Receptors used to generate simulations.
-        id_dir : str, optional
-            Directory containing simulations, by default None
+    @property
+    def receptors(self) -> set[Receptor]:
+        return {sim.receptor for sim in self.simulations.values()}
 
-        Returns
-        -------
-        pd.DataFrame
-            Missing simulations.
-        '''
-
-        # Get existing simulations
-        existing_sims = self.get_sims(id_dir)
-
-        # Merge the dataframes and add an indicator column
-        merged = receptors.merge(existing_sims, how='outer', indicator=True)
-
-        # Get the rows that are in receptors but not in existing_sims
-        missing_sims = merged[merged['_merge'] == 'left_only']
-
-        return missing_sims
-    
-    def read_footprints(self, footprint_dir: str | None=None, subset: bool | list=False, engine: str='rasterio',
-                        cache: bool | str=False, reload_cache: bool=False) -> Footprints:
-        """
-        _summary_
-
-        Parameters
-        ----------
-        footprint_dir : str, optional
-            Directory containing footprint files, by default None
-        subset : bool | list, optional
-            Bounds to subset the footprints, by default False
-        engine : str, optional
-            Engine to use to read the footprints, by default 'rasterio'
-        cache : bool | str, optional
-            Whether to cache the footprints. If True, path to cache file, by default False
-        reload_cache : bool, optional
-            Whether to reload the cache, by default False
-
-        Returns
-        -------
-        Footprints
-            Footprints instance.
-        """
-
-        footprint_dir = os.path.join(self.stilt_wd, 'out', footprint_dir or 'footprints')
-        
-        footprints = Footprints(footprint_dir, subset, engine, cache, reload_cache)
-        
-        return footprints
-
-    def get_foots(self, footprint_dir: str | None=None, subset: bool | list=False, engine: str='rasterio',
-                        cache: bool | str=False, reload_cache: bool=False) -> xr.DataArray:
-        """
-        Get footprints from STILT output directory.
-
-        Parameters
-        ----------
-        footprint_dir : str | None, optional
-            Directory containing footprint files, by default None.
-        subset : bool | list, optional
-            Bounds to subset the footprints, by default False.
-        engine : str, optional
-            Engine to use to read the footprints, by default 'rasterio'.
-        cache : bool | str, optional
-            Whether to cache the footprints. If True, path to cache file, by default False.
-        reload_cache : bool, optional
-            Whether to reload the cache, by default False.
-        Returns
-        -------
-        xr.DataArray
-            Footprints.
-        """
-        
-        footprints = self.read_footprints(footprint_dir, subset, engine,
-                                          cache, reload_cache)
-
-        return footprints.foots
-
-
-def Lin2021(dCH4: pd.Series, footprints: Footprints,
-            weight: bool=False, filter_sims: bool=False) -> pd.DataFrame:
-    '''
-    Estimate basin emissions using Lin et al. 2021 method.
-    
-    Following this logic, we estimate the Basin-averaged CH4 emissions
-    Φ by dividing the CH4 enhancement measured at HPL by the total
-    footprint integrating over all gridcells i within the Uinta Basin
-    (defined as between 39.9N to 40.5N and 110.6W to 109W), where Φ at
-    daily timescales was determined by dividing the ∆CH4 averaged over the
-    afternoon (13:00–16:00 MST) by the total footprint averaged over the
-    same hours.
-
-    Parameters
-    ----------
-    dCH4 : pd.Series
-        Time series of CH4 enhancements.
-    footprints : Footprints
-        Footprints instance.
-    weight : bool, optional
-        Whether to weight the footprints by area, by default False
-    filter_sims : bool, optional
-        Whether to filter simulations, by default False.
-
-    Returns
-    -------
-    pd.DataFrame
-        Estimated emissions
-    '''
-
-    if weight:
-        # AREA WEIGHTED
-
-        # Multiply by cell area, divide by total area, sum
-        # f_weighted = (STILT.footprints.foots * STILT.footprints.area)\
-        #     / STILT.footprints.area.sum()
-        # f_sum = f_weighted.sum(dim=['x', 'y'])
-
-        # Simple cosine weighting
-        f_sum = footprints.weighted.sum(dim=['x', 'y'])
-
-    else:
-        # NOT AREA WEIGHTED
-        f_sum = footprints.foots.sum(dim=['x', 'y'])
-
-    f_sum_daily = f_sum.resample(run_time='1D').mean().to_pandas()
-
-    if filter_sims:
-        # Filter simulations when footprint is too weak
-        f_thres = f_sum_daily.quantile(0.1)  # 10% quantile
-        f_sum_daily[f_sum_daily < f_thres] = np.nan
-
-        # Filter simulations when transport errors are large
-        dir_thres = 45  # deg
-        ws_thres = 1  # m s-1
-
-    emis = (dCH4 / f_sum_daily).to_frame('CH4_emis')
-    emis.index.name = 'Time_UTC'
-
-    return emis
+    @cached_property
+    def footprints(self) -> Footprint | None:
+        footprints = []
+        for i, sim in enumerate(self.simulations.values()):
+            if i == 100:
+                break
+            if sim.footprint:
+                footprints.append(sim.footprint.foot)
+                del sim.footprint  # free memory & reset cache
+        if not footprints:
+            return None
+        return Footprint(simulation_id=self.stilt_wd.stem,
+                         foot=xr.merge(footprints).foot)
