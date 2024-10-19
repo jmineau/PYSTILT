@@ -11,11 +11,18 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
-from typing import Any, Self
+from typing import Any
+from typing_extensions import \
+    Self  # requires python 3.11 to import from typing
 
+import numpy as np
 import pandas as pd
 import pyarrow.parquet as pq
+import pyproj
+import sparse
 import xarray as xr
+
+from lair.utils.geo import BaseGrid, CRS, clip, write_rio_crs
 
 # TODO:
 # - Support multiple receptors
@@ -118,9 +125,7 @@ class _UniqueReceptorMeta(type):
     def __call__(cls, longitude, latitude, height, *args, **kwargs):
         key = (longitude, latitude, height)
         if key in cls._receptors:
-            print('Receptor already exists')
             return cls._receptors[key]
-        print('Creating new receptor')
         receptor = super().__call__(*key, *args, **kwargs)
         cls._receptors[key] = receptor
         return receptor
@@ -135,7 +140,6 @@ class Receptor(metaclass=_UniqueReceptorMeta):
 
     def __init__(self, longitude: Any, latitude: Any, height: Any,
                  name: str | None = None):
-        print('Init receptor')
         self.longitude = longitude
         self.latitude = latitude
         self.height = height
@@ -255,13 +259,6 @@ class Trajectory:
 
         return data
 
-    @staticmethod
-    def _pivot(df: pd.DataFrame) -> xr.Dataset:
-        ds = xr.Dataset.from_dataframe(
-            df.set_index(['indx', 'time'])
-        )
-        return ds
-
     def to_xarray(self, error: bool = False) -> xr.Dataset:
         """
         Convert trajectory data to xarray.Dataset
@@ -272,11 +269,17 @@ class Trajectory:
         error : bool
             Output particle error data if available.
         """
+        def pivot(df: pd.DataFrame) -> xr.Dataset:
+            ds = xr.Dataset.from_dataframe(
+                df.set_index(['indx', 'time'])
+            )
+            return ds
+
         if not error:
-            ds = self._pivot(self.particles)
+            ds = pivot(self.particles)
             ds.attrs = self.params
         elif self.particle_error is not None:
-            ds = self._pivot(self.particle_error)
+            ds = pivot(self.particle_error)
             ds.attrs = self.error_params or {}
         else:
             raise ValueError('No error data available')
@@ -286,27 +289,64 @@ class Trajectory:
         return ds
 
 
-class Footprint:
+class Footprint(BaseGrid):
     """
     Footprint object containing STILT simulation footprint data.
     """
     def __init__(self, simulation_id: str,
-                 foot: xr.DataArray):
+                 run_time: dt.datetime,
+                 receptor: Receptor,
+                 data: xr.DataArray,
+                 crs: Any = 4326,
+                 time_created: str | None = None):
         self.simulation_id = simulation_id
-        self.foot = foot
+        self.run_time = run_time
+        self.receptor = receptor
+        self.data = data
+        self.crs = CRS(crs)
+        self.time_created = time_created
 
     def __repr__(self):
         return f'Footprint({self.simulation_id})'
 
+    @staticmethod
+    def _preprocess(ds: xr.Dataset) -> xr.Dataset:
+        """
+        Preprocess footprint data to add run_time and receptor dimensions.
+
+        Parameters
+        ----------
+        ds : xr.Dataset
+            Footprint data.
+
+        Returns
+        -------
+        xr.Dataset
+            Preprocessed footprint data.
+        """
+        # Extract metadata
+        run_time = dt.datetime.fromisoformat(ds.attrs.pop('r_run_time'))
+        receptor = Receptor(longitude=ds.attrs.pop('r_long'),
+                            latitude=ds.attrs.pop('r_lati'),
+                            height=ds.attrs.pop('r_zagl'))
+
+        # Add run_time and receptor dimensions
+        ds = ds.expand_dims(receptor=[receptor],
+                            run_time=[run_time])
+
+        return ds
+
     @classmethod
-    def from_netcdf(cls, file: str | Path) -> Self:
+    def from_netcdf(cls, file: str | Path, chunks: str | dict | None = None) -> Self:
         """
         Create Footprint object from netCDF file.
-        
+
         Parameters
         ----------
         file : str | Path
             Path to netCDF file.
+        chunks : str | dict, optional
+            Chunks for dask array. The default is None.
 
         Returns
         -------
@@ -314,9 +354,31 @@ class Footprint:
             Footprint object.
         """
         simulation_id = Path(file).stem.replace('_foot', '')
-        foot = xr.open_dataset(file).foot
+        ds = xr.open_dataset(file, chunks=chunks)
+        ds = cls._preprocess(ds)
 
-        return cls(simulation_id, foot)
+        time_created = ds.attrs.pop('time_created')
+        run_time = pd.Timestamp(ds.run_time.item()).to_pydatetime()
+        receptor = ds.receptor.item()
+        crs = pyproj.CRS.from_proj4(ds.attrs['crs'])
+        ds = write_rio_crs(ds, crs)
+
+        return cls(simulation_id, run_time=run_time, receptor=receptor,
+                   data=ds.foot, crs=crs, time_created=time_created)
+
+    @property
+    def sparse(self) -> xr.DataArray:
+        """
+        Convert footprint to sparse representation.
+
+        Returns
+        -------
+        xr.DataArray
+            Sparse footprint.
+        """
+        sparse_arr = sparse.COO.from_numpy(self.data.values)
+        return xr.DataArray(sparse_arr, name='foot', coords=self.data.coords,
+                            dims=self.data.dims, attrs=self.data.attrs)
 
     def time_integrate(self, start: dt.datetime | None = None,
                        end: dt.datetime | None = None) -> xr.DataArray:
@@ -335,14 +397,67 @@ class Footprint:
         xr.DataArray
             Time-integrated footprint
         """
-        return self.foot.sel(time=slice(start, end)).sum('time')
+        return self.data.sel(time=slice(start, end)).sum('time')
+
+    def clip_to_grid(self, grid, buffer: float = 0.1):
+        """
+        Clip footprint to grid extent with buffer.
+
+        Parameters
+        ----------
+        grid : BaseGrid
+            Grid to clip footprint to. Must have dims 'lon' and 'lat'.
+        buffer : float, optional
+            Buffer around grid extent as a fraction of grid size. The default is 0.1.
+
+        Returns
+        -------
+        Footprint
+            Clipped footprint.
+        """
+        # Determine bounds to clip footprints from out_grid
+        # Clip footprints to slightly larger than the output grid
+        xmin, xmax = grid['lon'].min(), grid['lon'].max()
+        ymin, ymax = grid['lat'].min(), grid['lat'].max()
+
+        # Calculate buffer
+        xbuffer = (xmax - xmin) * buffer
+        ybuffer = (ymax - ymin) * buffer
+
+        # Build clip bbox
+        bbox = [xmin - xbuffer, ymin - ybuffer,
+                xmax + xbuffer, ymax + ybuffer]
+
+        clipped = clip(self.data, bbox=bbox, crs=self.crs)
+
+        return Footprint(simulation_id=self.simulation_id, run_time=self.run_time, receptor=self.receptor,
+                         data=clipped, crs=self.crs, time_created=self.time_created)
+
+    def integrate_over_time_bins(self, t_bins):
+        """
+        Integrate footprint over time bins.
+
+        Parameters
+        ----------
+        t_bins : pd.IntervalIndex
+            Time bins for integration.
+
+        Returns
+        -------
+        xr.DataArray
+            Integrated footprint.
+        """
+        return self.data.groupby_bins(group='time', bins=t_bins, include_lowest=True).sum()
 
 
 class Simulation:
 
-    def __init__(self, path: str | Path):
+    def __init__(self, path: str | Path,
+                 footprint_chunks: str | dict | None = None):
         self.path = Path(path)
         assert self.path.exists(), f'Simulation not found: {self.path}'
+
+        self.footprint_chunks = footprint_chunks
 
         by_id_dir = Simulation.find_by_id_directory(self.path)
         self.id = str(self.path.relative_to(by_id_dir))
@@ -350,6 +465,10 @@ class Simulation:
         self.run_time = self.control.pop('run_time')
         receptors = self.control['receptors']
         self.receptor = receptors[0]  # TODO: support multiple receptors
+
+        self.input_path = self.path / f'{self.id}_input.json'
+        self.traj_path = self.path / f'{self.id}_traj.parquet'
+        self.foot_path = self.path / f'{self.id}_foot.nc'
 
     def __repr__(self) -> str:
         return f'Simulation({self.id})'
@@ -409,40 +528,45 @@ class Simulation:
 
         return control
 
+    @property
+    def has_trajectory(self) -> bool:
+        return self.traj_path.exists()
+
     @cached_property
     def trajectory(self) -> Trajectory | None:
-        file = self.path / f'{self.id}_traj.parquet'
-        if not file.exists():
+        if not self.has_trajectory:
             return None
-        return Trajectory.from_parquet(file)
+        return Trajectory.from_parquet(self.traj_path)
+
+    @property
+    def has_footprint(self) -> bool:
+        return self.foot_path.exists()
 
     @cached_property
     def footprint(self) -> Footprint | None:
-        file = self.path / f'{self.id}_foot.nc'
-        if not file.exists():
+        if not self.has_footprint:
             return None
-        footprint = Footprint.from_netcdf(file)
-        footprint.foot = footprint.foot.expand_dims(run_time=[self.run_time],)
-                                                    # receptor=[self.receptor])
-                                                    # r_long=[self.receptor.longitude],
-                                                    # r_lati=[self.receptor.latitude],
-                                                    # r_zagl=[self.receptor.height])
-        return footprint
+        foot = Footprint.from_netcdf(self.foot_path, chunks=self.footprint_chunks)
+        assert foot.run_time == self.run_time, f'Footprint run time {foot.run_time} does not match simulation run time {self.run_time}'
+        assert foot.receptor == self.receptor, f'Footprint receptor {foot.receptor} does not match simulation receptor {self.receptor}'
+        return foot
 
 
-class STILT:
+class Model:
 
     def __init__(self, stilt_wd: str | Path,
-                 output_wd: str | Path | None = None):
+                 output_wd: str | Path | None = None,
+                 footprint_chunks: str | dict | None = None):
         self.stilt_wd = Path(stilt_wd)
         self.output_wd = Path(output_wd) if output_wd else self.stilt_wd / 'out'
+        self.footprint_chunks = footprint_chunks
 
     @property
     def simulations(self) -> dict[str, Simulation]:
         sims = {}
         for control_file in (self.output_wd / 'by-id').rglob('CONTROL'):
-            sim_dir = control_file.parent
-            sims[sim_dir.stem] = Simulation(sim_dir)
+            sim = Simulation(control_file.parent, footprint_chunks=self.footprint_chunks)
+            sims[sim.id] = sim
         return sims
 
     @property
@@ -453,16 +577,30 @@ class STILT:
     def receptors(self) -> set[Receptor]:
         return {sim.receptor for sim in self.simulations.values()}
 
-    @cached_property
+    # def footprints(self) -> Footprint | None:
+    #     footprints = []
+    #     for i, sim in enumerate(self.simulations.values()):
+    #         if i == 100:
+    #             break
+    #         if sim.has_footprint:
+    #             yield sim.footprint
+    #     if not footprints:
+    #         return None
+    #     return xr.merge(footprints)
+    
     def footprints(self) -> Footprint | None:
-        footprints = []
-        for i, sim in enumerate(self.simulations.values()):
-            if i == 100:
-                break
-            if sim.footprint:
-                footprints.append(sim.footprint.foot)
-                del sim.footprint  # free memory & reset cache
-        if not footprints:
+        foot_paths = [sim.foot_path for sim in self.simulations.values()
+                      if sim.has_footprint]
+        if not foot_paths:
             return None
-        return Footprint(simulation_id=self.stilt_wd.stem,
-                         foot=xr.merge(footprints).foot)
+        footprints = xr.open_mfdataset(foot_paths, preprocess=Footprint._preprocess,
+                                       combine='nested', concat_dim=['run_time', 'receptor'],
+                                       engine='h5netcdf', parallel=True, chunks='auto')
+        
+        return footprints
+
+    def build_jacobian(self, obs_index, flux_index):
+        for sim_id, sim in self.simulations.items():
+            if sim.has_footprint:
+                foot = sim.footprint.sparse
+                foot.receptor.footprints.append(foot)
