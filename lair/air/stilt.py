@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from functools import cached_property
 import json
 from pathlib import Path
+import re
 from typing import Any, Literal
 from typing_extensions import \
     Self  # requires python 3.11 to import from typing
@@ -146,8 +147,6 @@ class Receptor(metaclass=_UniqueReceptorMeta):
         self.height = float(height)
         self.name = name
 
-        self.footprints = []  # ? keep track of footprints associated with receptor
-
     @classmethod
     def from_simulation_id(cls, sim_id: str) -> Self:
         """
@@ -181,24 +180,10 @@ class Receptor(metaclass=_UniqueReceptorMeta):
         return f'Receptor({x})'
 
     def __eq__(self, other) -> bool:
-        if isinstance(other, Receptor):
-            return all([
-                self.longitude == other.longitude,
-                self.latitude == other.latitude,
-                self.height == other.height
-            ])
-        elif isinstance(other, (tuple, list)):
-            return all([
-                self.longitude == other[0],
-                self.latitude == other[1],
-                self.height == other[2]
-            ])
-        elif isinstance(other, str):
-            return other in {self.id, self.name} if self.name else self.id == other
-        return False
+        return self.id == other.id
 
     def __hash__(self) -> int:
-        return hash((self.longitude, self.latitude, self.height))
+        return hash(self.id)
 
 
 class Trajectory:
@@ -353,7 +338,7 @@ class Footprint(BaseGrid):
                             height=ds.attrs.pop('r_zagl'))
 
         # Add run_time and receptor dimensions
-        ds = ds.expand_dims(receptor=[receptor],
+        ds = ds.expand_dims(receptor=[receptor.id],
                             run_time=[run_time])
 
         return ds
@@ -381,7 +366,7 @@ class Footprint(BaseGrid):
 
         time_created = ds.attrs.pop('time_created')
         run_time = pd.Timestamp(ds.run_time.item()).to_pydatetime()
-        receptor = ds.receptor.item()
+        receptor = Receptor(*ds.receptor.item().split('_'))
         crs = pyproj.CRS.from_proj4(ds.attrs['crs'])
         ds = write_rio_crs(ds, crs)
 
@@ -461,6 +446,8 @@ class Simulation:
     FAILURE_PHRASES = {
         'Insufficient number of meteorological files found': 'MISSING_MET_FILES',
         'meteorological data time interval varies': 'VARYING_MET_INTERVAL',
+        'PARTICLE_STILT.DAT does not contain any trajectory data': 'NO_TRAJECTORY_DATA',
+        'Fortran runtime error': 'FORTRAN_RUNTIME_ERROR',
     }
 
     def __init__(self, path: str | Path):
@@ -581,11 +568,12 @@ class Simulation:
             raise ValueError('Simulation was successful')
 
         # Check log file for errors
+        if self.log == '':
+            return 'EMPTY_LOG'
         for phrase, reason in self.FAILURE_PHRASES.items():
             if phrase in self.log:
                 return reason
-            else:
-                return 'UNKNOWN'
+        return 'UNKNOWN'
 
     @cached_property
     def config(self) -> dict[str, Any]:
@@ -619,18 +607,42 @@ class Simulation:
 
 
 class SimulationCollection(dict):
-    def __init__(self, out_dirs: str | Path | list[str | Path] | None = None):
+    """
+    Collection of Simulation objects.
+    Inherits from dict with additional categorization of successful and failed simulations.
+
+    Attributes
+    ----------
+    successful : dict[simulation.id, Simulation]
+        Dictionary of successful simulations.
+    failed : dict[simulation.id, Simulation]
+        Dictionary of failed simulations
+
+    Methods
+    -------
+    from_output_wd(output_wd)
+        Create a SimulationCollection from an output directory.
+    merge(collections)
+        Merge multiple SimulationCollections into one.
+    get_missing(in_csv, include_failed)
+        Find simulations in csv that are missing from output directory.
+    to_dataframe(subset)
+        Convert simulation metadata to pandas DataFrame.
+    to_csv(path, subset)
+        Save simulation metadata to csv.
+    """
+
+    def __init__(self, sims: list[Simulation] | dict[str, Simulation] | None = None):
         super().__init__()  # initialize dict
         self._failed = {}
         self._successful = {}
-
-        if out_dirs is None:
-            self.out_dirs = []
-        elif isinstance(out_dirs, (str, Path)):
-            self.out_dirs = [Path(out_dirs)]
-        else:
-            self.out_dirs = [Path(d) for d in out_dirs]
-        self._load_simulations()
+        if sims:
+            if isinstance(sims, dict):
+                for sim_id, sim in sims.items():
+                    self[sim_id] = sim
+            else:
+                for sim in sims:
+                    self[sim.id] = sim
 
     def __setitem__(self, key: str, sim: Simulation) -> None:
         """
@@ -643,17 +655,54 @@ class SimulationCollection(dict):
         sim : Simulation
             Simulation object.
         """
+        assert key == sim.id, f'Key {key} does not match simulation ID {sim.id}'
+        assert isinstance(sim, Simulation), f'Value must be a Simulation object'
         super().__setitem__(key, sim)
         if sim.was_successful:
             self._successful[key] = sim
         else:
             self._failed[key] = sim
 
-    def _load_simulations(self) -> None:
-        for out_dir in self.out_dirs:
-            for log_file in out_dir.rglob('stilt.log'):
-                sim = Simulation(log_file.parent)
-                self[sim.id] = sim
+    @classmethod
+    def from_output_wd(cls, output_wd: str | Path) -> Self:
+        """
+        Create a SimulationCollection from an output directory.
+
+        Parameters
+        ----------
+        output_wd : str | Path
+            Path to output directory.
+
+        Returns
+        -------
+        SimulationCollection
+            SimulationCollection object.
+        """
+        output_wd = Path(output_wd)
+        # Identify simulations using 'stilt.log' files
+        sims = [Simulation(log_file.parent)
+                for log_file in output_wd.rglob('stilt.log')]
+        return cls(sims)
+
+    @classmethod
+    def merge(cls, collections: list[Self]) -> Self:
+        """
+        Merge multiple SimulationCollections into one.
+
+        Parameters
+        ----------
+        collections : list[SimulationCollection]
+            List of SimulationCollections to merge.
+
+        Returns
+        -------
+        SimulationCollection
+            Merged SimulationCollection.
+        """
+        merged_sims = {}
+        for collection in collections:
+            merged_sims.update(collection)
+        return cls(merged_sims)
 
     @property
     def successful(self) -> dict[str, Simulation]:
@@ -681,7 +730,7 @@ class SimulationCollection(dict):
         """
         # Load dataframes
         in_df = pd.read_csv(in_csv)
-        sim_df = self.as_dataframe(subset='successful' if include_failed else None)
+        sim_df = self.to_dataframe(subset='successful' if include_failed else None)
 
         # Parse run_time as datetime
         in_df['run_time'] = pd.to_datetime(in_df['run_time'])
@@ -695,7 +744,7 @@ class SimulationCollection(dict):
         missing = merged[merged['_merge'] == 'left_only']
         return missing.drop(columns='_merge')
 
-    def as_dataframe(self, subset: Literal['successful', 'failed'] | None = None) -> pd.DataFrame:
+    def to_dataframe(self, subset: Literal['successful', 'failed'] | None = None) -> pd.DataFrame:
         """
         Convert simulation metadata to pandas DataFrame.
 
@@ -734,26 +783,358 @@ class SimulationCollection(dict):
         -------
         None
         """
-        df = self.as_dataframe(subset=subset)
+        df = self.to_dataframe(subset=subset)
         df.to_csv(path, index=False)
         return None
 
 
-class Model:
+class RunScript(dict):
+    """
+    STILT run script object containing configuration information.
+    Inherits from dict with additional grouping of configuration options.
 
-    def __init__(self, path: str | Path,
-                 out_dirs: str | Path | list[str | Path] | None = None):
+    Parameters
+    ----------
+    path : str | Path
+        Path to run script.
+
+    Attributes
+    ----------
+    path : Path
+        Path to run script.
+    model_options : dict
+        Model configuration options.
+    parallel_options : dict
+        Parallelization options.
+    footprint_options : dict
+        Footprint calculation options.
+    meteorological_options : dict
+        Meteorological data options.
+    transport_options : dict
+        Transport & dispersion options.
+    error_options : dict
+        Transport error options.
+    """
+    def __init__(self, path: str | Path):
+        super().__init__()
         self.path = Path(path)
-        if isinstance(out_dirs, (str, Path)):
-            self.out_dirs = [Path(out_dirs)]
-        elif isinstance(out_dirs, list):
-            self.out_dirs = [Path(d) for d in out_dirs]
-        else:
-            self.out_dirs = [self.path / 'out']
+        assert self.path.exists(), f'Run script not found: {self.path}'
+        config = self._parse()
+
+        # Build stilt and output working directories from file.path calls
+        self._stilt_wd = config.pop('stilt_wd')
+        self._output_wd = config.pop('output_wd')
+        stilt_wd = self._parse_file_path(self._stilt_wd)
+        output_wd = self._parse_file_path(self._output_wd)
+        stilt_wd = stilt_wd.replace('project', config['project'])
+        output_wd = output_wd.replace('stilt_wd', stilt_wd)
+        self.stilt_wd = Path(stilt_wd)
+        self.output_wd = Path(output_wd)
+
+        # Assign configuration options
+        self.update(config)
+
+    def _parse(self) -> dict[str, Any]:
+        """
+        Parse the run script for relevant configuration information.
+
+        Returns
+        -------
+        dict
+            Dictionary of relevant configuration information.
+        """
+        config = {}
+        pattern = re.compile(r"(\w+)\s*<-\s*([^#]*)")
+        multiline_var = None
+        multiline_value = []
+
+        with self.path.open() as f:
+            for line in f:
+                if line.startswith('#'):
+                    continue
+
+                if multiline_var:
+                    multiline_value.append(line.strip())
+                    if line.count("(") < line.count(")"):
+                        config[multiline_var] = self._parse_value(" ".join(multiline_value))
+                        multiline_var = None
+                        multiline_value = []
+                    continue
+                else:
+                    if line.startswith(' '):
+                        continue
+
+                match = pattern.search(line)
+                if match:
+                    key, value = match.groups()
+                    value = value.strip()
+
+                    # Determine if a variable is multiline by checking if there are more ( than )
+                    if value.count("(") > value.count(")"):
+                        multiline_var = key
+                        multiline_value.append(value)
+                    else:
+                        config[key] = self._parse_value(value)
+
+        return config
+
+    @staticmethod
+    def _parse_value(value: str) -> Any:
+        """
+        Parse a string value into its appropriate type.
+
+        Parameters
+        ----------
+        value : str
+            String value to parse.
+
+        Returns
+        -------
+        Any
+            Parsed value.
+        """
+        value = value.strip()
+        if value in ['NA', 'NULL']:
+            return None
+        if (value.startswith('"') and value.endswith('"')) or (value.startswith("'") and value.endswith("'")):
+            value = value[1:-1]
+        try:
+            return float(value)
+        except ValueError:
+            if value.lower() in ['true', 't']:
+                return True
+            elif value.lower() in ['false', 'f']:
+                return False
+        return re.sub(r'\s+', ' ', value)
+
+    @staticmethod
+    def _parse_file_path(value: str) -> str:
+        """
+        Parse a call to R's file.path() function.
+        
+        Parameters
+        ----------
+        value : str
+            String value to parse.
+
+        Returns
+        -------
+        str
+            Parsed file path.
+        """
+        # Extract file path from file.path() call
+        path = re.search(r'file.path\((.*)\)', value).group(1)
+        # Split the path on commas and strip whitespace and quotes
+        parts = [part.strip().strip('"').strip("'") for part in path.split(',')]
+        # Join the parts into a single path
+        return os.path.join(*parts)
+
+    @cached_property
+    def model_options(self) -> dict[str, Any]:
+        return {
+            'n_hours': self.get('n_hours'),
+            'numpar': self.get('numpar'),
+            'reset_output_wd': self.get('reset_output_wd'),
+            'rm_dat': self.get('rm_dat'),
+            'run_foot': self.get('run_foot'),
+            'run_trajec': self.get('run_trajec'),
+            'simulation_id': self.get('simulation_id'),
+            'timeout': self.get('timeout'),
+            'varsiwant': self.get('varsiwant'),
+            'write_trajec': self.get('write_trajec')
+        }
+
+    @cached_property
+    def parallel_options(self) -> dict[str, Any]:
+        return {
+            'n_cores': self.get('n_cores'),
+            'n_nodes': self.get('n_nodes'),
+            'processes_per_node': self.get('processes_per_node'),
+            'slurm': self.get('slurm'),
+            'slurm_options': self.get('slurm_options')
+        }
+
+    @cached_property
+    def footprint_options(self) -> dict[str, Any]:
+        return {
+            'hnf_plume': self.get('hnf_plume'),
+            'projection': self.get('projection'),
+            'smooth_factor': self.get('smooth_factor'),
+            'time_integrate': self.get('time_integrate'),
+            'xmn': self.get('xmn'),
+            'xmx': self.get('xmx'),
+            'ymn': self.get('ymn'),
+            'ymx': self.get('ymx'),
+            'xres': self.get('xres'),
+            'yres': self.get('yres')
+        }
+
+    @cached_property
+    def meteorological_options(self) -> dict[str, Any]:
+        return {
+            'met_path': self.get('met_path'),
+            'met_file_format': self.get('met_file_format'),
+            'n_hours_per_met_file': self.get('n_hours_per_met_file'),
+            'met_subgrid_buffer': self.get('met_subgrid_buffer'),
+            'met_subgrid_enable': self.get('met_subgrid_enable'),
+            'met_subgrid_levels': self.get('met_subgrid_levels'),
+            'n_met_min': self.get('n_met_min')
+        }
+
+    @cached_property
+    def transport_options(self) -> dict[str, Any]:
+        return {
+            'capemin': self.get('capemin'),
+            'cmass': self.get('cmass'),
+            'conage': self.get('conage'),
+            'cpack': self.get('cpack'),
+            'delt': self.get('delt'),
+            'dxf': self.get('dxf'),
+            'dyf': self.get('dyf'),
+            'dzf': self.get('dzf'),
+            'efile': self.get('efile'),
+            'emisshrs': self.get('emisshrs'),
+            'frhmax': self.get('frhmax'),
+            'frhs': self.get('frhs'),
+            'frme': self.get('frme'),
+            'frmr': self.get('frmr'),
+            'frts': self.get('frts'),
+            'frvs': self.get('frvs'),
+            'hscale': self.get('hscale'),
+            'ichem': self.get('ichem'),
+            'idsp': self.get('idsp'),
+            'initd': self.get('initd'),
+            'k10m': self.get('k10m'),
+            'kagl': self.get('kagl'),
+            'kbls': self.get('kbls'),
+            'kblt': self.get('kblt'),
+            'kdef': self.get('kdef'),
+            'khinp': self.get('khinp'),
+            'khmax': self.get('khmax'),
+            'kmix0': self.get('kmix0'),
+            'kmixd': self.get('kmixd'),
+            'kmsl': self.get('kmsl'),
+            'kpuff': self.get('kpuff'),
+            'krand': self.get('krand'),
+            'krnd': self.get('krnd'),
+            'kspl': self.get('kspl'),
+            'kwet': self.get('kwet'),
+            'kzmix': self.get('kzmix'),
+            'maxdim': self.get('maxdim'),
+            'maxpar': self.get('maxpar'),
+            'mgmin': self.get('mgmin'),
+            'mhrs': self.get('mhrs'),
+            'nbptyp': self.get('nbptyp'),
+            'ncycl': self.get('ncycl'),
+            'ndump': self.get('ndump'),
+            'ninit': self.get('ninit'),
+            'nstr': self.get('nstr'),
+            'nturb': self.get('nturb'),
+            'nver': self.get('nver'),
+            'outdt': self.get('outdt'),
+            'p10f': self.get('p10f'),
+            'pinbc': self.get('pinbc'),
+            'pinpf': self.get('pinpf'),
+            'poutf': self.get('poutf'),
+            'qcycle': self.get('qcycle'),
+            'rhb': self.get('rhb'),
+            'rht': self.get('rht'),
+            'splitf': self.get('splitf'),
+            'tkerd': self.get('tkerd'),
+            'tkern': self.get('tkern'),
+            'tlfrac': self.get('tlfrac'),
+            'tout': self.get('tout'),
+            'tratio': self.get('tratio'),
+            'tvmix': self.get('tvmix'),
+            'veght': self.get('veght'),
+            'vscale': self.get('vscale'),
+            'vscaleu': self.get('vscaleu'),
+            'vscales': self.get('vscales'),
+            'w_option': self.get('w_option'),
+            'zicontroltf': self.get('zicontroltf'),
+            'ziscale': self.get('ziscale'),
+            'z_top': self.get('z_top')
+        }
+
+    @cached_property
+    def error_options(self) -> dict[str, Any]:
+        return {
+            'horcoruverr': self.get('horcoruverr'),
+            'siguverr': self.get('siguverr'),
+            'tluverr': self.get('tluverr'),
+            'zcoruverr': self.get('zcoruverr'),
+            'horcorzierr': self.get('horcorzierr'),
+            'sigzierr': self.get('sigzierr'),
+            'tlzierr': self.get('tlzierr')
+        }
+
+
+class Model:
+    """
+    STILT model object containing configuration information and simulation data.
+    """
+    def __init__(self, project: str | Path,
+                 output_wd=None, model_options=None,
+                 parallel_options=None, footprint_options=None,
+                 meteorological_options=None, transport_options=None,
+                 error_options=None):
+        # Extract project name and working directory
+        project = Path(project)
+        self.project = project.name
+        wd = project.parent
+        if wd == Path('.'):
+            wd = Path.cwd()
+        self.stilt_wd = wd / project
+        self.output_wd = output_wd or self.stilt_wd / 'out'
+
+        # Check if project exists
+        assert self.stilt_wd.exists(), f'Project not found: {self.stilt_wd}'
+
+        self.model_options = model_options or {}
+        self.parallel_options = parallel_options or {}
+        self.footprint_options = footprint_options or {}
+        self.meteorological_options = meteorological_options or {}
+        self.transport_options = transport_options or {}
+        self.error_options = error_options or {}
+
+    @classmethod
+    def from_run_script(cls, script: str | Path):
+        """
+        Initialize STILT model from run script.
+
+        Parameters
+        ----------
+        script : str | Path
+            Path to STILT run script.
+
+        Returns
+        -------
+        Model
+            STILT model object.
+        """
+        run_script = RunScript(script)
+        return cls(
+            project=run_script.stilt_wd,
+            output_wd=run_script.output_wd,
+            model_options=run_script.model_options,
+            parallel_options=run_script.parallel_options,
+            footprint_options=run_script.footprint_options,
+            meteorological_options=run_script.meteorological_options,
+            transport_options=run_script.transport_options,
+            error_options=run_script.error_options
+        )
+
+    @property
+    def n_hours(self) -> int:
+        return self.model_options.get('n_hours', None)
+
+    @property
+    def numpar(self) -> int:
+        return self.model_options.get('numpar', None)
 
     @cached_property
     def simulations(self) -> SimulationCollection:
-        return SimulationCollection(out_dirs=self.out_dirs)
+        return SimulationCollection.from_output_wd(self.output_wd)
 
     @property
     def run_times(self) -> set[dt.datetime]:
