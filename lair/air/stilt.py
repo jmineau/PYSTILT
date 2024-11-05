@@ -24,6 +24,7 @@ import pyproj
 import sparse
 import xarray as xr
 
+from lair.utils.clock import TimeRange
 from lair.utils.geo import BaseGrid, CRS, clip, write_rio_crs
 
 # TODO:
@@ -387,6 +388,19 @@ class Footprint(BaseGrid):
         return xr.DataArray(sparse_arr, name='foot', coords=self.data.coords,
                             dims=self.data.dims, attrs=self.data.attrs)
 
+    @property
+    def time_range(self) -> TimeRange:
+        """
+        Get time range of footprint data.
+
+        Returns
+        -------
+        TimeRange
+            Time range of footprint data.
+        """
+        times = sorted(self.data.time.values)
+        return TimeRange(start=times[0], stop=pd.Timestamp(times[-1]) + pd.Timedelta(hours=1))
+
     def time_integrate(self, start: dt.datetime | None = None,
                        end: dt.datetime | None = None) -> xr.DataArray:
         """
@@ -527,6 +541,28 @@ class Simulation:
 
         return control
 
+    @property
+    def is_backward(self) -> bool:
+        return self.control['n_hours'] < 0
+
+    @property
+    def time_range(self) -> TimeRange:
+        """
+        Get time range of simulation.
+
+        Returns
+        -------
+        TimeRange
+            Time range of simulation.
+        """
+        if self.is_backward:
+            start = self.run_time + dt.timedelta(hours=self.control['n_hours'])
+            stop = self.run_time
+        else:
+            start = self.run_time
+            stop = self.run_time + dt.timedelta(hours=self.control['n_hours'] + 1)
+        return TimeRange(start=start, stop=stop)
+
     @cached_property
     def log(self) -> str:
         """
@@ -633,6 +669,15 @@ class SimulationCollection(dict):
     """
 
     def __init__(self, sims: list[Simulation] | dict[str, Simulation] | None = None):
+        """
+        Initialize SimulationCollection.
+
+        Parameters
+        ----------
+        sims : list[Simulation] | dict[str, Simulation], optional
+            List or dictionary of Simulation objects. The default is None.
+            If a dict, keys must match simulation IDs.
+        """
         super().__init__()  # initialize dict
         self._failed = {}
         self._successful = {}
