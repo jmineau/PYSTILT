@@ -7,8 +7,6 @@ Inspired by https://github.com/uataq/air-tracker-stiltctl
 import datetime as dt
 import os
 import subprocess
-from abc import ABC, abstractmethod
-from dataclasses import dataclass
 from functools import cached_property
 import json
 from pathlib import Path
@@ -17,7 +15,6 @@ from typing import Any, Literal
 from typing_extensions import \
     Self  # requires python 3.11 to import from typing
 
-import numpy as np
 import pandas as pd
 import pyarrow.parquet as pq
 import pyproj
@@ -33,8 +30,6 @@ from lair.utils.geo import BaseGrid, CRS, clip, write_rio_crs
 # - Run stilt_cli.r from python
 #   - stilt_cli only runs one simulation at a time via simulation step
 #   - want to be able to access slurm, but seems hard to manipulate run_stilt.r
-# - Footprint inherit from BaseGrid
-#   - refactor from inventories.py
 # - Trajectory gif
 # - Footprint plot
 
@@ -1211,3 +1206,17 @@ class Model:
                 reasons[reason] = []
             reasons[reason].append(sim)
         return reasons
+
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        # Instead of making Simulation & SimulationCollection objects picklable,
+        # we'll just store the simulation paths
+        if 'simulations' in state:
+            state['simulations'] = dict(state['simulations'])
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        # Restore the simulations attribute as a SimulationCollection
+        if 'simulations' in state:
+            self.simulations = SimulationCollection(state['simulations'])
