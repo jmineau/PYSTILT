@@ -4,6 +4,7 @@ Stochastic Time-Inverted Lagrangian Transport (STILT) Model.
 Inspired by https://github.com/uataq/air-tracker-stiltctl
 """
 
+from collections import UserDict
 import datetime as dt
 import os
 import subprocess
@@ -637,7 +638,7 @@ class Simulation:
         return foot
 
 
-class SimulationCollection(dict):
+class SimulationCollection(UserDict):
     """
     Collection of Simulation objects.
     Inherits from dict with additional categorization of successful and failed simulations.
@@ -674,15 +675,26 @@ class SimulationCollection(dict):
             If a dict, keys must match simulation IDs.
         """
         super().__init__()  # initialize dict
-        self._failed = {}
-        self._successful = {}
+
+        # Define additional dictionaries for successful and failed simulations
+        self.failed = {}
+        self.successful = {}
+
+        # Add simulations to collection
         if sims:
+            # When subclassing dict, self.update would not call __setitem__
+            # If we subclass UserDict, self.update would call __setitem__
+            # However, self.data.update does not call __setitem__ for UserDict
+            # Therefore we don't want to set on self.data directly, rather just self
             if isinstance(sims, dict):
-                for sim_id, sim in sims.items():
-                    self[sim_id] = sim
+                self.update(sims)
             else:
+                # Loop through simulations and add to collection
                 for sim in sims:
                     self[sim.id] = sim
+
+    def __repr__(self) -> str:
+        return f'SimulationCollection({len(self)} simulations)'
 
     def __setitem__(self, key: str, sim: Simulation) -> None:
         """
@@ -699,9 +711,9 @@ class SimulationCollection(dict):
         assert isinstance(sim, Simulation), f'Value must be a Simulation object'
         super().__setitem__(key, sim)
         if sim.was_successful:
-            self._successful[key] = sim
+            self.successful[key] = sim
         else:
-            self._failed[key] = sim
+            self.failed[key] = sim
 
     @classmethod
     def from_output_wd(cls, output_wd: str | Path) -> Self:
@@ -718,14 +730,17 @@ class SimulationCollection(dict):
         SimulationCollection
             SimulationCollection object.
         """
-        output_wd = Path(output_wd)
-        # Identify simulations using 'stilt.log' files
-        sims = [Simulation(log_file.parent)
-                for log_file in output_wd.rglob('stilt.log')]
+        sims = {}
+        by_id_dir = Path(output_wd) / 'by-id'
+        for root, dirs, files in os.walk(by_id_dir, followlinks=True):
+            # Identify simulations using 'stilt.log' files
+            if 'stilt.log' in files:
+                sim = Simulation(root)
+                sims[sim.id] = sim
         return cls(sims)
 
     @classmethod
-    def merge(cls, collections: list[Self]) -> Self:
+    def merge(cls, collections: Self | list[Self]) -> Self:
         """
         Merge multiple SimulationCollections into one.
 
@@ -740,17 +755,11 @@ class SimulationCollection(dict):
             Merged SimulationCollection.
         """
         merged_sims = {}
+        if isinstance(collections, cls):
+            collections = [collections]
         for collection in collections:
             merged_sims.update(collection)
         return cls(merged_sims)
-
-    @property
-    def successful(self) -> dict[str, Simulation]:
-        return self._successful
-
-    @property
-    def failed(self) -> dict[str, Simulation]:
-        return self._failed
 
     def get_missing(self, in_csv: str | Path, include_failed: bool = False) -> pd.DataFrame:
         """
@@ -801,7 +810,7 @@ class SimulationCollection(dict):
         if subset is None:
             sims = self
         else:
-            sims = {'successful': self._successful, 'failed': self._failed}[subset]
+            sims = {'successful': self.successful, 'failed': self.failed}[subset]
 
         data = []
         for sim in sims.values():
@@ -828,7 +837,7 @@ class SimulationCollection(dict):
         return None
 
 
-class RunScript(dict):
+class RunScript(UserDict):
     """
     STILT run script object containing configuration information.
     Inherits from dict with additional grouping of configuration options.
@@ -859,32 +868,30 @@ class RunScript(dict):
         super().__init__()
         self.path = Path(path)
         assert self.path.exists(), f'Run script not found: {self.path}'
-        config = self._parse()
+        self._parse()
 
         # Build stilt and output working directories from file.path calls
-        self._stilt_wd = config.pop('stilt_wd')
-        self._output_wd = config.pop('output_wd')
+        self._stilt_wd = self.data.pop('stilt_wd')
+        self._output_wd = self.data.pop('output_wd')
         stilt_wd = self._parse_file_path(self._stilt_wd)
         output_wd = self._parse_file_path(self._output_wd)
-        stilt_wd = stilt_wd.replace('project', config['project'])
+        stilt_wd = stilt_wd.replace('project', self.data['project'])
         output_wd = output_wd.replace('stilt_wd', stilt_wd)
         self.stilt_wd = Path(stilt_wd)
         self.output_wd = Path(output_wd)
 
-        # Assign configuration options
-        self.update(config)
+    def __repr__(self) -> str:
+        return f'RunScript({self.path})'
 
-    def _parse(self) -> dict[str, Any]:
+    def _parse(self) -> None:
         """
         Parse the run script for relevant configuration information.
 
         Returns
         -------
-        dict
-            Dictionary of relevant configuration information.
+        None
         """
-        config = {}
-        pattern = re.compile(r"(\w+)\s*<-\s*([^#]*)")
+        pattern = re.compile(r"(\w+\.?\w+)\s*<-\s*([^#]*)")
         multiline_var = None
         multiline_value = []
 
@@ -896,7 +903,7 @@ class RunScript(dict):
                 if multiline_var:
                     multiline_value.append(line.strip())
                     if line.count("(") < line.count(")"):
-                        config[multiline_var] = self._parse_value(" ".join(multiline_value))
+                        self.data[multiline_var] = self._parse_value(" ".join(multiline_value))
                         multiline_var = None
                         multiline_value = []
                     continue
@@ -914,9 +921,8 @@ class RunScript(dict):
                         multiline_var = key
                         multiline_value.append(value)
                     else:
-                        config[key] = self._parse_value(value)
-
-        return config
+                        self.data[key] = self._parse_value(value)
+        return None
 
     @staticmethod
     def _parse_value(value: str) -> Any:
@@ -962,6 +968,9 @@ class RunScript(dict):
         str
             Parsed file path.
         """
+        if 'file.path' not in value:
+            # If not a file.path call, return value
+            return value
         # Extract file path from file.path() call
         path = re.search(r'file.path\((.*)\)', value).group(1)
         # Split the path on commas and strip whitespace and quotes
@@ -972,140 +981,140 @@ class RunScript(dict):
     @cached_property
     def model_options(self) -> dict[str, Any]:
         return {
-            'n_hours': self.get('n_hours'),
-            'numpar': self.get('numpar'),
-            'reset_output_wd': self.get('reset_output_wd'),
-            'rm_dat': self.get('rm_dat'),
-            'run_foot': self.get('run_foot'),
-            'run_trajec': self.get('run_trajec'),
-            'simulation_id': self.get('simulation_id'),
-            'timeout': self.get('timeout'),
-            'varsiwant': self.get('varsiwant'),
-            'write_trajec': self.get('write_trajec')
+            'n_hours': self.data.get('n_hours'),
+            'numpar': self.data.get('numpar'),
+            'reset_output_wd': self.data.get('reset_output_wd'),
+            'rm_dat': self.data.get('rm_dat'),
+            'run_foot': self.data.get('run_foot'),
+            'run_trajec': self.data.get('run_trajec'),
+            'simulation_id': self.data.get('simulation_id'),
+            'timeout': self.data.get('timeout'),
+            'varsiwant': self.data.get('varsiwant'),
+            'write_trajec': self.data.get('write_trajec')
         }
 
     @cached_property
     def parallel_options(self) -> dict[str, Any]:
         return {
-            'n_cores': self.get('n_cores'),
-            'n_nodes': self.get('n_nodes'),
-            'processes_per_node': self.get('processes_per_node'),
-            'slurm': self.get('slurm'),
-            'slurm_options': self.get('slurm_options')
+            'n_cores': self.data.get('n_cores'),
+            'n_nodes': self.data.get('n_nodes'),
+            'processes_per_node': self.data.get('processes_per_node'),
+            'slurm': self.data.get('slurm'),
+            'slurm_options': self.data.get('slurm_options')
         }
 
     @cached_property
     def footprint_options(self) -> dict[str, Any]:
         return {
-            'hnf_plume': self.get('hnf_plume'),
-            'projection': self.get('projection'),
-            'smooth_factor': self.get('smooth_factor'),
-            'time_integrate': self.get('time_integrate'),
-            'xmn': self.get('xmn'),
-            'xmx': self.get('xmx'),
-            'ymn': self.get('ymn'),
-            'ymx': self.get('ymx'),
-            'xres': self.get('xres'),
-            'yres': self.get('yres')
+            'hnf_plume': self.data.get('hnf_plume'),
+            'projection': self.data.get('projection'),
+            'smooth_factor': self.data.get('smooth_factor'),
+            'time_integrate': self.data.get('time_integrate'),
+            'xmn': self.data.get('xmn'),
+            'xmx': self.data.get('xmx'),
+            'ymn': self.data.get('ymn'),
+            'ymx': self.data.get('ymx'),
+            'xres': self.data.get('xres'),
+            'yres': self.data.get('yres')
         }
 
     @cached_property
     def meteorological_options(self) -> dict[str, Any]:
         return {
-            'met_path': self.get('met_path'),
-            'met_file_format': self.get('met_file_format'),
-            'n_hours_per_met_file': self.get('n_hours_per_met_file'),
-            'met_subgrid_buffer': self.get('met_subgrid_buffer'),
-            'met_subgrid_enable': self.get('met_subgrid_enable'),
-            'met_subgrid_levels': self.get('met_subgrid_levels'),
-            'n_met_min': self.get('n_met_min')
+            'met_path': self.data.get('met_path'),
+            'met_file_format': self.data.get('met_file_format'),
+            'n_hours_per_met_file': self.data.get('n_hours_per_met_file'),
+            'met_subgrid_buffer': self.data.get('met_subgrid_buffer'),
+            'met_subgrid_enable': self.data.get('met_subgrid_enable'),
+            'met_subgrid_levels': self.data.get('met_subgrid_levels'),
+            'n_met_min': self.data.get('n_met_min')
         }
 
     @cached_property
     def transport_options(self) -> dict[str, Any]:
         return {
-            'capemin': self.get('capemin'),
-            'cmass': self.get('cmass'),
-            'conage': self.get('conage'),
-            'cpack': self.get('cpack'),
-            'delt': self.get('delt'),
-            'dxf': self.get('dxf'),
-            'dyf': self.get('dyf'),
-            'dzf': self.get('dzf'),
-            'efile': self.get('efile'),
-            'emisshrs': self.get('emisshrs'),
-            'frhmax': self.get('frhmax'),
-            'frhs': self.get('frhs'),
-            'frme': self.get('frme'),
-            'frmr': self.get('frmr'),
-            'frts': self.get('frts'),
-            'frvs': self.get('frvs'),
-            'hscale': self.get('hscale'),
-            'ichem': self.get('ichem'),
-            'idsp': self.get('idsp'),
-            'initd': self.get('initd'),
-            'k10m': self.get('k10m'),
-            'kagl': self.get('kagl'),
-            'kbls': self.get('kbls'),
-            'kblt': self.get('kblt'),
-            'kdef': self.get('kdef'),
-            'khinp': self.get('khinp'),
-            'khmax': self.get('khmax'),
-            'kmix0': self.get('kmix0'),
-            'kmixd': self.get('kmixd'),
-            'kmsl': self.get('kmsl'),
-            'kpuff': self.get('kpuff'),
-            'krand': self.get('krand'),
-            'krnd': self.get('krnd'),
-            'kspl': self.get('kspl'),
-            'kwet': self.get('kwet'),
-            'kzmix': self.get('kzmix'),
-            'maxdim': self.get('maxdim'),
-            'maxpar': self.get('maxpar'),
-            'mgmin': self.get('mgmin'),
-            'mhrs': self.get('mhrs'),
-            'nbptyp': self.get('nbptyp'),
-            'ncycl': self.get('ncycl'),
-            'ndump': self.get('ndump'),
-            'ninit': self.get('ninit'),
-            'nstr': self.get('nstr'),
-            'nturb': self.get('nturb'),
-            'nver': self.get('nver'),
-            'outdt': self.get('outdt'),
-            'p10f': self.get('p10f'),
-            'pinbc': self.get('pinbc'),
-            'pinpf': self.get('pinpf'),
-            'poutf': self.get('poutf'),
-            'qcycle': self.get('qcycle'),
-            'rhb': self.get('rhb'),
-            'rht': self.get('rht'),
-            'splitf': self.get('splitf'),
-            'tkerd': self.get('tkerd'),
-            'tkern': self.get('tkern'),
-            'tlfrac': self.get('tlfrac'),
-            'tout': self.get('tout'),
-            'tratio': self.get('tratio'),
-            'tvmix': self.get('tvmix'),
-            'veght': self.get('veght'),
-            'vscale': self.get('vscale'),
-            'vscaleu': self.get('vscaleu'),
-            'vscales': self.get('vscales'),
-            'w_option': self.get('w_option'),
-            'zicontroltf': self.get('zicontroltf'),
-            'ziscale': self.get('ziscale'),
-            'z_top': self.get('z_top')
+            'capemin': self.data.get('capemin'),
+            'cmass': self.data.get('cmass'),
+            'conage': self.data.get('conage'),
+            'cpack': self.data.get('cpack'),
+            'delt': self.data.get('delt'),
+            'dxf': self.data.get('dxf'),
+            'dyf': self.data.get('dyf'),
+            'dzf': self.data.get('dzf'),
+            'efile': self.data.get('efile'),
+            'emisshrs': self.data.get('emisshrs'),
+            'frhmax': self.data.get('frhmax'),
+            'frhs': self.data.get('frhs'),
+            'frme': self.data.get('frme'),
+            'frmr': self.data.get('frmr'),
+            'frts': self.data.get('frts'),
+            'frvs': self.data.get('frvs'),
+            'hscale': self.data.get('hscale'),
+            'ichem': self.data.get('ichem'),
+            'idsp': self.data.get('idsp'),
+            'initd': self.data.get('initd'),
+            'k10m': self.data.get('k10m'),
+            'kagl': self.data.get('kagl'),
+            'kbls': self.data.get('kbls'),
+            'kblt': self.data.get('kblt'),
+            'kdef': self.data.get('kdef'),
+            'khinp': self.data.get('khinp'),
+            'khmax': self.data.get('khmax'),
+            'kmix0': self.data.get('kmix0'),
+            'kmixd': self.data.get('kmixd'),
+            'kmsl': self.data.get('kmsl'),
+            'kpuff': self.data.get('kpuff'),
+            'krand': self.data.get('krand'),
+            'krnd': self.data.get('krnd'),
+            'kspl': self.data.get('kspl'),
+            'kwet': self.data.get('kwet'),
+            'kzmix': self.data.get('kzmix'),
+            'maxdim': self.data.get('maxdim'),
+            'maxpar': self.data.get('maxpar'),
+            'mgmin': self.data.get('mgmin'),
+            'mhrs': self.data.get('mhrs'),
+            'nbptyp': self.data.get('nbptyp'),
+            'ncycl': self.data.get('ncycl'),
+            'ndump': self.data.get('ndump'),
+            'ninit': self.data.get('ninit'),
+            'nstr': self.data.get('nstr'),
+            'nturb': self.data.get('nturb'),
+            'nver': self.data.get('nver'),
+            'outdt': self.data.get('outdt'),
+            'p10f': self.data.get('p10f'),
+            'pinbc': self.data.get('pinbc'),
+            'pinpf': self.data.get('pinpf'),
+            'poutf': self.data.get('poutf'),
+            'qcycle': self.data.get('qcycle'),
+            'rhb': self.data.get('rhb'),
+            'rht': self.data.get('rht'),
+            'splitf': self.data.get('splitf'),
+            'tkerd': self.data.get('tkerd'),
+            'tkern': self.data.get('tkern'),
+            'tlfrac': self.data.get('tlfrac'),
+            'tout': self.data.get('tout'),
+            'tratio': self.data.get('tratio'),
+            'tvmix': self.data.get('tvmix'),
+            'veght': self.data.get('veght'),
+            'vscale': self.data.get('vscale'),
+            'vscaleu': self.data.get('vscaleu'),
+            'vscales': self.data.get('vscales'),
+            'w_option': self.data.get('w_option'),
+            'zicontroltf': self.data.get('zicontroltf'),
+            'ziscale': self.data.get('ziscale'),
+            'z_top': self.data.get('z_top')
         }
 
     @cached_property
     def error_options(self) -> dict[str, Any]:
         return {
-            'horcoruverr': self.get('horcoruverr'),
-            'siguverr': self.get('siguverr'),
-            'tluverr': self.get('tluverr'),
-            'zcoruverr': self.get('zcoruverr'),
-            'horcorzierr': self.get('horcorzierr'),
-            'sigzierr': self.get('sigzierr'),
-            'tlzierr': self.get('tlzierr')
+            'horcoruverr': self.data.get('horcoruverr'),
+            'siguverr': self.data.get('siguverr'),
+            'tluverr': self.data.get('tluverr'),
+            'zcoruverr': self.data.get('zcoruverr'),
+            'horcorzierr': self.data.get('horcorzierr'),
+            'sigzierr': self.data.get('sigzierr'),
+            'tlzierr': self.data.get('tlzierr')
         }
 
 
@@ -1138,7 +1147,7 @@ class Model:
         self.error_options = error_options or {}
 
     @classmethod
-    def from_run_script(cls, script: str | Path):
+    def from_run_script(cls, script: str | Path | RunScript):
         """
         Initialize STILT model from run script.
 
@@ -1152,7 +1161,7 @@ class Model:
         Model
             STILT model object.
         """
-        run_script = RunScript(script)
+        run_script = script if isinstance(script, RunScript) else RunScript(script)
         return cls(
             project=run_script.stilt_wd,
             output_wd=run_script.output_wd,
