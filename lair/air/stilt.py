@@ -16,6 +16,7 @@ from typing import Any, Literal
 from typing_extensions import \
     Self  # requires python 3.11 to import from typing
 
+import numpy as np
 import pandas as pd
 import pyarrow.parquet as pq
 import pyproj
@@ -35,7 +36,7 @@ from lair.utils.geo import BaseGrid, CRS, clip, write_rio_crs
 # - Footprint plot
 
 
-def stilt_init(project: str | Path, branch='jmineau',
+def stilt_init(project: str | Path, branch: str = 'jmineau',
                repo: str = 'https://github.com/jmineau/stilt'):
     '''
     Initialize STILT project
@@ -681,7 +682,7 @@ class SimulationCollection(UserDict):
         self.successful = {}
 
         # Add simulations to collection
-        if sims:
+        if sims is not None:
             # When subclassing dict, self.update would not call __setitem__
             # If we subclass UserDict, self.update would call __setitem__
             # However, self.data.update does not call __setitem__ for UserDict
@@ -714,6 +715,22 @@ class SimulationCollection(UserDict):
             self.successful[key] = sim
         else:
             self.failed[key] = sim
+
+    def _subset(self, subset: Literal['successful', 'failed'] | None) -> dict[str, Simulation]:
+        """
+        Get subset of simulations.
+
+        Parameters
+        ----------
+        subset : str, optional
+            Subset of simulations to include. The default is None.
+
+        Returns
+        -------
+        dict[str, Simulation]
+            Subset of simulations.
+        """
+        return {'successful': self.successful, 'failed': self.failed}[subset] if subset else self.data
 
     @classmethod
     def from_output_wd(cls, output_wd: str | Path) -> Self:
@@ -793,6 +810,28 @@ class SimulationCollection(UserDict):
         missing = merged[merged['_merge'] == 'left_only']
         return missing.drop(columns='_merge')
 
+    def sample(self, n: int, replace: bool = True, subset: Literal['successful', 'failed'] | None = None) -> Self:
+        """
+        Sample simulations from the collection.
+
+        Parameters
+        ----------
+        n : int
+            Number of simulations to sample.
+        replace : bool, optional
+            Sample with replacement. The default is True.
+        subset : str, optional
+            Subset of simulations to sample from. The default is None.
+
+        Returns
+        -------
+        SimulationCollection
+            Sampled SimulationCollection.
+        """
+        sims = self._subset(subset)
+        sampled_ids = np.random.choice(list(sims.keys()), size=n, replace=replace)
+        return self.__class__({k: sims[k] for k in sampled_ids})
+
     def to_dataframe(self, subset: Literal['successful', 'failed'] | None = None) -> pd.DataFrame:
         """
         Convert simulation metadata to pandas DataFrame.
@@ -807,10 +846,7 @@ class SimulationCollection(UserDict):
         pd.DataFrame
             DataFrame of simulation metadata.
         """
-        if subset is None:
-            sims = self
-        else:
-            sims = {'successful': self.successful, 'failed': self.failed}[subset]
+        sims = self._subset(subset)
 
         data = []
         for sim in sims.values():
