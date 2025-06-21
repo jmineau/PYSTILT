@@ -6,9 +6,10 @@ Inspired by https://github.com/uataq/air-tracker-stiltctl
 
 from collections import UserDict
 import datetime as dt
+from functools import cached_property, partial
+import itertools
 import os
 import subprocess
-from functools import cached_property
 import json
 from pathlib import Path
 import re
@@ -24,7 +25,7 @@ import sparse
 import xarray as xr
 
 from lair.utils.clock import TimeRange
-from lair.utils.geo import BaseGrid, CRS, clip, write_rio_crs
+from lair.utils.geo import BaseGrid, CRS, clip, wrap_lons, write_rio_crs
 
 # TODO:
 # - Support multiple receptors
@@ -184,6 +185,51 @@ class Receptor(metaclass=_UniqueReceptorMeta):
         return hash(self.id)
 
 
+class Config:
+    def __init__(self, simulation_id: str,
+                 receptor: Receptor, namelist: dict, params: dict,
+                 met_files: list[str], error_params: dict | None = None):
+        self.simulation_id = simulation_id
+        self.receptor = receptor
+        self.namelist = namelist
+        self.params = params
+        self.met_files = met_files
+        self.error_params = error_params
+
+    @classmethod
+    def from_json(cls, file: str | Path) -> Self:
+        """
+        Create Config object from JSON file.
+
+        Parameters
+        ----------
+        file : str | Path
+            Path to JSON file.
+
+        Returns
+        -------
+        Config
+            Config object.
+        """
+        simulation_id = Path(file).stem.replace('_config', '')
+        
+        with open(file, 'r') as f:
+            data = json.load(f)
+
+        receptor = Receptor(
+            longitude=data['receptor']['long'],
+            latitude=data['receptor']['lati'],
+            height=data['receptor']['zagl'],
+        )
+        return cls(
+            simulation_id=simulation_id,
+            receptor=receptor,
+            namelist=data['namelist'],
+            params=data['params'],
+            met_files=data['met_files'],
+            error_params=data.get('error_params')
+        )
+
 class Trajectory:
 
     def __init__(self, simulation_id: str,
@@ -201,12 +247,17 @@ class Trajectory:
 
     @classmethod
     def from_parquet(cls, file: str | Path) -> Self:
+        # FIXME this doesnt work for jmineau/stilt output
+        file = Path(file)
         # Extract simulation ID from file name
-        simulation_id = Path(file).stem.replace('_traj', '')
+        simulation_id = file.stem.replace('_trajec', '')
+        
+        # Read config file
+        config_file = file.parent / f'{simulation_id}_config.json'
+        config = Config.from_json(config_file)
 
         # Read particle parquet data
         particles = pd.read_parquet(file)
-        meta = pq.read_metadata(file).metadata
 
         # Check for particle error data
         err_cols = particles.columns.str.endswith('_err')
@@ -215,9 +266,6 @@ class Trajectory:
             particle_error = particles.loc[:, err_cols]
             particles = particles.loc[:, ~err_cols]
 
-            # Extract error parameters
-            err_params = Trajectory._extract_meta(meta, 'err_param')
-        else:
             particle_error = None
             err_params = None
 
@@ -237,32 +285,6 @@ class Trajectory:
 
         return cls(simulation_id, run_time, params, receptor, particles,
                    particle_error, err_params)
-
-    @staticmethod
-    def _extract_meta(meta: dict, group: str
-                      ) -> dict[str, Any]:
-        def parse_val(v: bytes) -> Any:
-            val = v.decode()
-            try:
-                return int(val)
-            except ValueError:
-                try:
-                    return float(val)
-                except ValueError:
-                    val = {
-                        '.TRUE.': True,
-                        '.FALSE.': False,
-                        'NA': None
-                    }[val]
-                    return val
-
-        data = {}
-        for k, v in meta.items():
-            key = k.decode()
-            if key.startswith(group):
-                data[key.split(':')[1]] = parse_val(v)
-
-        return data
 
     def to_xarray(self, error: bool = False) -> xr.Dataset:
         """
@@ -292,6 +314,168 @@ class Trajectory:
         # TODO add receptor as coords?
 
         return ds
+
+    def calc_footprint(self, xmn, xmx, xres, ymn, ymx, yres,
+                       projection='+proj=longlat', smooth_factor=1, time_integrate=False):
+        """
+        Calculate footprint from trajectory data.
+
+        .. note::
+            Converted from Ben Fasoli's STILT R code.
+        """
+
+        wrap_lons_antimeridian = partial(wrap_lons, base=0)
+
+        def make_gauss_kernel(rs: tuple[float, float], sigma: float):
+            '''
+            Replicate Ben's make_gauss_kernel function in Python
+
+            .. note::
+                No need for projection parameter as we don't need the raster package
+            '''
+            if sigma == 0:
+                return np.array([[1]])
+
+            rs = np.array(rs)
+
+            d = 3 * sigma
+            nx = 1 + 2 * int(d / rs[0])
+            ny = 1 + 2 * int(d / rs[1])
+            m = np.zeros((ny, nx))
+
+            half_rs = rs / 2
+            xr = nx * half_rs[0]
+            yr = ny * half_rs[1]
+
+            # Create a grid of coordinates
+            x_coords = np.linspace(-xr + half_rs[0], xr - half_rs[0], nx)
+            y_coords = np.linspace(-yr + half_rs[1], yr - half_rs[1], ny)
+            x_grid, y_grid = np.meshgrid(x_coords, y_coords)
+
+            # Calculate the Gaussian kernel
+            p = x_grid**2 + y_grid**2
+            m = 1 / (2 * np.pi * sigma**2) * np.exp(-p / (2 * sigma**2))
+            w = m / np.sum(m)
+            w[np.isnan(w)] = 1
+            return w
+
+        p = self.particles.copy()
+
+        nparticles = len(p['indx'].unique())
+        time_sign = np.sign(np.median(p['time']))
+        is_longlat = '+proj=longlat' in projection
+
+        if is_longlat:
+            # Determine longitude wrapping behavior for grid extents containing anti
+            # meridian, including partial wraps (e.g. 20deg from 170:-170) and global
+            # coverage (e.g. 360deg from -180:180)
+            xdist = ((180 - xmn) - (-180 - xmx)) % 360
+            if xdist == 0:
+                xdist = 360
+                xmn, xmx = -180, 180
+            elif xmx < xmn or xmx > 180:
+                p['long'] = wrap_lons_antimeridian(p['long'])
+                xmn = wrap_lons_antimeridian(xmn)
+                xmx = wrap_lons_antimeridian(xmx)
+
+            xres_deg = xres
+            yres_deg = yres
+        else:
+            # Convert grid resolution to degrees using pyproj
+            proj = pyproj.Proj(projection)
+            xres_deg, yres_deg = proj(xres, 0, inverse=True)[0], proj(0, yres, inverse=True)[1]
+
+        # Interpolate particle locations during first 100 minutes of simulation if
+        # median distance traveled per time step is larger than grid resolution
+        aptime = p['time'].abs()
+        distances = p[aptime < 100].groupby('indx').agg(
+            dx=pd.NamedAgg(column='long', aggfunc=lambda x: x.diff().abs().median()),
+            dy=pd.NamedAgg(column='lati', aggfunc=lambda x: x.diff().abs().median())
+        ).reset_index()
+        should_interpolate = (distances.dx.median() > xres_deg) or (distances.dy.median() > yres_deg)
+
+        if should_interpolate:
+            times = time_sign * np.concatenate([np.arange(0, 10.1, 0.1),
+                                                np.arange(10.2, 20.2, 0.2),
+                                                np.arange(20.5, 100.5, 0.5)])
+
+            # Preserve total field prior to split-interpolating particle positions
+            foot_0_10_sum = p.foot[aptime <= 10].sum()
+            foot_10_20_sum = p.foot[(aptime > 10) & (aptime <= 20)].sum()
+            foot_20_100_sum = p.foot[(aptime > 20) & (aptime <= 100)].sum()
+
+            # Split particle influence along linear trajectory to sub-minute timescales
+            time_indx_grid = pd.DataFrame(list(itertools.product(times, p['indx'].unique())))
+            p = p.merge(time_indx_grid, on=['indx', 'time'], how='outer')
+            def interpolate_group(group):
+                group = group.sort_values(by='time', ascending=False)
+                group['long'] = group['long'].interpolate(method='linear')
+                group['lati'] = group['lati'].interpolate(method='linear')
+                group['foot'] = group['foot'].interpolate(method='linear')
+                return group
+
+            p = p.groupby('indx').apply(interpolate_group).reset_index(drop=True)
+            p = p.dropna()
+            p['time'] = p['time'].round(1)  # I AM HERE checking on the interpolation
+
+        p['rtime'] = p.groupby('indx')['time'].transform(lambda x: x - time_sign * x.abs().min())
+
+        if not is_longlat:
+            from pyproj import Proj, transform
+            proj = Proj(projection)
+            p['long'], p['lati'] = transform(Proj(init='epsg:4326'), proj, p['long'].values, p['lati'].values)
+            xmn, xmx, ymn, ymx = transform(Proj(init='epsg:4326'), proj, [xmn, xmx], [ymn, ymx])
+
+        glong = np.arange(xmn, xmx, xres)
+        glati = np.arange(ymn, ymx, yres)
+
+        kernel = p.groupby('rtime').agg({'long': 'var', 'lati': 'var', 'lati': 'mean'}).reset_index()
+        kernel['varsum'] = kernel['long'] + kernel['lati']
+        kernel['di'] = kernel['varsum'] ** 0.25
+        kernel['ti'] = (kernel['rtime'].abs() / 1440) ** 0.5
+        kernel['grid_conv'] = np.cos(np.deg2rad(kernel['lati'])) if is_longlat else 1
+        kernel['w'] = smooth_factor * 0.06 * kernel['di'] * kernel['ti'] / kernel['grid_conv']
+
+        max_k = make_gauss_kernel([xres, yres], kernel['w'].max())
+
+        xbuf = max_k.shape[1]
+        ybuf = max_k.shape[0]
+        glong_buf = np.arange(xmn - xbuf * xres, xmx + xbuf * xres, xres)
+        glati_buf = np.arange(ymn - ybuf * yres, ymx + ybuf * yres, yres)
+
+        p = p[(p['foot'] > 0) & (p['long'] >= xmn - xbuf * xres) & (p['long'] < xmx + xbuf * xres) & (p['lati'] >= ymn - ybuf * yres) & (p['lati'] < ymx + ybuf * yres)]
+        if p.empty:
+            return None
+
+        p['loi'] = np.searchsorted(glong_buf, p['long']) - 1
+        p['lai'] = np.searchsorted(glati_buf, p['lati']) - 1
+
+        nx, ny = len(glong_buf), len(glati_buf)
+        grd = np.zeros((ny, nx))
+
+        interval = 3600
+        interval_mins = interval / 60
+        p['layer'] = 0 if time_integrate else np.floor(p['time'] / interval_mins).astype(int)
+
+        layers = p['layer'].unique()
+        foot = np.zeros((ny, nx, len(layers)))
+
+        for i, layer in enumerate(layers):
+            layer_subset = p[p['layer'] == layer]
+            for rtime in layer_subset['rtime'].unique():
+                step = layer_subset[layer_subset['rtime'] == rtime]
+                step_w = kernel.loc[kernel['rtime'].sub(rtime).abs().idxmin(), 'w']
+                k = make_gauss_kernel([xres, yres], step_w)
+                for _, row in step.iterrows():
+                    loi, lai = int(row['loi']), int(row['lai'])
+                    foot[lai:lai+k.shape[0], loi:loi+k.shape[1], i] += row['foot'] * k
+
+        foot = foot[xbuf:-xbuf, ybuf:-ybuf, :] / nparticles
+
+        time_out = self.receptor.run_time if time_integrate else self.receptor.run_time + pd.to_timedelta(layers * interval, unit='s')
+
+        da = xr.DataArray(foot, coords=[glati, glong, time_out], dims=['lat', 'lon', 'time'])
+        return da
 
 
 class Footprint(BaseGrid):
