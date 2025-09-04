@@ -1,44 +1,38 @@
 """
 Stochastic Time-Inverted Lagrangian Transport (STILT) Model.
 
-Inspired by https://github.com/uataq/air-tracker-stiltctl
+A python implementation of the [R-STILT](https://github.com/jmineau/stilt) model framework.
+
+> Inspired by https://github.com/uataq/air-tracker-stiltctl
 """
 
+from abc import ABC, abstractmethod
 from collections import UserDict
 import datetime as dt
-from functools import cached_property, partial
-import itertools
+from functools import cached_property
+import hashlib
 import os
-import subprocess
-import json
 from pathlib import Path
 import re
-from typing import Any, Literal
+import subprocess
+from typing import Any, Callable, ClassVar, Generator, List, Literal, Tuple, Type
 from typing_extensions import \
     Self  # requires python 3.11 to import from typing
 
+import f90nml
 import numpy as np
+import shapely
+from shapely.geometry import Point, LineString, MultiPoint
 import pandas as pd
 import pyarrow.parquet as pq
+from pydantic import BaseModel, field_validator, model_validator, Field
 import pyproj
-import sparse
 import xarray as xr
-
-from lair.utils.clock import TimeRange
-from lair.utils.geo import BaseGrid, CRS, clip, wrap_lons, write_rio_crs
-
-# TODO:
-# - Support multiple receptors
-#   - ColumnReceptor
-# - Run stilt_cli.r from python
-#   - stilt_cli only runs one simulation at a time via simulation step
-#   - want to be able to access slurm, but seems hard to manipulate run_stilt.r
-# - Trajectory gif
-# - Footprint plot
+import yaml
 
 
-def stilt_init(project: str | Path, branch: str = 'jmineau',
-               repo: str = 'https://github.com/jmineau/stilt'):
+def stilt_init(project: str | Path, branch: str | None = None,
+               repo: str | None = None):
     '''
     Initialize STILT project
 
@@ -54,6 +48,12 @@ def stilt_init(project: str | Path, branch: str = 'jmineau',
     repo : str, optional
         URL of STILT project repo. The default is jmineau/stilt.
     '''
+    if branch is None:
+        branch = 'jmineau'
+    if repo is None:
+        repo = 'https://github.com/jmineau/stilt'
+    elif 'uataq' in repo and branch == 'jmineau':
+        raise ValueError("The 'uataq' repo does not have a 'jmineau' branch. ")
 
     # Extract project name and working directory
     project = Path(project)
@@ -81,249 +81,1248 @@ def stilt_init(project: str | Path, branch: str = 'jmineau',
     run_stilt_path.write_text(run_stilt)
 
 
-def fix_sim_links(old_out_dir, new_out_dir):
-    '''
-    Fix sim symlinks if stilt wd was changed
+class Meteorology:
+    """Meteorological data files for STILT simulations."""
+    def __init__(self, path: str | Path, format: str, tres: str | pd.Timedelta):
+        self.path = Path(path)
+        self.format = format
+        self.tres = pd.to_timedelta(tres)
 
-    Parameters
-    ----------
-    old_out_dir : str
-        old out directory where symlinks currently point to and shouldnt.
-    new_out_dir : str
-        new out directory where symlinks should point to.
+        # Initialize available files list
+        self._available_files = []
 
-    Returns
-    -------
-    None.
+    @property
+    def available_files(self) -> list[Path]:
+        if not self._available_files:
+            self._available_files = list(self.path.glob(self.format))
+        return self._available_files
 
-    '''
+    def get_files(self, r_time, n_hours) -> list[Path]:
+        # Implement logic to retrieve meteorological files based on the parameters
+        raise NotImplementedError
 
-    for subdir in ['footprints', 'particles']:
-        for file in os.listdir(os.path.join(new_out_dir, subdir)):
-            filepath = os.path.join(new_out_dir, subdir, file)
-
-            # Check if file is link
-            if os.path.islink(filepath):
-                old_link = os.readlink(filepath)
-
-                # Check if old_link is to file in old_out_dir
-                if old_link.startswith(old_out_dir):
-                    # Get sim_id of simulation
-                    sim_id = os.path.basename(os.path.dirname(old_link))
-
-                    # Remove old_link
-                    os.remove(filepath)
-
-                    # TODO this should be a relative path
-                    # Create new link to new_out_dir
-                    new_link = os.path.join(new_out_dir, 'by-id', sim_id, file)
-                    os.symlink(new_link, filepath)
+    def calc_subgrids(self, files, out_dir, exe_dir,
+                      projection, xmin, xmax, ymin, ymax,
+                      levels=None, buffer=0.1) -> Self:
+        # I think we want to return a new Meteorology instance
+        # with a new path that we can check for files
+        raise NotImplementedError
 
 
-class _UniqueReceptorMeta(type):
-    _receptors = {}
-
-    def __call__(cls, longitude, latitude, height, *args, **kwargs):
-        key = (longitude, latitude, height)
-        if key in cls._receptors:
-            return cls._receptors[key]
-        receptor = super().__call__(*key, *args, **kwargs)
-        cls._receptors[key] = receptor
-        return receptor
-
-class Receptor(metaclass=_UniqueReceptorMeta):
-
-    stilt_mapper = {
-        'lati': 'latitude',
-        'long': 'longitude',
-        'zagl': 'height',
-    }
-
-    def __init__(self, longitude: Any, latitude: Any, height: Any,
-                 name: str | None = None):
-        self.longitude = float(longitude)
-        self.latitude = float(latitude)
-        self.height = float(height)
-        self.name = name
-
-    @classmethod
-    def from_simulation_id(cls, sim_id: str) -> Self:
+class Receptor(ABC):
+    def __init__(self, time, geometry):
         """
-        Extract receptor metadata from simulation ID.
-        Requires simulation ID to be in the format '%Y%m%d%H%M_long_lati_zagl'.
+        A receptor that wraps a geometric object (Point, MultiPoint, etc.)
+        and associates it with a timestamp.
 
         Parameters
         ----------
-        sim_id : str
-            Simulation ID.
+        time : datetime
+            The timestamp associated with the receptor.
+        geometry : shapely.geometry.base.BaseGeometry
+            A geometric object (e.g., Point, MultiPoint).
+        """
+        if time is None:
+            raise ValueError("'time' must be provided for all receptor types.")
+        elif isinstance(time, str):
+            if '-' in time:
+                time = dt.datetime.fromisoformat(time)
+            else:
+                time = dt.datetime.strptime(time, '%Y%m%d%H%M')
+        elif not isinstance(time, dt.datetime):
+            raise TypeError("'time' must be a datetime object.")
+
+        self._time = time
+        self._geometry = geometry
+
+    @property
+    def time(self) -> dt.datetime:
+        """
+        Receptor time (UTC).
+        """
+        return self._time
+
+    @property
+    def geometry(self) -> shapely.Geometry:
+        """
+        Receptor geometry.
+        """
+        return self._geometry
+
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, Receptor):
+            return False
+        return (self.time == other.time and
+                self.geometry == other.geometry)
+
+    @property
+    def timestr(self) -> str:
+        """
+        Get the time as an ISO formatted string.
+
+        Returns
+        -------
+        str
+            Time in 'YYYYMMDDHHMM' format.
+        """
+        return self.time.strftime('%Y%m%d%H%M')
+
+    @property
+    @abstractmethod
+    def id(self) -> str:
+        pass
+
+    @property
+    @abstractmethod
+    def xyz(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """
+        Get the receptor coordinates as separate arrays of (lon, lat, height).
+
+        Returns
+        -------
+        Tuple[np.ndarray, np.ndarray, np.ndarray]
+            Tuple containing arrays of (longitude, latitude, height).
+        """
+        pass
+
+    @property
+    def is_vertical(self) -> bool:
+        raise NotImplementedError
+        # TODO : when a receptor is created from metadata, it is not currently possible
+        # to distinguish a SlantReceptor from a MultiPoint receptor
+        return isinstance(self, (ColumnReceptor, SlantReceptor))
+
+    @staticmethod
+    def build(time, longitude, latitude, height) -> 'Receptor':
+        """
+        Build a receptor object from time, latitude, longitude, and height.
+
+        Parameters
+        ----------
+        time : datetime
+            Timestamp of the receptor.
+        longitude : float | list[float]
+            Longitude(s) of the receptor.
+        latitude : float | list[float]
+            Latitude(s) of the receptor.
+        height : float | list[float]
+            Height(s) above ground level of the receptor.
 
         Returns
         -------
         Receptor
-            Receptor object.
+            The constructed receptor object.
         """
-        parts = sim_id.split('_')
-        assert len(parts) == 4, 'Invalid simulation ID format'
-        run_time, long, lati, zagl = parts
-        return cls(longitude=long, latitude=lati, height=zagl)
+
+        # Ensure inputs are arrays
+        times = np.atleast_1d(time)
+        lats = np.atleast_1d(latitude)
+        lons = np.atleast_1d(longitude)
+        zagls = np.atleast_1d(height)
+
+        n_time, n_lat, n_lon, n_zagl = len(times), len(lats), len(lons), len(zagls)
+
+        # Get receptor time
+        if n_time == 0:
+            raise ValueError("No receptor times provided.")
+        elif n_time > 1:
+            # If all times are not the same, raise an error
+            if not all(t == times[0] for t in times):
+                raise ValueError("All receptor times must be the same.")
+        time = pd.to_datetime(times[0])
+
+        # Case 1: Point Receptor
+        if n_lat == 1 and n_lon == 1 and n_zagl == 1:
+            return PointReceptor(time=time, longitude=lons[0], latitude=lats[0], height=zagls[0])
+
+        # Case 2: Column Receptor with one lat/lon and two zagl
+        if n_lat == 1 and n_lon == 1 and n_zagl == 2:
+            return ColumnReceptor.from_top_and_bottom(time=time, latitude=lats[0],
+                                                      longitude=lons[0],
+                                                      bottom=zagls[0], top=zagls[1])
+
+        # Case 3: Column Receptor with two identical lat/lon and two zagl
+        if n_lat == 2 and n_lon == 2 and n_zagl == 2:
+            if lats[0] == lats[1] and lons[0] == lons[1]:
+                points = zip(lons, lats, zagls)
+                return ColumnReceptor(time=time, points=points)
+
+        # Case 4: MultiPoint Receptor
+        if n_lat == n_lon == n_zagl:
+            points = [(lon, lat, hgt) for lon, lat, hgt in zip(lons, lats, zagls)]
+            return MultiPointReceptor(time=time, points=points)
+
+        # If none of the above cases match, raise an error
+        raise ValueError("Invalid receptor configuration: mismatched lengths of r_lati, r_long, and r_zagl.")
+
+    @staticmethod
+    def load_receptors_from_csv(path: str | Path) -> List['Receptor']:
+        """
+        Load receptors from a CSV file.
+        """
+        # Read the CSV file
+        df = pd.read_csv(path, parse_dates=['time'])
+
+        # Map columns
+        cols = {
+            'latitude': 'lati',
+            'longitude': 'long',
+            'height': 'zagl',
+            'lat': 'lati',
+            'lon': 'long',
+        }
+        df.columns = df.columns.str.lower()
+        df = df.rename(columns=cols)
+
+        # Check for required columns
+        required_cols = ['time', 'lati', 'long', 'zagl']
+        if not all(col in df.columns for col in required_cols):
+            raise ValueError(f"Receptor file must contain columns: {required_cols}")
+
+        # Determine grouping key
+        if 'group' in df.columns:
+            # Group rows and create a single Receptor for each group
+            key = 'group'
+        else:
+            # Treat each row as a separate PointReceptor
+            key = df.index
+
+        # Build receptors
+        receptors = df.groupby(key).apply(lambda x:
+                                          Receptor.build(time=x['time'],
+                                                         longitude=x['long'],
+                                                         latitude=x['lati'],
+                                                         height=x['zagl']),
+                                          include_groups=False).to_list()
+
+        return receptors
+
+
+class PointReceptor(Receptor):
+    """
+    Represents a single receptor at a specific 3D point (latitude, longitude, height) in space and time.
+    """
+
+    def __init__(self, time, longitude, latitude, height):
+        """
+        Parameters
+        ----------
+        time : any
+            Receptor timestamp.
+        longitude : float
+            Receptor longitude.
+        latitude : float
+            Receptor latitude.
+        height : float
+            Receptor height above ground (meters)
+        """
+        geometry = Point(longitude, latitude, height)
+        super().__init__(time=time, geometry=geometry)
+
+    @property
+    def id(self):
+        # Format: YYYYmmddHHMM_lon_lat_height
+        return f"{self.time.strftime('%Y%m%d%H%M')}_{self.longitude}_{self.latitude}_{self.height}"
+
+    @property
+    def longitude(self) -> float:
+        return self.geometry.x
+
+    @property
+    def latitude(self) -> float:
+        return self.geometry.y
+
+    @property
+    def height(self) -> float:
+        return self.geometry.z
+
+    @property
+    def xyz(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        x = np.atleast_1d(self.longitude)
+        y = np.atleast_1d(self.latitude)
+        z = np.atleast_1d(self.height)
+        return x, y, z
+
+    def __iter__(self) -> Generator[float, None, None]:
+        """
+        Allow unpacking of PointReceptor into (lon, lat, height).
+        """
+        yield self.longitude
+        yield self.latitude
+        yield self.height
+
+
+class MultiPointInterface(Receptor):
+
+    Geometry: Type[shapely.Geometry]
+
+    def __init__(self, time, points):
+        """
+        Parameters
+        ----------
+        time : any
+            Timestamp.
+        points : list of tuple | shapely.geometry.MultiPoint
+            List of (lon, lat, height) tuples or shapely MultiPoint.
+        """
+        # Build geometry
+        if isinstance(points, (list, tuple)):
+            geometry = self.Geometry(points)
+        elif isinstance(points, self.Geometry):
+            geometry = points
+        else:
+            raise TypeError(f"'points' must be a list of (lon, lat, height) tuples or a {self.Geometry}.")
+
+        self._points = None  # Initialize points
+
+        super().__init__(time=time, geometry=geometry)
+
+    @property
+    @abstractmethod
+    def points(self) -> List[Point]:
+        pass
+
+    @property
+    def xyz(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        x, y, z = [], [], []
+        for point in self.points:
+            x.append(point.x)
+            y.append(point.y)
+            z.append(point.z)
+        return np.array(x), np.array(y), np.array(z)
+
+    def __iter__(self):
+        yield from self.points
+
+    def __len__(self):
+        return len(self.points)
+
+
+class MultiPointReceptor(MultiPointInterface):
+    """
+    Represents a receptor composed of multiple 3D points, all at the same time.
+    """
+
+    Geometry = MultiPoint
+
+    @property
+    def id(self):
+        # Format: YYYYmmddHHMM_multi_<md5 hash of WKT multipoint>
+        wkt_string = self.geometry.wkt
+        hash_str = hashlib.md5(wkt_string.encode('utf-8')).hexdigest()
+        return f"{self.time.strftime('%Y%m%d%H%M')}_multi_{hash_str}"
+
+    @property
+    def points(self) -> List[Point]:
+        if not self._points:
+            self._points = list(self.geometry.geoms)
+        return self._points
+
+
+class ColumnReceptor(MultiPointInterface):
+    """
+    Represents a vertical column receptor at a single (x, y) location,
+    defined by a bottom and top height.
+    """
+
+    Geometry = LineString
+
+    def __init__(self, time, points):
+        """
+        Represents a vertical column receptor at a single (x, y) location, defined by a bottom and top height.
+
+        Parameters
+        ----------
+        time : any
+            Timestamp.
+        points : list of tuple
+            List of (lon, lat, height) tuples for the bottom and top points.
+        """
+        p1, p2 = points
+
+        lon = p1[0]
+        lat = p1[1]
+        if lon != p2[0]:
+            raise ValueError("For a column receptor, the longitude must be the same for both points.")
+        if lat != p2[1]:
+            raise ValueError("For a column receptor, the latitude must be the same for both points.")
+
+        top = max(p1[2], p2[2])
+        bottom = min(p1[2], p2[2])
+        if not (bottom < top):
+            raise ValueError("'bottom' height must be less than 'top' height.")
+
+        points = [(lon, lat, bottom), (lon, lat, top)]
+
+        self._longitude = lon
+        self._latitude = lat
+        self._top = top
+        self._bottom = bottom
+
+        super().__init__(time=time, points=points)
+
+    @property
+    def id(self):
+        # Format: YYYYmmddHHMM_lon_lat_X
+        return f"{self.timestr}_{self.longitude}_{self.latitude}_X"
+
+    @property
+    def points(self) -> List[Point]:
+        if not self._points:
+            self._points = [Point(*coords) for coords in self.geometry.coords]
+        return self._points
+
+    @property
+    def latitude(self) -> float:
+        return self._latitude
+
+    @property
+    def longitude(self) -> float:
+        return self._longitude
+
+    @property
+    def top(self) -> float:
+        return self._top
+
+    @property
+    def bottom(self) -> float:
+        return self._bottom
+
+    @classmethod
+    def from_top_and_bottom(cls, time, longitude, latitude, top, bottom):
+        points = [(longitude, latitude, bottom), (longitude, latitude, top)]
+        return cls(time=time, points=points)
+
+
+class SlantReceptor(MultiPointReceptor):
+    """
+    Represents a slanted column receptor, defined by multiple points along the slant.
+    """
+    
+    @classmethod
+    def from_top_and_bottom(cls, time, bottom, top, numpar, weights=None):
+        """
+        Parameters
+        ----------
+        time : any
+            Timestamp.
+        bottom : tuple
+            (lon, lat, height) tuple for the bottom of the slant.
+        top : tuple
+            (lon, lat, height) tuple for the top of the slant.
+        numpar : int
+            Number of points along the slant.
+        weights : list of float, optional
+            Weights for each point along the slant. Must be the same length as `numpar`.
+        """
+        raise NotImplementedError("SlantReceptor is not fully implemented yet.")
+
+        if len(bottom) != 3 or len(top) != 3:
+            raise ValueError("'bottom' and 'top' must be (lon, lat, height) tuples.")
+        if numpar < 2:
+            raise ValueError("'numpar' must be at least 2 to define a slant.")
+
+        # Generate intermediate points along the slant
+        # TODO :
+        # - Implement the logic to create slant receptors from the endpoints.
+        #   - There are various difficulties in determining the correct slant path
+        #     including determining the appropriate height above ground.
+        #   - Aaron is working on this. 
+        lon_step = (top[0] - bottom[0]) / (numpar - 1)
+        lat_step = (top[1] - bottom[1]) / (numpar - 1)
+        height_step = (top[2] - bottom[2]) / (numpar - 1)
+        points = [
+            (bottom[0] + i * lon_step, bottom[1] + i * lat_step, bottom[2] + i * height_step)
+            for i in range(numpar)
+        ]
+
+        # Initialize as a MultiPointReceptor
+        super().__init__(time=time, points=points)
+
+
+class Resolution(BaseModel):
+    xres: float
+    yres: float
+
+    def __str__(self) -> str:
+        return f"{self.xres}x{self.yres}"
+
+
+class Control(BaseModel):
+    """HYSPLIT control parameters."""
+    receptor: Receptor
+    emisshrs: float
+    n_hours: int
+    w_option: int
+    z_top: float
+    met_files: List[Path]
+
+    class Config:
+        # Allows Pydantic to work with custom classes like Receptor
+        arbitrary_types_allowed = True
+
+    def to_file(self, path):
+        raise NotImplementedError
+
+    @classmethod
+    def from_path(cls, path):
+        """
+        Build Control object from HYSPLIT control file.
+
+        Returns
+        -------
+        Control
+            Control object with parsed parameters.
+        """
+        path = Path(path).resolve()
+
+        if not path.exists():
+            raise FileNotFoundError('CONTROL file not found. Has the simulation been ran?')
+
+        with path.open() as f:
+            lines = f.readlines()
+
+        # Parse receptor time
+        time = dt.datetime.strptime(lines[0].strip(), '%y %m %d %H %M')
+
+        # Parse receptors
+        n_receptors = int(lines[1].strip())
+        cursor = 2
+        lats, lons, zagls = [], [], []
+        for i in range(cursor, cursor + n_receptors):
+            lat, lon, zagl = map(float, lines[i].strip().split())
+            lats.append(lat)
+            lons.append(lon)
+            zagls.append(zagl)
+
+        # Build receptor from receptors
+        receptor = Receptor.build(time=time, latitude=lats, longitude=lons, height=zagls)
+
+        cursor += n_receptors
+        n_hours = int(lines[cursor].strip())
+        w_option = int(lines[cursor + 1].strip())
+        z_top = float(lines[cursor + 2].strip())
+
+        # Parse met files
+        n_met_files = int(lines[cursor + 3].strip())
+        cursor += 4
+        met_files = []
+        for i in range(n_met_files):
+            dir_index = cursor + (i * 2)
+            file_index = dir_index + 1
+            met_file = Path(lines[dir_index].strip()) / lines[file_index].strip()
+            met_files.append(met_file)
+
+        cursor += 2 * n_met_files
+        emisshrs = float(lines[cursor].strip())
+
+        return cls(
+            receptor=receptor,
+            emisshrs=emisshrs,
+            n_hours=n_hours,
+            w_option=w_option,
+            z_top=z_top,
+            met_files=met_files
+        )
+
+
+class SystemParams(BaseModel):
+    stilt_wd: Path
+    output_wd: Path | None = None
+    lib_loc: Path | int | None = None
+
+    @model_validator(mode="after")
+    def _set_system_defaults(self) -> Self:
+        """Set default values for system parameters."""
+
+        if self.output_wd is None:
+            self.output_wd = self.stilt_wd / "out"
+
+        return self
+
+
+class FootprintParams(BaseModel):
+    hnf_plume: bool = True
+    projection: str = '+proj=longlat'
+    smooth_factor: float = 1.0
+    time_integrate: bool = False
+    xmn: float | None = None
+    xmx: float | None = None
+    xres: float | List[float] | None = None
+    ymn: float | None = None
+    ymx: float | None = None
+    yres: float | List[float] | None = None
+
+    @model_validator(mode="after")
+    def _set_footprint_defaults(self) -> Self:
+        """Set default values for footprint parameters."""
+        if self.yres is None:
+            self.yres = self.xres
+        return self
+
+    @model_validator(mode="after")
+    def _validate_footprint_params(self) -> Self:
+        """Validate footprint parameters."""
+
+        if type(self.xres) != type(self.yres):
+            raise ValueError("xres and yres must both be of the same type.")
+
+        def length(res):
+            if res is None:
+                return 0
+            if isinstance(res, list):
+                return len(res)
+            return 1
+
+        xlen = length(self.xres)
+        ylen = length(self.yres)
+
+        if xlen != ylen:
+            raise ValueError("xres and yres must have the same length.")
+
+        return self
+
+    @property
+    def resolutions(self) -> List[Resolution] | None:
+        """Get the x and y resolutions as a list of tuples."""
+        if self.xres is None:
+            return None
+        if not isinstance(self.xres, list):
+            self.xres = [self.xres]
+            self.yres = [self.yres]
+        return [Resolution(xres=xres, yres=yres) for xres, yres
+                in zip(self.xres, self.yres)]
+
+
+class MetParams(BaseModel):
+    met_path: Path
+    met_file_format: str
+    met_file_tres: str
+    met_subgrid_buffer: float = 0.1
+    met_subgrid_enable: bool = False
+    met_subgrid_levels: int | None = None
+    n_met_min: int = 1
+
+
+class ModelParams(BaseModel):
+    n_hours: int = -24
+    numpar: int = 1000
+    rm_dat: bool = True
+    run_foot: bool = True
+    run_trajec: bool = True
+    simulation_id: str | List[str] | None = None
+    timeout: int = 3600
+    varsiwant: List[Literal[
+        'time', 'indx', 'long', 'lati', 'zagl', 'sigw', 'tlgr', 'zsfc', 'icdx',
+        'temp', 'samt', 'foot', 'shtf', 'tcld', 'dmas', 'dens', 'rhfr', 'sphu',
+        'lcld', 'zloc', 'dswf', 'wout', 'mlht', 'rain', 'crai', 'pres', 'whtf',
+        'temz', 'zfx1'
+    ]] = Field(default_factory=lambda: [
+        'time', 'indx', 'long', 'lati', 'zagl', 'foot', 'mlht', 'pres',
+        'dens', 'samt', 'sigw', 'tlgr'
+    ])
+
+    @model_validator(mode='after')
+    def _validate_run_flags(self) -> Self:
+        """Ensure at least one of `run_trajec` or `run_foot` is True."""
+        if not self.run_trajec and not self.run_foot:
+            raise ValueError("Nothing to do: set `run_trajec` or `run_foot` to True")
+        return self
+
+
+class TransportParams(BaseModel):
+    capemin: float = -1.0
+    cmass: int = 0
+    conage: int = 48
+    cpack: int = 1
+    delt: int = 1
+    dxf: int = 1
+    dyf: int = 1
+    dzf: float = 0.01
+    efile: str = ''
+    emisshrs: float = 0.01
+    frhmax: float = 3.0
+    frhs: float = 1.0
+    frme: float = 0.1
+    frmr: float = 0.0
+    frts: float = 0.1
+    frvs: float = 0.1
+    hscale: int = 10800
+    ichem: int = 8
+    idsp: int = 2
+    initd: int = 0
+    k10m: int = 1
+    kagl: int = 1
+    kbls: int = 1
+    kblt: int = 5
+    kdef: int = 0
+    khinp: int = 0
+    khmax: int = 9999
+    kmix0: int = 250
+    kmixd: int = 3
+    kmsl: int = 0
+    kpuff: int = 0
+    krand: int = 4
+    krnd: int = 6
+    kspl: int = 1
+    kwet: int = 1
+    kzmix: int = 0
+    maxdim: int = 1
+    maxpar: int | None = None
+    mgmin: int = 10
+    mhrs: int = 9999
+    nbptyp: int = 1
+    ncycl: int = 0
+    ndump: int = 0
+    ninit: int = 1
+    nstr: int = 0
+    nturb: int = 0
+    nver: int = 0
+    outdt: int = 0
+    p10f: int = 1
+    pinbc: str = ''
+    pinpf: str = ''
+    poutf: str = ''
+    qcycle: int = 0
+    rhb: float = 80.0
+    rht: float = 60.0
+    splitf: int = 1
+    tkerd: float = 0.18
+    tkern: float = 0.18
+    tlfrac: float = 0.1
+    tout: float = 0.0
+    tratio: float = 0.75
+    tvmix: float = 1.0
+    veght: float = 0.5
+    vscale: int = 200
+    vscaleu: int = 200
+    vscales: int = -1
+    w_option: int = 0
+    wbbh: int = 0
+    wbwf: int = 0
+    wbwr: int = 0
+    wvert: bool = False
+    z_top: float = 25000.0
+    zicontroltf: int = 0
+    ziscale: int | List[int] = 0
+
+
+class ErrorParams(BaseModel):
+    siguverr: float | None = None
+    tluverr: float | None = None
+    zcoruverr: float | None = None
+    horcoruverr: float | None = None
+    sigzierr: float | None = None
+    tlzierr: float | None = None
+    horcorzierr: float | None = None
+
+    XYERR_PARAMS: ClassVar[Tuple[str, ...]] = ('siguverr', 'tluverr', 'zcoruverr', 'horcoruverr')
+    ZIERR_PARAMS: ClassVar[Tuple[str, ...]] = ('sigzierr', 'tlzierr', 'horcorzierr')
+
+    @model_validator(mode='after')
+    def _validate_error_params(self) -> Self:
+        """
+        Validate error parameters to ensure they are either all set or all None
+        """
+        xy_params = self.xyerr_params()
+        zi_params = self.zierr_params()
+
+        for name, params in [("XY", xy_params), ("ZI", zi_params)]:
+            is_na = [pd.isna(v) for v in params.values()]
+            if any(is_na):
+                if not all(is_na):
+                    raise ValueError(f"Inconsistent {name} error parameters: all must be set or all must be None")
+
+        return self
+
+    def xyerr_params(self) -> dict[str, float | None]:
+        """
+        Get the XY error parameters as a dictionary.
+        """
+        return {param: getattr(self, param) for param in self.XYERR_PARAMS}
+
+    def zierr_params(self) -> dict[str, float | None]:
+        """
+        Get the ZI error parameters as a dictionary.
+        """
+        return {param: getattr(self, param) for param in self.ZIERR_PARAMS}
+
+    @property
+    def winderrtf(self) -> int:
+        """
+        Determine the winderrtf flag based on the presence of error parameters.
+
+        Returns
+        -------
+        int
+            Wind error control flag.
+                0 : No error parameters are set
+                1 : ZI error parameters are set
+                2 : XY error parameters are set
+                3 : Both XY and ZI error parameters are set
+        """
+        xyerr = all(self.xyerr_params().values())
+        zierr = all(self.zierr_params().values())
+
+        return 2 * xyerr + zierr
+
+
+class UserFuncParams(BaseModel):
+    before_footprint: Callable | Path | None = None
+
+    @field_validator('before_footprint', mode='before')
+    @classmethod
+    def _load_before_footprint(cls, v: Any) -> Any:
+        """Ensure before_footprint is a callable or None."""
+        if isinstance(v, (str, Path)):
+            # Load the function from the specified path
+            p = Path(v)
+
+            if p.suffix.lower().endswith('r'):
+                # Pass the R path
+                return v
+            elif p.suffix.lower().endswith('py'):
+                # Load the Python function
+                raise NotImplementedError("Loading Python functions from file is not implemented yet.")
+            else:
+                raise ValueError(f"Unsupported file type: {p.suffix}")
+        return v
+
+
+class BaseConfig(ABC, SystemParams, FootprintParams, MetParams, ModelParams,
+                 TransportParams, ErrorParams, UserFuncParams):
+    """
+    STILT Configuration
+
+    This class consolidates all configuration parameters for the STILT model,
+    including system settings, footprint parameters, meteorological data,
+    model specifics, transport settings, error handling, and user-defined
+    functions.
+    """
+
+    class Config:
+        # Allows Pydantic to work with custom classes like Receptor
+        arbitrary_types_allowed = True
+
+    @staticmethod
+    def _load_yaml_params(path: str | Path) -> dict[str, Any]:
+        """
+        Load a YAML config file and return its contents as a dictionary.
+        """
+        with Path(path).open() as f:
+            config = yaml.safe_load(f)
+
+        # Flatten the config dictionary
+        params = {}
+        for key, value in config.items():
+            if isinstance(value, dict):
+                for subkey, subvalue in value.items():
+                    params[f"{subkey}"] = subvalue
+            else:
+                params[key] = value
+
+        return params
+
+    @classmethod
+    def from_path(cls, path: str | Path) -> Self:
+        """
+        Load STILT configuration from a YAML file.
+        """
+        params = cls._load_yaml_params(path)
+        return cls(**params)
+
+    @model_validator(mode='after')
+    def _validate_base_config(self) -> Self:
+        """Perform validation that depends on multiple fields."""
+
+        # Check if there's anything to run
+        if not self.run_trajec and not self.run_foot:
+            raise ValueError("Nothing to do: set run_trajec or run_foot to True")
+
+        # Check for grid parameters if running footprint or subgrid met
+        if self.run_foot or self.met_subgrid_enable:
+            required_grid_params = ['xmn', 'xmx', 'xres', 'ymn', 'ymx']
+            if any(getattr(self, arg) is None for arg in required_grid_params):
+                raise ValueError(
+                    "xmn, xmx, xres, ymn, and ymx must be specified when "
+                    "met_subgrid_enable or run_foot is True"
+                )
+
+        return self
+
+    @model_validator(mode='after')
+    def _set_config_defaults(self) -> Self:
+        """Set default values for configuration parameters."""
+
+        # Set default for maxpar if not provided
+        if self.maxpar is None:
+            self.maxpar = self.numpar
+
+        return self
+
+    def system_params(self) -> dict[str, Any]:
+        return {attr: getattr(self, attr)
+                for attr in SystemParams.model_fields.keys()}
+
+    def footprint_params(self) -> dict[str, Any]:
+        return {attr: getattr(self, attr)
+                for attr in FootprintParams.model_fields.keys()}
+
+    def met_params(self) -> dict[str, Any]:
+        return {attr: getattr(self, attr)
+                for attr in MetParams.model_fields.keys()}
+
+    def model_params(self) -> dict[str, Any]:
+        return {attr: getattr(self, attr)
+                for attr in ModelParams.model_fields.keys()}
+
+    def transport_params(self) -> dict[str, Any]:
+        return {attr: getattr(self, attr)
+                for attr in TransportParams.model_fields.keys()}
+
+    def error_params(self) -> dict[str, Any]:
+        return {attr: getattr(self, attr)
+                for attr in ErrorParams.model_fields.keys()}
+
+    def user_funcs(self) -> dict[str, Any]:
+        return {attr: getattr(self, attr)
+                for attr in UserFuncParams.model_fields.keys()}
+
+
+class SimulationConfig(BaseConfig):
+
+    receptor: Receptor
+
+    @classmethod
+    def from_path(cls, path: str | Path) -> Self:
+        # Open simulation config like a model config
+        model_config = ModelConfig.from_path(path)
+        # Then extract the receptor
+        receptor = model_config.receptors[0]
+        return cls(receptor=receptor, **model_config.model_dump())
+
+    @field_validator('simulation_id', mode='after')
+    @classmethod
+    def _validate_simulation_id(cls, simulation_id) -> str:
+        if not simulation_id:
+            simulation_id = cls.receptor.id
+        elif not isinstance(simulation_id, str):
+            raise TypeError("simulation_id must be a string")
+        return simulation_id
+
+    def to_model_config(self) -> 'ModelConfig':
+        config = self.model_dump()
+        receptor = config.pop('receptor')
+        return ModelConfig(
+            receptors=[receptor],
+            **config
+        )
+
+
+class ModelConfig(BaseConfig):
+
+    receptors: List[Receptor]
+
+    @classmethod
+    def from_path(cls, path: str | Path) -> Self:
+        params = cls._load_yaml_params(path)
+        if 'stilt_wd' not in params:
+            params['stilt_wd'] = Path(path).parent
+        return cls(**params)
+
+    @model_validator(mode='before')
+    @classmethod
+    def _load_receptors(cls, data) -> Self:
+        """
+        Validates and loads receptors. If a path is provided, it loads
+        receptors from the corresponding CSV file.
+        """
+        receptors = data.get('receptors')
+        if isinstance(receptors, (str, Path)):
+            # If the input is a path, load from the file.
+            receptor_path = Path(receptors)
+            if not receptor_path.is_absolute():
+                receptor_path = Path(data.get('stilt_wd')) / receptor_path
+            data['receptors'] = Receptor.load_receptors_from_csv(receptor_path)
+        return data
+
+    @model_validator(mode='after')
+    def _validate_model_config(self) -> Self:
+        """Validate the model configuration."""
+
+        # Check if simulation_id is set
+        if isinstance(self.simulation_id, str) and len(self.receptors) > 1:
+            raise ValueError("Simulation ID must be specified for each receptor or be left blank.")
+
+        return self
+
+    def to_file(self):
+        # Write out receptor information to csv
+        # Write out config
+        raise NotImplementedError
+
+    def build_simulation_configs(self) -> List[SimulationConfig]:
+        """
+        Build a list of SimulationConfig objects, one for each receptor.
+        """
+        raise NotImplementedError
+        config = self.model_dump()
+        receptors = config.pop('receptors')
+        simulation_id = config.pop('simulation_id')
+        if isinstance(simulation_id, list):
+            # TODO
+            pass
+            
+        return [
+            SimulationConfig(receptor=receptor, **config)
+            for receptor in receptors
+        ]
+
+
+class Output(ABC):
+    """Abstract base class for STILT model outputs."""
+    def __init__(self, simulation_id, receptor, data):
+        self.simulation_id = simulation_id
+        self.receptor = receptor
+        self.data = data
+
+    @property
+    @abstractmethod
+    def id(self) -> str:
+        pass
+
+
+class Trajectory(Output):
+    """STILT trajectory."""
+    def __init__(self, simulation_id: str, receptor: Receptor,
+                 data: pd.DataFrame, n_hours: int,
+                 met_files: list[Path], params: dict):
+        super().__init__(simulation_id=simulation_id,
+                         receptor=receptor, data=data)
+        self.n_hours = n_hours
+        self.met_files = met_files
+        self.params = params
 
     @property
     def id(self) -> str:
-        return f'{self.longitude}_{self.latitude}_{self.height}'
+        """Generate the ID for the trajectory."""
+        return f"{self.simulation_id}_{'error' if self.is_error else 'trajec'}"
 
-    def __repr__(self) -> str:
-        return f'Receptor(longitude={self.longitude}, latitude={self.latitude}, height={self.height})'
-
-    def __str__(self) -> str:
-        x = self.name if self.name else self.id
-        return f'Receptor({x})'
-
-    def __eq__(self, other) -> bool:
-        return self.id == other.id
-
-    def __hash__(self) -> int:
-        return hash(self.id)
-
-
-class Config:
-    def __init__(self, simulation_id: str,
-                 receptor: Receptor, namelist: dict, params: dict,
-                 met_files: list[str], error_params: dict | None = None):
-        self.simulation_id = simulation_id
-        self.receptor = receptor
-        self.namelist = namelist
-        self.params = params
-        self.met_files = met_files
-        self.error_params = error_params
+    @property
+    def is_error(self) -> bool:
+        """Determine if the trajectory has errors based on the wind error flag."""
+        winderrtf = self.params.get('winderrtf', 0)
+        return winderrtf > 0
 
     @classmethod
-    def from_json(cls, file: str | Path) -> Self:
+    def calculate(cls, simulation_dir, control, namelist: f90nml.Namelist,
+                  timeout=3600, rm_dat=True,
+                  file=None):
+        raise NotImplementedError
+        simulation_dir = Path(simulation_dir)
+        simulation_id = simulation_dir.name
+
+         # Write files needed for hysplit binary
+        # - CONTROL
+        control.write(simulation_dir / 'CONTROL')
+        # - SETUP.CFG
+        setup = f90nml.Namelist({'setup': namelist})
+        setup.write(simulation_dir / 'SETUP.CFG')
+        # - Optional[ZICONTROL]
+        # TODO
+
+        # Call hysplit binary to calculate trajectory
+        hycs_std = simulation_dir / "hycs_std"
+        # TODO
+        # Exit if not backwards
+
+        # Read PARTICLE_STILT.DAT file
+        data = pd.read_csv(simulation_dir / "PARTICLE_STILT.DAT", skiprows=1)
+        # Delete if selected
+        if rm_dat:
+            # TODO
+            pass
+
+        # Calculate `xhgt` (original release height) for Column/MultiPoint simulations
+
+        # Write data to parquet
+        if file is True:
+            # Use default name
+            file = simulation_dir / f"{simulation_id}_trajec.parquet"
+        if file:
+            data.to_parquet(file)
+
+        return cls(
+            simulation_id=simulation_dir.name,
+            receptor=control.receptor,
+            data=data,
+            n_hours=control.n_hours,
+            met_files=control.met_files,
+            params=namelist,
+        )
+
+    @classmethod
+    def from_path(cls, path):
+        # Read config and control files
+        config = SimulationConfig.from_path(path.parent / 'config.yaml')
+        control = Control.from_path(path.parent / 'CONTROL')
+
+        # Read data from parquet file
+        data = Trajectory.read_parquet(path, r_time=control.receptor.time,
+                                       outdt=config.outdt)
+
+        return cls(
+            simulation_id=config.simulation_id,
+            receptor=config.receptor,
+            data=data,
+            n_hours=config.n_hours,
+            met_files=control.met_files,
+            params=config.transport_params(),
+        )
+
+    @staticmethod
+    def read_parquet(path: str | Path,
+                     r_time: dt.datetime,
+                     outdt: int = 0, **kwargs) -> pd.DataFrame:
+        data = pd.read_parquet(path, **kwargs)
+
+        unit = 'min' if outdt == 0 else str(outdt) + 'min'
+        data['datetime'] =  r_time + pd.to_timedelta(data['time'], unit=unit)
+        return data
+
+
+class Footprint(Output):
+    """STILT footprint."""
+
+    # Maybe in the future we will inherit or replicate BaseGrid functionality
+    # super(BaseGrid).__init__(data=self.data, crs=self.crs)
+    # thinking now that this would be implmented in a subclass to keep this class cleaner
+
+    def __init__(self,
+                 simulation_id: str, receptor: Receptor,
+                 data: xr.DataArray,
+                 xmin: float, xmax: float,
+                 ymin: float, ymax: float,
+                 xres: float, yres: float,
+                 projection: str = '+proj=longlat',
+                 smooth_factor: float = 1.0,
+                 time_integrate: bool = False,
+                 ):
+        super().__init__(simulation_id=simulation_id, receptor=receptor,
+                         data=data)
+        self.xmin = xmin
+        self.xmax = xmax
+        self.ymin = ymin
+        self.ymax = ymax
+        self.xres = xres
+        self.yres = yres
+        self.projection = projection
+        self.smooth_factor = smooth_factor
+        self.time_integrate = time_integrate
+
+    @property
+    def resolution(self) -> str:
+        return f"{self.xres}x{self.yres}"
+
+    @property
+    def id(self) -> str:
+        return f"{self.simulation_id}_{self.resolution}_foot"
+
+    @property
+    def time_range(self) -> tuple[dt.datetime, dt.datetime]:
         """
-        Create Config object from JSON file.
+        Get time range of footprint data.
+
+        Returns
+        -------
+        tuple[pd.Timestamp, pd.Timestamp]
+            Time range of footprint data.
+        """
+        times = sorted(self.data.time.values)
+        start = pd.Timestamp(times[0]).to_pydatetime()
+        stop = pd.Timestamp(times[-1]) + pd.Timedelta(hours=1)
+        return start, stop.to_pydatetime()
+
+    @classmethod
+    def from_path(cls, path: str | Path,
+                  **kwargs) -> Self:
+        """
+        Create Footprint object from netCDF file.
+
+        Parameters
+        ----------
+        path : str | Path
+            Path to netCDF file.
+        **kwargs : dict
+            Additional keyword arguments for xr.open_dataset.
+
+        Returns
+        -------
+        Footprint
+            Footprint object.
+        """
+        # Resolve the file path
+        path = Path(path).resolve()
+
+        # Build the configuration from the file path
+        config = SimulationConfig.from_path(path.parent)
+
+        # Read the netCDF file, parsing the receptor
+        data = cls.read_netcdf(path, parse_receptor=True, **kwargs)
+
+        # Assert that the footprint receptor matches the config receptor
+        if data.attrs['receptor'] != config.receptor:
+            raise ValueError(f"Receptor mismatch: {data.attrs['receptor']} != {config.receptor}")
+
+        # Redefine the attributes of the data
+        attrs = {
+            'time_created': dt.datetime.fromisoformat(data.attrs.pop('time_created'))
+        }
+        data.attrs = attrs
+
+        return cls(simulation_id=config.simulation_id,
+                   receptor=config.receptor,
+                   data=data.foot,
+                   xmin=config.xmn, xmax=config.xmx,
+                   ymin=config.ymn, ymax=config.ymx,
+                   xres=config.xres, yres=config.yres,
+                   projection=config.projection,
+                   smooth_factor=config.smooth_factor,
+                   time_integrate=config.time_integrate
+                   )
+
+    @staticmethod
+    def get_res_from_file(file: str | Path) -> str:
+        """
+        Extract resolution from the file name.
 
         Parameters
         ----------
         file : str | Path
-            Path to JSON file.
+            Path to the footprint netCDF file.
 
         Returns
         -------
-        Config
-            Config object.
+        str
+            resolution.
         """
-        simulation_id = Path(file).stem.replace('_config', '')
-        
-        with open(file, 'r') as f:
-            data = json.load(f)
-
-        receptor = Receptor(
-            longitude=data['receptor']['long'],
-            latitude=data['receptor']['lati'],
-            height=data['receptor']['zagl'],
-        )
-        return cls(
-            simulation_id=simulation_id,
-            receptor=receptor,
-            namelist=data['namelist'],
-            params=data['params'],
-            met_files=data['met_files'],
-            error_params=data.get('error_params')
-        )
-
-class Trajectory:
-
-    def __init__(self, simulation_id: str,
-                 run_time: dt.datetime, params: dict,
-                 receptor: Receptor, particles: pd.DataFrame,
-                 particle_error: pd.DataFrame | None = None,
-                 error_params: dict | None = None):
-        self.simulation_id = simulation_id
-        self.run_time = run_time
-        self.params = params
-        self.receptor = receptor
-        self.particles = particles
-        self.particle_error = particle_error
-        self.error_params = error_params
+        file = Path(file).resolve()
+        simulation_id = Simulation.get_sim_id_from_path(file)
+        pattern = fr'{simulation_id}_?(.*)_foot\.nc$'
+        match = re.search(pattern, file.name)
+        if match:
+            res = match.group(1)
+        else:
+            raise ValueError(f"Unable to extract resolution from file name: {file.name}")
+        return res
 
     @classmethod
-    def from_parquet(cls, file: str | Path) -> Self:
-        # FIXME this doesnt work for jmineau/stilt output
-        file = Path(file)
-        # Extract simulation ID from file name
-        simulation_id = file.stem.replace('_trajec', '')
-        
-        # Read config file
-        config_file = file.parent / f'{simulation_id}_config.json'
-        config = Config.from_json(config_file)
-
-        # Read particle parquet data
-        particles = pd.read_parquet(file)
-
-        # Check for particle error data
-        err_cols = particles.columns.str.endswith('_err')
-        if any(err_cols):
-            # Split error columns from main data
-            particle_error = particles.loc[:, err_cols]
-            particles = particles.loc[:, ~err_cols]
-
-            particle_error = None
-            err_params = None
-
-        # Build receptor object from metadata
-        receptor_meta = Trajectory._extract_meta(meta, 'receptor')
-        receptor = Receptor(
-            latitude = receptor_meta['lati'],
-            longitude = receptor_meta['long'],
-            height = receptor_meta['zagl']
-        )
-
-        # Assign run time as attribute
-        run_time = dt.datetime.fromisoformat(receptor_meta['run_time'])
-
-        # Extract trajectory parameters
-        params = Trajectory._extract_meta(meta, 'param')
-
-        return cls(simulation_id, run_time, params, receptor, particles,
-                   particle_error, err_params)
-
-    def to_xarray(self, error: bool = False) -> xr.Dataset:
-        """
-        Convert trajectory data to xarray.Dataset
-        with time and particle index as coordinates.
-
-        Parameters
-        ----------
-        error : bool
-            Output particle error data if available.
-        """
-        def pivot(df: pd.DataFrame) -> xr.Dataset:
-            ds = xr.Dataset.from_dataframe(
-                df.set_index(['indx', 'time'])
-            )
-            return ds
-
-        if not error:
-            ds = pivot(self.particles)
-            ds.attrs = self.params
-        elif self.particle_error is not None:
-            ds = pivot(self.particle_error)
-            ds.attrs = self.error_params or {}
-        else:
-            raise ValueError('No error data available')
-
-        # TODO add receptor as coords?
-
-        return ds
-
-    def calc_footprint(self, xmn, xmx, xres, ymn, ymx, yres,
-                       projection='+proj=longlat', smooth_factor=1, time_integrate=False):
-        """
-        Calculate footprint from trajectory data.
-
-        .. note::
-            Converted from Ben Fasoli's STILT R code.
-        """
-
+    def calculate(cls, particles: pd.DataFrame, xmin: float, xmax: float,
+                  ymin: float, ymax: float, xres: float, yres: float,
+                  projection: str = '+proj=longlat',
+                  smooth_factor: float = 1.0, time_integrate: bool = False,
+                  file: str | Path | None = None) -> Self:
+        raise NotImplementedError
         wrap_lons_antimeridian = partial(wrap_lons, base=0)
 
         def make_gauss_kernel(rs: tuple[float, float], sigma: float):
@@ -359,7 +1358,7 @@ class Trajectory:
             w[np.isnan(w)] = 1
             return w
 
-        p = self.particles.copy()
+        p = particles.copy()
 
         nparticles = len(p['indx'].unique())
         time_sign = np.sign(np.median(p['time']))
@@ -416,7 +1415,7 @@ class Trajectory:
 
             p = p.groupby('indx').apply(interpolate_group).reset_index(drop=True)
             p = p.dropna()
-            p['time'] = p['time'].round(1)  # I AM HERE checking on the interpolation
+            p['time'] = p['time'].round(1)  # FIX ME I AM HERE checking on the interpolation
 
         p['rtime'] = p.groupby('indx')['time'].transform(lambda x: x - time_sign * x.abs().min())
 
@@ -477,113 +1476,49 @@ class Trajectory:
         da = xr.DataArray(foot, coords=[glati, glong, time_out], dims=['lat', 'lon', 'time'])
         return da
 
-
-class Footprint(BaseGrid):
-    """
-    Footprint object containing STILT simulation footprint data.
-    """
-    def __init__(self, simulation_id: str,
-                 run_time: dt.datetime,
-                 receptor: Receptor,
-                 data: xr.DataArray,
-                 crs: Any = 4326,
-                 time_created: str | None = None):
-        self.simulation_id = simulation_id
-        self.run_time = run_time
-        self.receptor = receptor
-        self.data = data
-        self.crs = CRS(crs)
-        self.time_created = time_created
-
-    def __repr__(self):
-        return f'Footprint({self.simulation_id})'
-
     @staticmethod
-    def _preprocess(ds: xr.Dataset) -> xr.Dataset:
+    def read_netcdf(file: str | Path, parse_receptor: bool = True, **kwargs) -> xr.Dataset:
         """
-        Preprocess footprint data to add run_time and receptor dimensions.
-
-        Parameters
-        ----------
-        ds : xr.Dataset
-            Footprint data.
-
-        Returns
-        -------
-        xr.Dataset
-            Preprocessed footprint data.
-        """
-        # Extract metadata
-        run_time = dt.datetime.fromisoformat(ds.attrs.pop('r_run_time'))
-        receptor = Receptor(longitude=ds.attrs.pop('r_long'),
-                            latitude=ds.attrs.pop('r_lati'),
-                            height=ds.attrs.pop('r_zagl'))
-
-        # Add run_time and receptor dimensions
-        ds = ds.expand_dims(receptor=[receptor.id],
-                            run_time=[run_time])
-
-        return ds
-
-    @classmethod
-    def from_netcdf(cls, file: str | Path, chunks: str | dict | None = None) -> Self:
-        """
-        Create Footprint object from netCDF file.
+        Read netCDF file and return xarray Dataset.
 
         Parameters
         ----------
         file : str | Path
             Path to netCDF file.
-        chunks : str | dict, optional
-            Chunks for dask array. The default is None.
+        parse_receptor : bool, optional
+            Whether to parse receptor coordinates. Default is True.
+        **kwargs : dict
+            Additional keyword arguments for xr.open_dataset.
 
         Returns
         -------
-        Footprint
-            Footprint object.
+        xr.Dataset
+            Footprint data as an xarray Dataset.
         """
-        simulation_id = Path(file).stem.replace('_foot', '')
-        ds = xr.open_dataset(file, chunks=chunks)
-        ds = cls._preprocess(ds)
+        ds = xr.open_dataset(Path(file).resolve(), **kwargs)
 
-        time_created = ds.attrs.pop('time_created')
-        run_time = pd.Timestamp(ds.run_time.item()).to_pydatetime()
-        receptor = Receptor(*ds.receptor.item().split('_'))
-        crs = pyproj.CRS.from_proj4(ds.attrs['crs'])
-        ds = write_rio_crs(ds, crs)
+        if parse_receptor:
+            receptor = Receptor.build(
+                time=ds.attrs.pop('r_time'),
+                longitude=ds.attrs.pop('r_long'),
+                latitude=ds.attrs.pop('r_lati'),
+                height=ds.attrs.pop('r_zagl'),
+            )
+            ds.attrs['receptor'] = receptor
+            # ds = ds.assign_coords({'receptor': receptor.id})
 
-        return cls(simulation_id, run_time=run_time, receptor=receptor,
-                   data=ds.foot, crs=crs, time_created=time_created)
+        return ds
 
-    @property
-    def sparse(self) -> xr.DataArray:
+    @staticmethod
+    def _integrate_over_time(data: xr.DataArray, start: dt.datetime | None = None,
+                             end: dt.datetime | None = None) -> xr.DataArray:
         """
-        Convert footprint to sparse representation.
-
-        Returns
-        -------
-        xr.DataArray
-            Sparse footprint.
+        Integrate footprint dataarray over time.
         """
-        sparse_arr = sparse.COO.from_numpy(self.data.values)
-        return xr.DataArray(sparse_arr, name='foot', coords=self.data.coords,
-                            dims=self.data.dims, attrs=self.data.attrs)
+        return data.sel(time=slice(start, end)).sum('time')
 
-    @property
-    def time_range(self) -> TimeRange:
-        """
-        Get time range of footprint data.
-
-        Returns
-        -------
-        TimeRange
-            Time range of footprint data.
-        """
-        times = sorted(self.data.time.values)
-        return TimeRange(start=times[0], stop=pd.Timestamp(times[-1]) + pd.Timedelta(hours=1))
-
-    def time_integrate(self, start: dt.datetime | None = None,
-                       end: dt.datetime | None = None) -> xr.DataArray:
+    def integrate_over_time(self, start: dt.datetime | None = None,
+                            end: dt.datetime | None = None) -> xr.DataArray:
         """
         Integrate footprint over time.
 
@@ -599,44 +1534,79 @@ class Footprint(BaseGrid):
         xr.DataArray
             Time-integrated footprint
         """
-        return self.data.sel(time=slice(start, end)).sum('time')
+        return self._integrate_over_time(self.data, start=start, end=end)
 
-    def clip_to_grid(self, grid, buffer: float = 0.1):
+
+class FootprintCollection(UserDict):
+    def __init__(self, simulation):
+        print('building footprint collection')
+        super().__init__()
+        self.simulation = simulation
+
+        self.resolutions = simulation.config.resolutions
+
+    def __getitem__(self, key):
+        # If the footprint for the given resolution is not loaded, load it
+        print('getting footprint for', key)
+        if key not in self.data:
+            print('loading footprint for', key)
+            path = self.simulation.paths['footprints'].get(key)
+            if path and path.exists():
+                print('found footprint file at', path)
+                xres, yres = map(float, key.split('x'))
+                self.data[key] = Footprint(
+                    simulation_id=self.simulation.id,
+                    receptor=self.simulation.receptor,
+                    data=Footprint.read_netcdf(path, parse_receptor=False).foot,
+                    xmin=self.simulation.config.xmn, xmax=self.simulation.config.xmx,
+                    ymin=self.simulation.config.ymn, ymax=self.simulation.config.ymx,
+                    xres=xres, yres=yres,
+                    projection=self.simulation.config.projection,
+                    smooth_factor=self.simulation.config.smooth_factor,
+                    time_integrate=self.simulation.config.time_integrate,
+                )
+            else:
+                raise KeyError(f"Footprint for resolution '{key}' not found.")
+        return self.data[key]
+
+    def get(self, resolution: str) -> Footprint | None:
         """
-        Clip footprint to grid extent with buffer.
+        Get footprint for a specific resolution.
 
         Parameters
         ----------
-        grid : BaseGrid
-            Grid to clip footprint to. Must have dims 'lon' and 'lat'.
-        buffer : float, optional
-            Buffer around grid extent as a fraction of grid size. The default is 0.1.
+        resolution : str
+            Resolution string (e.g., '1x1').
 
         Returns
         -------
-        Footprint
-            Clipped footprint.
+        Footprint | None
+            Footprint object if available, else None.
         """
-        # Determine bounds to clip footprints from out_grid
-        # Clip footprints to slightly larger than the output grid
-        xmin, xmax = grid['lon'].min(), grid['lon'].max()
-        ymin, ymax = grid['lat'].min(), grid['lat'].max()
+        try:
+            return self[resolution]
+        except KeyError:
+            return None
 
-        # Calculate buffer
-        xbuffer = (xmax - xmin) * buffer
-        ybuffer = (ymax - ymin) * buffer
-
-        # Build clip bbox
-        bbox = [xmin - xbuffer, ymin - ybuffer,
-                xmax + xbuffer, ymax + ybuffer]
-
-        clipped = clip(self.data, bbox=bbox, crs=self.crs)
-
-        return Footprint(simulation_id=self.simulation_id, run_time=self.run_time, receptor=self.receptor,
-                         data=clipped, crs=self.crs, time_created=self.time_created)
-
+    def __repr__(self):
+        return f"FootprintCollection(simulation_id={self.simulation.id}, resolutions={self.resolutions})"
 
 class Simulation:
+
+    PATHS = {
+        'config': 'config.yaml',
+        'control': 'CONTROL',
+        'error': 'error.parquet',
+        'footprints': '*_foot.nc',
+        'log': 'stilt.log',
+        'params': 'CONC.CFG',
+        'receptors': 'receptors.csv',
+        'setup': 'SETUP.CFG',
+        'trajectory': 'trajec.parquet',
+        'winderr': 'WINDERR',
+        'zicontrol': 'ZICONTROL',
+        'zierr': 'ZIERR',
+    }
 
     FAILURE_PHRASES = {
         'Insufficient number of meteorological files found': 'MISSING_MET_FILES',
@@ -645,89 +1615,82 @@ class Simulation:
         'Fortran runtime error': 'FORTRAN_RUNTIME_ERROR',
     }
 
-    def __init__(self, path: str | Path):
-        self.path = Path(path)
-        assert self.path.exists(), f'Simulation not found: {self.path}'
-        self._path = self.path.resolve()
+    def __init__(self,
+                 config: SimulationConfig,
+                 ):
+        self.config = config
 
-        # Extract simulation ID from path
-        by_id_dir = Simulation.find_by_id_directory(self._path)
-        self.id = str(self._path.relative_to(by_id_dir))
+        self.id = self.config.simulation_id
+        self.path = self.config.output_wd / 'by-id' / self.id
+        self.receptor = self.config.receptor
 
-        # Paths to output files
-        self.log_path = self.path / 'stilt.log'
-        self.config_path = self.path / f'{self.id}_config.json'
-        self.traj_path = self.path / f'{self.id}_traj.parquet'
-        self.foot_path = self.path / f'{self.id}_foot.nc'
+        # Lazy loading
+        self._paths = None
+        self._meteorology = None
+        self._met_files = None
+        self._control = None
+        self._setup = None
+        self._trajectory = None
+        self._error = None
+        self._footprints = None
 
-        # Get run time and receptor from simulation ID (requires default sim_id format)
-        self.run_time = dt.datetime.strptime(self.id.split('_')[0], '%Y%m%d%H%M')
-        self.receptor = Receptor.from_simulation_id(self.id)
+    @property
+    def paths(self) -> dict[str, Path | dict[str, Path]]:
+        if self._paths is None:
+            paths = {}
 
-    def __repr__(self) -> str:
-        return f'Simulation({self.id})'
+            paths['config'] = self.path / f"{self.id}_{self.PATHS['config']}"
+            paths['control'] = self.path / self.PATHS['control']
+            paths['error'] = self.path / f"{self.id}_{self.PATHS['error']}"
+            paths['log'] = self.path / self.PATHS['log']
+            paths['params'] = self.path / self.PATHS['params']
+            paths['receptors'] = self.path / self.PATHS['receptors']
+            paths['setup'] = self.path / self.PATHS['setup']
+            paths['trajectory'] = self.path / f"{self.id}_{self.PATHS['trajectory']}"
+            paths['winderr'] = self.path / self.PATHS['winderr']
+            paths['zicontrol'] = self.path / self.PATHS['zicontrol']
+            paths['zierr'] = self.path / self.PATHS['zierr']
 
-    @staticmethod
-    def find_by_id_directory(path: Path) -> Path:
-        for parent in path.resolve().parents:
-            if parent.name == 'by-id':
-                return parent
-        raise FileNotFoundError('by-id directory not found in the path hierarchy')
+            # Build footprint paths based on resolutions
+            paths['footprints'] = {}
+            resolutions = self.config.resolutions
+            if resolutions is not None:
+                for res in resolutions:
+                    paths['footprints'][str(res)] = self.path / f"{self.id}_{res}_foot.nc"
 
-    @cached_property
-    def control(self) -> dict[str, Any]:
+            self._paths = paths
+
+        return self._paths
+
+    @classmethod
+    def from_path(cls, path: str | Path) -> Self:
         """
-        Parse CONTROL file for simulation metadata.
+        Load simulation from a directory containing config.yaml.
+
+        Parameters
+        ----------
+        path : str | Path
+            Path to the simulation directory.
 
         Returns
         -------
-        dict
-            Dictionary of simulation metadata.
+        Self
+            Instance of the simulation.
         """
-        file = self.path / 'CONTROL'
-
-        if not file.exists():
-            raise FileNotFoundError('CONTROL file not found. Has the simulation been ran?')
-
-        with file.open() as f:
-            lines = f.readlines()
-
-        control = {}
-
-        control['run_time'] = dt.datetime.strptime(lines[0].strip(), '%y %m %d %H %M')
-
-        control['receptors'] = []
-        control['n_receptors'] = int(lines[1].strip())
-        cursor = 2
-        for i in range(cursor, cursor + control['n_receptors']):
-            lat, lon, zagl = map(float, lines[i].strip().split())
-            control['receptors'].append(Receptor(latitude=lat, longitude=lon, height=zagl))
-
-        cursor += control['n_receptors']
-        control['n_hours'] = int(lines[cursor].strip())
-        control['w_option'] = int(lines[cursor + 1].strip())
-        control['z_top'] = float(lines[cursor + 2].strip())
-
-        control['met_files'] = []
-        control['n_met_files'] = int(lines[cursor + 3].strip())
-        cursor += 4
-        for i in range(control['n_met_files']):
-            dir_index = cursor + (i * 2)
-            file_index = dir_index + 1
-            met_file = Path(lines[dir_index].strip()) / lines[file_index].strip()
-            control['met_files'].append(met_file)
-
-        cursor += 3 + 2 * control['n_met_files']
-        control['emisshrs'] = float(lines[cursor].strip())
-
-        return control
+        simulation_dir = Path(path)
+        config_path = simulation_dir / f"{simulation_dir.name}_config.yaml"
+        config = SimulationConfig.from_path(config_path)
+        return cls(config=config)
 
     @property
     def is_backward(self) -> bool:
-        return self.control['n_hours'] < 0
+        """
+        Check if the simulation is backward in time.
+        """
+        return self.config.n_hours < 0
 
     @property
-    def time_range(self) -> TimeRange:
+    def time_range(self) -> tuple[dt.datetime, dt.datetime]:
         """
         Get time range of simulation.
 
@@ -736,209 +1699,549 @@ class Simulation:
         TimeRange
             Time range of simulation.
         """
+        r_time = self.receptor.time
         if self.is_backward:
-            start = self.run_time + dt.timedelta(hours=self.control['n_hours'])
-            stop = self.run_time
+            start = r_time + dt.timedelta(hours=self.config.n_hours)
+            stop = r_time
         else:
-            start = self.run_time
-            stop = self.run_time + dt.timedelta(hours=self.control['n_hours'] + 1)
-        return TimeRange(start=start, stop=stop)
+            start = r_time
+            stop = r_time + dt.timedelta(hours=self.config.n_hours + 1)
+        return start, stop
 
-    @cached_property
-    def log(self) -> str:
+    @property
+    def status(self) -> str | None:
         """
-        Read STILT log file.
+        Get the status of the simulation.
 
         Returns
         -------
         str
-            STILT log file contents.
+            Status of the simulation.
         """
-        if not self.log_path.exists():
-            raise FileNotFoundError(f'Log file not found: {self.log_path}')
-        return self.log_path.read_text()
+        if not self.path.exists():
+            return None
+
+        if self.config.run_trajec and not self.paths['trajectory'].exists():
+            status = 'FAILURE'
+        elif self.config.run_foot and not all(path.exists()
+                                              for path in self.paths['footprints'].values()):
+            status = 'FAILURE'
+        else:
+            status = 'SUCCESS'
+
+        if status.lower().startswith('fail'):
+            status += f':{Simulation.identify_failure_reason(self.path)}'
+        return status
 
     @property
-    def was_successful(self) -> bool:
+    def meteorology(self) -> Meteorology:
+        if not self._meteorology:
+            self._meteorology = Meteorology(path=self.config.met_path,
+                                            format=self.config.met_file_format,
+                                            tres=self.config.met_file_tres)
+        return self._meteorology
+
+    @property
+    def met_files(self) -> List[Path]:
+        if not self._met_files:
+            if self.paths['control'].exists():
+                control = self.control
+                self._met_files = control.met_files
+            else:
+                # Get meteorology files from the meteorology object
+                self._met_files = self.meteorology.get_files(
+                    r_time=self.receptor.time,
+                    n_hours=self.config.n_hours
+                    )
+                if self.config.met_subgrid_enable:
+                    # Build subgrid meteorology
+                    self._meteorology = self.meteorology.calc_subgrids(
+                        files=self._met_files,
+                        out_dir=self.config.output_wd / 'met',
+                        exe_dir=self.config.stilt_wd / 'exe',
+                        projection=self.config.projection,
+                        xmin=self.config.xmn,
+                        xmax=self.config.xmx,
+                        ymin=self.config.ymn,
+                        ymax=self.config.ymx,
+                        levels=self.config.met_subgrid_levels,
+                        buffer=self.config.met_subgrid_buffer
+                        )
+                    # Get subgrid meteorology files
+                    self._met_files = self._meteorology.get_files(
+                        t_start=self.receptor.time + pd.Timedelta(hours=self.config.n_hours),
+                        n_hours=self.config.n_hours
+                    )
+                if len(self._met_files) < self.config.n_met_min:
+                    raise ValueError(f"Insufficient meteorological files found. "
+                                    f"Found: {len(self._met_files)}, "
+                                    f"Required: {self.config.n_met_min}")
+        return self._met_files
+
+    @property
+    def control(self) -> Control:
+        if not self._control:
+            if self.paths['control'].exists():
+                self._control = Control.from_path(self.paths['control'])
+            else:
+                self._control = Control(receptor=self.receptor,
+                                        n_hours=self.config.n_hours,
+                                        emisshrs=self.config.emisshrs,
+                                        w_option=self.config.w_option,
+                                        z_top=self.config.z_top,
+                                        met_files=self.met_files,
+                                        )
+        return self._control
+
+    @property
+    def setup(self) -> f90nml.Namelist:
+        """Setup namelist."""
+        if not self._setup:
+            if self.paths['setup'].exists():
+                self._setup = f90nml.read(self.paths['setup'])['setup']
+            else:
+                names = ['capemin', 'cmass', 'conage', 'cpack', 'delt', 'dxf',
+                         'dyf', 'dzf', 'efile', 'frhmax', 'frhs', 'frme', 'frmr',
+                         'frts', 'frvs', 'hscale', 'ichem', 'idsp', 'initd',
+                         'k10m', 'kagl', 'kbls', 'kblt', 'kdef', 'khinp',
+                         'khmax', 'kmix0', 'kmixd', 'kmsl', 'kpuff', 'krand',
+                         'krnd', 'kspl', 'kwet', 'kzmix', 'maxdim', 'maxpar',
+                         'mgmin', 'mhrs', 'nbptyp', 'ncycl', 'ndump', 'ninit',
+                         'nstr', 'nturb', 'numpar', 'nver', 'outdt', 'p10f',
+                         'pinbc', 'pinpf', 'poutf', 'qcycle', 'rhb', 'rht',
+                         'splitf', 'tkerd', 'tkern', 'tlfrac', 'tout', 'tratio',
+                         'tvmix', 'varsiwant', 'veght', 'vscale', 'vscaleu',
+                         'vscales', 'wbbh', 'wbwf', 'wbwr', 'winderrtf', 'wvert',
+                         'zicontroltf']
+                namelist = {name: getattr(self, name) for name in names if hasattr(self, name)}
+                self._setup = f90nml.Namelist(namelist)
+        return self._setup
+
+    def write_xyerr(self, path: str | Path) -> None:
         """
-        Check if simulation was successful by checking for the config json.
+        Write the XY error parameters to a file.
+        """
+        raise NotImplementedError
+
+    def write_zierr(self, path: str | Path) -> None:
+        raise NotImplementedError
+
+    def _load_trajectory(self, path: str | Path) -> Trajectory:
+        """Load trajectory from parquet file."""
+        trajectory = Trajectory(
+            simulation_id=self.id,
+            receptor=self.receptor,
+            data=Trajectory.read_parquet(
+                path=path,
+                r_time=self.receptor.time,
+                outdt=self.config.outdt,
+                ),
+            n_hours=self.config.n_hours,
+            params=self.config.transport_params(),
+            met_files=self.met_files,
+        )
+        return trajectory
+
+    @property
+    def trajectory(self) -> Trajectory | None:
+        """STILT particle trajectories."""
+        if not self._trajectory:
+            path = self.paths['trajectory']
+            if path.exists():
+                self._trajectory = self._load_trajectory(path)
+            else:
+                print("Trajectory file not found. Has the simulation been run?")
+            return self._trajectory
+
+    @property
+    def error(self) -> Trajectory | None:
+        """STILT particle error trajectories."""
+        if self.has_error and not self._error:
+            path = self.paths['error']
+            if path.exists():
+                self._error = self._load_trajectory(path)
+        return self._error
+
+    @property
+    def footprints(self) -> FootprintCollection:
+        """
+        Dictionary of STILT footprints.
 
         Returns
         -------
-        bool
-            True if simulation was successful, False otherwise.
+        FootprintCollection
+            Collection of Footprint objects.
         """
-        # TODO: is this the best way to do this?
-        # Other ideas include checking the stilt.log for keywords like 'STOP' or 'ERROR'
-        return self.config_path.exists()
+        if self._footprints is None:
+            self._footprints = FootprintCollection(simulation=self)
+        return self._footprints
 
-    def identify_failure_reason(self):
+    @property
+    def footprint(self) -> Footprint | None:
+        """
+        Load the default footprint from the simulation directory.
+
+        The default footprint is the one with the highest resolution
+        if multiple footprints exist, otherwise it is the only footprint.
+
+        Returns
+        -------
+        Footprint
+            Footprint object.
+        """
+        resolutions = self.config.resolutions
+        if resolutions is None:
+            return None
+        num_foots = len(resolutions)
+
+        def area(resolution):
+            xres, yres = map(float, resolution.split('x'))
+            return xres * yres
+
+        if num_foots == 0:
+            return None
+        elif num_foots == 1:
+            return self.footprints[resolutions[0]]
+        else:
+            # Find the resolution with the smallest area (xres * yres)
+            smallest = min(resolutions, key=area)
+            return self.footprints[smallest]
+
+    @cached_property  # TODO i think i need to set a setter
+    def log(self) -> str:
+        """
+        STILT log.
+
+        Returns
+        -------
+        str
+            STILT log contents.
+        """
+        if self.path:
+            log_file = self.path / 'stilt.log'
+            if not log_file.exists():
+                raise FileNotFoundError(f'Log file not found: {log_file}')
+            log = log_file.read_text()
+        else:
+            log = ''
+        return log
+
+    @staticmethod
+    def identify_failure_reason(path: str | Path) -> str:
         """
         Identify reason for simulation failure.
+
+        Parameters
+        ----------
+        path : str | Path
+            Path to the STILT simulation directory.
 
         Returns
         -------
         str
             Reason for simulation failure.
         """
-        if self.was_successful:
+        path = Path(path)
+        if not Simulation.is_sim_path(path):
+            raise ValueError(f"Path '{path}' is not a valid STILT simulation directory.")
+
+        if not path.glob('*config.json'):
             raise ValueError('Simulation was successful')
 
         # Check log file for errors
-        if self.log == '':
+        if not (path / 'stilt.log').exists():
             return 'EMPTY_LOG'
-        for phrase, reason in self.FAILURE_PHRASES.items():
-            if phrase in self.log:
+        for phrase, reason in Simulation.FAILURE_PHRASES.items():
+            if phrase in (path / 'stilt.log').read_text():
                 return reason
         return 'UNKNOWN'
 
-    @cached_property
-    def config(self) -> dict[str, Any]:
-        if not self.was_successful:
-            raise FileNotFoundError(f'Config file not found: {self.config_path}')
-        with self.config_path.open() as config_file:
-            return json.load(config_file)
+    @staticmethod
+    def get_sim_id_from_path(path: str | Path) -> str:
+        """
+        Extract simulation ID from the path.
 
-    @property
-    def has_trajectory(self) -> bool:
-        return self.traj_path.exists()
+        Parameters
+        ----------
+        path : str | Path
+            Path within the STILT output directory.
 
-    @cached_property
-    def trajectory(self) -> Trajectory:
-        if not self.has_trajectory:
-            raise FileNotFoundError(f'Trajectory not found: {self.traj_path}')
-        return Trajectory.from_parquet(self.traj_path)
+        Returns
+        -------
+        str
+            Simulation ID.
+        """
+        path = Path(path).resolve()
+        
+        # anything beyond by-id/ is considered part of the simulation ID (not including the file name)
+        if not 'by-id' in path.parent.parts:
+            raise ValueError("Unable to extract simulation ID from path. 'by-id' directory not found in parent path.")
+        id_index = path.parts.index('by-id') + 1
+        sim_id_parts = path.parts[id_index:]
+        if not sim_id_parts:
+            raise ValueError("No simulation ID found in path.")
+        return os.sep.join(sim_id_parts)
 
-    @property
-    def has_footprint(self) -> bool:
-        return self.foot_path.exists()
+    @staticmethod
+    def is_sim_path(path: str | Path) -> bool:
+        """
+        Check if the path is a valid STILT simulation directory.
 
-    @cached_property
-    def footprint(self) -> Footprint:
-        if not self.has_footprint:
-            raise FileNotFoundError(f'Footprint not found: {self.foot_path}')
-        foot = Footprint.from_netcdf(self.foot_path)
-        assert foot.run_time == self.run_time, f'Footprint run time {foot.run_time} does not match simulation run time {self.run_time}'
-        assert foot.receptor == self.receptor, f'Footprint receptor {foot.receptor} does not match simulation receptor {self.receptor}'
-        return foot
+        Parameters
+        ----------
+        path : str | Path
+            Path to check.
+
+        Returns
+        -------
+        bool
+            True if the path is a valid STILT simulation directory, False otherwise.
+        """
+        path = Path(path)
+        if not path.is_dir():
+            return False
+        exe_exists = (path / 'hycs_std').exists()
+        is_exe_dir = path.name == 'exe'
+        return exe_exists and not is_exe_dir
 
 
-class SimulationCollection(UserDict):
-    """
-    Collection of Simulation objects.
-    Inherits from dict with additional categorization of successful and failed simulations.
+class SimulationCollection:
 
-    Attributes
-    ----------
-    successful : dict[simulation.id, Simulation]
-        Dictionary of successful simulations.
-    failed : dict[simulation.id, Simulation]
-        Dictionary of failed simulations
+    COLUMNS = ['id', 'status', 'r_time', 'r_long', 'r_lati', 'r_zagl',
+               't_start', 't_end', 'path', 'simulation']
 
-    Methods
-    -------
-    from_output_wd(output_wd)
-        Create a SimulationCollection from an output directory.
-    merge(collections)
-        Merge multiple SimulationCollections into one.
-    get_missing(in_csv, include_failed)
-        Find simulations in csv that are missing from output directory.
-    to_dataframe(subset)
-        Convert simulation metadata to pandas DataFrame.
-    to_csv(path, subset)
-        Save simulation metadata to csv.
-    """
-
-    def __init__(self, sims: list[Simulation] | dict[str, Simulation] | None = None):
+    def __init__(self, sims: list[Simulation] | None = None):
         """
         Initialize SimulationCollection.
 
         Parameters
         ----------
-        sims : list[Simulation] | dict[str, Simulation], optional
-            List or dictionary of Simulation objects. The default is None.
-            If a dict, keys must match simulation IDs.
+        sims : list[Simulation]
+            List of Simulation objects to add to the collection.
+            If None, an empty collection is created.
         """
-        super().__init__()  # initialize dict
+        # Initialize an empty DataFrame with the required columns
+        self._df = pd.DataFrame(columns=self.COLUMNS)
 
-        # Define additional dictionaries for successful and failed simulations
-        self.failed = {}
-        self.successful = {}
+        # Add simulations to the collection if provided
+        if sims:
+            rows = [self._prepare_simulation_row(sim) for sim in sims]
+            self._df = pd.DataFrame(rows, columns=self.COLUMNS)
+            self._df.set_index('id', inplace=True)
 
-        # Add simulations to collection
-        if sims is not None:
-            # When subclassing dict, self.update would not call __setitem__
-            # If we subclass UserDict, self.update would call __setitem__
-            # However, self.data.update does not call __setitem__ for UserDict
-            # Therefore we don't want to set on self.data directly, rather just self
-            if isinstance(sims, dict):
-                self.update(sims)
-            else:
-                # Loop through simulations and add to collection
-                for sim in sims:
-                    self[sim.id] = sim
-
-    def __repr__(self) -> str:
-        return f'SimulationCollection({len(self)} simulations)'
-
-    def __setitem__(self, key: str, sim: Simulation) -> None:
+    @staticmethod
+    def _prepare_simulation_row(sim: Simulation) -> dict[str, Any]:
         """
-        Set a simulation in the collection and categorize it.
+        Prepare a dictionary row for a Simulation object.
+
+        Parameters
+        ----------
+        sim : Simulation
+            Simulation object to prepare.
+
+        Returns
+        -------
+        dict[str, Any]
+            Dictionary representation of the Simulation object.
+        """
+        x, y, z = sim.receptor.xyz
+        return {
+            'id': sim.id,
+            'status': sim.status,
+            'r_time': sim.receptor.time,
+            'r_long': x,
+            'r_lati': y,
+            'r_zagl': z,
+            't_start': sim.time_range[0],
+            't_end': sim.time_range[1],
+            'path': sim.path,
+            'simulation': sim,
+        }
+
+    @classmethod
+    def from_paths(cls, paths: List[Path | str]) -> Self:
+        """
+        Create SimulationCollection from a list of simulation paths.
+
+        Parameters
+        ----------
+        paths : list[Path | str]
+            List of paths to STILT simulation directories or files.
+
+        Returns
+        -------
+        SimulationCollection
+            Collection of Simulations.
+        """
+        sims = []
+        for path in paths:
+            path = Path(path)
+            if not Simulation.is_sim_path(path):
+                raise ValueError(f"Path '{path}' is not a valid STILT simulation directory.")
+            try:
+                sim = Simulation.from_path(path)
+            except Exception as e:
+                failure_reason = Simulation.identify_failure_reason(path)
+                sim = {
+                    'id': Simulation.get_sim_id_from_path(path=path),
+                    'status': f'FAILURE:{failure_reason}',
+                    'path': path,
+                }
+            sims.append(sim)
+        return cls(sims=sims)
+
+    @property
+    def df(self) -> pd.DataFrame:
+        """
+        Get the underlying DataFrame.
+
+        Returns
+        -------
+        pd.DataFrame
+            DataFrame containing simulation metadata.
+        """
+        return self._df
+
+    def __getitem__(self, key: str) -> Simulation:
+        """
+        Get a Simulation object by its ID.
 
         Parameters
         ----------
         key : str
             Simulation ID.
-        sim : Simulation
-            Simulation object.
-        """
-        assert key == sim.id, f'Key {key} does not match simulation ID {sim.id}'
-        assert isinstance(sim, Simulation), f'Value must be a Simulation object'
-        super().__setitem__(key, sim)
-        if sim.was_successful:
-            self.successful[key] = sim
-        else:
-            self.failed[key] = sim
-
-    def _subset(self, subset: Literal['successful', 'failed'] | None) -> dict[str, Simulation]:
-        """
-        Get subset of simulations.
-
-        Parameters
-        ----------
-        subset : str, optional
-            Subset of simulations to include. The default is None.
 
         Returns
         -------
-        dict[str, Simulation]
-            Subset of simulations.
+        Simulation
+            Simulation object corresponding to the given ID.
         """
-        return {'successful': self.successful, 'failed': self.failed}[subset] if subset else self.data
+        if key not in self._df.index:
+            raise KeyError(f"Simulation with ID '{key}' not found in the collection.")
+        return self._df.loc[key, 'simulation']
 
-    @classmethod
-    def from_output_wd(cls, output_wd: str | Path) -> Self:
+    def __setitem__(self, key: str, value: Simulation) -> None:
         """
-        Create a SimulationCollection from an output directory.
+        Set a Simulation object by its ID.
 
         Parameters
         ----------
-        output_wd : str | Path
-            Path to output directory.
+        key : str
+            Simulation ID.
+        value : Simulation
+            Simulation object to set.
+        """
+        if not isinstance(value, Simulation):
+            raise TypeError(f"Value must be a Simulation object, got {type(value)}.")
+        row = self._prepare_simulation_row(value)
+        if key in self._df.index:
+            raise KeyError(f"Simulation with ID '{key}' already exists in the collection.")
+        self._df.loc[key] = row
+
+    def __contains__(self, key: str) -> bool:
+        """
+        Check if a Simulation ID exists in the collection.
+
+        Parameters
+        ----------
+        key : str
+            Simulation ID.
 
         Returns
         -------
-        SimulationCollection
-            SimulationCollection object.
+        bool
+            True if the Simulation ID exists, False otherwise.
         """
-        sims = {}
-        by_id_dir = Path(output_wd) / 'by-id'
-        for root, dirs, files in os.walk(by_id_dir, followlinks=True):
-            # Identify simulations using 'stilt.log' files
-            if 'stilt.log' in files:
-                sim = Simulation(root)
-                sims[sim.id] = sim
-        return cls(sims)
+        return key in self._df.index
+
+    def __iter__(self):
+        """
+        Iterate over Simulations in the collection.
+
+        Returns
+        -------
+        Iterator[Simulation]
+            Iterator over Simulation objects.
+        """
+        return iter(self._df.simulation)
+
+    def __len__(self) -> int:
+        """
+        Get the number of Simulations in the collection.
+
+        Returns
+        -------
+        int
+            Number of Simulations in the collection.
+        """
+        return len(self._df)
+
+    def __repr__(self) -> str:
+        return repr(self._df)
+
+    def load_trajectories(self) -> None:
+        """
+        Load trajectories for all simulations in the collection.
+
+        Returns
+        -------
+        None
+            The trajectories are loaded into the 'simulation' column of the DataFrame.
+        """
+        self._df['trajectory'] = self._df['simulation'].apply(
+            lambda sim: sim.trajectory if isinstance(sim, Simulation) else None
+        )
+        return None
+
+    def load_footprints(self, resolutions: List[str] | None = None) -> None:
+        """
+        Load footprints for simulations in the collection.
+
+        Parameters
+        ----------
+        resolutions : list[str], optional
+            Resolutions to filter footprints. If None, all footprints are loaded.
+
+        Returns
+        -------
+        None
+            The footprints are loaded into the 'footprints' column of the DataFrame.
+        """
+        if isinstance(resolutions, str):
+            resolutions = [resolutions]
+
+        sims = self._df['simulation']
+
+        # Collect all unique resolutions across simulations
+        if resolutions is None:
+            resolutions = set()
+            for sim in sims:
+                if isinstance(sim, Simulation):
+                    sim_resolutions = sim.config.resolutions
+                    if sim_resolutions is not None:
+                        resolutions.update(map(str, sim.config.resolutions))
+
+        if not resolutions:
+            return None
+
+        # Populate the footprint columns
+        for idx, sim in sims.items():
+            if isinstance(sim, Simulation):
+                for res in resolutions:
+                    col_name = f"footprint_{res}"
+                    footprint = sim.footprints.get(res)
+                    if footprint is not None:
+                        if col_name not in self._df.columns:
+                            # Add columns for each resolution
+                            self._df[col_name] = None
+                        self._df.at[idx, col_name] = footprint
+
+        # If only one resolution exists, rename the column to "footprint"
+        if len(resolutions) == 1:
+            single_res_col = f"footprint_{resolutions[0]}"
+            self._df.rename(columns={single_res_col: "footprint"}, inplace=True)
+
+        return None
 
     @classmethod
     def merge(cls, collections: Self | list[Self]) -> Self:
@@ -955,21 +2258,24 @@ class SimulationCollection(UserDict):
         SimulationCollection
             Merged SimulationCollection.
         """
-        merged_sims = {}
-        if isinstance(collections, cls):
+        if not isinstance(collections, list):
             collections = [collections]
-        for collection in collections:
-            merged_sims.update(collection)
-        return cls(merged_sims)
 
-    def get_missing(self, in_csv: str | Path, include_failed: bool = False) -> pd.DataFrame:
+        merged_sims = pd.concat([collection._df for collection in collections])
+        if merged_sims.index.has_duplicates:
+            raise ValueError("Merged simulations contain duplicate IDs. Ensure unique simulation IDs across collections.")
+        collection = cls()
+        collection._df = merged_sims
+        return collection
+
+    def get_missing(self, in_receptors: str | Path | pd.DataFrame, include_failed: bool = False) -> pd.DataFrame:
         """
-        Find simulations in csv that are missing from output directory.
+        Find simulations in csv that are missing from simulation collection.
 
         Parameters
         ----------
-        in_csv : str | Path
-            Path to csv file containing simulation metadata.
+        in_receptors : str | Path | pd.DataFrame
+            Path to csv file containing receptor configuration or a DataFrame directly.
         include_failed : bool, optional
             Include failed simulations in output. The default is False.
 
@@ -978,474 +2284,93 @@ class SimulationCollection(UserDict):
         pd.DataFrame
             DataFrame of missing simulations.
         """
+        # Use receptor info to match simulations
+        cols = ['time', 'long', 'lati', 'zagl']
+
         # Load dataframes
-        in_df = pd.read_csv(in_csv)
-        sim_df = self.to_dataframe(subset='successful' if include_failed else None)
+        if isinstance(in_receptors, (str, Path)):
+            in_df = pd.read_csv(in_receptors)
+        elif isinstance(in_receptors, pd.DataFrame):
+            in_df = in_receptors.copy()
+        else:
+            raise TypeError("in_receptors must be a path to a csv file or a pandas DataFrame.")
+        in_df['time'] = pd.to_datetime(in_df['time'])
 
-        # Parse run_time as datetime
-        in_df['run_time'] = pd.to_datetime(in_df['run_time'])
-        sim_df['run_time'] = pd.to_datetime(sim_df['run_time'])
+        sim_df = self.df.copy()
+        if include_failed:
+            # Drop failed simulations from the sim df so that when doing an outer join with the input receptors,
+            # they appear in the input receptors but not in the simulation collection
+            sim_df = sim_df[sim_df['status'] == 'SUCCESS']
+        r_cols = {f'r_{col}': col for col in cols}
+        sim_df = sim_df[list(r_cols.keys())].rename(columns=r_cols).reset_index(drop=True)
 
-        # Use run_time & receptor info to match simulations
-        cols = ['run_time', 'long', 'lati', 'zagl']
-
-        # Merge dataframes on run_time & receptor info
-        merged = pd.merge(in_df, sim_df[cols], on=cols, how='outer', indicator=True)
+        # Merge dataframes on receptor info
+        merged = pd.merge(in_df, sim_df, on=cols, how='outer', indicator=True)
         missing = merged[merged['_merge'] == 'left_only']
         return missing.drop(columns='_merge')
 
-    def sample(self, n: int, replace: bool = True, subset: Literal['successful', 'failed'] | None = None) -> Self:
-        """
-        Sample simulations from the collection.
-
-        Parameters
-        ----------
-        n : int
-            Number of simulations to sample.
-        replace : bool, optional
-            Sample with replacement. The default is True.
-        subset : str, optional
-            Subset of simulations to sample from. The default is None.
-
-        Returns
-        -------
-        SimulationCollection
-            Sampled SimulationCollection.
-        """
-        sims = self._subset(subset)
-        sampled_ids = np.random.choice(list(sims.keys()), size=n, replace=replace)
-        return self.__class__({k: sims[k] for k in sampled_ids})
-
-    def to_dataframe(self, subset: Literal['successful', 'failed'] | None = None) -> pd.DataFrame:
-        """
-        Convert simulation metadata to pandas DataFrame.
-
-        Parameters
-        ----------
-        subset : str, optional
-            Subset of simulations to include. The default is None.
-
-        Returns
-        -------
-        pd.DataFrame
-            DataFrame of simulation metadata.
-        """
-        sims = self._subset(subset)
-
-        data = []
-        for sim in sims.values():
-            data.append({
-                'sim_id': sim.id,
-                'run_time': sim.run_time,
-                'long': sim.receptor.longitude,
-                'lati': sim.receptor.latitude,
-                'zagl': sim.receptor.height
-            })
-        return pd.DataFrame(data).set_index('sim_id').sort_values('run_time')
-
-    def to_csv(self, path: str | Path, subset: Literal['successful', 'failed'] | None = None) -> None:
-        """
-        Save simulation metadata to csv.
-        Contains columns for 'run_time', 'long', 'lati', and 'zagl'.
-
-        Returns
-        -------
-        None
-        """
-        df = self.to_dataframe(subset=subset)
-        df.to_csv(path, index=False)
-        return None
-
-
-class RunScript(UserDict):
-    """
-    STILT run script object containing configuration information.
-    Inherits from dict with additional grouping of configuration options.
-
-    Parameters
-    ----------
-    path : str | Path
-        Path to run script.
-
-    Attributes
-    ----------
-    path : Path
-        Path to run script.
-    model_options : dict
-        Model configuration options.
-    parallel_options : dict
-        Parallelization options.
-    footprint_options : dict
-        Footprint calculation options.
-    meteorological_options : dict
-        Meteorological data options.
-    transport_options : dict
-        Transport & dispersion options.
-    error_options : dict
-        Transport error options.
-    """
-    def __init__(self, path: str | Path):
-        super().__init__()
-        self.path = Path(path)
-        assert self.path.exists(), f'Run script not found: {self.path}'
-        self._parse()
-
-        # Build stilt and output working directories from file.path calls
-        self._stilt_wd = self.data.pop('stilt_wd')
-        self._output_wd = self.data.pop('output_wd')
-        stilt_wd = self._parse_file_path(self._stilt_wd)
-        output_wd = self._parse_file_path(self._output_wd)
-        stilt_wd = stilt_wd.replace('project', self.data['project'])
-        output_wd = output_wd.replace('stilt_wd', stilt_wd)
-        self.stilt_wd = Path(stilt_wd)
-        self.output_wd = Path(output_wd)
-
-    def __repr__(self) -> str:
-        return f'RunScript({self.path})'
-
-    def _parse(self) -> None:
-        """
-        Parse the run script for relevant configuration information.
-
-        Returns
-        -------
-        None
-        """
-        pattern = re.compile(r"(\w+\.?\w+)\s*<-\s*([^#]*)")
-        multiline_var = None
-        multiline_value = []
-
-        with self.path.open() as f:
-            for line in f:
-                if line.startswith('#'):
-                    continue
-
-                if multiline_var:
-                    multiline_value.append(line.strip())
-                    if line.count("(") < line.count(")"):
-                        self.data[multiline_var] = self._parse_value(" ".join(multiline_value))
-                        multiline_var = None
-                        multiline_value = []
-                    continue
-                else:
-                    if line.startswith(' '):
-                        continue
-
-                match = pattern.search(line)
-                if match:
-                    key, value = match.groups()
-                    value = value.strip()
-
-                    # Determine if a variable is multiline by checking if there are more ( than )
-                    if value.count("(") > value.count(")"):
-                        multiline_var = key
-                        multiline_value.append(value)
-                    else:
-                        self.data[key] = self._parse_value(value)
-        return None
-
-    @staticmethod
-    def _parse_value(value: str) -> Any:
-        """
-        Parse a string value into its appropriate type.
-
-        Parameters
-        ----------
-        value : str
-            String value to parse.
-
-        Returns
-        -------
-        Any
-            Parsed value.
-        """
-        value = value.strip()
-        if value in ['NA', 'NULL']:
-            return None
-        if (value.startswith('"') and value.endswith('"')) or (value.startswith("'") and value.endswith("'")):
-            value = value[1:-1]
-        try:
-            return float(value)
-        except ValueError:
-            if value.lower() in ['true', 't']:
-                return True
-            elif value.lower() in ['false', 'f']:
-                return False
-        return re.sub(r'\s+', ' ', value)
-
-    @staticmethod
-    def _parse_file_path(value: str) -> str:
-        """
-        Parse a call to R's file.path() function.
-        
-        Parameters
-        ----------
-        value : str
-            String value to parse.
-
-        Returns
-        -------
-        str
-            Parsed file path.
-        """
-        if 'file.path' not in value:
-            # If not a file.path call, return value
-            return value
-        # Extract file path from file.path() call
-        path = re.search(r'file.path\((.*)\)', value).group(1)
-        # Split the path on commas and strip whitespace and quotes
-        parts = [part.strip().strip('"').strip("'") for part in path.split(',')]
-        # Join the parts into a single path
-        return os.path.join(*parts)
-
-    @cached_property
-    def model_options(self) -> dict[str, Any]:
-        return {
-            'n_hours': self.data.get('n_hours'),
-            'numpar': self.data.get('numpar'),
-            'reset_output_wd': self.data.get('reset_output_wd'),
-            'rm_dat': self.data.get('rm_dat'),
-            'run_foot': self.data.get('run_foot'),
-            'run_trajec': self.data.get('run_trajec'),
-            'simulation_id': self.data.get('simulation_id'),
-            'timeout': self.data.get('timeout'),
-            'varsiwant': self.data.get('varsiwant'),
-            'write_trajec': self.data.get('write_trajec')
-        }
-
-    @cached_property
-    def parallel_options(self) -> dict[str, Any]:
-        return {
-            'n_cores': self.data.get('n_cores'),
-            'n_nodes': self.data.get('n_nodes'),
-            'processes_per_node': self.data.get('processes_per_node'),
-            'slurm': self.data.get('slurm'),
-            'slurm_options': self.data.get('slurm_options')
-        }
-
-    @cached_property
-    def footprint_options(self) -> dict[str, Any]:
-        return {
-            'hnf_plume': self.data.get('hnf_plume'),
-            'projection': self.data.get('projection'),
-            'smooth_factor': self.data.get('smooth_factor'),
-            'time_integrate': self.data.get('time_integrate'),
-            'xmn': self.data.get('xmn'),
-            'xmx': self.data.get('xmx'),
-            'ymn': self.data.get('ymn'),
-            'ymx': self.data.get('ymx'),
-            'xres': self.data.get('xres'),
-            'yres': self.data.get('yres')
-        }
-
-    @cached_property
-    def meteorological_options(self) -> dict[str, Any]:
-        return {
-            'met_path': self.data.get('met_path'),
-            'met_file_format': self.data.get('met_file_format'),
-            'n_hours_per_met_file': self.data.get('n_hours_per_met_file'),
-            'met_subgrid_buffer': self.data.get('met_subgrid_buffer'),
-            'met_subgrid_enable': self.data.get('met_subgrid_enable'),
-            'met_subgrid_levels': self.data.get('met_subgrid_levels'),
-            'n_met_min': self.data.get('n_met_min')
-        }
-
-    @cached_property
-    def transport_options(self) -> dict[str, Any]:
-        return {
-            'capemin': self.data.get('capemin'),
-            'cmass': self.data.get('cmass'),
-            'conage': self.data.get('conage'),
-            'cpack': self.data.get('cpack'),
-            'delt': self.data.get('delt'),
-            'dxf': self.data.get('dxf'),
-            'dyf': self.data.get('dyf'),
-            'dzf': self.data.get('dzf'),
-            'efile': self.data.get('efile'),
-            'emisshrs': self.data.get('emisshrs'),
-            'frhmax': self.data.get('frhmax'),
-            'frhs': self.data.get('frhs'),
-            'frme': self.data.get('frme'),
-            'frmr': self.data.get('frmr'),
-            'frts': self.data.get('frts'),
-            'frvs': self.data.get('frvs'),
-            'hscale': self.data.get('hscale'),
-            'ichem': self.data.get('ichem'),
-            'idsp': self.data.get('idsp'),
-            'initd': self.data.get('initd'),
-            'k10m': self.data.get('k10m'),
-            'kagl': self.data.get('kagl'),
-            'kbls': self.data.get('kbls'),
-            'kblt': self.data.get('kblt'),
-            'kdef': self.data.get('kdef'),
-            'khinp': self.data.get('khinp'),
-            'khmax': self.data.get('khmax'),
-            'kmix0': self.data.get('kmix0'),
-            'kmixd': self.data.get('kmixd'),
-            'kmsl': self.data.get('kmsl'),
-            'kpuff': self.data.get('kpuff'),
-            'krand': self.data.get('krand'),
-            'krnd': self.data.get('krnd'),
-            'kspl': self.data.get('kspl'),
-            'kwet': self.data.get('kwet'),
-            'kzmix': self.data.get('kzmix'),
-            'maxdim': self.data.get('maxdim'),
-            'maxpar': self.data.get('maxpar'),
-            'mgmin': self.data.get('mgmin'),
-            'mhrs': self.data.get('mhrs'),
-            'nbptyp': self.data.get('nbptyp'),
-            'ncycl': self.data.get('ncycl'),
-            'ndump': self.data.get('ndump'),
-            'ninit': self.data.get('ninit'),
-            'nstr': self.data.get('nstr'),
-            'nturb': self.data.get('nturb'),
-            'nver': self.data.get('nver'),
-            'outdt': self.data.get('outdt'),
-            'p10f': self.data.get('p10f'),
-            'pinbc': self.data.get('pinbc'),
-            'pinpf': self.data.get('pinpf'),
-            'poutf': self.data.get('poutf'),
-            'qcycle': self.data.get('qcycle'),
-            'rhb': self.data.get('rhb'),
-            'rht': self.data.get('rht'),
-            'splitf': self.data.get('splitf'),
-            'tkerd': self.data.get('tkerd'),
-            'tkern': self.data.get('tkern'),
-            'tlfrac': self.data.get('tlfrac'),
-            'tout': self.data.get('tout'),
-            'tratio': self.data.get('tratio'),
-            'tvmix': self.data.get('tvmix'),
-            'veght': self.data.get('veght'),
-            'vscale': self.data.get('vscale'),
-            'vscaleu': self.data.get('vscaleu'),
-            'vscales': self.data.get('vscales'),
-            'w_option': self.data.get('w_option'),
-            'zicontroltf': self.data.get('zicontroltf'),
-            'ziscale': self.data.get('ziscale'),
-            'z_top': self.data.get('z_top')
-        }
-
-    @cached_property
-    def error_options(self) -> dict[str, Any]:
-        return {
-            'horcoruverr': self.data.get('horcoruverr'),
-            'siguverr': self.data.get('siguverr'),
-            'tluverr': self.data.get('tluverr'),
-            'zcoruverr': self.data.get('zcoruverr'),
-            'horcorzierr': self.data.get('horcorzierr'),
-            'sigzierr': self.data.get('sigzierr'),
-            'tlzierr': self.data.get('tlzierr')
-        }
-
 
 class Model:
-    """
-    STILT model object containing configuration information and simulation data.
-    """
-    def __init__(self, project: str | Path,
-                 output_wd=None, model_options=None,
-                 parallel_options=None, footprint_options=None,
-                 meteorological_options=None, transport_options=None,
-                 error_options=None):
+    def __init__(self,
+                 project: str | Path,
+                 **kwargs):
+
         # Extract project name and working directory
         project = Path(project)
         self.project = project.name
+
+        if project.exists():
+            # Build model config from existing project
+            config = ModelConfig.from_path(project / 'config.yaml')
+
+        else:  # Create a new project
+            # Build model config
+            config = kwargs.pop('config', None)
+            if config is None:
+                config = self.initialize(project, **kwargs)
+            elif not isinstance(config, ModelConfig):
+                raise TypeError("config must be a ModelConfig instance.")
+
+        self.config = config
+
+        self._simulations = None  # Lazy loading
+
+    @staticmethod
+    def initialize(project: Path, **kwargs) -> ModelConfig:
+        # Determine working directory
         wd = project.parent
         if wd == Path('.'):
             wd = Path.cwd()
-        self.stilt_wd = wd / project
-        self.output_wd = output_wd or self.stilt_wd / 'out'
+        stilt_wd = wd / project
+        del kwargs['stilt_wd']
 
-        # Check if project exists
-        assert self.stilt_wd.exists(), f'Project not found: {self.stilt_wd}'
+        # Call stilt_init
+        repo = kwargs.pop('repo', None)
+        branch = kwargs.pop('branch', None)
+        stilt_init(project=project, branch=branch, repo=repo)
 
-        self.model_options = model_options or {}
-        self.parallel_options = parallel_options or {}
-        self.footprint_options = footprint_options or {}
-        self.meteorological_options = meteorological_options or {}
-        self.transport_options = transport_options or {}
-        self.error_options = error_options or {}
+        # Build config overriding default values with kwargs
+        config = ModelConfig(stilt_wd=stilt_wd, **kwargs)
 
-    @classmethod
-    def from_run_script(cls, script: str | Path | RunScript):
+        return config
+
+    @property
+    def simulations(self) -> SimulationCollection | None:
         """
-        Initialize STILT model from run script.
-
-        Parameters
-        ----------
-        script : str | Path
-            Path to STILT run script.
-
-        Returns
-        -------
-        Model
-            STILT model object.
+        Load all simulations from the output working directory.
         """
-        run_script = script if isinstance(script, RunScript) else RunScript(script)
-        return cls(
-            project=run_script.stilt_wd,
-            output_wd=run_script.output_wd,
-            model_options=run_script.model_options,
-            parallel_options=run_script.parallel_options,
-            footprint_options=run_script.footprint_options,
-            meteorological_options=run_script.meteorological_options,
-            transport_options=run_script.transport_options,
-            error_options=run_script.error_options
-        )
+        if self._simulations is None:
+            output_wd = self.config.output_wd
+            if output_wd.exists():
+                paths = list(self.config.output_wd.glob('by-id/*'))
+                self._simulations = SimulationCollection.from_paths(paths)
+        return self._simulations
 
-    @property
-    def n_hours(self) -> int:
-        return self.model_options.get('n_hours', None)
+    def run(self):
+        # Run the STILT model
+        # TODO Dont have time to implement python calculations
+        self._run_rscript()
 
-    @property
-    def numpar(self) -> int:
-        return self.model_options.get('numpar', None)
-
-    @cached_property
-    def simulations(self) -> SimulationCollection:
-        return SimulationCollection.from_output_wd(self.output_wd)
-
-    @property
-    def run_times(self) -> set[dt.datetime]:
-        return {sim.run_time for sim in self.simulations.successful.values()}
-
-    @property
-    def receptors(self) -> set[Receptor]:
-        return {sim.receptor for sim in self.simulations.successful.values()}
-
-    @property
-    def footprints(self) -> dict[str, Footprint]:
-        return {sim.id: sim.footprint
-                for sim in self.simulations.successful.values()
-                if sim.has_footprint}
-
-    def failed_sims_by_reason(self) -> dict[str, list[Simulation]]:
-        """
-        Group failed simulations by reason for failure.
-
-        Returns
-        -------
-        dict
-            Dictionary of failed simulations grouped by reason.
-        """
-        reasons = {}
-        for sim in self.simulations.failed.values():
-            reason = sim.identify_failure_reason()
-            if reason not in reasons:
-                reasons[reason] = []
-            reasons[reason].append(sim)
-        return reasons
-
-    def __getstate__(self):
-        state = self.__dict__.copy()
-        # Instead of making Simulation & SimulationCollection objects picklable,
-        # we'll just store the simulation paths
-        if 'simulations' in state:
-            state['simulations'] = dict(state['simulations'])
-        return state
-
-    def __setstate__(self, state):
-        self.__dict__.update(state)
-        # Restore the simulations attribute as a SimulationCollection
-        if 'simulations' in state:
-            self.simulations = SimulationCollection(state['simulations'])
+    def _run_rscript(self):
+        # In the meantime, we can call the R execultable
+        raise NotImplementedError
