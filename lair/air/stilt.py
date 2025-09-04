@@ -1539,7 +1539,6 @@ class Footprint(Output):
 
 class FootprintCollection(UserDict):
     def __init__(self, simulation):
-        print('building footprint collection')
         super().__init__()
         self.simulation = simulation
 
@@ -1547,12 +1546,9 @@ class FootprintCollection(UserDict):
 
     def __getitem__(self, key):
         # If the footprint for the given resolution is not loaded, load it
-        print('getting footprint for', key)
         if key not in self.data:
-            print('loading footprint for', key)
             path = self.simulation.paths['footprints'].get(key)
             if path and path.exists():
-                print('found footprint file at', path)
                 xres, yres = map(float, key.split('x'))
                 self.data[key] = Footprint(
                     simulation_id=self.simulation.id,
@@ -2044,6 +2040,10 @@ class SimulationCollection:
         dict[str, Any]
             Dictionary representation of the Simulation object.
         """
+        if isinstance(sim, dict) and 'id' in sim:
+            # Assume dictionaries with 'id' key are failed simulations
+            return sim
+
         x, y, z = sim.receptor.xyz
         return {
             'id': sim.id,
