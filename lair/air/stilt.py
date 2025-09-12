@@ -20,6 +20,7 @@ from typing_extensions import \
     Self  # requires python 3.11 to import from typing
 
 import f90nml
+import matplotlib.pyplot as plt
 import numpy as np
 import shapely
 from shapely.geometry import Point, LineString, MultiPoint
@@ -2348,6 +2349,58 @@ class SimulationCollection:
         merged = pd.merge(in_df, sim_df, on=cols, how='outer', indicator=True)
         missing = merged[merged['_merge'] == 'left_only']
         return missing.drop(columns='_merge')
+
+    def plot_availability(self, ax: plt.Axes | None = None, **kwargs) -> plt.Axes:
+        """
+        Plot availability of simulations over time.
+
+        Parameters
+        ----------
+        ax : plt.Axes, optional
+            Matplotlib Axes to plot on. If None, a new figure and axes are created.
+        **kwargs : dict
+            Additional keyword arguments for the scatter plot.
+
+        Returns
+        -------
+        plt.Axes
+            Matplotlib Axes with the plot.
+        """
+        if ax is None:
+            fig, ax = plt.subplots()
+        else:
+            fig = plt.gcf()
+
+        df = self.df.copy()
+        df['status'] = df['status'].fillna('MISSING')
+
+        # Iterate through each row of the DataFrame to plot the rectangles
+        for index, row in df.iterrows():
+            # Calculate the duration of the event
+            duration = row['t_end'] - row['t_start']
+            
+            # Plot a horizontal bar (gantt bar)
+            ax.barh(
+                y=row['location_id'],       # Y-axis is the location
+                width=duration,             # Width is the time duration
+                left=row['t_start'],        # Start position on the X-axis
+                height=0.6,                 # Height of the bar
+                align='center',
+                color='green' if row['status'] == 'SUCCESS' else 'red',
+                edgecolor='black',
+                alpha=0.6,
+                **kwargs
+            )
+        
+        fig.autofmt_xdate()
+        
+        ax.set(
+            title='Simulation Availability',
+            xlabel='Time',
+            ylabel='Location ID'
+        )
+
+        return ax
 
 
 class Model:
