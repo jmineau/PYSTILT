@@ -2041,8 +2041,10 @@ class Simulation:
 
 class SimulationCollection:
 
-    COLUMNS = ['id', 'status', 'r_time', 'r_long', 'r_lati', 'r_zagl',
-               't_start', 't_end', 'path', 'simulation']
+    COLUMNS = ['id', 'location_id', 'status',
+               'r_time', 'r_long', 'r_lati', 'r_zagl',
+               't_start', 't_end',
+               'path', 'simulation']
 
     def __init__(self, sims: list[Simulation] | None = None):
         """
@@ -2084,6 +2086,7 @@ class SimulationCollection:
 
         return {
             'id': sim.id,
+            'location_id': sim.receptor.location.id,
             'status': sim.status,
             'r_time': sim.receptor.time,
             'r_long': sim.receptor.location._lons,
