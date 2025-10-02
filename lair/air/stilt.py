@@ -1204,7 +1204,7 @@ class Trajectory(Output):
     @classmethod
     def from_path(cls, path):
         # Read config and control files
-        config = SimulationConfig.from_path(path.parent / 'config.yaml')
+        config = SimulationConfig.from_path(path.parent / f'{path.parent.name}_config.yaml')
         control = Control.from_path(path.parent / 'CONTROL')
 
         # Read data from parquet file
@@ -1305,7 +1305,7 @@ class Footprint(Output):
         path = Path(path).resolve()
 
         # Build the configuration from the file path
-        config = SimulationConfig.from_path(path.parent)
+        config = SimulationConfig.from_path(path.parent / f'{path.parent.name}_config.yaml')
 
         # Read the netCDF file, parsing the receptor
         data = cls.read_netcdf(path, parse_receptor=True, **kwargs)
