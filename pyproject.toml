@@ -96,11 +96,10 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
-addopts = "--cov=src/stilt --cov-report=term-missing --cov-report=html --cov-report=xml --import-mode=importlib"
+addopts = "--import-mode=importlib"
 
 [tool.coverage.run]
 source = ["src/stilt"]
-omit = ["*/tests/*", "*/test_*.py"]
 
 [tool.coverage.report]
 exclude_lines = [

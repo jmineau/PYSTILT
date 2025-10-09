@@ -29,15 +29,13 @@ jobs:
 
     - name: Run tests with pytest
       run: |
-        pytest --cov=stilt --cov-report=xml --junitxml=junit.xml -o junit_family=legacy
+        pytest --cov=stilt -junitxml=junit.xml -o junit_family=legacy
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v5
-      if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.10'
+      if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.10'  && !cancelled()
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
-        file: ./coverage.xml
-        fail_ci_if_error: false
 
     - name: Upload test results to Codecov
       if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.10' && !cancelled()
