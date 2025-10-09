@@ -30,6 +30,7 @@ dependencies = [
     "pydantic",
     "pyproj",
     "pyyaml",
+    "typing-extensions",
     "xarray",
 ]
 
