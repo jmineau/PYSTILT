@@ -263,7 +263,7 @@ class SimulationCollection:
         )
         return None
 
-    def load_footprints(self, resolutions: List[str] | None = None) -> None:
+    def load_footprints(self, resolutions: list[str] | None = None) -> None:
         """
         Load footprints for simulations in the collection.
 

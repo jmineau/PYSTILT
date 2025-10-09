@@ -1,7 +1,7 @@
 
 from abc import ABC
 from pathlib import Path
-from typing import Any, Callable, ClassVar, List, Literal, Tuple
+from typing import Any, Callable, ClassVar, Literal
 from typing_extensions import Self
 
 import pandas as pd
@@ -41,10 +41,10 @@ class FootprintParams(BaseModel):
     time_integrate: bool = False
     xmn: float | None = None
     xmx: float | None = None
-    xres: float | List[float] | None = None
+    xres: float | list[float] | None = None
     ymn: float | None = None
     ymx: float | None = None
-    yres: float | List[float] | None = None
+    yres: float | list[float] | None = None
 
     @model_validator(mode="after")
     def _set_footprint_defaults(self) -> Self:
@@ -76,7 +76,7 @@ class FootprintParams(BaseModel):
         return self
 
     @property
-    def resolutions(self) -> List[Resolution] | None:
+    def resolutions(self) -> list[Resolution] | None:
         """Get the x and y resolutions as a list of tuples."""
         if self.xres is None:
             return None
@@ -103,9 +103,9 @@ class ModelParams(BaseModel):
     rm_dat: bool = True
     run_foot: bool = True
     run_trajec: bool = True
-    simulation_id: str | List[str] | None = None
+    simulation_id: str | list[str] | None = None
     timeout: int = 3600
-    varsiwant: List[Literal[
+    varsiwant: list[Literal[
         'time', 'indx', 'long', 'lati', 'zagl', 'sigw', 'tlgr', 'zsfc', 'icdx',
         'temp', 'samt', 'foot', 'shtf', 'tcld', 'dmas', 'dens', 'rhfr', 'sphu',
         'lcld', 'zloc', 'dswf', 'wout', 'mlht', 'rain', 'crai', 'pres', 'whtf',
@@ -197,7 +197,7 @@ class TransportParams(BaseModel):
     wvert: bool = False
     z_top: float = 25000.0
     zicontroltf: int = 0
-    ziscale: int | List[int] = 0
+    ziscale: int | list[int] = 0
 
 
 class ErrorParams(BaseModel):
@@ -209,8 +209,8 @@ class ErrorParams(BaseModel):
     tlzierr: float | None = None
     horcorzierr: float | None = None
 
-    XYERR_PARAMS: ClassVar[Tuple[str, ...]] = ('siguverr', 'tluverr', 'zcoruverr', 'horcoruverr')
-    ZIERR_PARAMS: ClassVar[Tuple[str, ...]] = ('sigzierr', 'tlzierr', 'horcorzierr')
+    XYERR_PARAMS: ClassVar[tuple[str, ...]] = ('siguverr', 'tluverr', 'zcoruverr', 'horcoruverr')
+    ZIERR_PARAMS: ClassVar[tuple[str, ...]] = ('sigzierr', 'tlzierr', 'horcorzierr')
 
     @model_validator(mode='after')
     def _validate_error_params(self) -> Self:
@@ -414,7 +414,7 @@ class SimulationConfig(BaseConfig):
 
 class ModelConfig(BaseConfig):
 
-    receptors: List[Receptor]
+    receptors: list[Receptor]
 
     @classmethod
     def from_path(cls, path: str | Path) -> Self:
@@ -454,7 +454,7 @@ class ModelConfig(BaseConfig):
         # Write out config
         raise NotImplementedError
 
-    def build_simulation_configs(self) -> List[SimulationConfig]:
+    def build_simulation_configs(self) -> list[SimulationConfig]:
         """
         Build a list of SimulationConfig objects, one for each receptor.
         """
