@@ -21,6 +21,17 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
 ]
+dependencies = [
+    "f90nml",
+    "matplotlib",
+    "numpy",
+    "pandas",
+    "pyarrow",
+    "pydantic",
+    "pyproj",
+    "pyyaml",
+    "xarray",
+]
 
 [project.optional-dependencies]
 dev = [

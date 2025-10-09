@@ -75,6 +75,13 @@ autosummary_generate = True
 # Intersphinx settings
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3', None),
+    'matplotlib': ('https://matplotlib.org/stable/', None),
     'numpy': ('https://numpy.org/doc/stable/', None),
     'pandas': ('https://pandas.pydata.org/docs/', None),
+    'pyarrow': ('https://arrow.apache.org/docs/', None),
+    'pydantic': ('https://docs.pydantic.dev/latest/', None),
+    'pyyaml': ('https://pyyaml.org/wiki/PyYAMLDocumentation', None),
+    'pyproj': ('https://pyproj4.github.io/pyproj/stable/', None),
+    'shapely': ('https://shapely.readthedocs.io/en/stable/', None),
+    'xarray': ('https://xarray.pydata.org/en/stable/', None),
 }
