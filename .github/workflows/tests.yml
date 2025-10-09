@@ -29,7 +29,11 @@ jobs:
 
     - name: Run tests with pytest
       run: |
-        pytest --cov=stilt --junitxml=junit.xml -o junit_family=legacy
+        pytest -v
+
+    - name: Run coverage
+      run: |
+        pytest --cov --junitxml=junit.xml -o junit_family=legacy
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v5
