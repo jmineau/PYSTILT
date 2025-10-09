@@ -64,6 +64,8 @@ where = ["src"]
 
 [tool.ruff]
 target-version = "py310"
+
+[tool.ruff.lint]
 select = [
     "E",  # pycodestyle
     "F",  # Pyflakes
@@ -76,11 +78,11 @@ ignore = [
     "E501",  # line too long, handled by formatter
 ]
 
+[tool.ruff.lint.isort]
+known-first-party = ["stilt"]
+
 [tool.ruff.format]
 docstring-code-format = false
-
-[tool.ruff.isort]
-known-first-party = ["stilt"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
