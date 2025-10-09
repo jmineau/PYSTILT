@@ -32,8 +32,9 @@ jobs:
         pytest --cov=stilt --cov-report=xml
 
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v5
       if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.10'
       with:
+        token: ${{ secrets.CODECOV_TOKEN }}
         file: ./coverage.xml
         fail_ci_if_error: false
