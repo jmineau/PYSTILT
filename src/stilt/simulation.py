@@ -8,6 +8,7 @@ from pathlib import Path
 import re
 
 import f90nml
+import numpy as np
 import pandas as pd
 import pyarrow.parquet as pq
 from pydantic import BaseModel
