@@ -110,5 +110,5 @@ exclude_also = [
     "@(abc\\.)?abstractmethod",
     ]
 
-[tool.coverage.run]
-source = ["src/stilt"]
+# [tool.coverage.run]
+# source = ["src/stilt"]
