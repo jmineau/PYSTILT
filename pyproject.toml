@@ -1,0 +1,103 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "stilt"
+version = "2025.10.0"
+description = "A python implementation of the STILT model."
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+    {name = "James Mineau", email = "jameskmineau@gmail.com"}
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.1.0",
+    "pre-commit>=3.0.0",
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "pyright>=1.1.0",
+    "docstr-coverage>=2.0.0",
+]
+docs = [
+    "sphinx>=7.0.0",
+    "pydata-sphinx-theme>=0.14.0",
+    "sphinx-autodoc-typehints>=1.24.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/jmineau/PYSTILT"
+Documentation = "https://jmineau.github.io/PYSTILT/"
+Repository = "https://github.com/jmineau/PYSTILT"
+Issues = "https://github.com/jmineau/PYSTILT/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"stilt" = ["py.typed"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 88
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+]
+ignore = [
+    "E501",  # line too long, handled by formatter
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.ruff.isort]
+known-first-party = ["stilt"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "--cov=src/stilt --cov-report=term-missing --cov-report=html --cov-report=xml"
+
+[tool.pyright]
+include = ["src"]
+exclude = ["**/__pycache__", "**/.venv"]
+pythonVersion = "3.10"
+typeCheckingMode = "basic"
+reportMissingTypeStubs = false
+
+[tool.coverage.run]
+source = ["src/stilt"]
+omit = ["*/tests/*", "*/test_*.py"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
