@@ -17,12 +17,12 @@ PYSTILT
    :target: https://codecov.io/gh/jmineau/PYSTILT
    :alt: Code Coverage
 
-.. image:: https://badge.fury.io/py/stilt.svg
-   :target: https://badge.fury.io/py/stilt
+.. image:: https://badge.fury.io/py/pystilt.svg
+   :target: https://badge.fury.io/py/pystilt
    :alt: PyPI version
 
-.. image:: https://img.shields.io/pypi/pyversions/stilt.svg
-   :target: https://pypi.org/project/stilt/
+.. image:: https://img.shields.io/pypi/pyversions/pystilt.svg
+   :target: https://pypi.org/project/pystilt/
    :alt: Python Version
 
 .. image:: https://img.shields.io/badge/License-MIT-yellow.svg
@@ -31,7 +31,11 @@ PYSTILT
 
 .. image:: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json
    :target: https://github.com/astral-sh/ruff
-   :alt: Ruff
+   :alt: ruff
+
+.. image:: https://img.shields.io/badge/pyright-checked-brightgreen.svg
+   :target: https://github.com/microsoft/pyright
+   :alt: pyright
 
 A python implementation of the STILT model.
 
