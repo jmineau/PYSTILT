@@ -6,22 +6,20 @@ A python implementation of the [R-STILT](https://github.com/jmineau/stilt) model
 > Inspired by https://github.com/uataq/air-tracker-stiltctl
 """
 
-from pathlib import Path
 import subprocess
+from pathlib import Path
 from typing import Any
 
 import matplotlib.pyplot as plt
 import pandas as pd
-from typing_extensions import \
-    Self  # requires python 3.11 to import from typing
+from typing_extensions import Self  # requires python 3.11 to import from typing
 
 from stilt.config import ModelConfig
 from stilt.simulation import Simulation
 
 
-def stilt_init(project: str | Path, branch: str | None = None,
-               repo: str | None = None):
-    '''
+def stilt_init(project: str | Path, branch: str | None = None, repo: str | None = None):
+    """
     Initialize STILT project
 
     Python implementation of Rscript -e "uataq::stilt_init('project')"
@@ -35,46 +33,54 @@ def stilt_init(project: str | Path, branch: str | None = None,
         Branch of STILT project repo. The default is jmineau.
     repo : str, optional
         URL of STILT project repo. The default is jmineau/stilt.
-    '''
+    """
     if branch is None:
-        branch = 'jmineau'
+        branch = "jmineau"
     if repo is None:
-        repo = 'https://github.com/jmineau/stilt'
-    elif 'uataq' in repo and branch == 'jmineau':
+        repo = "https://github.com/jmineau/stilt"
+    elif "uataq" in repo and branch == "jmineau":
         raise ValueError("The 'uataq' repo does not have a 'jmineau' branch. ")
 
     # Extract project name and working directory
     project = Path(project)
     name = project.name
     wd = project.parent
-    if wd == Path('.'):
+    if wd == Path("."):
         wd = Path.cwd()
 
     if project.exists():
-        raise FileExistsError(f'{project} already exists')
+        raise FileExistsError(f"{project} already exists")
 
     # Clone git repository
-    cmd = f'git clone -b {branch} --single-branch --depth=1 {repo} {project}'
+    cmd = f"git clone -b {branch} --single-branch --depth=1 {repo} {project}"
     subprocess.check_call(cmd, shell=True)
 
     # Run setup executable
-    project.joinpath('setup').chmod(0o755)
-    subprocess.check_call('./setup', cwd=project)
+    project.joinpath("setup").chmod(0o755)
+    subprocess.check_call("./setup", cwd=project)
 
     # Render run_stilt.r template with project name and working directory
-    run_stilt_path = project.joinpath('r/run_stilt.r')
+    run_stilt_path = project.joinpath("r/run_stilt.r")
     run_stilt = run_stilt_path.read_text()
-    run_stilt = run_stilt.replace('{{project}}', name)
-    run_stilt = run_stilt.replace('{{wd}}', str(wd))
+    run_stilt = run_stilt.replace("{{project}}", name)
+    run_stilt = run_stilt.replace("{{wd}}", str(wd))
     run_stilt_path.write_text(run_stilt)
 
 
 class SimulationCollection:
-
-    COLUMNS = ['id', 'location_id', 'status',
-               'r_time', 'r_long', 'r_lati', 'r_zagl',
-               't_start', 't_end',
-               'path', 'simulation']
+    COLUMNS = [
+        "id",
+        "location_id",
+        "status",
+        "r_time",
+        "r_long",
+        "r_lati",
+        "r_zagl",
+        "t_start",
+        "t_end",
+        "path",
+        "simulation",
+    ]
 
     def __init__(self, sims: list[Simulation] | None = None):
         """
@@ -93,7 +99,7 @@ class SimulationCollection:
         if sims:
             rows = [self._prepare_simulation_row(sim) for sim in sims]
             self._df = pd.DataFrame(rows, columns=self.COLUMNS)
-            self._df.set_index('id', inplace=True)
+            self._df.set_index("id", inplace=True)
 
     @staticmethod
     def _prepare_simulation_row(sim: Simulation) -> dict[str, Any]:
@@ -110,22 +116,22 @@ class SimulationCollection:
         dict[str, Any]
             Dictionary representation of the Simulation object.
         """
-        if isinstance(sim, dict) and 'id' in sim:
+        if isinstance(sim, dict) and "id" in sim:
             # Assume dictionaries with 'id' key are failed simulations
             return sim
 
         return {
-            'id': sim.id,
-            'location_id': sim.receptor.location.id,
-            'status': sim.status,
-            'r_time': sim.receptor.time,
-            'r_long': sim.receptor.location._lons,
-            'r_lati': sim.receptor.location._lats,
-            'r_zagl': sim.receptor.location._hgts,
-            't_start': sim.time_range[0],
-            't_end': sim.time_range[1],
-            'path': sim.path,
-            'simulation': sim,
+            "id": sim.id,
+            "location_id": sim.receptor.location.id,
+            "status": sim.status,
+            "r_time": sim.receptor.time,
+            "r_long": sim.receptor.location._lons,
+            "r_lati": sim.receptor.location._lats,
+            "r_zagl": sim.receptor.location._hgts,
+            "t_start": sim.time_range[0],
+            "t_end": sim.time_range[1],
+            "path": sim.path,
+            "simulation": sim,
         }
 
     @classmethod
@@ -147,15 +153,17 @@ class SimulationCollection:
         for path in paths:
             path = Path(path)
             if not Simulation.is_sim_path(path):
-                raise ValueError(f"Path '{path}' is not a valid STILT simulation directory.")
+                raise ValueError(
+                    f"Path '{path}' is not a valid STILT simulation directory."
+                )
             try:
                 sim = Simulation.from_path(path)
-            except Exception as e:
+            except Exception:
                 failure_reason = Simulation.identify_failure_reason(path)
                 sim = {
-                    'id': Simulation.get_sim_id_from_path(path=path),
-                    'status': f'FAILURE:{failure_reason}',
-                    'path': path,
+                    "id": Simulation.get_sim_id_from_path(path=path),
+                    "status": f"FAILURE:{failure_reason}",
+                    "path": path,
                 }
             sims.append(sim)
         return cls(sims=sims)
@@ -188,7 +196,7 @@ class SimulationCollection:
         """
         if key not in self._df.index:
             raise KeyError(f"Simulation with ID '{key}' not found in the collection.")
-        return self._df.loc[key, 'simulation']
+        return self._df.loc[key, "simulation"]
 
     def __setitem__(self, key: str, value: Simulation) -> None:
         """
@@ -205,7 +213,9 @@ class SimulationCollection:
             raise TypeError(f"Value must be a Simulation object, got {type(value)}.")
         row = self._prepare_simulation_row(value)
         if key in self._df.index:
-            raise KeyError(f"Simulation with ID '{key}' already exists in the collection.")
+            raise KeyError(
+                f"Simulation with ID '{key}' already exists in the collection."
+            )
         self._df.loc[key] = row
 
     def __contains__(self, key: str) -> bool:
@@ -258,7 +268,7 @@ class SimulationCollection:
         None
             The trajectories are loaded into the 'simulation' column of the DataFrame.
         """
-        self._df['trajectory'] = self._df['simulation'].apply(
+        self._df["trajectory"] = self._df["simulation"].apply(
             lambda sim: sim.trajectory if isinstance(sim, Simulation) else None
         )
         return None
@@ -280,7 +290,7 @@ class SimulationCollection:
         if isinstance(resolutions, str):
             resolutions = [resolutions]
 
-        sims = self._df['simulation']
+        sims = self._df["simulation"]
 
         # Collect all unique resolutions across simulations
         if resolutions is None:
@@ -333,12 +343,16 @@ class SimulationCollection:
 
         merged_sims = pd.concat([collection._df for collection in collections])
         if merged_sims.index.has_duplicates:
-            raise ValueError("Merged simulations contain duplicate IDs. Ensure unique simulation IDs across collections.")
+            raise ValueError(
+                "Merged simulations contain duplicate IDs. Ensure unique simulation IDs across collections."
+            )
         collection = cls()
         collection._df = merged_sims
         return collection
 
-    def get_missing(self, in_receptors: str | Path | pd.DataFrame, include_failed: bool = False) -> pd.DataFrame:
+    def get_missing(
+        self, in_receptors: str | Path | pd.DataFrame, include_failed: bool = False
+    ) -> pd.DataFrame:
         """
         Find simulations in csv that are missing from simulation collection.
 
@@ -355,29 +369,33 @@ class SimulationCollection:
             DataFrame of missing simulations.
         """
         # Use receptor info to match simulations
-        cols = ['time', 'long', 'lati', 'zagl']
+        cols = ["time", "long", "lati", "zagl"]
 
         # Load dataframes
-        if isinstance(in_receptors, (str, Path)):
+        if isinstance(in_receptors, (str | Path)):
             in_df = pd.read_csv(in_receptors)
         elif isinstance(in_receptors, pd.DataFrame):
             in_df = in_receptors.copy()
         else:
-            raise TypeError("in_receptors must be a path to a csv file or a pandas DataFrame.")
-        in_df['time'] = pd.to_datetime(in_df['time'])
+            raise TypeError(
+                "in_receptors must be a path to a csv file or a pandas DataFrame."
+            )
+        in_df["time"] = pd.to_datetime(in_df["time"])
 
         sim_df = self.df.copy()
         if include_failed:
             # Drop failed simulations from the sim df so that when doing an outer join with the input receptors,
             # they appear in the input receptors but not in the simulation collection
-            sim_df = sim_df[sim_df['status'] == 'SUCCESS']
-        r_cols = {f'r_{col}': col for col in cols}
-        sim_df = sim_df[list(r_cols.keys())].rename(columns=r_cols).reset_index(drop=True)
+            sim_df = sim_df[sim_df["status"] == "SUCCESS"]
+        r_cols = {f"r_{col}": col for col in cols}
+        sim_df = (
+            sim_df[list(r_cols.keys())].rename(columns=r_cols).reset_index(drop=True)
+        )
 
         # Merge dataframes on receptor info
-        merged = pd.merge(in_df, sim_df, on=cols, how='outer', indicator=True)
-        missing = merged[merged['_merge'] == 'left_only']
-        return missing.drop(columns='_merge')
+        merged = pd.merge(in_df, sim_df, on=cols, how="outer", indicator=True)
+        missing = merged[merged["_merge"] == "left_only"]
+        return missing.drop(columns="_merge")
 
     def plot_availability(self, ax: plt.Axes | None = None, **kwargs) -> plt.Axes:
         """
@@ -401,53 +419,50 @@ class SimulationCollection:
             fig = plt.gcf()
 
         df = self.df.copy()
-        df['status'] = df['status'].fillna('MISSING')
+        df["status"] = df["status"].fillna("MISSING")
 
         # Iterate through each row of the DataFrame to plot the rectangles
         for index, row in df.iterrows():
             # Calculate the duration of the event
-            duration = row['t_end'] - row['t_start']
-            
+            duration = row["t_end"] - row["t_start"]
+
             # Plot a horizontal bar (gantt bar)
             ax.barh(
-                y=row['location_id'],       # Y-axis is the location
-                width=duration,             # Width is the time duration
-                left=row['t_start'],        # Start position on the X-axis
-                height=0.6,                 # Height of the bar
-                align='center',
-                color='green' if row['status'] == 'SUCCESS' else 'red',
-                edgecolor='black',
+                y=row["location_id"],  # Y-axis is the location
+                width=duration,  # Width is the time duration
+                left=row["t_start"],  # Start position on the X-axis
+                height=0.6,  # Height of the bar
+                align="center",
+                color="green" if row["status"] == "SUCCESS" else "red",
+                edgecolor="black",
                 alpha=0.6,
-                **kwargs
+                **kwargs,
             )
-        
+
         fig.autofmt_xdate()
-        
+
         ax.set(
-            title='Simulation Availability',
-            xlabel='Time',
-            ylabel='Location ID'
+            title="Simulation Availability",
+            xlabel="Time",
+            ylabel="Location ID",
         )
 
         return ax
 
 
 class Model:
-    def __init__(self,
-                 project: str | Path,
-                 **kwargs):
-
+    def __init__(self, project: str | Path, **kwargs):
         # Extract project name and working directory
         project = Path(project)
         self.project = project.name
 
         if project.exists():
             # Build model config from existing project
-            config = ModelConfig.from_path(project / 'config.yaml')
+            config = ModelConfig.from_path(project / "config.yaml")
 
         else:  # Create a new project
             # Build model config
-            config = kwargs.pop('config', None)
+            config = kwargs.pop("config", None)
             if config is None:
                 config = self.initialize(project, **kwargs)
             elif not isinstance(config, ModelConfig):
@@ -461,14 +476,14 @@ class Model:
     def initialize(project: Path, **kwargs) -> ModelConfig:
         # Determine working directory
         wd = project.parent
-        if wd == Path('.'):
+        if wd == Path("."):
             wd = Path.cwd()
         stilt_wd = wd / project
-        del kwargs['stilt_wd']
+        del kwargs["stilt_wd"]
 
         # Call stilt_init
-        repo = kwargs.pop('repo', None)
-        branch = kwargs.pop('branch', None)
+        repo = kwargs.pop("repo", None)
+        branch = kwargs.pop("branch", None)
         stilt_init(project=project, branch=branch, repo=repo)
 
         # Build config overriding default values with kwargs
@@ -484,7 +499,7 @@ class Model:
         if self._simulations is None:
             output_wd = self.config.output_wd
             if output_wd.exists():
-                paths = list(self.config.output_wd.glob('by-id/*'))
+                paths = list(self.config.output_wd.glob("by-id/*"))
                 self._simulations = SimulationCollection.from_paths(paths)
         return self._simulations
 

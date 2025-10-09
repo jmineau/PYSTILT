@@ -5,36 +5,37 @@
 
 import os
 import sys
-sys.path.insert(0, os.path.abspath('../../src'))
+
+sys.path.insert(0, os.path.abspath("../../src"))
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = 'PYSTILT'
-copyright = '2025, James Mineau'
-author = 'James Mineau'
-release = '2025.10.0'
+project = "PYSTILT"
+copyright = "2025, James Mineau"
+author = "James Mineau"
+release = "2025.10.0"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = [
-    'sphinx.ext.autodoc',
-    'sphinx.ext.autosummary',
-    'sphinx.ext.napoleon',
-    'sphinx.ext.viewcode',
-    'sphinx.ext.intersphinx',
-    'sphinx_autodoc_typehints',
+    "sphinx.ext.autodoc",
+    "sphinx.ext.autosummary",
+    "sphinx.ext.napoleon",
+    "sphinx.ext.viewcode",
+    "sphinx.ext.intersphinx",
+    "sphinx_autodoc_typehints",
 ]
 
-templates_path = ['_templates']
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+templates_path = ["_templates"]
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-html_theme = 'pydata_sphinx_theme'
-html_static_path = ['_static']
+html_theme = "pydata_sphinx_theme"
+html_static_path = ["_static"]
 
 html_theme_options = {
     "github_url": "https://github.com/jmineau/PYSTILT",
@@ -62,11 +63,11 @@ napoleon_attr_annotations = True
 
 # Autodoc settings
 autodoc_default_options = {
-    'members': True,
-    'member-order': 'bysource',
-    'special-members': '__init__',
-    'undoc-members': True,
-    'exclude-members': '__weakref__'
+    "members": True,
+    "member-order": "bysource",
+    "special-members": "__init__",
+    "undoc-members": True,
+    "exclude-members": "__weakref__",
 }
 
 # Autosummary settings
@@ -74,14 +75,14 @@ autosummary_generate = True
 
 # Intersphinx settings
 intersphinx_mapping = {
-    'python': ('https://docs.python.org/3', None),
-    'matplotlib': ('https://matplotlib.org/stable/', None),
-    'numpy': ('https://numpy.org/doc/stable/', None),
-    'pandas': ('https://pandas.pydata.org/docs/', None),
-    'pyarrow': ('https://arrow.apache.org/docs/', None),
-    'pydantic': ('https://docs.pydantic.dev/latest/', None),
-    'pyyaml': ('https://pyyaml.org/wiki/PyYAMLDocumentation', None),
-    'pyproj': ('https://pyproj4.github.io/pyproj/stable/', None),
-    'shapely': ('https://shapely.readthedocs.io/en/stable/', None),
-    'xarray': ('https://xarray.pydata.org/en/stable/', None),
+    "python": ("https://docs.python.org/3", None),
+    "matplotlib": ("https://matplotlib.org/stable/", None),
+    "numpy": ("https://numpy.org/doc/stable/", None),
+    "pandas": ("https://pandas.pydata.org/docs/", None),
+    "pyarrow": ("https://arrow.apache.org/docs/", None),
+    "pydantic": ("https://docs.pydantic.dev/latest/", None),
+    "pyyaml": ("https://pyyaml.org/wiki/PyYAMLDocumentation", None),
+    "pyproj": ("https://pyproj4.github.io/pyproj/stable/", None),
+    "shapely": ("https://shapely.readthedocs.io/en/stable/", None),
+    "xarray": ("https://xarray.pydata.org/en/stable/", None),
 }
