@@ -7,7 +7,6 @@ from functools import cached_property
 from pathlib import Path
 
 import f90nml
-import numpy as np
 import pandas as pd
 import xarray as xr
 from pydantic import BaseModel
@@ -154,47 +153,6 @@ class Trajectory(Output):
         file=None,
     ):
         raise NotImplementedError
-        simulation_dir = Path(simulation_dir)
-        simulation_id = simulation_dir.name
-
-        # Write files needed for hysplit binary
-        # - CONTROL
-        control.write(simulation_dir / "CONTROL")
-        # - SETUP.CFG
-        setup = f90nml.Namelist({"setup": namelist})
-        setup.write(simulation_dir / "SETUP.CFG")
-        # - Optional[ZICONTROL]
-        # TODO
-
-        # Call hysplit binary to calculate trajectory
-        hycs_std = simulation_dir / "hycs_std"
-        # TODO
-        # Exit if not backwards
-
-        # Read PARTICLE_STILT.DAT file
-        data = pd.read_csv(simulation_dir / "PARTICLE_STILT.DAT", skiprows=1)
-        # Delete if selected
-        if rm_dat:
-            # TODO
-            pass
-
-        # Calculate `xhgt` (original release height) for Column/MultiPoint simulations
-
-        # Write data to parquet
-        if file is True:
-            # Use default name
-            file = simulation_dir / f"{simulation_id}_trajec.parquet"
-        if file:
-            data.to_parquet(file)
-
-        return cls(
-            simulation_id=simulation_dir.name,
-            receptor=control.receptor,
-            data=data,
-            n_hours=control.n_hours,
-            met_files=control.met_files,
-            params=namelist,
-        )
 
     @classmethod
     def from_path(cls, path):
@@ -383,210 +341,6 @@ class Footprint(Output):
         file: str | Path | None = None,
     ) -> Self:
         raise NotImplementedError
-        wrap_lons_antimeridian = partial(wrap_lons, base=0)
-
-        def make_gauss_kernel(rs: tuple[float, float], sigma: float):
-            """
-            Replicate Ben's make_gauss_kernel function in Python
-
-            .. note::
-                No need for projection parameter as we don't need the raster package
-            """
-            if sigma == 0:
-                return np.array([[1]])
-
-            rs = np.array(rs)
-
-            d = 3 * sigma
-            nx = 1 + 2 * int(d / rs[0])
-            ny = 1 + 2 * int(d / rs[1])
-            m = np.zeros((ny, nx))
-
-            half_rs = rs / 2
-            xr = nx * half_rs[0]
-            yr = ny * half_rs[1]
-
-            # Create a grid of coordinates
-            x_coords = np.linspace(-xr + half_rs[0], xr - half_rs[0], nx)
-            y_coords = np.linspace(-yr + half_rs[1], yr - half_rs[1], ny)
-            x_grid, y_grid = np.meshgrid(x_coords, y_coords)
-
-            # Calculate the Gaussian kernel
-            p = x_grid**2 + y_grid**2
-            m = 1 / (2 * np.pi * sigma**2) * np.exp(-p / (2 * sigma**2))
-            w = m / np.sum(m)
-            w[np.isnan(w)] = 1
-            return w
-
-        p = particles.copy()
-
-        nparticles = len(p["indx"].unique())
-        time_sign = np.sign(np.median(p["time"]))
-        is_longlat = "+proj=longlat" in projection
-
-        if is_longlat:
-            # Determine longitude wrapping behavior for grid extents containing anti
-            # meridian, including partial wraps (e.g. 20deg from 170:-170) and global
-            # coverage (e.g. 360deg from -180:180)
-            xdist = ((180 - xmn) - (-180 - xmx)) % 360
-            if xdist == 0:
-                xdist = 360
-                xmn, xmx = -180, 180
-            elif xmx < xmn or xmx > 180:
-                p["long"] = wrap_lons_antimeridian(p["long"])
-                xmn = wrap_lons_antimeridian(xmn)
-                xmx = wrap_lons_antimeridian(xmx)
-
-            xres_deg = xres
-            yres_deg = yres
-        else:
-            # Convert grid resolution to degrees using pyproj
-            proj = pyproj.Proj(projection)
-            xres_deg, yres_deg = (
-                proj(xres, 0, inverse=True)[0],
-                proj(0, yres, inverse=True)[1],
-            )
-
-        # Interpolate particle locations during first 100 minutes of simulation if
-        # median distance traveled per time step is larger than grid resolution
-        aptime = p["time"].abs()
-        distances = (
-            p[aptime < 100]
-            .groupby("indx")
-            .agg(
-                dx=pd.NamedAgg(
-                    column="long", aggfunc=lambda x: x.diff().abs().median()
-                ),
-                dy=pd.NamedAgg(
-                    column="lati", aggfunc=lambda x: x.diff().abs().median()
-                ),
-            )
-            .reset_index()
-        )
-        should_interpolate = (distances.dx.median() > xres_deg) or (
-            distances.dy.median() > yres_deg
-        )
-
-        if should_interpolate:
-            times = time_sign * np.concatenate(
-                [
-                    np.arange(0, 10.1, 0.1),
-                    np.arange(10.2, 20.2, 0.2),
-                    np.arange(20.5, 100.5, 0.5),
-                ]
-            )
-
-            # Preserve total field prior to split-interpolating particle positions
-            foot_0_10_sum = p.foot[aptime <= 10].sum()
-            foot_10_20_sum = p.foot[(aptime > 10) & (aptime <= 20)].sum()
-            foot_20_100_sum = p.foot[(aptime > 20) & (aptime <= 100)].sum()
-
-            # Split particle influence along linear trajectory to sub-minute timescales
-            time_indx_grid = pd.DataFrame(
-                list(itertools.product(times, p["indx"].unique()))
-            )
-            p = p.merge(time_indx_grid, on=["indx", "time"], how="outer")
-
-            def interpolate_group(group):
-                group = group.sort_values(by="time", ascending=False)
-                group["long"] = group["long"].interpolate(method="linear")
-                group["lati"] = group["lati"].interpolate(method="linear")
-                group["foot"] = group["foot"].interpolate(method="linear")
-                return group
-
-            p = p.groupby("indx").apply(interpolate_group).reset_index(drop=True)
-            p = p.dropna()
-            p["time"] = p["time"].round(
-                1
-            )  # FIX ME I AM HERE checking on the interpolation
-
-        p["rtime"] = p.groupby("indx")["time"].transform(
-            lambda x: x - time_sign * x.abs().min()
-        )
-
-        if not is_longlat:
-            from pyproj import Proj, transform
-
-            proj = Proj(projection)
-            p["long"], p["lati"] = transform(
-                Proj(init="epsg:4326"), proj, p["long"].values, p["lati"].values
-            )
-            xmn, xmx, ymn, ymx = transform(
-                Proj(init="epsg:4326"), proj, [xmn, xmx], [ymn, ymx]
-            )
-
-        glong = np.arange(xmn, xmx, xres)
-        glati = np.arange(ymn, ymx, yres)
-
-        kernel = (
-            p.groupby("rtime")
-            .agg({"long": "var", "lati": "var", "lati": "mean"})
-            .reset_index()
-        )
-        kernel["varsum"] = kernel["long"] + kernel["lati"]
-        kernel["di"] = kernel["varsum"] ** 0.25
-        kernel["ti"] = (kernel["rtime"].abs() / 1440) ** 0.5
-        kernel["grid_conv"] = np.cos(np.deg2rad(kernel["lati"])) if is_longlat else 1
-        kernel["w"] = (
-            smooth_factor * 0.06 * kernel["di"] * kernel["ti"] / kernel["grid_conv"]
-        )
-
-        max_k = make_gauss_kernel([xres, yres], kernel["w"].max())
-
-        xbuf = max_k.shape[1]
-        ybuf = max_k.shape[0]
-        glong_buf = np.arange(xmn - xbuf * xres, xmx + xbuf * xres, xres)
-        glati_buf = np.arange(ymn - ybuf * yres, ymx + ybuf * yres, yres)
-
-        p = p[
-            (p["foot"] > 0)
-            & (p["long"] >= xmn - xbuf * xres)
-            & (p["long"] < xmx + xbuf * xres)
-            & (p["lati"] >= ymn - ybuf * yres)
-            & (p["lati"] < ymx + ybuf * yres)
-        ]
-        if p.empty:
-            return None
-
-        p["loi"] = np.searchsorted(glong_buf, p["long"]) - 1
-        p["lai"] = np.searchsorted(glati_buf, p["lati"]) - 1
-
-        nx, ny = len(glong_buf), len(glati_buf)
-        grd = np.zeros((ny, nx))
-
-        interval = 3600
-        interval_mins = interval / 60
-        p["layer"] = (
-            0 if time_integrate else np.floor(p["time"] / interval_mins).astype(int)
-        )
-
-        layers = p["layer"].unique()
-        foot = np.zeros((ny, nx, len(layers)))
-
-        for i, layer in enumerate(layers):
-            layer_subset = p[p["layer"] == layer]
-            for rtime in layer_subset["rtime"].unique():
-                step = layer_subset[layer_subset["rtime"] == rtime]
-                step_w = kernel.loc[kernel["rtime"].sub(rtime).abs().idxmin(), "w"]
-                k = make_gauss_kernel([xres, yres], step_w)
-                for _, row in step.iterrows():
-                    loi, lai = int(row["loi"]), int(row["lai"])
-                    foot[lai : lai + k.shape[0], loi : loi + k.shape[1], i] += (
-                        row["foot"] * k
-                    )
-
-        foot = foot[xbuf:-xbuf, ybuf:-ybuf, :] / nparticles
-
-        time_out = (
-            self.receptor.time
-            if time_integrate
-            else self.receptor.time + pd.to_timedelta(layers * interval, unit="s")
-        )
-
-        da = xr.DataArray(
-            foot, coords=[glati, glong, time_out], dims=["lat", "lon", "time"]
-        )
-        return da
 
     @staticmethod
     def read_netcdf(
@@ -841,10 +595,11 @@ class Simulation:
         if not self.path.exists():
             return None
 
-        if self.config.run_trajec and not self.paths["trajectory"].exists():
-            status = "FAILURE"
-        elif self.config.run_foot and not all(
-            path.exists() for path in self.paths["footprints"].values()
+        if (
+            self.config.run_trajec
+            and not self.paths["trajectory"].exists()
+            or self.config.run_foot
+            and not all(path.exists() for path in self.paths["footprints"].values())
         ):
             status = "FAILURE"
         else:
