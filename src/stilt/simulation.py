@@ -9,7 +9,7 @@ from pathlib import Path
 import f90nml
 import pandas as pd
 import xarray as xr
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing_extensions import Self
 
 from stilt.config import Resolution, SimulationConfig
@@ -27,9 +27,8 @@ class Control(BaseModel):
     z_top: float
     met_files: list[Path]
 
-    class Config:
-        # Allows Pydantic to work with custom classes like Receptor
-        arbitrary_types_allowed = True
+    # Allows Pydantic to work with custom classes like Receptor
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def to_file(self, path):
         raise NotImplementedError

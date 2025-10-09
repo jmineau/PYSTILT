@@ -82,14 +82,7 @@ ignore = [
 known-first-party = ["stilt"]
 
 [tool.ruff.format]
-docstring-code-format = false
-
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-python_files = ["test_*.py"]
-python_classes = ["Test*"]
-python_functions = ["test_*"]
-addopts = "--cov=src/stilt --cov-report=term-missing --cov-report=html --cov-report=xml"
+docstring-code-format = true
 
 [tool.pyright]
 include = ["src"]
@@ -97,6 +90,13 @@ exclude = ["**/__pycache__", "**/.venv"]
 pythonVersion = "3.10"
 typeCheckingMode = "basic"
 reportMissingTypeStubs = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "--cov=src/stilt --cov-report=term-missing --cov-report=html --cov-report=xml --import-mode=importlib"
 
 [tool.coverage.run]
 source = ["src/stilt"]

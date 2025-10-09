@@ -5,7 +5,7 @@ from typing import Any, ClassVar, Literal
 
 import pandas as pd
 import yaml
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from typing_extensions import Self
 
 from stilt.receptors import Receptor
@@ -350,9 +350,8 @@ class BaseConfig(
     functions.
     """
 
-    class Config:
-        # Allows Pydantic to work with custom classes like Receptor
-        arbitrary_types_allowed = True
+    # Allows Pydantic to work with custom classes like Receptor
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     @staticmethod
     def _load_yaml_params(path: str | Path) -> dict[str, Any]:
