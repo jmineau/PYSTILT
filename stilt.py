@@ -15,7 +15,7 @@ import os
 from pathlib import Path
 import re
 import subprocess
-from typing import Any, Callable, ClassVar, Generator, List, Literal, Tuple, Type
+from typing import Any, Callable, ClassVar, Generator, Literal
 from typing_extensions import \
     Self  # requires python 3.11 to import from typing
 
@@ -184,7 +184,7 @@ class Location:
         return self._coords
 
     @property
-    def points(self) -> List[Point]:
+    def points(self) -> list[Point]:
         """
         Returns a list of shapely Point objects representing the location's coordinates.
         """
@@ -384,7 +384,7 @@ class Receptor(ABC):
             raise ValueError("Unsupported geometry type for receptor.")
 
     @staticmethod
-    def load_receptors_from_csv(path: str | Path) -> List['Receptor']:
+    def load_receptors_from_csv(path: str | Path) -> list['Receptor']:
         """
         Load receptors from a CSV file.
         """
@@ -468,7 +468,7 @@ class MultiPointReceptor(Receptor):
         super().__init__(time=time, location=location)
 
     @property
-    def points(self) -> List[Point]:
+    def points(self) -> list[Point]:
         return self.location.points
 
     def __iter__(self) -> Generator[Point, None, None]:
@@ -595,7 +595,7 @@ class Control(BaseModel):
     n_hours: int
     w_option: int
     z_top: float
-    met_files: List[Path]
+    met_files: list[Path]
 
     class Config:
         # Allows Pydantic to work with custom classes like Receptor
@@ -688,10 +688,10 @@ class FootprintParams(BaseModel):
     time_integrate: bool = False
     xmn: float | None = None
     xmx: float | None = None
-    xres: float | List[float] | None = None
+    xres: float | list[float] | None = None
     ymn: float | None = None
     ymx: float | None = None
-    yres: float | List[float] | None = None
+    yres: float | list[float] | None = None
 
     @model_validator(mode="after")
     def _set_footprint_defaults(self) -> Self:
@@ -723,7 +723,7 @@ class FootprintParams(BaseModel):
         return self
 
     @property
-    def resolutions(self) -> List[Resolution] | None:
+    def resolutions(self) -> list[Resolution] | None:
         """Get the x and y resolutions as a list of tuples."""
         if self.xres is None:
             return None
@@ -750,9 +750,9 @@ class ModelParams(BaseModel):
     rm_dat: bool = True
     run_foot: bool = True
     run_trajec: bool = True
-    simulation_id: str | List[str] | None = None
+    simulation_id: str | list[str] | None = None
     timeout: int = 3600
-    varsiwant: List[Literal[
+    varsiwant: list[Literal[
         'time', 'indx', 'long', 'lati', 'zagl', 'sigw', 'tlgr', 'zsfc', 'icdx',
         'temp', 'samt', 'foot', 'shtf', 'tcld', 'dmas', 'dens', 'rhfr', 'sphu',
         'lcld', 'zloc', 'dswf', 'wout', 'mlht', 'rain', 'crai', 'pres', 'whtf',
@@ -844,7 +844,7 @@ class TransportParams(BaseModel):
     wvert: bool = False
     z_top: float = 25000.0
     zicontroltf: int = 0
-    ziscale: int | List[int] = 0
+    ziscale: int | list[int] = 0
 
 
 class ErrorParams(BaseModel):
@@ -856,8 +856,8 @@ class ErrorParams(BaseModel):
     tlzierr: float | None = None
     horcorzierr: float | None = None
 
-    XYERR_PARAMS: ClassVar[Tuple[str, ...]] = ('siguverr', 'tluverr', 'zcoruverr', 'horcoruverr')
-    ZIERR_PARAMS: ClassVar[Tuple[str, ...]] = ('sigzierr', 'tlzierr', 'horcorzierr')
+    XYERR_PARAMS: ClassVar[tuple[str, ...]] = ('siguverr', 'tluverr', 'zcoruverr', 'horcoruverr')
+    ZIERR_PARAMS: ClassVar[tuple[str, ...]] = ('sigzierr', 'tlzierr', 'horcorzierr')
 
     @model_validator(mode='after')
     def _validate_error_params(self) -> Self:
@@ -1061,7 +1061,7 @@ class SimulationConfig(BaseConfig):
 
 class ModelConfig(BaseConfig):
 
-    receptors: List[Receptor]
+    receptors: list[Receptor]
 
     @classmethod
     def from_path(cls, path: str | Path) -> Self:
@@ -1101,7 +1101,7 @@ class ModelConfig(BaseConfig):
         # Write out config
         raise NotImplementedError
 
-    def build_simulation_configs(self) -> List[SimulationConfig]:
+    def build_simulation_configs(self) -> list[SimulationConfig]:
         """
         Build a list of SimulationConfig objects, one for each receptor.
         """
@@ -1778,7 +1778,7 @@ class Simulation:
         return self._meteorology
 
     @property
-    def met_files(self) -> List[Path]:
+    def met_files(self) -> list[Path]:
         if not self._met_files:
             if self.paths['control'].exists():
                 control = self.control
@@ -2100,7 +2100,7 @@ class SimulationCollection:
         }
 
     @classmethod
-    def from_paths(cls, paths: List[Path | str]) -> Self:
+    def from_paths(cls, paths: list[Path | str]) -> Self:
         """
         Create SimulationCollection from a list of simulation paths.
 
@@ -2234,7 +2234,7 @@ class SimulationCollection:
         )
         return None
 
-    def load_footprints(self, resolutions: List[str] | None = None) -> None:
+    def load_footprints(self, resolutions: list[str] | None = None) -> None:
         """
         Load footprints for simulations in the collection.
 
