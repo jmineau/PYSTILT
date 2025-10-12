@@ -6,6 +6,7 @@ from typing_extensions import Self
 
 class Meteorology:
     """Meteorological data files for STILT simulations."""
+
     def __init__(self, path: str | Path, format: str, tres: str | pd.Timedelta):
         self.path = Path(path)
         self.format = format
@@ -24,9 +25,19 @@ class Meteorology:
         # Implement logic to retrieve meteorological files based on the parameters
         raise NotImplementedError
 
-    def calc_subgrids(self, files, out_dir, exe_dir,
-                      projection, xmin, xmax, ymin, ymax,
-                      levels=None, buffer=0.1) -> Self:
+    def calc_subgrids(
+        self,
+        files,
+        out_dir,
+        exe_dir,
+        projection,
+        xmin,
+        xmax,
+        ymin,
+        ymax,
+        levels=None,
+        buffer=0.1,
+    ) -> Self:
         # I think we want to return a new Meteorology instance
         # with a new path that we can check for files
         raise NotImplementedError

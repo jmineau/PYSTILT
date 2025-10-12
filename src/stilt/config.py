@@ -1,11 +1,12 @@
 from abc import ABC
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable, ClassVar, Literal
+from typing import Any, ClassVar, Literal
 
 import pandas as pd
+import yaml
 from pydantic import BaseModel, Field, field_validator, model_validator
 from typing_extensions import Self
-import yaml
 
 from stilt.receptors import Receptor
 
@@ -35,7 +36,7 @@ class SystemParams(BaseModel):
 
 class FootprintParams(BaseModel):
     hnf_plume: bool = True
-    projection: str = '+proj=longlat'
+    projection: str = "+proj=longlat"
     smooth_factor: float = 1.0
     time_integrate: bool = False
     xmn: float | None = None
@@ -82,8 +83,10 @@ class FootprintParams(BaseModel):
         if not isinstance(self.xres, list):
             self.xres = [self.xres]
             self.yres = [self.yres]
-        return [Resolution(xres=xres, yres=yres) for xres, yres
-                in zip(self.xres, self.yres)]
+        return [
+            Resolution(xres=xres, yres=yres)
+            for xres, yres in zip(self.xres, self.yres, strict=False)
+        ]
 
 
 class MetParams(BaseModel):
@@ -104,17 +107,56 @@ class ModelParams(BaseModel):
     run_trajec: bool = True
     simulation_id: str | list[str] | None = None
     timeout: int = 3600
-    varsiwant: list[Literal[
-        'time', 'indx', 'long', 'lati', 'zagl', 'sigw', 'tlgr', 'zsfc', 'icdx',
-        'temp', 'samt', 'foot', 'shtf', 'tcld', 'dmas', 'dens', 'rhfr', 'sphu',
-        'lcld', 'zloc', 'dswf', 'wout', 'mlht', 'rain', 'crai', 'pres', 'whtf',
-        'temz', 'zfx1'
-    ]] = Field(default_factory=lambda: [
-        'time', 'indx', 'long', 'lati', 'zagl', 'foot', 'mlht', 'pres',
-        'dens', 'samt', 'sigw', 'tlgr'
-    ])
+    varsiwant: list[
+        Literal[
+            "time",
+            "indx",
+            "long",
+            "lati",
+            "zagl",
+            "sigw",
+            "tlgr",
+            "zsfc",
+            "icdx",
+            "temp",
+            "samt",
+            "foot",
+            "shtf",
+            "tcld",
+            "dmas",
+            "dens",
+            "rhfr",
+            "sphu",
+            "lcld",
+            "zloc",
+            "dswf",
+            "wout",
+            "mlht",
+            "rain",
+            "crai",
+            "pres",
+            "whtf",
+            "temz",
+            "zfx1",
+        ]
+    ] = Field(
+        default_factory=lambda: [
+            "time",
+            "indx",
+            "long",
+            "lati",
+            "zagl",
+            "foot",
+            "mlht",
+            "pres",
+            "dens",
+            "samt",
+            "sigw",
+            "tlgr",
+        ]
+    )
 
-    @model_validator(mode='after')
+    @model_validator(mode="after")
     def _validate_run_flags(self) -> Self:
         """Ensure at least one of `run_trajec` or `run_foot` is True."""
         if not self.run_trajec and not self.run_foot:
@@ -131,7 +173,7 @@ class TransportParams(BaseModel):
     dxf: int = 1
     dyf: int = 1
     dzf: float = 0.01
-    efile: str = ''
+    efile: str = ""
     emisshrs: float = 0.01
     frhmax: float = 3.0
     frhs: float = 1.0
@@ -172,9 +214,9 @@ class TransportParams(BaseModel):
     nver: int = 0
     outdt: int = 0
     p10f: int = 1
-    pinbc: str = ''
-    pinpf: str = ''
-    poutf: str = ''
+    pinbc: str = ""
+    pinpf: str = ""
+    poutf: str = ""
     qcycle: int = 0
     rhb: float = 80.0
     rht: float = 60.0
@@ -208,10 +250,15 @@ class ErrorParams(BaseModel):
     tlzierr: float | None = None
     horcorzierr: float | None = None
 
-    XYERR_PARAMS: ClassVar[tuple[str, ...]] = ('siguverr', 'tluverr', 'zcoruverr', 'horcoruverr')
-    ZIERR_PARAMS: ClassVar[tuple[str, ...]] = ('sigzierr', 'tlzierr', 'horcorzierr')
+    XYERR_PARAMS: ClassVar[tuple[str, ...]] = (
+        "siguverr",
+        "tluverr",
+        "zcoruverr",
+        "horcoruverr",
+    )
+    ZIERR_PARAMS: ClassVar[tuple[str, ...]] = ("sigzierr", "tlzierr", "horcorzierr")
 
-    @model_validator(mode='after')
+    @model_validator(mode="after")
     def _validate_error_params(self) -> Self:
         """
         Validate error parameters to ensure they are either all set or all None
@@ -223,7 +270,9 @@ class ErrorParams(BaseModel):
             is_na = [pd.isna(v) for v in params.values()]
             if any(is_na):
                 if not all(is_na):
-                    raise ValueError(f"Inconsistent {name} error parameters: all must be set or all must be None")
+                    raise ValueError(
+                        f"Inconsistent {name} error parameters: all must be set or all must be None"
+                    )
 
         return self
 
@@ -262,7 +311,7 @@ class ErrorParams(BaseModel):
 class UserFuncParams(BaseModel):
     before_footprint: Callable | Path | None = None
 
-    @field_validator('before_footprint', mode='before')
+    @field_validator("before_footprint", mode="before")
     @classmethod
     def _load_before_footprint(cls, v: Any) -> Any:
         """Ensure before_footprint is a callable or None."""
@@ -270,19 +319,29 @@ class UserFuncParams(BaseModel):
             # Load the function from the specified path
             p = Path(v)
 
-            if p.suffix.lower().endswith('r'):
+            if p.suffix.lower().endswith("r"):
                 # Pass the R path
                 return v
-            elif p.suffix.lower().endswith('py'):
+            elif p.suffix.lower().endswith("py"):
                 # Load the Python function
-                raise NotImplementedError("Loading Python functions from file is not implemented yet.")
+                raise NotImplementedError(
+                    "Loading Python functions from file is not implemented yet."
+                )
             else:
                 raise ValueError(f"Unsupported file type: {p.suffix}")
         return v
 
 
-class BaseConfig(ABC, SystemParams, FootprintParams, MetParams, ModelParams,
-                 TransportParams, ErrorParams, UserFuncParams):
+class BaseConfig(
+    ABC,
+    SystemParams,
+    FootprintParams,
+    MetParams,
+    ModelParams,
+    TransportParams,
+    ErrorParams,
+    UserFuncParams,
+):
     """
     STILT Configuration
 
@@ -323,7 +382,7 @@ class BaseConfig(ABC, SystemParams, FootprintParams, MetParams, ModelParams,
         params = cls._load_yaml_params(path)
         return cls(**params)
 
-    @model_validator(mode='after')
+    @model_validator(mode="after")
     def _validate_base_config(self) -> Self:
         """Perform validation that depends on multiple fields."""
 
@@ -333,7 +392,7 @@ class BaseConfig(ABC, SystemParams, FootprintParams, MetParams, ModelParams,
 
         # Check for grid parameters if running footprint or subgrid met
         if self.run_foot or self.met_subgrid_enable:
-            required_grid_params = ['xmn', 'xmx', 'xres', 'ymn', 'ymx']
+            required_grid_params = ["xmn", "xmx", "xres", "ymn", "ymx"]
             if any(getattr(self, arg) is None for arg in required_grid_params):
                 raise ValueError(
                     "xmn, xmx, xres, ymn, and ymx must be specified when "
@@ -342,7 +401,7 @@ class BaseConfig(ABC, SystemParams, FootprintParams, MetParams, ModelParams,
 
         return self
 
-    @model_validator(mode='after')
+    @model_validator(mode="after")
     def _set_config_defaults(self) -> Self:
         """Set default values for configuration parameters."""
 
@@ -353,36 +412,34 @@ class BaseConfig(ABC, SystemParams, FootprintParams, MetParams, ModelParams,
         return self
 
     def system_params(self) -> dict[str, Any]:
-        return {attr: getattr(self, attr)
-                for attr in SystemParams.model_fields.keys()}
+        return {attr: getattr(self, attr) for attr in SystemParams.model_fields.keys()}
 
     def footprint_params(self) -> dict[str, Any]:
-        return {attr: getattr(self, attr)
-                for attr in FootprintParams.model_fields.keys()}
+        return {
+            attr: getattr(self, attr) for attr in FootprintParams.model_fields.keys()
+        }
 
     def met_params(self) -> dict[str, Any]:
-        return {attr: getattr(self, attr)
-                for attr in MetParams.model_fields.keys()}
+        return {attr: getattr(self, attr) for attr in MetParams.model_fields.keys()}
 
     def model_params(self) -> dict[str, Any]:
-        return {attr: getattr(self, attr)
-                for attr in ModelParams.model_fields.keys()}
+        return {attr: getattr(self, attr) for attr in ModelParams.model_fields.keys()}
 
     def transport_params(self) -> dict[str, Any]:
-        return {attr: getattr(self, attr)
-                for attr in TransportParams.model_fields.keys()}
+        return {
+            attr: getattr(self, attr) for attr in TransportParams.model_fields.keys()
+        }
 
     def error_params(self) -> dict[str, Any]:
-        return {attr: getattr(self, attr)
-                for attr in ErrorParams.model_fields.keys()}
+        return {attr: getattr(self, attr) for attr in ErrorParams.model_fields.keys()}
 
     def user_funcs(self) -> dict[str, Any]:
-        return {attr: getattr(self, attr)
-                for attr in UserFuncParams.model_fields.keys()}
+        return {
+            attr: getattr(self, attr) for attr in UserFuncParams.model_fields.keys()
+        }
 
 
 class SimulationConfig(BaseConfig):
-
     receptor: Receptor
 
     @classmethod
@@ -393,7 +450,7 @@ class SimulationConfig(BaseConfig):
         receptor = model_config.receptors[0]
         return cls(receptor=receptor, **model_config.model_dump())
 
-    @field_validator('simulation_id', mode='after')
+    @field_validator("simulation_id", mode="after")
     @classmethod
     def _validate_simulation_id(cls, simulation_id) -> str:
         if not simulation_id:
@@ -402,49 +459,47 @@ class SimulationConfig(BaseConfig):
             raise TypeError("simulation_id must be a string")
         return simulation_id
 
-    def to_model_config(self) -> 'ModelConfig':
+    def to_model_config(self) -> "ModelConfig":
         config = self.model_dump()
-        receptor = config.pop('receptor')
-        return ModelConfig(
-            receptors=[receptor],
-            **config
-        )
+        receptor = config.pop("receptor")
+        return ModelConfig(receptors=[receptor], **config)
 
 
 class ModelConfig(BaseConfig):
-
     receptors: list[Receptor]
 
     @classmethod
     def from_path(cls, path: str | Path) -> Self:
         params = cls._load_yaml_params(path)
-        if 'stilt_wd' not in params:
-            params['stilt_wd'] = Path(path).parent
+        if "stilt_wd" not in params:
+            params["stilt_wd"] = Path(path).parent
         return cls(**params)
 
-    @model_validator(mode='before')
+    @model_validator(mode="before")
     @classmethod
     def _load_receptors(cls, data) -> Self:
         """
         Validates and loads receptors. If a path is provided, it loads
         receptors from the corresponding CSV file.
         """
-        receptors = data.get('receptors')
+        receptors = data.get("receptors")
         if isinstance(receptors, (str, Path)):
             # If the input is a path, load from the file.
             receptor_path = Path(receptors)
             if not receptor_path.is_absolute():
-                receptor_path = Path(data.get('stilt_wd')) / receptor_path
-            data['receptors'] = Receptor.load_receptors_from_csv(receptor_path)
+                receptor_path = Path(data.get("stilt_wd")) / receptor_path
+            data["receptors"] = Receptor.load_receptors_from_csv(receptor_path)
         return data
 
-    @model_validator(mode='after')
+    @model_validator(mode="after")
     def _validate_model_config(self) -> Self:
         """Validate the model configuration."""
 
         # Check if simulation_id is set
         if isinstance(self.simulation_id, str) and len(self.receptors) > 1:
-            raise ValueError("Simulation ID must be specified for each receptor or be left blank.")
+            raise ValueError(
+                "Simulation ID must be specified for each receptor or be left blank."
+            )
 
         return self
 
@@ -459,13 +514,10 @@ class ModelConfig(BaseConfig):
         """
         raise NotImplementedError
         config = self.model_dump()
-        receptors = config.pop('receptors')
-        simulation_id = config.pop('simulation_id')
+        receptors = config.pop("receptors")
+        simulation_id = config.pop("simulation_id")
         if isinstance(simulation_id, list):
             # TODO
             pass
-            
-        return [
-            SimulationConfig(receptor=receptor, **config)
-            for receptor in receptors
-        ]
+
+        return [SimulationConfig(receptor=receptor, **config) for receptor in receptors]
