@@ -57,7 +57,7 @@ class FootprintParams(BaseModel):
     def _validate_footprint_params(self) -> Self:
         """Validate footprint parameters."""
 
-        if type(self.xres) != type(self.yres):
+        if type(self.xres) is not type(self.yres):
             raise ValueError("xres and yres must both be of the same type.")
 
         def length(res):
@@ -268,11 +268,10 @@ class ErrorParams(BaseModel):
 
         for name, params in [("XY", xy_params), ("ZI", zi_params)]:
             is_na = [pd.isna(v) for v in params.values()]
-            if any(is_na):
-                if not all(is_na):
-                    raise ValueError(
-                        f"Inconsistent {name} error parameters: all must be set or all must be None"
-                    )
+            if any(is_na) and not all(is_na):
+                raise ValueError(
+                    f"Inconsistent {name} error parameters: all must be set or all must be None"
+                )
 
         return self
 
@@ -412,30 +411,29 @@ class BaseConfig(
         return self
 
     def system_params(self) -> dict[str, Any]:
-        return {attr: getattr(self, attr) for attr in SystemParams.model_fields.keys()}
+        return {attr: getattr(self, attr) for attr in SystemParams.model_fields}
 
     def footprint_params(self) -> dict[str, Any]:
         return {
-            attr: getattr(self, attr) for attr in FootprintParams.model_fields.keys()
+            attr: getattr(self, attr) for attr in FootprintParams.model_fields
         }
 
     def met_params(self) -> dict[str, Any]:
-        return {attr: getattr(self, attr) for attr in MetParams.model_fields.keys()}
+        return {attr: getattr(self, attr) for attr in MetParams.model_fields}
 
     def model_params(self) -> dict[str, Any]:
-        return {attr: getattr(self, attr) for attr in ModelParams.model_fields.keys()}
+        return {attr: getattr(self, attr) for attr in ModelParams.model_fields}
 
     def transport_params(self) -> dict[str, Any]:
         return {
-            attr: getattr(self, attr) for attr in TransportParams.model_fields.keys()
+            attr: getattr(self, attr) for attr in TransportParams.model_fields
         }
 
     def error_params(self) -> dict[str, Any]:
-        return {attr: getattr(self, attr) for attr in ErrorParams.model_fields.keys()}
-
+        return {attr: getattr(self, attr) for attr in ErrorParams.model_fields}
     def user_funcs(self) -> dict[str, Any]:
         return {
-            attr: getattr(self, attr) for attr in UserFuncParams.model_fields.keys()
+            attr: getattr(self, attr) for attr in UserFuncParams.model_fields
         }
 
 

@@ -1,6 +1,6 @@
 import datetime as dt
 import hashlib
-from abc import ABC
+from abc import ABC, abstractmethod
 from collections.abc import Generator
 from pathlib import Path
 
@@ -237,6 +237,7 @@ class Receptor(ABC):
         return f"{self.timestr}_{self.location.id}"
 
     @property
+    @abstractmethod
     def is_vertical(self) -> bool:
         raise NotImplementedError
         # TODO : when a receptor is created from metadata, it is not currently possible
@@ -327,12 +328,9 @@ class Receptor(ABC):
             raise ValueError(f"Receptor file must contain columns: {required_cols}")
 
         # Determine grouping key
-        if "group" in df.columns:
-            # Group rows and create a single Receptor for each group
-            key = "group"
-        else:
-            # Treat each row as a separate PointReceptor
-            key = df.index
+        # If "group" column exists, group rows and create a single Receptor for each group
+        # Else, treat each row as a separate PointReceptor
+        key = "group" if "group" in df.columns else df.index
 
         # Build receptors
         receptors = (

@@ -422,7 +422,7 @@ class SimulationCollection:
         df["status"] = df["status"].fillna("MISSING")
 
         # Iterate through each row of the DataFrame to plot the rectangles
-        for index, row in df.iterrows():
+        for _index, row in df.iterrows():
             # Calculate the duration of the event
             duration = row["t_end"] - row["t_start"]
 
