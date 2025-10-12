@@ -1,0 +1,38 @@
+name: Code Quality
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  quality-check:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v5
+
+    - name: Set up Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: '3.10'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e ".[dev]"
+
+    - name: Lint with ruff
+      run: |
+        ruff check --output-format=github src/stilt
+
+    - name: Type checking with pyright
+      if: ${{ !cancelled() }}
+      run: |
+        pyright src/stilt
+
+    - name: Check docstring coverage
+      if: ${{ !cancelled() }}
+      run: |
+        docstr-coverage src/stilt --skip-magic --skip-init
