@@ -14,6 +14,11 @@ from .model import Model, stilt_init
 from .receptors import Receptor
 from .simulation import Footprint, Simulation, Trajectory
 
+units = {
+    "latex": None  # TODO
+}
+
+
 __all__ = [
     "ModelConfig",
     "Meteorology",

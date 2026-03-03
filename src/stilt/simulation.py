@@ -155,7 +155,10 @@ class Trajectory(Output):
         raise NotImplementedError
 
     @classmethod
-    def from_path(cls, path):
+    def from_path(cls, path) -> Self:
+        # Resolve the file path
+        path = Path(path).resolve()
+
         # Read config and control files
         config = SimulationConfig.from_path(
             path.parent / f"{path.parent.name}_config.yaml"

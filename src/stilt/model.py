@@ -495,7 +495,7 @@ class Model:
         if self._simulations is None:
             output_wd = self.config.output_wd
             if output_wd.exists():
-                paths = list(self.config.output_wd.glob("by-id/*"))
+                paths = self.config.output_wd.glob("by-id/*")
                 self._simulations = SimulationCollection.from_paths(paths)
         return self._simulations
 

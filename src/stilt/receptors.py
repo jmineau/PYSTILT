@@ -1,6 +1,6 @@
 import datetime as dt
 import hashlib
-from abc import ABC, abstractmethod
+from abc import ABC
 from collections.abc import Generator
 from pathlib import Path
 
@@ -237,7 +237,7 @@ class Receptor(ABC):
         return f"{self.timestr}_{self.location.id}"
 
     @property
-    @abstractmethod
+    # @abstractmethod
     def is_vertical(self) -> bool:
         raise NotImplementedError
         # TODO : when a receptor is created from metadata, it is not currently possible
