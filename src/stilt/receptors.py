@@ -9,6 +9,11 @@ import pandas as pd
 from shapely import Geometry, LineString, MultiPoint, Point
 
 
+def _format_coord(val: float) -> str:
+    """Format coordinate as int if whole number, otherwise as float."""
+    return str(int(val)) if val == int(val) else str(val)
+
+
 class Location:
     """
     Represents a spatial location for STILT models, independent of time.
@@ -57,7 +62,10 @@ class Location:
         Generate a unique identifier for this location based on its geometry.
         """
         if isinstance(self.geometry, Point):
-            return f"{self.geometry.x}_{self.geometry.y}_{self.geometry.z}"
+            x = _format_coord(self.geometry.x)
+            y = _format_coord(self.geometry.y)
+            z = _format_coord(self.geometry.z)
+            return f"{x}_{y}_{z}"
         elif isinstance(self.geometry, LineString):
             # For column locations
             coords = list(self.geometry.coords)
@@ -69,7 +77,9 @@ class Location:
                 raise ValueError(
                     "LineString must represent a vertical column with two points at the same (lon, lat)."
                 )
-            return f"{coords[0][0]}_{coords[0][1]}_X"
+            x = _format_coord(coords[0][0])
+            y = _format_coord(coords[0][1])
+            return f"{x}_{y}_X"
 
         # For MultiPoint geometries
         wkt_string = self.geometry.wkt
