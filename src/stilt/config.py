@@ -414,9 +414,7 @@ class BaseConfig(
         return {attr: getattr(self, attr) for attr in SystemParams.model_fields}
 
     def footprint_params(self) -> dict[str, Any]:
-        return {
-            attr: getattr(self, attr) for attr in FootprintParams.model_fields
-        }
+        return {attr: getattr(self, attr) for attr in FootprintParams.model_fields}
 
     def met_params(self) -> dict[str, Any]:
         return {attr: getattr(self, attr) for attr in MetParams.model_fields}
@@ -425,16 +423,13 @@ class BaseConfig(
         return {attr: getattr(self, attr) for attr in ModelParams.model_fields}
 
     def transport_params(self) -> dict[str, Any]:
-        return {
-            attr: getattr(self, attr) for attr in TransportParams.model_fields
-        }
+        return {attr: getattr(self, attr) for attr in TransportParams.model_fields}
 
     def error_params(self) -> dict[str, Any]:
         return {attr: getattr(self, attr) for attr in ErrorParams.model_fields}
+
     def user_funcs(self) -> dict[str, Any]:
-        return {
-            attr: getattr(self, attr) for attr in UserFuncParams.model_fields
-        }
+        return {attr: getattr(self, attr) for attr in UserFuncParams.model_fields}
 
 
 class SimulationConfig(BaseConfig):
@@ -477,12 +472,28 @@ class ModelConfig(BaseConfig):
     @classmethod
     def _load_receptors(cls, data) -> Self:
         """
-        Validates and loads receptors. If a path is provided, it loads
-        receptors from the corresponding CSV file.
+        Validates and loads receptors.
+
+        Supports three formats:
+        - Inline dict: receptor key with time, lati, long, zagl fields
+        - CSV path: receptors key with path string
+        - Pre-built: receptors key with list of Receptor objects
         """
+        receptor = data.get("receptor")
         receptors = data.get("receptors")
-        if isinstance(receptors, (str, Path)):
-            # If the input is a path, load from the file.
+
+        if receptor is not None and isinstance(receptor, dict):
+            # New inline format: receptor dict with coordinates
+            r = Receptor.build(
+                time=receptor["time"],
+                longitude=receptor["long"],
+                latitude=receptor["lati"],
+                height=receptor["zagl"],
+            )
+            data["receptors"] = [r]
+            data.pop("receptor", None)
+        elif isinstance(receptors, (str, Path)):
+            # Old CSV path format
             receptor_path = Path(receptors)
             if not receptor_path.is_absolute():
                 receptor_path = Path(data.get("stilt_wd")) / receptor_path
