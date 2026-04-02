@@ -476,7 +476,7 @@ class Simulation:
         "params": "CONC.CFG",
         "receptors": "receptors.csv",
         "setup": "SETUP.CFG",
-        "trajectory": "trajec.parquet",
+        "trajectory": "traj.parquet",
         "winderr": "WINDERR",
         "zicontrol": "ZICONTROL",
         "zierr": "ZIERR",

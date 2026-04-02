@@ -109,7 +109,7 @@ def plot_particle_variances(sim_dir: Path | str, fluxes: xr.DataArray) -> plt.Ax
     sim_dir = Path(sim_dir)
     sim_id = sim_dir.name
 
-    regular_path = sim_dir / f"{sim_id}_trajec.parquet"
+    regular_path = sim_dir / f"{sim_id}_traj.parquet"
     error_path = sim_dir / f"{sim_id}_error.parquet"
 
     # Calculate particle concentrations
@@ -150,7 +150,7 @@ def calculate_transport_error(sim_dir: Path | str, fluxes: xr.DataArray) -> floa
     sim_dir = Path(sim_dir)
     sim_id = sim_dir.name
 
-    regular_path = sim_dir / f"{sim_id}_trajec.parquet"
+    regular_path = sim_dir / f"{sim_id}_traj.parquet"
     error_path = sim_dir / f"{sim_id}_error.parquet"
 
     # Calculate variances
