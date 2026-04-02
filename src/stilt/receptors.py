@@ -1,6 +1,5 @@
 import datetime as dt
 import hashlib
-from abc import ABC
 from collections.abc import Generator
 from pathlib import Path
 
@@ -192,15 +191,20 @@ class Location:
         return self.geometry == other.geometry
 
 
-class Receptor(ABC):
+class Receptor:
+    """
+    A receptor that wraps a geometric object (Point, MultiPoint, LineString)
+    and associates it with a timestamp.
+
+    The receptor kind (point, column, multipoint) is derived from the
+    underlying geometry — there are no subclasses.
+    """
+
     def __init__(self, time, location: Location):
         """
-        A receptor that wraps a geometric object (Point, MultiPoint, etc.)
-        and associates it with a timestamp.
-
         Parameters
         ----------
-        time : datetime
+        time : datetime or str
             The timestamp associated with the receptor.
         location : Location
             A location object representing the receptor's spatial position.
@@ -219,27 +223,31 @@ class Receptor(ABC):
         self.location = location
 
     @property
-    def geometry(self) -> Geometry:
+    def kind(self) -> str:
         """
-        Receptor geometry.
-        """
-        return self.location.geometry
-
-    def __eq__(self, other) -> bool:
-        if not isinstance(other, Receptor):
-            return False
-        return self.time == other.time and self.location == other.location
-
-    @property
-    def timestr(self) -> str:
-        """
-        Get the time as an ISO formatted string.
+        The receptor kind, derived from the underlying geometry.
 
         Returns
         -------
         str
-            Time in 'YYYYMMDDHHMM' format.
+            One of 'point', 'column', or 'multipoint'.
         """
+        if isinstance(self.location.geometry, Point):
+            return "point"
+        elif isinstance(self.location.geometry, LineString):
+            return "column"
+        elif isinstance(self.location.geometry, MultiPoint):
+            return "multipoint"
+        return "unknown"
+
+    @property
+    def geometry(self) -> Geometry:
+        """Receptor geometry."""
+        return self.location.geometry
+
+    @property
+    def timestr(self) -> str:
+        """Time in 'YYYYMMDDHHMM' format."""
         return self.time.strftime("%Y%m%d%H%M")
 
     @property
@@ -247,17 +255,81 @@ class Receptor(ABC):
         return f"{self.timestr}_{self.location.id}"
 
     @property
-    # @abstractmethod
     def is_vertical(self) -> bool:
-        raise NotImplementedError
-        # TODO : when a receptor is created from metadata, it is not currently possible
-        # to distinguish a SlantReceptor from a MultiPoint receptor
-        return isinstance(self, (ColumnReceptor, SlantReceptor))
+        return self.kind == "column"
+
+    # -- Coordinate accessors --------------------------------------------------
+
+    @property
+    def longitude(self) -> float:
+        """Longitude of the receptor (first point for multipoint)."""
+        return self.location._lons[0]
+
+    @property
+    def latitude(self) -> float:
+        """Latitude of the receptor (first point for multipoint)."""
+        return self.location._lats[0]
+
+    @property
+    def height(self) -> float:
+        """Height AGL of the receptor (first point for multipoint)."""
+        return self.location._hgts[0]
+
+    @property
+    def points(self) -> list[Point]:
+        """All constituent shapely Points."""
+        return self.location.points
+
+    @property
+    def bottom(self) -> float | None:
+        """Bottom height for column receptors, None otherwise."""
+        if self.kind != "column":
+            return None
+        return float(min(self.location._hgts))
+
+    @property
+    def top(self) -> float | None:
+        """Top height for column receptors, None otherwise."""
+        if self.kind != "column":
+            return None
+        return float(max(self.location._hgts))
+
+    # -- Iteration -------------------------------------------------------------
+
+    def __iter__(self) -> Generator[float | Point, None, None]:
+        """
+        Iterate over the receptor's coordinates.
+
+        For point receptors, yields (longitude, latitude, height).
+        For multipoint/column receptors, yields constituent Points.
+        """
+        if self.kind == "point":
+            yield self.longitude
+            yield self.latitude
+            yield self.height
+        else:
+            yield from self.points
+
+    def __len__(self) -> int:
+        """Number of constituent points."""
+        return len(self.location._lons)
+
+    # -- Equality --------------------------------------------------------------
+
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, Receptor):
+            return False
+        return self.time == other.time and self.location == other.location
+
+    def __repr__(self) -> str:
+        return f"Receptor(kind={self.kind!r}, id={self.id!r})"
+
+    # -- Factory methods -------------------------------------------------------
 
     @staticmethod
     def build(time, longitude, latitude, height) -> "Receptor":
         """
-        Build a receptor object from time, latitude, longitude, and height.
+        Build a receptor from time and coordinates.
 
         Parameters
         ----------
@@ -273,12 +345,11 @@ class Receptor(ABC):
         Returns
         -------
         Receptor
-            The constructed receptor object.
         """
-        # Get receptor time
         time = pd.to_datetime(np.atleast_1d(time)[0])
 
-        # If height is a list/array of length 2 and longitude/latitude are scalars, repeat lon/lat
+        # If height is a list/array of length 2 and lon/lat are scalars,
+        # repeat lon/lat to form a column receptor.
         if (
             np.isscalar(longitude)
             and np.isscalar(latitude)
@@ -287,7 +358,7 @@ class Receptor(ABC):
         ):
             longitude = [longitude, longitude]
             latitude = [latitude, latitude]
-        # Build location object to determine geometry type
+
         location = Location.from_points(
             list(
                 zip(
@@ -298,30 +369,15 @@ class Receptor(ABC):
                 )
             )
         )
-        # Build appropriate receptor subclass based on geometry type
-        if isinstance(location.geometry, Point):
-            return PointReceptor(
-                time=time,
-                longitude=location._lons[0],
-                latitude=location._lats[0],
-                height=location._hgts[0],
-            )
-        elif isinstance(location.geometry, MultiPoint):
-            return MultiPointReceptor(time=time, points=location.points)
-        elif isinstance(location.geometry, LineString):
-            return ColumnReceptor.from_points(time=time, points=location.points)
-        else:
-            raise ValueError("Unsupported geometry type for receptor.")
+        return Receptor(time=time, location=location)
 
     @staticmethod
     def load_receptors_from_csv(path: str | Path) -> list["Receptor"]:
         """
         Load receptors from a CSV file.
         """
-        # Read the CSV file
         df = pd.read_csv(path, parse_dates=["time"])
 
-        # Map columns
         cols = {
             "latitude": "lati",
             "longitude": "long",
@@ -332,17 +388,14 @@ class Receptor(ABC):
         df.columns = df.columns.str.lower()
         df = df.rename(columns=cols)
 
-        # Check for required columns
         required_cols = ["time", "lati", "long", "zagl"]
         if not all(col in df.columns for col in required_cols):
             raise ValueError(f"Receptor file must contain columns: {required_cols}")
 
-        # Determine grouping key
-        # If "group" column exists, group rows and create a single Receptor for each group
-        # Else, treat each row as a separate PointReceptor
+        # If "group" column exists, group rows and create a single Receptor
+        # per group. Otherwise, treat each row as a separate point receptor.
         key = "group" if "group" in df.columns else df.index
 
-        # Build receptors
         receptors = (
             df.groupby(key)
             .apply(
@@ -358,164 +411,3 @@ class Receptor(ABC):
         )
 
         return receptors
-
-
-class PointReceptor(Receptor):
-    """
-    Represents a single receptor at a specific 3D point (latitude, longitude, height) in space and time.
-    """
-
-    def __init__(self, time, longitude, latitude, height):
-        location = Location.from_point(
-            longitude=longitude, latitude=latitude, height=height
-        )
-        super().__init__(time=time, location=location)
-
-    @property
-    def longitude(self) -> float:
-        return self.location._lons[0]
-
-    @property
-    def latitude(self) -> float:
-        return self.location._lats[0]
-
-    @property
-    def height(self) -> float:
-        return self.location._hgts[0]
-
-    def __iter__(self) -> Generator[float, None, None]:
-        """
-        Allow unpacking of PointReceptor into (lon, lat, height).
-        """
-        yield self.longitude
-        yield self.latitude
-        yield self.height
-
-
-class MultiPointReceptor(Receptor):
-    """
-    Represents a receptor composed of multiple 3D points, all at the same time.
-    """
-
-    def __init__(self, time, points):
-        location = Location.from_points(points)
-        super().__init__(time=time, location=location)
-
-    @property
-    def points(self) -> list[Point]:
-        return self.location.points
-
-    def __iter__(self) -> Generator[Point, None, None]:
-        """
-        Allow unpacking of MultiPointReceptor into its constituent Points.
-        """
-        yield from self.points
-
-    def __len__(self) -> int:
-        return len(self.points)
-
-
-class ColumnReceptor(Receptor):
-    """
-    Represents a vertical column receptor at a single (x, y) location,
-    defined by a bottom and top height.
-    """
-
-    def __init__(self, time, longitude, latitude, bottom, top):
-        location = Location.from_column(
-            longitude=longitude, latitude=latitude, bottom=bottom, top=top
-        )
-        super().__init__(time=time, location=location)
-
-        self._longitude = longitude
-        self._latitude = latitude
-        self._top = top
-        self._bottom = bottom
-
-    @property
-    def longitude(self) -> float:
-        return self._longitude
-
-    @property
-    def latitude(self) -> float:
-        return self._latitude
-
-    @property
-    def top(self) -> float:
-        return self._top
-
-    @property
-    def bottom(self) -> float:
-        return self._bottom
-
-    @classmethod
-    def from_points(cls, time, points):
-        p1, p2 = points
-
-        lon = p1[0]
-        lat = p1[1]
-        if lon != p2[0]:
-            raise ValueError(
-                "For a column receptor, the longitude must be the same for both points."
-            )
-        if lat != p2[1]:
-            raise ValueError(
-                "For a column receptor, the latitude must be the same for both points."
-            )
-
-        top = max(p1[2], p2[2])
-        bottom = min(p1[2], p2[2])
-        if not (bottom < top):
-            raise ValueError("'bottom' height must be less than 'top' height.")
-
-        return cls(time=time, longitude=lon, latitude=lat, bottom=bottom, top=top)
-
-
-class SlantReceptor(MultiPointReceptor):
-    """
-    Represents a slanted column receptor, defined by multiple points along the slant.
-    """
-
-    @classmethod
-    def from_top_and_bottom(cls, time, bottom, top, numpar, weights=None):
-        """
-        Parameters
-        ----------
-        time : any
-            Timestamp.
-        bottom : tuple
-            (lon, lat, height) tuple for the bottom of the slant.
-        top : tuple
-            (lon, lat, height) tuple for the top of the slant.
-        numpar : int
-            Number of points along the slant.
-        weights : list of float, optional
-            Weights for each point along the slant. Must be the same length as `numpar`.
-        """
-        raise NotImplementedError("SlantReceptor is not fully implemented yet.")
-
-        if len(bottom) != 3 or len(top) != 3:
-            raise ValueError("'bottom' and 'top' must be (lon, lat, height) tuples.")
-        if numpar < 2:
-            raise ValueError("'numpar' must be at least 2 to define a slant.")
-
-        # Generate intermediate points along the slant
-        # TODO :
-        # - Implement the logic to create slant receptors from the endpoints.
-        #   - There are various difficulties in determining the correct slant path
-        #     including determining the appropriate height above ground.
-        #   - Aaron is working on this.
-        lon_step = (top[0] - bottom[0]) / (numpar - 1)
-        lat_step = (top[1] - bottom[1]) / (numpar - 1)
-        height_step = (top[2] - bottom[2]) / (numpar - 1)
-        points = [
-            (
-                bottom[0] + i * lon_step,
-                bottom[1] + i * lat_step,
-                bottom[2] + i * height_step,
-            )
-            for i in range(numpar)
-        ]
-
-        # Initialize as a MultiPointReceptor
-        super().__init__(time=time, points=points)
