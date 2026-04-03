@@ -6,6 +6,7 @@ A python implementation of the [R-STILT](https://github.com/jmineau/stilt) model
 > Inspired by https://github.com/uataq/air-tracker-stiltctl
 """
 
+import os
 import subprocess
 from functools import cached_property
 from pathlib import Path
@@ -117,23 +118,29 @@ def stilt_init(project: str | Path, branch: str | None = None, repo: str | None 
 
 
 class Model:
-    def __init__(self, project: str | Path, **kwargs):
-        project = Path(project)
-        self.project = project
+    """STILT project interface for managing simulations.
 
-        if project.exists():
-            config = ModelConfig.from_path(project / "config.yaml")
-        else:
-            config = kwargs.pop("config", None)
-            if config is None:
-                config = self.initialize(project, **kwargs)
-            elif not isinstance(config, ModelConfig):
-                raise TypeError("config must be a ModelConfig instance.")
+    Config loading is lazy — accessing ``model.simulations`` only requires
+    the project directory to exist with the ``out/by-id/`` convention.
+    The full ``ModelConfig`` is only parsed when ``model.config`` is accessed.
+    """
 
-        self.config = config
+    def __init__(self, project: str | Path):
+        self.project = Path(project)
+
+    @cached_property
+    def config(self) -> ModelConfig:
+        """Load the project ModelConfig (parses config.yaml + receptor CSV)."""
+        config_path = self.project / "config.yaml"
+        if not config_path.exists():
+            raise FileNotFoundError(
+                f"No config.yaml found in {self.project}. "
+                "Use stilt_init() to create a new project."
+            )
+        return ModelConfig.from_path(config_path)
 
     @staticmethod
-    def initialize(project: Path, **kwargs) -> ModelConfig:
+    def initialize(project: Path, **kwargs) -> "Model":
         wd = project.parent
         if wd == Path("."):
             wd = Path.cwd()
@@ -144,56 +151,49 @@ class Model:
         branch = kwargs.pop("branch", None)
         stilt_init(project=project, branch=branch, repo=repo)
 
-        config = ModelConfig(stilt_wd=stilt_wd, **kwargs)
-        return config
+        # Write config so future Model(project) can load it
+        ModelConfig(stilt_wd=stilt_wd, **kwargs)
+        return Model(project)
 
     @cached_property
     def simulations(self) -> pd.DataFrame:
         """Lightweight simulation index built from directory names.
 
-        No YAML parsing — just directory listing + file existence checks.
+        Only performs a single directory listing — no file existence checks
+        or YAML parsing. Fast even on network filesystems with 100K+ sims.
 
         Returns
         -------
         pd.DataFrame
-            Index is sim_id. Columns: time, location_id, has_trajectory,
-            resolutions, path.
+            Index is sim_id. Columns: time, location_id, path.
         """
-        columns = ["time", "location_id", "has_trajectory", "resolutions", "path"]
-        by_id = self.config.output_wd / "by-id"
+        columns = ["time", "location_id", "path"]
+        by_id = self.project / "out" / "by-id"
         if not by_id.exists():
-            return pd.DataFrame(
-                columns=columns,
-            ).rename_axis("sim_id")
+            return pd.DataFrame(columns=columns).rename_axis("sim_id")
 
         rows = []
-        for sim_dir in sorted(by_id.iterdir()):
-            if not sim_dir.is_dir():
+        for entry in os.scandir(by_id):
+            if not entry.is_dir():
                 continue
-            sim_id = sim_dir.name
+            sim_id = entry.name
             try:
                 time, location_id = parse_sim_id(sim_id)
             except ValueError:
                 continue
-
-            has_traj = (sim_dir / f"{sim_id}_traj.parquet").exists()
-            resolutions = _find_resolutions(sim_dir, sim_id)
-
             rows.append(
                 {
                     "sim_id": sim_id,
                     "time": time,
                     "location_id": location_id,
-                    "has_trajectory": has_traj,
-                    "resolutions": resolutions,
-                    "path": sim_dir,
+                    "path": Path(entry.path),
                 }
             )
 
         if not rows:
             return pd.DataFrame(columns=columns).rename_axis("sim_id")
 
-        return pd.DataFrame(rows).set_index("sim_id")
+        return pd.DataFrame(rows).set_index("sim_id").sort_index()
 
     def invalidate_cache(self):
         """Clear the cached simulations index so it is rebuilt on next access."""
@@ -201,16 +201,16 @@ class Model:
 
     def get_simulations(
         self,
-        has_trajectory: bool = True,
         resolution: str | None = None,
         time_range: tuple | None = None,
     ) -> list[Path]:
         """Filtered list of simulation paths for downstream consumers.
 
+        File existence checks (trajectory, footprint resolution) are only
+        performed when filtering is requested, and only on matching sims.
+
         Parameters
         ----------
-        has_trajectory : bool
-            Only include simulations with a trajectory file.
         resolution : str, optional
             Only include simulations that have a footprint at this resolution
             (e.g. '0.01x0.01').
@@ -225,12 +225,17 @@ class Model:
         df = self.simulations
         if df.empty:
             return []
-        if has_trajectory:
-            df = df[df.has_trajectory]
-        if resolution:
-            df = df[df.resolutions.apply(lambda r: resolution in r)]
         if time_range:
             df = df[df.time.between(*time_range)]
+        if resolution:
+            df = df[
+                df.apply(
+                    lambda row: (
+                        row.path / f"{row.name}_{resolution}_foot.nc"
+                    ).exists(),
+                    axis=1,
+                )
+            ]
         return df.path.tolist()
 
     def get_missing(
@@ -248,6 +253,7 @@ class Model:
             will be built.
         include_failed : bool
             If True, treat failed simulations (no trajectory) as missing.
+            Checks for trajectory file existence only on sims in the index.
 
         Returns
         -------
@@ -268,7 +274,16 @@ class Model:
         if df.empty:
             return receptors
 
-        existing = set(df.index) if include_failed else set(df[df.has_trajectory].index)
+        if include_failed:
+            # Only count sims with trajectory files as done
+            has_traj = df.apply(
+                lambda row: (row.path / f"{row.name}_traj.parquet").exists(),
+                axis=1,
+            )
+            existing = set(df[has_traj].index)
+        else:
+            # Any directory present counts as done
+            existing = set(df.index)
 
         return receptors[~receptors.sim_id.isin(existing)]
 
@@ -284,7 +299,7 @@ class Model:
         -------
         Simulation
         """
-        return Simulation.from_path(self.config.output_wd / "by-id" / sim_id)
+        return Simulation.from_path(self.project / "out" / "by-id" / sim_id)
 
     def plot_availability(self, ax: plt.Axes | None = None, **kwargs) -> plt.Axes:
         """Plot simulation availability over time as a Gantt chart.
@@ -308,14 +323,12 @@ class Model:
             return ax
 
         for _, row in df.iterrows():
-            color = "green" if row.has_trajectory else "red"
             ax.barh(
                 y=row.location_id,
                 width=pd.Timedelta(hours=1),
                 left=row.time,
                 height=0.6,
                 align="center",
-                color=color,
                 edgecolor="black",
                 alpha=0.6,
                 **kwargs,
