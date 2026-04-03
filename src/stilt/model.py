@@ -7,15 +7,64 @@ A python implementation of the [R-STILT](https://github.com/jmineau/stilt) model
 """
 
 import subprocess
+from functools import cached_property
 from pathlib import Path
-from typing import Any
 
 import matplotlib.pyplot as plt
 import pandas as pd
-from typing_extensions import Self  # requires python 3.11 to import from typing
 
 from stilt.config import ModelConfig
 from stilt.simulation import Simulation
+
+
+def parse_sim_id(sim_id: str) -> tuple[pd.Timestamp, str]:
+    """Parse a simulation ID into (time, location_id).
+
+    Handles all ID formats:
+        202301150600_-111.5_40.5_100      → point
+        202301150600_-111.5_40.5_X        → column
+        202301150600_multi_abc123def456   → multipoint
+
+    Parameters
+    ----------
+    sim_id : str
+        Simulation ID string.
+
+    Returns
+    -------
+    tuple[pd.Timestamp, str]
+        (time, location_id) where location_id is everything after the
+        12-character timestamp and its trailing underscore.
+
+    Raises
+    ------
+    ValueError
+        If the sim_id doesn't start with a valid 12-digit timestamp.
+    """
+    if len(sim_id) < 13 or sim_id[12] != "_":
+        raise ValueError(f"Invalid sim_id format: {sim_id!r}")
+
+    time_str = sim_id[:12]
+    location_id = sim_id[13:]
+
+    try:
+        time = pd.to_datetime(time_str, format="%Y%m%d%H%M")
+    except ValueError:
+        raise ValueError(f"Cannot parse timestamp from sim_id: {sim_id!r}") from None
+
+    return time, location_id
+
+
+def _find_resolutions(sim_dir: Path, sim_id: str) -> list[str]:
+    """Discover footprint resolutions by globbing *_foot.nc files."""
+    prefix = f"{sim_id}_"
+    resolutions = []
+    for f in sim_dir.glob(f"{sim_id}_*_foot.nc"):
+        stem = f.stem.removesuffix("_foot")
+        res = stem[len(prefix) :]
+        if res:
+            resolutions.append(res)
+    return resolutions
 
 
 def stilt_init(project: str | Path, branch: str | None = None, repo: str | None = None):
@@ -67,397 +116,14 @@ def stilt_init(project: str | Path, branch: str | None = None, repo: str | None 
     run_stilt_path.write_text(run_stilt)
 
 
-class SimulationCollection:
-    COLUMNS = [
-        "id",
-        "location_id",
-        "status",
-        "r_time",
-        "r_long",
-        "r_lati",
-        "r_zagl",
-        "t_start",
-        "t_end",
-        "path",
-        "simulation",
-    ]
-
-    def __init__(self, sims: list[Simulation] | None = None):
-        """
-        Initialize SimulationCollection.
-
-        Parameters
-        ----------
-        sims : list[Simulation]
-            List of Simulation objects to add to the collection.
-            If None, an empty collection is created.
-        """
-        # Initialize an empty DataFrame with the required columns
-        self._df = pd.DataFrame(columns=self.COLUMNS)
-
-        # Add simulations to the collection if provided
-        if sims:
-            rows = [self._prepare_simulation_row(sim) for sim in sims]
-            self._df = pd.DataFrame(rows, columns=self.COLUMNS)
-            self._df.set_index("id", inplace=True)
-
-    @staticmethod
-    def _prepare_simulation_row(sim: Simulation) -> dict[str, Any]:
-        """
-        Prepare a dictionary row for a Simulation object.
-
-        Parameters
-        ----------
-        sim : Simulation
-            Simulation object to prepare.
-
-        Returns
-        -------
-        dict[str, Any]
-            Dictionary representation of the Simulation object.
-        """
-        if isinstance(sim, dict) and "id" in sim:
-            # Assume dictionaries with 'id' key are failed simulations
-            return sim
-
-        return {
-            "id": sim.id,
-            "location_id": sim.receptor.location.id,
-            "status": sim.status,
-            "r_time": sim.receptor.time,
-            "r_long": sim.receptor.location._lons,
-            "r_lati": sim.receptor.location._lats,
-            "r_zagl": sim.receptor.location._hgts,
-            "t_start": sim.time_range[0],
-            "t_end": sim.time_range[1],
-            "path": sim.path,
-            "simulation": sim,
-        }
-
-    @classmethod
-    def from_paths(cls, paths: list[Path | str]) -> Self:
-        """
-        Create SimulationCollection from a list of simulation paths.
-
-        Parameters
-        ----------
-        paths : list[Path | str]
-            List of paths to STILT simulation directories or files.
-
-        Returns
-        -------
-        SimulationCollection
-            Collection of Simulations.
-        """
-        sims = []
-        for path in paths:
-            path = Path(path)
-            if not Simulation.is_sim_path(path):
-                raise ValueError(
-                    f"Path '{path}' is not a valid STILT simulation directory."
-                )
-            try:
-                sim = Simulation.from_path(path)
-            except Exception:
-                failure_reason = Simulation.identify_failure_reason(path)
-                sim = {
-                    "id": Simulation.get_sim_id_from_path(path=path),
-                    "status": f"FAILURE:{failure_reason}",
-                    "path": path,
-                }
-            sims.append(sim)
-        return cls(sims=sims)
-
-    @property
-    def df(self) -> pd.DataFrame:
-        """
-        Get the underlying DataFrame.
-
-        Returns
-        -------
-        pd.DataFrame
-            DataFrame containing simulation metadata.
-        """
-        return self._df
-
-    def __getitem__(self, key: str) -> Simulation:
-        """
-        Get a Simulation object by its ID.
-
-        Parameters
-        ----------
-        key : str
-            Simulation ID.
-
-        Returns
-        -------
-        Simulation
-            Simulation object corresponding to the given ID.
-        """
-        if key not in self._df.index:
-            raise KeyError(f"Simulation with ID '{key}' not found in the collection.")
-        return self._df.loc[key, "simulation"]
-
-    def __setitem__(self, key: str, value: Simulation) -> None:
-        """
-        Set a Simulation object by its ID.
-
-        Parameters
-        ----------
-        key : str
-            Simulation ID.
-        value : Simulation
-            Simulation object to set.
-        """
-        if not isinstance(value, Simulation):
-            raise TypeError(f"Value must be a Simulation object, got {type(value)}.")
-        row = self._prepare_simulation_row(value)
-        if key in self._df.index:
-            raise KeyError(
-                f"Simulation with ID '{key}' already exists in the collection."
-            )
-        self._df.loc[key] = row
-
-    def __contains__(self, key: str) -> bool:
-        """
-        Check if a Simulation ID exists in the collection.
-
-        Parameters
-        ----------
-        key : str
-            Simulation ID.
-
-        Returns
-        -------
-        bool
-            True if the Simulation ID exists, False otherwise.
-        """
-        return key in self._df.index
-
-    def __iter__(self):
-        """
-        Iterate over Simulations in the collection.
-
-        Returns
-        -------
-        Iterator[Simulation]
-            Iterator over Simulation objects.
-        """
-        return iter(self._df.simulation)
-
-    def __len__(self) -> int:
-        """
-        Get the number of Simulations in the collection.
-
-        Returns
-        -------
-        int
-            Number of Simulations in the collection.
-        """
-        return len(self._df)
-
-    def __repr__(self) -> str:
-        return repr(self._df)
-
-    def load_trajectories(self) -> None:
-        """
-        Load trajectories for all simulations in the collection.
-
-        Returns
-        -------
-        None
-            The trajectories are loaded into the 'simulation' column of the DataFrame.
-        """
-        self._df["trajectory"] = self._df["simulation"].apply(
-            lambda sim: sim.trajectory if isinstance(sim, Simulation) else None
-        )
-        return None
-
-    def load_footprints(self, resolutions: list[str] | None = None) -> None:
-        """
-        Load footprints for simulations in the collection.
-
-        Parameters
-        ----------
-        resolutions : list[str], optional
-            Resolutions to filter footprints. If None, all footprints are loaded.
-
-        Returns
-        -------
-        None
-            The footprints are loaded into the 'footprints' column of the DataFrame.
-        """
-        if isinstance(resolutions, str):
-            resolutions = [resolutions]
-
-        sims = self._df["simulation"]
-
-        # Collect all unique resolutions across simulations
-        if resolutions is None:
-            resolutions = set()
-            for sim in sims:
-                if isinstance(sim, Simulation):
-                    sim_resolutions = sim.config.resolutions
-                    if sim_resolutions is not None:
-                        resolutions.update(map(str, sim.config.resolutions))
-
-        if not resolutions:
-            return None
-
-        # Populate the footprint columns
-        for idx, sim in sims.items():
-            if isinstance(sim, Simulation):
-                for res in resolutions:
-                    col_name = f"footprint_{res}"
-                    footprint = sim.footprints.get(res)
-                    if footprint is not None:
-                        if col_name not in self._df.columns:
-                            # Add columns for each resolution
-                            self._df[col_name] = None
-                        self._df.at[idx, col_name] = footprint
-
-        # If only one resolution exists, rename the column to "footprint"
-        if len(resolutions) == 1:
-            single_res_col = f"footprint_{resolutions[0]}"
-            self._df.rename(columns={single_res_col: "footprint"}, inplace=True)
-
-        return None
-
-    @classmethod
-    def merge(cls, collections: Self | list[Self]) -> Self:
-        """
-        Merge multiple SimulationCollections into one.
-
-        Parameters
-        ----------
-        collections : list[SimulationCollection]
-            List of SimulationCollections to merge.
-
-        Returns
-        -------
-        SimulationCollection
-            Merged SimulationCollection.
-        """
-        if not isinstance(collections, list):
-            collections = [collections]
-
-        merged_sims = pd.concat([collection._df for collection in collections])
-        if merged_sims.index.has_duplicates:
-            raise ValueError(
-                "Merged simulations contain duplicate IDs. Ensure unique simulation IDs across collections."
-            )
-        collection = cls()
-        collection._df = merged_sims
-        return collection
-
-    def get_missing(
-        self, in_receptors: str | Path | pd.DataFrame, include_failed: bool = False
-    ) -> pd.DataFrame:
-        """
-        Find simulations in csv that are missing from simulation collection.
-
-        Parameters
-        ----------
-        in_receptors : str | Path | pd.DataFrame
-            Path to csv file containing receptor configuration or a DataFrame directly.
-        include_failed : bool, optional
-            Include failed simulations in output. The default is False.
-
-        Returns
-        -------
-        pd.DataFrame
-            DataFrame of missing simulations.
-        """
-        # Use receptor info to match simulations
-        cols = ["time", "long", "lati", "zagl"]
-
-        # Load dataframes
-        if isinstance(in_receptors, (str, Path)):
-            in_df = pd.read_csv(in_receptors)
-        elif isinstance(in_receptors, pd.DataFrame):
-            in_df = in_receptors.copy()
-        else:
-            raise TypeError(
-                "in_receptors must be a path to a csv file or a pandas DataFrame."
-            )
-        in_df["time"] = pd.to_datetime(in_df["time"])
-
-        sim_df = self.df.copy()
-        if include_failed:
-            # Drop failed simulations from the sim df so that when doing an outer join with the input receptors,
-            # they appear in the input receptors but not in the simulation collection
-            sim_df = sim_df[sim_df["status"] == "SUCCESS"]
-        r_cols = {f"r_{col}": col for col in cols}
-        sim_df = (
-            sim_df[list(r_cols.keys())].rename(columns=r_cols).reset_index(drop=True)
-        )
-
-        # Merge dataframes on receptor info
-        merged = pd.merge(in_df, sim_df, on=cols, how="outer", indicator=True)
-        missing = merged[merged["_merge"] == "left_only"]
-        return missing.drop(columns="_merge")
-
-    def plot_availability(self, ax: plt.Axes | None = None, **kwargs) -> plt.Axes:
-        """
-        Plot availability of simulations over time.
-
-        Parameters
-        ----------
-        ax : plt.Axes, optional
-            Matplotlib Axes to plot on. If None, a new figure and axes are created.
-        **kwargs : dict
-            Additional keyword arguments for the scatter plot.
-
-        Returns
-        -------
-        plt.Axes
-            Matplotlib Axes with the plot.
-        """
-        if ax is None:
-            fig, ax = plt.subplots()
-        else:
-            fig = plt.gcf()
-
-        df = self.df.copy()
-        df["status"] = df["status"].fillna("MISSING")
-
-        # Iterate through each row of the DataFrame to plot the rectangles
-        for _index, row in df.iterrows():
-            # Calculate the duration of the event
-            duration = row["t_end"] - row["t_start"]
-
-            # Plot a horizontal bar (gantt bar)
-            ax.barh(
-                y=row["location_id"],  # Y-axis is the location
-                width=duration,  # Width is the time duration
-                left=row["t_start"],  # Start position on the X-axis
-                height=0.6,  # Height of the bar
-                align="center",
-                color="green" if row["status"] == "SUCCESS" else "red",
-                edgecolor="black",
-                alpha=0.6,
-                **kwargs,
-            )
-
-        fig.autofmt_xdate()
-
-        ax.set(title="Simulation Availability", xlabel="Time", ylabel="Location ID")
-
-        return ax
-
-
 class Model:
     def __init__(self, project: str | Path, **kwargs):
-        # Extract project name and working directory
         project = Path(project)
-        self.project = project.name
+        self.project = project
 
         if project.exists():
-            # Build model config from existing project
             config = ModelConfig.from_path(project / "config.yaml")
-
-        else:  # Create a new project
-            # Build model config
+        else:
             config = kwargs.pop("config", None)
             if config is None:
                 config = self.initialize(project, **kwargs)
@@ -466,44 +132,225 @@ class Model:
 
         self.config = config
 
-        self._simulations = None  # Lazy loading
-
     @staticmethod
     def initialize(project: Path, **kwargs) -> ModelConfig:
-        # Determine working directory
         wd = project.parent
         if wd == Path("."):
             wd = Path.cwd()
         stilt_wd = wd / project
         del kwargs["stilt_wd"]
 
-        # Call stilt_init
         repo = kwargs.pop("repo", None)
         branch = kwargs.pop("branch", None)
         stilt_init(project=project, branch=branch, repo=repo)
 
-        # Build config overriding default values with kwargs
         config = ModelConfig(stilt_wd=stilt_wd, **kwargs)
-
         return config
 
-    @property
-    def simulations(self) -> SimulationCollection | None:
+    @cached_property
+    def simulations(self) -> pd.DataFrame:
+        """Lightweight simulation index built from directory names.
+
+        No YAML parsing — just directory listing + file existence checks.
+
+        Returns
+        -------
+        pd.DataFrame
+            Index is sim_id. Columns: time, location_id, has_trajectory,
+            resolutions, path.
         """
-        Load all simulations from the output working directory.
+        columns = ["time", "location_id", "has_trajectory", "resolutions", "path"]
+        by_id = self.config.output_wd / "by-id"
+        if not by_id.exists():
+            return pd.DataFrame(
+                columns=columns,
+            ).rename_axis("sim_id")
+
+        rows = []
+        for sim_dir in sorted(by_id.iterdir()):
+            if not sim_dir.is_dir():
+                continue
+            sim_id = sim_dir.name
+            try:
+                time, location_id = parse_sim_id(sim_id)
+            except ValueError:
+                continue
+
+            has_traj = (sim_dir / f"{sim_id}_traj.parquet").exists()
+            resolutions = _find_resolutions(sim_dir, sim_id)
+
+            rows.append(
+                {
+                    "sim_id": sim_id,
+                    "time": time,
+                    "location_id": location_id,
+                    "has_trajectory": has_traj,
+                    "resolutions": resolutions,
+                    "path": sim_dir,
+                }
+            )
+
+        if not rows:
+            return pd.DataFrame(columns=columns).rename_axis("sim_id")
+
+        return pd.DataFrame(rows).set_index("sim_id")
+
+    def invalidate_cache(self):
+        """Clear the cached simulations index so it is rebuilt on next access."""
+        self.__dict__.pop("simulations", None)
+
+    def get_simulations(
+        self,
+        has_trajectory: bool = True,
+        resolution: str | None = None,
+        time_range: tuple | None = None,
+    ) -> list[Path]:
+        """Filtered list of simulation paths for downstream consumers.
+
+        Parameters
+        ----------
+        has_trajectory : bool
+            Only include simulations with a trajectory file.
+        resolution : str, optional
+            Only include simulations that have a footprint at this resolution
+            (e.g. '0.01x0.01').
+        time_range : tuple, optional
+            (start, end) datetime tuple to filter by receptor time.
+
+        Returns
+        -------
+        list[Path]
+            Paths to simulation directories matching the filters.
         """
-        if self._simulations is None:
-            output_wd = self.config.output_wd
-            if output_wd.exists():
-                paths = self.config.output_wd.glob("by-id/*")
-                self._simulations = SimulationCollection.from_paths(paths)
-        return self._simulations
+        df = self.simulations
+        if df.empty:
+            return []
+        if has_trajectory:
+            df = df[df.has_trajectory]
+        if resolution:
+            df = df[df.resolutions.apply(lambda r: resolution in r)]
+        if time_range:
+            df = df[df.time.between(*time_range)]
+        return df.path.tolist()
+
+    def get_missing(
+        self,
+        receptors: str | Path | pd.DataFrame,
+        include_failed: bool = False,
+    ) -> pd.DataFrame:
+        """Find receptors that don't have completed simulations.
+
+        Parameters
+        ----------
+        receptors : str | Path | pd.DataFrame
+            Receptor CSV path or DataFrame. Must contain a 'sim_id' column,
+            or 'time', 'long', 'lati', 'zagl' columns from which sim_ids
+            will be built.
+        include_failed : bool
+            If True, treat failed simulations (no trajectory) as missing.
+
+        Returns
+        -------
+        pd.DataFrame
+            Subset of receptors that are missing from the simulation index.
+        """
+        if isinstance(receptors, (str, Path)):
+            receptors = pd.read_csv(receptors, parse_dates=["time"])
+        else:
+            receptors = receptors.copy()
+
+        # Build sim_id if not present
+        if "sim_id" not in receptors.columns:
+            receptors["sim_id"] = _build_sim_ids(receptors)
+
+        # Determine which existing sims count as "done"
+        df = self.simulations
+        if df.empty:
+            return receptors
+
+        existing = set(df.index) if include_failed else set(df[df.has_trajectory].index)
+
+        return receptors[~receptors.sim_id.isin(existing)]
+
+    def load_simulation(self, sim_id: str) -> Simulation:
+        """Load a single Simulation object on demand (parses YAML).
+
+        Parameters
+        ----------
+        sim_id : str
+            Simulation ID.
+
+        Returns
+        -------
+        Simulation
+        """
+        return Simulation.from_path(self.config.output_wd / "by-id" / sim_id)
+
+    def plot_availability(self, ax: plt.Axes | None = None, **kwargs) -> plt.Axes:
+        """Plot simulation availability over time as a Gantt chart.
+
+        Parameters
+        ----------
+        ax : plt.Axes, optional
+            Matplotlib Axes to plot on.
+
+        Returns
+        -------
+        plt.Axes
+        """
+        if ax is None:
+            fig, ax = plt.subplots()
+        else:
+            fig = plt.gcf()
+
+        df = self.simulations.copy()
+        if df.empty:
+            return ax
+
+        for _, row in df.iterrows():
+            color = "green" if row.has_trajectory else "red"
+            ax.barh(
+                y=row.location_id,
+                width=pd.Timedelta(hours=1),
+                left=row.time,
+                height=0.6,
+                align="center",
+                color=color,
+                edgecolor="black",
+                alpha=0.6,
+                **kwargs,
+            )
+
+        fig.autofmt_xdate()
+        ax.set(title="Simulation Availability", xlabel="Time", ylabel="Location ID")
+        return ax
 
     def run(self):
-        # Run the STILT model
-        # TODO Dont have time to implement python calculations
+        # TODO: implement Python execution
         self._run_rscript()
 
     def _run_rscript(self):
-        # In the meantime, we can call the R execultable
         raise NotImplementedError
+
+
+def _build_sim_ids(df: pd.DataFrame) -> pd.Series:
+    """Build sim_id strings from a receptor DataFrame.
+
+    Expects columns: time (or Time_UTC), long, lati, zagl.
+    Only handles point receptors (the common case).
+    """
+    time_col = "time"
+    if time_col not in df.columns and "Time_UTC" in df.columns:
+        time_col = "Time_UTC"
+
+    time = pd.to_datetime(df[time_col])
+
+    return (
+        time.dt.strftime("%Y%m%d%H%M")
+        + "_"
+        + df["long"].astype(str)
+        + "_"
+        + df["lati"].astype(str)
+        + "_"
+        + df["zagl"].astype(str)
+    )

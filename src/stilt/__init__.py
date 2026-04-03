@@ -10,7 +10,7 @@ __email__ = "jameskmineau@gmail.com"
 
 from .config import ModelConfig
 from .meteorology import Meteorology
-from .model import Model, stilt_init
+from .model import Model, parse_sim_id, stilt_init
 from .receptors import Receptor
 from .footprint import Footprint
 from .simulation import Simulation
@@ -25,6 +25,7 @@ __all__ = [
     "ModelConfig",
     "Meteorology",
     "Model",
+    "parse_sim_id",
     "stilt_init",
     "Receptor",
     "Simulation",
