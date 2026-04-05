@@ -203,11 +203,13 @@ class Model:
         self,
         resolution: str | None = None,
         time_range: tuple | None = None,
+        location_ids: set[str] | None = None,
     ) -> list[Path]:
         """Filtered list of simulation paths for downstream consumers.
 
-        File existence checks (trajectory, footprint resolution) are only
-        performed when filtering is requested, and only on matching sims.
+        Index-only filters (time_range, location_ids) are applied first with
+        no file I/O. File existence checks (footprint resolution) are only
+        performed on the remaining rows.
 
         Parameters
         ----------
@@ -216,6 +218,9 @@ class Model:
             (e.g. '0.01x0.01').
         time_range : tuple, optional
             (start, end) datetime tuple to filter by receptor time.
+        location_ids : set[str], optional
+            Only include simulations whose location_id is in this set
+            (e.g. {"-111.85_40.77_4", "-111.847672_40.766189_35"}).
 
         Returns
         -------
@@ -227,6 +232,8 @@ class Model:
             return []
         if time_range:
             df = df[df.time.between(*time_range)]
+        if location_ids is not None:
+            df = df[df.location_id.isin(location_ids)]
         if resolution:
             df = df[
                 df.apply(
