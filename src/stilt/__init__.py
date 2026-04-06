@@ -12,7 +12,9 @@ from .config import ModelConfig
 from .meteorology import Meteorology
 from .model import Model, stilt_init
 from .receptors import Receptor
-from .simulation import Footprint, Simulation, Trajectory
+from .footprint import Footprint
+from .simulation import Simulation
+from .trajectory import Trajectory
 
 units = {
     "latex": None  # TODO
