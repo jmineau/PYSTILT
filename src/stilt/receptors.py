@@ -1,5 +1,6 @@
 import datetime as dt
 import hashlib
+import json
 from collections.abc import Generator
 from pathlib import Path
 
@@ -80,9 +81,17 @@ class Location:
             y = _format_coord(coords[0][1])
             return f"{x}_{y}_X"
 
-        # For MultiPoint geometries
-        wkt_string = self.geometry.wkt
-        hash_str = hashlib.md5(wkt_string.encode("utf-8")).hexdigest()
+        # For MultiPoint geometries: SHA-256 of canonical JSON (sorted by lon, lat, zagl)
+        # Matches R-STILT implementation in simulation_step.r.
+        points_sorted = sorted(zip(self._lons, self._lats, self._hgts, strict=False))
+        canonical = json.dumps(
+            [
+                [round(lon, 5), round(lat, 5), int(zagl)]
+                for lon, lat, zagl in points_sorted
+            ],
+            separators=(",", ":"),
+        )
+        hash_str = hashlib.sha256(canonical.encode()).hexdigest()[:10]
         return f"multi_{hash_str}"
 
     @property
