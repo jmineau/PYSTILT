@@ -45,7 +45,7 @@ class Observation:
 
     def __post_init__(self) -> None:
         parsed = pd.Timestamp(self.time)
-        if pd.isna(parsed):
+        if parsed is pd.NaT:
             raise ValueError("Observation.time must be a valid timestamp.")
         self.time = cast(pd.Timestamp, parsed)
         self.altitude_ref = validate_vertical_reference(self.altitude_ref)

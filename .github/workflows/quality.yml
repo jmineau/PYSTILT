@@ -38,4 +38,4 @@ jobs:
     - name: Check docstring coverage
       if: ${{ !cancelled() }}
       run: |
-        uv run docstr-coverage src/stilt --skip-magic --skip-init
+        uv run docstr-coverage src/stilt --skip-magic --skip-init --fail-under 95

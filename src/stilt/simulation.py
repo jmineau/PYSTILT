@@ -123,6 +123,8 @@ class SimID(str):
         if time is None or location_id is None:
             raise ValueError("Must provide 'receptor' or both 'time' and 'location_id'")
         ts = pd.Timestamp(time)
+        if ts is pd.NaT:
+            raise ValueError("'time' must be a valid timestamp")
         return cls(f"{met}_{ts.strftime('%Y%m%d%H%M')}_{location_id}")
 
     def __fspath__(self) -> str:

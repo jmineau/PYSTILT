@@ -324,7 +324,11 @@ class FootprintPlotAccessor:
                 shading="auto",
                 **kwargs,
             )
-            panel_ax.set_title(pd.Timestamp(t).strftime("%Y-%m-%d %H:%M"), fontsize=9)
+            panel_time = pd.Timestamp(t)
+            title = (
+                "NaT" if panel_time is pd.NaT else panel_time.strftime("%Y-%m-%d %H:%M")
+            )
+            panel_ax.set_title(title, fontsize=9)
             panel_ax.tick_params(labelsize=7)
 
         for panel_ax in axes_flat[n:]:

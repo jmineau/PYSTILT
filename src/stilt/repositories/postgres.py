@@ -1072,7 +1072,7 @@ class PostgreSQLRepository:
             ).fetchall()
         if not rows:
             return pd.DataFrame(
-                columns=["trajectory_status", "error"],
+                columns=pd.Index(["trajectory_status", "error"]),
                 index=pd.Index([], name="sim_id"),
             )
         df = pd.DataFrame(rows)
