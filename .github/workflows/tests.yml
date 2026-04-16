@@ -5,9 +5,11 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  workflow_dispatch:
 
 jobs:
-  test:
+  unit:
+    name: Unit tests
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -17,19 +19,22 @@ jobs:
     steps:
     - uses: actions/checkout@v5
 
+    - name: Install uv
+      uses: astral-sh/setup-uv@v4
+      with:
+        enable-cache: true
+
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v6
       with:
         python-version: ${{ matrix.python-version }}
 
     - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -e ".[dev]"
+      run: uv sync --group dev --python ${{ matrix.python-version }}
 
-    - name: Run tests with pytest
+    - name: Run unit tests
       run: |
-        pytest -v --cov=stilt --junitxml=junit.xml -o junit_family=legacy
+        uv run --python ${{ matrix.python-version }} pytest tests/ --ignore=tests/integration -v --cov=stilt --junitxml=junit.xml -o junit_family=legacy
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v5
@@ -42,3 +47,70 @@ jobs:
       uses: codecov/test-results-action@v1
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
+
+  integration:
+    name: Integration tests
+    runs-on: ubuntu-latest  # HYSPLIT binary is linux_x64 only
+
+    steps:
+    - uses: actions/checkout@v5
+
+    - name: Clone stilt-tutorials met data
+      run: git clone --depth 1 https://github.com/uataq/stilt-tutorials tests/stilt-tutorials
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v4
+      with:
+        enable-cache: true
+
+    - name: Set up Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: '3.12'
+
+    - name: Install dependencies
+      run: uv sync --group dev
+
+    - name: Run integration tests
+      run: uv run pytest tests/integration/ -v -m integration
+
+  package:
+    name: Package smoke test
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v5
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v4
+      with:
+        enable-cache: true
+
+    - name: Set up Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: '3.12'
+
+    - name: Install dependencies
+      run: uv sync --group dev
+
+    - name: Install build tools
+      run: python -m pip install --upgrade pip build twine
+
+    - name: Build distributions
+      run: python -m build
+
+    - name: Check distributions
+      run: twine check dist/*
+
+    - name: Install wheel in clean environment
+      run: |
+        python -m venv .pkgtest
+        .pkgtest/bin/pip install --upgrade pip
+        .pkgtest/bin/pip install dist/*.whl
+
+    - name: Smoke test installed package
+      run: |
+        .pkgtest/bin/python -c "import stilt; print(stilt.__version__)"
+        .pkgtest/bin/python -m stilt --help
+        .pkgtest/bin/stilt --help

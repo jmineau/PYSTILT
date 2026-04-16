@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stilt-pystilt-project
+  namespace: stilt
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: stilt-pystilt-project
+  template:
+    metadata:
+      labels:
+        app: stilt-pystilt-project
+    spec:
+      restartPolicy: Always
+      containers:
+        - name: pystilt-worker
+          image: ghcr.io/example/pystilt-worker:latest
+          command:
+            [
+              "stilt",
+              "serve",
+              "gs://example-bucket/pystilt-project",
+              "--cpus",
+              "1",
+            ]
+          env:
+            - name: PYSTILT_DB_URL
+              valueFrom:
+                secretKeyRef:
+                  name: pystilt-db
+                  key: PYSTILT_DB_URL

@@ -8,13 +8,22 @@ import sys
 
 sys.path.insert(0, os.path.abspath("../src"))
 
+PYDANTIC_AUTODOC_EXCLUDES = {
+    "model_config",
+    "model_fields",
+    "model_computed_fields",
+    "model_extra",
+    "model_fields_set",
+    "DEFAULT_TARGET",
+}
+
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = "PYSTILT"
-copyright = "2025, James Mineau"
+copyright = "2026, James Mineau"
 author = "James Mineau"
-release = "2025.10.0"
+release = "0.1.0a1"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -25,22 +34,35 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.viewcode",
     "sphinx.ext.intersphinx",
+    "sphinx.ext.githubpages",
     "sphinx_autodoc_typehints",
+    "sphinx_design",
 ]
 
 templates_path = ["_templates"]
-exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
+exclude_patterns = [
+    "_build",
+    "Thumbs.db",
+    ".DS_Store",
+    "api/_autosummary/kubernetes*.rst",
+]
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_theme = "pydata_sphinx_theme"
+html_title = "PYSTILT"
 html_static_path = ["_static"]
+html_css_files = ["custom.css"]
 
 html_theme_options = {
     "github_url": "https://github.com/jmineau/PYSTILT",
     "show_toc_level": 2,
     "navbar_align": "left",
+    "navigation_depth": 3,
+    "secondary_sidebar_items": ["page-toc", "edit-this-page", "sourcelink"],
+    "footer_start": ["copyright"],
+    "footer_end": ["sphinx-version", "theme-version"],
 }
 
 # -- Extension configuration -------------------------------------------------
@@ -67,11 +89,19 @@ autodoc_default_options = {
     "member-order": "bysource",
     "special-members": "__init__",
     "undoc-members": True,
-    "exclude-members": "__weakref__",
+    "exclude-members": ",".join(sorted(PYDANTIC_AUTODOC_EXCLUDES | {"__weakref__"})),
+}
+
+autodoc_type_aliases = {
+    "ModelConfig": "stilt.config.ModelConfig",
+    "Receptor": "stilt.receptor.Receptor",
+    "Trajectories": "stilt.trajectory.Trajectories",
 }
 
 # Autosummary settings
-autosummary_generate = True
+# The checked-in pages under docs/api/_autosummary are the source of truth.
+autosummary_generate = False
+autosummary_generate_overwrite = False
 
 # Intersphinx settings
 intersphinx_mapping = {
@@ -86,3 +116,22 @@ intersphinx_mapping = {
     "shapely": ("https://shapely.readthedocs.io/en/stable/", None),
     "xarray": ("https://xarray.pydata.org/en/stable/", None),
 }
+
+
+def skip_pydantic_members(
+    app: object,
+    what: str,
+    name: str,
+    obj: object,
+    skip: bool,
+    options: object,
+) -> bool | None:
+    """Hide Pydantic implementation attributes from generated API docs."""
+    if name in PYDANTIC_AUTODOC_EXCLUDES or name.startswith("__pydantic_"):
+        return True
+    return None
+
+
+def setup(app: object) -> None:
+    """Register Sphinx hooks for API doc cleanup."""
+    app.connect("autodoc-skip-member", skip_pydantic_members)

@@ -3,52 +3,78 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "stilt"
-version = "2025.10.0"
-description = "A python implementation of the STILT model."
+name = "pystilt"
+version = "0.1.0a1"
+description = "A Python implementation of the STILT Lagrangian atmospheric transport model."
 readme = "README.md"
 requires-python = ">=3.10"
-license = {text = "MIT"}
+license = "MIT"
 authors = [
     {name = "James Mineau", email = "jameskmineau@gmail.com"}
 ]
+keywords = ["stilt", "hysplit", "atmospheric-transport", "lagrangian", "footprint", "meteorology"]
 classifiers = [
     "Development Status :: 3 - Alpha",
-    "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Atmospheric Science",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
-    "f90nml",
-    "matplotlib",
-    "numpy",
-    "pandas",
-    "pyarrow",
-    "pydantic",
-    "pyproj",
-    "pyyaml",
-    "shapely",
-    "typing-extensions",
-    "xarray",
+    "fsspec>=2024.2",
+    "netcdf4>=1.7.3",
+    "numpy>=1.24",
+    "pandas>=2.0",
+    "pyarrow>=14.0",
+    "pydantic>=2.0",
+    "pydantic-settings>=2.0",
+    "pyyaml>=6.0",
+    "scipy>=1.10",
+    "shapely>=2.0",
+    "typer>=0.12",
+    "typing-extensions>=4.0",
+    "xarray>=2024.1",
 ]
 
 [project.optional-dependencies]
+projection = [
+    "pyproj",
+]
+visualization = [
+    "matplotlib",
+]
+cloud = [
+    "gcsfs>=2024.2",
+    "psycopg[binary]>=3.1",
+    "kubernetes>=28.0",
+    "s3fs>=2024.2",
+]
+complete = [
+    "pystilt[projection]",
+    "pystilt[visualization]",
+    "pystilt[cloud]",
+]
+
+[dependency-groups]
 dev = [
+    "pystilt[complete]",
+    "build>=1.2",
+    "twine>=5.0",
     "docstr-coverage>=2.0.0",
     "pre-commit>=3.0.0",
-    "pyright>=1.1.0",
+    "pyright[nodejs]>=1.1.0",
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
+    "pydata-sphinx-theme>=0.14.0",
     "ruff>=0.1.0",
     "rust-just>=1.42.4",
-]
-docs = [
-    "pydata-sphinx-theme>=0.14.0",
     "sphinx>=7.0.0",
     "sphinx-autodoc-typehints>=1.24.0",
+    "sphinx-design>=0.5",
 ]
 
 [project.urls]
@@ -83,9 +109,15 @@ exclude_also = [
 [tool.pyright]
 include = ["src"]
 exclude = ["**/__pycache__", "**/.venv"]
+venvPath = "."
+venv = ".venv"
+typeCheckingMode = "basic"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "integration: end-to-end tests requiring real met files and HYSPLIT execution",
+]
 
 [tool.ruff]
 target-version = "py310"
@@ -109,8 +141,12 @@ ignore = [
 [tool.ruff.lint.isort]
 known-first-party = ["stilt"]
 
+[project.scripts]
+stilt = "stilt.cli:app"
+
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.setuptools.package-data]
 "stilt" = ["py.typed"]
+"stilt.hysplit" = ["bin/**/*", "data/*"]

@@ -1,3 +1,7 @@
+# STILT-specific
+# Integration test data (clone with: git clone --depth 1 https://github.com/uataq/stilt-tutorials tests/stilt-tutorials)
+tests/stilt-tutorials
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
@@ -45,6 +49,7 @@ htmlcov/
 .cache
 nosetests.xml
 coverage.xml
+coverage.json
 *.cover
 *.py.cover
 .hypothesis/
@@ -70,6 +75,7 @@ instance/
 
 # Sphinx documentation
 docs/_build/
+docs/api/_autosummary/
 
 # PyBuilder
 .pybuilder/

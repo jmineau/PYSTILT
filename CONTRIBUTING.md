@@ -10,18 +10,9 @@ Thank you for considering contributing to PYSTILT! We welcome contributions from
    git clone https://github.com/YOUR_USERNAME/PYSTILT.git
    cd PYSTILT
    ```
-3. Create a python environment and install development dependencies:
+3. Install development dependencies with uv:
    ```bash
-   # Virtual environment setup (using venv)
-   python -m venv .venv
-   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-
-   # OR using conda
-   conda create -n pystilt-dev python=3.10
-   conda activate pystilt-dev
-
-   # Install development dependencies
-   pip install -e ".[dev]"
+   uv sync --group dev
    ```
 4. Install pre-commit hooks:
    ```bash

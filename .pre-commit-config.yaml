@@ -20,8 +20,12 @@ repos:
       # Run the formatter
       - id: ruff-format
 
-  - repo: https://github.com/RobertCraigie/pyright-python
-    rev: v1.1.406
+  - repo: local
     hooks:
       - id: pyright
-        additional_dependencies: [ "pyright[nodejs]" ]  # Ensure Node.js is installed in pyright venv
+        name: pyright
+        language: system
+        entry: uv run pyright
+        pass_filenames: false
+        args: [src/stilt]  # Mirror CI: only check src, not tests
+        types: [python]

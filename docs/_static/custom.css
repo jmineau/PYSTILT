@@ -1,0 +1,17 @@
+/* PYSTILT custom styles */
+
+/* Landing page card grid spacing */
+.sd-card {
+    border: 1px solid var(--pst-color-border);
+}
+
+/* Audience badge colors */
+.badge-beginner { background-color: #2ea44f; }
+.badge-migrator { background-color: #0969da; }
+.badge-advanced { background-color: #8250df; }
+.badge-developer { background-color: #cf222e; }
+
+/* Hero code block on landing page */
+.hero-code pre {
+    border-left: 4px solid var(--pst-color-primary);
+}
