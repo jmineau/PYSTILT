@@ -324,9 +324,11 @@ class FootprintPlotAccessor:
                 shading="auto",
                 **kwargs,
             )
-            panel_time = pd.Timestamp(t)
+            panel_time_raw = pd.Timestamp(t)
             title = (
-                "NaT" if panel_time is pd.NaT else panel_time.strftime("%Y-%m-%d %H:%M")
+                "NaT"
+                if not isinstance(panel_time_raw, pd.Timestamp)
+                else panel_time_raw.strftime("%Y-%m-%d %H:%M")
             )
             panel_ax.set_title(title, fontsize=9)
             panel_ax.tick_params(labelsize=7)

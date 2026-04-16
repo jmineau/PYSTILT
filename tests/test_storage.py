@@ -84,4 +84,6 @@ def test_project_layout_helpers(tmp_path):
 
 def test_simulation_dir_path(tmp_path):
     sid = "hrrr_202301011200_-111.85_40.77_5"
-    assert simulation_dir_path(tmp_path, sid) == tmp_path / "simulations" / "by-id" / sid
+    assert (
+        simulation_dir_path(tmp_path, sid) == tmp_path / "simulations" / "by-id" / sid
+    )

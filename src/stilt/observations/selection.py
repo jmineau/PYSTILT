@@ -237,10 +237,14 @@ def filter_observations(
     if time_range is None:
         start = end = None
     else:
-        start = pd.Timestamp(time_range[0])
-        end = pd.Timestamp(time_range[1])
-        if start is pd.NaT or end is pd.NaT:
+        start_raw = pd.Timestamp(time_range[0])
+        end_raw = pd.Timestamp(time_range[1])
+        if not isinstance(start_raw, pd.Timestamp) or not isinstance(
+            end_raw, pd.Timestamp
+        ):
             raise ValueError("time_range values must be valid timestamps.")
+        start = start_raw
+        end = end_raw
 
     filtered: list[Observation] = []
     for observation in observations:
@@ -250,9 +254,10 @@ def filter_observations(
             continue
         if allowed_ids is not None and observation.observation_id not in allowed_ids:
             continue
-        observation_time = pd.Timestamp(observation.time)
-        if observation_time is pd.NaT:
+        observation_time_raw = pd.Timestamp(observation.time)
+        if not isinstance(observation_time_raw, pd.Timestamp):
             continue
+        observation_time = observation_time_raw
         if start is not None and observation_time < start:
             continue
         if end is not None and observation_time > end:
