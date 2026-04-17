@@ -2,8 +2,10 @@
 
 This module provides the :func:`run_worker` function that each executor
 dispatches to compute trajectories and footprints for a single simulation,
-and the :func:`worker_loop` function that drives the pull-based claim/run/release
-cycle, plus the :func:`_run_batch` helper used internally by :func:`worker_loop`.
+the :func:`pull_worker_loop` function that drives the pull-based
+claim/run/release cycle, the :func:`push_worker_loop` helper used by
+chunk-based executors, plus the :func:`_run_batch` helper used internally
+by both worker paths.
 """
 
 from __future__ import annotations
@@ -18,22 +20,28 @@ import threading
 import time
 import traceback
 import uuid
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Literal, cast
 
 from pydantic import BaseModel, ConfigDict
 
-from stilt.artifacts import ArtifactStore
+from stilt.artifacts import (
+    ArtifactStore,
+    clear_empty_footprint_marker,
+    write_empty_footprint_marker,
+)
 from stilt.config import FootprintConfig, STILTParams
 from stilt.errors import SimulationError
 from stilt.meteorology import MetStream
 from stilt.receptor import Receptor
 from stilt.repositories import (
     ArtifactSummary,
+    QueueRepository,
     SimulationAttempt,
     SimulationClaim,
-    SimulationRepository,
+    StateRepository,
 )
 from stilt.simulation import SimID, Simulation
 
@@ -82,8 +90,9 @@ class SimulationTask(BaseModel):
     params: STILTParams
     foot_configs: dict[str, FootprintConfig] | None = None
     artifact_store: ArtifactStore
-    repository: SimulationRepository
+    repository: StateRepository
     claim: SimulationClaim | None = None
+    dispatch: Literal["push", "pull"] = "pull"
 
 
 @dataclass
@@ -116,7 +125,7 @@ def _build_artifact_summary(
 
 
 def _record_attempt(
-    repository: SimulationRepository,
+    repository: QueueRepository,
     sim_id: SimID,
     started_at: dt.datetime,
     outcome: str,
@@ -140,13 +149,18 @@ def _record_attempt(
     )
 
 
+def _claim_token(claim: SimulationClaim | None) -> str | None:
+    """Return the claim token for attempt history, if one exists."""
+    return claim.claim_token if claim is not None else None
+
+
 def _default_worker_id() -> str:
     """Return a stable-ish worker identifier for queue claims."""
     return f"{socket.gethostname()}:{os.getpid()}"
 
 
 def _claim_is_current(
-    repository: SimulationRepository,
+    repository: QueueRepository,
     claim: SimulationClaim | None,
 ) -> bool:
     """Return True when no claim is attached or the claim still owns the sim."""
@@ -155,8 +169,52 @@ def _claim_is_current(
     return repository.claim_is_current(claim.sim_id, claim.claim_token)
 
 
+def _current_runtime_repository(
+    repository: QueueRepository | None,
+    claim: SimulationClaim | None,
+) -> QueueRepository | None:
+    """Return the queue repository only when this worker still owns the claim."""
+    if repository is None or not _claim_is_current(repository, claim):
+        return None
+    return repository
+
+
+def _update_runtime_state(
+    repository: QueueRepository | None,
+    claim: SimulationClaim | None,
+    *,
+    sim_id: SimID,
+    update: Callable[[QueueRepository], None],
+    started_at: dt.datetime | None = None,
+    outcome: str | None = None,
+    terminal: bool | None = None,
+    error: str | None = None,
+) -> None:
+    """Apply a runtime state update only when the active claim is still current."""
+    active_repository = _current_runtime_repository(repository, claim)
+    if active_repository is None:
+        return
+
+    update(active_repository)
+
+    if outcome is None:
+        return
+    if started_at is None:
+        raise ValueError("started_at is required when recording an attempt.")
+
+    _record_attempt(
+        active_repository,
+        sim_id,
+        started_at,
+        outcome,
+        claim_token=_claim_token(claim),
+        terminal=terminal,
+        error=error,
+    )
+
+
 def _start_claim_heartbeat(
-    repository: SimulationRepository,
+    repository: QueueRepository,
     claim: SimulationClaim | None,
 ) -> tuple[threading.Event | None, threading.Thread | None]:
     """Start a background heartbeat thread for an active lease claim."""
@@ -184,8 +242,22 @@ def _start_claim_heartbeat(
     return stop_event, thread
 
 
+def chunk_path(chunk_dir: str | Path, index: int) -> Path:
+    """Return the canonical chunk-file path for one worker shard."""
+    return Path(chunk_dir) / f"task_{index}.txt"
+
+
+def _read_chunk(path: str | Path) -> list[str]:
+    """Read one chunk file into a list of simulation ids."""
+    return [
+        line.strip()
+        for line in Path(path).read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+
+
 def run_worker(args: SimulationTask) -> SimulationResult:
-    """Unified STILT worker: run HYSPLIT trajectories and optionally compute footprints.
+    """Run one STILT simulation task and any requested footprint outputs.
 
     When ``args.foot_configs`` is ``None``, only trajectories are run.  When
     configs are provided, trajectories are auto-run as needed and all
@@ -208,6 +280,7 @@ def run_worker(args: SimulationTask) -> SimulationResult:
     """
     started_at = dt.datetime.now(dt.timezone.utc)
 
+    # Build the simulation object
     sim = Simulation(
         directory=args.compute_root / args.sim_id,
         meteorology=args.meteorology,
@@ -215,31 +288,44 @@ def run_worker(args: SimulationTask) -> SimulationResult:
         params=args.params,
         artifact_store=args.artifact_store,
     )
-    heartbeat_stop, heartbeat_thread = _start_claim_heartbeat(
-        args.repository,
-        args.claim,
+
+    # Determine whether we need a runtime repo (do we need to track live queue state?)
+    track_runtime = args.dispatch == "pull"
+    runtime_repository = (
+        cast(QueueRepository, args.repository) if track_runtime else None
+    )
+    (
+        heartbeat_stop,
+        heartbeat_thread,
+    ) = (  # Start a heartbeat thread if we have a live claim to maintain, else no-op
+        _start_claim_heartbeat(runtime_repository, args.claim)
+        if runtime_repository is not None
+        else (None, None)
     )
 
     try:
+        # --- Trajectories Only (no footprints) ---
+
         if not args.foot_configs:
             try:
+                # Run the trajectories and publish durable artifacts
                 sim.run_trajectories(write=True)
                 args.artifact_store.publish_simulation(sim)
-                if _claim_is_current(args.repository, args.claim):
-                    args.repository.mark_trajectory_complete(str(sim.id))
-                    args.repository.record_artifacts(
-                        str(sim.id),
-                        _build_artifact_summary(sim),
-                    )
-                    _record_attempt(
-                        args.repository,
-                        sim.id,
-                        started_at,
-                        "complete",
-                        claim_token=(
-                            args.claim.claim_token if args.claim is not None else None
-                        ),
-                    )
+
+                summary = _build_artifact_summary(sim)
+
+                def _mark_complete(repository: QueueRepository) -> None:
+                    repository.mark_trajectory_complete(str(sim.id))
+                    repository.record_artifacts(str(sim.id), summary)
+
+                _update_runtime_state(
+                    runtime_repository,
+                    args.claim,
+                    sim_id=sim.id,
+                    update=_mark_complete,
+                    started_at=started_at,
+                    outcome="complete",
+                )
                 return SimulationResult(
                     sim_id=sim.id,
                     status="complete",
@@ -252,59 +338,41 @@ def run_worker(args: SimulationTask) -> SimulationResult:
                     log_path=sim.log_path if sim.log_path.exists() else None,
                     wrote_traj=True,
                 )
-            except SimulationError as e:
-                _append_simulation_error_log(sim, phase="trajectory", error=e)
-                args.artifact_store.publish_simulation(sim)
-                if _claim_is_current(args.repository, args.claim):
-                    args.repository.mark_trajectory_failed(str(sim.id), str(e))
-                    args.repository.record_artifacts(
-                        str(sim.id),
-                        _build_artifact_summary(sim),
-                    )
-                    _record_attempt(
-                        args.repository,
-                        sim.id,
-                        started_at,
-                        "failed",
-                        claim_token=(
-                            args.claim.claim_token if args.claim is not None else None
-                        ),
-                        error=str(e),
-                    )
-                return SimulationResult(
-                    sim_id=sim.id,
-                    status="failed",
-                    error=str(e),
-                    log_path=sim.log_path if sim.log_path.exists() else None,
-                    wrote_traj=False,
-                )
             except Exception as e:
+                outcome = "failed" if isinstance(e, SimulationError) else "error"
+
                 _append_simulation_error_log(sim, phase="trajectory", error=e)
                 args.artifact_store.publish_simulation(sim)
-                if _claim_is_current(args.repository, args.claim):
-                    args.repository.mark_trajectory_failed(str(sim.id), str(e))
-                    args.repository.record_artifacts(
-                        str(sim.id),
-                        _build_artifact_summary(sim),
-                    )
-                    _record_attempt(
-                        args.repository,
-                        sim.id,
-                        started_at,
-                        "error",
-                        claim_token=(
-                            args.claim.claim_token if args.claim is not None else None
-                        ),
-                        terminal=True,
-                        error=str(e),
-                    )
+
+                summary = _build_artifact_summary(sim)
+
+                def _mark_failed(
+                    repository: QueueRepository,
+                    _e: str = str(e),
+                    _summary: ArtifactSummary = summary,
+                ) -> None:
+                    repository.mark_trajectory_failed(str(sim.id), _e)
+                    repository.record_artifacts(str(sim.id), _summary)
+
+                _update_runtime_state(
+                    runtime_repository,
+                    args.claim,
+                    sim_id=sim.id,
+                    update=_mark_failed,
+                    started_at=started_at,
+                    outcome=outcome,
+                    terminal=True,
+                    error=str(e),
+                )
                 return SimulationResult(
                     sim_id=sim.id,
-                    status="error",
+                    status=outcome,
                     error=str(e),
                     log_path=sim.log_path if sim.log_path.exists() else None,
                     wrote_traj=False,
                 )
+
+        # --- Trajectories + Footprints ---
 
         traj_path = sim.trajectories_path
         wrote_traj = False
@@ -329,9 +397,12 @@ def run_worker(args: SimulationTask) -> SimulationResult:
                     wrote_traj = not traj_existed and traj_path.exists()
 
                 if foot is None:
+                    sim.footprint_path(name).unlink(missing_ok=True)
+                    write_empty_footprint_marker(sim.directory, name, sim_id=sim.id)
                     empty_footprints.append(name)
                     footprint_statuses[name] = "complete-empty"
                 else:
+                    clear_empty_footprint_marker(sim.directory, name, sim_id=sim.id)
                     completed_footprints.append(name)
                     foot_paths.append(sim.footprint_path(name))
                     footprint_statuses[name] = "complete"
@@ -343,9 +414,20 @@ def run_worker(args: SimulationTask) -> SimulationResult:
                         name, fc, write=True, error=True
                     )
                     if error_foot is None:
+                        sim.footprint_path(error_name).unlink(missing_ok=True)
+                        write_empty_footprint_marker(
+                            sim.directory,
+                            error_name,
+                            sim_id=sim.id,
+                        )
                         empty_footprints.append(error_name)
                         footprint_statuses[error_name] = "complete-empty"
                     else:
+                        clear_empty_footprint_marker(
+                            sim.directory,
+                            error_name,
+                            sim_id=sim.id,
+                        )
                         completed_footprints.append(error_name)
                         foot_paths.append(sim.footprint_path(error_name))
                         footprint_statuses[error_name] = "complete"
@@ -355,26 +437,25 @@ def run_worker(args: SimulationTask) -> SimulationResult:
 
             args.artifact_store.publish_simulation(sim)
 
-            if _claim_is_current(args.repository, args.claim):
+            summary = _build_artifact_summary(sim, footprint_statuses)
+
+            def _mark_footprints_complete(repository: QueueRepository) -> None:
                 if sim._artifact_path(traj_path) is not None:
-                    args.repository.mark_trajectory_complete(str(sim.id))
+                    repository.mark_trajectory_complete(str(sim.id))
                 for name in completed_footprints:
-                    args.repository.mark_footprint_complete(str(sim.id), name)
+                    repository.mark_footprint_complete(str(sim.id), name)
                 for name in empty_footprints:
-                    args.repository.mark_footprint_empty(str(sim.id), name)
-                args.repository.record_artifacts(
-                    str(sim.id),
-                    _build_artifact_summary(sim, footprint_statuses),
-                )
-                _record_attempt(
-                    args.repository,
-                    sim.id,
-                    started_at,
-                    "complete" if foot_paths else "complete-empty",
-                    claim_token=(
-                        args.claim.claim_token if args.claim is not None else None
-                    ),
-                )
+                    repository.mark_footprint_empty(str(sim.id), name)
+                repository.record_artifacts(str(sim.id), summary)
+
+            _update_runtime_state(
+                runtime_repository,
+                args.claim,
+                sim_id=sim.id,
+                update=_mark_footprints_complete,
+                started_at=started_at,
+                outcome="complete" if foot_paths else "complete-empty",
+            )
 
             return SimulationResult(
                 sim_id=sim.id,
@@ -399,27 +480,31 @@ def run_worker(args: SimulationTask) -> SimulationResult:
             )
             args.artifact_store.publish_simulation(sim)
             footprint_statuses[current_name] = "failed"
-            if _claim_is_current(args.repository, args.claim):
-                args.repository.mark_footprint_failed(str(sim.id), current_name, str(e))
+            summary = _build_artifact_summary(sim, footprint_statuses)
+
+            def _mark_footprint_failed(
+                repository: QueueRepository,
+                _e: str = str(e),
+                _name: str = current_name,
+                _summary: ArtifactSummary = summary,
+            ) -> None:
+                repository.mark_footprint_failed(str(sim.id), _name, _e)
                 if traj_path.exists():
-                    args.repository.mark_trajectory_complete(str(sim.id))
+                    repository.mark_trajectory_complete(str(sim.id))
                 else:
-                    args.repository.mark_trajectory_failed(str(sim.id), str(e))
-                args.repository.record_artifacts(
-                    str(sim.id),
-                    _build_artifact_summary(sim, footprint_statuses),
-                )
-                _record_attempt(
-                    args.repository,
-                    sim.id,
-                    started_at,
-                    "error",
-                    claim_token=(
-                        args.claim.claim_token if args.claim is not None else None
-                    ),
-                    terminal=True,
-                    error=str(e),
-                )
+                    repository.mark_trajectory_failed(str(sim.id), _e)
+                repository.record_artifacts(str(sim.id), _summary)
+
+            _update_runtime_state(
+                runtime_repository,
+                args.claim,
+                sim_id=sim.id,
+                update=_mark_footprint_failed,
+                started_at=started_at,
+                outcome="error",
+                terminal=True,
+                error=str(e),
+            )
             return SimulationResult(
                 sim_id=sim.id,
                 status="error",
@@ -450,9 +535,9 @@ def _init_pool_worker() -> None:
 
 
 def _run_batch(batch: list[SimulationTask], n_cores: int = 1) -> list[SimulationResult]:
-    """Run a list of simulations claimed from the repository queue.
+    """Run a list of simulations from either push chunks or the pull queue.
 
-    Called by :func:`worker_loop` with a batch of claimed simulations.
+    Called by the worker entrypoints with a batch of simulation tasks.
     Runs them sequentially (``n_cores=1``) or in a local multiprocessing pool
     (``n_cores>1``).
 
@@ -479,20 +564,30 @@ def _run_batch(batch: list[SimulationTask], n_cores: int = 1) -> list[Simulation
             try:
                 results.append(run_worker(args))
             except KeyboardInterrupt:
-                if _claim_is_current(args.repository, args.claim):
-                    args.repository.mark_trajectory_failed(
-                        str(args.sim_id), "Worker preempted by SIGTERM"
-                    )
-                    _record_attempt(
-                        args.repository,
-                        args.sim_id,
-                        dt.datetime.now(dt.timezone.utc),
-                        "interrupted",
-                        claim_token=(
-                            args.claim.claim_token if args.claim is not None else None
-                        ),
-                        error="Worker preempted by SIGTERM",
-                    )
+                runtime_repository = (
+                    cast(QueueRepository, args.repository)
+                    if args.dispatch == "pull"
+                    else None
+                )
+                interrupt_message = "Worker preempted by SIGTERM"
+                interrupted_at = dt.datetime.now(dt.timezone.utc)
+
+                def _mark_interrupted(
+                    repository: QueueRepository,
+                    _sid: SimID = args.sim_id,
+                    _msg: str = interrupt_message,
+                ) -> None:
+                    repository.mark_trajectory_failed(str(_sid), _msg)
+
+                _update_runtime_state(
+                    runtime_repository,
+                    args.claim,
+                    sim_id=args.sim_id,
+                    update=_mark_interrupted,
+                    started_at=interrupted_at,
+                    outcome="interrupted",
+                    error=interrupt_message,
+                )
                 break
         return results
     with multiprocessing.Pool(n_cores, initializer=_init_pool_worker) as pool:
@@ -504,20 +599,24 @@ def _run_worker_guarded(args: SimulationTask) -> SimulationResult:
     try:
         return run_worker(args)
     except KeyboardInterrupt:
-        if _claim_is_current(args.repository, args.claim):
-            args.repository.mark_trajectory_failed(
-                str(args.sim_id), "Worker preempted by SIGTERM"
-            )
-            _record_attempt(
-                args.repository,
-                args.sim_id,
-                dt.datetime.now(dt.timezone.utc),
-                "interrupted",
-                claim_token=(
-                    args.claim.claim_token if args.claim is not None else None
-                ),
-                error="Worker preempted by SIGTERM",
-            )
+        runtime_repository = (
+            cast(QueueRepository, args.repository) if args.dispatch == "pull" else None
+        )
+        interrupt_message = "Worker preempted by SIGTERM"
+        interrupted_at = dt.datetime.now(dt.timezone.utc)
+
+        def _mark_interrupted(repository: QueueRepository) -> None:
+            repository.mark_trajectory_failed(str(args.sim_id), interrupt_message)
+
+        _update_runtime_state(
+            runtime_repository,
+            args.claim,
+            sim_id=args.sim_id,
+            update=_mark_interrupted,
+            started_at=interrupted_at,
+            outcome="interrupted",
+            error=interrupt_message,
+        )
         return SimulationResult(
             sim_id=args.sim_id, status="interrupted", wrote_traj=False
         )
@@ -560,13 +659,14 @@ def _run_transactional_claim_loop(
             transactional_args = run_args.model_copy(
                 update={
                     "claim": uow.claim,
-                    "repository": cast(SimulationRepository, uow.repository),
+                    "repository": cast(QueueRepository, uow.repository),
+                    "dispatch": "pull",
                 }
             )
             run_worker(transactional_args)
 
 
-def worker_loop(
+def pull_worker_loop(
     model: object,
     n_cores: int = 1,
     follow: bool = False,
@@ -593,6 +693,8 @@ def worker_loop(
     poll_interval : float, optional
         Seconds to sleep between polls when *follow* is ``True`` and the queue
         is empty.  Defaults to 10.
+    lease_ttl : float, optional
+        Seconds for claim leases to live before expiring.  Defaults to 1800 (30 minutes).
     """
     if n_cores == 1 and hasattr(model.repository, "begin_claim_uow"):  # type: ignore[attr-defined]
         _run_transactional_claim_loop(
@@ -629,7 +731,9 @@ def worker_loop(
             if run_args is None:
                 released.append(claim)
             else:
-                batch.append(run_args.model_copy(update={"claim": claim}))
+                batch.append(
+                    run_args.model_copy(update={"claim": claim, "dispatch": "pull"})
+                )
         if released:
             model.repository.release_claims(released)  # type: ignore[attr-defined]
 
@@ -643,3 +747,19 @@ def worker_loop(
         # claimed → released → claimed forever.
         if not batch and not follow:
             return
+
+
+def push_worker_loop(
+    model: object,
+    chunk_path: str | Path,
+    n_cores: int = 1,
+) -> None:
+    """Run one immutable chunk shard without queue claims or heartbeats."""
+    batch: list[SimulationTask] = []
+    for sim_id in _read_chunk(chunk_path):
+        run_args = model._build_run_args(sim_id)  # type: ignore[attr-defined]
+        if run_args is None:
+            continue
+        batch.append(run_args.model_copy(update={"claim": None, "dispatch": "push"}))
+    if batch:
+        _run_batch(batch, n_cores=n_cores)

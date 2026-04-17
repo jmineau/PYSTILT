@@ -4,7 +4,7 @@ import datetime as dt
 import logging
 from collections.abc import Sequence
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import pandas as pd
 
@@ -61,7 +61,7 @@ class SimID(str):
     """
 
     met: str
-    time: pd.Timestamp
+    time: dt.datetime
     location_id: str
 
     def __new__(cls, sim_id_str: str) -> "SimID":
@@ -78,8 +78,14 @@ class SimID(str):
         time_str = rest[:12]
         location_id = rest[13:]
         try:
-            time = pd.to_datetime(time_str, format="%Y%m%d%H%M")
-        except ValueError:
+            time = dt.datetime(
+                int(time_str[:4]),
+                int(time_str[4:6]),
+                int(time_str[6:8]),
+                int(time_str[8:10]),
+                int(time_str[10:12]),
+            )
+        except (ValueError, TypeError):
             raise ValueError(
                 f"Cannot parse timestamp from sim_id: {sim_id_str!r}"
             ) from None
@@ -93,7 +99,7 @@ class SimID(str):
         cls,
         met: str,
         receptor: "Receptor | None" = None,
-        time: "pd.Timestamp | dt.datetime | str | None" = None,
+        time: "dt.datetime | str | None" = None,
         location_id: "str | None" = None,
     ) -> "SimID":
         """Build a :class:`SimID` from constituent parts.
@@ -122,11 +128,16 @@ class SimID(str):
             raise ValueError("'met' is required")
         if time is None or location_id is None:
             raise ValueError("Must provide 'receptor' or both 'time' and 'location_id'")
-        ts_raw = pd.Timestamp(time)
-        if not isinstance(ts_raw, pd.Timestamp):
-            raise ValueError("'time' must be a valid timestamp")
-        ts = ts_raw
-        return cls(f"{met}_{ts.strftime('%Y%m%d%H%M')}_{location_id}")
+        # dt.datetime (the common path from receptor.time) can format directly;
+        # strings and other types go through pd.Timestamp for parsing.
+        if isinstance(time, dt.datetime):
+            time_dt: dt.datetime = time
+        else:
+            ts = pd.Timestamp(time)
+            if ts is pd.NaT:
+                raise ValueError("'time' must be a valid timestamp")
+            time_dt = cast(dt.datetime, ts.to_pydatetime())
+        return cls(f"{met}_{time_dt.strftime('%Y%m%d%H%M')}_{location_id}")
 
     def __fspath__(self) -> str:
         """Allow Path joins like ``base / sim_id`` without manual str() conversion."""

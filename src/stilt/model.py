@@ -4,21 +4,23 @@ Stochastic Time-Inverted Lagrangian Transport (STILT) Model.
 A python implementation of the R-STILT model framework.
 """
 
+import datetime as dt
 import logging
 import os
 import tempfile
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import pandas as pd
 
 from stilt.artifacts import (
     ArtifactStore,
     FsspecArtifactStore,
-    error_trajectory_path,
+    empty_footprint_path,
     footprint_path,
     is_cloud_project,
+    project_chunks_path,
     project_config_key,
     project_config_path,
     project_receptors_key,
@@ -30,21 +32,34 @@ from stilt.artifacts import (
     simulation_index_path,
     trajectory_path,
 )
-from stilt.config import FootprintConfig, ModelConfig, STILTParams, _config_or_kwargs
+from stilt.config import (
+    ModelConfig,
+    STILTParams,
+    _config_or_kwargs,
+    foot_names,
+)
 from stilt.executors import (
     Executor,
     JobHandle,
+    LaunchSpec,
     LocalHandle,
     _sigterm_as_interrupt,
     get_executor,
 )
+from stilt.executors.factory import resolve_backend, resolve_dispatch
 from stilt.footprint import Footprint
 from stilt.meteorology import MetArchive, MetStream
 from stilt.receptor import Receptor, read_receptors
+from stilt.records import ModelRecordAccessor
 from stilt.repositories import (
+    ArtifactStateStore,
+    ArtifactStatusQuery,
     ArtifactSummary,
+    BatchStore,
     PostgreSQLRepository,
-    SimulationRepository,
+    QueueRepository,
+    QueueStore,
+    SimulationCatalog,
     SQLiteRepository,
 )
 from stilt.runtime import RuntimeSettings, resolve_runtime_settings
@@ -58,6 +73,79 @@ if TYPE_CHECKING:
     from stilt.visualization import ModelPlotAccessor
 
 
+class ReceptorResolver:
+    """Resolve receptors for simulations from durable inputs with catalog fallback."""
+
+    def __init__(
+        self,
+        receptors: Callable[[], list[Receptor]],
+        mets: Callable[[], dict[str, MetStream]],
+        catalog: SimulationCatalog,
+    ):
+        self._receptors = receptors
+        self._mets = mets
+        self._catalog = catalog
+        self._sim_id_to_receptor: dict[str, Receptor] | None = None
+
+    def lookup(self) -> dict[str, Receptor]:
+        """Return a cached mapping from sim_id to receptor from durable inputs."""
+        if self._sim_id_to_receptor is None:
+            self._sim_id_to_receptor = {
+                str(SimID.from_parts(met_name, receptor)): receptor
+                for met_name in self._mets()
+                for receptor in self._receptors()
+            }
+        return self._sim_id_to_receptor
+
+    def for_sim_id(self, sim_id: str) -> Receptor:
+        """Return one receptor for *sim_id* from durable inputs or catalog."""
+        receptor = self.lookup().get(sim_id)
+        if receptor is not None:
+            return receptor
+        return self._catalog.get_receptor(sim_id)
+
+
+class ArtifactLocator:
+    """Resolve durable artifact paths from local outputs or artifact storage."""
+
+    def __init__(
+        self,
+        output_dir: Path,
+        artifact_store: ArtifactStore,
+    ):
+        self._output_dir = output_dir
+        self._artifact_store = artifact_store
+
+    def resolve(self, sim_id: str, artifact_path: Path) -> Path | None:
+        """Return a local path to a durable artifact when it exists."""
+        if artifact_path.exists():
+            return artifact_path
+        key = simulation_artifact_key(sim_id, artifact_path.name)
+        if self._artifact_store.exists(key):
+            return self._artifact_store.local_path(key)
+        return None
+
+    def exists(self, sim_id: str, artifact_path: Path) -> bool:
+        """Return whether one simulation artifact already exists durably."""
+        return self.resolve(sim_id, artifact_path) is not None
+
+    def trajectory_complete(self, sim_id: str) -> bool:
+        """Return whether the main trajectory artifact exists for *sim_id*."""
+        sim_dir = simulation_dir_path(self._output_dir, sim_id)
+        return self.exists(sim_id, trajectory_path(sim_dir, sim_id))
+
+    def footprint_complete(self, sim_id: str, name: str) -> bool:
+        """Return whether one footprint output is complete from durable artifacts."""
+        sim_dir = simulation_dir_path(self._output_dir, sim_id)
+        return self.exists(
+            sim_id,
+            footprint_path(sim_dir, name, sim_id=sim_id),
+        ) or self.exists(
+            sim_id,
+            empty_footprint_path(sim_dir, name, sim_id=sim_id),
+        )
+
+
 class Model:
     """STILT project interface for managing simulations."""
 
@@ -65,7 +153,7 @@ class Model:
         self,
         project: str | Path | None = None,
         receptors: Receptor | Iterable | str | Path | None = None,
-        repository: SimulationRepository | None = None,
+        repository: QueueRepository | None = None,
         config: ModelConfig | None = None,
         output_dir: str | Path | None = None,
         compute_root: str | Path | None = None,
@@ -137,8 +225,24 @@ class Model:
                 # single receptor spec: (time, longitude, latitude, altitude)
                 self._receptors = [Receptor(*items)]
 
-        self.repository: SimulationRepository = repository or SQLiteRepository(
+        self.repository: QueueRepository = repository or SQLiteRepository(
             self.output_dir
+        )
+        self.catalog: SimulationCatalog = self.repository
+        self.status: ArtifactStatusQuery = self.repository
+        self.state: ArtifactStateStore = self.repository
+        self.batches: BatchStore = self.repository
+        self.queue: QueueStore | None = (
+            self.repository if isinstance(self.repository, QueueStore) else None
+        )
+        self.receptor_resolver = ReceptorResolver(
+            receptors=lambda: self.receptors,
+            mets=lambda: self.mets,
+            catalog=self.catalog,
+        )
+        self.artifact_locator = ArtifactLocator(
+            output_dir=self.output_dir,
+            artifact_store=self.artifact_store,
         )
         self.met_archive = MetArchive(self.runtime.met_archive)
 
@@ -146,6 +250,7 @@ class Model:
         self._simulations: SimulationMapping | None = None
         self._mets: dict[str, MetStream] | None = None
         self._plot: ModelPlotAccessor | None = None
+        self._records: ModelRecordAccessor | None = None
 
     def _resolve_compute_root(self, compute_root: str | Path | None) -> Path:
         """Return the parent directory under which worker sim dirs are created."""
@@ -190,7 +295,7 @@ class Model:
             ):
                 rows.append(
                     {
-                        "group": idx,
+                        "r_idx": idx,
                         "time": receptor.time.isoformat(sep=" "),
                         "longitude": float(lon),
                         "latitude": float(lat),
@@ -278,8 +383,8 @@ class Model:
                 self.artifact_store.local_path(project_receptors_key())
             )
         else:
-            sim_ids = self.repository.all_sim_ids()
-            self._receptors = [self.repository.get_receptor(sid) for sid in sim_ids]
+            sim_ids = self.catalog.all_sim_ids()
+            self._receptors = [self.catalog.get_receptor(sid) for sid in sim_ids]
 
         return self._receptors
 
@@ -297,7 +402,7 @@ class Model:
                 self.output_dir,
                 params,
                 self.mets,
-                self.repository,
+                self.catalog,
                 self.artifact_store,
             )
         return self._simulations
@@ -315,6 +420,13 @@ class Model:
 
             self._plot = ModelPlotAccessor(self)
         return self._plot
+
+    @property
+    def records(self) -> "ModelRecordAccessor":
+        """Metadata/query namespace for trajectory and footprint artifacts."""
+        if self._records is None:
+            self._records = ModelRecordAccessor(self)
+        return self._records
 
     @property
     def mets(self) -> dict[str, MetStream]:
@@ -361,18 +473,6 @@ class Model:
         dump = self.config.model_dump(exclude={"footprints", "grids", "mets"})
         return STILTParams(**dump)
 
-    @staticmethod
-    def _footprint_output_names(
-        foot_configs: dict[str, FootprintConfig],
-    ) -> list[str]:
-        """Return all requested footprint artifact names, including error outputs."""
-        names: list[str] = []
-        for name, cfg in foot_configs.items():
-            names.append(name)
-            if cfg.error:
-                names.append(f"{name}_error")
-        return names
-
     # -- Queries --------------------------------------------------------------
 
     def _filter_simulation_ids(
@@ -383,7 +483,7 @@ class Model:
         location_ids: set[str] | None = None,
     ) -> list[str]:
         """Return simulation IDs matching the given filters."""
-        df = self.repository.to_dataframe()
+        df = self.status.to_dataframe()
         if df.empty:
             return []
 
@@ -402,21 +502,9 @@ class Model:
 
         sim_ids = df.index.tolist()
         if footprint is not None:
-            sim_ids = [
-                sid
-                for sid in sim_ids
-                if self.repository.footprint_completed(sid, footprint)
-            ]
+            completed = self.status.bulk_footprint_completed([footprint])
+            sim_ids = [sid for sid in sim_ids if sid in completed]
         return sim_ids
-
-    def _resolve_artifact_path(self, sim_id: str, artifact_path: Path) -> Path | None:
-        """Return a local path to a durable artifact when it exists."""
-        if artifact_path.exists():
-            return artifact_path
-        key = simulation_artifact_key(sim_id, artifact_path.name)
-        if self.artifact_store.exists(key):
-            return self.artifact_store.local_path(key)
-        return None
 
     def get_simulation_ids(
         self,
@@ -496,24 +584,16 @@ class Model:
         error: bool = False,
     ) -> list[Path]:
         """Return local-accessible paths for matching trajectory artifacts."""
-        paths: list[Path] = []
-        for sim_id in self.get_simulation_ids(
-            mets=mets,
-            time_range=time_range,
-            location_ids=location_ids,
-        ):
-            if self.repository.traj_status(sim_id) != "complete":
-                continue
-            sim_dir = simulation_dir_path(self.output_dir, sim_id)
-            artifact_path = (
-                error_trajectory_path(sim_dir, sim_id)
-                if error
-                else trajectory_path(sim_dir, sim_id)
+        return [
+            record.path
+            for record in self.records.trajectories(
+                mets=mets,
+                time_range=time_range,
+                location_ids=location_ids,
+                error=error,
             )
-            resolved = self._resolve_artifact_path(sim_id, artifact_path)
-            if resolved is not None:
-                paths.append(resolved)
-        return paths
+            if record.status == "complete" and record.path is not None
+        ]
 
     def get_trajectories(
         self,
@@ -525,13 +605,15 @@ class Model:
     ) -> list[Trajectories]:
         """Load trajectories across matching simulations."""
         trajectories: list[Trajectories] = []
-        for path in self.get_trajectory_paths(
+        for record in self.records.trajectories(
             mets=mets,
             time_range=time_range,
             location_ids=location_ids,
             error=error,
         ):
-            trajectories.append(Trajectories.from_parquet(path))
+            if record.status != "complete" or record.path is None:
+                continue
+            trajectories.append(cast(Trajectories, self.records.load(record)))
         return trajectories
 
     def get_footprint_paths(
@@ -542,21 +624,16 @@ class Model:
         location_ids: set[str] | None = None,
     ) -> list[Path]:
         """Return local-accessible paths for matching footprint artifacts."""
-        paths: list[Path] = []
-        for sim_id in self.get_simulation_ids(
-            mets=mets,
-            footprint=name,
-            time_range=time_range,
-            location_ids=location_ids,
-        ):
-            if self.repository.footprint_status(sim_id, name) != "complete":
-                continue
-            sim_dir = simulation_dir_path(self.output_dir, sim_id)
-            artifact_path = footprint_path(sim_dir, name, sim_id=sim_id)
-            resolved = self._resolve_artifact_path(sim_id, artifact_path)
-            if resolved is not None:
-                paths.append(resolved)
-        return paths
+        return [
+            record.path
+            for record in self.records.footprints(
+                name,
+                mets=mets,
+                time_range=time_range,
+                location_ids=location_ids,
+            )
+            if record.status == "complete" and record.path is not None
+        ]
 
     def get_footprints(
         self,
@@ -584,16 +661,18 @@ class Model:
             Loaded footprint objects, one per matching simulation.
         """
         footprints: list[Footprint] = []
-        for path in self.get_footprint_paths(
+        for record in self.records.footprints(
             name,
             mets=mets,
             time_range=time_range,
             location_ids=location_ids,
         ):
+            if record.status != "complete" or record.path is None:
+                continue
             try:
-                footprints.append(Footprint.from_netcdf(path))
+                footprints.append(cast(Footprint, self.records.load(record)))
             except FileNotFoundError:
-                logger.debug("Skipping missing footprint file: %s", path)
+                logger.debug("Skipping missing footprint file: %s", record.path)
         return footprints
 
     def get_pending(
@@ -616,9 +695,9 @@ class Model:
             Simulation IDs without a registered (or completed) trajectory.
         """
         if include_failed:
-            existing = set(self.repository.completed_trajectories())
+            existing = set(self.status.completed_trajectories())
         else:
-            existing = set(self.repository.all_sim_ids())
+            existing = set(self.catalog.all_sim_ids())
         resolved_mets = self._resolve_mets(mets)
         return [
             str(SimID.from_parts(met_name, r))
@@ -645,7 +724,7 @@ class Model:
             Receptors to register.  Defaults to ``self.receptors``.
         batch_id : str or None, optional
             Label this group of simulations for progress tracking via
-            :meth:`~stilt.repositories.SimulationRepository.batch_progress`.
+            :meth:`~stilt.repositories.QueueRepository.batch_progress`.
             A timestamp-based name is used when ``None``.
 
         Returns
@@ -660,12 +739,41 @@ class Model:
             for met_name in self.mets
             for r in recs
         ]
-        self.repository.register_many(
+        self.catalog.register_many(
             pairs,
             batch_id=batch_id,
-            footprint_names=self._footprint_output_names(dict(self.config.footprints)),
+            footprint_names=foot_names(dict(self.config.footprints)),
         )
         return [sid for sid, _ in pairs]
+
+    def _write_push_chunks(
+        self,
+        sim_ids: list[str],
+        *,
+        n_workers: int,
+        batch_id: str | None = None,
+    ) -> tuple[str, ...]:
+        """Partition simulations into immutable chunk files for push workers."""
+        if not sim_ids:
+            return ()
+
+        label = batch_id or dt.datetime.now(dt.timezone.utc).strftime("%Y%m%d_%H%M%S")
+        chunk_dir = project_chunks_path(self.output_dir) / label
+        chunk_dir.mkdir(parents=True, exist_ok=True)
+
+        n_chunks = max(1, min(n_workers, len(sim_ids)))
+        buckets = [[] for _ in range(n_chunks)]
+        for idx, sim_id in enumerate(sim_ids):
+            buckets[idx % n_chunks].append(sim_id)
+
+        paths: list[str] = []
+        for idx, chunk in enumerate(buckets):
+            if not chunk:
+                continue
+            path = chunk_dir / f"task_{idx}.txt"
+            path.write_text("\n".join(chunk) + "\n", encoding="utf-8")
+            paths.append(str(path))
+        return tuple(paths)
 
     def run(
         self,
@@ -681,9 +789,10 @@ class Model:
         then compute footprints in a single pass.  When no footprint configs
         are defined, only HYSPLIT trajectories are dispatched.
 
-        Workers pull work from the project repository via
-        :func:`~stilt.workers.worker_loop`; the coordinator registers
-        simulations and starts workers, then optionally blocks.
+        Workers either pull work from the project repository via
+        :func:`~stilt.workers.pull_worker_loop` or consume immutable chunk
+        shards via :func:`~stilt.workers.push_worker_loop`; the coordinator
+        registers simulations and starts workers, then optionally blocks.
 
         Parameters
         ----------
@@ -708,8 +817,19 @@ class Model:
         resolved_skip = (
             skip_existing if skip_existing is not None else self.config.skip_existing
         )
+        execution = self.config.execution or {}
+        backend = resolve_backend(execution)
+        dispatch = resolve_dispatch(execution)
+
+        if dispatch == "push":
+            if not isinstance(self.repository, SQLiteRepository):
+                raise ValueError(
+                    "Push dispatch currently requires SQLiteRepository so durable state can be rebuilt from local outputs."
+                )
+            self.state.rebuild()
+
         foot_configs = dict(self.config.footprints)
-        requested_footprints = self._footprint_output_names(foot_configs)
+        requested_footprints = foot_names(foot_configs)
 
         # 1. Register all (met × receptor) combinations.
         all_sim_ids = self.submit(batch_id=batch_id)
@@ -722,55 +842,68 @@ class Model:
         if not resolved_skip:
             # Force-rerun: reset all sims to pending regardless of prior status.
             if foot_configs:
-                self.repository.clear_footprints(
-                    all_sim_ids, names=requested_footprints
-                )
-            for sim_id in all_sim_ids:
-                self.repository.record_artifacts(sim_id, ArtifactSummary())
-            self.repository.reset_to_pending(all_sim_ids)
+                self.state.clear_footprints(all_sim_ids, names=requested_footprints)
+            self.state.record_artifacts_many(
+                [(sid, ArtifactSummary()) for sid in all_sim_ids]
+            )
+            self.state.reset_to_pending(all_sim_ids)
         elif foot_configs:
             # Footprint mode with skip_existing: re-queue sims whose trajectory
             # is done but at least one footprint is still missing.
+            completed_foot_sims = self.status.bulk_footprint_completed(
+                requested_footprints
+            )
             sims_needing_foot = [
-                sid
-                for sid in all_sim_ids
-                if any(
-                    not self.repository.footprint_completed(sid, name)
-                    for name in requested_footprints
-                )
+                sid for sid in all_sim_ids if sid not in completed_foot_sims
             ]
             if sims_needing_foot:
-                self.repository.reset_to_pending(sims_needing_foot)
+                self.state.reset_to_pending(sims_needing_foot)
 
         # 3. Early exit when nothing is pending.
-        if not self.repository.pending_trajectories():
+        pending = self.status.pending_trajectories()
+        if not pending:
             logger.info("run: all simulations already complete — nothing to do")
             return LocalHandle()
 
         # 4. Start workers.
-        execution = self.config.execution or {}
         n_workers = execution.get("n_workers", 1)
+        if backend == "slurm" and dispatch == "push":
+            n_workers = execution.get("n_tasks", n_workers)
         exe = executor or get_executor(execution)
+        chunk_paths: tuple[str, ...] = ()
+        if dispatch == "push":
+            chunk_paths = self._write_push_chunks(
+                pending,
+                n_workers=n_workers,
+                batch_id=batch_id,
+            )
+            n_workers = len(chunk_paths)
 
         names = list(foot_configs.keys())
         logger.info(
-            "run(%s): starting workers for %d simulations",
+            "run(%s): starting %s workers for %d simulations",
             ", ".join(names) if names else "trajectories",
-            len(self.repository.pending_trajectories()),
+            dispatch,
+            len(pending),
         )
 
         handle = exe.start(
-            self.output_ref,
-            n_workers=n_workers,
-            follow=False,
-            output_dir=None,
-            compute_root=str(self.compute_root),
+            LaunchSpec(
+                project=self.output_ref,
+                n_workers=n_workers,
+                dispatch=dispatch,
+                output_dir=None,
+                compute_root=str(self.compute_root),
+                chunks=chunk_paths,
+            )
         )
 
         if wait:
             try:
                 with _sigterm_as_interrupt():
                     handle.wait()
+                if dispatch == "push":
+                    self.state.rebuild()
             except KeyboardInterrupt:
                 logger.warning("run interrupted")
                 raise
@@ -783,8 +916,8 @@ class Model:
         Returns ``None`` when ``skip_existing`` is satisfied (trajectory or all
         requested footprints already complete).
 
-        Called only by ``stilt worker``, which processes a single sim_id at a
-        time and can afford one DB lookup per call.  :meth:`run` builds
+        Called by worker entrypoints one simulation at a time, so it can afford
+        one DB lookup per call. :meth:`run` builds
         :class:`~stilt.workers.SimulationTask` inline from ``self.receptors`` to
         avoid N per-simulation DB queries.
 
@@ -799,7 +932,9 @@ class Model:
         """
         sid = SimID(sim_id)
         met_source = self.mets[sid.met]
-        receptor = self.repository.get_receptor(sim_id)
+        receptor = self.receptor_resolver.for_sim_id(sim_id)
+        dispatch = resolve_dispatch(self.config.execution or {})
+        push_dispatch = dispatch == "push"
 
         resolved_skip = self.config.skip_existing
         all_foot_configs = dict(self.config.footprints)
@@ -810,8 +945,14 @@ class Model:
                     name: cfg
                     for name, cfg in all_foot_configs.items()
                     if any(
-                        not self.repository.footprint_completed(sim_id, output_name)
-                        for output_name in self._footprint_output_names({name: cfg})
+                        not (
+                            self.artifact_locator.footprint_complete(
+                                sim_id, output_name
+                            )
+                            if push_dispatch
+                            else self.status.footprint_completed(sim_id, output_name)
+                        )
+                        for output_name in foot_names({name: cfg})
                     )
                 } or None
                 if foot_configs is None:
@@ -819,8 +960,10 @@ class Model:
             else:
                 foot_configs = all_foot_configs
         else:
-            if resolved_skip and sim_id in set(
-                self.repository.completed_trajectories()
+            if resolved_skip and (
+                self.artifact_locator.trajectory_complete(sim_id)
+                if push_dispatch
+                else sim_id in set(self.status.completed_trajectories())
             ):
                 return None
             foot_configs = None
@@ -849,13 +992,13 @@ class SimulationMapping:
         project_dir: Path,
         params: STILTParams,
         mets: dict[str, MetStream],
-        repository: SimulationRepository,
+        catalog: SimulationCatalog,
         artifact_store: ArtifactStore,
     ):
         self._project_dir = project_dir
         self._params = params
         self._mets = mets
-        self._repository = repository
+        self._catalog = catalog
         self._artifact_store = artifact_store
         self._cache: dict[str, Simulation] = {}
 
@@ -865,13 +1008,13 @@ class SimulationMapping:
         return self._cache[sim_id]
 
     def __contains__(self, sim_id: str) -> bool:
-        return self._repository.has(sim_id)
+        return self._catalog.has(sim_id)
 
     def __iter__(self):
-        return iter(self._repository.all_sim_ids())
+        return iter(self._catalog.all_sim_ids())
 
     def __len__(self) -> int:
-        return self._repository.count()
+        return self._catalog.count()
 
     def items(self):
         """Yield ``(sim_id, Simulation)`` pairs for all registered simulations."""
@@ -882,7 +1025,7 @@ class SimulationMapping:
         return (self[sid] for sid in self)
 
     def _build(self, sim_id: SimID) -> Simulation:
-        receptor = self._repository.get_receptor(sim_id)
+        receptor = self._catalog.get_receptor(sim_id)
         sim_dir = self._project_dir / "simulations" / "by-id" / sim_id
         return Simulation(
             directory=sim_dir,

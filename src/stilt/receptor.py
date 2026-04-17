@@ -6,7 +6,7 @@ import datetime as dt
 import hashlib
 import json
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 import pandas as pd
@@ -382,8 +382,9 @@ def read_receptors(path: str | Path) -> list[Receptor]:
     Returns
     -------
     list[Receptor]
-        Parsed receptors. If a ``group`` column exists, one receptor is
-        created per group; otherwise one per row.
+        Parsed receptors. If an ``r_idx`` column exists, one receptor is
+        created per unique index value (supports column/multipoint receptors);
+        otherwise one receptor is created per row.
     """
     df = pd.read_csv(path, parse_dates=["time"])
 
@@ -413,18 +414,47 @@ def read_receptors(path: str | Path) -> list[Receptor]:
     if not all(col in df.columns for col in required_cols):
         raise ValueError(f"Receptor file must contain columns: {required_cols}")
 
-    # If "group" column exists, group rows and create a single Receptor
-    # per group. Otherwise, treat each row as a separate point receptor.
-    key = "group" if "group" in df.columns else df.index
+    def _point_receptors_from_rows(frame: pd.DataFrame) -> list[Receptor]:
+        """Fast path: one Receptor per row (all point receptors)."""
+        return [
+            Receptor(
+                time=cast(Any, row).time,
+                longitude=cast(Any, row).long,
+                latitude=cast(Any, row).lati,
+                altitude=cast(Any, row).z,
+                altitude_ref=cast(Any, row).altitude_ref,
+            )
+            for row in frame.itertuples(index=False)
+        ]
 
-    return (
-        df.groupby(key)
-        .apply(
-            lambda x: _receptor_from_group(x),
-            include_groups=False,
-        )
-        .to_list()
-    )
+    # If an "r_idx" column exists, group rows and create a single Receptor per
+    # index value (supports column / multipoint receptors).  Use itertuples for
+    # single-row groups and groupby only for multi-row groups — groupby().apply()
+    # over many unique keys is very slow in pandas.
+    if "r_idx" in df.columns:
+        group_sizes = df.groupby("r_idx").size()
+        multi_keys = [k for k, v in group_sizes.items() if v > 1]
+
+        if not multi_keys:
+            return _point_receptors_from_rows(df)
+
+        single_mask = ~df["r_idx"].isin(multi_keys)
+        result: dict = {}
+        for row in df[single_mask].itertuples(index=False):
+            r = cast(Any, row)
+            result[r.r_idx] = Receptor(
+                time=r.time,
+                longitude=r.long,
+                latitude=r.lati,
+                altitude=r.z,
+                altitude_ref=r.altitude_ref,
+            )
+        for key, g in df[~single_mask].groupby("r_idx"):
+            result[key] = _receptor_from_group(cast(pd.DataFrame, g))
+
+        return [result[k] for k in df["r_idx"].unique()]
+
+    return _point_receptors_from_rows(df)
 
 
 def _receptor_from_group(group: pd.DataFrame) -> Receptor:

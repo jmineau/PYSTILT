@@ -302,6 +302,28 @@ def test_run_invokes_model_run(tmp_path, monkeypatch):
     fake_handle.wait.assert_called_once()
 
 
+def test_run_prints_startup_and_wait_messages(tmp_path, monkeypatch):
+    """run prints a startup summary before blocking locally."""
+    _write_minimal_config(tmp_path)
+
+    fake_handle = MagicMock()
+
+    monkeypatch.setattr(
+        "stilt.model.Model.run",
+        lambda self,
+        executor=None,
+        skip_existing=None,
+        wait=True,
+        batch_id=None: fake_handle,
+    )
+
+    result = runner.invoke(app, ["run", str(tmp_path)])
+
+    assert result.exit_code == 0
+    assert "Starting run:" in result.output
+    assert "Workers launched. Waiting for completion..." in result.output
+
+
 def test_run_no_skip_passes_false(tmp_path, monkeypatch):
     """--no-skip passes skip_existing=False to model.run()."""
     _write_minimal_config(tmp_path)
@@ -343,6 +365,7 @@ def test_run_accepts_cloud_project_uri(monkeypatch):
                 "Repo",
                 (),
                 {
+                    "rebuild": lambda self: None,
                     "count": lambda self: 0,
                     "completed_simulations": lambda self: [],
                     "pending_trajectories": lambda self: [],
@@ -392,6 +415,7 @@ def test_run_forwards_output_dir_and_compute_root(tmp_path, monkeypatch):
                 "Repo",
                 (),
                 {
+                    "rebuild": lambda self: None,
                     "count": lambda self: 0,
                     "completed_simulations": lambda self: [],
                     "pending_trajectories": lambda self: [],
@@ -549,8 +573,8 @@ def test_run_no_wait_prints_job_id(tmp_path, monkeypatch):
 # ---------------------------------------------------------------------------
 
 
-def test_worker_exits_when_no_config(tmp_path):
-    result = runner.invoke(app, ["worker", str(tmp_path)])
+def test_pull_worker_exits_when_no_config(tmp_path):
+    result = runner.invoke(app, ["pull-worker", str(tmp_path)])
     assert result.exit_code == 1
 
 
@@ -559,8 +583,8 @@ def test_worker_exits_when_no_config(tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_worker_pull_mode_calls_worker_loop(tmp_path, monkeypatch):
-    """worker calls worker_loop on the model."""
+def test_pull_worker_calls_pull_worker_loop(tmp_path, monkeypatch):
+    """pull-worker calls pull_worker_loop on the model."""
     _write_minimal_config(tmp_path)
 
     loop_calls: list[dict] = []
@@ -568,17 +592,17 @@ def test_worker_pull_mode_calls_worker_loop(tmp_path, monkeypatch):
     def fake_loop(model, n_cores=1, follow=False):
         loop_calls.append({"n_cores": n_cores, "follow": follow})
 
-    monkeypatch.setattr("stilt.cli.worker_loop", fake_loop)
+    monkeypatch.setattr("stilt.cli.pull_worker_loop", fake_loop)
 
-    result = runner.invoke(app, ["worker", str(tmp_path), "--cpus", "4"])
+    result = runner.invoke(app, ["pull-worker", str(tmp_path), "--cpus", "4"])
     assert result.exit_code == 0
     assert len(loop_calls) == 1
     assert loop_calls[0]["n_cores"] == 4
     assert loop_calls[0]["follow"] is False
 
 
-def test_worker_follow_flag_forwarded(tmp_path, monkeypatch):
-    """--follow is forwarded to worker_loop."""
+def test_pull_worker_follow_flag_forwarded(tmp_path, monkeypatch):
+    """--follow is forwarded to pull_worker_loop."""
     _write_minimal_config(tmp_path)
 
     loop_calls: list[dict] = []
@@ -586,15 +610,15 @@ def test_worker_follow_flag_forwarded(tmp_path, monkeypatch):
     def fake_loop(model, n_cores=1, follow=False):
         loop_calls.append({"follow": follow})
 
-    monkeypatch.setattr("stilt.cli.worker_loop", fake_loop)
+    monkeypatch.setattr("stilt.cli.pull_worker_loop", fake_loop)
 
-    result = runner.invoke(app, ["worker", str(tmp_path), "--follow"])
+    result = runner.invoke(app, ["pull-worker", str(tmp_path), "--follow"])
     assert result.exit_code == 0
     assert loop_calls[0]["follow"] is True
 
 
-def test_worker_accepts_cloud_project_uri(monkeypatch):
-    """worker command can bootstrap from a cloud project ref."""
+def test_pull_worker_accepts_cloud_project_uri(monkeypatch):
+    """pull-worker can bootstrap from a cloud project ref."""
     captured: list[dict] = []
 
     class _FakeModel:
@@ -609,10 +633,10 @@ def test_worker_accepts_cloud_project_uri(monkeypatch):
 
     monkeypatch.setattr("stilt.cli.Model", _FakeModel)
     monkeypatch.setattr(
-        "stilt.cli.worker_loop", lambda model, n_cores=1, follow=False: None
+        "stilt.cli.pull_worker_loop", lambda model, n_cores=1, follow=False: None
     )
 
-    result = runner.invoke(app, ["worker", "gs://bucket/project"])
+    result = runner.invoke(app, ["pull-worker", "gs://bucket/project"])
 
     assert result.exit_code == 0
     assert captured == [
@@ -624,8 +648,8 @@ def test_worker_accepts_cloud_project_uri(monkeypatch):
     ]
 
 
-def test_worker_forwards_output_dir_and_compute_root(tmp_path, monkeypatch):
-    """worker forwards durable-output and compute-root bootstrap options."""
+def test_pull_worker_forwards_output_dir_and_compute_root(tmp_path, monkeypatch):
+    """pull-worker forwards durable-output and compute-root bootstrap options."""
     _write_minimal_config(tmp_path)
     captured: list[dict] = []
 
@@ -641,13 +665,13 @@ def test_worker_forwards_output_dir_and_compute_root(tmp_path, monkeypatch):
 
     monkeypatch.setattr("stilt.cli.Model", _FakeModel)
     monkeypatch.setattr(
-        "stilt.cli.worker_loop", lambda model, n_cores=1, follow=False: None
+        "stilt.cli.pull_worker_loop", lambda model, n_cores=1, follow=False: None
     )
 
     result = runner.invoke(
         app,
         [
-            "worker",
+            "pull-worker",
             str(tmp_path),
             "--output-dir",
             "gs://bucket/project",
@@ -664,6 +688,40 @@ def test_worker_forwards_output_dir_and_compute_root(tmp_path, monkeypatch):
             "compute_root": str(tmp_path / "scratch"),
         }
     ]
+
+
+def test_push_worker_calls_push_worker_loop(tmp_path, monkeypatch):
+    _write_minimal_config(tmp_path)
+
+    loop_calls: list[dict] = []
+
+    def fake_loop(model, chunk_path, n_cores=1):
+        loop_calls.append({"chunk_path": chunk_path, "n_cores": n_cores})
+
+    monkeypatch.setattr("stilt.cli.push_worker_loop", fake_loop)
+
+    result = runner.invoke(
+        app,
+        [
+            "push-worker",
+            str(tmp_path),
+            "--chunk",
+            "/tmp/task_0.txt",
+            "--cpus",
+            "4",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert loop_calls == [{"chunk_path": "/tmp/task_0.txt", "n_cores": 4}]
+
+
+def test_push_worker_requires_chunk_option(tmp_path):
+    _write_minimal_config(tmp_path)
+
+    result = runner.invoke(app, ["push-worker", str(tmp_path)])
+
+    assert result.exit_code != 0
 
 
 # ---------------------------------------------------------------------------
@@ -685,7 +743,7 @@ def test_serve_calls_worker_loop_in_follow_mode(tmp_path, monkeypatch):
     def fake_loop(model, n_cores=1, follow=False):
         loop_calls.append({"n_cores": n_cores, "follow": follow})
 
-    monkeypatch.setattr("stilt.cli.worker_loop", fake_loop)
+    monkeypatch.setattr("stilt.cli.pull_worker_loop", fake_loop)
 
     result = runner.invoke(app, ["serve", str(tmp_path), "--cpus", "4"])
     assert result.exit_code == 0
@@ -707,7 +765,7 @@ def test_serve_accepts_cloud_project_uri(monkeypatch):
 
     monkeypatch.setattr("stilt.cli.Model", _FakeModel)
     monkeypatch.setattr(
-        "stilt.cli.worker_loop", lambda model, n_cores=1, follow=False: None
+        "stilt.cli.pull_worker_loop", lambda model, n_cores=1, follow=False: None
     )
 
     result = runner.invoke(app, ["serve", "gs://bucket/project"])
@@ -741,7 +799,7 @@ def test_serve_forwards_output_dir_and_compute_root(tmp_path, monkeypatch):
         loop_calls.append({"n_cores": n_cores, "follow": follow})
 
     monkeypatch.setattr("stilt.cli.Model", _FakeModel)
-    monkeypatch.setattr("stilt.cli.worker_loop", fake_loop)
+    monkeypatch.setattr("stilt.cli.pull_worker_loop", fake_loop)
 
     result = runner.invoke(
         app,

@@ -313,6 +313,16 @@ class FootprintConfig(BaseModel):
     )
 
 
+def foot_names(foot_configs: dict[str, FootprintConfig]) -> list[str]:
+    """Return all requested footprint artifact names, including error outputs."""
+    names: list[str] = []
+    for name, cfg in foot_configs.items():
+        names.append(name)
+        if cfg.error:
+            names.append(f"{name}_error")
+    return names
+
+
 class ModelParams(BaseModel):
     """Core STILT run controls."""
 

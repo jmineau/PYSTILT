@@ -8,20 +8,22 @@ import pytest
 from stilt.executors import (
     KubernetesExecutor,
     KubernetesHandle,
+    LaunchSpec,
     LocalExecutor,
     LocalHandle,
     SlurmExecutor,
     SlurmHandle,
     get_executor,
 )
+from stilt.executors.factory import resolve_dispatch
 
 # ---------------------------------------------------------------------------
 # LocalExecutor
 # ---------------------------------------------------------------------------
 
 
-def test_local_executor_start_calls_worker_loop_inline(tmp_path, monkeypatch):
-    """LocalExecutor.start() runs inline when n_workers <= 1."""
+def test_local_executor_start_calls_pull_worker_loop_inline(tmp_path, monkeypatch):
+    """LocalExecutor.start() runs inline for pull dispatch when n_workers <= 1."""
     calls = []
 
     def fake_worker_loop(model, n_cores=1, follow=False):
@@ -32,15 +34,21 @@ def test_local_executor_start_calls_worker_loop_inline(tmp_path, monkeypatch):
         "stilt.model.Model",
         lambda project, output_dir=None, compute_root=None: object(),
     )
-    monkeypatch.setattr("stilt.workers.worker_loop", fake_worker_loop)
+    monkeypatch.setattr("stilt.workers.pull_worker_loop", fake_worker_loop)
 
     ex = LocalExecutor(n_workers=1)
-    handle = ex.start(str(tmp_path), n_workers=1, follow=True)
+    handle = ex.start(
+        LaunchSpec(
+            project=str(tmp_path),
+            n_workers=1,
+            dispatch="pull",
+        )
+    )
 
     assert isinstance(handle, LocalHandle)
     assert len(calls) == 1
     assert calls[0]["n_cores"] == 1
-    assert calls[0]["follow"] is True
+    assert calls[0]["follow"] is False
 
 
 def test_local_handle_job_id():
@@ -52,7 +60,7 @@ def test_local_handle_wait_is_noop_for_inline():
 
 
 def test_local_executor_start_spawns_workers(tmp_path, monkeypatch):
-    """LocalExecutor.start() submits _worker_entrypoint N times when n_workers > 1."""
+    """LocalExecutor.start() submits pull worker entrypoints N times when n_workers > 1."""
     submitted = []
 
     class FakePool:
@@ -74,7 +82,13 @@ def test_local_executor_start_spawns_workers(tmp_path, monkeypatch):
     monkeypatch.setattr("stilt.executors.local.ProcessPoolExecutor", FakePool)
 
     ex = LocalExecutor(n_workers=3)
-    handle = ex.start(str(tmp_path), n_workers=3, follow=False)
+    handle = ex.start(
+        LaunchSpec(
+            project=str(tmp_path),
+            n_workers=3,
+            dispatch="pull",
+        )
+    )
 
     assert isinstance(handle, LocalHandle)
     assert len(submitted) == 3
@@ -99,8 +113,8 @@ def test_local_handle_wait_process_mode(tmp_path, monkeypatch):
     assert handle.job_id == "local"
 
 
-def test_local_executor_n_workers_override(tmp_path, monkeypatch):
-    """n_workers kwarg to start() overrides the instance default."""
+def test_local_executor_pull_n_workers_from_launch_spec(tmp_path, monkeypatch):
+    """LaunchSpec.n_workers overrides the instance default for pull dispatch."""
     submitted = []
 
     class FakePool:
@@ -122,8 +136,49 @@ def test_local_executor_n_workers_override(tmp_path, monkeypatch):
     monkeypatch.setattr("stilt.executors.local.ProcessPoolExecutor", FakePool)
 
     ex = LocalExecutor(n_workers=5)
-    ex.start(str(tmp_path), n_workers=2, follow=False)
+    ex.start(
+        LaunchSpec(
+            project=str(tmp_path),
+            n_workers=2,
+            dispatch="pull",
+        )
+    )
     assert len(submitted) == 2  # override used, not 5
+
+
+def test_local_executor_push_dispatch_submits_chunk_workers(tmp_path, monkeypatch):
+    submitted = []
+
+    class FakePool:
+        def __init__(self, max_workers):
+            self._max = max_workers
+
+        def submit(self, func, *args):
+            submitted.append(args)
+
+            class FakeFuture:
+                def result(self):
+                    return None
+
+            return FakeFuture()
+
+        def shutdown(self, wait=False):
+            pass
+
+    monkeypatch.setattr("stilt.executors.local.ProcessPoolExecutor", FakePool)
+
+    ex = LocalExecutor(n_workers=5)
+    ex.start(
+        LaunchSpec(
+            project=str(tmp_path),
+            n_workers=2,
+            dispatch="push",
+            chunks=("/tmp/task_0.txt", "/tmp/task_1.txt"),
+        )
+    )
+    assert len(submitted) == 2
+    assert submitted[0][1] == "/tmp/task_0.txt"
+    assert submitted[1][1] == "/tmp/task_1.txt"
 
 
 # ---------------------------------------------------------------------------
@@ -203,8 +258,8 @@ def test_slurm_executor_explicit_job_name_overrides_default():
     assert "--job-name=pystilt-my-project" not in directives
 
 
-def test_slurm_executor_start_renders_no_chunk_files(tmp_path, monkeypatch):
-    """start() renders a script with 'stilt worker <project>' and no task-id."""
+def test_slurm_executor_start_renders_chunk_worker_script(tmp_path, monkeypatch):
+    """start() renders a chunk-based push-worker script."""
     import subprocess
 
     calls = []
@@ -220,42 +275,30 @@ def test_slurm_executor_start_renders_no_chunk_files(tmp_path, monkeypatch):
     ex = SlurmExecutor.from_config(
         {"backend": "slurm", "partition": "notchpeak", "n_tasks": 4}
     )
-    handle = ex.start(str(tmp_path), n_workers=4, follow=False)
+    handle = ex.start(
+        LaunchSpec(
+            project=str(tmp_path),
+            n_workers=4,
+            dispatch="push",
+            chunks=tuple(
+                str(tmp_path / "simulations" / "chunks" / "batch-1" / f"task_{i}.txt")
+                for i in range(4)
+            ),
+        )
+    )
 
     assert isinstance(handle, SlurmHandle)
     assert handle.job_id == "777"
 
-    # Script should call 'stilt worker <project>' with no --task-id
-    slurm_dir = tmp_path / "simulations" / "slurm"
+    # Script should call 'stilt push-worker <project>' with one resolved chunk path.
+    slurm_dir = tmp_path / "slurm"
     scripts = list(slurm_dir.glob("submit_*.sh"))
     assert len(scripts) == 1
     script_text = scripts[0].read_text()
-    assert f"stilt worker {tmp_path}" in script_text
-    assert "--task-id" not in script_text
+    assert f"stilt push-worker {tmp_path}" in script_text
+    assert "CHUNK_PATH=" in script_text
+    assert '--chunk "$CHUNK_PATH"' in script_text
     assert "#SBATCH --job-name=pystilt-" in script_text
-
-    # No chunk files directory
-    chunks_dir = slurm_dir / "chunks"
-    assert not chunks_dir.exists()
-
-
-def test_slurm_executor_start_with_follow_flag(tmp_path, monkeypatch):
-    """start(follow=True) passes --follow to stilt worker."""
-    import subprocess
-
-    def fake_run(cmd, **kwargs):
-        return subprocess.CompletedProcess(
-            cmd, 0, stdout="Submitted batch job 1\n", stderr=""
-        )
-
-    monkeypatch.setattr("stilt.executors.slurm.subprocess.run", fake_run)
-
-    ex = SlurmExecutor.from_config({"backend": "slurm", "n_tasks": 2})
-    ex.start(str(tmp_path), n_workers=2, follow=True)
-
-    slurm_dir = tmp_path / "simulations" / "slurm"
-    script_text = list(slurm_dir.glob("submit_*.sh"))[0].read_text()
-    assert "--follow" in script_text
 
 
 def test_slurm_executor_start_with_output_dir_and_compute_root(tmp_path, monkeypatch):
@@ -271,15 +314,19 @@ def test_slurm_executor_start_with_output_dir_and_compute_root(tmp_path, monkeyp
 
     ex = SlurmExecutor.from_config({"backend": "slurm", "n_tasks": 1})
     ex.start(
-        str(tmp_path),
-        n_workers=1,
-        output_dir="s3://bucket/project",
-        compute_root="/scratch/pystilt",
+        LaunchSpec(
+            project=str(tmp_path),
+            n_workers=1,
+            dispatch="push",
+            output_dir="s3://bucket/project",
+            compute_root="/scratch/pystilt",
+            chunks=(
+                str(tmp_path / "simulations" / "chunks" / "batch-1" / "task_0.txt"),
+            ),
+        )
     )
 
-    script_text = list((tmp_path / "simulations" / "slurm").glob("submit_*.sh"))[
-        0
-    ].read_text()
+    script_text = list((tmp_path / "slurm").glob("submit_*.sh"))[0].read_text()
     assert "--output-dir s3://bucket/project" in script_text
     assert "--compute-root /scratch/pystilt" in script_text
 
@@ -287,34 +334,22 @@ def test_slurm_executor_start_with_output_dir_and_compute_root(tmp_path, monkeyp
 def test_slurm_executor_start_cloud_project_uses_local_submission_root(
     tmp_path, monkeypatch
 ):
-    """Cloud projects should not create sbatch artifacts under a fake local URI path."""
-    import subprocess
-
-    scratch_root = tmp_path / "scratch"
-
-    def fake_run(cmd, **kwargs):
-        return subprocess.CompletedProcess(
-            cmd, 0, stdout="Submitted batch job 22\n", stderr=""
-        )
-
-    monkeypatch.setattr("stilt.executors.slurm.subprocess.run", fake_run)
-    monkeypatch.setattr(
-        "stilt.executors.slurm.tempfile.mkdtemp", lambda prefix: str(scratch_root)
-    )
-
+    """Cloud projects are rejected for Slurm push dispatch."""
     ex = SlurmExecutor.from_config({"backend": "slurm", "n_tasks": 1})
-    ex.start("s3://bucket/my_proj", n_workers=1, follow=False)
-
-    script_text = list((scratch_root / "simulations" / "slurm").glob("submit_*.sh"))[
-        0
-    ].read_text()
-    assert "stilt worker s3://bucket/my_proj" in script_text
-    assert not (tmp_path / "s3:").exists()
+    with pytest.raises(ValueError, match="requires a local project/output root"):
+        ex.start(
+            LaunchSpec(
+                project="s3://bucket/my_proj",
+                n_workers=1,
+                dispatch="push",
+                chunks=("/tmp/task_0.txt",),
+            )
+        )
 
 
 def test_slurm_executor_start_zero_workers_returns_none_job_id(monkeypatch):
     ex = SlurmExecutor.from_config({"backend": "slurm"})
-    handle = ex.start(".", n_workers=0)
+    handle = ex.start(LaunchSpec(project=".", n_workers=0, dispatch="push"))
     assert handle.job_id == "none"
 
 
@@ -331,6 +366,11 @@ def test_get_executor_defaults_to_local_single_worker():
     ex = get_executor()
     assert isinstance(ex, LocalExecutor)
     assert ex._n_workers == 1
+
+
+def test_resolve_dispatch_defaults_local_to_pull():
+    assert resolve_dispatch() == "pull"
+    assert resolve_dispatch({"backend": "local"}) == "pull"
 
 
 def test_get_executor_local_n_workers_1_uses_local_executor():
@@ -526,7 +566,7 @@ def test_kubernetes_executor_job_manifest_includes_output_dir_and_compute_root()
     container = manifest["spec"]["template"]["spec"]["containers"][0]
     assert container["command"] == [
         "stilt",
-        "worker",
+        "pull-worker",
         "/data/myproj",
         "--output-dir",
         "gs://bucket/project",
@@ -554,47 +594,38 @@ def test_kubernetes_executor_keda_manifest_structure():
 
 
 def test_kubernetes_executor_start_batch_applies_job(monkeypatch):
-    """start(follow=False) applies a Job manifest."""
+    """start() applies a Job manifest."""
     ex = KubernetesExecutor(image="img")
     applied: list[dict] = []
     monkeypatch.setattr(ex, "_apply", lambda m: applied.append(m))
-    handle = ex.start("/data/myproj", n_workers=2, follow=False)
+    handle = ex.start(
+        LaunchSpec(
+            project="/data/myproj",
+            n_workers=2,
+            dispatch="pull",
+        )
+    )
     assert len(applied) == 1
     assert applied[0]["kind"] == "Job"
     assert isinstance(handle, KubernetesHandle)
     assert handle.job_id.startswith("job/")
 
 
-def test_kubernetes_executor_start_streaming_applies_deployment(monkeypatch):
-    """start(follow=True) applies a Deployment manifest (no KEDA if autoscale=False)."""
-    ex = KubernetesExecutor(image="img", autoscale=False)
-    applied: list[dict] = []
-    monkeypatch.setattr(ex, "_apply", lambda m: applied.append(m))
-    handle = ex.start("/data/myproj", n_workers=1, follow=True)
-    assert len(applied) == 1  # only the Deployment
-    assert applied[0]["kind"] == "Deployment"
-    assert handle.job_id.startswith("deployment/")
-
-
-def test_kubernetes_executor_start_autoscale_applies_keda(monkeypatch):
-    """start(follow=True) with autoscale=True applies both Deployment and ScaledObject."""
+def test_kubernetes_executor_start_ignores_autoscale_for_batch(monkeypatch):
+    """Executor launches only Jobs; autoscale config does not change start()."""
     ex = KubernetesExecutor(image="img", autoscale=True)
     applied: list[dict] = []
     monkeypatch.setattr(ex, "_apply", lambda m: applied.append(m))
-    ex.start("/data/myproj", n_workers=1, follow=True)
-    kinds = [m["kind"] for m in applied]
-    assert "Deployment" in kinds
-    assert "ScaledObject" in kinds
-
-
-def test_kubernetes_executor_start_no_keda_for_batch(monkeypatch):
-    """Batch jobs never get a KEDA ScaledObject even if autoscale=True."""
-    ex = KubernetesExecutor(image="img", autoscale=True)
-    applied: list[dict] = []
-    monkeypatch.setattr(ex, "_apply", lambda m: applied.append(m))
-    ex.start("/data/myproj", n_workers=4, follow=False)
+    ex.start(
+        LaunchSpec(
+            project="/data/myproj",
+            n_workers=4,
+            dispatch="pull",
+        )
+    )
     kinds = [m["kind"] for m in applied]
     assert "ScaledObject" not in kinds
+    assert kinds == ["Job"]
 
 
 def test_kubernetes_executor_apply_dispatches_by_manifest_kind(monkeypatch):

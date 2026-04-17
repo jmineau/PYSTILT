@@ -40,7 +40,7 @@ def test_db_secret_env_empty_when_secret_disabled():
 def test_worker_command_follow_mode_includes_follow_flag():
     assert worker_command("/data/project", follow=True) == [
         "stilt",
-        "worker",
+        "pull-worker",
         "/data/project",
         "--follow",
     ]
@@ -72,7 +72,7 @@ def test_worker_job_manifest_structure():
     container = manifest["spec"]["template"]["spec"]["containers"][0]
     assert container["command"] == [
         "stilt",
-        "worker",
+        "pull-worker",
         "/data/project",
         "--output-dir",
         "gs://bucket/project",
@@ -88,7 +88,7 @@ def test_worker_deployment_manifest_matches_follow_worker_shape():
     container = manifest["spec"]["template"]["spec"]["containers"][0]
     assert container["command"] == [
         "stilt",
-        "worker",
+        "pull-worker",
         "/data/project",
         "--follow",
     ]

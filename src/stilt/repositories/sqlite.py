@@ -4,15 +4,23 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+import os
 import sqlite3
 import tempfile
 import uuid
 from pathlib import Path
+from typing import Literal
 
 import pandas as pd
 import pyarrow.parquet as pq
 
-from stilt.artifacts import simulation_index_path, simulation_state_db_path
+from stilt.artifacts import (
+    error_trajectory_filename,
+    footprint_filename,
+    simulation_index_path,
+    simulation_state_db_path,
+    trajectory_filename,
+)
 from stilt.receptor import Receptor
 from stilt.simulation import SimID
 
@@ -99,10 +107,10 @@ CREATE TABLE IF NOT EXISTS attempts (
 class _ManagedConnection(sqlite3.Connection):
     """SQLite connection whose context manager also closes the handle."""
 
-    def __exit__(self, exc_type, exc_value, traceback) -> bool:
-        suppress = super().__exit__(exc_type, exc_value, traceback)
+    def __exit__(self, exc_type, exc_value, traceback) -> Literal[False]:
+        super().__exit__(exc_type, exc_value, traceback)
         self.close()
-        return suppress
+        return False
 
 
 def _now_iso() -> str:
@@ -331,65 +339,88 @@ class SQLiteRepository:
         footprint_names: list[str] | None = None,
     ) -> None:
         """Register many simulations, optionally grouped under one batch."""
-        targets_json = json.dumps(_normalize_footprint_names(footprint_names))
+        if not pairs:
+            return
         with self._connect() as conn:
             conn.execute("BEGIN IMMEDIATE")
-            for sim_id, receptor in pairs:
-                conn.execute(
-                    "INSERT OR IGNORE INTO simulations (sim_id, time, kind, altitude_ref) "
-                    "VALUES (?, ?, ?, ?)",
-                    (
-                        sim_id,
-                        receptor.time.isoformat(),
-                        receptor.kind,
-                        receptor.altitude_ref,
-                    ),
+            self._register_many_with_conn(
+                conn,
+                pairs,
+                batch_id=batch_id,
+                footprint_names=footprint_names,
+            )
+
+    def _register_many_with_conn(
+        self,
+        conn: sqlite3.Connection,
+        pairs: list[tuple[str, Receptor]],
+        batch_id: str | None = None,
+        footprint_names: list[str] | None = None,
+    ) -> None:
+        """Register many simulations inside an existing transaction."""
+        if not pairs:
+            return
+        targets_json = json.dumps(_normalize_footprint_names(footprint_names))
+        now = _now_iso()
+
+        sim_rows = [
+            (
+                sim_id,
+                receptor.time.isoformat(),
+                receptor.kind,
+                receptor.altitude_ref,
+                targets_json,
+            )
+            for sim_id, receptor in pairs
+        ]
+        artifact_rows = [(sim_id, now) for sim_id, _ in pairs]
+        point_rows = [
+            (sim_id, i, float(lat), float(lon), float(hgt))
+            for sim_id, receptor in pairs
+            for i, (lat, lon, hgt) in enumerate(
+                zip(
+                    receptor.latitudes,
+                    receptor.longitudes,
+                    receptor.altitudes,
+                    strict=False,
                 )
-                conn.execute(
-                    "UPDATE simulations SET altitude_ref=? WHERE sim_id=?",
-                    (receptor.altitude_ref, sim_id),
-                )
-                conn.execute(
-                    "UPDATE simulations SET footprint_targets=? WHERE sim_id=?",
-                    (targets_json, sim_id),
-                )
-                conn.execute(
-                    "INSERT OR IGNORE INTO artifact_index (sim_id, updated_at)"
-                    " VALUES (?, ?)",
-                    (sim_id, _now_iso()),
-                )
-                for i, (lat, lon, hgt) in enumerate(
-                    zip(
-                        receptor.latitudes,
-                        receptor.longitudes,
-                        receptor.altitudes,
-                        strict=False,
-                    )
-                ):
-                    conn.execute(
-                        "INSERT OR IGNORE INTO receptor_points "
-                        "(sim_id, point_idx, lati, long, zagl) VALUES (?, ?, ?, ?, ?)",
-                        (sim_id, i, float(lat), float(lon), float(hgt)),
-                    )
-            if batch_id is not None:
-                conn.execute(
-                    "INSERT OR IGNORE INTO batches (batch_id, total) VALUES (?, 0)",
-                    (batch_id,),
-                )
-                for sim_id, _ in pairs:
-                    conn.execute(
-                        "INSERT OR IGNORE INTO batch_simulations (batch_id, sim_id) "
-                        "VALUES (?, ?)",
-                        (batch_id, sim_id),
-                    )
-                total = conn.execute(
-                    "SELECT COUNT(*) FROM batch_simulations WHERE batch_id = ?",
-                    (batch_id,),
-                ).fetchone()[0]
-                conn.execute(
-                    "UPDATE batches SET total = ? WHERE batch_id = ?",
-                    (total, batch_id),
-                )
+            )
+        ]
+
+        conn.executemany(
+            "INSERT INTO simulations (sim_id, time, kind, altitude_ref, footprint_targets) "
+            "VALUES (?, ?, ?, ?, ?) "
+            "ON CONFLICT(sim_id) DO UPDATE SET "
+            "altitude_ref=excluded.altitude_ref, "
+            "footprint_targets=excluded.footprint_targets",
+            sim_rows,
+        )
+        conn.executemany(
+            "INSERT OR IGNORE INTO artifact_index (sim_id, updated_at) VALUES (?, ?)",
+            artifact_rows,
+        )
+        conn.executemany(
+            "INSERT OR IGNORE INTO receptor_points "
+            "(sim_id, point_idx, lati, long, zagl) VALUES (?, ?, ?, ?, ?)",
+            point_rows,
+        )
+        if batch_id is not None:
+            conn.execute(
+                "INSERT OR IGNORE INTO batches (batch_id, total) VALUES (?, 0)",
+                (batch_id,),
+            )
+            conn.executemany(
+                "INSERT OR IGNORE INTO batch_simulations (batch_id, sim_id) VALUES (?, ?)",
+                [(batch_id, sim_id) for sim_id, _ in pairs],
+            )
+            total = conn.execute(
+                "SELECT COUNT(*) FROM batch_simulations WHERE batch_id = ?",
+                (batch_id,),
+            ).fetchone()[0]
+            conn.execute(
+                "UPDATE batches SET total = ? WHERE batch_id = ?",
+                (total, batch_id),
+            )
 
     def sync(self) -> None:
         """No-op — state is updated directly via ``mark_*()``."""
@@ -607,13 +638,99 @@ class SQLiteRepository:
             latest_attempt=latest_attempt,
         )
 
+    def bulk_traj_status(
+        self, sim_ids: list[str] | None = None
+    ) -> dict[str, str | None]:
+        """Return the derived trajectory status for many simulations."""
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT sim_id, traj_status FROM simulations"
+            ).fetchall()
+            requested, summaries, active_claims, latest_attempts = self._state_maps(
+                conn
+            )
+
+        legacy_statuses = {row["sim_id"]: row["traj_status"] for row in rows}
+        selected = sim_ids if sim_ids is not None else list(legacy_statuses)
+
+        result: dict[str, str | None] = {}
+        for sim_id in selected:
+            legacy_status = legacy_statuses.get(sim_id)
+            if legacy_status is None:
+                result[sim_id] = None
+                continue
+            summary = summaries.get(sim_id, ArtifactSummary())
+            latest_attempt = latest_attempts.get(sim_id)
+            if (
+                latest_attempt is None
+                and not summary.traj_present
+                and legacy_status == "failed"
+            ):
+                result[sim_id] = "failed"
+                continue
+            result[sim_id] = trajectory_status_from_state(
+                summary,
+                active_claim=sim_id in active_claims,
+                latest_attempt=latest_attempt,
+            )
+        return result
+
     def footprint_status(self, sim_id: SimID | str, name: str) -> str | None:
         """Return the stored status for one named footprint."""
         return self.artifact_summary(sim_id).footprints.get(name)
 
+    def bulk_footprint_status(
+        self,
+        name: str,
+        sim_ids: list[str] | None = None,
+    ) -> dict[str, str | None]:
+        """Return the stored status for one named footprint across many simulations."""
+        selected = set(sim_ids) if sim_ids is not None else None
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT sim_id, footprints FROM artifact_index"
+            ).fetchall()
+
+        result: dict[str, str | None] = {}
+        for row in rows:
+            sim_id = row["sim_id"]
+            if selected is not None and sim_id not in selected:
+                continue
+            footprints = json.loads(row["footprints"] or "{}")
+            result[sim_id] = footprints.get(name)
+
+        if sim_ids is not None:
+            for sim_id in sim_ids:
+                result.setdefault(sim_id, None)
+        return result
+
     def footprint_completed(self, sim_id: SimID | str, name: str) -> bool:
         """Return whether one named footprint has a terminal complete state."""
         return self.footprint_status(sim_id, name) in {"complete", "complete-empty"}
+
+    def bulk_footprint_completed(self, names: list[str]) -> set[str]:
+        """Return sim_ids where every listed footprint name is complete.
+
+        Loads the entire artifact_index in one query instead of one query per
+        simulation — critical for large projects.
+        """
+        if not names:
+            with self._connect() as conn:
+                return {
+                    row[0]
+                    for row in conn.execute("SELECT sim_id FROM simulations").fetchall()
+                }
+        terminal = {"complete", "complete-empty"}
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT sim_id, footprints FROM artifact_index"
+            ).fetchall()
+        result: set[str] = set()
+        for row in rows:
+            fp: dict = json.loads(row["footprints"] or "{}")
+            if all(fp.get(name) in terminal for name in names):
+                result.add(row["sim_id"])
+        return result
 
     def get_receptor(self, sim_id: SimID | str) -> Receptor:
         """Reconstruct one receptor definition from repository rows."""
@@ -644,95 +761,218 @@ class SQLiteRepository:
             df = pd.read_sql("SELECT * FROM simulations", conn)
         return df.set_index("sim_id")
 
+    def _reset_runtime_state_with_conn(self, conn: sqlite3.Connection) -> None:
+        """Clear transient running/claim state inside an open transaction."""
+        conn.execute(
+            "UPDATE simulations SET traj_status = 'pending'"
+            " WHERE traj_status = 'running'"
+        )
+        conn.execute("DELETE FROM claims")
+
+    def reset_runtime_state(self) -> None:
+        """Clear transient running/claim state without rescanning artifacts."""
+        with self._connect() as conn:
+            self._reset_runtime_state_with_conn(conn)
+
+    @staticmethod
+    def _footprint_name_from_filename(
+        sim_id: str,
+        filename: str,
+        *,
+        suffix: str,
+    ) -> str | None:
+        """Return the footprint name encoded in one artifact filename."""
+        if not filename.endswith(suffix):
+            return None
+        without_suffix = filename[: -len(suffix)]
+        if without_suffix == sim_id:
+            return ""
+        prefix = f"{sim_id}_"
+        if without_suffix.startswith(prefix):
+            return without_suffix[len(prefix) :]
+        return None
+
+    def _register_rebuilt_simulation(
+        self,
+        conn: sqlite3.Connection,
+        sim_id: str,
+        existing: set[str],
+        *,
+        traj_file: Path | None,
+    ) -> bool:
+        """Ensure one on-disk simulation is registered during rebuild."""
+        if sim_id in existing:
+            return True
+
+        if traj_file is not None:
+            try:
+                meta = pq.ParquetFile(traj_file).schema_arrow.metadata
+                receptor_blob = None if meta is None else meta.get(b"stilt:receptor")
+                if receptor_blob is not None:
+                    receptor = Receptor.from_dict(json.loads(receptor_blob))
+                    self._register_many_with_conn(conn, [(sim_id, receptor)])
+                    existing.add(sim_id)
+                    return True
+            except Exception:
+                pass
+
+        try:
+            sid = SimID(sim_id)
+        except ValueError:
+            return False
+
+        now = _now_iso()
+        conn.execute(
+            "INSERT OR IGNORE INTO simulations (sim_id, time) VALUES (?, ?)",
+            (sim_id, sid.time.isoformat()),
+        )
+        conn.execute(
+            "INSERT OR IGNORE INTO artifact_index (sim_id, updated_at) VALUES (?, ?)",
+            (sim_id, now),
+        )
+        existing.add(sim_id)
+        return True
+
     def rebuild(self) -> None:
         """Rebuild repository state from on-disk simulation artifacts."""
         by_id = simulation_index_path(self._project_dir)
-        if not by_id.exists():
-            return
         with self._connect() as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            self._reset_runtime_state_with_conn(conn)
             conn.execute(
-                "UPDATE simulations SET traj_status = 'pending'"
-                " WHERE traj_status = 'running'"
+                "UPDATE simulations SET "
+                "traj_status = CASE WHEN traj_status = 'failed' THEN 'failed' ELSE 'pending' END, "
+                "error = CASE WHEN traj_status = 'failed' THEN error ELSE NULL END"
             )
-            conn.execute("DELETE FROM claims")
-        with self._connect() as conn:
+            conn.execute("DELETE FROM footprints")
+            conn.execute(
+                "UPDATE artifact_index SET "
+                "traj_present = 0, error_traj_present = 0, log_present = 0, "
+                "footprints = '{}', updated_at = ?",
+                (_now_iso(),),
+            )
+
+            if not by_id.exists():
+                return
+
             existing = {
-                row[0] for row in conn.execute("SELECT sim_id FROM simulations")
+                row["sim_id"]
+                for row in conn.execute("SELECT sim_id FROM simulations").fetchall()
             }
-        for sim_dir in sorted(by_id.iterdir()):
-            if not sim_dir.is_dir():
-                continue
-            sim_id = sim_dir.name
-            traj_file = sim_dir / f"{sim_id}_traj.parquet"
+            complete_ids: list[tuple[str]] = []
+            failed_ids: list[tuple[str]] = []
+            footprint_rows: list[tuple[str, str, str]] = []
+            artifact_rows: list[tuple[str, ArtifactSummary]] = []
 
-            if traj_file.exists():
-                if sim_id not in existing:
-                    try:
-                        meta = pq.ParquetFile(traj_file).schema_arrow.metadata
-                        receptor = Receptor.from_dict(
-                            json.loads(meta[b"stilt:receptor"])
+            with os.scandir(by_id) as sim_entries:
+                for sim_entry in sim_entries:
+                    if not sim_entry.is_dir():
+                        continue
+                    sim_id = sim_entry.name
+                    sim_dir = Path(sim_entry.path)
+
+                    with os.scandir(sim_entry.path) as artifact_entries:
+                        filenames = {entry.name for entry in artifact_entries}
+
+                    traj_name = trajectory_filename(sim_id)
+                    traj_present = traj_name in filenames
+                    error_traj_present = error_trajectory_filename(sim_id) in filenames
+                    log_present = "stilt.log" in filenames
+
+                    footprints: dict[str, str] = {}
+                    for filename in filenames:
+                        fp_name = self._footprint_name_from_filename(
+                            sim_id,
+                            filename,
+                            suffix="_foot.nc",
                         )
-                        self.register_many([(sim_id, receptor)])
-                    except Exception:
-                        try:
-                            sid = SimID(sim_id)
-                            with self._connect() as conn:
-                                conn.execute(
-                                    "INSERT OR IGNORE INTO simulations (sim_id, time)"
-                                    " VALUES (?, ?)",
-                                    (sim_id, sid.time.isoformat()),
-                                )
-                        except ValueError:
+                        if fp_name is not None:
+                            footprints[fp_name] = "complete"
+                    for filename in filenames:
+                        fp_name = self._footprint_name_from_filename(
+                            sim_id,
+                            filename,
+                            suffix="_foot.empty",
+                        )
+                        if fp_name is None:
                             continue
+                        if footprint_filename(sim_id, fp_name) in filenames:
+                            continue
+                        footprints.setdefault(fp_name, "complete-empty")
 
-                with self._connect() as conn:
-                    conn.execute(
-                        "UPDATE simulations SET traj_status = 'complete'"
-                        " WHERE sim_id = ? AND traj_status != 'complete'",
-                        (sim_id,),
+                    has_durable_outputs = (
+                        traj_present
+                        or error_traj_present
+                        or log_present
+                        or bool(footprints)
                     )
-                    summary = self._artifact_summary_from_conn(conn, sim_id)
-                    self._store_artifact_summary(
+                    if not has_durable_outputs:
+                        continue
+
+                    if not self._register_rebuilt_simulation(
                         conn,
                         sim_id,
-                        ArtifactSummary(
-                            traj_present=True,
-                            error_traj_present=summary.error_traj_present,
-                            log_present=summary.log_present,
-                            footprints=summary.footprints,
-                        ),
+                        existing,
+                        traj_file=(sim_dir / traj_name) if traj_present else None,
+                    ):
+                        continue
+
+                    summary = ArtifactSummary(
+                        traj_present=traj_present,
+                        error_traj_present=error_traj_present,
+                        log_present=log_present,
+                        footprints=footprints,
+                    )
+                    artifact_rows.append((sim_id, summary))
+                    if traj_present:
+                        complete_ids.append((sim_id,))
+                    elif error_traj_present:
+                        failed_ids.append((sim_id,))
+                    footprint_rows.extend(
+                        (sim_id, fp_name, status)
+                        for fp_name, status in footprints.items()
                     )
 
-            for foot_file in sim_dir.glob(f"{sim_id}*_foot.nc"):
-                stem = foot_file.stem
-                if not stem.endswith("_foot"):
-                    continue
-                without_foot = stem[: -len("_foot")]
-                if without_foot == sim_id:
-                    name = ""
-                elif without_foot.startswith(f"{sim_id}_"):
-                    name = without_foot[len(sim_id) + 1 :]
-                else:
-                    continue
-                with self._connect() as conn:
-                    conn.execute(
-                        "INSERT OR REPLACE INTO footprints (sim_id, name, status)"
-                        " VALUES (?, ?, 'complete')",
-                        (sim_id, name),
-                    )
-                    summary = self._artifact_summary_from_conn(conn, sim_id)
-                    footprints = dict(summary.footprints)
-                    footprints[name] = "complete"
-                    self._store_artifact_summary(
-                        conn,
-                        sim_id,
-                        ArtifactSummary(
-                            traj_present=summary.traj_present,
-                            error_traj_present=summary.error_traj_present,
-                            log_present=summary.log_present,
-                            footprints=footprints,
-                        ),
-                    )
+            if complete_ids:
+                conn.executemany(
+                    "UPDATE simulations SET traj_status = 'complete', error = NULL WHERE sim_id = ?",
+                    complete_ids,
+                )
+            if failed_ids:
+                conn.executemany(
+                    "UPDATE simulations SET traj_status = 'failed' "
+                    "WHERE sim_id = ? AND traj_status != 'complete'",
+                    failed_ids,
+                )
+            if footprint_rows:
+                conn.executemany(
+                    "INSERT OR REPLACE INTO footprints (sim_id, name, status) VALUES (?, ?, ?)",
+                    footprint_rows,
+                )
+            if artifact_rows:
+                now = _now_iso()
+                conn.executemany(
+                    "INSERT INTO artifact_index "
+                    "(sim_id, traj_present, error_traj_present, log_present, footprints, updated_at) "
+                    "VALUES (?, ?, ?, ?, ?, ?) "
+                    "ON CONFLICT(sim_id) DO UPDATE SET "
+                    "traj_present=excluded.traj_present, "
+                    "error_traj_present=excluded.error_traj_present, "
+                    "log_present=excluded.log_present, "
+                    "footprints=excluded.footprints, "
+                    "updated_at=excluded.updated_at",
+                    [
+                        (
+                            sim_id,
+                            int(summary.traj_present),
+                            int(summary.error_traj_present),
+                            int(summary.log_present),
+                            json.dumps(summary.footprints),
+                            now,
+                        )
+                        for sim_id, summary in artifact_rows
+                    ],
+                )
 
     def claim_pending_claims(
         self,
@@ -903,22 +1143,25 @@ class SQLiteRepository:
         """Clear terminal state so simulations can be retried from scratch."""
         if not sim_ids:
             return
+        _CHUNK = 500  # stay well under SQLite's 999-variable limit
+        now = _now_iso()
         with self._connect() as conn:
-            placeholders = ",".join("?" for _ in sim_ids)
-            conn.execute(
-                f"UPDATE simulations SET traj_status = 'pending', error = NULL"
-                f" WHERE sim_id IN ({placeholders}) AND traj_status != 'running'",
-                sim_ids,
-            )
-            conn.execute(
-                f"DELETE FROM claims WHERE sim_id IN ({placeholders}) "
-                "AND expires_at < ?",
-                [*sim_ids, _now_iso()],
-            )
-            conn.execute(
-                f"DELETE FROM attempts WHERE sim_id IN ({placeholders}) AND terminal = 1",
-                sim_ids,
-            )
+            for i in range(0, len(sim_ids), _CHUNK):
+                chunk = sim_ids[i : i + _CHUNK]
+                ph = ",".join("?" for _ in chunk)
+                conn.execute(
+                    f"UPDATE simulations SET traj_status = 'pending', error = NULL"
+                    f" WHERE sim_id IN ({ph}) AND traj_status != 'running'",
+                    chunk,
+                )
+                conn.execute(
+                    f"DELETE FROM claims WHERE sim_id IN ({ph}) AND expires_at < ?",
+                    [*chunk, now],
+                )
+                conn.execute(
+                    f"DELETE FROM attempts WHERE sim_id IN ({ph}) AND terminal = 1",
+                    chunk,
+                )
 
     def clear_footprints(
         self, sim_ids: list[str], names: list[str] | None = None
@@ -926,48 +1169,57 @@ class SQLiteRepository:
         """Clear stored footprint state for selected simulations and names."""
         if not sim_ids:
             return
+        _CHUNK = 500  # stay well under SQLite's 999-variable limit
+        sim_id_set = set(sim_ids)
+        name_ph = ",".join("?" for _ in names) if names else None
         with self._connect() as conn:
-            sim_placeholders = ",".join("?" for _ in sim_ids)
-            if names:
-                name_placeholders = ",".join("?" for _ in names)
-                conn.execute(
-                    "DELETE FROM footprints "
-                    f"WHERE sim_id IN ({sim_placeholders}) "
-                    f"AND name IN ({name_placeholders})",
-                    [*sim_ids, *names],
-                )
-                for sim_id in sim_ids:
-                    summary = self._artifact_summary_from_conn(conn, sim_id)
-                    footprints = dict(summary.footprints)
+            # DELETE from footprints in chunks to avoid variable-limit errors.
+            for i in range(0, len(sim_ids), _CHUNK):
+                chunk = sim_ids[i : i + _CHUNK]
+                ph = ",".join("?" for _ in chunk)
+                if names:
+                    conn.execute(
+                        f"DELETE FROM footprints WHERE sim_id IN ({ph}) AND name IN ({name_ph})",
+                        [*chunk, *names],
+                    )
+                else:
+                    conn.execute(
+                        f"DELETE FROM footprints WHERE sim_id IN ({ph})",
+                        chunk,
+                    )
+
+            # Bulk-update artifact_index: one SELECT + one executemany UPDATE.
+            rows = conn.execute(
+                "SELECT sim_id, traj_present, error_traj_present, log_present, footprints "
+                "FROM artifact_index"
+            ).fetchall()
+            updated = []
+            now = _now_iso()
+            for row in rows:
+                if row["sim_id"] not in sim_id_set:
+                    continue
+                fp = dict(json.loads(row["footprints"] or "{}"))
+                if names:
                     for name in names:
-                        footprints.pop(name, None)
-                    self._store_artifact_summary(
-                        conn,
-                        sim_id,
-                        ArtifactSummary(
-                            traj_present=summary.traj_present,
-                            error_traj_present=summary.error_traj_present,
-                            log_present=summary.log_present,
-                            footprints=footprints,
-                        ),
+                        fp.pop(name, None)
+                else:
+                    fp = {}
+                updated.append(
+                    (
+                        int(row["traj_present"]),
+                        int(row["error_traj_present"]),
+                        int(row["log_present"]),
+                        json.dumps(fp),
+                        now,
+                        row["sim_id"],
                     )
-            else:
-                conn.execute(
-                    f"DELETE FROM footprints WHERE sim_id IN ({sim_placeholders})",
-                    sim_ids,
                 )
-                for sim_id in sim_ids:
-                    summary = self._artifact_summary_from_conn(conn, sim_id)
-                    self._store_artifact_summary(
-                        conn,
-                        sim_id,
-                        ArtifactSummary(
-                            traj_present=summary.traj_present,
-                            error_traj_present=summary.error_traj_present,
-                            log_present=summary.log_present,
-                            footprints={},
-                        ),
-                    )
+            conn.executemany(
+                "UPDATE artifact_index SET "
+                "traj_present=?, error_traj_present=?, log_present=?, "
+                "footprints=?, updated_at=? WHERE sim_id=?",
+                updated,
+            )
 
     def batch_progress(self, batch_id: str) -> tuple[int, int]:
         """Return completed and total counts for one batch."""
@@ -1024,6 +1276,35 @@ class SQLiteRepository:
         """Persist one artifact summary for a simulation."""
         with self._connect() as conn:
             self._store_artifact_summary(conn, sim_id, summary)
+
+    def record_artifacts_many(self, pairs: list[tuple[str, ArtifactSummary]]) -> None:
+        """Persist artifact summaries for many simulations in one transaction."""
+        if not pairs:
+            return
+        now = _now_iso()
+        with self._connect() as conn:
+            conn.executemany(
+                "INSERT INTO artifact_index "
+                "(sim_id, traj_present, error_traj_present, log_present, footprints, updated_at) "
+                "VALUES (?, ?, ?, ?, ?, ?) "
+                "ON CONFLICT(sim_id) DO UPDATE SET "
+                "traj_present=excluded.traj_present, "
+                "error_traj_present=excluded.error_traj_present, "
+                "log_present=excluded.log_present, "
+                "footprints=excluded.footprints, "
+                "updated_at=excluded.updated_at",
+                [
+                    (
+                        sim_id,
+                        int(s.traj_present),
+                        int(s.error_traj_present),
+                        int(s.log_present),
+                        json.dumps(s.footprints),
+                        now,
+                    )
+                    for sim_id, s in pairs
+                ],
+            )
 
     def list_claims(self) -> list[SimulationClaim]:
         """List all currently recorded claims."""

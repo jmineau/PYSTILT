@@ -92,7 +92,7 @@ def test_service_batches_and_attempts(tmp_path):
     assert batch.is_complete is True
 
 
-def test_service_drain_delegates_to_worker_loop(tmp_path, monkeypatch):
+def test_service_drain_delegates_to_pull_worker_loop(tmp_path, monkeypatch):
     model, _ = _make_model(tmp_path)
     service = Service(model=model)
     calls: list[dict[str, object]] = []
@@ -114,7 +114,7 @@ def test_service_drain_delegates_to_worker_loop(tmp_path, monkeypatch):
             }
         )
 
-    monkeypatch.setattr("stilt.service.project.worker_loop", fake_worker_loop)
+    monkeypatch.setattr("stilt.service.project.pull_worker_loop", fake_worker_loop)
 
     service.drain(cpus=3, poll_interval=2.5, lease_ttl=60.0)
     service.serve(cpus=2, poll_interval=1.0, lease_ttl=30.0)

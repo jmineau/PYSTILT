@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
+from .protocol import LaunchSpec
+
 __all__ = ["LocalExecutor", "LocalHandle"]
 
 
@@ -43,12 +45,30 @@ def _worker_entrypoint(
 ) -> None:
     """Worker entry point for :class:`LocalExecutor`."""
     from stilt.model import Model
-    from stilt.workers import worker_loop
+    from stilt.workers import pull_worker_loop
 
-    worker_loop(
+    pull_worker_loop(
         Model(project=project, output_dir=output_dir, compute_root=compute_root),
         n_cores=n_cores,
         follow=follow,
+    )
+
+
+def _push_worker_entrypoint(
+    project: str,
+    chunk_path: str,
+    n_cores: int,
+    output_dir: str | None = None,
+    compute_root: str | None = None,
+) -> None:
+    """Chunk worker entry point for :class:`LocalExecutor`."""
+    from stilt.model import Model
+    from stilt.workers import push_worker_loop
+
+    push_worker_loop(
+        Model(project=project, output_dir=output_dir, compute_root=compute_root),
+        chunk_path=chunk_path,
+        n_cores=n_cores,
     )
 
 
@@ -58,26 +78,49 @@ class LocalExecutor:
     def __init__(self, n_workers: int) -> None:
         self._n_workers = n_workers
 
-    def start(
-        self,
-        project: str,
-        n_workers: int | None = None,
-        follow: bool = False,
-        output_dir: str | None = None,
-        compute_root: str | None = None,
-    ) -> LocalHandle:
+    def start(self, spec: LaunchSpec) -> LocalHandle:
         """Start local workers in-process or via a process pool."""
-        n = n_workers if n_workers is not None else self._n_workers
+        n = spec.n_workers if spec.n_workers is not None else self._n_workers
+        if spec.dispatch == "push":
+            chunks = list(spec.chunks)
+            if not chunks:
+                return LocalHandle()
+            if len(chunks) == 1:
+                _push_worker_entrypoint(
+                    spec.project,
+                    chunks[0],
+                    1,
+                    spec.output_dir,
+                    spec.compute_root,
+                )
+                return LocalHandle()
+
+            pool = ProcessPoolExecutor(max_workers=min(n, len(chunks)))
+            futures = [
+                pool.submit(
+                    _push_worker_entrypoint,
+                    spec.project,
+                    chunk,
+                    1,
+                    spec.output_dir,
+                    spec.compute_root,
+                )
+                for chunk in chunks
+            ]
+            return LocalHandle(futures, pool)
+
         if n <= 1:
             from stilt.model import Model
-            from stilt.workers import worker_loop
+            from stilt.workers import pull_worker_loop
 
-            worker_loop(
+            pull_worker_loop(
                 Model(
-                    project=project, output_dir=output_dir, compute_root=compute_root
+                    project=spec.project,
+                    output_dir=spec.output_dir,
+                    compute_root=spec.compute_root,
                 ),
                 n_cores=max(n, 1),
-                follow=follow,
+                follow=False,
             )
             return LocalHandle()
 
@@ -85,11 +128,11 @@ class LocalExecutor:
         futures = [
             pool.submit(
                 _worker_entrypoint,
-                project,
+                spec.project,
                 1,
-                follow,
-                output_dir,
-                compute_root,
+                False,
+                spec.output_dir,
+                spec.compute_root,
             )
             for _ in range(n)
         ]

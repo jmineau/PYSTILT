@@ -162,11 +162,10 @@ array task runs:
 
 .. code-block:: bash
 
-   stilt worker /path/to/slv_project --cpus <cpus_per_task>
+   stilt push-worker /path/to/slv_project --chunk /path/to/chunks/task_${SLURM_ARRAY_TASK_ID}.txt --cpus <cpus_per_task>
 
-Each worker task claims pending simulations from the repository, runs them,
-marks terminal state back into the repository, and exits when the queue is
-drained.
+Each array task runs one immutable chunk shard, publishes durable outputs,
+and exits without queue claims or heartbeats.
 
 
 Monitoring Progress

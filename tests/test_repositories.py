@@ -528,6 +528,18 @@ class TestSQLiteMemoryClaimPending:
 
 
 class TestSQLiteRebuildStaleRecovery:
+    def test_reset_runtime_state_resets_stale_running_to_pending(self, tmp_path):
+        repo = SQLiteRepository(tmp_path)
+        r = _make_receptor()
+        sid = _sid(r)
+        repo.register(sid, r)
+        repo.claim_pending(1)
+
+        repo.reset_runtime_state()
+
+        assert repo.traj_status(sid) == "pending"
+        assert repo.list_claims() == []
+
     def test_rebuild_resets_stale_running_to_pending(self, tmp_path):
         repo = SQLiteRepository(tmp_path)
         r = _make_receptor()
@@ -542,6 +554,29 @@ class TestSQLiteRebuildStaleRecovery:
 
         repo.rebuild()
         assert repo.traj_status(sid) == "pending"
+
+    @pytest.mark.parametrize(
+        ("repo_factory", "repo_mode"),
+        [
+            (SQLiteRepository, "sqlite-file"),
+            (_memory_repo, "sqlite-memory"),
+        ],
+        ids=["sqlite-file", "sqlite-memory"],
+    )
+    def test_rebuild_clears_stale_completed_artifacts(
+        self, tmp_path, repo_factory, repo_mode
+    ):
+        del repo_mode
+        repo = repo_factory(tmp_path)
+        r = _make_receptor()
+        sid = _sid(r)
+        repo.register(sid, r)
+        repo.mark_trajectory_complete(sid)
+
+        repo.rebuild()
+
+        assert repo.traj_status(sid) == "pending"
+        assert repo.artifact_summary(sid) == ArtifactSummary()
 
 
 # ---------------------------------------------------------------------------

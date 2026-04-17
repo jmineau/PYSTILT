@@ -578,9 +578,58 @@ class PostgreSQLRepository:
         """Return the stored status for one named footprint."""
         return self.artifact_summary(sim_id).footprints.get(name)
 
+    def bulk_footprint_status(
+        self,
+        name: str,
+        sim_ids: list[str] | None = None,
+    ) -> dict[str, str | None]:
+        """Return the stored status for one named footprint across many simulations."""
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT sim_id, footprints FROM artifact_index"
+            ).fetchall()
+
+        result: dict[str, str | None] = {}
+        selected = set(sim_ids) if sim_ids is not None else None
+        for row in rows:
+            sim_id = row["sim_id"]
+            if selected is not None and sim_id not in selected:
+                continue
+            footprints = row["footprints"] or {}
+            if isinstance(footprints, str):
+                footprints = json.loads(footprints)
+            result[sim_id] = footprints.get(name)
+
+        if sim_ids is not None:
+            for sim_id in sim_ids:
+                result.setdefault(sim_id, None)
+        return result
+
     def footprint_completed(self, sim_id: SimID | str, name: str = "") -> bool:
         """Return whether one named footprint has a complete terminal state."""
         return self.footprint_status(sim_id, name) in {"complete", "complete-empty"}
+
+    def bulk_footprint_completed(self, names: list[str]) -> set[str]:
+        """Return sim_ids where every listed footprint name is complete.
+
+        Loads the entire artifact_index in one query instead of one query per
+        simulation — critical for large projects.
+        """
+        terminal = {"complete", "complete-empty"}
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT sim_id, footprints FROM artifact_index"
+            ).fetchall()
+        if not names:
+            return {row["sim_id"] for row in rows}
+        result: set[str] = set()
+        for row in rows:
+            fp: dict = row["footprints"] or {}
+            if isinstance(fp, str):
+                fp = json.loads(fp)
+            if all(fp.get(name) in terminal for name in names):
+                result.add(row["sim_id"])
+        return result
 
     def get_receptor(self, sim_id: SimID | str) -> Receptor:
         """Reconstruct one receptor definition from PostgreSQL JSON."""
@@ -595,6 +644,10 @@ class PostgreSQLRepository:
 
     def rebuild(self) -> None:
         """Reset transient running state after an interrupted service process."""
+        self.reset_runtime_state()
+
+    def reset_runtime_state(self) -> None:
+        """Clear transient running/claim state without rescanning artifacts."""
         with self._connect() as conn:
             conn.execute(
                 "UPDATE simulations SET trajectory_status = NULL"
@@ -1129,6 +1182,43 @@ class PostgreSQLRepository:
             latest_attempt=latest_attempt,
         )
 
+    def bulk_traj_status(
+        self, sim_ids: list[str] | None = None
+    ) -> dict[str, str | None]:
+        """Return the derived trajectory status for many simulations."""
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT sim_id, trajectory_status FROM simulations"
+            ).fetchall()
+            requested, summaries, active_claims, latest_attempts = self._state_maps(
+                conn
+            )
+
+        legacy_statuses = {row["sim_id"]: row["trajectory_status"] for row in rows}
+        selected = sim_ids if sim_ids is not None else list(legacy_statuses)
+
+        result: dict[str, str | None] = {}
+        for sim_id in selected:
+            legacy_status = legacy_statuses.get(sim_id)
+            if legacy_status is None:
+                result[sim_id] = None
+                continue
+            summary = summaries.get(sim_id, ArtifactSummary())
+            latest_attempt = latest_attempts.get(sim_id)
+            if (
+                latest_attempt is None
+                and not summary.traj_present
+                and legacy_status == "failed"
+            ):
+                result[sim_id] = "failed"
+                continue
+            result[sim_id] = trajectory_status_from_state(
+                summary,
+                active_claim=sim_id in active_claims,
+                latest_attempt=latest_attempt,
+            )
+        return result
+
     def sync(self) -> None:
         """No-op — state is updated via ``mark_*()``."""
 
@@ -1142,6 +1232,12 @@ class PostgreSQLRepository:
         """Persist one artifact summary for a simulation."""
         with self._connect() as conn:
             self._store_artifact_summary(conn, sim_id, summary)
+
+    def record_artifacts_many(self, pairs: list[tuple[str, ArtifactSummary]]) -> None:
+        """Persist artifact summaries for many simulations in one transaction."""
+        with self._connect() as conn:
+            for sim_id, summary in pairs:
+                self._store_artifact_summary(conn, sim_id, summary)
 
     def list_claims(self) -> list[SimulationClaim]:
         """List all currently recorded claims."""

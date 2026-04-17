@@ -84,6 +84,11 @@ def footprint_index_relpath(filename: str) -> Path:
     return simulations_relpath() / "footprints" / filename
 
 
+def chunks_dir_relpath() -> Path:
+    """Return the relative path for the chunk staging directory."""
+    return Path("chunks")
+
+
 def simulation_dir_relpath(sim_id: str) -> Path:
     """Return the relative simulation directory path for *sim_id*."""
     return simulation_index_relpath() / sim_id
@@ -111,13 +116,18 @@ def trajectory_filename(sim_id: str) -> str:
 
 def error_trajectory_filename(sim_id: str) -> str:
     """Return the canonical error-trajectory filename for *sim_id*."""
-    return f"{sim_id}_error.parquet"
+    return trajectory_filename(sim_id).replace("_traj.parquet", "_error.parquet")
 
 
 def footprint_filename(sim_id: str, footprint_name: str = "") -> str:
     """Return the canonical footprint filename for *sim_id* and *footprint_name*."""
     suffix = f"_{footprint_name}" if footprint_name else ""
     return f"{sim_id}{suffix}_foot.nc"
+
+
+def empty_footprint_filename(sim_id: str, footprint_name: str = "") -> str:
+    """Return the canonical empty-footprint marker filename."""
+    return footprint_filename(sim_id, footprint_name).replace("_foot.nc", "_foot.empty")
 
 
 def trajectory_relpath(sim_id: str) -> Path:
@@ -134,6 +144,13 @@ def footprint_relpath(sim_id: str, footprint_name: str = "") -> Path:
     """Return the relative footprint artifact path for *sim_id*."""
     return simulation_artifact_relpath(
         sim_id, footprint_filename(sim_id, footprint_name)
+    )
+
+
+def empty_footprint_relpath(sim_id: str, footprint_name: str = "") -> Path:
+    """Return the relative empty-footprint marker path for *sim_id*."""
+    return simulation_artifact_relpath(
+        sim_id, empty_footprint_filename(sim_id, footprint_name)
     )
 
 
@@ -207,6 +224,11 @@ def footprint_index_path(project_dir: str | Path, filename: str) -> Path:
     return Path(project_dir) / footprint_index_relpath(filename)
 
 
+def project_chunks_path(project_dir: str | Path) -> Path:
+    """Return the local chunk staging directory under *project_dir*."""
+    return Path(project_dir) / chunks_dir_relpath()
+
+
 def simulation_log_path(sim_dir: str | Path, sim_id: str | None = None) -> Path:
     """Return the local log path for one simulation directory."""
     sim_dir = Path(sim_dir)
@@ -245,6 +267,41 @@ def footprint_path(
     sim_dir = Path(sim_dir)
     sim_id = sim_id or sim_dir.name
     return sim_dir / footprint_filename(sim_id, footprint_name)
+
+
+def empty_footprint_path(
+    sim_dir: str | Path,
+    footprint_name: str = "",
+    *,
+    sim_id: str | None = None,
+) -> Path:
+    """Return the local empty-footprint marker path for one simulation directory."""
+    sim_dir = Path(sim_dir)
+    sim_id = sim_id or sim_dir.name
+    return sim_dir / empty_footprint_filename(sim_id, footprint_name)
+
+
+def write_empty_footprint_marker(
+    sim_dir: str | Path,
+    footprint_name: str = "",
+    *,
+    sim_id: str | None = None,
+) -> Path:
+    """Create an existence-only marker for a complete-empty footprint result."""
+    marker = empty_footprint_path(sim_dir, footprint_name, sim_id=sim_id)
+    marker.parent.mkdir(parents=True, exist_ok=True)
+    marker.touch(exist_ok=True)
+    return marker
+
+
+def clear_empty_footprint_marker(
+    sim_dir: str | Path,
+    footprint_name: str = "",
+    *,
+    sim_id: str | None = None,
+) -> None:
+    """Remove any stale empty-footprint marker for one output name."""
+    empty_footprint_path(sim_dir, footprint_name, sim_id=sim_id).unlink(missing_ok=True)
 
 
 def _normalize_output_dir(output_dir: str | Path) -> str:
@@ -420,4 +477,9 @@ class FsspecArtifactStore:
                 footprint,
                 simulation_artifact_key(sim_id, footprint.name),
                 footprint_index_key(footprint.name),
+            )
+        for marker in sorted(sim.directory.glob(f"{sim_id}*_foot.empty")):
+            _publish(
+                marker,
+                simulation_artifact_key(sim_id, marker.name),
             )

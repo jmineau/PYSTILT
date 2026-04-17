@@ -4,7 +4,22 @@ from __future__ import annotations
 
 import contextlib
 import signal
-from typing import Protocol
+from dataclasses import dataclass, field
+from typing import Literal, Protocol
+
+DispatchMode = Literal["push", "pull"]
+
+
+@dataclass(frozen=True, slots=True)
+class LaunchSpec:
+    """Concrete launch request passed from the coordinator to executors."""
+
+    project: str
+    n_workers: int = 1
+    dispatch: DispatchMode = "push"
+    output_dir: str | None = None
+    compute_root: str | None = None
+    chunks: tuple[str, ...] = field(default_factory=tuple)
 
 
 @contextlib.contextmanager
@@ -39,13 +54,6 @@ class JobHandle(Protocol):
 class Executor(Protocol):
     """Worker-launch protocol: start workers, get a :class:`JobHandle` back immediately."""
 
-    def start(
-        self,
-        project: str,
-        n_workers: int = 1,
-        follow: bool = False,
-        output_dir: str | None = None,
-        compute_root: str | None = None,
-    ) -> JobHandle:
+    def start(self, spec: LaunchSpec) -> JobHandle:
         """Launch workers for one project and return a handle immediately."""
         ...

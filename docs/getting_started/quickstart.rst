@@ -102,7 +102,7 @@ The same workflow is available from the command line:
    stilt submit /path/to/my_project
 
    # Drain queued work with a batch worker
-   stilt worker /path/to/my_project --cpus 4
+    stilt pull-worker /path/to/my_project --cpus 4
 
    # Long-lived queue worker
    stilt serve /path/to/my_project --cpus 4

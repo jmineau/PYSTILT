@@ -468,11 +468,11 @@ def test_read_receptors_multiple_rows(tmp_path):
     assert len(receptors) == 2
 
 
-def test_read_receptors_multipoint_via_group(tmp_path):
-    """Rows sharing a group id are assembled into a single multipoint receptor."""
+def test_read_receptors_multipoint_via_r_idx(tmp_path):
+    """Rows sharing a r_idx id are assembled into a single multipoint receptor."""
     csv = tmp_path / "receptors.csv"
     csv.write_text(
-        "time,lati,long,zagl,group\n"
+        "time,lati,long,zagl,r_idx\n"
         "2023-01-01 12:00:00,40.77,-111.85,5.0,0\n"
         "2023-01-01 12:00:00,40.78,-111.86,5.0,0\n"
         "2023-01-01 13:00:00,40.79,-111.87,5.0,1\n"

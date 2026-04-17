@@ -103,8 +103,8 @@ Command-Line Interface
   # Optionally block until Slurm jobs finish
   stilt run /path/to/my_project --wait
 
-  # Dedicated queue worker process
-  stilt worker /path/to/my_project --cpus 4
+  # Dedicated pull-based queue worker process
+  stilt pull-worker /path/to/my_project --cpus 4
 
   # Long-lived streaming worker
   stilt serve /path/to/my_project --cpus 4
@@ -131,8 +131,8 @@ Three common workflows
 2. **Queue-first batch run**
 
    Use :meth:`~stilt.Model.submit`, :meth:`~stilt.Service.submit`, or
-   ``stilt submit`` to register simulations first, then drain them with
-   ``stilt worker`` or :meth:`~stilt.Service.drain`.
+  ``stilt submit`` to register simulations first, then drain them with
+  ``stilt pull-worker`` or :meth:`~stilt.Service.drain`.
 
 3. **Long-lived service workers**
 

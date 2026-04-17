@@ -31,7 +31,7 @@ Backend matrix
      - Single-process local runs for ``n_workers <= 1`` and multi-core local workstation or shared node runs for ``n_workers > 1``.
    * - ``slurm``
      - :class:`~stilt.executors.SlurmExecutor`
-     - HPC array-task queue draining via ``stilt worker``.
+       - HPC array-task chunk execution via ``stilt push-worker``.
    * - ``kubernetes``
      - :class:`~stilt.executors.KubernetesExecutor`
      - Cloud-native worker jobs or long-lived deployments.
@@ -106,7 +106,7 @@ CLI examples:
 
    stilt run ./my_project                 # submit and return
    stilt run ./my_project --wait          # submit and block
-   stilt worker ./my_project --cpus 4     # task-local worker entrypoint
+   stilt push-worker ./my_project --chunk /path/to/task_0.txt --cpus 4
 
 
 Kubernetes Execution

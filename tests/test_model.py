@@ -8,6 +8,7 @@ import pytest
 
 from stilt.artifacts import FsspecArtifactStore
 from stilt.config import FootprintConfig, Grid, MetConfig, ModelConfig
+from stilt.executors import LaunchSpec
 from stilt.model import Model
 from stilt.receptor import Receptor
 from stilt.repositories import SQLiteRepository
@@ -426,7 +427,7 @@ def test_cloud_run_passes_project_uri_to_executor(tmp_path, point_receptor):
     model.run(executor=exc, skip_existing=False)
 
     assert exc.was_started
-    assert exc.start_calls[0]["project"] == "s3://bucket/project"
+    assert exc.start_calls[0].project == "s3://bucket/project"
 
 
 def test_receptors_are_normalized_once(tmp_path):
@@ -529,6 +530,27 @@ def test_get_trajectory_paths_load_matching_trajectories(tmp_path, point_recepto
     assert result == [traj_path]
 
 
+def test_get_trajectory_paths_uses_bulk_status(tmp_path, point_receptor, monkeypatch):
+    sid = str(SimID.from_parts("hrrr", point_receptor))
+    repo = InMemoryRepository(tmp_path)
+    repo.register_many([(sid, point_receptor)])
+    repo.mark_trajectory_complete(sid)
+
+    traj_path = tmp_path / "simulations" / "by-id" / sid / f"{sid}_traj.parquet"
+    traj_path.parent.mkdir(parents=True, exist_ok=True)
+    traj_path.write_bytes(b"traj")
+
+    monkeypatch.setattr(
+        repo,
+        "traj_status",
+        lambda sim_id: (_ for _ in ()).throw(AssertionError("per-sim lookup")),
+    )
+
+    model = Model(project=tmp_path, repository=repo)
+
+    assert model.get_trajectory_paths() == [traj_path]
+
+
 def test_get_trajectory_paths_falls_back_to_artifact_store(tmp_path, point_receptor):
     sid = str(SimID.from_parts("hrrr", point_receptor))
     repo = InMemoryRepository(tmp_path)
@@ -572,6 +594,30 @@ def test_get_trajectories_load_matching_trajectories(
     assert result == [sentinel]
 
 
+def test_records_trajectories_return_metadata_and_load(
+    tmp_path, point_receptor, monkeypatch
+):
+    sid = str(SimID.from_parts("hrrr", point_receptor))
+    repo = InMemoryRepository(tmp_path)
+    repo.register_many([(sid, point_receptor)])
+    repo.mark_trajectory_complete(sid)
+
+    traj_path = tmp_path / "simulations" / "by-id" / sid / f"{sid}_traj.parquet"
+    traj_path.parent.mkdir(parents=True, exist_ok=True)
+    traj_path.write_bytes(b"traj")
+
+    monkeypatch.setattr("stilt.model.Trajectories.from_parquet", lambda p: p)
+
+    model = Model(project=tmp_path, repository=repo)
+    [record] = model.records.trajectories()
+
+    assert record.kind == "trajectory"
+    assert record.sim_id == sid
+    assert record.status == "complete"
+    assert record.path == traj_path
+    assert model.records.load(record) == traj_path
+
+
 def test_get_footprints_loads_matching_footprints(
     tmp_path, point_receptor, monkeypatch
 ):
@@ -612,6 +658,35 @@ def test_get_footprint_paths_load_matching_footprints(tmp_path, point_receptor):
     assert result == [foot_path]
 
 
+def test_get_footprint_paths_uses_bulk_completion(
+    tmp_path, point_receptor, monkeypatch
+):
+    sid = str(SimID.from_parts("hrrr", point_receptor))
+    repo = InMemoryRepository(tmp_path)
+    repo.register_many([(sid, point_receptor)])
+    repo.mark_trajectory_complete(sid)
+    repo.mark_footprint_complete(sid, "slv")
+
+    foot_path = tmp_path / "simulations" / "by-id" / sid / f"{sid}_slv_foot.nc"
+    foot_path.parent.mkdir(parents=True, exist_ok=True)
+    foot_path.write_text("stub")
+
+    monkeypatch.setattr(
+        repo,
+        "footprint_completed",
+        lambda sim_id, name: (_ for _ in ()).throw(AssertionError("per-sim lookup")),
+    )
+    monkeypatch.setattr(
+        repo,
+        "footprint_status",
+        lambda sim_id, name: (_ for _ in ()).throw(AssertionError("per-sim lookup")),
+    )
+
+    model = Model(project=tmp_path, repository=repo)
+
+    assert model.get_footprint_paths("slv") == [foot_path]
+
+
 def test_get_footprint_paths_skips_complete_empty(tmp_path, point_receptor):
     sid = str(SimID.from_parts("hrrr", point_receptor))
     repo = InMemoryRepository(tmp_path)
@@ -621,6 +696,51 @@ def test_get_footprint_paths_skips_complete_empty(tmp_path, point_receptor):
 
     model = Model(project=tmp_path, repository=repo)
     assert model.get_footprint_paths("slv") == []
+
+
+def test_records_footprints_return_status_metadata(tmp_path):
+    repo = InMemoryRepository(tmp_path)
+    rec_complete = Receptor(
+        time=dt.datetime(2023, 1, 1, 12),
+        longitude=-111.85,
+        latitude=40.77,
+        altitude=5.0,
+    )
+    rec_empty = Receptor(
+        time=dt.datetime(2023, 1, 1, 13),
+        longitude=-111.90,
+        latitude=40.77,
+        altitude=5.0,
+    )
+    sid_complete = str(SimID.from_parts("hrrr", rec_complete))
+    sid_empty = str(SimID.from_parts("hrrr", rec_empty))
+    repo.register_many(
+        [(sid_complete, rec_complete), (sid_empty, rec_empty)],
+        footprint_names=["slv"],
+    )
+    repo.mark_trajectory_complete(sid_complete)
+    repo.mark_trajectory_complete(sid_empty)
+    repo.mark_footprint_complete(sid_complete, "slv")
+    repo.mark_footprint_empty(sid_empty, "slv")
+
+    foot_path = (
+        tmp_path
+        / "simulations"
+        / "by-id"
+        / sid_complete
+        / f"{sid_complete}_slv_foot.nc"
+    )
+    foot_path.parent.mkdir(parents=True, exist_ok=True)
+    foot_path.write_text("stub")
+
+    model = Model(project=tmp_path, repository=repo)
+    records = {record.sim_id: record for record in model.records.footprints("slv")}
+
+    assert records[sid_complete].kind == "footprint"
+    assert records[sid_complete].status == "complete"
+    assert records[sid_complete].path == foot_path
+    assert records[sid_empty].status == "complete-empty"
+    assert records[sid_empty].path is None
 
 
 def test_get_footprints_empty_when_no_match(tmp_path):
@@ -705,6 +825,11 @@ def test_plot_accessor_is_cached(tmp_path):
     assert model.plot is model.plot
 
 
+def test_records_accessor_is_cached(tmp_path):
+    model = Model(project=tmp_path)
+    assert model.records is model.records
+
+
 def test_plot_availability_returns_axes(tmp_path, point_receptor):
     repo = InMemoryRepository(tmp_path)
     sid = str(SimID.from_parts("hrrr", point_receptor))
@@ -728,25 +853,10 @@ class _CapturingExecutor:
         from stilt.executors import LocalHandle
 
         self._handle = LocalHandle()
-        self.start_calls: list[dict] = []
+        self.start_calls: list[LaunchSpec] = []
 
-    def start(
-        self,
-        project,
-        n_workers=1,
-        follow=False,
-        output_dir=None,
-        compute_root=None,
-    ):
-        self.start_calls.append(
-            {
-                "project": project,
-                "n_workers": n_workers,
-                "follow": follow,
-                "output_dir": output_dir,
-                "compute_root": compute_root,
-            }
-        )
+    def start(self, spec: LaunchSpec):
+        self.start_calls.append(spec)
         return self._handle
 
     @property
@@ -769,7 +879,7 @@ def test_model_run_dispatches_to_executor(tmp_path, point_receptor):
     exc = _CapturingExecutor()
     _run_model(tmp_path, point_receptor, exc)
     assert exc.was_started
-    assert exc.start_calls[0]["compute_root"] == str(
+    assert exc.start_calls[0].compute_root == str(
         (tmp_path / "simulations" / "by-id").resolve()
     )
 
@@ -804,9 +914,9 @@ def test_model_run_forwards_separate_output_dir_and_compute_root(
     model.run(executor=exc, skip_existing=False)
 
     assert exc.was_started
-    assert exc.start_calls[0]["project"] == str(output_dir.resolve())
-    assert exc.start_calls[0]["output_dir"] is None
-    assert exc.start_calls[0]["compute_root"] == str(compute_root.resolve())
+    assert exc.start_calls[0].project == str(output_dir.resolve())
+    assert exc.start_calls[0].output_dir is None
+    assert exc.start_calls[0].compute_root == str(compute_root.resolve())
 
 
 def test_model_run_cloud_output_bootstraps_workers_from_output_uri(
@@ -829,8 +939,8 @@ def test_model_run_cloud_output_bootstraps_workers_from_output_uri(
     model.run(executor=exc, skip_existing=False)
 
     assert exc.was_started
-    assert exc.start_calls[0]["project"] == "s3://bucket/project"
-    assert exc.start_calls[0]["output_dir"] is None
+    assert exc.start_calls[0].project == "s3://bucket/project"
+    assert exc.start_calls[0].output_dir is None
 
 
 def test_model_run_skip_existing_omits_completed_trajectories(tmp_path, point_receptor):
@@ -1059,6 +1169,40 @@ def test_model_submit_with_batch_id(tmp_path, point_receptor):
     completed, total = model.repository.batch_progress("test_batch")
     assert total == 1
     assert completed == 0
+
+
+def test_build_run_args_push_uses_durable_inputs_not_repository(
+    tmp_path, point_receptor, monkeypatch
+):
+    """Push workers should not need SQLite lookups for receptor or skip state."""
+    config = _config(tmp_path, include_footprint=False).model_copy(
+        update={"execution": {"backend": "slurm"}}
+    )
+    repo = InMemoryRepository(tmp_path)
+    sid = str(SimID.from_parts("hrrr", point_receptor))
+
+    model = Model(
+        project=tmp_path,
+        config=config,
+        receptors=[point_receptor],
+        repository=repo,
+    )
+
+    monkeypatch.setattr(
+        repo,
+        "get_receptor",
+        lambda sim_id: (_ for _ in ()).throw(AssertionError("repository read")),
+    )
+    monkeypatch.setattr(
+        repo,
+        "completed_trajectories",
+        lambda: (_ for _ in ()).throw(AssertionError("repository read")),
+    )
+
+    run_args = model._build_run_args(sid)
+
+    assert run_args is not None
+    assert run_args.receptor.id == point_receptor.id
 
 
 def test_model_submit_registers_footprint_targets(tmp_path, point_receptor):

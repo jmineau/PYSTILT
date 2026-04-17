@@ -114,7 +114,7 @@ Or load from a CSV file:
    receptors = stilt.read_receptors("receptors.csv")
 
 The CSV must have at minimum columns ``time``, ``lat`` (or ``latitude``),
-``lon`` (or ``longitude``), and ``zagl`` (or ``height``). An optional ``group``
+``lon`` (or ``longitude``), and ``zagl`` (or ``height``). An optional ``r_idx``
 column enables multi-point (column) receptors; see
 :doc:`../advanced/column_receptors`.
 

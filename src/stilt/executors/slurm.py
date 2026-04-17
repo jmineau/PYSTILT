@@ -11,6 +11,8 @@ from typing import Any
 
 from stilt.artifacts import is_cloud_project, project_slug
 
+from .protocol import LaunchSpec
+
 
 def _slurm_submission_root(project: str) -> Path:
     """Return the local directory used for Slurm submission artifacts."""
@@ -54,11 +56,13 @@ class SlurmExecutor:
         n_tasks: int = 1000,
         cpus_per_task: int = 1,
         array_parallelism: int | None = None,
+        setup: list[str] | None = None,
     ) -> None:
         self._slurm_kwargs = slurm_kwargs
         self._n_tasks = n_tasks
         self._cpus_per_task = cpus_per_task
         self._array_parallelism = array_parallelism
+        self._setup: list[str] = setup or []
 
     @classmethod
     def from_config(cls, config: dict[str, Any]) -> SlurmExecutor:
@@ -69,11 +73,15 @@ class SlurmExecutor:
         n_tasks = cfg.pop("n_tasks", 1000)
         cpus_per_task = cfg.pop("cpus_per_task", 1)
         array_parallelism = cfg.pop("array_parallelism", None)
+        setup = cfg.pop("setup", None)
+        if isinstance(setup, str):
+            setup = [setup]
         return cls(
             slurm_kwargs=cfg,
             n_tasks=n_tasks,
             cpus_per_task=cpus_per_task,
             array_parallelism=array_parallelism,
+            setup=setup,
         )
 
     def _resolved_slurm_kwargs(self, project: str) -> dict[str, Any]:
@@ -100,36 +108,41 @@ class SlurmExecutor:
                 lines.append(f"#SBATCH --{flag}={value}")
         return "\n".join(lines)
 
-    def start(
-        self,
-        project: str,
-        n_workers: int = 1,
-        follow: bool = False,
-        output_dir: str | None = None,
-        compute_root: str | None = None,
-    ) -> SlurmHandle:
+    def start(self, spec: LaunchSpec) -> SlurmHandle:
         """Write a submission script, call ``sbatch``, and return the job handle."""
-        if n_workers <= 0:
+        if spec.dispatch != "push":
+            raise ValueError("SlurmExecutor supports only push dispatch.")
+        if is_cloud_project(spec.project):
+            raise ValueError(
+                "Slurm push dispatch requires a local project/output root that compute nodes can read."
+            )
+
+        chunk_paths = list(spec.chunks)
+        if not chunk_paths:
             return SlurmHandle("none")
 
-        project_dir = _slurm_submission_root(project)
-        slurm_dir = project_dir / "simulations" / "slurm"
+        project_dir = _slurm_submission_root(spec.project)
+        slurm_dir = project_dir / "slurm"
         logs_dir = slurm_dir / "logs"
         logs_dir.mkdir(parents=True, exist_ok=True)
 
-        n_tasks = min(self._n_tasks, n_workers)
+        n_tasks = min(self._n_tasks, len(chunk_paths))
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         script_path = slurm_dir / f"submit_{timestamp}.sh"
-        directives = self._render_sbatch_directives(n_tasks, project=project)
+        directives = self._render_sbatch_directives(n_tasks, project=spec.project)
 
+        chunk_dir = Path(chunk_paths[0]).parent
+
+        # Set flags to pass to the push worker
         cpus_flag = f" --cpus {self._cpus_per_task}" if self._cpus_per_task > 1 else ""
-        follow_flag = " --follow" if follow else ""
         output_flag = (
-            f" --output-dir {shlex.quote(output_dir)}" if output_dir is not None else ""
+            f" --output-dir {shlex.quote(spec.output_dir)}"
+            if spec.output_dir is not None
+            else ""
         )
         compute_flag = (
-            f" --compute-root {shlex.quote(compute_root)}"
-            if compute_root is not None
+            f" --compute-root {shlex.quote(spec.compute_root)}"
+            if spec.compute_root is not None
             else ""
         )
         script_lines = [
@@ -138,9 +151,13 @@ class SlurmExecutor:
             f"#SBATCH --output={logs_dir}/%a.out",
             f"#SBATCH --error={logs_dir}/%a.err",
             "",
+            *self._setup,
+            *([""] if self._setup else []),
+            f"CHUNK_PATH={shlex.quote(str(chunk_dir))}/task_${{SLURM_ARRAY_TASK_ID}}.txt",
             (
-                f"stilt worker {shlex.quote(project)}"
-                f"{cpus_flag}{follow_flag}{output_flag}{compute_flag}"
+                f"stilt push-worker {shlex.quote(spec.project)}"
+                ' --chunk "$CHUNK_PATH"'
+                f"{cpus_flag}{output_flag}{compute_flag}"
             ),
         ]
         script_path.write_text("\n".join(script_lines) + "\n")
@@ -150,7 +167,13 @@ class SlurmExecutor:
             ["sbatch", str(script_path)],
             capture_output=True,
             text=True,
-            check=True,
         )
+        if result.returncode != 0:
+            raise RuntimeError(
+                f"sbatch failed (exit {result.returncode}):\n"
+                f"  script: {script_path}\n"
+                f"  stdout: {result.stdout.strip()}\n"
+                f"  stderr: {result.stderr.strip()}"
+            )
         job_id = result.stdout.strip().split()[-1]
         return SlurmHandle(job_id)

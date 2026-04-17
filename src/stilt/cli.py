@@ -12,7 +12,8 @@ Usage examples::
     stilt run                         # run locally, block until done
     stilt run ./my_project --no-skip  # re-run all simulations
     stilt run --wait                  # submit to Slurm and block until done
-    stilt worker ./my_project                       # drain pending simulations
+    stilt pull-worker ./my_project                  # drain pending simulations
+    stilt push-worker ./my_project --chunk simulations/chunks/run_01/task_0.txt
     stilt serve ./my_project --cpus 8               # long-lived streaming mode
     stilt submit ./my_project --receptors new_receptors.csv  # register sims without running
     stilt rebuild                     # rebuild repository DB from disk
@@ -22,6 +23,7 @@ Usage examples::
 from __future__ import annotations
 
 import logging
+import threading
 from pathlib import Path
 from typing import Any
 
@@ -37,10 +39,11 @@ from stilt.artifacts import (
 )
 from stilt.config import STILTParams
 from stilt.executors import SlurmHandle, get_executor
+from stilt.executors.factory import resolve_backend, resolve_dispatch
 from stilt.model import Model
 from stilt.receptor import read_receptors
 from stilt.service import Service, summarize_queue
-from stilt.workers import worker_loop
+from stilt.workers import pull_worker_loop, push_worker_loop
 
 app = typer.Typer(
     name="stilt",
@@ -248,6 +251,7 @@ def run(
     # Resolve project dir: --config parent takes precedence over positional arg.
     if config_path is not None:
         resolved_dir = str(config_path.resolve().parent)
+        resolved_output = output_dir
         if (
             not (Path(resolved_dir) / "config.yaml").exists()
             and not config_path.exists()
@@ -267,8 +271,8 @@ def run(
 
     # Build executor override if --backend or --n-workers are given.
     executor = None
+    execution = dict(model.config.execution or {})
     if backend is not None or n_workers is not None:
-        execution = dict(model.config.execution or {})
         if backend is not None:
             execution["backend"] = backend
         if n_workers is not None:
@@ -276,6 +280,13 @@ def run(
         executor = get_executor(execution)
 
     skip_existing = None if not no_skip else False
+    _print_run_start(
+        model,
+        execution=execution,
+        skip_existing=skip_existing,
+        batch_id=batch_id,
+        wait=wait,
+    )
     handle = model.run(
         executor=executor,
         skip_existing=skip_existing,
@@ -285,11 +296,13 @@ def run(
     if isinstance(handle, SlurmHandle):
         typer.echo(f"Submitted job: {handle.job_id}")
         if wait:
-            handle.wait()
+            typer.echo("Waiting for Slurm job completion...")
+            _wait_with_progress(model, handle)
             _print_status(model)
     else:
         # Local backend — always complete inline so no orphan workers.
-        handle.wait()
+        typer.echo("Workers launched. Waiting for completion...")
+        _wait_with_progress(model, handle)
         _print_status(model)
 
 
@@ -340,8 +353,8 @@ def submit(
         typer.echo(f"Batch: {batch_id}")
 
 
-@app.command()
-def worker(
+@app.command("pull-worker")
+def pull_worker(
     project_dir: str = _REQUIRED_PROJECT_DIR_ARG,
     cpus: int = typer.Option(
         1, "--cpus", help="Number of CPU cores to use for within-task parallelism."
@@ -360,15 +373,14 @@ def worker(
     """Drain pending simulations from the project repository.
 
     Atomically claims and processes simulations until the queue is empty
-    (batch mode) or indefinitely (``--follow``).  This is the command run
-    by each ``SlurmExecutor`` array task.
+    (batch mode) or indefinitely (``--follow``).
 
     Examples
     --------
     ::
 
-        stilt worker ./hrrr_24h
-        stilt worker ./hrrr_24h --cpus 8 --follow
+        stilt pull-worker ./hrrr_24h
+        stilt pull-worker ./hrrr_24h --cpus 8 --follow
     """
     resolved_dir, resolved_output = _resolve_model_root(
         project_dir, output_dir, require_inputs=True
@@ -376,7 +388,35 @@ def worker(
     model = Model(
         project=resolved_dir, output_dir=resolved_output, compute_root=compute_root
     )
-    worker_loop(model, n_cores=cpus, follow=follow)
+    pull_worker_loop(model, n_cores=cpus, follow=follow)
+
+
+@app.command("push-worker")
+def push_worker(
+    project_dir: str = _REQUIRED_PROJECT_DIR_ARG,
+    chunk: str = typer.Option(
+        ...,
+        "--chunk",
+        help="Path to one immutable chunk file.",
+    ),
+    cpus: int = typer.Option(
+        1, "--cpus", help="Number of CPU cores to use for within-task parallelism."
+    ),
+    output_dir: str | None = _OUTPUT_DIR,
+    compute_root: str | None = _COMPUTE_ROOT,
+) -> None:
+    """Run one immutable chunk shard without queue claims or heartbeats."""
+    resolved_dir, resolved_output = _resolve_model_root(
+        project_dir, output_dir, require_inputs=True
+    )
+    model = Model(
+        project=resolved_dir, output_dir=resolved_output, compute_root=compute_root
+    )
+    push_worker_loop(
+        model,
+        chunk_path=chunk,
+        n_cores=cpus,
+    )
 
 
 @app.command()
@@ -391,7 +431,7 @@ def serve(
     """Run long-lived queue workers that keep polling for new simulations.
 
     This is the user-facing streaming consumer command. It is equivalent to
-    ``stilt worker --follow`` but uses language that better matches the
+    ``stilt pull-worker --follow`` but uses language that better matches the
     deployment model for always-on queue consumers.
 
     Examples
@@ -407,7 +447,7 @@ def serve(
     model = Model(
         project=resolved_dir, output_dir=resolved_output, compute_root=compute_root
     )
-    worker_loop(model, n_cores=cpus, follow=True)
+    pull_worker_loop(model, n_cores=cpus, follow=True)
 
 
 @app.command()
@@ -520,3 +560,100 @@ def _print_status(model: Model) -> None:
             pct = f"{100 * done / tot:.1f}%" if tot > 0 else "0%"
             check = " \u2713" if done == tot and tot > 0 else ""
             typer.echo(f"  {batch_id}   {done} / {tot}   ({pct}){check}")
+
+
+def _print_run_start(
+    model: Model,
+    *,
+    execution: dict[str, Any],
+    skip_existing: bool | None,
+    batch_id: str | None,
+    wait: bool,
+) -> None:
+    """Print a concise startup summary for ``stilt run``."""
+    backend = resolve_backend(execution)
+    dispatch = resolve_dispatch(execution)
+    project = getattr(model, "project", "<unknown>")
+    output_root = getattr(model, "output_dir", None)
+    compute_root = getattr(model, "compute_root", None)
+    receptors = getattr(model, "receptors", None)
+    worker_count = execution.get("n_workers", 1)
+    if backend == "slurm" and dispatch == "push":
+        worker_count = execution.get("n_tasks", worker_count)
+    mode = "config" if skip_existing is None else "no-skip"
+    typer.echo(
+        "Starting run: "
+        f"project={project}  backend={backend}  dispatch={dispatch}  "
+        f"workers={worker_count}  skip={mode}"
+    )
+    if batch_id:
+        typer.echo(f"Batch: {batch_id}")
+    if output_root is not None and output_root != project:
+        typer.echo(f"Output root: {output_root}")
+    if compute_root is not None:
+        default_compute_root = Path(str(project)) / "simulations" / "by-id"
+        if str(compute_root) != str(default_compute_root):
+            typer.echo(f"Compute root: {compute_root}")
+    if receptors is not None:
+        typer.echo(f"Receptors loaded: {len(receptors)}")
+    typer.echo(
+        "Execution mode: " + ("submit-and-wait" if wait else "submit-and-return")
+        if backend == "slurm"
+        else "Execution mode: local-blocking"
+    )
+
+
+def _format_progress_line(model: Model) -> str | None:
+    """Return a one-line progress summary, or ``None`` if unavailable."""
+    try:
+        status = summarize_queue(model)
+    except Exception:
+        return None
+    return (
+        "Progress: "
+        f"total={status.total}  completed={status.completed}  "
+        f"running={status.running}  pending={status.pending}  failed={status.failed}"
+    )
+
+
+def _wait_with_progress(
+    model: Model,
+    handle: object,
+    *,
+    poll_interval: float = 5.0,
+) -> None:
+    """Wait on a job handle while periodically printing queue progress."""
+    done = threading.Event()
+    errors: list[BaseException] = []
+
+    def _wait() -> None:
+        try:
+            handle.wait()  # type: ignore[attr-defined]
+        except BaseException as exc:  # pragma: no cover - re-raised in caller thread
+            errors.append(exc)
+        finally:
+            done.set()
+
+    thread = threading.Thread(target=_wait, daemon=True)
+    thread.start()
+
+    last_line: str | None = None
+    initial_line = _format_progress_line(model)
+    if initial_line is not None:
+        typer.echo(initial_line)
+        last_line = initial_line
+
+    while not done.wait(timeout=poll_interval):
+        line = _format_progress_line(model)
+        if line is None:
+            typer.echo("Progress: still running...")
+            continue
+        if line != last_line:
+            typer.echo(line)
+            last_line = line
+        else:
+            typer.echo(f"{line}  (no change)")
+
+    thread.join()
+    if errors:
+        raise errors[0]

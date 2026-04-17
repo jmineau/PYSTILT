@@ -107,8 +107,8 @@ def trajectory_status_from_state(
 
 
 @runtime_checkable
-class SimulationRepository(Protocol):
-    """Read/write interface for simulation state persistence."""
+class SimulationCatalog(Protocol):
+    """Simulation identity and receptor catalog operations."""
 
     def register_many(
         self,
@@ -118,6 +118,27 @@ class SimulationRepository(Protocol):
     ) -> None:
         """Register one or more simulations and their receptor geometry."""
         ...
+
+    def all_sim_ids(self) -> list[str]:
+        """Return all registered simulation identifiers."""
+        ...
+
+    def has(self, sim_id: SimID | str) -> bool:
+        """Return True when a simulation id is registered."""
+        ...
+
+    def count(self) -> int:
+        """Return the number of registered simulations."""
+        ...
+
+    def get_receptor(self, sim_id: SimID | str) -> Receptor:
+        """Load the stored receptor geometry for one simulation."""
+        ...
+
+
+@runtime_checkable
+class ArtifactStateStore(Protocol):
+    """Durable artifact state mutation operations."""
 
     def sync(self) -> None:
         """Flush deferred state updates when a backend batches writes."""
@@ -143,9 +164,36 @@ class SimulationRepository(Protocol):
         """Record a terminal failure for one named footprint."""
         ...
 
-    def all_sim_ids(self) -> list[str]:
-        """Return all registered simulation identifiers."""
+    def reset_runtime_state(self) -> None:
+        """Clear transient running/claim state without rescanning durable outputs."""
         ...
+
+    def rebuild(self) -> None:
+        """Fully reconstruct repository state from durable simulation artifacts."""
+        ...
+
+    def reset_to_pending(self, sim_ids: list[str]) -> None:
+        """Reset one or more simulations to pending trajectory state."""
+        ...
+
+    def clear_footprints(
+        self, sim_ids: list[str], names: list[str] | None = None
+    ) -> None:
+        """Clear all or selected footprint statuses for the given simulations."""
+        ...
+
+    def record_artifacts(self, sim_id: str, summary: ArtifactSummary) -> None:
+        """Persist a durable artifact summary for one simulation."""
+        ...
+
+    def record_artifacts_many(self, pairs: list[tuple[str, ArtifactSummary]]) -> None:
+        """Persist artifact summaries for many simulations in one transaction."""
+        ...
+
+
+@runtime_checkable
+class ArtifactStatusQuery(Protocol):
+    """Artifact status and summary query operations."""
 
     def completed_trajectories(self) -> list[str]:
         """Return simulation ids whose trajectory artifacts are complete."""
@@ -163,29 +211,58 @@ class SimulationRepository(Protocol):
         """Return the compatibility trajectory status for one simulation."""
         ...
 
-    def has(self, sim_id: SimID | str) -> bool:
-        """Return True when a simulation id is registered."""
-        ...
-
-    def count(self) -> int:
-        """Return the number of registered simulations."""
-        ...
-
-    def get_receptor(self, sim_id: SimID | str) -> Receptor:
-        """Load the stored receptor geometry for one simulation."""
+    def bulk_traj_status(
+        self,
+        sim_ids: list[str] | None = None,
+    ) -> dict[str, str | None]:
+        """Return compatibility trajectory statuses for many simulations."""
         ...
 
     def footprint_status(self, sim_id: SimID | str, name: str) -> str | None:
         """Return the durable status for one named footprint."""
         ...
 
+    def bulk_footprint_status(
+        self,
+        name: str,
+        sim_ids: list[str] | None = None,
+    ) -> dict[str, str | None]:
+        """Return durable status for one named footprint across many simulations."""
+        ...
+
     def footprint_completed(self, sim_id: SimID | str, name: str) -> bool:
         """Return True when one named footprint reached a complete state."""
         ...
 
-    def rebuild(self) -> None:
-        """Reconstruct repository state from durable simulation artifacts."""
+    def bulk_footprint_completed(self, names: list[str]) -> set[str]:
+        """Return sim_ids where every listed footprint name is complete."""
         ...
+
+    def artifact_summary(self, sim_id: SimID | str) -> ArtifactSummary:
+        """Return the durable artifact summary for one simulation."""
+        ...
+
+    def to_dataframe(self) -> pd.DataFrame:
+        """Return the repository state as a tabular dataframe."""
+        ...
+
+
+@runtime_checkable
+class BatchStore(Protocol):
+    """Submitted batch progress query operations."""
+
+    def batch_progress(self, batch_id: str) -> tuple[int, int]:
+        """Return completed-vs-total counts for one submitted batch."""
+        ...
+
+    def all_batches(self) -> list[tuple[str, int, int]]:
+        """Return summary progress for every known batch."""
+        ...
+
+
+@runtime_checkable
+class QueueStore(Protocol):
+    """Live pull-worker claim and attempt coordination operations."""
 
     def claim_pending_claims(
         self,
@@ -230,32 +307,6 @@ class SimulationRepository(Protocol):
         """Return expired claims to pending state and list their sim ids."""
         ...
 
-    def reset_to_pending(self, sim_ids: list[str]) -> None:
-        """Reset one or more simulations to pending trajectory state."""
-        ...
-
-    def clear_footprints(
-        self, sim_ids: list[str], names: list[str] | None = None
-    ) -> None:
-        """Clear all or selected footprint statuses for the given simulations."""
-        ...
-
-    def batch_progress(self, batch_id: str) -> tuple[int, int]:
-        """Return completed-vs-total counts for one submitted batch."""
-        ...
-
-    def all_batches(self) -> list[tuple[str, int, int]]:
-        """Return summary progress for every known batch."""
-        ...
-
-    def artifact_summary(self, sim_id: SimID | str) -> ArtifactSummary:
-        """Return the durable artifact summary for one simulation."""
-        ...
-
-    def record_artifacts(self, sim_id: str, summary: ArtifactSummary) -> None:
-        """Persist a durable artifact summary for one simulation."""
-        ...
-
     def list_claims(self) -> list[SimulationClaim]:
         """Return all currently stored claim/lease records."""
         ...
@@ -278,6 +329,18 @@ class SimulationRepository(Protocol):
         """Append or upsert one execution attempt record."""
         ...
 
-    def to_dataframe(self) -> pd.DataFrame:
-        """Return the repository state as a tabular dataframe."""
-        ...
+
+@runtime_checkable
+class StateRepository(
+    SimulationCatalog,
+    ArtifactStateStore,
+    ArtifactStatusQuery,
+    BatchStore,
+    Protocol,
+):
+    """Composite durable repository interface used by existing callers."""
+
+
+@runtime_checkable
+class QueueRepository(StateRepository, QueueStore, Protocol):
+    """Composite durable repository plus live queue coordination."""

@@ -137,18 +137,18 @@ the points, with any remainder assigned to the earliest points first:
 Reading Column/Multipoint Receptors from CSV
 ---------------------------------------------
 
-The :func:`~stilt.read_receptors` function supports a ``group`` column that
+The :func:`~stilt.read_receptors` function supports a ``r_idx`` column that
 assigns individual point rows to a named multipoint receptor:
 
 .. code-block:: text
 
-   time,lat,lon,altitude,altitude_ref,group
+   time,lat,lon,altitude,altitude_ref,r_idx
    2023-07-15 21:00:00+00:00,40.77,-111.85,0,agl,col_01
    2023-07-15 21:00:00+00:00,40.77,-111.85,500,agl,col_01
    2023-07-15 21:00:00+00:00,40.77,-111.85,1000,agl,col_01
    2023-07-15 21:00:00+00:00,40.77,-111.85,1500,agl,col_01
 
-All rows with the same ``group`` are combined into one
+All rows with the same ``r_idx`` are combined into one
 :class:`~stilt.Receptor`. If all points share the same lon/lat, the receptor
 is classified as ``"column"``; otherwise it is ``"multipoint"``.
 

@@ -22,6 +22,7 @@ from .footprint import Footprint
 from .meteorology import MetArchive, MetStream
 from .model import Model
 from .receptor import Receptor, read_receptors
+from .records import ArtifactRecord
 from .runtime import RuntimeSettings
 from .service import BatchStatus, QueueStatus, Service
 from .simulation import SimID, Simulation
@@ -44,6 +45,7 @@ __all__ = [
     "SimID",
     "Footprint",
     "Trajectories",
+    "ArtifactRecord",
     # Receptors
     "Receptor",
     "read_receptors",

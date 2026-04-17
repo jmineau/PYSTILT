@@ -7,14 +7,15 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from stilt.executors.factory import resolve_dispatch
 from stilt.model import Model
 from stilt.receptor import Receptor
 from stilt.repositories import (
+    QueueRepository,
     SimulationAttempt,
     SimulationClaim,
-    SimulationRepository,
 )
-from stilt.workers import worker_loop
+from stilt.workers import pull_worker_loop
 
 if TYPE_CHECKING:
     from stilt.executors import Executor, JobHandle
@@ -62,6 +63,8 @@ def summarize_queue(
     now: dt.datetime | None = None,
 ) -> QueueStatus:
     """Return the project-level simulation queue summary for *model*."""
+    if _should_refresh_durable_state(model):
+        model.repository.rebuild()
     repo = model.repository
     current = now or dt.datetime.now(dt.timezone.utc)
     total = repo.count()
@@ -114,7 +117,7 @@ class Service:
         )
 
     @property
-    def repository(self) -> SimulationRepository:
+    def repository(self) -> QueueRepository:
         """Underlying repository used for queue/service state."""
         return self.model.repository
 
@@ -155,7 +158,7 @@ class Service:
         lease_ttl: float = 1800.0,
     ) -> None:
         """Drain pending simulations from the project's repository."""
-        worker_loop(
+        pull_worker_loop(
             self.model,
             n_cores=cpus,
             follow=follow,
@@ -184,11 +187,15 @@ class Service:
 
     def batch_status(self, batch_id: str) -> BatchStatus:
         """Return the progress summary for one submitted batch."""
+        if _should_refresh_durable_state(self.model):
+            self.repository.rebuild()
         completed, total = self.repository.batch_progress(batch_id)
         return BatchStatus(batch_id=batch_id, completed=completed, total=total)
 
     def batches(self) -> list[BatchStatus]:
         """Return all known batches ordered by repository policy."""
+        if _should_refresh_durable_state(self.model):
+            self.repository.rebuild()
         return [
             BatchStatus(batch_id=batch_id, completed=completed, total=total)
             for batch_id, completed, total in self.repository.all_batches()
@@ -210,3 +217,11 @@ class Service:
     def attempts(self, sim_id: str | None = None) -> list[SimulationAttempt]:
         """Return recorded execution attempts, optionally filtered by sim_id."""
         return self.repository.list_attempts(sim_id)
+
+
+def _should_refresh_durable_state(model: Model) -> bool:
+    """Return True when status should rebuild durable state before reading it."""
+    try:
+        return resolve_dispatch(model.config.execution or {}) == "push"
+    except FileNotFoundError:
+        return True

@@ -593,16 +593,16 @@ def test_run_worker_footprint_remote_existing_traj_marks_traj_complete(
 
 
 # ---------------------------------------------------------------------------
-# worker_loop
+# pull_worker_loop
 # ---------------------------------------------------------------------------
 
 
-class TestWorkerLoop:
-    """Tests for worker_loop using a fake model with shared-memory SQLite."""
+class TestPullWorkerLoop:
+    """Tests for pull_worker_loop using a fake model with shared-memory SQLite."""
 
     def _make_model(self, tmp_path, n_sims=3):
         """Build a fake model with a shared-memory SQLite repo and n_sims pending."""
-        from stilt.workers import worker_loop
+        from stilt.workers import pull_worker_loop
 
         repo = InMemoryRepository(tmp_path)
         pairs = []
@@ -620,11 +620,11 @@ class TestWorkerLoop:
         model = MagicMock()
         model.repository = repo
 
-        return model, [sid for sid, _ in pairs], worker_loop
+        return model, [sid for sid, _ in pairs], pull_worker_loop
 
     def test_drains_queue(self, tmp_path, monkeypatch):
-        """worker_loop drains all pending sims and exits."""
-        model, sids, worker_loop = self._make_model(tmp_path, n_sims=3)
+        """pull_worker_loop drains all pending sims and exits."""
+        model, sids, pull_worker_loop = self._make_model(tmp_path, n_sims=3)
 
         run_args_stub = MagicMock(spec=SimulationTask)
         model._build_run_args.return_value = run_args_stub
@@ -635,15 +635,15 @@ class TestWorkerLoop:
             lambda chunk, n_cores=1: chunk_calls.append(len(chunk)) or [],
         )
 
-        worker_loop(model, n_cores=3, follow=False)
+        pull_worker_loop(model, n_cores=3, follow=False)
 
         assert model._build_run_args.call_count == 3
         assert sum(chunk_calls) == 3
-        assert model.repository.claim_pending(1) == []  # queue is drained
+        assert model.repository.claim_pending_claims(1) == []  # queue is drained
 
     def test_releases_skipped_claims(self, tmp_path, monkeypatch):
-        """worker_loop releases claims when _build_run_args returns None."""
-        model, sids, worker_loop = self._make_model(tmp_path, n_sims=2)
+        """pull_worker_loop releases claims when _build_run_args returns None."""
+        model, sids, pull_worker_loop = self._make_model(tmp_path, n_sims=2)
 
         run_args_stub = MagicMock(spec=SimulationTask)
 
@@ -660,26 +660,26 @@ class TestWorkerLoop:
             lambda chunk, n_cores=1: chunk_calls.append(len(chunk)) or [],
         )
 
-        worker_loop(model, n_cores=2, follow=False)
+        pull_worker_loop(model, n_cores=2, follow=False)
 
         # The skipped sim should be back to pending
         assert model.repository.traj_status(sids[0]) == "pending"
         assert sum(chunk_calls) == 1
 
     def test_exits_on_empty_queue_no_follow(self, tmp_path, monkeypatch):
-        """worker_loop exits immediately when queue is empty and follow=False."""
-        model, _, worker_loop = self._make_model(tmp_path, n_sims=0)
+        """pull_worker_loop exits immediately when queue is empty and follow=False."""
+        model, _, pull_worker_loop = self._make_model(tmp_path, n_sims=0)
 
         monkeypatch.setattr(
             "stilt.workers._run_batch",
             lambda chunk, n_cores=1: [],
         )
 
-        worker_loop(model, n_cores=1, follow=False)
+        pull_worker_loop(model, n_cores=1, follow=False)
 
     def test_follow_polls_then_processes(self, tmp_path, monkeypatch):
-        """worker_loop with follow=True polls when empty, processes when work arrives."""
-        model, _, worker_loop = self._make_model(tmp_path, n_sims=0)
+        """pull_worker_loop with follow=True polls when empty, processes when work arrives."""
+        model, _, pull_worker_loop = self._make_model(tmp_path, n_sims=0)
 
         call_count = [0]
         original_claims = model.repository.claim_pending_claims
@@ -713,14 +713,14 @@ class TestWorkerLoop:
         )
 
         with pytest.raises(KeyboardInterrupt):
-            worker_loop(model, n_cores=1, follow=True, poll_interval=0.01)
+            pull_worker_loop(model, n_cores=1, follow=True, poll_interval=0.01)
 
         assert call_count[0] >= 4
         assert model._build_run_args.call_count >= 1
 
     def test_follow_uses_idle_backoff(self, tmp_path, monkeypatch):
         """Idle follow-mode polls back off up to a capped interval."""
-        model, _, worker_loop = self._make_model(tmp_path, n_sims=0)
+        model, _, pull_worker_loop = self._make_model(tmp_path, n_sims=0)
         sleep_calls: list[float] = []
         claim_count = {"n": 0}
 
@@ -735,7 +735,7 @@ class TestWorkerLoop:
         monkeypatch.setattr("stilt.workers.time.sleep", sleep_calls.append)
 
         with pytest.raises(KeyboardInterrupt):
-            worker_loop(model, n_cores=1, follow=True, poll_interval=0.5)
+            pull_worker_loop(model, n_cores=1, follow=True, poll_interval=0.5)
 
         assert sleep_calls == [0.5, 1.0, 2.0]
 
@@ -743,7 +743,7 @@ class TestWorkerLoop:
         self, tmp_path, monkeypatch
     ):
         """Single-core workers prefer the transactional claim path when offered."""
-        from stilt.workers import worker_loop
+        from stilt.workers import pull_worker_loop
 
         claim = SimulationClaim(
             sim_id="hrrr_202301011200_-111.85_40.77_5",
@@ -793,7 +793,7 @@ class TestWorkerLoop:
             lambda args: seen.append(args) or MagicMock(),
         )
 
-        worker_loop(model, n_cores=1, follow=False)
+        pull_worker_loop(model, n_cores=1, follow=False)
 
         assert repo.begin_claim_uow.call_count == 2
         assert seen[0]["claim"] == claim
@@ -807,7 +807,7 @@ class TestWorkerLoop:
         self, tmp_path, monkeypatch
     ):
         """Skipped transactional claims are rolled back via uow.release()."""
-        from stilt.workers import worker_loop
+        from stilt.workers import pull_worker_loop
 
         claim = SimulationClaim(
             sim_id="hrrr_202301011200_-111.85_40.77_5",
@@ -851,7 +851,7 @@ class TestWorkerLoop:
         run_worker_mock = MagicMock()
         monkeypatch.setattr("stilt.workers.run_worker", run_worker_mock)
 
-        worker_loop(model, n_cores=1, follow=False)
+        pull_worker_loop(model, n_cores=1, follow=False)
 
         assert released == [True]
         run_worker_mock.assert_not_called()

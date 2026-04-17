@@ -8,6 +8,8 @@ from typing import Any
 from stilt.artifacts import project_slug
 from stilt.repositories.postgres import POSTGRES_PENDING_SIMULATIONS_SQL
 
+from .protocol import LaunchSpec
+
 DB_URL_ENV = "PYSTILT_DB_URL"
 DB_URL_SECRET_KEY = "PYSTILT_DB_URL"
 DEFAULT_DB_SECRET = "pystilt-db"
@@ -50,7 +52,7 @@ def worker_command(
     compute_root: str | None = None,
 ) -> list[str]:
     """Return a CLI command for batch or follow-mode queue workers."""
-    command = ["stilt", "worker", project]
+    command = ["stilt", "pull-worker", project]
     if follow:
         command.append("--follow")
     if output_dir is not None:
@@ -276,7 +278,7 @@ class KubernetesHandle:
 
 
 class KubernetesExecutor:
-    """Deploy STILT workers as a K8s Job (batch) or Deployment (streaming)."""
+    """Deploy batch-mode STILT pull workers as Kubernetes Jobs."""
 
     def __init__(
         self,
@@ -420,38 +422,20 @@ class KubernetesExecutor:
             if exc.status != 409:
                 raise
 
-    def start(
-        self,
-        project: str,
-        n_workers: int = 1,
-        follow: bool = False,
-        output_dir: str | None = None,
-        compute_root: str | None = None,
-    ) -> KubernetesHandle:
-        """Create the worker Job/Deployment and return its handle."""
-        name = self._k8s_name(project)
-        kind = "Deployment" if follow else "Job"
+    def start(self, spec: LaunchSpec) -> KubernetesHandle:
+        """Create the worker Job and return its handle."""
+        if spec.dispatch != "pull":
+            raise ValueError("KubernetesExecutor supports only pull dispatch.")
 
-        if follow:
-            manifest = self._deployment_manifest(
-                name,
-                project,
-                n_workers,
-                output_dir=output_dir,
-                compute_root=compute_root,
-            )
-        else:
-            manifest = self._job_manifest(
-                name,
-                project,
-                n_workers,
-                output_dir=output_dir,
-                compute_root=compute_root,
-            )
+        name = self._k8s_name(spec.project)
+        manifest = self._job_manifest(
+            name,
+            spec.project,
+            spec.n_workers,
+            output_dir=spec.output_dir,
+            compute_root=spec.compute_root,
+        )
 
         self._apply(manifest)
 
-        if follow and self._autoscale:
-            self._apply(self._keda_manifest(name))
-
-        return KubernetesHandle(name, self._namespace, kind)
+        return KubernetesHandle(name, self._namespace, "Job")
