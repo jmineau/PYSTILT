@@ -27,6 +27,12 @@ from stilt.config import (
 )
 from stilt.receptor import Receptor
 
+from ..fixtures.r_stilt_reference import (
+    reference_grid,
+    reference_r_sim_id,
+    reference_receptor,
+)
+
 # ---------------------------------------------------------------------------
 # Marker - apply to every test that needs real met + HYSPLIT
 # ---------------------------------------------------------------------------
@@ -67,12 +73,7 @@ def met_dir() -> Path:
 @pytest.fixture(scope="session")
 def wbb_receptor() -> Receptor:
     """Single WBB-like receptor matching R-STILT tutorial parameters."""
-    return Receptor(
-        time=dt.datetime(2015, 12, 10, 0, 0),
-        longitude=-112.0,
-        latitude=40.5,
-        altitude=5.0,
-    )
+    return reference_receptor()
 
 
 @pytest.fixture(scope="session")
@@ -105,7 +106,7 @@ def multipoint_receptor() -> Receptor:
 @pytest.fixture(scope="session")
 def wbb_grid() -> Grid:
     """Domain grid covering the WBB area at 0.01° resolution."""
-    return Grid(xmin=-113.0, xmax=-111.0, ymin=39.5, ymax=41.5, xres=0.01, yres=0.01)
+    return reference_grid()
 
 
 @pytest.fixture(scope="session")
@@ -191,7 +192,7 @@ def multipoint_config(met_dir) -> ModelConfig:
 # R-STILT reference simulation (footprint fidelity tests)
 # ---------------------------------------------------------------------------
 
-_R_SIM_ID = "201512100000_-112_40.5_5"
+_R_SIM_ID = reference_r_sim_id()
 # Default: sibling R-STILT_fork dev workspace relative to the PYSTILT repo root
 _DEFAULT_R_REF_DIR = (
     _TESTS_DIR.parent / ".." / "R-STILT_fork" / "out" / "by-id" / _R_SIM_ID

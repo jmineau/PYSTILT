@@ -11,6 +11,9 @@
 #
 # Optional environment variables:
 #   STILT_R_DIR    Path to uataq/stilt checkout (default: ../R-STILT)
+#   STILT_KRAND    HYSPLIT KRAND mode for deterministic fixture generation
+#                  (default: 2; do not use 4 if you want SEED to matter)
+#   STILT_SEED     HYSPLIT SEED value written to SETUP.CFG (default: 42)
 #   STILT_MET_DIR  Path to stilt-tutorials/01-wbb/met dir
 #                  (default: ../stilt-tutorials/01-wbb/met)
 #
@@ -23,17 +26,25 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 FIXTURES_DIR="$SCRIPT_DIR/r_ref"
 
+eval "$(cd "$REPO_ROOT" && uv run python -m tests.fixtures.r_stilt_reference shell)"
+
 STILT_R_DIR="${STILT_R_DIR:-$REPO_ROOT/../R-STILT}"
 STILT_TUTORIALS_DIR="${STILT_TUTORIALS_DIR:-$REPO_ROOT/../stilt-tutorials}"
 STILT_MET_DIR="${STILT_MET_DIR:-$STILT_TUTORIALS_DIR/01-wbb/met}"
+STILT_KRAND="${STILT_KRAND:-$STILT_REFERENCE_KRAND}"
+STILT_SEED="${STILT_SEED:-$STILT_REFERENCE_SEED}"
 
-SIM_ID="201512100000_-112_40.5_5"
+SIM_ID="$STILT_REFERENCE_R_SIM_ID"
 OUT_DIR="$STILT_R_DIR/out/by-id/$SIM_ID"
 RUN_STILT="$STILT_R_DIR/r/run_stilt.r"
+SIMULATION_STEP="$STILT_R_DIR/r/src/simulation_step.r"
+WRITE_SETUP="$STILT_R_DIR/r/src/write_setup.r"
 
 echo "=== Generating R-STILT reference fixtures ==="
 echo "R-STILT dir : $STILT_R_DIR"
 echo "Met dir     : $STILT_MET_DIR"
+echo "KRAND       : $STILT_KRAND"
+echo "SEED        : $STILT_SEED"
 echo "Fixtures dir: $FIXTURES_DIR"
 echo ""
 
@@ -59,25 +70,53 @@ if [[ ! -d "$STILT_R_DIR" ]]; then
   Rscript -e "setwd('$PARENT_DIR'); require('uataq'); uataq::stilt_init('$STILT_NAME')"
 fi
 
-# Patch run_stilt.r (creates .bak for restore on exit)
-cp "$RUN_STILT" "$RUN_STILT.bak"
+# Patch R-STILT sources (creates .bak files for restore on exit)
+for file in "$RUN_STILT" "$SIMULATION_STEP" "$WRITE_SETUP"; do
+  cp "$file" "$file.bak"
+done
 
 cleanup() {
-  if [[ -f "$RUN_STILT.bak" ]]; then
-    mv "$RUN_STILT.bak" "$RUN_STILT"
-    echo "Restored run_stilt.r"
-  fi
+  for file in "$RUN_STILT" "$SIMULATION_STEP" "$WRITE_SETUP"; do
+    if [[ -f "$file.bak" ]]; then
+      mv "$file.bak" "$file"
+      echo "Restored $(basename "$file")"
+    fi
+  done
 }
 trap cleanup EXIT
 
 sed -i \
   -e "s|met_path           <- '<path_to_arl_meteorological_data>'|met_path           <- '$STILT_MET_DIR'|" \
-  -e "s|n_hours       <- -24|n_hours       <- -6|" \
-  -e "s|xmn <- NA|xmn <- -113|" \
-  -e "s|xmx <- NA|xmx <- -111|" \
-  -e "s|ymn <- NA|ymn <- 39.5|" \
-  -e "s|ymx <- NA|ymx <- 41.5|" \
+  -e "s|t_start <- '2015-12-10 00:00:00'|t_start <- '$STILT_REFERENCE_TIME'|" \
+  -e "s|t_end   <- '2015-12-10 00:00:00'|t_end   <- '$STILT_REFERENCE_TIME'|" \
+  -e "s|lati <- 40.5|lati <- $STILT_REFERENCE_LATITUDE|" \
+  -e "s|long <- -112.0|long <- $STILT_REFERENCE_LONGITUDE|" \
+  -e "s|zagl <- 5|zagl <- $STILT_REFERENCE_ALTITUDE|" \
+  -e "s|met_file_format    <- '%Y%m%d.%Hz.hrrra'|met_file_format    <- '$STILT_REFERENCE_MET_FILE_FORMAT'|" \
+  -e "s|met_file_tres      <- '6 hours'|met_file_tres      <- '$STILT_REFERENCE_R_MET_FILE_TRES'|" \
+  -e "s|n_hours       <- -24|n_hours       <- $STILT_REFERENCE_N_HOURS|" \
+  -e "s|numpar        <- 1000|numpar        <- $STILT_REFERENCE_NUMPAR|" \
+  -e "s|krand       <- 4|krand       <- $STILT_KRAND|" \
+  -e "/krand       <- /a seed        <- $STILT_SEED" \
+  -e "s|xmn <- NA|xmn <- $STILT_REFERENCE_XMIN|" \
+  -e "s|xmx <- NA|xmx <- $STILT_REFERENCE_XMAX|" \
+  -e "s|ymn <- NA|ymn <- $STILT_REFERENCE_YMIN|" \
+  -e "s|ymx <- NA|ymx <- $STILT_REFERENCE_YMAX|" \
+  -e "s|xres <- 0.01|xres <- $STILT_REFERENCE_XRES|" \
+  -e "s|yres <- xres|yres <- $STILT_REFERENCE_YRES|" \
+  -e "s|krand = krand,|krand = krand,\n            seed = seed,|" \
   "$RUN_STILT"
+
+sed -i \
+  -e "s|krand = 4,|krand = 4,\n                            seed = NULL,|" \
+  -e "s|krand = krand,|krand = krand,\n      seed = seed,|" \
+  "$SIMULATION_STEP"
+
+sed -i \
+  -e "s|krand = 4,|krand = 4,\n                        seed = NULL,|" \
+  -e "/if (is.logical(rhs))/i\    if (is.null(rhs))\n\      return(NULL)" \
+  -e "s|eq('KRAND', krand),|eq('KRAND', krand),\n           eq('SEED', seed),|" \
+  "$WRITE_SETUP"
 
 # Run R-STILT from its working directory
 echo "Running Rscript r/run_stilt.r in $STILT_R_DIR ..."
@@ -111,7 +150,7 @@ Rscript -e "
 
 # Copy to fixtures (overwrite any previous reference)
 mkdir -p "$FIXTURES_DIR"
-cp "$TRAJ_PARQUET" "$FIXTURES_DIR/${SIM_ID}_traj.parquet"
+cp "$TRAJ_PARQUET" "$FIXTURES_DIR/r_traj.parquet"
 cp "$FOOT_NC"      "$FIXTURES_DIR/r_foot.nc"
 
 echo ""
