@@ -52,41 +52,45 @@ class SlurmExecutor:
 
     def __init__(
         self,
-        slurm_kwargs: dict[str, Any],
-        n_tasks: int = 1000,
+        n_tasks: int,
         cpus_per_task: int = 1,
         array_parallelism: int | None = None,
         setup: list[str] | None = None,
+        **kwargs: Any,
     ) -> None:
-        self._slurm_kwargs = slurm_kwargs
         self._n_tasks = n_tasks
         self._cpus_per_task = cpus_per_task
         self._array_parallelism = array_parallelism
         self._setup: list[str] = setup or []
+        self._kwargs = kwargs
 
     @classmethod
     def from_config(cls, config: dict[str, Any]) -> SlurmExecutor:
         """Build a Slurm executor from ``ModelConfig.execution`` values."""
         cfg = dict(config)
         cfg.pop("backend", None)
-        cfg.pop("n_workers", None)
-        n_tasks = cfg.pop("n_tasks", 1000)
-        cpus_per_task = cfg.pop("cpus_per_task", 1)
+        n_workers = cfg.pop("n_workers", None)
+        n_tasks = cfg.pop("n_tasks", n_workers)
+        cpus_per_task = cfg.pop("cpus-per-task", 1)
         array_parallelism = cfg.pop("array_parallelism", None)
         setup = cfg.pop("setup", None)
         if isinstance(setup, str):
             setup = [setup]
+        if n_tasks is None:
+            raise ValueError(
+                "SlurmExecutor requires 'n_tasks' or 'n_workers' in execution config."
+            )
         return cls(
-            slurm_kwargs=cfg,
             n_tasks=n_tasks,
             cpus_per_task=cpus_per_task,
             array_parallelism=array_parallelism,
             setup=setup,
+            **cfg,
         )
 
     def _resolved_slurm_kwargs(self, project: str) -> dict[str, Any]:
         """Return sbatch kwargs with PYSTILT defaults applied."""
-        kwargs = dict(self._slurm_kwargs)
+        kwargs = dict(self._kwargs)
         kwargs.setdefault("job_name", f"pystilt-{project_slug(project)}")
         return kwargs
 

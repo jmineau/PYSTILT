@@ -220,6 +220,21 @@ def test_write_setup_creates_cfg(tmp_path, point_receptor):
     assert "numpar" in content.lower()
     assert "varsiwant" in content.lower()
     assert "kmsl=0" in content.lower()
+    assert "seed=" not in content.lower()
+
+
+def test_write_setup_includes_seed_when_configured(tmp_path, point_receptor):
+    runner = HYSPLITRunner(
+        directory=tmp_path,
+        receptor=point_receptor,
+        params=STILTParams(seed=17),
+        met_files=[tmp_path / "met" / "dummy"],
+        exe_dir=tmp_path,
+    )
+    runner._write_setup(winderrtf=0)
+    content = (tmp_path / "SETUP.CFG").read_text().lower()
+
+    assert "seed=17" in content
 
 
 def test_write_setup_sets_winderrtf(tmp_path, point_receptor):

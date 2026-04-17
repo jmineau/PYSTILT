@@ -8,7 +8,12 @@ import pytest
 import xarray as xr
 
 from stilt.config import FootprintConfig, Grid, VerticalOperatorTransformSpec
-from stilt.footprint import Footprint, _calc_digits, _make_gauss_kernel
+from stilt.footprint import (
+    Footprint,
+    _calc_digits,
+    _interpolation_times,
+    _make_gauss_kernel,
+)
 from stilt.receptor import Receptor
 
 
@@ -355,3 +360,13 @@ def test_make_gauss_kernel_odd_shape():
     k = _make_gauss_kernel((0.1, 0.1), sigma=0.3)
     assert k.shape[0] % 2 == 1
     assert k.shape[1] % 2 == 1
+
+
+def test_interpolation_times_match_r_stilt_schedule():
+    times = _interpolation_times(-1)
+
+    assert times[0] == pytest.approx(0.0)
+    assert times[np.where(np.isclose(times, -10.0))[0][0]] == pytest.approx(-10.0)
+    assert times[np.where(np.isclose(times, -20.0))[0][0]] == pytest.approx(-20.0)
+    assert times[-1] == pytest.approx(-100.0)
+    assert len(times) == 311

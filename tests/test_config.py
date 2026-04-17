@@ -105,6 +105,14 @@ def test_build_setup_entries_uses_metadata_targets():
     assert "w_option" not in entries
     assert "z_top" not in entries
     assert "ziscale" not in entries
+    assert "seed" not in entries
+
+
+def test_build_setup_entries_includes_seed_when_set():
+    p = STILTParams(seed=17)
+    entries = build_setup_entries(p)
+
+    assert entries["seed"] == 17
 
 
 def test_iter_documented_config_fields_hides_internal_transport_fields_by_default():

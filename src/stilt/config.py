@@ -529,6 +529,16 @@ class TransportParams(BaseModel):
         4,
         description="Random-number mode for turbulence, repeatability, and diagnostic no-mixing runs.",
     )
+    seed: int | None = cfg_field(
+        None,
+        description=(
+            "Optional HYSPLIT random-number seed written to SETUP.CFG. "
+            "Use with krand values that preserve a fixed initial seed; krand=4 "
+            "and 10-13 still randomize the initial seed."
+        ),
+        target="setup",
+        visibility="advanced",
+    )
     krnd: int = Field(6, description="Enhanced-merging interval in hours.")
     kspl: int = Field(1, description="Standard particle-splitting interval in hours.")
     kwet: int = Field(
@@ -929,8 +939,11 @@ def _collect_target_entries(
         field_target = meta.get("target", default_target)
         if field_target != target:
             continue
+        value = getattr(params, name)
+        if value is None:
+            continue
         key = meta.get("namelist", name)
-        entries[key] = getattr(params, name)
+        entries[key] = value
     return entries
 
 

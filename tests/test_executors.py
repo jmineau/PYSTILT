@@ -200,7 +200,7 @@ def test_slurm_executor_from_config_extracts_pystilt_keys():
     assert ex._n_tasks == 200
     assert ex._cpus_per_task == 24
     assert ex._array_parallelism == 50
-    assert ex._slurm_kwargs == {"account": "lin-np", "partition": "lin-np"}
+    assert ex._kwargs == {"account": "lin-np", "partition": "lin-np"}
 
 
 def test_slurm_executor_from_config_defaults():

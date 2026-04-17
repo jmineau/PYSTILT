@@ -44,6 +44,18 @@ def _calc_digits(res: float) -> int:
     return int(-math.log10(res))  # 0 for res >= 1
 
 
+def _interpolation_times(time_sign: int) -> np.ndarray:
+    """Exact R-STILT early-time interpolation schedule in minutes."""
+    times = np.concatenate(
+        [
+            np.arange(0, 101, dtype=float) / 10,
+            np.arange(102, 201, 2, dtype=float) / 10,
+            np.arange(205, 1001, 5, dtype=float) / 10,
+        ]
+    )
+    return times * time_sign
+
+
 class Footprint:
     """STILT footprint container with grid metadata and data array."""
 
@@ -195,8 +207,8 @@ class Footprint:
         # --- Sub-minute interpolation for first 100 min ---
         # Near the receptor, particles move quickly relative to the grid.
         # If the median inter-particle step exceeds one grid cell, insert
-        # sub-minute time points (0.1 min for |t|<10, 0.2 for 10-20,
-        # 0.5 for 20-100) and linearly interpolate positions and foot.
+        # sub-minute time points (0.0-10.0 by 0.1 min, 10.2-20.0 by 0.2,
+        # 20.5-100.0 by 0.5) and linearly interpolate positions and foot.
         # Foot values are rescaled after interpolation to preserve the
         # total influence in each time window.
         early = p[np.abs(p["time"]) < 100]
@@ -204,18 +216,18 @@ class Footprint:
         dx_med = (
             bp["long"]
             .apply(
-                lambda s: float(np.abs(np.diff(s.values)).mean())
-                if len(s) > 1
-                else np.nan
+                lambda s: (
+                    float(np.abs(np.diff(s.values)).mean()) if len(s) > 1 else np.nan
+                )
             )
             .median()
         )
         dy_med = (
             bp["lati"]
             .apply(
-                lambda s: float(np.abs(np.diff(s.values)).mean())
-                if len(s) > 1
-                else np.nan
+                lambda s: (
+                    float(np.abs(np.diff(s.values)).mean()) if len(s) > 1 else np.nan
+                )
             )
             .median()
         )
@@ -223,16 +235,7 @@ class Footprint:
         if (not np.isnan(dx_med) and dx_med > xres) or (
             not np.isnan(dy_med) and dy_med > yres
         ):
-            t_new = (
-                np.concatenate(
-                    [
-                        np.round(np.arange(0, 10, 0.1), 1),
-                        np.round(np.arange(10.2, 20.1, 0.2), 1),
-                        np.round(np.arange(20.5, 100.5, 0.5), 1),
-                    ]
-                )
-                * time_sign
-            )
+            t_new = _interpolation_times(time_sign)
 
             # Store pre-interpolation foot sums per window for rescaling later
             atime = np.abs(p["time"])
