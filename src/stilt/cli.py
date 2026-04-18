@@ -578,8 +578,6 @@ def _print_run_start(
     compute_root = getattr(model, "compute_root", None)
     receptors = getattr(model, "receptors", None)
     worker_count = execution.get("n_workers", 1)
-    if backend == "slurm" and dispatch == "push":
-        worker_count = execution.get("n_tasks", worker_count)
     mode = "config" if skip_existing is None else "no-skip"
     typer.echo(
         "Starting run: "

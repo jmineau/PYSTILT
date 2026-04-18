@@ -1176,7 +1176,7 @@ def test_build_run_args_push_uses_durable_inputs_not_repository(
 ):
     """Push workers should not need SQLite lookups for receptor or skip state."""
     config = _config(tmp_path, include_footprint=False).model_copy(
-        update={"execution": {"backend": "slurm"}}
+        update={"execution": {"backend": "slurm", "n_workers": 1}}
     )
     repo = InMemoryRepository(tmp_path)
     sid = str(SimID.from_parts("hrrr", point_receptor))

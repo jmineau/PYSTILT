@@ -46,7 +46,7 @@ from stilt.executors import (
     _sigterm_as_interrupt,
     get_executor,
 )
-from stilt.executors.factory import resolve_backend, resolve_dispatch
+from stilt.executors.factory import resolve_dispatch
 from stilt.footprint import Footprint
 from stilt.meteorology import MetArchive, MetStream
 from stilt.receptor import Receptor, read_receptors
@@ -818,7 +818,6 @@ class Model:
             skip_existing if skip_existing is not None else self.config.skip_existing
         )
         execution = self.config.execution or {}
-        backend = resolve_backend(execution)
         dispatch = resolve_dispatch(execution)
 
         if dispatch == "push":
@@ -867,8 +866,6 @@ class Model:
 
         # 4. Start workers.
         n_workers = execution.get("n_workers", 1)
-        if backend == "slurm" and dispatch == "push":
-            n_workers = execution.get("n_tasks", n_workers)
         exe = executor or get_executor(execution)
         chunk_paths: tuple[str, ...] = ()
         if dispatch == "push":

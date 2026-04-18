@@ -192,31 +192,30 @@ def test_slurm_executor_from_config_extracts_pystilt_keys():
             "backend": "slurm",
             "account": "lin-np",
             "partition": "lin-np",
-            "n_tasks": 200,
+            "n_workers": 200,
             "cpus_per_task": 24,
             "array_parallelism": 50,
         }
     )
-    assert ex._n_tasks == 200
+    assert ex._n_workers == 200
     assert ex._cpus_per_task == 24
     assert ex._array_parallelism == 50
     assert ex._kwargs == {"account": "lin-np", "partition": "lin-np"}
 
 
-def test_slurm_executor_from_config_defaults():
-    ex = SlurmExecutor.from_config({"backend": "slurm"})
-    assert ex._n_tasks == 1000
-    assert ex._cpus_per_task == 1
-    assert ex._array_parallelism is None
+def test_slurm_executor_from_config_requires_explicit_n_workers():
+    with pytest.raises(ValueError, match="explicit 'n_workers'"):
+        SlurmExecutor.from_config({"backend": "slurm"})
 
 
 def test_slurm_executor_render_sbatch_directives_simple():
     ex = SlurmExecutor(
-        slurm_kwargs={"account": "lin-np", "partition": "notchpeak"},
-        n_tasks=4,
+        n_workers=4,
         cpus_per_task=1,
+        account="lin-np",
+        partition="notchpeak",
     )
-    directives = ex._render_sbatch_directives(n_tasks=4, project="/tmp/my_project")
+    directives = ex._render_sbatch_directives(n_workers=4, project="/tmp/my_project")
     assert "--array=0-3" in directives
     assert "--account=lin-np" in directives
     assert "--partition=notchpeak" in directives
@@ -226,34 +225,33 @@ def test_slurm_executor_render_sbatch_directives_simple():
 
 def test_slurm_executor_render_sbatch_directives_with_parallelism():
     ex = SlurmExecutor(
-        slurm_kwargs={},
-        n_tasks=10,
+        n_workers=10,
         cpus_per_task=8,
         array_parallelism=5,
     )
-    directives = ex._render_sbatch_directives(n_tasks=10, project="/tmp/my_project")
+    directives = ex._render_sbatch_directives(n_workers=10, project="/tmp/my_project")
     assert "--array=0-9%5" in directives
     assert "--cpus-per-task=8" in directives
 
 
 def test_slurm_executor_render_sbatch_bool_true():
     """Boolean True renders as bare flag."""
-    ex = SlurmExecutor(slurm_kwargs={"exclusive": True}, n_tasks=1)
-    directives = ex._render_sbatch_directives(n_tasks=1, project="/tmp/my_project")
+    ex = SlurmExecutor(exclusive=True, n_workers=1)
+    directives = ex._render_sbatch_directives(n_workers=1, project="/tmp/my_project")
     assert "--exclusive" in directives
     assert "--exclusive=" not in directives
 
 
 def test_slurm_executor_render_sbatch_bool_false():
     """Boolean False is skipped."""
-    ex = SlurmExecutor(slurm_kwargs={"exclusive": False}, n_tasks=1)
-    directives = ex._render_sbatch_directives(n_tasks=1, project="/tmp/my_project")
+    ex = SlurmExecutor(exclusive=False, n_workers=1)
+    directives = ex._render_sbatch_directives(n_workers=1, project="/tmp/my_project")
     assert "exclusive" not in directives
 
 
 def test_slurm_executor_explicit_job_name_overrides_default():
-    ex = SlurmExecutor(slurm_kwargs={"job_name": "custom-name"}, n_tasks=1)
-    directives = ex._render_sbatch_directives(n_tasks=1, project="/tmp/my_project")
+    ex = SlurmExecutor(job_name="custom-name", n_workers=1)
+    directives = ex._render_sbatch_directives(n_workers=1, project="/tmp/my_project")
     assert "--job-name=custom-name" in directives
     assert "--job-name=pystilt-my-project" not in directives
 
@@ -273,7 +271,7 @@ def test_slurm_executor_start_renders_chunk_worker_script(tmp_path, monkeypatch)
     monkeypatch.setattr("stilt.executors.slurm.subprocess.run", fake_run)
 
     ex = SlurmExecutor.from_config(
-        {"backend": "slurm", "partition": "notchpeak", "n_tasks": 4}
+        {"backend": "slurm", "partition": "notchpeak", "n_workers": 4}
     )
     handle = ex.start(
         LaunchSpec(
@@ -312,7 +310,7 @@ def test_slurm_executor_start_with_output_dir_and_compute_root(tmp_path, monkeyp
 
     monkeypatch.setattr("stilt.executors.slurm.subprocess.run", fake_run)
 
-    ex = SlurmExecutor.from_config({"backend": "slurm", "n_tasks": 1})
+    ex = SlurmExecutor.from_config({"backend": "slurm", "n_workers": 1})
     ex.start(
         LaunchSpec(
             project=str(tmp_path),
@@ -335,7 +333,7 @@ def test_slurm_executor_start_cloud_project_uses_local_submission_root(
     tmp_path, monkeypatch
 ):
     """Cloud projects are rejected for Slurm push dispatch."""
-    ex = SlurmExecutor.from_config({"backend": "slurm", "n_tasks": 1})
+    ex = SlurmExecutor.from_config({"backend": "slurm", "n_workers": 1})
     with pytest.raises(ValueError, match="requires a local project/output root"):
         ex.start(
             LaunchSpec(
@@ -348,7 +346,7 @@ def test_slurm_executor_start_cloud_project_uses_local_submission_root(
 
 
 def test_slurm_executor_start_zero_workers_returns_none_job_id(monkeypatch):
-    ex = SlurmExecutor.from_config({"backend": "slurm"})
+    ex = SlurmExecutor(n_workers=1)
     handle = ex.start(LaunchSpec(project=".", n_workers=0, dispatch="push"))
     assert handle.job_id == "none"
 
@@ -386,8 +384,13 @@ def test_get_executor_local_n_workers_gt1_uses_local_executor():
 
 
 def test_get_executor_slurm_is_slurm_executor():
-    ex = get_executor({"backend": "slurm", "partition": "notchpeak"})
+    ex = get_executor({"backend": "slurm", "partition": "notchpeak", "n_workers": 4})
     assert isinstance(ex, SlurmExecutor)
+
+
+def test_get_executor_slurm_requires_explicit_n_workers():
+    with pytest.raises(ValueError, match="explicit 'n_workers'"):
+        get_executor({"backend": "slurm", "partition": "notchpeak"})
 
 
 def test_get_executor_unknown_backend_raises():
