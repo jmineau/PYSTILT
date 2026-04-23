@@ -70,7 +70,7 @@ def py_outputs(tmp_path_factory, fidelity_config) -> dict[str, Path]:
     model.run()
 
     sim_id = reference_python_sim_id()
-    sim_dir = model.directory / "simulations" / "by-id" / sim_id
+    sim_dir = model.layout.project_dir / "simulations" / "by-id" / sim_id
 
     return {
         "sim_dir": sim_dir,

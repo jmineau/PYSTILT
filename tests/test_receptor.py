@@ -40,17 +40,17 @@ def test_format_coord_small_positive():
 
 def test_location_id_point_basic():
     r = Receptor("202301011200", -111.85, 40.77, 5.0)
-    assert r.location_id == "-111.85_40.77_5"
+    assert r.id.location == "-111.85_40.77_5"
 
 
 def test_location_id_point_integer_coords():
     r = Receptor("202301011200", -112.0, 40.0, 10.0)
-    assert r.location_id == "-112_40_10"
+    assert r.id.location == "-112_40_10"
 
 
 def test_location_id_point_fractional_height():
     r = Receptor("202301011200", -111.85, 40.77, 2.5)
-    assert r.location_id == "-111.85_40.77_2.5"
+    assert r.id.location == "-111.85_40.77_2.5"
 
 
 # ---------------------------------------------------------------------------
@@ -60,12 +60,12 @@ def test_location_id_point_fractional_height():
 
 def test_location_id_column_ends_with_X():
     r = Receptor("202301011200", -111.85, 40.77, [5.0, 50.0])
-    assert r.location_id == "-111.85_40.77_X"
+    assert r.id.location == "-111.85_40.77_X"
 
 
 def test_location_id_column_integer_coords():
     r = Receptor("202301011200", -112.0, 40.0, [5.0, 50.0])
-    assert r.location_id == "-112_40_X"
+    assert r.id.location == "-112_40_X"
 
 
 # ---------------------------------------------------------------------------
@@ -80,25 +80,25 @@ def test_location_id_multipoint_stable():
     hgts = [5, 5, 5]
     r1 = Receptor("202301011200", lons, lats, hgts)
     r2 = Receptor("202301011200", lons, lats, hgts)
-    assert r1.location_id == r2.location_id
+    assert r1.id.location == r2.id.location
 
 
 def test_location_id_multipoint_order_independent():
     """Hash must not depend on insertion order."""
     r_a = Receptor("202301011200", [-111.85, -111.86], [40.77, 40.78], [5, 5])
     r_b = Receptor("202301011200", [-111.86, -111.85], [40.78, 40.77], [5, 5])
-    assert r_a.location_id == r_b.location_id
+    assert r_a.id.location == r_b.id.location
 
 
 def test_location_id_multipoint_starts_with_multi():
     r = Receptor("202301011200", [-111.85, -111.86], [40.77, 40.78], [5, 5])
-    assert r.location_id.startswith("multi_")
+    assert r.id.location.startswith("multi_")
 
 
 def test_location_id_multipoint_hash_length():
     """Hash portion is exactly 10 hex chars."""
     r = Receptor("202301011200", [-111.85, -111.86], [40.77, 40.78], [5, 5])
-    hash_part = r.location_id.replace("multi_", "")
+    hash_part = r.id.location.replace("multi_", "")
     assert len(hash_part) == 10
     assert all(c in "0123456789abcdef" for c in hash_part)
 
@@ -113,13 +113,13 @@ def test_location_id_multipoint_matches_spec():
     )
     expected_hash = hashlib.sha256(canonical.encode()).hexdigest()[:10]
     r = Receptor("202301011200", [-111.85, -111.86], [40.77, 40.78], [5, 5])
-    assert r.location_id == f"multi_{expected_hash}"
+    assert r.id.location == f"multi_{expected_hash}"
 
 
 def test_location_id_multipoint_differs_for_different_points():
     r_a = Receptor("202301011200", [-111.85, -111.86], [40.77, 40.78], [5, 5])
     r_b = Receptor("202301011200", [-111.85, -111.87], [40.77, 40.79], [5, 5])
-    assert r_a.location_id != r_b.location_id
+    assert r_a.id.location != r_b.id.location
 
 
 # ---------------------------------------------------------------------------
@@ -160,7 +160,7 @@ def test_from_column_top_bottom():
 
 def test_from_column_id():
     r = Receptor.from_column("202301011200", -111.85, 40.77, bottom=5.0, top=50.0)
-    assert r.location_id == "-111.85_40.77_X"
+    assert r.id.location == "-111.85_40.77_X"
 
 
 def test_from_column_bottom_ge_top_raises():
@@ -181,7 +181,7 @@ def test_from_column_bottom_eq_top_raises():
 def test_from_points_single_makes_point():
     r = Receptor.from_points("202301011200", [(-111.85, 40.77, 5)])
     assert r.kind == "point"
-    assert r.location_id == "-111.85_40.77_5"
+    assert r.id.location == "-111.85_40.77_5"
 
 
 def test_from_points_two_same_xy_makes_column():
@@ -189,7 +189,7 @@ def test_from_points_two_same_xy_makes_column():
         "202301011200", [(-111.85, 40.77, 5), (-111.85, 40.77, 50)]
     )
     assert r.kind == "column"
-    assert r.location_id.endswith("_X")
+    assert r.id.location.endswith("_X")
 
 
 def test_from_points_two_different_xy_makes_multipoint():

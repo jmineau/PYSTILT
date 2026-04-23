@@ -1,16 +1,17 @@
-"""Release-critical integration coverage for queue service and transforms."""
+"""Release-critical integration coverage for queue runtime and transforms."""
 
 from __future__ import annotations
 
 import numpy as np
+import pytest
 
 from stilt.config import (
     FirstOrderLifetimeTransformSpec,
     FootprintConfig,
     ModelConfig,
 )
+from stilt.execution import pull_simulations
 from stilt.model import Model
-from stilt.service import Service
 
 from .conftest import integration
 
@@ -21,50 +22,30 @@ def _footprint_total(footprint) -> float:
 
 
 @integration
-def test_service_submit_and_drain_runs_batch_end_to_end(
+def test_pull_simulations_requires_runtime_queue_backend(
     tmp_path,
     wbb_receptor,
     wbb_config,
 ):
-    """Service.submit + Service.drain should execute one queued batch end to end."""
-    service = Service(
+    """pull_simulations should fail clearly when only the local SQLite index exists."""
+    model = Model(
         project=tmp_path / "service_queue",
         config=wbb_config,
         receptors=[wbb_receptor],
     )
 
-    sim_ids = service.submit(batch_id="service_batch")
+    sim_ids = model.register_pending()
     assert len(sim_ids) == 1
 
-    pending = service.status()
+    pending = model.status()
     assert pending.total == 1
     assert pending.pending == 1
     assert pending.running == 0
     assert pending.completed == 0
     assert pending.failed == 0
 
-    service.drain(cpus=1, poll_interval=0.1, lease_ttl=30.0)
-
-    complete = service.status()
-    assert complete.total == 1
-    assert complete.pending == 0
-    assert complete.running == 0
-    assert complete.completed == 1
-    assert complete.failed == 0
-
-    batch = service.batch_status("service_batch")
-    assert batch.total == 1
-    assert batch.completed == 1
-    assert batch.is_complete is True
-
-    assert service.active_claims() == []
-    attempts = service.attempts(sim_ids[0])
-    assert len(attempts) == 1
-    assert attempts[0].outcome == "complete"
-
-    sim_dir = service.model.directory / "simulations" / "by-id" / sim_ids[0]
-    assert list(sim_dir.glob("*.parquet")), "No trajectory parquet from service drain"
-    assert list(sim_dir.glob("*_foot.nc")), "No footprint artifact from service drain"
+    with pytest.raises(ValueError, match="claim-capable index backend"):
+        pull_simulations(model, poll_interval=0.1)
 
 
 @integration
@@ -108,8 +89,8 @@ def test_declarative_transform_config_changes_real_footprint(
     )
     model.run()
 
-    [baseline] = model.get_footprints("baseline")
-    [lifetime] = model.get_footprints("lifetime")
+    [baseline] = model.footprints["baseline"].load()
+    [lifetime] = model.footprints["lifetime"].load()
 
     assert len(lifetime.config.transforms) == 1
 

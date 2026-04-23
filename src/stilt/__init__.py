@@ -1,32 +1,29 @@
-"""PYSTILT
+"""PYSTILT public package surface."""
 
-A Python implementation of the STILT Lagrangian atmospheric transport model.
-"""
-
+from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _version
 
-__version__ = _version("pystilt")
-__author__ = "James Mineau"
-__email__ = "jameskmineau@gmail.com"
-
-
-from .artifacts import ArtifactStore, FsspecArtifactStore
 from .config import (
     Bounds,
     FootprintConfig,
     Grid,
     MetConfig,
     ModelConfig,
+    RuntimeSettings,
 )
 from .footprint import Footprint
 from .meteorology import MetArchive, MetStream
 from .model import Model
-from .receptor import Receptor, read_receptors
-from .records import ArtifactRecord
-from .runtime import RuntimeSettings
-from .service import BatchStatus, QueueStatus, Service
+from .receptor import LocationID, Receptor, ReceptorID, read_receptors
 from .simulation import SimID, Simulation
 from .trajectory import Trajectories
+
+try:
+    __version__ = _version("pystilt")
+except PackageNotFoundError:
+    __version__ = "0+unknown"
+__author__ = "James Mineau"
+__email__ = "jameskmineau@gmail.com"
 
 __all__ = [
     # Core
@@ -37,24 +34,17 @@ __all__ = [
     "Grid",
     "Bounds",
     "MetConfig",
-    # Durable artifact access
-    "ArtifactStore",
-    "FsspecArtifactStore",
+    "RuntimeSettings",
     # Data objects (returned by Model methods)
     "Simulation",
     "SimID",
     "Footprint",
     "Trajectories",
-    "ArtifactRecord",
     # Receptors
+    "LocationID",
     "Receptor",
+    "ReceptorID",
     "read_receptors",
-    # Runtime settings
-    "RuntimeSettings",
-    # Service facade
-    "Service",
-    "QueueStatus",
-    "BatchStatus",
     # Meteorology
     "MetStream",
     "MetArchive",

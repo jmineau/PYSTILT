@@ -1,32 +1,24 @@
-"""Simulation execution and artifact loading for STILT runs."""
+"""Simulation execution and output loading for STILT runs."""
+
+from __future__ import annotations
 
 import datetime as dt
 import logging
 from collections.abc import Sequence
 from pathlib import Path
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
-import pandas as pd
-
-from stilt.artifacts import (
-    ArtifactStore,
-    error_trajectory_path,
-    footprint_path,
-    resolve_directory,
-    simulation_artifact_key,
-    simulation_log_path,
-    simulation_met_path,
-    trajectory_path,
-)
-from stilt.config import FootprintConfig, STILTParams, _config_or_kwargs
+from stilt.config import FootprintConfig, STILTParams
+from stilt.config.model import _config_or_kwargs
 from stilt.errors import (
     EmptyTrajectoryError,
     identify_failure_reason,
 )
 from stilt.footprint import Footprint
-from stilt.hysplit import HYSPLITRunner
-from stilt.meteorology import MetStream
-from stilt.receptor import Receptor
+from stilt.hysplit import HYSPLITDriver
+from stilt.meteorology import MetID, MetStream
+from stilt.receptor import LocationID, Receptor, ReceptorID
+from stilt.storage import SimulationFiles, Store, resolve_directory
 from stilt.trajectory import Trajectories
 from stilt.transforms import (
     ParticleTransform,
@@ -60,84 +52,46 @@ class SimID(str):
         SimID.from_parts(met="hrrr", receptor=r)
     """
 
-    met: str
+    met: MetID
+    receptor: ReceptorID
     time: dt.datetime
-    location_id: str
+    location: LocationID
 
-    def __new__(cls, sim_id_str: str) -> "SimID":
+    def __new__(cls, id_str: str) -> SimID:
         """Create from canonical ``'{met}_{YYYYMMDDHHMM}_{location_id}'`` string."""
-        instance = super().__new__(cls, sim_id_str)
-        try:
-            i = sim_id_str.index("_")
-        except ValueError:
-            raise ValueError(f"Invalid sim_id format: {sim_id_str!r}") from None
-        met = sim_id_str[:i]
-        rest = sim_id_str[i + 1 :]
-        if len(rest) < 13 or rest[12] != "_":
-            raise ValueError(f"Invalid sim_id format: {sim_id_str!r}")
-        time_str = rest[:12]
-        location_id = rest[13:]
-        try:
-            time = dt.datetime(
-                int(time_str[:4]),
-                int(time_str[4:6]),
-                int(time_str[6:8]),
-                int(time_str[8:10]),
-                int(time_str[10:12]),
-            )
-        except (ValueError, TypeError):
-            raise ValueError(
-                f"Cannot parse timestamp from sim_id: {sim_id_str!r}"
-            ) from None
-        instance.met = met
-        instance.time = time
-        instance.location_id = location_id
+        if not id_str.count("_") >= 3:
+            raise ValueError(f"Invalid sim_id format: {id_str!r}")
+        instance = super().__new__(cls, id_str)
+        met_str, recep_str = id_str.split("_", 1)
+        receptor_id = ReceptorID(recep_str)
+
+        instance.met = MetID(met_str)
+        instance.receptor = receptor_id
+        instance.time = receptor_id.time
+        instance.location = receptor_id.location
         return instance
 
     @classmethod
     def from_parts(
         cls,
-        met: str,
-        receptor: "Receptor | None" = None,
-        time: "dt.datetime | str | None" = None,
-        location_id: "str | None" = None,
-    ) -> "SimID":
+        met: MetID | str,
+        receptor: Receptor,
+    ) -> SimID:
         """Build a :class:`SimID` from constituent parts.
 
         Parameters
         ----------
-        met : str
-            Name of the meteorology configuration (e.g. ``'hrrr'``).
-        receptor : Receptor, optional
+        met : MetID | str
+            ID of the meteorology configuration (e.g. ``'hrrr'``).
+            Cannot contain underscores.
+        receptor : Receptor
             Source receptor; provides the release time and location ID.
-        time : pd.Timestamp or str, optional
-            Release time; overrides ``receptor.time`` when provided.
-        location_id : str, optional
-            Location ID; overrides ``receptor.location_id`` when provided.
 
         Returns
         -------
         SimID
         """
-        if receptor is not None:
-            if time is None:
-                time = receptor.time
-            if location_id is None:
-                location_id = receptor.location_id
-        if not met:
-            raise ValueError("'met' is required")
-        if time is None or location_id is None:
-            raise ValueError("Must provide 'receptor' or both 'time' and 'location_id'")
-        # dt.datetime (the common path from receptor.time) can format directly;
-        # strings and other types go through pd.Timestamp for parsing.
-        if isinstance(time, dt.datetime):
-            time_dt: dt.datetime = time
-        else:
-            ts = pd.Timestamp(time)
-            if ts is pd.NaT:
-                raise ValueError("'time' must be a valid timestamp")
-            time_dt = cast(dt.datetime, ts.to_pydatetime())
-        return cls(f"{met}_{time_dt.strftime('%Y%m%d%H%M')}_{location_id}")
+        return cls(f"{met}_{receptor.id}")
 
     def __fspath__(self) -> str:
         """Allow Path joins like ``base / sim_id`` without manual str() conversion."""
@@ -154,17 +108,17 @@ class Simulation:
         params: STILTParams,
         directory: str | Path | None = None,
         exe_dir: Path | None = None,
-        artifact_store: ArtifactStore | None = None,
+        store: Store | None = None,
     ):
         if directory is None:
             scratch_dir = resolve_directory(prefix="pystilt_")
-            directory = scratch_dir / SimID.from_parts(meteorology.name, receptor)
+            directory = scratch_dir / SimID.from_parts(meteorology.id, receptor)
         self.directory = resolve_directory(directory)
         self.meteorology = meteorology
         self.receptor = receptor
         self.params = params
         self._exe_dir = exe_dir
-        self._artifact_store = artifact_store
+        self._store = store
 
         # The sim ID is derived from the directory name
         # This dientangles the sim ID from the receptor and met,
@@ -172,6 +126,7 @@ class Simulation:
         # The Model object in coordination with the service workers
         # then assigns the met_YYYYMMDDHHMM_location_id format to the sim directory name.
         self.id = SimID(self.directory.name)
+        self.files = SimulationFiles(self.directory, str(self.id))
 
         self.directory.mkdir(parents=True, exist_ok=True)
 
@@ -186,42 +141,42 @@ class Simulation:
     @property
     def met_dir(self) -> Path:
         """Compute-local meteorology staging directory."""
-        return simulation_met_path(self.directory, self.id)
+        return self.files.met_dir
 
     @property
     def log_path(self) -> Path:
         """Compute-local HYSPLIT log path."""
-        return simulation_log_path(self.directory, self.id)
+        return self.files.log_path
 
     @property
     def trajectories_path(self) -> Path:
         """Compute-local trajectory parquet path."""
-        return trajectory_path(self.directory, self.id)
+        return self.files.trajectory_path
 
     @property
     def error_trajectories_path(self) -> Path:
         """Compute-local error-trajectory parquet path."""
-        return error_trajectory_path(self.directory, self.id)
+        return self.files.error_trajectory_path
 
     def footprint_path(self, name: str = "") -> Path:
         """Compute-local footprint path for one footprint name."""
-        return footprint_path(self.directory, name, sim_id=self.id)
+        return self.files.footprint_path(name)
 
-    def _artifact_key(self, path: Path) -> str:
-        """Return the canonical storage key for a simulation artifact path."""
-        return simulation_artifact_key(str(self.id), path.name)
+    def storage_key(self, path: Path) -> str:
+        """Return the canonical storage key for one simulation output path."""
+        return self.files.key(path)
 
-    def _artifact_path(self, path: Path) -> Path | None:
-        """Return a local path to an artifact from disk or the artifact store."""
+    def resolve_output(self, path: Path) -> Path | None:
+        """Return a local path to one output from disk or the durable store."""
         if path.exists():
             return path
-        key = self._artifact_key(path)
-        if self._artifact_store is not None and self._artifact_store.exists(key):
-            return self._artifact_store.local_path(key)
+        key = self.storage_key(path)
+        if self._store is not None and self._store.exists(key):
+            return self._store.local_path(key)
         return None
 
     @property
-    def plot(self) -> "SimulationPlotAccessor":
+    def plot(self) -> SimulationPlotAccessor:
         """Plotting namespace (e.g. ``sim.plot.map()``)."""
         if self._plot is None:
             from stilt.visualization import SimulationPlotAccessor
@@ -265,9 +220,9 @@ class Simulation:
             ``'failed:<reason>'`` string if HYSPLIT failed, or ``None`` if the
             simulation directory does not yet exist.
         """
-        if self._artifact_path(self.trajectories_path) is not None:
+        if self.resolve_output(self.trajectories_path) is not None:
             return "complete"
-        log_path = self._artifact_path(self.log_path)
+        log_path = self.resolve_output(self.log_path)
         if log_path is None:
             return None
         return f"failed:{identify_failure_reason(log_path.parent)}"
@@ -316,14 +271,14 @@ class Simulation:
         FileNotFoundError
             If the log has not been written yet.
         """
-        log_path = self._artifact_path(self.log_path)
+        log_path = self.resolve_output(self.log_path)
         if log_path is None:
             raise FileNotFoundError(f"Log file not found: {self.log_path}")
         return log_path.read_text()
 
     # -- Footprints ------------------------------------------------------------
 
-    def get_footprint(self, name: str) -> "Footprint | None":
+    def get_footprint(self, name: str) -> Footprint | None:
         """Return a named footprint, loading from disk if not already cached.
 
         Parameters
@@ -337,7 +292,7 @@ class Simulation:
             The footprint if the file exists on disk, otherwise ``None``.
         """
         if name not in self._footprints:
-            path = self._artifact_path(self.footprint_path(name))
+            path = self.resolve_output(self.footprint_path(name))
             if path is None:
                 return None
             self._footprints[name] = Footprint.from_netcdf(path)
@@ -367,7 +322,7 @@ class Simulation:
         if rm_dat is None:
             rm_dat = self.params.rm_dat
 
-        runner = HYSPLITRunner(
+        runner = HYSPLITDriver(
             directory=self.directory,
             receptor=self.receptor,
             params=self.params,
@@ -413,7 +368,7 @@ class Simulation:
         transforms: Sequence[ParticleTransform] | None = None,
         transform_context: ParticleTransformContext | None = None,
         **kwargs,
-    ) -> "Footprint | None":
+    ) -> Footprint | None:
         """Compute a named footprint and store it in the footprint cache.
 
         Parameters
@@ -496,7 +451,7 @@ class Simulation:
         Trajectories or None
         """
         if not self._trajectories:
-            traj_path = self._artifact_path(self.trajectories_path)
+            traj_path = self.resolve_output(self.trajectories_path)
             if traj_path is not None:
                 self._trajectories = Trajectories.from_parquet(traj_path)
             else:
@@ -516,7 +471,7 @@ class Simulation:
         Trajectories or None
         """
         if not self._error_trajectories:
-            error_path = self._artifact_path(self.error_trajectories_path)
+            error_path = self.resolve_output(self.error_trajectories_path)
             if error_path is not None:
                 self._error_trajectories = Trajectories.from_parquet(error_path)
         return self._error_trajectories

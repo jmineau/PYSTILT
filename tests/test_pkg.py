@@ -19,3 +19,28 @@ def test_email():
     """Test that email is defined."""
     assert hasattr(stilt, "__email__")
     assert isinstance(stilt.__email__, str)
+
+
+def test_documented_top_level_symbols_are_importable():
+    """The curated top-level API matches the core reference surface."""
+    expected = [
+        "Bounds",
+        "Footprint",
+        "FootprintConfig",
+        "Grid",
+        "LocationID",
+        "MetArchive",
+        "MetConfig",
+        "MetStream",
+        "Model",
+        "ModelConfig",
+        "Receptor",
+        "ReceptorID",
+        "RuntimeSettings",
+        "SimID",
+        "Simulation",
+        "Trajectories",
+        "read_receptors",
+    ]
+    for name in expected:
+        assert hasattr(stilt, name), name

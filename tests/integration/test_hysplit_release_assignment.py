@@ -8,7 +8,7 @@ from pathlib import Path
 import numpy as np
 
 from stilt.config import STILTParams
-from stilt.hysplit.runner import HYSPLITRunner
+from stilt.hysplit.driver import HYSPLITDriver
 from stilt.meteorology import MetStream
 from stilt.receptor import Receptor
 
@@ -62,7 +62,7 @@ def test_hysplit_multipoint_release_points_follow_control_order(tmp_path, met_di
         file_tres="6h",
     ).required_files(r_time=receptor.time, n_hours=params.n_hours)
 
-    runner = HYSPLITRunner(
+    runner = HYSPLITDriver(
         receptor=receptor,
         params=params,
         met_files=met_files,
@@ -126,7 +126,7 @@ def test_hysplit_multipoint_release_points_follow_control_order_nondivisible(
         file_tres="6h",
     ).required_files(r_time=receptor.time, n_hours=params.n_hours)
 
-    runner = HYSPLITRunner(
+    runner = HYSPLITDriver(
         receptor=receptor,
         params=params,
         met_files=met_files,
@@ -177,7 +177,7 @@ def test_hysplit_column_release_spans_vertical_line_without_endpoint_chunking(
         file_tres="6h",
     ).required_files(r_time=receptor.time, n_hours=params.n_hours)
 
-    runner = HYSPLITRunner(
+    runner = HYSPLITDriver(
         receptor=receptor,
         params=params,
         met_files=met_files,
@@ -191,9 +191,16 @@ def test_hysplit_column_release_spans_vertical_line_without_endpoint_chunking(
     assert (
         release_rows["zagl"].between(receptor.bottom - 50.0, receptor.top + 50.0).all()
     )
-    assert release_rows["zagl"].nunique() == params.numpar
-    corr = np.corrcoef(
-        release_rows["indx"].to_numpy(dtype=float),
-        release_rows["zagl"].to_numpy(dtype=float),
-    )[0, 1]
-    assert float(corr) > 0.98
+    heights = release_rows["zagl"].to_numpy(dtype=float)
+    assert len(np.unique(heights)) == params.numpar
+    span = receptor.top - receptor.bottom
+    sorted_heights = np.sort(heights)
+    central_band = heights[
+        (heights >= receptor.bottom + 0.25 * span)
+        & (heights <= receptor.top - 0.25 * span)
+    ]
+
+    # A true column release should populate the interior of the requested
+    # vertical span rather than splitting into two endpoint-heavy clusters.
+    assert len(central_band) >= params.numpar // 2
+    assert float(np.max(np.diff(sorted_heights))) < 0.35 * span

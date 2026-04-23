@@ -1,10 +1,10 @@
+:orphan:
+
 Advanced Topics
 ===============
 
-.. toctree::
-   :maxdepth: 2
+This landing page is kept only for direct links. The active navigation for
+these topics now lives under :doc:`../guides/index`.
 
-   column_receptors
-   footprint_aggregation
-   custom_hooks
-   error_trajectories
+- :doc:`observations`
+- :doc:`durable_state`

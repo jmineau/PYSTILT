@@ -16,7 +16,7 @@ import pandas as pd
 import xarray as xr
 
 from stilt.config import MetConfig
-from stilt.errors import FailureReason
+from stilt.index import OutputSummary
 from stilt.model import Model
 from stilt.simulation import SimID
 
@@ -29,6 +29,25 @@ from .conftest import integration
 
 def _sim_id(receptor, met: str = "hrrr") -> str:
     return str(SimID.from_parts(met, receptor))
+
+
+def _state_call(model: Model, method: str, *args, **kwargs):
+    if method == "output_summaries":
+        return model.index.summaries(*args, **kwargs)
+    if method == "footprint_complete":
+        sim_id, name = args
+        summaries = model.index.summaries([sim_id])
+        return summaries.get(sim_id, OutputSummary()).footprint_complete(name)
+    if method == "trajectory_status":
+        [sim_id] = args
+        summaries = model.index.summaries([sim_id])
+        summary = summaries.get(sim_id, OutputSummary())
+        if summary.traj_present:
+            return "complete"
+        if summary.error_traj_present or summary.log_present:
+            return "failed"
+        return "pending"
+    return getattr(model.index, method)(*args, **kwargs)
 
 
 # ---------------------------------------------------------------------------
@@ -47,12 +66,13 @@ def test_trajectory(tmp_path, wbb_receptor, traj_only_config):
     model.run()
 
     sid = _sim_id(wbb_receptor)
-    sim_dir = model.directory / "simulations" / "by-id" / sid
+    sim_dir = model.layout.project_dir / "simulations" / "by-id" / sid
 
     parquet_files = list(sim_dir.glob("*.parquet"))
     assert parquet_files, f"No parquet found in {sim_dir}"
     assert len(pd.read_parquet(parquet_files[0])) > 0, "Trajectory parquet is empty"
-    assert sid in model.repository.completed_trajectories()
+    assert sid in _state_call(model, "output_summaries", [sid])
+    assert _state_call(model, "trajectory_status", sid) == "complete"
 
     log_file = sim_dir / "stilt.log"
     assert log_file.exists(), "stilt.log missing"
@@ -77,7 +97,7 @@ def test_footprint(tmp_path, wbb_receptor, wbb_config):
     model.run()
 
     sid = _sim_id(wbb_receptor)
-    sim_dir = model.directory / "simulations" / "by-id" / sid
+    sim_dir = model.layout.project_dir / "simulations" / "by-id" / sid
 
     foot_files = list(sim_dir.glob("*_foot.nc"))
     assert foot_files, f"No footprint NetCDF found in {sim_dir}"
@@ -86,7 +106,7 @@ def test_footprint(tmp_path, wbb_receptor, wbb_config):
     assert {"time", "lat", "lon"} <= set(ds.dims), f"Missing dims in {set(ds.dims)}"
     ds.close()
 
-    assert model.repository.footprint_completed(sid, "default")
+    assert _state_call(model, "footprint_complete", sid, "default")
 
 
 # ---------------------------------------------------------------------------
@@ -119,14 +139,7 @@ def test_failure_missing_met(tmp_path, wbb_receptor, traj_only_config):
     model.run()
 
     sid = _sim_id(wbb_receptor)
-    assert sid not in model.repository.completed_trajectories()
-
-    df = model.repository.to_dataframe()
-    assert sid in df.index
-    reason = df.loc[sid, "traj_status"]
-    assert reason in ("failed", FailureReason.MISSING_MET_FILES), (
-        f"Unexpected status: {reason!r}"
-    )
+    assert _state_call(model, "trajectory_status", sid) == "failed"
 
 
 # ---------------------------------------------------------------------------
@@ -145,9 +158,9 @@ def test_idempotency(tmp_path, wbb_receptor, traj_only_config):
 
     model.run()
     sid = _sim_id(wbb_receptor)
-    assert sid in model.repository.completed_trajectories()
+    assert _state_call(model, "trajectory_status", sid) == "complete"
 
-    sim_dir = model.directory / "simulations" / "by-id" / sid
+    sim_dir = model.layout.project_dir / "simulations" / "by-id" / sid
     parquet = next(sim_dir.glob("*.parquet"))
     mtime_before = parquet.stat().st_mtime
 
@@ -175,10 +188,10 @@ def test_column(tmp_path, column_receptor, wbb_config):
     sid = _sim_id(column_receptor)
     assert sid.endswith("_X"), f"Expected column sim_id to end '_X', got {sid!r}"
 
-    sim_dir = model.directory / "simulations" / "by-id" / sid
+    sim_dir = model.layout.project_dir / "simulations" / "by-id" / sid
     assert list(sim_dir.glob("*.parquet")), "No trajectory parquet"
     assert list(sim_dir.glob("*_foot.nc")), "No footprint NetCDF"
-    assert sid in model.repository.completed_trajectories()
+    assert _state_call(model, "trajectory_status", sid) == "complete"
 
 
 # ---------------------------------------------------------------------------
@@ -201,10 +214,10 @@ def test_multipoint(tmp_path, multipoint_receptor, multipoint_config):
         f"Expected multipoint sim_id to contain 'multi_', got {sid!r}"
     )
 
-    sim_dir = model.directory / "simulations" / "by-id" / sid
+    sim_dir = model.layout.project_dir / "simulations" / "by-id" / sid
     assert list(sim_dir.glob("*.parquet")), "No trajectory parquet"
     assert list(sim_dir.glob("*_foot.nc")), "No footprint NetCDF"
-    assert sid in model.repository.completed_trajectories()
+    assert _state_call(model, "trajectory_status", sid) == "complete"
 
 
 # ---------------------------------------------------------------------------
@@ -223,12 +236,12 @@ def test_multifoot(tmp_path, wbb_receptor, multifoot_config):
     model.run()
 
     sid = _sim_id(wbb_receptor)
-    sim_dir = model.directory / "simulations" / "by-id" / sid
+    sim_dir = model.layout.project_dir / "simulations" / "by-id" / sid
 
     assert list(sim_dir.glob("*_fine_foot.nc")), "No 'fine' footprint NetCDF"
     assert list(sim_dir.glob("*_coarse_foot.nc")), "No 'coarse' footprint NetCDF"
-    assert model.repository.footprint_completed(sid, "fine")
-    assert model.repository.footprint_completed(sid, "coarse")
+    assert _state_call(model, "footprint_complete", sid, "fine")
+    assert _state_call(model, "footprint_complete", sid, "coarse")
 
 
 # ---------------------------------------------------------------------------

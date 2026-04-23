@@ -52,7 +52,7 @@ def test_observation_normalizes_timestamp_and_keeps_geometry():
     assert obs.operator is operator
 
 
-def test_scene_batch_id_defaults_to_scene_id():
+def test_scene_exposes_observation_ids():
     obs = Observation(
         sensor="tccon",
         species="xco2",
@@ -63,7 +63,6 @@ def test_scene_batch_id_defaults_to_scene_id():
     )
     scene = Scene(id="my-scene", sensor="tccon", observations=[obs])
 
-    assert scene.batch_id == "my-scene"
     assert scene.observation_ids == ["obs-1"]
 
 

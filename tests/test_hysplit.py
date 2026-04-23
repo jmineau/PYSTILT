@@ -6,7 +6,8 @@ import pytest
 
 from stilt.config import STILTParams
 from stilt.errors import HYSPLITFailureError, NoParticleOutputError
-from stilt.hysplit import ControlFile, HYSPLITRunner
+from stilt.hysplit import HYSPLITDriver
+from stilt.hysplit.control import ControlFile
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -138,14 +139,14 @@ def _write_particle_dat(path: Path, rows: list[list[float]]) -> None:
     path.write_text("\n".join(lines) + "\n")
 
 
-def _make_runner(tmp_path, point_receptor, rm_dat_default=True) -> HYSPLITRunner:
+def _make_runner(tmp_path, point_receptor, rm_dat_default=True) -> HYSPLITDriver:
     params = STILTParams(
         n_hours=-24,
         numpar=10,
         rm_dat=rm_dat_default,
         varsiwant=["time", "indx", "long", "lati", "zagl", "foot"],
     )
-    return HYSPLITRunner(
+    return HYSPLITDriver(
         directory=tmp_path,
         receptor=point_receptor,
         params=params,
@@ -207,7 +208,7 @@ def test_run_persists_fortran_runtime_output_on_failure(tmp_path, point_receptor
 
 
 # ---------------------------------------------------------------------------
-# HYSPLITRunner._write_setup
+# HYSPLITDriver._write_setup
 # ---------------------------------------------------------------------------
 
 
@@ -224,7 +225,7 @@ def test_write_setup_creates_cfg(tmp_path, point_receptor):
 
 
 def test_write_setup_includes_seed_when_configured(tmp_path, point_receptor):
-    runner = HYSPLITRunner(
+    runner = HYSPLITDriver(
         directory=tmp_path,
         receptor=point_receptor,
         params=STILTParams(seed=17),
@@ -282,7 +283,7 @@ def test_write_setup_rejects_conflicting_explicit_kmsl(tmp_path, point_receptor)
         altitude=1500.0,
         altitude_ref="msl",
     )
-    runner = HYSPLITRunner(
+    runner = HYSPLITDriver(
         directory=tmp_path,
         receptor=receptor,
         params=params,
@@ -295,11 +296,11 @@ def test_write_setup_rejects_conflicting_explicit_kmsl(tmp_path, point_receptor)
 
 
 # ---------------------------------------------------------------------------
-# HYSPLITRunner._write_winderr / _write_zierr
+# HYSPLITDriver._write_winderr / _write_zierr
 # ---------------------------------------------------------------------------
 
 
-def _make_runner_with_xyerr(tmp_path, point_receptor) -> HYSPLITRunner:
+def _make_runner_with_xyerr(tmp_path, point_receptor) -> HYSPLITDriver:
     params = STILTParams(
         n_hours=-24,
         numpar=10,
@@ -309,7 +310,7 @@ def _make_runner_with_xyerr(tmp_path, point_receptor) -> HYSPLITRunner:
         zcoruverr=500.0,
         horcoruverr=40.0,
     )
-    return HYSPLITRunner(
+    return HYSPLITDriver(
         directory=tmp_path,
         receptor=point_receptor,
         params=params,
@@ -318,7 +319,7 @@ def _make_runner_with_xyerr(tmp_path, point_receptor) -> HYSPLITRunner:
     )
 
 
-def _make_runner_with_zierr(tmp_path, point_receptor) -> HYSPLITRunner:
+def _make_runner_with_zierr(tmp_path, point_receptor) -> HYSPLITDriver:
     params = STILTParams(
         n_hours=-24,
         numpar=10,
@@ -327,7 +328,7 @@ def _make_runner_with_zierr(tmp_path, point_receptor) -> HYSPLITRunner:
         tlzierr=60.0,
         horcorzierr=40.0,
     )
-    return HYSPLITRunner(
+    return HYSPLITDriver(
         directory=tmp_path,
         receptor=point_receptor,
         params=params,
@@ -376,7 +377,7 @@ def test_write_zicontrol_creates_file_from_shared_vector(tmp_path, point_recepto
         zicontroltf=1,
         ziscale=[0.8, 0.8, 0.9],
     )
-    runner = HYSPLITRunner(
+    runner = HYSPLITDriver(
         directory=tmp_path,
         receptor=point_receptor,
         params=params,
@@ -399,7 +400,7 @@ def test_write_zicontrol_expands_scalar_to_run_length(tmp_path, point_receptor):
         zicontroltf=1,
         ziscale=0.8,
     )
-    runner = HYSPLITRunner(
+    runner = HYSPLITDriver(
         directory=tmp_path,
         receptor=point_receptor,
         params=params,
@@ -421,7 +422,7 @@ def test_write_zicontrol_rejects_multiple_nested_vectors(tmp_path, point_recepto
         zicontroltf=1,
         ziscale=[[0.8, 0.8], [0.9, 0.9]],
     )
-    runner = HYSPLITRunner(
+    runner = HYSPLITDriver(
         directory=tmp_path,
         receptor=point_receptor,
         params=params,
@@ -434,7 +435,7 @@ def test_write_zicontrol_rejects_multiple_nested_vectors(tmp_path, point_recepto
 
 
 # ---------------------------------------------------------------------------
-# HYSPLITRunner.prepare()
+# HYSPLITDriver.prepare()
 # ---------------------------------------------------------------------------
 
 
@@ -450,7 +451,7 @@ def test_prepare_writes_control_and_setup(tmp_path, point_receptor):
         numpar=10,
         varsiwant=["time", "indx", "long", "lati", "zagl", "foot"],
     )
-    runner = HYSPLITRunner(
+    runner = HYSPLITDriver(
         directory=sim_dir,
         receptor=point_receptor,
         params=params,
@@ -477,7 +478,7 @@ def test_prepare_writes_zicontrol_when_enabled(tmp_path, point_receptor):
         zicontroltf=1,
         ziscale=[1.0] * 24,
     )
-    runner = HYSPLITRunner(
+    runner = HYSPLITDriver(
         directory=sim_dir,
         receptor=point_receptor,
         params=params,

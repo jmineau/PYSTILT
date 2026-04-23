@@ -1,6 +1,7 @@
 """Tests for stilt.meteorology."""
 
 import datetime as dt
+import logging
 from pathlib import Path
 
 import pytest
@@ -15,7 +16,7 @@ from stilt.meteorology import MetArchive, MetStream
 
 def _make_met(tmp_path: Path, file_format: str, tres: str, n_min: int = 1) -> MetStream:
     return MetStream(
-        name="hrrr",
+        met_id="hrrr",
         directory=tmp_path,
         file_format=file_format,
         file_tres=tres,
@@ -58,6 +59,29 @@ def test_met_archive_stage_files_symlinks_or_copies(tmp_path):
     assert staged == [staged_dir / src.name]
     assert staged[0].exists()
     assert staged[0].read_text() == "met"
+
+
+def test_met_archive_stage_files_deduplicates_duplicate_basenames(tmp_path, caplog):
+    source_dir = tmp_path / "archive"
+    staged_dir = tmp_path / "compute" / "met"
+    first_dir = source_dir / "a"
+    second_dir = source_dir / "b"
+    first_dir.mkdir(parents=True)
+    second_dir.mkdir(parents=True)
+    first = first_dir / "20230101_12"
+    second = second_dir / "20230101_12"
+    first.write_text("first")
+    second.write_text("second")
+
+    archive = MetArchive()
+    with caplog.at_level(logging.WARNING):
+        staged = archive.stage_files([first, second], staged_dir)
+
+    assert staged == [staged_dir / first.name]
+    assert staged[0].read_text() == "first"
+    assert "duplicate basename" in caplog.text
+    assert str(first.resolve()) in caplog.text
+    assert str(second.resolve()) in caplog.text
 
 
 # ---------------------------------------------------------------------------
@@ -251,7 +275,7 @@ def test_met_stream_stage_files_for_simulation_uses_archive_root(tmp_path):
     source = _touch_files(met_dir, ["20230101_11", "20230101_12"])
 
     met = MetStream(
-        name="hrrr",
+        met_id="hrrr",
         directory="hrrr",
         file_format="%Y%m%d_%H",
         file_tres="1h",

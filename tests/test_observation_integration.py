@@ -19,7 +19,7 @@ def _minimal_config(tmp_path):
     )
 
 
-def test_point_sensor_scene_batch_id_bridges_into_model_submit(tmp_path):
+def test_point_sensor_scene_bridges_into_model_register_pending(tmp_path):
     sensor = PointSensor(name="tower", supported_species=("co2",))
     observations = [
         sensor.make_observation(
@@ -42,9 +42,8 @@ def test_point_sensor_scene_batch_id_bridges_into_model_submit(tmp_path):
     receptors = [sensor.build_receptor(obs) for obs in scene.observations]
 
     model = Model(project=tmp_path, config=_minimal_config(tmp_path))
-    sim_ids = model.submit(receptors=receptors, batch_id=scene.batch_id)
+    sim_ids = model.register_pending(receptors=receptors, scene_id=scene.id)
 
-    assert scene.batch_id == "tower-20230101120000"
+    assert scene.id == "tower-20230101120000"
     assert len(sim_ids) == 2
-    assert set(model.get_simulation_ids()) == set(sim_ids)
-    assert model.repository.batch_progress(scene.batch_id) == (0, 2)
+    assert set(model.simulations.ids()) == set(sim_ids)

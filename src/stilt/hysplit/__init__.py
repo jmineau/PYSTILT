@@ -1,7 +1,5 @@
-"""HYSPLIT binary interface: control file, namelist, and runner."""
+"""Public HYSPLIT driver surface."""
 
-from .control import ControlFile
-from .namelist import NameList
-from .runner import HYSPLITResult, HYSPLITRunner
+from .driver import HYSPLITDriver
 
-__all__ = ["ControlFile", "HYSPLITResult", "HYSPLITRunner", "NameList"]
+__all__ = ["HYSPLITDriver"]

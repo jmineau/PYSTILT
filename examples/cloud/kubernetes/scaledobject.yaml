@@ -16,15 +16,13 @@ spec:
         query: >-
           SELECT COUNT(*) FROM simulations AS s
           LEFT JOIN artifact_index AS ai ON ai.sim_id = s.sim_id
-          LEFT JOIN claims AS c ON c.sim_id = s.sim_id AND c.expires_at >= NOW()
           LEFT JOIN LATERAL (
             SELECT terminal FROM attempts AS a
             WHERE a.sim_id = s.sim_id
             ORDER BY a.started_at DESC, a.attempt_id DESC
             LIMIT 1
           ) AS latest ON TRUE
-          WHERE c.sim_id IS NULL
-            AND COALESCE(latest.terminal, FALSE) = FALSE
+          WHERE COALESCE(latest.terminal, FALSE) = FALSE
             AND NOT (
               COALESCE(ai.traj_present, FALSE) = TRUE
               AND NOT EXISTS (

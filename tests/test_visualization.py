@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import uuid
 
 import matplotlib
 import numpy as np
@@ -372,28 +373,37 @@ def test_simulation_map_show_receptor_false(receptor):
 def test_model_availability_empty():
     from unittest.mock import MagicMock
 
+    class _FakeState:
+        def sim_ids(self):
+            return []
+
     model = MagicMock()
-    model.repository.to_dataframe.return_value = pd.DataFrame()
+    model.index = _FakeState()
 
     ax = ModelPlotAccessor(model).availability()
     assert ax is not None
 
 
 def test_model_availability_with_sims(tmp_path):
+    from stilt.index.sqlite import SqliteIndex
     from stilt.model import Model
-    from stilt.repositories import SQLiteRepository
     from stilt.simulation import SimID
 
-    repo = SQLiteRepository.in_memory(tmp_path)
+    repo = SqliteIndex(
+        tmp_path,
+        db_path=f"file:{uuid.uuid4().hex}?mode=memory&cache=shared",
+        uri=True,
+    )
     r = Receptor(
         time=dt.datetime(2023, 1, 1, 12),
         longitude=-111.85,
         latitude=40.77,
         altitude=5.0,
     )
-    repo.register_many([(str(SimID.from_parts("hrrr", r)), r)])
+    repo.register([(str(SimID.from_parts("hrrr", r)), r)])
 
-    model = Model(project=tmp_path, repository=repo)
+    model = Model(project=tmp_path)
+    model._index = repo
     ax = model.plot.availability()
     assert ax is not None
 
@@ -401,9 +411,13 @@ def test_model_availability_with_sims(tmp_path):
 def test_model_availability_reuses_ax():
     from unittest.mock import MagicMock
 
+    class _FakeState:
+        def sim_ids(self):
+            return []
+
     _, existing = plt.subplots()
     model = MagicMock()
-    model.repository.to_dataframe.return_value = pd.DataFrame()
+    model.index = _FakeState()
 
     ax = ModelPlotAccessor(model).availability(ax=existing)
     assert ax is existing

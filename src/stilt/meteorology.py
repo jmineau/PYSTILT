@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import shutil
 from pathlib import Path
 from typing import cast
@@ -9,6 +10,19 @@ from typing import cast
 import pandas as pd
 
 from stilt.errors import ConfigValidationError, MeteorologyError
+
+logger = logging.getLogger(__name__)
+
+
+class MetID(str):
+    """Identifier for one meteorology stream, used to key receptor footprints."""
+
+    def __new__(cls, name: str):
+        if "_" in name:
+            raise ValueError(
+                "MetID cannot contain underscores, which are reserved for delimiting sim_id components."
+            )
+        return super().__new__(cls, name)
 
 
 class MetArchive:
@@ -30,19 +44,38 @@ class MetArchive:
         target.mkdir(parents=True, exist_ok=True)
 
         staged: list[Path] = []
+        staged_sources: dict[Path, Path] = {}
         for src in files:
             src = Path(src)
+            resolved_src = src.resolve()
             if src.parent == target:
+                existing = staged_sources.get(src)
+                if existing is not None:
+                    continue
+                staged_sources[src] = resolved_src
                 staged.append(src)
                 continue
 
             dst = target / src.name
+            existing = staged_sources.get(dst)
+            if existing is not None:
+                if existing != resolved_src:
+                    logger.warning(
+                        "met archive has duplicate basename %s at %s and %s; staging %s",
+                        src.name,
+                        existing,
+                        resolved_src,
+                        existing,
+                    )
+                continue
+
+            staged_sources[dst] = resolved_src
             if dst.exists() or dst.is_symlink():
                 staged.append(dst)
                 continue
 
             try:
-                dst.symlink_to(src.resolve())
+                dst.symlink_to(resolved_src)
             except OSError:
                 shutil.copy2(src, dst)
             staged.append(dst)
@@ -54,7 +87,7 @@ class MetStream:
 
     def __init__(
         self,
-        name: str,
+        met_id: MetID | str,
         directory: Path | str,
         file_format: str,
         file_tres: pd.Timedelta | str,
@@ -65,7 +98,7 @@ class MetStream:
         subgrid_levels: int | None = None,
         archive: MetArchive | None = None,
     ):
-        self.name = name
+        self.id = MetID(met_id)
         self.archive = archive or MetArchive()
         self.directory = self.archive.resolve_directory(directory)
         self.file_format = file_format

@@ -39,6 +39,90 @@ def _parse_time(time):
     return pd.to_datetime(time).to_pydatetime()
 
 
+class LocationID(str):
+    """Unique identifier for a receptor's spatial location.
+
+    For point receptors: 'lon_lat_alt' (e.g. '-120.5_35.2_100').
+    For column receptors: 'lon_lat_X' (e.g. '-120.5_35.2_X').
+    For multipoint receptors: 'multi_{hash}' where {hash} is a SHA-256 hash of the sorted coordinates.
+    """
+
+    @classmethod
+    def from_receptor(cls, receptor: Receptor) -> LocationID:
+        """Create a LocationID from a Receptor instance."""
+        if receptor._kind == "point":
+            x = _format_coord(receptor.longitudes[0])
+            y = _format_coord(receptor.latitudes[0])
+            z = _format_coord(receptor.altitudes[0])
+            return cls(f"{x}_{y}_{z}")
+        elif receptor._kind == "column":
+            x = _format_coord(receptor.longitudes[0])
+            y = _format_coord(receptor.latitudes[0])
+            return cls(f"{x}_{y}_X")
+        else:
+            # Multipoint: SHA-256 of canonical JSON (sorted by lon, lat, altitude).
+            # Matches R-STILT implementation in simulation_step.r.
+            pts_sorted = sorted(
+                zip(
+                    receptor.longitudes,
+                    receptor.latitudes,
+                    receptor.altitudes,
+                    strict=False,
+                )
+            )
+            canonical = json.dumps(
+                [
+                    [round(float(lon), 5), round(float(lat), 5), int(altitude)]
+                    for lon, lat, altitude in pts_sorted
+                ],
+                separators=(",", ":"),
+            )
+            hash_str = hashlib.sha256(canonical.encode()).hexdigest()[:10]
+            return cls(f"multi_{hash_str}")
+
+
+class ReceptorID(str):
+    """
+    Unique identifier for a receptor, composed of timestamp and location ID.
+
+    Format: '{YYYYMMDDHHMM}_{location_id}', where location_id is either:
+      - 'lon_lat_alt' for point receptors
+      - 'lon_lat_X' for column receptors
+      - 'multi_{hash}' for multipoint receptors (SHA-256 hash of sorted coordinates)
+    """
+
+    time: dt.datetime
+    location: LocationID
+
+    def __new__(cls, id_str: str):
+        if "_" not in id_str:
+            raise ValueError(
+                "ReceptorID must be in format '{YYYYMMDDHHMM}_{location_id}'"
+            )
+        instance = super().__new__(cls, id_str)
+        time_str, location_id = id_str.split("_", 1)
+        time = dt.datetime(
+            int(time_str[0:4]),  # year
+            int(time_str[4:6]),  # month
+            int(time_str[6:8]),  # day
+            int(time_str[8:10]),  # hour
+            int(time_str[10:12]),  # minute
+        )
+        instance.time = time
+        instance.location = LocationID(location_id)
+        return instance
+
+    @classmethod
+    def from_receptor(cls, receptor: Receptor) -> ReceptorID:
+        """Create a ReceptorID from a Receptor instance."""
+        return cls.from_parts(receptor.time, LocationID.from_receptor(receptor))
+
+    @classmethod
+    def from_parts(cls, time: dt.datetime, location_id: LocationID) -> ReceptorID:
+        """Create a ReceptorID from separate time and location_id components."""
+        return cls(f"{time:%Y%m%d%H%M}_{location_id}")
+
+
 class Receptor:
     """A STILT receptor: a spatial location associated with a timestamp.
 
@@ -134,42 +218,9 @@ class Receptor:
         return self._kind
 
     @property
-    def timestr(self) -> str:
-        """Time in 'YYYYMMDDHHMM' format."""
-        return self.time.strftime("%Y%m%d%H%M")
-
-    @property
-    def location_id(self) -> str:
-        """Unique identifier for this receptor's spatial location."""
-        if self._kind == "point":
-            x = _format_coord(self.longitudes[0])
-            y = _format_coord(self.latitudes[0])
-            z = _format_coord(self.altitudes[0])
-            return f"{x}_{y}_{z}"
-        elif self._kind == "column":
-            x = _format_coord(self.longitudes[0])
-            y = _format_coord(self.latitudes[0])
-            return f"{x}_{y}_X"
-        else:
-            # Multipoint: SHA-256 of canonical JSON (sorted by lon, lat, altitude).
-            # Matches R-STILT implementation in simulation_step.r.
-            pts_sorted = sorted(
-                zip(self.longitudes, self.latitudes, self.altitudes, strict=False)
-            )
-            canonical = json.dumps(
-                [
-                    [round(float(lon), 5), round(float(lat), 5), int(altitude)]
-                    for lon, lat, altitude in pts_sorted
-                ],
-                separators=(",", ":"),
-            )
-            hash_str = hashlib.sha256(canonical.encode()).hexdigest()[:10]
-            return f"multi_{hash_str}"
-
-    @property
-    def id(self) -> str:
+    def id(self) -> ReceptorID:
         """Receptor identifier composed of timestamp and location ID."""
-        return f"{self.timestr}_{self.location_id}"
+        return ReceptorID.from_receptor(self)
 
     @property
     def geometry(self):

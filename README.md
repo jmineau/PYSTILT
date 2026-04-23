@@ -22,7 +22,9 @@ large batch runs, and streaming queue workers.
 - **One-off transport runs** for local analysis and notebooks:
   use `Model.run()` or `stilt run`.
 - **Queue-backed batch or service runs** for HPC/cloud execution:
-  use `Model.submit()`, `stilt.Service`, `stilt worker`, and `stilt serve`.
+  use `Model.register_pending()`, `stilt register`, `stilt pull-worker`, and
+  `stilt serve` with a PostgreSQL-backed queue index configured via
+  `PYSTILT_DB_URL`.
 - **Observation-driven workflows** for science-facing code:
   use `stilt.observations` to turn normalized observations into `Receptor`
   objects before feeding them into the same runtime.
@@ -37,7 +39,7 @@ large batch runs, and streaming queue workers.
 | Empty footprint | Treated as terminal success (`complete-empty`), not failure. |
 | Reruns | `skip_existing=True` avoids rework for already complete outputs; `skip_existing=False` forces rerun. |
 
-For details see the user guide pages on running and execution.
+For details see the guides on executors, Slurm, and Kubernetes.
 
 ## Installation
 
@@ -105,20 +107,23 @@ foot = sim.get_footprint("default")
 ## Quickstart: queue/service runtime
 
 ```bash
+# Queue workers require a PostgreSQL-backed queue index.
+export PYSTILT_DB_URL=postgresql://user:pass@host:5432/pystilt
+
 # Initialize project files (config.yaml and receptors.csv)
 stilt init ./my_project
 
 # Run with local workers (blocks until complete)
 stilt run ./my_project --backend local --n-workers 8
 
-# Register work without starting workers
-stilt submit ./my_project --batch-id daily_2026_04_13
+# Register one grouped scene submission
+stilt register ./my_project --scene-id daily_2026_04_13
 
 # Drain queue from worker processes (batch mode)
-stilt worker ./my_project --cpus 4
+stilt pull-worker ./my_project
 
 # Long-lived queue workers (streaming mode)
-stilt serve ./my_project --cpus 4
+stilt serve ./my_project
 
 # Check project status
 stilt status ./my_project
@@ -128,15 +133,16 @@ The same queue model is available in Python:
 
 ```python
 import stilt
+from stilt.execution import pull_simulations
 
-service = stilt.Service(project="./my_project")
-service.submit(batch_id="daily_2026_04_14")
-service.drain(cpus=4)   # batch mode
-# or: service.serve(cpus=4)  # long-lived worker
+model = stilt.Model(project="./my_project")
+model.register_pending(scene_id="daily_2026_04_14")
+pull_simulations(model, follow=False)  # batch mode
+print(model.status(scene_id="daily_2026_04_14"))
 ```
 
-In all modes, workers claim simulations from the repository and write terminal
-state directly back to the same queue model.
+In all modes, workers claim simulations from the PostgreSQL-backed index and
+write terminal state directly back to the same durable registry.
 
 ## Quickstart: observation layer
 
@@ -161,8 +167,8 @@ observations = [
 [scene] = sensor.group_scenes(observations)
 receptors = [sensor.build_receptor(obs) for obs in scene.observations]
 
-service = stilt.Service(project="./my_project")  # existing project config on disk
-service.submit(receptors=receptors, batch_id=scene.batch_id)
+model = stilt.Model(project="./my_project")  # existing project config on disk
+model.register_pending(receptors=receptors, scene_id=scene.id)
 ```
 
 Direct `Observation(...)` construction is still available when you already
@@ -176,7 +182,7 @@ This layer currently focuses on:
 - generic point/column sensor families
 - observation-to-receptor conversion
 
-See `docs/user_guide/observations.rst` for the intended workflow boundary.
+See `docs/advanced/observations.rst` for the intended workflow boundary.
 
 ## Declarative transforms
 
@@ -215,9 +221,8 @@ for sim in model.simulations.values():
     foot = sim.get_footprint("default")
 
 # Load footprints across all matching simulations
-footprints = model.get_footprints(
-    "default",
-    time_range=("2023-01-01", "2023-01-31"),
+footprints = model.footprints["default"].load(
+    time_range=("2023-01-01", "2023-01-31")
 )
 
 coords = [(-111.9, 40.7), (-111.8, 40.8)]
@@ -237,9 +242,9 @@ The model APIs treat it as a successful terminal outcome while skipping missing 
 ## Documentation map
 
 - `docs/getting_started/quickstart.rst`: first local run
-- `docs/user_guide/running.rst`: run semantics and queue workflows
-- `docs/user_guide/service.rst`: `stilt.Service` and Kubernetes helpers
-- `docs/user_guide/observations.rst`: observation/scenes/sensors/transforms
+- `docs/guides/executors.rst`: local, Slurm, and Kubernetes execution
+- `docs/guides/kubernetes.rst`: queue workers and Kubernetes manifests
+- `docs/reference/observations.rst`: observation/scenes/sensors/transforms
 - `examples/cloud/`: minimal Kubernetes deployment templates
 
 ## Documentation

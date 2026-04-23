@@ -6,7 +6,6 @@ import pandas as pd
 import pytest
 import xarray as xr
 
-from stilt.artifacts import FsspecArtifactStore
 from stilt.config import (
     FirstOrderLifetimeTransformSpec,
     FootprintConfig,
@@ -18,6 +17,7 @@ from stilt.errors import HYSPLITTimeoutError
 from stilt.footprint import Footprint
 from stilt.meteorology import MetArchive, MetStream
 from stilt.simulation import SimID, Simulation
+from stilt.storage import FsspecStore
 from stilt.trajectory import Trajectories
 
 
@@ -45,7 +45,7 @@ def _sim(
     tmp_path,
     point_receptor,
     met_kwargs=None,
-    artifact_store=None,
+    store=None,
     **param_overrides,
 ) -> Simulation:
     sid = str(SimID.from_parts("hrrr", point_receptor))
@@ -68,7 +68,7 @@ def _sim(
         receptor=point_receptor,
         params=_params(tmp_path, **param_overrides),
         meteorology=met,
-        artifact_store=artifact_store,
+        store=store,
     )
 
 
@@ -117,7 +117,7 @@ def test_simid_invalid_raises():
 
 def test_simid_from_receptor(point_receptor):
     sid = SimID.from_parts("hrrr", point_receptor)
-    assert sid.location_id == point_receptor.location_id
+    assert sid.location == point_receptor.id.location
     assert sid.met == "hrrr"
 
 
@@ -176,7 +176,7 @@ def test_simulation_status_complete_when_traj_present(point_receptor, tmp_path):
 
 def test_meteorology_requires_explicit_subgrid_path(point_receptor, tmp_path):
     with pytest.raises(
-        ValueError,
+        NotImplementedError,
         match="subgrid_enable is not yet implemented",
     ):
         _sim(tmp_path, point_receptor, met_kwargs={"subgrid_enable": True})
@@ -184,7 +184,7 @@ def test_meteorology_requires_explicit_subgrid_path(point_receptor, tmp_path):
 
 def test_meteorology_requires_bounds_when_subgrid_enabled(point_receptor, tmp_path):
     with pytest.raises(
-        ValueError,
+        NotImplementedError,
         match="subgrid_enable is not yet implemented",
     ):
         _sim(
@@ -262,7 +262,7 @@ def test_simulation_run_trajectories_uses_source_met_files_in_metadata(
             is_error=is_error,
         )
 
-    monkeypatch.setattr("stilt.simulation.HYSPLITRunner", _FakeRunner)
+    monkeypatch.setattr("stilt.simulation.HYSPLITDriver", _FakeRunner)
     monkeypatch.setattr(
         "stilt.simulation.Trajectories.from_particles", _fake_from_particles
     )
@@ -295,7 +295,7 @@ def test_run_trajectories_timeout_maps_to_domain_error(
         def execute(self, timeout, rm_dat):
             raise HYSPLITTimeoutError("boom")
 
-    monkeypatch.setattr("stilt.simulation.HYSPLITRunner", _FakeRunner)
+    monkeypatch.setattr("stilt.simulation.HYSPLITDriver", _FakeRunner)
     monkeypatch.setattr(sim, "meteorology", _FakeMet())
 
     with pytest.raises(HYSPLITTimeoutError):
@@ -348,7 +348,7 @@ def test_run_trajectories_sets_main_and_error_trajectories(
         def execute(self, timeout, rm_dat):
             return _Result()
 
-    monkeypatch.setattr("stilt.simulation.HYSPLITRunner", _FakeRunner)
+    monkeypatch.setattr("stilt.simulation.HYSPLITDriver", _FakeRunner)
     monkeypatch.setattr(sim, "meteorology", _FakeMet())
 
     sim.run_trajectories(timeout=1, rm_dat=False, write=False)
@@ -374,13 +374,13 @@ def test_simulation_log_loads_from_artifact_store_fallback(point_receptor, tmp_p
     sim = _sim(
         tmp_path / "cache",
         point_receptor,
-        artifact_store=FsspecArtifactStore(storage_root),
+        store=FsspecStore(storage_root),
     )
 
     assert sim.log == "cloud log"
 
 
-def test_simulation_log_loads_from_artifact_store(point_receptor, tmp_path):
+def test_simulation_log_loads_from_store(point_receptor, tmp_path):
     sid = str(SimID.from_parts("hrrr", point_receptor))
     output_root = tmp_path / "artifacts"
     log_path = output_root / "simulations" / "by-id" / sid / "stilt.log"
@@ -390,7 +390,7 @@ def test_simulation_log_loads_from_artifact_store(point_receptor, tmp_path):
     sim = _sim(
         tmp_path / "cache",
         point_receptor,
-        artifact_store=FsspecArtifactStore(output_root),
+        store=FsspecStore(output_root),
     )
 
     assert sim.log == "artifact log"
@@ -425,7 +425,7 @@ def test_get_footprint_loads_from_artifact_store_fallback(point_receptor, tmp_pa
     sim = _sim(
         tmp_path / "cache",
         point_receptor,
-        artifact_store=FsspecArtifactStore(storage_root),
+        store=FsspecStore(storage_root),
     )
 
     foot = sim.get_footprint("slv")
@@ -505,21 +505,21 @@ def test_simulation_trajectories_load_from_storage_backend(point_receptor, tmp_p
     sim = _sim(
         tmp_path / "cache",
         point_receptor,
-        artifact_store=FsspecArtifactStore(storage_root),
+        store=FsspecStore(storage_root),
     )
 
     assert sim.trajectories is not None
     assert not sim.trajectories.is_error
 
 
-def test_simulation_trajectories_load_from_artifact_store(point_receptor, tmp_path):
+def test_simulation_trajectories_load_from_store(point_receptor, tmp_path):
     output_root = tmp_path / "artifacts"
     _write_remote_trajectories(output_root, point_receptor, is_error=False)
 
     sim = _sim(
         tmp_path / "cache",
         point_receptor,
-        artifact_store=FsspecArtifactStore(output_root),
+        store=FsspecStore(output_root),
     )
 
     assert sim.trajectories is not None
@@ -535,7 +535,7 @@ def test_simulation_error_trajectories_load_from_storage_backend(
     sim = _sim(
         tmp_path / "cache",
         point_receptor,
-        artifact_store=FsspecArtifactStore(storage_root),
+        store=FsspecStore(storage_root),
     )
 
     assert sim.error_trajectories is not None
@@ -555,7 +555,7 @@ def test_simulation_status_uses_storage_backed_artifacts(point_receptor, tmp_pat
     sim = _sim(
         tmp_path / "cache",
         point_receptor,
-        artifact_store=FsspecArtifactStore(storage_root),
+        store=FsspecStore(storage_root),
     )
     assert sim.status == "complete"
 

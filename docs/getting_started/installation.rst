@@ -1,63 +1,65 @@
 Installation
 ============
 
-Requirements
-------------
+Package install
+---------------
 
-- Python ≥ 3.10
-- A UNIX-like operating system (Linux or macOS). Windows is not supported;
-  use WSL if you are on Windows.
-- Meteorological data in `ARL format
-  <https://www.ready.noaa.gov/archives.php>`_ (e.g., HRRR, NAM, GFS).
-  PYSTILT does not download meteorology for you; see
-  :doc:`../user_guide/meteorology` for guidance on obtaining data.
-
-From PyPI
----------
+Install the base transport package with:
 
 .. code-block:: bash
 
    pip install pystilt
 
-This installs the core package. Optional extras:
+Install optional extras for projections, visualization, cloud storage, Slurm,
+and Kubernetes-oriented workflows with:
 
 .. code-block:: bash
 
-   pip install "pystilt[projection]"    # pyproj support for projected grids
-   pip install "pystilt[cloud]"         # S3/GCS/PostgreSQL/Kubernetes support
-   pip install "pystilt[visualization]" # Matplotlib plotting helpers
-   pip install "pystilt[complete]"      # All of the above
+   pip install "pystilt[complete]"
 
-From Source
------------
+Developer install
+-----------------
+
+From a source checkout, the repository already includes a ``uv.lock`` and a
+``justfile``. A typical developer setup is:
 
 .. code-block:: bash
 
-   git clone https://github.com/jmineau/PYSTILT.git
-   cd PYSTILT
-   pip install -e .
+   uv sync --group dev
 
-Development Installation
+Bundled HYSPLIT binaries
 ------------------------
 
-Requires `uv <https://docs.astral.sh/uv/>`_ and
-`just <https://just.systems/man/en/>`_:
+PYSTILT resolves bundled HYSPLIT binaries from ``stilt.hysplit.bin`` when it
+can. The current source tree ships platform-specific bundles for:
 
-.. code-block:: bash
+- Linux ``x86_64``
+- macOS ``x86_64``
 
-   git clone https://github.com/jmineau/PYSTILT.git
-   cd PYSTILT
-   uv sync --group dev
-   pre-commit install
+If your platform is not bundled, the driver expects a compatible ``hycs_std``
+binary available from a directory you provide.
 
-Run the test suite:
+Runtime dependencies you still need to supply
+---------------------------------------------
 
-.. code-block:: bash
+PYSTILT does not manufacture your meteorology archive. You still need:
 
-   just test
+- ARL-formatted meteorology files for the met streams in ``config.yaml``
+- a writable project or output root
+- PostgreSQL when running claim-based shared workers
+- Slurm or Kubernetes infrastructure when using those executors
 
-Build the docs locally:
+Build the docs locally
+----------------------
+
+The repo includes a docs build target:
 
 .. code-block:: bash
 
    just build-docs
+
+or directly:
+
+.. code-block:: bash
+
+   uv run sphinx-build -M html docs docs/_build

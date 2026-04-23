@@ -637,14 +637,14 @@ class ModelPlotAccessor:
             fig = plt.gcf()
         assert ax is not None
 
-        df = self._model.repository.to_dataframe()
-        if df.empty:
+        sim_ids = self._model.index.sim_ids()
+        if not sim_ids:
             return ax
 
-        for sim_id in df.index:
+        for sim_id in sim_ids:
             sid = SimID(sim_id)
             ax.barh(  # type: ignore[arg-type]
-                y=sid.location_id,
+                y=sid.location,
                 width=pd.Timedelta(hours=1),  # type: ignore[arg-type]
                 left=sid.time,  # type: ignore[arg-type]
                 height=0.6,

@@ -1,6 +1,6 @@
 """Tests for stilt.service.kubernetes manifest helpers."""
 
-from stilt.repositories.postgres import POSTGRES_PENDING_SIMULATIONS_SQL
+from stilt.index.postgres import POSTGRES_PENDING_SIMULATIONS_SQL
 from stilt.service.kubernetes import (
     db_secret_env,
     scaled_object_manifest,
@@ -46,13 +46,11 @@ def test_worker_command_follow_mode_includes_follow_flag():
     ]
 
 
-def test_serve_command_uses_service_cli_and_cpus():
-    assert serve_command("/data/project", cpus=2) == [
+def test_serve_command_uses_service_cli():
+    assert serve_command("/data/project") == [
         "stilt",
         "serve",
         "/data/project",
-        "--cpus",
-        "2",
     ]
 
 
@@ -94,20 +92,30 @@ def test_worker_deployment_manifest_matches_follow_worker_shape():
     ]
 
 
+def test_worker_job_manifest_places_pod_spec_at_pod_level():
+    manifest = worker_job_manifest(
+        "/data/project",
+        image="img",
+        pod_spec={"nodeSelector": {"disk": "ssd"}},
+    )
+
+    pod_spec = manifest["spec"]["template"]["spec"]
+    container = pod_spec["containers"][0]
+    assert pod_spec["nodeSelector"] == {"disk": "ssd"}
+    assert "nodeSelector" not in container
+
+
 def test_service_deployment_manifest_uses_serve_cli():
     manifest = service_deployment_manifest(
         "/data/project",
         image="img",
         replicas=1,
-        cpus=4,
     )
     container = manifest["spec"]["template"]["spec"]["containers"][0]
     assert container["command"] == [
         "stilt",
         "serve",
         "/data/project",
-        "--cpus",
-        "4",
     ]
 
 

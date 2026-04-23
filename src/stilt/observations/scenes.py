@@ -22,11 +22,6 @@ class Scene:
     metadata: dict[str, Any] = field(default_factory=dict)
 
     @property
-    def batch_id(self) -> str:
-        """Default batch grouping to use when submitting this scene to Model."""
-        return self.id
-
-    @property
     def observation_ids(self) -> list[str | None]:
         """Observation identifiers in the same order as ``observations``."""
         return [obs.observation_id for obs in self.observations]
