@@ -193,6 +193,7 @@ def test_read_particles_raises_domain_error_when_file_missing(tmp_path, point_re
 
 def test_run_persists_fortran_runtime_output_on_failure(tmp_path, point_receptor):
     runner = _make_runner(tmp_path, point_receptor)
+    runner.log_path.write_text("previous attempt\n")
     exe = tmp_path / "hycs_std"
     exe.write_text(
         "#!/usr/bin/env bash\n"
@@ -204,7 +205,9 @@ def test_run_persists_fortran_runtime_output_on_failure(tmp_path, point_receptor
     with pytest.raises(HYSPLITFailureError):
         runner._run(timeout=5)
 
-    assert "Fortran runtime error" in runner.log_path.read_text()
+    log_text = runner.log_path.read_text()
+    assert "previous attempt" in log_text
+    assert "Fortran runtime error" in log_text
 
 
 # ---------------------------------------------------------------------------

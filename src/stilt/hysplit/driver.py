@@ -1,10 +1,13 @@
 """HYSPLIT driver: binary resolution and simulation execution."""
 
+import os
 import platform
+import signal
 import subprocess
 from dataclasses import dataclass
 from importlib.resources import files as pkg_files
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 
@@ -68,13 +71,13 @@ class HYSPLITResult:
         Main particle positions and footprint columns from the PARDUMP file.
     error_particles : pd.DataFrame or None
         Error-trajectory particle data, or ``None`` if no error run was performed.
-    stdout : str
-        Captured standard output from the hycs_std process.
+    log_path : Path
+        Combined log path containing streamed standard output from the run(s).
     """
 
     particles: pd.DataFrame
     error_particles: pd.DataFrame | None
-    stdout: str
+    log_path: Path
 
 
 class HYSPLITDriver:
@@ -149,10 +152,9 @@ class HYSPLITDriver:
         Returns
         -------
         HYSPLITResult
-            Parsed particles, optional error particles, and captured stdout.
+            Parsed particles, optional error particles, and streamed log path.
         """
-        # --- Main run ---
-        stdout = self._run(timeout)
+        self._run(timeout, label="main")
 
         particles = self._read_particles(rm_dat)
 
@@ -164,10 +166,10 @@ class HYSPLITDriver:
             self._write_setup(winderrtf=self.params.winderrtf)
 
             try:
-                err_stdout = self._run(timeout)
+                self._run(timeout, label="error")
             except (HYSPLITTimeoutError, HYSPLITFailureError) as e:
-                err_stdout = f"STILT ERROR (error trajectory): {e}\n"
-            stdout += err_stdout
+                with self.log_path.open("a", encoding="utf-8") as handle:
+                    handle.write(f"\n=== error run failed ===\n{e}\n")
 
             if self.particle_stilt_path.exists():
                 error_particles = self._read_particles(rm_dat)
@@ -175,38 +177,59 @@ class HYSPLITDriver:
         return HYSPLITResult(
             particles=particles,
             error_particles=error_particles,
-            stdout=stdout,
+            log_path=self.log_path,
         )
 
     # -- Private helpers -------------------------------------------------------
 
-    def _run(self, timeout: int | None) -> str:
-        """Run hycs_std, return captured stdout. Raises on timeout or failure phrase."""
-        with subprocess.Popen(
-            "./hycs_std",
-            cwd=self.directory,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-        ) as proc:
-            try:
-                stdout_bytes, _ = proc.communicate(timeout=timeout)
-            except subprocess.TimeoutExpired as e:
-                proc.kill()
-                stdout_bytes, _ = proc.communicate()
-                output = stdout_bytes.decode(errors="replace")
-                self.log_path.write_text(output)
-                raise HYSPLITTimeoutError(
-                    f"hycs_std timed out after {timeout}s for {self.directory}"
-                ) from e
-
-        output = stdout_bytes.decode(errors="replace")
-        self.log_path.write_text(output)
-
+    def _run(self, timeout: int | None, *, label: str = "main") -> None:
+        """Run hycs_std, streaming output to the log file."""
+        if not self.hycs_std_path.exists():
+            raise FileNotFoundError(
+                f"HYSPLIT executable not found for {self.directory}: {self.hycs_std_path}"
+            )
+        segment_start = self.log_path.stat().st_size if self.log_path.exists() else 0
+        with self.log_path.open("a", encoding="utf-8") as handle:
+            handle.write(f"\n=== {label} run ===\n")
+            handle.flush()
+            with subprocess.Popen(
+                [str(self.hycs_std_path)],
+                cwd=self.directory,
+                stdout=handle,
+                stderr=subprocess.STDOUT,
+                start_new_session=True,
+            ) as proc:
+                try:
+                    proc.wait(timeout=timeout)
+                except subprocess.TimeoutExpired as e:
+                    self._terminate_process(proc)
+                    raise HYSPLITTimeoutError(
+                        f"hycs_std timed out after {timeout}s for {self.directory}"
+                    ) from e
+        output = self._read_log_segment(segment_start)
         for phrase, reason in FAILURE_PHRASES.items():
             if phrase in output:
                 raise HYSPLITFailureError(reason, str(self.directory))
 
-        return output
+    def _terminate_process(self, proc: subprocess.Popen[Any]) -> None:
+        """Terminate one HYSPLIT process group with a bounded escalation path."""
+        try:
+            os.killpg(proc.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            return
+        try:
+            proc.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            try:
+                proc.kill()
+            finally:
+                proc.wait(timeout=5)
+
+    def _read_log_segment(self, start: int) -> str:
+        """Read one appended segment from the combined log file."""
+        with self.log_path.open("r", encoding="utf-8", errors="replace") as handle:
+            handle.seek(start)
+            return handle.read()
 
     def _read_particles(self, rm_dat: bool) -> pd.DataFrame:
         """Read and optionally remove ``PARTICLE_STILT.DAT`` output."""

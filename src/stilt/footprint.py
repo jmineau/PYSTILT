@@ -5,7 +5,7 @@ import json
 import math
 import os
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 import pandas as pd
@@ -18,6 +18,8 @@ from stilt.receptor import Receptor
 
 if TYPE_CHECKING:
     from stilt.visualization import FootprintPlotAccessor
+
+EMPTY_REASON_ATTR = "empty_reason"
 
 
 def _make_gauss_kernel(rs: tuple[float, float], sigma: float) -> np.ndarray:
@@ -41,7 +43,7 @@ def _calc_digits(res: float) -> int:
         raise ValueError("Resolution must be positive")
     if res < 1:
         return int(math.ceil(math.log10(1 / res))) + 1
-    return int(-math.log10(res))  # 0 for res >= 1
+    return max(int(-math.log10(res)), 0)
 
 
 def _interpolation_times(time_sign: int) -> np.ndarray:
@@ -54,6 +56,75 @@ def _interpolation_times(time_sign: int) -> np.ndarray:
         ]
     )
     return times * time_sign
+
+
+def _utc_index(values: Any) -> pd.DatetimeIndex:
+    """Return one UTC-normalized DatetimeIndex."""
+    return pd.DatetimeIndex(pd.to_datetime(values, utc=True))
+
+
+def _time_bin_columns(time_bins: pd.IntervalIndex) -> pd.DatetimeIndex:
+    """Return the left edges of time bins as UTC-naive datetimes."""
+    left = _utc_index(time_bins.left)
+    return left.tz_localize(None)
+
+
+def _naive_utc_timestamp(
+    value: dt.datetime | pd.Timestamp | None,
+) -> pd.Timestamp | None:
+    """Normalize one optional timestamp to UTC-naive form."""
+    if value is None:
+        return None
+    ts = pd.Timestamp(value)
+    if str(ts) == "NaT":
+        return None
+    return cast(pd.Timestamp, ts.tz_convert(None) if ts.tzinfo is not None else ts)
+
+
+def _build_footprint_array(
+    *,
+    foot_arr: np.ndarray,
+    layers: np.ndarray,
+    receptor: Receptor,
+    is_longlat: bool,
+    glong: np.ndarray,
+    glati: np.ndarray,
+    xres: float,
+    yres: float,
+    wrapped_longitude: bool,
+) -> xr.DataArray:
+    """Build one footprint DataArray from rasterized numpy output."""
+    if len(layers) == 0:
+        layers = np.array([0], dtype=int)
+    if len(foot_arr.shape) != 3:
+        raise ValueError("foot_arr must be 3D in (time, y, x) order.")
+    if len(layers) == 1 and foot_arr.shape[0] == 1:
+        time_out = [receptor.time]
+    else:
+        time_out = [receptor.time + pd.Timedelta(hours=int(layer)) for layer in layers]
+    time_index = _utc_index(time_out).tz_localize(None)
+    x_dim = "lon" if is_longlat else "x"
+    y_dim = "lat" if is_longlat else "y"
+    x_coords = glong + xres / 2
+    y_coords = glati + yres / 2
+    if wrapped_longitude:
+        unwrapped = ((x_coords + 180.0) % 360.0) - 180.0
+        order = np.argsort(unwrapped)
+        x_coords = unwrapped[order]
+        foot_arr = foot_arr[:, :, order]
+    return xr.DataArray(
+        foot_arr,
+        dims=["time", y_dim, x_dim],
+        coords={"time": time_index, y_dim: y_coords, x_dim: x_coords},
+        attrs={"units": "ppm (umol-1 m2 s)"},
+    )
+
+
+def _empty_footprint_data(data: xr.DataArray, reason: str) -> xr.DataArray:
+    """Return footprint data marked as an explicit zero-contribution output."""
+    data = data.copy()
+    data.attrs[EMPTY_REASON_ATTR] = reason
+    return data
 
 
 class Footprint:
@@ -89,10 +160,37 @@ class Footprint:
     @property
     def time_range(self) -> tuple[dt.datetime, dt.datetime]:
         """Get time range of footprint data."""
-        times = sorted(self.data.time.values)
-        start = pd.Timestamp(times[0]).to_pydatetime()
-        stop = pd.Timestamp(times[-1]) + pd.Timedelta(hours=1)
-        return start, stop.to_pydatetime()  # type: ignore[return-value]
+        times = _utc_index(self.data.time.values)
+        start = pd.Timestamp(cast(Any, times.min()))
+        if str(start) == "NaT":
+            raise ValueError("Footprint has no valid time coordinates.")
+        if len(times) <= 1 or self.config.time_integrate:
+            stop = start
+        else:
+            step = times[1] - times[0]
+            stop = pd.Timestamp(cast(Any, times.max() + step))
+        return (
+            cast(dt.datetime, start.to_pydatetime()),
+            cast(dt.datetime, stop.to_pydatetime()),
+        )
+
+    @property
+    def empty_reason(self) -> str | None:
+        """Reason this footprint is an explicit zero-contribution output."""
+        reason = self.data.attrs.get(EMPTY_REASON_ATTR)
+        return str(reason) if reason else None
+
+    @property
+    def is_empty(self) -> bool:
+        """Return whether this footprint was explicitly marked empty."""
+        return self.empty_reason is not None
+
+    def __repr__(self) -> str:
+        """Compact developer-facing footprint representation."""
+        return (
+            f"Footprint(name={self.name!r}, dims={dict(self.data.sizes)!r}, "
+            f"is_empty={self.is_empty!r})"
+        )
 
     @classmethod
     def from_netcdf(cls, path: str | Path, **kwargs) -> Self:
@@ -112,39 +210,39 @@ class Footprint:
         """
         path = Path(path).resolve()
 
-        # Read dataset
         ds = xr.open_dataset(path, **kwargs)
+        attrs = dict(ds.attrs)
 
-        # Build receptor
-        receptor = Receptor.from_dict(json.loads(ds.attrs.pop("receptor")))
+        receptor = Receptor.from_dict(json.loads(attrs["receptor"]))
 
-        # Build config
         foot_config = FootprintConfig(
             grid=Grid(
-                xmin=ds.attrs["xmin"],
-                xmax=ds.attrs["xmax"],
-                ymin=ds.attrs["ymin"],
-                ymax=ds.attrs["ymax"],
-                xres=ds.attrs["xres"],
-                yres=ds.attrs["yres"],
-                projection=ds.attrs.get("projection", "+proj=longlat"),
+                xmin=attrs["xmin"],
+                xmax=attrs["xmax"],
+                ymin=attrs["ymin"],
+                ymax=attrs["ymax"],
+                xres=attrs["xres"],
+                yres=attrs["yres"],
+                projection=attrs.get("projection", "+proj=longlat"),
             ),
-            smooth_factor=ds.attrs.get("smooth_factor", 1.0),
-            time_integrate=ds.attrs.get("time_integrate", False),
-            transforms=json.loads(ds.attrs.get("transforms", "[]")),
+            smooth_factor=attrs.get("smooth_factor", 1.0),
+            time_integrate=attrs.get("time_integrate", False),
+            transforms=json.loads(attrs.get("transforms", "[]")),
         )
 
-        name = ds.attrs.pop("name", "")
+        name = attrs.get("name", "")
 
-        if "time_created" in ds.attrs:
-            ds.attrs["time_created"] = dt.datetime.fromisoformat(
-                ds.attrs["time_created"]
-            )
+        data = ds.foot
+        empty_reason = attrs.get(EMPTY_REASON_ATTR)
+        if empty_reason is None and bool(attrs.get("is_empty", False)):
+            empty_reason = "legacy"
+        if empty_reason is not None:
+            data = _empty_footprint_data(data, str(empty_reason))
 
         return cls(
             receptor=receptor,
             config=foot_config,
-            data=ds.foot,
+            data=data,
             name=name,
         )
 
@@ -155,7 +253,7 @@ class Footprint:
         receptor: Receptor,
         config: FootprintConfig,
         name: str = "",
-    ) -> Self | None:
+    ) -> Self:
         """
         Calculate footprint from particle trajectories.
 
@@ -173,11 +271,11 @@ class Footprint:
 
         Returns
         -------
-        Footprint or None
-            Footprint object when at least one particle contributes inside the
-            buffered domain, otherwise ``None``.
+        Footprint
+            Footprint object. Empty footprints are represented explicitly as a
+            zero-valued data array with empty metadata.
         """
-        p = particles.copy()
+        p = particles.copy(deep=False)
 
         # Unpack config and derive convenience flags
         grid = config.grid
@@ -187,6 +285,32 @@ class Footprint:
         is_longlat = "+proj=longlat" in projection
         smooth_factor = config.smooth_factor
         time_integrate = config.time_integrate
+        wrapped_longitude = False
+
+        if p.empty:
+            n_lon = max(1, int(round((xmax - xmin) / xres)))
+            n_lat = max(1, int(round((ymax - ymin) / yres)))
+            glong = xmin + np.arange(n_lon) * xres
+            glati = ymin + np.arange(n_lat) * yres
+            return cls(
+                receptor=receptor,
+                config=config,
+                data=_empty_footprint_data(
+                    _build_footprint_array(
+                        foot_arr=np.zeros((1, n_lat, n_lon), dtype=float),
+                        layers=np.array([0], dtype=int),
+                        receptor=receptor,
+                        is_longlat=is_longlat,
+                        glong=glong,
+                        glati=glati,
+                        xres=xres,
+                        yres=yres,
+                        wrapped_longitude=False,
+                    ),
+                    "no_particles",
+                ),
+                name=name,
+            )
 
         n_particles = p["indx"].nunique()
         # time_sign: -1 for backward runs (negative time), +1 for forward
@@ -200,6 +324,7 @@ class Footprint:
             if xdist == 0:
                 xmin, xmax = -180.0, 180.0
             elif (xmax < xmin) or (xmax > 180):
+                wrapped_longitude = True
                 p["long"] = ((p["long"] % 360) + 360) % 360
                 xmin = ((xmin % 360) + 360) % 360
                 xmax = ((xmax % 360) + 360) % 360
@@ -369,6 +494,15 @@ class Footprint:
         glong_buf = xmin - xbuf * xres + np.arange(n_lon_buf) * xres
         glati_buf = ymin - ybuf * yres + np.arange(n_lat_buf) * yres
 
+        layer_series = (
+            pd.Series(0, index=p.index, dtype=int)
+            if time_integrate
+            else np.floor(p["time"] / 60).astype(int)
+        )
+        all_layers = np.sort(np.asarray(pd.Series(layer_series).unique(), dtype=int))
+        if len(all_layers) == 0:
+            all_layers = np.array([0], dtype=int)
+
         # --- Filter to particles with positive foot inside the buffered domain ---
         p = p[
             (p["foot"] > 0)
@@ -377,8 +511,6 @@ class Footprint:
             & (p["lati"] >= ymin - ybufh * yres)
             & (p["lati"] < ymax + ybufh * yres)
         ]
-        if p.empty:
-            return None
 
         # --- Assign particles to buffered grid cells and aggregate ---
         p = p.copy()
@@ -396,8 +528,34 @@ class Footprint:
         p["layer"] = (
             0 if time_integrate else np.floor(p["time"] / interval_mins).astype(int)
         )
-        layers = np.sort(np.asarray(p["layer"].unique()))
+        layers = (
+            np.sort(np.asarray(p["layer"].unique(), dtype=int))
+            if not p.empty
+            else all_layers
+        )
         n_layers = len(layers)
+
+        if p.empty:
+            foot_arr = np.zeros((n_layers, n_lat, n_lon), dtype=float)
+            return cls(
+                receptor=receptor,
+                config=config,
+                data=_empty_footprint_data(
+                    _build_footprint_array(
+                        foot_arr=foot_arr,
+                        layers=layers,
+                        receptor=receptor,
+                        is_longlat=is_longlat,
+                        glong=glong,
+                        glati=glati,
+                        xres=xres,
+                        yres=yres,
+                        wrapped_longitude=wrapped_longitude,
+                    ),
+                    "outside_domain",
+                ),
+                name=name,
+            )
 
         # --- Accumulate footprint per layer ---
         foot_arr = np.zeros((n_lon_buf, n_lat_buf, n_layers))
@@ -466,38 +624,20 @@ class Footprint:
         # --- Trim buffer and normalize ---
         foot_arr = foot_arr[xbuf : xbuf + n_lon, ybuf : ybuf + n_lat, :] / n_particles
 
-        # --- Build time coordinate ---
-        if time_integrate:
-            time_out = [receptor.time]
-        else:
-            time_out = [
-                receptor.time + pd.Timedelta(seconds=int(layer) * 3600)
-                for layer in layers
-            ]
-        time_index = pd.DatetimeIndex(pd.to_datetime(time_out, utc=True)).tz_convert(
-            None
-        )
-
-        # --- Build xarray DataArray ---
-        x_dim = "lon" if is_longlat else "x"
-        y_dim = "lat" if is_longlat else "y"
-        x_coords = glong + xres / 2  # cell centers
-        y_coords = glati + yres / 2
-
-        # Transpose from (lon, lat, time) to (time, lat, lon) - CF convention.
-        foot_arr = foot_arr.transpose(2, 1, 0)
-
-        data = xr.DataArray(
-            foot_arr,
-            dims=["time", y_dim, x_dim],
-            coords={x_dim: x_coords, y_dim: y_coords, "time": time_index},
-            attrs={"units": "ppm (umol-1 m2 s)"},
-        )
-
         return cls(
             receptor=receptor,
             config=config,
-            data=data,
+            data=_build_footprint_array(
+                foot_arr=foot_arr.transpose(2, 1, 0),
+                layers=layers,
+                receptor=receptor,
+                is_longlat=is_longlat,
+                glong=glong,
+                glati=glati,
+                xres=xres,
+                yres=yres,
+                wrapped_longitude=wrapped_longitude,
+            ),
             name=name,
         )
 
@@ -526,6 +666,15 @@ class Footprint:
                     pd.to_datetime(ds["time"].values, utc=True)
                 ).tz_convert(None)
             )
+        receptor_time = pd.Timestamp(self.receptor.time)
+        if receptor_time.tzinfo is not None:
+            receptor_time = receptor_time.tz_convert(None)
+        ds = ds.assign_coords(receptor_time=receptor_time)
+        if self.receptor.kind != "multipoint":
+            ds = ds.assign_coords(
+                receptor_latitude=self.receptor.latitude,
+                receptor_longitude=self.receptor.longitude,
+            )
         ds.attrs.update(
             {
                 "name": self.name,
@@ -539,6 +688,8 @@ class Footprint:
                 "yres": grid.yres,
                 "smooth_factor": self.config.smooth_factor,
                 "time_integrate": int(self.config.time_integrate),
+                "is_empty": int(self.is_empty),
+                EMPTY_REASON_ATTR: self.empty_reason or "",
                 "transforms": json.dumps(
                     [
                         transform.model_dump(mode="json")
@@ -551,7 +702,10 @@ class Footprint:
 
         tmp_path = path.with_suffix(path.suffix + ".tmp")
         try:
-            ds.to_netcdf(tmp_path)
+            ds.to_netcdf(
+                tmp_path,
+                encoding={"foot": {"zlib": True, "complevel": 4}},
+            )
             os.replace(tmp_path, path)
         finally:
             if tmp_path.exists():
@@ -575,7 +729,9 @@ class Footprint:
         xr.DataArray
             Time-summed footprint.
         """
-        return self.data.sel(time=slice(start, end)).sum("time")
+        start_ts = _naive_utc_timestamp(start)
+        end_ts = _naive_utc_timestamp(end)
+        return self.data.sel(time=slice(start_ts, end_ts)).sum("time")
 
     def aggregate(
         self,
@@ -601,50 +757,39 @@ class Footprint:
         is_latlon = "lon" in self.data.dims and "lat" in self.data.dims
         x_dim = "lon" if is_latlon else "x"
         y_dim = "lat" if is_latlon else "y"
-
-        # Convert to pandas and round to avoid floating-point mismatch
-        foot = self.data.to_series().reset_index()
-        xdigits = _calc_digits(self.config.grid.xres)
-        ydigits = _calc_digits(self.config.grid.yres)
-        foot[x_dim] = foot[x_dim].round(xdigits)
-        foot[y_dim] = foot[y_dim].round(ydigits)
-        foot = foot.set_index([x_dim, y_dim, "time"])
-
-        # Round requested coords to match footprint grid
-        raw = pd.MultiIndex.from_tuples(coords, names=[x_dim, y_dim])
-        coord_index = pd.MultiIndex.from_arrays(
-            [
-                raw.get_level_values(0).round(xdigits),
-                raw.get_level_values(1).round(ydigits),
-            ],
-            names=[x_dim, y_dim],
+        coord_index = pd.MultiIndex.from_tuples(coords, names=[x_dim, y_dim])
+        x_values = np.asarray([coord[0] for coord in coords], dtype=float)
+        y_values = np.asarray([coord[1] for coord in coords], dtype=float)
+        sampled = (
+            self.data.reindex(
+                {
+                    x_dim: pd.Index(np.unique(x_values), name=x_dim),
+                    y_dim: pd.Index(np.unique(y_values), name=y_dim),
+                }
+            )
+            .fillna(0.0)
+            .sel(
+                {
+                    x_dim: xr.DataArray(x_values, dims="obs"),
+                    y_dim: xr.DataArray(y_values, dims="obs"),
+                }
+            )
         )
+        frame = sampled.transpose("obs", "time").to_pandas()
+        if frame.empty:
+            return pd.DataFrame(
+                0.0, index=coord_index, columns=_time_bin_columns(time_bins)
+            )
 
-        # Filter to requested coordinates
-        filtered = (
-            foot.reset_index(level="time")
-            .loc[coord_index]
-            .set_index("time", append=True)
-        )
-
-        if filtered.empty:
-            cols = time_bins.left.rename("time")
-            return pd.DataFrame(0.0, index=coord_index, columns=cols)
-
-        # Bin time axis and sum within each bin
-        tmp = filtered.reset_index()
-        time_col = tmp["time"]
-        if hasattr(time_bins, "dtype") and hasattr(time_bins.dtype, "subtype"):
-            target_dtype = time_bins.dtype.subtype  # type: ignore[union-attr]
-            if time_col.dtype != target_dtype:
-                time_col = time_col.astype(target_dtype)
-        tmp["time"] = pd.cut(time_col, bins=time_bins, include_lowest=True, right=False)
-        tmp["time"] = tmp["time"].cat.rename_categories(lambda x: x.left)
-
-        return (
-            tmp.groupby([x_dim, y_dim, "time"], observed=True)
-            .sum()
-            .unstack("time")
-            .droplevel(0, axis=1)
-            .reindex(columns=time_bins.left, fill_value=0.0)
-        )
+        frame.index = coord_index
+        frame.columns = _utc_index(frame.columns).tz_localize(None)
+        columns = _time_bin_columns(time_bins)
+        result = pd.DataFrame(0.0, index=coord_index, columns=columns)
+        for interval, left_edge in zip(time_bins, columns, strict=False):
+            left = _naive_utc_timestamp(interval.left)
+            right = _naive_utc_timestamp(interval.right)
+            assert left is not None and right is not None
+            mask = (frame.columns >= left) & (frame.columns < right)
+            if mask.any():
+                result[left_edge] = frame.loc[:, mask].sum(axis=1)
+        return result

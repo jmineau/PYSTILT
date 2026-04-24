@@ -2,8 +2,8 @@ Meteorology
 ===========
 
 Meteorology in PYSTILT has both a durable configuration layer and a runtime
-file-discovery layer. ``MetConfig`` describes a stream in ``config.yaml``;
-``MetStream`` and ``MetArchive`` handle runtime resolution and staging.
+file-discovery layer. ``MetConfig`` describes a source in ``config.yaml``;
+``MetSource`` handles runtime file lookup and staging.
 
 Runtime helpers
 ---------------
@@ -13,8 +13,7 @@ Runtime helpers
    :nosignatures:
 
    stilt.MetID
-   stilt.MetArchive
-   stilt.MetStream
+   stilt.MetSource
 
 Field-by-field configuration details for :class:`stilt.config.MetConfig` live
 on :doc:`configuration`.

@@ -199,11 +199,9 @@ def test_run_prints_startup_and_wait_messages(tmp_path, monkeypatch):
 
     monkeypatch.setattr(
         "stilt.model.Model.run",
-        lambda self,
-        executor=None,
-        skip_existing=None,
-        rebuild=None,
-        wait=True,: fake_handle,
+        lambda self, executor=None, skip_existing=None, rebuild=None, wait=True,: (
+            fake_handle
+        ),
     )
 
     result = runner.invoke(app, ["run", str(tmp_path)])
@@ -466,11 +464,9 @@ def test_run_slurm_fire_and_forget(tmp_path, monkeypatch):
 
     monkeypatch.setattr(
         "stilt.model.Model.run",
-        lambda self,
-        executor=None,
-        skip_existing=None,
-        rebuild=None,
-        wait=True,: fake_handle,
+        lambda self, executor=None, skip_existing=None, rebuild=None, wait=True,: (
+            fake_handle
+        ),
     )
 
     result = runner.invoke(app, ["run", str(tmp_path)])
@@ -491,11 +487,9 @@ def test_run_slurm_with_wait_flag_blocks(tmp_path, monkeypatch):
 
     monkeypatch.setattr(
         "stilt.model.Model.run",
-        lambda self,
-        executor=None,
-        skip_existing=None,
-        rebuild=None,
-        wait=True,: fake_handle,
+        lambda self, executor=None, skip_existing=None, rebuild=None, wait=True,: (
+            fake_handle
+        ),
     )
 
     result = runner.invoke(app, ["run", str(tmp_path), "--wait"])
@@ -519,11 +513,9 @@ def test_run_no_wait_prints_job_id(tmp_path, monkeypatch):
     fake_handle.wait = MagicMock()
     monkeypatch.setattr(
         "stilt.model.Model.run",
-        lambda self,
-        executor=None,
-        skip_existing=None,
-        rebuild=None,
-        wait=True,: fake_handle,
+        lambda self, executor=None, skip_existing=None, rebuild=None, wait=True,: (
+            fake_handle
+        ),
     )
 
     result = runner.invoke(app, ["run", str(tmp_path)])

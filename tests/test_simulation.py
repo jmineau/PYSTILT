@@ -15,7 +15,7 @@ from stilt.config import (
 )
 from stilt.errors import HYSPLITTimeoutError
 from stilt.footprint import Footprint
-from stilt.meteorology import MetArchive, MetStream
+from stilt.meteorology import MetSource
 from stilt.simulation import SimID, Simulation
 from stilt.storage import FsspecStore
 from stilt.trajectory import Trajectories
@@ -52,7 +52,7 @@ def _sim(
     sim_dir = tmp_path / "simulations" / "by-id" / sid
     sim_dir.mkdir(parents=True, exist_ok=True)
     mc = _met_config(tmp_path, **(met_kwargs or {}))
-    met = MetStream(
+    met = MetSource(
         "hrrr",
         directory=mc.directory,
         file_format=mc.file_format,
@@ -129,7 +129,7 @@ def test_simid_is_pathlike(point_receptor, tmp_path):
 
 def test_simulation_status_none_when_dir_missing(point_receptor, tmp_path):
     mc = _met_config(tmp_path)
-    met = MetStream(
+    met = MetSource(
         "hrrr",
         directory=mc.directory,
         file_format=mc.file_format,
@@ -150,7 +150,7 @@ def test_simulation_without_directory_uses_canonical_temp_sim_id(
     point_receptor, tmp_path
 ):
     mc = _met_config(tmp_path)
-    met = MetStream(
+    met = MetSource(
         "hrrr",
         directory=mc.directory,
         file_format=mc.file_format,
@@ -217,12 +217,11 @@ def test_simulation_run_trajectories_uses_source_met_files_in_metadata(
     source_dir.mkdir(parents=True)
     source_file = source_dir / point_receptor.time.strftime("%Y%m%d_%H")
     source_file.touch()
-    sim.meteorology = MetStream(
+    sim.meteorology = MetSource(
         "hrrr",
-        directory="hrrr",
+        directory=source_dir,
         file_format="%Y%m%d_%H",
         file_tres="1h",
-        archive=MetArchive(tmp_path / "archive"),
     )
 
     seen: dict[str, list[Path]] = {}

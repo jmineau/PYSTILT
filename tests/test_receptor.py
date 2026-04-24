@@ -274,6 +274,17 @@ def test_receptor_time_compact_string():
     assert r.time == dt.datetime(2023, 1, 1, 12, 0)
 
 
+def test_receptor_time_aware_input_normalizes_to_naive_utc():
+    r = Receptor(
+        time="2023-01-01T05:00:00-07:00",
+        longitude=-111.85,
+        latitude=40.77,
+        altitude=5.0,
+    )
+    assert r.time == dt.datetime(2023, 1, 1, 12, 0)
+    assert r.time.tzinfo is None
+
+
 def test_receptor_scalar_altitude_makes_point():
     r = Receptor(time="202301011200", longitude=-111.85, latitude=40.77, altitude=5.0)
     assert r.kind == "point"
@@ -323,8 +334,9 @@ def test_receptor_init_parses_iso_and_compact_strings():
         time="202301011200", longitude=-111.85, latitude=40.77, altitude=5.0
     )
 
-    assert r_iso.time == dt.datetime(2023, 1, 1, 12, 0)
-    assert r_compact.time == dt.datetime(2023, 1, 1, 12, 0)
+    expected = dt.datetime(2023, 1, 1, 12, 0)
+    assert r_iso.time == expected
+    assert r_compact.time == expected
 
 
 def test_receptor_geometry_and_vertical_flag(point_receptor, column_receptor):

@@ -55,6 +55,5 @@ important environment variables are:
 - ``PYSTILT_CACHE_DIR``
 - ``PYSTILT_COMPUTE_ROOT``
 - ``PYSTILT_MAX_ROWS``
-- ``STILT_MET_ARCHIVE``
 
 This split keeps deployment concerns out of science configuration.

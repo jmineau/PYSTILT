@@ -6,7 +6,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, cast
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from .base import _SqlIndex
 from .rebuild import scan_durable_simulations
@@ -55,10 +55,7 @@ def _connect_postgres(db_url: str) -> Any:
             "PostgresIndex requires psycopg. "
             "Install it with: pip install 'pystilt[cloud]'"
         ) from exc
-    return psycopg.connect(  # type: ignore[call-arg]
-        db_url,
-        row_factory=cast(Any, psycopg.rows.dict_row),
-    )
+    return psycopg.connect(db_url, row_factory=psycopg.rows.dict_row)  # pyright: ignore[reportArgumentType]
 
 
 @dataclass(slots=True)
@@ -165,36 +162,34 @@ class PostgresIndex(_SqlIndex):
     @contextmanager
     def claim_one(self) -> Iterator[PostgresClaim | None]:
         """Atomically claim one pending simulation for pull-mode execution."""
-        conn = self._connect()
-        try:
-            row = conn.execute(
-                "SELECT s.sim_id "
-                "FROM simulations AS s "
-                f"WHERE {self._pending_where} "
-                "ORDER BY s.sim_id "
-                "LIMIT 1 "
-                "FOR UPDATE OF s SKIP LOCKED"
-            ).fetchone()
-            if row is None:
-                conn.rollback()
-                yield None
-                return
+        with self._connect() as conn:
+            try:
+                row = conn.execute(
+                    "SELECT s.sim_id "
+                    "FROM simulations AS s "
+                    f"WHERE {self._pending_where} "
+                    "ORDER BY s.sim_id "
+                    "LIMIT 1 "
+                    "FOR UPDATE OF s SKIP LOCKED"
+                ).fetchone()
+                if row is None:
+                    conn.rollback()
+                    yield None
+                    return
 
-            claim = PostgresClaim(
-                sim_id=row["sim_id"],
-                _index=self,
-                _conn=conn,
-            )
-            yield claim
-            if claim.released:
+                claim = PostgresClaim(
+                    sim_id=row["sim_id"],
+                    _index=self,
+                    _conn=conn,
+                )
+                yield claim
+                if claim.released:
+                    conn.rollback()
+                else:
+                    conn.commit()
+            except Exception:
                 conn.rollback()
-            else:
-                conn.commit()
-        except Exception:
-            conn.rollback()
-            raise
-        finally:
-            conn.close()
+                raise
 
     def rebuild(self) -> None:
         if self._output_root is None:

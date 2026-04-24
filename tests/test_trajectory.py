@@ -3,6 +3,7 @@
 from pathlib import Path
 
 import pandas as pd
+import pyarrow as pa
 import pytest
 
 from stilt.config import STILTParams
@@ -97,7 +98,8 @@ def test_to_parquet_is_atomic_on_failure(point_receptor, tmp_path, monkeypatch):
     path = tmp_path / "traj.parquet"
     tmp = path.with_suffix(".parquet.tmp")
 
-    def _broken_write(table, write_path):
+    def _broken_write(table, write_path, **kwargs):
+        del table, kwargs
         Path(write_path).write_bytes(b"partial parquet")
         raise RuntimeError("write failed")
 
@@ -108,6 +110,36 @@ def test_to_parquet_is_atomic_on_failure(point_receptor, tmp_path, monkeypatch):
 
     assert not path.exists()
     assert not tmp.exists()
+
+
+def test_to_parquet_falls_back_when_zstd_is_unavailable(
+    point_receptor,
+    tmp_path,
+    monkeypatch,
+):
+    traj = Trajectories.from_particles(
+        particles=_particles_basic(),
+        receptor=point_receptor,
+        params=_params(tmp_path, hnf_plume=False),
+        met_files=[Path("/tmp/met1")],
+    )
+    path = tmp_path / "traj.parquet"
+    compressions: list[str | None] = []
+
+    def _fake_write(table, write_path, **kwargs):
+        del table
+        compression = kwargs["compression"]
+        compressions.append(compression)
+        if compression == "zstd":
+            raise pa.ArrowNotImplementedError("codec not supported")
+        Path(write_path).write_bytes(b"fallback parquet")
+
+    monkeypatch.setattr("stilt.trajectory.pq.write_table", _fake_write)
+
+    traj.to_parquet(path)
+
+    assert compressions == ["zstd", "snappy"]
+    assert path.read_bytes() == b"fallback parquet"
 
 
 def test_calc_plume_dilution_requires_columns():

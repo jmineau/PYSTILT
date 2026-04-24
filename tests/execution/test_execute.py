@@ -12,7 +12,7 @@ import pytest
 from pydantic import ValidationError
 
 from stilt.config import FootprintConfig, Grid, MetConfig, ModelConfig, STILTParams
-from stilt.errors import SimulationError
+from stilt.errors import ConfigValidationError, SimulationError
 from stilt.execution import (
     SimulationResult,
     SimulationTask,
@@ -23,7 +23,7 @@ from stilt.execution import (
 )
 from stilt.index import OutputSummary
 from stilt.index.sqlite import SqliteIndex
-from stilt.meteorology import MetStream
+from stilt.meteorology import MetSource
 from stilt.model import Model as _Model
 from stilt.receptor import Receptor
 from stilt.simulation import SimID
@@ -61,8 +61,8 @@ def sim_id(receptor: Receptor) -> SimID:
 
 
 @pytest.fixture
-def met(tmp_path) -> MetStream:
-    return MetStream(
+def met(tmp_path) -> MetSource:
+    return MetSource(
         "hrrr",
         directory=tmp_path / "met",
         file_format="%Y%m%d_%H",
@@ -510,6 +510,8 @@ def test_push_simulations_persists_results(tmp_path, receptor, monkeypatch):
 
     push_simulations(model, [sim_id])
 
+    assert state.pending_trajectories() == [sim_id]
+
     state.rebuild()
 
     assert state.counts().completed == 1
@@ -590,5 +592,5 @@ def test_pull_simulations_drains_queue(tmp_path, receptor, monkeypatch):
 def test_pull_simulations_requires_postgres_state(tmp_path):
     model = SimpleNamespace(index=SqliteIndex(tmp_path))
 
-    with pytest.raises(ValueError, match="claim-capable index backend"):
+    with pytest.raises(ConfigValidationError, match="claim-capable index backend"):
         pull_simulations(model, follow=False)

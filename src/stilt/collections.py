@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, overload
 from stilt.config import STILTParams
 from stilt.footprint import Footprint
 from stilt.index import OutputSummary, SimulationIndex
-from stilt.meteorology import MetStream
+from stilt.meteorology import MetSource
 from stilt.receptor import Receptor, read_receptors
 from stilt.selection import (
     filter_ids,
@@ -63,16 +63,29 @@ class ReceptorCollection:
             items = list(receptors)
             if not items:
                 return [], None
-            if items and (
-                isinstance(items[0], Receptor)
-                or (isinstance(items[0], Iterable) and not isinstance(items[0], str))
+            if all(isinstance(item, Receptor) for item in items):
+                return list(items), None
+            if len(items) == 4 and not any(
+                isinstance(item, Iterable) and not isinstance(item, (str, bytes))
+                for item in items
+            ):
+                return [Receptor(*items)], None
+            if all(
+                isinstance(item, Iterable) and not isinstance(item, (str, bytes))
+                for item in items
             ):
                 return [
                     item if isinstance(item, Receptor) else Receptor(*item)
                     for item in items
                 ], None
-            return [Receptor(*items)], None
-        return None, None
+            raise TypeError(
+                "Receptors must be a Receptor, a path, or an iterable of Receptor "
+                "instances / (time, longitude, latitude, altitude) tuples."
+            )
+        raise TypeError(
+            "Receptors must be a Receptor, a path, or an iterable of Receptor "
+            "instances / (time, longitude, latitude, altitude) tuples."
+        )
 
     def _load(self) -> list[Receptor]:
         """Load and cache receptors from the best available durable source."""
@@ -145,7 +158,7 @@ class SimulationCollection:
         self,
         output_dir: Path,
         params: STILTParams,
-        mets: dict[str, MetStream],
+        mets: dict[str, MetSource],
         receptors: ReceptorCollection,
         footprint_names: list[str],
         index: SimulationIndex,
@@ -371,17 +384,19 @@ class TrajectoryCollection:
         self._main = _OutputAccessor(
             model,
             present=lambda summary: summary.traj_present,
-            local_path=lambda sim_id: ProjectFiles(model.layout.output_dir)
-            .simulation(sim_id)
-            .trajectory_path,
+            local_path=lambda sim_id: (
+                ProjectFiles(model.layout.output_dir).simulation(sim_id).trajectory_path
+            ),
             load_one=Trajectories.from_parquet,
         )
         self._error = _OutputAccessor(
             model,
             present=lambda summary: summary.error_traj_present,
-            local_path=lambda sim_id: ProjectFiles(model.layout.output_dir)
-            .simulation(sim_id)
-            .error_trajectory_path,
+            local_path=lambda sim_id: (
+                ProjectFiles(model.layout.output_dir)
+                .simulation(sim_id)
+                .error_trajectory_path
+            ),
             load_one=Trajectories.from_parquet,
         )
 
@@ -434,9 +449,11 @@ class NamedFootprintCollection(_OutputAccessor):
         super().__init__(
             model,
             present=lambda summary, n=name: summary.footprint_complete(n),
-            local_path=lambda sim_id, n=name: ProjectFiles(model.layout.output_dir)
-            .simulation(sim_id)
-            .footprint_path(n),
+            local_path=lambda sim_id, n=name: (
+                ProjectFiles(model.layout.output_dir)
+                .simulation(sim_id)
+                .footprint_path(n)
+            ),
             load_one=Footprint.from_netcdf,
         )
 

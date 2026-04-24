@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import shlex
+import shutil
 import subprocess
 import tempfile
 import time
@@ -59,8 +60,14 @@ def _slurm_submission_root(project: str) -> Path:
 class SlurmHandle:
     """Handle for a fire-and-forget Slurm array job submitted via ``sbatch``."""
 
-    def __init__(self, job_id: str) -> None:
+    def __init__(
+        self,
+        job_id: str,
+        *,
+        chunk_dir: Path | None = None,
+    ) -> None:
         self._job_id = job_id
+        self._chunk_dir = chunk_dir
         self._completed = False
 
     @property
@@ -72,16 +79,51 @@ class SlurmHandle:
         """Poll ``squeue`` until the submitted job no longer appears."""
         if self._completed:
             return
-        while True:
-            result = subprocess.run(
-                ["squeue", "--job", self._job_id, "--noheader"],
+        try:
+            while True:
+                result = subprocess.run(
+                    ["squeue", "--job", self._job_id, "--noheader"],
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
+                )
+                if result.returncode != 0:
+                    raise RuntimeError(result.stderr.strip() or "squeue failed")
+                if not result.stdout.strip():
+                    break
+                time.sleep(30)
+            status = subprocess.run(
+                [
+                    "sacct",
+                    "--jobs",
+                    self._job_id,
+                    "--noheader",
+                    "--parsable2",
+                    "--format=State",
+                ],
                 capture_output=True,
                 text=True,
+                timeout=30,
             )
-            if not result.stdout.strip():
-                break
-            time.sleep(30)
-        self._completed = True
+            if status.returncode != 0:
+                raise RuntimeError(status.stderr.strip() or "sacct failed")
+            states = {
+                line.strip().split("|")[0]
+                for line in status.stdout.splitlines()
+                if line.strip()
+            }
+            if any(
+                state.startswith(prefix)
+                for state in states
+                for prefix in ("FAILED", "CANCELLED", "TIMEOUT")
+            ):
+                raise RuntimeError(
+                    f"Slurm job {self._job_id} finished unsuccessfully: {sorted(states)}"
+                )
+            self._completed = True
+        finally:
+            if self._chunk_dir is not None:
+                shutil.rmtree(self._chunk_dir, ignore_errors=True)
 
 
 class SlurmExecutor:
@@ -248,6 +290,7 @@ class SlurmExecutor:
             ["sbatch", str(script_path)],
             capture_output=True,
             text=True,
+            timeout=60,
         )
         if result.returncode != 0:
             raise RuntimeError(
@@ -258,4 +301,4 @@ class SlurmExecutor:
             )
         job_id = result.stdout.strip().split()[-1]
         logger.info(f"Submitted job: {job_id}")
-        return SlurmHandle(job_id)
+        return SlurmHandle(job_id, chunk_dir=chunk_dir)

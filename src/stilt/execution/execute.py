@@ -11,6 +11,7 @@ import logging
 import multiprocessing
 import signal
 
+from stilt.execution.backends.protocol import sigterm_as_interrupt
 from stilt.simulation import Simulation
 
 from .phases import (
@@ -184,13 +185,42 @@ def execute_batch(
         Per-simulation results in batch order.
     """
     if n_cores <= 1:
-        signal.signal(signal.SIGTERM, _sigterm_handler)
-        results = []
-        for task in batch:
-            result = _execute_task_result(task)
-            results.append(result)
-            if result.status == "interrupted":
-                break
-        return results
+        with sigterm_as_interrupt():
+            results = []
+            for task in batch:
+                result = _execute_task_result(task)
+                results.append(result)
+                if result.status == "interrupted":
+                    break
+            return results
+
+    indexed_batch = list(enumerate(batch))
+    ordered_results: dict[int, SimulationResult] = {}
     with multiprocessing.Pool(n_cores, initializer=_init_pool_worker) as pool:
-        return list(pool.map(_execute_task_guarded, batch))
+        try:
+            if hasattr(pool, "imap_unordered"):
+                iterator = pool.imap_unordered(_execute_indexed_task, indexed_batch)
+            else:
+                iterator = pool.map(_execute_indexed_task, indexed_batch)
+            for idx, result in iterator:
+                ordered_results[idx] = result
+                if result.status == "interrupted" and hasattr(pool, "terminate"):
+                    pool.terminate()
+                    break
+        except KeyboardInterrupt:
+            if hasattr(pool, "terminate"):
+                pool.terminate()
+        finally:
+            if hasattr(pool, "close"):
+                pool.close()
+            if hasattr(pool, "join"):
+                pool.join()
+    return [ordered_results[idx] for idx in sorted(ordered_results)]
+
+
+def _execute_indexed_task(
+    item: tuple[int, SimulationTask],
+) -> tuple[int, SimulationResult]:
+    """Run one indexed task so parallel execution can preserve batch order."""
+    idx, task = item
+    return idx, _execute_task_guarded(task)

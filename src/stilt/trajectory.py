@@ -3,12 +3,13 @@
 import json
 import os
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
+import xarray as xr
 from typing_extensions import Self
 
 from stilt.config import STILTParams
@@ -16,6 +17,32 @@ from stilt.receptor import Receptor
 
 if TYPE_CHECKING:
     from stilt.visualization import TrajectoriesPlotAccessor
+
+
+def _write_parquet_table(
+    table: pa.Table,
+    path: Path,
+    *,
+    use_dictionary: list[str] | bool,
+) -> None:
+    """Write parquet with compact defaults and conservative codec fallback."""
+    last_error: Exception | None = None
+    for compression in ("zstd", "snappy", None):
+        try:
+            pq.write_table(
+                table,
+                path,
+                compression=cast(Any, compression),
+                use_dictionary=cast(Any, use_dictionary),
+            )
+            return
+        except (pa.ArrowNotImplementedError, ValueError) as exc:
+            message = str(exc).lower()
+            if "codec" not in message and "compression" not in message:
+                raise
+            last_error = exc
+    if last_error is not None:
+        raise last_error
 
 
 class Trajectories:
@@ -52,6 +79,13 @@ class Trajectories:
         self.is_error = is_error
         self._plot: TrajectoriesPlotAccessor | None = None
 
+    def __repr__(self) -> str:
+        """Compact developer-facing trajectory representation."""
+        return (
+            f"Trajectories(rows={len(self.data)!r}, "
+            f"is_error={self.is_error!r}, receptor={self.receptor.id!r})"
+        )
+
     @property
     def plot(self) -> "TrajectoriesPlotAccessor":
         """Plotting namespace (e.g. ``traj.plot.map()``)."""
@@ -62,7 +96,12 @@ class Trajectories:
         return self._plot
 
     @classmethod
-    def from_parquet(cls, path: str | Path) -> Self:
+    def from_parquet(
+        cls,
+        path: str | Path,
+        *,
+        columns: list[str] | None = None,
+    ) -> Self:
         """Load a Trajectories instance from a self-contained parquet file.
 
         Metadata (receptor, params, met_files, is_error) is read from
@@ -83,13 +122,14 @@ class Trajectories:
 
         # Parse metadata
         receptor = Receptor.from_dict(json.loads(meta[b"stilt:receptor"]))
-        params = json.loads(meta[b"stilt:params"])
+        params = STILTParams.model_validate(json.loads(meta[b"stilt:params"]))
         met_files = [Path(p) for p in json.loads(meta[b"stilt:met_files"])]
         is_error = json.loads(meta[b"stilt:is_error"])
 
         # Read data
-        data = pd.read_parquet(path)
-        data["datetime"] = pd.to_datetime(data["datetime"])
+        data = pd.read_parquet(path, columns=columns)
+        if "datetime" in data.columns:
+            data["datetime"] = pd.to_datetime(data["datetime"], utc=True)
 
         return cls(
             receptor=receptor,
@@ -222,12 +262,20 @@ class Trajectories:
         table = table.replace_schema_metadata({**existing, **meta})
         tmp_path = path.with_suffix(path.suffix + ".tmp")
         try:
-            pq.write_table(table, tmp_path)
+            _write_parquet_table(
+                table,
+                tmp_path,
+                use_dictionary=["indx"] if "indx" in self.data.columns else True,
+            )
             os.replace(tmp_path, path)
         finally:
             if tmp_path.exists():
                 tmp_path.unlink()
         return path
+
+    def to_xarray(self) -> xr.Dataset:
+        """Return a simple xarray view of the particle table."""
+        return self.data.set_index(["indx", "datetime"]).to_xarray()
 
 
 def calc_plume_dilution(

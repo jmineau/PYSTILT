@@ -9,7 +9,7 @@ import numpy as np
 
 from stilt.config import STILTParams
 from stilt.hysplit.driver import HYSPLITDriver
-from stilt.meteorology import MetStream
+from stilt.meteorology import MetSource
 from stilt.receptor import Receptor
 
 from .conftest import integration
@@ -55,7 +55,7 @@ def test_hysplit_multipoint_release_points_follow_control_order(tmp_path, met_di
         rm_dat=True,
         varsiwant=["time", "indx", "long", "lati", "zagl", "foot"],
     )
-    met_files = MetStream(
+    met_files = MetSource(
         "hrrr",
         directory=met_dir,
         file_format="%Y%m%d.%Hz.hrrra",
@@ -119,7 +119,7 @@ def test_hysplit_multipoint_release_points_follow_control_order_nondivisible(
         rm_dat=True,
         varsiwant=["time", "indx", "long", "lati", "zagl", "foot"],
     )
-    met_files = MetStream(
+    met_files = MetSource(
         "hrrr",
         directory=met_dir,
         file_format="%Y%m%d.%Hz.hrrra",
@@ -170,7 +170,7 @@ def test_hysplit_column_release_spans_vertical_line_without_endpoint_chunking(
         rm_dat=True,
         varsiwant=["time", "indx", "long", "lati", "zagl", "foot"],
     )
-    met_files = MetStream(
+    met_files = MetSource(
         "hrrr",
         directory=met_dir,
         file_format="%Y%m%d.%Hz.hrrra",

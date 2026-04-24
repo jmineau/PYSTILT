@@ -7,6 +7,7 @@ import pytest
 
 from stilt.execution import SimulationResult
 from stilt.index import IndexCounts, OutputSummary
+from stilt.index import sqlite as sqlite_mod
 from stilt.index.sqlite import SqliteIndex
 from stilt.index.updates import index_update_from_summary
 from stilt.receptor import Receptor
@@ -143,6 +144,20 @@ def _memory_state(tmp_path) -> SqliteIndex:
         db_path=f"file:{uuid.uuid4().hex}?mode=memory&cache=shared",
         uri=True,
     )
+
+
+def test_supports_wal_on_local_filesystem(monkeypatch, tmp_path):
+    monkeypatch.setattr(sqlite_mod, "_mount_type", lambda _path: "ext4")
+
+    assert sqlite_mod._supports_wal(tmp_path / "index.db") is True
+
+
+def test_disables_wal_on_nfs_filesystem(monkeypatch, tmp_path):
+    monkeypatch.setattr(sqlite_mod, "_mount_type", lambda _path: "nfs")
+
+    assert sqlite_mod._supports_wal(tmp_path / "index.db") is False
+    with pytest.warns(UserWarning, match="SQLite WAL disabled"):
+        SqliteIndex(tmp_path)
 
 
 @pytest.mark.parametrize(

@@ -40,6 +40,10 @@ class FootprintConfig(BaseModel):
         visibility="advanced",
     )
 
+    def replace(self, **updates: object) -> FootprintConfig:
+        """Return a copy with updated fields for interactive iteration."""
+        return self.model_copy(update=updates)
+
 
 def foot_names(foot_configs: dict[str, FootprintConfig]) -> list[str]:
     """Return all requested footprint output names, including error outputs."""

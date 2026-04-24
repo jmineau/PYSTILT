@@ -12,11 +12,12 @@ from .config import (
     RuntimeSettings,
 )
 from .footprint import Footprint
-from .meteorology import MetArchive, MetStream
+from .meteorology import MetSource
 from .model import Model
-from .receptor import LocationID, Receptor, ReceptorID, read_receptors
+from .receptor import LocationID, Receptor, ReceptorID, ReceptorKind, read_receptors
 from .simulation import SimID, Simulation
 from .trajectory import Trajectories
+from .transforms import ParticleTransform
 
 try:
     __version__ = _version("pystilt")
@@ -44,8 +45,10 @@ __all__ = [
     "LocationID",
     "Receptor",
     "ReceptorID",
+    "ReceptorKind",
     "read_receptors",
     # Meteorology
-    "MetStream",
-    "MetArchive",
+    "MetSource",
+    # Transforms
+    "ParticleTransform",
 ]

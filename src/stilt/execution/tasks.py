@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Literal
 from pydantic import BaseModel, ConfigDict
 
 from stilt.config import FootprintConfig, STILTParams
-from stilt.meteorology import MetStream
+from stilt.meteorology import MetSource
 from stilt.receptor import Receptor
 from stilt.simulation import SimID
 from stilt.storage import ProjectFiles, SimulationFiles, Storage
@@ -32,7 +32,7 @@ class SimulationTask(BaseModel):
 
     compute_root: Path
     sim_id: SimID
-    meteorology: MetStream
+    meteorology: MetSource
     receptor: Receptor
     params: STILTParams
     skip_existing: bool = False
@@ -57,6 +57,10 @@ class SimulationResult:
     error: str | None = None
     started_at: dt.datetime | None = None
     finished_at: dt.datetime | None = None
+
+    def __repr__(self) -> str:
+        """Compact developer-facing simulation result representation."""
+        return f"SimulationResult(sim_id={self.sim_id!r}, status={self.status!r})"
 
 
 def build_simulation_task(

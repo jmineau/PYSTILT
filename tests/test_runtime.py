@@ -8,7 +8,6 @@ from stilt.config import RuntimeSettings, resolve_runtime_settings
 
 def test_runtime_settings_from_env(monkeypatch, tmp_path):
     monkeypatch.setenv("PYSTILT_DB_URL", "postgresql://user:pass@db/pystilt")
-    monkeypatch.setenv("STILT_MET_ARCHIVE", str(tmp_path / "met"))
     monkeypatch.setenv("PYSTILT_CACHE_DIR", str(tmp_path / "cache"))
     monkeypatch.setenv("PYSTILT_COMPUTE_ROOT", str(tmp_path / "scratch"))
     monkeypatch.setenv("PYSTILT_MAX_ROWS", "25")
@@ -16,7 +15,6 @@ def test_runtime_settings_from_env(monkeypatch, tmp_path):
     runtime = RuntimeSettings.from_env()
 
     assert runtime.db_url == "postgresql://user:pass@db/pystilt"
-    assert runtime.met_archive == tmp_path / "met"
     assert runtime.cache_dir == tmp_path / "cache"
     assert runtime.compute_root == tmp_path / "scratch"
     assert runtime.max_rows == 25

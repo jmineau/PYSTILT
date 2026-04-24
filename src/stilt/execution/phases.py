@@ -171,7 +171,9 @@ def _materialize_footprint_output(
         error=is_error_output,
     )
     if foot is None:
-        sim.footprint_path(stored_name).unlink(missing_ok=True)
+        sim.files.write_empty_footprint_marker(stored_name)
+        return "complete-empty", None
+    if foot.is_empty:
         sim.files.write_empty_footprint_marker(stored_name)
         return "complete-empty", None
 

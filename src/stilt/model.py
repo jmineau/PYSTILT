@@ -36,7 +36,7 @@ from stilt.execution import (
 )
 from stilt.index import IndexCounts, SimulationIndex
 from stilt.index.factory import resolve_index
-from stilt.meteorology import MetArchive, MetStream
+from stilt.meteorology import MetSource
 from stilt.receptor import Receptor
 from stilt.simulation import SimID
 from stilt.storage import (
@@ -106,7 +106,7 @@ class Model:
         Science-facing receptor accessor.
     simulations : SimulationCollection
         Registered simulation handles backed by the durable index.
-    mets : dict[str, MetStream]
+    mets : dict[str, MetSource]
         Named meteorology streams.
     trajectories : TrajectoryCollection
         Cross-simulation trajectory accessor.
@@ -138,7 +138,6 @@ class Model:
         # Runtime settings are not persisted in the project config, but they may be
         # needed to resolve the durable index backend, so resolve them first.
         self.runtime = resolve_runtime_settings(runtime)
-        self.met_archive = MetArchive(self.runtime.met_archive)
 
         # The project layout resolver also handles output_dir defaulting and cloud URI parsing.
         self.layout = ProjectLayout.resolve(project, output_dir)
@@ -159,13 +158,19 @@ class Model:
         self._config = _config_or_kwargs(config, kwargs, ModelConfig)
 
         # Lazy caches for expensive properties
-        self._mets: dict[str, MetStream] | None = None
+        self._mets: dict[str, MetSource] | None = None
         self._receptors = receptors  # may be None, a Receptor, or an iterable of Receptors; resolved lazily in the accessor
         self._index: SimulationIndex | None = None
         self._simulations: SimulationCollection | None = None
         self._trajectories: TrajectoryCollection | None = None
         self._footprints: FootprintCollection | None = None
         self._plot: ModelPlotAccessor | None = None
+
+    def __repr__(self) -> str:
+        """Compact developer-facing model representation."""
+        return (
+            f"Model(project={self.project!r}, output_root={self.layout.output_root!r})"
+        )
 
     @property
     def index(self) -> SimulationIndex:
@@ -328,12 +333,12 @@ class Model:
         return self._footprints
 
     @property
-    def mets(self) -> dict[str, MetStream]:
+    def mets(self) -> dict[str, MetSource]:
         """Named met streams, with subgrid cache paths resolved under compute_root."""
         if self._mets is None:
             self._mets = {}
             for name, config in self.config.mets.items():
-                self._mets[name] = MetStream(
+                self._mets[name] = MetSource(
                     name,
                     directory=config.directory,
                     file_format=config.file_format,
@@ -343,7 +348,6 @@ class Model:
                     subgrid_bounds=config.subgrid_bounds,
                     subgrid_buffer=config.subgrid_buffer,
                     subgrid_levels=config.subgrid_levels,
-                    archive=self.met_archive,
                 )
         return self._mets
 

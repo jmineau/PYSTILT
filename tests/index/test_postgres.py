@@ -1,5 +1,6 @@
-"""Unit tests for PostgreSQL index pruning helpers."""
+"""Unit tests for PostgreSQL index helpers."""
 
+from stilt.index import postgres
 from stilt.index.postgres import PostgresIndex
 
 
@@ -66,3 +67,21 @@ def test_postgres_state_soft_cap_keeps_active_rows_when_no_terminal_candidates()
 
     assert pruned == []
     assert conn.deleted == []
+
+
+def test_postgres_index_uses_direct_connection_factory(monkeypatch):
+    calls: list[str] = []
+    first = object()
+    second = object()
+
+    def _fake_connect(db_url: str):
+        calls.append(db_url)
+        return first if len(calls) == 1 else second
+
+    monkeypatch.setattr(postgres, "_connect_postgres", _fake_connect)
+    state = object.__new__(PostgresIndex)
+    state._db_url = "postgresql://example"
+
+    assert state._connect() is first
+    assert state._connect() is second
+    assert calls == ["postgresql://example", "postgresql://example"]

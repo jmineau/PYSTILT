@@ -6,7 +6,9 @@ import datetime as dt
 import logging
 from collections.abc import Sequence
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
+
+import pandas as pd
 
 from stilt.config import FootprintConfig, STILTParams
 from stilt.config.model import _config_or_kwargs
@@ -16,7 +18,7 @@ from stilt.errors import (
 )
 from stilt.footprint import Footprint
 from stilt.hysplit import HYSPLITDriver
-from stilt.meteorology import MetID, MetStream
+from stilt.meteorology import MetID, MetSource
 from stilt.receptor import LocationID, Receptor, ReceptorID
 from stilt.storage import SimulationFiles, Store, resolve_directory
 from stilt.trajectory import Trajectories
@@ -103,7 +105,7 @@ class Simulation:
 
     def __init__(
         self,
-        meteorology: MetStream,
+        meteorology: MetSource,
         receptor: Receptor,
         params: STILTParams,
         directory: str | Path | None = None,
@@ -137,6 +139,10 @@ class Simulation:
         self._error_trajectories = None
         self._footprints: dict[str, Footprint] = {}
         self._plot: SimulationPlotAccessor | None = None
+
+    def __repr__(self) -> str:
+        """Compact developer-facing simulation representation."""
+        return f"Simulation(id={self.id!r}, directory={str(self.directory)!r})"
 
     @property
     def met_dir(self) -> Path:
@@ -332,7 +338,13 @@ class Simulation:
         runner.prepare()
         result = runner.execute(timeout=timeout, rm_dat=rm_dat)
 
-        self.log_path.write_text(result.stdout)
+        result_log = getattr(result, "log_path", None)
+        if result_log is not None:
+            result_log_path = Path(result_log)
+            if result_log_path != self.log_path and result_log_path.exists():
+                self.log_path.write_text(result_log_path.read_text())
+        elif hasattr(result, "stdout"):
+            self.log_path.write_text(str(cast(Any, result).stdout))
 
         if result.particles.empty:
             raise EmptyTrajectoryError(f"No trajectory data for {self.id}")
@@ -368,7 +380,7 @@ class Simulation:
         transforms: Sequence[ParticleTransform] | None = None,
         transform_context: ParticleTransformContext | None = None,
         **kwargs,
-    ) -> Footprint | None:
+    ) -> Footprint:
         """Compute a named footprint and store it in the footprint cache.
 
         Parameters
@@ -407,18 +419,29 @@ class Simulation:
             self.run_trajectories(write=write)
             traj = self.error_trajectories if error else self.trajectories
 
-        if traj is None:
-            # Genuinely empty (e.g. no error particles produced).
-            return None
-
         stored_name = f"{name}_error" if error else name
-        particles = traj.data
+        if traj is None:
+            particles = (
+                self.trajectories.data.head(0).copy()
+                if self.trajectories is not None
+                else pd.DataFrame(
+                    {
+                        "time": pd.Series(dtype="float64"),
+                        "indx": pd.Series(dtype="int64"),
+                        "long": pd.Series(dtype="float64"),
+                        "lati": pd.Series(dtype="float64"),
+                        "foot": pd.Series(dtype="float64"),
+                    }
+                )
+            )
+        else:
+            particles = traj.data
         resolved_transforms = build_particle_transforms(config.transforms)
         if transforms is not None:
             resolved_transforms.extend(transforms)
         if resolved_transforms:
             context = transform_context or ParticleTransformContext(
-                receptor=traj.receptor,
+                receptor=self.receptor if traj is None else traj.receptor,
                 footprint_name=stored_name,
                 footprint_config=config,
                 is_error=error,
@@ -429,12 +452,14 @@ class Simulation:
                 context=context,
             )
         foot = Footprint.calculate(
-            particles, receptor=traj.receptor, config=config, name=stored_name
+            particles,
+            receptor=self.receptor if traj is None else traj.receptor,
+            config=config,
+            name=stored_name,
         )
-        if foot is not None:
-            self._footprints[stored_name] = foot
-            if write:
-                foot.to_netcdf(self.footprint_path(stored_name))
+        self._footprints[stored_name] = foot
+        if write:
+            foot.to_netcdf(self.footprint_path(stored_name))
         return foot
 
     # -- Lazy trajectory loading -----------------------------------------------

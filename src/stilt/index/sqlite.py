@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
+import warnings
 from pathlib import Path
 from typing import Any, ClassVar, Literal
 
@@ -62,6 +63,38 @@ class _ManagedConnection(sqlite3.Connection):
         super().__exit__(exc_type, exc_value, traceback)
         self.close()
         return False
+
+
+def _mount_type(path: Path) -> str | None:
+    """Return the filesystem type for one path on Linux when discoverable."""
+    try:
+        mounts = Path("/proc/mounts").read_text().splitlines()
+    except OSError:
+        return None
+    resolved = path.resolve()
+    best: tuple[int, str | None] = (-1, None)
+    for line in mounts:
+        parts = line.split()
+        if len(parts) < 3:
+            continue
+        mount_point = Path(parts[1])
+        fstype = parts[2]
+        try:
+            if resolved.is_relative_to(mount_point):
+                length = len(str(mount_point))
+                if length > best[0]:
+                    best = (length, fstype)
+        except ValueError:
+            continue
+    return best[1]
+
+
+def _supports_wal(path: Path) -> bool:
+    """Return whether one on-disk SQLite database should enable WAL."""
+    fstype = _mount_type(path)
+    if fstype is None:
+        return True
+    return fstype not in {"nfs", "nfs4", "cifs", "smbfs", "lustre", "gpfs"}
 
 
 class SqliteIndex(_SqlIndex):
@@ -150,8 +183,16 @@ class SqliteIndex(_SqlIndex):
             assert isinstance(self._db_path, Path)
             self._db_path.parent.mkdir(parents=True, exist_ok=True)
         with self._connect() as conn:
-            if not self._is_memory_db:
-                conn.execute("PRAGMA journal_mode=WAL")
+            if not self._is_memory_db and isinstance(self._db_path, Path):
+                if _supports_wal(self._db_path):
+                    conn.execute("PRAGMA journal_mode=WAL")
+                else:
+                    warnings.warn(
+                        f"SQLite WAL disabled for non-local filesystem at {self._db_path}. "
+                        "Using DELETE journal mode instead.",
+                        stacklevel=2,
+                    )
+                    conn.execute("PRAGMA journal_mode=DELETE")
             conn.executescript(_SCHEMA)
         self._validate_schema()
 

@@ -155,6 +155,23 @@ def test_netcdf_roundtrip_preserves_transform_specs(tmp_path):
     assert transform.mode == "ak"
 
 
+def test_netcdf_roundtrip_preserves_empty_metadata(tmp_path, point_receptor):
+    particles = _particles_in_domain()
+    particles["long"] = 0.0
+    particles["lati"] = 0.0
+    foot = Footprint.calculate(
+        particles, receptor=point_receptor, config=_foot_config()
+    )
+    path = tmp_path / "empty_foot.nc"
+
+    foot.to_netcdf(path)
+    loaded = Footprint.from_netcdf(path)
+
+    assert loaded.is_empty is True
+    assert loaded.empty_reason == "outside_domain"
+    assert float(loaded.data.sum()) == pytest.approx(0.0)
+
+
 def test_netcdf_roundtrip_no_name(tmp_path):
     """Footprint with no name (unnamed) roundtrips as empty string."""
     foot = _make_footprint(n_times=1)
@@ -202,7 +219,7 @@ def test_netcdf_roundtrip_with_timezone_aware_time(tmp_path):
 def test_time_range_single_timestep():
     foot = _make_footprint(n_times=1)
     start, stop = foot.time_range
-    assert stop > start
+    assert stop == start
     assert isinstance(start, dt.datetime)
 
 
@@ -290,14 +307,19 @@ def test_calculate_dims_are_time_lat_lon(point_receptor):
     assert tuple(foot.data.dims) == ("time", "lat", "lon")
 
 
-def test_calculate_returns_none_when_particles_outside_domain(point_receptor):
-    """All particles outside the domain → None."""
+def test_calculate_returns_explicit_empty_footprint_when_particles_outside_domain(
+    point_receptor,
+):
+    """All particles outside the domain should return an explicit empty footprint."""
     particles = _particles_in_domain()
     particles["long"] = 0.0  # far outside [-114, -113]
     particles["lati"] = 0.0
     config = _foot_config()
     result = Footprint.calculate(particles, receptor=point_receptor, config=config)
-    assert result is None
+    assert isinstance(result, Footprint)
+    assert result.is_empty is True
+    assert result.empty_reason == "outside_domain"
+    assert float(result.data.sum()) == pytest.approx(0.0)
 
 
 def test_calculate_assigns_name(point_receptor):

@@ -5,18 +5,12 @@ STILT requires gridded meteorological fields in NOAA ARL format. PYSTILT does
 not download meteorology for you; it discovers files you already have and
 stages the required subset into each simulation's compute-local directory.
 
-Meteorology in the current package has three layers:
-
 ``MetConfig``
    Durable configuration stored in ``config.yaml``.
 
-``MetArchive``
-   A runtime helper that resolves relative stream directories against a shared
-   archive root and stages files into compute-local space.
-
-``MetStream``
-   The runtime object that discovers and validates required files for one named
-   stream.
+``MetSource``
+   The runtime object that discovers and stages required files for one named
+   met product.
 
 Obtaining ARL meteorology
 -------------------------
@@ -36,7 +30,7 @@ The intended long-term meteorology preparation path is the companion
 waiting on ``arl-met`` before enabling subgrid generation and cropping in the
 main package.
 
-Configuring a stream
+Configuring a source
 --------------------
 
 .. code-block:: python
@@ -50,7 +44,7 @@ Configuring a stream
        n_min=2,
    )
 
-You can register multiple streams in one ``ModelConfig``:
+You can register multiple sources in one ``ModelConfig``:
 
 .. code-block:: python
 
@@ -68,17 +62,20 @@ You can register multiple streams in one ``ModelConfig``:
 How file selection works
 ------------------------
 
-At runtime, ``MetStream.required_files()`` computes the simulation time window,
+At runtime, ``MetSource.required_files()`` computes the simulation time window,
 derives the required filename patterns from ``file_format`` and ``file_tres``,
-scans the configured directory recursively, and returns the matching ARL files.
+and globs for matching ARL files recursively under ``directory``. Each expected
+time step triggers one targeted search rather than a full directory scan, which
+keeps I/O proportional to the number of time steps needed rather than the size
+of the archive.
 
 If too few files are found, the run fails clearly instead of silently starting
 with incomplete meteorology.
 
 .. code-block:: python
 
-   source = stilt.MetStream(
-       name="hrrr",
+   source = stilt.MetSource(
+       met_id="hrrr",
        directory="/data/met/hrrr",
        file_format="%Y%m%d_%H",
        file_tres="1h",
@@ -90,30 +87,8 @@ with incomplete meteorology.
        n_hours=-24,
    )
 
-Shared archives and relative paths
-----------------------------------
-
-When ``STILT_MET_ARCHIVE`` is set, relative meteorology directories are
-resolved against that archive root. This is useful when the same project config
-needs to run on multiple machines or inside workers that mount the same archive
-at a common location.
-
-.. code-block:: bash
-
-   export STILT_MET_ARCHIVE=/data/stilt-meteorology
-
-Then ``config.yaml`` can use a relative directory:
-
-.. code-block:: yaml
-
-   mets:
-     hrrr:
-       directory: hrrr/conus
-       file_format: "%Y%m%d_%H"
-       file_tres: 1h
-
 Staging into compute-local space
---------------------------------
+---------------------------------
 
 ``Simulation.met_files`` stages the selected meteorology files into the
 simulation's compute-local ``met/`` directory using link-or-copy semantics.
@@ -121,7 +96,7 @@ simulation's compute-local ``met/`` directory using link-or-copy semantics.
 This matters when:
 
 - your archive is read-only
-- workers use object storage or a slower shared filesystem for durable output
+- workers use a slower shared filesystem for durable output
 - HYSPLIT should read from a short local path in scratch space
 
 Current limitation

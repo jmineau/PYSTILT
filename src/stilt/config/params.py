@@ -450,7 +450,7 @@ class ErrorParams(BaseModel):
 class STILTParams(ModelParams, TransportParams, ErrorParams):
     """All STILT/HYSPLIT parameters in one flat model."""
 
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+    model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
 
     @model_validator(mode="after")
     def _set_maxpar(self) -> Self:

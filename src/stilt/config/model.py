@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-import warnings
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
 import yaml
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, ConfigDict, model_validator
 from typing_extensions import Self
 
 from .fields import T, _field_meta, cfg_field
@@ -20,6 +19,8 @@ from .spatial import Bounds, Grid
 
 class ModelConfig(STILTParams):
     """Project-level config: STILT params plus met and footprint definitions."""
+
+    model_config = ConfigDict(extra="forbid")
 
     footprints: dict[str, FootprintConfig] = cfg_field(
         default_factory=dict,
@@ -46,6 +47,27 @@ class ModelConfig(STILTParams):
             "Can be overridden at call time via model.run(skip_existing=...)."
         ),
     )
+
+    @classmethod
+    def basic(
+        cls,
+        *,
+        mets: dict[str, MetConfig],
+        n_hours: int = -24,
+        numpar: int = 200,
+        footprints: dict[str, FootprintConfig] | None = None,
+        skip_existing: bool = True,
+        **kwargs: Any,
+    ) -> Self:
+        """Build a science-facing config with the most common controls."""
+        return cls(
+            mets=mets,
+            n_hours=n_hours,
+            numpar=numpar,
+            footprints=footprints or {},
+            skip_existing=skip_existing,
+            **kwargs,
+        )
 
     @model_validator(mode="before")
     @classmethod
@@ -111,13 +133,7 @@ class ModelConfig(STILTParams):
         path = Path(path)
         with path.open() as f:
             raw: dict = yaml.safe_load(f) or {}
-        known = set(cls.model_fields)
-        unknown = set(raw) - known
-        if unknown:
-            warnings.warn(
-                f"Unknown config keys ignored: {sorted(unknown)}", stacklevel=2
-            )
-        return cls.model_validate({k: v for k, v in raw.items() if k in known})
+        return cls.model_validate(raw)
 
 
 CONFIG_DOC_MODELS: tuple[type[BaseModel], ...] = (

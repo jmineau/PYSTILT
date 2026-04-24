@@ -1,7 +1,6 @@
 """Tests for stilt.config - models and YAML roundtrip."""
 
 import textwrap
-import warnings
 
 import pytest
 from pydantic import ValidationError
@@ -431,8 +430,8 @@ def test_model_config_loads_footprint_transforms_from_yaml(tmp_path):
     assert transforms[1].lifetime_hours == pytest.approx(3.0)
 
 
-def test_model_config_unknown_keys_warn(tmp_path):
-    """from_yaml must warn (not crash) on unrecognized keys."""
+def test_model_config_unknown_keys_raise(tmp_path):
+    """from_yaml must fail fast on unrecognized keys."""
 
     yaml_text = textwrap.dedent(f"""\
         n_hours: -24
@@ -446,7 +445,5 @@ def test_model_config_unknown_keys_warn(tmp_path):
     path = tmp_path / "config.yaml"
     path.write_text(yaml_text)
 
-    with warnings.catch_warnings(record=True) as w:
-        warnings.simplefilter("always")
+    with pytest.raises(ValidationError, match="mystery_param"):
         ModelConfig.from_yaml(path)
-    assert any("mystery_param" in str(warning.message) for warning in w)

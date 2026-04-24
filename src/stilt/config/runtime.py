@@ -18,7 +18,6 @@ class _RuntimeEnvSettings(BaseSettings):
     )
 
     db_url: str | None = Field(default=None, alias="PYSTILT_DB_URL")
-    met_archive: Path | None = Field(default=None, alias="STILT_MET_ARCHIVE")
     cache_dir: Path | None = Field(default=None, alias="PYSTILT_CACHE_DIR")
     compute_root: Path | None = Field(default=None, alias="PYSTILT_COMPUTE_ROOT")
     max_rows: int | None = Field(default=None, alias="PYSTILT_MAX_ROWS", ge=1)
@@ -32,10 +31,6 @@ class RuntimeSettings(BaseModel):
     db_url: str | None = Field(
         default=None,
         description="Database URL for a shared simulation index backend.",
-    )
-    met_archive: Path | None = Field(
-        default=None,
-        description="Shared meteorology archive root used for staging met files.",
     )
     cache_dir: Path | None = Field(
         default=None,
@@ -57,7 +52,6 @@ class RuntimeSettings(BaseModel):
         loaded = _RuntimeEnvSettings()
         return cls(
             db_url=loaded.db_url,
-            met_archive=loaded.met_archive,
             cache_dir=loaded.cache_dir,
             compute_root=loaded.compute_root,
             max_rows=loaded.max_rows,

@@ -690,35 +690,15 @@ def test_model_uses_runtime_defaults_for_compute_root_and_cache_dir(tmp_path):
     assert model.storage.store._cache_dir == tmp_path / "cache"
 
 
-def test_model_resolves_relative_met_dirs_from_runtime_archive(tmp_path):
-    config = ModelConfig(
-        mets={
-            "hrrr": MetConfig(
-                directory=Path("hrrr"),
-                file_format="%Y%m%d_%H",
-                file_tres="1h",
-            )
-        }
-    )
-    runtime = RuntimeSettings(met_archive=tmp_path / "archive")
-
-    model = Model(
-        project=tmp_path / "project",
-        config=config,
-        runtime=runtime,
-    )
-
-    assert model.mets["hrrr"].directory == (tmp_path / "archive" / "hrrr").resolve()
-
-
 def test_model_uses_runtime_db_url_for_cloud_output(tmp_path, monkeypatch):
     captured: list[tuple[str, int | None]] = []
     runtime = RuntimeSettings(db_url="postgresql://runtime-db/pystilt", max_rows=25)
 
     monkeypatch.setattr(
         "stilt.index.factory.PostgresIndex",
-        lambda url, output_root=None, max_rows=None: captured.append((url, max_rows))
-        or InMemoryIndex(tmp_path / "repo"),
+        lambda url, output_root=None, max_rows=None: (
+            captured.append((url, max_rows)) or InMemoryIndex(tmp_path / "repo")
+        ),
     )
 
     model = Model(
@@ -743,8 +723,9 @@ def test_model_uses_runtime_db_url_for_local_output(tmp_path, monkeypatch):
 
     monkeypatch.setattr(
         "stilt.index.factory.PostgresIndex",
-        lambda url, output_root=None, max_rows=None: captured.append((url, max_rows))
-        or InMemoryIndex(tmp_path / "repo"),
+        lambda url, output_root=None, max_rows=None: (
+            captured.append((url, max_rows)) or InMemoryIndex(tmp_path / "repo")
+        ),
     )
 
     model = Model(
@@ -762,8 +743,9 @@ def test_model_passes_runtime_max_rows_to_sqlite_state(tmp_path, monkeypatch):
 
     monkeypatch.setattr(
         "stilt.index.factory.SqliteIndex",
-        lambda path, max_rows=None: captured.append(max_rows)
-        or InMemoryIndex(tmp_path / "repo"),
+        lambda path, max_rows=None: (
+            captured.append(max_rows) or InMemoryIndex(tmp_path / "repo")
+        ),
     )
 
     model = Model(
