@@ -26,7 +26,7 @@ def _finished_result(result: SimulationResult) -> SimulationResult:
     """Ensure one worker result has a finished timestamp."""
     if result.finished_at is not None:
         return result
-    result.finished_at = dt.datetime.now(dt.timezone.utc)
+    result.finished_at = dt.datetime.now(dt.timezone.utc).replace(tzinfo=None)
     return result
 
 

@@ -57,7 +57,7 @@ def execute_task(task: SimulationTask) -> SimulationResult:
     SimulationResult
         Typed per-simulation execution result.
     """
-    started_at = dt.datetime.now(dt.timezone.utc)
+    started_at = dt.datetime.now(dt.timezone.utc).replace(tzinfo=None)
 
     sim = _build_simulation(task)
 
@@ -120,7 +120,7 @@ def _unexpected_task_failure_result(
         if sim.error_trajectories_path.exists():
             error_traj_path = sim.error_trajectories_path
 
-    finished_at = dt.datetime.now(dt.timezone.utc)
+    finished_at = dt.datetime.now(dt.timezone.utc).replace(tzinfo=None)
     return SimulationResult(
         sim_id=task.sim_id,
         status=_failure_status(error),
@@ -137,11 +137,11 @@ def _unexpected_task_failure_result(
 
 def _execute_task_result(task: SimulationTask) -> SimulationResult:
     """Run one task and normalize worker interrupts and uncaught exceptions."""
-    started_at = dt.datetime.now(dt.timezone.utc)
+    started_at = dt.datetime.now(dt.timezone.utc).replace(tzinfo=None)
     try:
         return execute_task(task)
     except KeyboardInterrupt:
-        finished_at = dt.datetime.now(dt.timezone.utc)
+        finished_at = dt.datetime.now(dt.timezone.utc).replace(tzinfo=None)
         return SimulationResult(
             sim_id=task.sim_id,
             status="interrupted",

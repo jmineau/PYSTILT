@@ -214,6 +214,11 @@ def test_netcdf_roundtrip_with_timezone_aware_time(tmp_path):
     assert tuple(loaded.data.dims) == ("time", "lat", "lon")
     assert loaded.data.shape == (1, 2, 2)
     assert float(loaded.data.sum()) == pytest.approx(4.0)
+    # Time coord and receptor.time must come back as naive UTC.
+    assert loaded.receptor.time.tzinfo is None
+    loaded_time = pd.Timestamp(loaded.data.time.values[0])
+    assert loaded_time.tzinfo is None
+    assert loaded_time == pd.Timestamp("2023-01-01 12:00:00")
 
 
 def test_time_range_single_timestep():

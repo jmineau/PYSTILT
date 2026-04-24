@@ -71,6 +71,40 @@ def test_from_particles_adds_datetime(point_receptor, tmp_path):
     assert pd.api.types.is_datetime64_any_dtype(traj.data["datetime"])
 
 
+def test_parquet_roundtrip_preserves_naive_utc_from_tz_aware_receptor(tmp_path):
+    """A tz-aware receptor time must normalize to naive UTC and stay naive
+    through the trajectory parquet round-trip so the receptor/trajectory/
+    footprint time axes align without pandas raising on mixed tz comparisons."""
+    aware_receptor = Receptor(
+        time=pd.Timestamp("2023-01-01 12:00:00+00:00"),
+        longitude=-111.85,
+        latitude=40.77,
+        altitude=5.0,
+    )
+    # Receptor normalizes tz-aware input to naive UTC.
+    assert aware_receptor.time.tzinfo is None
+
+    traj = Trajectories.from_particles(
+        particles=_particles_basic(),
+        receptor=aware_receptor,
+        params=_params(tmp_path, hnf_plume=False),
+        met_files=[Path("/tmp/met1")],
+    )
+    assert traj.data["datetime"].dt.tz is None
+
+    path = tmp_path / "traj.parquet"
+    traj.to_parquet(path)
+    loaded = Trajectories.from_parquet(path)
+
+    assert loaded.receptor.time.tzinfo is None
+    assert loaded.receptor.time == aware_receptor.time
+    assert loaded.data["datetime"].dt.tz is None
+    pd.testing.assert_series_equal(
+        loaded.data["datetime"].reset_index(drop=True),
+        traj.data["datetime"].reset_index(drop=True),
+    )
+
+
 def test_to_from_parquet_roundtrip(point_receptor, tmp_path):
     traj = Trajectories.from_particles(
         particles=_particles_basic(),

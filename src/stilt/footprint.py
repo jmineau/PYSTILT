@@ -667,8 +667,6 @@ class Footprint:
                 ).tz_convert(None)
             )
         receptor_time = pd.Timestamp(self.receptor.time)
-        if receptor_time.tzinfo is not None:
-            receptor_time = receptor_time.tz_convert(None)
         ds = ds.assign_coords(receptor_time=receptor_time)
         if self.receptor.kind != "multipoint":
             ds = ds.assign_coords(
@@ -696,7 +694,9 @@ class Footprint:
                         for transform in self.config.transforms
                     ]
                 ),
-                "time_created": dt.datetime.now(dt.timezone.utc).isoformat(),
+                "time_created": dt.datetime.now(dt.timezone.utc)
+                .replace(tzinfo=None)
+                .isoformat(),
             }
         )
 

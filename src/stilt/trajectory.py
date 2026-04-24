@@ -126,10 +126,11 @@ class Trajectories:
         met_files = [Path(p) for p in json.loads(meta[b"stilt:met_files"])]
         is_error = json.loads(meta[b"stilt:is_error"])
 
-        # Read data
+        # Read data. `datetime` is written naive UTC by ``from_particles``; keep
+        # it naive on read so the receptor/trajectory/footprint time axes align.
         data = pd.read_parquet(path, columns=columns)
         if "datetime" in data.columns:
-            data["datetime"] = pd.to_datetime(data["datetime"], utc=True)
+            data["datetime"] = pd.to_datetime(data["datetime"])
 
         return cls(
             receptor=receptor,
