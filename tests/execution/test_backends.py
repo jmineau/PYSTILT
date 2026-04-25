@@ -440,6 +440,61 @@ def test_slurm_handle_job_id():
     assert SlurmHandle("12345").job_id == "12345"
 
 
+def test_slurm_handle_wait_polls_until_complete_and_cleans_chunks(
+    tmp_path, monkeypatch
+):
+    calls: list[str] = []
+    chunk_dir = tmp_path / "chunks"
+    chunk_dir.mkdir()
+    (chunk_dir / "task_0.txt").write_text("sim-a\n")
+
+    def fake_run(args, capture_output, text, timeout):
+        command = args[0]
+        calls.append(command)
+        if command == "squeue":
+            stdout = "12345 running\n" if calls.count("squeue") == 1 else ""
+            return types.SimpleNamespace(returncode=0, stdout=stdout, stderr="")
+        if command == "sacct":
+            return types.SimpleNamespace(
+                returncode=0,
+                stdout="COMPLETED|\nCOMPLETED+|\n",
+                stderr="",
+            )
+        raise AssertionError(f"Unexpected command: {args}")
+
+    monkeypatch.setattr("stilt.execution.backends.slurm.subprocess.run", fake_run)
+    monkeypatch.setattr("stilt.execution.backends.slurm.time.sleep", lambda _: None)
+
+    handle = SlurmHandle("12345", chunk_dir=chunk_dir)
+    handle.wait()
+
+    assert calls == ["squeue", "squeue", "sacct"]
+    assert not chunk_dir.exists()
+
+
+@pytest.mark.parametrize("state", ["FAILED", "CANCELLED", "TIMEOUT"])
+def test_slurm_handle_wait_raises_for_unsuccessful_terminal_states(
+    tmp_path, monkeypatch, state
+):
+    chunk_dir = tmp_path / "chunks"
+    chunk_dir.mkdir()
+
+    def fake_run(args, capture_output, text, timeout):
+        if args[0] == "squeue":
+            return types.SimpleNamespace(returncode=0, stdout="", stderr="")
+        if args[0] == "sacct":
+            return types.SimpleNamespace(returncode=0, stdout=f"{state}|\n", stderr="")
+        raise AssertionError(f"Unexpected command: {args}")
+
+    monkeypatch.setattr("stilt.execution.backends.slurm.subprocess.run", fake_run)
+
+    handle = SlurmHandle("12345", chunk_dir=chunk_dir)
+    with pytest.raises(RuntimeError, match="finished unsuccessfully"):
+        handle.wait()
+
+    assert not chunk_dir.exists()
+
+
 # ---------------------------------------------------------------------------
 # get_executor
 # ---------------------------------------------------------------------------
