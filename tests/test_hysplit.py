@@ -276,6 +276,43 @@ def test_execute_ignores_stale_main_particles_after_error_run_timeout(
     assert "=== error run failed ===" in runner.log_path.read_text()
 
 
+def test_terminate_process_escalates_when_group_kill_does_not_finish(
+    tmp_path, point_receptor, monkeypatch
+):
+    import subprocess
+
+    runner = _make_runner(tmp_path, point_receptor)
+
+    class FakeProc:
+        pid = 1234
+
+        def __init__(self) -> None:
+            self.kill_calls = 0
+            self.wait_calls = 0
+
+        def wait(self, timeout: int) -> int:
+            self.wait_calls += 1
+            if self.wait_calls == 1:
+                raise subprocess.TimeoutExpired(cmd="hycs_std", timeout=timeout)
+            return 0
+
+        def kill(self) -> None:
+            self.kill_calls += 1
+
+    proc = FakeProc()
+    killpg_calls: list[tuple[int, int]] = []
+    monkeypatch.setattr(
+        "stilt.hysplit.driver.os.killpg",
+        lambda pid, sig: killpg_calls.append((pid, sig)),
+    )
+
+    runner._terminate_process(proc)
+
+    assert killpg_calls == [(proc.pid, 9)]
+    assert proc.kill_calls == 1
+    assert proc.wait_calls == 2
+
+
 # ---------------------------------------------------------------------------
 # HYSPLITDriver._write_setup
 # ---------------------------------------------------------------------------
