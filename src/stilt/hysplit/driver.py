@@ -164,6 +164,8 @@ class HYSPLITDriver:
             self._write_winderr()
             self._write_zierr()
             self._write_setup(winderrtf=self.params.winderrtf)
+            self.particle_stilt_path.unlink(missing_ok=True)
+            self.particle_path.unlink(missing_ok=True)
 
             try:
                 self._run(timeout, label="error")

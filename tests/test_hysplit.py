@@ -235,6 +235,47 @@ def test_run_times_out_and_keeps_labeled_log_output(tmp_path, point_receptor):
     assert "starting main run" in log_text
 
 
+def test_execute_ignores_stale_main_particles_after_error_run_timeout(
+    tmp_path, point_receptor, monkeypatch
+):
+    runner = HYSPLITDriver(
+        directory=tmp_path,
+        receptor=point_receptor,
+        params=STILTParams(
+            n_hours=-24,
+            numpar=10,
+            rm_dat=False,
+            siguverr=1.0,
+            tluverr=60.0,
+            zcoruverr=500.0,
+            horcoruverr=40.0,
+            varsiwant=["time", "indx", "long", "lati", "zagl", "foot"],
+        ),
+        met_files=[tmp_path / "met" / "dummy"],
+        exe_dir=tmp_path,
+    )
+
+    def fake_run(timeout: int | None, *, label: str = "main") -> None:
+        if label == "main":
+            _write_particle_dat(
+                runner.particle_stilt_path,
+                rows=[[-60, 1, -111.9, 40.7, 10.0, 1e-5]],
+            )
+            return
+        raise HYSPLITTimeoutError("error run timed out", str(tmp_path))
+
+    monkeypatch.setattr(runner, "_run", fake_run)
+    monkeypatch.setattr(runner, "_write_winderr", lambda: None)
+    monkeypatch.setattr(runner, "_write_zierr", lambda: None)
+    monkeypatch.setattr(runner, "_write_setup", lambda winderrtf: None)
+
+    result = runner.execute(timeout=5, rm_dat=False)
+
+    assert len(result.particles) == 1
+    assert result.error_particles is None
+    assert "=== error run failed ===" in runner.log_path.read_text()
+
+
 # ---------------------------------------------------------------------------
 # HYSPLITDriver._write_setup
 # ---------------------------------------------------------------------------
