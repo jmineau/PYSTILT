@@ -5,7 +5,11 @@ from pathlib import Path
 import pytest
 
 from stilt.config import STILTParams
-from stilt.errors import HYSPLITFailureError, NoParticleOutputError
+from stilt.errors import (
+    HYSPLITFailureError,
+    HYSPLITTimeoutError,
+    NoParticleOutputError,
+)
 from stilt.hysplit import HYSPLITDriver
 from stilt.hysplit.control import ControlFile
 
@@ -208,6 +212,27 @@ def test_run_persists_fortran_runtime_output_on_failure(tmp_path, point_receptor
     log_text = runner.log_path.read_text()
     assert "previous attempt" in log_text
     assert "Fortran runtime error" in log_text
+
+
+def test_run_raises_clear_error_when_executable_missing(tmp_path, point_receptor):
+    runner = _make_runner(tmp_path, point_receptor)
+
+    with pytest.raises(FileNotFoundError, match="HYSPLIT executable not found"):
+        runner._run(timeout=5)
+
+
+def test_run_times_out_and_keeps_labeled_log_output(tmp_path, point_receptor):
+    runner = _make_runner(tmp_path, point_receptor)
+    exe = tmp_path / "hycs_std"
+    exe.write_text("#!/usr/bin/env bash\necho 'starting main run'\nsleep 30\n")
+    exe.chmod(0o755)
+
+    with pytest.raises(HYSPLITTimeoutError, match="timed out"):
+        runner._run(timeout=1)
+
+    log_text = runner.log_path.read_text()
+    assert "=== main run ===" in log_text
+    assert "starting main run" in log_text
 
 
 # ---------------------------------------------------------------------------
