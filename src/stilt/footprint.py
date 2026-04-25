@@ -4,6 +4,7 @@ import datetime as dt
 import json
 import math
 import os
+from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
@@ -125,6 +126,409 @@ def _empty_footprint_data(data: xr.DataArray, reason: str) -> xr.DataArray:
     data = data.copy()
     data.attrs[EMPTY_REASON_ATTR] = reason
     return data
+
+
+@dataclass(frozen=True, slots=True)
+class _BufferedGrid:
+    """Buffered output-grid geometry used during footprint accumulation."""
+
+    glong_buf: np.ndarray
+    glati_buf: np.ndarray
+    n_lon_buf: int
+    n_lat_buf: int
+    xbuf: int
+    ybuf: int
+    xbufh: int
+    ybufh: int
+
+
+def _wrap_antimeridian_longitudes(
+    p: pd.DataFrame, *, xmin: float, xmax: float
+) -> tuple[pd.DataFrame, float, float, bool]:
+    """Wrap particle longitudes and domain bounds to 0-360 when the domain crosses the dateline.
+
+    Only meaningful for geographic CRS.  Returns ``(p, xmin, xmax, wrapped)``.
+    """
+    xdist = ((180 - xmin) - (-180 - xmax)) % 360
+    if xdist == 0:
+        return p, -180.0, 180.0, False
+    if (xmax < xmin) or (xmax > 180):
+        p = p.copy()
+        p["long"] = ((p["long"] % 360) + 360) % 360
+        xmin = ((xmin % 360) + 360) % 360
+        xmax = ((xmax % 360) + 360) % 360
+        return p, xmin, xmax, True
+    return p, xmin, xmax, False
+
+
+def _interpolate_early_timesteps(
+    p: pd.DataFrame, *, xres: float, yres: float, time_sign: int
+) -> pd.DataFrame:
+    """Densify particle tracks for the first 100 minutes when inter-step movement > grid cell.
+
+    Near the receptor, particles move quickly relative to the grid.  If the
+    median inter-particle step exceeds one grid cell, insert sub-minute time
+    points (0.0-10.0 by 0.1 min, 10.2-20.0 by 0.2, 20.5-100.0 by 0.5) and
+    linearly interpolate positions and foot.  Foot values are rescaled after
+    interpolation to preserve the total influence in each time window.
+    """
+    early = p[np.abs(p["time"]) < 100]
+    bp = early.groupby("indx")
+
+    def _median_step(col: str) -> float:
+        return float(
+            bp[col]
+            .apply(
+                lambda s: (
+                    float(np.abs(np.diff(s.values)).mean()) if len(s) > 1 else np.nan
+                )
+            )
+            .median()
+        )
+
+    dx_med = _median_step("long")
+    dy_med = _median_step("lati")
+
+    if (np.isnan(dx_med) or dx_med <= xres) and (np.isnan(dy_med) or dy_med <= yres):
+        return p
+
+    t_new = _interpolation_times(time_sign)
+
+    # Store pre-interpolation foot sums per window for rescaling later.
+    atime = np.abs(p["time"])
+    foot_sums = [
+        p.loc[atime <= 10, "foot"].sum(),
+        p.loc[(atime > 10) & (atime <= 20), "foot"].sum(),
+        p.loc[(atime > 20) & (atime <= 100), "foot"].sum(),
+    ]
+
+    # Outer-join each particle track with the dense time grid, then interpolate
+    # long/lati/foot at the new time points.
+    p = p.copy()
+    p["time"] = p["time"].astype(float)
+    dense = pd.MultiIndex.from_product(
+        [p["indx"].unique(), t_new], names=["indx", "time"]
+    ).to_frame(index=False)
+    p = p.merge(dense, on=["indx", "time"], how="outer").sort_values(
+        ["indx", "time"], ascending=[True, False]
+    )
+
+    def _interp_cols(g: pd.DataFrame) -> pd.DataFrame:
+        t = g["time"].to_numpy(dtype=float)
+        out = {}
+        for col in ["long", "lati", "foot"]:
+            y = g[col].to_numpy(dtype=float)
+            valid = ~np.isnan(y)
+            out[col] = np.interp(t, t[valid], y[valid]) if valid.sum() >= 2 else y
+        return pd.DataFrame(out, index=g.index)
+
+    p[["long", "lati", "foot"]] = p.groupby("indx", group_keys=False).apply(
+        _interp_cols
+    )
+    p = p.dropna(subset=["long", "lati", "foot"]).copy()
+    p["time"] = p["time"].round(1)
+
+    # Rescale foot so total influence per window matches original.
+    atime = np.abs(p["time"])
+    masks = [
+        atime <= 10,
+        (atime > 10) & (atime <= 20),
+        (atime > 20) & (atime <= 100),
+    ]
+    for mask, total in zip(masks, foot_sums, strict=False):
+        s = p.loc[mask, "foot"].sum()
+        if s > 0:
+            p.loc[mask, "foot"] *= total / s
+
+    return p
+
+
+def _project_particles_to_crs(
+    p: pd.DataFrame,
+    *,
+    projection: str,
+    xmin: float,
+    xmax: float,
+    ymin: float,
+    ymax: float,
+) -> tuple[pd.DataFrame, float, float, float, float]:
+    """Project lon/lat particle positions and domain bounds to the output CRS.
+
+    Only called for non-longlat projections.  ``pyproj`` is imported lazily
+    since the default longlat path does not need it.
+    """
+    try:
+        from pyproj import Transformer
+    except ImportError as e:
+        raise ImportError("pyproj is required for non-longlat projections") from e
+    tr = Transformer.from_crs("EPSG:4326", projection, always_xy=True)
+    p = p.copy()
+    p["long"], p["lati"] = tr.transform(p["long"].values, p["lati"].values)
+    corners = tr.transform([xmin, xmax], [ymin, ymax])
+    return (
+        p,
+        float(np.min(corners[0])),
+        float(np.max(corners[0])),
+        float(np.min(corners[1])),
+        float(np.max(corners[1])),
+    )
+
+
+def _compute_kernel_bandwidths(
+    p: pd.DataFrame, *, smooth_factor: float, is_longlat: bool
+) -> tuple[pd.DataFrame, np.ndarray]:
+    """Return (kernel_df, w) where w is the per-rtime Gaussian sigma.
+
+    Bandwidth ``w`` scales with particle spread (``di``) and elapsed time
+    (``ti``), corrected for grid convergence at high latitudes (``grid_conv``):
+
+        w = smooth_factor * 0.06 * varsum^(1/4) * (|rtime|/1440)^(1/2) / cos(lat)
+    """
+    kernel_df = (
+        p.groupby("rtime")
+        .agg(
+            long_var=("long", "var"),
+            lati_var=("lati", "var"),
+            lat_mean=("lati", "mean"),
+        )
+        .reset_index()
+        .dropna()
+    )
+    if kernel_df.empty:
+        # Single-particle / no-variance case: zero-width kernel per rtime.
+        rtime_vals = np.sort(np.asarray(p["rtime"].dropna().unique()))
+        kernel_df = pd.DataFrame(
+            {
+                "rtime": rtime_vals,
+                "lat_mean": [float(p["lati"].to_numpy().mean())] * len(rtime_vals),
+            }
+        )
+        return kernel_df, np.zeros(len(kernel_df), dtype=float)
+
+    kernel_df["varsum"] = kernel_df["long_var"] + kernel_df["lati_var"]
+    di = kernel_df["varsum"].to_numpy() ** 0.25
+    ti = (np.abs(kernel_df["rtime"].to_numpy()) / 1440) ** 0.5
+    grid_conv = (
+        np.cos(kernel_df["lat_mean"].to_numpy() * np.pi / 180) if is_longlat else 1.0
+    )
+    w = smooth_factor * 0.06 * di * ti / grid_conv
+    return kernel_df, w
+
+
+def _build_buffered_grid(
+    *,
+    xmin: float,
+    ymin: float,
+    xres: float,
+    yres: float,
+    n_lon: int,
+    n_lat: int,
+    max_kernel: np.ndarray,
+) -> _BufferedGrid:
+    """Extend the output grid by the largest kernel half-width on each side.
+
+    The buffer ensures particles near the domain edge are smoothed correctly.
+    """
+    xbuf = max_kernel.shape[0]
+    ybuf = max_kernel.shape[1]
+    n_lon_buf = n_lon + 2 * xbuf
+    n_lat_buf = n_lat + 2 * ybuf
+    return _BufferedGrid(
+        glong_buf=xmin - xbuf * xres + np.arange(n_lon_buf) * xres,
+        glati_buf=ymin - ybuf * yres + np.arange(n_lat_buf) * yres,
+        n_lon_buf=n_lon_buf,
+        n_lat_buf=n_lat_buf,
+        xbuf=xbuf,
+        ybuf=ybuf,
+        xbufh=(xbuf - 1) // 2,
+        ybufh=(ybuf - 1) // 2,
+    )
+
+
+def _filter_and_rasterize_particles(
+    p: pd.DataFrame,
+    *,
+    buffered: _BufferedGrid,
+    xmin: float,
+    xmax: float,
+    ymin: float,
+    ymax: float,
+    xres: float,
+    yres: float,
+    time_integrate: bool,
+) -> tuple[pd.DataFrame, np.ndarray]:
+    """Filter to in-domain particles, assign buffered-grid cells, aggregate, and add layer.
+
+    Returns ``(p, layers)`` where ``p`` has columns ``loi, lai, time, rtime,
+    foot, layer`` and ``layers`` is the sorted set of unique layer indices
+    (hour bins, or ``[0]`` when ``time_integrate`` is True).
+    """
+    # Layer axis is derived from unfiltered particles so that empty
+    # footprints still carry the right layer count downstream.
+    layer_series = (
+        pd.Series(0, index=p.index, dtype=int)
+        if time_integrate
+        else np.floor(p["time"] / 60).astype(int)
+    )
+    all_layers = np.sort(np.asarray(pd.Series(layer_series).unique(), dtype=int))
+    if len(all_layers) == 0:
+        all_layers = np.array([0], dtype=int)
+
+    xbufh, ybufh = buffered.xbufh, buffered.ybufh
+    filtered = cast(
+        pd.DataFrame,
+        p[
+            (p["foot"] > 0)
+            & (p["long"] >= xmin - xbufh * xres)
+            & (p["long"] < xmax + xbufh * xres)
+            & (p["lati"] >= ymin - ybufh * yres)
+            & (p["lati"] < ymax + ybufh * yres)
+        ].copy(),
+    )
+
+    if filtered.empty:
+        return filtered, all_layers
+
+    filtered["loi"] = (
+        np.searchsorted(
+            buffered.glong_buf,
+            filtered["long"].to_numpy(dtype=float),
+            side="right",
+        )
+        - 1
+    )
+    filtered["lai"] = (
+        np.searchsorted(
+            buffered.glati_buf,
+            filtered["lati"].to_numpy(dtype=float),
+            side="right",
+        )
+        - 1
+    )
+    # Sum foot for particles in the same cell at the same time step.
+    p = cast(
+        pd.DataFrame,
+        filtered.groupby(["loi", "lai", "time", "rtime"], as_index=False)["foot"].sum(),
+    )
+
+    # time_integrate=True collapses all steps into a single layer; otherwise
+    # bin into hourly layers for time-resolved output.
+    p["layer"] = 0 if time_integrate else np.floor(p["time"] / 60).astype(int)
+    layers = np.sort(np.asarray(p["layer"].unique(), dtype=int))
+    return p, layers
+
+
+def _accumulate_smoothed_footprint(
+    p: pd.DataFrame,
+    *,
+    layers: np.ndarray,
+    buffered: _BufferedGrid,
+    kernel_df: pd.DataFrame,
+    w: np.ndarray,
+    rs: tuple[float, float],
+) -> np.ndarray:
+    """Scatter particle foot values onto the buffered grid and Gaussian-smooth per timestep.
+
+    Returns ``foot_arr`` of shape ``(n_lon_buf, n_lat_buf, n_layers)``.  Uses
+    ``np.bincount`` for the scatter (faster than ``np.add.at``) and confines
+    the convolution to the bounding box of nonzero cells (mathematically
+    equivalent to full-grid convolution because surroundings are zero and
+    ``mode='constant'`` zero-pads).
+    """
+    foot_arr = np.zeros(
+        (buffered.n_lon_buf, buffered.n_lat_buf, len(layers)), dtype=float
+    )
+    rtimes_all = kernel_df["rtime"].values
+    kernel_cache: dict[float, np.ndarray] = {}
+
+    for i, layer in enumerate(layers):
+        layer_p = p.loc[p["layer"] == layer]
+        for rtime_val in layer_p["rtime"].unique():
+            step = layer_p[layer_p["rtime"] == rtime_val]
+
+            # Nearest-neighbour kernel bandwidth for this rtime.
+            step_w_idx = int(np.argmin(np.abs(rtimes_all - rtime_val)))
+            step_w = float(w[step_w_idx])
+            if step_w not in kernel_cache:
+                kernel_cache[step_w] = _make_gauss_kernel(rs, step_w)
+            k = kernel_cache[step_w]
+
+            loi_arr = step["loi"].values.astype(int)
+            lai_arr = step["lai"].values.astype(int)
+            foot_vals = step["foot"].values
+            valid = (
+                (loi_arr >= 0)
+                & (loi_arr < buffered.n_lon_buf)
+                & (lai_arr >= 0)
+                & (lai_arr < buffered.n_lat_buf)
+            )
+            lin_idx = loi_arr[valid] * buffered.n_lat_buf + lai_arr[valid]
+            sparse = np.bincount(
+                lin_idx,
+                weights=foot_vals[valid],
+                minlength=buffered.n_lon_buf * buffered.n_lat_buf,
+            ).reshape(buffered.n_lon_buf, buffered.n_lat_buf)
+
+            nz_r, nz_c = np.nonzero(sparse)
+            if len(nz_r) == 0:
+                continue
+            kh_x = k.shape[0] // 2
+            kh_y = k.shape[1] // 2
+            r0 = max(0, nz_r.min() - kh_x)
+            r1 = min(buffered.n_lon_buf, nz_r.max() + kh_x + 1)
+            c0 = max(0, nz_c.min() - kh_y)
+            c1 = min(buffered.n_lat_buf, nz_c.max() + kh_y + 1)
+            foot_arr[r0:r1, c0:c1, i] += _convolve(
+                sparse[r0:r1, c0:c1], k, mode="constant", cval=0.0
+            )
+
+    return foot_arr
+
+
+def _empty_footprint_result(
+    *,
+    receptor: Receptor,
+    config: FootprintConfig,
+    name: str,
+    xmin: float,
+    xmax: float,
+    ymin: float,
+    ymax: float,
+    xres: float,
+    yres: float,
+    is_longlat: bool,
+    wrapped_longitude: bool,
+    layers: np.ndarray | None = None,
+    reason: str,
+) -> "Footprint":
+    """Build an explicit zero-valued footprint with an empty-reason attr."""
+    n_lon = max(1, int(round((xmax - xmin) / xres)))
+    n_lat = max(1, int(round((ymax - ymin) / yres)))
+    glong = xmin + np.arange(n_lon) * xres
+    glati = ymin + np.arange(n_lat) * yres
+    resolved_layers = (
+        layers if layers is not None and len(layers) > 0 else np.array([0], dtype=int)
+    )
+    foot_arr = np.zeros((len(resolved_layers), n_lat, n_lon), dtype=float)
+    return Footprint(
+        receptor=receptor,
+        config=config,
+        data=_empty_footprint_data(
+            _build_footprint_array(
+                foot_arr=foot_arr,
+                layers=resolved_layers,
+                receptor=receptor,
+                is_longlat=is_longlat,
+                glong=glong,
+                glati=glati,
+                xres=xres,
+                yres=yres,
+                wrapped_longitude=wrapped_longitude,
+            ),
+            reason,
+        ),
+        name=name,
+    )
 
 
 class Footprint:
@@ -275,9 +679,6 @@ class Footprint:
             Footprint object. Empty footprints are represented explicitly as a
             zero-valued data array with empty metadata.
         """
-        p = particles.copy(deep=False)
-
-        # Unpack config and derive convenience flags
         grid = config.grid
         projection = grid.projection
         xmin, xmax, xres = grid.xmin, grid.xmax, grid.xres
@@ -285,344 +686,130 @@ class Footprint:
         is_longlat = "+proj=longlat" in projection
         smooth_factor = config.smooth_factor
         time_integrate = config.time_integrate
-        wrapped_longitude = False
 
-        if p.empty:
-            n_lon = max(1, int(round((xmax - xmin) / xres)))
-            n_lat = max(1, int(round((ymax - ymin) / yres)))
-            glong = xmin + np.arange(n_lon) * xres
-            glati = ymin + np.arange(n_lat) * yres
-            return cls(
-                receptor=receptor,
-                config=config,
-                data=_empty_footprint_data(
-                    _build_footprint_array(
-                        foot_arr=np.zeros((1, n_lat, n_lon), dtype=float),
-                        layers=np.array([0], dtype=int),
-                        receptor=receptor,
-                        is_longlat=is_longlat,
-                        glong=glong,
-                        glati=glati,
-                        xres=xres,
-                        yres=yres,
-                        wrapped_longitude=False,
-                    ),
-                    "no_particles",
+        if particles.empty:
+            return cast(
+                Self,
+                _empty_footprint_result(
+                    receptor=receptor,
+                    config=config,
+                    name=name,
+                    xmin=xmin,
+                    xmax=xmax,
+                    ymin=ymin,
+                    ymax=ymax,
+                    xres=xres,
+                    yres=yres,
+                    is_longlat=is_longlat,
+                    wrapped_longitude=False,
+                    reason="no_particles",
                 ),
-                name=name,
             )
 
+        p = particles.copy(deep=False)
         n_particles = p["indx"].nunique()
-        # time_sign: -1 for backward runs (negative time), +1 for forward
+        # time_sign: -1 for backward runs, +1 for forward.
         time_sign = int(np.sign(p["time"].median()))
 
-        # --- Antimeridian handling ---
-        # If the domain crosses the dateline, wrap longitudes to 0-360 so
-        # coordinate arithmetic stays consistent.
+        wrapped_longitude = False
         if is_longlat:
-            xdist = ((180 - xmin) - (-180 - xmax)) % 360
-            if xdist == 0:
-                xmin, xmax = -180.0, 180.0
-            elif (xmax < xmin) or (xmax > 180):
-                wrapped_longitude = True
-                p["long"] = ((p["long"] % 360) + 360) % 360
-                xmin = ((xmin % 360) + 360) % 360
-                xmax = ((xmax % 360) + 360) % 360
-
-        # --- Sub-minute interpolation for first 100 min ---
-        # Near the receptor, particles move quickly relative to the grid.
-        # If the median inter-particle step exceeds one grid cell, insert
-        # sub-minute time points (0.0-10.0 by 0.1 min, 10.2-20.0 by 0.2,
-        # 20.5-100.0 by 0.5) and linearly interpolate positions and foot.
-        # Foot values are rescaled after interpolation to preserve the
-        # total influence in each time window.
-        early = p[np.abs(p["time"]) < 100]
-        bp = early.groupby("indx")
-        dx_med = (
-            bp["long"]
-            .apply(
-                lambda s: (
-                    float(np.abs(np.diff(s.values)).mean()) if len(s) > 1 else np.nan
-                )
-            )
-            .median()
-        )
-        dy_med = (
-            bp["lati"]
-            .apply(
-                lambda s: (
-                    float(np.abs(np.diff(s.values)).mean()) if len(s) > 1 else np.nan
-                )
-            )
-            .median()
-        )
-
-        if (not np.isnan(dx_med) and dx_med > xres) or (
-            not np.isnan(dy_med) and dy_med > yres
-        ):
-            t_new = _interpolation_times(time_sign)
-
-            # Store pre-interpolation foot sums per window for rescaling later
-            atime = np.abs(p["time"])
-            foot_sums = [
-                p.loc[atime <= 10, "foot"].sum(),
-                p.loc[(atime > 10) & (atime <= 20), "foot"].sum(),
-                p.loc[(atime > 20) & (atime <= 100), "foot"].sum(),
-            ]
-
-            # Outer-join each particle track with the dense time grid, then
-            # interpolate long/lati/foot at the new time points
-            p["time"] = p["time"].astype(float)
-            grid = pd.MultiIndex.from_product(
-                [p["indx"].unique(), t_new], names=["indx", "time"]
-            ).to_frame(index=False)
-            p = p.merge(grid, on=["indx", "time"], how="outer").sort_values(
-                ["indx", "time"], ascending=[True, False]
+            p, xmin, xmax, wrapped_longitude = _wrap_antimeridian_longitudes(
+                p, xmin=xmin, xmax=xmax
             )
 
-            def _interp_cols(g):
-                """Interpolate long/lati/foot columns onto a dense time grid."""
-                t = g["time"].values.astype(float)
-                out = {}
-                for col in ["long", "lati", "foot"]:
-                    y = g[col].values.astype(float)
-                    valid = ~np.isnan(y)
-                    out[col] = (
-                        np.interp(t, t[valid], y[valid]) if valid.sum() >= 2 else y
-                    )
-                return pd.DataFrame(out, index=g.index)
+        p = _interpolate_early_timesteps(p, xres=xres, yres=yres, time_sign=time_sign)
 
-            p[["long", "lati", "foot"]] = p.groupby("indx", group_keys=False).apply(
-                _interp_cols
-            )
-
-            p = p.dropna(subset=["long", "lati", "foot"]).copy()
-            p["time"] = p["time"].round(1)
-
-            # Rescale foot so total influence per window matches original
-            atime = np.abs(p["time"])
-            masks = [
-                atime <= 10,
-                (atime > 10) & (atime <= 20),
-                (atime > 20) & (atime <= 100),
-            ]
-            for mask, total in zip(masks, foot_sums, strict=False):
-                s = p.loc[mask, "foot"].sum()
-                if s > 0:
-                    p.loc[mask, "foot"] *= total / s
-
-        # --- Relative time per particle ---
         # rtime = time elapsed since each particle's first output step.
-        # Used to compute kernel bandwidth (particles spread more with time).
+        # Used below to compute kernel bandwidth (particles spread more with time).
         p["rtime"] = p.groupby("indx")["time"].transform(
             lambda s: s - time_sign * np.abs(s).min()
         )
 
-        # --- Project coordinates if not longlat ---
-        # Transform particle positions and domain bounds into the output CRS.
         if not is_longlat:
-            try:
-                from pyproj import Transformer
-            except ImportError as e:
-                raise ImportError(
-                    "pyproj is required for non-longlat projections"
-                ) from e
-            tr = Transformer.from_crs("EPSG:4326", projection, always_xy=True)
-            p["long"], p["lati"] = tr.transform(p["long"].values, p["lati"].values)
-            corners = tr.transform([xmin, xmax], [ymin, ymax])
-            xmin, xmax = float(np.min(corners[0])), float(np.max(corners[0]))
-            ymin, ymax = float(np.min(corners[1])), float(np.max(corners[1]))
+            p, xmin, xmax, ymin, ymax = _project_particles_to_crs(
+                p,
+                projection=projection,
+                xmin=xmin,
+                xmax=xmax,
+                ymin=ymin,
+                ymax=ymax,
+            )
 
-        # --- Output grid cell lower-left corners ---
+        # Output grid lower-left corners.
         n_lon = max(1, int(round((xmax - xmin) / xres)))
         n_lat = max(1, int(round((ymax - ymin) / yres)))
         glong = xmin + np.arange(n_lon) * xres
         glati = ymin + np.arange(n_lat) * yres
-
-        # --- Kernel bandwidths per rtime ---
-        # Bandwidth w scales with particle spread (di) and elapsed time (ti),
-        # corrected for grid convergence at high latitudes (grid_conv).
-        # Formula: w = smooth_factor * 0.06 * varsum^(1/4) * (|rtime|/1440)^(1/2) / cos(lat)
         rs = (xres, yres)
-        kernel_df = (
-            p.groupby("rtime")
-            .agg(
-                long_var=("long", "var"),
-                lati_var=("lati", "var"),
-                lat_mean=("lati", "mean"),
-            )
-            .reset_index()
-            .dropna()
-        )
-        if kernel_df.empty:
-            # Single-particle/no-variance case: use zero-width kernel per rtime,
-            # equivalent to no smoothing while still allowing downstream indexing.
-            rtime_vals = np.sort(np.asarray(p["rtime"].dropna().unique()))
-            kernel_df = pd.DataFrame(
-                {
-                    "rtime": rtime_vals,
-                    "lat_mean": [float(p["lati"].to_numpy().mean())] * len(rtime_vals),
-                }
-            )
-            w = np.zeros(len(kernel_df), dtype=float)
-        else:
-            kernel_df["varsum"] = kernel_df["long_var"] + kernel_df["lati_var"]
-            di = kernel_df["varsum"].to_numpy() ** 0.25
-            ti = (np.abs(kernel_df["rtime"].to_numpy()) / 1440) ** 0.5
-            grid_conv = (
-                np.cos(kernel_df["lat_mean"].to_numpy() * np.pi / 180)
-                if is_longlat
-                else 1.0
-            )
-            w = smooth_factor * 0.06 * di * ti / grid_conv
 
-        # --- Buffer grid sized to the largest kernel ---
-        # Extend the output grid by the largest kernel half-width on each side
-        # so that particles near the domain edge are smoothed correctly.
-        max_k = (
+        kernel_df, w = _compute_kernel_bandwidths(
+            p, smooth_factor=smooth_factor, is_longlat=is_longlat
+        )
+        max_kernel = (
             _make_gauss_kernel(rs, float(np.max(w)))
             if len(w) > 0
             else np.array([[1.0]])
         )
-        xbuf = max_k.shape[0]
-        ybuf = max_k.shape[1]
-        xbufh = (xbuf - 1) // 2
-        ybufh = (ybuf - 1) // 2
-
-        n_lon_buf = n_lon + 2 * xbuf
-        n_lat_buf = n_lat + 2 * ybuf
-        glong_buf = xmin - xbuf * xres + np.arange(n_lon_buf) * xres
-        glati_buf = ymin - ybuf * yres + np.arange(n_lat_buf) * yres
-
-        layer_series = (
-            pd.Series(0, index=p.index, dtype=int)
-            if time_integrate
-            else np.floor(p["time"] / 60).astype(int)
+        buffered = _build_buffered_grid(
+            xmin=xmin,
+            ymin=ymin,
+            xres=xres,
+            yres=yres,
+            n_lon=n_lon,
+            n_lat=n_lat,
+            max_kernel=max_kernel,
         )
-        all_layers = np.sort(np.asarray(pd.Series(layer_series).unique(), dtype=int))
-        if len(all_layers) == 0:
-            all_layers = np.array([0], dtype=int)
 
-        # --- Filter to particles with positive foot inside the buffered domain ---
-        p = p[
-            (p["foot"] > 0)
-            & (p["long"] >= xmin - xbufh * xres)
-            & (p["long"] < xmax + xbufh * xres)
-            & (p["lati"] >= ymin - ybufh * yres)
-            & (p["lati"] < ymax + ybufh * yres)
-        ]
-
-        # --- Assign particles to buffered grid cells and aggregate ---
-        p = p.copy()
-        assert isinstance(p, pd.DataFrame)
-        p["loi"] = np.searchsorted(glong_buf, p["long"].to_numpy(), side="right") - 1
-        p["lai"] = np.searchsorted(glati_buf, p["lati"].to_numpy(), side="right") - 1
-        # Sum foot for particles in the same cell at the same time step
-        p = p.groupby(["loi", "lai", "time", "rtime"], as_index=False)["foot"].sum()
-        assert isinstance(p, pd.DataFrame)
-
-        # --- Assign each time step to an output layer ---
-        # time_integrate=True collapses all steps into a single layer;
-        # otherwise bin into hourly layers for time-resolved output.
-        interval_mins = 60
-        p["layer"] = (
-            0 if time_integrate else np.floor(p["time"] / interval_mins).astype(int)
+        p, layers = _filter_and_rasterize_particles(
+            p,
+            buffered=buffered,
+            xmin=xmin,
+            xmax=xmax,
+            ymin=ymin,
+            ymax=ymax,
+            xres=xres,
+            yres=yres,
+            time_integrate=time_integrate,
         )
-        layers = (
-            np.sort(np.asarray(p["layer"].unique(), dtype=int))
-            if not p.empty
-            else all_layers
-        )
-        n_layers = len(layers)
 
         if p.empty:
-            foot_arr = np.zeros((n_layers, n_lat, n_lon), dtype=float)
-            return cls(
-                receptor=receptor,
-                config=config,
-                data=_empty_footprint_data(
-                    _build_footprint_array(
-                        foot_arr=foot_arr,
-                        layers=layers,
-                        receptor=receptor,
-                        is_longlat=is_longlat,
-                        glong=glong,
-                        glati=glati,
-                        xres=xres,
-                        yres=yres,
-                        wrapped_longitude=wrapped_longitude,
-                    ),
-                    "outside_domain",
+            return cast(
+                Self,
+                _empty_footprint_result(
+                    receptor=receptor,
+                    config=config,
+                    name=name,
+                    xmin=xmin,
+                    xmax=xmax,
+                    ymin=ymin,
+                    ymax=ymax,
+                    xres=xres,
+                    yres=yres,
+                    is_longlat=is_longlat,
+                    wrapped_longitude=wrapped_longitude,
+                    layers=layers,
+                    reason="outside_domain",
                 ),
-                name=name,
             )
 
-        # --- Accumulate footprint per layer ---
-        foot_arr = np.zeros((n_lon_buf, n_lat_buf, n_layers))
-        rtimes_all = kernel_df["rtime"].values
-        kernel_cache: dict[float, np.ndarray] = {}
+        foot_arr = _accumulate_smoothed_footprint(
+            p,
+            layers=layers,
+            buffered=buffered,
+            kernel_df=kernel_df,
+            w=w,
+            rs=rs,
+        )
 
-        for i, layer in enumerate(layers):
-            layer_p = p.loc[p["layer"] == layer]
-            for rtime_val in layer_p["rtime"].unique():
-                step = layer_p[layer_p["rtime"] == rtime_val]
-
-                # Look up the kernel bandwidth (w) for this rtime - nearest
-                # neighbor in the precomputed kernel_df rtime grid.
-                step_w_idx = int(np.argmin(np.abs(rtimes_all - rtime_val)))
-                step_w = float(w[step_w_idx])
-                # Build Gaussian kernel at this bandwidth; cache by exact sigma
-                # value since the same rtime can appear across multiple layers.
-                if step_w not in kernel_cache:
-                    kernel_cache[step_w] = _make_gauss_kernel(rs, step_w)
-                k = kernel_cache[step_w]
-
-                # Scatter particle foot values onto the buffered grid using
-                # bincount (faster than np.add.at for this use case).
-                loi_arr = step["loi"].values.astype(int)
-                lai_arr = step["lai"].values.astype(int)
-                foot_vals = step["foot"].values
-                valid = (
-                    (loi_arr >= 0)
-                    & (loi_arr < n_lon_buf)
-                    & (lai_arr >= 0)
-                    & (lai_arr < n_lat_buf)
-                )
-                lin_idx = loi_arr[valid] * n_lat_buf + lai_arr[valid]
-                sparse = np.bincount(
-                    lin_idx, weights=foot_vals[valid], minlength=n_lon_buf * n_lat_buf
-                ).reshape(n_lon_buf, n_lat_buf)
-
-                # Subgrid convolution: find the bounding box of nonzero cells
-                # and convolve only that region, padded by the kernel half-width.
-                # This is mathematically equivalent to convolving the full
-                # buffered grid because all cells outside the bounding box are
-                # zero and mode='constant' zero-pads beyond array edges - but
-                # it's much faster when particles occupy a small fraction of the
-                # domain (typical for fine-resolution grids like 0.01°).
-                nz_r, nz_c = np.nonzero(sparse)
-                if len(nz_r) == 0:
-                    continue  # no particles in domain this timestep
-                kh_x, kh_y = (
-                    k.shape[0] // 2,
-                    k.shape[1] // 2,
-                )  # kernel half-width in cells
-                r0 = max(
-                    0, nz_r.min() - kh_x
-                )  # left edge of bounding box, extended by kernel half-width
-                r1 = min(n_lon_buf, nz_r.max() + kh_x + 1)  # right edge of bounding box
-                c0 = max(0, nz_c.min() - kh_y)  # top edge of bounding box
-                c1 = min(
-                    n_lat_buf, nz_c.max() + kh_y + 1
-                )  # bottom edge of bounding box
-                foot_arr[r0:r1, c0:c1, i] += (
-                    _convolve(  # convolve the sparse grid within the bounding box
-                        sparse[r0:r1, c0:c1], k, mode="constant", cval=0.0
-                    )
-                )
-
-        # --- Trim buffer and normalize ---
-        foot_arr = foot_arr[xbuf : xbuf + n_lon, ybuf : ybuf + n_lat, :] / n_particles
+        # Trim buffer and normalize by particle count.
+        foot_arr = (
+            foot_arr[
+                buffered.xbuf : buffered.xbuf + n_lon,
+                buffered.ybuf : buffered.ybuf + n_lat,
+                :,
+            ]
+            / n_particles
+        )
 
         return cls(
             receptor=receptor,
@@ -775,7 +962,7 @@ class Footprint:
                 }
             )
         )
-        frame = sampled.transpose("obs", "time").to_pandas()
+        frame = cast(pd.DataFrame, sampled.transpose("obs", "time").to_pandas())
         if frame.empty:
             return pd.DataFrame(
                 0.0, index=coord_index, columns=_time_bin_columns(time_bins)
@@ -791,5 +978,7 @@ class Footprint:
             assert left is not None and right is not None
             mask = (frame.columns >= left) & (frame.columns < right)
             if mask.any():
-                result[left_edge] = frame.loc[:, mask].sum(axis=1)
+                result[left_edge] = cast(pd.DataFrame, frame.loc[:, mask]).sum(
+                    axis="columns"
+                )
         return result
