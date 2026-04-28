@@ -12,6 +12,7 @@ from stilt.errors import (
 )
 from stilt.hysplit import HYSPLITDriver
 from stilt.hysplit.control import ControlFile
+from stilt.hysplit.driver import _read_particle_dat
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -174,6 +175,41 @@ def test_read_particles_parses_expected_columns(tmp_path, point_receptor):
     assert len(df) == 2
     assert list(df.columns) == runner.params.varsiwant
     assert df["indx"].iloc[0] == 1
+
+
+def test_read_particle_dat_handles_irregular_whitespace(tmp_path):
+    path = tmp_path / "PARTICLE_STILT.DAT"
+    path.write_text(
+        "header\n"
+        " -60    1   -111.9     40.7  10.0   1e-5\n"
+        "\t-120  2\t-112.0 40.6   20.0 2e-5\n"
+    )
+    names = ["time", "indx", "long", "lati", "zagl", "foot"]
+
+    df = _read_particle_dat(path, names)
+
+    assert list(df.columns) == names
+    assert df.shape == (2, 6)
+    assert df["foot"].iloc[1] == pytest.approx(2e-5)
+
+
+def test_read_particle_dat_handles_header_only_file(tmp_path):
+    path = tmp_path / "PARTICLE_STILT.DAT"
+    path.write_text("header\n")
+    names = ["time", "indx", "long", "lati", "zagl", "foot"]
+
+    df = _read_particle_dat(path, names)
+
+    assert df.empty
+    assert list(df.columns) == names
+
+
+def test_read_particle_dat_validates_column_count(tmp_path):
+    path = tmp_path / "PARTICLE_STILT.DAT"
+    path.write_text("header\n-60 1 -111.9\n")
+
+    with pytest.raises(ValueError, match="has 3 columns, expected 6"):
+        _read_particle_dat(path, ["time", "indx", "long", "lati", "zagl", "foot"])
 
 
 def test_read_particles_removes_dat_files_when_requested(tmp_path, point_receptor):

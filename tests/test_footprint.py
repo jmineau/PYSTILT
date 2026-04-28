@@ -132,6 +132,25 @@ def test_netcdf_roundtrip_preserves_name(tmp_path):
     assert loaded.grid.xres == pytest.approx(0.1)
 
 
+def test_from_netcdf_forwards_chunks_to_xarray(tmp_path, monkeypatch):
+    foot = _make_footprint(n_times=1)
+    path = tmp_path / "chunked_foot.nc"
+    foot.to_netcdf(path)
+    seen_kwargs = {}
+    real_open_dataset = xr.open_dataset
+
+    def fake_open_dataset(path_arg, **kwargs):
+        seen_kwargs.update(kwargs)
+        return real_open_dataset(path_arg)
+
+    monkeypatch.setattr("stilt.footprint.xr.open_dataset", fake_open_dataset)
+
+    loaded = Footprint.from_netcdf(path, chunks={"time": 1})
+
+    assert loaded.name == "slv"
+    assert seen_kwargs["chunks"] == {"time": 1}
+
+
 def test_netcdf_writes_cf_grid_mapping_and_coordinates(tmp_path):
     foot = _make_footprint(n_times=1)
     path = tmp_path / "cf_foot.nc"

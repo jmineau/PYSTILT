@@ -4,11 +4,14 @@ import os
 import platform
 import signal
 import subprocess
+import warnings
+from collections.abc import Sequence
 from dataclasses import dataclass
 from importlib.resources import files as pkg_files
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 import pandas as pd
 
 from stilt.config import (
@@ -59,6 +62,31 @@ def _bundled_exe_dir() -> Path:
 def _bundled_data_dir() -> Path:
     """Return the bundled HYSPLIT data files directory."""
     return Path(str(pkg_files("stilt.hysplit") / "data"))
+
+
+def _read_particle_dat(path: Path, names: Sequence[str]) -> pd.DataFrame:
+    """Read one whitespace-delimited HYSPLIT particle output file.
+
+    ``numpy.loadtxt`` is substantially cheaper than regex-based pandas parsing
+    for large numeric ``PARTICLE_STILT.DAT`` files while still handling
+    variable-width whitespace emitted by HYSPLIT.
+    """
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore",
+            message="loadtxt: input contained no data",
+            category=UserWarning,
+        )
+        values = np.loadtxt(path, skiprows=1, ndmin=2)
+
+    if values.size == 0:
+        return pd.DataFrame(columns=pd.Index(names))
+    if values.shape[1] != len(names):
+        raise ValueError(
+            f"{path.name} has {values.shape[1]} columns, expected {len(names)} "
+            f"from varsiwant={list(names)!r}."
+        )
+    return pd.DataFrame(values, columns=pd.Index(names))
 
 
 @dataclass
@@ -241,13 +269,7 @@ class HYSPLITDriver:
                 f"{particle_path.name} not produced for {self.directory}"
             )
 
-        particles = pd.read_csv(
-            particle_path,
-            sep=r"\s+",
-            header=None,
-            skiprows=1,
-            names=self.params.varsiwant,
-        )
+        particles = _read_particle_dat(particle_path, self.params.varsiwant)
 
         if rm_dat:
             particle_path.unlink(missing_ok=True)

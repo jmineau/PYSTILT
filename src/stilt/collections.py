@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable, Iterator
+from collections.abc import Iterable, Iterator
 from pathlib import Path
-from typing import TYPE_CHECKING, overload
+from typing import TYPE_CHECKING, Generic, Protocol, TypeVar, overload
 
 from stilt.config import STILTParams
 from stilt.footprint import Footprint
@@ -28,6 +28,8 @@ from stilt.trajectory import Trajectories
 
 if TYPE_CHECKING:
     from stilt.model import Model
+
+TOutput = TypeVar("TOutput", covariant=True)
 
 
 class ReceptorCollection:
@@ -284,26 +286,75 @@ class SimulationCollection:
         )
 
 
-class _OutputAccessor:
+class _OutputSpec(Protocol[TOutput]):
+    """Typed contract for one durable simulation output family."""
+
+    def present(self, summary: OutputSummary) -> bool:
+        """Return whether this output is complete in one index summary."""
+        ...
+
+    def local_path(self, model: Model, sim_id: str) -> Path:
+        """Return this output's project-local path for one simulation id."""
+        ...
+
+    def load_one(self, path: Path) -> TOutput:
+        """Load one resolved local output path."""
+        ...
+
+
+class _TrajectoryOutputSpec:
+    """Output spec for main or error trajectory parquet files."""
+
+    def __init__(self, *, error: bool = False):
+        self.error = error
+
+    def present(self, summary: OutputSummary) -> bool:
+        return summary.error_traj_present if self.error else summary.traj_present
+
+    def local_path(self, model: Model, sim_id: str) -> Path:
+        sim_files = ProjectFiles(model.layout.output_dir).simulation(sim_id)
+        return (
+            sim_files.error_trajectory_path if self.error else sim_files.trajectory_path
+        )
+
+    def load_one(self, path: Path) -> Trajectories:
+        return Trajectories.from_parquet(path)
+
+
+class _NamedFootprintOutputSpec:
+    """Output spec for one named footprint netCDF file."""
+
+    def __init__(self, name: str):
+        self.name = name
+
+    def present(self, summary: OutputSummary) -> bool:
+        return summary.footprint_complete(self.name)
+
+    def local_path(self, model: Model, sim_id: str) -> Path:
+        return (
+            ProjectFiles(model.layout.output_dir)
+            .simulation(sim_id)
+            .footprint_path(self.name)
+        )
+
+    def load_one(self, path: Path) -> Footprint:
+        return Footprint.from_netcdf(path)
+
+
+class _OutputAccessor(Generic[TOutput]):
     """Shared implementation of cross-simulation output accessors.
 
-    Subclasses/factories supply three callables — a presence test, a local-path
-    resolver, and a single-path loader — and inherit ``paths()`` / ``load()`` /
-    ``missing()`` with consistent filter semantics.
+    Subclasses/factories supply a typed output spec and inherit ``paths()`` /
+    ``load()`` / ``missing()`` with consistent filter semantics.
     """
 
     def __init__(
         self,
         model: Model,
-        *,
-        present: Callable[[OutputSummary], bool],
-        local_path: Callable[[str], Path],
-        load_one: Callable[[Path], object],
+        spec: _OutputSpec[TOutput],
     ):
         self._model = model
-        self._present = present
-        self._local_path = local_path
-        self._load_one = load_one
+        self._spec = spec
 
     def _configured_mets(self) -> Iterable[str] | None:
         return self._model.config.mets if self._model._config is not None else None
@@ -341,8 +392,8 @@ class _OutputAccessor:
                 time_range=time_range,
                 location_ids=location_ids,
             ),
-            present=self._present,
-            local_path=self._local_path,
+            present=self._spec.present,
+            local_path=lambda sim_id: self._spec.local_path(self._model, sim_id),
         )
 
     def load(
@@ -350,9 +401,9 @@ class _OutputAccessor:
         mets: str | list[str] | None = None,
         time_range: tuple | None = None,
         location_ids: set[str] | None = None,
-    ) -> list:
+    ) -> list[TOutput]:
         return [
-            self._load_one(path)
+            self._spec.load_one(path)
             for path in self.paths(
                 mets=mets, time_range=time_range, location_ids=location_ids
             )
@@ -372,7 +423,7 @@ class _OutputAccessor:
                 time_range=time_range,
                 location_ids=location_ids,
             ),
-            present=self._present,
+            present=self._spec.present,
         )
 
 
@@ -381,26 +432,10 @@ class TrajectoryCollection:
 
     def __init__(self, model: Model):
         self._model = model
-        self._main = _OutputAccessor(
-            model,
-            present=lambda summary: summary.traj_present,
-            local_path=lambda sim_id: (
-                ProjectFiles(model.layout.output_dir).simulation(sim_id).trajectory_path
-            ),
-            load_one=Trajectories.from_parquet,
-        )
-        self._error = _OutputAccessor(
-            model,
-            present=lambda summary: summary.error_traj_present,
-            local_path=lambda sim_id: (
-                ProjectFiles(model.layout.output_dir)
-                .simulation(sim_id)
-                .error_trajectory_path
-            ),
-            load_one=Trajectories.from_parquet,
-        )
+        self._main = _OutputAccessor(model, _TrajectoryOutputSpec())
+        self._error = _OutputAccessor(model, _TrajectoryOutputSpec(error=True))
 
-    def _accessor(self, error: bool) -> _OutputAccessor:
+    def _accessor(self, error: bool) -> _OutputAccessor[Trajectories]:
         return self._error if error else self._main
 
     def paths(
@@ -441,21 +476,12 @@ class TrajectoryCollection:
         )
 
 
-class NamedFootprintCollection(_OutputAccessor):
+class NamedFootprintCollection(_OutputAccessor[Footprint]):
     """Science-facing accessor for one named footprint output across simulations."""
 
     def __init__(self, model: Model, name: str):
         self.name = name
-        super().__init__(
-            model,
-            present=lambda summary, n=name: summary.footprint_complete(n),
-            local_path=lambda sim_id, n=name: (
-                ProjectFiles(model.layout.output_dir)
-                .simulation(sim_id)
-                .footprint_path(n)
-            ),
-            load_one=Footprint.from_netcdf,
-        )
+        super().__init__(model, _NamedFootprintOutputSpec(name))
 
     def load(  # type: ignore[override]
         self,

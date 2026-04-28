@@ -666,13 +666,18 @@ class Footprint:
         )
 
     @classmethod
-    def from_netcdf(cls, path: str | Path, **kwargs) -> Self:
+    def from_netcdf(
+        cls, path: str | Path, *, chunks: Any | None = None, **kwargs: Any
+    ) -> Self:
         """Create a footprint from a netCDF file.
 
         Parameters
         ----------
         path : str or Path
             NetCDF footprint file path.
+        chunks : dict, int, "auto", or None, optional
+            Forwarded to :func:`xarray.open_dataset` for dask-backed lazy
+            loading when requested.
         **kwargs
             Passed to :func:`xarray.open_dataset`.
 
@@ -683,6 +688,8 @@ class Footprint:
         """
         path = Path(path).resolve()
 
+        if chunks is not None:
+            kwargs["chunks"] = chunks
         ds = xr.open_dataset(path, **kwargs)
         attrs = dict(ds.attrs)
 
