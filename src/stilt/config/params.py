@@ -16,9 +16,10 @@ class ModelParams(BaseModel):
 
     DEFAULT_TARGET: ClassVar[str | None] = None
 
-    n_hours: int = Field(
+    n_hours: int = cfg_field(
         -24,
         description="Number of hours to run each simulation; negative indicates backward in time.",
+        target="control",
     )
     numpar: int = cfg_field(
         200,
@@ -376,33 +377,40 @@ class ErrorParams(BaseModel):
 
     DEFAULT_TARGET: ClassVar[str | None] = None
 
-    siguverr: float | None = Field(
+    siguverr: float | None = cfg_field(
         None,
         description="Standard deviation of horizontal wind error [m/s]",
+        target="winderr",
     )
-    tluverr: float | None = Field(
+    tluverr: float | None = cfg_field(
         None,
         description="Standard deviation of horiztontal wind error timescale [min]",
+        target="winderr",
     )
-    zcoruverr: float | None = Field(
+    zcoruverr: float | None = cfg_field(
         None,
         description="Vertical correlation length scale of horizontal wind error [m]",
+        target="winderr",
     )
-    horcoruverr: float | None = Field(
+    horcoruverr: float | None = cfg_field(
         None,
         description="Horizontal correlation length scale of horizontal wind error [km]",
+        target="winderr",
     )
-    sigzierr: float | None = Field(
+    sigzierr: float | None = cfg_field(
         None,
         description="Standard deviation of mixed-layer height errors [%]",
+        target="zierr",
     )
-    tlzierr: float | None = Field(
+    tlzierr: float | None = cfg_field(
         None,
         description="Standard deviation of mixed layer height timescale [min]",
+        target="zierr",
     )
-    horcorzierr: float | None = Field(
+    horcorzierr: float | None = cfg_field(
         None,
         description="Horizontal correlation length scale of mixed-layer height errors [km]",
+        target="zierr",
     )
 
     XYERR_PARAMS: ClassVar[tuple[str, ...]] = (

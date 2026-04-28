@@ -11,12 +11,15 @@ from stilt.config import (
     FootprintConfig,
     MetConfig,
     ModelConfig,
+    ModelParams,
     STILTParams,
     TransportParams,
     VerticalOperatorTransformSpec,
+    build_control_entries,
     build_setup_entries,
     iter_documented_config_fields,
 )
+from stilt.config.model import _resolved_field_meta
 
 # ---------------------------------------------------------------------------
 # ErrorParams.winderrtf
@@ -114,6 +117,29 @@ def test_build_setup_entries_includes_seed_when_set():
     assert entries["seed"] == 17
 
 
+def test_build_control_entries_uses_control_targets():
+    p = STILTParams(emisshrs=0.5, w_option=1, z_top=12000.0)
+    entries = build_control_entries(p)
+
+    assert entries == {
+        "emisshrs": 0.5,
+        "w_option": 1,
+        "z_top": 12000.0,
+    }
+
+
+def test_resolved_field_meta_applies_defaults_and_overrides():
+    assert _resolved_field_meta(ModelParams, "numpar")["target"] == "setup"
+    assert _resolved_field_meta(TransportParams, "seed")["target"] == "setup"
+    assert _resolved_field_meta(TransportParams, "emisshrs")["target"] == "control"
+    assert _resolved_field_meta(TransportParams, "w_option")["target"] == "control"
+    assert _resolved_field_meta(TransportParams, "z_top")["target"] == "control"
+    assert _resolved_field_meta(TransportParams, "ziscale")["target"] == "zicontrol"
+    assert _resolved_field_meta(ErrorParams, "siguverr")["target"] == "winderr"
+    assert _resolved_field_meta(ErrorParams, "sigzierr")["target"] == "zierr"
+    assert _resolved_field_meta(TransportParams, "ichem")["visibility"] == "internal"
+
+
 def test_iter_documented_config_fields_hides_internal_transport_fields_by_default():
     public_names = {
         name
@@ -159,6 +185,7 @@ def test_model_config_flat_construction(tmp_path):
     cfg = ModelConfig(
         n_hours=-24,
         numpar=100,
+        seed=42,
         mets={
             "hrrr": MetConfig(
                 directory=tmp_path / "met",
@@ -169,6 +196,7 @@ def test_model_config_flat_construction(tmp_path):
     )
     assert cfg.n_hours == -24
     assert cfg.numpar == 100
+    assert cfg.seed == 42
 
 
 def test_model_config_requires_nonempty_mets():
@@ -215,6 +243,9 @@ def test_model_config_yaml_roundtrip_basic(tmp_path):
     path = tmp_path / "config.yaml"
     cfg.to_yaml(path)
     loaded = ModelConfig.from_yaml(path)
+    text = path.read_text()
+
+    assert "#" not in text
     assert loaded.n_hours == -24
     assert loaded.numpar == 100
     assert "hrrr" in loaded.mets
@@ -387,6 +418,36 @@ def test_model_config_inline_bounds_in_yaml(tmp_path):
     fc = loaded.footprints["slv_coarse"]
     assert fc.grid.xres == 0.05
     assert fc.grid.xmin == -114.0
+
+
+def test_model_config_footprint_grid_shorthand_in_yaml(tmp_path):
+    """Footprint config accepts grid bounds directly under the footprint name."""
+    yaml_text = textwrap.dedent(f"""\
+        n_hours: -24
+        numpar: 100
+        mets:
+          hrrr:
+            directory: {tmp_path / "met"}
+            file_format: "%Y%m%d_%H"
+            file_tres: 1h
+        footprints:
+          slv_coarse:
+            xmin: -114.0
+            xmax: -111.0
+            ymin: 39.0
+            ymax: 42.0
+            xres: 0.05
+            yres: 0.05
+            smooth_factor: 0.75
+    """)
+    path = tmp_path / "config.yaml"
+    path.write_text(yaml_text)
+    loaded = ModelConfig.from_yaml(path)
+    fc = loaded.footprints["slv_coarse"]
+
+    assert fc.grid.xmin == -114.0
+    assert fc.grid.xres == 0.05
+    assert fc.smooth_factor == 0.75
 
 
 def test_model_config_loads_footprint_transforms_from_yaml(tmp_path):

@@ -16,6 +16,9 @@ from .meteorology import MetConfig
 from .params import ErrorParams, ModelParams, STILTParams, TransportParams
 from .spatial import Bounds, Grid
 
+_GRID_KEYS = frozenset({"xmin", "xmax", "ymin", "ymax", "xres", "yres", "projection"})
+_REQUIRED_GRID_KEYS = frozenset({"xmin", "xmax", "ymin", "ymax", "xres", "yres"})
+
 
 class ModelConfig(STILTParams):
     """Project-level config: STILT params plus met and footprint definitions."""
@@ -90,7 +93,15 @@ class ModelConfig(STILTParams):
                             )
                         cfg["grid"] = grids_raw[grid_ref]
                     elif grid_ref is None:
-                        raise ValueError(f"Footprint '{name}' is missing a 'grid' key.")
+                        shorthand_keys = _REQUIRED_GRID_KEYS & set(cfg)
+                        if shorthand_keys == _REQUIRED_GRID_KEYS:
+                            cfg["grid"] = {
+                                key: cfg.pop(key) for key in _GRID_KEYS if key in cfg
+                            }
+                        else:
+                            raise ValueError(
+                                f"Footprint '{name}' is missing a 'grid' key."
+                            )
                 resolved[name] = cfg
             data = {**data, "footprints": resolved}
         return data
@@ -157,10 +168,22 @@ def iter_documented_config_fields(
         models = CONFIG_DOC_MODELS
     for model in models:
         for name, field in model.model_fields.items():
-            visibility = _field_meta(field).get("visibility", "public")
-            if visibility == "internal" and not include_internal:
+            meta = _resolved_field_meta(model, name)
+            if meta["visibility"] == "internal" and not include_internal:
                 continue
             yield model, name, field
+
+
+def _resolved_field_meta(model: type[BaseModel], name: str) -> dict[str, Any]:
+    """Return field metadata after applying class-level routing defaults."""
+    field = model.model_fields[name]
+    meta = _field_meta(field)
+    return {
+        **meta,
+        "target": meta.get("target", getattr(model, "DEFAULT_TARGET", None)),
+        "visibility": meta.get("visibility", "public"),
+        "namelist": meta.get("namelist", name),
+    }
 
 
 def _collect_target_entries(
@@ -171,17 +194,14 @@ def _collect_target_entries(
 ) -> dict[str, Any]:
     """Collect config fields whose metadata routes them to one output target."""
     entries: dict[str, Any] = {}
-    default_target = getattr(model, "DEFAULT_TARGET", None)
-    for name, field in model.model_fields.items():
-        meta = _field_meta(field)
-        field_target = meta.get("target", default_target)
-        if field_target != target:
+    for name in model.model_fields:
+        meta = _resolved_field_meta(model, name)
+        if meta["target"] != target:
             continue
         value = getattr(params, name)
         if value is None:
             continue
-        key = meta.get("namelist", name)
-        entries[key] = value
+        entries[meta["namelist"]] = value
     return entries
 
 

@@ -7,6 +7,14 @@ of the STILT parameter surface. The field tables below are rendered directly
 from the live Pydantic model metadata so the parameter descriptions stay in
 sync with the code.
 
+PYSTILT intentionally keeps the public configuration surface flat. Common run
+controls such as ``n_hours``, ``numpar``, and ``seed`` can be passed directly to
+``ModelConfig`` or ``Model`` rather than through nested parameter objects.
+Internally, those fields are routed to PYSTILT logic or to HYSPLIT files such
+as ``CONTROL``, ``SETUP.CFG``, ``ZICONTROL``, ``WINDERR``, and ``ZIERR``.
+Most users do not need to care about that routing unless they are debugging
+generated HYSPLIT inputs or adding a new parameter.
+
 Configuration models
 --------------------
 

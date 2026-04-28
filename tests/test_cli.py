@@ -3,6 +3,7 @@
 from pathlib import Path
 from unittest.mock import MagicMock
 
+import yaml
 from typer.testing import CliRunner
 
 import stilt.__main__
@@ -993,6 +994,50 @@ def test_init_prints_confirmation(tmp_path):
     result = runner.invoke(app, ["init", str(project)])
     assert result.exit_code == 0
     assert "Initialized STILT project" in result.output
+
+
+def test_init_writes_science_first_commented_config(tmp_path):
+    project = tmp_path / "new_project"
+    result = runner.invoke(app, ["init", str(project)])
+    assert result.exit_code == 0
+
+    text = (project / "config.yaml").read_text()
+    parsed = yaml.safe_load(text)
+
+    assert "#" in text
+    assert ModelConfig.from_yaml(project / "config.yaml")
+    assert list(parsed) == [
+        "mets",
+        "footprints",
+        "n_hours",
+        "numpar",
+        "varsiwant",
+        "hnf_plume",
+        "skip_existing",
+    ]
+    assert "grids" not in parsed
+    assert "grid" not in parsed["footprints"]["default"]
+    assert parsed["footprints"]["default"]["xmin"] == -113.0
+    assert (
+        ModelConfig.from_yaml(project / "config.yaml").footprints["default"].grid.xmin
+        == -113.0
+    )
+    assert text.index("mets:") < text.index("footprints:")
+    assert text.index("footprints:") < text.index("n_hours:")
+    assert text.index("numpar:") < text.index("skip_existing:")
+    assert text.index("skip_existing:") < text.index("# execution:")
+
+
+def test_init_config_omits_advanced_and_internal_knobs(tmp_path):
+    project = tmp_path / "new_project"
+    result = runner.invoke(app, ["init", str(project)])
+    assert result.exit_code == 0
+
+    text = (project / "config.yaml").read_text()
+
+    assert "ichem" not in text
+    assert "idsp" not in text
+    assert "kagl" not in text
 
 
 def test_init_aborts_when_config_exists(tmp_path):

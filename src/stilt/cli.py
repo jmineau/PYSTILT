@@ -29,10 +29,7 @@ from pathlib import Path
 from typing import Any
 
 import typer
-import yaml
-from pydantic import BaseModel
 
-from stilt.config import STILTParams
 from stilt.execution import (
     SlurmHandle,
     get_executor,
@@ -56,17 +53,45 @@ app = typer.Typer(
 logger = logging.getLogger(__name__)
 
 
-def _to_commented_yaml(model_cls: type[BaseModel], data: dict[str, Any]) -> str:
-    """Render *data* as YAML with a ``#`` comment above each key that has a description."""
-    fields = model_cls.model_fields
-    lines: list[str] = []
-    for key, value in data.items():
-        field = fields.get(key)
-        if field is not None and field.description:
-            desc = " ".join(field.description.split())
-            lines.append(f"# {desc}")
-        lines.append(yaml.dump({key: value}, default_flow_style=False).rstrip())
-    return "\n".join(lines) + "\n"
+def _starter_config_yaml() -> str:
+    """Return the science-first commented starter config written by ``stilt init``."""
+    return """# PYSTILT project configuration
+# See docs for details: https://jmineau.github.io/PYSTILT
+
+
+# Meteorology sources. Edit directory to point to your ARL files.
+mets:
+  hrrr:  # Unique name for this met source.
+    directory: /path/to/arl/meteorology
+    file_format: "%Y%m%d_%H"
+    file_tres: 1h  # Temporal resolution of met files.
+
+
+# Named footprint products to compute for each receptor.
+# For multiple footprints, define reusable top-level grids and reference them by name.
+footprints:
+  default:  # Name of this footprint product.
+    xmin: -113.0
+    xmax: -110.5
+    ymin: 40.0
+    ymax: 42.0
+    xres: 0.01
+    yres: 0.01
+
+
+# Common run controls. Negative n_hours means backward in time.
+n_hours: -24
+numpar: 1000
+varsiwant: [time, indx, long, lati, zagl, foot, mlht, pres, dens, samt, sigw, tlgr]
+hnf_plume: true  # rescale footprints via a gaussian plume model in the hyper-near field
+skip_existing: true  # skip simulation outputs that already exist
+
+
+# Execution is optional. Local execution is the default.
+# execution:
+#   backend: local  # or "slurm"
+#   n_workers: 1
+"""
 
 
 # ---------------------------------------------------------------------------
@@ -176,20 +201,7 @@ def init(
 
     project_dir.mkdir(parents=True, exist_ok=True)
 
-    stilt_yaml = _to_commented_yaml(STILTParams, {"n_hours": -24, "numpar": 1000})
-    config_path.write_text(
-        "# STILT project configuration\n"
-        "# Edit mets.hrrr.directory to point to your ARL meteorology files.\n"
-        "\n" + stilt_yaml + "\nmets:\n"
-        "  hrrr:\n"
-        "    directory: /path/to/arl/meteorology\n"
-        '    file_format: "%Y%m%d_%H"\n'
-        "    file_tres: 1h\n"
-        "\n"
-        "# execution:\n"
-        "#   backend: local  # increase n_workers for parallel; use 'slurm' for HPC\n"
-        "#   n_workers: 1\n"
-    )
+    config_path.write_text(_starter_config_yaml())
 
     receptors_path.write_text(
         "time,longitude,latitude,altitude\n"
