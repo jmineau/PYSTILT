@@ -17,7 +17,7 @@ from stilt.errors import HYSPLITTimeoutError
 from stilt.footprint import Footprint
 from stilt.meteorology import MetSource
 from stilt.simulation import SimID, Simulation
-from stilt.storage import FsspecStore
+from stilt.storage import LocalStore
 from stilt.trajectory import Trajectories
 
 
@@ -373,7 +373,7 @@ def test_simulation_log_loads_from_artifact_store_fallback(point_receptor, tmp_p
     sim = _sim(
         tmp_path / "cache",
         point_receptor,
-        store=FsspecStore(storage_root),
+        store=LocalStore(storage_root),
     )
 
     assert sim.log == "cloud log"
@@ -389,7 +389,7 @@ def test_simulation_log_loads_from_store(point_receptor, tmp_path):
     sim = _sim(
         tmp_path / "cache",
         point_receptor,
-        store=FsspecStore(output_root),
+        store=LocalStore(output_root),
     )
 
     assert sim.log == "artifact log"
@@ -424,7 +424,7 @@ def test_get_footprint_loads_from_artifact_store_fallback(point_receptor, tmp_pa
     sim = _sim(
         tmp_path / "cache",
         point_receptor,
-        store=FsspecStore(storage_root),
+        store=LocalStore(storage_root),
     )
 
     foot = sim.get_footprint("slv")
@@ -504,7 +504,7 @@ def test_simulation_trajectories_load_from_storage_backend(point_receptor, tmp_p
     sim = _sim(
         tmp_path / "cache",
         point_receptor,
-        store=FsspecStore(storage_root),
+        store=LocalStore(storage_root),
     )
 
     assert sim.trajectories is not None
@@ -518,7 +518,7 @@ def test_simulation_trajectories_load_from_store(point_receptor, tmp_path):
     sim = _sim(
         tmp_path / "cache",
         point_receptor,
-        store=FsspecStore(output_root),
+        store=LocalStore(output_root),
     )
 
     assert sim.trajectories is not None
@@ -534,7 +534,7 @@ def test_simulation_error_trajectories_load_from_storage_backend(
     sim = _sim(
         tmp_path / "cache",
         point_receptor,
-        store=FsspecStore(storage_root),
+        store=LocalStore(storage_root),
     )
 
     assert sim.error_trajectories is not None
@@ -554,7 +554,7 @@ def test_simulation_status_uses_storage_backed_artifacts(point_receptor, tmp_pat
     sim = _sim(
         tmp_path / "cache",
         point_receptor,
-        store=FsspecStore(storage_root),
+        store=LocalStore(storage_root),
     )
     assert sim.status == "complete"
 

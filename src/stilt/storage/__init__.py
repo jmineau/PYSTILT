@@ -26,12 +26,13 @@ from .layout import (
     uri_join,
 )
 from .project import Storage
-from .store import FsspecStore, Store
+from .store import FsspecStore, LocalStore, Store, make_store
 
 __all__ = [
     "CHUNKS_DIRNAME",
     "CONFIG_FILENAME",
     "FsspecStore",
+    "LocalStore",
     "FOOTPRINT_INDEX_DIRNAME",
     "PARTICLE_INDEX_DIRNAME",
     "ProjectFiles",
@@ -46,6 +47,7 @@ __all__ = [
     "Storage",
     "Store",
     "empty_footprint_filename",
+    "make_store",
     "error_trajectory_filename",
     "footprint_filename",
     "is_cloud_project",

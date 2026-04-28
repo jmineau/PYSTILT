@@ -19,7 +19,7 @@ from stilt.index.sqlite import SqliteIndex
 from stilt.model import Model as _Model
 from stilt.receptor import Receptor
 from stilt.simulation import SimID
-from stilt.storage import FsspecStore, Storage
+from stilt.storage import LocalStore, Storage, Store
 
 
 def _record_result(
@@ -124,7 +124,7 @@ def _state_call(state, method: str, *args, **kwargs):
 def _storage(
     project_dir: Path,
     output_dir: Path,
-    store: FsspecStore,
+    store: Store,
     *,
     is_cloud_project: bool = False,
 ) -> Storage:
@@ -352,7 +352,7 @@ def test_simulations_mapping_uses_store_for_reload(
         storage=_storage(
             tmp_path / "cache",
             tmp_path / "cache",
-            FsspecStore(output_root),
+            LocalStore(output_root),
         ),
     )
 
@@ -665,7 +665,7 @@ def test_model_loads_config_and_receptors_via_store(tmp_path):
         storage=_storage(
             tmp_path / "cache",
             tmp_path / "cache",
-            FsspecStore(output_root),
+            LocalStore(output_root),
         ),
     )
 
@@ -673,7 +673,7 @@ def test_model_loads_config_and_receptors_via_store(tmp_path):
     assert len(model.receptors) == 1
 
 
-def test_model_uses_runtime_defaults_for_compute_root_and_cache_dir(tmp_path):
+def test_model_uses_runtime_defaults_for_compute_root_and_local_store(tmp_path):
     runtime = RuntimeSettings(
         compute_root=tmp_path / "scratch",
         cache_dir=tmp_path / "cache",
@@ -686,8 +686,7 @@ def test_model_uses_runtime_defaults_for_compute_root_and_cache_dir(tmp_path):
     )
 
     assert model.compute_root == (tmp_path / "scratch").resolve()
-    assert isinstance(model.storage.store, FsspecStore)
-    assert model.storage.store._cache_dir == tmp_path / "cache"
+    assert isinstance(model.storage.store, LocalStore)
 
 
 def test_model_uses_runtime_db_url_for_cloud_output(tmp_path, monkeypatch):
@@ -709,7 +708,7 @@ def test_model_uses_runtime_db_url_for_cloud_output(tmp_path, monkeypatch):
         storage=_storage(
             tmp_path / "project",
             tmp_path / "artifacts-local",
-            FsspecStore(tmp_path / "artifacts"),
+            LocalStore(tmp_path / "artifacts"),
         ),
     )
 
@@ -763,7 +762,7 @@ def test_register_pending_bootstraps_config_and_receptors_to_storage(
 ):
     output_root = tmp_path / "artifacts"
     repo = InMemoryIndex(tmp_path / "repo")
-    artifact_store = FsspecStore(output_root)
+    artifact_store = LocalStore(output_root)
 
     model = Model(
         project="s3://bucket/project",
@@ -855,7 +854,7 @@ def test_model_uses_output_dir_for_default_sqlite_repository(tmp_path):
 
 def test_cloud_run_passes_project_uri_to_executor(tmp_path, point_receptor):
     repo = InMemoryIndex(tmp_path / "repo")
-    artifact_store = FsspecStore(tmp_path / "artifacts")
+    artifact_store = LocalStore(tmp_path / "artifacts")
 
     model = Model(
         project="s3://bucket/project",
@@ -1092,7 +1091,7 @@ def test_trajectory_accessor_paths_fall_back_to_store(tmp_path, point_receptor):
         storage=_storage(
             tmp_path / "cache",
             tmp_path / "cache",
-            FsspecStore(storage_root),
+            LocalStore(storage_root),
         ),
     )
     result = model.trajectories.paths()
@@ -1335,7 +1334,7 @@ def test_named_footprint_accessor_load_falls_back_to_store(
         storage=_storage(
             tmp_path / "cache",
             tmp_path / "cache",
-            FsspecStore(storage_root),
+            LocalStore(storage_root),
         ),
     )
     result = model.footprints["slv"].load()
@@ -1548,7 +1547,7 @@ def test_model_run_cloud_output_bootstraps_workers_from_output_uri(
     """Remote workers should reconstruct from the durable output URI, not a local project path."""
     project_dir = tmp_path / "project"
     repo = InMemoryIndex(tmp_path / "repo")
-    artifact_store = FsspecStore(tmp_path / "artifacts")
+    artifact_store = LocalStore(tmp_path / "artifacts")
 
     model = Model(
         project=project_dir,
@@ -1720,7 +1719,7 @@ def test_model_run_returns_completed_handle_when_nothing_to_do(
 
 def test_model_run_with_custom_storage(tmp_path, point_receptor):
     """Tests can bind custom storage after construction for output lookup paths."""
-    artifact_store = FsspecStore(tmp_path)
+    artifact_store = LocalStore(tmp_path)
     exc = _CapturingExecutor()
     model = Model(
         project=tmp_path,

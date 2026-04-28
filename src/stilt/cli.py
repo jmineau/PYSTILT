@@ -407,9 +407,8 @@ def push_worker(
     model = Model(
         project=resolved_dir, output_dir=resolved_output, compute_root=compute_root
     )
-    sim_ids = [
-        s for line in Path(chunk).read_text().splitlines() if (s := line.strip())
-    ]
+    chunk_path = Path(chunk)
+    sim_ids = [s for line in chunk_path.read_text().splitlines() if (s := line.strip())]
     push_simulations(model, sim_ids, n_cores=cpus, skip_existing=skip_existing)
 
 

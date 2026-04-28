@@ -10,10 +10,10 @@ import pyarrow.parquet as pq
 
 from stilt.receptor import Receptor
 from stilt.storage import (
-    FsspecStore,
     ProjectFiles,
     SimulationFiles,
     error_trajectory_filename,
+    make_store,
     trajectory_filename,
 )
 
@@ -63,7 +63,7 @@ def _receptor_from_parquet(parquet_file: Path | None) -> Receptor | None:
 
 def scan_durable_simulations(output_root: str | Path) -> list[ScannedSimulation]:
     """Scan one durable output root and summarize every simulation directory."""
-    store = FsspecStore(output_root)
+    store = make_store(output_root)
     grouped: dict[str, set[str]] = {}
     for key in store.list_prefix(ProjectFiles.simulation_prefix()):
         parts = PurePosixPath(key).parts

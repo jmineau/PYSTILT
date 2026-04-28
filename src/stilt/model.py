@@ -40,10 +40,10 @@ from stilt.meteorology import MetSource
 from stilt.receptor import Receptor
 from stilt.simulation import SimID
 from stilt.storage import (
-    FsspecStore,
     ProjectFiles,
     ProjectLayout,
     Storage,
+    make_store,
     project_slug,
 )
 
@@ -145,9 +145,7 @@ class Model:
         self.storage = Storage(
             project_dir=self.layout.project_dir,
             output_dir=self.layout.output_dir,
-            store=FsspecStore(
-                self.layout.output_root, cache_dir=self.runtime.cache_dir
-            ),
+            store=make_store(self.layout.output_root, cache_dir=self.runtime.cache_dir),
             is_cloud_project=self.layout.is_cloud_project,
         )
 

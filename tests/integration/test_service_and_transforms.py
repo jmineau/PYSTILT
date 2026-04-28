@@ -10,6 +10,7 @@ from stilt.config import (
     FootprintConfig,
     ModelConfig,
 )
+from stilt.errors import ConfigValidationError
 from stilt.execution import pull_simulations
 from stilt.model import Model
 
@@ -44,7 +45,7 @@ def test_pull_simulations_requires_runtime_queue_backend(
     assert pending.completed == 0
     assert pending.failed == 0
 
-    with pytest.raises(ValueError, match="claim-capable index backend"):
+    with pytest.raises(ConfigValidationError, match="claim-capable index backend"):
         pull_simulations(model, poll_interval=0.1)
 
 

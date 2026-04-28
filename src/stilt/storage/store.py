@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import posixpath
 import shutil
 import tempfile
@@ -25,15 +26,6 @@ def _normalize_output_dir(output_dir: str | Path) -> str:
     return str(Path(raw).resolve())
 
 
-def _is_local_filesystem_protocol(protocol: object) -> bool:
-    """Return True when the resolved filesystem writes directly to local disk."""
-    if isinstance(protocol, str):
-        return protocol in {"file", "local"}
-    if isinstance(protocol, tuple):
-        return any(item in {"file", "local"} for item in protocol)
-    return False
-
-
 @runtime_checkable
 class Store(Protocol):
     """Durable file access independent of the local compute workspace."""
@@ -46,8 +38,127 @@ class Store(Protocol):
     def publish_simulation(self, sim: Simulation) -> None: ...
 
 
+class LocalStore:
+    """Durable store backed by the local filesystem.
+
+    Uses atomic tmp-then-replace for file writes and relative symlinks for
+    local-only flat alias views under ``simulations/particles`` and
+    ``simulations/footprints``.
+    """
+
+    def __init__(self, output_dir: str | Path) -> None:
+        self.output_dir = Path(output_dir).resolve()
+
+    def _path(self, key: str) -> Path:
+        return self.output_dir / key.strip("/")
+
+    def read_bytes(self, key: str) -> bytes:
+        return self._path(key).read_bytes()
+
+    def write_bytes(self, key: str, data: bytes) -> None:
+        path = self._path(key)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(data)
+
+    def exists(self, key: str) -> bool:
+        return self._path(key).exists()
+
+    def list_prefix(self, prefix: str) -> list[str]:
+        base = self._path(prefix)
+        if not base.exists():
+            return []
+        if base.is_file():
+            return [prefix.strip("/")]
+        return sorted(
+            str(p.relative_to(self.output_dir)) for p in base.rglob("*") if p.is_file()
+        )
+
+    def local_path(self, key: str) -> Path:
+        return self._path(key)
+
+    def publish_file(self, local_path: str | Path, key: str) -> None:
+        """Atomically copy one local file into the store under *key*.
+
+        Writes to a sibling ``.tmp`` first then ``Path.replace`` onto the
+        final key — same-directory rename is atomic on POSIX, so concurrent
+        readers never observe a partial file.
+        """
+        src = Path(local_path)
+        if not src.exists():
+            return
+        target = self._path(key)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        if src.resolve() == target.resolve():
+            return
+        tmp = target.with_suffix(target.suffix + ".tmp")
+        try:
+            shutil.copy2(src, tmp)
+            tmp.replace(target)
+        finally:
+            if tmp.exists():
+                tmp.unlink(missing_ok=True)
+
+    def _publish_symlink(self, src: Path, key: str) -> None:
+        """Atomically symlink *src* into the store under *key*.
+
+        Writes a relative symlink to a sibling ``.tmp`` first, then
+        ``Path.replace`` onto the final key, so readers never see an
+        unlinked-then-recreated window during republish.
+        """
+        target = self._path(key)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        if src.resolve() == target.resolve():
+            return
+        tmp = target.with_suffix(target.suffix + ".tmp")
+        if tmp.exists() or tmp.is_symlink():
+            tmp.unlink()
+        try:
+            tmp.symlink_to(os.path.relpath(src, start=target.parent))
+            tmp.replace(target)
+        finally:
+            if tmp.exists() or tmp.is_symlink():
+                tmp.unlink(missing_ok=True)
+
+    def publish_simulation(self, sim: Simulation) -> None:
+        """Publish the standard durable outputs produced by one simulation."""
+        files = SimulationFiles(sim.directory, str(sim.id))
+        log_path = files.log_path
+        traj_path = files.trajectory_path
+        error_path = files.error_trajectory_path
+
+        def _publish(src: Path, canonical_key: str, *index_keys: str) -> None:
+            if not src.exists():
+                return
+            self.publish_file(src, canonical_key)
+            canonical_local = self.local_path(canonical_key)
+            for key in index_keys:
+                self._publish_symlink(canonical_local, key)
+
+        _publish(log_path, files.key(log_path))
+        _publish(
+            traj_path,
+            files.key(traj_path),
+            ProjectFiles.particle_index_key(traj_path.name),
+        )
+        _publish(error_path, files.key(error_path))
+        for footprint in sorted(sim.directory.glob(f"{files.sim_id}*_foot.nc")):
+            _publish(
+                footprint,
+                files.key(footprint),
+                ProjectFiles.footprint_index_key(footprint.name),
+            )
+        for marker in sorted(sim.directory.glob(f"{files.sim_id}*_foot.empty")):
+            _publish(marker, files.key(marker))
+
+
 class FsspecStore:
-    """Durable store backed by an ``fsspec`` filesystem."""
+    """Durable store backed by an ``fsspec`` remote filesystem.
+
+    Suitable for object stores (``s3://``, ``gs://``, ``abfs://``) and
+    pseudo-remote backends (``memory://``, ``http://``). Remote stores publish
+    only canonical ``simulations/by-id`` outputs; flat alias views are local
+    filesystem conveniences handled by ``LocalStore``.
+    """
 
     def __init__(
         self,
@@ -59,7 +170,7 @@ class FsspecStore:
         self._cache_dir = Path(cache_dir) if cache_dir is not None else None
 
     def _cache_storage(self) -> Path:
-        """Return the local cache directory used for remote `local_path()` calls."""
+        """Return the local cache directory used for remote ``local_path()`` calls."""
         if self._cache_dir is None:
             self._cache_dir = Path(tempfile.mkdtemp(prefix="pystilt_cache_"))
         self._cache_dir.mkdir(parents=True, exist_ok=True)
@@ -74,7 +185,7 @@ class FsspecStore:
         return uri_join(root, clean)
 
     def _key_uri(self, key: str) -> str:
-        """Return a fully-qualified URI/path for use with `fsspec.open_local()`."""
+        """Return a fully-qualified URI/path for use with ``fsspec.open_local()``."""
         clean = key.strip("/")
         if not clean:
             return self.output_dir
@@ -111,9 +222,7 @@ class FsspecStore:
         return sorted(self._relative_key(path) for path in self.fs.find(full_prefix))
 
     def local_path(self, key: str) -> Path:
-        """Return a local path for a durable key, caching remote objects as needed."""
-        if _is_local_filesystem_protocol(self.fs.protocol):
-            return Path(self._full_key(key))
+        """Return a local path for a durable key, downloading and caching as needed."""
         local = fsspec.open_local(
             f"simplecache::{self._key_uri(key)}",
             simplecache={"cache_storage": str(self._cache_storage())},
@@ -123,16 +232,9 @@ class FsspecStore:
         return Path(local)
 
     def publish_file(self, local_path: str | Path, key: str) -> None:
-        """Copy one local file into the durable store under *key*."""
+        """Upload one local file into the remote store under *key*."""
         src = Path(local_path)
         if not src.exists():
-            return
-        if _is_local_filesystem_protocol(self.fs.protocol):
-            target = Path(self._full_key(key))
-            target.parent.mkdir(parents=True, exist_ok=True)
-            if src.resolve() == target.resolve():
-                return
-            shutil.copy2(src, target)
             return
         full_key = self._full_key(key)
         parent = posixpath.dirname(full_key)
@@ -140,47 +242,39 @@ class FsspecStore:
             self.fs.makedirs(parent, exist_ok=True)
         self.fs.put_file(str(src), full_key)
 
-    def _publish_local_alias(self, src: Path, key: str) -> None:
-        """Create a local symlink alias inside the durable store."""
-        target = Path(self._full_key(key))
-        target.parent.mkdir(parents=True, exist_ok=True)
-        if src.resolve() == target.resolve():
-            return
-        target.unlink(missing_ok=True)
-        target.symlink_to(src.resolve())
-
     def publish_simulation(self, sim: Simulation) -> None:
         """Publish the standard durable outputs produced by one simulation."""
         files = SimulationFiles(sim.directory, str(sim.id))
-        is_local = _is_local_filesystem_protocol(self.fs.protocol)
         log_path = files.log_path
         traj_path = files.trajectory_path
         error_path = files.error_trajectory_path
 
-        def _publish(src: Path, canonical_key: str, *index_keys: str) -> None:
+        def _publish(src: Path, canonical_key: str) -> None:
             if not src.exists():
                 return
             self.publish_file(src, canonical_key)
-            local_canonical = self.local_path(canonical_key) if is_local else None
-            for key in index_keys:
-                if is_local:
-                    assert local_canonical is not None
-                    self._publish_local_alias(local_canonical, key)
-                else:
-                    self.publish_file(src, key)
 
         _publish(log_path, files.key(log_path))
-        _publish(
-            traj_path,
-            files.key(traj_path),
-            ProjectFiles.particle_index_key(traj_path.name),
-        )
+        _publish(traj_path, files.key(traj_path))
         _publish(error_path, files.key(error_path))
         for footprint in sorted(sim.directory.glob(f"{files.sim_id}*_foot.nc")):
-            _publish(
-                footprint,
-                files.key(footprint),
-                ProjectFiles.footprint_index_key(footprint.name),
-            )
+            _publish(footprint, files.key(footprint))
         for marker in sorted(sim.directory.glob(f"{files.sim_id}*_foot.empty")):
             _publish(marker, files.key(marker))
+
+
+def make_store(
+    output_dir: str | Path,
+    *,
+    cache_dir: str | Path | None = None,
+) -> Store:
+    """Return the appropriate ``Store`` backend for *output_dir*.
+
+    Local filesystem paths → ``LocalStore`` (atomic relative symlinks, no fsspec
+    overhead). Remote URIs (``s3://``, ``gs://``, ``memory://``, …) →
+    ``FsspecStore``.
+    """
+    raw = str(output_dir)
+    if "://" in raw:
+        return FsspecStore(raw, cache_dir=cache_dir)
+    return LocalStore(raw)
