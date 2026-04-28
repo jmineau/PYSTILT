@@ -3,7 +3,7 @@ Migrating From R-STILT
 
 R-STILT organizes projects around R functions, ``setup.r`` scripts, and
 filesystem conventions. PYSTILT expresses the same broad ideas through Python
-classes, ``config.yaml``, and a durable simulation index.
+classes, ``config.yaml``, and a output simulation index.
 
 .. list-table::
    :header-rows: 1
@@ -38,7 +38,7 @@ classes, ``config.yaml``, and a durable simulation index.
      - Parquet trajectory files
    * - Footprint output
      - NetCDF footprint outputs
-     - NetCDF footprint outputs with durable per-name status
+     - NetCDF footprint outputs with output per-name status
    * - Simulation identity
      - timestamp plus location string
      - ``<met>_<YYYYMMDDHHMM>_<location_id>``
@@ -48,7 +48,7 @@ Key differences
 
 - configuration is validated before execution
 - project, output, and compute roots can be separate
-- durable status and reruns are first-class rather than incidental
+- output status and reruns are first-class rather than incidental
 - local, Slurm, and Kubernetes execution share one runtime model
 
 Practical advice

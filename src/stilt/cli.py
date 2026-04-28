@@ -1,7 +1,8 @@
-"""STILT command-line interface.
+"""
+STILT command-line interface.
 
 Thin Typer wrapper over the model and runtime APIs. Each command loads a
-project or durable output root, delegates to ``Model`` or execution helpers,
+project or output root, delegates to ``Model`` or execution helpers,
 and prints a brief status summary. All heavy lifting lives in ``model.py``,
 ``service/``, and ``execution/``; this module has no orchestration logic of
 its own.
@@ -17,7 +18,7 @@ Usage examples::
     stilt push-worker ./my_project --chunk chunks/run_01/task_0.txt
     stilt serve ./my_project                         # long-lived streaming mode
     stilt register ./my_project --scene-id overpass_001       # register a scene group
-    stilt rebuild                     # rebuild durable index from disk
+    stilt rebuild                     # rebuild output index from disk
     stilt status                      # show status from cwd
 """
 
@@ -115,7 +116,7 @@ _NO_SKIP = typer.Option(
 _OUTPUT_DIR = typer.Option(
     None,
     "--output-dir",
-    help="Durable output root. May be a local path or object-storage URI.",
+    help="Output root. May be a local path or object-storage URI.",
 )
 _COMPUTE_ROOT = typer.Option(
     None,
@@ -145,7 +146,7 @@ def _resolve_project_dir(
         raise typer.Exit(code=1)
     if not require_inputs and not (has_inputs or has_index):
         typer.echo(
-            f"Error: '{resolved}' does not look like a STILT project or durable output root.",
+            f"Error: '{resolved}' does not look like a STILT project or output root.",
             err=True,
         )
         raise typer.Exit(code=1)
@@ -158,7 +159,7 @@ def _resolve_model_root(
     *,
     require_inputs: bool,
 ) -> tuple[str, str | None]:
-    """Return the root passed to Model plus any separate durable output override."""
+    """Return the root passed to Model plus any separate output override."""
     root = project_dir if project_dir is not None else output_dir
     resolved = _resolve_project_dir(root, require_inputs=require_inputs)
     if project_dir is not None:
@@ -175,7 +176,8 @@ def _resolve_model_root(
 def init(
     project_dir: Path = _NEW_PROJECT_DIR_ARG,
 ) -> None:
-    """Scaffold a new STILT project directory with a default config.yaml.
+    """
+    Scaffold a new STILT project directory with a default config.yaml.
 
     Creates a starter config.yaml and receptors.csv. Edit both files
     before running ``stilt run``.
@@ -246,14 +248,15 @@ def run(
         None,
         "--rebuild/--no-rebuild",
         help=(
-            "Rebuild the durable index from outputs before planning. "
+            "Rebuild the output index from outputs before planning. "
             "Defaults to auto: enabled when skip-existing is in effect."
         ),
     ),
     output_dir: str | None = _OUTPUT_DIR,
     compute_root: str | None = _COMPUTE_ROOT,
 ) -> None:
-    """Run trajectories (and footprints if configured).
+    """
+    Run trajectories (and footprints if configured).
 
     Reads ``config.yaml`` in the project directory.  If footprint configs are
     defined there, footprints are generated after trajectories.
@@ -367,7 +370,8 @@ def pull_worker(
     output_dir: str | None = _OUTPUT_DIR,
     compute_root: str | None = _COMPUTE_ROOT,
 ) -> None:
-    """Drain pending simulations from the durable project index.
+    """
+    Drain pending simulations from the output project index.
 
     Atomically pulls and processes simulations until the queue is empty
     (batch mode) or indefinitely (``--follow``).
@@ -405,8 +409,7 @@ def push_worker(
         None,
         "--skip-existing/--no-skip-existing",
         help=(
-            "Respect durable outputs that already exist. "
-            "Defaults to config.yaml when omitted."
+            "Respect outputs that already exist. Defaults to config.yaml when omitted."
         ),
     ),
     output_dir: str | None = _OUTPUT_DIR,
@@ -430,7 +433,8 @@ def serve(
     output_dir: str | None = _OUTPUT_DIR,
     compute_root: str | None = _COMPUTE_ROOT,
 ) -> None:
-    """Run long-lived queue workers that keep polling for new simulations.
+    """
+    Run long-lived queue workers that keep polling for new simulations.
 
     This is the user-facing streaming consumer command. It is equivalent to
     ``stilt pull-worker --follow`` but uses language that better matches the
@@ -458,7 +462,8 @@ def rebuild(
     project_dir: str | None = _PROJECT_DIR_ARG,
     output_dir: str | None = _OUTPUT_DIR,
 ) -> None:
-    """Rebuild durable index rows by scanning simulation output on disk.
+    """
+    Rebuild output index rows by scanning simulation output on disk.
 
     Useful after manual file operations or interrupted runs that left the
     SQLite database out of sync with the filesystem.

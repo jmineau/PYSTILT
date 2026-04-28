@@ -14,6 +14,14 @@ Project interface
    :nosignatures:
 
    Model
+
+Receptor objects
+----------------
+
+.. autosummary::
+   :toctree: _api
+   :nosignatures:
+
    Receptor
    ReceptorID
    LocationID

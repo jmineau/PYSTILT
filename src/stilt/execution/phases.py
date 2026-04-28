@@ -36,7 +36,7 @@ def _append_simulation_error_log(
     phase: str,
     error: BaseException,
 ) -> None:
-    """Append a durable PYSTILT error section to one simulation log."""
+    """Append a output PYSTILT error section to one simulation log."""
     log_path = sim.log_path
     log_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -75,7 +75,7 @@ def _existing_footprint_status(
     sim: Simulation,
     footprint_name: str,
 ) -> FootprintTerminalStatus | None:
-    """Return the durable terminal state already present for one footprint."""
+    """Return the output terminal state already present for one footprint."""
     if sim.resolve_output(sim.footprint_path(footprint_name)) is not None:
         return "complete"
     if sim.resolve_output(sim.files.empty_footprint_path(footprint_name)) is not None:
@@ -84,7 +84,7 @@ def _existing_footprint_status(
 
 
 def _trajectory_present(sim: Simulation) -> bool:
-    """Return whether a durable trajectory output already exists."""
+    """Return whether a output trajectory output already exists."""
     return sim.resolve_output(sim.trajectories_path) is not None
 
 
@@ -126,7 +126,8 @@ def _record_footprint_status(
 def _footprint_targets(
     foot_configs: dict[str, FootprintConfig],
 ) -> Iterator[tuple[str, str, FootprintConfig, bool]]:
-    """Yield logical footprint outputs in execution order.
+    """
+    Yield logical footprint outputs in execution order.
 
     Returns tuples of ``(base_name, stored_name, config, is_error_output)``.
     """
@@ -154,7 +155,8 @@ def _materialize_footprint_output(
     is_error_output: bool,
     skip_existing: bool,
 ) -> tuple[FootprintTerminalStatus, Path | None]:
-    """Ensure one footprint output exists durably and return its terminal state.
+    """
+    Ensure one footprint output exists durably and return its terminal state.
 
     Returns the terminal status plus the output path when this call produced a
     new non-empty NetCDF footprint.

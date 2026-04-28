@@ -101,7 +101,7 @@ Execution backends implement the `Executor` and `JobHandle` protocols in
 `src/stilt/execution/backends/protocol.py`. The coordinator relies on the
 executor's `dispatch` mode:
 - `push` executors receive an explicit list of pending simulation IDs and should
-  publish durable artifacts before the coordinator rebuilds local state
+  publish output files before the coordinator rebuilds local state
 - `pull` executors claim work from the shared index and should preserve claim
   transactions until a simulation result is recorded or released
 

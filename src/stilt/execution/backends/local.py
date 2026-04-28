@@ -67,10 +67,11 @@ def _local_worker_entrypoint(
 
 
 class LocalExecutor:
-    """Local executor: runs simulations in-process (n=1) or across a process pool (n>1).
+    """
+    Local executor: runs simulations in-process (n=1) or across a process pool (n>1).
 
     Uses push dispatch — pending sim IDs are distributed directly without chunk
-    files or queue claims. The coordinator synchronizes the durable index after
+    files or queue claims. The coordinator synchronizes the output index after
     execution.
     """
 

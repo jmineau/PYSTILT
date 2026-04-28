@@ -1,4 +1,4 @@
-"""Shared transition helpers for durable index backends."""
+"""Shared transition helpers for output index backends."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True, slots=True)
 class IndexUpdate:
-    """One fully resolved row update for a durable simulation index."""
+    """One fully resolved row update for a output simulation index."""
 
     trajectory_status: str
     error: str | None
@@ -21,7 +21,7 @@ class IndexUpdate:
 
 
 def output_summary_from_result(result: SimulationResult) -> OutputSummary:
-    """Project one worker result onto durable output-presence flags."""
+    """Project one worker result onto output-presence flags."""
     return OutputSummary(
         traj_present=result.traj_present,
         error_traj_present=result.error_traj_path is not None,
@@ -59,7 +59,7 @@ def index_update_from_result(result: SimulationResult) -> IndexUpdate:
 
 
 def index_update_from_summary(summary: OutputSummary) -> IndexUpdate:
-    """Resolve trajectory status for one durable output scan summary."""
+    """Resolve trajectory status for one output scan summary."""
     if summary.traj_present:
         return IndexUpdate(
             trajectory_status="complete",

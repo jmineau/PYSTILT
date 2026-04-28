@@ -30,7 +30,7 @@ REQUIRED_SIMULATION_COLUMNS = {
 
 @dataclass(frozen=True, slots=True)
 class SqlIndexPredicates:
-    """Rendered durable-index predicates for one SQL dialect."""
+    """Rendered output-index predicates for one SQL dialect."""
 
     completed: str
     pending: str
@@ -165,7 +165,7 @@ def _update_counts(
 
 
 def count_rows(rows: Iterable[Any]) -> IndexCounts:
-    """Aggregate one iterable of SQL rows into durable index counts."""
+    """Aggregate one iterable of SQL rows into output index counts."""
     counts = IndexCounts()
     for row in rows:
         summary = output_summary_from_row(row)
@@ -184,7 +184,7 @@ def count_rows(rows: Iterable[Any]) -> IndexCounts:
 
 
 def group_counts(rows: Iterable[Any]) -> dict[str, IndexCounts]:
-    """Aggregate SQL rows into per-scene durable counts."""
+    """Aggregate SQL rows into per-scene output counts."""
     grouped: dict[str, IndexCounts] = {}
     for row in rows:
         scene_id = row["scene_id"]
@@ -301,7 +301,7 @@ def apply_rebuild_records(
     register_missing: Any,
     store_update: Any,
 ) -> None:
-    """Apply scanned durable outputs to one mutable SQL-backed index."""
+    """Apply scanned outputs to one mutable SQL-backed index."""
     for record in records:
         if record.sim_id not in existing_ids:
             if record.receptor is None:

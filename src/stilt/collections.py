@@ -33,7 +33,8 @@ TOutput = TypeVar("TOutput", covariant=True)
 
 
 class ReceptorCollection:
-    """Sequence of receptors with positional and receptor-id access.
+    """
+    Sequence of receptors with positional and receptor-id access.
 
     Access by position (``receptors[0]``, ``receptors[:3]``) or by
     receptor identifier (``receptors[sim_id.receptor_id]``), symmetric with
@@ -90,7 +91,7 @@ class ReceptorCollection:
         )
 
     def _load(self) -> list[Receptor]:
-        """Load and cache receptors from the best available durable source."""
+        """Load and cache receptors from the best available output source."""
         if self._items is not None:
             return self._items
         if self.source_path is not None:
@@ -100,7 +101,7 @@ class ReceptorCollection:
         if loaded is None:
             raise FileNotFoundError(
                 "No receptors available: no explicit receptors, no source path, "
-                "and no receptors.csv in the project root or durable store."
+                "and no receptors.csv in the project root or output store."
             )
         self._items = loaded
         return self._items
@@ -150,7 +151,8 @@ class ReceptorCollection:
 
 
 class SimulationCollection:
-    """Lazy simulation collection backed by the durable project index.
+    """
+    Lazy simulation collection backed by the output project index.
 
     This object is the science-facing boundary for simulation identity,
     selection, and lazy handle construction.
@@ -287,7 +289,7 @@ class SimulationCollection:
 
 
 class _OutputSpec(Protocol[TOutput]):
-    """Typed contract for one durable simulation output family."""
+    """Typed contract for one output simulation output family."""
 
     def present(self, summary: OutputSummary) -> bool:
         """Return whether this output is complete in one index summary."""
@@ -342,7 +344,8 @@ class _NamedFootprintOutputSpec:
 
 
 class _OutputAccessor(Generic[TOutput]):
-    """Shared implementation of cross-simulation output accessors.
+    """
+    Shared implementation of cross-simulation output accessors.
 
     Subclasses/factories supply a typed output spec and inherit ``paths()`` /
     ``load()`` / ``missing()`` with consistent filter semantics.

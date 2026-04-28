@@ -55,7 +55,7 @@ def uri_join(root: str, *parts: str) -> str:
 
 @dataclass(frozen=True, slots=True)
 class ProjectLayout:
-    """Resolved local directories and durable refs for one model instance."""
+    """Resolved local directories and output refs for one model instance."""
 
     project_ref: str
     output_ref: str
@@ -104,5 +104,5 @@ class ProjectLayout:
 
     @property
     def output_root(self) -> str:
-        """Return the canonical durable output ref or resolved local directory."""
+        """Return the canonical output ref or resolved local directory."""
         return self.output_ref if self.is_cloud_output else str(self.output_dir)

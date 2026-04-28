@@ -142,7 +142,7 @@ print(model.status(scene_id="daily_2026_04_14"))
 ```
 
 In all modes, workers claim simulations from the PostgreSQL-backed index and
-write terminal state directly back to the same durable registry.
+write terminal state directly back to the same registry.
 
 ## Quickstart: observation layer
 

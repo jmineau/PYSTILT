@@ -6,7 +6,7 @@ not download meteorology for you; it discovers files you already have and
 stages the required subset into each simulation's compute-local directory.
 
 ``MetConfig``
-   Durable configuration stored in ``config.yaml``.
+   Output configuration stored in ``config.yaml``.
 
 ``MetSource``
    The runtime object that discovers and stages required files for one named
@@ -96,7 +96,7 @@ simulation's compute-local ``met/`` directory using link-or-copy semantics.
 This matters when:
 
 - your archive is read-only
-- workers use a slower shared filesystem for durable output
+- workers use a slower shared filesystem for output
 - HYSPLIT should read from a short local path in scratch space
 
 Current limitation

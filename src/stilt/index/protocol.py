@@ -1,4 +1,5 @@
-"""Durable simulation index types for PYSTILT.
+"""
+Output simulation index types for PYSTILT.
 
 The index layer tracks one row per simulation and sits between:
 
@@ -6,7 +7,7 @@ The index layer tracks one row per simulation and sits between:
 - worker result recording,
 - read paths such as ``model.status()`` and collection-level queries.
 
-`OutputSummary` is the light durable presence summary for one simulation.
+`OutputSummary` is the light output presence summary for one simulation.
 `IndexCounts` is the cheap aggregate view over a whole index or one scene.
 """
 
@@ -28,7 +29,7 @@ COMPLETE_FOOTPRINT_STATUSES = frozenset({"complete", "complete-empty"})
 def _normalize_footprint_names(
     footprint_names: list[str] | None = None,
 ) -> list[str]:
-    """Return sorted unique footprint names for durable index storage."""
+    """Return sorted unique footprint names for output index storage."""
     return sorted(set(footprint_names or []))
 
 
@@ -57,7 +58,7 @@ def _normalize_registration_pairs(
 
 @dataclass(frozen=True, slots=True)
 class OutputSummary:
-    """Lightweight durable output presence summary for one simulation."""
+    """Lightweight output presence summary for one simulation."""
 
     traj_present: bool = False
     error_traj_present: bool = False
@@ -97,7 +98,7 @@ class OutputSummary:
 
 @dataclass(frozen=True, slots=True)
 class IndexCounts:
-    """Cheap aggregate counts for one durable simulation index view."""
+    """Cheap aggregate counts for one output simulation index view."""
 
     total: int = 0
     completed: int = 0
@@ -108,7 +109,7 @@ class IndexCounts:
 
 @runtime_checkable
 class SimulationIndex(Protocol):
-    """Durable simulation registry surface for model, CLI, and workers."""
+    """Output simulation registry surface for model, CLI, and workers."""
 
     def record(self, result: SimulationResult) -> None: ...
 
@@ -147,7 +148,7 @@ class SimulationIndex(Protocol):
     ) -> dict[str, OutputSummary]: ...
 
     def rebuild(self) -> None:
-        """Rebuild durable index rows by rescanning durable outputs."""
+        """Rebuild output index rows by rescanning outputs."""
         ...
 
 

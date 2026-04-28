@@ -26,7 +26,8 @@ def sigterm_as_interrupt():
 
 
 class JobHandle(Protocol):
-    """Handle returned by :meth:`Executor.start`.
+    """
+    Handle returned by :meth:`Executor.start`.
 
     ``wait()`` blocks until the launched work is no longer running.
     """
@@ -42,11 +43,12 @@ class JobHandle(Protocol):
 
 
 class Executor(Protocol):
-    """Worker-launch protocol: start workers, get a :class:`JobHandle` back immediately.
+    """
+    Worker-launch protocol: start workers, get a :class:`JobHandle` back immediately.
 
     Implementors declare a ``dispatch`` class attribute (``"push"`` or ``"pull"``).
     The coordinator reads this to handle dispatch-specific queue/index setup
-    and post-run durable-index rebuild policy before/after calling :meth:`start`.
+    and post-run output-index rebuild policy before/after calling :meth:`start`.
     """
 
     dispatch: DispatchMode

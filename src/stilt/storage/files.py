@@ -40,7 +40,7 @@ def empty_footprint_filename(sim_id: str, footprint_name: str = "") -> str:
 
 @dataclass(frozen=True, slots=True)
 class SimulationFiles:
-    """Local paths and durable keys for one simulation's standard outputs."""
+    """Local paths and output keys for one simulation's standard outputs."""
 
     directory: Path
     sim_id: str
@@ -94,7 +94,7 @@ class SimulationFiles:
 
 @dataclass(frozen=True, slots=True)
 class ProjectFiles:
-    """Local paths plus durable key conventions for one project root."""
+    """Local paths plus output key conventions for one project root."""
 
     root: Path
 

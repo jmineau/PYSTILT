@@ -155,7 +155,7 @@ def output_paths(
     present: Callable[[OutputSummary], bool],
     local_path: Callable[[str], Path],
 ) -> list[Path]:
-    """Resolve matching durable output paths for one simulation-id query."""
+    """Resolve matching output paths for one simulation-id query."""
     found = index.summaries(sim_ids)
     resolved_paths: list[Path] = []
     for sim_id in sim_ids:

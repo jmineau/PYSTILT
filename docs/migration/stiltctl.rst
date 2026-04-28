@@ -23,15 +23,15 @@ PYSTILT itself rather than a separate control-plane package.
    * - Kubernetes manifests
      - Helm / KEDA / helper tooling
      - ``stilt.service.kubernetes`` helper functions
-   * - Durable registry
+   * - Output registry
      - PostgreSQL queue tables
-     - PostgreSQL-backed durable simulation index via ``PYSTILT_DB_URL``
+     - PostgreSQL-backed output simulation index via ``PYSTILT_DB_URL``
 
 Why it matters
 --------------
 
 - one package now owns the science-facing model and the worker runtime
-- local, HPC, and cloud execution all share one durable project model
+- local, HPC, and cloud execution all share one output project model
 - fewer cross-package compatibility problems
 
 What to re-check

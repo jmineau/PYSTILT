@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
 
 class Storage:
-    """STILT-aware durable storage facade over a lower-level store backend."""
+    """STILT-aware output storage facade over a lower-level store backend."""
 
     def __init__(
         self,
@@ -33,7 +33,7 @@ class Storage:
         self.is_cloud_project = is_cloud_project
 
     def _config_bytes(self, config: ModelConfig) -> bytes:
-        """Serialize one in-memory config for durable bootstrap."""
+        """Serialize one in-memory config for output bootstrap."""
         tmp_name: str | None = None
         try:
             with tempfile.NamedTemporaryFile(
@@ -106,7 +106,7 @@ class Storage:
         self.store.write_bytes(ProjectFiles.receptors_key(), data)
 
     def load_config(self) -> ModelConfig:
-        """Load project config from the local project root or durable storage."""
+        """Load project config from the local project root or output storage."""
         from stilt.config import ModelConfig
 
         config_path = ProjectFiles(self.project_dir).config_path
@@ -120,7 +120,7 @@ class Storage:
         return ModelConfig.from_yaml(self.store.local_path(ProjectFiles.config_key()))
 
     def receptor_source_path(self) -> Path | None:
-        """Return the best local path to durable project receptors, if present."""
+        """Return the best local path to output project receptors, if present."""
         local_path = ProjectFiles(self.project_dir).receptors_path
         if local_path.exists():
             return local_path
@@ -129,7 +129,7 @@ class Storage:
         return None
 
     def load_receptors(self) -> list[Receptor] | None:
-        """Load project receptors from durable storage when available."""
+        """Load project receptors from output storage when available."""
         from stilt.receptor import read_receptors
 
         source = self.receptor_source_path()
@@ -138,7 +138,7 @@ class Storage:
         return read_receptors(source)
 
     def resolve(self, sim_id: str, output_path: Path) -> Path | None:
-        """Return a local path to a durable output when it exists."""
+        """Return a local path to a output when it exists."""
         if output_path.exists():
             return output_path
         key = SimulationFiles.key_for(sim_id, output_path.name)
@@ -151,5 +151,5 @@ class Storage:
         return self.resolve(sim_id, output_path) is not None
 
     def publish_simulation(self, sim: Simulation) -> None:
-        """Publish one simulation's standard durable outputs."""
+        """Publish one simulation's standard outputs."""
         self.store.publish_simulation(sim)

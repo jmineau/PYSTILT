@@ -1,8 +1,8 @@
-Durable State, Indexes, And Shared Workers
+Output State, Indexes, And Shared Workers
 ==========================================
 
 PYSTILT does not treat simulation execution as a purely ephemeral process. The
-current package centers durable state so that workers, CLI commands, and Python
+current package centers output state so that workers, CLI commands, and Python
 code can all agree on what exists and what still needs work.
 
 Index backends
@@ -12,7 +12,7 @@ Two index backends exist today:
 
 ``SQLite``
    The default for local output roots. Good for single-machine or shared-file
-   workflows where one durable index file is enough.
+   workflows where one output index file is enough.
 
 ``PostgreSQL``
    Used when ``PYSTILT_DB_URL`` is set or when cloud output roots require a
@@ -42,7 +42,7 @@ There is also an explicit escape hatch:
 
    stilt rebuild ./project
 
-Use it after manual file movement or if durable outputs and the local index
+Use it after manual file movement or if outputs and the local index
 have drifted apart.
 
 Runtime environment

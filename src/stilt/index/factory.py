@@ -20,7 +20,7 @@ def resolve_index(
     runtime: RuntimeSettings,
     builtin_backend: Literal["sqlite", "postgres"],
 ) -> SimulationIndex:
-    """Resolve the durable simulation index backend for one model instance."""
+    """Resolve the output simulation index backend for one model instance."""
     if index is not None:
         return index
     if runtime.db_url:

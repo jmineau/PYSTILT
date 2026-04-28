@@ -1,4 +1,4 @@
-Project Layout And Durable State
+Project Layout And Output State
 ================================
 
 PYSTILT separates three concepts that are often mixed together in older
@@ -9,12 +9,12 @@ workflows:
    ``receptors.csv`` normally live.
 
 ``output_dir``
-   The durable output root. This is where the simulation index and simulation
+   The output root. This is where the simulation index and simulation
    artifacts live. By default it is the same as ``project``.
 
 ``compute_root``
    A compute-local parent directory for worker scratch directories. This is
-   especially useful when durable outputs live on object storage or a slower
+   especially useful when outputs live on object storage or a slower
    shared filesystem.
 
 Default local layout
@@ -35,7 +35,7 @@ When project and output roots are the same, PYSTILT uses:
 Separate input and output roots
 -------------------------------
 
-You can keep human-edited inputs in one place and durable results in another:
+You can keep human-edited inputs in one place and output results in another:
 
 .. code-block:: python
 
@@ -48,7 +48,7 @@ You can keep human-edited inputs in one place and durable results in another:
 This is the right model when:
 
 - project inputs are version-controlled locally
-- durable outputs belong in object storage
+- outputs belong in object storage
 - workers need fast local scratch space for staging meteorology and HYSPLIT files
 
 How configuration is loaded
@@ -57,9 +57,9 @@ How configuration is loaded
 ``Model.config`` is loaded lazily:
 
 - from the local project root when ``config.yaml`` is present
-- otherwise from durable storage if the project has already been bootstrapped
+- otherwise from output storage if the project has already been bootstrapped
 
-The same rule applies to receptors. ``Model.register_pending()`` is the durable
+The same rule applies to receptors. ``Model.register_pending()`` is the output
 boundary that publishes config and receptor inputs before simulations are
 registered in the index.
 
@@ -79,7 +79,7 @@ hash-based location ID.
 Status model
 ------------
 
-The durable index tracks aggregate counts and per-simulation output presence.
+The output index tracks aggregate counts and per-simulation output presence.
 In the current alpha, the useful mental model is:
 
 - trajectories move through ``pending``, ``running``, ``complete``, or ``failed``

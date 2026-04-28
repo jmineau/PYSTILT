@@ -1,4 +1,5 @@
-"""Single-simulation execution core.
+"""
+Single-simulation execution core.
 
 :func:`execute_task` — run one simulation task (trajectory or footprint path).
 :func:`execute_batch` — run a list of tasks sequentially or in a process pool.
@@ -37,20 +38,21 @@ def _build_simulation(task: SimulationTask) -> Simulation:
 
 
 def execute_task(task: SimulationTask) -> SimulationResult:
-    """Run one STILT simulation task and any requested footprint outputs.
+    """
+    Run one STILT simulation task and any requested footprint outputs.
 
     When ``task.foot_configs`` is ``None``, only trajectories are run.  When
     configs are provided, trajectories are auto-run as needed and all
     footprint products are computed in a single pass so the trajectory file
-    is loaded exactly once. Durable outputs are published through
-    ``task.storage``. Durable index writes happen separately through an
+    is loaded exactly once. Outputs are published through
+    ``task.storage``. Output index writes happen separately through an
     explicit index backend.
 
     Parameters
     ----------
     task : SimulationTask
         Serialisable bundle containing project dir, sim ID, meteorology,
-        receptor, STILT params, optional footprint configs, and durable storage.
+        receptor, STILT params, optional footprint configs, and output storage.
 
     Returns
     -------
@@ -84,7 +86,7 @@ def _unexpected_task_failure_result(
     error: Exception,
     started_at: dt.datetime,
 ) -> SimulationResult:
-    """Convert one uncaught task exception into a durable worker result."""
+    """Convert one uncaught task exception into a output worker result."""
     logger.exception(
         "simulation %s failed before worker result normalization: %s",
         task.sim_id,
@@ -166,7 +168,8 @@ def _execute_task_guarded(task: SimulationTask) -> SimulationResult:
 def execute_batch(
     batch: list[SimulationTask], n_cores: int = 1
 ) -> list[SimulationResult]:
-    """Run a list of simulation tasks sequentially or in a local process pool.
+    """
+    Run a list of simulation tasks sequentially or in a local process pool.
 
     When Slurm preempts or wall-times the task it sends SIGTERM. The handler
     converts SIGTERM to :exc:`KeyboardInterrupt` so the worker can return an

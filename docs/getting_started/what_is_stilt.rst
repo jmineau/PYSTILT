@@ -74,7 +74,7 @@ models:
        cloud infrastructure.
      - `uataq/stiltctl <https://github.com/uataq/stiltctl>`_
    * - **PYSTILT**
-     - The current Python package aiming to unify transport, durable runtime,
+     - The current Python package aiming to unify transport, output runtime,
        and observation-facing workflows.
      - `jmineau/PYSTILT <https://github.com/jmineau/PYSTILT>`_
 
@@ -87,7 +87,7 @@ Key Improvements Over R-STILT
   the same receptor foundation.
 * **Multiple execution backends**. Local, Slurm, and Kubernetes are part of one
   execution model.
-* **Persistent index**. Simulation status is durable and resumable.
+* **Persistent index**. Simulation status is stored and resumable.
 * **Standard outputs**. Trajectories are stored as Parquet and footprints as
   NetCDF.
 

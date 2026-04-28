@@ -1,7 +1,7 @@
 Storage And Index
 =================
 
-The durable runtime is split between an index for simulation state and storage
+The output runtime is split between an index for simulation state and storage
 helpers for locating project inputs, outputs, and backing stores.
 
 Index models

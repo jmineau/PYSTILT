@@ -1,4 +1,4 @@
-"""Shared SQL durable-index base used by SQLite and PostgreSQL backends."""
+"""Shared SQL output-index base used by SQLite and PostgreSQL backends."""
 
 from __future__ import annotations
 
@@ -38,7 +38,8 @@ if TYPE_CHECKING:
 
 
 class _SqlIndex(SimulationIndex, abc.ABC):
-    """Dialect-parameterised SQL simulation index.
+    """
+    Dialect-parameterised SQL simulation index.
 
     Concrete backends fill in a handful of dialect constants, a connection
     factory, a ``WHERE sim_id IN (...)`` dispatcher, and a column-introspection
@@ -83,7 +84,8 @@ class _SqlIndex(SimulationIndex, abc.ABC):
         prefix_params: tuple = (),
         fetch: bool = False,
     ) -> list[Any]:
-        """Run ``{prefix} WHERE sim_id <IN-OR-ANY> {suffix}`` across *sim_ids*.
+        """
+        Run ``{prefix} WHERE sim_id <IN-OR-ANY> {suffix}`` across *sim_ids*.
 
         SQLite chunks the id list into multiple ``IN (?, ?, ...)`` statements;
         PostgreSQL issues one ``sim_id = ANY(%s)`` query.  When ``fetch`` is

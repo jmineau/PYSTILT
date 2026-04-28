@@ -20,7 +20,8 @@ if TYPE_CHECKING:
 
 
 class SimulationTask(BaseModel):
-    """Serialisable bundle of everything a worker needs to run one simulation.
+    """
+    Serialisable bundle of everything a worker needs to run one simulation.
 
     Passed as the single argument to :func:`~stilt.execution.execute_task` so
     it can be pickled and shipped to a remote executor (local subprocess, Slurm
@@ -70,7 +71,7 @@ def build_simulation_task(
     foot_configs: dict[str, FootprintConfig] | None = None,
     skip_existing: bool | None = None,
 ) -> SimulationTask:
-    """Build one worker task from durable project inputs."""
+    """Build one worker task from output project inputs."""
     sid = SimID(sim_id)
     return SimulationTask(
         compute_root=model.compute_root,
@@ -92,9 +93,10 @@ def _planned_foot_configs(
     *,
     skip_existing: bool | None = None,
 ) -> dict[str, FootprintConfig] | None:
-    """Return the footprint configs that still need work for one simulation.
+    """
+    Return the footprint configs that still need work for one simulation.
 
-    Checks the durable store (filesystem) for per-footprint existence. Workers
+    Checks the output store (filesystem) for per-footprint existence. Workers
     must never touch the index — that belongs to the submit side.
     """
     all_foot_configs = dict(model.config.footprints)
@@ -124,7 +126,8 @@ def plan_simulation_task(
     *,
     skip_existing: bool | None = None,
 ) -> SimulationTask:
-    """Plan one runnable worker task for a sim already known to need work.
+    """
+    Plan one runnable worker task for a sim already known to need work.
 
     The caller is expected to pass sim IDs from ``index.pending_trajectories()``
     or ``index.claim_one()``, both of which filter on the SQL completion

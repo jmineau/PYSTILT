@@ -67,7 +67,7 @@ That means:
 
 - no worker-side queue polling is required for Slurm
 - each array task has a fixed work assignment
-- reruns are driven by durable status and ``skip_existing``
+- reruns are driven by output status and ``skip_existing``
 
 Monitor and rerun
 -----------------

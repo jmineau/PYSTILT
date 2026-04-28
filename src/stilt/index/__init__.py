@@ -1,4 +1,4 @@
-"""Public exports for durable simulation index types."""
+"""Public exports for output simulation index types."""
 
 from .protocol import (
     COMPLETE_FOOTPRINT_STATUSES,

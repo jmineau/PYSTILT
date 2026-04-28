@@ -79,7 +79,8 @@ class SimID(str):
         met: MetID | str,
         receptor: Receptor,
     ) -> SimID:
-        """Build a :class:`SimID` from constituent parts.
+        """
+        Build a :class:`SimID` from constituent parts.
 
         Parameters
         ----------
@@ -173,7 +174,7 @@ class Simulation:
         return self.files.key(path)
 
     def resolve_output(self, path: Path) -> Path | None:
-        """Return a local path to one output from disk or the durable store."""
+        """Return a local path to one output from disk or the output store."""
         if path.exists():
             return path
         key = self.storage_key(path)
@@ -199,7 +200,8 @@ class Simulation:
 
     @property
     def time_range(self) -> tuple[dt.datetime, dt.datetime]:
-        """Start and stop datetimes spanned by this simulation.
+        """
+        Start and stop datetimes spanned by this simulation.
 
         Returns
         -------
@@ -217,7 +219,8 @@ class Simulation:
 
     @property
     def status(self) -> str | None:
-        """Current status of this simulation directory.
+        """
+        Current status of this simulation directory.
 
         Returns
         -------
@@ -247,9 +250,10 @@ class Simulation:
 
     @property
     def met_files(self) -> list[Path]:
-        """Compute-local meteorology files staged for HYSPLIT execution.
+        """
+        Compute-local meteorology files staged for HYSPLIT execution.
 
-        The durable/source archive paths remain available via
+        The output/source archive paths remain available via
         :attr:`source_met_files`.
 
         Returns
@@ -266,7 +270,8 @@ class Simulation:
 
     @property
     def log(self) -> str:
-        """Contents of the HYSPLIT stdout log file.
+        """
+        Contents of the HYSPLIT stdout log file.
 
         Returns
         -------
@@ -285,7 +290,8 @@ class Simulation:
     # -- Footprints ------------------------------------------------------------
 
     def get_footprint(self, name: str) -> Footprint | None:
-        """Return a named footprint, loading from disk if not already cached.
+        """
+        Return a named footprint, loading from disk if not already cached.
 
         Parameters
         ----------
@@ -312,7 +318,8 @@ class Simulation:
         rm_dat: bool | None = None,
         write: bool = False,
     ) -> None:
-        """Run HYSPLIT, populating ``self.trajectories`` and ``self.error_trajectories``.
+        """
+        Run HYSPLIT, populating ``self.trajectories`` and ``self.error_trajectories``.
 
         Parameters
         ----------
@@ -381,7 +388,8 @@ class Simulation:
         transform_context: ParticleTransformContext | None = None,
         **kwargs,
     ) -> Footprint:
-        """Compute a named footprint and store it in the footprint cache.
+        """
+        Compute a named footprint and store it in the footprint cache.
 
         Parameters
         ----------
@@ -466,7 +474,8 @@ class Simulation:
 
     @property
     def trajectories(self) -> Trajectories | None:
-        """Main particle trajectories, loaded from parquet on first access.
+        """
+        Main particle trajectories, loaded from parquet on first access.
 
         Returns ``None`` if no trajectory parquet exists and the simulation
         has not been run in this process.
@@ -487,7 +496,8 @@ class Simulation:
 
     @property
     def error_trajectories(self) -> Trajectories | None:
-        """Error-trajectory particles, loaded from parquet on first access.
+        """
+        Error-trajectory particles, loaded from parquet on first access.
 
         Returns ``None`` if no error parquet exists.
 
