@@ -1,4 +1,4 @@
-"""Helpers for rebuilding durable indexes from canonical outputs."""
+"""Helpers for rebuilding output indexes from canonical outputs."""
 
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ from .protocol import OutputSummary
 
 @dataclass(frozen=True, slots=True)
 class ScannedSimulation:
-    """Durable output snapshot for one simulation id."""
+    """Output snapshot for one simulation id."""
 
     sim_id: str
     summary: OutputSummary
@@ -35,7 +35,7 @@ def _footprint_name_from_filename(
     *,
     suffix: str,
 ) -> str | None:
-    """Return the footprint name encoded in one durable output filename."""
+    """Return the footprint name encoded in one output filename."""
     if not filename.endswith(suffix):
         return None
     without_suffix = filename[: -len(suffix)]
@@ -61,8 +61,8 @@ def _receptor_from_parquet(parquet_file: Path | None) -> Receptor | None:
         return None
 
 
-def scan_durable_simulations(output_root: str | Path) -> list[ScannedSimulation]:
-    """Scan one durable output root and summarize every simulation directory."""
+def scan_output_simulations(output_root: str | Path) -> list[ScannedSimulation]:
+    """Scan one output root and summarize every simulation directory."""
     store = make_store(output_root)
     grouped: dict[str, set[str]] = {}
     for key in store.list_prefix(ProjectFiles.simulation_prefix()):

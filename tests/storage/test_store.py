@@ -1,4 +1,4 @@
-"""Tests for storage store backends and durable key layout."""
+"""Tests for storage store backends and output key layout."""
 
 import shutil
 from types import SimpleNamespace

@@ -54,7 +54,7 @@ if TYPE_CHECKING:
 
 
 def _wrap_wait_with_rebuild(handle: JobHandle, index: SimulationIndex) -> JobHandle:
-    """Wrap one handle's ``wait()`` so push completion rebuilds durable state once."""
+    """Wrap one handle's ``wait()`` so push completion rebuilds output state once."""
     original_wait = handle.wait
     completed = False
 
@@ -76,10 +76,10 @@ class Model:
 
     ``Model`` is the primary Python entry point for configuring a STILT project,
     running one-off simulations, and loading simulation results. It also owns
-    the durable project index used by batch, HPC, and cloud execution.
+    the output project index used by batch, HPC, and cloud execution.
 
     Pull-mode workers and streaming consumers operate against the model's
-    durable index directly when the configured index supports claims.
+    output index directly when the configured index supports claims.
     Claim-worker control is exposed primarily through the CLI and
     :func:`stilt.execution.pull_simulations` for advanced Python use.
 
@@ -92,7 +92,7 @@ class Model:
     config : ModelConfig or None, optional
         In-memory project config. When omitted, config is loaded lazily from storage.
     output_dir : str or Path or None, optional
-        Durable output root. Defaults to ``project``.
+        Output root. Defaults to ``project``.
     compute_root : str or Path or None, optional
         Local parent directory where worker simulation directories are created.
     runtime : RuntimeSettings or None, optional
@@ -105,7 +105,7 @@ class Model:
     receptors : ReceptorCollection
         Science-facing receptor accessor.
     simulations : SimulationCollection
-        Registered simulation handles backed by the durable index.
+        Registered simulation handles backed by the output index.
     mets : dict[str, MetSource]
         Named meteorology streams.
     trajectories : TrajectoryCollection
@@ -115,9 +115,9 @@ class Model:
     plot : ModelPlotAccessor
         Plotting namespace for model summaries and outputs.
     index : SimulationIndex
-        Durable simulation registry used by the coordinator and output queries.
+        Output simulation registry used by the coordinator and output queries.
     storage : Storage
-        Durable bootstrap and output storage facade.
+        Output bootstrap and output storage facade.
     runtime : RuntimeSettings
         Runtime-only deployment settings.
     layout : ProjectLayout
@@ -136,7 +136,7 @@ class Model:
         **kwargs,
     ):
         # Runtime settings are not persisted in the project config, but they may be
-        # needed to resolve the durable index backend, so resolve them first.
+        # needed to resolve the output index backend, so resolve them first.
         self.runtime = resolve_runtime_settings(runtime)
 
         # The project layout resolver also handles output_dir defaulting and cloud URI parsing.
@@ -172,7 +172,7 @@ class Model:
 
     @property
     def index(self) -> SimulationIndex:
-        """Durable simulation registry for this model."""
+        """Output simulation registry for this model."""
         if self._index is None:
             self._index = resolve_index(
                 None,
@@ -238,7 +238,7 @@ class Model:
     ) -> list[str]:
         """Persist model inputs and register one batch of pending work.
 
-        This is the durable registration boundary shared by local runs,
+        This is the output registration boundary shared by local runs,
         queue-backed workers, and the CLI ``stilt register`` command.
 
         Parameters
@@ -274,8 +274,8 @@ class Model:
             scene_id=scene_id,
         )
 
-        # Registration updates the durable receptor/index truth, so drop
-        # cached accessors — next access rebuilds from that durable surface.
+        # Registration updates the output receptor/index truth, so drop
+        # cached accessors — next access rebuilds from that output surface.
         self._receptors = None
         self._simulations = None
 
@@ -388,12 +388,12 @@ class Model:
             Skip simulations that already have output.  ``None`` (default)
             reads the value from ``config.skip_existing``.
         rebuild : bool or None, optional
-            Rebuild the durable index from outputs before planning work.
+            Rebuild the output index from outputs before planning work.
             ``None`` (default) uses auto mode: rebuild when skip-existing
             is enabled, otherwise skip the pre-run rebuild.
         wait : bool, optional
             If ``True`` (default), block until all workers finish and rebuild
-            durable index from outputs. If ``False``, return the :class:`JobHandle`
+            output index from outputs. If ``False``, return the :class:`JobHandle`
             immediately — suitable for fire-and-forget Slurm runs.
 
         Returns
@@ -411,7 +411,7 @@ class Model:
         """
         index = self.index
 
-        # Execution mutates durable index state, so any cached simulation view must
+        # Execution mutates output index state, so any cached simulation view must
         # be rebuilt after each coordinator run.
         self._simulations = None
         resolved_skip = (
@@ -436,7 +436,7 @@ class Model:
             return LocalHandle()
 
         if resolved_rebuild:
-            logger.info("run: rebuilding durable index before planning")
+            logger.info("run: rebuilding output index before planning")
             index.rebuild()
 
         index.reset_to_pending(sim_ids, clear_outputs=not resolved_skip)

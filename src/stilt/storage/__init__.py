@@ -1,4 +1,4 @@
-"""Project file layout and durable storage helpers."""
+"""Project file layout and output storage helpers."""
 
 from .files import (
     CHUNKS_DIRNAME,

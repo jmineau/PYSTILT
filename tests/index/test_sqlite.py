@@ -372,7 +372,7 @@ def test_record_artifacts_roundtrip(tmp_path):
     assert _state_call(state, "output_summary", sim_id) == summary
 
 
-def test_rebuild_rebuilds_from_durable_artifacts(tmp_path):
+def test_rebuild_rebuilds_from_output_artifacts(tmp_path):
     state = SqliteIndex(tmp_path)
     receptor = _make_receptor()
     sim_id = _sid(receptor)

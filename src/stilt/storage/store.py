@@ -1,4 +1,4 @@
-"""Durable output store backends."""
+"""Output store backends."""
 
 from __future__ import annotations
 
@@ -28,7 +28,7 @@ def _normalize_output_dir(output_dir: str | Path) -> str:
 
 @runtime_checkable
 class Store(Protocol):
-    """Durable file access independent of the local compute workspace."""
+    """Output file access independent of the local compute workspace."""
 
     def read_bytes(self, key: str) -> bytes: ...
     def write_bytes(self, key: str, data: bytes) -> None: ...
@@ -39,7 +39,7 @@ class Store(Protocol):
 
 
 class LocalStore:
-    """Durable store backed by the local filesystem.
+    """Output store backed by the local filesystem.
 
     Uses atomic tmp-then-replace for file writes and relative symlinks for
     local-only flat alias views under ``simulations/particles`` and
@@ -120,7 +120,7 @@ class LocalStore:
                 tmp.unlink(missing_ok=True)
 
     def publish_simulation(self, sim: Simulation) -> None:
-        """Publish the standard durable outputs produced by one simulation."""
+        """Publish the standard outputs produced by one simulation."""
         files = SimulationFiles(sim.directory, str(sim.id))
         log_path = files.log_path
         traj_path = files.trajectory_path
@@ -152,7 +152,7 @@ class LocalStore:
 
 
 class FsspecStore:
-    """Durable store backed by an ``fsspec`` remote filesystem.
+    """Output store backed by an ``fsspec`` remote filesystem.
 
     Suitable for object stores (``s3://``, ``gs://``, ``abfs://``) and
     pseudo-remote backends (``memory://``, ``http://``). Remote stores publish
@@ -222,7 +222,7 @@ class FsspecStore:
         return sorted(self._relative_key(path) for path in self.fs.find(full_prefix))
 
     def local_path(self, key: str) -> Path:
-        """Return a local path for a durable key, downloading and caching as needed."""
+        """Return a local path for a output key, downloading and caching as needed."""
         local = fsspec.open_local(
             f"simplecache::{self._key_uri(key)}",
             simplecache={"cache_storage": str(self._cache_storage())},
@@ -243,7 +243,7 @@ class FsspecStore:
         self.fs.put_file(str(src), full_key)
 
     def publish_simulation(self, sim: Simulation) -> None:
-        """Publish the standard durable outputs produced by one simulation."""
+        """Publish the standard outputs produced by one simulation."""
         files = SimulationFiles(sim.directory, str(sim.id))
         log_path = files.log_path
         traj_path = files.trajectory_path

@@ -61,7 +61,7 @@ def test_resolve_project_dir_returns_cloud_uri_unchanged():
     assert _resolve_project_dir("s3://bucket/project") == "s3://bucket/project"
 
 
-def test_resolve_project_dir_accepts_durable_output_root_without_config(tmp_path):
+def test_resolve_project_dir_accepts_output_root_without_config(tmp_path):
     (tmp_path / "simulations").mkdir()
     resolved = _resolve_project_dir(tmp_path, require_inputs=False)
     assert resolved == str(tmp_path.resolve())
@@ -370,7 +370,7 @@ def test_run_accepts_cloud_project_uri(monkeypatch):
 
 
 def test_run_forwards_output_dir_and_compute_root(tmp_path, monkeypatch):
-    """run forwards the new durable-output and compute-root options."""
+    """run forwards the new output-output and compute-root options."""
     _write_minimal_config(tmp_path)
     captured: list[dict] = []
 
@@ -605,7 +605,7 @@ def test_pull_worker_accepts_cloud_project_uri(monkeypatch):
 
 
 def test_pull_worker_forwards_output_dir_and_compute_root(tmp_path, monkeypatch):
-    """pull-worker forwards durable-output and compute-root bootstrap options."""
+    """pull-worker forwards output-output and compute-root bootstrap options."""
     _write_minimal_config(tmp_path)
     captured: list[dict] = []
 

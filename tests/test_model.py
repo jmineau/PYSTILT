@@ -175,7 +175,7 @@ def _config(tmp_path, point_receptor=None, include_footprint=True) -> ModelConfi
     )
 
 
-def test_receptors_require_explicit_or_durable_source_when_not_provided(
+def test_receptors_require_explicit_or_output_source_when_not_provided(
     tmp_path, point_receptor
 ):
     repo = InMemoryIndex(tmp_path)
@@ -1480,7 +1480,7 @@ def test_model_run_propagates_resolved_skip_to_executor_kwargs(
 def test_model_run_forwards_separate_output_dir_and_compute_root(
     tmp_path, point_receptor
 ):
-    """Workers should compute in scratch and publish into the durable output root."""
+    """Workers should compute in scratch and publish into the output root."""
     project_dir = tmp_path / "project"
     output_dir = tmp_path / "output"
     compute_root = tmp_path / "scratch"
@@ -1544,7 +1544,7 @@ def test_model_run_push_handle_wait_rebuilds_state_once(tmp_path, point_receptor
 def test_model_run_cloud_output_bootstraps_workers_from_output_uri(
     tmp_path, point_receptor
 ):
-    """Remote workers should reconstruct from the durable output URI, not a local project path."""
+    """Remote workers should reconstruct from the output URI, not a local project path."""
     project_dir = tmp_path / "project"
     repo = InMemoryIndex(tmp_path / "repo")
     artifact_store = LocalStore(tmp_path / "artifacts")
@@ -1886,7 +1886,7 @@ def test_model_status_reflects_queue_counts(tmp_path, point_receptor):
     )
 
 
-def test_plan_simulation_task_push_uses_durable_inputs_not_repository(
+def test_plan_simulation_task_push_uses_stored_inputs_not_repository(
     tmp_path, point_receptor, monkeypatch
 ):
     """Push workers should not need SQLite lookups for receptor or skip state."""

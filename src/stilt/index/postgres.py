@@ -1,4 +1,4 @@
-"""PostgreSQL durable index backend."""
+"""PostgreSQL output index backend."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from .base import _SqlIndex
-from .rebuild import scan_durable_simulations
+from .rebuild import scan_output_simulations
 from .sql import SqlPredicateDialect, build_index_predicates
 
 if TYPE_CHECKING:
@@ -70,7 +70,7 @@ class PostgresClaim:
 
 
 class PostgresIndex(_SqlIndex):
-    """Durable PostgreSQL simulation index for shared-service deployments."""
+    """Output PostgreSQL simulation index for shared-service deployments."""
 
     _ph: ClassVar[str] = "%s"
     _now_sql: ClassVar[str] = "NOW()"
@@ -189,7 +189,7 @@ class PostgresIndex(_SqlIndex):
                 )
             return
 
-        records = scan_durable_simulations(self._output_root)
+        records = scan_output_simulations(self._output_root)
         with self._connect() as conn:
             self._rebuild_apply(conn, records)
 

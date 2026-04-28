@@ -1,4 +1,4 @@
-"""SQLite durable index backend."""
+"""SQLite output index backend."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from typing import Any, ClassVar, Literal
 from stilt.storage import ProjectFiles
 
 from .base import _SqlIndex
-from .rebuild import scan_durable_simulations
+from .rebuild import scan_output_simulations
 from .sql import SqlPredicateDialect, build_index_predicates, chunked
 
 _SCHEMA = """
@@ -86,7 +86,7 @@ def _supports_wal(path: Path) -> bool:
 
 
 class SqliteIndex(_SqlIndex):
-    """SQLite-backed durable simulation index for a STILT project directory."""
+    """SQLite-backed output simulation index for a STILT project directory."""
 
     _ph: ClassVar[str] = "?"
     _now_sql: ClassVar[str] = "datetime('now')"
@@ -185,7 +185,7 @@ class SqliteIndex(_SqlIndex):
         self._validate_schema()
 
     def rebuild(self) -> None:
-        records = scan_durable_simulations(self._project_dir)
+        records = scan_output_simulations(self._project_dir)
         with self._connect() as conn:
             conn.execute("BEGIN IMMEDIATE")
             self._rebuild_apply(conn, records)
