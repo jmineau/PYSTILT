@@ -10,19 +10,17 @@ that do not belong in a first-run tutorial.
    :caption: Workflow Guides
 
    project_layout
+   configuration
    meteorology
    outputs
-   python_inline
-   executors
-   slurm
-   kubernetes
+   execution/index
 
 .. toctree::
    :maxdepth: 1
    :caption: Advanced Guides
 
    ../advanced/observations
-   ../advanced/durable_state
+   ../advanced/output_state
 
 .. toctree::
    :maxdepth: 1

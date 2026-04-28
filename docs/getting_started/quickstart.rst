@@ -93,7 +93,7 @@ The same first run can be driven entirely from Python:
 What gets written
 -----------------
 
-For each simulation ID, PYSTILT writes into the durable project layout:
+For each simulation ID, PYSTILT writes into the output project layout:
 
 .. code-block:: text
 
@@ -111,8 +111,8 @@ For each simulation ID, PYSTILT writes into the durable project layout:
 What to do next
 ---------------
 
-- See :doc:`../guides/project_layout` for the durable project model.
+- See :doc:`../guides/project_layout` for the output project model.
+- See :doc:`../guides/configuration` for editing ``config.yaml``.
 - See :doc:`../guides/meteorology` for configuring ARL meteorology cleanly.
-- See :doc:`../guides/python_inline` for notebook-style use.
 - See :doc:`../guides/outputs` for trajectory and footprint outputs.
-- See :doc:`../guides/executors` for local, Slurm, and Kubernetes execution.
+- See :doc:`../guides/execution/index` for local, Slurm, and Kubernetes execution.
