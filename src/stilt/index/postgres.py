@@ -10,38 +10,27 @@ from typing import TYPE_CHECKING, Any, ClassVar
 
 from .base import _SqlIndex
 from .rebuild import scan_durable_simulations
+from .sql import SqlPredicateDialect, build_index_predicates
 
 if TYPE_CHECKING:
     from stilt.execution import SimulationResult
 
-_COMPLETED_WHERE_SQL = """
-COALESCE(s.traj_present, FALSE) = TRUE
-AND NOT EXISTS (
-    SELECT 1
-    FROM jsonb_array_elements_text(COALESCE(s.footprint_targets, '[]'::jsonb)) AS target(name)
-    WHERE COALESCE(COALESCE(s.footprints, '{}'::jsonb) ->> target.name, '')
-        NOT IN ('complete', 'complete-empty')
+_PREDICATES = build_index_predicates(
+    SqlPredicateDialect(
+        true_sql="TRUE",
+        false_sql="FALSE",
+        target_rows_sql=(
+            "jsonb_array_elements_text(COALESCE(s.footprint_targets, '[]'::jsonb)) "
+            "AS target(name)"
+        ),
+        footprint_status_sql="COALESCE(s.footprints, '{}'::jsonb) ->> target.name",
+    )
 )
-"""
-
-_PENDING_WHERE_SQL = f"""
-COALESCE(s.trajectory_status, 'pending') NOT IN ('running', 'failed')
-AND NOT (
-    {_COMPLETED_WHERE_SQL}
-)
-"""
-
-_PRUNE_ELIGIBLE_WHERE_SQL = f"""
-s.trajectory_status = 'failed'
-OR (
-    {_COMPLETED_WHERE_SQL}
-)
-"""
 
 POSTGRES_PENDING_SIMULATIONS_SQL = f"""
 SELECT COUNT(*)
 FROM simulations AS s
-WHERE {_PENDING_WHERE_SQL}
+WHERE {_PREDICATES.pending}
 """
 
 
@@ -91,9 +80,9 @@ class PostgresIndex(_SqlIndex):
     _jsonb_cast: ClassVar[str] = "::jsonb"
     _bool_encode: ClassVar[Any] = bool
     _backend_name: ClassVar[str] = "PostgreSQL"
-    _completed_where: ClassVar[str] = _COMPLETED_WHERE_SQL
-    _pending_where: ClassVar[str] = _PENDING_WHERE_SQL
-    _prune_eligible_where: ClassVar[str] = _PRUNE_ELIGIBLE_WHERE_SQL
+    _completed_where: ClassVar[str] = _PREDICATES.completed
+    _pending_where: ClassVar[str] = _PREDICATES.pending
+    _prune_eligible_where: ClassVar[str] = _PREDICATES.prune_eligible
 
     _SCHEMA = """
         CREATE TABLE IF NOT EXISTS simulations (

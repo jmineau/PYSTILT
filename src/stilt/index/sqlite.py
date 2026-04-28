@@ -11,7 +11,7 @@ from stilt.storage import ProjectFiles
 
 from .base import _SqlIndex
 from .rebuild import scan_durable_simulations
-from .sql import chunked
+from .sql import SqlPredicateDialect, build_index_predicates, chunked
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS simulations (
@@ -30,30 +30,18 @@ CREATE TABLE IF NOT EXISTS simulations (
 );
 """
 
-_COMPLETED_WHERE_SQL = """
-COALESCE(s.traj_present, 0) = 1
-AND NOT EXISTS (
-    SELECT 1
-    FROM json_each(COALESCE(s.footprint_targets, '[]')) AS target
-    LEFT JOIN json_each(COALESCE(s.footprints, '{}')) AS fp
-        ON fp.key = target.value
-    WHERE COALESCE(fp.value, '') NOT IN ('complete', 'complete-empty')
+_PREDICATES = build_index_predicates(
+    SqlPredicateDialect(
+        true_sql="1",
+        false_sql="0",
+        target_rows_sql=(
+            "json_each(COALESCE(s.footprint_targets, '[]')) AS target "
+            "LEFT JOIN json_each(COALESCE(s.footprints, '{}')) AS fp "
+            "ON fp.key = target.value"
+        ),
+        footprint_status_sql="fp.value",
+    )
 )
-"""
-
-_PENDING_WHERE_SQL = f"""
-COALESCE(s.trajectory_status, 'pending') NOT IN ('running', 'failed')
-AND NOT (
-    {_COMPLETED_WHERE_SQL}
-)
-"""
-
-_PRUNE_ELIGIBLE_WHERE_SQL = f"""
-s.trajectory_status = 'failed'
-OR (
-    {_COMPLETED_WHERE_SQL}
-)
-"""
 
 
 class _ManagedConnection(sqlite3.Connection):
@@ -108,9 +96,9 @@ class SqliteIndex(_SqlIndex):
     _jsonb_cast: ClassVar[str] = ""
     _bool_encode: ClassVar[Any] = int
     _backend_name: ClassVar[str] = "SQLite"
-    _completed_where: ClassVar[str] = _COMPLETED_WHERE_SQL
-    _pending_where: ClassVar[str] = _PENDING_WHERE_SQL
-    _prune_eligible_where: ClassVar[str] = _PRUNE_ELIGIBLE_WHERE_SQL
+    _completed_where: ClassVar[str] = _PREDICATES.completed
+    _pending_where: ClassVar[str] = _PREDICATES.pending
+    _prune_eligible_where: ClassVar[str] = _PREDICATES.prune_eligible
 
     _project_dir: Path
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Iterable, Iterator
+from dataclasses import dataclass
 from typing import Any
 
 from stilt.receptor import Receptor
@@ -25,6 +26,54 @@ REQUIRED_SIMULATION_COLUMNS = {
     "created_at",
     "updated_at",
 }
+
+
+@dataclass(frozen=True, slots=True)
+class SqlIndexPredicates:
+    """Rendered durable-index predicates for one SQL dialect."""
+
+    completed: str
+    pending: str
+    prune_eligible: str
+
+
+@dataclass(frozen=True, slots=True)
+class SqlPredicateDialect:
+    """Dialect fragments needed to render shared simulation-state predicates."""
+
+    true_sql: str
+    false_sql: str
+    target_rows_sql: str
+    footprint_status_sql: str
+
+
+def build_index_predicates(dialect: SqlPredicateDialect) -> SqlIndexPredicates:
+    """Render completion/pending/prune predicates for one SQL dialect."""
+    completed = f"""
+COALESCE(s.traj_present, {dialect.false_sql}) = {dialect.true_sql}
+AND NOT EXISTS (
+    SELECT 1
+    FROM {dialect.target_rows_sql}
+    WHERE COALESCE({dialect.footprint_status_sql}, '') NOT IN ('complete', 'complete-empty')
+)
+"""
+    pending = f"""
+COALESCE(s.trajectory_status, 'pending') NOT IN ('running', 'failed')
+AND NOT (
+    {completed}
+)
+"""
+    prune_eligible = f"""
+s.trajectory_status = 'failed'
+OR (
+    {completed}
+)
+"""
+    return SqlIndexPredicates(
+        completed=completed,
+        pending=pending,
+        prune_eligible=prune_eligible,
+    )
 
 
 def validate_required_columns(found: set[str], *, backend_name: str) -> None:
