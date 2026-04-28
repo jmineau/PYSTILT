@@ -242,21 +242,17 @@ def _interpolate_early_timesteps(
     interpolation to preserve the total influence in each time window.
     """
     early = p[np.abs(p["time"]) < 100]
-    bp = early.groupby("indx")
+    if early.empty:
+        return p
 
-    def _median_step(col: str) -> float:
-        return float(
-            bp[col]
-            .apply(
-                lambda s: (
-                    float(np.abs(np.diff(s.values)).mean()) if len(s) > 1 else np.nan
-                )
-            )
-            .median()
-        )
-
-    dx_med = _median_step("long")
-    dy_med = _median_step("lati")
+    order = np.lexsort(
+        (np.asarray(early["time"], dtype=float), np.asarray(early["indx"]))
+    )
+    early = cast(pd.DataFrame, early.iloc[order])
+    diffs = early.groupby("indx", sort=False)[["long", "lati"]].diff().abs()
+    mean_steps = cast(pd.DataFrame, diffs.groupby(early["indx"], sort=False).mean())
+    dx_med = float(mean_steps["long"].median())
+    dy_med = float(mean_steps["lati"].median())
 
     if (np.isnan(dx_med) or dx_med <= xres) and (np.isnan(dy_med) or dy_med <= yres):
         return p
@@ -271,30 +267,7 @@ def _interpolate_early_timesteps(
         p.loc[(atime > 20) & (atime <= 100), "foot"].sum(),
     ]
 
-    # Outer-join each particle track with the dense time grid, then interpolate
-    # long/lati/foot at the new time points.
-    p = p.copy()
-    p["time"] = p["time"].astype(float)
-    dense = pd.MultiIndex.from_product(
-        [p["indx"].unique(), t_new], names=["indx", "time"]
-    ).to_frame(index=False)
-    p = p.merge(dense, on=["indx", "time"], how="outer").sort_values(
-        ["indx", "time"], ascending=[True, False]
-    )
-
-    def _interp_cols(g: pd.DataFrame) -> pd.DataFrame:
-        t = g["time"].to_numpy(dtype=float)
-        out = {}
-        for col in ["long", "lati", "foot"]:
-            y = g[col].to_numpy(dtype=float)
-            valid = ~np.isnan(y)
-            out[col] = np.interp(t, t[valid], y[valid]) if valid.sum() >= 2 else y
-        return pd.DataFrame(out, index=g.index)
-
-    p[["long", "lati", "foot"]] = p.groupby("indx", group_keys=False).apply(
-        _interp_cols
-    )
-    p = p.dropna(subset=["long", "lati", "foot"]).copy()
+    p = _interpolate_particle_tracks(p, t_new=t_new)
     p["time"] = p["time"].round(1)
 
     # Rescale foot so total influence per window matches original.
@@ -310,6 +283,33 @@ def _interpolate_early_timesteps(
             p.loc[mask, "foot"] *= total / s
 
     return p
+
+
+def _interpolate_particle_tracks(p: pd.DataFrame, *, t_new: np.ndarray) -> pd.DataFrame:
+    """Interpolate long/lati/foot for each particle on a dense time grid."""
+    frames: list[pd.DataFrame] = []
+    for indx, group in p.groupby("indx", sort=False):
+        source_time = group["time"].to_numpy(dtype=float)
+        target_time = np.unique(np.concatenate([source_time, t_new]))
+        order = np.argsort(source_time)
+        sorted_time = source_time[order]
+        unique_time, unique_idx = np.unique(sorted_time, return_index=True)
+        data: dict[str, Any] = {
+            "indx": np.full(len(target_time), indx),
+            "time": target_time,
+        }
+        for col in ["long", "lati", "foot"]:
+            values = group[col].to_numpy(dtype=float)[order][unique_idx]
+            if len(unique_time) >= 2:
+                data[col] = np.interp(target_time, unique_time, values)
+            elif len(unique_time) == 1:
+                data[col] = np.full(len(target_time), values[0])
+            else:
+                data[col] = np.full(len(target_time), np.nan)
+        frames.append(pd.DataFrame(data))
+    if not frames:
+        return p.iloc[0:0].copy()
+    return pd.concat(frames, ignore_index=True).dropna(subset=["long", "lati", "foot"])
 
 
 def _project_particles_to_crs(
@@ -510,46 +510,46 @@ def _accumulate_smoothed_footprint(
     rtimes_all = kernel_df["rtime"].values
     kernel_cache: dict[float, np.ndarray] = {}
 
-    for i, layer in enumerate(layers):
-        layer_p = p.loc[p["layer"] == layer]
-        for rtime_val in layer_p["rtime"].unique():
-            step = layer_p[layer_p["rtime"] == rtime_val]
+    layer_index = {int(layer): i for i, layer in enumerate(layers)}
+    for key, step in p.groupby(["layer", "rtime"], sort=False):
+        layer, rtime_val = cast(tuple[Any, Any], key)
+        i = layer_index[int(layer)]
 
-            # Nearest-neighbour kernel bandwidth for this rtime.
-            step_w_idx = int(np.argmin(np.abs(rtimes_all - rtime_val)))
-            step_w = float(w[step_w_idx])
-            if step_w not in kernel_cache:
-                kernel_cache[step_w] = _make_gauss_kernel(rs, step_w)
-            k = kernel_cache[step_w]
+        # Nearest-neighbour kernel bandwidth for this rtime.
+        step_w_idx = int(np.argmin(np.abs(rtimes_all - rtime_val)))
+        step_w = float(w[step_w_idx])
+        if step_w not in kernel_cache:
+            kernel_cache[step_w] = _make_gauss_kernel(rs, step_w)
+        k = kernel_cache[step_w]
 
-            loi_arr = step["loi"].values.astype(int)
-            lai_arr = step["lai"].values.astype(int)
-            foot_vals = step["foot"].values
-            valid = (
-                (loi_arr >= 0)
-                & (loi_arr < buffered.n_lon_buf)
-                & (lai_arr >= 0)
-                & (lai_arr < buffered.n_lat_buf)
-            )
-            lin_idx = loi_arr[valid] * buffered.n_lat_buf + lai_arr[valid]
-            sparse = np.bincount(
-                lin_idx,
-                weights=foot_vals[valid],
-                minlength=buffered.n_lon_buf * buffered.n_lat_buf,
-            ).reshape(buffered.n_lon_buf, buffered.n_lat_buf)
+        loi_arr = step["loi"].values.astype(int)
+        lai_arr = step["lai"].values.astype(int)
+        foot_vals = step["foot"].to_numpy(dtype=float)
+        valid = (
+            (loi_arr >= 0)
+            & (loi_arr < buffered.n_lon_buf)
+            & (lai_arr >= 0)
+            & (lai_arr < buffered.n_lat_buf)
+        )
+        lin_idx = loi_arr[valid] * buffered.n_lat_buf + lai_arr[valid]
+        sparse = np.bincount(
+            lin_idx,
+            weights=foot_vals[valid],
+            minlength=buffered.n_lon_buf * buffered.n_lat_buf,
+        ).reshape(buffered.n_lon_buf, buffered.n_lat_buf)
 
-            nz_r, nz_c = np.nonzero(sparse)
-            if len(nz_r) == 0:
-                continue
-            kh_x = k.shape[0] // 2
-            kh_y = k.shape[1] // 2
-            r0 = max(0, nz_r.min() - kh_x)
-            r1 = min(buffered.n_lon_buf, nz_r.max() + kh_x + 1)
-            c0 = max(0, nz_c.min() - kh_y)
-            c1 = min(buffered.n_lat_buf, nz_c.max() + kh_y + 1)
-            foot_arr[r0:r1, c0:c1, i] += _convolve(
-                sparse[r0:r1, c0:c1], k, mode="constant", cval=0.0
-            )
+        nz_r, nz_c = np.nonzero(sparse)
+        if len(nz_r) == 0:
+            continue
+        kh_x = k.shape[0] // 2
+        kh_y = k.shape[1] // 2
+        r0 = max(0, nz_r.min() - kh_x)
+        r1 = min(buffered.n_lon_buf, nz_r.max() + kh_x + 1)
+        c0 = max(0, nz_c.min() - kh_y)
+        c1 = min(buffered.n_lat_buf, nz_c.max() + kh_y + 1)
+        foot_arr[r0:r1, c0:c1, i] += _convolve(
+            sparse[r0:r1, c0:c1], k, mode="constant", cval=0.0
+        )
 
     return foot_arr
 
@@ -797,9 +797,8 @@ class Footprint:
 
         # rtime = time elapsed since each particle's first output step.
         # Used below to compute kernel bandwidth (particles spread more with time).
-        p["rtime"] = p.groupby("indx")["time"].transform(
-            lambda s: s - time_sign * np.abs(s).min()
-        )
+        min_abs_time = p["time"].abs().groupby(p["indx"], sort=False).transform("min")
+        p["rtime"] = p["time"] - time_sign * min_abs_time
 
         if not is_longlat:
             p, xmin, xmax, ymin, ymax = _project_particles_to_crs(

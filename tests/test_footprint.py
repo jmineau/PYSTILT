@@ -13,6 +13,7 @@ from stilt.footprint import (
     Footprint,
     _calc_digits,
     _cf_grid_mapping_attrs,
+    _interpolate_early_timesteps,
     _interpolation_times,
     _make_gauss_kernel,
 )
@@ -464,3 +465,35 @@ def test_interpolation_times_match_r_stilt_schedule():
     assert times[np.where(np.isclose(times, -20.0))[0][0]] == pytest.approx(-20.0)
     assert times[-1] == pytest.approx(-100.0)
     assert len(times) == 311
+
+
+def test_interpolate_early_timesteps_preserves_window_foot_sums():
+    particles = pd.DataFrame(
+        {
+            "time": [-5.0, -50.0, -120.0, -5.0, -50.0, -120.0],
+            "indx": [1, 1, 1, 2, 2, 2],
+            "long": [-113.0, -114.0, -115.0, -112.0, -113.5, -115.0],
+            "lati": [39.0, 40.0, 41.0, 39.5, 40.5, 41.5],
+            "foot": [1.0, 2.0, 4.0, 3.0, 5.0, 7.0],
+        }
+    )
+    original_atime = np.abs(particles["time"])
+    original_sums = [
+        particles.loc[original_atime <= 10, "foot"].sum(),
+        particles.loc[(original_atime > 10) & (original_atime <= 20), "foot"].sum(),
+        particles.loc[(original_atime > 20) & (original_atime <= 100), "foot"].sum(),
+    ]
+
+    interpolated = _interpolate_early_timesteps(
+        particles, xres=0.01, yres=0.01, time_sign=-1
+    )
+
+    assert len(interpolated) > len(particles)
+    atime = np.abs(interpolated["time"])
+    interpolated_sums = [
+        interpolated.loc[atime <= 10, "foot"].sum(),
+        interpolated.loc[(atime > 10) & (atime <= 20), "foot"].sum(),
+        interpolated.loc[(atime > 20) & (atime <= 100), "foot"].sum(),
+    ]
+    assert interpolated_sums == pytest.approx(original_sums)
+    assert interpolated[["long", "lati", "foot"]].isna().sum().sum() == 0
