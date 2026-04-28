@@ -1,5 +1,6 @@
 """Tests for stilt.footprint helpers and aggregation."""
 
+import builtins
 import datetime as dt
 
 import numpy as np
@@ -11,6 +12,7 @@ from stilt.config import FootprintConfig, Grid, VerticalOperatorTransformSpec
 from stilt.footprint import (
     Footprint,
     _calc_digits,
+    _cf_grid_mapping_attrs,
     _interpolation_times,
     _make_gauss_kernel,
 )
@@ -67,6 +69,26 @@ def test_make_gauss_kernel_sigma_zero():
     assert k[0, 0] == pytest.approx(1.0)
 
 
+def test_cf_grid_mapping_attrs_without_pyproj_uses_conservative_longlat_fallback(
+    monkeypatch,
+):
+    real_import = builtins.__import__
+
+    def fake_import(name, *args, **kwargs):
+        if name == "pyproj":
+            raise ImportError("pyproj unavailable")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", fake_import)
+
+    attrs = _cf_grid_mapping_attrs("+proj=longlat")
+
+    assert attrs == {
+        "proj4_params": "+proj=longlat",
+        "grid_mapping_name": "latitude_longitude",
+    }
+
+
 def test_aggregate_returns_dataframe():
     foot = _make_footprint(n_times=1)
     t0 = pd.Timestamp("2023-01-01 12:00")
@@ -108,6 +130,32 @@ def test_netcdf_roundtrip_preserves_name(tmp_path):
     loaded = Footprint.from_netcdf(path)
     assert loaded.name == "slv"
     assert loaded.grid.xres == pytest.approx(0.1)
+
+
+def test_netcdf_writes_cf_grid_mapping_and_coordinates(tmp_path):
+    foot = _make_footprint(n_times=1)
+    path = tmp_path / "cf_foot.nc"
+
+    foot.to_netcdf(path)
+
+    ds = xr.open_dataset(path)
+    try:
+        assert ds.attrs["Conventions"] == "CF-1.8"
+        assert "crs" in ds
+        assert ds["crs"].attrs["grid_mapping_name"] == "latitude_longitude"
+        assert ds["foot"].attrs["grid_mapping"] == "crs"
+        assert ds["lon"].attrs["standard_name"] == "longitude"
+        assert ds["lon"].attrs["units"] == "degrees_east"
+        assert ds["lat"].attrs["standard_name"] == "latitude"
+        assert ds["lat"].attrs["units"] == "degrees_north"
+        assert ds["time"].attrs["standard_name"] == "time"
+        assert "receptor" in ds.attrs
+        assert "receptor_time" not in ds.coords
+        assert "receptor_longitude" not in ds.coords
+        assert "receptor_latitude" not in ds.coords
+        assert "receptor_altitude" not in ds.coords
+    finally:
+        ds.close()
 
 
 def test_netcdf_roundtrip_prefers_stored_name_attr(tmp_path):
