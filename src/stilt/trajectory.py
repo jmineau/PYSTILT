@@ -9,7 +9,6 @@ import numpy as np
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
-import xarray as xr
 from typing_extensions import Self
 
 from stilt.config import STILTParams
@@ -102,7 +101,8 @@ class Trajectories:
         *,
         columns: list[str] | None = None,
     ) -> Self:
-        """Load a Trajectories instance from a self-contained parquet file.
+        """
+        Load a Trajectories instance from a self-contained parquet file.
 
         Metadata (receptor, params, met_files, is_error) is read from
         Arrow schema metadata embedded by ``to_parquet``.
@@ -128,7 +128,7 @@ class Trajectories:
 
         # Read data. `datetime` is written naive UTC by ``from_particles``; keep
         # it naive on read so the receptor/trajectory/footprint time axes align.
-        data = pd.read_parquet(path, columns=columns)
+        data = pf.read(columns=columns).to_pandas()
         if "datetime" in data.columns:
             data["datetime"] = pd.to_datetime(data["datetime"])
 
@@ -149,7 +149,8 @@ class Trajectories:
         met_files: list[Path],
         is_error: bool = False,
     ) -> "Trajectories":
-        """Build a Trajectories instance from raw HYSPLIT particle output.
+        """
+        Build a Trajectories instance from raw HYSPLIT particle output.
 
         Assigns ``xhgt`` for column/multipoint receptors, applies
         ``hnf_plume`` dilution correction if configured, and converts
@@ -230,7 +231,8 @@ class Trajectories:
         )
 
     def to_parquet(self, path: str | Path) -> Path:
-        """Persist trajectory data and metadata to a self-contained parquet file.
+        """
+        Persist trajectory data and metadata to a self-contained parquet file.
 
         Receptor, params, met_files, and is_error are stored in Arrow
         schema metadata so ``from_parquet`` needs no sibling files.
@@ -274,15 +276,12 @@ class Trajectories:
                 tmp_path.unlink()
         return path
 
-    def to_xarray(self) -> xr.Dataset:
-        """Return a simple xarray view of the particle table."""
-        return self.data.set_index(["indx", "datetime"]).to_xarray()
-
 
 def calc_plume_dilution(
     particles: pd.DataFrame, r_zagl: float | None, veght: float
 ) -> pd.DataFrame:
-    """Rescale footprint for near-field plume dilution.
+    """
+    Rescale footprint for near-field plume dilution.
 
     Requires ``varsiwant`` to include: ``dens``, ``samt``, ``sigw``,
     ``tlgr``, ``foot``, ``mlht``.
@@ -325,12 +324,17 @@ def calc_plume_dilution(
         )
     )
     p["pbl_mixing"] = veght * p["mlht"]
-    p = p.sort_values("time", ascending=False)
 
     start_h = p["xhgt"] if "xhgt" in p.columns else r_zagl
     if start_h is None:
         raise ValueError("r_zagl must be provided if 'xhgt' is not in particles.")
-    p["plume"] = start_h + p.groupby("indx")["sigma"].cumsum()
+    # cumsum must accumulate within each particle track in descending time order
+    p["plume"] = start_h + (
+        p.sort_values("time", ascending=False)
+        .groupby("indx", sort=False)["sigma"]
+        .cumsum()
+        .reindex(p.index)
+    )
     p["foot"] = np.where(
         p["plume"] < p["pbl_mixing"],
         0.02897 / (p["plume"] * p["dens"]) * p["samt"] * 60,

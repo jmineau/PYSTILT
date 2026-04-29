@@ -65,7 +65,8 @@ def _bundled_data_dir() -> Path:
 
 
 def _read_particle_dat(path: Path, names: Sequence[str]) -> pd.DataFrame:
-    """Read one whitespace-delimited HYSPLIT particle output file.
+    """
+    Read one whitespace-delimited HYSPLIT particle output file.
 
     ``numpy.loadtxt`` is substantially cheaper than regex-based pandas parsing
     for large numeric ``PARTICLE_STILT.DAT`` files while still handling
@@ -91,7 +92,8 @@ def _read_particle_dat(path: Path, names: Sequence[str]) -> pd.DataFrame:
 
 @dataclass
 class HYSPLITResult:
-    """Raw output from a single HYSPLIT execution.
+    """
+    Raw output from a single HYSPLIT execution.
 
     Attributes
     ----------
@@ -236,13 +238,19 @@ class HYSPLITDriver:
                     raise HYSPLITTimeoutError(
                         f"hycs_std timed out after {timeout}s for {self.directory}"
                     ) from e
-        output = self._read_log_segment(segment_start)
-        for phrase, reason in FAILURE_PHRASES.items():
-            if phrase in output:
-                raise HYSPLITFailureError(reason, str(self.directory))
+        self._check_log_for_failure(segment_start)
 
     def _terminate_process(self, proc: subprocess.Popen[Any]) -> None:
-        """Terminate one HYSPLIT process group with a bounded escalation path."""
+        """Terminate one HYSPLIT process group with SIGTERM→wait→SIGKILL escalation."""
+        try:
+            os.killpg(proc.pid, signal.SIGTERM)
+        except ProcessLookupError:
+            return
+        try:
+            proc.wait(timeout=3)
+            return
+        except subprocess.TimeoutExpired:
+            pass
         try:
             os.killpg(proc.pid, signal.SIGKILL)
         except ProcessLookupError:
@@ -250,16 +258,22 @@ class HYSPLITDriver:
         try:
             proc.wait(timeout=5)
         except subprocess.TimeoutExpired:
-            try:
-                proc.kill()
-            finally:
-                proc.wait(timeout=5)
+            proc.wait()
 
-    def _read_log_segment(self, start: int) -> str:
-        """Read one appended segment from the combined log file."""
+    def _check_log_for_failure(self, start: int) -> None:
+        """
+        Scan the new log segment for known HYSPLIT failure phrases.
+
+        ``start`` is a byte offset from ``stat().st_size``; ``seek()`` in text
+        mode is safe for byte-aligned positions on POSIX (no multi-byte chars
+        are written by hycs_std).
+        """
         with self.log_path.open("r", encoding="utf-8", errors="replace") as handle:
             handle.seek(start)
-            return handle.read()
+            for line in handle:
+                for phrase, reason in FAILURE_PHRASES.items():
+                    if phrase in line:
+                        raise HYSPLITFailureError(reason, str(self.directory))
 
     def _read_particles(self, rm_dat: bool) -> pd.DataFrame:
         """Read and optionally remove ``PARTICLE_STILT.DAT`` output."""
@@ -304,7 +318,8 @@ class HYSPLITDriver:
         params = self.params._xyerr_params()
         if all(v is not None for v in params.values()):
             self.winderr_path.write_text(
-                "\n".join(str(v) for v in params.values()) + "\n"
+                "\n".join(str(v) for v in params.values()) + "\n",
+                encoding="utf-8",
             )
 
     def _write_zierr(self) -> None:
@@ -312,7 +327,8 @@ class HYSPLITDriver:
         params = self.params._zierr_params()
         if all(v is not None for v in params.values()):
             self.zierr_path.write_text(
-                "\n".join(str(v) for v in params.values()) + "\n"
+                "\n".join(str(v) for v in params.values()) + "\n",
+                encoding="utf-8",
             )
 
     def _ziscale_values(self) -> list[float] | None:

@@ -467,5 +467,17 @@ class STILTParams(ModelParams, TransportParams, ErrorParams):
             self.maxpar = self.numpar
         return self
 
+    @model_validator(mode="after")
+    def _validate_hnf_plume(self) -> Self:
+        """Raise at construction time if hnf_plume=True but varsiwant is missing required columns."""
+        if self.hnf_plume:
+            required = {"dens", "samt", "sigw", "tlgr", "foot", "mlht"}
+            missing = required - set(self.varsiwant)
+            if missing:
+                raise ValueError(
+                    f"hnf_plume=True requires varsiwant to include: {sorted(missing)}"
+                )
+        return self
+
 
 __all__ = ["ErrorParams", "ModelParams", "STILTParams", "TransportParams"]

@@ -117,7 +117,9 @@ def _build_footprint_array(
         foot_arr,
         dims=["time", y_dim, x_dim],
         coords={"time": time_index, y_dim: y_coords, x_dim: x_coords},
-        attrs={"units": "ppm (umol-1 m2 s)"},
+        attrs={
+            "units": "ppm m2 s umol-1"
+        },  # surface influence function: ppm per (µmol m⁻² s⁻¹)
     )
 
 
@@ -214,7 +216,8 @@ class _BufferedGrid:
 def _wrap_antimeridian_longitudes(
     p: pd.DataFrame, *, xmin: float, xmax: float
 ) -> tuple[pd.DataFrame, float, float, bool]:
-    """Wrap particle longitudes and domain bounds to 0-360 when the domain crosses the dateline.
+    """
+    Wrap particle longitudes and domain bounds to 0-360 when the domain crosses the dateline.
 
     Only meaningful for geographic CRS.  Returns ``(p, xmin, xmax, wrapped)``.
     """
@@ -233,7 +236,8 @@ def _wrap_antimeridian_longitudes(
 def _interpolate_early_timesteps(
     p: pd.DataFrame, *, xres: float, yres: float, time_sign: int
 ) -> pd.DataFrame:
-    """Densify particle tracks for the first 100 minutes when inter-step movement > grid cell.
+    """
+    Densify particle tracks for the first 100 minutes when inter-step movement > grid cell.
 
     Near the receptor, particles move quickly relative to the grid.  If the
     median inter-particle step exceeds one grid cell, insert sub-minute time
@@ -321,7 +325,8 @@ def _project_particles_to_crs(
     ymin: float,
     ymax: float,
 ) -> tuple[pd.DataFrame, float, float, float, float]:
-    """Project lon/lat particle positions and domain bounds to the output CRS.
+    """
+    Project lon/lat particle positions and domain bounds to the output CRS.
 
     Only called for non-longlat projections.  ``pyproj`` is imported lazily
     since the default longlat path does not need it.
@@ -346,7 +351,8 @@ def _project_particles_to_crs(
 def _compute_kernel_bandwidths(
     p: pd.DataFrame, *, smooth_factor: float, is_longlat: bool
 ) -> tuple[pd.DataFrame, np.ndarray]:
-    """Return (kernel_df, w) where w is the per-rtime Gaussian sigma.
+    """
+    Return (kernel_df, w) where w is the per-rtime Gaussian sigma.
 
     Bandwidth ``w`` scales with particle spread (``di``) and elapsed time
     (``ti``), corrected for grid convergence at high latitudes (``grid_conv``):
@@ -394,7 +400,8 @@ def _build_buffered_grid(
     n_lat: int,
     max_kernel: np.ndarray,
 ) -> _BufferedGrid:
-    """Extend the output grid by the largest kernel half-width on each side.
+    """
+    Extend the output grid by the largest kernel half-width on each side.
 
     The buffer ensures particles near the domain edge are smoothed correctly.
     """
@@ -426,7 +433,8 @@ def _filter_and_rasterize_particles(
     yres: float,
     time_integrate: bool,
 ) -> tuple[pd.DataFrame, np.ndarray]:
-    """Filter to in-domain particles, assign buffered-grid cells, aggregate, and add layer.
+    """
+    Filter to in-domain particles, assign buffered-grid cells, aggregate, and add layer.
 
     Returns ``(p, layers)`` where ``p`` has columns ``loi, lai, time, rtime,
     foot, layer`` and ``layers`` is the sorted set of unique layer indices
@@ -496,7 +504,8 @@ def _accumulate_smoothed_footprint(
     w: np.ndarray,
     rs: tuple[float, float],
 ) -> np.ndarray:
-    """Scatter particle foot values onto the buffered grid and Gaussian-smooth per timestep.
+    """
+    Scatter particle foot values onto the buffered grid and Gaussian-smooth per timestep.
 
     Returns ``foot_arr`` of shape ``(n_lon_buf, n_lat_buf, n_layers)``.  Uses
     ``np.bincount`` for the scatter (faster than ``np.add.at``) and confines
@@ -669,7 +678,8 @@ class Footprint:
     def from_netcdf(
         cls, path: str | Path, *, chunks: Any | None = None, **kwargs: Any
     ) -> Self:
-        """Create a footprint from a netCDF file.
+        """
+        Create a footprint from a netCDF file.
 
         Parameters
         ----------
@@ -706,7 +716,7 @@ class Footprint:
                 projection=attrs.get("projection", "+proj=longlat"),
             ),
             smooth_factor=attrs.get("smooth_factor", 1.0),
-            time_integrate=attrs.get("time_integrate", False),
+            time_integrate=bool(attrs.get("time_integrate", False)),
             transforms=json.loads(attrs.get("transforms", "[]")),
         )
 
@@ -886,6 +896,12 @@ class Footprint:
             / n_particles
         )
 
+        if foot_arr.shape != (n_lon, n_lat, len(layers)):
+            raise ValueError(
+                f"foot_arr shape mismatch: expected ({n_lon}, {n_lat}, {len(layers)}), "
+                f"got {foot_arr.shape}"
+            )
+
         return cls(
             receptor=receptor,
             config=config,
@@ -904,7 +920,8 @@ class Footprint:
         )
 
     def to_netcdf(self, path: str | Path) -> Path:
-        """Write footprint to a netCDF file with CF-convention attributes.
+        """
+        Write footprint to a netCDF file with CF-convention attributes.
 
         Parameters
         ----------
@@ -971,7 +988,8 @@ class Footprint:
     def integrate_over_time(
         self, start: dt.datetime | None = None, end: dt.datetime | None = None
     ) -> xr.DataArray:
-        """Integrate this footprint over an optional time range.
+        """
+        Integrate this footprint over an optional time range.
 
         Parameters
         ----------
@@ -994,7 +1012,8 @@ class Footprint:
         coords: list[tuple[float, float]],
         time_bins: pd.IntervalIndex,
     ) -> pd.DataFrame:
-        """Sample footprint at coordinates and integrate over time bins.
+        """
+        Sample footprint at coordinates and integrate over time bins.
 
         Parameters
         ----------
@@ -1016,20 +1035,12 @@ class Footprint:
         coord_index = pd.MultiIndex.from_tuples(coords, names=[x_dim, y_dim])
         x_values = np.asarray([coord[0] for coord in coords], dtype=float)
         y_values = np.asarray([coord[1] for coord in coords], dtype=float)
-        sampled = (
-            self.data.reindex(
-                {
-                    x_dim: pd.Index(np.unique(x_values), name=x_dim),
-                    y_dim: pd.Index(np.unique(y_values), name=y_dim),
-                }
-            )
-            .fillna(0.0)
-            .sel(
-                {
-                    x_dim: xr.DataArray(x_values, dims="obs"),
-                    y_dim: xr.DataArray(y_values, dims="obs"),
-                }
-            )
+        sampled = self.data.sel(
+            {
+                x_dim: xr.DataArray(x_values, dims="obs"),
+                y_dim: xr.DataArray(y_values, dims="obs"),
+            },
+            method="nearest",
         )
         frame = cast(pd.DataFrame, sampled.transpose("obs", "time").to_pandas())
         if frame.empty:
@@ -1044,7 +1055,10 @@ class Footprint:
         for interval, left_edge in zip(time_bins, columns, strict=False):
             left = _naive_utc_timestamp(interval.left)
             right = _naive_utc_timestamp(interval.right)
-            assert left is not None and right is not None
+            if left is None or right is None:
+                raise ValueError(
+                    f"Could not convert interval bounds to UTC timestamps: {interval}"
+                )
             mask = (frame.columns >= left) & (frame.columns < right)
             if mask.any():
                 result[left_edge] = cast(pd.DataFrame, frame.loc[:, mask]).sum(

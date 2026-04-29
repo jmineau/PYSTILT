@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import datetime as dt
 import logging
+import re
 from collections.abc import Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
@@ -61,8 +62,11 @@ class SimID(str):
 
     def __new__(cls, id_str: str) -> SimID:
         """Create from canonical ``'{met}_{YYYYMMDDHHMM}_{location_id}'`` string."""
-        if not id_str.count("_") >= 3:
-            raise ValueError(f"Invalid sim_id format: {id_str!r}")
+        if not re.fullmatch(r"[a-z0-9]+_\d{12}_.+", id_str):
+            raise ValueError(
+                f"Invalid sim_id format: {id_str!r}. "
+                "Expected '{met}_{YYYYMMDDHHMM}_{location_id}'."
+            )
         instance = super().__new__(cls, id_str)
         met_str, recep_str = id_str.split("_", 1)
         receptor_id = ReceptorID(recep_str)
@@ -488,10 +492,6 @@ class Simulation:
             traj_path = self.resolve_output(self.trajectories_path)
             if traj_path is not None:
                 self._trajectories = Trajectories.from_parquet(traj_path)
-            else:
-                logger.info(
-                    f"No trajectories for {self.id} - has the simulation been run?"
-                )
         return self._trajectories
 
     @property

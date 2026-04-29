@@ -8,7 +8,7 @@ import logging
 import os
 import tempfile
 from collections.abc import Iterable
-from functools import wraps
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -53,26 +53,34 @@ if TYPE_CHECKING:
     from stilt.visualization import ModelPlotAccessor
 
 
-def _wrap_wait_with_rebuild(handle: JobHandle, index: SimulationIndex) -> JobHandle:
-    """Wrap one handle's ``wait()`` so push completion rebuilds output state once."""
-    original_wait = handle.wait
-    completed = False
+@dataclass
+class _RebuildOnCompleteHandle:
+    """JobHandle wrapper that rebuilds the output index once after push-mode completion."""
 
-    @wraps(original_wait)
-    def wait() -> None:
-        nonlocal completed
-        if completed:
+    _inner: JobHandle
+    _index: SimulationIndex
+    _completed: bool = field(default=False, init=False)
+
+    @property
+    def job_id(self) -> str:
+        return self._inner.job_id
+
+    def wait(self) -> None:
+        if self._completed:
             return
-        original_wait()
-        index.rebuild()
-        completed = True
+        self._inner.wait()
+        self._index.rebuild()
+        self._completed = True
 
-    handle.wait = wait
-    return handle
+
+def _wrap_wait_with_rebuild(handle: JobHandle, index: SimulationIndex) -> JobHandle:
+    """Wrap one handle so push-mode completion rebuilds output state once."""
+    return _RebuildOnCompleteHandle(handle, index)  # type: ignore[return-value]
 
 
 class Model:
-    """Science-facing STILT project interface.
+    """
+    Science-facing STILT project interface.
 
     ``Model`` is the primary Python entry point for configuring a STILT project,
     running one-off simulations, and loading simulation results. It also owns
@@ -97,6 +105,11 @@ class Model:
         Local parent directory where worker simulation directories are created.
     runtime : RuntimeSettings or None, optional
         Runtime-only deployment settings such as cache roots and DB URLs.
+    **kwargs
+        Forwarded to :class:`~stilt.config.ModelConfig` when *config* is not
+        provided.  Any valid ``ModelConfig`` field name is accepted (e.g.
+        ``n_hours=-48``, ``numpar=500``).  Mutually exclusive with *config* —
+        passing both raises ``TypeError``.
 
     Attributes
     ----------
@@ -202,7 +215,8 @@ class Model:
 
     @property
     def config(self) -> ModelConfig:
-        """Project :class:`ModelConfig`, loaded from ``config.yaml`` if not provided at construction.
+        """
+        Project :class:`ModelConfig`, loaded from ``config.yaml`` if not provided at construction.
 
         Returns
         -------
@@ -214,7 +228,8 @@ class Model:
 
     @property
     def receptors(self) -> ReceptorCollection:
-        """Sequence-like receptor accessor for this project.
+        """
+        Sequence-like receptor accessor for this project.
 
         Access by position (``model.receptors[0]``) or by receptor identifier
         (``model.receptors[sim_id.receptor_id]``).
@@ -236,10 +251,16 @@ class Model:
         *,
         scene_id: str | None = None,
     ) -> list[str]:
-        """Persist model inputs and register one batch of pending work.
+        """
+        Persist model inputs and register one batch of pending work.
 
         This is the output registration boundary shared by local runs,
         queue-backed workers, and the CLI ``stilt register`` command.
+
+        Registration is idempotent: calling this multiple times with the same
+        receptors does not create duplicate index entries.  The underlying
+        index backend uses an upsert (``ON CONFLICT DO UPDATE``) so existing
+        rows are updated in place rather than duplicated.
 
         Parameters
         ----------
@@ -283,7 +304,8 @@ class Model:
 
     @property
     def simulations(self) -> SimulationCollection:
-        """Lazy simulation collection for registered simulations.
+        """
+        Lazy simulation collection for registered simulations.
 
         Returns
         -------
@@ -304,7 +326,8 @@ class Model:
 
     @property
     def plot(self) -> "ModelPlotAccessor":
-        """Plotting namespace for this model (e.g. ``model.plot.availability()``).
+        """
+        Plotting namespace for this model (e.g. ``model.plot.availability()``).
 
         Returns
         -------
@@ -368,7 +391,8 @@ class Model:
         rebuild: bool | None = None,
         wait: bool = True,
     ) -> JobHandle:
-        """Register pending work and start workers to drain it.
+        """
+        Register pending work and start workers to drain it.
 
         When ``config.footprints`` contains one or more footprint
         configurations, workers auto-run HYSPLIT trajectories as needed and

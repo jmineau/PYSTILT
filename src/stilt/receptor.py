@@ -222,6 +222,8 @@ class Receptor:
             and self.latitudes[0] == self.latitudes[1]
         ):
             self._kind = ReceptorKind.COLUMN
+            if self.altitudes[0] > self.altitudes[1]:
+                self.altitudes = self.altitudes[::-1]
         else:
             self._kind = ReceptorKind.MULTIPOINT
 
