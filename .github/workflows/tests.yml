@@ -34,19 +34,22 @@ jobs:
 
     - name: Run unit tests
       run: |
-        uv run --python ${{ matrix.python-version }} pytest tests/ --ignore=tests/integration -v --cov=stilt --junitxml=junit.xml -o junit_family=legacy
+        uv run --python ${{ matrix.python-version }} pytest tests/ --ignore=tests/integration -v --cov=src/stilt --cov-report=term-missing --cov-report=xml:coverage.xml --junitxml=junit.xml -o junit_family=legacy
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v5
       if: ${{ matrix.os == 'ubuntu-latest' && matrix.python-version == '3.10' && !cancelled() }}
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
+        files: coverage.xml
 
     - name: Upload test results to Codecov
+      uses: codecov/codecov-action@v5
       if: ${{ matrix.os == 'ubuntu-latest' && matrix.python-version == '3.10' && !cancelled() }}
-      uses: codecov/test-results-action@v1
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
+        files: junit.xml
+        report_type: test_results
 
   integration:
     name: Integration tests
