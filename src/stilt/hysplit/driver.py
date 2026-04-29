@@ -40,20 +40,18 @@ ZIERR_FILE = "ZIERR"
 ZICONTROL_FILE = "ZICONTROL"
 
 
-# Mapping from (system, machine) → bundled subdirectory inside stilt/hysplit/bin/
-_PLATFORM_MAP: dict[tuple[str, str], str] = {
-    ("Linux", "x86_64"): "linux_x64",
-    ("Darwin", "x86_64"): "macos_x64",
-}
-
-
 def _bundled_exe_dir() -> Path:
     """Return the bundled binary directory for the current platform."""
-    key = (platform.system(), platform.machine())
-    subdir = _PLATFORM_MAP.get(key)
-    if subdir is None:
+    system = platform.system()
+    machine = platform.machine()
+    if system == "Linux" and machine == "x86_64":
+        subdir = "linux_x64"
+    elif system == "Darwin":
+        # arm64 (Apple Silicon) runs x86_64 binaries via Rosetta 2
+        subdir = "macos_x64"
+    else:
         raise RuntimeError(
-            f"No bundled HYSPLIT binary for {platform.system()} {platform.machine()}. "
+            f"No bundled HYSPLIT binary for {system} {machine}. "
             "Build hycs_std from source and place it in a directory on your PATH."
         )
     return Path(str(pkg_files("stilt.hysplit") / "bin" / subdir))
