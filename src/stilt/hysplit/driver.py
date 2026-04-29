@@ -43,15 +43,13 @@ ZICONTROL_FILE = "ZICONTROL"
 def _bundled_exe_dir() -> Path:
     """Return the bundled binary directory for the current platform."""
     system = platform.system()
-    machine = platform.machine()
-    if system == "Linux" and machine == "x86_64":
+    if system == "Linux":
         subdir = "linux_x64"
     elif system == "Darwin":
-        # arm64 (Apple Silicon) runs x86_64 binaries via Rosetta 2
         subdir = "macos_x64"
     else:
         raise RuntimeError(
-            f"No bundled HYSPLIT binary for {system} {machine}. "
+            f"No bundled HYSPLIT binary for {system}. "
             "Build hycs_std from source and place it in a directory on your PATH."
         )
     return Path(str(pkg_files("stilt.hysplit") / "bin" / subdir))
