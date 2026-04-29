@@ -22,7 +22,8 @@ class ControlFile(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def write(self, path: str | Path) -> None:
-        """Write the HYSPLIT CONTROL file.
+        """
+        Write the HYSPLIT CONTROL file.
 
         Format is positional text: receptor time, receptor coordinates,
         run parameters, met files, emission hours.

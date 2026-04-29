@@ -156,6 +156,23 @@ class SimulationCollection:
 
     This object is the science-facing boundary for simulation identity,
     selection, and lazy handle construction.
+
+    Parameters
+    ----------
+    output_dir
+        Project output root used to construct per-simulation directories.
+    params
+        Shared STILT parameter set applied to every simulation handle.
+    mets
+        Configured meteorology sources keyed by met stream name.
+    receptors
+        Collection used to resolve receptors referenced by simulation ids.
+    footprint_names
+        Named footprints expected for complete output.
+    index
+        Durable output index used for filtering and status checks.
+    store
+        Output store used by constructed simulation handles.
     """
 
     def __init__(
@@ -277,6 +294,7 @@ class SimulationCollection:
         return resolve_mets(self._mets, mets)
 
     def _build(self, sim_id: SimID) -> Simulation:
+        """Build and cache a concrete simulation handle for one id."""
         receptor = self._receptors[sim_id.receptor]
         sim_dir = ProjectFiles(self._output_dir).simulation(str(sim_id)).directory
         return Simulation(
@@ -305,34 +323,53 @@ class _OutputSpec(Protocol[TOutput]):
 
 
 class _TrajectoryOutputSpec:
-    """Output spec for main or error trajectory parquet files."""
+    """
+    Output spec for main or error trajectory parquet files.
+
+    Parameters
+    ----------
+    error
+        When true, target error-trajectory outputs instead of main trajectories.
+    """
 
     def __init__(self, *, error: bool = False):
         self.error = error
 
     def present(self, summary: OutputSummary) -> bool:
+        """Return whether the requested trajectory flavor is present."""
         return summary.error_traj_present if self.error else summary.traj_present
 
     def local_path(self, model: Model, sim_id: str) -> Path:
+        """Return the local path for this trajectory flavor and simulation."""
         sim_files = ProjectFiles(model.layout.output_dir).simulation(sim_id)
         return (
             sim_files.error_trajectory_path if self.error else sim_files.trajectory_path
         )
 
     def load_one(self, path: Path) -> Trajectories:
+        """Load one trajectory parquet file into a `Trajectories` object."""
         return Trajectories.from_parquet(path)
 
 
 class _NamedFootprintOutputSpec:
-    """Output spec for one named footprint netCDF file."""
+    """
+    Output spec for one named footprint netCDF file.
+
+    Parameters
+    ----------
+    name
+        Footprint name to resolve for each simulation.
+    """
 
     def __init__(self, name: str):
         self.name = name
 
     def present(self, summary: OutputSummary) -> bool:
+        """Return whether this named footprint is complete in one summary."""
         return summary.footprint_complete(self.name)
 
     def local_path(self, model: Model, sim_id: str) -> Path:
+        """Return the local netCDF path for this footprint and simulation."""
         return (
             ProjectFiles(model.layout.output_dir)
             .simulation(sim_id)
@@ -340,6 +377,7 @@ class _NamedFootprintOutputSpec:
         )
 
     def load_one(self, path: Path) -> Footprint:
+        """Load one footprint netCDF file into a `Footprint` object."""
         return Footprint.from_netcdf(path)
 
 
@@ -349,6 +387,13 @@ class _OutputAccessor(Generic[TOutput]):
 
     Subclasses/factories supply a typed output spec and inherit ``paths()`` /
     ``load()`` / ``missing()`` with consistent filter semantics.
+
+    Parameters
+    ----------
+    model
+        Model that provides configuration, storage, and index access.
+    spec
+        Output-family spec used to resolve presence, paths, and loading.
     """
 
     def __init__(
@@ -360,6 +405,7 @@ class _OutputAccessor(Generic[TOutput]):
         self._spec = spec
 
     def _configured_mets(self) -> Iterable[str] | None:
+        """Return configured met stream names when model config is available."""
         return self._model.config.mets if self._model._config is not None else None
 
     def _matching_ids(
@@ -370,6 +416,7 @@ class _OutputAccessor(Generic[TOutput]):
         time_range: tuple | None,
         location_ids: set[str] | None,
     ) -> list[str]:
+        """Return simulation ids matching common accessor filters."""
         return matching_ids(
             self._model.index,
             receptors=self._model.receptors,
@@ -386,6 +433,7 @@ class _OutputAccessor(Generic[TOutput]):
         time_range: tuple | None = None,
         location_ids: set[str] | None = None,
     ) -> list[Path]:
+        """Return local-accessible output paths for matching simulations."""
         return output_paths(
             self._model.storage,
             self._model.index,
@@ -405,6 +453,7 @@ class _OutputAccessor(Generic[TOutput]):
         time_range: tuple | None = None,
         location_ids: set[str] | None = None,
     ) -> list[TOutput]:
+        """Load matching outputs into their science-facing Python objects."""
         return [
             self._spec.load_one(path)
             for path in self.paths(
@@ -418,6 +467,7 @@ class _OutputAccessor(Generic[TOutput]):
         time_range: tuple | None = None,
         location_ids: set[str] | None = None,
     ) -> list[str]:
+        """Return simulation ids still missing this output family."""
         return missing_ids(
             self._model.index,
             self._matching_ids(
@@ -431,7 +481,14 @@ class _OutputAccessor(Generic[TOutput]):
 
 
 class TrajectoryCollection:
-    """Science-facing accessor for trajectory outputs across simulations."""
+    """
+    Science-facing accessor for trajectory outputs across simulations.
+
+    Parameters
+    ----------
+    model
+        Model that owns the simulation index, storage, and output layout.
+    """
 
     def __init__(self, model: Model):
         self._model = model
@@ -439,6 +496,7 @@ class TrajectoryCollection:
         self._error = _OutputAccessor(model, _TrajectoryOutputSpec(error=True))
 
     def _accessor(self, error: bool) -> _OutputAccessor[Trajectories]:
+        """Return the main or error trajectory accessor."""
         return self._error if error else self._main
 
     def paths(

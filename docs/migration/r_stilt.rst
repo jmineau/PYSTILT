@@ -1,7 +1,7 @@
 Migrating From R-STILT
 ======================
 
-R-STILT organizes projects around R functions, ``setup.r`` scripts, and
+R-STILT organizes projects around R functions, the ``run_stilt.r`` script, and
 filesystem conventions. PYSTILT expresses the same broad ideas through Python
 classes, ``config.yaml``, and a output simulation index.
 
@@ -16,10 +16,10 @@ classes, ``config.yaml``, and a output simulation index.
      - ``stilt_init(project_path)``
      - ``stilt init`` or ``stilt.Model(project=...)``
    * - Run controls
-     - ``stilt_run(...)`` arguments
+     - ``run_stilt.r`` variables
      - :class:`stilt.ModelConfig` fields
    * - Meteorology
-     - ``met_loc``, ``met_file_format``, ``met_file_tres``
+     - ``met_directory``, ``met_file_format``, ``met_file_tres``
      - :class:`stilt.MetConfig` in ``ModelConfig.mets``
    * - Receptors
      - receptor data.frame

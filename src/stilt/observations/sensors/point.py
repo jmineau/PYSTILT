@@ -9,7 +9,8 @@ from stilt.receptor import Receptor
 
 
 class PointSensor(BaseSensor):
-    """Sensor family for point-like observations.
+    """
+    Sensor family for point-like observations.
 
     This fits fixed towers, moving in-situ platforms, and other measurements
     that should normalize to a single location and map to a point receptor.

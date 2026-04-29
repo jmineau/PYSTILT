@@ -110,7 +110,8 @@ class TrajectoriesPlotAccessor:
         tiler_zoom: int = 8,
         **kwargs,
     ) -> Axes:
-        """Scatter all particle positions colored by a trajectory variable.
+        """
+        Scatter all particle positions colored by a trajectory variable.
 
         Parameters
         ----------
@@ -188,7 +189,8 @@ class FootprintPlotAccessor:
         tiler_zoom: int = 8,
         **kwargs,
     ) -> Axes:
-        """2-D map of the footprint, optionally log-scaled.
+        """
+        2-D map of the footprint, optionally log-scaled.
 
         Parameters
         ----------
@@ -266,7 +268,8 @@ class FootprintPlotAccessor:
         figsize: tuple[float, float] | None = None,
         **kwargs,
     ) -> tuple[Figure, np.ndarray]:
-        """One subplot per time step, with a shared colorbar.
+        """
+        One subplot per time step, with a shared colorbar.
 
         Parameters
         ----------
@@ -363,7 +366,8 @@ class ReceptorPlotAccessor:
         tiler_zoom: int = 8,
         **kwargs,
     ) -> Axes:
-        """Plot receptor location(s) on a map.
+        """
+        Plot receptor location(s) on a map.
 
         Parameters
         ----------
@@ -500,7 +504,8 @@ class SimulationPlotAccessor:
         met_bounds: Bounds | None = None,
         ax: Axes | None = None,
     ) -> Axes:
-        """Composite map stacking footprint → trajectories → receptor.
+        """
+        Composite map stacking footprint → trajectories → receptor.
 
         Layers are rendered in order from bottom to top.  Any layer whose
         data is unavailable (e.g. footprint not yet computed) is silently
@@ -615,7 +620,8 @@ class ModelPlotAccessor:
         self._model = model
 
     def availability(self, ax: Axes | None = None, **kwargs) -> Axes:
-        """Plot simulation availability by location and time.
+        """
+        Plot simulation availability by location and time.
 
         Parameters
         ----------

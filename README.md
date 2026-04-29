@@ -239,14 +239,6 @@ for footprint in footprints:
 If a footprint is tracked as `complete-empty`, no NetCDF file is expected for that footprint.
 The model APIs treat it as a successful terminal outcome while skipping missing file loads.
 
-## Documentation map
-
-- `docs/getting_started/quickstart.rst`: first local run
-- `docs/guides/executors.rst`: local, Slurm, and Kubernetes execution
-- `docs/guides/kubernetes.rst`: queue workers and Kubernetes manifests
-- `docs/reference/observations.rst`: observation/scenes/sensors/transforms
-- `examples/cloud/`: minimal Kubernetes deployment templates
-
 ## Documentation
 
 Full documentation is available at [https://jmineau.github.io/PYSTILT/](https://jmineau.github.io/PYSTILT/)

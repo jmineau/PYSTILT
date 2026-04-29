@@ -27,7 +27,8 @@ def _write_chunks(
     n_workers: int,
     batch_id: str,
 ) -> int:
-    """Partition sim IDs into chunk files for array tasks.
+    """
+    Partition sim IDs into chunk files for array tasks.
 
     Returns the number of chunk files written.
     """

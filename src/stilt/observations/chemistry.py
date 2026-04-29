@@ -33,7 +33,8 @@ _TIME_UNIT_TO_HOURS = {
 
 @dataclass(frozen=True, slots=True)
 class ChemistryContext:
-    """Context passed into a chemistry model.
+    """
+    Context passed into a chemistry model.
 
     The first pass stays intentionally small: chemistry models operate on the
     particle table and may optionally use observation/species metadata plus the
@@ -75,7 +76,8 @@ class NoOpChemistry:
 
 
 class FirstOrderLifetimeChemistry:
-    """Apply a first-order exponential lifetime decay to particle ``foot``.
+    """
+    Apply a first-order exponential lifetime decay to particle ``foot``.
 
     This is a small portable chemistry model rather than a domain-specific NO2
     workflow.  It uses the transport-age column (minutes by default) and a

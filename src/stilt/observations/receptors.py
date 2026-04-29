@@ -19,7 +19,8 @@ def build_point_receptor(
     *,
     altitude: float | None = None,
 ) -> Receptor:
-    """Build a point receptor for one observation.
+    """
+    Build a point receptor for one observation.
 
     If ``altitude`` is omitted, the observation altitude is used.
     """
@@ -171,7 +172,8 @@ def build_slant_receptor(
     surface_altitude: float | None = None,
     model_top_altitude: float | None = None,
 ) -> Receptor:
-    """Build a slant multipoint receptor from observation LOS geometry.
+    """
+    Build a slant multipoint receptor from observation LOS geometry.
 
     When explicit clipping values are omitted, the builder uses the strongest
     available hints:

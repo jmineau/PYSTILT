@@ -1,4 +1,5 @@
-"""Old-style DEC/VMS Fortran namelist writer for HYSPLIT SETUP.CFG.
+"""
+Old-style DEC/VMS Fortran namelist writer for HYSPLIT SETUP.CFG.
 
 HYSPLIT v5 expects the ``$NAME ... $END`` namelist format (DEC/VMS extension),
 not the standard Fortran-90 ``&name ... /`` format that f90nml produces.
@@ -22,7 +23,8 @@ class NameList:
         self._entries: list[tuple[str, str]] = []
 
     def add(self, key: str, value) -> None:
-        """Append one key-value pair to the namelist.
+        """
+        Append one key-value pair to the namelist.
 
         Parameters
         ----------
@@ -34,7 +36,8 @@ class NameList:
         self._entries.append((key.upper(), self._format(value)))
 
     def update(self, mapping: dict) -> None:
-        """Append multiple key-value pairs from *mapping*.
+        """
+        Append multiple key-value pairs from *mapping*.
 
         Parameters
         ----------
@@ -45,7 +48,8 @@ class NameList:
             self.add(key, value)
 
     def write(self, path: str | Path) -> None:
-        """Write the namelist to *path*, replacing any existing file.
+        """
+        Write the namelist to *path*, replacing any existing file.
 
         Parameters
         ----------

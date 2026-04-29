@@ -29,7 +29,8 @@ FAILURE_PHRASES: dict[str, FailureReason] = {
 
 
 def identify_failure_reason(path: str | Path) -> FailureReason:
-    """Parse stilt.log to identify why a simulation failed.
+    """
+    Parse stilt.log to identify why a simulation failed.
 
     Parameters
     ----------
@@ -88,7 +89,8 @@ class EmptyTrajectoryError(TrajectoryError):
 
 
 class HYSPLITFailureError(TrajectoryError):
-    """hycs_std reported a recognizable failure phrase in the log.
+    """
+    hycs_std reported a recognizable failure phrase in the log.
 
     Attributes
     ----------

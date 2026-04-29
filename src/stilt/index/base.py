@@ -97,6 +97,7 @@ class _SqlIndex(SimulationIndex, abc.ABC):
     # ------------------------------------------------------------------
 
     def _validate_schema(self) -> None:
+        """Fail fast when the connected backend is missing required columns."""
         with self._connect() as conn:
             validate_required_columns(
                 self._table_columns(conn, "simulations"),
@@ -108,6 +109,7 @@ class _SqlIndex(SimulationIndex, abc.ABC):
     # ------------------------------------------------------------------
 
     def record(self, result: SimulationResult) -> None:
+        """Record one completed worker result into the durable index."""
         with self._connect() as conn:
             self._record_result_conn(conn, result)
 
@@ -118,6 +120,7 @@ class _SqlIndex(SimulationIndex, abc.ABC):
         footprint_names: list[str] | None = None,
         scene_id: str | None = None,
     ) -> None:
+        """Register one or many simulations as known rows in the index."""
         normalized = _normalize_registration_pairs(pairs, receptor)
         with self._connect() as conn:
             self._register_many_conn(
@@ -129,10 +132,12 @@ class _SqlIndex(SimulationIndex, abc.ABC):
             self._prune_to_max_rows_conn(conn)
 
     def sim_ids(self) -> list[str]:
+        """Return all registered simulation identifiers in stable order."""
         with self._connect() as conn:
             return ordered_sim_ids(conn)
 
     def has(self, sim_id: SimID | str) -> bool:
+        """Return whether one simulation id is already registered."""
         with self._connect() as conn:
             row = conn.execute(
                 f"SELECT 1 FROM simulations WHERE sim_id = {self._ph}",
@@ -141,10 +146,12 @@ class _SqlIndex(SimulationIndex, abc.ABC):
         return row is not None
 
     def count(self) -> int:
+        """Return the total number of registered simulation rows."""
         with self._connect() as conn:
             return total_rows(conn)
 
     def counts(self, scene_id: str | None = None) -> IndexCounts:
+        """Return aggregate queue counts for the whole index or one scene."""
         if scene_id is not None:
             with self._connect() as conn:
                 rows = conn.execute(
@@ -167,6 +174,7 @@ class _SqlIndex(SimulationIndex, abc.ABC):
         )
 
     def scene_counts(self) -> dict[str, IndexCounts]:
+        """Return aggregate counts grouped by non-null scene id."""
         with self._connect() as conn:
             rows = conn.execute(
                 "SELECT scene_id, trajectory_status, traj_present, error_traj_present, "
@@ -176,6 +184,7 @@ class _SqlIndex(SimulationIndex, abc.ABC):
         return group_counts(rows)
 
     def receptors_for(self, sim_ids: list[str]) -> dict[str, Receptor]:
+        """Return receptors keyed by simulation id for the requested rows."""
         if not sim_ids:
             return {}
         with self._connect() as conn:
@@ -193,6 +202,7 @@ class _SqlIndex(SimulationIndex, abc.ABC):
         *,
         clear_outputs: bool = False,
     ) -> None:
+        """Reset matching non-running rows back to pending state."""
         if not sim_ids:
             return
         with self._connect() as conn:
@@ -219,6 +229,7 @@ class _SqlIndex(SimulationIndex, abc.ABC):
                 )
 
     def pending_trajectories(self) -> list[str]:
+        """Return simulation ids whose trajectory work is still pending."""
         with self._connect() as conn:
             return ordered_sim_ids(conn, self._pending_where)
 
@@ -226,6 +237,7 @@ class _SqlIndex(SimulationIndex, abc.ABC):
         self,
         sim_ids: list[str] | None = None,
     ) -> dict[str, OutputSummary]:
+        """Return output summaries for all rows or one requested subset."""
         if sim_ids == []:
             return {}
         with self._connect() as conn:
@@ -256,6 +268,7 @@ class _SqlIndex(SimulationIndex, abc.ABC):
         sim_id: str,
         update: IndexUpdate,
     ) -> None:
+        """Apply one normalized status update to an existing row."""
         conn.execute(
             "UPDATE simulations SET "
             f"trajectory_status = {self._ph}, error = {self._ph}, "
@@ -267,6 +280,7 @@ class _SqlIndex(SimulationIndex, abc.ABC):
         )
 
     def _record_result_conn(self, conn: Any, result: SimulationResult) -> None:
+        """Store one worker result and enforce any configured row cap."""
         self._store_update_conn(
             conn,
             str(result.sim_id),
@@ -281,6 +295,7 @@ class _SqlIndex(SimulationIndex, abc.ABC):
         footprint_names: list[str] | None = None,
         scene_id: str | None = None,
     ) -> None:
+        """Insert or refresh one-or-many registered simulations."""
         if not pairs:
             return
         rows = registration_rows(
@@ -301,6 +316,7 @@ class _SqlIndex(SimulationIndex, abc.ABC):
         )
 
     def _prune_to_max_rows_conn(self, conn: Any) -> list[str]:
+        """Delete oldest terminal rows until the optional soft cap is satisfied."""
         if self._max_rows is None:
             return []
         total = total_rows(conn)
@@ -327,6 +343,7 @@ class _SqlIndex(SimulationIndex, abc.ABC):
     # ------------------------------------------------------------------
 
     def _rebuild_apply(self, conn: Any, records: list[Any]) -> None:
+        """Reconcile scanned output records back into registered index rows."""
         reset_for_rebuild(
             conn,
             now_sql=self._now_sql,

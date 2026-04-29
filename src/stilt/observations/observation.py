@@ -17,7 +17,8 @@ from .uncertainty import UncertaintyBudget
 
 @dataclass(slots=True)
 class Observation:
-    """One normalized measurement record independent of raw file format.
+    """
+    One normalized measurement record independent of raw file format.
 
     Observations can be constructed directly by external parsers or via
     ``Sensor.make_observation()`` helpers in ``stilt.observations``.

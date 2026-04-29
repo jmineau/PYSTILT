@@ -30,40 +30,68 @@ def _normalize_output_dir(output_dir: str | Path) -> str:
 class Store(Protocol):
     """Output file access independent of the local compute workspace."""
 
-    def read_bytes(self, key: str) -> bytes: ...
-    def write_bytes(self, key: str, data: bytes) -> None: ...
-    def exists(self, key: str) -> bool: ...
-    def list_prefix(self, prefix: str) -> list[str]: ...
-    def local_path(self, key: str) -> Path: ...
-    def publish_simulation(self, sim: Simulation) -> None: ...
+    def read_bytes(self, key: str) -> bytes:
+        """Return the raw bytes stored under one canonical output key."""
+        ...
+
+    def write_bytes(self, key: str, data: bytes) -> None:
+        """Write raw bytes under one canonical output key."""
+        ...
+
+    def exists(self, key: str) -> bool:
+        """Return whether one canonical output key currently exists."""
+        ...
+
+    def list_prefix(self, prefix: str) -> list[str]:
+        """Return canonical keys that exist below one store-relative prefix."""
+        ...
+
+    def local_path(self, key: str) -> Path:
+        """Return a local filesystem path for one output key."""
+        ...
+
+    def publish_simulation(self, sim: Simulation) -> None:
+        """Publish the standard output files produced by one simulation."""
+        ...
 
 
 class LocalStore:
-    """Output store backed by the local filesystem.
+    """
+    Output store backed by the local filesystem.
 
     Uses atomic tmp-then-replace for file writes and relative symlinks for
     local-only flat alias views under ``simulations/particles`` and
     ``simulations/footprints``.
+
+    Parameters
+    ----------
+    output_dir
+        Root directory that stores the project's published outputs.
     """
 
     def __init__(self, output_dir: str | Path) -> None:
         self.output_dir = Path(output_dir).resolve()
 
     def _path(self, key: str) -> Path:
+        """Return the absolute local path for one canonical output key."""
         return self.output_dir / key.strip("/")
 
     def read_bytes(self, key: str) -> bytes:
+        """Return the raw bytes stored under one canonical output key."""
         return self._path(key).read_bytes()
 
     def write_bytes(self, key: str, data: bytes) -> None:
+        """Write raw bytes under one canonical output key."""
         path = self._path(key)
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(data)
 
     def exists(self, key: str) -> bool:
+        """Return whether one canonical output key exists locally."""
         return self._path(key).exists()
 
     def list_prefix(self, prefix: str) -> list[str]:
+        """Return canonical keys that exist below one local prefix."""
         base = self._path(prefix)
         if not base.exists():
             return []
@@ -74,10 +102,12 @@ class LocalStore:
         )
 
     def local_path(self, key: str) -> Path:
+        """Return the local filesystem path for one canonical output key."""
         return self._path(key)
 
     def publish_file(self, local_path: str | Path, key: str) -> None:
-        """Atomically copy one local file into the store under *key*.
+        """
+        Atomically copy one local file into the store under *key*.
 
         Writes to a sibling ``.tmp`` first then ``Path.replace`` onto the
         final key — same-directory rename is atomic on POSIX, so concurrent
@@ -99,7 +129,8 @@ class LocalStore:
                 tmp.unlink(missing_ok=True)
 
     def _publish_symlink(self, src: Path, key: str) -> None:
-        """Atomically symlink *src* into the store under *key*.
+        """
+        Atomically symlink *src* into the store under *key*.
 
         Writes a relative symlink to a sibling ``.tmp`` first, then
         ``Path.replace`` onto the final key, so readers never see an
@@ -127,6 +158,7 @@ class LocalStore:
         error_path = files.error_trajectory_path
 
         def _publish(src: Path, canonical_key: str, *index_keys: str) -> None:
+            """Publish one file and optional flat alias keys if it exists."""
             if not src.exists():
                 return
             self.publish_file(src, canonical_key)
@@ -152,12 +184,20 @@ class LocalStore:
 
 
 class FsspecStore:
-    """Output store backed by an ``fsspec`` remote filesystem.
+    """
+    Output store backed by an ``fsspec`` remote filesystem.
 
     Suitable for object stores (``s3://``, ``gs://``, ``abfs://``) and
     pseudo-remote backends (``memory://``, ``http://``). Remote stores publish
     only canonical ``simulations/by-id`` outputs; flat alias views are local
     filesystem conveniences handled by ``LocalStore``.
+
+    Parameters
+    ----------
+    output_dir
+        Remote or local URI root used for published outputs.
+    cache_dir
+        Optional local cache directory for ``local_path()`` downloads.
     """
 
     def __init__(
@@ -202,9 +242,11 @@ class FsspecStore:
         return full_key
 
     def read_bytes(self, key: str) -> bytes:
+        """Return the raw bytes stored under one canonical output key."""
         return self.fs.cat(self._full_key(key))
 
     def write_bytes(self, key: str, data: bytes) -> None:
+        """Write raw bytes under one canonical output key."""
         full_key = self._full_key(key)
         parent = posixpath.dirname(full_key)
         if parent:
@@ -213,9 +255,11 @@ class FsspecStore:
             handle.write(data)
 
     def exists(self, key: str) -> bool:
+        """Return whether one canonical output key exists in the backend."""
         return self.fs.exists(self._full_key(key))
 
     def list_prefix(self, prefix: str) -> list[str]:
+        """Return canonical keys that exist below one backend prefix."""
         full_prefix = self._full_key(prefix)
         if not self.fs.exists(full_prefix):
             return []
@@ -250,6 +294,7 @@ class FsspecStore:
         error_path = files.error_trajectory_path
 
         def _publish(src: Path, canonical_key: str) -> None:
+            """Upload one canonical simulation output file if it exists."""
             if not src.exists():
                 return
             self.publish_file(src, canonical_key)
@@ -268,7 +313,8 @@ def make_store(
     *,
     cache_dir: str | Path | None = None,
 ) -> Store:
-    """Return the appropriate ``Store`` backend for *output_dir*.
+    """
+    Return the appropriate ``Store`` backend for *output_dir*.
 
     Local filesystem paths → ``LocalStore`` (atomic relative symlinks, no fsspec
     overhead). Remote URIs (``s3://``, ``gs://``, ``memory://``, …) →

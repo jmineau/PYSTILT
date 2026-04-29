@@ -62,7 +62,8 @@ class BaseSensor:
         species: str | None = None,
         **kwargs: Any,
     ) -> Observation:
-        """Construct one normalized observation stamped with this sensor name.
+        """
+        Construct one normalized observation stamped with this sensor name.
 
         This is a lightweight normalization helper for code that already has
         structured values in hand. Product-specific file readers remain
@@ -83,7 +84,8 @@ class BaseSensor:
         raise NotImplementedError
 
     def group_scenes(self, observations: Sequence[Observation]) -> list[Scene]:
-        """Group observations into scenes.
+        """
+        Group observations into scenes.
 
         The default behavior is intentionally conservative: keep the given
         collection together as a single scene.

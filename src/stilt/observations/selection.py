@@ -147,7 +147,8 @@ def jitter_observation(
     method: JitterMethod = "regular",
     seed: int | None = None,
 ) -> list[Observation]:
-    """Expand one observation into jittered observation realizations.
+    """
+    Expand one observation into jittered observation realizations.
 
     The returned observations have point geometry at the sampled locations and
     preserve the original observation metadata.
@@ -224,7 +225,8 @@ def filter_observations(
     quality: Mapping[str, float | int | bool] | None = None,
     predicate: ObservationPredicate | None = None,
 ) -> list[Observation]:
-    """Return observations that match simple generic filtering criteria.
+    """
+    Return observations that match simple generic filtering criteria.
 
     This is the non-spatial counterpart to :func:`select_observations_spatial`.
     It preserves input order and only applies exact-match checks so it stays
@@ -304,7 +306,8 @@ def select_observations_spatial(
     domain_lon_range: tuple[float, float],
     domain_lat_range: tuple[float, float],
 ) -> list[Observation]:
-    """Select satellite observations using a near-field + background grid pattern.
+    """
+    Select satellite observations using a near-field + background grid pattern.
 
     Ports the ``sel.obs4recpv2`` strategy from X-STILT: construct a dense
     near-field sampling grid centred on *site* and a sparse background grid

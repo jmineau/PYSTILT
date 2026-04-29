@@ -34,7 +34,7 @@ local runs, Slurm arrays, and Kubernetes workers.
       :link: tutorials/index
       :link-type: doc
 
-      Work through cleaned-up examples for a stationary tower workflow, Slurm
+      Work through examples for a stationary tower workflow, Slurm
       execution, and footprint-to-flux calculations.
 
    .. grid-item-card:: :fas:`code` Reference

@@ -26,7 +26,8 @@ _PWF_MODES: frozenset[str] = frozenset({"pwf", "ak_pwf", "integration", "tccon"}
 
 @dataclass(frozen=True, slots=True)
 class WeightingContext:
-    """Context passed into a particle-weighting model.
+    """
+    Context passed into a particle-weighting model.
 
     This is intentionally small for the first pass. It gives the weighting interface
     a place to carry observation/operator metadata today while leaving room for

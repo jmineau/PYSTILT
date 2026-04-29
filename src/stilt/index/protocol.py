@@ -111,7 +111,9 @@ class IndexCounts:
 class SimulationIndex(Protocol):
     """Output simulation registry surface for model, CLI, and workers."""
 
-    def record(self, result: SimulationResult) -> None: ...
+    def record(self, result: SimulationResult) -> None:
+        """Record one completed worker result into the durable index."""
+        ...
 
     def register(
         self,
@@ -119,33 +121,53 @@ class SimulationIndex(Protocol):
         receptor: Receptor | None = None,
         footprint_names: list[str] | None = None,
         scene_id: str | None = None,
-    ) -> None: ...
+    ) -> None:
+        """Register one or many simulations as known rows in the index."""
+        ...
 
-    def sim_ids(self) -> list[str]: ...
+    def sim_ids(self) -> list[str]:
+        """Return all registered simulation identifiers in stable order."""
+        ...
 
-    def has(self, sim_id: SimID | str) -> bool: ...
+    def has(self, sim_id: SimID | str) -> bool:
+        """Return whether one simulation id is already registered."""
+        ...
 
-    def count(self) -> int: ...
+    def count(self) -> int:
+        """Return the total number of registered simulation rows."""
+        ...
 
-    def counts(self, scene_id: str | None = None) -> IndexCounts: ...
+    def counts(self, scene_id: str | None = None) -> IndexCounts:
+        """Return aggregate queue counts for the whole index or one scene."""
+        ...
 
-    def scene_counts(self) -> dict[str, IndexCounts]: ...
+    def scene_counts(self) -> dict[str, IndexCounts]:
+        """Return aggregate counts grouped by non-null scene id."""
+        ...
 
-    def receptors_for(self, sim_ids: list[str]) -> dict[str, Receptor]: ...
+    def receptors_for(self, sim_ids: list[str]) -> dict[str, Receptor]:
+        """Return receptors keyed by simulation id for the requested rows."""
+        ...
 
     def reset_to_pending(
         self,
         sim_ids: list[str],
         *,
         clear_outputs: bool = False,
-    ) -> None: ...
+    ) -> None:
+        """Reset matching non-running rows back to pending state."""
+        ...
 
-    def pending_trajectories(self) -> list[str]: ...
+    def pending_trajectories(self) -> list[str]:
+        """Return simulation ids whose trajectory work is still pending."""
+        ...
 
     def summaries(
         self,
         sim_ids: list[str] | None = None,
-    ) -> dict[str, OutputSummary]: ...
+    ) -> dict[str, OutputSummary]:
+        """Return output summaries for all rows or one requested subset."""
+        ...
 
     def rebuild(self) -> None:
         """Rebuild output index rows by rescanning outputs."""

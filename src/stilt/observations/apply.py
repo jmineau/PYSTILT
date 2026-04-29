@@ -14,7 +14,8 @@ def apply_vertical_operator(
     *,
     coordinate: str = "xhgt",
 ) -> pd.DataFrame:
-    """Weight particle footprint values by a vertical observation operator.
+    """
+    Weight particle footprint values by a vertical observation operator.
 
     This ports the core X-STILT weighting step (``wgt.trajec.foot``) into a
     generic, sensor-independent function.  The profile stored in
