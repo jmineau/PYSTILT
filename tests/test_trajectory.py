@@ -72,7 +72,8 @@ def test_from_particles_adds_datetime(point_receptor, tmp_path):
 
 
 def test_parquet_roundtrip_preserves_naive_utc_from_tz_aware_receptor(tmp_path):
-    """A tz-aware receptor time must normalize to naive UTC and stay naive
+    """
+    A tz-aware receptor time must normalize to naive UTC and stay naive
     through the trajectory parquet round-trip so the receptor/trajectory/
     footprint time axes align without pandas raising on mixed tz comparisons."""
     aware_receptor = Receptor(

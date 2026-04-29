@@ -1534,7 +1534,7 @@ def test_model_run_push_handle_wait_rebuilds_state_once(tmp_path, point_receptor
     exc = _PushExecutor()
     handle = model.run(executor=exc, skip_existing=False, wait=False)
 
-    assert handle is exc._handle
+    assert handle is not exc._handle
     handle.wait()
     handle.wait()
 

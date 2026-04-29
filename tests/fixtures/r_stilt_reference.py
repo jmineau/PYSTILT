@@ -1,4 +1,5 @@
-"""Single source of truth for the seeded R-STILT reference case.
+"""
+Single source of truth for the seeded R-STILT reference case.
 
 This module defines the canonical receptor, grid, transport controls, and
 fixture paths used by both the R-STILT fixture generator and the PYSTILT

@@ -1,4 +1,5 @@
-"""Integration tests for PYSTILT end-to-end execution.
+"""
+Integration tests for PYSTILT end-to-end execution.
 
 These tests run real HYSPLIT against real met files and are collected by
 default.  They are automatically skipped when the stilt-tutorials met data

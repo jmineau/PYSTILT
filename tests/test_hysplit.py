@@ -148,6 +148,7 @@ def _make_runner(tmp_path, point_receptor, rm_dat_default=True) -> HYSPLITDriver
     params = STILTParams(
         n_hours=-24,
         numpar=10,
+        hnf_plume=False,
         rm_dat=rm_dat_default,
         varsiwant=["time", "indx", "long", "lati", "zagl", "foot"],
     )
@@ -280,6 +281,7 @@ def test_execute_ignores_stale_main_particles_after_error_run_timeout(
         params=STILTParams(
             n_hours=-24,
             numpar=10,
+            hnf_plume=False,
             rm_dat=False,
             siguverr=1.0,
             tluverr=60.0,
@@ -344,8 +346,8 @@ def test_terminate_process_escalates_when_group_kill_does_not_finish(
 
     runner._terminate_process(proc)
 
-    assert killpg_calls == [(proc.pid, 9)]
-    assert proc.kill_calls == 1
+    assert killpg_calls == [(proc.pid, 15), (proc.pid, 9)]
+    assert proc.kill_calls == 0
     assert proc.wait_calls == 2
 
 
@@ -414,6 +416,7 @@ def test_write_setup_rejects_conflicting_explicit_kmsl(tmp_path, point_receptor)
     params = STILTParams(
         n_hours=-24,
         numpar=10,
+        hnf_plume=False,
         rm_dat=True,
         kmsl=0,
         varsiwant=["time", "indx", "long", "lati", "zagl", "foot"],
@@ -446,6 +449,7 @@ def _make_runner_with_xyerr(tmp_path, point_receptor) -> HYSPLITDriver:
     params = STILTParams(
         n_hours=-24,
         numpar=10,
+        hnf_plume=False,
         varsiwant=["time", "indx", "long", "lati", "zagl", "foot"],
         siguverr=1.0,
         tluverr=60.0,
@@ -465,6 +469,7 @@ def _make_runner_with_zierr(tmp_path, point_receptor) -> HYSPLITDriver:
     params = STILTParams(
         n_hours=-24,
         numpar=10,
+        hnf_plume=False,
         varsiwant=["time", "indx", "long", "lati", "zagl", "foot"],
         sigzierr=0.6,
         tlzierr=60.0,
@@ -515,6 +520,7 @@ def test_write_zicontrol_creates_file_from_shared_vector(tmp_path, point_recepto
     params = STILTParams(
         n_hours=-24,
         numpar=10,
+        hnf_plume=False,
         varsiwant=["time", "indx", "long", "lati", "zagl", "foot"],
         zicontroltf=1,
         ziscale=[0.8, 0.8, 0.9],
@@ -538,6 +544,7 @@ def test_write_zicontrol_expands_scalar_to_run_length(tmp_path, point_receptor):
     params = STILTParams(
         n_hours=-4,
         numpar=10,
+        hnf_plume=False,
         varsiwant=["time", "indx", "long", "lati", "zagl", "foot"],
         zicontroltf=1,
         ziscale=0.8,
@@ -560,6 +567,7 @@ def test_write_zicontrol_rejects_multiple_nested_vectors(tmp_path, point_recepto
     params = STILTParams(
         n_hours=-24,
         numpar=10,
+        hnf_plume=False,
         varsiwant=["time", "indx", "long", "lati", "zagl", "foot"],
         zicontroltf=1,
         ziscale=[[0.8, 0.8], [0.9, 0.9]],
@@ -591,6 +599,7 @@ def test_prepare_writes_control_and_setup(tmp_path, point_receptor):
     params = STILTParams(
         n_hours=-24,
         numpar=10,
+        hnf_plume=False,
         varsiwant=["time", "indx", "long", "lati", "zagl", "foot"],
     )
     runner = HYSPLITDriver(
@@ -616,6 +625,7 @@ def test_prepare_writes_zicontrol_when_enabled(tmp_path, point_receptor):
     params = STILTParams(
         n_hours=-24,
         numpar=10,
+        hnf_plume=False,
         varsiwant=["time", "indx", "long", "lati", "zagl", "foot"],
         zicontroltf=1,
         ziscale=[1.0] * 24,

@@ -1,4 +1,5 @@
-"""Integration fidelity test: seeded PYSTILT vs seeded R-STILT reference.
+"""
+Integration fidelity test: seeded PYSTILT vs seeded R-STILT reference.
 
 This module runs a real PYSTILT simulation against the 01-wbb tutorial
 meteorology, forcing deterministic HYSPLIT settings with ``krand=2`` and

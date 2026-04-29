@@ -34,7 +34,8 @@ def _nearest_release_assignments(release_rows, receptor):
 
 @integration
 def test_hysplit_multipoint_release_points_follow_control_order(tmp_path, met_dir):
-    """Multipoint particles are assigned to explicit points in CONTROL order.
+    """
+    Multipoint particles are assigned to explicit points in CONTROL order.
 
     This test characterizes the compiled HYSPLIT binary directly rather than
     PYSTILT's later ``xhgt`` reconstruction. It uses a divisible particle count

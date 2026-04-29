@@ -546,6 +546,55 @@ def test_simulation_trajectories_none_when_no_parquet(point_receptor, tmp_path):
     assert sim.trajectories is None
 
 
+def test_generate_footprint_autoruns_trajectories_when_missing(
+    point_receptor, tmp_path, monkeypatch
+):
+    sim = _sim(tmp_path, point_receptor)
+    particles = pd.DataFrame(
+        {
+            "time": [0.0, -60.0, -120.0],
+            "indx": [1, 1, 1],
+            "long": [-111.86, -111.86, -111.86],
+            "lati": [40.76, 40.76, 40.76],
+            "zagl": [50.0, 50.0, 50.0],
+            "foot": [1.0, 1.0, 1.0],
+        }
+    )
+    run_calls: list[bool] = []
+
+    def _fake_run_trajectories(*, write: bool = False, **kwargs) -> None:
+        del kwargs
+        run_calls.append(write)
+        sim._trajectories = Trajectories.from_particles(
+            particles=particles,
+            receptor=point_receptor,
+            params=_params(tmp_path),
+            met_files=[tmp_path / "metfile"],
+        )
+
+    monkeypatch.setattr(sim, "run_trajectories", _fake_run_trajectories)
+
+    foot = sim.generate_footprint(
+        "slv",
+        FootprintConfig(
+            grid=Grid(
+                xmin=-114.0,
+                xmax=-111.0,
+                ymin=39.0,
+                ymax=42.0,
+                xres=0.1,
+                yres=0.1,
+            ),
+            time_integrate=True,
+            smooth_factor=0.0,
+        ),
+    )
+
+    assert foot is not None
+    assert run_calls == [False]
+    assert sim.trajectories is not None
+
+
 def test_simulation_status_uses_storage_backed_artifacts(point_receptor, tmp_path):
     sid = str(SimID.from_parts("hrrr", point_receptor))
     storage_root = tmp_path / "remote"

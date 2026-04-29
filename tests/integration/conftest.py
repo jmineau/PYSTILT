@@ -1,4 +1,5 @@
-"""Shared fixtures for PYSTILT integration tests.
+"""
+Shared fixtures for PYSTILT integration tests.
 
 Integration tests exercise real met files and real HYSPLIT execution.
 They are collected and run by default; the ``met_dir`` fixture skips
@@ -51,7 +52,8 @@ _DEFAULT_MET_DIR = _TESTS_DIR / "stilt-tutorials" / "01-wbb" / "met"
 
 @pytest.fixture(scope="session")
 def met_dir() -> Path:
-    """Path to 01-wbb HRRR ARL met files.
+    """
+    Path to 01-wbb HRRR ARL met files.
 
     Override with STILT_TEST_MET_DIR if stilt-tutorials is elsewhere.
     Default: tests/stilt-tutorials/01-wbb/met (gitignored).
@@ -111,7 +113,8 @@ def wbb_grid() -> Grid:
 
 @pytest.fixture(scope="session")
 def wbb_config(met_dir, wbb_grid) -> ModelConfig:
-    """Minimal ModelConfig for integration tests.
+    """
+    Minimal ModelConfig for integration tests.
 
     Uses n_hours=-6 and numpar=100 to keep runtime under ~2 minutes.
     """
@@ -201,7 +204,8 @@ _DEFAULT_R_REF_DIR = (
 
 @pytest.fixture(scope="session")
 def r_ref_sim_dir() -> Path:
-    """Directory of the R-STILT reference simulation used for footprint fidelity tests.
+    """
+    Directory of the R-STILT reference simulation used for footprint fidelity tests.
 
     Override with STILT_R_REF_SIM_DIR if the R-STILT_fork workspace is elsewhere.
     Default: <repo>/../R-STILT_fork/out/by-id/201512100000_-112_40.5_5 (dev workspace).
