@@ -102,6 +102,13 @@ class MetSource:
                 f"Found: {n_files}, Required: {self.n_min}.{detail}"
             )
 
+        if missing:
+            examples = ", ".join(missing[:3])
+            logger.warning(
+                "Met patterns not found (simulation may lack temporal coverage): %s",
+                examples,
+            )
+
         if self.subgrid_enable is False:
             return files
 

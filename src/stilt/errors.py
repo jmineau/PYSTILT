@@ -8,6 +8,7 @@ class FailureReason(str, Enum):
     """Recognized HYSPLIT failure modes, parsed from stilt.log."""
 
     MISSING_MET_FILES = "MISSING_MET_FILES"
+    MET_COVERAGE = "MET_COVERAGE"
     VARYING_MET_INTERVAL = "VARYING_MET_INTERVAL"
     NO_TRAJECTORY_DATA = "NO_TRAJECTORY_DATA"
     FORTRAN_RUNTIME_ERROR = "FORTRAN_RUNTIME_ERROR"
@@ -22,6 +23,8 @@ class FailureReason(str, Enum):
 #: Phrases written to stilt.log by HYSPLIT, mapped to their FailureReason.
 FAILURE_PHRASES: dict[str, FailureReason] = {
     "Insufficient number of meteorological files found": FailureReason.MISSING_MET_FILES,
+    "start point not within (x,y,t) any data file": FailureReason.MET_COVERAGE,
+    "start time after end of meteorology data": FailureReason.MET_COVERAGE,
     "meteorological data time interval varies": FailureReason.VARYING_MET_INTERVAL,
     "PARTICLE_STILT.DAT does not contain any trajectory data": FailureReason.NO_TRAJECTORY_DATA,
     "Fortran runtime error": FailureReason.FORTRAN_RUNTIME_ERROR,
