@@ -25,6 +25,7 @@ def test_failure_reason_is_str():
 def test_all_failure_reasons_exist():
     expected = {
         "MISSING_MET_FILES",
+        "MET_COVERAGE",
         "VARYING_MET_INTERVAL",
         "NO_TRAJECTORY_DATA",
         "FORTRAN_RUNTIME_ERROR",
