@@ -10,6 +10,7 @@ that do not belong in a first-run tutorial.
    :caption: Workflow Guides
 
    project_layout
+   receptors
    configuration
    meteorology
    outputs

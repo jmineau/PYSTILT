@@ -37,7 +37,7 @@ Build a model in memory and call ``run()``:
    model = stilt.Model(
        project="./case",
        receptors=[
-           stilt.Receptor(
+           stilt.PointReceptor(
                time="2023-01-01 12:00:00",
                longitude=-111.85,
                latitude=40.77,

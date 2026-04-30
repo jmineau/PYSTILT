@@ -46,7 +46,7 @@ The same first run can be driven entirely from Python:
    import pandas as pd
    import stilt
 
-   receptor = stilt.Receptor(
+   receptor = stilt.PointReceptor(
        time=pd.Timestamp("2023-07-15 18:00:00"),
        longitude=-111.848,
        latitude=40.766,

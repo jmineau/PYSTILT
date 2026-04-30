@@ -22,7 +22,7 @@ Receptors
 
    times = pd.date_range("2015-07-05 00:00", "2015-07-11 23:00", freq="1h")
    receptors = [
-       stilt.Receptor(
+       stilt.PointReceptor(
            time=t,
            latitude=40.7665,
            longitude=-111.8472,

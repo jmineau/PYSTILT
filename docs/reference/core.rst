@@ -23,6 +23,9 @@ Receptor objects
    :nosignatures:
 
    Receptor
+   PointReceptor
+   ColumnReceptor
+   MultiPointReceptor
    ReceptorID
    LocationID
    read_receptors

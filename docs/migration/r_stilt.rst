@@ -23,7 +23,7 @@ classes, ``config.yaml``, and a output simulation index.
      - :class:`stilt.MetConfig` in ``ModelConfig.mets``
    * - Receptors
      - receptor data.frame
-     - :class:`stilt.Receptor` or :func:`stilt.read_receptors`
+     - :class:`stilt.PointReceptor` / :class:`stilt.ColumnReceptor` / :class:`stilt.MultiPointReceptor` or :func:`stilt.read_receptors`
    * - Footprint grid
      - ``xmn``, ``xmx``, ``ymn``, ``ymx``, ``xres``, ``yres``
      - :class:`stilt.Grid` inside :class:`stilt.FootprintConfig`

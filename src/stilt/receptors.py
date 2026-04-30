@@ -24,27 +24,32 @@ TimeLike: TypeAlias = dt.datetime | pd.Timestamp | np.datetime64 | str
 
 
 def _validate_lon(lon) -> None:
+    """Raise if any longitude value falls outside [-180, 180]."""
     arr = np.asarray(lon)
     if np.any((arr < -180) | (arr > 180)):
         raise ValueError("longitude must be within [-180, 180].")
 
 
 def _validate_lat(lat) -> None:
+    """Raise if any latitude value falls outside [-90, 90]."""
     arr = np.asarray(lat)
     if np.any((arr < -90) | (arr > 90)):
         raise ValueError("latitude must be within [-90, 90].")
 
 
 def _validate_agl(alt, altitude_ref: str) -> None:
+    """Raise if any altitude is negative when altitude_ref is 'agl'."""
     if altitude_ref == "agl" and np.any(np.asarray(alt) < 0):
         raise ValueError("AGL altitudes must be >= 0.")
 
 
 def _format_coord(val: float) -> str:
+    """Format a coordinate float as an integer string when it is whole, else as-is."""
     return str(int(val)) if val == int(val) else str(val)
 
 
 def _parse_time(time: TimeLike) -> dt.datetime:
+    """Parse any supported time-like value to a naive UTC datetime."""
     if time is None:
         raise ValueError("'time' must be provided for all receptor types.")
     if isinstance(time, (int, float, np.integer, np.floating)):
@@ -150,7 +155,9 @@ class Receptor(ABC):
 
     @property
     @abstractmethod
-    def location_id(self) -> LocationID: ...
+    def location_id(self) -> LocationID:
+        """Spatial location identifier that uniquely describes this receptor's position."""
+        ...
 
     @abstractmethod
     def __len__(self) -> int: ...
@@ -161,10 +168,14 @@ class Receptor(ABC):
         ...
 
     @abstractmethod
-    def to_dict(self) -> dict[str, object]: ...
+    def to_dict(self) -> dict[str, object]:
+        """Serialize this receptor to a round-trippable dict including a ``"type"`` key."""
+        ...
 
     @abstractmethod
-    def _build_geometry(self) -> Geometry: ...
+    def _build_geometry(self) -> Geometry:
+        """Construct the shapely geometry for this receptor."""
+        ...
 
     @property
     def id(self) -> ReceptorID:
@@ -287,6 +298,7 @@ class PointReceptor(Receptor):
 
     @property
     def location_id(self) -> LocationID:
+        """``"{lon}_{lat}_{alt}"`` formatted location identifier."""
         x = _format_coord(self.longitude)
         y = _format_coord(self.latitude)
         z = _format_coord(self.altitude)
@@ -305,9 +317,11 @@ class PointReceptor(Receptor):
         )
 
     def _build_geometry(self) -> Point:
+        """Return a shapely Point at this receptor's location."""
         return Point(self.longitude, self.latitude, self.altitude)
 
     def to_dict(self) -> dict[str, object]:
+        """Return a dict with keys ``type``, ``time``, ``longitude``, ``latitude``, ``altitude``, ``altitude_ref``."""
         return {
             "type": type(self).__name__,
             "time": self.time.isoformat(),
@@ -361,6 +375,7 @@ class ColumnReceptor(Receptor):
 
     @property
     def location_id(self) -> LocationID:
+        """``"{lon}_{lat}_X"`` formatted location identifier (altitude replaced by ``X``)."""
         x = _format_coord(self.longitude)
         y = _format_coord(self.latitude)
         return LocationID(f"{x}_{y}_X")
@@ -380,6 +395,7 @@ class ColumnReceptor(Receptor):
         )
 
     def _build_geometry(self) -> LineString:
+        """Return a shapely LineString spanning bottom to top at this receptor's location."""
         return LineString(
             [
                 (self.longitude, self.latitude, self.bottom),
@@ -388,6 +404,7 @@ class ColumnReceptor(Receptor):
         )
 
     def to_dict(self) -> dict[str, object]:
+        """Return a dict with keys ``type``, ``time``, ``longitude``, ``latitude``, ``bottom``, ``top``, ``altitude_ref``."""
         return {
             "type": type(self).__name__,
             "time": self.time.isoformat(),
@@ -440,6 +457,7 @@ class MultiPointReceptor(Receptor):
 
     @property
     def location_id(self) -> LocationID:
+        """``"multi_{sha256[:10]}"`` identifier derived from a sorted canonical hash of all points."""
         pts_sorted = sorted(
             zip(self.longitudes, self.latitudes, self.altitudes, strict=False)
         )
@@ -463,11 +481,13 @@ class MultiPointReceptor(Receptor):
         return f"MultiPointReceptor(id={self.id!r}, n_points={len(self)}, altitude_ref={self.altitude_ref})"
 
     def _build_geometry(self) -> MultiPoint:
+        """Return a shapely MultiPoint covering all constituent locations."""
         return MultiPoint(
             list(zip(self.longitudes, self.latitudes, self.altitudes, strict=False))
         )
 
     def to_dict(self) -> dict[str, object]:
+        """Return a dict with keys ``type``, ``time``, ``longitudes``, ``latitudes``, ``altitudes``, ``altitude_ref``."""
         return {
             "type": type(self).__name__,
             "time": self.time.isoformat(),
@@ -509,6 +529,7 @@ def read_receptors(path: str | Path) -> list[Receptor]:
         raise ValueError(f"Receptor file must contain columns: {required_cols}")
 
     def _point_receptors_from_rows(frame: pd.DataFrame) -> list[Receptor]:
+        """Build one PointReceptor per row from a normalised receptor DataFrame."""
         return [
             PointReceptor(
                 time=cast(Any, row).time,

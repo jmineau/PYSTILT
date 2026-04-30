@@ -20,7 +20,7 @@ The Science In Three Steps
 
 1. **Define a receptor**. This is a point in space and time representing where
    and when you made a measurement, or want to simulate one. In PYSTILT this is
-   a :class:`~stilt.Receptor`.
+   a :class:`~stilt.PointReceptor`, :class:`~stilt.ColumnReceptor`, or :class:`~stilt.MultiPointReceptor`.
 2. **Release and backward-track particles**. An ensemble of theoretical air
    parcels is released from the receptor and followed backward through time
    using gridded meteorological wind fields. Random turbulent velocities are
