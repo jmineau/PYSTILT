@@ -39,7 +39,7 @@ from stilt.execution import (
     resolve_backend,
 )
 from stilt.model import Model
-from stilt.receptor import read_receptors
+from stilt.receptors import read_receptors
 from stilt.storage import (
     ProjectFiles,
     is_cloud_project,

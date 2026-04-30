@@ -10,7 +10,7 @@ from stilt.index import IndexCounts, OutputSummary
 from stilt.index import sqlite as sqlite_mod
 from stilt.index.sqlite import SqliteIndex
 from stilt.index.updates import index_update_from_summary
-from stilt.receptor import Receptor
+from stilt.receptors import PointReceptor, Receptor
 from stilt.simulation import SimID
 from stilt.storage import (
     ProjectFiles,
@@ -131,7 +131,7 @@ def _make_receptor(
     altitude: float = 5.0,
     time: str = "202301011200",
 ) -> Receptor:
-    return Receptor(time=time, longitude=lon, latitude=lat, altitude=altitude)
+    return PointReceptor(time=time, longitude=lon, latitude=lat, altitude=altitude)
 
 
 def _sid(receptor: Receptor, met: str = "hrrr") -> str:
@@ -236,7 +236,7 @@ def test_get_receptor_roundtrip(tmp_path, state_factory):
     _state_call(state, "register", sim_id, receptor)
     loaded = _state_call(state, "get_receptor", sim_id)
 
-    assert loaded.kind == "point"
+    assert isinstance(loaded, PointReceptor)
     assert loaded.longitude == pytest.approx(receptor.longitude)
     assert loaded.latitude == pytest.approx(receptor.latitude)
     assert loaded.altitude == pytest.approx(receptor.altitude)

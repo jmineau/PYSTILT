@@ -18,10 +18,10 @@ if TYPE_CHECKING:
     from stilt.config import Bounds
     from stilt.footprint import Footprint
     from stilt.model import Model
-    from stilt.receptor import Receptor
     from stilt.simulation import Simulation
     from stilt.trajectory import Trajectories
 
+from stilt.receptors import ColumnReceptor, MultiPointReceptor, Receptor
 
 # ---------------------------------------------------------------------------
 # Internal helpers
@@ -392,8 +392,10 @@ class ReceptorPlotAccessor:
         standalone = ax is None
 
         r = self._receptor
-        lons = r.longitudes
-        lats = r.latitudes
+        coords = [(lat, lon, alt) for lat, lon, alt in r]
+        lats = np.array([c[0] for c in coords])
+        lons = np.array([c[1] for c in coords])
+        alts = np.array([c[2] for c in coords])
 
         if domain is not None:
             pad = 0.5
@@ -418,11 +420,11 @@ class ReceptorPlotAccessor:
 
         fig, ax = _make_ax(ax, extent=extent, tiler=tiler, tiler_zoom=tiler_zoom)
 
-        if r.kind == "multipoint":
+        if isinstance(r, MultiPointReceptor):
             sc = ax.scatter(
                 lons,
                 lats,
-                c=r.altitudes,
+                c=alts,
                 cmap="plasma",
                 s=80,
                 zorder=5,
@@ -430,7 +432,7 @@ class ReceptorPlotAccessor:
                 **kwargs,
             )
             fig.colorbar(sc, ax=ax, label="Height AGL (m)", shrink=0.7, pad=0.02)
-        elif r.kind == "column":
+        elif isinstance(r, ColumnReceptor):
             ax.scatter(
                 [lons[0]],
                 [lats[0]],
@@ -569,11 +571,13 @@ class SimulationPlotAccessor:
         else:
             r = sim.receptor
             pad = 2.0
+            _lats = np.array([lat for lat, lon, alt in r])
+            _lons = np.array([lon for lat, lon, alt in r])
             extent = (
-                r.longitudes.min() - pad,
-                r.longitudes.max() + pad,
-                r.latitudes.min() - pad,
-                r.latitudes.max() + pad,
+                _lons.min() - pad,
+                _lons.max() + pad,
+                _lats.min() - pad,
+                _lats.max() + pad,
             )
 
         _, ax = _make_ax(ax, extent=extent)

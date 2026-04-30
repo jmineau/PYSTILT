@@ -26,7 +26,7 @@ from stilt.config import (
     Grid,
     ModelConfig,
 )
-from stilt.receptor import Receptor
+from stilt.receptors import PointReceptor, Receptor
 
 from ..fixtures.r_stilt_reference import (
     reference_grid,
@@ -81,7 +81,7 @@ def wbb_receptor() -> Receptor:
 @pytest.fixture(scope="session")
 def column_receptor() -> Receptor:
     """Column receptor - same lat/lon, two heights - matching R-STILT test_run_stilt_column."""
-    return Receptor(
+    return PointReceptor(
         time=dt.datetime(2015, 12, 10, 0, 0),
         longitude=-112.0,
         latitude=40.5,
@@ -92,7 +92,7 @@ def column_receptor() -> Receptor:
 @pytest.fixture(scope="session")
 def multipoint_receptor() -> Receptor:
     """Three-location multipoint receptor - matching R-STILT test_run_stilt_multipoint."""
-    return Receptor(
+    return PointReceptor(
         time=dt.datetime(2015, 12, 10, 0, 0),
         longitude=[-112.0, -111.5, -111.0],
         latitude=[40.5, 41.0, 41.5],

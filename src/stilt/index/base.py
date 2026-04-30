@@ -6,7 +6,7 @@ import abc
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any, ClassVar
 
-from stilt.receptor import Receptor
+from stilt.receptors import Receptor
 from stilt.simulation import SimID
 
 from .protocol import (

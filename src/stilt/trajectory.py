@@ -12,7 +12,7 @@ import pyarrow.parquet as pq
 from typing_extensions import Self
 
 from stilt.config import STILTParams
-from stilt.receptor import Receptor
+from stilt.receptors import ColumnReceptor, MultiPointReceptor, PointReceptor, Receptor
 
 if TYPE_CHECKING:
     from stilt.visualization import TrajectoriesPlotAccessor
@@ -172,10 +172,10 @@ class Trajectories:
         p = particles.copy()
         numpar = int(p["indx"].max())  # type: ignore[arg-type]
 
-        if receptor.kind == "column":
+        if isinstance(receptor, ColumnReceptor):
             xhgt_step = (receptor.top - receptor.bottom) / numpar
             p["xhgt"] = (p["indx"] - 0.5) * xhgt_step + receptor.bottom
-        elif receptor.kind == "multipoint":
+        elif isinstance(receptor, MultiPointReceptor):
             release_rows = (
                 p.loc[p["time"] == p["time"].max(), ["indx", "long", "lati"]]
                 .drop_duplicates(subset=["indx"])
@@ -215,7 +215,7 @@ class Trajectories:
             p["xhgt"] = p["indx"].map(mapping.get)
 
         if params.hnf_plume:
-            r_zagl = receptor.altitude if receptor.kind == "point" else None
+            r_zagl = receptor.altitude if isinstance(receptor, PointReceptor) else None
             p = calc_plume_dilution(p, r_zagl, params.veght)
 
         p["datetime"] = receptor.time + pd.to_timedelta(

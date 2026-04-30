@@ -19,7 +19,7 @@ from stilt.observations import (
     VerticalOperatorWeighting,
     WeightingContext,
 )
-from stilt.receptor import Receptor
+from stilt.receptors import Receptor
 
 if TYPE_CHECKING:
     from collections.abc import Iterable

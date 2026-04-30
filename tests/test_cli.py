@@ -100,7 +100,9 @@ def test_status_counts_full_simulation_completion(tmp_path):
     """A complete trajectory without required footprints is not done yet."""
     from stilt.execution import SimulationResult
     from stilt.model import Model
-    from stilt.receptor import Receptor
+    from stilt.receptors import (
+        PointReceptor,
+    )
     from stilt.simulation import SimID
 
     cfg = ModelConfig(
@@ -126,7 +128,7 @@ def test_status_counts_full_simulation_completion(tmp_path):
     )
     cfg.to_yaml(tmp_path / "config.yaml")
 
-    receptor = Receptor(
+    receptor = PointReceptor(
         time="2023-01-01 12:00:00",
         longitude=-111.85,
         latitude=40.77,

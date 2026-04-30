@@ -7,7 +7,7 @@ from typing import Any, Protocol
 
 from stilt.observations.observation import Observation
 from stilt.observations.scenes import Scene, make_scene
-from stilt.receptor import Receptor
+from stilt.receptors import Receptor
 
 
 class Sensor(Protocol):

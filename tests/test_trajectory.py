@@ -7,7 +7,7 @@ import pyarrow as pa
 import pytest
 
 from stilt.config import STILTParams
-from stilt.receptor import Receptor
+from stilt.receptors import ColumnReceptor, MultiPointReceptor, PointReceptor
 from stilt.trajectory import Trajectories, calc_plume_dilution
 
 
@@ -76,7 +76,7 @@ def test_parquet_roundtrip_preserves_naive_utc_from_tz_aware_receptor(tmp_path):
     A tz-aware receptor time must normalize to naive UTC and stay naive
     through the trajectory parquet round-trip so the receptor/trajectory/
     footprint time axes align without pandas raising on mixed tz comparisons."""
-    aware_receptor = Receptor(
+    aware_receptor = PointReceptor(
         time=pd.Timestamp("2023-01-01 12:00:00+00:00"),
         longitude=-111.85,
         latitude=40.77,
@@ -206,11 +206,12 @@ def test_from_particles_column_receptor_assigns_xhgt(column_receptor, tmp_path):
 
 
 def test_from_particles_column_receptor_spans_column_monotonically(tmp_path):
-    receptor = Receptor(
+    receptor = ColumnReceptor(
         time="2023-01-01 12:00:00",
         longitude=-111.85,
         latitude=40.77,
-        altitude=[5.0, 1000.0],
+        bottom=5.0,
+        top=1000.0,
     )
     particles = _particles_release_rows(
         indices=list(range(1, 13)),
@@ -235,11 +236,11 @@ def test_from_particles_column_receptor_spans_column_monotonically(tmp_path):
 def test_from_particles_multipoint_receptor_assigns_xhgt_from_release_locations(
     tmp_path,
 ):
-    receptor = Receptor(
+    receptor = MultiPointReceptor(
         time="2023-01-01 12:00:00",
-        longitude=[-112.0, -111.8, -111.6],
-        latitude=[40.5, 40.5, 40.5],
-        altitude=[100.0, 500.0, 900.0],
+        longitudes=[-112.0, -111.8, -111.6],
+        latitudes=[40.5, 40.5, 40.5],
+        altitudes=[100.0, 500.0, 900.0],
     )
     particles = _particles_release_rows(
         indices=list(range(1, 13)),
@@ -301,11 +302,11 @@ def test_from_particles_multipoint_receptor_assigns_xhgt_from_release_locations(
 def test_from_particles_multipoint_nondivisible_particle_blocks_follow_release_locations(
     tmp_path,
 ):
-    receptor = Receptor(
+    receptor = MultiPointReceptor(
         time="2023-01-01 12:00:00",
-        longitude=[-112.0, -111.8, -111.6],
-        latitude=[40.5, 40.5, 40.5],
-        altitude=[100.0, 500.0, 900.0],
+        longitudes=[-112.0, -111.8, -111.6],
+        latitudes=[40.5, 40.5, 40.5],
+        altitudes=[100.0, 500.0, 900.0],
     )
     particles = _particles_release_rows(
         indices=list(range(1, 11)),

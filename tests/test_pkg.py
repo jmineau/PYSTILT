@@ -24,7 +24,9 @@ def test_email():
 def test_documented_top_level_symbols_are_importable():
     """The curated top-level API matches the core reference surface."""
     expected = [
+        "Receptor",
         "Bounds",
+        "ColumnReceptor",
         "Footprint",
         "FootprintConfig",
         "Grid",
@@ -33,7 +35,8 @@ def test_documented_top_level_symbols_are_importable():
         "MetSource",
         "Model",
         "ModelConfig",
-        "Receptor",
+        "MultiPointReceptor",
+        "PointReceptor",
         "ReceptorID",
         "RuntimeSettings",
         "SimID",

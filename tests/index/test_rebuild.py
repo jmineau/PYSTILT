@@ -11,7 +11,7 @@ from stilt.index.rebuild import (
     _receptor_from_parquet,
     scan_output_simulations,
 )
-from stilt.receptor import Receptor
+from stilt.receptors import PointReceptor, Receptor
 
 
 def test_footprint_name_from_filename_handles_default_named_and_invalid_cases():
@@ -65,7 +65,7 @@ def test_receptor_from_parquet_returns_none_on_read_failure(monkeypatch, tmp_pat
 
 
 def test_receptor_from_parquet_loads_receptor_from_metadata(monkeypatch, tmp_path):
-    receptor = Receptor(
+    receptor = PointReceptor(
         time=dt.datetime(2023, 1, 1, 12),
         longitude=-111.85,
         latitude=40.77,
@@ -91,7 +91,7 @@ def test_receptor_from_parquet_loads_receptor_from_metadata(monkeypatch, tmp_pat
 def test_scan_output_simulations_summarizes_outputs_and_empty_markers(
     monkeypatch, tmp_path
 ):
-    receptor = Receptor(
+    receptor = PointReceptor(
         time=dt.datetime(2023, 1, 1, 12),
         longitude=-111.85,
         latitude=40.77,

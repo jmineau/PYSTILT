@@ -10,7 +10,7 @@ import numpy as np
 from stilt.config import STILTParams
 from stilt.hysplit.driver import HYSPLITDriver
 from stilt.meteorology import MetSource
-from stilt.receptor import Receptor
+from stilt.receptors import ColumnReceptor, MultiPointReceptor
 
 from .conftest import integration
 
@@ -43,11 +43,11 @@ def test_hysplit_multipoint_release_points_follow_control_order(tmp_path, met_di
     ``indx`` block.
     """
 
-    receptor = Receptor(
+    receptor = MultiPointReceptor(
         time=dt.datetime(2015, 12, 10, 0, 0),
-        longitude=[-112.0, -111.8, -111.6],
-        latitude=[40.5, 40.5, 40.5],
-        altitude=[100.0, 500.0, 900.0],
+        longitudes=[-112.0, -111.8, -111.6],
+        latitudes=[40.5, 40.5, 40.5],
+        altitudes=[100.0, 500.0, 900.0],
     )
     params = STILTParams(
         n_hours=-1,
@@ -107,11 +107,11 @@ def test_hysplit_multipoint_release_points_follow_control_order_nondivisible(
 ):
     """Nondivisible particle counts still use contiguous blocks in point order."""
 
-    receptor = Receptor(
+    receptor = MultiPointReceptor(
         time=dt.datetime(2015, 12, 10, 0, 0),
-        longitude=[-112.0, -111.8, -111.6],
-        latitude=[40.5, 40.5, 40.5],
-        altitude=[100.0, 500.0, 900.0],
+        longitudes=[-112.0, -111.8, -111.6],
+        latitudes=[40.5, 40.5, 40.5],
+        altitudes=[100.0, 500.0, 900.0],
     )
     params = STILTParams(
         n_hours=-1,
@@ -158,11 +158,12 @@ def test_hysplit_column_release_spans_vertical_line_without_endpoint_chunking(
 ):
     """Column releases span the requested vertical range rather than endpoint chunks."""
 
-    receptor = Receptor(
+    receptor = ColumnReceptor(
         time=dt.datetime(2015, 12, 10, 0, 0),
         longitude=-112.0,
         latitude=40.5,
-        altitude=[5.0, 1000.0],
+        bottom=5.0,
+        top=1000.0,
     )
     params = STILTParams(
         n_hours=-1,

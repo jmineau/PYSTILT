@@ -14,7 +14,15 @@ from .config import (
 from .footprint import Footprint
 from .meteorology import MetSource
 from .model import Model
-from .receptor import LocationID, Receptor, ReceptorID, ReceptorKind, read_receptors
+from .receptors import (
+    ColumnReceptor,
+    LocationID,
+    MultiPointReceptor,
+    PointReceptor,
+    Receptor,
+    ReceptorID,
+    read_receptors,
+)
 from .simulation import SimID, Simulation
 from .trajectory import Trajectories
 from .transforms import ParticleTransform
@@ -42,10 +50,12 @@ __all__ = [
     "Footprint",
     "Trajectories",
     # Receptors
-    "LocationID",
     "Receptor",
+    "ColumnReceptor",
+    "LocationID",
+    "MultiPointReceptor",
+    "PointReceptor",
     "ReceptorID",
-    "ReceptorKind",
     "read_receptors",
     # Meteorology
     "MetSource",

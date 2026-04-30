@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt  # noqa: E402 — must come after use("Agg")
 
 from stilt.config import FootprintConfig, Grid, STILTParams
 from stilt.footprint import Footprint
-from stilt.receptor import Receptor
+from stilt.receptors import ColumnReceptor, MultiPointReceptor, PointReceptor
 from stilt.trajectory import Trajectories
 from stilt.visualization import (
     ModelPlotAccessor,
@@ -40,7 +40,7 @@ def close_figures():
 
 @pytest.fixture
 def receptor():
-    return Receptor(
+    return PointReceptor(
         time=dt.datetime(2023, 1, 1, 12),
         longitude=-111.85,
         latitude=40.77,
@@ -50,21 +50,22 @@ def receptor():
 
 @pytest.fixture
 def col_receptor():
-    return Receptor(
+    return ColumnReceptor(
         time=dt.datetime(2023, 1, 1, 12),
         longitude=-111.85,
         latitude=40.77,
-        altitude=[5.0, 50.0],
+        bottom=5.0,
+        top=50.0,
     )
 
 
 @pytest.fixture
 def multi_receptor():
-    return Receptor(
+    return MultiPointReceptor(
         time=dt.datetime(2023, 1, 1, 12),
-        longitude=[-111.85, -111.86, -111.84],
-        latitude=[40.77, 40.78, 40.76],
-        altitude=[5.0, 5.0, 5.0],
+        longitudes=[-111.85, -111.86, -111.84],
+        latitudes=[40.77, 40.78, 40.76],
+        altitudes=[5.0, 5.0, 5.0],
     )
 
 
@@ -394,7 +395,7 @@ def test_model_availability_with_sims(tmp_path):
         db_path=f"file:{uuid.uuid4().hex}?mode=memory&cache=shared",
         uri=True,
     )
-    r = Receptor(
+    r = PointReceptor(
         time=dt.datetime(2023, 1, 1, 12),
         longitude=-111.85,
         latitude=40.77,

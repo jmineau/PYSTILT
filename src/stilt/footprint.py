@@ -15,7 +15,7 @@ from scipy.ndimage import convolve as _convolve
 from typing_extensions import Self
 
 from stilt.config import FootprintConfig, Grid
-from stilt.receptor import Receptor
+from stilt.receptors import Receptor
 
 if TYPE_CHECKING:
     from stilt.visualization import FootprintPlotAccessor

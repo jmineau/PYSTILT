@@ -9,7 +9,7 @@ import numpy as np
 from stilt.config import VerticalReference
 from stilt.observations.geometry import LineOfSight
 from stilt.observations.observation import Observation
-from stilt.receptor import Receptor
+from stilt.receptors import ColumnReceptor, MultiPointReceptor, PointReceptor, Receptor
 
 _EARTH_RADIUS_M = 6_371_000.0
 
@@ -18,7 +18,7 @@ def build_point_receptor(
     observation: Observation,
     *,
     altitude: float | None = None,
-) -> Receptor:
+) -> PointReceptor:
     """
     Build a point receptor for one observation.
 
@@ -30,7 +30,7 @@ def build_point_receptor(
             "A point receptor altitude is required. Pass `altitude=` or set "
             "`Observation.altitude`."
         )
-    return Receptor(
+    return PointReceptor(
         time=observation.time,
         longitude=observation.longitude,
         latitude=observation.latitude,
@@ -45,9 +45,9 @@ def build_column_receptor(
     bottom: float,
     top: float,
     altitude_ref: VerticalReference = "agl",
-) -> Receptor:
+) -> ColumnReceptor:
     """Build a vertical-column receptor centered on one observation."""
-    return Receptor.from_column(
+    return ColumnReceptor(
         time=observation.time,
         longitude=observation.longitude,
         latitude=observation.latitude,
@@ -62,13 +62,14 @@ def build_multipoint_receptor(
     *,
     points: list[tuple[float, float, float]],
     altitude_ref: VerticalReference = "agl",
-) -> Receptor:
+) -> MultiPointReceptor:
     """Build a multipoint receptor from explicit release points."""
-    return Receptor.from_points(
-        observation.time,
-        points,
-        altitude_ref=altitude_ref,
-    )
+    r = Receptor.from_points(observation.time, points, altitude_ref=altitude_ref)
+    if not isinstance(r, MultiPointReceptor):
+        raise ValueError(
+            "build_multipoint_receptor requires at least 2 distinct points."
+        )
+    return r
 
 
 def _sample_los_altitudes(
@@ -171,7 +172,7 @@ def build_slant_receptor(
     line_of_sight: LineOfSight | None = None,
     surface_altitude: float | None = None,
     model_top_altitude: float | None = None,
-) -> Receptor:
+) -> MultiPointReceptor:
     """
     Build a slant multipoint receptor from observation LOS geometry.
 
@@ -246,8 +247,6 @@ def build_slant_receptor(
         )
         points.append((longitude, latitude, altitude))
 
-    return Receptor.from_points(
-        observation.time,
-        points,
-        altitude_ref=los.altitude_ref,
-    )
+    r = Receptor.from_points(observation.time, points, altitude_ref=los.altitude_ref)
+    assert isinstance(r, MultiPointReceptor)
+    return r

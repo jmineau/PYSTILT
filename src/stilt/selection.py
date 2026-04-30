@@ -10,7 +10,7 @@ import pandas as pd
 
 from stilt.errors import ConfigValidationError
 from stilt.index import OutputSummary, SimulationIndex
-from stilt.receptor import Receptor
+from stilt.receptors import Receptor
 from stilt.simulation import SimID
 from stilt.storage import Storage
 

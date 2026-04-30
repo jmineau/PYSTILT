@@ -17,7 +17,7 @@ from stilt.execution.tasks import plan_simulation_task
 from stilt.index import IndexCounts, OutputSummary
 from stilt.index.sqlite import SqliteIndex
 from stilt.model import Model as _Model
-from stilt.receptor import Receptor
+from stilt.receptors import PointReceptor
 from stilt.simulation import SimID
 from stilt.storage import LocalStore, Storage, Store
 
@@ -190,13 +190,13 @@ def test_receptors_require_explicit_or_output_source_when_not_provided(
 
 def test_simulation_collection_select_filters_by_time_and_location(tmp_path):
     repo = InMemoryIndex(tmp_path)
-    rec_a = Receptor(
+    rec_a = PointReceptor(
         time=dt.datetime(2023, 1, 1, 12),
         longitude=-111.85,
         latitude=40.77,
         altitude=5.0,
     )
-    rec_b = Receptor(
+    rec_b = PointReceptor(
         time=dt.datetime(2023, 1, 1, 13),
         longitude=-111.90,
         latitude=40.77,
@@ -224,13 +224,13 @@ def test_simulation_collection_select_filters_by_time_and_location(tmp_path):
 
 def test_simulation_collection_ids_filters_by_time_and_location(tmp_path):
     repo = InMemoryIndex(tmp_path)
-    rec_a = Receptor(
+    rec_a = PointReceptor(
         time=dt.datetime(2023, 1, 1, 12),
         longitude=-111.85,
         latitude=40.77,
         altitude=5.0,
     )
-    rec_b = Receptor(
+    rec_b = PointReceptor(
         time=dt.datetime(2023, 1, 1, 13),
         longitude=-111.90,
         latitude=40.77,
@@ -380,13 +380,13 @@ def test_simulations_mapping_iter(tmp_path, point_receptor):
 
 def test_simulations_mapping_ids_filters_by_time_and_location(tmp_path):
     repo = InMemoryIndex(tmp_path)
-    rec_a = Receptor(
+    rec_a = PointReceptor(
         time=dt.datetime(2023, 1, 1, 12),
         longitude=-111.85,
         latitude=40.77,
         altitude=5.0,
     )
-    rec_b = Receptor(
+    rec_b = PointReceptor(
         time=dt.datetime(2023, 1, 1, 13),
         longitude=-111.90,
         latitude=40.77,
@@ -450,13 +450,13 @@ def test_simulations_mapping_select_filters_by_footprint(tmp_path, point_recepto
 
 def test_simulation_collection_incomplete_returns_only_unregistered_ids(tmp_path):
     repo = InMemoryIndex(tmp_path)
-    rec_a = Receptor(
+    rec_a = PointReceptor(
         time=dt.datetime(2023, 1, 1, 12),
         longitude=-111.85,
         latitude=40.77,
         altitude=5.0,
     )
-    rec_b = Receptor(
+    rec_b = PointReceptor(
         time=dt.datetime(2023, 1, 1, 13),
         longitude=-111.90,
         latitude=40.77,
@@ -479,13 +479,13 @@ def test_simulation_collection_incomplete_returns_only_unregistered_ids(tmp_path
 
 def test_simulation_collection_incomplete_uses_configured_footprints(tmp_path):
     repo = InMemoryIndex(tmp_path)
-    rec_complete = Receptor(
+    rec_complete = PointReceptor(
         time=dt.datetime(2023, 1, 1, 12),
         longitude=-111.85,
         latitude=40.77,
         altitude=5.0,
     )
-    rec_missing = Receptor(
+    rec_missing = PointReceptor(
         time=dt.datetime(2023, 1, 1, 13),
         longitude=-111.90,
         latitude=40.77,
@@ -515,13 +515,13 @@ def test_simulation_collection_incomplete_uses_configured_footprints(tmp_path):
 
 def test_trajectory_collection_missing_returns_non_complete_ids(tmp_path):
     repo = InMemoryIndex(tmp_path)
-    rec_complete = Receptor(
+    rec_complete = PointReceptor(
         time=dt.datetime(2023, 1, 1, 12),
         longitude=-111.85,
         latitude=40.77,
         altitude=5.0,
     )
-    rec_missing = Receptor(
+    rec_missing = PointReceptor(
         time=dt.datetime(2023, 1, 1, 13),
         longitude=-111.90,
         latitude=40.77,
@@ -544,19 +544,19 @@ def test_trajectory_collection_missing_returns_non_complete_ids(tmp_path):
 
 def test_named_footprint_collection_missing_excludes_complete_empty(tmp_path):
     repo = InMemoryIndex(tmp_path)
-    rec_complete = Receptor(
+    rec_complete = PointReceptor(
         time=dt.datetime(2023, 1, 1, 12),
         longitude=-111.85,
         latitude=40.77,
         altitude=5.0,
     )
-    rec_empty = Receptor(
+    rec_empty = PointReceptor(
         time=dt.datetime(2023, 1, 1, 13),
         longitude=-111.90,
         latitude=40.77,
         altitude=5.0,
     )
-    rec_missing = Receptor(
+    rec_missing = PointReceptor(
         time=dt.datetime(2023, 1, 1, 14),
         longitude=-111.95,
         latitude=40.77,
@@ -630,7 +630,7 @@ def test_receptors_from_single_tuple(tmp_path):
     )
 
     assert len(model.receptors) == 1
-    assert isinstance(model.receptors[0], Receptor)
+    assert isinstance(model.receptors[0], PointReceptor)
     assert model.receptors[0].latitude == pytest.approx(40.77)
     assert model.receptors[0].longitude == pytest.approx(-111.85)
 
@@ -645,7 +645,7 @@ def test_receptors_from_sequence_of_tuples(tmp_path):
     )
 
     assert len(model.receptors) == 2
-    assert all(isinstance(r, Receptor) for r in model.receptors)
+    assert all(isinstance(r, PointReceptor) for r in model.receptors)
     assert f"{model.receptors[1].time:%Y%m%d%H%M}" == "202301011300"
     assert model.receptors[1].altitude == pytest.approx(10.0)
 
@@ -1223,13 +1223,13 @@ def test_named_footprint_accessor_paths_skip_complete_empty(tmp_path, point_rece
 
 def test_footprint_accessor_names_and_paths(tmp_path):
     repo = InMemoryIndex(tmp_path)
-    rec_complete = Receptor(
+    rec_complete = PointReceptor(
         time=dt.datetime(2023, 1, 1, 12),
         longitude=-111.85,
         latitude=40.77,
         altitude=5.0,
     )
-    rec_empty = Receptor(
+    rec_empty = PointReceptor(
         time=dt.datetime(2023, 1, 1, 13),
         longitude=-111.90,
         latitude=40.77,

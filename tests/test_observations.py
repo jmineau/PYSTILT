@@ -10,7 +10,7 @@ from stilt.observations import (
     VerticalOperator,
     ViewingGeometry,
 )
-from stilt.receptor import Receptor
+from stilt.receptors import PointReceptor
 
 
 def test_observation_normalizes_timestamp_and_keeps_geometry():
@@ -79,8 +79,8 @@ def test_base_sensor_groups_scene_and_allows_receptor_building():
         name = "tower"
         supported_species = ("co2",)
 
-        def build_receptor(self, observation: Observation) -> Receptor:
-            return Receptor(
+        def build_receptor(self, observation: Observation) -> PointReceptor:
+            return PointReceptor(
                 time=observation.time,
                 longitude=observation.longitude,
                 latitude=observation.latitude,

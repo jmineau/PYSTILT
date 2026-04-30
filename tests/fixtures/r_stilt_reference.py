@@ -16,7 +16,9 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from stilt.config import FootprintConfig, Grid, ModelConfig
-    from stilt.receptor import Receptor
+    from stilt.receptors import (
+        Receptor,
+    )
 
 REFERENCE_FIXTURES_DIR = Path(__file__).with_name("r_ref")
 REFERENCE_TRAJECTORY_PATH = REFERENCE_FIXTURES_DIR / "r_traj.parquet"
@@ -97,9 +99,11 @@ def reference_r_met_file_tres() -> str:
 
 def reference_receptor() -> Receptor:
     """Return the canonical seeded-fidelity receptor."""
-    from stilt.receptor import Receptor
+    from stilt.receptors import (
+        PointReceptor,
+    )
 
-    return Receptor(
+    return PointReceptor(
         time=REFERENCE_TIME,
         longitude=REFERENCE_LONGITUDE,
         latitude=REFERENCE_LATITUDE,

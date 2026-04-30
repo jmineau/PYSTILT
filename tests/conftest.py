@@ -11,7 +11,7 @@ from stilt.config import (
     ModelConfig,
     STILTParams,
 )
-from stilt.receptor import Receptor
+from stilt.receptors import ColumnReceptor, MultiPointReceptor, PointReceptor
 
 # ---------------------------------------------------------------------------
 # Receptor fixtures
@@ -21,7 +21,7 @@ from stilt.receptor import Receptor
 @pytest.fixture
 def point_receptor():
     """A simple single-point receptor."""
-    return Receptor(
+    return PointReceptor(
         time=dt.datetime(2023, 1, 1, 12, 0),
         longitude=-111.85,
         latitude=40.77,
@@ -32,22 +32,23 @@ def point_receptor():
 @pytest.fixture
 def column_receptor():
     """A vertical-column receptor (two heights, same lon/lat)."""
-    return Receptor(
+    return ColumnReceptor(
         time=dt.datetime(2023, 1, 1, 12, 0),
         longitude=-111.85,
         latitude=40.77,
-        altitude=[5.0, 50.0],
+        bottom=5.0,
+        top=50.0,
     )
 
 
 @pytest.fixture
 def multipoint_receptor():
     """A multi-point receptor (three different locations)."""
-    return Receptor(
+    return MultiPointReceptor(
         time=dt.datetime(2023, 1, 1, 12, 0),
-        longitude=[-111.85, -111.86, -111.84],
-        latitude=[40.77, 40.78, 40.76],
-        altitude=[5.0, 5.0, 5.0],
+        longitudes=[-111.85, -111.86, -111.84],
+        latitudes=[40.77, 40.78, 40.76],
+        altitudes=[5.0, 5.0, 5.0],
     )
 
 

@@ -8,7 +8,7 @@ from pathlib import Path, PurePosixPath
 
 import pyarrow.parquet as pq
 
-from stilt.receptor import Receptor
+from stilt.receptors import Receptor
 from stilt.storage import (
     ProjectFiles,
     SimulationFiles,

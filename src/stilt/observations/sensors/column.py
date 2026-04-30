@@ -11,7 +11,7 @@ from stilt.observations.receptors import (
     build_slant_receptor,
 )
 from stilt.observations.sensors.base import BaseSensor
-from stilt.receptor import Receptor
+from stilt.receptors import Receptor
 
 ColumnMode = Literal["vertical", "slant"]
 

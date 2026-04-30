@@ -10,7 +10,7 @@ from stilt.config import STILTParams
 from stilt.footprint import Footprint
 from stilt.index import OutputSummary, SimulationIndex
 from stilt.meteorology import MetSource
-from stilt.receptor import Receptor, read_receptors
+from stilt.receptors import PointReceptor, Receptor, read_receptors
 from stilt.selection import (
     filter_ids,
     matching_ids,
@@ -72,21 +72,21 @@ class ReceptorCollection:
                 isinstance(item, Iterable) and not isinstance(item, (str, bytes))
                 for item in items
             ):
-                return [Receptor(*items)], None
+                return [PointReceptor(*items)], None
             if all(
                 isinstance(item, Iterable) and not isinstance(item, (str, bytes))
                 for item in items
             ):
                 return [
-                    item if isinstance(item, Receptor) else Receptor(*item)
+                    item if isinstance(item, Receptor) else PointReceptor(*item)
                     for item in items
                 ], None
             raise TypeError(
-                "Receptors must be a Receptor, a path, or an iterable of Receptor "
+                "Receptors must be a receptor, a path, or an iterable of receptor "
                 "instances / (time, longitude, latitude, altitude) tuples."
             )
         raise TypeError(
-            "Receptors must be a Receptor, a path, or an iterable of Receptor "
+            "Receptors must be a receptor, a path, or an iterable of receptor "
             "instances / (time, longitude, latitude, altitude) tuples."
         )
 

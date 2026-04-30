@@ -17,7 +17,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
-from stilt.receptor import Receptor
+from stilt.receptors import Receptor
 from stilt.simulation import SimID
 
 if TYPE_CHECKING:

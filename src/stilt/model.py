@@ -37,7 +37,7 @@ from stilt.execution import (
 from stilt.index import IndexCounts, SimulationIndex
 from stilt.index.factory import resolve_index
 from stilt.meteorology import MetSource
-from stilt.receptor import Receptor
+from stilt.receptors import Receptor
 from stilt.simulation import SimID
 from stilt.storage import (
     ProjectFiles,

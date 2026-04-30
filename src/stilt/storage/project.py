@@ -12,7 +12,7 @@ from .store import Store
 
 if TYPE_CHECKING:
     from stilt.config import ModelConfig
-    from stilt.receptor import Receptor
+    from stilt.receptors import Receptor
     from stilt.simulation import Simulation
 
 
@@ -70,12 +70,7 @@ class Storage:
         )
         writer.writeheader()
         for idx, receptor in enumerate(receptors):
-            for lon, lat, altitude in zip(
-                receptor.longitudes,
-                receptor.latitudes,
-                receptor.altitudes,
-                strict=False,
-            ):
+            for lat, lon, altitude in receptor:
                 writer.writerow(
                     {
                         "r_idx": idx,
@@ -130,7 +125,7 @@ class Storage:
 
     def load_receptors(self) -> list[Receptor] | None:
         """Load project receptors from output storage when available."""
-        from stilt.receptor import read_receptors
+        from stilt.receptors import read_receptors
 
         source = self.receptor_source_path()
         if source is None:

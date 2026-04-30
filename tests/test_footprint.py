@@ -17,14 +17,14 @@ from stilt.footprint import (
     _interpolation_times,
     _make_gauss_kernel,
 )
-from stilt.receptor import Receptor
+from stilt.receptors import PointReceptor
 
 
 def _make_footprint(
     xres: float = 0.1, yres: float = 0.1, n_times: int = 1
 ) -> Footprint:
     receptor_time = dt.datetime(2023, 1, 1, 12)
-    receptor = Receptor(
+    receptor = PointReceptor(
         time=receptor_time,
         longitude=-111.85,
         latitude=40.77,
@@ -254,7 +254,7 @@ def test_netcdf_roundtrip_no_name(tmp_path):
 
 def test_netcdf_roundtrip_with_timezone_aware_time(tmp_path):
     receptor_time = pd.Timestamp("2023-01-01 12:00:00+00:00")
-    receptor = Receptor(
+    receptor = PointReceptor(
         time=receptor_time,
         longitude=-111.85,
         latitude=40.77,

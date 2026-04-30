@@ -13,6 +13,7 @@ from stilt.errors import (
 from stilt.hysplit import HYSPLITDriver
 from stilt.hysplit.control import ControlFile
 from stilt.hysplit.driver import _read_particle_dat
+from stilt.receptors import ColumnReceptor, MultiPointReceptor
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -113,7 +114,7 @@ def test_control_file_roundtrip_column_receptor(column_receptor, tmp_path):
     path = tmp_path / "CONTROL"
     cf.write(path)
     loaded = ControlFile.read(path)
-    assert loaded.receptor.kind == "column"
+    assert isinstance(loaded.receptor, ColumnReceptor)
     assert loaded.receptor.bottom == pytest.approx(column_receptor.bottom)
     assert loaded.receptor.top == pytest.approx(column_receptor.top)
 
@@ -123,7 +124,7 @@ def test_control_file_roundtrip_multipoint_receptor(multipoint_receptor, tmp_pat
     path = tmp_path / "CONTROL"
     cf.write(path)
     loaded = ControlFile.read(path)
-    assert loaded.receptor.kind == "multipoint"
+    assert isinstance(loaded.receptor, MultiPointReceptor)
     assert len(loaded.receptor) == len(multipoint_receptor)
 
 

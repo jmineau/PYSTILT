@@ -11,6 +11,7 @@ from stilt.observations import (
     build_point_receptor,
     build_slant_receptor,
 )
+from stilt.receptors import ColumnReceptor, MultiPointReceptor, PointReceptor
 
 
 def test_build_point_receptor_uses_observation_altitude():
@@ -25,7 +26,7 @@ def test_build_point_receptor_uses_observation_altitude():
 
     receptor = build_point_receptor(observation)
 
-    assert receptor.kind == "point"
+    assert isinstance(receptor, PointReceptor)
     assert receptor.altitude == 30.0
     assert receptor.altitude_ref == "agl"
 
@@ -69,7 +70,7 @@ def test_build_column_receptor():
 
     receptor = build_column_receptor(observation, bottom=10.0, top=1500.0)
 
-    assert receptor.kind == "column"
+    assert isinstance(receptor, ColumnReceptor)
     assert receptor.bottom == 10.0
     assert receptor.top == 1500.0
     assert receptor.altitude_ref == "agl"
@@ -93,7 +94,7 @@ def test_build_multipoint_receptor():
         ],
     )
 
-    assert receptor.kind == "multipoint"
+    assert isinstance(receptor, MultiPointReceptor)
     assert len(receptor) == 3
 
 
@@ -119,7 +120,7 @@ def test_build_slant_receptor():
 
     receptor = build_slant_receptor(observation)
 
-    assert receptor.kind == "multipoint"
+    assert isinstance(receptor, MultiPointReceptor)
     assert len(receptor) == 5
     assert receptor.longitudes[0] == -111.9
     assert receptor.latitudes[0] == 40.7

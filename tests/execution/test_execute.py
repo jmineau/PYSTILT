@@ -25,7 +25,7 @@ from stilt.index import OutputSummary
 from stilt.index.sqlite import SqliteIndex
 from stilt.meteorology import MetSource
 from stilt.model import Model as _Model
-from stilt.receptor import Receptor
+from stilt.receptors import PointReceptor, Receptor
 from stilt.simulation import SimID
 from stilt.storage import (
     FsspecStore,
@@ -47,7 +47,7 @@ def Model(*args, index=None, storage=None, **kwargs):
 
 @pytest.fixture
 def receptor() -> Receptor:
-    return Receptor(
+    return PointReceptor(
         time=dt.datetime(2023, 1, 1, 12),
         longitude=-111.85,
         latitude=40.77,
@@ -162,7 +162,7 @@ def test_execute_task_returns_complete_result(tmp_path, task, monkeypatch):
 
 def test_record_result_records_successful_trajectory(tmp_path, sim_id):
     state = SqliteIndex(tmp_path)
-    receptor = Receptor(
+    receptor = PointReceptor(
         time="2023-01-01 12:00:00",
         longitude=-111.85,
         latitude=40.77,
@@ -225,7 +225,7 @@ def test_execute_task_logs_simulation_failures_to_stderr(
 
 def test_record_result_records_failed_attempt(tmp_path, sim_id):
     state = SqliteIndex(tmp_path)
-    receptor = Receptor(
+    receptor = PointReceptor(
         time="2023-01-01 12:00:00",
         longitude=-111.85,
         latitude=40.77,
@@ -253,7 +253,7 @@ def test_record_result_records_failed_attempt(tmp_path, sim_id):
 
 def test_record_result_keeps_interrupted_attempt_pending(tmp_path, sim_id):
     state = SqliteIndex(tmp_path)
-    receptor = Receptor(
+    receptor = PointReceptor(
         time="2023-01-01 12:00:00",
         longitude=-111.85,
         latitude=40.77,
@@ -403,7 +403,7 @@ def test_execute_batch_returns_completed_results_without_side_effect_logs(
 def test_execute_batch_continues_after_uncaught_simulation_error(
     tmp_path, task, monkeypatch, caplog
 ):
-    other_receptor = Receptor(
+    other_receptor = PointReceptor(
         time=dt.datetime(2023, 1, 1, 13),
         longitude=-111.86,
         latitude=40.78,

@@ -6,7 +6,7 @@ from pathlib import Path
 from pydantic import BaseModel, ConfigDict
 
 from stilt.config import VerticalReference
-from stilt.receptor import Receptor
+from stilt.receptors import Receptor
 
 
 class ControlFile(BaseModel):
@@ -44,12 +44,7 @@ class ControlFile(BaseModel):
         # Receptor coordinates (one line per point)
         n_points = len(self.receptor)
         lines.append(str(n_points))
-        for lat, lon, altitude in zip(
-            self.receptor.latitudes,
-            self.receptor.longitudes,
-            self.receptor.altitudes,
-            strict=False,
-        ):
+        for lat, lon, altitude in self.receptor:
             lines.append(f"{lat} {lon} {altitude}")
 
         # Run parameters
@@ -138,12 +133,9 @@ class ControlFile(BaseModel):
             lons.append(lon)
             altitudes.append(altitude)
 
-        # Build receptor from receptors
-        receptor = Receptor(
+        receptor = Receptor.from_points(
             time=time,
-            latitude=lats,
-            longitude=lons,
-            altitude=altitudes,
+            points=list(zip(lons, lats, altitudes, strict=False)),
             altitude_ref=altitude_ref,
         )
 

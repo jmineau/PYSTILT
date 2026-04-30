@@ -7,7 +7,7 @@ from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 from typing import Any
 
-from stilt.receptor import Receptor
+from stilt.receptors import Receptor
 
 from .protocol import IndexCounts, OutputSummary
 from .updates import IndexUpdate

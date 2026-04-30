@@ -3,6 +3,7 @@
 import pytest
 
 from stilt.observations import ColumnSensor, LineOfSight, Observation, ViewingGeometry
+from stilt.receptors import ColumnReceptor, MultiPointReceptor
 
 
 def test_column_sensor_make_observation_requires_species_without_single_default():
@@ -28,7 +29,7 @@ def test_column_sensor_vertical_builds_column_receptor():
     sensor = ColumnSensor(mode="vertical", bottom=50.0, top=1500.0)
     receptor = sensor.build_receptor(observation)
 
-    assert receptor.kind == "column"
+    assert isinstance(receptor, ColumnReceptor)
     assert receptor.bottom == 50.0
     assert receptor.top == 1500.0
 
@@ -90,7 +91,7 @@ def test_column_sensor_slant_builds_multipoint_receptor():
     sensor = ColumnSensor(mode="slant")
     receptor = sensor.build_receptor(observation)
 
-    assert receptor.kind == "multipoint"
+    assert isinstance(receptor, MultiPointReceptor)
     assert len(receptor) == 5
     assert receptor.altitude_ref == "msl"
 

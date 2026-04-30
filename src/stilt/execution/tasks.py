@@ -11,7 +11,7 @@ from pydantic import BaseModel, ConfigDict
 
 from stilt.config import FootprintConfig, STILTParams
 from stilt.meteorology import MetSource
-from stilt.receptor import Receptor
+from stilt.receptors import Receptor
 from stilt.simulation import SimID
 from stilt.storage import ProjectFiles, SimulationFiles, Storage
 

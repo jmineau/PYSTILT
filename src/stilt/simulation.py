@@ -20,7 +20,7 @@ from stilt.errors import (
 from stilt.footprint import Footprint
 from stilt.hysplit import HYSPLITDriver
 from stilt.meteorology import MetID, MetSource
-from stilt.receptor import LocationID, Receptor, ReceptorID
+from stilt.receptors import LocationID, Receptor, ReceptorID
 from stilt.storage import SimulationFiles, Store, resolve_directory
 from stilt.trajectory import Trajectories
 from stilt.transforms import (

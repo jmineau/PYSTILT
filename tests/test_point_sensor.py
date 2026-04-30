@@ -3,6 +3,7 @@
 import pytest
 
 from stilt.observations import HorizontalGeometry, Observation, PointSensor
+from stilt.receptors import PointReceptor
 
 
 def test_point_sensor_make_observation_sets_sensor_and_default_species():
@@ -45,7 +46,7 @@ def test_point_sensor_uses_observation_altitude_when_present():
     sensor = PointSensor(name="tower", supported_species=("co2",))
     receptor = sensor.build_receptor(observation)
 
-    assert receptor.kind == "point"
+    assert isinstance(receptor, PointReceptor)
     assert receptor.altitude == 25.0
 
 
@@ -61,7 +62,7 @@ def test_point_sensor_default_height_overrides_missing_altitude():
     sensor = PointSensor(name="train", default_height=4.0)
     receptor = sensor.build_receptor(observation)
 
-    assert receptor.kind == "point"
+    assert isinstance(receptor, PointReceptor)
     assert receptor.altitude == 4.0
 
 
