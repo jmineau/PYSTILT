@@ -34,7 +34,7 @@ jobs:
 
     - name: Run unit tests
       run: |
-        uv run --python ${{ matrix.python-version }} pytest tests/ --ignore=tests/integration -v --cov=src/stilt --cov-report=term-missing --cov-report=xml:coverage.xml --junitxml=junit.xml -o junit_family=legacy
+        uv run --python ${{ matrix.python-version }} pytest tests/ --ignore=tests/r_stilt -m "not integration" -v --cov=src/stilt --cov-report=term-missing --cov-report=xml:coverage.xml --junitxml=junit.xml -o junit_family=legacy
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v5
@@ -96,15 +96,15 @@ jobs:
         cd stilt-r-src/r/src
         R CMD SHLIB permute.f90
 
-    - name: Run integration tests (includes live R fidelity tests)
+    - name: Run integration tests (includes R fidelity tests)
       env:
         STILT_R_DIR: ${{ github.workspace }}/stilt-r-src
-      run: uv run pytest tests/integration/ -v -m integration
+      run: uv run pytest tests/ -v -m integration
 
     - name: Run R-STILT synthetic footprint tests
       env:
         STILT_R_DIR: ${{ github.workspace }}/stilt-r-src
-      run: uv run pytest tests/integration/r_stilt/test_footprint_synth.py -v
+      run: uv run pytest tests/r_stilt/test_footprint_synth.py -v
 
   package:
     name: Package smoke test
