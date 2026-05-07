@@ -1,17 +1,18 @@
 """
-Integration fidelity tests: seeded PYSTILT vs R-STILT run live.
+Integration fidelity tests: seeded PYSTILT vs R-STILT.
 
-Each scenario in ``ALL_SCENARIOS`` runs as a parametrized test pair:
+Each scenario in ``ALL_SCENARIOS`` runs as a parametrized test triple:
 
 1. ``test_setup_cfg_pins_krand_and_seed`` — SETUP.CFG written by PYSTILT
    contains the expected RNG controls for the scenario.
-2. ``test_footprint_matches_r_live`` — Feed the PYSTILT trajectory (HNF-
-   corrected particles) to R-STILT's ``calc_footprint`` helper and compare
-   the resulting footprint grid at rtol=1e-7.
+2. ``test_trajectory_matches_r`` — PYSTILT particle table matches R-STILT's
+   at rtol=1e-7 when both run the same hycs_std binary.
+3. ``test_footprint_matches_r`` — Feed the PYSTILT trajectory (HNF-corrected
+   particles) to R-STILT's ``calc_footprint`` helper and compare the resulting
+   footprint grid at rtol=1e-7.
 
-This replaces the old pre-committed-fixture approach. R is run live, which
-means the test is self-contained: no committed R outputs are required, and
-the test cannot silently pass against a stale fixture.
+R is run directly for each test; no pre-committed fixtures are required and
+tests cannot silently pass against stale outputs.
 
 Skips automatically when:
   * Met files are absent (``met_dir`` fixture handles this).
@@ -33,16 +34,16 @@ import xarray as xr
 from stilt.hysplit.driver import _bundled_exe_dir
 from stilt.model import Model
 
-from ...fixtures.r_stilt_reference import (
+from ..conftest import integration
+from ..fixtures.r_stilt_reference import (
     ALL_SCENARIOS,
     REFERENCE_MET_FILE_FORMAT,
     REFERENCE_MET_FILE_INTERVAL_HOURS,
     REFERENCE_TIME,
     ReferenceScenario,
 )
-from ..conftest import integration
 
-_R_HELPERS = Path(__file__).parents[2] / "fixtures" / "r_helpers"
+_R_HELPERS = Path(__file__).parents[1] / "fixtures" / "r_helpers"
 
 
 # ---------------------------------------------------------------------------
@@ -96,7 +97,7 @@ def _trajectory_compare_columns(scenario: ReferenceScenario) -> tuple[str, ...]:
     return scenario.compare_columns
 
 
-def _r_trajectory_live(
+def _r_trajectory(
     tmp_path: Path,
     rscript: str,
     r_stilt_dir: Path,
@@ -275,7 +276,7 @@ def test_hysplit_binary_matches_r(r_stilt_dir: Path) -> None:
 
 
 @integration
-def test_trajectory_matches_r_live(
+def test_trajectory_matches_r(
     scenario_outputs: dict,
     rscript: str,
     r_stilt_dir: Path,
@@ -294,7 +295,7 @@ def test_trajectory_matches_r_live(
     compare_columns = _trajectory_compare_columns(s)
 
     py_traj = pd.read_parquet(scenario_outputs["traj"])
-    r_traj = _r_trajectory_live(tmp_path / s.name, rscript, r_stilt_dir, met_dir, s)
+    r_traj = _r_trajectory(tmp_path / s.name, rscript, r_stilt_dir, met_dir, s)
 
     assert len(py_traj) == len(r_traj), (
         f"[{s.name}] trajectory row counts differ: "
@@ -332,7 +333,7 @@ def test_trajectory_matches_r_live(
 
 
 @integration
-def test_footprint_matches_r_live(
+def test_footprint_matches_r(
     scenario_outputs: dict,
     rscript: str,
     r_stilt_dir: Path,

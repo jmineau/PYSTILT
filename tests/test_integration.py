@@ -5,11 +5,10 @@ These tests run real HYSPLIT against real met files and are collected by
 default.  They are automatically skipped when the stilt-tutorials met data
 is not present (the ``met_dir`` fixture handles this).
 
-Run all integration tests explicitly:
-    pytest tests/integration/ -v
+Run integration tests explicitly:
+    pytest tests/ -v -m integration
 
-Skip them when you only want unit tests:
-    pytest tests/ --ignore=tests/integration
+Skip them:
     pytest tests/ -m "not integration"
 """
 
@@ -177,16 +176,16 @@ def test_idempotency(tmp_path, wbb_receptor, traj_only_config):
 
 
 @integration
-def test_column(tmp_path, column_receptor, wbb_config):
+def test_column(tmp_path, wbb_column_receptor, wbb_config):
     """Column receptor produces trajectory and footprint; sim_id ends with _X."""
     model = Model(
         project=tmp_path / "column",
         config=wbb_config,
-        receptors=[column_receptor],
+        receptors=[wbb_column_receptor],
     )
     model.run()
 
-    sid = _sim_id(column_receptor)
+    sid = _sim_id(wbb_column_receptor)
     assert sid.endswith("_X"), f"Expected column sim_id to end '_X', got {sid!r}"
 
     sim_dir = model.layout.project_dir / "simulations" / "by-id" / sid
@@ -201,16 +200,16 @@ def test_column(tmp_path, column_receptor, wbb_config):
 
 
 @integration
-def test_multipoint(tmp_path, multipoint_receptor, multipoint_config):
+def test_multipoint(tmp_path, wbb_multipoint_receptor, multipoint_config):
     """Multipoint receptor (3 locations) produces trajectory and footprint."""
     model = Model(
         project=tmp_path / "multipoint",
         config=multipoint_config,
-        receptors=[multipoint_receptor],
+        receptors=[wbb_multipoint_receptor],
     )
     model.run()
 
-    sid = _sim_id(multipoint_receptor)
+    sid = _sim_id(wbb_multipoint_receptor)
     assert "multi_" in sid, (
         f"Expected multipoint sim_id to contain 'multi_', got {sid!r}"
     )

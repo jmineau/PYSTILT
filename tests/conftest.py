@@ -16,6 +16,39 @@ from stilt.config import (
 )
 from stilt.receptors import ColumnReceptor, MultiPointReceptor, PointReceptor
 
+from .fixtures.r_stilt_reference import reference_grid, reference_receptor
+
+# ---------------------------------------------------------------------------
+# Marker - apply to every test that needs real met + HYSPLIT
+# ---------------------------------------------------------------------------
+
+integration = pytest.mark.integration
+
+# ---------------------------------------------------------------------------
+# Met directory
+# ---------------------------------------------------------------------------
+
+_TESTS_DIR = Path(__file__).parent
+_DEFAULT_MET_DIR = _TESTS_DIR / "stilt-tutorials" / "01-wbb" / "met"
+
+
+@pytest.fixture(scope="session")
+def met_dir() -> Path:
+    """
+    Path to 01-wbb HRRR ARL met files.
+
+    Override with STILT_TEST_MET_DIR if stilt-tutorials is elsewhere.
+    Default: tests/stilt-tutorials/01-wbb/met (gitignored).
+    """
+    path = Path(os.environ.get("STILT_TEST_MET_DIR", _DEFAULT_MET_DIR))
+    if not path.exists():
+        pytest.skip(
+            f"Met directory not found: {path}\n"
+            "Clone uataq/stilt-tutorials or set STILT_TEST_MET_DIR."
+        )
+    return path
+
+
 # ---------------------------------------------------------------------------
 # Receptor fixtures
 # ---------------------------------------------------------------------------
@@ -125,3 +158,119 @@ def rscript(r_stilt_dir) -> str:  # noqa: ARG001
     if not exe:
         pytest.skip("Rscript not found on PATH.")
     return exe
+
+
+# ---------------------------------------------------------------------------
+# WBB integration fixtures (real met + HYSPLIT; session-scoped)
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture(scope="session")
+def wbb_receptor():
+    """Single WBB-like receptor matching R-STILT tutorial parameters."""
+    return reference_receptor()
+
+
+@pytest.fixture(scope="session")
+def wbb_column_receptor():
+    """Column receptor at WBB - same lat/lon, two heights."""
+    return ColumnReceptor(
+        time=dt.datetime(2015, 12, 10, 0, 0),
+        longitude=-112.0,
+        latitude=40.5,
+        bottom=5.0,
+        top=1000.0,
+    )
+
+
+@pytest.fixture(scope="session")
+def wbb_multipoint_receptor():
+    """Three-location multipoint receptor matching R-STILT test_run_stilt_multipoint."""
+    return MultiPointReceptor(
+        time=dt.datetime(2015, 12, 10, 0, 0),
+        longitudes=[-112.0, -111.5, -111.0],
+        latitudes=[40.5, 41.0, 41.5],
+        altitudes=[5.0, 500.0, 1000.0],
+    )
+
+
+@pytest.fixture(scope="session")
+def wbb_grid() -> Grid:
+    """Domain grid covering the WBB area at 0.01° resolution."""
+    return reference_grid()
+
+
+@pytest.fixture(scope="session")
+def wbb_config(met_dir, wbb_grid) -> ModelConfig:
+    """Minimal ModelConfig for integration tests (n_hours=-6, numpar=100)."""
+    return ModelConfig(
+        mets={
+            "hrrr": {
+                "directory": met_dir,
+                "file_format": "%Y%m%d.%Hz.hrrra",
+                "file_tres": "6h",
+            }
+        },
+        n_hours=-6,
+        numpar=100,
+        footprints={
+            "default": FootprintConfig(grid=wbb_grid),
+        },
+    )
+
+
+@pytest.fixture(scope="session")
+def traj_only_config(met_dir) -> ModelConfig:
+    """ModelConfig without footprints for trajectory-only tests."""
+    return ModelConfig(
+        mets={
+            "hrrr": {
+                "directory": met_dir,
+                "file_format": "%Y%m%d.%Hz.hrrra",
+                "file_tres": "6h",
+            }
+        },
+        n_hours=-6,
+        numpar=100,
+    )
+
+
+@pytest.fixture(scope="session")
+def multifoot_config(met_dir, wbb_grid) -> ModelConfig:
+    """Config with two named footprints at different resolutions."""
+    coarse_grid = Grid(
+        xmin=-113.0, xmax=-111.0, ymin=39.5, ymax=41.5, xres=0.05, yres=0.05
+    )
+    return ModelConfig(
+        mets={
+            "hrrr": {
+                "directory": met_dir,
+                "file_format": "%Y%m%d.%Hz.hrrra",
+                "file_tres": "6h",
+            }
+        },
+        n_hours=-6,
+        numpar=100,
+        footprints={
+            "fine": FootprintConfig(grid=wbb_grid),
+            "coarse": FootprintConfig(grid=coarse_grid),
+        },
+    )
+
+
+@pytest.fixture(scope="session")
+def multipoint_config(met_dir) -> ModelConfig:
+    """Config with a wider domain covering all three multipoint receptor locations."""
+    grid = Grid(xmin=-113.0, xmax=-110.5, ymin=39.5, ymax=42.0, xres=0.01, yres=0.01)
+    return ModelConfig(
+        mets={
+            "hrrr": {
+                "directory": met_dir,
+                "file_format": "%Y%m%d.%Hz.hrrra",
+                "file_tres": "6h",
+            }
+        },
+        n_hours=-6,
+        numpar=100,
+        footprints={"default": FootprintConfig(grid=grid)},
+    )

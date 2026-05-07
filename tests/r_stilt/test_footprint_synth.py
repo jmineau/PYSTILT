@@ -55,7 +55,7 @@ from stilt.trajectory import calc_plume_dilution
 # Shared constants
 # ---------------------------------------------------------------------------
 
-_R_HELPERS = Path(__file__).parents[2] / "fixtures" / "r_helpers"
+_R_HELPERS = Path(__file__).parents[1] / "fixtures" / "r_helpers"
 
 _RECEPTOR_TIME = dt.datetime(2015, 12, 10, 0, 0)
 _RECEPTOR = PointReceptor(_RECEPTOR_TIME, -112.0, 40.5, 5.0)
