@@ -46,7 +46,7 @@ for (f in list.files(src_dir, pattern = "\\.r$", full.names = TRUE)) {
   source(f)
 }
 
-library(arrow)
+load_libs('arrow', 'dplyr', 'lubridate', 'ncdf4', 'raster', 'R.utils')
 
 # Upstream R-STILT write_setup.r does not expose SEED.  PYSTILT does, and the
 # live fidelity tests pin krand/seed for deterministic HYSPLIT output, so wrap

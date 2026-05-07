@@ -42,9 +42,7 @@ for (f in list.files(src_dir, pattern = "\\.r$", full.names = TRUE)) {
   source(f)
 }
 
-library(arrow)
-library(dplyr)
-library(ncdf4)  # write_footprint only writes .nc when ncdf4 is attached
+load_libs('arrow', 'dplyr', 'lubridate', 'ncdf4', 'raster', 'R.utils')
 p <- as.data.frame(read_parquet(particles_parquet))
 
 # Synthetic test DataFrames sometimes contain only one early-time row per

@@ -80,7 +80,7 @@ jobs:
         r-version: 'release'
 
     - name: Install system dependencies for R packages
-      run: sudo apt-get install -y libnetcdf-dev libgdal-dev libgeos-dev libproj-dev
+      run: sudo apt-get install -y libnetcdf-dev libgdal-dev libgeos-dev libproj-dev libssl-dev libxml2-dev
 
     - name: Clone uataq/stilt R source
       run: git clone --depth 1 https://github.com/uataq/stilt stilt-r-src
@@ -95,10 +95,6 @@ jobs:
       run: |
         cd stilt-r-src/r/src
         R CMD SHLIB permute.f90
-
-    - name: Install R packages
-      run: |
-        Rscript -e "install.packages(c('arrow', 'dplyr', 'ncdf4', 'raster'), repos='https://cloud.r-project.org')"
 
     - name: Run integration tests (includes live R fidelity tests)
       env:
