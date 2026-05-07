@@ -85,6 +85,12 @@ jobs:
     - name: Clone uataq/stilt R source
       run: git clone --depth 1 https://github.com/uataq/stilt stilt-r-src
 
+    - name: Populate R-STILT exe directory from bundled binaries
+      run: |
+        mkdir -p stilt-r-src/exe
+        cp stilt-r-src/bin/linux_x64/hycs_std stilt-r-src/exe/hycs_std
+        chmod +x stilt-r-src/exe/hycs_std
+
     - name: Build permute.so
       run: |
         cd stilt-r-src/r/src
