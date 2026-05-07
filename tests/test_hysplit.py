@@ -501,6 +501,14 @@ def test_write_winderr_no_op_without_xyerr(tmp_path, point_receptor):
     assert not (tmp_path / "WINDERR").exists()
 
 
+def test_write_winderr_values_match_r_stilt_order(tmp_path, point_receptor):
+    """WINDERR lines are siguverr, tluverr, zcoruverr, horcoruverr — matching R-STILT write_winderr."""
+    runner = _make_runner_with_xyerr(tmp_path, point_receptor)
+    runner._write_winderr()
+    lines = (tmp_path / "WINDERR").read_text().strip().splitlines()
+    assert [float(v) for v in lines] == [1.0, 60.0, 500.0, 40.0]
+
+
 def test_write_zierr_creates_file(tmp_path, point_receptor):
     runner = _make_runner_with_zierr(tmp_path, point_receptor)
     runner._write_zierr()
@@ -508,6 +516,14 @@ def test_write_zierr_creates_file(tmp_path, point_receptor):
     assert zierr.exists()
     lines = zierr.read_text().strip().splitlines()
     assert len(lines) == 3  # sigzierr, tlzierr, horcorzierr
+
+
+def test_write_zierr_values_match_r_stilt_order(tmp_path, point_receptor):
+    """ZIERR lines are sigzierr, tlzierr, horcorzierr — matching R-STILT write_zierr."""
+    runner = _make_runner_with_zierr(tmp_path, point_receptor)
+    runner._write_zierr()
+    lines = (tmp_path / "ZIERR").read_text().strip().splitlines()
+    assert [float(v) for v in lines] == [0.6, 60.0, 40.0]
 
 
 def test_write_zierr_no_op_without_zierr(tmp_path, point_receptor):

@@ -276,3 +276,50 @@ def test_cli_run(tmp_path, wbb_config, wbb_receptor):
     sim_dir = project_dir / "simulations" / "by-id" / sid
     assert list(sim_dir.glob("*.parquet")), "CLI run: no trajectory parquet"
     assert list(sim_dir.glob("*_foot.nc")), "CLI run: no footprint NetCDF"
+
+
+# ---------------------------------------------------------------------------
+# Error trajectory - winderrtf > 0
+# ---------------------------------------------------------------------------
+
+
+@integration
+def test_error_trajectory(tmp_path, wbb_receptor, traj_only_config):
+    """XY wind error params trigger a second HYSPLIT run; error parquet is saved."""
+    error_config = traj_only_config.model_copy(
+        update={
+            "siguverr": 1.0,
+            "tluverr": 60.0,
+            "zcoruverr": 500.0,
+            "horcoruverr": 40.0,
+        }
+    )
+    model = Model(
+        project=tmp_path / "error_traj",
+        config=error_config,
+        receptors=[wbb_receptor],
+    )
+    model.run()
+
+    sid = _sim_id(wbb_receptor)
+    sim_dir = model.layout.project_dir / "simulations" / "by-id" / sid
+
+    main_files = list(sim_dir.glob("*_traj.parquet"))
+    error_files = list(sim_dir.glob("*_error.parquet"))
+
+    assert main_files, "No main trajectory parquet"
+    assert error_files, "No error trajectory parquet — winderrtf path not triggered"
+
+    main_traj = pd.read_parquet(main_files[0])
+    error_traj = pd.read_parquet(error_files[0])
+
+    assert len(main_traj) > 0, "Main trajectory is empty"
+    assert len(error_traj) > 0, "Error trajectory is empty"
+    assert set(main_traj.columns) == set(error_traj.columns), (
+        "Error trajectory has different columns than main trajectory"
+    )
+    assert (
+        not main_traj["long"]
+        .reset_index(drop=True)
+        .equals(error_traj["long"].reset_index(drop=True))
+    ), "Error trajectory identical to main — wind perturbation had no effect"
