@@ -80,7 +80,7 @@ jobs:
         r-version: 'release'
 
     - name: Install system dependencies for R packages
-      run: sudo apt-get install -y libnetcdf-dev
+      run: sudo apt-get install -y libnetcdf-dev libgdal-dev libgeos-dev libproj-dev
 
     - name: Clone uataq/stilt R source
       run: git clone --depth 1 https://github.com/uataq/stilt stilt-r-src
