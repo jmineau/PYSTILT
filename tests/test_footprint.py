@@ -19,6 +19,7 @@ from stilt.footprint import (
     _make_gauss_kernel,
 )
 from stilt.receptors import PointReceptor
+from stilt.trajectory import calc_plume_dilution
 
 
 def _make_footprint(
@@ -538,6 +539,24 @@ def test_make_gauss_kernel_odd_shape():
     assert k.shape[1] % 2 == 1
 
 
+def test_make_gauss_kernel_symmetric():
+    """
+    For equal x/y resolution, the kernel is symmetric under both axis flips and
+    transposition.  An asymmetric kernel would create directional bias — footprints
+    would incorrectly favour one compass direction over another.
+    """
+    k = _make_gauss_kernel((0.01, 0.01), sigma=0.3)
+    np.testing.assert_array_equal(
+        k, k.T, err_msg="kernel must be symmetric under transpose"
+    )
+    np.testing.assert_array_equal(
+        k, k[::-1, :], err_msg="kernel must be symmetric about row axis"
+    )
+    np.testing.assert_array_equal(
+        k, k[:, ::-1], err_msg="kernel must be symmetric about col axis"
+    )
+
+
 def test_interpolation_times_match_r_stilt_schedule():
     times = _interpolation_times(-1)
 
@@ -600,3 +619,362 @@ def test_interpolate_early_timesteps_matches_r_na_omit_with_extra_columns():
         ["indx", "time"], ascending=[True, False], kind="stable"
     ).reset_index(drop=True)
     pd.testing.assert_frame_equal(interpolated, expected, check_dtype=False)
+
+
+# ---------------------------------------------------------------------------
+# Mathematical invariants — no R required
+#
+# These properties must hold from pure math regardless of R-STILT agreement.
+# They are the foundation of using PYSTILT footprints in linear inversion:
+#   concentration = sum(footprint * flux)
+# If the footprint is not linear in the particle sensitivity values, or if
+# smoothing is not mass-conservative, that inversion is invalid.
+# ---------------------------------------------------------------------------
+
+
+def _interior_particles(n: int = 40, seed: int = 55) -> pd.DataFrame:
+    """Particles well inside the domain, no t=0 receptor row."""
+    rng = np.random.default_rng(seed)
+    return pd.DataFrame(
+        {
+            "time": [-60.0] * n,
+            "indx": [float(i + 1) for i in range(n)],
+            "long": rng.uniform(-113.8, -113.2, n),
+            "lati": rng.uniform(39.2, 39.8, n),
+            "zagl": [5.0] * n,
+            "foot": rng.uniform(1e-5, 1e-4, n),
+        }
+    )
+
+
+def _interior_config(smooth_factor: float = 0.0) -> FootprintConfig:
+    return FootprintConfig(
+        grid=Grid(xmin=-114.0, xmax=-113.0, ymin=39.0, ymax=40.0, xres=0.1, yres=0.1),
+        smooth_factor=smooth_factor,
+    )
+
+
+def test_calculate_linearity_in_foot_values(point_receptor):
+    """
+    Scaling all particle foot values by a constant scales the output by the same
+    factor.
+
+    This is the foundational property of Bayesian inversion: concentration =
+    integral(footprint * flux). If the footprint is not linear in the particle
+    foot values, that integral is invalid.  All operations in Footprint.calculate
+    are linear in foot (bincount, Gaussian convolution, division by n_particles),
+    so the output must scale exactly.
+    """
+    particles = _interior_particles()
+    config = _interior_config(smooth_factor=1.0)
+
+    foot_1x = Footprint.calculate(particles, receptor=point_receptor, config=config)
+
+    particles_2x = particles.copy()
+    particles_2x["foot"] = particles_2x["foot"] * 2.0
+    foot_2x = Footprint.calculate(particles_2x, receptor=point_receptor, config=config)
+
+    np.testing.assert_allclose(
+        foot_2x.data.values,
+        foot_1x.data.values * 2.0,
+        rtol=1e-10,
+        err_msg="Footprint must scale linearly with particle foot values",
+    )
+
+
+def test_calculate_total_equals_normalized_input_sum_at_zero_smooth(point_receptor):
+    """
+    With smooth_factor=0, total footprint = sum(in-domain foot) / n_particles.
+
+    STILT normalizes by particle count so that the footprint is intensive (per
+    particle).  The 1×1 identity kernel does not move any sensitivity between
+    cells, so the grid sum must exactly equal the un-normalized particle sum
+    divided by the ensemble size.
+    """
+    particles = _interior_particles()
+    n = particles["indx"].nunique()
+    config = _interior_config(smooth_factor=0.0)
+
+    foot = Footprint.calculate(particles, receptor=point_receptor, config=config)
+
+    expected = float(particles["foot"].sum()) / n
+    assert float(foot.data.values.sum()) == pytest.approx(expected, rel=1e-10)
+
+
+def test_calculate_gaussian_smoothing_preserves_total_sensitivity(point_receptor):
+    """
+    Gaussian smoothing does not create or destroy total footprint sensitivity.
+
+    The kernel sums to 1 (verified separately in test_make_gauss_kernel_normalized)
+    and particles are placed well inside the domain so the Gaussian tails do not
+    spill outside the grid boundary.  Any loss of total sensitivity from smoothing
+    would silently bias flux inversion toward underestimating emissions.
+    """
+    particles = _interior_particles()
+    config_0 = _interior_config(smooth_factor=0.0)
+    config_s = _interior_config(smooth_factor=1.0)
+
+    foot_0 = Footprint.calculate(particles, receptor=point_receptor, config=config_0)
+    foot_s = Footprint.calculate(particles, receptor=point_receptor, config=config_s)
+
+    total_0 = float(foot_0.data.values.sum())
+    total_s = float(foot_s.data.values.sum())
+
+    assert total_s == pytest.approx(total_0, rel=1e-5), (
+        f"Smoothing changed total footprint: {total_0:.6g} → {total_s:.6g} "
+        f"(Δ = {abs(total_s - total_0) / total_0:.2e})"
+    )
+
+
+def test_calculate_reproducible(point_receptor):
+    """
+    Calling Footprint.calculate twice with identical inputs returns identical arrays.
+
+    Statefulness bugs (e.g. a mutable module-level cache that accumulates across
+    calls) would cause different runs of the same simulation to diverge silently.
+    """
+    particles = _interior_particles()
+    config = _interior_config(smooth_factor=1.0)
+
+    foot1 = Footprint.calculate(particles, receptor=point_receptor, config=config)
+    foot2 = Footprint.calculate(particles, receptor=point_receptor, config=config)
+
+    np.testing.assert_array_equal(
+        foot1.data.values,
+        foot2.data.values,
+        err_msg="Footprint.calculate must be deterministic — identical inputs must produce identical outputs",
+    )
+
+
+def test_calculate_time_integrate_equals_sum_of_time_slices(point_receptor):
+    """
+    time_integrate=True must equal summing the per-time-step footprint.
+
+    If the collapsed footprint were computed differently from the sum of slices,
+    daily-average footprints used in Bayesian inversion would silently differ from
+    the sum of the hourly footprints researchers expect.
+    """
+    particles = _particles_in_domain()
+    grid = Grid(xmin=-114.0, xmax=-113.0, ymin=39.0, ymax=40.0, xres=0.1, yres=0.1)
+
+    foot_ti = Footprint.calculate(
+        particles,
+        receptor=point_receptor,
+        config=FootprintConfig(grid=grid, time_integrate=True),
+    )
+    foot_no = Footprint.calculate(
+        particles,
+        receptor=point_receptor,
+        config=FootprintConfig(grid=grid, time_integrate=False),
+    )
+
+    np.testing.assert_allclose(
+        foot_ti.data.values.squeeze(),
+        foot_no.data.sum("time").values,
+        rtol=1e-10,
+        err_msg="time_integrate=True must equal the sum over all individual time slices",
+    )
+
+
+def test_calculate_smooth_zero_assigns_exact_cells(point_receptor):
+    """
+    With smooth_factor=0, each particle's foot goes entirely into the one cell it
+    falls in — no neighbouring cells receive any spillover.
+
+    This tests the 1×1 identity kernel path (sigma=0 → _make_gauss_kernel returns
+    [[1.0]]).  A bug here would mean that the ``permute.f90``-equivalent scatter
+    operation distributes sensitivity to wrong cells, corrupting the spatial pattern
+    of all no-smooth footprints.
+    """
+    grid = Grid(xmin=-114.0, xmax=-113.0, ymin=39.0, ymax=40.0, xres=0.1, yres=0.1)
+    config = FootprintConfig(grid=grid, smooth_factor=0.0)
+
+    # 10 identical particles exactly at the centre of cell (start=-113.9, centre=-113.85)
+    n = 10
+    foot_val = 1e-4
+    particles = pd.DataFrame(
+        {
+            "time": [-60.0] * n,
+            "indx": [float(i + 1) for i in range(n)],
+            "long": [-113.85] * n,
+            "lati": [39.05] * n,
+            "zagl": [5.0] * n,
+            "foot": [foot_val] * n,
+        }
+    )
+
+    foot = Footprint.calculate(particles, receptor=point_receptor, config=config)
+
+    # total = sum(foot) / n_particles = (n * foot_val) / n = foot_val
+    assert float(foot.data.values.sum()) == pytest.approx(foot_val, rel=1e-10)
+
+    # Exactly one non-zero cell across all time layers
+    nonzero_count = int((foot.data.values > 0).sum())
+    assert nonzero_count == 1, (
+        f"smooth_factor=0: expected exactly 1 non-zero cell, got {nonzero_count}"
+    )
+
+
+def test_concentration_reconstruction_from_known_footprint(point_receptor):
+    """
+    c = Σ foot[i,j] * q[i,j] recovers the analytically expected concentration.
+
+    This is the fundamental identity that Bayesian flux inversion relies on:
+    a receptor concentration enhancement equals the dot product of the footprint
+    sensitivity matrix with the surface flux field.  If this identity is broken
+    — by a normalization error, wrong cell assignment, or unit mismatch — every
+    inferred emission estimate is wrong, silently.
+
+    Setup (smooth_factor=0 so values are exact, no Gaussian spread):
+      - Cluster A: 10 particles at cell centre (-113.85°, 39.05°), foot = 2e-4
+      - Cluster B: 10 particles at cell centre (-113.35°, 39.55°), foot = 3e-4
+      - 20 total unique particles (n_particles = 20)
+
+    Analytical footprint values:
+      F_A = n_A * foot_A / n_particles = 10 * 2e-4 / 20 = 1e-4  ppm/(μmol m⁻² s⁻¹)
+      F_B = n_B * foot_B / n_particles = 10 * 3e-4 / 20 = 1.5e-4 ppm/(μmol m⁻² s⁻¹)
+
+    Applied flux field (non-zero only at the two cluster cells):
+      q_A = 5.0  μmol m⁻² s⁻¹   (roughly a moderate CH₄ surface source)
+      q_B = 8.0  μmol m⁻² s⁻¹
+
+    Expected concentration:
+      c = F_A * q_A + F_B * q_B = 1e-4 * 5 + 1.5e-4 * 8 = 1.7e-3 ppm ≈ 1.7 ppb
+    """
+    grid = Grid(xmin=-114.0, xmax=-113.0, ymin=39.0, ymax=40.0, xres=0.1, yres=0.1)
+    config = FootprintConfig(grid=grid, smooth_factor=0.0)
+
+    n_a, n_b = 10, 10
+    n_total = n_a + n_b
+    foot_a, foot_b = 2e-4, 3e-4
+
+    particles = pd.DataFrame(
+        {
+            "time": [-60.0] * n_total,
+            "indx": [float(i + 1) for i in range(n_total)],
+            "long": [-113.85] * n_a + [-113.35] * n_b,
+            "lati": [39.05] * n_a + [39.55] * n_b,
+            "zagl": [5.0] * n_total,
+            "foot": [foot_a] * n_a + [foot_b] * n_b,
+        }
+    )
+
+    foot = Footprint.calculate(particles, receptor=point_receptor, config=config)
+
+    # Verify the footprint cell values are exactly what the formula predicts.
+    expected_fa = n_a * foot_a / n_total  # 1e-4
+    expected_fb = n_b * foot_b / n_total  # 1.5e-4
+
+    f_a = float(foot.data.sel(lon=-113.85, lat=39.05, method="nearest").sum())
+    f_b = float(foot.data.sel(lon=-113.35, lat=39.55, method="nearest").sum())
+
+    assert f_a == pytest.approx(expected_fa, rel=1e-10), (
+        f"Cell A footprint: expected {expected_fa:.3e}, got {f_a:.3e}"
+    )
+    assert f_b == pytest.approx(expected_fb, rel=1e-10), (
+        f"Cell B footprint: expected {expected_fb:.3e}, got {f_b:.3e}"
+    )
+
+    # Apply flux field (non-zero at the two cluster cells only).
+    q_a, q_b = 5.0, 8.0
+    flux = np.zeros_like(foot.data.values)
+
+    lons = foot.data.lon.values
+    lats = foot.data.lat.values
+    lon_a = int(np.argmin(np.abs(lons - (-113.85))))
+    lat_a = int(np.argmin(np.abs(lats - 39.05)))
+    lon_b = int(np.argmin(np.abs(lons - (-113.35))))
+    lat_b = int(np.argmin(np.abs(lats - 39.55)))
+
+    flux[:, lat_a, lon_a] = q_a
+    flux[:, lat_b, lon_b] = q_b
+
+    # c = F_A * q_A + F_B * q_B
+    c_computed = float((foot.data.values * flux).sum())
+    c_expected = expected_fa * q_a + expected_fb * q_b  # 1.7e-3 ppm
+
+    assert c_computed == pytest.approx(c_expected, rel=1e-10), (
+        f"Concentration reconstruction: c = {c_computed:.4g} ppm, "
+        f"expected {c_expected:.4g} ppm  (~{c_expected * 1e3:.2f} ppb)"
+    )
+
+
+def test_hnf_correction_invariants():
+    """
+    Mathematical invariants of the HNF near-field plume-dilution correction.
+
+    The HNF correction replaces the HYSPLIT-raw foot with a Gaussian near-field
+    value (0.02897 / (plume * dens) * samt * 60) when the plume has not yet
+    grown to fill the mixing layer.  This can be larger or smaller than the raw
+    value.  The invariants that must always hold:
+
+    1. Corrected foot is always positive.
+    2. When plume >= pbl_mixing, foot is left unchanged (identity path).
+    3. The raw values are preserved in `foot_no_hnf_dilution`.
+    """
+    rng = np.random.default_rng(77)
+    n = 50
+    raw_foot = rng.uniform(1e-5, 1e-3, n)
+    # Force some particles to have large plume (sigma >> mlht) so the identity
+    # path is exercised.  Large sigw + long time → large plume.
+    sigw = np.concatenate(
+        [
+            rng.uniform(0.01, 0.5, n // 2),  # small sigma → near-field path
+            rng.uniform(5.0, 20.0, n // 2),  # large sigma → identity path
+        ]
+    )
+    particles = pd.DataFrame(
+        {
+            "time": np.concatenate(
+                [
+                    rng.uniform(-0.5, -0.1, n // 2),  # short time → small plume
+                    rng.uniform(-6.0, -5.0, n // 2),  # long time → large plume
+                ]
+            ),
+            "indx": [float(i + 1) for i in range(n)],
+            "long": [-112.0] * n,
+            "lati": [40.5] * n,
+            "zagl": [5.0] * n,
+            "foot": raw_foot,
+            "mlht": [500.0] * n,  # pbl_mixing = 0.5 * 500 = 250 m
+            "dens": [1.2] * n,
+            "samt": [60.0] * n,
+            "sigw": sigw,
+            "tlgr": [100.0] * n,
+        }
+    )
+
+    result = calc_plume_dilution(particles.copy(), r_zagl=5.0, veght=0.5)
+
+    # Invariant 1: corrected foot is always positive.
+    assert np.all(result["foot"].values > 0), (
+        "HNF-corrected foot values must be positive"
+    )
+
+    # Invariant 2: identity path — particles where plume >= pbl_mixing
+    # are unchanged.  Reconstruct plume = r_zagl + sigma to find them.
+    abs_time_s = np.abs(particles["time"] * 60)
+    tlgr = particles["tlgr"]
+    sigma = (
+        particles["samt"]
+        * np.sqrt(2)
+        * particles["sigw"]
+        * np.sqrt(tlgr * abs_time_s + tlgr**2 * np.exp(-abs_time_s / tlgr) - 1)
+    )
+    plume = 5.0 + sigma  # r_zagl=5 + sigma (single timestep, cumsum is sigma itself)
+    pbl_mixing = 0.5 * particles["mlht"]
+    identity_mask = (plume >= pbl_mixing).to_numpy()
+
+    np.testing.assert_allclose(
+        result.loc[identity_mask, "foot"].values,
+        raw_foot[identity_mask],
+        rtol=1e-12,
+        err_msg="Particles with plume >= pbl_mixing must have foot unchanged",
+    )
+
+    # Invariant 3: raw values preserved in foot_no_hnf_dilution.
+    np.testing.assert_array_equal(
+        result["foot_no_hnf_dilution"].values,
+        raw_foot,
+        err_msg="foot_no_hnf_dilution must equal the original foot values",
+    )

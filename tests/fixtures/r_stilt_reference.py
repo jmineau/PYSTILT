@@ -379,6 +379,94 @@ TIME_INTEGRATE = ReferenceScenario(
     compare_columns=_TRAJ_COLS_WITH_HNF,
 )
 
+#: Point receptor, smooth_factor=0 — pure binning, no Gaussian spread.
+#
+# R-STILT calls permute.f90 with a 1×1 kernel; PYSTILT uses np.bincount with no
+# convolution step.  This path is not exercised by any other fidelity scenario
+# and has different edge-case behaviour (particle at a cell boundary goes to
+# exactly one cell with full weight, not spread across neighbours).
+SMOOTH_ZERO = ReferenceScenario(
+    name="smooth_zero",
+    description="Point receptor, smooth_factor=0.0 — 1×1 identity kernel, no Gaussian spread",
+    receptor_type="point",
+    longitude=REFERENCE_LONGITUDE,
+    latitude=REFERENCE_LATITUDE,
+    altitude=REFERENCE_ALTITUDE,
+    n_hours=REFERENCE_N_HOURS,
+    numpar=REFERENCE_NUMPAR,
+    krand=REFERENCE_KRAND,
+    seed=REFERENCE_SEED,
+    hnf_plume=True,
+    smooth_factor=0.0,
+    time_integrate=False,
+    xmin=REFERENCE_XMIN,
+    xmax=REFERENCE_XMAX,
+    ymin=REFERENCE_YMIN,
+    ymax=REFERENCE_YMAX,
+    xres=REFERENCE_XRES,
+    yres=REFERENCE_YRES,
+    compare_columns=_TRAJ_COLS_WITH_HNF,
+)
+
+#: Point receptor, coarse grid (0.05° × 0.05°) — 5× larger cells than the default.
+#
+# Coarser resolution produces different kernel sizes in grid-cell units (the same
+# physical sigma covers fewer cells) and changes the bin-assignment edge cases.
+# Exercises that grid-cell start computation, rasterization, and kernel scaling
+# are consistent at resolutions coarser than the reference 0.01°.
+COARSE_GRID = ReferenceScenario(
+    name="coarse_grid",
+    description="Point receptor, xres=yres=0.05° — 5× coarser than reference grid",
+    receptor_type="point",
+    longitude=REFERENCE_LONGITUDE,
+    latitude=REFERENCE_LATITUDE,
+    altitude=REFERENCE_ALTITUDE,
+    n_hours=REFERENCE_N_HOURS,
+    numpar=REFERENCE_NUMPAR,
+    krand=REFERENCE_KRAND,
+    seed=REFERENCE_SEED,
+    hnf_plume=True,
+    smooth_factor=1.0,
+    time_integrate=False,
+    xmin=REFERENCE_XMIN,
+    xmax=REFERENCE_XMAX,
+    ymin=REFERENCE_YMIN,
+    ymax=REFERENCE_YMAX,
+    xres=0.05,
+    yres=0.05,
+    compare_columns=_TRAJ_COLS_WITH_HNF,
+)
+
+#: Full 24-hour backward run from the reference receptor.
+#
+# Uses four met files (20151209.00z through 20151209.18z) plus the boundary
+# 20151210.00z file — all present in the stilt-tutorials met directory.
+# This is the most realistic scenario for operational SLV methane inversions
+# and tests met-file chaining, longer trajectory accumulation, and that the
+# trajectory parser handles 24 hours of HYSPLIT particle output correctly.
+DAY_BACKWARD = ReferenceScenario(
+    name="day_backward",
+    description="Point receptor, n_hours=-24 — full day backward, four met files",
+    receptor_type="point",
+    longitude=REFERENCE_LONGITUDE,
+    latitude=REFERENCE_LATITUDE,
+    altitude=REFERENCE_ALTITUDE,
+    n_hours=-24,
+    numpar=REFERENCE_NUMPAR,
+    krand=REFERENCE_KRAND,
+    seed=REFERENCE_SEED,
+    hnf_plume=True,
+    smooth_factor=1.0,
+    time_integrate=False,
+    xmin=REFERENCE_XMIN,
+    xmax=REFERENCE_XMAX,
+    ymin=REFERENCE_YMIN,
+    ymax=REFERENCE_YMAX,
+    xres=REFERENCE_XRES,
+    yres=REFERENCE_YRES,
+    compare_columns=_TRAJ_COLS_WITH_HNF,
+)
+
 #: All canonical scenarios in priority order (POINT has committed fixtures first).
 ALL_SCENARIOS: list[ReferenceScenario] = [
     POINT,
@@ -387,6 +475,9 @@ ALL_SCENARIOS: list[ReferenceScenario] = [
     NO_HNF,
     SMOOTH,
     TIME_INTEGRATE,
+    SMOOTH_ZERO,
+    COARSE_GRID,
+    DAY_BACKWARD,
 ]
 
 

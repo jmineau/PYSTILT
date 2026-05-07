@@ -55,6 +55,26 @@ jobs:
     name: Integration + R-STILT tests
     runs-on: ubuntu-latest  # HYSPLIT binary is linux_x64 only
 
+    env:
+      # Pinned uataq/stilt commit used for R-STILT fidelity comparison.
+      #
+      # HOW TO UPDATE:
+      #   1. Bump STILT_R_SHA to the new commit.
+      #   2. Run the fidelity tests locally:
+      #        STILT_R_DIR=stilt-r-src uv run pytest tests/r_stilt/ -v -m integration
+      #   3. If tests pass  → commit the new SHA.
+      #      If tests diverge → read the diff; determine whether PYSTILT or R-STILT
+      #      changed and update whichever is wrong before committing the SHA bump.
+      #
+      # WHAT TO WATCH in uataq/stilt git log:
+      #   r/src/calc_footprint.r   — gridding, interpolation, kernel bandwidth
+      #   r/src/calc_trajectory.r  — HNF plume dilution (calc_plume_dilution)
+      #   r/src/permute.f90        — inner Gaussian scatter loop
+      #   r/src/write_footprint.r  — output format / precision (float32 assumption)
+      #
+      # IGNORE: run_stilt.r, stilt_cli.r, docs, R package scaffolding.
+      STILT_R_SHA: e2feb358b62337cbe27ed7958ab3334016ba2de1
+
     steps:
     - uses: actions/checkout@v5
 
@@ -82,8 +102,11 @@ jobs:
     - name: Install system dependencies for R packages
       run: sudo apt-get install -y libnetcdf-dev libgdal-dev libgeos-dev libproj-dev libssl-dev libxml2-dev
 
-    - name: Clone uataq/stilt R source
-      run: git clone --depth 1 https://github.com/uataq/stilt stilt-r-src
+    - name: Clone uataq/stilt R source at pinned commit
+      run: |
+        git init stilt-r-src
+        git -C stilt-r-src fetch --depth 1 https://github.com/uataq/stilt "$STILT_R_SHA"
+        git -C stilt-r-src checkout FETCH_HEAD
 
     - name: Populate R-STILT exe directory from bundled binaries
       run: |
