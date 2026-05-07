@@ -22,15 +22,24 @@ Skips automatically when:
 from __future__ import annotations
 
 import subprocess
+from hashlib import sha256
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 import pytest
 import xarray as xr
 
+from stilt.hysplit.driver import _bundled_exe_dir
 from stilt.model import Model
 
-from ...fixtures.r_stilt_reference import ALL_SCENARIOS, ReferenceScenario
+from ...fixtures.r_stilt_reference import (
+    ALL_SCENARIOS,
+    REFERENCE_MET_FILE_FORMAT,
+    REFERENCE_MET_FILE_INTERVAL_HOURS,
+    REFERENCE_TIME,
+    ReferenceScenario,
+)
 from ..conftest import integration
 
 _R_HELPERS = Path(__file__).parents[2] / "fixtures" / "r_helpers"
@@ -39,6 +48,97 @@ _R_HELPERS = Path(__file__).parents[2] / "fixtures" / "r_helpers"
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+
+def _sha256_file(path: Path) -> str:
+    h = sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _assert_hysplit_binary_matches_r(r_stilt_dir: Path) -> None:
+    py_hycs = _bundled_exe_dir() / "hycs_std"
+    r_hycs = r_stilt_dir / "exe" / "hycs_std"
+    assert py_hycs.exists(), f"PYSTILT hycs_std not found: {py_hycs}"
+    assert r_hycs.exists(), f"R-STILT hycs_std not found: {r_hycs}"
+    py_hash = _sha256_file(py_hycs)
+    r_hash = _sha256_file(r_hycs)
+    assert py_hash == r_hash, (
+        "PYSTILT and R-STILT must use the same hycs_std binary for trajectory "
+        f"fidelity tests.\nPYSTILT: {py_hycs} {py_hash}\n"
+        f"R-STILT: {r_hycs} {r_hash}"
+    )
+
+
+def _csv(values: float | tuple[float, ...]) -> str:
+    if isinstance(values, tuple):
+        return ",".join(f"{v:g}" for v in values)
+    return f"{values:g}"
+
+
+def _sorted_trajectory(df: pd.DataFrame, columns: tuple[str, ...]) -> pd.DataFrame:
+    return (
+        df.loc[:, list(columns)].sort_values(by=["indx", "time"]).reset_index(drop=True)
+    )
+
+
+def _trajectory_compare_columns(scenario: ReferenceScenario) -> tuple[str, ...]:
+    if scenario.receptor_type == "multipoint" and scenario.hnf_plume:
+        # R-STILT has no direct PYSTILT-style multipoint receptor; when given
+        # multiple heights in one run, calc_trajectory treats them as a
+        # column/line and assigns xhgt across the particle index range.  The
+        # raw HYSPLIT trajectory and uncorrected foot still match exactly, but
+        # HNF-corrected foot intentionally differs because PYSTILT maps
+        # particles to their actual multipoint release altitudes.
+        return tuple(c for c in scenario.compare_columns if c != "foot")
+    return scenario.compare_columns
+
+
+def _r_trajectory_live(
+    tmp_path: Path,
+    rscript: str,
+    r_stilt_dir: Path,
+    met_dir: Path,
+    scenario: ReferenceScenario,
+) -> pd.DataFrame:
+    """Run R-STILT calc_trajectory live and return the particle table."""
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    out_path = tmp_path / "r_traj.parquet"
+    work_dir = tmp_path / "r_run"
+
+    result = subprocess.run(
+        [
+            rscript,
+            str(_R_HELPERS / "calc_trajectory.r"),
+            str(out_path),
+            str(work_dir),
+            str(r_stilt_dir),
+            str(met_dir),
+            REFERENCE_MET_FILE_FORMAT,
+            f"{REFERENCE_MET_FILE_INTERVAL_HOURS} hours",
+            REFERENCE_TIME.strftime("%Y-%m-%dT%H:%M:%S"),
+            _csv(scenario.longitude),
+            _csv(scenario.latitude),
+            _csv(scenario.altitude),
+            str(scenario.n_hours),
+            str(scenario.numpar),
+            str(scenario.krand),
+            str(scenario.seed),
+            str(scenario.hnf_plume).upper(),
+            "TRUE",
+        ],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(
+            f"[{scenario.name}] calc_trajectory.r failed "
+            f"(exit {result.returncode}):\nSTDERR:\n{result.stderr}\n"
+            f"STDOUT:\n{result.stdout}"
+        )
+    return pd.read_parquet(out_path)
 
 
 def _r_footprint_from_traj(
@@ -165,6 +265,69 @@ def test_setup_cfg_pins_krand_and_seed(scenario_outputs: dict) -> None:
     )
     assert f"seed={s.seed}" in content, (
         f"[{s.name}] seed={s.seed} not found in SETUP.CFG"
+    )
+
+
+@integration
+def test_hysplit_binary_matches_r(r_stilt_dir: Path) -> None:
+    """Trajectory parity is only meaningful when both tools run the same hycs_std."""
+    _assert_hysplit_binary_matches_r(r_stilt_dir)
+
+
+@integration
+def test_trajectory_matches_r_live(
+    scenario_outputs: dict,
+    rscript: str,
+    r_stilt_dir: Path,
+    met_dir: Path,
+    tmp_path: Path,
+) -> None:
+    """
+    PYSTILT trajectory table matches R-STILT when both run the same hycs_std.
+
+    This compares particle positions and footprint sensitivity columns after
+    R-STILT's trajectory read and HNF correction, before either implementation
+    performs footprint gridding.
+    """
+    s: ReferenceScenario = scenario_outputs["scenario"]
+    _assert_hysplit_binary_matches_r(r_stilt_dir)
+    compare_columns = _trajectory_compare_columns(s)
+
+    py_traj = pd.read_parquet(scenario_outputs["traj"])
+    r_traj = _r_trajectory_live(tmp_path / s.name, rscript, r_stilt_dir, met_dir, s)
+
+    assert len(py_traj) == len(r_traj), (
+        f"[{s.name}] trajectory row counts differ: "
+        f"PYSTILT={len(py_traj)}, R-STILT={len(r_traj)}"
+    )
+    assert set(compare_columns) <= set(py_traj.columns), (
+        f"[{s.name}] PYSTILT trajectory missing comparison columns: "
+        f"{sorted(set(compare_columns) - set(py_traj.columns))}"
+    )
+    assert set(compare_columns) <= set(r_traj.columns), (
+        f"[{s.name}] R-STILT trajectory missing comparison columns: "
+        f"{sorted(set(compare_columns) - set(r_traj.columns))}"
+    )
+
+    py_sorted = _sorted_trajectory(py_traj, compare_columns)
+    r_sorted = _sorted_trajectory(r_traj, compare_columns)
+
+    np.testing.assert_array_equal(
+        py_sorted["indx"].to_numpy(),
+        r_sorted["indx"].to_numpy(),
+        err_msg=f"[{s.name}] particle indices differ.",
+    )
+    np.testing.assert_array_equal(
+        py_sorted["time"].to_numpy(),
+        r_sorted["time"].to_numpy(),
+        err_msg=f"[{s.name}] trajectory times differ.",
+    )
+    np.testing.assert_allclose(
+        py_sorted.drop(columns=["indx", "time"]).to_numpy(dtype=float),
+        r_sorted.drop(columns=["indx", "time"]).to_numpy(dtype=float),
+        rtol=1e-7,
+        atol=1e-10,
+        err_msg=f"[{s.name}] trajectory values differ from R-STILT live output.",
     )
 
 
