@@ -1,6 +1,9 @@
 """Shared fixtures for the PYSTILT test suite."""
 
 import datetime as dt
+import os
+import shutil
+from pathlib import Path
 
 import pytest
 
@@ -94,3 +97,31 @@ def grid():
 @pytest.fixture
 def footprint_config(grid):
     return FootprintConfig(grid=grid)
+
+
+# ---------------------------------------------------------------------------
+# R-STILT fixtures (skip gracefully when R or STILT_R_DIR not available)
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture(scope="session")
+def r_stilt_dir() -> Path:
+    """Path to a uataq/stilt R checkout. Set STILT_R_DIR env var to enable."""
+    env = os.environ.get("STILT_R_DIR")
+    if env:
+        path = Path(env)
+        if path.exists():
+            return path
+    pytest.skip(
+        "STILT_R_DIR not set or path not found. "
+        "Set STILT_R_DIR=/path/to/uataq-stilt to run R-STILT comparison tests."
+    )
+
+
+@pytest.fixture(scope="session")
+def rscript(r_stilt_dir) -> str:  # noqa: ARG001
+    """Path to the Rscript executable. Skips if not on PATH."""
+    exe = shutil.which("Rscript")
+    if not exe:
+        pytest.skip("Rscript not found on PATH.")
+    return exe

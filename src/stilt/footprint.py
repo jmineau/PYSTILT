@@ -59,6 +59,26 @@ def _interpolation_times(time_sign: int) -> np.ndarray:
     return times * time_sign
 
 
+def _grid_cell_starts(minimum: float, maximum: float, resolution: float) -> np.ndarray:
+    """
+    Return lower-left cell starts for a half-open grid extent.
+
+    Cells start at ``minimum`` and repeat by ``resolution`` while the complete
+    cell remains inside ``[minimum, maximum]``.  Equivalently, ``maximum`` is an
+    outer grid boundary, not a cell start.  The small tolerance keeps common
+    decimal resolutions from losing the final intended cell to binary
+    floating-point roundoff.
+    """
+    if resolution <= 0:
+        raise ValueError("Grid resolution must be positive.")
+    quotient = (maximum - minimum) / resolution
+    tol = 10 * np.finfo(float).eps * max(abs(quotient), 1.0)
+    n_cells = int(np.floor(quotient + tol))
+    if n_cells < 1:
+        raise ValueError("Grid extent must contain at least one complete cell.")
+    return minimum + np.arange(n_cells, dtype=float) * resolution
+
+
 def _utc_index(values: Any) -> pd.DatetimeIndex:
     """Return one UTC-normalized DatetimeIndex."""
     return pd.DatetimeIndex(pd.to_datetime(values, utc=True))
@@ -245,18 +265,22 @@ def _interpolate_early_timesteps(
     linearly interpolate positions and foot.  Foot values are rescaled after
     interpolation to preserve the total influence in each time window.
     """
-    early = p[np.abs(p["time"]) < 100]
+    early = cast(pd.DataFrame, p[np.abs(p["time"]) < 100])
     if early.empty:
         return p
 
-    order = np.lexsort(
-        (np.asarray(early["time"], dtype=float), np.asarray(early["indx"]))
+    # Match R: per-particle median(abs(diff(long/lati))), then median across particles.
+    # should_interpolate = median(dx) > xres OR median(dy) > yres
+    sorted_early = early.sort_values(by=["indx", "time"])
+    diffs = cast(
+        pd.DataFrame,
+        sorted_early.groupby("indx", sort=False)[["long", "lati"]].diff().abs(),
     )
-    early = cast(pd.DataFrame, early.iloc[order])
-    diffs = early.groupby("indx", sort=False)[["long", "lati"]].diff().abs()
-    mean_steps = cast(pd.DataFrame, diffs.groupby(early["indx"], sort=False).mean())
-    dx_med = float(mean_steps["long"].median())
-    dy_med = float(mean_steps["lati"].median())
+    per_particle_med = cast(pd.DataFrame, diffs.groupby(sorted_early["indx"]).median())
+    dx_values = per_particle_med["long"].dropna()
+    dy_values = per_particle_med["lati"].dropna()
+    dx_med = float(dx_values.median()) if not dx_values.empty else np.nan
+    dy_med = float(dy_values.median()) if not dy_values.empty else np.nan
 
     if (np.isnan(dx_med) or dx_med <= xres) and (np.isnan(dy_med) or dy_med <= yres):
         return p
@@ -292,28 +316,48 @@ def _interpolate_early_timesteps(
 def _interpolate_particle_tracks(p: pd.DataFrame, *, t_new: np.ndarray) -> pd.DataFrame:
     """Interpolate long/lati/foot for each particle on a dense time grid."""
     frames: list[pd.DataFrame] = []
+    original_columns = list(p.columns)
     for indx, group in p.groupby("indx", sort=False):
         source_time = group["time"].to_numpy(dtype=float)
         target_time = np.unique(np.concatenate([source_time, t_new]))
         order = np.argsort(source_time)
         sorted_time = source_time[order]
         unique_time, unique_idx = np.unique(sorted_time, return_index=True)
-        data: dict[str, Any] = {
-            "indx": np.full(len(target_time), indx),
-            "time": target_time,
-        }
+
+        # Mirror R-STILT's full_join(expand.grid(...), by = c("indx", "time")):
+        # original rows keep every column, while inserted rows only receive the
+        # interpolated long/lati/foot values below.  A later dropna() therefore
+        # matches R's na.omit() across all columns.
+        expanded = pd.DataFrame(
+            {
+                "indx": np.full(len(target_time), indx),
+                "time": target_time,
+            }
+        )
+        join_group = group.copy(deep=False)
+        join_group["time"] = join_group["time"].astype(float)
+        frame = expanded.merge(join_group, on=["indx", "time"], how="left", sort=False)
         for col in ["long", "lati", "foot"]:
             values = group[col].to_numpy(dtype=float)[order][unique_idx]
             if len(unique_time) >= 2:
-                data[col] = np.interp(target_time, unique_time, values)
+                # left/right=nan matches R's na_interp: no extrapolation
+                # beyond the observed [min_time, max_time] range.
+                frame[col] = np.interp(
+                    target_time, unique_time, values, left=np.nan, right=np.nan
+                )
             elif len(unique_time) == 1:
-                data[col] = np.full(len(target_time), values[0])
+                frame[col] = np.full(len(target_time), values[0])
             else:
-                data[col] = np.full(len(target_time), np.nan)
-        frames.append(pd.DataFrame(data))
+                frame[col] = np.full(len(target_time), np.nan)
+        frames.append(frame.loc[:, original_columns])
     if not frames:
         return p.iloc[0:0].copy()
-    return pd.concat(frames, ignore_index=True).dropna(subset=["long", "lati", "foot"])
+    return (
+        pd.concat(frames, ignore_index=True)
+        .dropna()
+        .sort_values(["indx", "time"], ascending=[True, False], kind="stable")
+        .reset_index(drop=True)
+    )
 
 
 def _project_particles_to_crs(
@@ -580,10 +624,10 @@ def _empty_footprint_result(
     reason: str,
 ) -> "Footprint":
     """Build an explicit zero-valued footprint with an empty-reason attr."""
-    n_lon = max(1, int(round((xmax - xmin) / xres)))
-    n_lat = max(1, int(round((ymax - ymin) / yres)))
-    glong = xmin + np.arange(n_lon) * xres
-    glati = ymin + np.arange(n_lat) * yres
+    glong = _grid_cell_starts(xmin, xmax, xres)
+    glati = _grid_cell_starts(ymin, ymax, yres)
+    n_lon = len(glong)
+    n_lat = len(glati)
     resolved_layers = (
         layers if layers is not None and len(layers) > 0 else np.array([0], dtype=int)
     )
@@ -820,11 +864,11 @@ class Footprint:
                 ymax=ymax,
             )
 
-        # Output grid lower-left corners.
-        n_lon = max(1, int(round((xmax - xmin) / xres)))
-        n_lat = max(1, int(round((ymax - ymin) / yres)))
-        glong = xmin + np.arange(n_lon) * xres
-        glati = ymin + np.arange(n_lat) * yres
+        # Output grid lower-left corners for half-open extents [min, max).
+        glong = _grid_cell_starts(xmin, xmax, xres)
+        glati = _grid_cell_starts(ymin, ymax, yres)
+        n_lon = len(glong)
+        n_lat = len(glati)
         rs = (xres, yres)
 
         kernel_df, w = _compute_kernel_bandwidths(

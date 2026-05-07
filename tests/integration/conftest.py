@@ -9,10 +9,6 @@ Met directory resolution order:
   1. STILT_TEST_MET_DIR environment variable
   2. tests/stilt-tutorials/01-wbb/met within the repo (gitignored; clone with
      ``git clone --depth 1 https://github.com/uataq/stilt-tutorials tests/stilt-tutorials``)
-
-R-STILT reference footprint resolution order (for footprint fidelity tests):
-  1. STILT_R_REF_SIM_DIR environment variable
-  2. <repo>/../R-STILT_fork/out/by-id/201512100000_-112_40.5_5 (dev workspace)
 """
 
 import datetime as dt
@@ -30,7 +26,6 @@ from stilt.receptors import ColumnReceptor, MultiPointReceptor, Receptor
 
 from ..fixtures.r_stilt_reference import (
     reference_grid,
-    reference_r_sim_id,
     reference_receptor,
 )
 
@@ -190,31 +185,3 @@ def multipoint_config(met_dir) -> ModelConfig:
         numpar=100,
         footprints={"default": FootprintConfig(grid=grid)},
     )
-
-
-# ---------------------------------------------------------------------------
-# R-STILT reference simulation (footprint fidelity tests)
-# ---------------------------------------------------------------------------
-
-_R_SIM_ID = reference_r_sim_id()
-# Default: sibling R-STILT_fork dev workspace relative to the PYSTILT repo root
-_DEFAULT_R_REF_DIR = (
-    _TESTS_DIR.parent / ".." / "R-STILT_fork" / "out" / "by-id" / _R_SIM_ID
-)
-
-
-@pytest.fixture(scope="session")
-def r_ref_sim_dir() -> Path:
-    """
-    Directory of the R-STILT reference simulation used for footprint fidelity tests.
-
-    Override with STILT_R_REF_SIM_DIR if the R-STILT_fork workspace is elsewhere.
-    Default: <repo>/../R-STILT_fork/out/by-id/201512100000_-112_40.5_5 (dev workspace).
-    """
-    path = Path(os.environ.get("STILT_R_REF_SIM_DIR", _DEFAULT_R_REF_DIR)).resolve()
-    if not path.exists():
-        pytest.skip(
-            f"R-STILT reference sim dir not found: {path}\n"
-            "Set STILT_R_REF_SIM_DIR or run R-STILT_fork to generate the reference."
-        )
-    return path

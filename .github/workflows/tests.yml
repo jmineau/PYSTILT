@@ -52,7 +52,7 @@ jobs:
         report_type: test_results
 
   integration:
-    name: Integration tests
+    name: Integration + fidelity tests
     runs-on: ubuntu-latest  # HYSPLIT binary is linux_x64 only
 
     steps:
@@ -74,8 +74,69 @@ jobs:
     - name: Install dependencies
       run: uv sync --group dev
 
-    - name: Run integration tests
+    - name: Set up R
+      uses: r-lib/actions/setup-r@v2
+      with:
+        r-version: 'release'
+
+    - name: Clone uataq/stilt R source
+      run: git clone --depth 1 https://github.com/uataq/stilt stilt-r-src
+
+    - name: Build permute.so
+      run: |
+        cd stilt-r-src/r/src
+        R CMD SHLIB permute.f90
+
+    - name: Install R packages
+      run: |
+        Rscript -e "install.packages(c('arrow', 'dplyr', 'ncdf4', 'raster'), repos='https://cloud.r-project.org')"
+
+    - name: Run integration tests (includes live R fidelity tests)
+      env:
+        STILT_R_DIR: ${{ github.workspace }}/stilt-r-src
       run: uv run pytest tests/integration/ -v -m integration
+
+  r-synth:
+    name: R-STILT synthetic footprint tests
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v5
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v4
+      with:
+        enable-cache: true
+
+    - name: Set up Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: '3.12'
+
+    - name: Install dependencies
+      run: uv sync --group dev
+
+    - name: Set up R
+      uses: r-lib/actions/setup-r@v2
+      with:
+        r-version: 'release'
+
+    - name: Clone uataq/stilt R source
+      run: git clone --depth 1 https://github.com/uataq/stilt stilt-r-src
+
+    - name: Build permute.so
+      run: |
+        cd stilt-r-src/r/src
+        R CMD SHLIB permute.f90
+
+    - name: Install R packages
+      run: |
+        Rscript -e "install.packages(c('arrow', 'dplyr', 'ncdf4', 'raster'), repos='https://cloud.r-project.org')"
+
+    - name: Run R-STILT synthetic footprint tests
+      env:
+        STILT_R_DIR: ${{ github.workspace }}/stilt-r-src
+      run: uv run pytest tests/integration/r_stilt/test_footprint_synth.py -v
 
   package:
     name: Package smoke test

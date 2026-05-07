@@ -13,6 +13,7 @@ from stilt.footprint import (
     Footprint,
     _calc_digits,
     _cf_grid_mapping_attrs,
+    _grid_cell_starts,
     _interpolate_early_timesteps,
     _interpolation_times,
     _make_gauss_kernel,
@@ -62,6 +63,20 @@ def test_calc_digits_values():
 def test_calc_digits_invalid():
     with pytest.raises(ValueError):
         _calc_digits(0.0)
+
+
+def test_grid_cell_starts_use_complete_half_open_cells():
+    starts = _grid_cell_starts(0.0, 1.0, 0.3)
+
+    np.testing.assert_allclose(starts, [0.0, 0.3, 0.6])
+
+
+def test_grid_cell_starts_keep_decimal_boundary_cell():
+    starts = _grid_cell_starts(-113.0, -111.0, 0.01)
+
+    assert len(starts) == 200
+    assert starts[0] == pytest.approx(-113.0)
+    assert starts[-1] == pytest.approx(-111.01)
 
 
 def test_make_gauss_kernel_sigma_zero():
@@ -436,6 +451,72 @@ def test_calculate_smooth_factor_zero(point_receptor):
     assert foot is not None
 
 
+def test_calculate_irregular_grid_uses_complete_cells(point_receptor):
+    config = FootprintConfig(
+        grid=Grid(
+            xmin=-114.0,
+            xmax=-113.0,
+            ymin=39.0,
+            ymax=40.0,
+            xres=0.3,
+            yres=0.4,
+        ),
+        smooth_factor=0.0,
+    )
+    particles = _particles_in_domain()
+
+    foot = Footprint.calculate(particles, receptor=point_receptor, config=config)
+
+    np.testing.assert_allclose(foot.data.lon.values, [-113.85, -113.55, -113.25])
+    np.testing.assert_allclose(foot.data.lat.values, [39.2, 39.6])
+    assert foot.data.shape == (2, 2, 3)
+
+
+def test_calculate_empty_irregular_grid_uses_complete_cells(point_receptor):
+    config = FootprintConfig(
+        grid=Grid(
+            xmin=-114.0,
+            xmax=-113.0,
+            ymin=39.0,
+            ymax=40.0,
+            xres=0.3,
+            yres=0.4,
+        ),
+        smooth_factor=0.0,
+    )
+    particles = _particles_in_domain()
+    particles["long"] = 0.0
+    particles["lati"] = 0.0
+
+    foot = Footprint.calculate(particles, receptor=point_receptor, config=config)
+
+    assert foot.is_empty is True
+    np.testing.assert_allclose(foot.data.lon.values, [-113.85, -113.55, -113.25])
+    np.testing.assert_allclose(foot.data.lat.values, [39.2, 39.6])
+    assert foot.data.shape == (2, 2, 3)
+
+
+def test_calculate_non_square_resolution_is_finite(point_receptor):
+    config = FootprintConfig(
+        grid=Grid(
+            xmin=-114.0,
+            xmax=-113.0,
+            ymin=39.0,
+            ymax=40.0,
+            xres=0.01,
+            yres=0.05,
+        )
+    )
+    particles = _particles_in_domain()
+
+    foot = Footprint.calculate(particles, receptor=point_receptor, config=config)
+
+    assert foot.data.sizes["lon"] == 100
+    assert foot.data.sizes["lat"] == 20
+    assert np.isfinite(foot.data.values).all()
+    assert float(foot.data.values.min()) >= 0.0
+
+
 def test_calculate_grid_property(point_receptor):
     particles = _particles_in_domain()
     config = _foot_config()
@@ -497,3 +578,25 @@ def test_interpolate_early_timesteps_preserves_window_foot_sums():
     ]
     assert interpolated_sums == pytest.approx(original_sums)
     assert interpolated[["long", "lati", "foot"]].isna().sum().sum() == 0
+
+
+def test_interpolate_early_timesteps_matches_r_na_omit_with_extra_columns():
+    particles = pd.DataFrame(
+        {
+            "time": [-5.0, -50.0, -120.0, -5.0, -50.0, -120.0],
+            "indx": [1, 1, 1, 2, 2, 2],
+            "long": [-113.0, -114.0, -115.0, -112.0, -113.5, -115.0],
+            "lati": [39.0, 40.0, 41.0, 39.5, 40.5, 41.5],
+            "zagl": [5.0, 6.0, 7.0, 5.0, 6.0, 7.0],
+            "foot": [1.0, 2.0, 4.0, 3.0, 5.0, 7.0],
+        }
+    )
+
+    interpolated = _interpolate_early_timesteps(
+        particles, xres=0.01, yres=0.01, time_sign=-1
+    )
+
+    expected = particles.sort_values(
+        ["indx", "time"], ascending=[True, False], kind="stable"
+    ).reset_index(drop=True)
+    pd.testing.assert_frame_equal(interpolated, expected, check_dtype=False)
