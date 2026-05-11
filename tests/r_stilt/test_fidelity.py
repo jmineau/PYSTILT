@@ -37,9 +37,6 @@ from stilt.model import Model
 from ..conftest import integration
 from ..fixtures.r_stilt_reference import (
     ALL_SCENARIOS,
-    REFERENCE_MET_FILE_FORMAT,
-    REFERENCE_MET_FILE_INTERVAL_HOURS,
-    REFERENCE_TIME,
     ReferenceScenario,
 )
 
@@ -117,9 +114,9 @@ def _r_trajectory(
             str(work_dir),
             str(r_stilt_dir),
             str(met_dir),
-            REFERENCE_MET_FILE_FORMAT,
-            f"{REFERENCE_MET_FILE_INTERVAL_HOURS} hours",
-            REFERENCE_TIME.strftime("%Y-%m-%dT%H:%M:%S"),
+            scenario.met_file_format,
+            f"{int(scenario.met_file_tres[:-1])} hours",
+            scenario.time.strftime("%Y-%m-%dT%H:%M:%S"),
             _csv(scenario.longitude),
             _csv(scenario.latitude),
             _csv(scenario.altitude),

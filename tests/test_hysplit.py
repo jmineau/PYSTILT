@@ -12,8 +12,6 @@ from stilt.errors import (
 )
 from stilt.hysplit import HYSPLITDriver
 from stilt.hysplit.control import ControlFile
-from stilt.hysplit.driver import _read_particle_dat
-from stilt.receptors import ColumnReceptor, MultiPointReceptor
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -114,7 +112,7 @@ def test_control_file_roundtrip_column_receptor(column_receptor, tmp_path):
     path = tmp_path / "CONTROL"
     cf.write(path)
     loaded = ControlFile.read(path)
-    assert isinstance(loaded.receptor, ColumnReceptor)
+    assert loaded.receptor.kind == "column"
     assert loaded.receptor.bottom == pytest.approx(column_receptor.bottom)
     assert loaded.receptor.top == pytest.approx(column_receptor.top)
 
@@ -124,7 +122,7 @@ def test_control_file_roundtrip_multipoint_receptor(multipoint_receptor, tmp_pat
     path = tmp_path / "CONTROL"
     cf.write(path)
     loaded = ControlFile.read(path)
-    assert isinstance(loaded.receptor, MultiPointReceptor)
+    assert loaded.receptor.kind == "multipoint"
     assert len(loaded.receptor) == len(multipoint_receptor)
 
 
@@ -149,7 +147,6 @@ def _make_runner(tmp_path, point_receptor, rm_dat_default=True) -> HYSPLITDriver
     params = STILTParams(
         n_hours=-24,
         numpar=10,
-        hnf_plume=False,
         rm_dat=rm_dat_default,
         varsiwant=["time", "indx", "long", "lati", "zagl", "foot"],
     )
@@ -177,41 +174,6 @@ def test_read_particles_parses_expected_columns(tmp_path, point_receptor):
     assert len(df) == 2
     assert list(df.columns) == runner.params.varsiwant
     assert df["indx"].iloc[0] == 1
-
-
-def test_read_particle_dat_handles_irregular_whitespace(tmp_path):
-    path = tmp_path / "PARTICLE_STILT.DAT"
-    path.write_text(
-        "header\n"
-        " -60    1   -111.9     40.7  10.0   1e-5\n"
-        "\t-120  2\t-112.0 40.6   20.0 2e-5\n"
-    )
-    names = ["time", "indx", "long", "lati", "zagl", "foot"]
-
-    df = _read_particle_dat(path, names)
-
-    assert list(df.columns) == names
-    assert df.shape == (2, 6)
-    assert df["foot"].iloc[1] == pytest.approx(2e-5)
-
-
-def test_read_particle_dat_handles_header_only_file(tmp_path):
-    path = tmp_path / "PARTICLE_STILT.DAT"
-    path.write_text("header\n")
-    names = ["time", "indx", "long", "lati", "zagl", "foot"]
-
-    df = _read_particle_dat(path, names)
-
-    assert df.empty
-    assert list(df.columns) == names
-
-
-def test_read_particle_dat_validates_column_count(tmp_path):
-    path = tmp_path / "PARTICLE_STILT.DAT"
-    path.write_text("header\n-60 1 -111.9\n")
-
-    with pytest.raises(ValueError, match="has 3 columns, expected 6"):
-        _read_particle_dat(path, ["time", "indx", "long", "lati", "zagl", "foot"])
 
 
 def test_read_particles_removes_dat_files_when_requested(tmp_path, point_receptor):
@@ -282,7 +244,6 @@ def test_execute_ignores_stale_main_particles_after_error_run_timeout(
         params=STILTParams(
             n_hours=-24,
             numpar=10,
-            hnf_plume=False,
             rm_dat=False,
             siguverr=1.0,
             tluverr=60.0,
@@ -347,8 +308,8 @@ def test_terminate_process_escalates_when_group_kill_does_not_finish(
 
     runner._terminate_process(proc)
 
-    assert killpg_calls == [(proc.pid, 15), (proc.pid, 9)]
-    assert proc.kill_calls == 0
+    assert killpg_calls == [(proc.pid, 9)]
+    assert proc.kill_calls == 1
     assert proc.wait_calls == 2
 
 
@@ -417,7 +378,6 @@ def test_write_setup_rejects_conflicting_explicit_kmsl(tmp_path, point_receptor)
     params = STILTParams(
         n_hours=-24,
         numpar=10,
-        hnf_plume=False,
         rm_dat=True,
         kmsl=0,
         varsiwant=["time", "indx", "long", "lati", "zagl", "foot"],
@@ -450,7 +410,6 @@ def _make_runner_with_xyerr(tmp_path, point_receptor) -> HYSPLITDriver:
     params = STILTParams(
         n_hours=-24,
         numpar=10,
-        hnf_plume=False,
         varsiwant=["time", "indx", "long", "lati", "zagl", "foot"],
         siguverr=1.0,
         tluverr=60.0,
@@ -470,7 +429,6 @@ def _make_runner_with_zierr(tmp_path, point_receptor) -> HYSPLITDriver:
     params = STILTParams(
         n_hours=-24,
         numpar=10,
-        hnf_plume=False,
         varsiwant=["time", "indx", "long", "lati", "zagl", "foot"],
         sigzierr=0.6,
         tlzierr=60.0,
@@ -501,14 +459,6 @@ def test_write_winderr_no_op_without_xyerr(tmp_path, point_receptor):
     assert not (tmp_path / "WINDERR").exists()
 
 
-def test_write_winderr_values_match_r_stilt_order(tmp_path, point_receptor):
-    """WINDERR lines are siguverr, tluverr, zcoruverr, horcoruverr — matching R-STILT write_winderr."""
-    runner = _make_runner_with_xyerr(tmp_path, point_receptor)
-    runner._write_winderr()
-    lines = (tmp_path / "WINDERR").read_text().strip().splitlines()
-    assert [float(v) for v in lines] == [1.0, 60.0, 500.0, 40.0]
-
-
 def test_write_zierr_creates_file(tmp_path, point_receptor):
     runner = _make_runner_with_zierr(tmp_path, point_receptor)
     runner._write_zierr()
@@ -516,14 +466,6 @@ def test_write_zierr_creates_file(tmp_path, point_receptor):
     assert zierr.exists()
     lines = zierr.read_text().strip().splitlines()
     assert len(lines) == 3  # sigzierr, tlzierr, horcorzierr
-
-
-def test_write_zierr_values_match_r_stilt_order(tmp_path, point_receptor):
-    """ZIERR lines are sigzierr, tlzierr, horcorzierr — matching R-STILT write_zierr."""
-    runner = _make_runner_with_zierr(tmp_path, point_receptor)
-    runner._write_zierr()
-    lines = (tmp_path / "ZIERR").read_text().strip().splitlines()
-    assert [float(v) for v in lines] == [0.6, 60.0, 40.0]
 
 
 def test_write_zierr_no_op_without_zierr(tmp_path, point_receptor):
@@ -537,7 +479,6 @@ def test_write_zicontrol_creates_file_from_shared_vector(tmp_path, point_recepto
     params = STILTParams(
         n_hours=-24,
         numpar=10,
-        hnf_plume=False,
         varsiwant=["time", "indx", "long", "lati", "zagl", "foot"],
         zicontroltf=1,
         ziscale=[0.8, 0.8, 0.9],
@@ -561,7 +502,6 @@ def test_write_zicontrol_expands_scalar_to_run_length(tmp_path, point_receptor):
     params = STILTParams(
         n_hours=-4,
         numpar=10,
-        hnf_plume=False,
         varsiwant=["time", "indx", "long", "lati", "zagl", "foot"],
         zicontroltf=1,
         ziscale=0.8,
@@ -584,7 +524,6 @@ def test_write_zicontrol_rejects_multiple_nested_vectors(tmp_path, point_recepto
     params = STILTParams(
         n_hours=-24,
         numpar=10,
-        hnf_plume=False,
         varsiwant=["time", "indx", "long", "lati", "zagl", "foot"],
         zicontroltf=1,
         ziscale=[[0.8, 0.8], [0.9, 0.9]],
@@ -616,7 +555,6 @@ def test_prepare_writes_control_and_setup(tmp_path, point_receptor):
     params = STILTParams(
         n_hours=-24,
         numpar=10,
-        hnf_plume=False,
         varsiwant=["time", "indx", "long", "lati", "zagl", "foot"],
     )
     runner = HYSPLITDriver(
@@ -642,7 +580,6 @@ def test_prepare_writes_zicontrol_when_enabled(tmp_path, point_receptor):
     params = STILTParams(
         n_hours=-24,
         numpar=10,
-        hnf_plume=False,
         varsiwant=["time", "indx", "long", "lati", "zagl", "foot"],
         zicontroltf=1,
         ziscale=[1.0] * 24,

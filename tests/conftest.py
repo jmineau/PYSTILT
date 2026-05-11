@@ -16,7 +16,12 @@ from stilt.config import (
 )
 from stilt.receptors import ColumnReceptor, MultiPointReceptor, PointReceptor
 
-from .fixtures.r_stilt_reference import reference_grid, reference_receptor
+from .fixtures.r_stilt_reference import (
+    REFERENCE_MET_FILE_FORMAT,
+    REFERENCE_TIME,
+    reference_grid,
+    reference_receptor,
+)
 
 # ---------------------------------------------------------------------------
 # Marker - apply to every test that needs real met + HYSPLIT
@@ -29,24 +34,69 @@ integration = pytest.mark.integration
 # ---------------------------------------------------------------------------
 
 _TESTS_DIR = Path(__file__).parent
-_DEFAULT_MET_DIR = _TESTS_DIR / "stilt-tutorials" / "01-wbb" / "met"
+_MET_CACHE = _TESTS_DIR / "met_cache"
+
+# SLV bounding box for bbox-cropped HRRRSource downloads (~16 MB per 6h block)
+_SLV_BBOX = (-114.0, 39.0, -110.0, 42.0)  # (west, south, east, north)
+
+# Individual 6h HRRR blocks needed by all 12 fidelity scenarios.
+# Each entry is a (block_start, block_end) pair that maps to exactly one file.
+# Winter blocks cover day_backward (24h), which needs blocks from the previous day.
+# Bump the GHA cache key in tests.yml when you add blocks here.
+_MET_BLOCKS: list[tuple[str, str]] = [
+    # Winter 2021-01-15 (includes day_backward 24h)
+    ("2021-01-14 06:00", "2021-01-14 11:59"),
+    ("2021-01-14 12:00", "2021-01-14 17:59"),
+    ("2021-01-14 18:00", "2021-01-14 23:59"),
+    ("2021-01-15 00:00", "2021-01-15 05:59"),
+    ("2021-01-15 06:00", "2021-01-15 11:59"),
+    # Summer 2021-07-15
+    ("2021-07-15 00:00", "2021-07-15 05:59"),
+    ("2021-07-15 06:00", "2021-07-15 11:59"),
+]
 
 
 @pytest.fixture(scope="session")
 def met_dir() -> Path:
     """
-    Path to 01-wbb HRRR ARL met files.
+    Path to HRRR ARL met files for fidelity tests.
 
-    Override with STILT_TEST_MET_DIR if stilt-tutorials is elsewhere.
-    Default: tests/stilt-tutorials/01-wbb/met (gitignored).
+    Resolution order:
+    1. STILT_TEST_MET_DIR env var — point at a pre-downloaded cache directory.
+    2. STILT_TEST_FETCH_MET=1 — download all 7 bbox-cropped 6h blocks in parallel
+       via HRRRSource into tests/met_cache/ (gitignored; ~112 MB total; cached in CI).
+       Already-present files are skipped automatically.
+    3. Otherwise skip.
     """
-    path = Path(os.environ.get("STILT_TEST_MET_DIR", _DEFAULT_MET_DIR))
-    if not path.exists():
-        pytest.skip(
-            f"Met directory not found: {path}\n"
-            "Clone uataq/stilt-tutorials or set STILT_TEST_MET_DIR."
-        )
-    return path
+    env = os.environ.get("STILT_TEST_MET_DIR")
+    if env and Path(env).exists():
+        return Path(env)
+
+    if os.environ.get("STILT_TEST_FETCH_MET") == "1":
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+
+        from arlmet.sources import HRRRSource
+
+        _MET_CACHE.mkdir(exist_ok=True)
+        src = HRRRSource()
+
+        with ThreadPoolExecutor(max_workers=len(_MET_BLOCKS)) as pool:
+            futures = {
+                pool.submit(src.fetch, s, e, local_dir=_MET_CACHE, bbox=_SLV_BBOX): (
+                    s,
+                    e,
+                )
+                for s, e in _MET_BLOCKS
+            }
+            for fut in as_completed(futures):
+                fut.result()  # surface any download errors immediately
+
+        return _MET_CACHE
+
+    pytest.skip(
+        "Met files not available. Set STILT_TEST_MET_DIR to a directory with "
+        "HRRR ARL files, or set STILT_TEST_FETCH_MET=1 to download automatically."
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -175,7 +225,7 @@ def wbb_receptor():
 def wbb_column_receptor():
     """Column receptor at WBB - same lat/lon, two heights."""
     return ColumnReceptor(
-        time=dt.datetime(2015, 12, 10, 0, 0),
+        time=REFERENCE_TIME,
         longitude=-112.0,
         latitude=40.5,
         bottom=5.0,
@@ -185,9 +235,9 @@ def wbb_column_receptor():
 
 @pytest.fixture(scope="session")
 def wbb_multipoint_receptor():
-    """Three-location multipoint receptor matching R-STILT test_run_stilt_multipoint."""
+    """Three-location multipoint receptor at WBB area."""
     return MultiPointReceptor(
-        time=dt.datetime(2015, 12, 10, 0, 0),
+        time=REFERENCE_TIME,
         longitudes=[-112.0, -111.5, -111.0],
         latitudes=[40.5, 41.0, 41.5],
         altitudes=[5.0, 500.0, 1000.0],
@@ -207,7 +257,7 @@ def wbb_config(met_dir, wbb_grid) -> ModelConfig:
         mets={
             "hrrr": {
                 "directory": met_dir,
-                "file_format": "%Y%m%d.%Hz.hrrra",
+                "file_format": REFERENCE_MET_FILE_FORMAT,
                 "file_tres": "6h",
             }
         },
@@ -226,7 +276,7 @@ def traj_only_config(met_dir) -> ModelConfig:
         mets={
             "hrrr": {
                 "directory": met_dir,
-                "file_format": "%Y%m%d.%Hz.hrrra",
+                "file_format": REFERENCE_MET_FILE_FORMAT,
                 "file_tres": "6h",
             }
         },
@@ -245,7 +295,7 @@ def multifoot_config(met_dir, wbb_grid) -> ModelConfig:
         mets={
             "hrrr": {
                 "directory": met_dir,
-                "file_format": "%Y%m%d.%Hz.hrrra",
+                "file_format": REFERENCE_MET_FILE_FORMAT,
                 "file_tres": "6h",
             }
         },
@@ -266,7 +316,7 @@ def multipoint_config(met_dir) -> ModelConfig:
         mets={
             "hrrr": {
                 "directory": met_dir,
-                "file_format": "%Y%m%d.%Hz.hrrra",
+                "file_format": REFERENCE_MET_FILE_FORMAT,
                 "file_tres": "6h",
             }
         },

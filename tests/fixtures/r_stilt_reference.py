@@ -9,7 +9,7 @@ how to build the PYSTILT objects it needs.
 from __future__ import annotations
 
 import datetime as dt
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Literal
 
 # ---------------------------------------------------------------------------
@@ -17,7 +17,8 @@ from typing import Literal
 # ---------------------------------------------------------------------------
 
 REFERENCE_MET = "hrrr"
-REFERENCE_TIME = dt.datetime(2015, 12, 10, 0, 0)
+REFERENCE_TIME = dt.datetime(2021, 1, 15, 6, 0)
+REFERENCE_SUMMER_TIME = dt.datetime(2021, 7, 15, 6, 0)
 REFERENCE_LONGITUDE = -112.0
 REFERENCE_LATITUDE = 40.5
 REFERENCE_ALTITUDE = 5.0
@@ -26,7 +27,7 @@ REFERENCE_N_HOURS = -6
 REFERENCE_NUMPAR = 1000
 REFERENCE_KRAND = 2
 REFERENCE_SEED = 42
-REFERENCE_MET_FILE_FORMAT = "%Y%m%d.%Hz.hrrra"
+REFERENCE_MET_FILE_FORMAT = "%Y%m%d_%H"
 REFERENCE_MET_FILE_INTERVAL_HOURS = 6
 
 REFERENCE_XMIN = -113.0
@@ -140,6 +141,10 @@ class ReferenceScenario:
     xres: float
     yres: float
     compare_columns: tuple[str, ...]
+    # Optional — override per-scenario; defaults match the shared reference constants
+    time: dt.datetime = field(default_factory=lambda: REFERENCE_TIME)
+    met_file_format: str = field(default_factory=lambda: REFERENCE_MET_FILE_FORMAT)
+    met_file_tres: str = "6h"
 
     # ------------------------------------------------------------------
     # PYSTILT object factories (lazy imports to avoid circular load)
@@ -151,7 +156,7 @@ class ReferenceScenario:
 
         if self.receptor_type == "point":
             return PointReceptor(
-                REFERENCE_TIME,
+                self.time,
                 float(self.longitude),  # type: ignore[arg-type]
                 float(self.latitude),  # type: ignore[arg-type]
                 float(self.altitude),  # type: ignore[arg-type]
@@ -159,14 +164,14 @@ class ReferenceScenario:
         if self.receptor_type == "column":
             bottom, top = self.altitude  # type: ignore[misc]
             return ColumnReceptor(
-                REFERENCE_TIME,
+                self.time,
                 float(self.longitude),  # type: ignore[arg-type]
                 float(self.latitude),  # type: ignore[arg-type]
                 bottom=float(bottom),
                 top=float(top),
             )
         return MultiPointReceptor(
-            REFERENCE_TIME,
+            self.time,
             longitudes=list(self.longitude),  # type: ignore[arg-type]
             latitudes=list(self.latitude),  # type: ignore[arg-type]
             altitudes=list(self.altitude),  # type: ignore[arg-type]
@@ -204,8 +209,8 @@ class ReferenceScenario:
                 "mets": {
                     REFERENCE_MET: {
                         "directory": met_dir,
-                        "file_format": REFERENCE_MET_FILE_FORMAT,
-                        "file_tres": reference_python_met_file_tres(),
+                        "file_format": self.met_file_format,
+                        "file_tres": self.met_file_tres,
                     }
                 },
                 "n_hours": self.n_hours,
@@ -467,7 +472,85 @@ DAY_BACKWARD = ReferenceScenario(
     compare_columns=_TRAJ_COLS_WITH_HNF,
 )
 
-#: All canonical scenarios in priority order (POINT has committed fixtures first).
+#: Summer convective PBL — boundary layer depth drives HNF dilution very differently
+#: from the winter reference scenarios.
+HRRR_SUMMER = ReferenceScenario(
+    name="hrrr_summer",
+    description="Point receptor, 2021-07-15 06Z — summer convective PBL, hnf_plume=True",
+    receptor_type="point",
+    longitude=REFERENCE_LONGITUDE,
+    latitude=REFERENCE_LATITUDE,
+    altitude=REFERENCE_ALTITUDE,
+    n_hours=REFERENCE_N_HOURS,
+    numpar=REFERENCE_NUMPAR,
+    krand=REFERENCE_KRAND,
+    seed=REFERENCE_SEED,
+    hnf_plume=True,
+    smooth_factor=1.0,
+    time_integrate=False,
+    xmin=REFERENCE_XMIN,
+    xmax=REFERENCE_XMAX,
+    ymin=REFERENCE_YMIN,
+    ymax=REFERENCE_YMAX,
+    xres=REFERENCE_XRES,
+    yres=REFERENCE_YRES,
+    compare_columns=_TRAJ_COLS_WITH_HNF,
+    time=REFERENCE_SUMMER_TIME,
+)
+
+#: Receptor placed near the SW corner of the footprint domain so that a
+#: significant fraction of back-trajectories exit the grid.  Exercises
+#: particle-binning at grid boundaries and the out-of-domain mask.
+EDGE_RECEPTOR = ReferenceScenario(
+    name="edge_receptor",
+    description="Receptor at SW domain corner (-112.95°, 39.55°) — particle binning near grid boundary",
+    receptor_type="point",
+    longitude=-112.95,
+    latitude=39.55,
+    altitude=REFERENCE_ALTITUDE,
+    n_hours=REFERENCE_N_HOURS,
+    numpar=REFERENCE_NUMPAR,
+    krand=REFERENCE_KRAND,
+    seed=REFERENCE_SEED,
+    hnf_plume=True,
+    smooth_factor=1.0,
+    time_integrate=False,
+    xmin=REFERENCE_XMIN,
+    xmax=REFERENCE_XMAX,
+    ymin=REFERENCE_YMIN,
+    ymax=REFERENCE_YMAX,
+    xres=REFERENCE_XRES,
+    yres=REFERENCE_YRES,
+    compare_columns=_TRAJ_COLS_WITH_HNF,
+)
+
+#: Three-location multipoint receptor in summer — highest-risk combination for
+#: operational SLV inversions: HNF correction + convective PBL + multipoint.
+SUMMER_MULTIPOINT = ReferenceScenario(
+    name="summer_multipoint",
+    description="Three-location multipoint receptor, 2021-07-15 06Z — summer HNF + multipoint",
+    receptor_type="multipoint",
+    longitude=(-112.0, -111.5, -111.0),
+    latitude=(40.5, 41.0, 41.5),
+    altitude=(0.0, 500.0, 1000.0),
+    n_hours=REFERENCE_N_HOURS,
+    numpar=REFERENCE_NUMPAR,
+    krand=REFERENCE_KRAND,
+    seed=REFERENCE_SEED,
+    hnf_plume=True,
+    smooth_factor=1.0,
+    time_integrate=False,
+    xmin=-113.0,
+    xmax=-110.5,
+    ymin=39.5,
+    ymax=42.0,
+    xres=REFERENCE_XRES,
+    yres=REFERENCE_YRES,
+    compare_columns=_TRAJ_COLS_WITH_HNF,
+    time=REFERENCE_SUMMER_TIME,
+)
+
+#: All canonical scenarios in priority order.
 ALL_SCENARIOS: list[ReferenceScenario] = [
     POINT,
     COLUMN,
@@ -478,6 +561,9 @@ ALL_SCENARIOS: list[ReferenceScenario] = [
     SMOOTH_ZERO,
     COARSE_GRID,
     DAY_BACKWARD,
+    HRRR_SUMMER,
+    EDGE_RECEPTOR,
+    SUMMER_MULTIPOINT,
 ]
 
 
