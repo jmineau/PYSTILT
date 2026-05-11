@@ -23,7 +23,7 @@ from stilt.execution import (
 )
 from stilt.index import OutputSummary
 from stilt.index.sqlite import SqliteIndex
-from stilt.meteorology import MetSource
+from stilt.meteorology import MetStream
 from stilt.model import Model as _Model
 from stilt.receptors import PointReceptor, Receptor
 from stilt.simulation import SimID
@@ -61,8 +61,8 @@ def sim_id(receptor: Receptor) -> SimID:
 
 
 @pytest.fixture
-def met(tmp_path) -> MetSource:
-    return MetSource(
+def met(tmp_path) -> MetStream:
+    return MetStream(
         "hrrr",
         directory=tmp_path / "met",
         file_format="%Y%m%d_%H",

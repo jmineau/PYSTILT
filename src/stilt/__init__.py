@@ -12,7 +12,7 @@ from .config import (
     RuntimeSettings,
 )
 from .footprint import Footprint
-from .meteorology import MetSource
+from .meteorology import MetStream
 from .model import Model
 from .receptors import (
     ColumnReceptor,
@@ -58,7 +58,7 @@ __all__ = [
     "ReceptorID",
     "read_receptors",
     # Meteorology
-    "MetSource",
+    "MetStream",
     # Transforms
     "ParticleTransform",
 ]

@@ -36,7 +36,7 @@ from stilt.execution import (
 )
 from stilt.index import IndexCounts, SimulationIndex
 from stilt.index.factory import resolve_index
-from stilt.meteorology import MetSource
+from stilt.meteorology import MetStream
 from stilt.receptors import Receptor
 from stilt.simulation import SimID
 from stilt.storage import (
@@ -119,7 +119,7 @@ class Model:
         Science-facing receptor accessor.
     simulations : SimulationCollection
         Registered simulation handles backed by the output index.
-    mets : dict[str, MetSource]
+    mets : dict[str, MetStream]
         Named meteorology streams.
     trajectories : TrajectoryCollection
         Cross-simulation trajectory accessor.
@@ -169,7 +169,7 @@ class Model:
         self._config = _config_or_kwargs(config, kwargs, ModelConfig)
 
         # Lazy caches for expensive properties
-        self._mets: dict[str, MetSource] | None = None
+        self._mets: dict[str, MetStream] | None = None
         self._receptors = receptors  # may be None, a Receptor, or an iterable of Receptors; resolved lazily in the accessor
         self._index: SimulationIndex | None = None
         self._simulations: SimulationCollection | None = None
@@ -354,21 +354,25 @@ class Model:
         return self._footprints
 
     @property
-    def mets(self) -> dict[str, MetSource]:
-        """Named met streams, with subgrid cache paths resolved under compute_root."""
+    def mets(self) -> dict[str, MetStream]:
+        """Named met streams, resolved from config."""
         if self._mets is None:
             self._mets = {}
             for name, config in self.config.mets.items():
-                self._mets[name] = MetSource(
+                self._mets[name] = MetStream(
                     name,
                     directory=config.directory,
                     file_format=config.file_format,
                     file_tres=config.file_tres,
                     n_min=config.n_min,
+                    source_type=config.source,
+                    source_kwargs=config.source_kwargs,
+                    backend=config.backend,
                     subgrid_enable=config.subgrid_enable,
                     subgrid_bounds=config.subgrid_bounds,
                     subgrid_buffer=config.subgrid_buffer,
                     subgrid_levels=config.subgrid_levels,
+                    subgrid_dir=config.subgrid_dir,
                 )
         return self._mets
 

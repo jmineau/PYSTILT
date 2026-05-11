@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Literal
 from pydantic import BaseModel, ConfigDict
 
 from stilt.config import FootprintConfig, STILTParams
-from stilt.meteorology import MetSource
+from stilt.meteorology import MetStream
 from stilt.receptors import Receptor
 from stilt.simulation import SimID
 from stilt.storage import ProjectFiles, SimulationFiles, Storage
@@ -33,7 +33,7 @@ class SimulationTask(BaseModel):
 
     compute_root: Path
     sim_id: SimID
-    meteorology: MetSource
+    meteorology: MetStream
     receptor: Receptor
     params: STILTParams
     skip_existing: bool = False

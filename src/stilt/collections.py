@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Generic, Protocol, TypeVar, overload
 from stilt.config import STILTParams
 from stilt.footprint import Footprint
 from stilt.index import OutputSummary, SimulationIndex
-from stilt.meteorology import MetSource
+from stilt.meteorology import MetStream
 from stilt.receptors import PointReceptor, Receptor, read_receptors
 from stilt.selection import (
     filter_ids,
@@ -179,7 +179,7 @@ class SimulationCollection:
         self,
         output_dir: Path,
         params: STILTParams,
-        mets: dict[str, MetSource],
+        mets: dict[str, MetStream],
         receptors: ReceptorCollection,
         footprint_names: list[str],
         index: SimulationIndex,

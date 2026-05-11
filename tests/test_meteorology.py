@@ -3,25 +3,291 @@
 import datetime as dt
 import logging
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import pytest
 
+from stilt.config.meteorology import MetConfig
+from stilt.config.spatial import Bounds
 from stilt.errors import MeteorologyError
-from stilt.meteorology import MetSource
+from stilt.meteorology import MetStream
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
 
-def _make_met(tmp_path: Path, file_format: str, tres: str, n_min: int = 1) -> MetSource:
-    return MetSource(
+def _make_met(tmp_path: Path, file_format: str, tres: str, n_min: int = 1) -> MetStream:
+    return MetStream(
         met_id="hrrr",
         directory=tmp_path,
         file_format=file_format,
         file_tres=tres,
         n_min=n_min,
     )
+
+
+# ---------------------------------------------------------------------------
+# MetConfig validation
+# ---------------------------------------------------------------------------
+
+
+def test_metconfig_archive_mode_requires_file_format(tmp_path):
+    """Archive mode (no source) requires file_format and file_tres."""
+    with pytest.raises(Exception, match="file_format and file_tres are required"):
+        MetConfig(directory=tmp_path)
+
+
+def test_metconfig_archive_mode_valid(tmp_path):
+    cfg = MetConfig(directory=tmp_path, file_format="%Y%m%d_%H", file_tres="1h")
+    assert cfg.file_format == "%Y%m%d_%H"
+    assert cfg.source is None
+
+
+def test_metconfig_source_mode_no_file_format_needed(tmp_path):
+    """Source mode does not require file_format or file_tres."""
+    cfg = MetConfig(directory=tmp_path, source="hrrr")
+    assert cfg.source == "hrrr"
+    assert cfg.file_format is None
+
+
+def test_metconfig_unknown_source_raises(tmp_path):
+    with pytest.raises(Exception, match="Unknown arlmet source"):
+        MetConfig(directory=tmp_path, source="bogus_product")
+
+
+def test_metconfig_subgrid_requires_bounds(tmp_path):
+    with pytest.raises(Exception, match="subgrid_bounds is required"):
+        MetConfig(
+            directory=tmp_path,
+            source="hrrr",
+            subgrid_enable=True,
+        )
+
+
+def test_metconfig_subgrid_valid(tmp_path):
+    cfg = MetConfig(
+        directory=tmp_path,
+        source="hrrr",
+        subgrid_enable=True,
+        subgrid_bounds=Bounds(xmin=-114, xmax=-110, ymin=39, ymax=42),
+    )
+    assert cfg.subgrid_enable is True
+
+
+def test_metconfig_extra_fields_as_source_kwargs(tmp_path):
+    """Extra inline fields land in source_kwargs (for e.g. NAMSSource domain)."""
+    cfg = MetConfig(directory=tmp_path, source="nams", domain="ak")
+    assert cfg.source_kwargs == {"domain": "ak"}
+
+
+# ---------------------------------------------------------------------------
+# MetStream source mode (download via arlmet)
+# ---------------------------------------------------------------------------
+
+
+def _make_source_met(tmp_path: Path, source: str = "hrrr", **kwargs) -> MetStream:
+    return MetStream(
+        met_id=source,
+        directory=tmp_path,
+        source_type=source,
+        **kwargs,
+    )
+
+
+def test_metsource_download_calls_fetch(tmp_path):
+    """In source mode, required_files delegates to arlmet source.fetch()."""
+    mock_source = MagicMock()
+    mock_source.fetch.return_value = [tmp_path / "file1", tmp_path / "file2"]
+    for f in mock_source.fetch.return_value:
+        f.touch()
+
+    met = _make_source_met(tmp_path)
+    met._arlmet_source = mock_source  # inject mock
+
+    files = met.required_files(r_time="2024-07-18 12:00", n_hours=-24)
+
+    mock_source.fetch.assert_called_once()
+    call_kwargs = mock_source.fetch.call_args
+    assert call_kwargs.kwargs["local_dir"] == tmp_path
+    assert call_kwargs.kwargs["backend"] == "s3"
+    assert call_kwargs.kwargs["bbox"] is None
+    assert len(files) == 2
+
+
+def test_metsource_download_with_subgrid_passes_bbox(tmp_path):
+    """source mode + subgrid_enable passes bbox to arlmet fetch."""
+    mock_source = MagicMock()
+    mock_source.fetch.return_value = [tmp_path / "file1"]
+    (tmp_path / "file1").touch()
+
+    bounds = Bounds(xmin=-114.0, xmax=-110.0, ymin=39.0, ymax=42.0)
+    met = MetStream(
+        met_id="hrrr",
+        directory=tmp_path,
+        source_type="hrrr",
+        subgrid_enable=True,
+        subgrid_bounds=bounds,
+        subgrid_buffer=0.5,
+    )
+    met._arlmet_source = mock_source
+
+    met.required_files(r_time="2024-07-18 12:00", n_hours=-24)
+
+    bbox = mock_source.fetch.call_args.kwargs["bbox"]
+    assert bbox == (-114.5, 38.5, -109.5, 42.5)
+
+
+def test_metsource_download_n_min_raises(tmp_path):
+    """MeteorologyError when fetch returns fewer files than n_min."""
+    mock_source = MagicMock()
+    mock_source.fetch.return_value = []
+
+    met = _make_source_met(tmp_path, n_min=2)
+    met._arlmet_source = mock_source
+
+    with pytest.raises(MeteorologyError, match="Insufficient"):
+        met.required_files(r_time="2024-07-18 12:00", n_hours=-24)
+
+
+# ---------------------------------------------------------------------------
+# MetStream archive subsetting via arlmet.extract_subset
+# ---------------------------------------------------------------------------
+
+
+def test_metsource_archive_subgrid_calls_extract_subset(tmp_path):
+    """Archive-mode subsetting calls extract_subset and stages the cached copy."""
+    source_dir = tmp_path / "archive"
+    source_dir.mkdir()
+    src_file = source_dir / "20230101_12"
+    src_file.write_text("met")
+
+    bounds = Bounds(xmin=-114.0, xmax=-110.0, ymin=39.0, ymax=42.0)
+    met = MetStream(
+        met_id="hrrr",
+        directory=source_dir,
+        file_format="%Y%m%d_%H",
+        file_tres="1h",
+        subgrid_enable=True,
+        subgrid_bounds=bounds,
+        subgrid_buffer=0.0,
+    )
+
+    target_dir = tmp_path / "sim" / "met"
+    with patch("arlmet.extract_subset") as mock_extract:
+        # Make extract_subset create the cache file so staging can proceed
+        def _fake_extract(src, dst, **kw):
+            dst.write_text("subsetted")
+
+        mock_extract.side_effect = _fake_extract
+        staged = met.stage_files_for_simulation(
+            r_time=dt.datetime(2023, 1, 1, 12), n_hours=-1, target_dir=target_dir
+        )
+
+    mock_extract.assert_called_once()
+    call_args = mock_extract.call_args
+    assert call_args.args[0] == src_file.resolve()
+    assert call_args.kwargs["bbox"] == (-114.0, 39.0, -110.0, 42.0)
+    # staged file should be in target_dir
+    assert len(staged) == 1
+    assert staged[0].parent == target_dir
+
+
+def test_metsource_archive_subgrid_reuses_cache(tmp_path):
+    """extract_subset is not called again when the cached file already exists."""
+    source_dir = tmp_path / "archive"
+    source_dir.mkdir()
+    src_file = source_dir / "20230101_12"
+    src_file.write_text("met")
+
+    bounds = Bounds(xmin=-114.0, xmax=-110.0, ymin=39.0, ymax=42.0)
+    met = MetStream(
+        met_id="hrrr",
+        directory=source_dir,
+        file_format="%Y%m%d_%H",
+        file_tres="1h",
+        subgrid_enable=True,
+        subgrid_bounds=bounds,
+    )
+
+    # Pre-populate the cache
+    subgrid_dir = met._resolved_subgrid_dir()
+    subgrid_dir.mkdir(parents=True)
+    (subgrid_dir / src_file.name).write_text("cached")
+
+    target_dir = tmp_path / "sim" / "met"
+    with patch("arlmet.extract_subset") as mock_extract:
+        met.stage_files_for_simulation(
+            r_time=dt.datetime(2023, 1, 1, 12), n_hours=-1, target_dir=target_dir
+        )
+
+    mock_extract.assert_not_called()
+
+
+def test_metsource_archive_subgrid_levels(tmp_path):
+    """subgrid_levels=N passes levels=list(range(N)) to extract_subset."""
+    source_dir = tmp_path / "archive"
+    source_dir.mkdir()
+    src_file = source_dir / "20230101_12"
+    src_file.write_text("met")
+
+    bounds = Bounds(xmin=-114.0, xmax=-110.0, ymin=39.0, ymax=42.0)
+    met = MetStream(
+        met_id="hrrr",
+        directory=source_dir,
+        file_format="%Y%m%d_%H",
+        file_tres="1h",
+        subgrid_enable=True,
+        subgrid_bounds=bounds,
+        subgrid_levels=5,
+    )
+
+    target_dir = tmp_path / "sim" / "met"
+    with patch("arlmet.extract_subset") as mock_extract:
+
+        def _fake_extract(src, dst, **kw):
+            dst.write_text("subsetted")
+
+        mock_extract.side_effect = _fake_extract
+        met.stage_files_for_simulation(
+            r_time=dt.datetime(2023, 1, 1, 12), n_hours=-1, target_dir=target_dir
+        )
+
+    assert mock_extract.call_args.kwargs["levels"] == [0, 1, 2, 3, 4]
+
+
+def test_metsource_archive_subgrid_auto_dir(tmp_path):
+    """subgrid_dir defaults to directory/subgrid when not set."""
+    source_dir = tmp_path / "archive"
+    source_dir.mkdir()
+    bounds = Bounds(xmin=-114.0, xmax=-110.0, ymin=39.0, ymax=42.0)
+    met = MetStream(
+        met_id="hrrr",
+        directory=source_dir,
+        file_format="%Y%m%d_%H",
+        file_tres="1h",
+        subgrid_enable=True,
+        subgrid_bounds=bounds,
+    )
+    assert met._resolved_subgrid_dir() == source_dir / "subgrid"
+
+
+def test_metsource_archive_subgrid_custom_dir(tmp_path):
+    """subgrid_dir is used when explicitly set."""
+    source_dir = tmp_path / "archive"
+    custom_dir = tmp_path / "custom_subgrid"
+    source_dir.mkdir()
+    bounds = Bounds(xmin=-114.0, xmax=-110.0, ymin=39.0, ymax=42.0)
+    met = MetStream(
+        met_id="hrrr",
+        directory=source_dir,
+        file_format="%Y%m%d_%H",
+        file_tres="1h",
+        subgrid_enable=True,
+        subgrid_bounds=bounds,
+        subgrid_dir=custom_dir,
+    )
+    assert met._resolved_subgrid_dir() == custom_dir
 
 
 def _touch_files(tmp_path: Path, names: list[str]) -> list[Path]:

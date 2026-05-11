@@ -25,6 +25,7 @@ classifiers = [
     "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
+    "arlmet>=0.1.0a1",
     "fsspec>=2024.2",
     "netcdf4>=1.6.5",
     "numpy>=1.24",

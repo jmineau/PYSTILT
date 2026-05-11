@@ -19,7 +19,7 @@ from stilt.errors import (
 )
 from stilt.footprint import Footprint
 from stilt.hysplit import HYSPLITDriver
-from stilt.meteorology import MetID, MetSource
+from stilt.meteorology import MetID, MetStream
 from stilt.receptors import LocationID, Receptor, ReceptorID
 from stilt.storage import SimulationFiles, Store, resolve_directory
 from stilt.trajectory import Trajectories
@@ -110,7 +110,7 @@ class Simulation:
 
     def __init__(
         self,
-        meteorology: MetSource,
+        meteorology: MetStream,
         receptor: Receptor,
         params: STILTParams,
         directory: str | Path | None = None,

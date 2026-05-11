@@ -15,7 +15,7 @@ from stilt.config import (
 )
 from stilt.errors import HYSPLITTimeoutError
 from stilt.footprint import Footprint
-from stilt.meteorology import MetSource
+from stilt.meteorology import MetStream
 from stilt.simulation import SimID, Simulation
 from stilt.storage import LocalStore
 from stilt.trajectory import Trajectories
@@ -52,16 +52,20 @@ def _sim(
     sim_dir = tmp_path / "simulations" / "by-id" / sid
     sim_dir.mkdir(parents=True, exist_ok=True)
     mc = _met_config(tmp_path, **(met_kwargs or {}))
-    met = MetSource(
+    met = MetStream(
         "hrrr",
         directory=mc.directory,
         file_format=mc.file_format,
         file_tres=mc.file_tres,
         n_min=mc.n_min,
+        source_type=mc.source,
+        source_kwargs=mc.source_kwargs,
+        backend=mc.backend,
         subgrid_enable=mc.subgrid_enable,
         subgrid_bounds=mc.subgrid_bounds,
         subgrid_buffer=mc.subgrid_buffer,
         subgrid_levels=mc.subgrid_levels,
+        subgrid_dir=mc.subgrid_dir,
     )
     return Simulation(
         directory=sim_dir,
@@ -129,7 +133,7 @@ def test_simid_is_pathlike(point_receptor, tmp_path):
 
 def test_simulation_status_none_when_dir_missing(point_receptor, tmp_path):
     mc = _met_config(tmp_path)
-    met = MetSource(
+    met = MetStream(
         "hrrr",
         directory=mc.directory,
         file_format=mc.file_format,
@@ -150,7 +154,7 @@ def test_simulation_without_directory_uses_canonical_temp_sim_id(
     point_receptor, tmp_path
 ):
     mc = _met_config(tmp_path)
-    met = MetSource(
+    met = MetStream(
         "hrrr",
         directory=mc.directory,
         file_format=mc.file_format,
@@ -174,24 +178,26 @@ def test_simulation_status_complete_when_traj_present(point_receptor, tmp_path):
     assert sim.status == "complete"
 
 
-def test_meteorology_requires_explicit_subgrid_path(point_receptor, tmp_path):
-    with pytest.raises(
-        NotImplementedError,
-        match="subgrid_enable is not yet implemented",
-    ):
+def test_meteorology_subgrid_requires_bounds(point_receptor, tmp_path):
+    """subgrid_enable=True without bounds raises a ValidationError at config time."""
+    with pytest.raises(Exception, match="subgrid_bounds is required"):
         _sim(tmp_path, point_receptor, met_kwargs={"subgrid_enable": True})
 
 
-def test_meteorology_requires_bounds_when_subgrid_enabled(point_receptor, tmp_path):
-    with pytest.raises(
-        NotImplementedError,
-        match="subgrid_enable is not yet implemented",
-    ):
-        _sim(
-            tmp_path,
-            point_receptor,
-            met_kwargs={"subgrid_enable": tmp_path / "subgrid"},
-        )
+def test_meteorology_subgrid_enable_accepts_bool(point_receptor, tmp_path):
+    """subgrid_enable=True with bounds is accepted (no longer raises NotImplementedError)."""
+    from stilt.config.spatial import Bounds
+
+    # Should not raise — subgrid is now implemented
+    sim = _sim(
+        tmp_path,
+        point_receptor,
+        met_kwargs={
+            "subgrid_enable": True,
+            "subgrid_bounds": Bounds(xmin=-114, xmax=-110, ymin=39, ymax=42),
+        },
+    )
+    assert sim.meteorology.subgrid_enable is True
 
 
 def test_simulation_met_files_stage_into_compute_dir(point_receptor, tmp_path):
@@ -217,7 +223,7 @@ def test_simulation_run_trajectories_uses_source_met_files_in_metadata(
     source_dir.mkdir(parents=True)
     source_file = source_dir / point_receptor.time.strftime("%Y%m%d_%H")
     source_file.touch()
-    sim.meteorology = MetSource(
+    sim.meteorology = MetStream(
         "hrrr",
         directory=source_dir,
         file_format="%Y%m%d_%H",

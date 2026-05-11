@@ -232,6 +232,25 @@ wheels = [
 ]
 
 [[package]]
+name = "arlmet"
+version = "0.1.0a1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "numpy", version = "2.4.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "pandas", version = "2.3.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "pandas", version = "3.0.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "pyproj", version = "3.7.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "pyproj", version = "3.7.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "xarray", version = "2025.6.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "xarray", version = "2026.2.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/06/eb/92c8d17d37d394159d1e731df4335e6df753062cf20623f070374c725072/arlmet-0.1.0a1.tar.gz", hash = "sha256:1fe19aef5a598c2fc375bbee0db26c5846f5a935f78586cd9b277580e4f79807", size = 84219, upload-time = "2026-05-11T10:36:34.071Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f0/a8/de8aa106f6e582929e6c3d23c917799b92ee77a819ae6fc6efa15ed8308c/arlmet-0.1.0a1-py3-none-any.whl", hash = "sha256:d8c32c02d96a8f7da10e22caeee36b07968c1b1ce4d54a144fd2ca417cd2acaa", size = 64850, upload-time = "2026-05-11T10:36:32.522Z" },
+]
+
+[[package]]
 name = "async-timeout"
 version = "5.0.1"
 source = { registry = "https://pypi.org/simple" }
@@ -3357,6 +3376,7 @@ name = "pystilt"
 version = "0.1.0a1"
 source = { editable = "." }
 dependencies = [
+    { name = "arlmet" },
     { name = "fsspec" },
     { name = "netcdf4", version = "1.7.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' and platform_machine == 'ARM64' and sys_platform == 'win32'" },
     { name = "netcdf4", version = "1.7.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' or platform_machine != 'ARM64' or sys_platform != 'win32'" },
@@ -3426,6 +3446,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "arlmet", specifier = ">=0.1.0a1" },
     { name = "fsspec", specifier = ">=2024.2" },
     { name = "gcsfs", marker = "extra == 'cloud'", specifier = ">=2024.2" },
     { name = "kubernetes", marker = "extra == 'cloud'", specifier = ">=28.0" },

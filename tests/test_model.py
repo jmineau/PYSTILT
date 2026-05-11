@@ -927,11 +927,9 @@ def test_register_pending_tracks_scene_counts(tmp_path, point_receptor):
     }
 
 
-def test_met_config_raises_not_implemented_for_subgrid_enable(tmp_path, point_receptor):
-    with pytest.raises(
-        NotImplementedError,
-        match="subgrid_enable is not yet implemented",
-    ):
+def test_met_config_subgrid_requires_bounds(tmp_path, point_receptor):
+    """subgrid_enable=True without subgrid_bounds raises a ValidationError."""
+    with pytest.raises(Exception, match="subgrid_bounds is required"):
         ModelConfig(
             mets={
                 "hrrr": MetConfig(
