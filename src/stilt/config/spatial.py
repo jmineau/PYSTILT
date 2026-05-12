@@ -27,44 +27,35 @@ def kmsl_from_vertical_reference(reference: VerticalReference) -> int:
 
 
 class Bounds(BaseModel):
-    """Immutable geographic bounding box used for spatial subsetting."""
+    """Immutable geographic bounding box (always lon/lat degrees)."""
 
     model_config = ConfigDict(frozen=True)
 
-    xmin: float = cfg_field(
-        ...,
-        description="Minimum x-coordinate (longitude for geographic CRS).",
-    )
-    xmax: float = cfg_field(
-        ...,
-        description="Maximum x-coordinate (longitude for geographic CRS).",
-    )
-    ymin: float = cfg_field(
-        ...,
-        description="Minimum y-coordinate (latitude for geographic CRS).",
-    )
-    ymax: float = cfg_field(
-        ...,
-        description="Maximum y-coordinate (latitude for geographic CRS).",
-    )
-    projection: str = cfg_field(
-        "+proj=longlat",
-        description="PROJ string defining the coordinate reference system.",
-    )
+    xmin: float = cfg_field(..., description="Western longitude (degrees).")
+    xmax: float = cfg_field(..., description="Eastern longitude (degrees).")
+    ymin: float = cfg_field(..., description="Southern latitude (degrees).")
+    ymax: float = cfg_field(..., description="Northern latitude (degrees).")
 
 
 class Grid(Bounds):
-    """Gridded spatial domain for footprint computation."""
+    """Footprint grid: lon/lat bounds, optional output projection, cell resolution."""
 
     model_config = ConfigDict(frozen=True)
 
     xres: float = cfg_field(
         ...,
-        description="Cell width in the projection's x units (degrees for geographic CRS).",
+        description="Cell width in projection units (degrees for longlat, metres for UTM, etc.).",
     )
     yres: float = cfg_field(
         ...,
-        description="Cell height in the projection's y units (degrees for geographic CRS).",
+        description="Cell height in projection units (degrees for longlat, metres for UTM, etc.).",
+    )
+    projection: str = cfg_field(
+        "+proj=longlat",
+        description=(
+            "Output CRS as a PROJ string.  Bounds are always lon/lat; "
+            "particles and bounds are projected to this CRS before gridding."
+        ),
     )
 
     @property

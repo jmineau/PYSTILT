@@ -370,7 +370,10 @@ def _project_particles_to_crs(
     ymax: float,
 ) -> tuple[pd.DataFrame, float, float, float, float]:
     """
-    Project lon/lat particle positions and domain bounds to the output CRS.
+    Project lon/lat particles and lon/lat bounds to the output CRS.
+
+    Grid bounds are always specified in lon/lat degrees; this function projects
+    them to the target CRS alongside the particle positions.
 
     Only called for non-longlat projections.  ``pyproj`` is imported lazily
     since the default longlat path does not need it.
@@ -382,13 +385,13 @@ def _project_particles_to_crs(
     tr = Transformer.from_crs("EPSG:4326", projection, always_xy=True)
     p = p.copy()
     p["long"], p["lati"] = tr.transform(p["long"].values, p["lati"].values)
-    corners = tr.transform([xmin, xmax], [ymin, ymax])
+    corners_x, corners_y = tr.transform([xmin, xmax], [ymin, ymax])
     return (
         p,
-        float(np.min(corners[0])),
-        float(np.max(corners[0])),
-        float(np.min(corners[1])),
-        float(np.max(corners[1])),
+        float(np.min(corners_x)),
+        float(np.max(corners_x)),
+        float(np.min(corners_y)),
+        float(np.max(corners_y)),
     )
 
 

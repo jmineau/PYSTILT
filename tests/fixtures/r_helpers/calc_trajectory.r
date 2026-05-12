@@ -11,13 +11,18 @@
 #   7  run_time ISO, UTC
 #   8  receptor longitudes, comma separated
 #   9  receptor latitudes, comma separated
-#  10  receptor heights AGL, comma separated
+#  10  receptor heights AGL or MSL, comma separated
 #  11  n_hours
 #  12  numpar
 #  13  krand
 #  14  seed
 #  15  hnf_plume
 #  16  rm_dat
+#  17  kmsl              (optional; 0=AGL default, 1=MSL)
+#  18  siguverr          (optional; "" disables XY wind error)
+#  19  tluverr           (optional)
+#  20  zcoruverr         (optional)
+#  21  horcoruverr       (optional)
 
 args <- commandArgs(trailingOnly = TRUE)
 output_parquet  <- args[1]
@@ -36,6 +41,12 @@ krand           <- as.numeric(args[13])
 seed            <- as.numeric(args[14])
 hnf_plume       <- toupper(args[15]) == "TRUE"
 rm_dat          <- toupper(args[16]) == "TRUE"
+kmsl            <- if (length(args) >= 17 && nchar(args[17]) > 0) as.numeric(args[17]) else 0
+siguverr_arg    <- if (length(args) >= 18) args[18] else ""
+tluverr_arg     <- if (length(args) >= 19) args[19] else ""
+zcoruverr_arg   <- if (length(args) >= 20) args[20] else ""
+horcoruverr_arg <- if (length(args) >= 21) args[21] else ""
+use_winderr     <- nchar(siguverr_arg) > 0
 
 dir.create(work_dir, recursive = TRUE, showWarnings = FALSE)
 dir.create(dirname(output_parquet), recursive = TRUE, showWarnings = FALSE)
@@ -98,7 +109,7 @@ namelist <- list(
   khmax = 9999,
   kmix0 = 150,
   kmixd = 3,
-  kmsl = 0,
+  kmsl = kmsl,
   kpuff = 0,
   krand = krand,
   krnd = 6,
@@ -172,3 +183,33 @@ if (is.null(particle)) {
 }
 
 write_parquet(particle, output_parquet)
+
+# If XY wind-error parameters were supplied, run a second HYSPLIT trajectory
+# with winderrtf=1 and the WINDERR file to produce the error trajectory.
+# PYSTILT does the same two-run sequence; comparing both ensures fidelity
+# for the error-trajectory pathway.
+if (use_winderr) {
+  winderr_path <- file.path(work_dir, "WINDERR")
+  writeLines(
+    c(siguverr_arg, tluverr_arg, zcoruverr_arg, horcoruverr_arg),
+    winderr_path
+  )
+  error_parquet <- sub("\\.parquet$", "_error.parquet", output_parquet)
+  namelist$winderrtf <- 1
+  error_particle <- calc_trajectory(
+    namelist  = namelist,
+    rundir    = work_dir,
+    emisshrs  = 0.01,
+    hnf_plume = hnf_plume,
+    met_files = met_files,
+    n_hours   = n_hours,
+    output    = output,
+    rm_dat    = rm_dat,
+    timeout   = 3600,
+    w_option  = 0,
+    z_top     = 25000
+  )
+  if (!is.null(error_particle)) {
+    write_parquet(error_particle, error_parquet)
+  }
+}

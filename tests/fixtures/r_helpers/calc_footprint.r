@@ -82,6 +82,8 @@ if (need_anchors) {
 # Synthetic tests compare only lat/lon/foot values, so any valid POSIXct works.
 r_run_time <- as.POSIXct("2015-12-10 00:00:00", tz = "UTC")
 
+# Bounds always arrive in lon/lat (degrees); R-STILT's calc_footprint expects
+# the same convention and projects internally when projection != longlat.
 calc_footprint(p,
                r_run_time     = r_run_time,
                output         = output_nc,

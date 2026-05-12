@@ -148,6 +148,15 @@ class ReferenceScenario:
     # If set, this scenario's trajectory is physically identical to the named scenario.
     # The fixture skips the R+HYSPLIT trajectory run and test_trajectory_matches_r skips.
     shares_trajectory_with: str | None = field(default=None)
+    # Footprint grid projection (PROJ string); "+proj=longlat" is geographic lon/lat.
+    projection: str = field(default="+proj=longlat")
+    # Receptor vertical reference: "agl" (default) or "msl".
+    altitude_ref: str = field(default="agl")
+    # XY wind-error parameters; all four must be set together or all None.
+    siguverr: float | None = field(default=None)
+    tluverr: float | None = field(default=None)
+    zcoruverr: float | None = field(default=None)
+    horcoruverr: float | None = field(default=None)
 
     # ------------------------------------------------------------------
     # PYSTILT object factories (lazy imports to avoid circular load)
@@ -163,6 +172,7 @@ class ReferenceScenario:
                 float(self.longitude),  # type: ignore[arg-type]
                 float(self.latitude),  # type: ignore[arg-type]
                 float(self.altitude),  # type: ignore[arg-type]
+                altitude_ref=self.altitude_ref,  # type: ignore[arg-type]
             )
         if self.receptor_type == "column":
             bottom, top = self.altitude  # type: ignore[misc]
@@ -172,12 +182,14 @@ class ReferenceScenario:
                 float(self.latitude),  # type: ignore[arg-type]
                 bottom=float(bottom),
                 top=float(top),
+                altitude_ref=self.altitude_ref,  # type: ignore[arg-type]
             )
         return MultiPointReceptor(
             self.time,
             longitudes=list(self.longitude),  # type: ignore[arg-type]
             latitudes=list(self.latitude),  # type: ignore[arg-type]
             altitudes=list(self.altitude),  # type: ignore[arg-type]
+            altitude_ref=self.altitude_ref,  # type: ignore[arg-type]
         )
 
     def make_grid(self):
@@ -191,6 +203,7 @@ class ReferenceScenario:
             ymax=self.ymax,
             xres=self.xres,
             yres=self.yres,
+            projection=self.projection,
         )
 
     def make_footprint_config(self):
@@ -207,24 +220,32 @@ class ReferenceScenario:
         """Return a :class:`~stilt.config.ModelConfig` configured for this scenario."""
         from stilt.config import ModelConfig
 
-        return ModelConfig.model_validate(
-            {
-                "mets": {
-                    REFERENCE_MET: {
-                        "directory": met_dir,
-                        "file_format": self.met_file_format,
-                        "file_tres": self.met_file_tres,
-                    }
-                },
-                "n_hours": self.n_hours,
-                "numpar": self.numpar,
-                "krand": self.krand,
-                "seed": self.seed,
-                "hnf_plume": self.hnf_plume,
-                "varsiwant": REFERENCE_VARSIWANT,
-                "footprints": {"default": self.make_footprint_config()},
-            }
-        )
+        config: dict = {
+            "mets": {
+                REFERENCE_MET: {
+                    "directory": met_dir,
+                    "file_format": self.met_file_format,
+                    "file_tres": self.met_file_tres,
+                }
+            },
+            "n_hours": self.n_hours,
+            "numpar": self.numpar,
+            "krand": self.krand,
+            "seed": self.seed,
+            "hnf_plume": self.hnf_plume,
+            "varsiwant": REFERENCE_VARSIWANT,
+            "footprints": {"default": self.make_footprint_config()},
+        }
+        if self.siguverr is not None:
+            config.update(
+                {
+                    "siguverr": self.siguverr,
+                    "tluverr": self.tluverr,
+                    "zcoruverr": self.zcoruverr,
+                    "horcoruverr": self.horcoruverr,
+                }
+            )
+        return ModelConfig.model_validate(config)
 
     def py_sim_id(self) -> str:
         """Return the PYSTILT simulation ID (``met_YYYYMMDDHHMM_location``)."""
@@ -644,6 +665,125 @@ HIGH_SMOOTH = ReferenceScenario(
     shares_trajectory_with="point",
 )
 
+#: Forward 6-hour run from 2021-01-14 12Z to 18Z — verifies time_sign=+1 in both
+#: PYSTILT footprint calculation and R-STILT.  Met files 20210114_12 and 20210114_18
+#: are present in the test cache.
+FORWARD = ReferenceScenario(
+    name="forward",
+    description="Point receptor, n_hours=+6 — forward trajectory; time_sign=+1 in footprint",
+    receptor_type="point",
+    longitude=REFERENCE_LONGITUDE,
+    latitude=REFERENCE_LATITUDE,
+    altitude=REFERENCE_ALTITUDE,
+    n_hours=6,
+    numpar=REFERENCE_NUMPAR,
+    krand=REFERENCE_KRAND,
+    seed=REFERENCE_SEED,
+    hnf_plume=True,
+    smooth_factor=1.0,
+    time_integrate=False,
+    xmin=REFERENCE_XMIN,
+    xmax=REFERENCE_XMAX,
+    ymin=REFERENCE_YMIN,
+    ymax=REFERENCE_YMAX,
+    xres=REFERENCE_XRES,
+    yres=REFERENCE_YRES,
+    compare_columns=_TRAJ_COLS_WITH_HNF,
+    time=dt.datetime(2021, 1, 14, 12, 0),
+)
+
+#: UTM Zone 12N projected footprint — trajectory is identical to POINT (same
+#: receptor/met), only the grid CRS changes.  Tests that particle projection and
+#: kernel scaling work correctly in a projected coordinate system.
+PROJECTED_CRS = ReferenceScenario(
+    name="projected_crs",
+    description=(
+        "Point receptor, UTM Zone 12N grid (xres=yres=2000 m) — projected CRS footprint"
+    ),
+    receptor_type="point",
+    longitude=REFERENCE_LONGITUDE,
+    latitude=REFERENCE_LATITUDE,
+    altitude=REFERENCE_ALTITUDE,
+    n_hours=REFERENCE_N_HOURS,
+    numpar=REFERENCE_NUMPAR,
+    krand=REFERENCE_KRAND,
+    seed=REFERENCE_SEED,
+    hnf_plume=True,
+    smooth_factor=1.0,
+    time_integrate=False,
+    xmin=REFERENCE_XMIN,
+    xmax=REFERENCE_XMAX,
+    ymin=REFERENCE_YMIN,
+    ymax=REFERENCE_YMAX,
+    xres=2000.0,
+    yres=2000.0,
+    compare_columns=_TRAJ_COLS_WITH_HNF,
+    projection="+proj=utm +zone=12 +datum=WGS84 +units=m +no_defs",
+    shares_trajectory_with="point",
+)
+
+#: MSL-altitude receptor — WBB sits at ~1330 m MSL; 5 m AGL = 1335 m MSL.
+#: Setting altitude_ref="msl" sets kmsl=1 in SETUP.CFG so HYSPLIT interprets
+#: the release height as MSL.  Trajectory should be nearly identical to POINT
+#: (negligible height difference) but validates the kmsl pathway.
+MSL_ALTITUDE = ReferenceScenario(
+    name="msl_altitude",
+    description="Point receptor at 1335 m MSL (altitude_ref='msl', kmsl=1) — tests kmsl pathway",
+    receptor_type="point",
+    longitude=REFERENCE_LONGITUDE,
+    latitude=REFERENCE_LATITUDE,
+    altitude=1335.0,
+    n_hours=REFERENCE_N_HOURS,
+    numpar=REFERENCE_NUMPAR,
+    krand=REFERENCE_KRAND,
+    seed=REFERENCE_SEED,
+    hnf_plume=True,
+    smooth_factor=1.0,
+    time_integrate=False,
+    xmin=REFERENCE_XMIN,
+    xmax=REFERENCE_XMAX,
+    ymin=REFERENCE_YMIN,
+    ymax=REFERENCE_YMAX,
+    xres=REFERENCE_XRES,
+    yres=REFERENCE_YRES,
+    compare_columns=_TRAJ_COLS_WITH_HNF,
+    altitude_ref="msl",
+)
+
+#: XY wind-error trajectory — sets siguverr/tluverr/zcoruverr/horcoruverr,
+#: triggering a second HYSPLIT run with WINDERR.  Compares both the main
+#: trajectory (should be identical to POINT) and the error trajectory against
+#: R-STILT's second HYSPLIT run.
+WINDERR = ReferenceScenario(
+    name="winderr",
+    description=(
+        "Point receptor with XY wind-error params (siguverr=1 m/s) — "
+        "second HYSPLIT run with WINDERR"
+    ),
+    receptor_type="point",
+    longitude=REFERENCE_LONGITUDE,
+    latitude=REFERENCE_LATITUDE,
+    altitude=REFERENCE_ALTITUDE,
+    n_hours=REFERENCE_N_HOURS,
+    numpar=REFERENCE_NUMPAR,
+    krand=REFERENCE_KRAND,
+    seed=REFERENCE_SEED,
+    hnf_plume=True,
+    smooth_factor=1.0,
+    time_integrate=False,
+    xmin=REFERENCE_XMIN,
+    xmax=REFERENCE_XMAX,
+    ymin=REFERENCE_YMIN,
+    ymax=REFERENCE_YMAX,
+    xres=REFERENCE_XRES,
+    yres=REFERENCE_YRES,
+    compare_columns=_TRAJ_COLS_WITH_HNF,
+    siguverr=1.0,
+    tluverr=60.0,
+    zcoruverr=500.0,
+    horcoruverr=40.0,
+)
+
 #: All canonical scenarios in priority order.
 ALL_SCENARIOS: list[ReferenceScenario] = [
     POINT,
@@ -661,6 +801,10 @@ ALL_SCENARIOS: list[ReferenceScenario] = [
     LOW_AGL,
     MET_GRID_EDGE,
     HIGH_SMOOTH,
+    FORWARD,
+    PROJECTED_CRS,
+    MSL_ALTITUDE,
+    WINDERR,
 ]
 
 

@@ -63,6 +63,9 @@ def scenario_outputs(request, met_dir, rscript, r_stilt_dir, tmp_path_factory) -
     if not foot_files:
         pytest.fail(f"[{scenario.name}] No footprint NetCDF found in {sim_dir}")
 
+    error_traj_files = list(sim_dir.glob("*_error.parquet"))
+    error_traj_path = error_traj_files[0] if error_traj_files else None
+
     # Skip R trajectory run for scenarios whose transport is identical to another.
     # test_trajectory_matches_r will pytest.skip() when r_traj is None.
     if scenario.shares_trajectory_with is not None:
@@ -76,12 +79,26 @@ def scenario_outputs(request, met_dir, rscript, r_stilt_dir, tmp_path_factory) -
             "foot": foot_files[0],
             "setup": sim_dir / "SETUP.CFG",
             "r_traj": None,
+            "r_error_traj": None,
+            "error_traj": None,
         }
 
     # Run R trajectory once here so test_trajectory_matches_r can reuse it
     # instead of paying a second HYSPLIT invocation.
     r_traj_path = project_dir / "r_traj.parquet"
     r_work_dir = project_dir / "r_run"
+
+    # Derive kmsl from the scenario's altitude_ref.
+    kmsl = 0 if scenario.altitude_ref == "agl" else 1
+
+    # WINDERR args: pass "" when unused so calc_trajectory.r can detect absence.
+    winderr_args = [
+        str(scenario.siguverr) if scenario.siguverr is not None else "",
+        str(scenario.tluverr) if scenario.tluverr is not None else "",
+        str(scenario.zcoruverr) if scenario.zcoruverr is not None else "",
+        str(scenario.horcoruverr) if scenario.horcoruverr is not None else "",
+    ]
+
     t0 = time.perf_counter()
     result = subprocess.run(
         [
@@ -103,6 +120,8 @@ def scenario_outputs(request, met_dir, rscript, r_stilt_dir, tmp_path_factory) -
             str(scenario.seed),
             str(scenario.hnf_plume).upper(),
             "TRUE",
+            str(kmsl),
+            *winderr_args,
         ],
         capture_output=True,
         text=True,
@@ -116,10 +135,21 @@ def scenario_outputs(request, met_dir, rscript, r_stilt_dir, tmp_path_factory) -
         )
     r_traj = pd.read_parquet(r_traj_path)
 
+    # Load the R error trajectory if WINDERR produced one.
+    r_error_traj = None
+    if scenario.siguverr is not None:
+        r_error_path = r_traj_path.parent / (
+            r_traj_path.stem + "_error" + r_traj_path.suffix
+        )
+        if r_error_path.exists():
+            r_error_traj = pd.read_parquet(r_error_path)
+
     return {
         "scenario": scenario,
         "traj": traj_files[0],
         "foot": foot_files[0],
         "setup": sim_dir / "SETUP.CFG",
         "r_traj": r_traj,
+        "r_error_traj": r_error_traj,
+        "error_traj": error_traj_path,
     }

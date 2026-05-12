@@ -144,7 +144,7 @@ def _r_footprint(
     return ds
 
 
-def _r_footprint_debug(
+def _r_footprint_stages(
     tmp_path: Path,
     rscript: str,
     r_stilt_dir: Path,
@@ -162,7 +162,7 @@ def _r_footprint_debug(
     result = subprocess.run(
         [
             rscript,
-            str(_R_HELPERS / "calc_footprint_debug.r"),
+            str(_R_HELPERS / "calc_footprint_stages.r"),
             str(p_path),
             str(out_dir),
             str(grid.xmin),
@@ -181,7 +181,7 @@ def _r_footprint_debug(
     )
     if result.returncode != 0:
         raise RuntimeError(
-            f"calc_footprint_debug.r failed (exit {result.returncode}):\n"
+            f"calc_footprint_stages.r failed (exit {result.returncode}):\n"
             f"STDERR:\n{result.stderr}\nSTDOUT:\n{result.stdout}"
         )
 
@@ -221,7 +221,7 @@ def _py_footprint(
     return ds
 
 
-def _py_footprint_debug(
+def _py_footprint_stages(
     particles: pd.DataFrame,
     grid: Grid = _GRID,
     smooth_factor: float = 1.0,
@@ -307,7 +307,7 @@ def _py_footprint_debug(
     }
 
 
-def _assert_debug_tables_close(
+def _assert_stages_close(
     py: dict[str, pd.DataFrame],
     r: dict[str, pd.DataFrame],
     *,
@@ -957,10 +957,10 @@ def test_calc_footprint_intermediate_tables_match_r(rscript, r_stilt_dir, tmp_pa
         )
     p = pd.concat(rows, ignore_index=True)
 
-    py = _py_footprint_debug(p)
-    r = _r_footprint_debug(tmp_path, rscript, r_stilt_dir, p)
+    py = _py_footprint_stages(p)
+    r = _r_footprint_stages(tmp_path, rscript, r_stilt_dir, p)
 
-    _assert_debug_tables_close(py, r, source_particles=p, label="longlat")
+    _assert_stages_close(py, r, source_particles=p, label="longlat")
 
 
 def test_calc_footprint_utm_intermediate_tables_match_r(rscript, r_stilt_dir, tmp_path):
@@ -1023,10 +1023,10 @@ def test_calc_footprint_utm_intermediate_tables_match_r(rscript, r_stilt_dir, tm
         )
     p = pd.concat(rows, ignore_index=True)
 
-    py = _py_footprint_debug(p, grid=grid)
-    r = _r_footprint_debug(tmp_path, rscript, r_stilt_dir, p, grid=grid)
+    py = _py_footprint_stages(p, grid=grid)
+    r = _r_footprint_stages(tmp_path, rscript, r_stilt_dir, p, grid=grid)
 
-    _assert_debug_tables_close(py, r, source_particles=p, label="utm")
+    _assert_stages_close(py, r, source_particles=p, label="utm")
 
 
 def test_mass_conservation_smooth_zero(rscript, r_stilt_dir, tmp_path):

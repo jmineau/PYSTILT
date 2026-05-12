@@ -44,6 +44,13 @@ pytestmark = [pytest.mark.fidelity]
 _R_HELPERS = Path(__file__).parents[1] / "fixtures" / "r_helpers"
 
 
+def _normalize_footprint_dims(ds: xr.Dataset) -> xr.Dataset:
+    """Rename x/y → lon/lat for projected-CRS footprints (both PYSTILT and R use x/y)."""
+    if "x" in ds.dims and "y" in ds.dims and "lat" not in ds.dims:
+        return ds.rename({"x": "lon", "y": "lat"})
+    return ds
+
+
 # ---------------------------------------------------------------------------
 # Deep footprint comparison
 # ---------------------------------------------------------------------------
@@ -76,18 +83,24 @@ def _assert_footprint_deep(
     py_foot = py_ds.foot.values.astype(np.float64)
     r_foot = r_ds.foot.values.astype(np.float64)
 
+    # Longlat coordinates are in degrees — require near-exact agreement.
+    # Projected coordinates are in metres; pyproj and R's proj4 both wrap PROJ
+    # but may produce O(µm) differences, so allow up to 1 mm.
+    is_longlat = "+proj=longlat" in scenario.projection
+    coord_atol = 1e-12 if is_longlat else 1e-3
+
     np.testing.assert_allclose(
         py_ds.lat.values,
         r_ds.lat.values,
         rtol=0,
-        atol=1e-12,
+        atol=coord_atol,
         err_msg=f"[{scenario.name}] lat coordinates differ.",
     )
     np.testing.assert_allclose(
         py_ds.lon.values,
         r_ds.lon.values,
         rtol=0,
-        atol=1e-12,
+        atol=coord_atol,
         err_msg=f"[{scenario.name}] lon coordinates differ.",
     )
 
@@ -217,6 +230,7 @@ def _r_footprint_from_traj(
             str(scenario.smooth_factor),
             str(scenario.time_integrate).upper(),
             str(r_stilt_dir),
+            scenario.projection,
         ],
         capture_output=True,
         text=True,
@@ -248,7 +262,7 @@ def _r_footprint_from_traj(
     ds = xr.open_dataset(nc_path)
     ds.load()
     ds.close()
-    return ds
+    return _normalize_footprint_dims(ds)
 
 
 # ---------------------------------------------------------------------------
@@ -355,9 +369,8 @@ def test_footprint_matches_r(
     """
     s: ReferenceScenario = scenario_outputs["scenario"]
 
-    py_ds = xr.open_dataset(scenario_outputs["foot"])
+    py_ds = _normalize_footprint_dims(xr.open_dataset(scenario_outputs["foot"]))
     py_ds.load()
-    py_ds.close()
 
     r_ds = _r_footprint_from_traj(
         tmp_path / s.name,
@@ -368,3 +381,65 @@ def test_footprint_matches_r(
     )
 
     _assert_footprint_deep(py_ds, r_ds, s)
+
+
+@integration
+def test_error_trajectory_matches_r(
+    scenario_outputs: dict,
+    r_stilt_dir: Path,
+) -> None:
+    """
+    PYSTILT error trajectory matches R-STILT's second HYSPLIT run with WINDERR.
+
+    Only runs for scenarios that have XY wind-error parameters (siguverr etc.).
+    Both implementations write the same WINDERR file content and run the same
+    hycs_std binary a second time with winderrtf=1, so the error trajectories
+    should agree at the same tolerance as the main trajectory.
+    """
+    s: ReferenceScenario = scenario_outputs["scenario"]
+    if scenario_outputs.get("r_error_traj") is None:
+        pytest.skip(f"[{s.name}] No WINDERR params — not a WINDERR scenario")
+
+    _assert_hysplit_binary_matches_r(r_stilt_dir)
+
+    error_traj_path = scenario_outputs.get("error_traj")
+    if error_traj_path is None:
+        pytest.fail(f"[{s.name}] PYSTILT produced no *_error.parquet in sim dir")
+
+    compare_columns = _trajectory_compare_columns(s)
+    py_error = pd.read_parquet(error_traj_path)
+    r_error = scenario_outputs["r_error_traj"]
+
+    assert len(py_error) == len(r_error), (
+        f"[{s.name}] error trajectory row counts differ: "
+        f"PYSTILT={len(py_error)}, R-STILT={len(r_error)}"
+    )
+    assert set(compare_columns) <= set(py_error.columns), (
+        f"[{s.name}] PYSTILT error trajectory missing columns: "
+        f"{sorted(set(compare_columns) - set(py_error.columns))}"
+    )
+    assert set(compare_columns) <= set(r_error.columns), (
+        f"[{s.name}] R-STILT error trajectory missing columns: "
+        f"{sorted(set(compare_columns) - set(r_error.columns))}"
+    )
+
+    py_sorted = _sorted_trajectory(py_error, compare_columns)
+    r_sorted = _sorted_trajectory(r_error, compare_columns)
+
+    np.testing.assert_array_equal(
+        py_sorted["indx"].to_numpy(),
+        r_sorted["indx"].to_numpy(),
+        err_msg=f"[{s.name}] error trajectory particle indices differ.",
+    )
+    np.testing.assert_array_equal(
+        py_sorted["time"].to_numpy(),
+        r_sorted["time"].to_numpy(),
+        err_msg=f"[{s.name}] error trajectory times differ.",
+    )
+    np.testing.assert_allclose(
+        py_sorted.drop(columns=["indx", "time"]).to_numpy(dtype=float),
+        r_sorted.drop(columns=["indx", "time"]).to_numpy(dtype=float),
+        rtol=1e-7,
+        atol=1e-10,
+        err_msg=f"[{s.name}] error trajectory values differ from R-STILT.",
+    )
