@@ -262,7 +262,7 @@ def test_cli_run(tmp_path, wbb_config, wbb_receptor):
     wbb_config.to_yaml(project_dir / "config.yaml")
 
     (project_dir / "receptors.csv").write_text(
-        "time,lati,long,zagl\n2015-12-10 00:00:00,40.5,-112.0,5.0\n"
+        "time,lati,long,zagl\n2021-01-15 06:00:00,40.5,-112.0,5.0\n"
     )
 
     result = CliRunner().invoke(app, ["run", str(project_dir)])

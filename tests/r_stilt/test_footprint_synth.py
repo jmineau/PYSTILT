@@ -51,6 +51,8 @@ from stilt.footprint import (
 from stilt.receptors import PointReceptor
 from stilt.trajectory import calc_plume_dilution
 
+pytestmark = [pytest.mark.fidelity]
+
 # ---------------------------------------------------------------------------
 # Shared constants
 # ---------------------------------------------------------------------------
@@ -119,9 +121,11 @@ def _r_footprint(
 
     if not nc_path.exists():
         # calc_footprint returned NULL (all particles outside domain).
-        # Return an all-zero Dataset so the caller can assert values == 0.
-        lat = _grid_cell_starts(grid.ymin, grid.ymax, grid.yres)
-        lon = _grid_cell_starts(grid.xmin, grid.xmax, grid.xres)
+        # Use cell centres (+ 0.5*res) to match PYSTILT's coordinate convention.
+        glong = _grid_cell_starts(grid.xmin, grid.xmax, grid.xres)
+        glati = _grid_cell_starts(grid.ymin, grid.ymax, grid.yres)
+        lon = glong + grid.xres / 2
+        lat = glati + grid.yres / 2
         n_lat = len(lat)
         n_lon = len(lon)
         return xr.Dataset(
@@ -1023,6 +1027,148 @@ def test_calc_footprint_utm_intermediate_tables_match_r(rscript, r_stilt_dir, tm
     r = _r_footprint_debug(tmp_path, rscript, r_stilt_dir, p, grid=grid)
 
     _assert_debug_tables_close(py, r, source_particles=p, label="utm")
+
+
+def test_mass_conservation_smooth_zero(rscript, r_stilt_dir, tmp_path):
+    """
+    smooth_factor=0 footprint sum equals total in-domain foot / n_particles.
+
+    When smooth_factor=0 the kernel is a 1×1 delta function, so convolution
+    is a no-op and no mass moves between cells.  The footprint array sum must
+    therefore equal sum(foot_values) / n_particles for particles that land
+    inside the domain — a discrete mass-conservation identity.
+
+    Both tools are checked independently against the analytical expected value,
+    then against each other.
+    """
+    n_par = 20
+    rng = np.random.default_rng(42)
+    rows = []
+    for t in [-1.0, -61.0]:
+        rows.append(
+            pd.DataFrame(
+                {
+                    "time": [t] * n_par,
+                    "indx": [float(i + 1) for i in range(n_par)],
+                    "long": rng.normal(-112.0, 0.05, n_par).tolist(),
+                    "lati": rng.normal(40.5, 0.05, n_par).tolist(),
+                    "zagl": [5.0] * n_par,
+                    "foot": [1e-4] * n_par,
+                }
+            )
+        )
+    p = pd.concat(rows, ignore_index=True)
+    grid = Grid(xmin=-112.5, xmax=-111.5, ymin=40.0, ymax=41.0, xres=0.1, yres=0.1)
+
+    py_ds = _py_footprint(tmp_path / "py", p, grid=grid, smooth_factor=0.0)
+    r_ds = _r_footprint(
+        tmp_path / "r", rscript, r_stilt_dir, p, grid=grid, smooth_factor=0.0
+    )
+
+    expected_sum = float(p["foot"].sum()) / n_par
+
+    np.testing.assert_allclose(
+        float(py_ds.foot.values.sum()),
+        expected_sum,
+        rtol=1e-6,
+        err_msg="PYSTILT smooth_factor=0 footprint violates mass conservation.",
+    )
+    np.testing.assert_allclose(
+        float(r_ds.foot.values.sum()),
+        expected_sum,
+        rtol=1e-6,
+        err_msg="R-STILT smooth_factor=0 footprint violates mass conservation.",
+    )
+    np.testing.assert_allclose(
+        py_ds.foot.values.astype(np.float64),
+        r_ds.foot.values.astype(np.float64),
+        rtol=1e-7,
+        atol=1e-8,
+        err_msg="smooth_factor=0: PYSTILT and R footprints differ.",
+    )
+
+
+def test_gaussian_convolution_does_not_create_mass(tmp_path):
+    """
+    Gaussian smoothing must not increase total footprint mass.
+
+    Convolution with a kernel that sums to 1 is mass-conserving for interior
+    particles.  For particles near the domain edge the kernel is truncated by
+    zero-padding, so the smoothed total can only decrease.  Tests smooth_factor
+    1.0 and 2.0 (larger kernel → more edge truncation).
+
+    This is a Python-only invariant test; the equivalent R check is covered by
+    the live fidelity scenarios (SMOOTH, HIGH_SMOOTH) via test_footprint_matches_r.
+    """
+    rng = np.random.default_rng(7)
+    n = 50
+    p = _particles(
+        n=n,
+        long=rng.normal(-112.0, 0.02, n).tolist(),
+        lati=rng.normal(40.5, 0.02, n).tolist(),
+        foot=[1e-3] * n,
+    )
+    grid = Grid(xmin=-112.5, xmax=-111.5, ymin=40.0, ymax=41.0, xres=0.01, yres=0.01)
+
+    py_zero = _py_footprint(tmp_path / "py0", p, grid=grid, smooth_factor=0.0)
+    py_one = _py_footprint(tmp_path / "py1", p, grid=grid, smooth_factor=1.0)
+    py_two = _py_footprint(tmp_path / "py2", p, grid=grid, smooth_factor=2.0)
+
+    s0 = float(py_zero.foot.values.sum())
+    s1 = float(py_one.foot.values.sum())
+    s2 = float(py_two.foot.values.sum())
+
+    assert s1 <= s0 * (1 + 1e-10), f"smooth_factor=1 created mass: {s1:.6e} > {s0:.6e}"
+    assert s2 <= s0 * (1 + 1e-10), f"smooth_factor=2 created mass: {s2:.6e} > {s0:.6e}"
+    np.testing.assert_allclose(
+        s1,
+        s0,
+        rtol=1e-4,
+        err_msg="Interior particles: smooth_factor=1 should be nearly mass-conserving.",
+    )
+
+
+def test_extreme_foot_gridding_matches_r(rscript, r_stilt_dir, tmp_path):
+    """
+    Gridding with large foot values (as after HNF at near-surface) matches R.
+
+    Synthetic particles carry foot=0.1, mimicking the amplified sensitivity
+    that HNF correction produces at very low AGL.  HNF itself is NOT applied
+    here — foot is set directly to exercise the bincount accumulation and
+    kernel convolution at extreme magnitudes.  The actual HNF pathway is
+    covered end-to-end by the LOW_AGL live fidelity scenario.
+
+    atol=1e-8 accommodates summation-order drift that scales with max_foot:
+    O(N * ε * 0.1) ≈ 2e-14 — well within the tolerance.
+    """
+    n_par = 15
+    rng = np.random.default_rng(99)
+    rows = []
+    for t in [-1.0, -61.0]:
+        rows.append(
+            pd.DataFrame(
+                {
+                    "time": [t] * n_par,
+                    "indx": [float(i + 1) for i in range(n_par)],
+                    "long": rng.normal(-112.0, 0.02, n_par).tolist(),
+                    "lati": rng.normal(40.5, 0.02, n_par).tolist(),
+                    "zagl": [0.5] * n_par,
+                    "foot": [0.1] * n_par,
+                }
+            )
+        )
+    p = pd.concat(rows, ignore_index=True)
+
+    py_ds = _py_footprint(tmp_path / "py", p, smooth_factor=1.0)
+    r_ds = _r_footprint(tmp_path / "r", rscript, r_stilt_dir, p, smooth_factor=1.0)
+
+    np.testing.assert_allclose(
+        py_ds.foot.values.astype(np.float64),
+        r_ds.foot.values.astype(np.float64),
+        rtol=1e-7,
+        atol=1e-8,
+        err_msg="Extreme foot values: PYSTILT and R footprints differ.",
+    )
 
 
 def test_latitude_kernel_scaling(rscript, r_stilt_dir, tmp_path):

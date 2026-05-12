@@ -61,7 +61,7 @@ def test_declarative_transform_config_changes_real_footprint(
         mets={
             "hrrr": {
                 "directory": met_dir,
-                "file_format": "%Y%m%d.%Hz.hrrra",
+                "file_format": "%Y%m%d_%H",
                 "file_tres": "6h",
             }
         },

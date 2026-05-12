@@ -44,7 +44,7 @@ def test_hysplit_multipoint_release_points_follow_control_order(tmp_path, met_di
     """
 
     receptor = MultiPointReceptor(
-        time=dt.datetime(2015, 12, 10, 0, 0),
+        time=dt.datetime(2021, 1, 15, 6, 0),
         longitudes=[-112.0, -111.8, -111.6],
         latitudes=[40.5, 40.5, 40.5],
         altitudes=[100.0, 500.0, 900.0],
@@ -59,7 +59,7 @@ def test_hysplit_multipoint_release_points_follow_control_order(tmp_path, met_di
     met_files = MetStream(
         "hrrr",
         directory=met_dir,
-        file_format="%Y%m%d.%Hz.hrrra",
+        file_format="%Y%m%d_%H",
         file_tres="6h",
     ).required_files(r_time=receptor.time, n_hours=params.n_hours)
 
@@ -108,7 +108,7 @@ def test_hysplit_multipoint_release_points_follow_control_order_nondivisible(
     """Nondivisible particle counts still use contiguous blocks in point order."""
 
     receptor = MultiPointReceptor(
-        time=dt.datetime(2015, 12, 10, 0, 0),
+        time=dt.datetime(2021, 1, 15, 6, 0),
         longitudes=[-112.0, -111.8, -111.6],
         latitudes=[40.5, 40.5, 40.5],
         altitudes=[100.0, 500.0, 900.0],
@@ -123,7 +123,7 @@ def test_hysplit_multipoint_release_points_follow_control_order_nondivisible(
     met_files = MetStream(
         "hrrr",
         directory=met_dir,
-        file_format="%Y%m%d.%Hz.hrrra",
+        file_format="%Y%m%d_%H",
         file_tres="6h",
     ).required_files(r_time=receptor.time, n_hours=params.n_hours)
 
@@ -159,7 +159,7 @@ def test_hysplit_column_release_spans_vertical_line_without_endpoint_chunking(
     """Column releases span the requested vertical range rather than endpoint chunks."""
 
     receptor = ColumnReceptor(
-        time=dt.datetime(2015, 12, 10, 0, 0),
+        time=dt.datetime(2021, 1, 15, 6, 0),
         longitude=-112.0,
         latitude=40.5,
         bottom=5.0,
@@ -175,7 +175,7 @@ def test_hysplit_column_release_spans_vertical_line_without_endpoint_chunking(
     met_files = MetStream(
         "hrrr",
         directory=met_dir,
-        file_format="%Y%m%d.%Hz.hrrra",
+        file_format="%Y%m%d_%H",
         file_tres="6h",
     ).required_files(r_time=receptor.time, n_hours=params.n_hours)
 

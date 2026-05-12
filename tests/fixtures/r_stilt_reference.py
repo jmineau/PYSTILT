@@ -145,6 +145,9 @@ class ReferenceScenario:
     time: dt.datetime = field(default_factory=lambda: REFERENCE_TIME)
     met_file_format: str = field(default_factory=lambda: REFERENCE_MET_FILE_FORMAT)
     met_file_tres: str = "6h"
+    # If set, this scenario's trajectory is physically identical to the named scenario.
+    # The fixture skips the R+HYSPLIT trajectory run and test_trajectory_matches_r skips.
+    shares_trajectory_with: str | None = field(default=None)
 
     # ------------------------------------------------------------------
     # PYSTILT object factories (lazy imports to avoid circular load)
@@ -358,6 +361,7 @@ SMOOTH = ReferenceScenario(
     xres=REFERENCE_XRES,
     yres=REFERENCE_YRES,
     compare_columns=_TRAJ_COLS_WITH_HNF,
+    shares_trajectory_with="point",
 )
 
 #: Point receptor with all time steps collapsed into a single 2-D footprint layer.
@@ -382,6 +386,7 @@ TIME_INTEGRATE = ReferenceScenario(
     xres=REFERENCE_XRES,
     yres=REFERENCE_YRES,
     compare_columns=_TRAJ_COLS_WITH_HNF,
+    shares_trajectory_with="point",
 )
 
 #: Point receptor, smooth_factor=0 — pure binning, no Gaussian spread.
@@ -411,6 +416,7 @@ SMOOTH_ZERO = ReferenceScenario(
     xres=REFERENCE_XRES,
     yres=REFERENCE_YRES,
     compare_columns=_TRAJ_COLS_WITH_HNF,
+    shares_trajectory_with="point",
 )
 
 #: Point receptor, coarse grid (0.05° × 0.05°) — 5× larger cells than the default.
@@ -440,6 +446,7 @@ COARSE_GRID = ReferenceScenario(
     xres=0.05,
     yres=0.05,
     compare_columns=_TRAJ_COLS_WITH_HNF,
+    shares_trajectory_with="point",
 )
 
 #: Full 24-hour backward run from the reference receptor.
@@ -550,6 +557,93 @@ SUMMER_MULTIPOINT = ReferenceScenario(
     time=REFERENCE_SUMMER_TIME,
 )
 
+#: Receptor at 0.5 m AGL — maximises HNF plume dilution correction.
+#: At near-surface height sigma is very small so the HNF conditional
+#: (plume < pbl_mixing) is almost always active, amplifying foot by 1/sigma.
+LOW_AGL = ReferenceScenario(
+    name="low_agl",
+    description="Point receptor at zagl=0.5 m — near-surface HNF stress",
+    receptor_type="point",
+    longitude=REFERENCE_LONGITUDE,
+    latitude=REFERENCE_LATITUDE,
+    altitude=0.5,
+    n_hours=REFERENCE_N_HOURS,
+    numpar=REFERENCE_NUMPAR,
+    krand=REFERENCE_KRAND,
+    seed=REFERENCE_SEED,
+    hnf_plume=True,
+    smooth_factor=1.0,
+    time_integrate=False,
+    xmin=REFERENCE_XMIN,
+    xmax=REFERENCE_XMAX,
+    ymin=REFERENCE_YMIN,
+    ymax=REFERENCE_YMAX,
+    xres=REFERENCE_XRES,
+    yres=REFERENCE_YRES,
+    compare_columns=_TRAJ_COLS_WITH_HNF,
+)
+
+#: Receptor 0.2° from western and 0.1° from southern edge of the bbox-cropped
+#: HRRR met domain (bbox = -114, 39, -110, 42).  Back-trajectories rapidly
+#: exit the met boundary, exercising HYSPLIT's boundary termination and the
+#: footprint gridding with a highly sparse particle set.
+#:
+#: Domain is shifted SW to include the receptor (-113.8°, 39.1°), which lies
+#: outside the standard WBB domain.  Using the standard domain would place all
+#: particles outside the grid and produce trivially-zero footprints that test
+#: nothing meaningful.
+MET_GRID_EDGE = ReferenceScenario(
+    name="met_grid_edge",
+    description=(
+        "Receptor at (-113.8°, 39.1°) near SW edge of cropped HRRR met domain"
+    ),
+    receptor_type="point",
+    longitude=-113.8,
+    latitude=39.1,
+    altitude=REFERENCE_ALTITUDE,
+    n_hours=REFERENCE_N_HOURS,
+    numpar=REFERENCE_NUMPAR,
+    krand=REFERENCE_KRAND,
+    seed=REFERENCE_SEED,
+    hnf_plume=True,
+    smooth_factor=1.0,
+    time_integrate=False,
+    xmin=-114.0,
+    xmax=-112.0,
+    ymin=38.5,
+    ymax=40.5,
+    xres=REFERENCE_XRES,
+    yres=REFERENCE_YRES,
+    compare_columns=_TRAJ_COLS_WITH_HNF,
+)
+
+#: smooth_factor=2.0 — kernel spans many grid cells and the buffer extent
+#: must be enlarged accordingly.  Tests buffer construction, edge zero-padding,
+#: and that the larger convolution does not introduce spurious mass.
+HIGH_SMOOTH = ReferenceScenario(
+    name="high_smooth",
+    description="Point receptor with smooth_factor=2.0 — large kernel buffer stress",
+    receptor_type="point",
+    longitude=REFERENCE_LONGITUDE,
+    latitude=REFERENCE_LATITUDE,
+    altitude=REFERENCE_ALTITUDE,
+    n_hours=REFERENCE_N_HOURS,
+    numpar=REFERENCE_NUMPAR,
+    krand=REFERENCE_KRAND,
+    seed=REFERENCE_SEED,
+    hnf_plume=True,
+    smooth_factor=2.0,
+    time_integrate=False,
+    xmin=REFERENCE_XMIN,
+    xmax=REFERENCE_XMAX,
+    ymin=REFERENCE_YMIN,
+    ymax=REFERENCE_YMAX,
+    xres=REFERENCE_XRES,
+    yres=REFERENCE_YRES,
+    compare_columns=_TRAJ_COLS_WITH_HNF,
+    shares_trajectory_with="point",
+)
+
 #: All canonical scenarios in priority order.
 ALL_SCENARIOS: list[ReferenceScenario] = [
     POINT,
@@ -564,6 +658,9 @@ ALL_SCENARIOS: list[ReferenceScenario] = [
     HRRR_SUMMER,
     EDGE_RECEPTOR,
     SUMMER_MULTIPOINT,
+    LOW_AGL,
+    MET_GRID_EDGE,
+    HIGH_SMOOTH,
 ]
 
 
