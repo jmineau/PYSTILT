@@ -784,6 +784,58 @@ WINDERR = ReferenceScenario(
     horcoruverr=40.0,
 )
 
+#: Tight 0.2° × 0.2° domain around WBB — particles exit the footprint grid
+#: within the first ~20 minutes of the back-trajectory.
+#
+# At 40.5°N a 0.2° box is ~22 km north–south and ~17 km east–west; at a
+# typical 10 m/s synoptic wind, particles drift one full box width in
+# ~30 min, so the bulk of a 6h back-trajectory falls outside.  This exercises
+# three branches the other scenarios never hit together:
+#
+#   1. The ``foot > 0 & inside-buffered-bounds`` filter at
+#      ``footprint.py:_filter_and_rasterize_particles`` drops most particles.
+#   2. The ``n_particles`` denominator (computed pre-filter, line 843) divides
+#      by the original ensemble size, not the surviving count — both R and
+#      PYSTILT must agree on this denominator.
+#   3. The convolution bounding box from ``np.nonzero(sparse)`` shrinks to a
+#      small patch, so the kernel-padding logic gets tested on a near-empty
+#      grid.
+#
+# Bounds are chosen so that (max-min)/res evaluates to just over an integer
+# in float64 (within _grid_cell_starts' 10·eps tolerance).  Centred bounds
+# like (-112.1, -111.9) hit an asymmetric float-representation case where
+# q=19.999...863, just below the integer — _grid_cell_starts would drop a
+# cell vs R-STILT's seq() iteration.  (-112.0, -111.8) gives clean
+# q=20.000...284.  Receptor at -112, 40.5 sits at the western edge of the
+# lon range, so particles drifting west exit immediately on every step
+# regardless of synoptic wind direction; lat is centred on the receptor.
+SPARSE_TIGHT_DOMAIN = ReferenceScenario(
+    name="sparse_tight_domain",
+    description=(
+        "Point receptor in tight 0.2° domain — most particles exit early; "
+        "tests filter + n_particles denominator on dropped-particle branch"
+    ),
+    receptor_type="point",
+    longitude=REFERENCE_LONGITUDE,
+    latitude=REFERENCE_LATITUDE,
+    altitude=REFERENCE_ALTITUDE,
+    n_hours=REFERENCE_N_HOURS,
+    numpar=REFERENCE_NUMPAR,
+    krand=REFERENCE_KRAND,
+    seed=REFERENCE_SEED,
+    hnf_plume=True,
+    smooth_factor=1.0,
+    time_integrate=False,
+    xmin=-112.0,
+    xmax=-111.8,
+    ymin=40.4,
+    ymax=40.6,
+    xres=REFERENCE_XRES,
+    yres=REFERENCE_YRES,
+    compare_columns=_TRAJ_COLS_WITH_HNF,
+    shares_trajectory_with="point",
+)
+
 #: All canonical scenarios in priority order.
 ALL_SCENARIOS: list[ReferenceScenario] = [
     POINT,
@@ -805,6 +857,7 @@ ALL_SCENARIOS: list[ReferenceScenario] = [
     PROJECTED_CRS,
     MSL_ALTITUDE,
     WINDERR,
+    SPARSE_TIGHT_DOMAIN,
 ]
 
 

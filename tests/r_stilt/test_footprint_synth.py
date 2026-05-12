@@ -490,17 +490,22 @@ def _assert_footprint_close(
     """Compare PYSTILT and R-STILT footprint datasets."""
     prefix = f"[{label}] " if label else ""
 
+    # Coord tolerance must scale with magnitude: longlat coords are <360°,
+    # but projected coords (e.g. UTM meters) can be ~10^7, where pyproj/proj4
+    # float64 round-tripping introduces O(machine-eps × magnitude) ≈ 1e-10
+    # absolute noise. rtol=1e-13 gives sub-mm at UTM scales and stays tighter
+    # than 2e-11 for longlat.
     np.testing.assert_allclose(
         py_ds.lat.values,
         r_ds.lat.values,
-        rtol=0,
+        rtol=1e-13,
         atol=1e-12,
         err_msg=f"{prefix}lat coordinates differ",
     )
     np.testing.assert_allclose(
         py_ds.lon.values,
         r_ds.lon.values,
-        rtol=0,
+        rtol=1e-13,
         atol=1e-12,
         err_msg=f"{prefix}lon coordinates differ",
     )
@@ -1208,3 +1213,35 @@ def test_latitude_kernel_scaling(rscript, r_stilt_dir, tmp_path):
         py_ds = _py_footprint(tmp_path / f"py_{tag}", p, grid=grid)
         r_ds = _r_footprint(tmp_path / f"r_{tag}", rscript, r_stilt_dir, p, grid=grid)
         _assert_footprint_close(py_ds, r_ds, label=f"lat_{tag}")
+
+
+def test_global_grid_matches_r(rscript, r_stilt_dir, tmp_path):
+    """
+    Global 360°-wide grid (xmin=-180, xmax=180).
+
+    R-STILT (calc_footprint.r:87-91) detects ``xdist == 0`` and re-anchors
+    bounds to [-180, 180]; PYSTILT's _wrap_antimeridian_longitudes returns
+    the same anchoring with ``wrapped=False``.  The full pipeline must agree
+    on a wide-grid scenario where the kernel doesn't span the antimeridian.
+    """
+    rng = np.random.default_rng(7)
+    n = 150
+    p = _particles(
+        n=n,
+        long=rng.normal(-112.0, 0.5, n).tolist(),
+        lati=rng.normal(40.0, 0.5, n).tolist(),
+        foot=[1e-3] * n,
+    )
+    grid = Grid(
+        xmin=-180.0,
+        xmax=180.0,
+        ymin=-90.0,
+        ymax=90.0,
+        xres=1.0,
+        yres=1.0,
+    )
+
+    py_ds = _py_footprint(tmp_path / "py", p, grid=grid)
+    r_ds = _r_footprint(tmp_path / "r", rscript, r_stilt_dir, p, grid=grid)
+
+    _assert_footprint_close(py_ds, r_ds, label="global_grid")

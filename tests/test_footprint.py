@@ -13,10 +13,13 @@ from stilt.footprint import (
     Footprint,
     _calc_digits,
     _cf_grid_mapping_attrs,
+    _compute_kernel_bandwidths,
     _grid_cell_starts,
     _interpolate_early_timesteps,
     _interpolation_times,
     _make_gauss_kernel,
+    _project_particles_to_crs,
+    _wrap_antimeridian_longitudes,
 )
 from stilt.receptors import PointReceptor
 from stilt.trajectory import calc_plume_dilution
@@ -978,3 +981,131 @@ def test_hnf_correction_invariants():
         raw_foot,
         err_msg="foot_no_hnf_dilution must equal the original foot values",
     )
+
+
+# ---------------------------------------------------------------------------
+# Python-only helper tests: branch coverage for paths the live-R fidelity
+# tests cannot reliably target. These run in CI on every Python version
+# without needing R, Rscript, or HYSPLIT.
+# ---------------------------------------------------------------------------
+
+
+def test_wrap_antimeridian_longitudes_global_branch():
+    """xdist == 0 (global 360° grid) anchors to [-180, 180] without wrapping."""
+    p = pd.DataFrame({"long": [-179.0, 0.0, 179.0]})
+    out, xmin, xmax, wrapped = _wrap_antimeridian_longitudes(p, xmin=-180.0, xmax=180.0)
+    assert xmin == -180.0
+    assert xmax == 180.0
+    assert wrapped is False
+    # Particle longitudes must be unchanged in the global branch.
+    np.testing.assert_array_equal(out["long"].values, p["long"].values)
+
+
+def test_wrap_antimeridian_longitudes_crossing_branch():
+    """xmax < xmin (dateline crossing) rotates longitudes into [0, 360)."""
+    p = pd.DataFrame({"long": [179.0, -179.0, 170.0, -170.0]})
+    out, xmin, xmax, wrapped = _wrap_antimeridian_longitudes(p, xmin=170.0, xmax=-170.0)
+    assert wrapped is True
+    # Bounds wrap to 170, 190 in [0, 360) space.
+    assert xmin == pytest.approx(170.0)
+    assert xmax == pytest.approx(190.0)
+    expected = np.array([179.0, 181.0, 170.0, 190.0])
+    np.testing.assert_allclose(out["long"].values, expected)
+
+
+def test_wrap_antimeridian_longitudes_partial_wrap_branch():
+    """xmax > 180 (partial wrap, e.g. xmin=170, xmax=200) also rotates."""
+    p = pd.DataFrame({"long": [175.0, -175.0]})
+    out, xmin, xmax, wrapped = _wrap_antimeridian_longitudes(p, xmin=170.0, xmax=200.0)
+    assert wrapped is True
+    assert xmin == pytest.approx(170.0)
+    assert xmax == pytest.approx(200.0)
+    np.testing.assert_allclose(out["long"].values, np.array([175.0, 185.0]))
+
+
+def test_wrap_antimeridian_longitudes_no_wrap_branch():
+    """Standard CONUS domain (xmin=-113, xmax=-111) returns particles unchanged."""
+    p = pd.DataFrame({"long": [-112.5, -111.5]})
+    out, xmin, xmax, wrapped = _wrap_antimeridian_longitudes(
+        p, xmin=-113.0, xmax=-111.0
+    )
+    assert wrapped is False
+    assert xmin == -113.0
+    assert xmax == -111.0
+    np.testing.assert_array_equal(out["long"].values, p["long"].values)
+
+
+def test_project_particles_to_crs_raises_on_missing_pyproj(monkeypatch):
+    """Non-longlat path surfaces a clear ImportError when pyproj is absent."""
+    real_import = builtins.__import__
+
+    def fake_import(name, *args, **kwargs):
+        if name == "pyproj":
+            raise ImportError("pyproj missing")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", fake_import)
+    p = pd.DataFrame({"long": [-112.0], "lati": [40.0]})
+    with pytest.raises(ImportError, match="pyproj"):
+        _project_particles_to_crs(
+            p,
+            projection="+proj=utm +zone=12 +datum=WGS84 +units=m +no_defs",
+            xmin=-113.0,
+            xmax=-111.0,
+            ymin=39.0,
+            ymax=41.0,
+        )
+
+
+def test_project_particles_to_crs_rejects_invalid_proj_string():
+    """An unparseable proj4 string surfaces from pyproj as a parse error."""
+    from pyproj.exceptions import CRSError
+
+    p = pd.DataFrame({"long": [-112.0], "lati": [40.0]})
+    with pytest.raises(CRSError):
+        _project_particles_to_crs(
+            p,
+            projection="+proj=nope-not-a-projection",
+            xmin=-113.0,
+            xmax=-111.0,
+            ymin=39.0,
+            ymax=41.0,
+        )
+
+
+def test_compute_kernel_bandwidths_single_particle_returns_zero_sigma():
+    """
+    Zero-variance edge case: a single particle has var(long)=var(lati)=NaN,
+    which R's na.omit() drops. PYSTILT's helper returns w=0 (identity kernel)
+    instead, so a one-particle trajectory still produces a valid (degenerate)
+    footprint rather than crashing.
+    """
+    p = pd.DataFrame(
+        {
+            "indx": [1.0, 1.0],
+            "rtime": [-1.0, -2.0],
+            "time": [-1.0, -2.0],
+            "long": [-112.0, -112.0],
+            "lati": [40.5, 40.5],
+            "foot": [1e-3, 1e-3],
+        }
+    )
+    kernel_df, w = _compute_kernel_bandwidths(p, smooth_factor=1.0, is_longlat=True)
+    np.testing.assert_array_equal(w, np.zeros_like(w))
+    assert len(kernel_df) == len(w)
+
+
+def test_compute_kernel_bandwidths_two_coincident_particles_returns_zero_sigma():
+    """Two particles at identical positions have varsum=0 ⇒ w=0."""
+    p = pd.DataFrame(
+        {
+            "indx": [1.0, 1.0, 2.0, 2.0],
+            "rtime": [-1.0, -2.0, -1.0, -2.0],
+            "time": [-1.0, -2.0, -1.0, -2.0],
+            "long": [-112.0] * 4,
+            "lati": [40.5] * 4,
+            "foot": [1e-3] * 4,
+        }
+    )
+    kernel_df, w = _compute_kernel_bandwidths(p, smooth_factor=1.0, is_longlat=True)
+    np.testing.assert_array_equal(w, np.zeros_like(w))

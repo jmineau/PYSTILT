@@ -239,6 +239,15 @@ for footprint in footprints:
 If a footprint is tracked as `complete-empty`, no NetCDF file is expected for that footprint.
 The model APIs treat it as a successful terminal outcome while skipping missing file loads.
 
+## R-STILT parity
+
+PYSTILT footprints match the [uataq/stilt](https://github.com/uataq/stilt) R
+implementation on **numerical values** at `rtol=1e-7` per cell, validated by
+end-to-end fidelity scenarios against a **pinned upstream commit**.
+NetCDF output is not byte-compatible with R-STILT;
+it should be read as generic CF-1.8 NetCDF.
+See [STILT-R.md](STILT-R.md) for more details.
+
 ## Documentation
 
 Full documentation is available at [https://jmineau.github.io/PYSTILT/](https://jmineau.github.io/PYSTILT/)
