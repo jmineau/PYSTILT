@@ -17,6 +17,14 @@ that map where upwind surface fluxes influence a measurement.
 The project is in alpha and focused on a unified execution model that works for one-off runs,
 large batch runs, and streaming queue workers.
 
+## Status
+
+PYSTILT is alpha software (v0.1.0a1). No backward compatibility guarantees before v1.0.
+
+The core transport is stable: HYSPLIT execution, trajectory and footprint generation,
+numerical R-STILT parity, and the local and SLURM execution paths are all exercised by the
+test suite. The public API may change while the package settles.
+
 ## Choose a workflow
 
 - **One-off transport runs** for local analysis and notebooks:
@@ -29,17 +37,42 @@ large batch runs, and streaming queue workers.
   use `stilt.observations` to turn normalized observations into `Receptor`
   objects before feeding them into the same runtime.
 
-## Alpha execution semantics
+## Roadmap
 
-| Area | Current behavior |
+PYSTILT draws design and science inspiration from two sister projects:
+[X-STILT](https://github.com/uataq/X-STILT) for column and satellite science workflows, and
+[stiltctl](https://github.com/jmineau/air-tracker-stiltctl) for cloud-native execution
+patterns. The tables below track what has been absorbed and what remains in scope.
+See the full [roadmap](https://jmineau.github.io/PYSTILT/roadmap.html) for more details.
+
+### Execution and orchestration (from stiltctl)
+
+| Feature | Status |
 |---|---|
-| Delivery guarantee | At-least-once processing. A simulation can be retried after interruption or failure. |
-| Trajectory status | `pending -> running -> complete` or `failed`. |
-| Footprint status | `complete`, `complete-empty`, or `failed` per footprint name. |
-| Empty footprint | Treated as terminal success (`complete-empty`), not failure. |
-| Reruns | `skip_existing=True` avoids rework for already complete outputs; `skip_existing=False` forces rerun. |
+| Pull-mode queue workers (`stilt pull-worker`) | Implemented |
+| Long-lived streaming mode (`stilt serve`) | Implemented |
+| PostgreSQL-backed simulation registry | Implemented |
+| Scene-based submission grouping | Implemented |
+| Thin CLI → Model → worker call path | Implemented |
+| Kubernetes worker deployment | Partial |
+| Cloud object store outputs (GCS, S3) | In scope |
 
-For details see the guides on executors, Slurm, and Kubernetes.
+### Column and satellite science (from X-STILT)
+
+Full X-STILT feature parity is not a goal. PYSTILT absorbs X-STILT's observation-layer
+design and column-weighting concepts without trying to replicate every script.
+
+| Feature | Status |
+|---|---|
+| `stilt.observations` layer (`Observation`, `Scene`, sensor families) | Implemented |
+| Column receptor support | Implemented |
+| Vertical operator particle transforms (AK / pressure weighting) | Implemented |
+| First-order lifetime decay transform | Implemented |
+| Declarative per-footprint transforms in config | Implemented |
+| Slant-column receptor support | In scope (pending HYSPLIT validation) |
+| Additional transform types | In scope |
+| Specific sensor adapters (OCO-2/3, TROPOMI, TCCON) | Deferred |
+| Inventory coupling and background estimation | Deferred |
 
 ## Installation
 

@@ -76,3 +76,28 @@ These commands surface the executor model regardless of backend:
 ``stilt serve``
    Like ``pull-worker --follow``: keeps polling indefinitely for new claimable
    work.  Use for always-on queue consumers.
+
+Simulation state and delivery guarantees
+-----------------------------------------
+
+These semantics apply across all backends.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 25 75
+
+   * - Area
+     - Current behavior
+   * - Delivery guarantee
+     - At-least-once processing. A simulation can be retried after interruption
+       or failure.
+   * - Trajectory status
+     - ``pending → running → complete`` or ``failed``.
+   * - Footprint status
+     - ``complete``, ``complete-empty``, or ``failed`` per footprint name.
+   * - Empty footprint
+     - Treated as terminal success (``complete-empty``), not failure. No NetCDF
+       file is written or expected for empty footprints.
+   * - Reruns
+     - ``skip_existing=True`` avoids rework for already complete outputs.
+       ``skip_existing=False`` forces a full rerun regardless of prior state.

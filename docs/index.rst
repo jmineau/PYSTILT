@@ -52,3 +52,4 @@ local runs, Slurm arrays, and Kubernetes workers.
    guides/index
    tutorials/index
    reference/index
+   roadmap

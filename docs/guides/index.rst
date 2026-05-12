@@ -28,5 +28,11 @@ that do not belong in a first-run tutorial.
    :caption: Migration Guides
 
    ../migration/r_stilt
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Project Status
+
+   ../roadmap
    ../migration/x_stilt
    ../migration/stiltctl
