@@ -42,7 +42,7 @@ for (f in list.files(src_dir, pattern = "\\.r$", full.names = TRUE)) {
   source(f)
 }
 
-load_libs('arrow', 'dplyr', 'lubridate', 'ncdf4', 'raster', 'R.utils')
+load_libs('arrow', 'dplyr', 'lubridate', 'ncdf4', 'proj4', 'raster', 'R.utils')
 p <- as.data.frame(read_parquet(particles_parquet))
 
 # Synthetic test DataFrames sometimes contain only one early-time row per

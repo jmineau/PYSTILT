@@ -37,8 +37,7 @@ for (f in list.files(src_dir, pattern = "\\.r$", full.names = TRUE)) {
   source(f)
 }
 
-library(arrow)
-library(dplyr)
+load_libs('arrow', 'dplyr', 'proj4')
 
 p <- as.data.frame(read_parquet(particles_parquet))
 
