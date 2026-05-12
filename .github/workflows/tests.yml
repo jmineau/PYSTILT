@@ -97,6 +97,7 @@ jobs:
         path: tests/met_cache
         # Bump the version suffix when _MET_BLOCKS changes in conftest.py
         key: met-hrrr-2021-v1
+        save-always: true
 
     - name: Set up R
       uses: r-lib/actions/setup-r@v2
