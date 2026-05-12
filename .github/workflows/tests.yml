@@ -91,13 +91,29 @@ jobs:
     - name: Install dependencies
       run: uv sync --group dev
 
-    - name: Cache HRRR met files
-      uses: actions/cache@v4
+    - name: Restore HRRR met cache
+      id: met-cache
+      uses: actions/cache/restore@v4
       with:
         path: tests/met_cache
         # Bump the version suffix when _MET_BLOCKS changes in conftest.py
         key: met-hrrr-2021-v1
-        save-always: true
+
+    - name: Prewarm HRRR met cache
+      if: steps.met-cache.outputs.cache-hit != 'true'
+      env:
+        STILT_TEST_FETCH_MET: "1"
+      run: |
+        uv run pytest \
+          tests/test_hysplit_release_assignment.py::test_hysplit_multipoint_release_points_follow_control_order \
+          --setup-only -q
+
+    - name: Save HRRR met cache
+      if: steps.met-cache.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v4
+      with:
+        path: tests/met_cache
+        key: ${{ steps.met-cache.outputs.cache-primary-key }}
 
     - name: Set up R
       uses: r-lib/actions/setup-r@v2
@@ -127,13 +143,13 @@ jobs:
     - name: Run integration tests (includes R fidelity tests)
       env:
         STILT_R_DIR: ${{ github.workspace }}/stilt-r-src
-        STILT_TEST_FETCH_MET: "1"
+        STILT_TEST_MET_DIR: ${{ github.workspace }}/tests/met_cache
       run: uv run pytest tests/ -v -m integration
 
     - name: Run R-STILT synthetic footprint tests
       env:
         STILT_R_DIR: ${{ github.workspace }}/stilt-r-src
-        STILT_TEST_FETCH_MET: "1"
+        STILT_TEST_MET_DIR: ${{ github.workspace }}/tests/met_cache
       run: uv run pytest tests/r_stilt/test_footprint_synth.py -v
 
   package:
