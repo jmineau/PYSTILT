@@ -32,6 +32,11 @@ class LocalHandle:
         """Return the synthetic identifier used for local execution."""
         return "local"
 
+    @property
+    def detached(self) -> bool:
+        """Local workers run in this process and must be awaited inline."""
+        return False
+
     def wait(self) -> None:
         """Wait for all local worker futures and then shut down the pool."""
         if self._completed:

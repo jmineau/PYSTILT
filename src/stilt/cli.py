@@ -32,7 +32,6 @@ from typing import Any
 import typer
 
 from stilt.execution import (
-    SlurmHandle,
     get_executor,
     pull_simulations,
     push_simulations,
@@ -310,14 +309,19 @@ def run(
         rebuild=rebuild,
         wait=False,
     )
-    if isinstance(handle, SlurmHandle):
+    # Decide inline-vs-detached from the handle's own `detached` property, not
+    # its concrete type. model.run() may return a wrapped handle (e.g.
+    # _RebuildOnCompleteHandle), which defeats isinstance checks and previously
+    # forced every backend into the blocking path. Inline backends (local) must
+    # be awaited here or their in-process workers are orphaned; detached
+    # backends (slurm, kubernetes) are fire-and-forget unless --wait is given.
+    if handle.detached:
         typer.echo(f"Submitted job: {handle.job_id}")
         if wait:
-            typer.echo("Waiting for Slurm job completion...")
+            typer.echo("Waiting for job completion...")
             _wait_with_progress(model, handle)
             _print_status(model)
     else:
-        # Local backend — always complete inline so no orphan workers.
         typer.echo("Workers launched. Waiting for completion...")
         _wait_with_progress(model, handle)
         _print_status(model)
