@@ -1,5 +1,6 @@
 """Tests for execution backend launchers."""
 
+import subprocess
 import sys
 import types
 
@@ -492,6 +493,67 @@ def test_slurm_handle_wait_raises_for_unsuccessful_terminal_states(
     with pytest.raises(RuntimeError, match="finished unsuccessfully"):
         handle.wait()
 
+    assert not chunk_dir.exists()
+
+
+def test_slurm_handle_wait_keeps_chunks_when_poll_times_out(tmp_path, monkeypatch):
+    """A scheduler-poll timeout must NOT delete the chunk dir.
+
+    Regression test: a busy controller can make squeue/sacct time out while the
+    array job is still running. The old code deleted the chunk dir in a blanket
+    ``finally``, starving the still-queued tasks (FileNotFoundError -> failed).
+    The chunk dir must survive so the running job can finish.
+    """
+    chunk_dir = tmp_path / "chunks"
+    chunk_dir.mkdir()
+    (chunk_dir / "task_0.txt").write_text("sim-a\n")
+
+    def always_timeout(args, capture_output, text, timeout):
+        raise subprocess.TimeoutExpired(args, timeout)
+
+    monkeypatch.setattr(
+        "stilt.execution.backends.slurm.subprocess.run", always_timeout
+    )
+    monkeypatch.setattr("stilt.execution.backends.slurm.time.sleep", lambda _: None)
+
+    handle = SlurmHandle("12345", chunk_dir=chunk_dir)
+    with pytest.raises(subprocess.TimeoutExpired):
+        handle.wait()
+
+    # The job never left the queue, so the chunk files must remain.
+    assert chunk_dir.exists()
+    assert (chunk_dir / "task_0.txt").exists()
+
+
+def test_slurm_handle_wait_retries_transient_poll_timeout(tmp_path, monkeypatch):
+    """A single transient poll timeout should be retried, not fatal."""
+    chunk_dir = tmp_path / "chunks"
+    chunk_dir.mkdir()
+    (chunk_dir / "task_0.txt").write_text("sim-a\n")
+
+    calls: list[str] = []
+
+    def flaky_run(args, capture_output, text, timeout):
+        command = args[0]
+        calls.append(command)
+        # First squeue call times out once, then succeeds (job gone).
+        if command == "squeue" and calls.count("squeue") == 1:
+            raise subprocess.TimeoutExpired(args, timeout)
+        if command == "squeue":
+            return types.SimpleNamespace(returncode=0, stdout="", stderr="")
+        if command == "sacct":
+            return types.SimpleNamespace(
+                returncode=0, stdout="COMPLETED|\n", stderr=""
+            )
+        raise AssertionError(f"Unexpected command: {args}")
+
+    monkeypatch.setattr("stilt.execution.backends.slurm.subprocess.run", flaky_run)
+    monkeypatch.setattr("stilt.execution.backends.slurm.time.sleep", lambda _: None)
+
+    handle = SlurmHandle("12345", chunk_dir=chunk_dir)
+    handle.wait()  # should not raise despite the first timeout
+
+    # Job completed cleanly -> chunk dir cleaned up.
     assert not chunk_dir.exists()
 
 
