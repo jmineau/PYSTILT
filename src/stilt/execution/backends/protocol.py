@@ -37,6 +37,18 @@ class JobHandle(Protocol):
         """Return the backend-specific job identifier."""
         ...
 
+    @property
+    def detached(self) -> bool:
+        """
+        Whether the launched work runs independently of this process.
+
+        ``True`` for backends whose workers survive the submitting process
+        (Slurm, Kubernetes) — the caller may return immediately without
+        orphaning work. ``False`` for in-process backends (local) whose workers
+        must be awaited inline.
+        """
+        ...
+
     def wait(self) -> None:
         """Block until the launched work is no longer running."""
         ...

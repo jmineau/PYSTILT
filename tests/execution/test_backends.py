@@ -497,7 +497,8 @@ def test_slurm_handle_wait_raises_for_unsuccessful_terminal_states(
 
 
 def test_slurm_handle_wait_keeps_chunks_when_poll_times_out(tmp_path, monkeypatch):
-    """A scheduler-poll timeout must NOT delete the chunk dir.
+    """
+    A scheduler-poll timeout must NOT delete the chunk dir.
 
     Regression test: a busy controller can make squeue/sacct time out while the
     array job is still running. The old code deleted the chunk dir in a blanket
@@ -511,9 +512,7 @@ def test_slurm_handle_wait_keeps_chunks_when_poll_times_out(tmp_path, monkeypatc
     def always_timeout(args, capture_output, text, timeout):
         raise subprocess.TimeoutExpired(args, timeout)
 
-    monkeypatch.setattr(
-        "stilt.execution.backends.slurm.subprocess.run", always_timeout
-    )
+    monkeypatch.setattr("stilt.execution.backends.slurm.subprocess.run", always_timeout)
     monkeypatch.setattr("stilt.execution.backends.slurm.time.sleep", lambda _: None)
 
     handle = SlurmHandle("12345", chunk_dir=chunk_dir)
@@ -542,9 +541,7 @@ def test_slurm_handle_wait_retries_transient_poll_timeout(tmp_path, monkeypatch)
         if command == "squeue":
             return types.SimpleNamespace(returncode=0, stdout="", stderr="")
         if command == "sacct":
-            return types.SimpleNamespace(
-                returncode=0, stdout="COMPLETED|\n", stderr=""
-            )
+            return types.SimpleNamespace(returncode=0, stdout="COMPLETED|\n", stderr="")
         raise AssertionError(f"Unexpected command: {args}")
 
     monkeypatch.setattr("stilt.execution.backends.slurm.subprocess.run", flaky_run)

@@ -65,6 +65,10 @@ class _RebuildOnCompleteHandle:
     def job_id(self) -> str:
         return self._inner.job_id
 
+    @property
+    def detached(self) -> bool:
+        return self._inner.detached
+
     def wait(self) -> None:
         if self._completed:
             return

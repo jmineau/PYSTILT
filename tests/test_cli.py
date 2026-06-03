@@ -176,6 +176,7 @@ def test_run_invokes_model_run(tmp_path, monkeypatch):
     _write_minimal_config(tmp_path)
 
     fake_handle = MagicMock()
+    fake_handle.detached = False  # local execution -> inline wait
     calls: list = []
 
     def fake_run(self, executor=None, skip_existing=None, rebuild=None, wait=True):
@@ -199,6 +200,7 @@ def test_run_prints_startup_and_wait_messages(tmp_path, monkeypatch):
     _write_minimal_config(tmp_path)
 
     fake_handle = MagicMock()
+    fake_handle.detached = False  # local execution -> inline wait
 
     monkeypatch.setattr(
         "stilt.model.Model.run",
@@ -219,6 +221,8 @@ def test_run_startup_summary_uses_explicit_roots(tmp_path, monkeypatch):
     _write_minimal_config(tmp_path)
 
     class _FakeHandle:
+        detached = False
+
         def wait(self):
             return None
 
@@ -271,6 +275,7 @@ def test_run_no_skip_passes_false(tmp_path, monkeypatch):
     _write_minimal_config(tmp_path)
 
     fake_handle = MagicMock()
+    fake_handle.detached = False  # local execution -> inline wait
     calls: list = []
 
     def fake_run(self, executor=None, skip_existing=None, rebuild=None, wait=True):
@@ -325,6 +330,8 @@ def test_run_accepts_cloud_project_uri(monkeypatch):
     captured: list[dict] = []
 
     class _FakeHandle:
+        detached = False
+
         def wait(self):
             return None
 
@@ -377,6 +384,8 @@ def test_run_forwards_output_dir_and_compute_root(tmp_path, monkeypatch):
     captured: list[dict] = []
 
     class _FakeHandle:
+        detached = False
+
         def wait(self):
             return None
 
@@ -497,7 +506,7 @@ def test_run_slurm_with_wait_flag_blocks(tmp_path, monkeypatch):
 
     result = runner.invoke(app, ["run", str(tmp_path), "--wait"])
     assert result.exit_code == 0
-    assert "Waiting for Slurm job completion..." in result.output
+    assert "Waiting for job completion..." in result.output
     fake_handle.wait.assert_called_once()
 
 

@@ -25,8 +25,11 @@ logger = logging.getLogger(__name__)
 _POLL_RETRIES = 5
 
 
-def _run_scheduler_query(cmd: list[str], *, timeout: int = 30) -> subprocess.CompletedProcess:
-    """Run a scheduler query, retrying on transient timeouts.
+def _run_scheduler_query(
+    cmd: list[str], *, timeout: int = 30
+) -> subprocess.CompletedProcess:
+    """
+    Run a scheduler query, retrying on transient timeouts.
 
     A single slow response from a busy Slurm controller should not crash the
     wait loop. Retries a few times before propagating the timeout.
@@ -34,9 +37,7 @@ def _run_scheduler_query(cmd: list[str], *, timeout: int = 30) -> subprocess.Com
     last_exc: subprocess.TimeoutExpired | None = None
     for _ in range(_POLL_RETRIES):
         try:
-            return subprocess.run(
-                cmd, capture_output=True, text=True, timeout=timeout
-            )
+            return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
         except subprocess.TimeoutExpired as exc:
             last_exc = exc
             time.sleep(5)
@@ -99,6 +100,11 @@ class SlurmHandle:
     def job_id(self) -> str:
         """Return the scheduler job id reported by ``sbatch``."""
         return self._job_id
+
+    @property
+    def detached(self) -> bool:
+        """Slurm array tasks run independently of the submitting process."""
+        return True
 
     def wait(self) -> None:
         """Poll ``squeue`` until the submitted job no longer appears."""

@@ -26,6 +26,11 @@ class KubernetesHandle:
         """Return the Kubernetes resource identifier for the launched workers."""
         return f"job/{self._name}"
 
+    @property
+    def detached(self) -> bool:
+        """Kubernetes Jobs run independently of the submitting process."""
+        return True
+
     def wait(self) -> None:
         """Poll the Job until completions are satisfied."""
         if self._completed:
