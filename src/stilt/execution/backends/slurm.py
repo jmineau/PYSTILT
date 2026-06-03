@@ -19,6 +19,30 @@ from stilt.storage import ProjectFiles, is_cloud_project, project_slug
 
 logger = logging.getLogger(__name__)
 
+# Number of times to retry a scheduler poll that times out before giving up.
+# A busy controller can be slow to answer squeue/sacct; a transient timeout
+# must not abort the wait (and, with the old code, destroy the chunk dir).
+_POLL_RETRIES = 5
+
+
+def _run_scheduler_query(cmd: list[str], *, timeout: int = 30) -> subprocess.CompletedProcess:
+    """Run a scheduler query, retrying on transient timeouts.
+
+    A single slow response from a busy Slurm controller should not crash the
+    wait loop. Retries a few times before propagating the timeout.
+    """
+    last_exc: subprocess.TimeoutExpired | None = None
+    for _ in range(_POLL_RETRIES):
+        try:
+            return subprocess.run(
+                cmd, capture_output=True, text=True, timeout=timeout
+            )
+        except subprocess.TimeoutExpired as exc:
+            last_exc = exc
+            time.sleep(5)
+    assert last_exc is not None
+    raise last_exc
+
 
 def _write_chunks(
     output_dir: Path,
@@ -80,20 +104,24 @@ class SlurmHandle:
         """Poll ``squeue`` until the submitted job no longer appears."""
         if self._completed:
             return
+        # Tracks whether we observed the job leave the scheduler queue. Chunk
+        # cleanup is gated on this, NOT on success: if wait() exits while the
+        # job is still queued/running (a poll timeout that outlives the retries,
+        # an interrupt, a SIGTERM), deleting the chunk files would starve the
+        # still-running array tasks (FileNotFoundError -> failed tasks).
+        job_left_queue = False
         try:
             while True:
-                result = subprocess.run(
-                    ["squeue", "--job", self._job_id, "--noheader"],
-                    capture_output=True,
-                    text=True,
-                    timeout=30,
+                result = _run_scheduler_query(
+                    ["squeue", "--job", self._job_id, "--noheader"]
                 )
                 if result.returncode != 0:
                     raise RuntimeError(result.stderr.strip() or "squeue failed")
                 if not result.stdout.strip():
+                    job_left_queue = True
                     break
                 time.sleep(30)
-            status = subprocess.run(
+            status = _run_scheduler_query(
                 [
                     "sacct",
                     "--jobs",
@@ -101,10 +129,7 @@ class SlurmHandle:
                     "--noheader",
                     "--parsable2",
                     "--format=State",
-                ],
-                capture_output=True,
-                text=True,
-                timeout=30,
+                ]
             )
             if status.returncode != 0:
                 raise RuntimeError(status.stderr.strip() or "sacct failed")
@@ -123,7 +148,13 @@ class SlurmHandle:
                 )
             self._completed = True
         finally:
-            if self._chunk_dir is not None:
+            # Delete chunk files only once the job has left the scheduler queue
+            # (success OR terminal failure — both mean no task will read them
+            # again). If wait() exits while the job is still queued/running,
+            # leave the chunks: deleting them would starve the remaining tasks.
+            # A leaked chunk dir on abnormal exit is harmless and cleaned up by
+            # the next run.
+            if job_left_queue and self._chunk_dir is not None:
                 shutil.rmtree(self._chunk_dir, ignore_errors=True)
 
 
