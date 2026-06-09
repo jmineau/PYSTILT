@@ -448,8 +448,9 @@ def test_simulations_mapping_select_filters_by_footprint(tmp_path, point_recepto
     assert str(result[0].id) == sid
 
 
-def test_simulation_collection_incomplete_returns_only_unregistered_ids(tmp_path):
-    repo = InMemoryIndex(tmp_path)
+def test_simulation_collection_incomplete_returns_ids_missing_outputs(tmp_path):
+    from stilt.storage import ProjectFiles
+
     rec_a = PointReceptor(
         time=dt.datetime(2023, 1, 1, 12),
         longitude=-111.85,
@@ -464,21 +465,23 @@ def test_simulation_collection_incomplete_returns_only_unregistered_ids(tmp_path
     )
     sid_a = str(SimID.from_parts("hrrr", rec_a))
     sid_b = str(SimID.from_parts("hrrr", rec_b))
-    _state_call(repo, "register", [(sid_a, rec_a)])
-    _mark_trajectory_complete(repo, sid_a)
+
+    files_a = ProjectFiles(tmp_path).simulation(sid_a)
+    files_a.directory.mkdir(parents=True, exist_ok=True)
+    files_a.trajectory_path.write_bytes(b"traj")
 
     model = Model(
         project=tmp_path,
         config=_config(tmp_path, include_footprint=False),
         receptors=[rec_a, rec_b],
-        index=repo,
     )
 
     assert model.simulations.incomplete() == [sid_b]
 
 
 def test_simulation_collection_incomplete_uses_configured_footprints(tmp_path):
-    repo = InMemoryIndex(tmp_path)
+    from stilt.storage import ProjectFiles
+
     rec_complete = PointReceptor(
         time=dt.datetime(2023, 1, 1, 12),
         longitude=-111.85,
@@ -493,21 +496,22 @@ def test_simulation_collection_incomplete_uses_configured_footprints(tmp_path):
     )
     sid_complete = str(SimID.from_parts("hrrr", rec_complete))
     sid_missing = str(SimID.from_parts("hrrr", rec_missing))
-    _state_call(
-        repo,
-        "register",
-        [(sid_complete, rec_complete), (sid_missing, rec_missing)],
-        footprint_names=["slv"],
-    )
-    _mark_trajectory_complete(repo, sid_complete)
-    _mark_trajectory_complete(repo, sid_missing)
-    _mark_footprint_complete(repo, sid_complete, "slv")
+
+    # Complete sim has the trajectory AND the configured footprint on disk;
+    # the missing sim has only the trajectory, so its footprint is still pending.
+    files_complete = ProjectFiles(tmp_path).simulation(sid_complete)
+    files_complete.directory.mkdir(parents=True, exist_ok=True)
+    files_complete.trajectory_path.write_bytes(b"traj")
+    files_complete.footprint_path("slv").write_bytes(b"foot")
+
+    files_missing = ProjectFiles(tmp_path).simulation(sid_missing)
+    files_missing.directory.mkdir(parents=True, exist_ok=True)
+    files_missing.trajectory_path.write_bytes(b"traj")
 
     model = Model(
         project=tmp_path,
         config=_config(tmp_path),
         receptors=[rec_complete, rec_missing],
-        index=repo,
     )
 
     assert model.simulations.incomplete() == [sid_missing]

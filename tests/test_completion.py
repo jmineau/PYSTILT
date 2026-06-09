@@ -6,6 +6,7 @@ from stilt.completion import (
     ERROR_TRAJECTORY,
     TRAJECTORY,
     expected_artifacts,
+    expected_for_config,
     footprint_artifact,
     is_complete,
 )
@@ -67,14 +68,14 @@ def test_complete_when_error_not_expected(tmp_path):
     _touch(tmp_path, "s1", "traj")
     _touch(tmp_path, "s1", "foot", "default")
     cfg = _Cfg(footprints={"default": None}, error_enabled=False)
-    assert is_complete("s1", cfg, _storage(tmp_path)) is True
+    assert is_complete("s1", expected_for_config(cfg), _storage(tmp_path)) is True
 
 
 def test_incomplete_when_error_expected_but_missing(tmp_path):
     _touch(tmp_path, "s1", "traj")
     _touch(tmp_path, "s1", "foot", "default")
     cfg = _Cfg(footprints={"default": None}, error_enabled=True)
-    assert is_complete("s1", cfg, _storage(tmp_path)) is False
+    assert is_complete("s1", expected_for_config(cfg), _storage(tmp_path)) is False
 
 
 def test_complete_when_error_present(tmp_path):
@@ -82,17 +83,17 @@ def test_complete_when_error_present(tmp_path):
     _touch(tmp_path, "s1", "error")
     _touch(tmp_path, "s1", "foot", "default")
     cfg = _Cfg(footprints={"default": None}, error_enabled=True)
-    assert is_complete("s1", cfg, _storage(tmp_path)) is True
+    assert is_complete("s1", expected_for_config(cfg), _storage(tmp_path)) is True
 
 
 def test_empty_footprint_marker_counts_complete(tmp_path):
     _touch(tmp_path, "s1", "traj")
     _touch(tmp_path, "s1", "empty", "default")
     cfg = _Cfg(footprints={"default": None}, error_enabled=False)
-    assert is_complete("s1", cfg, _storage(tmp_path)) is True
+    assert is_complete("s1", expected_for_config(cfg), _storage(tmp_path)) is True
 
 
 def test_incomplete_when_trajectory_missing(tmp_path):
     _touch(tmp_path, "s1", "foot", "default")
     cfg = _Cfg(footprints={"default": None}, error_enabled=False)
-    assert is_complete("s1", cfg, _storage(tmp_path)) is False
+    assert is_complete("s1", expected_for_config(cfg), _storage(tmp_path)) is False

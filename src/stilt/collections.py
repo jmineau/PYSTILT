@@ -6,6 +6,7 @@ from collections.abc import Iterable, Iterator
 from pathlib import Path
 from typing import TYPE_CHECKING, Generic, Protocol, TypeVar, overload
 
+from stilt.completion import expected_artifacts, is_complete
 from stilt.config import STILTParams
 from stilt.footprint import Footprint
 from stilt.index import OutputSummary, SimulationIndex
@@ -269,7 +270,13 @@ class SimulationCollection:
         time_range: tuple | None = None,
         location_ids: set[str] | None = None,
     ) -> list[str]:
-        """Return simulation IDs not fully complete for the current model config."""
+        """
+        Return simulation IDs not fully complete for the current model config.
+
+        Completion is decided by the outputs on disk (by key), so the result
+        reflects what has actually been produced — including, when error params
+        are set, the error trajectory.
+        """
         candidate_ids = matching_ids(
             self._index,
             receptors=self._receptors,
@@ -279,14 +286,14 @@ class SimulationCollection:
             time_range=time_range,
             location_ids=location_ids,
         )
-        found = self._index.summaries(candidate_ids)
+        expected = expected_artifacts(
+            self._footprint_names, error_enabled=self._params.error_enabled
+        )
+        storage = Storage(self._output_dir, self._output_dir, self._store)
         return [
             sim_id
             for sim_id in candidate_ids
-            if found.get(sim_id, OutputSummary()).needs_work(
-                self._footprint_names,
-                skip_existing=True,
-            )
+            if not is_complete(sim_id, expected, storage)
         ]
 
     def _resolve_mets(self, mets: str | list[str] | None) -> set[str]:

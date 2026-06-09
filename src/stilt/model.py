@@ -18,7 +18,7 @@ from stilt.collections import (
     SimulationCollection,
     TrajectoryCollection,
 )
-from stilt.completion import is_complete
+from stilt.completion import expected_for_config, is_complete
 from stilt.config import (
     ModelConfig,
     RuntimeSettings,
@@ -478,10 +478,11 @@ class Model:
         # When error params are set, that set includes the error trajectory, so
         # sims that pre-date error mode are correctly re-dispatched to backfill it.
         if resolved_skip:
+            expected = expected_for_config(self.config)
             pending = [
                 sim_id
                 for sim_id in sim_ids
-                if not is_complete(sim_id, self.config, self.storage)
+                if not is_complete(sim_id, expected, self.storage)
             ]
         else:
             pending = list(sim_ids)
