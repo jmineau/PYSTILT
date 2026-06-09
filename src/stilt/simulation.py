@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 import pandas as pd
 
-from stilt.config import FootprintConfig, STILTParams
+from stilt.config import ErrorParams, FootprintConfig, STILTParams
 from stilt.config.model import _config_or_kwargs
 from stilt.errors import (
     EmptyTrajectoryError,
@@ -34,6 +34,38 @@ if TYPE_CHECKING:
     from stilt.visualization import SimulationPlotAccessor
 
 logger = logging.getLogger(__name__)
+
+_ERROR_PARAM_FIELDS = frozenset(ErrorParams.XYERR_PARAMS) | frozenset(
+    ErrorParams.ZIERR_PARAMS
+)
+
+
+def _read_trajectory_params(path: Path) -> STILTParams | None:
+    """Read just the stored params from a trajectory parquet's Arrow metadata."""
+    import json
+
+    import pyarrow.parquet as pq
+
+    try:
+        meta = pq.ParquetFile(path).schema_arrow.metadata
+    except Exception:
+        return None
+    if not meta or b"stilt:params" not in meta:
+        return None
+    try:
+        return STILTParams.model_validate(json.loads(meta[b"stilt:params"]))
+    except Exception:
+        return None
+
+
+def _params_match_ignoring_error(a: STILTParams, b: STILTParams) -> bool:
+    """Return whether two param sets agree on everything but the error params."""
+    da = a.model_dump()
+    db = b.model_dump()
+    for field in _ERROR_PARAM_FIELDS:
+        da.pop(field, None)
+        db.pop(field, None)
+    return da == db
 
 
 class SimID(str):
@@ -316,6 +348,25 @@ class Simulation:
 
     # -- Execution -------------------------------------------------------------
 
+    def _can_reuse_main_for_error(self) -> bool:
+        """
+        Whether to run only the error pass, reusing an existing main trajectory.
+
+        True when an error trajectory is configured (``winderrtf > 0``) but not
+        yet present, the main trajectory already exists, and its stored params
+        match the current config on everything but the error params. Lets an
+        error-trajectory backfill skip recomputing the (expensive) main run.
+        """
+        if self.params.winderrtf <= 0:
+            return False
+        if self.resolve_output(self.error_trajectories_path) is not None:
+            return False
+        main_path = self.resolve_output(self.trajectories_path)
+        if main_path is None:
+            return False
+        stored = _read_trajectory_params(main_path)
+        return stored is not None and _params_match_ignoring_error(stored, self.params)
+
     def run_trajectories(
         self,
         timeout: int | None = None,
@@ -339,6 +390,11 @@ class Simulation:
         if rm_dat is None:
             rm_dat = self.params.rm_dat
 
+        # If the main trajectory already exists with matching (non-error) params
+        # and only the error trajectory is needed, run the error pass alone — the
+        # error run is independent of the main, so there's no need to recompute it.
+        error_only = self._can_reuse_main_for_error()
+
         runner = HYSPLITDriver(
             directory=self.directory,
             receptor=self.receptor,
@@ -347,7 +403,7 @@ class Simulation:
             exe_dir=self._exe_dir,
         )
         runner.prepare()
-        result = runner.execute(timeout=timeout, rm_dat=rm_dat)
+        result = runner.execute(timeout=timeout, rm_dat=rm_dat, error_only=error_only)
 
         result_log = getattr(result, "log_path", None)
         if result_log is not None:
@@ -357,15 +413,15 @@ class Simulation:
         elif hasattr(result, "stdout"):
             self.log_path.write_text(str(cast(Any, result).stdout))
 
-        if result.particles.empty:
-            raise EmptyTrajectoryError(f"No trajectory data for {self.id}")
-
-        self._trajectories = Trajectories.from_particles(
-            result.particles,
-            receptor=self.receptor,
-            params=self.params,
-            met_files=self.source_met_files,
-        )
+        if not error_only:
+            if result.particles is None or result.particles.empty:
+                raise EmptyTrajectoryError(f"No trajectory data for {self.id}")
+            self._trajectories = Trajectories.from_particles(
+                result.particles,
+                receptor=self.receptor,
+                params=self.params,
+                met_files=self.source_met_files,
+            )
 
         if result.error_particles is not None and not result.error_particles.empty:
             self._error_trajectories = Trajectories.from_particles(
