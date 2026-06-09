@@ -76,7 +76,7 @@ class LocalExecutor:
     Local executor: runs simulations in-process (n=1) or across a process pool (n>1).
 
     Uses push dispatch — pending sim IDs are distributed directly without chunk
-    files or queue claims. The coordinator synchronizes the output index after
+    files or queue claims. The coordinator collects results after
     execution.
     """
 

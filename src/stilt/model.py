@@ -91,7 +91,7 @@ class Model:
     receptors : ReceptorCollection
         Science-facing receptor accessor.
     simulations : SimulationCollection
-        Registered simulation handles backed by the output index.
+        Registered simulation handles backed by the manifest registry.
     mets : dict[str, MetStream]
         Named meteorology streams.
     trajectories : TrajectoryCollection
@@ -122,7 +122,7 @@ class Model:
         **kwargs,
     ):
         # Runtime settings are not persisted in the project config, but they may be
-        # needed to resolve the output index backend, so resolve them first.
+        # needed to resolve the work queue backend, so resolve them first.
         self.runtime = resolve_runtime_settings(runtime)
 
         # The project layout resolver also handles output_dir defaulting and cloud URI parsing.
@@ -240,8 +240,8 @@ class Model:
         queue-backed workers, and the CLI ``stilt register`` command.
 
         Registration is idempotent: calling this multiple times with the same
-        receptors does not create duplicate index entries.  The underlying
-        index backend uses an upsert (``ON CONFLICT DO UPDATE``) so existing
+        receptors does not create duplicate registry entries.  The manifest
+        uses an upsert so existing
         rows are updated in place rather than duplicated.
 
         Parameters
@@ -277,7 +277,7 @@ class Model:
         if self.queue is not None:
             self.queue.register(list(pairs), scene_id=scene_id)
 
-        # Registration updates the output receptor/index truth, so drop
+        # Registration updates the registry, so drop
         # cached accessors — next access rebuilds from that output surface.
         self._receptors = None
         self._simulations = None
@@ -409,7 +409,7 @@ class Model:
         then compute footprints in a single pass.  When no footprint configs
         are defined, only HYSPLIT trajectories are dispatched.
 
-        Workers either drain a claim-capable project index via
+        Workers either drain the Postgres work queue via
         :func:`~stilt.execution.pull_simulations` or consume immutable chunk
         shards via :func:`~stilt.execution.push_simulations`; the coordinator
         registers simulations and starts workers, then optionally blocks.
@@ -422,13 +422,12 @@ class Model:
             Skip simulations that already have output.  ``None`` (default)
             reads the value from ``config.skip_existing``.
         rebuild : bool or None, optional
-            Rebuild the output index from outputs before planning work.
-            ``None`` (default) uses auto mode: rebuild when skip-existing
-            is enabled, otherwise skip the pre-run rebuild.
+            Deprecated no-op. Completion is always read from the outputs by key,
+            so there is nothing to rebuild before planning.
         wait : bool, optional
-            If ``True`` (default), block until all workers finish and rebuild
-            output index from outputs. If ``False``, return the :class:`JobHandle`
-            immediately — suitable for fire-and-forget Slurm runs.
+            If ``True`` (default), block until all workers finish. If ``False``,
+            return the :class:`JobHandle` immediately — suitable for
+            fire-and-forget Slurm runs.
 
         Returns
         -------
@@ -440,7 +439,7 @@ class Model:
         ``Model.run()`` is the main science-facing execution path for local or
         notebook use. For claim-based service workflows, use
         :func:`stilt.execution.pull_simulations` against a model configured with
-        a PostgreSQL-backed index, or use the CLI ``stilt pull-worker`` and
+        a PostgreSQL-backed queue, or use the CLI ``stilt pull-worker`` and
         ``stilt serve`` commands.
         """
         # Execution may produce new outputs, so drop any cached simulation view.

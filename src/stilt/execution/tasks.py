@@ -26,7 +26,7 @@ class SimulationTask(BaseModel):
     Passed as the single argument to :func:`~stilt.execution.execute_task` so
     it can be pickled and shipped to a remote executor (local subprocess, Slurm
     task, Kubernetes Job) without needing shared runtime objects. Atomic claim
-    handling stays outside the task on claim-capable index backends.
+    handling stays outside the task on the claim-capable work queue.
     """
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -97,7 +97,7 @@ def _planned_foot_configs(
     Return the footprint configs that still need work for one simulation.
 
     Checks the output store (filesystem) for per-footprint existence. Workers
-    must never touch the index — that belongs to the submit side.
+    must never touch the queue — that belongs to the submit side.
     """
     all_foot_configs = dict(model.config.footprints)
     if not all_foot_configs:
@@ -129,9 +129,8 @@ def plan_simulation_task(
     """
     Plan one runnable worker task for a sim already known to need work.
 
-    The caller is expected to pass sim IDs from ``index.pending_trajectories()``
-    or ``index.claim_one()``, both of which filter on the SQL completion
-    predicate — so this function does not re-check skip-existing.
+    The caller passes sim IDs that already need work (queue claims, or a
+    by-key skip-existing filter), so this function does not re-check them.
     """
     return build_simulation_task(
         model,

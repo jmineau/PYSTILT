@@ -6,7 +6,7 @@ outputs on disk: identity (``sim_id``, ``met``), the receptor, the scene label,
 and the configured footprint targets. Completion is **never** stored here — it is
 computed by key from the store (see :mod:`stilt.completion`).
 
-The manifest replaces the registration columns of the old SQLite index. It lives
+The manifest replaces the per-row registration of the former index. It lives
 in the project's ``.stilt/`` directory as ``manifest.parquet`` and is read and
 written through a :class:`~stilt.storage.Store`, so it works on local filesystems
 and cloud object stores alike.

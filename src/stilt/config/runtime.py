@@ -30,7 +30,7 @@ class RuntimeSettings(BaseModel):
 
     db_url: str | None = Field(
         default=None,
-        description="Database URL for a shared simulation index backend.",
+        description="Database URL for the shared Postgres work queue.",
     )
     cache_dir: Path | None = Field(
         default=None,
@@ -43,7 +43,7 @@ class RuntimeSettings(BaseModel):
     max_rows: int | None = Field(
         default=None,
         ge=1,
-        description="Maximum number of index rows to claim or process in one batch.",
+        description="Maximum number of queue rows to claim or process in one batch.",
     )
 
     @classmethod

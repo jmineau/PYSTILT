@@ -135,7 +135,7 @@ def _resolve_project_dir(
     resolved = Path(raw).resolve()
     has_inputs = (resolved / "config.yaml").exists()
     files = ProjectFiles(resolved)
-    has_index = files.simulations_dir.exists() or files.index_db_path.exists()
+    has_outputs = files.simulations_dir.exists()
     if require_inputs and not has_inputs:
         typer.echo(
             f"Error: '{resolved}' does not look like a STILT project directory "
@@ -143,7 +143,7 @@ def _resolve_project_dir(
             err=True,
         )
         raise typer.Exit(code=1)
-    if not require_inputs and not (has_inputs or has_index):
+    if not require_inputs and not (has_inputs or has_outputs):
         typer.echo(
             f"Error: '{resolved}' does not look like a STILT project or output root.",
             err=True,
@@ -247,7 +247,7 @@ def run(
         None,
         "--rebuild/--no-rebuild",
         help=(
-            "Rebuild the output index from outputs before planning. "
+            "Deprecated no-op (completion is read from outputs by key). "
             "Defaults to auto: enabled when skip-existing is in effect."
         ),
     ),
