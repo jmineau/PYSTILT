@@ -16,6 +16,10 @@ CHUNKS_DIRNAME = "chunks"
 SIMULATION_LOG_FILENAME = "stilt.log"
 SIMULATION_MET_DIRNAME = "met"
 
+# Tool-managed project state (registry/catalog), not user-authored inputs.
+STILT_DIRNAME = ".stilt"
+MANIFEST_FILENAME = "manifest.parquet"
+
 
 def trajectory_filename(sim_id: str) -> str:
     """Return the canonical trajectory filename for *sim_id*."""
@@ -152,6 +156,16 @@ class ProjectFiles:
         return self.simulations_dir / SIMULATION_INDEX_DB_FILENAME
 
     @property
+    def stilt_dir(self) -> Path:
+        """Return the tool-managed state directory for this project."""
+        return self.root / STILT_DIRNAME
+
+    @property
+    def manifest_path(self) -> Path:
+        """Return the local path to the simulation registry manifest."""
+        return self.stilt_dir / MANIFEST_FILENAME
+
+    @property
     def particle_index_dir(self) -> Path:
         """Return the directory used for flat particle-file aliases."""
         return self.simulations_dir / PARTICLE_INDEX_DIRNAME
@@ -179,6 +193,11 @@ class ProjectFiles:
     def receptors_key() -> str:
         """Return the canonical output-store key for the receptors file."""
         return RECEPTORS_FILENAME
+
+    @staticmethod
+    def manifest_key() -> str:
+        """Return the canonical output-store key for the registry manifest."""
+        return f"{STILT_DIRNAME}/{MANIFEST_FILENAME}"
 
     @staticmethod
     def particle_index_key(filename: str) -> str:
