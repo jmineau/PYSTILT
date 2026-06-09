@@ -8,7 +8,6 @@ import logging
 import os
 import tempfile
 from collections.abc import Iterable
-from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -18,7 +17,7 @@ from stilt.collections import (
     SimulationCollection,
     TrajectoryCollection,
 )
-from stilt.completion import expected_for_config, is_complete
+from stilt.completion import StatusCounts, expected_for_config, is_complete
 from stilt.config import (
     ModelConfig,
     RuntimeSettings,
@@ -35,11 +34,10 @@ from stilt.execution import (
     get_executor,
     sigterm_as_interrupt,
 )
-from stilt.index import IndexCounts, SimulationIndex
-from stilt.index.factory import resolve_index
 from stilt.manifest import Manifest
 from stilt.meteorology import MetStream
 from stilt.receptors import Receptor
+from stilt.service import PostgresQueue, resolve_queue
 from stilt.simulation import SimID
 from stilt.storage import (
     ProjectFiles,
@@ -55,47 +53,16 @@ if TYPE_CHECKING:
     from stilt.visualization import ModelPlotAccessor
 
 
-@dataclass
-class _RebuildOnCompleteHandle:
-    """JobHandle wrapper that rebuilds the output index once after push-mode completion."""
-
-    _inner: JobHandle
-    _index: SimulationIndex
-    _completed: bool = field(default=False, init=False)
-
-    @property
-    def job_id(self) -> str:
-        return self._inner.job_id
-
-    @property
-    def detached(self) -> bool:
-        return self._inner.detached
-
-    def wait(self) -> None:
-        if self._completed:
-            return
-        self._inner.wait()
-        self._index.rebuild()
-        self._completed = True
-
-
-def _wrap_wait_with_rebuild(handle: JobHandle, index: SimulationIndex) -> JobHandle:
-    """Wrap one handle so push-mode completion rebuilds output state once."""
-    return _RebuildOnCompleteHandle(handle, index)  # type: ignore[return-value]
-
-
 class Model:
     """
     Science-facing STILT project interface.
 
     ``Model`` is the primary Python entry point for configuring a STILT project,
-    running one-off simulations, and loading simulation results. It also owns
-    the output project index used by batch, HPC, and cloud execution.
+    running one-off simulations, and loading simulation results.
 
-    Pull-mode workers and streaming consumers operate against the model's
-    output index directly when the configured index supports claims.
-    Claim-worker control is exposed primarily through the CLI and
-    :func:`stilt.execution.pull_simulations` for advanced Python use.
+    Completion is read from the outputs by key; the registry is the manifest.
+    A Postgres work queue (``model.queue``) is used only for pull/serve workers,
+    exposed through the CLI and :func:`stilt.execution.pull_simulations`.
 
     Parameters
     ----------
@@ -133,8 +100,8 @@ class Model:
         Cross-simulation footprint accessor namespace.
     plot : ModelPlotAccessor
         Plotting namespace for model summaries and outputs.
-    index : SimulationIndex
-        Output simulation registry used by the coordinator and output queries.
+    queue : PostgresQueue or None
+        Postgres work queue for pull/serve workers (``None`` locally).
     storage : Storage
         Output bootstrap and output storage facade.
     runtime : RuntimeSettings
@@ -177,7 +144,7 @@ class Model:
         # Lazy caches for expensive properties
         self._mets: dict[str, MetStream] | None = None
         self._receptors = receptors  # may be None, a Receptor, or an iterable of Receptors; resolved lazily in the accessor
-        self._index: SimulationIndex | None = None
+        self._queue: PostgresQueue | None = None
         self._manifest: Manifest | None = None
         self._simulations: SimulationCollection | None = None
         self._trajectories: TrajectoryCollection | None = None
@@ -198,22 +165,17 @@ class Model:
         return self._manifest
 
     @property
-    def index(self) -> SimulationIndex | None:
+    def queue(self) -> PostgresQueue | None:
         """
         Postgres work queue, present only when a DB URL is configured.
 
-        Local projects have no index: the registry is the manifest and
+        Local projects have no queue: the registry is the manifest and
         completion is computed by key. The queue exists only to distribute work
         to pull/serve workers.
         """
-        if self._index is None and self.runtime.db_url:
-            self._index = resolve_index(
-                None,
-                output_root=self.layout.output_root,
-                runtime=self.runtime,
-                builtin_backend="postgres",
-            )
-        return self._index
+        if self._queue is None and self.runtime.db_url:
+            self._queue = resolve_queue(self.runtime)
+        return self._queue
 
     def _resolve_compute_root(self, compute_root: str | Path | None) -> Path:
         """Return the parent directory under which worker sim dirs are created."""
@@ -312,8 +274,8 @@ class Model:
         foot = foot_names(dict(self.config.footprints))
         self.manifest.register(list(pairs), footprint_names=foot, scene_id=scene_id)
         # When a queue is configured, also seed it so pull/serve workers can claim.
-        if self.index is not None:
-            self.index.register(list(pairs), footprint_names=foot, scene_id=scene_id)
+        if self.queue is not None:
+            self.queue.register(list(pairs), scene_id=scene_id)
 
         # Registration updates the output receptor/index truth, so drop
         # cached accessors — next access rebuilds from that output surface.
@@ -398,18 +360,18 @@ class Model:
 
     # -- Queries --------------------------------------------------------------
 
-    def _counts(self, sim_ids: list[str]) -> IndexCounts:
+    def _counts(self, sim_ids: list[str]) -> StatusCounts:
         """Aggregate completion (by key) over a set of registered sim ids."""
         if not sim_ids:
-            return IndexCounts()
+            return StatusCounts()
         expected = expected_for_config(self.config)
         total = len(sim_ids)
         completed = sum(
             1 for sim_id in sim_ids if is_complete(sim_id, expected, self.storage)
         )
-        return IndexCounts(total=total, completed=completed, pending=total - completed)
+        return StatusCounts(total=total, completed=completed, pending=total - completed)
 
-    def status(self, scene_id: str | None = None) -> IndexCounts:
+    def status(self, scene_id: str | None = None) -> StatusCounts:
         """
         Return completion counts (total/completed/pending) from the registry.
 
@@ -423,7 +385,7 @@ class Model:
             sim_ids = self.manifest.sim_ids()
         return self._counts(sim_ids)
 
-    def scene_counts(self) -> dict[str, IndexCounts]:
+    def scene_counts(self) -> dict[str, StatusCounts]:
         """Return completion counts grouped by registered scene."""
         return {
             scene: self._counts(sim_ids)
@@ -481,15 +443,11 @@ class Model:
         a PostgreSQL-backed index, or use the CLI ``stilt pull-worker`` and
         ``stilt serve`` commands.
         """
-        index = self.index
-
-        # Execution mutates registry/output state, so any cached simulation view
-        # must be rebuilt after each coordinator run.
+        # Execution may produce new outputs, so drop any cached simulation view.
         self._simulations = None
         resolved_skip = (
             skip_existing if skip_existing is not None else self.config.skip_existing
         )
-        resolved_rebuild = resolved_skip if rebuild is None else rebuild
         resolved_executor = executor or get_executor(self.config.execution or {})
         if isinstance(resolved_executor, SlurmExecutor) and (
             self.layout.is_cloud_project or self.layout.is_cloud_output
@@ -507,15 +465,7 @@ class Model:
             logger.info("run: no receptors configured — nothing to do")
             return LocalHandle()
 
-        # The queue (Postgres) tracks its own row state; keep it consistent.
-        # Local projects have no index — completion is decided entirely by key.
-        if index is not None:
-            if resolved_rebuild:
-                logger.info("run: rebuilding queue state before planning")
-                index.rebuild()
-            index.reset_to_pending(sim_ids, clear_outputs=not resolved_skip)
-
-        # Completion is decided by the outputs themselves (by key), not the index:
+        # Completion is decided by the outputs themselves (by key):
         # a sim is pending unless every artifact it must produce already exists.
         # When error params are set, that set includes the error trajectory, so
         # sims that pre-date error mode are correctly re-dispatched to backfill it.
@@ -547,9 +497,6 @@ class Model:
             compute_root=str(self.compute_root),
             skip_existing=resolved_skip,
         )
-        if dispatch == "push" and index is not None:
-            handle = _wrap_wait_with_rebuild(handle, index)
-
         if wait:
             logger.info("run: waiting for workers to finish...")
             try:

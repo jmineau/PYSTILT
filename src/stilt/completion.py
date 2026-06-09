@@ -14,6 +14,7 @@ The error *trajectory* is required only when the wind-error params are set
 from __future__ import annotations
 
 from collections.abc import Collection, Iterable
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from stilt.storage.files import ProjectFiles
@@ -25,6 +26,17 @@ if TYPE_CHECKING:
 TRAJECTORY = "trajectory"
 ERROR_TRAJECTORY = "error_trajectory"
 _FOOTPRINT_PREFIX = "footprint:"
+
+
+@dataclass(frozen=True, slots=True)
+class StatusCounts:
+    """Aggregate completion counts for one project or scene."""
+
+    total: int = 0
+    completed: int = 0
+    running: int = 0
+    pending: int = 0
+    failed: int = 0
 
 
 def footprint_artifact(name: str) -> str:

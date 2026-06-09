@@ -417,8 +417,8 @@ def test_push_simulations_persists_results(tmp_path, receptor, monkeypatch):
     assert model.storage.exists(sim_id, traj_file)
 
 
-def test_pull_simulations_requires_postgres_state(tmp_path):
-    model = SimpleNamespace(index=object())
+def test_pull_simulations_requires_a_queue(tmp_path):
+    model = SimpleNamespace(queue=None)
 
-    with pytest.raises(ConfigValidationError, match="claim-capable index backend"):
+    with pytest.raises(ConfigValidationError, match="Postgres work queue"):
         pull_simulations(model, follow=False)

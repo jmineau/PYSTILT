@@ -5,8 +5,9 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from stilt.index.postgres import POSTGRES_PENDING_SIMULATIONS_SQL
 from stilt.storage import project_slug
+
+from .postgres import POSTGRES_PENDING_SIMULATIONS_SQL
 
 DB_URL_ENV = "PYSTILT_DB_URL"
 DB_URL_SECRET_KEY = "PYSTILT_DB_URL"

@@ -16,7 +16,6 @@ import pandas as pd
 import xarray as xr
 
 from stilt.config import MetConfig
-from stilt.index import OutputSummary
 from stilt.model import Model
 from stilt.simulation import SimID
 
@@ -32,22 +31,24 @@ def _sim_id(receptor, met: str = "hrrr") -> str:
 
 
 def _state_call(model: Model, method: str, *args, **kwargs):
+    """Completion checks by key (the store is the source of truth)."""
+    from stilt.storage import ProjectFiles
+
     if method == "output_summaries":
-        return model.index.summaries(*args, **kwargs)
+        return model.manifest.sim_ids()
     if method == "footprint_complete":
         sim_id, name = args
-        summaries = model.index.summaries([sim_id])
-        return summaries.get(sim_id, OutputSummary()).footprint_complete(name)
+        files = ProjectFiles(model.layout.output_dir).simulation(sim_id)
+        return model.storage.exists(
+            sim_id, files.footprint_path(name)
+        ) or model.storage.exists(sim_id, files.empty_footprint_path(name))
     if method == "trajectory_status":
         [sim_id] = args
-        summaries = model.index.summaries([sim_id])
-        summary = summaries.get(sim_id, OutputSummary())
-        if summary.traj_present:
+        files = ProjectFiles(model.layout.output_dir).simulation(sim_id)
+        if model.storage.exists(sim_id, files.trajectory_path):
             return "complete"
-        if summary.error_traj_present or summary.log_present:
-            return "failed"
         return "pending"
-    return getattr(model.index, method)(*args, **kwargs)
+    raise NotImplementedError(method)
 
 
 # ---------------------------------------------------------------------------
