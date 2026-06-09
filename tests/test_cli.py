@@ -9,7 +9,7 @@ from typer.testing import CliRunner
 import stilt.__main__
 from stilt.cli import _resolve_project_dir, app
 from stilt.config import FootprintConfig, Grid, ModelConfig
-from stilt.index import IndexCounts
+from stilt.completion import StatusCounts
 
 runner = CliRunner()
 
@@ -17,7 +17,7 @@ runner = CliRunner()
 def _fake_state_for_cli_summary():
     class _FakeState:
         def counts(self):
-            return IndexCounts()
+            return StatusCounts()
 
         def rebuild(self):
             return None
@@ -925,7 +925,7 @@ def test_status_filters_one_scene(tmp_path, monkeypatch):
 
         def status(self, scene_id=None):
             assert scene_id == "scene-a"
-            return IndexCounts(total=2, completed=1, running=0, pending=1, failed=0)
+            return StatusCounts(total=2, completed=1, running=0, pending=1, failed=0)
 
     monkeypatch.setattr("stilt.cli.Model", _FakeModel)
 
@@ -945,10 +945,10 @@ def test_status_groups_counts_by_scene(tmp_path, monkeypatch):
 
         def scene_counts(self):
             return {
-                "scene-a": IndexCounts(
+                "scene-a": StatusCounts(
                     total=2, completed=1, running=0, pending=1, failed=0
                 ),
-                "scene-b": IndexCounts(
+                "scene-b": StatusCounts(
                     total=1, completed=0, running=0, pending=1, failed=0
                 ),
             }

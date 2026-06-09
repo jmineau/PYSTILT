@@ -12,7 +12,7 @@ from stilt.execution import (
     SlurmExecutor,
 )
 from stilt.execution.tasks import plan_simulation_task
-from stilt.index import IndexCounts
+from stilt.completion import StatusCounts
 from stilt.model import Model as _Model
 from stilt.receptors import PointReceptor
 from stilt.simulation import SimID
@@ -567,14 +567,12 @@ def test_model_uses_runtime_defaults_for_compute_root_and_local_store(tmp_path):
 
 
 def test_model_uses_runtime_db_url_for_cloud_output(tmp_path, monkeypatch):
-    captured: list[tuple[str, int | None]] = []
+    captured: list[str] = []
     runtime = RuntimeSettings(db_url="postgresql://runtime-db/pystilt", max_rows=25)
 
     monkeypatch.setattr(
-        "stilt.index.factory.PostgresIndex",
-        lambda url, output_root=None, max_rows=None: (
-            captured.append((url, max_rows)) or object()
-        ),
+        "stilt.service.postgres.PostgresQueue",
+        lambda db_url: captured.append(db_url) or object(),
     )
 
     model = Model(
@@ -589,19 +587,17 @@ def test_model_uses_runtime_db_url_for_cloud_output(tmp_path, monkeypatch):
         ),
     )
 
-    assert model.index is not None
-    assert captured == [("postgresql://runtime-db/pystilt", 25)]
+    assert model.queue is not None
+    assert captured == ["postgresql://runtime-db/pystilt"]
 
 
 def test_model_uses_runtime_db_url_for_local_output(tmp_path, monkeypatch):
-    captured: list[tuple[str, int | None]] = []
+    captured: list[str] = []
     runtime = RuntimeSettings(db_url="postgresql://runtime-db/pystilt", max_rows=12)
 
     monkeypatch.setattr(
-        "stilt.index.factory.PostgresIndex",
-        lambda url, output_root=None, max_rows=None: (
-            captured.append((url, max_rows)) or object()
-        ),
+        "stilt.service.postgres.PostgresQueue",
+        lambda db_url: captured.append(db_url) or object(),
     )
 
     model = Model(
@@ -610,8 +606,8 @@ def test_model_uses_runtime_db_url_for_local_output(tmp_path, monkeypatch):
         runtime=runtime,
     )
 
-    assert model.index is not None
-    assert captured == [("postgresql://runtime-db/pystilt", 12)]
+    assert model.queue is not None
+    assert captured == ["postgresql://runtime-db/pystilt"]
 
 
 def test_register_pending_bootstraps_config_and_receptors_to_storage(
@@ -747,7 +743,7 @@ def test_register_pending_tracks_scene_counts(tmp_path, point_receptor):
     sim_ids = model.register_pending(scene_id="scene-a")
 
     assert len(sim_ids) == 1
-    assert model.status(scene_id="scene-a") == IndexCounts(
+    assert model.status(scene_id="scene-a") == StatusCounts(
         total=1,
         completed=0,
         running=0,
@@ -755,7 +751,7 @@ def test_register_pending_tracks_scene_counts(tmp_path, point_receptor):
         failed=0,
     )
     assert model.scene_counts() == {
-        "scene-a": IndexCounts(
+        "scene-a": StatusCounts(
             total=1,
             completed=0,
             running=0,
@@ -1523,7 +1519,7 @@ def test_model_status_reflects_queue_counts(tmp_path, point_receptor):
 
     model.register_pending()
 
-    assert model.status() == IndexCounts(
+    assert model.status() == StatusCounts(
         total=1,
         completed=0,
         running=0,

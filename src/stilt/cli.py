@@ -18,7 +18,7 @@ Usage examples::
     stilt push-worker ./my_project --chunk chunks/run_01/task_0.txt
     stilt serve ./my_project                         # long-lived streaming mode
     stilt register ./my_project --scene-id overpass_001       # register a scene group
-    stilt rebuild                     # rebuild output index from disk
+    stilt rebuild                     # report project status
     stilt status                      # show status from cwd
 """
 
@@ -375,7 +375,7 @@ def pull_worker(
     compute_root: str | None = _COMPUTE_ROOT,
 ) -> None:
     """
-    Drain pending simulations from the output project index.
+    Drain pending simulations from the work queue.
 
     Atomically pulls and processes simulations until the queue is empty
     (batch mode) or indefinitely (``--follow``).
@@ -477,8 +477,6 @@ def rebuild(
         project_dir, output_dir, require_inputs=False
     )
     model = Model(project=resolved_dir, output_dir=resolved_output)
-    if model.index is not None:
-        model.index.rebuild()
     _print_status(model)
 
 

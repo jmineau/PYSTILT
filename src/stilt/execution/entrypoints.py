@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 import time
-from contextlib import AbstractContextManager
-from typing import TYPE_CHECKING, Protocol, runtime_checkable
+from typing import TYPE_CHECKING
 
 from stilt.errors import ConfigValidationError
 
@@ -11,22 +10,6 @@ from .tasks import plan_simulation_task
 
 if TYPE_CHECKING:
     from stilt import Model
-    from stilt.execution.tasks import SimulationResult
-
-
-class _Claim(Protocol):
-    """Private execution-only claim surface used by pull workers."""
-
-    sim_id: str
-
-    def record(self, result: SimulationResult) -> None: ...
-
-
-@runtime_checkable
-class _ClaimCapableIndex(Protocol):
-    """Private execution-only capability for pull-worker indexes."""
-
-    def claim_one(self) -> AbstractContextManager[_Claim | None]: ...
 
 
 def push_simulations(
@@ -58,17 +41,18 @@ def pull_simulations(
     *,
     skip_existing: bool | None = None,
 ) -> None:
-    """Drain pending simulations through atomic index claims."""
-    if not isinstance(model.index, _ClaimCapableIndex):
+    """Drain the work queue through atomic claims."""
+    queue = model.queue
+    if queue is None:
         raise ConfigValidationError(
-            "Pull-mode workers require a claim-capable index backend. "
-            "Configure PostgreSQL via PYSTILT_DB_URL."
+            "Pull-mode workers require a Postgres work queue. "
+            "Configure it via PYSTILT_DB_URL."
         )
 
     idle_sleep = max(poll_interval, 0.1)
     max_idle_sleep = min(60.0, max(idle_sleep, poll_interval * 8))
     while True:
-        with model.index.claim_one() as claim:
+        with queue.claim_one() as claim:
             if claim is None:
                 if follow:
                     time.sleep(idle_sleep)

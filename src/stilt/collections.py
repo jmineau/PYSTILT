@@ -153,7 +153,7 @@ class ReceptorCollection:
 
 class SimulationCollection:
     """
-    Lazy simulation collection backed by the output project index.
+    Lazy simulation collection backed by the manifest registry.
 
     This object is the science-facing boundary for simulation identity,
     selection, and lazy handle construction.
@@ -170,8 +170,8 @@ class SimulationCollection:
         Collection used to resolve receptors referenced by simulation ids.
     footprint_names
         Named footprints expected for complete output.
-    index
-        Durable output index used for filtering and status checks.
+    manifest
+        Manifest registry used for identity and selection.
     store
         Output store used by constructed simulation handles.
     """
@@ -416,7 +416,7 @@ class _OutputAccessor(Generic[TOutput]):
     Parameters
     ----------
     model
-        Model that provides configuration, storage, and index access.
+        Model that provides configuration, storage, and registry access.
     spec
         Output-family spec used to resolve presence, paths, and loading.
     """
@@ -509,7 +509,7 @@ class TrajectoryCollection:
     Parameters
     ----------
     model
-        Model that owns the simulation index, storage, and output layout.
+        Model that owns the registry, storage, and output layout.
     """
 
     def __init__(self, model: Model):

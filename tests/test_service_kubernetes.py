@@ -1,6 +1,6 @@
 """Tests for stilt.service.kubernetes manifest helpers."""
 
-from stilt.index.postgres import POSTGRES_PENDING_SIMULATIONS_SQL
+from stilt.service.postgres import POSTGRES_PENDING_SIMULATIONS_SQL
 from stilt.service.kubernetes import (
     db_secret_env,
     scaled_object_manifest,
