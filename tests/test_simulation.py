@@ -254,7 +254,7 @@ def test_simulation_run_trajectories_uses_source_met_files_in_metadata(
         def prepare(self):
             return None
 
-        def execute(self, timeout, rm_dat):
+        def execute(self, timeout, rm_dat, *, error_only=False):
             return _Result()
 
     def _fake_from_particles(particles, *, receptor, params, met_files, is_error=False):
@@ -297,7 +297,7 @@ def test_run_trajectories_timeout_maps_to_domain_error(
         def prepare(self):
             return None
 
-        def execute(self, timeout, rm_dat):
+        def execute(self, timeout, rm_dat, *, error_only=False):
             raise HYSPLITTimeoutError("boom")
 
     monkeypatch.setattr("stilt.simulation.HYSPLITDriver", _FakeRunner)
@@ -350,7 +350,7 @@ def test_run_trajectories_sets_main_and_error_trajectories(
         def prepare(self):
             return None
 
-        def execute(self, timeout, rm_dat):
+        def execute(self, timeout, rm_dat, *, error_only=False):
             return _Result()
 
     monkeypatch.setattr("stilt.simulation.HYSPLITDriver", _FakeRunner)
@@ -619,3 +619,120 @@ def test_simulation_status_uses_storage_backed_artifacts(point_receptor, tmp_pat
     log_path.write_text("Insufficient number of meteorological files found")
 
     assert "MISSING_MET_FILES" in str(sim.status)
+
+
+# ---------------------------------------------------------------------------
+# Error-only backfill: reuse an existing main trajectory, run only the error pass
+# ---------------------------------------------------------------------------
+
+_ERR = dict(siguverr=1.0, tluverr=60.0, zcoruverr=500.0, horcoruverr=40.0)
+
+
+def _particles_df(foot: float = 1e-5) -> pd.DataFrame:
+    return pd.DataFrame(
+        {
+            "time": [-60],
+            "indx": [1],
+            "long": [-111.9],
+            "lati": [40.7],
+            "zagl": [10.0],
+            "foot": [foot],
+        }
+    )
+
+
+def _write_trajectory(sim, params, *, is_error: bool = False, foot: float = 1e-5):
+    traj = Trajectories.from_particles(
+        _particles_df(foot),
+        receptor=sim.receptor,
+        params=params,
+        met_files=[],
+        is_error=is_error,
+    )
+    path = sim.error_trajectories_path if is_error else sim.trajectories_path
+    path.parent.mkdir(parents=True, exist_ok=True)
+    traj.to_parquet(path)
+
+
+def test_reuse_main_for_error_when_present_and_params_match(tmp_path, point_receptor):
+    sim = _sim(tmp_path, point_receptor, **_ERR)
+    _write_trajectory(sim, sim.params)
+    assert sim._can_reuse_main_for_error() is True
+
+
+def test_reuse_main_for_error_when_only_error_params_were_added(
+    tmp_path, point_receptor
+):
+    # Main was generated WITHOUT error params; now error params are configured —
+    # the main is still valid, only the error trajectory needs running.
+    sim = _sim(tmp_path, point_receptor, **_ERR)
+    _write_trajectory(sim, _params(tmp_path))  # stored params carry no error fields
+    assert sim._can_reuse_main_for_error() is True
+
+
+def test_no_reuse_when_error_not_configured(tmp_path, point_receptor):
+    sim = _sim(tmp_path, point_receptor)  # winderrtf == 0
+    _write_trajectory(sim, sim.params)
+    assert sim._can_reuse_main_for_error() is False
+
+
+def test_no_reuse_when_main_missing(tmp_path, point_receptor):
+    sim = _sim(tmp_path, point_receptor, **_ERR)
+    assert sim._can_reuse_main_for_error() is False
+
+
+def test_no_reuse_when_error_already_present(tmp_path, point_receptor):
+    sim = _sim(tmp_path, point_receptor, **_ERR)
+    _write_trajectory(sim, sim.params)
+    _write_trajectory(sim, sim.params, is_error=True, foot=2e-5)
+    assert sim._can_reuse_main_for_error() is False
+
+
+def test_no_reuse_when_non_error_params_differ(tmp_path, point_receptor):
+    sim = _sim(tmp_path, point_receptor, **_ERR)
+    stored = _params(tmp_path, numpar=sim.params.numpar + 100, **_ERR)
+    _write_trajectory(sim, stored)
+    assert sim._can_reuse_main_for_error() is False
+
+
+def test_run_trajectories_error_only_skips_main_run(
+    tmp_path, point_receptor, monkeypatch
+):
+    sim = _sim(tmp_path, point_receptor, **_ERR)
+    _write_trajectory(sim, sim.params)
+    original_main = sim.trajectories_path.read_bytes()
+
+    captured: dict = {}
+
+    class _FakeMet:
+        def required_files(self, **kwargs):
+            return []
+
+        def stage_files_for_simulation(self, **kwargs):
+            return []
+
+    class _Result:
+        stdout = "ok"
+        particles = None
+        error_particles = _particles_df(2e-5)
+
+    class _FakeRunner:
+        def __init__(self, **kwargs):
+            pass
+
+        def prepare(self):
+            return None
+
+        def execute(self, timeout, rm_dat, *, error_only=False):
+            captured["error_only"] = error_only
+            return _Result()
+
+    monkeypatch.setattr("stilt.simulation.HYSPLITDriver", _FakeRunner)
+    monkeypatch.setattr(sim, "meteorology", _FakeMet())
+
+    sim.run_trajectories(timeout=1, rm_dat=False, write=True)
+
+    assert captured["error_only"] is True
+    assert sim.error_trajectories is not None
+    # The existing main trajectory is left untouched (not recomputed/overwritten).
+    assert sim.trajectories_path.read_bytes() == original_main

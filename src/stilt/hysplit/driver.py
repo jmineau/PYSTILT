@@ -93,15 +93,16 @@ class HYSPLITResult:
 
     Attributes
     ----------
-    particles : pd.DataFrame
+    particles : pd.DataFrame or None
         Main particle positions and footprint columns from the PARDUMP file.
+        ``None`` when the main run was skipped (error-only execution).
     error_particles : pd.DataFrame or None
         Error-trajectory particle data, or ``None`` if no error run was performed.
     log_path : Path
         Combined log path containing streamed standard output from the run(s).
     """
 
-    particles: pd.DataFrame
+    particles: pd.DataFrame | None
     error_particles: pd.DataFrame | None
     log_path: Path
 
@@ -159,7 +160,13 @@ class HYSPLITDriver:
         self._write_setup(winderrtf=0)
         self._write_zicontrol()
 
-    def execute(self, timeout: int | None, rm_dat: bool) -> HYSPLITResult:
+    def execute(
+        self,
+        timeout: int | None,
+        rm_dat: bool,
+        *,
+        error_only: bool = False,
+    ) -> HYSPLITResult:
         """
         Run HYSPLIT, optionally followed by an error trajectory run.
 
@@ -174,17 +181,22 @@ class HYSPLITDriver:
         rm_dat : bool
             If ``True``, delete the raw ``PARTICLE.DAT`` file after parsing to
             save disk space.
+        error_only : bool
+            If ``True``, skip the main run and run only the (independent) error
+            trajectory. Used to backfill error trajectories without recomputing
+            an existing main trajectory. ``particles`` is ``None`` in this case.
 
         Returns
         -------
         HYSPLITResult
             Parsed particles, optional error particles, and streamed log path.
         """
-        self._run(timeout, label="main")
+        particles = None
+        if not error_only:
+            self._run(timeout, label="main")
+            particles = self._read_particles(rm_dat)
 
-        particles = self._read_particles(rm_dat)
-
-        # --- Error trajectory (only if main succeeded) ---
+        # --- Error trajectory (independent of the main run) ---
         error_particles = None
         if self.params.winderrtf > 0:
             self._write_winderr()
