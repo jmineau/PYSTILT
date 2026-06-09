@@ -6,6 +6,40 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- **Completion is computed by key from the store, not from an index.** A
+  simulation is complete iff every output it is configured to produce exists
+  (`stilt.completion.is_complete`). When wind-error params are set, that set
+  includes the error trajectory.
+- **The registry is now `.stilt/manifest.parquet`** (`stilt.manifest`) — a small
+  parquet of registration metadata (sim_id / met / receptor / scene /
+  footprints), read and written through the `Store` so it works on local
+  filesystems and cloud object stores alike. Registration metadata only;
+  completion is never stored.
+- **`model.index` → `model.queue`.** The Postgres backend is now a lean,
+  status-only work queue (`stilt.service.PostgresQueue`: enqueue → claim
+  [`FOR UPDATE SKIP LOCKED`] → done/failed), present only when `PYSTILT_DB_URL`
+  is set. Local projects have no database — registry is the manifest, completion
+  is by key.
+- **Error-trajectory backfill runs only the error pass.** Enabling error params
+  on a project that already has trajectories now runs the error trajectory
+  alone — reusing the existing main when the config (ignoring error params)
+  matches — instead of recomputing every main trajectory.
+
+### Removed
+
+- The `stilt.index` subpackage, `SimulationIndex` / `IndexCounts` /
+  `OutputSummary`, the SQLite index backend, and the SQL
+  completion-predicate / dialect machinery. The on-disk index database is gone.
+
+### Fixed
+
+- A simulation with a main trajectory and footprints but no error trajectory
+  (when wind-error params are configured) was incorrectly treated as complete and
+  skipped under `skip_existing`. It is now re-dispatched so the error trajectory
+  is backfilled.
+
 ## [0.1.0a1] - 2026-04-28
 
 First public alpha of PYSTILT — a typed Python implementation of the
