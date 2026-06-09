@@ -98,12 +98,10 @@ def test_status_accepts_output_dir_without_project_arg(tmp_path):
 
 def test_status_counts_full_simulation_completion(tmp_path):
     """A complete trajectory without required footprints is not done yet."""
-    from stilt.execution import SimulationResult
     from stilt.model import Model
-    from stilt.receptors import (
-        PointReceptor,
-    )
+    from stilt.receptors import PointReceptor
     from stilt.simulation import SimID
+    from stilt.storage import ProjectFiles
 
     cfg = ModelConfig(
         mets={
@@ -137,13 +135,10 @@ def test_status_counts_full_simulation_completion(tmp_path):
     model = Model(project=tmp_path, config=cfg, receptors=[receptor])
     sid = str(SimID.from_parts("hrrr", receptor))
     model.register_pending()
-    model.index.record(
-        SimulationResult(
-            sim_id=SimID(sid),
-            status="complete",
-            traj_present=True,
-        )
-    )
+    # Trajectory exists but the required footprint does not → not complete.
+    files = ProjectFiles(tmp_path).simulation(sid)
+    files.directory.mkdir(parents=True, exist_ok=True)
+    files.trajectory_path.write_bytes(b"x")
 
     result = runner.invoke(app, ["status", str(tmp_path)])
 
@@ -806,35 +801,21 @@ def test_rebuild_exits_when_no_config(tmp_path):
     assert result.exit_code == 1
 
 
-def test_rebuild_calls_repository_rebuild(tmp_path, monkeypatch):
-    """rebuild command calls state.rebuild() and prints status."""
+def test_rebuild_prints_status_without_a_queue(tmp_path):
+    """Without a queue, rebuild is a no-op that just reports status."""
     _write_minimal_config(tmp_path)
-
-    rebuild_calls: list = []
-    monkeypatch.setattr(
-        "stilt.index.sqlite.SqliteIndex.rebuild",
-        lambda self: rebuild_calls.append(True),
-    )
 
     result = runner.invoke(app, ["rebuild", str(tmp_path)])
     assert result.exit_code == 0
-    assert rebuild_calls  # was called at least once
     assert "total=" in result.output
 
 
-def test_rebuild_accepts_output_dir_without_project_arg(tmp_path, monkeypatch):
+def test_rebuild_accepts_output_dir_without_project_arg(tmp_path):
     (tmp_path / "simulations").mkdir()
-
-    rebuild_calls: list = []
-    monkeypatch.setattr(
-        "stilt.index.sqlite.SqliteIndex.rebuild",
-        lambda self: rebuild_calls.append(True),
-    )
 
     result = runner.invoke(app, ["rebuild", "--output-dir", str(tmp_path)])
 
     assert result.exit_code == 0
-    assert rebuild_calls
 
 
 # ---------------------------------------------------------------------------

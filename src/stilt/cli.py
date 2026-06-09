@@ -467,16 +467,18 @@ def rebuild(
     output_dir: str | None = _OUTPUT_DIR,
 ) -> None:
     """
-    Rebuild output index rows by scanning simulation output on disk.
+    Rebuild the work queue from simulation output on disk.
 
-    Useful after manual file operations or interrupted runs that left the
-    SQLite database out of sync with the filesystem.
+    Local projects have no queue — completion is read directly from the outputs
+    by key, so there is nothing to rebuild and this just reports status. With a
+    configured queue (``PYSTILT_DB_URL``) it rescans outputs into the queue.
     """
     resolved_dir, resolved_output = _resolve_model_root(
         project_dir, output_dir, require_inputs=False
     )
     model = Model(project=resolved_dir, output_dir=resolved_output)
-    model.index.rebuild()
+    if model.index is not None:
+        model.index.rebuild()
     _print_status(model)
 
 

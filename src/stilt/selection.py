@@ -4,15 +4,17 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterable
 from pathlib import Path
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 import pandas as pd
 
 from stilt.errors import ConfigValidationError
-from stilt.index import OutputSummary, SimulationIndex
 from stilt.receptors import Receptor
 from stilt.simulation import SimID
 from stilt.storage import Storage
+
+if TYPE_CHECKING:
+    from stilt.manifest import Manifest
 
 
 def _normalized_time_range(
@@ -116,7 +118,7 @@ def _candidate_ids(
 
 
 def matching_ids(
-    index: SimulationIndex,
+    registry: Manifest,
     *,
     receptors: Iterable[Receptor],
     configured_mets: Iterable[str] | None,
@@ -125,9 +127,9 @@ def matching_ids(
     time_range: tuple | None = None,
     location_ids: set[str] | None = None,
 ) -> list[str]:
-    """Return registered or candidate simulation IDs that match query filters."""
+    """Return registered (manifest) or candidate (receptors×mets) simulation IDs."""
     if registered:
-        sim_ids = index.sim_ids()
+        sim_ids = registry.sim_ids()
         available_mets = (
             set(configured_mets)
             if configured_mets is not None
@@ -149,18 +151,13 @@ def matching_ids(
 
 def output_paths(
     storage: Storage,
-    index: SimulationIndex,
     sim_ids: list[str],
     *,
-    present: Callable[[OutputSummary], bool],
     local_path: Callable[[str], Path],
 ) -> list[Path]:
-    """Resolve matching output paths for one simulation-id query."""
-    found = index.summaries(sim_ids)
+    """Resolve, by key, the local-accessible output paths that exist."""
     resolved_paths: list[Path] = []
     for sim_id in sim_ids:
-        if not present(found.get(sim_id, OutputSummary())):
-            continue
         resolved = storage.resolve(sim_id, local_path(sim_id))
         if resolved is not None:
             resolved_paths.append(resolved)
@@ -168,16 +165,12 @@ def output_paths(
 
 
 def missing_ids(
-    index: SimulationIndex,
     sim_ids: list[str],
     *,
-    present: Callable[[OutputSummary], bool],
+    present: Callable[[str], bool],
 ) -> list[str]:
-    """Return simulation IDs whose output summaries do not satisfy ``present``."""
-    found = index.summaries(sim_ids)
-    return [
-        sim_id for sim_id in sim_ids if not present(found.get(sim_id, OutputSummary()))
-    ]
+    """Return simulation IDs whose output is not present (checked by key)."""
+    return [sim_id for sim_id in sim_ids if not present(sim_id)]
 
 
 __all__ = [

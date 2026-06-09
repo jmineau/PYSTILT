@@ -37,6 +37,7 @@ from stilt.execution import (
 )
 from stilt.index import IndexCounts, SimulationIndex
 from stilt.index.factory import resolve_index
+from stilt.manifest import Manifest
 from stilt.meteorology import MetStream
 from stilt.receptors import Receptor
 from stilt.simulation import SimID
@@ -177,6 +178,7 @@ class Model:
         self._mets: dict[str, MetStream] | None = None
         self._receptors = receptors  # may be None, a Receptor, or an iterable of Receptors; resolved lazily in the accessor
         self._index: SimulationIndex | None = None
+        self._manifest: Manifest | None = None
         self._simulations: SimulationCollection | None = None
         self._trajectories: TrajectoryCollection | None = None
         self._footprints: FootprintCollection | None = None
@@ -189,14 +191,27 @@ class Model:
         )
 
     @property
-    def index(self) -> SimulationIndex:
-        """Output simulation registry for this model."""
-        if self._index is None:
+    def manifest(self) -> Manifest:
+        """Registry of registered simulations (``.stilt/manifest.parquet``)."""
+        if self._manifest is None:
+            self._manifest = Manifest(self.storage.store)
+        return self._manifest
+
+    @property
+    def index(self) -> SimulationIndex | None:
+        """
+        Postgres work queue, present only when a DB URL is configured.
+
+        Local projects have no index: the registry is the manifest and
+        completion is computed by key. The queue exists only to distribute work
+        to pull/serve workers.
+        """
+        if self._index is None and self.runtime.db_url:
             self._index = resolve_index(
                 None,
                 output_root=self.layout.output_root,
                 runtime=self.runtime,
-                builtin_backend="postgres" if self.layout.is_cloud_output else "sqlite",
+                builtin_backend="postgres",
             )
         return self._index
 
@@ -294,11 +309,11 @@ class Model:
             for met_name in self.mets
             for receptor in recs
         )
-        self.index.register(
-            list(pairs),
-            footprint_names=foot_names(dict(self.config.footprints)),
-            scene_id=scene_id,
-        )
+        foot = foot_names(dict(self.config.footprints))
+        self.manifest.register(list(pairs), footprint_names=foot, scene_id=scene_id)
+        # When a queue is configured, also seed it so pull/serve workers can claim.
+        if self.index is not None:
+            self.index.register(list(pairs), footprint_names=foot, scene_id=scene_id)
 
         # Registration updates the output receptor/index truth, so drop
         # cached accessors — next access rebuilds from that output surface.
@@ -324,7 +339,7 @@ class Model:
                 self.mets,
                 self.receptors,
                 list(self.config.footprints),
-                self.index,
+                self.manifest,
                 self.storage.store,
             )
         return self._simulations
@@ -383,13 +398,37 @@ class Model:
 
     # -- Queries --------------------------------------------------------------
 
+    def _counts(self, sim_ids: list[str]) -> IndexCounts:
+        """Aggregate completion (by key) over a set of registered sim ids."""
+        if not sim_ids:
+            return IndexCounts()
+        expected = expected_for_config(self.config)
+        total = len(sim_ids)
+        completed = sum(
+            1 for sim_id in sim_ids if is_complete(sim_id, expected, self.storage)
+        )
+        return IndexCounts(total=total, completed=completed, pending=total - completed)
+
     def status(self, scene_id: str | None = None) -> IndexCounts:
-        """Return cheap aggregate counts for the current project registry."""
-        return self.index.counts(scene_id=scene_id)
+        """
+        Return completion counts (total/completed/pending) from the registry.
+
+        Counts are derived from the manifest registry plus by-key completion, so
+        they reflect the outputs on disk. ``running``/``failed`` are execution
+        states tracked only by the queue and are left zero here.
+        """
+        if scene_id is not None:
+            sim_ids = self.manifest.sim_ids_by_scene().get(scene_id, [])
+        else:
+            sim_ids = self.manifest.sim_ids()
+        return self._counts(sim_ids)
 
     def scene_counts(self) -> dict[str, IndexCounts]:
-        """Return grouped aggregate counts for each registered scene."""
-        return self.index.scene_counts()
+        """Return completion counts grouped by registered scene."""
+        return {
+            scene: self._counts(sim_ids)
+            for scene, sim_ids in self.manifest.sim_ids_by_scene().items()
+        }
 
     # -- Execution ------------------------------------------------------------
 
@@ -444,8 +483,8 @@ class Model:
         """
         index = self.index
 
-        # Execution mutates output index state, so any cached simulation view must
-        # be rebuilt after each coordinator run.
+        # Execution mutates registry/output state, so any cached simulation view
+        # must be rebuilt after each coordinator run.
         self._simulations = None
         resolved_skip = (
             skip_existing if skip_existing is not None else self.config.skip_existing
@@ -468,11 +507,14 @@ class Model:
             logger.info("run: no receptors configured — nothing to do")
             return LocalHandle()
 
-        if resolved_rebuild:
-            logger.info("run: rebuilding output index before planning")
-            index.rebuild()
+        # The queue (Postgres) tracks its own row state; keep it consistent.
+        # Local projects have no index — completion is decided entirely by key.
+        if index is not None:
+            if resolved_rebuild:
+                logger.info("run: rebuilding queue state before planning")
+                index.rebuild()
+            index.reset_to_pending(sim_ids, clear_outputs=not resolved_skip)
 
-        index.reset_to_pending(sim_ids, clear_outputs=not resolved_skip)
         # Completion is decided by the outputs themselves (by key), not the index:
         # a sim is pending unless every artifact it must produce already exists.
         # When error params are set, that set includes the error trajectory, so
@@ -505,7 +547,7 @@ class Model:
             compute_root=str(self.compute_root),
             skip_existing=resolved_skip,
         )
-        if dispatch == "push":
+        if dispatch == "push" and index is not None:
             handle = _wrap_wait_with_rebuild(handle, index)
 
         if wait:
