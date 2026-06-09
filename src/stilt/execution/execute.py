@@ -45,8 +45,8 @@ def execute_task(task: SimulationTask) -> SimulationResult:
     configs are provided, trajectories are auto-run as needed and all
     footprint products are computed in a single pass so the trajectory file
     is loaded exactly once. Outputs are published through
-    ``task.storage``. Output index writes happen separately through an
-    explicit index backend.
+    ``task.storage``. Queue status updates happen separately on the submit
+    side.
 
     Parameters
     ----------

@@ -59,13 +59,6 @@ def test_store_key_helpers_return_canonical_layout():
     )
 
 
-def test_simulation_index_db_path_uses_simulations_subdir(tmp_path):
-    assert (
-        ProjectFiles(tmp_path).index_db_path
-        == tmp_path / "simulations" / "index.sqlite"
-    )
-
-
 # ---------------------------------------------------------------------------
 # Contract tests — run against both LocalStore and FsspecStore(memory://)
 # ---------------------------------------------------------------------------

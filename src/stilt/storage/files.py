@@ -9,7 +9,6 @@ CONFIG_FILENAME = "config.yaml"
 RECEPTORS_FILENAME = "receptors.csv"
 SIMULATIONS_DIRNAME = "simulations"
 SIMULATION_INDEX_DIRNAME = "by-id"
-SIMULATION_INDEX_DB_FILENAME = "index.sqlite"
 PARTICLE_INDEX_DIRNAME = "particles"
 FOOTPRINT_INDEX_DIRNAME = "footprints"
 CHUNKS_DIRNAME = "chunks"
@@ -149,11 +148,6 @@ class ProjectFiles:
     def by_id_dir(self) -> Path:
         """Return the directory that stores one subdirectory per simulation."""
         return self.simulations_dir / SIMULATION_INDEX_DIRNAME
-
-    @property
-    def index_db_path(self) -> Path:
-        """Return the local path to the simulation index database."""
-        return self.simulations_dir / SIMULATION_INDEX_DB_FILENAME
 
     @property
     def stilt_dir(self) -> Path:
