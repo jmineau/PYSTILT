@@ -1,7 +1,6 @@
 """Tests for stilt.model with index/registration boundaries."""
 
 import datetime as dt
-import uuid
 from pathlib import Path
 
 import pandas as pd
@@ -10,12 +9,10 @@ import pytest
 from stilt.config import FootprintConfig, Grid, MetConfig, ModelConfig, RuntimeSettings
 from stilt.errors import ConfigValidationError
 from stilt.execution import (
-    SimulationResult,
     SlurmExecutor,
 )
 from stilt.execution.tasks import plan_simulation_task
-from stilt.index import IndexCounts, OutputSummary
-from stilt.index.sqlite import SqliteIndex
+from stilt.index import IndexCounts
 from stilt.model import Model as _Model
 from stilt.receptors import PointReceptor
 from stilt.simulation import SimID
@@ -37,105 +34,6 @@ def _write_footprint(output_dir, sim_id, name, *, empty=False):
         files.write_empty_footprint_marker(name)
     else:
         files.footprint_path(name).write_bytes(b"x")
-
-
-def _record_result(
-    state: SqliteIndex,
-    sim_id: str,
-    *,
-    status: str = "complete",
-    traj_present: bool = True,
-    footprint_statuses: dict[str, str] | None = None,
-    error: str | None = None,
-    finished_at: dt.datetime | None = None,
-) -> None:
-    footprints = dict(state.summaries([sim_id]).get(sim_id, OutputSummary()).footprints)
-    if footprint_statuses is not None:
-        footprints.update(footprint_statuses)
-    state.record(
-        SimulationResult(
-            sim_id=SimID(sim_id),
-            status=status,
-            traj_present=traj_present,
-            footprint_statuses=footprints,
-            error=error,
-            started_at=finished_at,
-            finished_at=finished_at,
-        )
-    )
-
-
-def _mark_trajectory_complete(state: SqliteIndex, sim_id: str) -> None:
-    _record_result(state, sim_id)
-
-
-def _mark_trajectory_failed(
-    state: SqliteIndex,
-    sim_id: str,
-    error: str = "",
-) -> None:
-    _record_result(
-        state,
-        sim_id,
-        status="failed",
-        traj_present=False,
-        error=error or None,
-    )
-
-
-def _mark_footprint_complete(
-    state: SqliteIndex,
-    sim_id: str,
-    name: str,
-) -> None:
-    _record_result(state, sim_id, footprint_statuses={name: "complete"})
-
-
-def _mark_footprint_empty(
-    state: SqliteIndex,
-    sim_id: str,
-    name: str,
-) -> None:
-    _record_result(state, sim_id, footprint_statuses={name: "complete-empty"})
-
-
-def _mark_footprint_failed(
-    state: SqliteIndex,
-    sim_id: str,
-    name: str,
-    error: str = "",
-) -> None:
-    _record_result(
-        state,
-        sim_id,
-        status="error",
-        footprint_statuses={name: "failed"},
-        error=error or None,
-    )
-
-
-def InMemoryIndex(project_dir: Path | None = None):
-    root = project_dir or Path.cwd()
-    return SqliteIndex(
-        root,
-        db_path=f"file:{uuid.uuid4().hex}?mode=memory&cache=shared",
-        uri=True,
-    )
-
-
-def _state_call(state, method: str, *args, **kwargs):
-    if method == "output_summary":
-        [sim_id] = args
-        return state.summaries([sim_id]).get(sim_id, OutputSummary())
-    if method == "output_summaries":
-        return state.summaries(*args, **kwargs)
-    if method == "get_receptor":
-        [sim_id] = args
-        mapping = state.receptors_for([sim_id])
-        return mapping[sim_id]
-    if method == "get_receptors":
-        return state.receptors_for(*args, **kwargs)
-    return getattr(state, method)(*args, **kwargs)
 
 
 def _storage(
@@ -195,11 +93,8 @@ def _config(tmp_path, point_receptor=None, include_footprint=True) -> ModelConfi
 def test_receptors_require_explicit_or_output_source_when_not_provided(
     tmp_path, point_receptor
 ):
-    repo = InMemoryIndex(tmp_path)
-    sid = str(SimID.from_parts("hrrr", point_receptor))
-    _state_call(repo, "register", [(sid, point_receptor)])
 
-    model = Model(project=tmp_path, index=repo, receptors=None)
+    model = Model(project=tmp_path, receptors=None)
 
     with pytest.raises(FileNotFoundError, match="No receptors available"):
         len(model.receptors)
@@ -268,22 +163,16 @@ def test_simulation_collection_ids_filters_by_time_and_location(tmp_path):
 
 
 def test_simulation_collection_ids_rejects_unknown_met(tmp_path, point_receptor):
-    repo = InMemoryIndex(tmp_path)
-    sid = str(SimID.from_parts("hrrr", point_receptor))
-    _state_call(repo, "register", [(sid, point_receptor)])
 
-    model = Model(project=tmp_path, config=_config(tmp_path), index=repo)
+    model = Model(project=tmp_path, config=_config(tmp_path))
 
     with pytest.raises(ConfigValidationError, match="Unknown met name"):
         model.simulations.ids(mets="bogus")
 
 
 def test_trajectory_queries_reject_unknown_met(tmp_path, point_receptor):
-    repo = InMemoryIndex(tmp_path)
-    sid = str(SimID.from_parts("hrrr", point_receptor))
-    _state_call(repo, "register", [(sid, point_receptor)])
 
-    model = Model(project=tmp_path, config=_config(tmp_path), index=repo)
+    model = Model(project=tmp_path, config=_config(tmp_path))
 
     with pytest.raises(ConfigValidationError, match="Unknown met name"):
         model.trajectories.paths(mets="bogus")
@@ -324,15 +213,12 @@ def test_simulations_mapping_len_and_contains(tmp_path, point_receptor):
 
 
 def test_simulations_mapping_getitem(tmp_path, point_receptor):
-    repo = InMemoryIndex(tmp_path)
     sid = str(SimID.from_parts("hrrr", point_receptor))
-    _state_call(repo, "register", [(sid, point_receptor)])
 
     model = Model(
         project=tmp_path,
         config=_config(tmp_path),
         receptors=[point_receptor],
-        index=repo,
     )
     from stilt.simulation import Simulation
 
@@ -343,9 +229,7 @@ def test_simulations_mapping_getitem(tmp_path, point_receptor):
 def test_simulations_mapping_uses_store_for_reload(
     tmp_path, point_receptor, monkeypatch
 ):
-    repo = InMemoryIndex(tmp_path)
     sid = str(SimID.from_parts("hrrr", point_receptor))
-    _state_call(repo, "register", [(sid, point_receptor)])
 
     output_root = tmp_path / "artifacts"
     traj_path = output_root / "simulations" / "by-id" / sid / f"{sid}_traj.parquet"
@@ -359,7 +243,6 @@ def test_simulations_mapping_uses_store_for_reload(
         project=tmp_path / "cache",
         config=_config(tmp_path),
         receptors=[point_receptor],
-        index=repo,
         storage=_storage(
             tmp_path / "cache",
             tmp_path / "cache",
@@ -656,7 +539,6 @@ def test_model_loads_config_and_receptors_via_store(tmp_path):
 
     model = Model(
         project=tmp_path / "cache",
-        index=InMemoryIndex(tmp_path / "cache"),
         storage=_storage(
             tmp_path / "cache",
             tmp_path / "cache",
@@ -691,7 +573,7 @@ def test_model_uses_runtime_db_url_for_cloud_output(tmp_path, monkeypatch):
     monkeypatch.setattr(
         "stilt.index.factory.PostgresIndex",
         lambda url, output_root=None, max_rows=None: (
-            captured.append((url, max_rows)) or InMemoryIndex(tmp_path / "repo")
+            captured.append((url, max_rows)) or object()
         ),
     )
 
@@ -718,7 +600,7 @@ def test_model_uses_runtime_db_url_for_local_output(tmp_path, monkeypatch):
     monkeypatch.setattr(
         "stilt.index.factory.PostgresIndex",
         lambda url, output_root=None, max_rows=None: (
-            captured.append((url, max_rows)) or InMemoryIndex(tmp_path / "repo")
+            captured.append((url, max_rows)) or object()
         ),
     )
 
@@ -730,18 +612,18 @@ def test_model_uses_runtime_db_url_for_local_output(tmp_path, monkeypatch):
 
     assert model.index is not None
     assert captured == [("postgresql://runtime-db/pystilt", 12)]
+
+
 def test_register_pending_bootstraps_config_and_receptors_to_storage(
     tmp_path, point_receptor
 ):
     output_root = tmp_path / "artifacts"
-    repo = InMemoryIndex(tmp_path / "repo")
     artifact_store = LocalStore(output_root)
 
     model = Model(
         project="s3://bucket/project",
         config=_config(tmp_path),
         receptors=[point_receptor],
-        index=repo,
         storage=_storage(
             tmp_path / "cache",
             tmp_path / "cache",
@@ -757,7 +639,6 @@ def test_register_pending_bootstraps_config_and_receptors_to_storage(
 
     clone = Model(
         project="s3://bucket/project",
-        index=repo,
         storage=_storage(
             tmp_path / "cache",
             tmp_path / "cache",
@@ -809,15 +690,15 @@ def test_register_pending_bootstraps_inputs_to_project_root(tmp_path, point_rece
     clone = Model(project=project_dir)
     assert len(clone.receptors) == 1
     assert clone.config.mets["hrrr"].directory == tmp_path / "met"
+
+
 def test_cloud_run_passes_project_uri_to_executor(tmp_path, point_receptor):
-    repo = InMemoryIndex(tmp_path / "repo")
     artifact_store = LocalStore(tmp_path / "artifacts")
 
     model = Model(
         project="s3://bucket/project",
         config=_config(tmp_path),
         receptors=[point_receptor],
-        index=repo,
         storage=_storage(
             tmp_path / "cache",
             tmp_path / "cache",
@@ -931,8 +812,7 @@ def test_model_config_and_kwargs_raises(tmp_path):
 
 
 def test_simulation_collection_select_empty_when_no_sims(tmp_path):
-    repo = InMemoryIndex(tmp_path)
-    model = Model(project=tmp_path, config=_config(tmp_path), index=repo)
+    model = Model(project=tmp_path, config=_config(tmp_path))
     result = model.simulations.select()
     assert result == []
 
@@ -986,6 +866,8 @@ def test_trajectory_accessor_paths_load_matching_error_trajectories(
     model.manifest.register([(sid, point_receptor)])
 
     assert model.trajectories.paths(error=True) == [error_path]
+
+
 def test_trajectory_accessor_paths_fall_back_to_store(tmp_path, point_receptor):
     sid = str(SimID.from_parts("hrrr", point_receptor))
 
@@ -1085,14 +967,11 @@ def test_named_footprint_accessor_paths_load_matching_footprints(
     result = model.footprints["slv"].paths()
 
     assert result == [foot_path]
-def test_named_footprint_accessor_paths_skip_complete_empty(tmp_path, point_receptor):
-    sid = str(SimID.from_parts("hrrr", point_receptor))
-    repo = InMemoryIndex(tmp_path)
-    _state_call(repo, "register", [(sid, point_receptor)], footprint_names=["slv"])
-    _mark_trajectory_complete(repo, sid)
-    _mark_footprint_empty(repo, sid, "slv")
 
-    model = Model(project=tmp_path, index=repo)
+
+def test_named_footprint_accessor_paths_skip_complete_empty(tmp_path, point_receptor):
+
+    model = Model(project=tmp_path)
     assert model.footprints["slv"].paths() == []
 
 
@@ -1151,8 +1030,7 @@ def test_named_footprint_accessor_loads_matching_footprints(
 
 
 def test_named_footprint_accessor_load_empty_when_no_match(tmp_path):
-    repo = InMemoryIndex(tmp_path)
-    model = Model(project=tmp_path, index=repo)
+    model = Model(project=tmp_path)
     assert model.footprints["slv"].load() == []
 
 
@@ -1161,18 +1039,12 @@ def test_named_footprint_accessor_load_skips_missing_files(
 ):
     from stilt.footprint import Footprint
 
-    repo = InMemoryIndex(tmp_path)
-    sid = str(SimID.from_parts("hrrr", point_receptor))
-    _state_call(repo, "register", [(sid, point_receptor)])
-    _mark_trajectory_complete(repo, sid)
-    _mark_footprint_complete(repo, sid, "slv")
-
     def _missing(_path):
         raise FileNotFoundError
 
     monkeypatch.setattr(Footprint, "from_netcdf", staticmethod(_missing))
 
-    model = Model(project=tmp_path, index=repo)
+    model = Model(project=tmp_path)
     assert model.footprints["slv"].load() == []
 
 
@@ -1244,11 +1116,10 @@ def test_footprint_accessor_is_cached(tmp_path):
 
 
 def test_plot_availability_returns_axes(tmp_path, point_receptor):
-    repo = InMemoryIndex(tmp_path)
     sid = str(SimID.from_parts("hrrr", point_receptor))
-    _state_call(repo, "register", [(sid, point_receptor)])
 
-    model = Model(project=tmp_path, index=repo)
+    model = Model(project=tmp_path)
+    model.manifest.register([(sid, point_receptor)])
     ax = model.plot.availability()
 
     assert ax.get_title() == "Simulation Availability"
@@ -1358,12 +1229,13 @@ def test_model_run_forwards_separate_output_dir_and_compute_root(
     assert exc.start_calls[0]["project"] == str(output_dir.resolve())
     assert exc.start_calls[0]["output_dir"] == str(output_dir.resolve())
     assert exc.start_calls[0]["compute_root"] == str(compute_root.resolve())
+
+
 def test_model_run_cloud_output_bootstraps_workers_from_output_uri(
     tmp_path, point_receptor
 ):
     """Remote workers should reconstruct from the output URI, not a local project path."""
     project_dir = tmp_path / "project"
-    repo = InMemoryIndex(tmp_path / "repo")
     artifact_store = LocalStore(tmp_path / "artifacts")
 
     model = Model(
@@ -1371,7 +1243,6 @@ def test_model_run_cloud_output_bootstraps_workers_from_output_uri(
         output_dir="s3://bucket/project",
         config=_config(tmp_path),
         receptors=[point_receptor],
-        index=repo,
         storage=_storage(
             project_dir,
             tmp_path / "artifacts-local",
@@ -1409,13 +1280,11 @@ def test_model_run_rejects_slurm_when_output_root_is_cloud(tmp_path, point_recep
     config = _config(tmp_path).model_copy(
         update={"execution": {"backend": "slurm", "n_workers": 1}}
     )
-    repo = InMemoryIndex(tmp_path / "repo")
     model = Model(
         project=tmp_path,
         output_dir="s3://bucket/project",
         config=config,
         receptors=[point_receptor],
-        index=repo,
     )
 
     with pytest.raises(
@@ -1501,16 +1370,10 @@ def test_model_run_no_skip_resets_and_dispatches(tmp_path, point_receptor):
     """skip_existing=False resets completed sim to pending and starts executor."""
     from stilt.simulation import SimID
 
-    repo = InMemoryIndex(tmp_path)
-    sid = str(SimID.from_parts("hrrr", point_receptor))
-    _state_call(repo, "register", [(sid, point_receptor)])
-    _mark_trajectory_complete(repo, sid)
-
     model = Model(
         project=tmp_path,
         config=_config(tmp_path, include_footprint=False),
         receptors=[point_receptor],
-        index=repo,
     )
     exc = _CapturingExecutor()
     model.run(executor=exc, skip_existing=False)
@@ -1525,16 +1388,13 @@ def test_model_run_returns_completed_handle_when_nothing_to_do(
     from stilt.execution import LocalHandle
     from stilt.simulation import SimID
 
-    repo = InMemoryIndex(tmp_path)
     sid = str(SimID.from_parts("hrrr", point_receptor))
-    _state_call(repo, "register", [(sid, point_receptor)])
-    _mark_trajectory_complete(repo, sid)
+    _write_trajectory(tmp_path, sid)  # trajectory present → nothing to do
 
     model = Model(
         project=tmp_path,
         config=_config(tmp_path, include_footprint=False),
         receptors=[point_receptor],
-        index=repo,
     )
     handle = model.run(executor=_CapturingExecutor(), skip_existing=True)
 
@@ -1604,17 +1464,10 @@ def test_model_run_foot_configs_retries_failed_footprint(tmp_path, point_recepto
     """With skip_existing=True, failed footprint states are re-queued for retry."""
     from stilt.simulation import SimID
 
-    repo = InMemoryIndex(tmp_path)
-    sid = str(SimID.from_parts("hrrr", point_receptor))
-    _state_call(repo, "register", [(sid, point_receptor)])
-    _mark_trajectory_complete(repo, sid)
-    _mark_footprint_failed(repo, sid, "slv", "transient")
-
     model = Model(
         project=tmp_path,
         config=_config(tmp_path, include_footprint=True),
         receptors=[point_receptor],
-        index=repo,
     )
     exc = _CapturingExecutor()
     model.run(executor=exc, skip_existing=True, rebuild=False)
@@ -1628,17 +1481,12 @@ def test_model_run_no_skip_clears_completed_footprints_for_rerun(
     """Force rerun clears footprint completion so workers regenerate outputs."""
     from stilt.simulation import SimID
 
-    repo = InMemoryIndex(tmp_path)
     sid = str(SimID.from_parts("hrrr", point_receptor))
-    _state_call(repo, "register", [(sid, point_receptor)], footprint_names=["slv"])
-    _mark_trajectory_complete(repo, sid)
-    _mark_footprint_complete(repo, sid, "slv")
 
     model = Model(
         project=tmp_path,
         config=_config(tmp_path, include_footprint=True),
         receptors=[point_receptor],
-        index=repo,
     )
     exc = _CapturingExecutor()
     model.run(executor=exc, skip_existing=False)
@@ -1648,41 +1496,6 @@ def test_model_run_no_skip_clears_completed_footprints_for_rerun(
     assert run_args is not None
     assert run_args.foot_configs is not None
     assert "slv" in run_args.foot_configs
-    assert _state_call(repo, "output_summary", sid).footprints.get("slv") is None
-
-
-def test_model_run_skip_existing_dispatches_despite_stale_running_status(
-    tmp_path, point_receptor
-):
-    """
-    By-key planning ignores the index 'running' status.
-
-    Completion is decided by outputs on disk, so a sim with no outputs is
-    dispatched even if a prior (crashed) run left it marked ``running``.
-    In-flight deduplication for concurrent workers is the queue's job, not
-    local ``run()``'s.
-    """
-    from stilt.simulation import SimID
-
-    repo = InMemoryIndex(tmp_path)
-    sid = str(SimID.from_parts("hrrr", point_receptor))
-    _state_call(repo, "register", [(sid, point_receptor)], footprint_names=["slv"])
-    with repo._connect() as conn:
-        conn.execute(
-            "UPDATE simulations SET trajectory_status='running' WHERE sim_id=?",
-            (sid,),
-        )
-
-    model = Model(
-        project=tmp_path,
-        config=_config(tmp_path, include_footprint=True),
-        receptors=[point_receptor],
-        index=repo,
-    )
-    exc = _CapturingExecutor()
-    model.run(executor=exc, skip_existing=True, rebuild=False)
-
-    assert exc.was_started
 
 
 def test_register_pending_registers_sims(tmp_path, point_receptor):
@@ -1720,27 +1533,20 @@ def test_model_status_reflects_queue_counts(tmp_path, point_receptor):
 
 
 def test_plan_simulation_task_push_uses_stored_inputs_not_repository(
-    tmp_path, point_receptor, monkeypatch
+    tmp_path, point_receptor
 ):
-    """Push workers should not need SQLite lookups for receptor or skip state."""
+    """Push workers get receptor/skip state from stored inputs, not a registry."""
     config = _config(tmp_path, include_footprint=False).model_copy(
         update={"execution": {"backend": "slurm", "n_workers": 1}}
     )
-    repo = InMemoryIndex(tmp_path)
     sid = str(SimID.from_parts("hrrr", point_receptor))
 
     model = Model(
         project=tmp_path,
         config=config,
         receptors=[point_receptor],
-        index=repo,
     )
 
-    monkeypatch.setattr(
-        SqliteIndex,
-        "receptors_for",
-        lambda self, sim_id: (_ for _ in ()).throw(AssertionError("repository read")),
-    )
     run_args = plan_simulation_task(model, sid)
 
     assert run_args is not None
