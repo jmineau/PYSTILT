@@ -100,8 +100,9 @@ For each simulation ID, PYSTILT writes into the output project layout:
    my_project/
      config.yaml
      receptors.csv
+     .stilt/
+       manifest.parquet
      simulations/
-       index.sqlite
        by-id/
          hrrr_202307151800_-111.848_40.766_10/
            stilt.log

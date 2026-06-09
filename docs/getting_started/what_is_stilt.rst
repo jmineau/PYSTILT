@@ -87,7 +87,8 @@ Key Improvements Over R-STILT
   the same receptor foundation.
 * **Multiple execution backends**. Local, Slurm, and Kubernetes are part of one
   execution model.
-* **Persistent index**. Simulation status is stored and resumable.
+* **Resumable by key**. Completion is read from the outputs on disk, so runs
+  pick up exactly where they left off.
 * **Standard outputs**. Trajectories are stored as Parquet and footprints as
   NetCDF.
 

@@ -1,49 +1,53 @@
-Output State, Indexes, And Shared Workers
-==========================================
+Output State And Shared Workers
+===============================
 
 PYSTILT does not treat simulation execution as a purely ephemeral process. The
-current package centers output state so that workers, CLI commands, and Python
-code can all agree on what exists and what still needs work.
+package centers output state so that workers, CLI commands, and Python code can
+all agree on what exists and what still needs work. There is **no local
+database** — state is split between three small pieces.
 
-Index backends
+Completion is by key
+--------------------
+
+A simulation is *complete* iff every artifact it is configured to produce exists
+in the store. Completion is computed by key from the outputs (see
+:mod:`stilt.completion`); nothing tracks output presence separately, so the
+store is always the source of truth. When wind-error params are set, the
+expected set includes the error trajectory.
+
+The manifest
+------------
+
+The registry of registered simulations lives in the project's ``.stilt/``
+directory as ``manifest.parquet`` (see :mod:`stilt.manifest`). It holds only
+what is *not* derivable from the outputs — identity, receptor, scene label, and
+the configured footprint targets. It is read and written through a
+:class:`~stilt.storage.Store`, so it works on local filesystems and cloud object
+stores alike. Completion is never stored here.
+
+The work queue
 --------------
 
-Two index backends exist today:
+Claim-based workers need a backend that can atomically lock one pending
+simulation at a time. That backend is a lean PostgreSQL work queue
+(:class:`stilt.service.PostgresQueue`: enqueue → claim
+``FOR UPDATE SKIP LOCKED`` → done/failed), present only when ``PYSTILT_DB_URL``
+is set. It tracks *status* only — completion is still by key.
 
-``SQLite``
-   The default for local output roots. Good for single-machine or shared-file
-   workflows where one output index file is enough.
-
-``PostgreSQL``
-   Used when ``PYSTILT_DB_URL`` is set or when cloud output roots require a
-   shared claim-capable registry.
-
-Why PostgreSQL matters
-----------------------
-
-Claim-based workers require a backend that can atomically lock one pending
-simulation at a time. In the current alpha, that means PostgreSQL.
-
-``pull_simulations()`` and ``stilt pull-worker`` will fail clearly if the model
-is only backed by the local SQLite index.
+``pull_simulations()`` and ``stilt pull-worker`` fail clearly if the model has
+no queue configured. Local projects have no database: the manifest is the
+registry and completion is by key.
 
 Rebuild behavior
 ----------------
-
-Push-style backends attach an ``index.rebuild`` callback to their job handle.
-That means:
-
-- local runs rebuild the index after the workers finish
-- Slurm runs rebuild after the array job is observed complete
-
-There is also an explicit escape hatch:
 
 .. code-block:: bash
 
    stilt rebuild ./project
 
-Use it after manual file movement or if outputs and the local index
-have drifted apart.
+Local projects have nothing to rebuild — completion is read directly from the
+outputs by key — so this just reports status. With a configured queue
+(``PYSTILT_DB_URL``) it rescans outputs back into the queue.
 
 Runtime environment
 -------------------

@@ -63,8 +63,8 @@ pending simulations and dispatches them through the configured backend.
 Querying outputs
 ----------------
 
-``model.simulations`` is a lazy collection backed by the output index.  Use
-it to inspect or filter completed work without re-running:
+``model.simulations`` is a lazy collection backed by the manifest of registered
+simulations.  Use it to inspect or filter completed work without re-running:
 
 .. code-block:: python
 

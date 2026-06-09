@@ -16,7 +16,7 @@ PYSTILT supports two Kubernetes-oriented patterns:
   ``stilt.service.kubernetes`` manifest helpers — for always-on queue
   consumers that poll for new work indefinitely.
 
-Both patterns depend on a shared PostgreSQL-backed output index.
+Both patterns depend on a shared PostgreSQL-backed work queue.
 
 Batch-mode executor
 -------------------

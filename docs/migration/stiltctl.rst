@@ -25,7 +25,7 @@ PYSTILT itself rather than a separate control-plane package.
      - ``stilt.service.kubernetes`` helper functions
    * - Output registry
      - PostgreSQL queue tables
-     - PostgreSQL-backed output simulation index via ``PYSTILT_DB_URL``
+     - ``.stilt/manifest.parquet`` manifest + optional PostgreSQL work queue via ``PYSTILT_DB_URL``
 
 Why it matters
 --------------

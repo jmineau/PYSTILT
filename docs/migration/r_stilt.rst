@@ -3,7 +3,7 @@ Migrating From R-STILT
 
 R-STILT organizes projects around R functions, the ``run_stilt.r`` script, and
 filesystem conventions. PYSTILT expresses the same broad ideas through Python
-classes, ``config.yaml``, and a output simulation index.
+classes, ``config.yaml``, and a manifest of registered simulations.
 
 .. list-table::
    :header-rows: 1

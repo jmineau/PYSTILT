@@ -102,7 +102,7 @@ with any receptor type.
 
 ``receptor.id``
    A :class:`ReceptorID` string in ``YYYYMMDDHHMM_{location}`` format.
-   Used as the unique key throughout the storage and index layers.
+   Used as the unique key throughout the storage and manifest layers.
 
 ``receptor.time``
    A naive UTC :class:`datetime.datetime`.

@@ -11,7 +11,7 @@ How it works
 
 Running ``stilt run`` with ``backend: slurm``:
 
-1. Registers pending simulations in the output index.
+1. Registers pending simulations in the manifest.
 2. Writes immutable chunk files under ``<output>/chunks/<batch_id>/``.
 3. Renders a submission script under ``<project>/slurm/``.
 4. Submits a Slurm array job — one task per chunk — via ``sbatch``.
@@ -88,7 +88,7 @@ Block until the array finishes (useful for debugging or scripted workflows):
 Monitoring and reruns
 ---------------------
 
-Use the Slurm scheduler and the output index together:
+Use the Slurm scheduler and ``stilt status`` together:
 
 .. code-block:: bash
 

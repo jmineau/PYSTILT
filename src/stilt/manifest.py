@@ -40,7 +40,7 @@ class Manifest:
     def read(self) -> pd.DataFrame:
         """Return the manifest as a DataFrame (empty if none has been written)."""
         if not self._store.exists(self._key()):
-            return pd.DataFrame(columns=_COLUMNS)
+            return pd.DataFrame(columns=pd.Index(_COLUMNS))
         return pd.read_parquet(io.BytesIO(self._store.read_bytes(self._key())))
 
     def _write(self, frame: pd.DataFrame) -> None:
@@ -70,7 +70,7 @@ class Manifest:
         if not new_rows:
             return
         combined = pd.concat(
-            [self.read(), pd.DataFrame(new_rows, columns=_COLUMNS)],
+            [self.read(), pd.DataFrame(new_rows, columns=pd.Index(_COLUMNS))],
             ignore_index=True,
         )
         combined = combined.drop_duplicates(subset="sim_id", keep="last").reset_index(

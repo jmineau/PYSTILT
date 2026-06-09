@@ -9,8 +9,8 @@ workflows:
    ``receptors.csv`` normally live.
 
 ``output_dir``
-   The output root. This is where the simulation index and simulation
-   artifacts live. By default it is the same as ``project``.
+   The output root. This is where the manifest registry (under ``.stilt/``) and
+   simulation artifacts live. By default it is the same as ``project``.
 
 ``compute_root``
    A compute-local parent directory for worker scratch directories. This is
@@ -27,8 +27,9 @@ When project and output roots are the same, PYSTILT uses:
    project/
      config.yaml
      receptors.csv
+     .stilt/
+       manifest.parquet
      simulations/
-       index.sqlite
        by-id/
          <sim_id>/
 
@@ -61,7 +62,7 @@ How configuration is loaded
 
 The same rule applies to receptors. ``Model.register_pending()`` is the output
 boundary that publishes config and receptor inputs before simulations are
-registered in the index.
+registered in the manifest.
 
 Simulation identity
 -------------------
@@ -79,8 +80,8 @@ hash-based location ID.
 Status model
 ------------
 
-The output index tracks aggregate counts and per-simulation output presence.
-In the current alpha, the useful mental model is:
+Status is computed by key from the outputs on disk (joined against the manifest
+of registered simulations). In the current alpha, the useful mental model is:
 
 - trajectories move through ``pending``, ``running``, ``complete``, or ``failed``
 - footprints are tracked per footprint name

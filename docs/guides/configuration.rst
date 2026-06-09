@@ -118,8 +118,8 @@ You can define more than one named footprint:
        yres: 0.1
        smooth_factor: 1.0
 
-Each completed simulation will track each named footprint separately in the
-output index.
+Each named footprint is tracked separately: a simulation is complete only once
+every configured footprint exists for it.
 
 Execution examples
 ------------------

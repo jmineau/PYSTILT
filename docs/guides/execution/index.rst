@@ -24,8 +24,8 @@ Dispatch models
    a Slurm array.
 
 **Pull dispatch** (``kubernetes``)
-   Workers independently claim pending simulations from a shared output index
-   backend.  The coordinator registers work and returns; pods drain the queue
+   Workers independently claim pending simulations from a shared work queue.
+   The coordinator registers work and returns; pods drain the queue
    autonomously.
 
 Choosing a backend
@@ -43,8 +43,8 @@ Choosing a backend
    shared-filesystem paths.
 
 ``kubernetes``
-   For cloud-native or container-scale deployments backed by a PostgreSQL index
-   and object-store outputs. Requires more infrastructure than the
+   For cloud-native or container-scale deployments backed by a PostgreSQL work
+   queue and object-store outputs. Requires more infrastructure than the
    other two backends.
 
    .. note::
@@ -70,7 +70,7 @@ These commands surface the executor model regardless of backend:
    heartbeats.  Used by Slurm task array elements.
 
 ``stilt pull-worker``
-   Claim and execute pending simulations from the output index.  Used by
+   Claim and execute pending simulations from the work queue.  Used by
    Kubernetes pods and long-lived local workers.
 
 ``stilt serve``
