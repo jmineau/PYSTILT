@@ -1606,19 +1606,19 @@ def test_model_run_rejects_slurm_when_output_root_is_cloud(tmp_path, point_recep
 
 
 def test_model_run_skip_existing_omits_completed_trajectories(tmp_path, point_receptor):
-    """With skip_existing=True, executor is NOT started when all trajs are complete."""
+    """With skip_existing=True, executor is NOT started when the trajectory exists."""
     from stilt.simulation import SimID
+    from stilt.storage import ProjectFiles
 
-    repo = InMemoryIndex(tmp_path)
     sid = str(SimID.from_parts("hrrr", point_receptor))
-    _state_call(repo, "register", [(sid, point_receptor)])
-    _mark_trajectory_complete(repo, sid)
+    files = ProjectFiles(tmp_path).simulation(sid)
+    files.directory.mkdir(parents=True, exist_ok=True)
+    files.trajectory_path.write_bytes(b"traj")
 
     model = Model(
         project=tmp_path,
         config=_config(tmp_path, include_footprint=False),
         receptors=[point_receptor],
-        index=repo,
     )
     exc = _CapturingExecutor()
     model.run(executor=exc, skip_existing=True, rebuild=False)
@@ -1648,7 +1648,15 @@ def test_model_run_skip_existing_auto_rebuilds_stale_outputs(tmp_path, point_rec
     assert not exc.was_started
 
 
-def test_model_run_skip_existing_can_disable_auto_rebuild(tmp_path, point_receptor):
+def test_model_run_skip_existing_is_disk_based_regardless_of_rebuild(
+    tmp_path, point_receptor
+):
+    """
+    Completion is decided by the outputs on disk, not by a pre-run rebuild.
+
+    Even with ``rebuild=False`` a sim whose outputs already exist is skipped,
+    because by-key completion always reads the store.
+    """
     from stilt.simulation import SimID
     from stilt.storage import ProjectFiles
 
@@ -1667,7 +1675,7 @@ def test_model_run_skip_existing_can_disable_auto_rebuild(tmp_path, point_recept
 
     model.run(executor=exc, skip_existing=True, rebuild=False)
 
-    assert exc.was_started
+    assert not exc.was_started
 
 
 def test_model_run_no_skip_resets_and_dispatches(tmp_path, point_receptor):
@@ -1732,18 +1740,18 @@ def test_model_run_with_custom_storage(tmp_path, point_receptor):
 def test_model_run_foot_configs_skip_completed(tmp_path, point_receptor):
     """With footprint configs, executor is NOT started when all footprints are done."""
     from stilt.simulation import SimID
+    from stilt.storage import ProjectFiles
 
-    repo = InMemoryIndex(tmp_path)
     sid = str(SimID.from_parts("hrrr", point_receptor))
-    _state_call(repo, "register", [(sid, point_receptor)])
-    _mark_trajectory_complete(repo, sid)
-    _mark_footprint_complete(repo, sid, "slv")
+    files = ProjectFiles(tmp_path).simulation(sid)
+    files.directory.mkdir(parents=True, exist_ok=True)
+    files.trajectory_path.write_bytes(b"traj")
+    files.footprint_path("slv").write_bytes(b"foot")
 
     model = Model(
         project=tmp_path,
         config=_config(tmp_path, include_footprint=True),
         receptors=[point_receptor],
-        index=repo,
     )
     exc = _CapturingExecutor()
     model.run(executor=exc, skip_existing=True, rebuild=False)
@@ -1752,20 +1760,20 @@ def test_model_run_foot_configs_skip_completed(tmp_path, point_receptor):
 
 
 def test_model_run_foot_configs_skip_complete_empty(tmp_path, point_receptor):
-    """With skip_existing=True, complete-empty footprints are treated as done."""
+    """With skip_existing=True, an empty-footprint marker is treated as done."""
     from stilt.simulation import SimID
+    from stilt.storage import ProjectFiles
 
-    repo = InMemoryIndex(tmp_path)
     sid = str(SimID.from_parts("hrrr", point_receptor))
-    _state_call(repo, "register", [(sid, point_receptor)])
-    _mark_trajectory_complete(repo, sid)
-    _mark_footprint_empty(repo, sid, "slv")
+    files = ProjectFiles(tmp_path).simulation(sid)
+    files.directory.mkdir(parents=True, exist_ok=True)
+    files.trajectory_path.write_bytes(b"traj")
+    files.write_empty_footprint_marker("slv")
 
     model = Model(
         project=tmp_path,
         config=_config(tmp_path, include_footprint=True),
         receptors=[point_receptor],
-        index=repo,
     )
     exc = _CapturingExecutor()
     model.run(executor=exc, skip_existing=True, rebuild=False)
@@ -1824,8 +1832,17 @@ def test_model_run_no_skip_clears_completed_footprints_for_rerun(
     assert _state_call(repo, "output_summary", sid).footprints.get("slv") is None
 
 
-def test_model_run_skip_existing_does_not_requeue_running_sim(tmp_path, point_receptor):
-    """A repeated coordinator run must not duplicate an already-running sim."""
+def test_model_run_skip_existing_dispatches_despite_stale_running_status(
+    tmp_path, point_receptor
+):
+    """
+    By-key planning ignores the index 'running' status.
+
+    Completion is decided by outputs on disk, so a sim with no outputs is
+    dispatched even if a prior (crashed) run left it marked ``running``.
+    In-flight deduplication for concurrent workers is the queue's job, not
+    local ``run()``'s.
+    """
     from stilt.simulation import SimID
 
     repo = InMemoryIndex(tmp_path)
@@ -1846,8 +1863,7 @@ def test_model_run_skip_existing_does_not_requeue_running_sim(tmp_path, point_re
     exc = _CapturingExecutor()
     model.run(executor=exc, skip_existing=True, rebuild=False)
 
-    assert repo.counts().running == 1
-    assert not exc.was_started
+    assert exc.was_started
 
 
 def test_register_pending_registers_sims(tmp_path, point_receptor):
