@@ -101,6 +101,13 @@ class Manifest:
             if row["sim_id"] in wanted
         }
 
+    def footprint_names(self) -> list[str]:
+        """Return the union of configured footprint targets across the registry."""
+        names: set[str] = set()
+        for raw in self.read()["footprints"]:
+            names.update(json.loads(raw) if isinstance(raw, str) else (raw or []))
+        return sorted(names)
+
     def sim_ids_by_scene(self) -> dict[str, list[str]]:
         """Return ``scene -> [sim_id]`` for rows carrying a non-null scene."""
         frame = self.read()

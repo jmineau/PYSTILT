@@ -19,7 +19,24 @@ from stilt.index.sqlite import SqliteIndex
 from stilt.model import Model as _Model
 from stilt.receptors import PointReceptor
 from stilt.simulation import SimID
-from stilt.storage import LocalStore, Storage, Store
+from stilt.storage import LocalStore, ProjectFiles, Storage, Store
+
+
+def _write_trajectory(output_dir, sim_id, *, error=False):
+    """Write a stub trajectory output to disk (by-key completion world)."""
+    files = ProjectFiles(output_dir).simulation(sim_id)
+    files.directory.mkdir(parents=True, exist_ok=True)
+    (files.error_trajectory_path if error else files.trajectory_path).write_bytes(b"x")
+
+
+def _write_footprint(output_dir, sim_id, name, *, empty=False):
+    """Write a stub footprint output (or empty marker) to disk."""
+    files = ProjectFiles(output_dir).simulation(sim_id)
+    files.directory.mkdir(parents=True, exist_ok=True)
+    if empty:
+        files.write_empty_footprint_marker(name)
+    else:
+        files.footprint_path(name).write_bytes(b"x")
 
 
 def _record_result(
@@ -189,7 +206,6 @@ def test_receptors_require_explicit_or_output_source_when_not_provided(
 
 
 def test_simulation_collection_select_filters_by_time_and_location(tmp_path):
-    repo = InMemoryIndex(tmp_path)
     rec_a = PointReceptor(
         time=dt.datetime(2023, 1, 1, 12),
         longitude=-111.85,
@@ -203,16 +219,14 @@ def test_simulation_collection_select_filters_by_time_and_location(tmp_path):
         altitude=5.0,
     )
 
-    sid_a = str(SimID.from_parts("hrrr", rec_a))
     sid_b = str(SimID.from_parts("hrrr", rec_b))
-    _state_call(repo, "register", [(sid_a, rec_a), (sid_b, rec_b)])
 
     model = Model(
         project=tmp_path,
         config=_config(tmp_path),
         receptors=[rec_a, rec_b],
-        index=repo,
     )
+    model.register_pending()
     got = model.simulations.select(
         time_range=(pd.Timestamp("2023-01-01 12:30"), pd.Timestamp("2023-01-01 13:30")),
         location_ids={SimID(sid_b).location},
@@ -223,7 +237,6 @@ def test_simulation_collection_select_filters_by_time_and_location(tmp_path):
 
 
 def test_simulation_collection_ids_filters_by_time_and_location(tmp_path):
-    repo = InMemoryIndex(tmp_path)
     rec_a = PointReceptor(
         time=dt.datetime(2023, 1, 1, 12),
         longitude=-111.85,
@@ -239,14 +252,13 @@ def test_simulation_collection_ids_filters_by_time_and_location(tmp_path):
 
     sid_a = str(SimID.from_parts("hrrr", rec_a))
     sid_b = str(SimID.from_parts("hrrr", rec_b))
-    _state_call(repo, "register", [(sid_a, rec_a), (sid_b, rec_b)])
 
     model = Model(
         project=tmp_path,
         config=_config(tmp_path),
         receptors=[rec_a, rec_b],
-        index=repo,
     )
+    model.manifest.register([(sid_a, rec_a), (sid_b, rec_b)])
     got = model.simulations.ids(
         time_range=(pd.Timestamp("2023-01-01 12:30"), pd.Timestamp("2023-01-01 13:30")),
         location_ids={SimID(sid_b).location},
@@ -301,11 +313,10 @@ def test_register_pending_refreshes_model_inputs_after_explicit_subset(
 
 
 def test_simulations_mapping_len_and_contains(tmp_path, point_receptor):
-    repo = InMemoryIndex(tmp_path)
     sid = str(SimID.from_parts("hrrr", point_receptor))
-    _state_call(repo, "register", [(sid, point_receptor)])
 
-    model = Model(project=tmp_path, config=_config(tmp_path), index=repo)
+    model = Model(project=tmp_path, config=_config(tmp_path))
+    model.manifest.register([(sid, point_receptor)])
     sims = model.simulations
 
     assert sid in sims
@@ -364,22 +375,19 @@ def test_simulations_mapping_uses_store_for_reload(
 
 
 def test_simulations_mapping_iter(tmp_path, point_receptor):
-    repo = InMemoryIndex(tmp_path)
     sid = str(SimID.from_parts("hrrr", point_receptor))
-    _state_call(repo, "register", [(sid, point_receptor)])
 
     model = Model(
         project=tmp_path,
         config=_config(tmp_path),
         receptors=[point_receptor],
-        index=repo,
     )
+    model.manifest.register([(sid, point_receptor)])
     all_ids = list(model.simulations)
     assert sid in all_ids
 
 
 def test_simulations_mapping_ids_filters_by_time_and_location(tmp_path):
-    repo = InMemoryIndex(tmp_path)
     rec_a = PointReceptor(
         time=dt.datetime(2023, 1, 1, 12),
         longitude=-111.85,
@@ -395,14 +403,13 @@ def test_simulations_mapping_ids_filters_by_time_and_location(tmp_path):
 
     sid_a = str(SimID.from_parts("hrrr", rec_a))
     sid_b = str(SimID.from_parts("hrrr", rec_b))
-    _state_call(repo, "register", [(sid_a, rec_a), (sid_b, rec_b)])
 
     model = Model(
         project=tmp_path,
         config=_config(tmp_path),
         receptors=[rec_a, rec_b],
-        index=repo,
     )
+    model.manifest.register([(sid_a, rec_a), (sid_b, rec_b)])
     got = model.simulations.ids(
         time_range=(pd.Timestamp("2023-01-01 12:30"), pd.Timestamp("2023-01-01 13:30")),
         location_ids={SimID(sid_b).location},
@@ -412,36 +419,32 @@ def test_simulations_mapping_ids_filters_by_time_and_location(tmp_path):
 
 
 def test_simulations_mapping_values(tmp_path, point_receptor):
-    repo = InMemoryIndex(tmp_path)
     sid = str(SimID.from_parts("hrrr", point_receptor))
-    _state_call(repo, "register", [(sid, point_receptor)])
 
     model = Model(
         project=tmp_path,
         config=_config(tmp_path),
         receptors=[point_receptor],
-        index=repo,
     )
+    model.manifest.register([(sid, point_receptor)])
     vals = list(model.simulations.values())
     assert len(vals) == 1
 
 
 def test_simulations_mapping_select_filters_by_footprint(tmp_path, point_receptor):
-    repo = InMemoryIndex(tmp_path)
     sid = str(SimID.from_parts("hrrr", point_receptor))
-    _state_call(repo, "register", [(sid, point_receptor)])
-    _mark_trajectory_complete(repo, sid)
+    _write_trajectory(tmp_path, sid)
 
     model = Model(
         project=tmp_path,
         config=_config(tmp_path),
         receptors=[point_receptor],
-        index=repo,
     )
+    model.manifest.register([(sid, point_receptor)])
 
     assert model.simulations.select(footprint="slv") == []
 
-    _mark_footprint_complete(repo, sid, "slv")
+    _write_footprint(tmp_path, sid, "slv")
     result = model.simulations.select(footprint="slv")
 
     assert len(result) == 1
@@ -518,7 +521,6 @@ def test_simulation_collection_incomplete_uses_configured_footprints(tmp_path):
 
 
 def test_trajectory_collection_missing_returns_non_complete_ids(tmp_path):
-    repo = InMemoryIndex(tmp_path)
     rec_complete = PointReceptor(
         time=dt.datetime(2023, 1, 1, 12),
         longitude=-111.85,
@@ -533,21 +535,19 @@ def test_trajectory_collection_missing_returns_non_complete_ids(tmp_path):
     )
     sid_complete = str(SimID.from_parts("hrrr", rec_complete))
     sid_missing = str(SimID.from_parts("hrrr", rec_missing))
-    _state_call(repo, "register", [(sid_complete, rec_complete)])
-    _mark_trajectory_complete(repo, sid_complete)
+    _write_trajectory(tmp_path, sid_complete)
 
     model = Model(
         project=tmp_path,
         config=_config(tmp_path),
         receptors=[rec_complete, rec_missing],
-        index=repo,
     )
+    model.manifest.register([(sid_complete, rec_complete)])
 
     assert model.trajectories.missing() == [sid_missing]
 
 
 def test_named_footprint_collection_missing_excludes_complete_empty(tmp_path):
-    repo = InMemoryIndex(tmp_path)
     rec_complete = PointReceptor(
         time=dt.datetime(2023, 1, 1, 12),
         longitude=-111.85,
@@ -569,38 +569,29 @@ def test_named_footprint_collection_missing_excludes_complete_empty(tmp_path):
     sid_complete = str(SimID.from_parts("hrrr", rec_complete))
     sid_empty = str(SimID.from_parts("hrrr", rec_empty))
     sid_missing = str(SimID.from_parts("hrrr", rec_missing))
-    _state_call(
-        repo,
-        "register",
-        [(sid_complete, rec_complete), (sid_empty, rec_empty)],
-        footprint_names=["slv"],
-    )
-    _mark_trajectory_complete(repo, sid_complete)
-    _mark_trajectory_complete(repo, sid_empty)
-    _mark_footprint_complete(repo, sid_complete, "slv")
-    _mark_footprint_empty(repo, sid_empty, "slv")
+    _write_trajectory(tmp_path, sid_complete)
+    _write_trajectory(tmp_path, sid_empty)
+    _write_footprint(tmp_path, sid_complete, "slv")
+    _write_footprint(tmp_path, sid_empty, "slv", empty=True)
 
     model = Model(
         project=tmp_path,
         config=_config(tmp_path),
         receptors=[rec_complete, rec_empty, rec_missing],
-        index=repo,
     )
 
     assert model.footprints["slv"].missing() == [sid_missing]
 
 
 def test_simulations_mapping_items(tmp_path, point_receptor):
-    repo = InMemoryIndex(tmp_path)
     sid = str(SimID.from_parts("hrrr", point_receptor))
-    _state_call(repo, "register", [(sid, point_receptor)])
 
     model = Model(
         project=tmp_path,
         config=_config(tmp_path),
         receptors=[point_receptor],
-        index=repo,
     )
+    model.manifest.register([(sid, point_receptor)])
     items = list(model.simulations.items())
     assert len(items) == 1
     assert items[0][0] == sid
@@ -739,28 +730,6 @@ def test_model_uses_runtime_db_url_for_local_output(tmp_path, monkeypatch):
 
     assert model.index is not None
     assert captured == [("postgresql://runtime-db/pystilt", 12)]
-
-
-def test_model_passes_runtime_max_rows_to_sqlite_state(tmp_path, monkeypatch):
-    captured: list[int | None] = []
-
-    monkeypatch.setattr(
-        "stilt.index.factory.SqliteIndex",
-        lambda path, max_rows=None: (
-            captured.append(max_rows) or InMemoryIndex(tmp_path / "repo")
-        ),
-    )
-
-    model = Model(
-        project=tmp_path / "project",
-        config=_config(tmp_path),
-        runtime=RuntimeSettings(max_rows=7),
-    )
-
-    assert model.index is not None
-    assert captured == [7]
-
-
 def test_register_pending_bootstraps_config_and_receptors_to_storage(
     tmp_path, point_receptor
 ):
@@ -840,22 +809,6 @@ def test_register_pending_bootstraps_inputs_to_project_root(tmp_path, point_rece
     clone = Model(project=project_dir)
     assert len(clone.receptors) == 1
     assert clone.config.mets["hrrr"].directory == tmp_path / "met"
-
-
-def test_model_uses_output_dir_for_default_sqlite_repository(tmp_path):
-    project_dir = tmp_path / "project"
-    output_root = tmp_path / "output"
-
-    model = Model(
-        project=project_dir,
-        output_dir=output_root,
-        config=_config(tmp_path),
-    )
-
-    assert isinstance(model.index, SqliteIndex)
-    assert model.index._db_path == output_root / "simulations" / "index.sqlite"
-
-
 def test_cloud_run_passes_project_uri_to_executor(tmp_path, point_receptor):
     repo = InMemoryIndex(tmp_path / "repo")
     artifact_store = LocalStore(tmp_path / "artifacts")
@@ -985,23 +938,21 @@ def test_simulation_collection_select_empty_when_no_sims(tmp_path):
 
 
 def test_simulation_collection_select_filters_by_footprint(tmp_path, point_receptor):
-    repo = InMemoryIndex(tmp_path)
     sid = str(SimID.from_parts("hrrr", point_receptor))
-    _state_call(repo, "register", [(sid, point_receptor)])
-    _mark_trajectory_complete(repo, sid)
+    _write_trajectory(tmp_path, sid)
 
     model = Model(
         project=tmp_path,
         config=_config(tmp_path),
         receptors=[point_receptor],
-        index=repo,
     )
+    model.manifest.register([(sid, point_receptor)])
     # No footprint registered → filtered out
     result = model.simulations.select(footprint="slv")
     assert result == []
 
     # Register footprint
-    _mark_footprint_complete(repo, sid, "slv")
+    _write_footprint(tmp_path, sid, "slv")
     result = model.simulations.select(footprint="slv")
     assert len(result) == 1
     assert str(result[0].id) == sid
@@ -1009,15 +960,14 @@ def test_simulation_collection_select_filters_by_footprint(tmp_path, point_recep
 
 def test_trajectory_accessor_paths_load_matching_trajectories(tmp_path, point_receptor):
     sid = str(SimID.from_parts("hrrr", point_receptor))
-    repo = InMemoryIndex(tmp_path)
-    _state_call(repo, "register", [(sid, point_receptor)])
-    _mark_trajectory_complete(repo, sid)
+    _write_trajectory(tmp_path, sid)
 
     traj_path = tmp_path / "simulations" / "by-id" / sid / f"{sid}_traj.parquet"
     traj_path.parent.mkdir(parents=True, exist_ok=True)
     traj_path.write_bytes(b"traj")
 
-    model = Model(project=tmp_path, index=repo)
+    model = Model(project=tmp_path)
+    model.manifest.register([(sid, point_receptor)])
     result = model.trajectories.paths()
 
     assert result == [traj_path]
@@ -1027,60 +977,17 @@ def test_trajectory_accessor_paths_load_matching_error_trajectories(
     tmp_path, point_receptor
 ):
     sid = str(SimID.from_parts("hrrr", point_receptor))
-    repo = InMemoryIndex(tmp_path)
-    _state_call(repo, "register", [(sid, point_receptor)])
 
     error_path = tmp_path / "simulations" / "by-id" / sid / f"{sid}_error.parquet"
     error_path.parent.mkdir(parents=True, exist_ok=True)
     error_path.write_bytes(b"error-traj")
 
-    repo.record(
-        SimulationResult(
-            sim_id=SimID(sid),
-            status="failed",
-            traj_present=False,
-            error_traj_path=error_path,
-            started_at=dt.datetime.now(dt.timezone.utc),
-        )
-    )
-
-    model = Model(project=tmp_path, index=repo)
+    model = Model(project=tmp_path)
+    model.manifest.register([(sid, point_receptor)])
 
     assert model.trajectories.paths(error=True) == [error_path]
-
-
-def test_trajectory_accessor_paths_uses_bulk_status(
-    tmp_path, point_receptor, monkeypatch
-):
-    sid = str(SimID.from_parts("hrrr", point_receptor))
-    repo = InMemoryIndex(tmp_path)
-    _state_call(repo, "register", [(sid, point_receptor)])
-    _mark_trajectory_complete(repo, sid)
-
-    traj_path = tmp_path / "simulations" / "by-id" / sid / f"{sid}_traj.parquet"
-    traj_path.parent.mkdir(parents=True, exist_ok=True)
-    traj_path.write_bytes(b"traj")
-
-    original = SqliteIndex.summaries
-    summary_calls: list[list[str] | None] = []
-
-    def _record_summaries(self, sim_ids=None):
-        summary_calls.append(sim_ids)
-        return original(self, sim_ids)
-
-    monkeypatch.setattr(SqliteIndex, "summaries", _record_summaries)
-
-    model = Model(project=tmp_path, index=repo)
-
-    assert model.trajectories.paths() == [traj_path]
-    assert summary_calls == [[sid]]
-
-
 def test_trajectory_accessor_paths_fall_back_to_store(tmp_path, point_receptor):
     sid = str(SimID.from_parts("hrrr", point_receptor))
-    repo = InMemoryIndex(tmp_path)
-    _state_call(repo, "register", [(sid, point_receptor)])
-    _mark_trajectory_complete(repo, sid)
 
     storage_root = tmp_path / "remote"
     storage_path = storage_root / "simulations" / "by-id" / sid / f"{sid}_traj.parquet"
@@ -1089,13 +996,13 @@ def test_trajectory_accessor_paths_fall_back_to_store(tmp_path, point_receptor):
 
     model = Model(
         project=tmp_path / "cache",
-        index=repo,
         storage=_storage(
             tmp_path / "cache",
             tmp_path / "cache",
             LocalStore(storage_root),
         ),
     )
+    model.manifest.register([(sid, point_receptor)])
     result = model.trajectories.paths()
 
     assert len(result) == 1
@@ -1106,9 +1013,7 @@ def test_trajectory_accessor_load_matching_trajectories(
     tmp_path, point_receptor, monkeypatch
 ):
     sid = str(SimID.from_parts("hrrr", point_receptor))
-    repo = InMemoryIndex(tmp_path)
-    _state_call(repo, "register", [(sid, point_receptor)])
-    _mark_trajectory_complete(repo, sid)
+    _write_trajectory(tmp_path, sid)
 
     traj_path = tmp_path / "simulations" / "by-id" / sid / f"{sid}_traj.parquet"
     traj_path.parent.mkdir(parents=True, exist_ok=True)
@@ -1119,7 +1024,8 @@ def test_trajectory_accessor_load_matching_trajectories(
         "stilt.collections.Trajectories.from_parquet", lambda p: sentinel
     )
 
-    model = Model(project=tmp_path, index=repo)
+    model = Model(project=tmp_path)
+    model.manifest.register([(sid, point_receptor)])
     result = model.trajectories.load()
 
     assert result == [sentinel]
@@ -1127,9 +1033,7 @@ def test_trajectory_accessor_load_matching_trajectories(
 
 def test_trajectory_accessor_paths_and_load(tmp_path, point_receptor, monkeypatch):
     sid = str(SimID.from_parts("hrrr", point_receptor))
-    repo = InMemoryIndex(tmp_path)
-    _state_call(repo, "register", [(sid, point_receptor)])
-    _mark_trajectory_complete(repo, sid)
+    _write_trajectory(tmp_path, sid)
 
     traj_path = tmp_path / "simulations" / "by-id" / sid / f"{sid}_traj.parquet"
     traj_path.parent.mkdir(parents=True, exist_ok=True)
@@ -1137,7 +1041,8 @@ def test_trajectory_accessor_paths_and_load(tmp_path, point_receptor, monkeypatc
 
     monkeypatch.setattr("stilt.collections.Trajectories.from_parquet", lambda p: p)
 
-    model = Model(project=tmp_path, index=repo)
+    model = Model(project=tmp_path)
+    model.manifest.register([(sid, point_receptor)])
     assert model.trajectories.paths() == [traj_path]
     assert model.trajectories.load() == [traj_path]
 
@@ -1147,18 +1052,17 @@ def test_named_footprint_accessor_loads_matching_footprints_via_path(
 ):
     from stilt.footprint import Footprint
 
-    repo = InMemoryIndex(tmp_path)
     sid = str(SimID.from_parts("hrrr", point_receptor))
-    _state_call(repo, "register", [(sid, point_receptor)])
-    _mark_trajectory_complete(repo, sid)
-    _mark_footprint_complete(repo, sid, "slv")
+    _write_trajectory(tmp_path, sid)
+    _write_footprint(tmp_path, sid, "slv")
     foot_path = tmp_path / "simulations" / "by-id" / sid / f"{sid}_slv_foot.nc"
     foot_path.parent.mkdir(parents=True, exist_ok=True)
     foot_path.write_text("stub")
 
     monkeypatch.setattr(Footprint, "from_netcdf", staticmethod(lambda p: p))
 
-    model = Model(project=tmp_path, index=repo)
+    model = Model(project=tmp_path)
+    model.manifest.register([(sid, point_receptor)])
     result = model.footprints["slv"].load()
 
     assert len(result) == 1
@@ -1169,49 +1073,18 @@ def test_named_footprint_accessor_paths_load_matching_footprints(
     tmp_path, point_receptor
 ):
     sid = str(SimID.from_parts("hrrr", point_receptor))
-    repo = InMemoryIndex(tmp_path)
-    _state_call(repo, "register", [(sid, point_receptor)])
-    _mark_trajectory_complete(repo, sid)
-    _mark_footprint_complete(repo, sid, "slv")
+    _write_trajectory(tmp_path, sid)
+    _write_footprint(tmp_path, sid, "slv")
 
     foot_path = tmp_path / "simulations" / "by-id" / sid / f"{sid}_slv_foot.nc"
     foot_path.parent.mkdir(parents=True, exist_ok=True)
     foot_path.write_text("stub")
 
-    model = Model(project=tmp_path, index=repo)
+    model = Model(project=tmp_path)
+    model.manifest.register([(sid, point_receptor)])
     result = model.footprints["slv"].paths()
 
     assert result == [foot_path]
-
-
-def test_named_footprint_accessor_paths_use_bulk_completion(
-    tmp_path, point_receptor, monkeypatch
-):
-    sid = str(SimID.from_parts("hrrr", point_receptor))
-    repo = InMemoryIndex(tmp_path)
-    _state_call(repo, "register", [(sid, point_receptor)])
-    _mark_trajectory_complete(repo, sid)
-    _mark_footprint_complete(repo, sid, "slv")
-
-    foot_path = tmp_path / "simulations" / "by-id" / sid / f"{sid}_slv_foot.nc"
-    foot_path.parent.mkdir(parents=True, exist_ok=True)
-    foot_path.write_text("stub")
-
-    original = SqliteIndex.summaries
-    summary_calls: list[list[str] | None] = []
-
-    def _record_summaries(self, sim_ids=None):
-        summary_calls.append(sim_ids)
-        return original(self, sim_ids)
-
-    monkeypatch.setattr(SqliteIndex, "summaries", _record_summaries)
-
-    model = Model(project=tmp_path, index=repo)
-
-    assert model.footprints["slv"].paths() == [foot_path]
-    assert summary_calls == [[sid]]
-
-
 def test_named_footprint_accessor_paths_skip_complete_empty(tmp_path, point_receptor):
     sid = str(SimID.from_parts("hrrr", point_receptor))
     repo = InMemoryIndex(tmp_path)
@@ -1224,7 +1097,6 @@ def test_named_footprint_accessor_paths_skip_complete_empty(tmp_path, point_rece
 
 
 def test_footprint_accessor_names_and_paths(tmp_path):
-    repo = InMemoryIndex(tmp_path)
     rec_complete = PointReceptor(
         time=dt.datetime(2023, 1, 1, 12),
         longitude=-111.85,
@@ -1239,16 +1111,10 @@ def test_footprint_accessor_names_and_paths(tmp_path):
     )
     sid_complete = str(SimID.from_parts("hrrr", rec_complete))
     sid_empty = str(SimID.from_parts("hrrr", rec_empty))
-    _state_call(
-        repo,
-        "register",
-        [(sid_complete, rec_complete), (sid_empty, rec_empty)],
-        footprint_names=["slv"],
-    )
-    _mark_trajectory_complete(repo, sid_complete)
-    _mark_trajectory_complete(repo, sid_empty)
-    _mark_footprint_complete(repo, sid_complete, "slv")
-    _mark_footprint_empty(repo, sid_empty, "slv")
+    _write_trajectory(tmp_path, sid_complete)
+    _write_trajectory(tmp_path, sid_empty)
+    _write_footprint(tmp_path, sid_complete, "slv")
+    _write_footprint(tmp_path, sid_empty, "slv", empty=True)
 
     foot_path = (
         tmp_path
@@ -1257,10 +1123,9 @@ def test_footprint_accessor_names_and_paths(tmp_path):
         / sid_complete
         / f"{sid_complete}_slv_foot.nc"
     )
-    foot_path.parent.mkdir(parents=True, exist_ok=True)
-    foot_path.write_text("stub")
 
-    model = Model(project=tmp_path, index=repo)
+    model = Model(project=tmp_path, config=_config(tmp_path))
+    model.manifest.register([(sid_complete, rec_complete), (sid_empty, rec_empty)])
     assert list(model.footprints) == ["slv"]
     assert model.footprints["slv"].paths() == [foot_path]
 
@@ -1270,11 +1135,9 @@ def test_named_footprint_accessor_loads_matching_footprints(
 ):
     from stilt.footprint import Footprint
 
-    repo = InMemoryIndex(tmp_path)
     sid = str(SimID.from_parts("hrrr", point_receptor))
-    _state_call(repo, "register", [(sid, point_receptor)])
-    _mark_trajectory_complete(repo, sid)
-    _mark_footprint_complete(repo, sid, "slv")
+    _write_trajectory(tmp_path, sid)
+    _write_footprint(tmp_path, sid, "slv")
 
     foot_path = tmp_path / "simulations" / "by-id" / sid / f"{sid}_slv_foot.nc"
     foot_path.parent.mkdir(parents=True, exist_ok=True)
@@ -1282,7 +1145,8 @@ def test_named_footprint_accessor_loads_matching_footprints(
 
     monkeypatch.setattr(Footprint, "from_netcdf", staticmethod(lambda p: p))
 
-    model = Model(project=tmp_path, index=repo)
+    model = Model(project=tmp_path)
+    model.manifest.register([(sid, point_receptor)])
     assert model.footprints["slv"].load() == [foot_path]
 
 
@@ -1317,11 +1181,7 @@ def test_named_footprint_accessor_load_falls_back_to_store(
 ):
     from stilt.footprint import Footprint
 
-    repo = InMemoryIndex(tmp_path)
     sid = str(SimID.from_parts("hrrr", point_receptor))
-    _state_call(repo, "register", [(sid, point_receptor)], footprint_names=["slv"])
-    _mark_trajectory_complete(repo, sid)
-    _mark_footprint_complete(repo, sid, "slv")
 
     storage_root = tmp_path / "remote"
     storage_key = storage_root / "simulations" / "by-id" / sid / f"{sid}_slv_foot.nc"
@@ -1332,13 +1192,13 @@ def test_named_footprint_accessor_load_falls_back_to_store(
 
     model = Model(
         project=tmp_path / "cache",
-        index=repo,
         storage=_storage(
             tmp_path / "cache",
             tmp_path / "cache",
             LocalStore(storage_root),
         ),
     )
+    model.manifest.register([(sid, point_receptor)])
     result = model.footprints["slv"].load()
 
     assert len(result) == 1
@@ -1350,26 +1210,21 @@ def test_named_footprint_accessor_load_filters_by_mets(
 ):
     from stilt.footprint import Footprint
 
-    repo = InMemoryIndex(tmp_path)
     sid_hrrr = str(SimID.from_parts("hrrr", point_receptor))
     sid_nam = str(SimID.from_parts("nam", point_receptor))
-    _state_call(
-        repo, "register", [(sid_hrrr, point_receptor), (sid_nam, point_receptor)]
-    )
     for sid in (sid_hrrr, sid_nam):
-        _mark_trajectory_complete(repo, sid)
-        _mark_footprint_complete(repo, sid, "slv")
-        foot_path = tmp_path / "simulations" / "by-id" / sid / f"{sid}_slv_foot.nc"
-        foot_path.parent.mkdir(parents=True, exist_ok=True)
-        foot_path.write_text("stub")
+        _write_trajectory(tmp_path, sid)
+        _write_footprint(tmp_path, sid, "slv")
 
     monkeypatch.setattr(Footprint, "from_netcdf", staticmethod(lambda p: p))
 
     cfg = _config(tmp_path, point_receptor)
     cfg.to_yaml(tmp_path / "config.yaml")
-    model = Model(project=tmp_path, index=repo)
+    model = Model(project=tmp_path)
+    model.manifest.register([(sid_hrrr, point_receptor), (sid_nam, point_receptor)])
     result = model.footprints["slv"].load(mets="hrrr")
 
+    assert result
     assert all("hrrr" in str(p) for p in result)
 
 
@@ -1460,14 +1315,14 @@ def test_model_run_resolves_executor_from_config(tmp_path, point_receptor, monke
 
 
 def test_model_run_registers_sims_before_start(tmp_path, point_receptor):
-    """repository.register_many is called before executor.start()."""
+    """register_pending records the sim in the manifest before executor.start()."""
     from stilt.simulation import SimID
 
     exc = _CapturingExecutor()
     model, _ = _run_model(tmp_path, point_receptor, exc)
 
     sid = str(SimID.from_parts("hrrr", point_receptor))
-    assert sid in list(_state_call(model.index, "sim_ids"))
+    assert sid in model.manifest.sim_ids()
 
 
 def test_model_run_propagates_resolved_skip_to_executor_kwargs(
@@ -1503,46 +1358,6 @@ def test_model_run_forwards_separate_output_dir_and_compute_root(
     assert exc.start_calls[0]["project"] == str(output_dir.resolve())
     assert exc.start_calls[0]["output_dir"] == str(output_dir.resolve())
     assert exc.start_calls[0]["compute_root"] == str(compute_root.resolve())
-
-
-def test_model_run_push_wait_uses_state_rebuild(tmp_path, point_receptor, monkeypatch):
-    class _PushExecutor(_CapturingExecutor):
-        dispatch = "push"
-
-    rebuild_calls: list[bool] = []
-    monkeypatch.setattr(
-        "stilt.index.sqlite.SqliteIndex.rebuild",
-        lambda self: rebuild_calls.append(True),
-    )
-
-    exc = _PushExecutor()
-    _run_model(tmp_path, point_receptor, exc, skip_existing=False, wait=True)
-
-    assert rebuild_calls == [True]
-
-
-def test_model_run_push_handle_wait_rebuilds_state_once(tmp_path, point_receptor):
-    class _PushExecutor(_CapturingExecutor):
-        dispatch = "push"
-
-    model = Model(
-        project=tmp_path,
-        config=_config(tmp_path),
-        receptors=[point_receptor],
-    )
-    rebuild_calls: list[bool] = []
-    model.index.rebuild = lambda: rebuild_calls.append(True)  # type: ignore[method-assign]
-
-    exc = _PushExecutor()
-    handle = model.run(executor=exc, skip_existing=False, wait=False)
-
-    assert handle is not exc._handle
-    handle.wait()
-    handle.wait()
-
-    assert rebuild_calls == [True]
-
-
 def test_model_run_cloud_output_bootstraps_workers_from_output_uri(
     tmp_path, point_receptor
 ):
@@ -1883,7 +1698,7 @@ def test_register_pending_registers_sims(tmp_path, point_receptor):
 
     sid = str(SimID.from_parts("hrrr", point_receptor))
     assert sid in sim_ids
-    assert _state_call(model.index, "has", sid)
+    assert model.manifest.has(sid)
 
 
 def test_model_status_reflects_queue_counts(tmp_path, point_receptor):
@@ -1933,7 +1748,7 @@ def test_plan_simulation_task_push_uses_stored_inputs_not_repository(
 
 
 def test_register_pending_registers_footprint_targets(tmp_path, point_receptor):
-    """Submitted sims are not fully complete until required footprints exist."""
+    """A sim is not complete until its required footprint exists on disk."""
     from stilt.simulation import SimID
 
     model = Model(
@@ -1943,36 +1758,9 @@ def test_register_pending_registers_footprint_targets(tmp_path, point_receptor):
     )
     sid = str(SimID.from_parts("hrrr", point_receptor))
     model.register_pending()
-    _record_result(model.index, sid)
+    _write_trajectory(tmp_path, sid)
 
-    assert model.index.counts().completed == 0
+    assert model.status().completed == 0
 
-    _record_result(model.index, sid, footprint_statuses={"slv": "complete"})
-    assert model.index.counts().completed == 1
-
-
-def test_register_pending_registers_error_footprint_targets(tmp_path, point_receptor):
-    """Error-footprint outputs are part of the requested manifest targets."""
-    from stilt.simulation import SimID
-
-    cfg = _config(tmp_path, include_footprint=True)
-    cfg.footprints["slv"] = cfg.footprints["slv"].model_copy(update={"error": True})
-    model = Model(
-        project=tmp_path,
-        config=cfg,
-        receptors=[point_receptor],
-    )
-    sid = str(SimID.from_parts("hrrr", point_receptor))
-
-    model.register_pending()
-    _record_result(model.index, sid)
-    _record_result(model.index, sid, footprint_statuses={"slv": "complete"})
-
-    assert model.index.counts().completed == 0
-
-    _record_result(
-        model.index,
-        sid,
-        footprint_statuses={"slv_error": "complete-empty"},
-    )
-    assert model.index.counts().completed == 1
+    _write_footprint(tmp_path, sid, "slv")
+    assert model.status().completed == 1

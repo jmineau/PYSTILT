@@ -1,4 +1,10 @@
-"""Index backend resolution helpers."""
+"""
+Work-queue backend resolution.
+
+The only persistent index backend is the Postgres work queue, present when a DB
+URL is configured. Local projects have no index: the registry is the manifest
+(``stilt.manifest``) and completion is computed by key (``stilt.completion``).
+"""
 
 from __future__ import annotations
 
@@ -6,11 +12,9 @@ from pathlib import Path
 from typing import Literal
 
 from stilt.config import RuntimeSettings
-from stilt.errors import ConfigValidationError
 
 from .postgres import PostgresIndex
 from .protocol import SimulationIndex
-from .sqlite import SqliteIndex
 
 
 def resolve_index(
@@ -18,9 +22,9 @@ def resolve_index(
     *,
     output_root: str | Path,
     runtime: RuntimeSettings,
-    builtin_backend: Literal["sqlite", "postgres"],
-) -> SimulationIndex:
-    """Resolve the output simulation index backend for one model instance."""
+    builtin_backend: Literal["postgres"] = "postgres",
+) -> SimulationIndex | None:
+    """Return the Postgres work queue when a DB URL is configured, else ``None``."""
     if index is not None:
         return index
     if runtime.db_url:
@@ -29,16 +33,4 @@ def resolve_index(
             output_root=output_root,
             max_rows=runtime.max_rows,
         )
-    if builtin_backend == "postgres":
-        db_url = runtime.db_url
-        if not db_url:
-            raise ConfigValidationError(
-                "PYSTILT_DB_URL env var or RuntimeSettings.db_url is required "
-                "for cloud output projects"
-            )
-        return PostgresIndex(
-            db_url,
-            output_root=output_root,
-            max_rows=runtime.max_rows,
-        )
-    return SqliteIndex(Path(output_root), max_rows=runtime.max_rows)
+    return None

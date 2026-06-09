@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Generic, Protocol, TypeVar, overload
 from stilt.completion import expected_artifacts, is_complete
 from stilt.config import STILTParams
 from stilt.footprint import Footprint
-from stilt.index import OutputSummary, SimulationIndex
+from stilt.manifest import Manifest
 from stilt.meteorology import MetStream
 from stilt.receptors import PointReceptor, Receptor, read_receptors
 from stilt.selection import (
@@ -183,7 +183,7 @@ class SimulationCollection:
         mets: dict[str, MetStream],
         receptors: ReceptorCollection,
         footprint_names: list[str],
-        index: SimulationIndex,
+        manifest: Manifest,
         store: Store,
     ):
         self._output_dir = output_dir
@@ -191,9 +191,20 @@ class SimulationCollection:
         self._mets = mets
         self._receptors = receptors
         self._footprint_names = footprint_names
-        self._index = index
+        self._manifest = manifest
         self._store = store
         self._cache: dict[str, Simulation] = {}
+
+    def _storage(self) -> Storage:
+        """Return a storage facade for by-key completion checks."""
+        return Storage(self._output_dir, self._output_dir, self._store)
+
+    def _footprint_present(self, storage: Storage, sim_id: str, name: str) -> bool:
+        """Return whether one named footprint is complete (by key, incl. empty)."""
+        files = ProjectFiles(self._output_dir).simulation(sim_id)
+        return storage.exists(sim_id, files.footprint_path(name)) or storage.exists(
+            sim_id, files.empty_footprint_path(name)
+        )
 
     def __getitem__(self, sim_id: str) -> Simulation:
         if sim_id not in self._cache:
@@ -201,17 +212,17 @@ class SimulationCollection:
         return self._cache[sim_id]
 
     def __contains__(self, sim_id: str) -> bool:
-        return self._index.has(sim_id)
+        return self._manifest.has(sim_id)
 
     def __iter__(self) -> Iterator[str]:
-        return iter(self._index.sim_ids())
+        return iter(self._manifest.sim_ids())
 
     def __len__(self) -> int:
-        return self._index.count()
+        return self._manifest.count()
 
     def keys(self) -> list[str]:
         """Return all registered simulation identifiers."""
-        return self._index.sim_ids()
+        return self._manifest.sim_ids()
 
     def items(self) -> Iterator[tuple[str, Simulation]]:
         """Yield ``(sim_id, Simulation)`` pairs for all registered simulations."""
@@ -230,7 +241,7 @@ class SimulationCollection:
     ) -> list[str]:
         """Return simulation identifiers matching the given filters."""
         filtered = filter_ids(
-            self._index.sim_ids(),
+            self._manifest.sim_ids(),
             mets=self._resolve_mets(mets),
             time_range=time_range,
             location_ids=location_ids,
@@ -239,11 +250,11 @@ class SimulationCollection:
         if footprint is None or not filtered:
             return filtered
 
-        found = self._index.summaries(filtered)
+        storage = self._storage()
         return [
             sim_id
             for sim_id in filtered
-            if found.get(sim_id, OutputSummary()).footprints_complete([footprint])
+            if self._footprint_present(storage, sim_id, footprint)
         ]
 
     def select(
@@ -278,7 +289,7 @@ class SimulationCollection:
         are set, the error trajectory.
         """
         candidate_ids = matching_ids(
-            self._index,
+            self._manifest,
             receptors=self._receptors,
             configured_mets=self._mets,
             registered=False,
@@ -289,7 +300,7 @@ class SimulationCollection:
         expected = expected_artifacts(
             self._footprint_names, error_enabled=self._params.error_enabled
         )
-        storage = Storage(self._output_dir, self._output_dir, self._store)
+        storage = self._storage()
         return [
             sim_id
             for sim_id in candidate_ids
@@ -316,8 +327,8 @@ class SimulationCollection:
 class _OutputSpec(Protocol[TOutput]):
     """Typed contract for one output simulation output family."""
 
-    def present(self, summary: OutputSummary) -> bool:
-        """Return whether this output is complete in one index summary."""
+    def present(self, model: Model, sim_id: str) -> bool:
+        """Return whether this output exists for one simulation (by key)."""
         ...
 
     def local_path(self, model: Model, sim_id: str) -> Path:
@@ -342,9 +353,9 @@ class _TrajectoryOutputSpec:
     def __init__(self, *, error: bool = False):
         self.error = error
 
-    def present(self, summary: OutputSummary) -> bool:
-        """Return whether the requested trajectory flavor is present."""
-        return summary.error_traj_present if self.error else summary.traj_present
+    def present(self, model: Model, sim_id: str) -> bool:
+        """Return whether the requested trajectory flavor exists, by key."""
+        return model.storage.exists(sim_id, self.local_path(model, sim_id))
 
     def local_path(self, model: Model, sim_id: str) -> Path:
         """Return the local path for this trajectory flavor and simulation."""
@@ -371,9 +382,16 @@ class _NamedFootprintOutputSpec:
     def __init__(self, name: str):
         self.name = name
 
-    def present(self, summary: OutputSummary) -> bool:
-        """Return whether this named footprint is complete in one summary."""
-        return summary.footprint_complete(self.name)
+    def present(self, model: Model, sim_id: str) -> bool:
+        """
+        Return whether this named footprint is complete, by key.
+
+        An empty-footprint marker counts as a (terminal, empty) completion.
+        """
+        files = ProjectFiles(model.layout.output_dir).simulation(sim_id)
+        return model.storage.exists(
+            sim_id, files.footprint_path(self.name)
+        ) or model.storage.exists(sim_id, files.empty_footprint_path(self.name))
 
     def local_path(self, model: Model, sim_id: str) -> Path:
         """Return the local netCDF path for this footprint and simulation."""
@@ -425,7 +443,7 @@ class _OutputAccessor(Generic[TOutput]):
     ) -> list[str]:
         """Return simulation ids matching common accessor filters."""
         return matching_ids(
-            self._model.index,
+            self._model.manifest,
             receptors=self._model.receptors,
             configured_mets=self._configured_mets(),
             registered=registered,
@@ -443,14 +461,12 @@ class _OutputAccessor(Generic[TOutput]):
         """Return local-accessible output paths for matching simulations."""
         return output_paths(
             self._model.storage,
-            self._model.index,
             self._matching_ids(
                 registered=True,
                 mets=mets,
                 time_range=time_range,
                 location_ids=location_ids,
             ),
-            present=self._spec.present,
             local_path=lambda sim_id: self._spec.local_path(self._model, sim_id),
         )
 
@@ -476,14 +492,13 @@ class _OutputAccessor(Generic[TOutput]):
     ) -> list[str]:
         """Return simulation ids still missing this output family."""
         return missing_ids(
-            self._model.index,
             self._matching_ids(
                 registered=False,
                 mets=mets,
                 time_range=time_range,
                 location_ids=location_ids,
             ),
-            present=self._spec.present,
+            present=lambda sim_id: self._spec.present(self._model, sim_id),
         )
 
 
@@ -584,7 +599,5 @@ class FootprintCollection:
         try:
             return list(self._model.config.footprints)
         except FileNotFoundError:
-            found = self._model.index.summaries()
-            return sorted(
-                {name for summary in found.values() for name in summary.footprints}
-            )
+            # No config on disk — recover the names from the registry.
+            return self._model.manifest.footprint_names()
