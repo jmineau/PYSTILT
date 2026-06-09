@@ -100,15 +100,21 @@ def present_artifacts(
     }
 
 
-def is_complete(sim_id: str, config: ModelConfig, storage: Storage) -> bool:
+def is_complete(
+    sim_id: str,
+    expected: Collection[str],
+    storage: Storage,
+) -> bool:
     """
-    Return whether one simulation has produced all of its expected outputs.
+    Return whether one simulation has produced all of its *expected* outputs.
 
-    Short-circuits on the first missing artifact, checking the trajectory first
-    so the many incomplete simulations cost a single existence check.
+    ``expected`` is computed once by the caller (e.g. :func:`expected_for_config`)
+    and reused across many simulations. Short-circuits on the first missing
+    artifact, checking the trajectory first so the many incomplete simulations
+    cost a single existence check.
     """
     files = ProjectFiles(storage.output_dir).simulation(sim_id)
-    expected = sorted(expected_for_config(config), key=_check_order)
+    ordered = sorted(expected, key=_check_order)
     return all(
-        _artifact_present(artifact, sim_id, files, storage) for artifact in expected
+        _artifact_present(artifact, sim_id, files, storage) for artifact in ordered
     )
