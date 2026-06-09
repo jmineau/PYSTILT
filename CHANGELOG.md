@@ -6,6 +6,8 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.0a2] - 2026-06-09
+
 ### Changed
 
 - **Completion is computed by key from the store, not from an index.** A
@@ -40,7 +42,7 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   skipped under `skip_existing`. It is now re-dispatched so the error trajectory
   is backfilled.
 
-## [0.1.0a1] - 2026-04-28
+## [0.1.0a1] - 2026-05-12
 
 First public alpha of PYSTILT — a typed Python implementation of the
 [R-STILT](https://github.com/uataq/stilt) framework for Stochastic
