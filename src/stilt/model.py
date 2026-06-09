@@ -18,6 +18,7 @@ from stilt.collections import (
     SimulationCollection,
     TrajectoryCollection,
 )
+from stilt.completion import is_complete
 from stilt.config import (
     ModelConfig,
     RuntimeSettings,
@@ -472,7 +473,18 @@ class Model:
             index.rebuild()
 
         index.reset_to_pending(sim_ids, clear_outputs=not resolved_skip)
-        pending = index.pending_trajectories()
+        # Completion is decided by the outputs themselves (by key), not the index:
+        # a sim is pending unless every artifact it must produce already exists.
+        # When error params are set, that set includes the error trajectory, so
+        # sims that pre-date error mode are correctly re-dispatched to backfill it.
+        if resolved_skip:
+            pending = [
+                sim_id
+                for sim_id in sim_ids
+                if not is_complete(sim_id, self.config, self.storage)
+            ]
+        else:
+            pending = list(sim_ids)
         if not pending:
             logger.info("run: all simulations already complete — nothing to do")
             return LocalHandle()

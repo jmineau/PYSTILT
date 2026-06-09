@@ -69,6 +69,20 @@ def test_winderrtf_partial_zi_raises():
         ErrorParams(sigzierr=0.6, tlzierr=60.0)  # missing horcorzierr
 
 
+def test_error_enabled_false_by_default():
+    assert ErrorParams().error_enabled is False
+
+
+def test_error_enabled_true_when_xy_params_set():
+    e = ErrorParams(siguverr=1.0, tluverr=60.0, zcoruverr=500.0, horcoruverr=40.0)
+    assert e.error_enabled is True
+
+
+def test_error_enabled_true_when_zi_params_set():
+    e = ErrorParams(sigzierr=0.6, tlzierr=60.0, horcorzierr=40.0)
+    assert e.error_enabled is True
+
+
 # ---------------------------------------------------------------------------
 # STILTParams - flat construction and maxpar default
 # ---------------------------------------------------------------------------

@@ -454,6 +454,17 @@ class ErrorParams(BaseModel):
         zierr = all(v is not None for v in self._zierr_params().values())
         return xyerr + 2 * zierr
 
+    @property
+    def error_enabled(self) -> bool:
+        """
+        Whether an error-trajectory mode is configured (XY and/or ZI).
+
+        When True, a run writes a wind-perturbed ``*_error`` trajectory
+        alongside the main trajectory, so completion checks should require
+        that error trajectory to be present.
+        """
+        return self.winderrtf > 0
+
 
 class STILTParams(ModelParams, TransportParams, ErrorParams):
     """All STILT/HYSPLIT parameters in one flat model."""
