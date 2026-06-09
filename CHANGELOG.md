@@ -6,6 +6,13 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- Documentation build: removed the dead ``stilt.index`` autosummary entries and
+  stale SQLite / output-index prose left over from the index dissolution, so the
+  Sphinx docs build cleanly again. Also made ``stilt.manifest`` pyright-clean
+  (``pd.Index``-wrapped ``DataFrame(columns=...)``). No runtime change.
+
 ## [0.1.0a2] - 2026-06-09
 
 ### Changed
