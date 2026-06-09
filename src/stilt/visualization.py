@@ -647,7 +647,7 @@ class ModelPlotAccessor:
             fig = plt.gcf()
         assert ax is not None
 
-        sim_ids = self._model.index.sim_ids()
+        sim_ids = self._model.manifest.sim_ids()
         if not sim_ids:
             return ax
 

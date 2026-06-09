@@ -2,8 +2,6 @@
 
 import datetime as dt
 import logging
-from collections.abc import Iterator
-from contextlib import contextmanager
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock
@@ -21,8 +19,6 @@ from stilt.execution import (
     pull_simulations,
     push_simulations,
 )
-from stilt.index import OutputSummary
-from stilt.index.sqlite import SqliteIndex
 from stilt.meteorology import MetStream
 from stilt.model import Model as _Model
 from stilt.receptors import PointReceptor, Receptor
@@ -160,39 +156,6 @@ def test_execute_task_returns_complete_result(tmp_path, task, monkeypatch):
     assert result.error_traj_path == error_path
 
 
-def test_record_result_records_successful_trajectory(tmp_path, sim_id):
-    state = SqliteIndex(tmp_path)
-    receptor = PointReceptor(
-        time="2023-01-01 12:00:00",
-        longitude=-111.85,
-        latitude=40.77,
-        altitude=5.0,
-    )
-    state.register([(str(sim_id), receptor)])
-    result = SimulationResult(
-        sim_id=sim_id,
-        status="complete",
-        traj_present=True,
-        traj_path=tmp_path / "traj.parquet",
-        error_traj_path=tmp_path / "error.parquet",
-        log_path=tmp_path / "stilt.log",
-        wrote_traj=True,
-        started_at=dt.datetime.now(dt.timezone.utc),
-    )
-
-    state.record(result)
-
-    assert state.summaries([str(sim_id)]).get(
-        str(sim_id), OutputSummary()
-    ) == OutputSummary(
-        traj_present=True,
-        error_traj_present=True,
-        log_present=True,
-        footprints={},
-    )
-    assert state.counts().completed == 1
-
-
 def test_execute_task_returns_failed_result_for_simulation_error(
     tmp_path, task, monkeypatch
 ):
@@ -221,63 +184,6 @@ def test_execute_task_logs_simulation_failures_to_stderr(
     assert str(task.sim_id) in caplog.text
     assert "trajectory" in caplog.text
     assert "HYSPLIT failed" in caplog.text
-
-
-def test_record_result_records_failed_attempt(tmp_path, sim_id):
-    state = SqliteIndex(tmp_path)
-    receptor = PointReceptor(
-        time="2023-01-01 12:00:00",
-        longitude=-111.85,
-        latitude=40.77,
-        altitude=5.0,
-    )
-    state.register([(str(sim_id), receptor)])
-    result = SimulationResult(
-        sim_id=sim_id,
-        status="failed",
-        traj_present=False,
-        error="boom",
-        started_at=dt.datetime.now(dt.timezone.utc),
-    )
-
-    state.record(result)
-
-    with state._connect() as conn:
-        row = conn.execute(
-            "SELECT trajectory_status, error FROM simulations WHERE sim_id=?",
-            (str(sim_id),),
-        ).fetchone()
-    assert row["trajectory_status"] == "failed"
-    assert row["error"] == "boom"
-
-
-def test_record_result_keeps_interrupted_attempt_pending(tmp_path, sim_id):
-    state = SqliteIndex(tmp_path)
-    receptor = PointReceptor(
-        time="2023-01-01 12:00:00",
-        longitude=-111.85,
-        latitude=40.77,
-        altitude=5.0,
-    )
-    state.register([(str(sim_id), receptor)])
-    result = SimulationResult(
-        sim_id=sim_id,
-        status="interrupted",
-        traj_present=False,
-        error="Worker preempted by SIGTERM",
-        started_at=dt.datetime.now(dt.timezone.utc),
-    )
-
-    state.record(result)
-
-    with state._connect() as conn:
-        row = conn.execute(
-            "SELECT trajectory_status, error FROM simulations WHERE sim_id=?",
-            (str(sim_id),),
-        ).fetchone()
-    assert row["trajectory_status"] == "pending"
-    assert row["error"] == "Worker preempted by SIGTERM"
-    assert state.pending_trajectories() == [str(sim_id)]
 
 
 def test_execute_task_footprint_complete_empty_result(tmp_path, task, monkeypatch):
@@ -475,33 +381,30 @@ def test_execute_batch_pool_guard_converts_uncaught_exceptions(
 
 
 def test_push_simulations_persists_results(tmp_path, receptor, monkeypatch):
-    state = SqliteIndex(tmp_path)
     model = Model(
         project=tmp_path,
         config=_make_model_config(tmp_path),
         receptors=[receptor],
-        index=state,
     )
     [sim_id] = model.register_pending()
     started_at = dt.datetime.now(dt.timezone.utc)
+    traj_file = (
+        ProjectFiles(Path(model.layout.output_dir)).simulation(sim_id).trajectory_path
+    )
 
     def _fake_execute_batch(batch, n_cores=1):
         del batch, n_cores
-        traj_file = (
-            ProjectFiles(Path(model.layout.output_dir))
-            .simulation(sim_id)
-            .trajectory_path
-        )
         traj_file.parent.mkdir(parents=True, exist_ok=True)
         traj_file.write_bytes(b"traj")
-        result = SimulationResult(
-            sim_id=SimID(sim_id),
-            status="complete",
-            traj_present=True,
-            started_at=started_at,
-            finished_at=started_at,
-        )
-        return [result]
+        return [
+            SimulationResult(
+                sim_id=SimID(sim_id),
+                status="complete",
+                traj_present=True,
+                started_at=started_at,
+                finished_at=started_at,
+            )
+        ]
 
     monkeypatch.setattr(
         "stilt.execution.entrypoints.execute_batch",
@@ -510,87 +413,12 @@ def test_push_simulations_persists_results(tmp_path, receptor, monkeypatch):
 
     push_simulations(model, [sim_id])
 
-    assert state.pending_trajectories() == [sim_id]
-
-    state.rebuild()
-
-    assert state.counts().completed == 1
-
-
-class _FakeUnitOfWork:
-    def __init__(self, sim_id: str, state: SqliteIndex):
-        self.sim_id = sim_id
-        self._state = state
-        self._released = False
-
-    def release(self):
-        self._released = True
-
-    def record(self, result: SimulationResult) -> None:
-        self._state.record(result)
-
-    @property
-    def released(self):
-        return self._released
-
-
-class _FakePullState:
-    def __init__(self, state: SqliteIndex, sim_ids: list[str]):
-        self._state = state
-        self._sim_ids = list(sim_ids)
-        self.released: list[str] = []
-
-    def __getattr__(self, name: str):
-        return getattr(self._state, name)
-
-    @contextmanager
-    def claim_one(self) -> Iterator[_FakeUnitOfWork | None]:
-        if not self._sim_ids:
-            yield None
-            return
-        sim_id = self._sim_ids.pop(0)
-        uow = _FakeUnitOfWork(sim_id=sim_id, state=self._state)
-        yield uow
-        if uow.released:
-            self.released.append(sim_id)
-
-
-def test_pull_simulations_drains_queue(tmp_path, receptor, monkeypatch):
-    state = SqliteIndex(tmp_path)
-    model = Model(
-        project=tmp_path,
-        config=_make_model_config(tmp_path),
-        receptors=[receptor],
-        index=state,
-    )
-    [sim_id] = model.register_pending()
-    fake_state = _FakePullState(state, [sim_id])
-    model = Model(
-        project=tmp_path,
-        config=_make_model_config(tmp_path),
-        receptors=[receptor],
-        index=fake_state,
-    )
-    started_at = dt.datetime.now(dt.timezone.utc)
-
-    monkeypatch.setattr(
-        "stilt.execution.entrypoints.execute_task",
-        lambda task: SimulationResult(
-            sim_id=task.sim_id,
-            status="complete",
-            traj_present=True,
-            started_at=started_at,
-        ),
-    )
-
-    pull_simulations(model, follow=False)
-
-    assert state.counts().completed == 1
-    assert fake_state.released == []
+    # Push publishes outputs to the store; completion is read by key.
+    assert model.storage.exists(sim_id, traj_file)
 
 
 def test_pull_simulations_requires_postgres_state(tmp_path):
-    model = SimpleNamespace(index=SqliteIndex(tmp_path))
+    model = SimpleNamespace(index=object())
 
     with pytest.raises(ConfigValidationError, match="claim-capable index backend"):
         pull_simulations(model, follow=False)
