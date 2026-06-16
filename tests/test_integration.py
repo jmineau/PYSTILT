@@ -137,10 +137,14 @@ def test_failure_missing_met(tmp_path, wbb_receptor, traj_only_config):
         config=bad_config,
         receptors=[wbb_receptor],
     )
+    # run() must not raise: a per-simulation failure is captured, not fatal.
     model.run()
 
     sid = _sim_id(wbb_receptor)
-    assert _state_call(model, "trajectory_status", sid) == "failed"
+    # The by-key store has no "failed" state, so the trajectory is simply absent
+    # (incomplete). Failure is surfaced through the log-derived Simulation.status.
+    assert _state_call(model, "trajectory_status", sid) == "pending"
+    assert model.simulations[sid].status == "failed:MISSING_MET_FILES"
 
 
 # ---------------------------------------------------------------------------

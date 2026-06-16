@@ -189,7 +189,7 @@ class MetStream:
         n_files = len(files)
         if n_files == 0 or n_files < self.n_min:
             raise MeteorologyError(
-                f"Insufficient meteorological files found. "
+                f"Insufficient number of meteorological files found. "
                 f"Found: {n_files}, Required: {self.n_min}."
             )
         return files
@@ -240,7 +240,7 @@ class MetStream:
                 examples = ", ".join(missing[:3])
                 detail = f" Patterns not found in {self.directory}: {examples}."
             raise MeteorologyError(
-                f"Insufficient meteorological files found. "
+                f"Insufficient number of meteorological files found. "
                 f"Found: {n_files}, Required: {self.n_min}.{detail}"
             )
 

@@ -8,6 +8,16 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- PYSTILT's ``MeteorologyError`` now uses HYSPLIT's exact "Insufficient number of
+  meteorological files found" wording, so missing-met failures caught Python-side
+  (before HYSPLIT runs) are classified as ``MISSING_MET_FILES`` like HYSPLIT's
+  own. ``Simulation.status`` previously reported ``failed:UNKNOWN`` for this
+  common case.
+- Repaired two stale CI tests left over from the index dissolution:
+  ``test_failure_missing_met`` now asserts failure through the log-derived
+  ``Simulation.status`` (the by-key store has no "failed" state), and
+  ``test_pull_simulations_requires_runtime_queue_backend`` matches the current
+  Postgres-work-queue error message. Tests only.
 - Documentation build: removed the dead ``stilt.index`` autosummary entries and
   stale SQLite / output-index prose left over from the index dissolution, so the
   Sphinx docs build cleanly again. Also made ``stilt.manifest`` pyright-clean

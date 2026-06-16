@@ -22,6 +22,9 @@ class FailureReason(str, Enum):
 
 #: Phrases written to stilt.log by HYSPLIT, mapped to their FailureReason.
 FAILURE_PHRASES: dict[str, FailureReason] = {
+    # PYSTILT's MeteorologyError (raised Python-side before HYSPLIT runs, then
+    # written to the log by the phase runner) shares HYSPLIT's exact wording, so
+    # one phrase classifies both.
     "Insufficient number of meteorological files found": FailureReason.MISSING_MET_FILES,
     "start point not within (x,y,t) any data file": FailureReason.MET_COVERAGE,
     "start time after end of meteorology data": FailureReason.MET_COVERAGE,

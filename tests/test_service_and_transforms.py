@@ -28,7 +28,7 @@ def test_pull_simulations_requires_runtime_queue_backend(
     wbb_receptor,
     wbb_config,
 ):
-    """pull_simulations should fail clearly when only the local SQLite index exists."""
+    """pull_simulations should fail clearly when no Postgres work queue is configured."""
     model = Model(
         project=tmp_path / "service_queue",
         config=wbb_config,
@@ -45,7 +45,7 @@ def test_pull_simulations_requires_runtime_queue_backend(
     assert pending.completed == 0
     assert pending.failed == 0
 
-    with pytest.raises(ConfigValidationError, match="claim-capable index backend"):
+    with pytest.raises(ConfigValidationError, match="Postgres work queue"):
         pull_simulations(model, poll_interval=0.1)
 
 
