@@ -277,10 +277,10 @@ def _interpolate_early_timesteps(
         sorted_early.groupby("indx", sort=False)[["long", "lati"]].diff().abs(),
     )
     per_particle_med = cast(pd.DataFrame, diffs.groupby(sorted_early["indx"]).median())
-    dx_values = per_particle_med["long"].dropna()
-    dy_values = per_particle_med["lati"].dropna()
-    dx_med = float(dx_values.median()) if not dx_values.empty else np.nan
-    dy_med = float(dy_values.median()) if not dy_values.empty else np.nan
+    dx_values = per_particle_med["long"].dropna().to_numpy()
+    dy_values = per_particle_med["lati"].dropna().to_numpy()
+    dx_med = float(np.median(dx_values)) if dx_values.size else np.nan
+    dy_med = float(np.median(dy_values)) if dy_values.size else np.nan
 
     if (np.isnan(dx_med) or dx_med <= xres) and (np.isnan(dy_med) or dy_med <= yres):
         return p
