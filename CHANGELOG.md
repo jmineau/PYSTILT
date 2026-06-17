@@ -6,6 +6,8 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.0a3] - 2026-06-17
+
 ### Added
 
 - **``Grid.to_xarray()``** returns the footprint grid as a CF-style xarray
