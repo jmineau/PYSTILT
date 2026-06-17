@@ -6,8 +6,35 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **``Grid.to_xarray()``** returns the footprint grid as a CF-style xarray
+  ``Dataset`` of cell centers (1-D ``lon``/``lat`` or projected ``x``/``y``
+  coordinates matching the native footprint grid, plus a ``crs`` grid-mapping
+  variable). This is the interchange form of the grid: pass it straight to
+  ``Footprint.aggregate`` as the target, or hand it to other tools via the shared
+  xarray/CF grid convention. ``pyproj`` is required only for non-longlat grids.
+
 ### Fixed
 
+- **``Footprint.aggregate`` now conservatively regrids onto the target grid
+  instead of nearest-point sampling.** A footprint is an *extensive, per-cell*
+  sensitivity (its units carry ``m²``), so coarsening it means **summing** native
+  cells, not averaging. Each native cell is apportioned to the target cells it
+  overlaps by area fraction (a sum-conserving conservative regrid): aligned
+  coarsening reduces exactly to a block-sum, misaligned/finer targets split
+  native cells by overlap, and mass outside the target grid is dropped (never
+  folded into edge cells). The old ``sel(..., method="nearest")`` kept a single
+  native pixel per cell, undercounting coarse-grid sensitivities by
+  ``~(target_res/native_res)²`` — e.g. ~25-43× too small for 0.01° footprints on
+  a 0.05° inversion grid, silently weakening STILT Jacobian rows.
+  - The first argument is now ``target`` (was ``coords``) and accepts an **xarray
+    grid** (``lon``/``lat`` or ``x``/``y`` coordinates; ``NaN`` cells in a 2-D
+    ``DataArray`` are masked out) *or* a plain list of ``(x, y)`` cell centers.
+    The bare-coords path still infers ``resolution`` from the coordinate spacing,
+    so positional callers (e.g. the fips Jacobian builder) keep working with no
+    change. The ``(x, y)``-indexed, one-column-per-time-bin return shape is
+    unchanged.
 - PYSTILT's ``MeteorologyError`` now uses HYSPLIT's exact "Insufficient number of
   meteorological files found" wording, so missing-met failures caught Python-side
   (before HYSPLIT runs) are classified as ``MISSING_MET_FILES`` like HYSPLIT's

@@ -41,7 +41,7 @@ Use :meth:`stilt.Footprint.aggregate` when you have discrete source locations:
    for foot in footprints:
        start, end = foot.time_range
        bins = pd.interval_range(start=start, end=end, freq="1h")
-       sensitivity = foot.aggregate(coords=coords, time_bins=bins)
+       sensitivity = foot.aggregate(target=coords, time_bins=bins)
        enhancement = (sensitivity.to_numpy() * fluxes[:, None]).sum(axis=0)
        rows.append(
            pd.Series(

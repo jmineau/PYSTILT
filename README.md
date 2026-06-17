@@ -266,7 +266,7 @@ time_bins = pd.interval_range(
 )
 
 for footprint in footprints:
-    hourly = footprint.aggregate(coords=coords, time_bins=time_bins)
+    hourly = footprint.aggregate(target=coords, time_bins=time_bins)
 ```
 
 If a footprint is tracked as `complete-empty`, no NetCDF file is expected for that footprint.
