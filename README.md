@@ -19,7 +19,7 @@ large batch runs, and streaming queue workers.
 
 ## Status
 
-PYSTILT is alpha software (v0.1.0a1). No backward compatibility guarantees before v1.0.
+PYSTILT is in alpha development. No backward compatibility guarantees before v1.0.
 
 The core transport is stable: HYSPLIT execution, trajectory and footprint generation,
 numerical R-STILT parity, and the local and SLURM execution paths are all exercised by the
