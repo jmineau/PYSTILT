@@ -117,8 +117,8 @@ Footprints expose two especially useful analysis helpers:
 
    total = foot.integrate_over_time()
 
-   sampled = foot.aggregate(
-       coords=[(-111.97, 40.515), (-112.015, 40.779)],
+   aggregated = foot.aggregate(
+       target=[(-111.97, 40.515), (-112.015, 40.779)],
        time_bins=pd.interval_range(
            start=foot.time_range[0],
            end=foot.time_range[1],
@@ -128,9 +128,12 @@ Footprints expose two especially useful analysis helpers:
 
 ``integrate_over_time()`` collapses the time dimension.
 
-``aggregate()`` samples the footprint at source coordinates and groups the
-result by time bins, which is useful for point-source or inventory-style flux
-applications.
+``aggregate()`` conservatively regrids the footprint onto a target grid and
+groups the result by time bins. ``target`` may be an xarray grid (``lon``/``lat``
+or ``x``/``y`` coordinates) or a list of ``(x, y)`` cell centers. Because a
+footprint is an extensive, per-cell sensitivity, native cells are **summed**
+(by area overlap) into each target cell rather than sampled -- the right
+behavior for inventory- or grid-style flux applications.
 
 Plotting shortcuts
 ------------------
