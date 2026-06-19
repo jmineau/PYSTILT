@@ -85,6 +85,59 @@ class Trajectories:
             f"is_error={self.is_error!r}, receptor={self.receptor.id!r})"
         )
 
+    def endpoints(self) -> pd.DataFrame:
+        """
+        Per-particle trajectory endpoints (the far end of each particle's path).
+
+        For each particle the row at the largest ``|time|`` from release is kept:
+        where the air **came from** for a backward run (``is_backward``, the usual
+        receptor case) or **went** for a forward run. This is the point to sample a
+        boundary/background field at (e.g. ``lair.noaa.CarbonTracker.background``)
+        for a backward run. Direction is handled implicitly -- ``max |time|`` is the
+        most-negative offset for a backward run and the most-positive for a forward
+        run.
+
+        Every particle contributes one endpoint, whether it ran the full duration or
+        left the domain early. An early exit is a real endpoint: the point where that
+        air entered (backward) or left (forward) the domain, which is exactly where
+        the background should be sampled.
+
+        Returns
+        -------
+        pandas.DataFrame
+            One row per particle with columns ``indx``, ``time`` (endpoint absolute
+            time, UTC, ready for field sampling), ``lati``, ``long``, ``zagl``,
+            ``endpoint_age_min`` (signed minutes from release), and ``run_time``
+            (receptor release time). Ready to pass to
+            ``CarbonTracker.sample()/.background()``.
+        """
+        cols = ["indx", "time", "lati", "long", "zagl", "endpoint_age_min", "run_time"]
+        if self.data.empty:
+            return pd.DataFrame(columns=cols)
+
+        reach = self.data["time"].abs()
+        ep = self.data.loc[reach.groupby(self.data["indx"], sort=False).idxmax()]
+
+        if "datetime" in ep.columns:
+            end_time = pd.to_datetime(ep["datetime"]).to_numpy()
+        else:
+            end_time = (
+                pd.Timestamp(self.receptor.time)
+                + pd.to_timedelta(ep["time"], unit="min")
+            ).to_numpy()
+
+        return pd.DataFrame(
+            {
+                "indx": ep["indx"].to_numpy(),
+                "time": end_time,
+                "lati": ep["lati"].to_numpy(),
+                "long": ep["long"].to_numpy(),
+                "zagl": ep["zagl"].to_numpy(),
+                "endpoint_age_min": ep["time"].to_numpy(),
+                "run_time": pd.Timestamp(self.receptor.time),
+            }
+        )
+
     @property
     def plot(self) -> "TrajectoriesPlotAccessor":
         """Plotting namespace (e.g. ``traj.plot.map()``)."""
