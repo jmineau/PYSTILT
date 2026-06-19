@@ -6,6 +6,15 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **``Trajectories.endpoints()``** returns one row per particle at the far end of
+  its path (the largest ``|time|`` from release), with the absolute endpoint
+  ``time``, ``lati``, ``long``, ``zagl``, ``endpoint_age_min``, and ``run_time``.
+  This is where to sample a boundary/background field (e.g. CarbonTracker) for a
+  backward run. Every particle contributes one endpoint, including those that left
+  the domain early (an early exit is a real inflow point, not an incomplete run).
+
 ## [0.1.0a3] - 2026-06-17
 
 ### Added
