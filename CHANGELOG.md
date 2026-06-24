@@ -6,6 +6,8 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.0a4] - 2026-06-24
+
 ### Added
 
 - **``Trajectories.endpoints()``** returns one row per particle at the far end of
