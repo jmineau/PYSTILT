@@ -113,7 +113,7 @@ class Trajectories:
         """
         cols = ["indx", "time", "lati", "long", "zagl", "endpoint_age_min", "run_time"]
         if self.data.empty:
-            return pd.DataFrame(columns=cols)
+            return pd.DataFrame(columns=pd.Index(cols))
 
         reach = self.data["time"].abs()
         ep = self.data.loc[reach.groupby(self.data["indx"], sort=False).idxmax()]
