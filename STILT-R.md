@@ -9,9 +9,9 @@ scope of the parity claim and the procedure for keeping it current.
 | Field | Value |
 |---|---|
 | Upstream | https://github.com/uataq/stilt |
-| Pinned SHA | `e2feb358b62337cbe27ed7958ab3334016ba2de1` |
+| Pinned SHA | `0e290a68730e155bc2156e28af492a463228c88a` |
 | Pin location | `.github/workflows/tests.yml` (env `STILT_R_SHA`) |
-| Last verified | 2026-05-12 |
+| Last verified | 2026-06-25 |
 
 The SHA is the single source of truth for what "matches R-STILT" means in this
 repository. Reviewers reading "tests pass" should interpret it as **tests pass
@@ -67,6 +67,42 @@ Additional synthetic tests in
 exercise hand-crafted particle DataFrames against R-STILT to isolate specific
 code paths (single-particle Gaussian, boundary fenceposts, dateline crossing,
 global grid, latitude bandwidth scaling, etc.).
+
+## Large-scale seed-matched validation
+
+Beyond the 20 CI fidelity scenarios, PYSTILT has been validated against R-STILT
+on a **200-receptor, seed-matched, bit-for-bit campaign** spanning 2016–2024
+(WBB tower, Salt Lake Valley; 35 m AGL; 1000 particles; 24 h backward; HRRR;
+`krand=2`, `seed=42`; byte-identical v5.1.0 `hycs_std` on both sides). For each
+receptor the PYSTILT trajectory is compared to an independent R-STILT
+`calc_trajectory` run, and the PYSTILT footprint to R's `calc_footprint` of the
+same particles, at three resolutions (0.01°, 0.05°, 0.1°).
+
+**Result: all 200 receptors match bit-for-bit.**
+
+| Quantity | Agreement (max over 200 receptors) |
+|---|---|
+| Trajectory, per particle | abs `1.0e-17`, rel `5.6e-16` — machine-exact (float64) |
+| Footprint, per-cell relative error | median `~2e-8`, max `~6e-8` |
+| Footprint nonzero-cell set | identical (e.g. 250,644 = 250,644 at 0.01°) |
+| Footprint total mass | rel `~2e-8` |
+
+The per-cell relative error is **uniform across cell magnitudes** — the smallest
+cells (<0.01 % of peak) agree as tightly as the largest, so small footprint
+values are not disproportionately wrong. This follows from the trajectories
+being bit-identical: the only footprint difference is float-summation order in
+the gridding/convolution, and footprints are stored as **`float32`**
+(ε ≈ 1.2e-7). The observed ~2e-8 relative agreement is therefore **below the
+float32 storage floor** — the two outputs agree to the precision the NetCDF
+format can represent. Mass-weighted relative error (what a flux inversion
+integrates) is ~2e-8.
+
+This is a one-time field-scale validation (not run in CI); it complements the
+structural coverage of the CI fidelity scenarios with broad real-meteorology
+breadth. Reading identical met on both sides across the full date range requires
+the `find_met_files` dedup fix carried in the pinned SHA — HRRR archives can
+expose one physical file via both a top-level symlink and a `YYYY/MM/`
+subdirectory, which older R-STILT listed twice.
 
 ## Procedure for bumping the pinned SHA
 

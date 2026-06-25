@@ -73,7 +73,7 @@ jobs:
       #   r/src/write_footprint.r  — output format / precision (float32 assumption)
       #
       # IGNORE: run_stilt.r, stilt_cli.r, docs, R package scaffolding.
-      STILT_R_SHA: e2feb358b62337cbe27ed7958ab3334016ba2de1
+      STILT_R_SHA: 0e290a68730e155bc2156e28af492a463228c88a
 
     steps:
     - uses: actions/checkout@v5
