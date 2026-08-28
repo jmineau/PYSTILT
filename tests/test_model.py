@@ -6,13 +6,13 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
+from stilt.completion import StatusCounts
 from stilt.config import FootprintConfig, Grid, MetConfig, ModelConfig, RuntimeSettings
 from stilt.errors import ConfigValidationError
 from stilt.execution import (
     SlurmExecutor,
 )
 from stilt.execution.tasks import plan_simulation_task
-from stilt.completion import StatusCounts
 from stilt.model import Model as _Model
 from stilt.receptors import PointReceptor
 from stilt.simulation import SimID
@@ -93,7 +93,6 @@ def _config(tmp_path, point_receptor=None, include_footprint=True) -> ModelConfi
 def test_receptors_require_explicit_or_output_source_when_not_provided(
     tmp_path, point_receptor
 ):
-
     model = Model(project=tmp_path, receptors=None)
 
     with pytest.raises(FileNotFoundError, match="No receptors available"):
@@ -163,7 +162,6 @@ def test_simulation_collection_ids_filters_by_time_and_location(tmp_path):
 
 
 def test_simulation_collection_ids_rejects_unknown_met(tmp_path, point_receptor):
-
     model = Model(project=tmp_path, config=_config(tmp_path))
 
     with pytest.raises(ConfigValidationError, match="Unknown met name"):
@@ -171,7 +169,6 @@ def test_simulation_collection_ids_rejects_unknown_met(tmp_path, point_receptor)
 
 
 def test_trajectory_queries_reject_unknown_met(tmp_path, point_receptor):
-
     model = Model(project=tmp_path, config=_config(tmp_path))
 
     with pytest.raises(ConfigValidationError, match="Unknown met name"):
@@ -966,7 +963,6 @@ def test_named_footprint_accessor_paths_load_matching_footprints(
 
 
 def test_named_footprint_accessor_paths_skip_complete_empty(tmp_path, point_receptor):
-
     model = Model(project=tmp_path)
     assert model.footprints["slv"].paths() == []
 
@@ -1364,7 +1360,6 @@ def test_model_run_skip_existing_is_disk_based_regardless_of_rebuild(
 
 def test_model_run_no_skip_resets_and_dispatches(tmp_path, point_receptor):
     """skip_existing=False resets completed sim to pending and starts executor."""
-    from stilt.simulation import SimID
 
     model = Model(
         project=tmp_path,
@@ -1458,7 +1453,6 @@ def test_model_run_foot_configs_skip_complete_empty(tmp_path, point_receptor):
 
 def test_model_run_foot_configs_retries_failed_footprint(tmp_path, point_receptor):
     """With skip_existing=True, failed footprint states are re-queued for retry."""
-    from stilt.simulation import SimID
 
     model = Model(
         project=tmp_path,
@@ -1566,3 +1560,22 @@ def test_register_pending_registers_footprint_targets(tmp_path, point_receptor):
 
     _write_footprint(tmp_path, sid, "slv")
     assert model.status().completed == 1
+
+
+def test_register_pending_preserves_project_receptors_csv(tmp_path):
+    """Registering the project's own receptors.csv must not rewrite the file."""
+    cfg = _config(tmp_path)
+    cfg.to_yaml(tmp_path / "config.yaml")
+    original = (
+        "time,lati,long,zagl\n"
+        "2023-01-01 12:00:00,40.77,-111.85,5.0\n"
+        "2023-01-01 13:00:00,40.78,-111.86,5.0\n"
+    )
+    csv = tmp_path / "receptors.csv"
+    csv.write_text(original)
+
+    model = _Model(project=tmp_path, config=cfg)
+    sim_ids = model.register_pending()
+
+    assert len(sim_ids) == 2
+    assert csv.read_text() == original

@@ -6,6 +6,13 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- `read_receptors` raises `ValueError` when rows sharing an `r_idx` have
+  different release times, instead of silently using the first row's time
+- `Model.register_pending()` no longer rewrites the project's `receptors.csv`
+  when registering receptors loaded from it
+
 ## [0.1.0a4] - 2026-06-24
 
 ### Added

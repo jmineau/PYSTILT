@@ -578,7 +578,12 @@ def _receptor_from_group(group: pd.DataFrame) -> Receptor:
     lons = group["long"].tolist()
     lats = group["lati"].tolist()
     alts = group["z"].tolist()
-    time = pd.to_datetime(np.atleast_1d(group["time"])[0])
+    times = pd.to_datetime(group["time"]).unique()
+    if len(times) != 1:
+        raise ValueError(
+            "All rows in one receptor group must share the same release time."
+        )
+    time = pd.to_datetime(times[0])
     return Receptor.from_points(
         time=time,
         points=list(zip(lons, lats, alts, strict=False)),

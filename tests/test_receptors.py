@@ -439,6 +439,17 @@ def test_read_receptors_multipoint_via_r_idx(tmp_path):
     assert len(receptors[0]) == 2
 
 
+def test_read_receptors_r_idx_group_mixed_times_raises(tmp_path):
+    csv = tmp_path / "receptors.csv"
+    csv.write_text(
+        "time,lati,long,zagl,r_idx\n"
+        "2023-01-01 12:00:00,40.77,-111.85,5.0,0\n"
+        "2023-01-01 13:00:00,40.78,-111.86,5.0,0\n"
+    )
+    with pytest.raises(ValueError, match="same release time"):
+        read_receptors(csv)
+
+
 def test_read_receptors_alt_column_names(tmp_path):
     csv = tmp_path / "receptors.csv"
     csv.write_text(

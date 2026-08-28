@@ -258,7 +258,13 @@ class Model:
             Registered simulation identifiers.
         """
         recs = tuple(receptors) if receptors is not None else tuple(self.receptors)
-        source_path = self.receptors.source_path if receptors is None else None
+        # When registering the model's own receptor inputs, preserve the user's
+        # file byte-for-byte rather than regenerating it from parsed objects.
+        source_path = None
+        if receptors is None:
+            source_path = (
+                self.receptors.source_path or self.storage.receptor_source_path()
+            )
 
         self.storage.publish_config(self.config)
         self.storage.publish_receptors(

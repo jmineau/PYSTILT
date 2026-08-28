@@ -152,6 +152,9 @@ appropriate subclass objects.  The CSV format follows the R-STILT convention
 (``time``, ``longitude``/``long``, ``latitude``/``lati``, ``zagl``/``zmsl``).
 Rows grouped under the same ``r_idx`` are assembled into a
 :class:`ColumnReceptor` or :class:`MultiPointReceptor` automatically.
+All rows in a group must share the same ``time`` (a receptor releases at a
+single time); observations with different times need distinct ``r_idx``
+values so that each becomes its own simulation.
 
 .. code-block:: python
 
