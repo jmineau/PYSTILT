@@ -6,6 +6,8 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.0a5] - 2026-08-28
+
 ### Fixed
 
 - `read_receptors` raises `ValueError` when rows sharing an `r_idx` have
