@@ -6,6 +6,13 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.0a6] - 2026-08-28
+
+### Added
+
+- `CITATION.cff` and `.zenodo.json` citation metadata so GitHub releases are
+  automatically archived (and DOI-minted) on Zenodo
+
 ## [0.1.0a5] - 2026-08-28
 
 ### Fixed
