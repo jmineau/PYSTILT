@@ -1,6 +1,10 @@
 PYSTILT
 =======
 
+.. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.22211796.svg
+   :target: https://doi.org/10.5281/zenodo.22211796
+   :alt: DOI
+
 .. rst-class:: hero-copy
 
 PYSTILT is an alpha Python implementation of the STILT transport workflow. It
