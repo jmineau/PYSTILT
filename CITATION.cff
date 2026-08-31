@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+type: software
+title: "PYSTILT"
+abstract: "A Python implementation of the STILT Lagrangian atmospheric transport model."
+authors:
+  - family-names: Mineau
+    given-names: James K.
+    email: jameskmineau@gmail.com
+    orcid: "https://orcid.org/0000-0002-2289-2252"
+    affiliation: "University of Utah"
+license: MIT
+repository-code: "https://github.com/jmineau/PYSTILT"
+keywords:
+  - stilt
+  - hysplit
+  - atmospheric-transport
+  - lagrangian
+  - footprint

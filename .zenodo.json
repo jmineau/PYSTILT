@@ -1,0 +1,14 @@
+{
+  "title": "PYSTILT",
+  "description": "A Python implementation of the STILT Lagrangian atmospheric transport model.",
+  "creators": [
+    {
+      "name": "Mineau, James K.",
+      "affiliation": "University of Utah",
+      "orcid": "0000-0002-2289-2252"
+    }
+  ],
+  "license": "MIT",
+  "upload_type": "software",
+  "keywords": ["stilt", "hysplit", "atmospheric-transport", "lagrangian", "footprint", "meteorology"]
+}
