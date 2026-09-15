@@ -14,14 +14,29 @@ if TYPE_CHECKING:
     from .observation import Observation
 
 
-# Modes that require scaling by n_particles.
+# Modes whose profile values are *layer weights* (a PWF sums to 1 across the
+# column) rather than dimensionless per-particle scalings.
 #
 # The footprint calculator divides the aggregated particle influence by
-# n_particles, which means that fractional pressure-weight profiles (PWF sums
-# to 1 across the column) must be rescaled to preserve the column-integrated
-# signal. AK-only modes do not need this correction because AK_norm is already
-# dimensionless and approximately normalized without a per-particle factor.
+# n_particles. To preserve the column-integrated signal, each operator level's
+# weight must be shared among the particles released nearest to that level:
+# ``weight_i = value(z_i) * n_particles / n_particles_at_level(i)``. When the
+# profile is sampled once per particle (the X-STILT convention) the level
+# counts are all one and this reduces to ``value * n_particles``; when a coarse
+# retrieval profile is supplied, the per-level count keeps the magnitude
+# independent of ``numpar``. AK-only modes do not need this correction because
+# AK_norm is already dimensionless.
 _PWF_MODES: frozenset[str] = frozenset({"pwf", "ak_pwf", "integration", "tccon"})
+
+
+def _nearest_level_index(x: np.ndarray, levels: np.ndarray) -> np.ndarray:
+    """Return, for each coordinate in *x*, the index of the nearest ascending level."""
+    if len(levels) == 1:
+        return np.zeros(len(x), dtype=int)
+    idx = np.clip(np.searchsorted(levels, x), 1, len(levels) - 1)
+    lower = levels[idx - 1]
+    upper = levels[idx]
+    return np.where(np.abs(x - lower) <= np.abs(upper - x), idx - 1, idx)
 
 
 @dataclass(frozen=True, slots=True)
@@ -150,11 +165,27 @@ def _apply_vertical_operator_impl(
     values = values[sort_idx]
 
     coords = p[coordinate].to_numpy(dtype=float)
-    weights = np.interp(coords, levels, values, left=values[0], right=values[-1])
 
     if operator.mode in _PWF_MODES:
+        # Layer weights: each particle takes the value of its nearest level
+        # (piecewise constant), shared among the particles at that level.
         n_particles = int(cast(pd.Series, p["indx"]).nunique())
-        weights = weights * n_particles
+        # Count particles per level using one row per particle (release
+        # coordinates such as ``xhgt`` are constant along a trajectory, so
+        # the first row is representative).
+        per_particle = p.drop_duplicates(subset="indx")
+        level_counts = np.bincount(
+            _nearest_level_index(
+                per_particle[coordinate].to_numpy(dtype=float), levels
+            ),
+            minlength=len(levels),
+        )
+        row_levels = _nearest_level_index(coords, levels)
+        weights = (
+            values[row_levels] * n_particles / np.maximum(level_counts[row_levels], 1)
+        )
+    else:
+        weights = np.interp(coords, levels, values, left=values[0], right=values[-1])
 
     p["foot_before_weight"] = p["foot"]
     p["foot"] = p["foot"] * weights

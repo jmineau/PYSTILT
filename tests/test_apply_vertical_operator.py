@@ -143,3 +143,52 @@ def test_foot_before_weight_preserved():
     assert "foot_before_weight" in result.columns
     assert result["foot_before_weight"].tolist() == [1.0, 1.0, 1.0]
     assert result["foot"].tolist() == pytest.approx([0.2, 0.5, 0.8])
+
+
+def test_pwf_mode_shares_level_weight_across_particles_at_that_level():
+    # 1000 particles spread over a 5-level PWF (0.2 each).  The weighted
+    # footprint must keep the same magnitude as the unweighted one instead of
+    # scaling with numpar (reported as a ~numpar-fold inflation).
+    n = 1000
+    heights = [100.0 + 400.0 * i / (n - 1) for i in range(n)]
+    p = _make_particles(n=n, heights=heights)
+    operator = VerticalOperator(
+        mode="pwf",
+        levels=[100.0, 200.0, 300.0, 400.0, 500.0],
+        values=[0.2] * 5,
+    )
+    result = apply_vertical_operator(p, operator)
+
+    # Column-integrated signal: mean weight over particles equals sum(values).
+    assert result["foot"].sum() / n == pytest.approx(1.0)
+    # Interior levels hold 250 particles each -> weight 0.2 * 1000 / 250.
+    mid = result.loc[result["xhgt"].between(260.0, 340.0), "foot"]
+    assert mid.to_numpy() == pytest.approx(0.8)
+
+
+def test_pwf_mode_level_counts_use_particles_not_rows():
+    # Two particles at two levels, each with three trajectory rows.  Row
+    # count must not leak into the per-level particle count.
+    p = pd.DataFrame(
+        {
+            "indx": [1, 1, 1, 2, 2, 2],
+            "xhgt": [0.0, 0.0, 0.0, 1000.0, 1000.0, 1000.0],
+            "foot": [1.0] * 6,
+        }
+    )
+    operator = VerticalOperator(mode="pwf", levels=[0.0, 1000.0], values=[0.4, 0.6])
+    result = apply_vertical_operator(p, operator)
+    assert result["foot"].tolist() == pytest.approx([0.8] * 3 + [1.2] * 3)
+
+
+def test_ak_pwf_mode_preserves_averaging_kernel_scale():
+    # Combined AK*PWF profile whose sum is 0.5 (AK_norm = 0.5 everywhere):
+    # the column-integrated weight must stay 0.5, not be renormalized to 1.
+    n = 100
+    heights = [10.0 * i for i in range(n)]
+    p = _make_particles(n=n, heights=heights)
+    operator = VerticalOperator(
+        mode="ak_pwf", levels=[0.0, 500.0, 1000.0], values=[0.125, 0.25, 0.125]
+    )
+    result = apply_vertical_operator(p, operator)
+    assert result["foot"].sum() / n == pytest.approx(0.5)

@@ -466,3 +466,43 @@ def test_read_receptors_zmsl_infers_msl(tmp_path):
     receptors = read_receptors(csv)
     assert len(receptors) == 1
     assert receptors[0].altitude_ref == "msl"
+
+
+# ---------------------------------------------------------------------------
+# MultiPointReceptor - duplicate horizontal locations are rejected
+# ---------------------------------------------------------------------------
+
+
+def test_multipoint_rejects_stacked_heights_at_one_location():
+    # HYSPLIT chains same-lat/lon starting locations into one vertical line
+    # source and releases only between the last two heights.
+    with pytest.raises(ValueError, match="distinct horizontal"):
+        MultiPointReceptor(
+            "202508110440",
+            [-76.68869] * 5,
+            [37.76396] * 5,
+            [100.0, 200.0, 300.0, 400.0, 500.0],
+        )
+
+
+def test_multipoint_rejects_nonconsecutive_duplicate_location():
+    with pytest.raises(ValueError, match="distinct horizontal"):
+        MultiPointReceptor(
+            "202301011200",
+            [-111.85, -111.86, -111.85],
+            [40.77, 40.78, 40.77],
+            [100.0, 200.0, 300.0],
+        )
+
+
+def test_read_receptors_stacked_group_reports_r_idx(tmp_path):
+    csv = tmp_path / "receptors.csv"
+    csv.write_text(
+        "r_idx,time,longitude,latitude,altitude,altitude_ref\n"
+        + "".join(
+            f"0,2025-08-11 04:40:50,-76.688690186,37.763957977,{z},agl\n"
+            for z in (100.0, 200.0, 300.0, 400.0, 500.0)
+        )
+    )
+    with pytest.raises(ValueError, match="r_idx=0.*distinct horizontal"):
+        read_receptors(csv)

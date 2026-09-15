@@ -6,6 +6,21 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- `MultiPointReceptor` rejects points that share a horizontal location.
+  HYSPLIT chains same-lat/lon starting locations into one vertical line
+  source and only releases between the last two heights, so stacking
+  several altitudes at one location silently dropped all but the top
+  segment. Use `ColumnReceptor` or one `PointReceptor` per height instead.
+- `apply_vertical_operator` PWF modes (`pwf`, `ak_pwf`, `integration`,
+  `tccon`) now treat `values` as layer weights: each particle takes its
+  nearest level's value, shared among the particles at that level
+  (`value × n_particles / n_at_level`), instead of linearly interpolating and
+  multiplying by `n_particles` outright. Weighted footprints built from a
+  coarse retrieval profile no longer scale with `numpar`; per-particle
+  profiles (the X-STILT convention) are unchanged.
+
 ## [0.1.0a6] - 2026-08-28
 
 ### Added

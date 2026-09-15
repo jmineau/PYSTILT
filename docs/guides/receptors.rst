@@ -93,6 +93,18 @@ All three coordinate arrays must have the same length.  The location
 identifier is an order-independent SHA-256 hash of the point set, so
 reordering the points produces the same simulation ID.
 
+.. warning::
+
+   Every point must have a **distinct horizontal location**.  HYSPLIT
+   interprets consecutive starting locations that share a latitude/longitude
+   as a single vertical line source and releases particles only between the
+   last two heights, so stacking several altitudes at one location would
+   silently drop all but the top segment.  :class:`MultiPointReceptor`
+   raises ``ValueError`` in that case.  For a vertical column use
+   :class:`ColumnReceptor`; for discrete release heights at one location run
+   one :class:`PointReceptor` per height (distinct ``r_idx`` in the CSV) and
+   combine the footprints afterwards.
+
 
 Shared interface
 ----------------
@@ -142,6 +154,7 @@ How those particles are distributed depends on receptor type.
 **MultiPointReceptor** — ``numpar`` particles are distributed as evenly as
 possible across the ``n`` release locations.  Choosing ``numpar`` as a
 multiple of ``n`` ensures every location receives exactly equal counts.
+Release locations must be horizontally distinct (see the warning above).
 
 
 Loading from CSV

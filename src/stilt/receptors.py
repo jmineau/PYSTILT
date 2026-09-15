@@ -43,6 +43,29 @@ def _validate_agl(alt, altitude_ref: str) -> None:
         raise ValueError("AGL altitudes must be >= 0.")
 
 
+def _validate_distinct_horizontal(lons, lats) -> None:
+    """
+    Raise if two points share a horizontal location.
+
+    HYSPLIT chains consecutive CONTROL starting locations that share a
+    latitude/longitude into a single vertical line source and only releases
+    from the last pair, so stacking several heights at one location in a
+    multipoint receptor silently drops all but the top segment.  PYSTILT also
+    maps particles back to their release altitude by horizontal position, so
+    duplicate locations cannot be told apart even when non-consecutive.
+    """
+    pts = np.column_stack((np.round(lons, 5), np.round(lats, 5)))
+    if len(np.unique(pts, axis=0)) != len(pts):
+        raise ValueError(
+            "MultiPointReceptor points must have distinct horizontal locations "
+            "(HYSPLIT collapses starting locations that share a lat/lon into a "
+            "single vertical line source and releases only between the last two "
+            "heights). Use ColumnReceptor for a vertical column, or one "
+            "PointReceptor per height (distinct r_idx) for discrete release "
+            "heights at one location."
+        )
+
+
 def _format_coord(val: float) -> str:
     """Format a coordinate float as an integer string when it is whole, else as-is."""
     return str(int(val)) if val == int(val) else str(val)
@@ -454,6 +477,7 @@ class MultiPointReceptor(Receptor):
         _validate_lon(self.longitudes)
         _validate_lat(self.latitudes)
         _validate_agl(self.altitudes, self.altitude_ref)
+        _validate_distinct_horizontal(self.longitudes, self.latitudes)
 
     @property
     def location_id(self) -> LocationID:
@@ -560,7 +584,10 @@ def read_receptors(path: str | Path) -> list[Receptor]:
                 altitude_ref=r.altitude_ref,
             )
         for key, g in df[~single_mask].groupby("r_idx"):
-            result[key] = _receptor_from_group(cast(pd.DataFrame, g))
+            try:
+                result[key] = _receptor_from_group(cast(pd.DataFrame, g))
+            except ValueError as exc:
+                raise ValueError(f"r_idx={key!r}: {exc}") from exc
 
         return [result[k] for k in df["r_idx"].unique()]
 
