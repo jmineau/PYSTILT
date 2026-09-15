@@ -5,11 +5,11 @@ from __future__ import annotations
 from typing import Literal
 
 from stilt.config import VerticalReference
-from stilt.observations.observation import Observation
-from stilt.observations.receptors import (
+from stilt.observations.builders import (
     build_column_receptor,
     build_slant_receptor,
 )
+from stilt.observations.observation import Observation
 from stilt.observations.sensors.base import BaseSensor
 from stilt.receptors import Receptor
 

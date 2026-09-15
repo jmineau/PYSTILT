@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Protocol, cast
+from typing import TYPE_CHECKING, Any, Protocol
 
 import numpy as np
 import pandas as pd
@@ -27,6 +27,25 @@ if TYPE_CHECKING:
 # independent of ``numpar``. AK-only modes do not need this correction because
 # AK_norm is already dimensionless.
 _PWF_MODES: frozenset[str] = frozenset({"pwf", "ak_pwf", "integration", "tccon"})
+
+
+def _release_coordinate(p: pd.DataFrame, coordinate: str) -> pd.Series:
+    """
+    Return each particle's *release* value of ``coordinate`` indexed by ``indx``.
+
+    Release coordinates such as ``xhgt`` are constant along a trajectory, but
+    HYSPLIT diagnostics such as ``pres`` are written at every time step.  The
+    row nearest the receptor time (smallest ``|time|`` when ``time`` is in
+    minutes; otherwise the first row) defines the release value.
+    """
+    if "time" in p.columns and pd.api.types.is_numeric_dtype(p["time"]):
+        ordered = p.assign(_age=p["time"].abs()).sort_values("_age", kind="stable")
+    else:
+        ordered = p
+    first = ordered.drop_duplicates(subset="indx")
+    return pd.Series(
+        first[coordinate].to_numpy(dtype=float), index=first["indx"].to_numpy()
+    )
 
 
 def _nearest_level_index(x: np.ndarray, levels: np.ndarray) -> np.ndarray:
@@ -164,20 +183,16 @@ def _apply_vertical_operator_impl(
     levels = levels[sort_idx]
     values = values[sort_idx]
 
-    coords = p[coordinate].to_numpy(dtype=float)
+    # One release value per particle, broadcast along its trajectory rows.
+    per_particle = _release_coordinate(p, coordinate)
+    coords = per_particle.reindex(p["indx"].to_numpy()).to_numpy(dtype=float)
 
     if operator.mode in _PWF_MODES:
         # Layer weights: each particle takes the value of its nearest level
         # (piecewise constant), shared among the particles at that level.
-        n_particles = int(cast(pd.Series, p["indx"]).nunique())
-        # Count particles per level using one row per particle (release
-        # coordinates such as ``xhgt`` are constant along a trajectory, so
-        # the first row is representative).
-        per_particle = p.drop_duplicates(subset="indx")
+        n_particles = len(per_particle)
         level_counts = np.bincount(
-            _nearest_level_index(
-                per_particle[coordinate].to_numpy(dtype=float), levels
-            ),
+            _nearest_level_index(per_particle.to_numpy(dtype=float), levels),
             minlength=len(levels),
         )
         row_levels = _nearest_level_index(coords, levels)

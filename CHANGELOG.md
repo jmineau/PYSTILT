@@ -6,6 +6,27 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- `apply_vertical_operator(coordinate="pres")` weighted each trajectory row
+  by that row's pressure, so a particle's weight drifted along its path.
+  Every coordinate is now taken from the particle's release row (nearest the
+  receptor time) and applied to the whole trajectory.
+
+### Changed
+
+- Renamed `stilt.selection` to `stilt.queries` and
+  `stilt.observations.receptors` to `stilt.observations.builders`. Public
+  re-exports from `stilt` and `stilt.observations` are unchanged.
+- `RuntimeSettings` and `stilt.service` docstrings now state that they are
+  deployment wiring only (queue URL, compute root, cache, Kubernetes
+  manifests), not science configuration or a general service API.
+
+### Documentation
+
+- Roadmap refreshed: the runtime simplification is done; the
+  footprint-to-state-geometry bridge is the active track.
+
 ## [0.1.0a7] - 2026-09-15
 
 ### Fixed

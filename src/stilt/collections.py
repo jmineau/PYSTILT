@@ -11,14 +11,14 @@ from stilt.config import STILTParams
 from stilt.footprint import Footprint
 from stilt.manifest import Manifest
 from stilt.meteorology import MetStream
-from stilt.receptors import PointReceptor, Receptor, read_receptors
-from stilt.selection import (
+from stilt.queries import (
     filter_ids,
     matching_ids,
     missing_ids,
     output_paths,
     resolve_mets,
 )
+from stilt.receptors import PointReceptor, Receptor, read_receptors
 from stilt.simulation import SimID, Simulation
 from stilt.storage import (
     ProjectFiles,

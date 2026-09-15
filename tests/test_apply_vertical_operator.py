@@ -192,3 +192,19 @@ def test_ak_pwf_mode_preserves_averaging_kernel_scale():
     )
     result = apply_vertical_operator(p, operator)
     assert result["foot"].sum() / n == pytest.approx(0.5)
+
+
+def test_pressure_coordinate_uses_release_row_for_whole_trajectory():
+    # ``pres`` changes along each trajectory; the weight must come from the
+    # release row (smallest |time|) and be constant per particle.
+    p = pd.DataFrame(
+        {
+            "indx": [1, 1, 1, 2, 2, 2],
+            "time": [-1.0, -2.0, -3.0, -3.0, -1.0, -2.0],
+            "pres": [900.0, 850.0, 800.0, 600.0, 700.0, 650.0],
+            "foot": [1.0] * 6,
+        }
+    )
+    operator = VerticalOperator(mode="ak", levels=[600.0, 900.0], values=[0.0, 1.0])
+    result = apply_vertical_operator(p, operator, coordinate="pres")
+    assert result["foot"].tolist() == pytest.approx([1.0] * 3 + [1.0 / 3.0] * 3)

@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
+from stilt.observations.builders import build_point_receptor
 from stilt.observations.observation import Observation
-from stilt.observations.receptors import build_point_receptor
 from stilt.observations.sensors.base import BaseSensor
 from stilt.receptors import Receptor
 

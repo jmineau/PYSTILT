@@ -24,7 +24,15 @@ class _RuntimeEnvSettings(BaseSettings):
 
 
 class RuntimeSettings(BaseModel):
-    """Typed runtime settings shared across CLI, workers, and executors."""
+    """
+    Deployment and worker-bootstrap wiring, not science configuration.
+
+    Holds where a deployment keeps its queue (``db_url``), scratch compute
+    root, download cache, and registry bound.  Transport and footprint
+    parameters live in :class:`~stilt.config.ModelConfig`; nothing here
+    changes a simulation's result, only where and how it runs.  Values are
+    read from ``PYSTILT_*`` environment variables via :func:`resolve_runtime_settings`.
+    """
 
     model_config = ConfigDict(extra="ignore")
 

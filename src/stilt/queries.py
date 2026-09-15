@@ -1,4 +1,4 @@
-"""Shared simulation/output selection helpers."""
+"""Shared simulation/output query helpers (id matching, missing outputs)."""
 
 from __future__ import annotations
 

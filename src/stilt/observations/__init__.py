@@ -1,6 +1,12 @@
 """Observation-domain models and sensor interfaces for science workflows."""
 
 from .apply import apply_vertical_operator
+from .builders import (
+    build_column_receptor,
+    build_multipoint_receptor,
+    build_point_receptor,
+    build_slant_receptor,
+)
 from .chemistry import (
     ChemistryContext,
     ChemistryModel,
@@ -11,12 +17,6 @@ from .chemistry import (
 from .geometry import HorizontalGeometry, LineOfSight, ViewingGeometry
 from .observation import Observation
 from .operators import VerticalOperator
-from .receptors import (
-    build_column_receptor,
-    build_multipoint_receptor,
-    build_point_receptor,
-    build_slant_receptor,
-)
 from .scenes import (
     Scene,
     group_scenes_by_key,

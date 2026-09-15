@@ -38,8 +38,11 @@ def apply_vertical_operator(
         Name of the column in *particles* to use as the interpolation
         coordinate.  Defaults to ``"xhgt"`` (release height AGL in metres,
         assigned by ``Trajectories.from_particles`` for column and multipoint
-        receptors).  Pass ``"pres"`` to interpolate on pressure (hPa);
-        levels are internally sorted to ascending order before interpolation.
+        receptors).  Pass ``"pres"`` to interpolate on release pressure
+        (hPa); levels are internally sorted to ascending order before
+        interpolation.  Whatever the coordinate, each particle's value is
+        taken from its row nearest the receptor time and applied to every
+        row of that particle's trajectory.
 
     Returns
     -------

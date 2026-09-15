@@ -3,8 +3,9 @@ Roadmap
 
 .. note::
 
-   PYSTILT is alpha software (v0.1.0a1).  The public API may change while the
-   package settles.  No backward compatibility guarantees before v1.0.
+   PYSTILT is alpha software (the ``0.1.0a`` series).  The public API may
+   change while the package settles.  No backward compatibility guarantees
+   before v1.0.
 
 Current status
 --------------
@@ -17,9 +18,11 @@ The **core transport** is stable and exercised by the test suite:
 - Simulation registry (skip-existing, status tracking)
 - Observation layer for science-facing workflows
 
-Active development is focused on finishing the core runtime simplification
-(plan 036: simulation registry and bounded index) before expanding into new
-science or packaging features.
+The core runtime simplification (a lean manifest-plus-Postgres registry with
+by-key completion) landed in June 2026.  Active development has moved to the
+science boundary between footprints and inversion state grids (see
+*Future plans* below); the execution and observation tracks are maintained
+but not expanding.
 
 Execution and orchestration (from stiltctl)
 -------------------------------------------
@@ -87,11 +90,14 @@ design and column-weighting concepts.  Full X-STILT feature parity is
 Future plans
 ------------
 
-The following work is planned but blocked on stabilizing the current runtime
-surface first:
+In priority order:
 
-- **Spatial-target and footprint aggregation**: ergonomic
-  projection/aggregation bridge between footprints and non-rectilinear flux grids.
+- **Spatial-target and footprint aggregation** (active): an explicit
+  bridge between the native footprint raster and an inversion's state
+  geometry (rectilinear grids, points, later polygon/hex meshes), including
+  regenerating footprints from stored trajectories when the target grid
+  changes.  Conservative area-overlap aggregation and ``Grid.to_xarray`` are
+  the first pieces.
 - **Slant receptor geometry**: satellite-geometry receptors once
   HYSPLIT vertical-coordinate behavior is validated.
 - **Observation-layer maturation**: specific sensor
