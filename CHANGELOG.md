@@ -6,6 +6,8 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.0a7] - 2026-09-15
+
 ### Fixed
 
 - `MultiPointReceptor` rejects points that share a horizontal location.
