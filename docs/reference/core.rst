@@ -41,3 +41,31 @@ Simulation objects
    SimID
    Trajectories
    Footprint
+
+Spatial geometries
+------------------
+
+The state geometry a footprint is aggregated onto (see
+:meth:`Footprint.aggregate`).  :class:`Grid` doubles as a rectilinear
+geometry and is documented under :doc:`configuration`.
+
+.. autosummary::
+   :toctree: _api
+   :nosignatures:
+
+   Mesh
+   Zones
+   Geometry
+   SpatialTarget
+
+Overlap weights between a footprint raster and a geometry are built once and
+cached; these helpers are in :mod:`stilt.geometry`.
+
+.. autosummary::
+   :toctree: _api
+   :nosignatures:
+
+   geometry.overlap_weights
+   geometry.check_resolution
+   geometry.same_crs
+   geometry.is_longlat_crs

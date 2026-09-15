@@ -15,6 +15,8 @@ from stilt.config import STILTParams
 from stilt.receptors import ColumnReceptor, MultiPointReceptor, PointReceptor, Receptor
 
 if TYPE_CHECKING:
+    from stilt.config import FootprintConfig
+    from stilt.footprint import Footprint
     from stilt.visualization import TrajectoriesPlotAccessor
 
 
@@ -282,6 +284,26 @@ class Trajectories:
             params=params,
             is_error=is_error,
         )
+
+    def footprint(self, config: "FootprintConfig", name: str = "") -> "Footprint":
+        """
+        Calculate a footprint from these trajectories on a new grid.
+
+        This is the regeneration path for a target grid that differs from any
+        stored footprint: rather than regridding a stored raster, rebuild the
+        footprint from the particles with full kernel fidelity.  Equivalent to
+        :meth:`stilt.Footprint.calculate` with this run's receptor.
+
+        Parameters
+        ----------
+        config : FootprintConfig
+            Grid and smoothing parameters for the new footprint.
+        name : str, optional
+            Name for the footprint.
+        """
+        from stilt.footprint import Footprint
+
+        return Footprint.calculate(self.data, self.receptor, config, name=name)
 
     def to_parquet(self, path: str | Path) -> Path:
         """

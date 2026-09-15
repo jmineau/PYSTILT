@@ -2,6 +2,7 @@
 
 import builtins
 import datetime as dt
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -21,6 +22,7 @@ from stilt.footprint import (
     _project_particles_to_crs,
     _wrap_antimeridian_longitudes,
 )
+from stilt.geometry import Mesh, Zones
 from stilt.receptors import PointReceptor
 from stilt.trajectory import calc_plume_dilution
 
@@ -1457,3 +1459,197 @@ def test_compute_kernel_bandwidths_two_coincident_particles_returns_zero_sigma()
     )
     kernel_df, w = _compute_kernel_bandwidths(p, smooth_factor=1.0, is_longlat=True)
     np.testing.assert_array_equal(w, np.zeros_like(w))
+
+
+# ---------------------------------------------------------------------------
+# Spatial geometries: Grid, Mesh, Zones
+# ---------------------------------------------------------------------------
+
+
+def test_aggregate_grid_target_matches_xarray_target():
+    """A Grid target gives the same values and cell order as its to_xarray form."""
+    native_res, coarse_res = 0.01, 0.03
+    fine = _block_centers(6, native_res)
+    vals = np.arange(36, dtype=float).reshape(len(fine), len(fine))
+    foot = _foot_on_grid(fine, fine, vals, xres=native_res, yres=native_res)
+    grid = Grid(
+        xmin=0.0, xmax=0.06, ymin=0.0, ymax=0.06, xres=coarse_res, yres=coarse_res
+    )
+
+    t0 = pd.Timestamp("2023-01-01 12:00")
+    bins = pd.interval_range(start=t0, periods=1, freq="1h", closed="left")
+    via_grid = foot.aggregate(grid, bins)
+    via_xr = foot.aggregate(grid.to_xarray(), bins)
+
+    assert via_grid.index.equals(grid.index)
+    np.testing.assert_allclose(via_grid.to_numpy(), via_xr.to_numpy())
+    assert via_grid.to_numpy().sum() == pytest.approx(vals.sum())
+
+
+def test_aggregate_mesh_window_sums_exactly():
+    """Each Mesh window sums the native cells inside it, independently."""
+    native_res = 0.01
+    fine = _block_centers(6, native_res)  # 0.005 .. 0.055
+    vals = np.arange(36, dtype=float).reshape(len(fine), len(fine))
+    foot = _foot_on_grid(fine, fine, vals, xres=native_res, yres=native_res)
+
+    # Two overlapping 3x3 windows: overlap is allowed and counted in both.
+    mesh = Mesh.from_windows([(0.015, 0.015), (0.025, 0.025)], 0.03, ids=["a", "b"])
+    t0 = pd.Timestamp("2023-01-01 12:00")
+    bins = pd.interval_range(start=t0, periods=1, freq="1h", closed="left")
+    result = foot.aggregate(mesh, bins)
+
+    assert result.index.equals(mesh.index)
+    assert result.loc["a"].iloc[0] == pytest.approx(vals[0:3, 0:3].sum())
+    assert result.loc["b"].iloc[0] == pytest.approx(vals[1:4, 1:4].sum())
+
+
+def test_aggregate_mesh_off_lattice_splits_by_area():
+    """A polygon not aligned to the native lattice takes area fractions."""
+    native_res = 0.01
+    fine = _block_centers(4, native_res)  # 0.005, 0.015, 0.025, 0.035
+    vals = np.ones((4, 4))
+    foot = _foot_on_grid(fine, fine, vals, xres=native_res, yres=native_res)
+    mesh = Mesh.from_windows([(0.015, 0.015)], 0.02)  # area = 4 native cells
+    t0 = pd.Timestamp("2023-01-01 12:00")
+    bins = pd.interval_range(start=t0, periods=1, freq="1h", closed="left")
+    result = foot.aggregate(mesh, bins)
+    assert result.iloc[0, 0] == pytest.approx(4.0)
+
+
+def test_aggregate_mesh_ids_index_and_time_bins():
+    foot = _make_footprint(n_times=2)
+    t0 = pd.Timestamp("2023-01-01 12:00")
+    foot.data.loc[t0, 39.05, -113.95] = 1e-4
+    foot.data.loc[t0 + pd.Timedelta(hours=1), 39.15, -113.85] = 3e-4
+
+    mesh = Mesh.from_windows([(-113.95, 39.05), (-113.85, 39.15)], 0.1, ids=["a", "b"])
+    bins = pd.interval_range(start=t0, periods=2, freq="1h", closed="left")
+    result = foot.aggregate(mesh, bins)
+
+    assert result.index.tolist() == ["a", "b"]
+    assert result.index.name == "cell"
+    assert result.shape == (2, 2)
+    assert result.loc["a"].tolist() == pytest.approx([1e-4, 0.0])
+    assert result.loc["b"].tolist() == pytest.approx([0.0, 3e-4])
+
+
+def test_aggregate_zones_merge_grid_cells():
+    native_res, coarse_res = 0.01, 0.03
+    fine = _block_centers(6, native_res)
+    vals = np.arange(36, dtype=float).reshape(len(fine), len(fine))
+    foot = _foot_on_grid(fine, fine, vals, xres=native_res, yres=native_res)
+    coarse = Grid(
+        xmin=0.0, xmax=0.06, ymin=0.0, ymax=0.06, xres=coarse_res, yres=coarse_res
+    )
+    part = Zones.from_labels(coarse, ["W", "W", "E", "E"])  # x outer: W=x<0.03
+
+    t0 = pd.Timestamp("2023-01-01 12:00")
+    bins = pd.interval_range(start=t0, periods=1, freq="1h", closed="left")
+    result = foot.aggregate(part, bins)
+    assert result.index.tolist() == ["W", "E"]
+    assert result.loc["W"].iloc[0] == pytest.approx(vals[:, :3].sum())
+    assert result.loc["E"].iloc[0] == pytest.approx(vals[:, 3:].sum())
+    assert result.to_numpy().sum() == pytest.approx(vals.sum())
+
+
+def test_aggregate_warns_when_target_cells_under_resolved():
+    foot = _make_footprint()  # native 0.1 deg
+    t0 = pd.Timestamp("2023-01-01 12:00")
+    bins = pd.interval_range(start=t0, periods=1, freq="1h", closed="left")
+    mesh = Mesh.from_windows([(-113.95, 39.05)], 0.05)  # half a native cell
+    with pytest.warns(UserWarning, match="under-resolved"):
+        foot.aggregate(mesh, bins)
+
+
+def test_aggregate_grid_in_other_crs_is_reprojected():
+    pytest.importorskip("pyproj")
+    foot = _make_footprint()
+    t0 = pd.Timestamp("2023-01-01 12:00")
+    foot.data.loc[t0, 39.05, -113.95] = 1.0
+    foot.data.loc[t0, 39.15, -113.85] = 1.0
+    bins = pd.interval_range(start=t0, periods=1, freq="1h", closed="left")
+    # Coarse 20 km UTM cells covering the seeded footprint cells
+    grid = Grid(
+        xmin=-114.2,
+        xmax=-113.6,
+        ymin=38.8,
+        ymax=39.4,
+        xres=20000.0,
+        yres=20000.0,
+        projection="EPSG:32612",
+    )
+    result = foot.aggregate(grid, bins)
+    assert result.to_numpy().sum() == pytest.approx(2.0, rel=1e-6)
+
+
+def test_aggregate_mesh_empty_footprint_returns_zeros():
+    foot = _make_footprint(n_times=1)
+    foot.data = foot.data.isel(time=slice(0, 0))
+    t0 = pd.Timestamp("2023-01-01 12:00")
+    bins = pd.interval_range(start=t0, periods=1, freq="1h", closed="left")
+    mesh = Mesh.from_windows([(-113.95, 39.05)], 0.1)
+    result = foot.aggregate(mesh, bins)
+    assert result.shape == (1, 1)
+    assert result.to_numpy().sum() == 0.0
+
+
+# ---------------------------------------------------------------------------
+# Geometry hash: recorded with geometry-derived footprints
+# ---------------------------------------------------------------------------
+
+
+def _windows_spec(shift: float = 0.0):
+    return {
+        "kind": "windows",
+        "coords": [(-113.95 + shift, 39.05), (-113.85 + shift, 39.15)],
+        "size": 0.25,  # >= 2 native cells so no under-resolution warning
+        "ids": ["a", "b"],
+    }
+
+
+def test_footprint_config_records_geometry_hash():
+    fc = FootprintConfig(geometry=_windows_spec())
+    assert fc.geometry_hash == fc.geometry.build().hash
+    # explicit grid still records the hash; reload with both present builds nothing
+    reloaded = FootprintConfig(
+        grid=fc.grid, geometry=_windows_spec(), geometry_hash="deadbeef00"
+    )
+    assert reloaded.geometry_hash == "deadbeef00"
+
+
+def test_netcdf_roundtrip_keeps_geometry_and_hash(tmp_path):
+    fc = FootprintConfig(grid=_make_footprint().config.grid, geometry=_windows_spec())
+    foot = _make_footprint()
+    foot = Footprint(receptor=foot.receptor, config=fc, data=foot.data, name="geo")
+    path = foot.to_netcdf(tmp_path / "geo_foot.nc")
+    loaded = Footprint.from_netcdf(path)
+    assert loaded.config.geometry == fc.geometry
+    assert loaded.config.geometry_hash == fc.geometry_hash
+    # a grid-only footprint carries no geometry attrs at all
+    plain = _make_footprint().to_netcdf(tmp_path / "plain_foot.nc")
+    import xarray as xr
+
+    with xr.open_dataset(plain) as ds:
+        assert "geometry" not in ds.attrs and "geometry_hash" not in ds.attrs
+    assert Footprint.from_netcdf(plain).config.geometry_hash is None
+
+
+def test_aggregate_warns_when_geometry_hash_differs():
+    base = _make_footprint()
+    fc = FootprintConfig(grid=base.config.grid, geometry=_windows_spec())
+    foot = Footprint(receptor=base.receptor, config=fc, data=base.data, name="geo")
+    t0 = pd.Timestamp("2023-01-01 12:00")
+    bins = pd.interval_range(start=t0, periods=1, freq="1h", closed="left")
+
+    same = fc.geometry.build()
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        foot.aggregate(same, bins)  # identical geometry: no warning
+        foot.aggregate(base.config.grid, bins)  # grids are never checked
+
+    other = Mesh.from_windows([(-113.9, 39.1)], 0.25, ids=["c"])
+    with pytest.warns(UserWarning, match="derived for geometry"):
+        foot.aggregate(other, bins)
+    with pytest.warns(UserWarning, match="derived for geometry"):
+        foot.aggregate(Zones.from_labels(other, ["z"]), bins)

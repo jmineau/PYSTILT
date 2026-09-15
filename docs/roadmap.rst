@@ -92,12 +92,14 @@ Future plans
 
 In priority order:
 
-- **Spatial-target and footprint aggregation** (active): an explicit
-  bridge between the native footprint raster and an inversion's state
-  geometry (rectilinear grids, points, later polygon/hex meshes), including
-  regenerating footprints from stored trajectories when the target grid
-  changes.  Conservative area-overlap aggregation and ``Grid.to_xarray`` are
-  the first pieces.
+- **Spatial geometries and footprint aggregation** (implemented): footprints
+  are computed on a rectilinear raster and aggregated onto any state geometry
+  (:class:`stilt.Grid`, :class:`stilt.Mesh` from shapefiles / H3 hexagons /
+  point windows, :class:`stilt.Zones` super-cells) through cached sparse
+  overlap weights, with ``Grid.from_geometry`` deriving the raster for a
+  geometry, ``FootprintConfig.geometry`` naming it in YAML, and
+  ``Trajectories.footprint`` regenerating footprints from stored particles.
+  Still to come: a YAML form for ``Zones``.
 - **Slant receptor geometry**: satellite-geometry receptors once
   HYSPLIT vertical-coordinate behavior is validated.
 - **Observation-layer maturation**: specific sensor

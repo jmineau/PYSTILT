@@ -50,3 +50,17 @@ Transform specifications
 
    VerticalOperatorTransformSpec
    FirstOrderLifetimeTransformSpec
+
+Geometry specifications
+-----------------------
+
+Declarative state geometries for ``FootprintConfig.geometry``; each has a
+``build()`` returning a :class:`stilt.Mesh`.
+
+.. autosummary::
+   :toctree: _api
+   :nosignatures:
+
+   FileGeometrySpec
+   H3GeometrySpec
+   WindowsGeometrySpec

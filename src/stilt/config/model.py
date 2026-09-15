@@ -98,9 +98,10 @@ class ModelConfig(STILTParams):
                             cfg["grid"] = {
                                 key: cfg.pop(key) for key in _GRID_KEYS if key in cfg
                             }
-                        else:
+                        elif cfg.get("geometry") is None:
                             raise ValueError(
-                                f"Footprint '{name}' is missing a 'grid' key."
+                                f"Footprint '{name}' is missing a 'grid' key "
+                                "(or a 'geometry' to derive one from)."
                             )
                 resolved[name] = cfg
             data = {**data, "footprints": resolved}

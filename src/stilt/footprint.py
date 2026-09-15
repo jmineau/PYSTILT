@@ -4,6 +4,7 @@ import datetime as dt
 import json
 import math
 import os
+import warnings
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, NamedTuple, cast
@@ -15,6 +16,14 @@ from scipy.ndimage import convolve as _convolve
 from typing_extensions import Self
 
 from stilt.config import FootprintConfig, Grid
+from stilt.geometry import (
+    Mesh,
+    SpatialTarget,
+    Zones,
+    check_resolution,
+    overlap_weights,
+    same_crs,
+)
 from stilt.receptors import Receptor
 
 if TYPE_CHECKING:
@@ -866,6 +875,8 @@ class Footprint:
             smooth_factor=attrs.get("smooth_factor", 1.0),
             time_integrate=bool(attrs.get("time_integrate", False)),
             transforms=json.loads(attrs.get("transforms", "[]")),
+            geometry=json.loads(attrs["geometry"]) if "geometry" in attrs else None,
+            geometry_hash=attrs.get("geometry_hash") or None,
         )
 
         name = attrs.get("name", "")
@@ -1120,6 +1131,11 @@ class Footprint:
                 .isoformat(),
             }
         )
+        if self.config.geometry is not None:
+            ds.attrs["geometry"] = json.dumps(
+                self.config.geometry.model_dump(mode="json")
+            )
+            ds.attrs["geometry_hash"] = self.config.geometry_hash or ""
 
         tmp_path = path.with_suffix(path.suffix + ".tmp")
         try:
@@ -1157,21 +1173,29 @@ class Footprint:
 
     def _resolve_target(
         self,
-        target: xr.DataArray | xr.Dataset | list[tuple[float, float]],
+        target: Grid | xr.DataArray | xr.Dataset | list[tuple[float, float]],
         resolution: float | tuple[float, float] | None,
         x_dim: str,
         y_dim: str,
     ) -> _AggTarget:
         """
-        Normalize an aggregation target into cells plus full regular axes.
+        Normalize a lattice aggregation target into cells plus full regular axes.
 
-        Accepts either an xarray grid (``lon``/``lat`` or ``x``/``y``
-        coordinates; ``NaN`` cells in a 2-D DataArray are treated as masked-out)
-        or a plain list of ``(x, y)`` cell centers (with ``resolution``).
+        Accepts a :class:`~stilt.config.Grid`, an xarray grid (``lon``/``lat``
+        or ``x``/``y`` coordinates; ``NaN`` cells in a 2-D DataArray are treated
+        as masked-out), or a plain list of ``(x, y)`` cell centers (with
+        ``resolution``).
         """
         px = np.asarray(self.data[x_dim].values, dtype=float)
         py = np.asarray(self.data[y_dim].values, dtype=float)
         grid = self.config.grid
+
+        if isinstance(target, Grid):
+            axis_x, axis_y = target.axes
+            cell_x, cell_y = target.cells
+            return _AggTarget(
+                cell_x, cell_y, axis_x, axis_y, float(target.xres), float(target.yres)
+            )
 
         if isinstance(target, xr.DataArray | xr.Dataset):
             tx = (
@@ -1243,13 +1267,13 @@ class Footprint:
 
     def aggregate(
         self,
-        target: xr.DataArray | xr.Dataset | list[tuple[float, float]],
+        target: SpatialTarget,
         time_bins: pd.IntervalIndex,
         *,
         resolution: float | tuple[float, float] | None = None,
     ) -> pd.DataFrame:
         """
-        Conservatively regrid the footprint onto a target grid and sum over time.
+        Conservatively regrid the footprint onto a spatial target and sum over time.
 
         The footprint is an extensive, per-cell sensitivity (its units carry
         ``m^2``), so coarsening it means **summing** native cells, not
@@ -1263,12 +1287,22 @@ class Footprint:
 
         Parameters
         ----------
-        target : xr.DataArray | xr.Dataset | list[tuple[float, float]]
-            The target grid.  Preferred: an xarray grid carrying ``lon``/``lat``
-            (or ``x``/``y``) coordinates; ``NaN`` cells in a 2-D DataArray are
-            treated as masked-out.  Also accepts a plain list of ``(x, y)`` cell
-            centers (a regular grid is assumed), in which case ``resolution`` is
-            used or inferred from the coordinate spacing.
+        target : SpatialTarget
+            The state geometry to aggregate onto.  Preferred forms:
+
+            - :class:`~stilt.config.Grid` — every cell of a rectilinear grid,
+              in ``Grid.index`` order.
+            - :class:`~stilt.Mesh` — arbitrary polygons (shapefile, H3
+              hexagons, nested grids, point-source windows); results are
+              indexed by cell id.
+            - :class:`~stilt.Zones` — super-cells merging a grid or mesh.
+
+            Geometries in another CRS are reprojected onto the footprint's
+            native raster.  Also accepted: an xarray grid carrying
+            ``lon``/``lat`` (or ``x``/``y``) coordinates, where ``NaN`` cells in
+            a 2-D DataArray are treated as masked-out; and a plain list of
+            ``(x, y)`` cell centers (a regular lattice is assumed), in which
+            case ``resolution`` is used or inferred from the coordinate spacing.
         time_bins : pd.IntervalIndex
             Flux time intervals to sum over.
         resolution : float or (float, float), optional
@@ -1279,12 +1313,20 @@ class Footprint:
         Returns
         -------
         pd.DataFrame
-            Indexed by (x, y) target cell with one column per time bin (labeled
-            by bin left edge). Missing cell/bin combinations are 0.
+            Indexed by target cell (``(x, y)`` MultiIndex for grids, ``cell``
+            ids for meshes and zones) with one column per time bin
+            (labeled by bin left edge). Missing cell/bin combinations are 0.
         """
         is_latlon = "lon" in self.data.dims and "lat" in self.data.dims
         x_dim = "lon" if is_latlon else "x"
         y_dim = "lat" if is_latlon else "y"
+
+        self._check_geometry_hash(target)
+        native_crs = self.config.grid.projection
+        if isinstance(target, (Mesh, Zones)) or (
+            isinstance(target, Grid) and not same_crs(target.projection, native_crs)
+        ):
+            return self._aggregate_geometry(target, time_bins, x_dim, y_dim)
 
         tgt = self._resolve_target(target, resolution, x_dim, y_dim)
         coord_index = pd.MultiIndex.from_arrays(
@@ -1329,4 +1371,62 @@ class Footprint:
             f_bin = data_arr[in_bin].sum(axis=0)  # (Ny, Nx)
             lattice = weight_y @ f_bin @ weight_x.T  # (Ty, Tx)
             result[left_edge] = lattice[row, col]
+        return result
+
+    def _check_geometry_hash(self, target: object) -> None:
+        """Warn when aggregating onto a mesh other than the one this raster was derived for."""
+        expected = self.config.geometry_hash
+        if not expected:
+            return
+        mesh = target.base if isinstance(target, Zones) else target
+        if isinstance(mesh, Mesh) and mesh.hash != expected:
+            warnings.warn(
+                f"Footprint {self.name!r} was derived for geometry {expected} but is "
+                f"being aggregated onto geometry {mesh.hash}; the geometry source may "
+                "have changed since the footprint was computed, so the raster "
+                "resolution and extent may no longer suit it.",
+                stacklevel=3,
+            )
+
+    def _aggregate_geometry(
+        self,
+        target: Grid | Mesh | Zones,
+        time_bins: pd.IntervalIndex,
+        x_dim: str,
+        y_dim: str,
+    ) -> pd.DataFrame:
+        """
+        Aggregate through the cached overlap-weight matrix of a geometry.
+
+        ``W`` (``n_cells × n_native``) holds the fraction of each native cell
+        inside each target cell, so each time bin is ``W @ F.ravel()``.
+        """
+        columns = _time_bin_columns(time_bins)
+        result = pd.DataFrame(0.0, index=target.index, columns=columns)
+
+        ntime = int(self.data.sizes.get("time", 0))
+        if self.data.size == 0 or ntime == 0:
+            return result
+
+        px = np.asarray(self.data[x_dim].values, dtype=float)
+        py = np.asarray(self.data[y_dim].values, dtype=float)
+        xres, yres = self.config.grid.xres, self.config.grid.yres
+        crs = self.config.grid.projection
+        check_resolution(target, xres, yres, crs)
+        weights = overlap_weights(target, px, py, xres, yres, crs)
+
+        data_arr = self.data.transpose("time", y_dim, x_dim).to_numpy()
+        native_times = _utc_index(self.data["time"].values).tz_localize(None)
+        for interval, left_edge in zip(time_bins, columns, strict=False):
+            left = _naive_utc_timestamp(interval.left)
+            right = _naive_utc_timestamp(interval.right)
+            if left is None or right is None:
+                raise ValueError(
+                    f"Could not convert interval bounds to UTC timestamps: {interval}"
+                )
+            in_bin = np.asarray((native_times >= left) & (native_times < right))
+            if not in_bin.any():
+                continue
+            f_bin = data_arr[in_bin].sum(axis=0).ravel()  # (Ny * Nx,)
+            result[left_edge] = weights @ f_bin
         return result

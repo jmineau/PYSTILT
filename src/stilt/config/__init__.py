@@ -2,6 +2,12 @@
 
 from .fields import cfg_field
 from .footprint import FootprintConfig, foot_names
+from .geometry import (
+    FileGeometrySpec,
+    GeometrySpec,
+    H3GeometrySpec,
+    WindowsGeometrySpec,
+)
 from .meteorology import MetConfig
 from .model import (
     ModelConfig,
@@ -27,8 +33,11 @@ from .transforms import (
 __all__ = [
     "Bounds",
     "ErrorParams",
+    "FileGeometrySpec",
     "FirstOrderLifetimeTransformSpec",
     "FootprintConfig",
+    "GeometrySpec",
+    "H3GeometrySpec",
     "Grid",
     "MetConfig",
     "ModelConfig",
@@ -39,6 +48,7 @@ __all__ = [
     "TransportParams",
     "VerticalOperatorTransformSpec",
     "VerticalReference",
+    "WindowsGeometrySpec",
     "build_control_entries",
     "build_setup_entries",
     "cfg_field",

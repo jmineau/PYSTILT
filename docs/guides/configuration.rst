@@ -121,6 +121,52 @@ You can define more than one named footprint:
 Each named footprint is tracked separately: a simulation is complete only once
 every configured footprint exists for it.
 
+Footprints for a state geometry
+-------------------------------
+
+When the footprint exists to feed an inversion whose state lives on a
+non-rectilinear geometry (a shapefile, H3 hexagons, point-source windows),
+name that geometry instead of the raster and let PYSTILT derive a raster
+fine enough to resolve it (:meth:`stilt.Grid.from_geometry`):
+
+.. code-block:: yaml
+
+   footprints:
+     counties:
+       geometry:
+         kind: file          # shapefile / GeoPackage / GeoJSON (needs geopandas)
+         path: counties.shp
+         ids: NAME           # attribute column used as cell ids
+     hexes:
+       geometry:
+         kind: h3            # needs the h3 package
+         resolution: 8
+         bounds: {xmin: -112.3, xmax: -111.6, ymin: 40.4, ymax: 41.0}
+       cells_per_target: 4   # native cells across the smallest hexagon (default)
+     sources:
+       geometry:
+         kind: windows
+         coords: [[-111.97, 40.515], [-112.015, 40.779]]
+         size: 0.01
+         ids: [landfill, wwtp]
+
+The derived ``grid`` is written back into the config, so the geometry object
+is never needed to read a stored footprint.  Give both ``grid`` and
+``geometry`` to pin the raster explicitly; ``geometry`` is then kept as a
+record and ``config.geometry.build()`` returns the :class:`stilt.Mesh` to
+aggregate onto.  A content hash of the built geometry (``geometry_hash``) is
+stored with the config and in each footprint file; ``Footprint.aggregate``
+warns if the mesh it is handed no longer matches, which catches a shapefile
+edited after the footprints were computed.
+
+.. note::
+
+   :class:`stilt.Zones` (super-cells) have no YAML form yet; build them in
+   code with ``Zones.from_labels(base, labels)``.  A ``kind: zones`` spec
+   would need a label source (an attribute column, a CSV keyed by cell id, or
+   polygons assigned by cell centre) and will be added once a project needs
+   its zoning to live in the config.
+
 Execution examples
 ------------------
 

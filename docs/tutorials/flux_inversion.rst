@@ -27,21 +27,27 @@ Use :meth:`stilt.Footprint.aggregate` when you have discrete source locations:
    import numpy as np
    import pandas as pd
 
+   import stilt
+
    footprints = model.footprints["wbb"].load(mets="hrrr")
 
-   sources = [
-       (-111.970, 40.515, 45.0),
-       (-112.015, 40.779, 120.0),
-       (-111.890, 40.650, 30.0),
-   ]
-   coords = [(lon, lat) for lon, lat, _ in sources]
-   fluxes = np.array([flux for _, _, flux in sources])
+   sources = {
+       "landfill": (-111.970, 40.515, 45.0),
+       "wwtp": (-112.015, 40.779, 120.0),
+       "refinery": (-111.890, 40.650, 30.0),
+   }
+   targets = stilt.Mesh.from_windows(
+       [(lon, lat) for lon, lat, _ in sources.values()],
+       size=0.01,  # window size in degrees around each source
+       ids=list(sources),
+   )
+   fluxes = np.array([flux for _, _, flux in sources.values()])
 
    rows = []
    for foot in footprints:
        start, end = foot.time_range
        bins = pd.interval_range(start=start, end=end, freq="1h")
-       sensitivity = foot.aggregate(target=coords, time_bins=bins)
+       sensitivity = foot.aggregate(target=targets, time_bins=bins)  # indexed by cell id
        enhancement = (sensitivity.to_numpy() * fluxes[:, None]).sum(axis=0)
        rows.append(
            pd.Series(

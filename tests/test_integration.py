@@ -328,3 +328,73 @@ def test_error_trajectory(tmp_path, wbb_receptor, traj_only_config):
         .reset_index(drop=True)
         .equals(error_traj["long"].reset_index(drop=True))
     ), "Error trajectory identical to main — wind perturbation had no effect"
+
+
+# ---------------------------------------------------------------------------
+# Geometry-derived footprint config (plan 030)
+# ---------------------------------------------------------------------------
+
+
+@integration
+def test_geometry_footprint(tmp_path, wbb_receptor, met_dir):
+    """A footprint named by geometry derives its raster, runs, and aggregates."""
+    from stilt.config import ModelConfig
+    from stilt.footprint import Footprint
+
+    from .fixtures.r_stilt_reference import (
+        REFERENCE_KRAND,
+        REFERENCE_MET_FILE_FORMAT,
+        REFERENCE_SEED,
+    )
+
+    # Half-degree windows so particles stay in the derived raster for hours.
+    spec = {
+        "kind": "windows",
+        "coords": [(-112.0, 40.5), (-112.6, 40.9)],
+        "size": 0.5,
+        "ids": ["wbb", "nw"],
+    }
+    config = ModelConfig(
+        mets={
+            "hrrr": {
+                "directory": met_dir,
+                "file_format": REFERENCE_MET_FILE_FORMAT,
+                "file_tres": "6h",
+            }
+        },
+        n_hours=-6,
+        numpar=100,
+        krand=REFERENCE_KRAND,
+        seed=REFERENCE_SEED,
+        footprints={"sources": {"geometry": spec, "cells_per_target": 10}},
+    )
+    fc = config.footprints["sources"]
+    assert fc.grid.xres == fc.grid.yres == 0.05  # 0.5 / 10
+    assert fc.geometry_hash
+
+    model = Model(project=tmp_path / "geom", config=config, receptors=[wbb_receptor])
+    model.run()
+
+    sid = _sim_id(wbb_receptor)
+    sim_dir = model.layout.project_dir / "simulations" / "by-id" / sid
+    foot_files = list(sim_dir.glob("*_foot.nc"))
+    assert len(foot_files) == 1, foot_files
+    foot = Footprint.from_netcdf(foot_files[0])
+    assert foot.config.grid == fc.grid
+    assert foot.config.geometry == fc.geometry
+    assert foot.config.geometry_hash == fc.geometry_hash
+    assert _state_call(model, "footprint_complete", sid, "sources")
+
+    mesh = fc.geometry.build()
+    r_time = pd.Timestamp(wbb_receptor.time)
+    bins = pd.interval_range(
+        start=r_time - pd.Timedelta(hours=6), end=r_time, freq="1h", closed="left"
+    )
+    import warnings
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", UserWarning)
+        agg = foot.aggregate(mesh, bins)
+    assert agg.index.tolist() == ["wbb", "nw"]
+    assert agg.loc["wbb"].sum() > 0  # the receptor sits inside its own window
+    assert agg.to_numpy().sum() <= float(foot.data.sum()) + 1e-12

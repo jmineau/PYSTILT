@@ -10,8 +10,9 @@ Install the base transport package with:
 
    pip install pystilt
 
-Install optional extras for projections, visualization, cloud storage, Slurm,
-and Kubernetes-oriented workflows with:
+Install optional extras for projections, spatial geometries (shapefiles via
+geopandas, H3 hexagons), visualization, cloud storage, Slurm, and
+Kubernetes-oriented workflows with:
 
 .. code-block:: bash
 

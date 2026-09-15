@@ -12,6 +12,7 @@ from .config import (
     RuntimeSettings,
 )
 from .footprint import Footprint
+from .geometry import Geometry, Mesh, SpatialTarget, Zones
 from .meteorology import MetStream
 from .model import Model
 from .receptors import (
@@ -57,6 +58,11 @@ __all__ = [
     "PointReceptor",
     "ReceptorID",
     "read_receptors",
+    # Spatial geometries (state geometry for aggregation)
+    "Geometry",
+    "Mesh",
+    "Zones",
+    "SpatialTarget",
     # Meteorology
     "MetStream",
     # Transforms

@@ -45,6 +45,11 @@ dependencies = [
 projection = [
     "pyproj>=3.5",
 ]
+geometry = [
+    "geopandas>=1.0",
+    "h3>=4.0",
+    "pyproj>=3.5",
+]
 visualization = [
     "matplotlib>=3.7",
 ]
@@ -56,6 +61,7 @@ cloud = [
 ]
 complete = [
     "pystilt[projection]",
+    "pystilt[geometry]",
     "pystilt[visualization]",
     "pystilt[cloud]",
 ]

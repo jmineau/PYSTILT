@@ -6,6 +6,44 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **Spatial geometries** for footprint aggregation (plan 030). Footprints
+  are still computed on a rectilinear raster; moving one onto another
+  geometry is a cached sparse overlap-weight matrix (`stilt.geometry.
+  overlap_weights`), so Jacobian building is one matmul per footprint.
+  - `stilt.Mesh`: arbitrary polygon cells with ids and a CRS. Constructors:
+    `from_file` / `from_geodataframe` (shapefiles, GeoPackage; geopandas),
+    `from_h3(resolution, bounds)` (hexagons; optional `h3`),
+    `from_windows(coords, size, ids=)` (point sources), `from_grid`.
+  - `stilt.Zones`: labels merging the cells of a `Grid` or `Mesh`
+    into super-cells.
+  - `Grid` gained `axes`, `cells`, `index`, `is_longlat`, and
+    `Grid.from_geometry(geometry, cells_per_target=4)` /
+    `from_geometries`, which derive the native raster that resolves a
+    geometry (envelope snapped to whole cells, resolution rounded down to
+    one significant figure).
+  - `Footprint.aggregate` accepts `Grid`, `Mesh`, and `Zones`
+    (`stilt.SpatialTarget` is the union with xarray grids and coordinate
+    lists), reprojects geometries in another CRS onto the native raster,
+    and warns when the smallest target cell spans fewer than two native
+    cells.
+- `Trajectories.footprint(config)` regenerates a footprint from stored
+  particles on a new grid, for target geometries finer than any stored
+  raster.
+- `FootprintConfig.geometry`: a declarative geometry spec (`kind: file`,
+  `h3`, or `windows`) naming the state geometry a footprint serves. When
+  `grid` is omitted it is derived with `Grid.from_geometry` (tunable via
+  `cells_per_target`); `geometry.build()` returns the `Mesh`. The built
+  geometry's content hash is recorded as `geometry_hash`, written to the
+  footprint netCDF alongside the spec, and `Footprint.aggregate` warns when
+  the mesh it is given has a different hash (the geometry source changed
+  after the footprint was computed). Grid-only footprints are unaffected.
+- `pystilt[geometry]` extra (geopandas, h3, pyproj), included in `complete`.
+- Polygon overlap weights use `exactextract` automatically when it is
+  installed (not a dependency; ~100x faster on large rasters, identical
+  fractions), else shapely. `overlap_weights(..., backend=...)` forces one.
+
 ## [0.1.0a8] - 2026-09-15
 
 ### Fixed

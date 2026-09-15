@@ -128,12 +128,70 @@ Footprints expose two especially useful analysis helpers:
 
 ``integrate_over_time()`` collapses the time dimension.
 
-``aggregate()`` conservatively regrids the footprint onto a target grid and
-groups the result by time bins. ``target`` may be an xarray grid (``lon``/``lat``
-or ``x``/``y`` coordinates) or a list of ``(x, y)`` cell centers. Because a
-footprint is an extensive, per-cell sensitivity, native cells are **summed**
-(by area overlap) into each target cell rather than sampled -- the right
-behavior for inventory- or grid-style flux applications.
+``aggregate()`` conservatively regrids the footprint onto a *spatial
+geometry* and groups the result by time bins.  Because a footprint is an
+extensive, per-cell sensitivity, native cells are **summed** (by area
+overlap) into each target cell rather than sampled -- the right behavior for
+inventory- or grid-style flux applications.
+
+Footprints are always *computed* on a rectilinear raster (this keeps the
+STILT kernel and R-STILT parity).  Any other state geometry is reached by a
+sparse overlap-weight matrix that is built once per (raster, geometry) pair
+and cached, so aggregating thousands of footprints is one matmul each.
+
+The target is the state geometry of your inversion:
+
+- :class:`stilt.Grid` -- every cell of a rectilinear grid; ``grid.index``
+  gives the matching ``(lon, lat)`` state index.
+- :class:`stilt.Mesh` -- arbitrary polygons with ids: a shapefile
+  (``Mesh.from_file``), H3 hexagons (``Mesh.from_h3``), nested grids, or
+  point-source windows (``Mesh.from_windows``).  Results are indexed by
+  cell id.
+- :class:`stilt.Zones` -- labels that merge the cells of a grid or
+  mesh into super-cells.
+- An xarray grid (``lon``/``lat`` or ``x``/``y`` coordinates; ``NaN`` cells
+  in a 2-D DataArray are masked out) or a plain list of ``(x, y)`` cell
+  centers on a regular lattice.
+
+.. code-block:: python
+
+   import stilt
+
+   state = stilt.Grid(xmin=-112.3, xmax=-111.6, ymin=40.4, ymax=41.0,
+                      xres=0.02, yres=0.02)
+   by_cell = foot.aggregate(state, time_bins=bins)        # index == state.index
+
+   sources = stilt.Mesh.from_windows(
+       [(-111.97, 40.515), (-112.015, 40.779)], 0.01, ids=["landfill", "wwtp"]
+   )
+   by_source = foot.aggregate(sources, time_bins=bins)    # index == ["landfill", "wwtp"]
+
+   counties = stilt.Mesh.from_file("counties.shp", ids="NAME")
+   by_county = foot.aggregate(counties, time_bins=bins)   # reprojected as needed
+
+   sectors = stilt.Zones.from_labels(state, labels)   # one label per grid cell
+   by_sector = foot.aggregate(sectors, time_bins=bins)
+
+Geometries in another CRS are reprojected onto the footprint's raster.  The
+raster must be fine enough to resolve the target cells: ``aggregate`` warns
+when the smallest target cell spans fewer than two native cells.
+
+Polygon overlaps are computed with shapely by default.  If the optional
+`exactextract <https://github.com/isciences/exactextract>`_ package is
+installed (``pip install exactextract``; it is not a PYSTILT dependency) it is
+used automatically and is roughly a hundred times faster on large rasters,
+with identical fractions.  Pass ``backend="shapely"`` or
+``backend="exactextract"`` to :func:`stilt.geometry.overlap_weights` to force
+one.  To choose a
+raster for a geometry up front, or to rebuild a stored footprint at higher
+fidelity from its particles:
+
+.. code-block:: python
+
+   hexes = stilt.Mesh.from_h3(8, bounds=state)
+   grid = stilt.Grid.from_geometry(hexes, cells_per_target=4)   # snapped, rounded
+   traj = model.trajectories.load_one(path)
+   foot = traj.footprint(stilt.FootprintConfig(grid=grid))
 
 Plotting shortcuts
 ------------------

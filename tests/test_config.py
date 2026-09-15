@@ -9,6 +9,7 @@ from stilt.config import (
     ErrorParams,
     FirstOrderLifetimeTransformSpec,
     FootprintConfig,
+    Grid,
     MetConfig,
     ModelConfig,
     ModelParams,
@@ -522,3 +523,114 @@ def test_model_config_unknown_keys_raise(tmp_path):
 
     with pytest.raises(ValidationError, match="mystery_param"):
         ModelConfig.from_yaml(path)
+
+
+# ---------------------------------------------------------------------------
+# FootprintConfig.geometry
+# ---------------------------------------------------------------------------
+
+
+def test_footprint_config_derives_grid_from_windows_geometry():
+    fc = FootprintConfig(
+        geometry={
+            "kind": "windows",
+            "coords": [(-111.97, 40.515), (-112.015, 40.779)],
+            "size": 0.01,
+            "ids": ["landfill", "wwtp"],
+        }
+    )
+    assert fc.geometry is not None and fc.geometry.kind == "windows"
+    assert fc.grid.xres == fc.grid.yres == pytest.approx(0.002)  # 0.01 / 4 -> 0.002
+    assert fc.grid.xmin <= -112.02 and fc.grid.ymax >= 40.784
+    mesh = fc.geometry.build()
+    assert mesh.ids == ("landfill", "wwtp")
+
+
+def test_footprint_config_cells_per_target_and_explicit_grid_wins():
+    spec = {"kind": "windows", "coords": [(0.5, 0.5)], "size": 0.1}
+    fc = FootprintConfig(geometry=spec, cells_per_target=10)
+    assert fc.grid.xres == pytest.approx(0.01)
+    explicit = Grid(xmin=0.0, xmax=1.0, ymin=0.0, ymax=1.0, xres=0.05, yres=0.05)
+    fc2 = FootprintConfig(grid=explicit, geometry=spec)
+    assert fc2.grid == explicit and fc2.geometry is not None
+
+
+def test_footprint_config_requires_grid_or_geometry():
+    with pytest.raises(ValueError):
+        FootprintConfig()
+
+
+def test_footprint_config_h3_geometry():
+    pytest.importorskip("h3")
+    fc = FootprintConfig(
+        geometry={
+            "kind": "h3",
+            "resolution": 8,
+            "bounds": {"xmin": -112.0, "xmax": -111.8, "ymin": 40.6, "ymax": 40.8},
+        }
+    )
+    assert fc.grid.xres <= 0.0025  # res-8 hexagons are ~0.5 km across
+    assert len(fc.geometry.build()) > 50
+
+
+def test_model_config_yaml_roundtrip_with_geometry(tmp_path):
+    gpd = pytest.importorskip("geopandas")
+    import shapely
+
+    gdf = gpd.GeoDataFrame(
+        {"NAME": ["a", "b"]},
+        geometry=[
+            shapely.box(-112.0, 40.5, -111.9, 40.6),
+            shapely.box(-111.9, 40.5, -111.8, 40.6),
+        ],
+        crs="EPSG:4326",
+    )
+    shp = tmp_path / "cells.geojson"
+    gdf.to_file(shp, driver="GeoJSON")
+
+    config = ModelConfig(
+        mets={
+            "hrrr": {
+                "directory": tmp_path,
+                "file_format": "%Y%m%d_%H",
+                "file_tres": "6h",
+            }
+        },
+        n_hours=-6,
+        numpar=100,
+        footprints={
+            "cells": {"geometry": {"kind": "file", "path": str(shp), "ids": "NAME"}}
+        },
+    )
+    fc = config.footprints["cells"]
+    assert fc.grid.xres == pytest.approx(0.02)  # 0.1 / 4 -> 0.025 -> 0.02
+    assert fc.geometry is not None and fc.geometry.kind == "file"
+
+    path = tmp_path / "config.yaml"
+    config.to_yaml(path)
+    loaded = ModelConfig.from_yaml(path)
+    lfc = loaded.footprints["cells"]
+    assert lfc.grid == fc.grid
+    assert lfc.geometry == fc.geometry
+    assert lfc.geometry.build().ids == ("a", "b")
+
+
+def test_file_geometry_spec_layer_and_where(tmp_path):
+    gpd = pytest.importorskip("geopandas")
+    import shapely
+
+    from stilt.config import FileGeometrySpec
+
+    gdf = gpd.GeoDataFrame(
+        {"NAME": ["a", "b", "c"], "KEEP": [1, 1, 0]},
+        geometry=[shapely.box(i, 0, i + 1, 1) for i in range(3)],
+        crs="EPSG:4326",
+    )
+    gpkg = tmp_path / "cells.gpkg"
+    gdf.to_file(gpkg, layer="cells", driver="GPKG")
+    gdf.iloc[:1].to_file(gpkg, layer="other", driver="GPKG")
+
+    spec = FileGeometrySpec(path=str(gpkg), ids="NAME", layer="cells", where="KEEP=1")
+    mesh = spec.build()
+    assert mesh.ids == ("a", "b")
+    assert FileGeometrySpec(path=str(gpkg), layer="other").build().ids == ("0",)

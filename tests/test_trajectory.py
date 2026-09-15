@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import pyarrow as pa
 import pytest
@@ -436,3 +437,38 @@ def test_endpoints_returns_far_end_per_particle(point_receptor, tmp_path):
         point_receptor.time + pd.Timedelta(minutes=-30),
     ]
     assert (ep["run_time"] == point_receptor.time).all()
+
+
+def test_trajectories_footprint_regenerates_on_new_grid(tmp_path):
+    """Trajectories.footprint() calculates a footprint on an arbitrary grid."""
+    from stilt.config import FootprintConfig, Grid
+    from stilt.footprint import Footprint
+
+    rng = np.random.default_rng(0)
+    n = 20
+    particles = pd.DataFrame(
+        {
+            "time": [-60] * n + [-120] * n,
+            "indx": list(range(1, n + 1)) * 2,
+            "long": rng.uniform(-113.9, -113.1, n * 2),
+            "lati": rng.uniform(39.1, 39.9, n * 2),
+            "zagl": rng.uniform(5, 100, n * 2),
+            "foot": rng.uniform(0.0, 1e-3, n * 2),
+        }
+    )
+    receptor = PointReceptor("2023-01-01 12:00:00", -113.5, 39.5, 5.0)
+    traj = Trajectories.from_particles(
+        particles=particles,
+        receptor=receptor,
+        params=STILTParams(n_hours=-2, numpar=n, hnf_plume=False),
+        met_files=[Path("/tmp/met1")],
+    )
+    config = FootprintConfig(
+        grid=Grid(xmin=-114.0, xmax=-113.0, ymin=39.0, ymax=40.0, xres=0.1, yres=0.1)
+    )
+    fp = traj.footprint(config, name="coarse")
+    assert isinstance(fp, Footprint)
+    assert fp.name == "coarse"
+    assert fp.receptor == receptor
+    assert fp.config.grid == config.grid
+    assert float(fp.data.sum()) > 0
