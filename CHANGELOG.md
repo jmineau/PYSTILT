@@ -6,6 +6,8 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.0a10] - 2026-09-19
+
 ### Changed
 
 - **Pressure weighting is now derived from the particles** (X-STILT's
