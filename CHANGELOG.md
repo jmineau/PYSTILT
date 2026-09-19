@@ -6,6 +6,8 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.0a11] - 2026-09-19
+
 ### Fixed
 
 - `VerticalOperator` now rejects an unknown `mode` at construction. Because it
