@@ -6,6 +6,19 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- **Pressure weighting is now derived from the particles** (X-STILT's
+  approach). `VerticalOperator` modes `pwf` and `ak_pwf` fit a hypsometric
+  curve to the particles' first-step heights and pressures and weight each
+  particle by the pressure gap it represents, so the user no longer supplies a
+  PWF profile and the result is independent of `numpar` and profile
+  resolution. `levels` / `values` now hold only the averaging kernel. New
+  optional `surface_pressure` (hPa) pins the column bottom; `pressure_levels`
+  is removed. The `integration` and `tccon` modes are removed (`pwf` and
+  `ak_pwf` with instrument factors folded into `values`). Transformed particle
+  tables gain `xpres` and `pwf` columns.
+
 ## [0.1.0a9] - 2026-09-17
 
 ### Added

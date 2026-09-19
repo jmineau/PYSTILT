@@ -14,19 +14,16 @@ if TYPE_CHECKING:
     from .observation import Observation
 
 
-# Modes whose profile values are *layer weights* (a PWF sums to 1 across the
-# column) rather than dimensionless per-particle scalings.
+# Modes that weight each particle by the fraction of the column's air mass it
+# represents. Following X-STILT, the pressure weighting function (PWF) is
+# derived from the particles' own release pressures rather than from a
+# user-supplied profile; see ``_particle_pwf``.
 #
-# The footprint calculator divides the aggregated particle influence by
-# n_particles. To preserve the column-integrated signal, each operator level's
-# weight must be shared among the particles released nearest to that level:
-# ``weight_i = value(z_i) * n_particles / n_particles_at_level(i)``. When the
-# profile is sampled once per particle (the X-STILT convention) the level
-# counts are all one and this reduces to ``value * n_particles``; when a coarse
-# retrieval profile is supplied, the per-level count keeps the magnitude
-# independent of ``numpar``. AK-only modes do not need this correction because
-# AK_norm is already dimensionless.
-_PWF_MODES: frozenset[str] = frozenset({"pwf", "ak_pwf", "integration", "tccon"})
+# ``Footprint.calculate`` divides the aggregated influence by ``n_particles``,
+# so the weights are multiplied by ``n_particles`` to keep the weighted
+# footprint's magnitude independent of ``numpar``.
+_PWF_MODES: frozenset[str] = frozenset({"pwf", "ak_pwf"})
+_AK_MODES: frozenset[str] = frozenset({"ak", "ak_pwf"})
 
 
 def _release_coordinate(p: pd.DataFrame, coordinate: str) -> pd.Series:
@@ -48,14 +45,66 @@ def _release_coordinate(p: pd.DataFrame, coordinate: str) -> pd.Series:
     )
 
 
-def _nearest_level_index(x: np.ndarray, levels: np.ndarray) -> np.ndarray:
-    """Return, for each coordinate in *x*, the index of the nearest ascending level."""
-    if len(levels) == 1:
-        return np.zeros(len(x), dtype=int)
-    idx = np.clip(np.searchsorted(levels, x), 1, len(levels) - 1)
-    lower = levels[idx - 1]
-    upper = levels[idx]
-    return np.where(np.abs(x - lower) <= np.abs(upper - x), idx - 1, idx)
+def _particle_pwf(
+    p: pd.DataFrame, surface_pressure: float | None
+) -> tuple[pd.Series, pd.Series]:
+    """
+    Derive each particle's release pressure and pressure weight.
+
+    Follows X-STILT's ``get.wgt.*.func``: fit a hypsometric curve
+    ``ln p = b + a·z`` to the particles' first-step heights and pressures
+    (this smooths the one-time-step offset from the true release state and
+    yields a surface pressure when none is supplied), evaluate it at each
+    particle's release height, and turn the spacing between neighbouring
+    release pressures into the air mass each particle represents.
+
+    HYSPLIT spreads column particles evenly over height, each one randomized
+    within its own ``1/numpar`` slab, so a particle stands for the slab
+    centred on it: the cell edges sit midway between adjacent release
+    pressures, the surface closes the bottom, and the topmost cell mirrors its
+    lower half-width.  (X-STILT instead gives each particle the layer *below*
+    it, which shifts every weight down by half a cell and leaves the lowest
+    particle with almost none.)
+
+    Returns ``(xpres, pwf)`` indexed by ``indx``. ``pwf`` sums to the fraction
+    of the atmosphere's mass the column covers, ``(p_sfc - p_top) / p_sfc``;
+    the rest lies above the column top, where surface fluxes cannot reach the
+    receptor within the back-trajectory.
+    """
+    for col in ("pres", "zagl"):
+        if col not in p.columns:
+            raise ValueError(
+                f"Pressure weighting requires the {col!r} particle variable; "
+                "include it in STILTParams.varsiwant."
+            )
+    pres = _release_coordinate(p, "pres")
+    zagl = _release_coordinate(p, "zagl")
+    z_release = _release_coordinate(p, "xhgt") if "xhgt" in p.columns else zagl
+
+    if zagl.nunique() < 2:
+        raise ValueError(
+            "Pressure weighting needs particles released over a range of heights "
+            "(a ColumnReceptor); all particles share one release height."
+        )
+    a, b = np.polyfit(zagl.to_numpy(), np.log(pres.to_numpy()), 1)
+    if a >= 0:
+        raise ValueError(
+            "Could not fit a pressure profile to the particles (pressure does "
+            "not decrease with height)."
+        )
+    p_sfc = (
+        float(surface_pressure) if surface_pressure is not None else float(np.exp(b))
+    )
+
+    xpres = pd.Series(p_sfc * np.exp(a * z_release.to_numpy()), index=z_release.index)
+    ordered = xpres.sort_values(ascending=False)  # surface upward
+    levels = ordered.to_numpy()
+
+    mids = (levels[:-1] + levels[1:]) / 2.0
+    lower_edges = np.concatenate(([p_sfc], mids))
+    upper_edges = np.concatenate((mids, [2 * levels[-1] - mids[-1]]))
+    pwf = pd.Series((lower_edges - upper_edges) / p_sfc, index=ordered.index)
+    return xpres, pwf
 
 
 @dataclass(frozen=True, slots=True)
@@ -137,6 +186,38 @@ def apply_weighting(
     return weighting.apply(particles, context=context)
 
 
+def _ak_weights(
+    p: pd.DataFrame, operator: VerticalOperator, coordinate: str
+) -> np.ndarray:
+    """Interpolate the averaging kernel to each row's particle release coordinate."""
+    if coordinate not in p.columns:
+        raise ValueError(
+            f"Particle DataFrame has no column {coordinate!r}. "
+            "Assign release heights ('xhgt') before applying a vertical operator, "
+            "or pass coordinate='pres' for pressure-based interpolation."
+        )
+    if not operator.levels or not operator.values:
+        raise ValueError(
+            "VerticalOperator.levels and .values must both be non-empty "
+            f"for mode={operator.mode!r}."
+        )
+    levels = np.asarray(operator.levels, dtype=float)
+    values = np.asarray(operator.values, dtype=float)
+    if len(levels) != len(values):
+        raise ValueError(
+            f"VerticalOperator.levels ({len(levels)}) and .values "
+            f"({len(values)}) must have the same length."
+        )
+    sort_idx = np.argsort(levels)
+    levels = levels[sort_idx]
+    values = values[sort_idx]
+
+    # One release value per particle, broadcast along its trajectory rows.
+    per_particle = _release_coordinate(p, coordinate)
+    coords = per_particle.reindex(p["indx"].to_numpy()).to_numpy(dtype=float)
+    return np.interp(coords, levels, values, left=values[0], right=values[-1])
+
+
 def _apply_vertical_operator_impl(
     particles: pd.DataFrame,
     operator: VerticalOperator,
@@ -157,50 +238,16 @@ def _apply_vertical_operator_impl(
     if operator.mode == "uniform":
         return p
 
-    if coordinate not in p.columns:
-        raise ValueError(
-            f"Particle DataFrame has no column {coordinate!r}. "
-            "Assign release heights ('xhgt') before applying a vertical operator, "
-            "or pass coordinate='pres' for pressure-based interpolation."
-        )
-
-    if not operator.levels or not operator.values:
-        raise ValueError(
-            "VerticalOperator.levels and .values must both be non-empty "
-            f"for mode={operator.mode!r}."
-        )
-
-    levels = np.asarray(operator.levels, dtype=float)
-    values = np.asarray(operator.values, dtype=float)
-
-    if len(levels) != len(values):
-        raise ValueError(
-            f"VerticalOperator.levels ({len(levels)}) and .values "
-            f"({len(values)}) must have the same length."
-        )
-
-    sort_idx = np.argsort(levels)
-    levels = levels[sort_idx]
-    values = values[sort_idx]
-
-    # One release value per particle, broadcast along its trajectory rows.
-    per_particle = _release_coordinate(p, coordinate)
-    coords = per_particle.reindex(p["indx"].to_numpy()).to_numpy(dtype=float)
+    weights = np.ones(len(p))
+    if operator.mode in _AK_MODES:
+        weights = weights * _ak_weights(p, operator, coordinate)
 
     if operator.mode in _PWF_MODES:
-        # Layer weights: each particle takes the value of its nearest level
-        # (piecewise constant), shared among the particles at that level.
-        n_particles = len(per_particle)
-        level_counts = np.bincount(
-            _nearest_level_index(per_particle.to_numpy(dtype=float), levels),
-            minlength=len(levels),
-        )
-        row_levels = _nearest_level_index(coords, levels)
-        weights = (
-            values[row_levels] * n_particles / np.maximum(level_counts[row_levels], 1)
-        )
-    else:
-        weights = np.interp(coords, levels, values, left=values[0], right=values[-1])
+        xpres, pwf = _particle_pwf(p, operator.surface_pressure)
+        indx = p["indx"].to_numpy()
+        p["xpres"] = xpres.reindex(indx).to_numpy()
+        p["pwf"] = pwf.reindex(indx).to_numpy()
+        weights = weights * p["pwf"].to_numpy() * len(pwf)
 
     p["foot_before_weight"] = p["foot"]
     p["foot"] = p["foot"] * weights

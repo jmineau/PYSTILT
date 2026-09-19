@@ -61,7 +61,7 @@ class _ConfiguredVerticalOperatorTransform:
             mode=spec.mode,
             levels=list(spec.levels),
             values=list(spec.values),
-            pressure_levels=list(spec.pressure_levels),
+            surface_pressure=spec.surface_pressure,
             metadata=dict(spec.metadata),
         )
         self._coordinate = spec.coordinate

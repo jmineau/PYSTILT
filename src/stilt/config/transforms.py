@@ -10,22 +10,29 @@ class VerticalOperatorTransformSpec(BaseModel):
     kind: Literal["vertical_operator"] = Field(
         description="Discriminator identifying this transform as a vertical operator.",
     )
-    mode: Literal["none", "uniform", "ak", "pwf", "ak_pwf", "integration", "tccon"] = (
-        Field(
-            description="Built-in vertical-operator mode used to interpret the levels and values arrays."
+    mode: Literal["none", "uniform", "ak", "pwf", "ak_pwf"] = Field(
+        description=(
+            "Built-in vertical-operator mode. 'ak' interpolates an averaging "
+            "kernel from levels/values; 'pwf' weights particles by the air mass "
+            "they represent, derived from their release pressures; 'ak_pwf' "
+            "does both."
         )
     )
     levels: list[float] = Field(
         default_factory=list,
-        description="Vertical coordinates paired with the operator values.",
+        description="Vertical coordinates of the averaging-kernel values ('ak' and 'ak_pwf' only).",
     )
     values: list[float] = Field(
         default_factory=list,
-        description="Operator values applied at the specified vertical levels.",
+        description="Normalized averaging-kernel values at the specified levels ('ak' and 'ak_pwf' only).",
     )
-    pressure_levels: list[float] = Field(
-        default_factory=list,
-        description="Optional pressure grid used by pressure-based operator modes.",
+    surface_pressure: float | None = Field(
+        default=None,
+        gt=0,
+        description=(
+            "Surface pressure (hPa) closing the bottom of the column for pressure "
+            "weighting. Estimated from the particles when omitted."
+        ),
     )
     coordinate: str = Field(
         default="xhgt",
@@ -39,11 +46,11 @@ class VerticalOperatorTransformSpec(BaseModel):
     @model_validator(mode="after")
     def _validate_operator_shape(self) -> Self:
         """Validate that operator level and value arrays have matching lengths."""
-        if self.mode not in {"none", "uniform"}:
+        if self.mode in {"ak", "ak_pwf"}:
             if not self.levels or not self.values:
                 raise ValueError(
-                    "Vertical operator transforms require non-empty levels and "
-                    "values unless mode is 'none' or 'uniform'."
+                    "Vertical operator transforms with an averaging kernel "
+                    "('ak', 'ak_pwf') require non-empty levels and values."
                 )
             if len(self.levels) != len(self.values):
                 raise ValueError(

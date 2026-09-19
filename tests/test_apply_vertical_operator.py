@@ -1,5 +1,6 @@
 """Tests for apply_vertical_operator."""
 
+import numpy as np
 import pandas as pd
 import pytest
 
@@ -49,37 +50,6 @@ def test_ak_mode_interpolates_and_weights_foot():
     assert result["foot"].tolist() == pytest.approx([0.0, 1.0])
 
 
-def test_pwf_mode_scales_by_n_particles():
-    n = 4
-    # Uniform PWF: each particle gets 0.25, which × 4 particles = 1.0.
-    p = _make_particles(n=n, heights=[100.0, 200.0, 300.0, 400.0])
-    operator = VerticalOperator(
-        mode="pwf",
-        levels=[100.0, 200.0, 300.0, 400.0],
-        values=[0.25, 0.25, 0.25, 0.25],
-    )
-    result = apply_vertical_operator(p, operator)
-
-    # weight = 0.25 * 4 = 1.0, foot unchanged
-    assert result["foot"].tolist() == pytest.approx([1.0, 1.0, 1.0, 1.0])
-
-
-def test_ak_pwf_mode_scales_by_n_particles():
-    n = 2
-    # AK_norm × PWF: lower particle gets 0.1*0.5, upper gets 0.9*0.5.
-    p = _make_particles(n=n, heights=[0.0, 1000.0])
-    operator = VerticalOperator(
-        mode="ak_pwf",
-        levels=[0.0, 1000.0],
-        values=[0.05, 0.45],  # AK*PWF pre-combined
-    )
-    result = apply_vertical_operator(p, operator)
-
-    # weight = value * n_particles (=2)
-    expected = [0.05 * 2, 0.45 * 2]
-    assert result["foot"].tolist() == pytest.approx(expected)
-
-
 def test_pressure_coordinate_sorts_ascending():
     # Profiles stored in top-to-bottom order (decreasing pressure).
     # Particles near 1000 hPa (surface) should get weight=1.0,
@@ -90,7 +60,6 @@ def test_pressure_coordinate_sorts_ascending():
         mode="ak",
         levels=[900.0, 300.0],  # stored high-to-low pressure
         values=[1.0, 0.0],
-        pressure_levels=[900.0, 300.0],
     )
     result = apply_vertical_operator(p, operator, coordinate="pres")
 
@@ -145,55 +114,6 @@ def test_foot_before_weight_preserved():
     assert result["foot"].tolist() == pytest.approx([0.2, 0.5, 0.8])
 
 
-def test_pwf_mode_shares_level_weight_across_particles_at_that_level():
-    # 1000 particles spread over a 5-level PWF (0.2 each).  The weighted
-    # footprint must keep the same magnitude as the unweighted one instead of
-    # scaling with numpar (reported as a ~numpar-fold inflation).
-    n = 1000
-    heights = [100.0 + 400.0 * i / (n - 1) for i in range(n)]
-    p = _make_particles(n=n, heights=heights)
-    operator = VerticalOperator(
-        mode="pwf",
-        levels=[100.0, 200.0, 300.0, 400.0, 500.0],
-        values=[0.2] * 5,
-    )
-    result = apply_vertical_operator(p, operator)
-
-    # Column-integrated signal: mean weight over particles equals sum(values).
-    assert result["foot"].sum() / n == pytest.approx(1.0)
-    # Interior levels hold 250 particles each -> weight 0.2 * 1000 / 250.
-    mid = result.loc[result["xhgt"].between(260.0, 340.0), "foot"]
-    assert mid.to_numpy() == pytest.approx(0.8)
-
-
-def test_pwf_mode_level_counts_use_particles_not_rows():
-    # Two particles at two levels, each with three trajectory rows.  Row
-    # count must not leak into the per-level particle count.
-    p = pd.DataFrame(
-        {
-            "indx": [1, 1, 1, 2, 2, 2],
-            "xhgt": [0.0, 0.0, 0.0, 1000.0, 1000.0, 1000.0],
-            "foot": [1.0] * 6,
-        }
-    )
-    operator = VerticalOperator(mode="pwf", levels=[0.0, 1000.0], values=[0.4, 0.6])
-    result = apply_vertical_operator(p, operator)
-    assert result["foot"].tolist() == pytest.approx([0.8] * 3 + [1.2] * 3)
-
-
-def test_ak_pwf_mode_preserves_averaging_kernel_scale():
-    # Combined AK*PWF profile whose sum is 0.5 (AK_norm = 0.5 everywhere):
-    # the column-integrated weight must stay 0.5, not be renormalized to 1.
-    n = 100
-    heights = [10.0 * i for i in range(n)]
-    p = _make_particles(n=n, heights=heights)
-    operator = VerticalOperator(
-        mode="ak_pwf", levels=[0.0, 500.0, 1000.0], values=[0.125, 0.25, 0.125]
-    )
-    result = apply_vertical_operator(p, operator)
-    assert result["foot"].sum() / n == pytest.approx(0.5)
-
-
 def test_pressure_coordinate_uses_release_row_for_whole_trajectory():
     # ``pres`` changes along each trajectory; the weight must come from the
     # release row (smallest |time|) and be constant per particle.
@@ -208,3 +128,256 @@ def test_pressure_coordinate_uses_release_row_for_whole_trajectory():
     operator = VerticalOperator(mode="ak", levels=[600.0, 900.0], values=[0.0, 1.0])
     result = apply_vertical_operator(p, operator, coordinate="pres")
     assert result["foot"].tolist() == pytest.approx([1.0] * 3 + [1.0 / 3.0] * 3)
+
+
+# ---------------------------------------------------------------------------
+# Particle-derived pressure weighting
+#
+# Reference atmosphere for these tests: isothermal, so pressure falls off
+# exactly as p(z) = P_SFC * exp(-z / SCALE_HEIGHT).  That makes every expected
+# weight computable in closed form.
+# ---------------------------------------------------------------------------
+
+P_SFC = 1000.0
+SCALE_HEIGHT = 8000.0
+
+
+def _column_particles(
+    n: int,
+    z_top: float = 3000.0,
+    z_bottom: float = 0.0,
+    rows_per_particle: int = 1,
+) -> pd.DataFrame:
+    """
+    Particles released evenly in height through an isothermal atmosphere.
+
+    ``rows_per_particle`` > 1 adds later trajectory steps that drift in height
+    and pressure, so tests can check that only the release row is used.
+    """
+    z = np.linspace(z_bottom, z_top, n)
+    pres = P_SFC * np.exp(-z / SCALE_HEIGHT)
+    frames = [
+        pd.DataFrame(
+            {
+                "indx": np.arange(1, n + 1),
+                "time": -(step + 1.0),
+                "xhgt": z,
+                "zagl": z + 10.0 * step,
+                "pres": pres * (1.0 - 0.001 * step),
+                "foot": 1.0,
+            }
+        )
+        for step in range(rows_per_particle)
+    ]
+    return pd.concat(frames, ignore_index=True)
+
+
+def _expected_pwf(n: int, z_top: float = 3000.0, z_bottom: float = 0.0) -> np.ndarray:
+    """
+    Closed-form weights for :func:`_column_particles`.
+
+    Each particle owns the slab centred on it: edges midway between adjacent
+    release pressures, the surface closing the bottom, and the top slab
+    mirroring its lower half-width.
+    """
+    levels = P_SFC * np.exp(-np.linspace(z_bottom, z_top, n) / SCALE_HEIGHT)
+    mids = (levels[:-1] + levels[1:]) / 2.0
+    lower = np.concatenate(([P_SFC], mids))
+    upper = np.concatenate((mids, [2 * levels[-1] - mids[-1]]))
+    return (lower - upper) / P_SFC
+
+
+def test_pwf_weights_match_cell_edges():
+    n = 5
+    result = apply_vertical_operator(_column_particles(n), VerticalOperator(mode="pwf"))
+
+    expected = _expected_pwf(n)
+    assert result["pwf"].to_numpy() == pytest.approx(expected, rel=1e-6)
+    # Every particle carries real weight, including the one at the surface.
+    assert (result["pwf"].to_numpy() > 0).all()
+    # weight = pwf x n_particles, cancelling Footprint.calculate's mean.
+    assert result["foot"].to_numpy() == pytest.approx(expected * n, rel=1e-6)
+    assert result["foot_before_weight"].tolist() == [1.0] * n
+
+
+def test_pwf_release_pressure_follows_hypsometric_fit():
+    n = 6
+    result = apply_vertical_operator(_column_particles(n), VerticalOperator(mode="pwf"))
+    expected = P_SFC * np.exp(-np.linspace(0.0, 3000.0, n) / SCALE_HEIGHT)
+    assert result["xpres"].to_numpy() == pytest.approx(expected, rel=1e-6)
+
+
+def test_pwf_sums_to_fraction_of_column_covered():
+    # A 0-3 km column holds 1 - exp(-3000/8000) ~ 31% of the atmosphere's mass.
+    result = apply_vertical_operator(
+        _column_particles(200), VerticalOperator(mode="pwf")
+    )
+    assert result["pwf"].sum() == pytest.approx(
+        1.0 - np.exp(-3000.0 / SCALE_HEIGHT), rel=1e-2
+    )
+    assert result["pwf"].sum() < 1.0
+
+
+def test_pwf_taller_column_covers_more_mass():
+    shallow = apply_vertical_operator(
+        _column_particles(100, z_top=1000.0), VerticalOperator(mode="pwf")
+    )
+    deep = apply_vertical_operator(
+        _column_particles(100, z_top=6000.0), VerticalOperator(mode="pwf")
+    )
+    assert deep["pwf"].sum() > shallow["pwf"].sum()
+
+
+def test_pwf_weights_decrease_with_height():
+    # Equal height steps span less air mass higher up.
+    result = apply_vertical_operator(
+        _column_particles(20), VerticalOperator(mode="pwf")
+    )
+    pwf = result.sort_values("xhgt")["pwf"].to_numpy()
+    assert (np.diff(pwf[1:]) < 0).all()
+
+
+def test_pwf_footprint_magnitude_independent_of_numpar():
+    # The bug Jacob Bushey hit: weighted footprints scaled with numpar.
+    small = apply_vertical_operator(
+        _column_particles(100), VerticalOperator(mode="pwf")
+    )
+    large = apply_vertical_operator(
+        _column_particles(1000), VerticalOperator(mode="pwf")
+    )
+    # Footprint.calculate divides by the particle count, so compare sum / N.
+    # A 10x change in numpar moves the result by well under a percent; the
+    # residual is the top cell's half-width, not a scaling with numpar.
+    assert small["foot"].sum() / 100 == pytest.approx(
+        large["foot"].sum() / 1000, rel=1e-2
+    )
+
+
+def test_pwf_magnitude_comparable_to_unweighted_footprint():
+    # A weighted column footprint should stay the same order of magnitude as
+    # an unweighted one, not be inflated or crushed by numpar.
+    p = _column_particles(500)
+    weighted = apply_vertical_operator(p, VerticalOperator(mode="pwf"))
+    ratio = weighted["foot"].sum() / p["foot"].sum()
+    assert 0.1 < ratio < 10.0
+
+
+def test_pwf_uses_release_row_not_drifted_rows():
+    p = _column_particles(5, rows_per_particle=3)
+    result = apply_vertical_operator(p, VerticalOperator(mode="pwf"))
+
+    # One weight per particle, broadcast along its whole trajectory.
+    assert (result.groupby("indx")["foot"].nunique() == 1).all()
+    release = p.loc[p["time"] == -1.0].set_index("indx")["pres"]
+    got = result.drop_duplicates("indx").set_index("indx")["xpres"]
+    assert got.to_numpy() == pytest.approx(release.to_numpy(), rel=1e-6)
+
+
+def test_pwf_surface_pressure_override_rescales_column():
+    p = _column_particles(50)
+    fitted = apply_vertical_operator(p, VerticalOperator(mode="pwf"))
+    pinned = apply_vertical_operator(
+        p, VerticalOperator(mode="pwf", surface_pressure=900.0)
+    )
+    # Same column shape, referenced to the supplied surface pressure.
+    assert pinned["xpres"].to_numpy() == pytest.approx(
+        fitted["xpres"].to_numpy() * 0.9, rel=1e-6
+    )
+    assert pinned["pwf"].sum() == pytest.approx(fitted["pwf"].sum(), rel=1e-6)
+
+
+def test_pwf_elevated_column_bottom_assigns_air_below_to_lowest_particle():
+    # A column starting at 500 m still measures the air beneath it; the lowest
+    # particle carries that sub-column.
+    result = apply_vertical_operator(
+        _column_particles(20, z_bottom=500.0), VerticalOperator(mode="pwf")
+    )
+    lowest = result.sort_values("xhgt")["pwf"].iloc[0]
+    second = result.sort_values("xhgt")["pwf"].iloc[1]
+    assert lowest > second
+
+
+def test_ak_pwf_scales_pwf_by_averaging_kernel():
+    p = _column_particles(50)
+    pwf_only = apply_vertical_operator(p, VerticalOperator(mode="pwf"))
+    both = apply_vertical_operator(
+        p, VerticalOperator(mode="ak_pwf", levels=[0.0, 3000.0], values=[0.5, 0.5])
+    )
+    assert both["foot"].to_numpy() == pytest.approx(pwf_only["foot"].to_numpy() * 0.5)
+
+
+def test_ak_pwf_kernel_on_height_varies_with_release_height():
+    p = _column_particles(50)
+    result = apply_vertical_operator(
+        p, VerticalOperator(mode="ak_pwf", levels=[0.0, 3000.0], values=[1.0, 0.0])
+    )
+    ratio = (
+        result["foot"].to_numpy()
+        / apply_vertical_operator(p, VerticalOperator(mode="pwf"))["foot"].to_numpy()
+    )
+    # Kernel falls linearly from 1 at the surface to 0 at the column top.
+    assert ratio[0] == pytest.approx(1.0, abs=1e-6)
+    assert ratio[-1] == pytest.approx(0.0, abs=1e-6)
+
+
+def test_ak_pwf_kernel_on_pressure_coordinate():
+    p = _column_particles(50)
+    # Kernel defined on pressure: 1 at 1000 hPa (surface), 0 at 500 hPa.
+    result = apply_vertical_operator(
+        p,
+        VerticalOperator(mode="ak_pwf", levels=[500.0, 1000.0], values=[0.0, 1.0]),
+        coordinate="pres",
+    )
+    pwf_only = apply_vertical_operator(p, VerticalOperator(mode="pwf"))
+    ratio = result["foot"].to_numpy() / pwf_only["foot"].to_numpy()
+    xpres = result["xpres"].to_numpy()
+    assert ratio == pytest.approx(np.clip((xpres - 500.0) / 500.0, 0.0, 1.0), rel=1e-6)
+
+
+def test_ak_pwf_requires_kernel_levels_and_values():
+    p = _column_particles(10)
+    with pytest.raises(ValueError, match="non-empty"):
+        apply_vertical_operator(p, VerticalOperator(mode="ak_pwf"))
+
+
+def test_pwf_ignores_levels_and_values():
+    p = _column_particles(10)
+    bare = apply_vertical_operator(p, VerticalOperator(mode="pwf"))
+    noisy = apply_vertical_operator(
+        p, VerticalOperator(mode="pwf", levels=[0.0, 1.0], values=[9.0, 9.0])
+    )
+    assert noisy["foot"].to_numpy() == pytest.approx(bare["foot"].to_numpy())
+
+
+def test_pwf_requires_pressure_variable():
+    p = _column_particles(5).drop(columns=["pres"])
+    with pytest.raises(ValueError, match="'pres'"):
+        apply_vertical_operator(p, VerticalOperator(mode="pwf"))
+
+
+def test_pwf_requires_zagl_variable():
+    p = _column_particles(5).drop(columns=["zagl"])
+    with pytest.raises(ValueError, match="'zagl'"):
+        apply_vertical_operator(p, VerticalOperator(mode="pwf"))
+
+
+def test_pwf_rejects_single_release_height():
+    p = _column_particles(5)
+    p["zagl"] = 100.0
+    with pytest.raises(ValueError, match="range of heights"):
+        apply_vertical_operator(p, VerticalOperator(mode="pwf"))
+
+
+def test_pwf_rejects_pressure_increasing_with_height():
+    p = _column_particles(10)
+    p["pres"] = 900.0 + p["zagl"] / 100.0
+    with pytest.raises(ValueError, match="does not decrease with height"):
+        apply_vertical_operator(p, VerticalOperator(mode="pwf"))
+
+
+def test_pwf_reweighting_restores_original_foot():
+    p = _column_particles(10)
+    once = apply_vertical_operator(p, VerticalOperator(mode="pwf"))
+    twice = apply_vertical_operator(once, VerticalOperator(mode="pwf"))
+    assert twice["foot"].to_numpy() == pytest.approx(once["foot"].to_numpy())
+    assert twice["foot_before_weight"].tolist() == [1.0] * 10

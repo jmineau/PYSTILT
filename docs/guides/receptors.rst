@@ -50,9 +50,10 @@ ColumnReceptor
 --------------
 
 Use when the measurement integrates over a vertical range at a single
-horizontal position.  STILT releases particles at both ``bottom`` and ``top``
-and the footprints are averaged with weighting supplied externally (e.g. an
-averaging kernel).
+horizontal position.  HYSPLIT releases particles uniformly in height between
+``bottom`` and ``top``.  To turn the result into a mass-weighted column
+footprint (with an optional averaging kernel), add a ``vertical_operator``
+transform — see :doc:`/advanced/observations`.
 
 .. code-block:: python
 

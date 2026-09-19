@@ -74,7 +74,7 @@ Each footprint can declare particle transforms in ``config.yaml``:
          - kind: vertical_operator
            mode: ak_pwf
            levels: [0.0, 1000.0, 2000.0]
-           values: [0.2, 0.5, 0.3]
+           values: [1.0, 0.9, 0.7]
          - kind: first_order_lifetime
            lifetime_hours: 4.0
 
@@ -85,3 +85,50 @@ The built-in transform specs are intentionally small:
 
 That keeps configuration readable while still covering useful column and simple
 chemistry workflows.
+
+Vertical weighting for column receptors
+---------------------------------------
+
+A column instrument averages the mixing ratio over air mass, but HYSPLIT
+releases column particles uniformly in *height*, so a plain particle mean
+over-weights the thin upper layers.  The ``vertical_operator`` transform fixes
+that with two ingredients:
+
+``pwf`` — pressure weighting function
+   Derived from the particles themselves, following X-STILT.  A hypsometric
+   curve is fit to the particles' first-step heights and pressures and
+   evaluated at each release height; each particle then carries the slab of air
+   centred on it, so a particle near the ground counts for more than one aloft.
+   Nothing needs to be supplied.  Pass ``surface_pressure`` (hPa) to reference
+   the profile to the retrieval's surface pressure instead of the fitted value.
+   Requires ``pres`` and ``zagl`` in ``varsiwant`` (both are defaults).
+
+``ak`` — averaging kernel
+   Supplied by the user as ``levels`` / ``values`` (normalized, dimensionless).
+   ``levels`` are release heights AGL in metres by default; set
+   ``coordinate: pres`` when the kernel is on pressure levels.  Fold
+   instrument-specific factors (e.g. TCCON's wet-air scaling) into ``values``.
+
+``ak_pwf`` combines both and is the usual choice for satellite and TCCON
+columns.
+
+Two things are worth knowing about the result:
+
+- The weights sum to the fraction of the atmosphere's mass the column covers
+  (about 0.3 for a 0-3 km column), not to one.  Air above the column top
+  cannot be reached by surface fluxes within the back-trajectory, so the
+  footprint is complete; the remaining fraction belongs to the prior profile
+  if you are building a full column simulation.
+- The weighted footprint's magnitude does not depend on ``numpar``.
+
+The transformed particle table carries ``xpres`` (release pressure, hPa) and
+``pwf`` columns so you can inspect the weighting directly:
+
+.. code-block:: python
+
+   weighted = apply_vertical_operator(particles, VerticalOperator(mode="pwf"))
+   weighted.drop_duplicates("indx")[["xhgt", "xpres", "pwf"]]
+
+A column whose bottom sits above the ground still measures the air beneath it,
+so the lowest particle carries that whole sub-column.  Start the receptor at
+or near the surface unless you intend that.
