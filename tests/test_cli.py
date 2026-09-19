@@ -8,8 +8,8 @@ from typer.testing import CliRunner
 
 import stilt.__main__
 from stilt.cli import _resolve_project_dir, app
-from stilt.config import FootprintConfig, Grid, ModelConfig
 from stilt.completion import StatusCounts
+from stilt.config import FootprintConfig, Grid, ModelConfig
 
 runner = CliRunner()
 

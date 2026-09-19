@@ -1,6 +1,5 @@
 """Tests for stilt.service.kubernetes manifest helpers."""
 
-from stilt.service.postgres import POSTGRES_PENDING_SIMULATIONS_SQL
 from stilt.service.kubernetes import (
     db_secret_env,
     scaled_object_manifest,
@@ -12,6 +11,7 @@ from stilt.service.kubernetes import (
     worker_deployment_manifest,
     worker_job_manifest,
 )
+from stilt.service.postgres import POSTGRES_PENDING_SIMULATIONS_SQL
 
 
 def test_service_name_uses_project_slug():
