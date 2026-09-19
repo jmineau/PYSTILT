@@ -6,6 +6,16 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- `VerticalOperator` now rejects an unknown `mode` at construction. Because it
+  is a plain dataclass its `Literal` annotation is not enforced at runtime, so
+  a mode retired in 0.1.0a10 (`integration`, `tccon`) fell straight through
+  `apply_vertical_operator` leaving `foot` unweighted while still adding
+  `foot_before_weight` — a silent no-op that looked like weighting had been
+  applied. Retired modes now raise and name their replacement. The declarative
+  `transforms` path was never affected; pydantic validated it.
+
 ## [0.1.0a10] - 2026-09-19
 
 ### Changed

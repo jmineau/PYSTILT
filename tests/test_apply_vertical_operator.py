@@ -381,3 +381,33 @@ def test_pwf_reweighting_restores_original_foot():
     twice = apply_vertical_operator(once, VerticalOperator(mode="pwf"))
     assert twice["foot"].to_numpy() == pytest.approx(once["foot"].to_numpy())
     assert twice["foot_before_weight"].tolist() == [1.0] * 10
+
+
+# ---------------------------------------------------------------------------
+# Mode validation
+#
+# VerticalOperator is a plain dataclass, so its Literal annotation is not
+# enforced at runtime. Without an explicit check an unknown mode used to fall
+# through apply_vertical_operator leaving foot unweighted while still adding
+# foot_before_weight -- a silent no-op that looked like it had worked.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("retired", "replacement"), [("integration", "pwf"), ("tccon", "ak_pwf")]
+)
+def test_retired_modes_raise_and_name_their_replacement(retired, replacement):
+    with pytest.raises(ValueError, match=f"removed in 0.1.0a10.*{replacement}"):
+        VerticalOperator(mode=retired, levels=[0.0, 3000.0], values=[1.0, 0.4])
+
+
+def test_unknown_mode_raises_and_lists_valid_modes():
+    with pytest.raises(ValueError, match="Unknown vertical-operator mode"):
+        VerticalOperator(mode="nonsense")
+
+
+@pytest.mark.parametrize("mode", ["none", "uniform", "ak", "pwf", "ak_pwf"])
+def test_every_supported_mode_constructs(mode):
+    assert (
+        VerticalOperator(mode=mode, levels=[0.0, 1.0], values=[1.0, 1.0]).mode == mode
+    )
