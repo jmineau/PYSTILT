@@ -19,6 +19,13 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `ak_pwf` with instrument factors folded into `values`). Transformed particle
   tables gain `xpres` and `pwf` columns.
 
+### Added
+
+- Integration tests for pressure weighting against real HYSPLIT trajectories
+  (`tests/test_pwf_integration.py`), covering hypsometric fit quality through
+  a winter inversion, weight physicality, `numpar` independence, and the
+  particle scatter that makes the fit necessary.
+
 ## [0.1.0a9] - 2026-09-17
 
 ### Added
