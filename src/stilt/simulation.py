@@ -378,6 +378,12 @@ class Simulation:
 
         Parameters
         ----------
+        timeout : int, optional
+            Wall-clock cap in seconds for each hycs_std run. Defaults to
+            ``params.timeout``, so a project can cap wedged HYSPLIT processes from
+            ``config.yaml`` without every caller passing it.
+        rm_dat : bool, optional
+            Defaults to ``params.rm_dat``.
         write : bool
             If True, persist trajectories (and error trajectories if present) to
             ``self.traj_path`` / ``self.error_path``.
@@ -389,6 +395,8 @@ class Simulation:
         """
         if rm_dat is None:
             rm_dat = self.params.rm_dat
+        if timeout is None:
+            timeout = getattr(self.params, "timeout", None)
 
         # If the main trajectory already exists with matching (non-error) params
         # and only the error trajectory is needed, run the error pass alone — the
@@ -484,6 +492,7 @@ class Simulation:
 
         if traj is None:
             # Auto-run, threading write so callers with write=False stay in-memory.
+            # timeout=None picks up params.timeout inside run_trajectories.
             self.run_trajectories(write=write)
             traj = self.error_trajectories if error else self.trajectories
 

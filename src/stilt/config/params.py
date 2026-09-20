@@ -39,6 +39,16 @@ class ModelParams(BaseModel):
         True,
         description="Remove HYSPLIT binary output files (*.dat) after parsing to save disk space.",
     )
+    timeout: int | None = Field(
+        None,
+        description=(
+            "Wall-clock cap in seconds on a single hycs_std run. A wedged HYSPLIT process "
+            "otherwise blocks its worker forever (proc.wait has no deadline), so one bad "
+            "receptor can hold a batch worker until the Slurm wall time kills it. With a "
+            "timeout the run raises HYSPLITTimeoutError, which the execution loop already "
+            "records as a failure and moves past. Leave unset to wait indefinitely."
+        ),
+    )
     varsiwant: list[
         Literal[
             "time",
