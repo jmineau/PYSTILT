@@ -610,3 +610,90 @@ def test_prepare_writes_zicontrol_when_enabled(tmp_path, point_receptor):
     assert zicontrol.exists()
     lines = zicontrol.read_text().strip().splitlines()
     assert lines[0] == "24"
+
+
+# ---------------------------------------------------------------------------
+# Custom HYSPLIT build (STILTParams.exe_dir)
+# ---------------------------------------------------------------------------
+
+
+def _fake_build(path, marker="fake binary"):
+    path.mkdir(parents=True, exist_ok=True)
+    (path / "hycs_std").write_text(marker)
+    return path
+
+
+def _exe_driver(tmp_path, point_receptor, *, params_exe=None, arg_exe=None, sim="sim"):
+    params = STILTParams(
+        n_hours=-24,
+        numpar=10,
+        hnf_plume=False,
+        exe_dir=params_exe,
+        varsiwant=["time", "indx", "long", "lati", "zagl", "foot"],
+    )
+    return HYSPLITDriver(
+        directory=tmp_path / sim,
+        receptor=point_receptor,
+        params=params,
+        met_files=[tmp_path / "met" / "dummy"],
+        exe_dir=arg_exe,
+    )
+
+
+def test_exe_dir_from_params_is_used(tmp_path, point_receptor):
+    build = _fake_build(tmp_path / "my_build", "patched")
+    runner = _exe_driver(tmp_path, point_receptor, params_exe=build)
+    runner.prepare()
+    assert (tmp_path / "sim" / "hycs_std").read_text() == "patched"
+
+
+def test_explicit_exe_dir_argument_beats_params(tmp_path, point_receptor):
+    from_params = _fake_build(tmp_path / "a", "from params")
+    from_arg = _fake_build(tmp_path / "b", "from argument")
+    runner = _exe_driver(
+        tmp_path, point_receptor, params_exe=from_params, arg_exe=from_arg
+    )
+    runner.prepare()
+    assert (tmp_path / "sim" / "hycs_std").read_text() == "from argument"
+
+
+def test_default_is_the_bundled_binary(tmp_path, point_receptor):
+    runner = _exe_driver(tmp_path, point_receptor)
+    assert runner.exe_dir.name in {"linux_x64", "macos_x64"}
+
+
+def test_exe_dir_without_hycs_std_raises(tmp_path, point_receptor):
+    empty = tmp_path / "empty"
+    empty.mkdir()
+    runner = _exe_driver(tmp_path, point_receptor, params_exe=empty)
+    with pytest.raises(FileNotFoundError, match="hycs_std"):
+        runner.prepare()
+
+
+def test_only_hycs_std_is_linked_from_a_custom_build_dir(tmp_path, point_receptor):
+    # A real HYSPLIT exec/ directory holds dozens of other programs.
+    build = _fake_build(tmp_path / "exec")
+    (build / "Makefile").write_text("")
+    (build / "concplot").write_text("")
+    runner = _exe_driver(tmp_path, point_receptor, params_exe=build)
+    runner.prepare()
+    sim = tmp_path / "sim"
+    assert (sim / "hycs_std").exists()
+    assert not (sim / "Makefile").exists()
+    assert not (sim / "concplot").exists()
+
+
+def test_reused_sim_directory_is_relinked_to_the_new_build(tmp_path, point_receptor):
+    old = _fake_build(tmp_path / "old", "old build")
+    new = _fake_build(tmp_path / "new", "new build")
+    _exe_driver(tmp_path, point_receptor, params_exe=old).prepare()
+    assert (tmp_path / "sim" / "hycs_std").read_text() == "old build"
+    _exe_driver(tmp_path, point_receptor, params_exe=new).prepare()
+    assert (tmp_path / "sim" / "hycs_std").read_text() == "new build"
+
+
+def test_exe_dir_is_not_written_to_setup_cfg(tmp_path, point_receptor):
+    build = _fake_build(tmp_path / "my_build")
+    runner = _exe_driver(tmp_path, point_receptor, params_exe=build)
+    runner.prepare()
+    assert "exe_dir" not in (tmp_path / "sim" / "SETUP.CFG").read_text().lower()

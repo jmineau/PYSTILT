@@ -132,19 +132,33 @@ class HYSPLITDriver:
         self.receptor = receptor
         self.params = params
         self.met_files = met_files
-        self.exe_dir = Path(exe_dir) if exe_dir is not None else _bundled_exe_dir()
+        # explicit argument > STILTParams.exe_dir > binary bundled with the package
+        chosen = exe_dir if exe_dir is not None else params.exe_dir
+        self.exe_dir = Path(chosen) if chosen is not None else _bundled_exe_dir()
         self.data_dir = Path(data_dir) if data_dir is not None else _bundled_data_dir()
 
     def prepare(self) -> None:
         """Create sim directory, symlink executables and data files, write CONTROL and SETUP.CFG."""
         self.directory.mkdir(parents=True, exist_ok=True)
 
-        # Symlink binary from exe_dir, data files from data_dir (mirrors R-STILT)
-        for src_dir in [self.exe_dir, self.data_dir]:
-            for f in src_dir.iterdir():
-                link = self.directory / f.name
-                if not link.exists():
-                    link.symlink_to(f.resolve())
+        # Symlink the binary from exe_dir and data files from data_dir (mirrors
+        # R-STILT). Only hycs_std is taken from exe_dir: a custom build directory
+        # usually holds a whole HYSPLIT exec/ tree we have no business linking.
+        exe = self.exe_dir / HYCS_STD_FILE
+        if not exe.is_file():
+            raise FileNotFoundError(
+                f"No {HYCS_STD_FILE!r} executable in {self.exe_dir}. "
+                "Check STILTParams.exe_dir."
+            )
+        # A reused simulation directory may still point at a different build.
+        if self.hycs_std_path.is_symlink() and (
+            self.hycs_std_path.resolve() != exe.resolve()
+        ):
+            self.hycs_std_path.unlink()
+        for f in [exe, *self.data_dir.iterdir()]:
+            link = self.directory / f.name
+            if not link.exists():
+                link.symlink_to(f.resolve())
 
         # Write HYSPLIT CONTROL
         ControlFile(

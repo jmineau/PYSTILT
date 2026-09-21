@@ -152,10 +152,43 @@ How those particles are distributed depends on receptor type.
 **ColumnReceptor** — particles are evenly spread across the column from
 ``bottom`` to ``top``.
 
-**MultiPointReceptor** — ``numpar`` particles are distributed as evenly as
-possible across the ``n`` release locations.  Choosing ``numpar`` as a
-multiple of ``n`` ensures every location receives exactly equal counts.
-Release locations must be horizontally distinct (see the warning above).
+**MultiPointReceptor** — ``numpar`` particles are distributed across the
+``n`` release locations.  HYSPLIT rounds the per-location count *up* and stops
+when ``numpar`` runs out, so the last location can come up short (200
+particles over 10 locations gives 21 to each of the first nine and 11 to the
+last).  Release locations must be horizontally distinct (see the warning
+above).
+
+
+Release heights for multipoint and slant receptors
+---------------------------------------------------
+
+HYSPLIT does not record which release location a particle came from, so PYSTILT
+recovers each particle's release height (``xhgt``, which vertical weighting
+depends on) from the first row HYSPLIT writes for it.  With the bundled build
+that row is one timestep *after* release, by which time the wind has carried
+the particle a few hundred metres — further than the points of a slant column
+are apart.  PYSTILT therefore:
+
+1. uses release-time (``t = 0``) rows when the HYSPLIT build writes them, which
+   makes the recovery exact;
+2. otherwise matches on **height** when the release altitudes are all distinct,
+   as they always are for a slant column.  Height drifts about thirty times less
+   than horizontal position over one step, and this recovers release heights to
+   within roughly 20 m;
+3. otherwise matches on horizontal position, and **warns** when the locations
+   are closer than 1 km, since the result cannot then be trusted.
+
+A HYSPLIT modification that writes ``t = 0`` rows has been submitted to NOAA
+ARL.  Until it is in a published build, you can run your own:
+
+.. code-block:: yaml
+
+   # config.yaml
+   exe_dir: /path/to/hysplit/exec    # directory containing hycs_std
+
+The setting is stored with the trajectory parameters, so outputs record which
+build produced them.
 
 
 Loading from CSV

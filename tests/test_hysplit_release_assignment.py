@@ -215,3 +215,51 @@ def test_hysplit_column_release_spans_vertical_line_without_endpoint_chunking(
     # spanning draw and flaked (e.g. 5 of 12) before the release was seeded.
     assert len(central_band) >= params.numpar // 3
     assert float(np.max(np.diff(sorted_heights))) < 0.35 * span
+
+
+@integration
+def test_close_spaced_slant_release_heights_are_recovered(tmp_path, met_dir):
+    """
+    The case that used to fail silently.
+
+    Ten release points 173 m apart (a 30-degree viewing zenith over a 3 km
+    column) climbing 300 m per level. The bundled HYSPLIT build writes no t=0
+    row, and in the first minute the wind carries particles hundreds of
+    metres, past several neighbouring release points. Matching on horizontal
+    position put the assigned release height off by ~240 m RMS; matching on
+    height recovers it to within the vertical drift.
+    """
+    from stilt.trajectory import Trajectories
+
+    n_levels = 10
+    altitudes = np.linspace(300.0, 3000.0, n_levels)
+    metres_per_deg_lon = 111_320.0 * np.cos(np.radians(40.766))
+    receptor = MultiPointReceptor(
+        time=dt.datetime(2021, 1, 15, 6, 0),
+        longitudes=-111.8479 + np.arange(n_levels) * 173.0 / metres_per_deg_lon,
+        latitudes=np.full(n_levels, 40.766),
+        altitudes=altitudes,
+    )
+    params = STILTParams(n_hours=-1, numpar=200, hnf_plume=False, rm_dat=True)
+    met_files = MetStream(
+        "hrrr", directory=met_dir, file_format="%Y%m%d_%H", file_tres="6h"
+    ).required_files(r_time=receptor.time, n_hours=params.n_hours)
+
+    runner = HYSPLITDriver(
+        receptor=receptor,
+        params=params,
+        met_files=met_files,
+        directory=Path(tmp_path) / "close_slant",
+    )
+    runner.prepare()
+    particles = runner.execute(timeout=300, rm_dat=True).particles
+    data = Trajectories.from_particles(
+        particles=particles, receptor=receptor, params=params, met_files=met_files
+    ).data
+
+    release = _release_time_rows(data).drop_duplicates("indx")
+    # Each group's actual height should sit at the altitude it was assigned.
+    errors = release.groupby("xhgt")["zagl"].mean() - sorted(set(release["xhgt"]))
+    assert float(np.sqrt((errors**2).mean())) < 60.0
+    # and every level received particles
+    assert set(release["xhgt"]) == set(altitudes.tolist())

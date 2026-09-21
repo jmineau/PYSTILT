@@ -6,6 +6,31 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **Multipoint and slant receptors assigned release heights (`xhgt`) to the
+  wrong particles when release points were close together.** HYSPLIT's first
+  output row is one timestep after release, by which time bulk advection has
+  moved particles 200-600 m, further than the 50-300 m spacing of a typical
+  slant column; matching particles to release points by horizontal position
+  put `xhgt` off by 190-700 m RMS, so averaging kernels were applied to the
+  wrong particles. `xhgt` is now recovered from release-time (`t=0`) rows when
+  the HYSPLIT build writes them (exact), else by release height when the
+  altitudes are distinct (~20 m), else by horizontal position with a warning
+  when points are closer than 1 km. Point and column receptors were never
+  affected.
+- Removed the fallback that split particles as `numpar // n_locations` per
+  release point. HYSPLIT rounds the per-location count up and truncates the
+  last location, so that split was wrong.
+
+### Added
+
+- `exe_dir` setting (`STILTParams` / `config.yaml`) to run a custom `hycs_std`
+  build instead of the bundled binary. It reaches local, Slurm and queue
+  workers, is recorded with the trajectory parameters, and only `hycs_std` is
+  linked from the directory. A reused simulation directory is relinked when
+  the build changes.
+
 ## [0.1.0a11] - 2026-09-19
 
 ### Fixed

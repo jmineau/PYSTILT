@@ -2,6 +2,7 @@
 
 import json
 import os
+import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
@@ -44,6 +45,79 @@ def _write_parquet_table(
             last_error = exc
     if last_error is not None:
         raise last_error
+
+
+# Below this horizontal spacing, release points cannot be told apart from the
+# first in-flight row. Measured with HRRR at WBB: bulk advection moves
+# particles 200-600 m in the first minute, by an amount that varies with
+# height; at 1000 m spacing the release height is still recovered to ~15 m,
+# at 300 m it is off by ~190 m.
+_MIN_RELIABLE_SPACING_M = 1000.0
+
+
+def _multipoint_release_heights(
+    p: pd.DataFrame, receptor: MultiPointReceptor
+) -> pd.Series:
+    """
+    Return each row's release altitude for a multipoint (or slant) receptor.
+
+    HYSPLIT does not record which starting location a particle came from, so
+    it is recovered from the row nearest the release time:
+
+    1. If the HYSPLIT build writes release-time (``t=0``) rows, nothing has
+       moved yet and the nearest release point horizontally is exact.
+    2. Otherwise the first row is already a timestep of transport later.
+       Height drifts ~30x less than horizontal position over that step, so
+       when the release altitudes are all distinct (always true of a slant
+       column) match on height instead.
+    3. Otherwise fall back to horizontal position, and warn when the release
+       points are too close together for that to be trusted.
+    """
+    first = (
+        p.assign(_age=p["time"].abs())
+        .sort_values("_age", kind="stable")
+        .drop_duplicates(subset="indx")
+    )
+    lons = np.asarray(receptor.longitudes, dtype=float)
+    lats = np.asarray(receptor.latitudes, dtype=float)
+    alts = np.asarray(receptor.altitudes, dtype=float)
+    has_t0 = bool((first["_age"] == 0).all())
+
+    # Height of each particle in the receptor's own vertical reference.
+    height = None
+    if "zagl" in first.columns:
+        if receptor.altitude_ref == "agl":
+            height = first["zagl"].to_numpy(dtype=float)
+        elif "zsfc" in first.columns:
+            height = (first["zagl"] + first["zsfc"]).to_numpy(dtype=float)
+
+    if not has_t0 and height is not None and len(np.unique(alts)) == len(alts):
+        nearest = np.argmin(np.abs(height[:, None] - alts[None, :]), axis=1)
+    else:
+        xy = first[["long", "lati"]].to_numpy(dtype=float)
+        pts = np.column_stack((lons, lats))
+        nearest = np.argmin(
+            np.sum((xy[:, None, :] - pts[None, :, :]) ** 2, axis=2), axis=1
+        )
+        if not has_t0 and len(alts) > 1:
+            x = lons * np.cos(np.radians(lats.mean())) * 111_320.0
+            y = lats * 111_320.0
+            gaps = np.hypot(x[:, None] - x[None, :], y[:, None] - y[None, :])
+            spacing = float(gaps[np.triu_indices(len(alts), k=1)].min())
+            if spacing < _MIN_RELIABLE_SPACING_M:
+                warnings.warn(
+                    f"MultiPointReceptor release points are as close as "
+                    f"{spacing:.0f} m and cannot be separated by altitude, and this "
+                    "HYSPLIT build writes no t=0 row, so particles cannot be "
+                    "reliably matched to their release points; 'xhgt' may be wrong. "
+                    "Use a HYSPLIT build that writes release-time rows "
+                    "(STILTParams.exe_dir) or space the points more than "
+                    f"{_MIN_RELIABLE_SPACING_M:.0f} m apart.",
+                    stacklevel=3,
+                )
+
+    mapping = dict(zip(first["indx"].to_numpy(), alts[nearest], strict=True))
+    return cast(pd.Series, p["indx"]).map(mapping.get)
 
 
 class Trajectories:
@@ -231,43 +305,7 @@ class Trajectories:
             xhgt_step = (receptor.top - receptor.bottom) / numpar
             p["xhgt"] = (p["indx"] - 0.5) * xhgt_step + receptor.bottom
         elif isinstance(receptor, MultiPointReceptor):
-            release_rows = (
-                p.loc[p["time"] == p["time"].max(), ["indx", "long", "lati"]]
-                .drop_duplicates(subset=["indx"])
-                .sort_values("indx")
-            )
-            release_points = np.column_stack(
-                (
-                    np.asarray(receptor.longitudes, dtype=float),
-                    np.asarray(receptor.latitudes, dtype=float),
-                )
-            )
-            if len(release_rows) == numpar:
-                particle_points = release_rows[["long", "lati"]].to_numpy(dtype=float)
-                distances = np.sum(
-                    (particle_points[:, None, :] - release_points[None, :, :]) ** 2,
-                    axis=2,
-                )
-                nearest_release = np.argmin(distances, axis=1)
-                mapping = {
-                    int(indx): float(receptor.altitudes[point_idx])
-                    for indx, point_idx in zip(
-                        release_rows["indx"], nearest_release, strict=False
-                    )
-                }
-            else:
-                hgts = receptor.altitudes
-                n_locs = len(hgts)
-                counts = [numpar // n_locs] * n_locs
-                for i in range(numpar % n_locs):
-                    counts[i] += 1
-                mapping: dict[int, float] = {}
-                idx = 1
-                for height, count in zip(hgts, counts, strict=False):
-                    for _ in range(count):
-                        mapping[idx] = height
-                        idx += 1
-            p["xhgt"] = p["indx"].map(mapping.get)
+            p["xhgt"] = _multipoint_release_heights(p, receptor)
 
         if params.hnf_plume:
             r_zagl = receptor.altitude if isinstance(receptor, PointReceptor) else None

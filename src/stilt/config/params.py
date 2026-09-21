@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import ClassVar, Literal
 
 import pandas as pd
@@ -47,6 +48,15 @@ class ModelParams(BaseModel):
             "receptor can hold a batch worker until the Slurm wall time kills it. With a "
             "timeout the run raises HYSPLITTimeoutError, which the execution loop already "
             "records as a failure and moves past. Leave unset to wait indefinitely."
+        ),
+    )
+    exe_dir: Path | None = Field(
+        None,
+        description=(
+            "Directory containing a custom ``hycs_std`` build to run instead of the "
+            "binary bundled with PYSTILT. Recorded with the trajectory parameters, so "
+            "outputs say which build produced them. A build that writes release-time "
+            "(t=0) rows to PARTICLE_STILT.DAT makes multipoint and slant receptors exact."
         ),
     )
     varsiwant: list[
