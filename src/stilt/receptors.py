@@ -524,7 +524,13 @@ class MultiPointReceptor(Receptor):
 
 def read_receptors(path: str | Path) -> list[Receptor]:
     """Load receptors from a CSV file."""
-    df = pd.read_csv(path, parse_dates=["time"])
+    # r_idx is a grouping key, so read it as text. Left to inference, pandas parses a large
+    # file in chunks and types each chunk separately: in a file mixing numeric and string
+    # ids, a receptor whose rows straddle a chunk boundary comes back part int, part str,
+    # and groupby splits it into two receptors with half the points each -- silently.
+    header = pd.read_csv(path, nrows=0).columns
+    dtype = {c: str for c in header if str(c).lower() == "r_idx"}
+    df = pd.read_csv(path, parse_dates=["time"], dtype=dtype)
 
     original_columns = [str(col).lower() for col in df.columns]
     inferred_altitude_ref = None
@@ -587,7 +593,7 @@ def read_receptors(path: str | Path) -> list[Receptor]:
             try:
                 result[key] = _receptor_from_group(cast(pd.DataFrame, g))
             except ValueError as exc:
-                raise ValueError(f"r_idx={key!r}: {exc}") from exc
+                raise ValueError(f"r_idx={key}: {exc}") from exc
 
         return [result[k] for k in df["r_idx"].unique()]
 
