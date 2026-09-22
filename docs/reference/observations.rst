@@ -1,42 +1,17 @@
 Observations
 ============
 
-The observation layer is still settling. It defines the normalized observation,
-scene grouping, the slant receptor builder, and selection helpers used for column and
-satellite-style workflows (:doc:`/advanced/observations`). Particle weighting
-lives in :doc:`transforms`.
-
-Observation models
-------------------
+Helpers for column and satellite workflows: overpass grouping, sounding
+selection, pixel jitter, and slant line-of-sight geometry
+(:doc:`/advanced/observations`). They work on plain arrays and tables and
+produce the inputs to :class:`~stilt.Receptor` objects. Particle weighting,
+including per-receptor averaging-kernel tables, lives in :doc:`transforms`.
 
 .. autosummary::
    :toctree: _api
    :nosignatures:
 
-   stilt.observations.Observation
-   stilt.observations.Scene
-
-Geometry
---------
-
-.. autosummary::
-   :toctree: _api
-   :nosignatures:
-
-   stilt.observations.HorizontalGeometry
-   stilt.observations.ViewingGeometry
-
-Builders, grouping, and selection
----------------------------------
-
-.. autosummary::
-   :toctree: _api
-   :nosignatures:
-
-   stilt.observations.slant_points
-   stilt.observations.build_slant_receptor
    stilt.observations.group_by_overpass
-   stilt.observations.group_observations
-   stilt.observations.filter_observations
    stilt.observations.select_observations_spatial
-   stilt.observations.jitter_observation
+   stilt.observations.jitter_points
+   stilt.observations.slant_points

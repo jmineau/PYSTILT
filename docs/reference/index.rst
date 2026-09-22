@@ -12,8 +12,8 @@ looking for how to do something rather than what a function takes, the
 - :doc:`execution`: running simulations locally, on Slurm, or on Kubernetes
 - :doc:`transforms`: particle weighting (averaging kernel, pressure
   weighting, lifetime)
-- :doc:`observations`: observations, scenes, and receptor builders for
-  column and satellite work
+- :doc:`observations`: overpass grouping, sounding selection, jitter, and
+  slant geometry for column and satellite work
 - :doc:`project`: project folders and storage backends
 - :doc:`hysplit`: the low-level HYSPLIT driver
 

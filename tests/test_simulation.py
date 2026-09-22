@@ -1182,3 +1182,57 @@ def test_publish_without_directory_is_noop(point_receptor, tmp_path):
     sim.publish()
 
     assert not (storage_root / sim.key_prefix).exists()
+
+
+def test_generate_footprint_uses_the_receptor_kernel_from_a_project_table(
+    column_receptor, tmp_path
+):
+    """Two receptors, one config, one table: each footprint gets its own kernel."""
+    from stilt.receptors import ColumnReceptor
+    from stilt.store import LocalStore
+    from stilt.transforms import AveragingKernel, averaging_kernel_table
+
+    store = LocalStore(tmp_path)
+    other = ColumnReceptor(
+        column_receptor.time,
+        column_receptor.longitude + 0.1,
+        column_receptor.latitude,
+        column_receptor.bottom,
+        column_receptor.top,
+    )
+    averaging_kernel_table(
+        [column_receptor, other],
+        levels=[0.0, 3000.0],
+        values=[[1.0, 1.0], [0.25, 0.25]],
+    ).to_parquet(tmp_path / "kernels.parquet")
+    config = FootprintConfig(
+        grid=Grid(xmin=-114.0, xmax=-111.0, ymin=39.0, ymax=42.0, xres=0.1, yres=0.1),
+        time_integrate=True,
+        smooth_factor=0.0,
+        transforms=[AveragingKernel(table="kernels.parquet")],
+    )
+
+    sums = {}
+    for receptor in (column_receptor, other):
+        sim = _sim(tmp_path, receptor, store=store)
+        particles = pd.DataFrame(
+            {
+                "time": [0.0, -60.0, 0.0, -60.0],
+                "indx": [1, 1, 2, 2],
+                "long": [receptor.longitude] * 4,
+                "lati": [receptor.latitude] * 4,
+                "zagl": [500.0, 500.0, 2500.0, 2500.0],
+                "xhgt": [500.0, 500.0, 2500.0, 2500.0],
+                "foot": [1.0, 1.0, 1.0, 1.0],
+            }
+        )
+        sim._trajectories = Trajectories.from_particles(
+            particles=particles,
+            receptor=receptor,
+            params=_params(tmp_path),
+            met_files=[tmp_path / "metfile"],
+        )
+        sums[receptor.id] = float(sim.generate_footprint("column", config).data.sum())
+
+    assert sums[column_receptor.id] > 0
+    assert sums[other.id] == pytest.approx(0.25 * sums[column_receptor.id])

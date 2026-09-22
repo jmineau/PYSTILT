@@ -14,6 +14,12 @@ keys, so the same object describes the transform and performs it::
             values: [1.0, 0.9, 0.7]
           - kind: pressure_weighting
 
+An averaging kernel that differs per receptor (every satellite sounding has
+its own) comes from a table in the project instead::
+
+          - kind: averaging_kernel
+            table: kernels.parquet
+
 A ``kind`` containing a dot is an import path to a user-defined transform
 class (see the *Custom transforms* guide). Transforms run once, in list order,
 on the unweighted particle table, and return a new table — they never mutate
@@ -26,18 +32,23 @@ them.
 
 from __future__ import annotations
 
+import functools
 import importlib
+import os
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
+from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Any, Literal, Protocol, runtime_checkable
 
 import numpy as np
 import pandas as pd
+from numpy.typing import ArrayLike
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, model_validator
 from typing_extensions import Self
 
 if TYPE_CHECKING:
-    from stilt.observations import Observation
     from stilt.receptors import Receptor
+    from stilt.store import Store
 
 
 # -- interface ------------------------------------------------------------------
@@ -48,15 +59,18 @@ class TransformContext:
     """
     What a transform may know about the footprint it is applied for.
 
-    The built-in transforms ignore it; it exists so a user transform can reach
-    the receptor (location, release time, geometry), whether this is the error
-    trajectory, and any observation the footprint serves.
+    ``receptor`` is the receptor the particles were released from (its ``id``
+    keys per-receptor inputs such as an averaging-kernel table),
+    ``footprint_name`` the footprint being generated, ``is_error`` whether
+    these are the error trajectories, and ``store`` the project store, so
+    files named relative to the project root can be found wherever the
+    footprint is generated.
     """
 
     receptor: Receptor
     footprint_name: str = ""
     is_error: bool = False
-    observation: Observation | None = None
+    store: Store | None = None
 
 
 @runtime_checkable
@@ -199,24 +213,132 @@ def ak_weights(
 # -- built-in transforms ----------------------------------------------------------
 
 
+KERNEL_TABLE_COLUMNS = ("receptor", "level", "value")
+
+
+def averaging_kernel_table(
+    receptors: Iterable[Any],
+    levels: Sequence[ArrayLike],
+    values: Sequence[ArrayLike],
+) -> pd.DataFrame:
+    """
+    Build the per-receptor averaging-kernel table for :class:`AveragingKernel`.
+
+    One kernel per receptor, in long form: a ``receptor`` column holding the
+    receptor id, and one ``level`` / ``value`` row per kernel point. Write it
+    into the project with ``.to_parquet()`` or ``.to_csv(index=False)`` and
+    name the file as ``table:`` in the footprint's ``averaging_kernel``
+    transform.
+
+    ``receptors`` are :class:`~stilt.Receptor` objects or their ids.
+    ``values`` holds one array per receptor. ``levels`` is either one array
+    per receptor (satellite retrievals, whose pressure grids differ per
+    sounding) or a single array shared by all of them (a fixed altitude grid).
+    """
+    ids = [str(getattr(r, "id", r)) for r in receptors]
+    value_arrays = [np.asarray(v, dtype=float).ravel() for v in values]
+    if len(value_arrays) != len(ids):
+        raise ValueError(
+            f"averaging_kernel_table: {len(ids)} receptors but "
+            f"{len(value_arrays)} kernels."
+        )
+    try:
+        shared = np.asarray(levels, dtype=float)
+    except (TypeError, ValueError):  # ragged: one array per receptor
+        shared = None
+    if shared is not None and shared.ndim == 1:
+        level_arrays = [shared] * len(ids)
+    else:
+        level_arrays = [np.asarray(lv, dtype=float).ravel() for lv in levels]
+        if len(level_arrays) != len(ids):
+            raise ValueError(
+                f"averaging_kernel_table: {len(ids)} receptors but "
+                f"{len(level_arrays)} level arrays."
+            )
+    frames = []
+    for rid, lv, va in zip(ids, level_arrays, value_arrays, strict=True):
+        if lv.size == 0 or lv.size != va.size:
+            raise ValueError(
+                f"averaging_kernel_table: receptor {rid} has {lv.size} levels "
+                f"and {va.size} values."
+            )
+        frames.append(pd.DataFrame({"receptor": rid, "level": lv, "value": va}))
+    return pd.concat(frames, ignore_index=True)
+
+
+def _read_kernel_table(path: str) -> dict[str, tuple[np.ndarray, np.ndarray]]:
+    suffix = Path(path).suffix.lower()
+    if suffix in {".parquet", ".pq"}:
+        table = pd.read_parquet(path)
+    elif suffix == ".csv":
+        table = pd.read_csv(path)
+    else:
+        raise ValueError(
+            f"averaging_kernel table {path!r} must be a .parquet or .csv file."
+        )
+    missing = [c for c in KERNEL_TABLE_COLUMNS if c not in table.columns]
+    if missing:
+        raise ValueError(
+            f"averaging_kernel table {path!r} lacks columns {missing}; "
+            f"expected {list(KERNEL_TABLE_COLUMNS)} (see averaging_kernel_table)."
+        )
+    kernels = {}
+    for rid, group in table.groupby("receptor", sort=False):
+        kernels[str(rid)] = (
+            group["level"].to_numpy(dtype=float),
+            group["value"].to_numpy(dtype=float),
+        )
+    return kernels
+
+
+@functools.lru_cache(maxsize=8)
+def _cached_kernel_table(
+    path: str, _mtime: float | None
+) -> dict[str, tuple[np.ndarray, np.ndarray]]:
+    return _read_kernel_table(path)
+
+
+def _load_kernel_table(path: str) -> dict[str, tuple[np.ndarray, np.ndarray]]:
+    """Read a kernel table once per file version (local files are keyed by mtime)."""
+    try:
+        mtime: float | None = os.stat(path).st_mtime
+    except OSError:
+        mtime = None
+    return _cached_kernel_table(path, mtime)
+
+
 class AveragingKernel(BaseModel):
     """
     Weight each particle's ``foot`` by an averaging kernel at its release coordinate.
 
+    Give the kernel inline as ``levels`` and ``values``, or name a ``table``
+    holding one kernel per receptor (see :func:`averaging_kernel_table`); the
+    receptor's row is picked by ``context.receptor.id`` when the footprint is
+    generated. A relative ``table`` path is resolved against the project
+    root, so it works inside ``stilt run`` and on Slurm and Kubernetes
+    workers. A receptor missing from the table is an error.
+
     ``levels`` are release heights AGL in metres by default; set
     ``coordinate: pres`` for a kernel on pressure levels (hPa). Fold any
-    instrument-specific factor (for example TCCON's wet-air scaling) into
-    ``values``. Adds an ``ak_weight`` column.
+    instrument-specific factor (for example TCCON's wet-air scaling) into the
+    values. Adds an ``ak_weight`` column.
     """
 
     model_config = ConfigDict(frozen=True)
 
     kind: Literal["averaging_kernel"] = "averaging_kernel"
-    levels: list[float] = Field(
-        description="Vertical coordinates of the averaging-kernel values."
+    levels: list[float] | None = Field(
+        default=None, description="Vertical coordinates of the averaging-kernel values."
     )
-    values: list[float] = Field(
-        description="Normalized averaging-kernel values at ``levels``."
+    values: list[float] | None = Field(
+        default=None, description="Normalized averaging-kernel values at ``levels``."
+    )
+    table: str | None = Field(
+        default=None,
+        description=(
+            "Per-receptor kernel table (.parquet or .csv with receptor, level, "
+            "value columns), relative to the project root."
+        ),
     )
     coordinate: str = Field(
         default="xhgt",
@@ -224,9 +346,20 @@ class AveragingKernel(BaseModel):
     )
 
     @model_validator(mode="after")
-    def _same_length(self) -> Self:
+    def _inline_or_table(self) -> Self:
+        inline = self.levels is not None or self.values is not None
+        if self.table is not None:
+            if inline:
+                raise ValueError(
+                    "averaging_kernel takes either levels/values or a table, not both."
+                )
+            if not self.table.strip():
+                raise ValueError("averaging_kernel table must be a file name.")
+            return self
         if not self.levels or not self.values:
-            raise ValueError("averaging_kernel requires non-empty levels and values.")
+            raise ValueError(
+                "averaging_kernel requires non-empty levels and values, or a table."
+            )
         if len(self.levels) != len(self.values):
             raise ValueError(
                 f"averaging_kernel levels ({len(self.levels)}) and values "
@@ -234,10 +367,37 @@ class AveragingKernel(BaseModel):
             )
         return self
 
+    def kernel(
+        self, context: TransformContext | None = None
+    ) -> tuple[list[float], list[float]]:
+        """Return ``(levels, values)`` for the receptor in *context*."""
+        if self.table is None:
+            assert self.levels is not None and self.values is not None
+            return self.levels, self.values
+        if context is None:
+            raise ValueError(
+                "averaging_kernel with a table needs a TransformContext to know "
+                "which receptor to look up."
+            )
+        path = self.table
+        if context.store is not None and not Path(path).is_absolute():
+            path = str(context.store.local_path(path))
+        kernels = _load_kernel_table(path)
+        rid = str(context.receptor.id)
+        try:
+            levels, values = kernels[rid]
+        except KeyError:
+            raise KeyError(
+                f"averaging_kernel table {self.table!r} has no kernel for "
+                f"receptor {rid!r}."
+            ) from None
+        return levels.tolist(), values.tolist()
+
     def apply(
         self, particles: pd.DataFrame, context: TransformContext | None = None
     ) -> pd.DataFrame:
-        weights = ak_weights(particles, self.levels, self.values, self.coordinate)
+        levels, values = self.kernel(context)
+        weights = ak_weights(particles, levels, values, self.coordinate)
         out = particles.copy()
         out["ak_weight"] = weights
         out["foot"] = out["foot"] * weights
@@ -405,7 +565,7 @@ def load_transform(spec: Any) -> Any:
 def dump_transform(transform: Any) -> dict[str, Any]:
     """Return the config mapping for one transform (inverse of :func:`load_transform`)."""
     if hasattr(transform, "model_dump"):
-        data = dict(transform.model_dump(mode="json"))
+        data = dict(transform.model_dump(mode="json", exclude_none=True))
     else:
         raise TypeError(
             f"{type(transform).__qualname__} cannot be written to config: transforms "
@@ -428,6 +588,7 @@ def apply_transforms(
 
 __all__ = [
     "HOURS_PER",
+    "KERNEL_TABLE_COLUMNS",
     "AveragingKernel",
     "BuiltinTransform",
     "FirstOrderLifetime",
@@ -437,6 +598,7 @@ __all__ = [
     "UnresolvedTransform",
     "ak_weights",
     "apply_transforms",
+    "averaging_kernel_table",
     "dump_transform",
     "load_transform",
     "particle_pwf",

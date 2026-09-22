@@ -15,6 +15,7 @@ from stilt.transforms import (
     TransformContext,
     UnresolvedTransform,
     apply_transforms,
+    averaging_kernel_table,
     dump_transform,
     load_transform,
     transform_kind,
@@ -102,7 +103,7 @@ def test_transform_context_defaults(point_receptor):
     assert ctx.receptor is point_receptor
     assert ctx.footprint_name == ""
     assert ctx.is_error is False
-    assert ctx.observation is None
+    assert ctx.store is None
 
 
 def test_builtins_satisfy_particle_transform_protocol():
@@ -181,6 +182,15 @@ def test_ak_missing_coordinate_column_raises():
 def test_ak_mismatched_levels_values_raises_at_construction():
     with pytest.raises(ValidationError, match="same length"):
         AveragingKernel(levels=[0.0, 1000.0], values=[0.5])
+
+
+def test_ak_requires_inline_kernel_or_table():
+    with pytest.raises(ValidationError, match="levels and values, or a table"):
+        AveragingKernel()
+    with pytest.raises(ValidationError, match="not both"):
+        AveragingKernel(levels=[0.0], values=[1.0], table="kernels.parquet")
+    with pytest.raises(ValidationError, match="file name"):
+        AveragingKernel(table="  ")
 
 
 def test_ak_empty_levels_raises_at_construction():
@@ -670,9 +680,11 @@ def test_dump_transform_builtin_contents():
         "values": [0.2, 0.8],
         "coordinate": "xhgt",
     }
-    assert dump_transform(PressureWeighting()) == {
-        "kind": "pressure_weighting",
-        "surface_pressure": None,
+    assert dump_transform(PressureWeighting()) == {"kind": "pressure_weighting"}
+    assert dump_transform(AveragingKernel(table="kernels.parquet")) == {
+        "kind": "averaging_kernel",
+        "table": "kernels.parquet",
+        "coordinate": "xhgt",
     }
 
 
@@ -709,3 +721,174 @@ def test_transform_kind():
     assert transform_kind(ScaleFoot()) == SCALE_FOOT_KIND
     assert transform_kind(PlainScale()) == PLAIN_SCALE_KIND
     assert transform_kind(UnresolvedTransform(kind=MISSING_KIND)) == MISSING_KIND
+
+
+# ---------------------------------------------------------------------------
+# Per-receptor averaging-kernel tables
+# ---------------------------------------------------------------------------
+
+
+def _two_receptors():
+    from stilt.receptors import ColumnReceptor
+
+    a = ColumnReceptor("2023-01-01 12:00", -111.85, 40.77, 0.0, 3000.0)
+    b = ColumnReceptor("2023-01-01 12:00", -111.80, 40.70, 0.0, 3000.0)
+    return a, b
+
+
+def test_averaging_kernel_table_one_kernel_per_receptor():
+    a, b = _two_receptors()
+
+    table = averaging_kernel_table(
+        [a, b],
+        levels=[[0.0, 1000.0, 2000.0], [0.0, 1500.0]],
+        values=[[1.0, 0.8, 0.6], [1.0, 0.5]],
+    )
+
+    assert list(table.columns) == ["receptor", "level", "value"]
+    assert table["receptor"].tolist() == [str(a.id)] * 3 + [str(b.id)] * 2
+    assert table["level"].tolist() == [0.0, 1000.0, 2000.0, 0.0, 1500.0]
+    assert table["value"].tolist() == [1.0, 0.8, 0.6, 1.0, 0.5]
+
+
+def test_averaging_kernel_table_shared_levels_and_ids():
+    a, b = _two_receptors()
+
+    table = averaging_kernel_table(
+        [str(a.id), b], levels=np.array([0.0, 3000.0]), values=[[1.0, 0.0], [0.5, 0.5]]
+    )
+
+    assert table["level"].tolist() == [0.0, 3000.0, 0.0, 3000.0]
+    assert table["receptor"].tolist() == [str(a.id), str(a.id), str(b.id), str(b.id)]
+
+
+def test_averaging_kernel_table_rejects_mismatches():
+    a, b = _two_receptors()
+    with pytest.raises(ValueError, match="2 receptors but 1 kernels"):
+        averaging_kernel_table([a, b], levels=[0.0, 1.0], values=[[1.0, 1.0]])
+    with pytest.raises(ValueError, match="2 receptors but 1 level arrays"):
+        averaging_kernel_table(
+            [a, b], levels=[[0.0, 1.0]], values=[[1.0, 1.0], [1.0, 1.0]]
+        )
+    with pytest.raises(ValueError, match="2 levels and 3 values"):
+        averaging_kernel_table([a], levels=[[0.0, 1.0]], values=[[1.0, 1.0, 1.0]])
+
+
+def _write_table(path, a, b):
+    table = averaging_kernel_table(
+        [a, b],
+        levels=[[0.0, 3000.0], [0.0, 3000.0]],
+        values=[[1.0, 1.0], [0.5, 0.5]],  # b's kernel halves everything
+    )
+    if path.suffix == ".csv":
+        table.to_csv(path, index=False)
+    else:
+        table.to_parquet(path)
+    return table
+
+
+@pytest.mark.parametrize("filename", ["kernels.parquet", "kernels.csv"])
+def test_ak_table_picks_the_receptor_kernel_via_the_store(tmp_path, filename):
+    from stilt.store import LocalStore
+
+    a, b = _two_receptors()
+    _write_table(tmp_path / filename, a, b)
+    kernel = AveragingKernel(table=filename)
+    p = _make_particles(4)
+
+    store = LocalStore(tmp_path)
+    out_a = kernel.apply(p, TransformContext(receptor=a, store=store))
+    out_b = kernel.apply(p, TransformContext(receptor=b, store=store))
+
+    assert out_a["foot"].tolist() == [1.0] * 4
+    assert out_b["foot"].tolist() == [0.5] * 4
+    assert out_b["ak_weight"].tolist() == [0.5] * 4
+    assert kernel.kernel(TransformContext(receptor=b, store=store)) == (
+        [0.0, 3000.0],
+        [0.5, 0.5],
+    )
+
+
+def test_ak_table_absolute_path_needs_no_store(tmp_path):
+    a, b = _two_receptors()
+    path = tmp_path / "kernels.parquet"
+    _write_table(path, a, b)
+
+    out = AveragingKernel(table=str(path)).apply(
+        _make_particles(2), TransformContext(receptor=b)
+    )
+
+    assert out["foot"].tolist() == [0.5, 0.5]
+
+
+def test_ak_table_relative_path_without_store_is_relative_to_cwd(tmp_path, monkeypatch):
+    a, b = _two_receptors()
+    _write_table(tmp_path / "kernels.csv", a, b)
+    monkeypatch.chdir(tmp_path)
+
+    out = AveragingKernel(table="kernels.csv").apply(
+        _make_particles(2), TransformContext(receptor=b)
+    )
+
+    assert out["foot"].tolist() == [0.5, 0.5]
+
+
+def test_ak_table_missing_receptor_raises(tmp_path):
+    from stilt.receptors import PointReceptor
+
+    a, b = _two_receptors()
+    path = tmp_path / "kernels.parquet"
+    _write_table(path, a, b)
+    other = PointReceptor("2023-01-01 12:00", -111.0, 40.0, 10.0)
+
+    with pytest.raises(KeyError, match="no kernel for receptor"):
+        AveragingKernel(table=str(path)).apply(
+            _make_particles(2), TransformContext(receptor=other)
+        )
+
+
+def test_ak_table_requires_context_and_known_columns(tmp_path):
+    with pytest.raises(ValueError, match="TransformContext"):
+        AveragingKernel(table="kernels.parquet").apply(_make_particles(2))
+
+    bad = tmp_path / "bad.csv"
+    pd.DataFrame({"receptor": ["x"], "z": [0.0], "ak": [1.0]}).to_csv(bad, index=False)
+    a, _ = _two_receptors()
+    with pytest.raises(ValueError, match="lacks columns"):
+        AveragingKernel(table=str(bad)).apply(
+            _make_particles(2), TransformContext(receptor=a)
+        )
+
+    with pytest.raises(ValueError, match=".parquet or .csv"):
+        AveragingKernel(table=str(tmp_path / "kernels.json")).apply(
+            _make_particles(2), TransformContext(receptor=a)
+        )
+
+
+def test_ak_table_rereads_when_the_file_changes(tmp_path):
+    import os
+
+    a, b = _two_receptors()
+    path = tmp_path / "kernels.csv"
+    _write_table(path, a, b)
+    kernel = AveragingKernel(table=str(path))
+    ctx = TransformContext(receptor=b)
+    assert kernel.apply(_make_particles(1), ctx)["foot"].tolist() == [0.5]
+
+    averaging_kernel_table(
+        [a, b], levels=[0.0, 3000.0], values=[[1.0, 1.0], [0.25, 0.25]]
+    ).to_csv(path, index=False)
+    os.utime(path, (path.stat().st_atime, path.stat().st_mtime + 10))
+
+    assert kernel.apply(_make_particles(1), ctx)["foot"].tolist() == [0.25]
+
+
+def test_ak_table_round_trips_through_config():
+    kernel = load_transform(
+        {"kind": "averaging_kernel", "table": "kernels.parquet", "coordinate": "pres"}
+    )
+
+    assert isinstance(kernel, AveragingKernel)
+    assert kernel.table == "kernels.parquet"
+    assert kernel.levels is None
+    assert load_transform(dump_transform(kernel)) == kernel

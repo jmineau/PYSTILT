@@ -59,8 +59,7 @@ An EM27 retrieval (for example PROFFAST output) gives one column value per
 spectrum with the solar zenith and azimuth angles at that time. The sun
 moves about 15° per hour, so build one receptor per averaging window rather
 than one per day. The points come from :func:`~stilt.observations.slant_points`
-and the receptor from :meth:`stilt.Receptor.from_points`; no
-``Observation`` is needed.
+and the receptor from :meth:`stilt.Receptor.from_points`.
 
 .. code-block:: python
 
@@ -115,48 +114,65 @@ receptor covers, so the footprint is complete for the surface fluxes; the
 column above the receptor top is background.
 
 The averaging kernel is different. An EM27 kernel changes with the solar
-zenith angle, so each window has its own. Keep it alongside the window and
-apply it when generating that window's footprint:
+zenith angle, so each window has its own. Write them into the project as a
+table keyed by receptor, with
+:func:`~stilt.transforms.averaging_kernel_table`, and let the footprint's
+``averaging_kernel`` transform look each one up:
 
 .. code-block:: python
 
-   from stilt.transforms import AveragingKernel
+   from stilt.transforms import averaging_kernel_table
 
-   kernels = [AveragingKernel(levels=row.ak_levels, values=row.ak) for _, row in windows.iterrows()]
+   # PROFFAST tabulates the kernel by solar zenith angle on one altitude grid
+   kernels = [kernel_for_sza(row.sza) for _, row in windows.iterrows()]
+   table = averaging_kernel_table(receptors, levels=AK_ALTITUDES, values=kernels)
+   table.to_parquet(model.project.directory / "kernels.parquet")
 
-   config = model.config.footprints["column"]
-   for kernel, receptor in zip(kernels, receptors):
-       sim = model.simulations[f"hrrr_{receptor.id}"]
-       sim.generate_footprint("column", config, transforms=[kernel], write=True)
+.. code-block:: yaml
 
-If one kernel is a good enough approximation for a campaign, list it under
-``transforms`` in ``config.yaml`` instead and every receptor gets it inside
-``stilt run``.
+   footprints:
+     column:
+       grid: slv
+       transforms:
+         - kind: averaging_kernel
+           table: kernels.parquet
+         - kind: pressure_weighting
+
+The kernel's ``levels`` are heights above ground by default; use
+``coordinate: pres`` for a kernel on pressure levels. If one kernel is a good
+enough approximation for a campaign, give it inline as ``levels`` and
+``values`` instead of a table.
 
 Satellite soundings
 -------------------
 
 For a satellite product you have many soundings per overpass, each with its
-own location, surface altitude, viewing angles, and averaging kernel. That
-is what :class:`~stilt.observations.Observation` is for: the reader fills
-one per sounding, with the angles in a
-:class:`~stilt.observations.ViewingGeometry` and the surface altitude in
-``altitude`` (MSL), and :func:`~stilt.observations.build_slant_receptor`
-anchors the path at that altitude:
+own location, surface altitude, viewing angles, and averaging kernel. The
+same two lines apply per row of the product table, anchored at each
+sounding's surface altitude (MSL):
 
 .. code-block:: python
 
    import numpy as np
-   from stilt.observations import build_slant_receptor, group_by_overpass
+   import stilt
+   from stilt.observations import slant_points
 
-   def slant(obs):
-       return build_slant_receptor(obs, np.linspace(obs.altitude, obs.altitude + 3000, 20))
+   receptors = [
+       stilt.Receptor.from_points(
+           row.time,
+           slant_points(
+               row.longitude, row.latitude,
+               np.linspace(row.surface_altitude, row.surface_altitude + 3000, 20),
+               zenith=row.vza, azimuth=row.vaa,
+           ),
+           altitude_ref="msl",
+       )
+       for row in df.itertuples()
+   ]
+   model.register(receptors=receptors)
 
-   for scene in group_by_overpass(observations):
-       model.register(receptors=scene.receptors(slant))
-
-The *Adding your own instrument* section of :doc:`../advanced/observations`
-has the full reader-builder-transform pattern. Many satellite workflows
+:doc:`../advanced/observations` walks through selecting the soundings first
+and writing their kernels to the project. Many satellite workflows
 neglect the slant and use a :class:`~stilt.ColumnReceptor` instead; at a 20°
 viewing angle the top of a 3 km column is only 1 km off the nadir point,
 which is within a footprint grid cell for coarse grids.

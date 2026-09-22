@@ -34,9 +34,10 @@ test suite. The public API may change while the package settles.
   use `Model.register()`, `stilt register`, `stilt pull-worker`, and
   `stilt serve` with a PostgreSQL work queue configured via `PYSTILT_DB_URL`.
   Slurm needs no database: `stilt run --backend slurm`.
-- **Observation-driven workflows** for science-facing code:
-  use `stilt.observations` to turn normalized observations into `Receptor`
-  objects before feeding them into the same runtime.
+- **Column and satellite workflows** for science-facing code:
+  use `stilt.observations` to group, select, and lay out soundings as
+  `Receptor` objects, and a per-receptor averaging-kernel table to weight
+  them inside the same runtime.
 
 ## Roadmap
 
@@ -64,14 +65,15 @@ design and column-weighting concepts without trying to replicate every script.
 
 | Feature | Status |
 |---|---|
-| `stilt.observations` layer (`Observation`, `Scene`, receptor builders, selection) | Implemented |
+| `stilt.observations` helpers (overpass grouping, sounding selection, jitter, slant geometry) | Implemented |
 | Column receptor support | Implemented |
 | Averaging-kernel and pressure-weighting particle transforms | Implemented |
 | First-order lifetime decay transform | Implemented |
 | Declarative per-footprint transforms in config | Implemented |
 | Slant-column receptor support | Implemented |
 | User-defined transforms (`kind: my.module.Class`) | Implemented |
-| Product readers (OCO-2/3, TROPOMI, TCCON) | Out of scope: your reader produces `Observation` objects |
+| Per-sounding averaging kernels in batch runs (`averaging_kernel` with `table:`) | Implemented |
+| Product readers (OCO-2/3, TROPOMI, TCCON) | Out of scope: your reader produces a table of soundings |
 | Inventory coupling and background estimation | Deferred |
 
 ## Installation
@@ -177,42 +179,47 @@ print(model.status())
 Workers claim simulations from the queue and record done/failed there;
 whether outputs exist is always read from the project itself.
 
-## Quickstart: observation layer
+## Quickstart: column and satellite soundings
 
-`stilt.observations` sits above `Receptor` for measurements and retrievals
-that are not already receptors. Your reader produces `Observation` objects;
-PYSTILT groups, selects, and turns them into receptors:
+Your reader produces a table with one row per sounding. `stilt.observations`
+groups and selects rows, each row becomes a `Receptor`, and each sounding's
+averaging kernel goes into a table in the project so every runner applies
+the right kernel to the right receptor:
 
 ```python
 import stilt
-from stilt.observations import Observation, group_by_overpass
+from stilt.observations import group_by_overpass
+from stilt.transforms import averaging_kernel_table
 
-observations = [
-    Observation(sensor="tower", species="co2", time="2023-01-01 12:00:00",
-                latitude=40.77, longitude=-111.85, altitude=30.0, observation_id="tower-001"),
-    Observation(sensor="tower", species="co2", time="2023-01-01 12:05:00",
-                latitude=40.78, longitude=-111.84, altitude=30.0, observation_id="tower-002"),
-]
+df = read_my_product(path)                       # your reader: time, longitude, latitude, ak_pressure, ak, ...
+df["overpass"] = group_by_overpass(df["time"])   # label rows by overpass; thin with pandas or select_observations_spatial
 
-model = stilt.Model(project="./my_project")  # existing project config on disk
-for scene in group_by_overpass(observations):
-    receptors = [stilt.PointReceptor(o.time, o.longitude, o.latitude, o.altitude) for o in scene]
-    model.register(receptors=receptors)
+model = stilt.Model(project="./my_project")      # existing project config on disk
+receptors = [stilt.ColumnReceptor(r.time, r.longitude, r.latitude, 0, 3000) for r in df.itertuples()]
+model.register(receptors=receptors)
+
+averaging_kernel_table(receptors, levels=df.ak_pressure, values=df.ak).to_parquet(
+    model.project.directory / "kernels.parquet"
+)
+model.run()
 ```
 
-An observation is plain data; build receptors from it with the `Receptor`
-classes, or with `build_slant_receptor` for a slant column. A custom
-instrument is a reader plus, when needed, your own builder and transform. See
-the [observations guide](https://jmineau.github.io/PYSTILT/advanced/observations.html).
+with the footprint declared once in `config.yaml`:
 
-This layer currently focuses on:
+```yaml
+footprints:
+  column:
+    grid: slv
+    transforms:
+      - kind: averaging_kernel
+        table: kernels.parquet
+        coordinate: pres
+      - kind: pressure_weighting
+```
 
-- normalized `Observation` and `Scene` objects
-- horizontal, viewing, and line-of-sight geometry
-- overpass scenes, sounding selection, jitter
-- observation-to-receptor conversion
-
-See `docs/advanced/observations.rst` for the intended workflow boundary.
+Slant paths come from `slant_points` and `Receptor.from_points`. See the
+[observations guide](https://jmineau.github.io/PYSTILT/advanced/observations.html)
+and the [slant columns guide](https://jmineau.github.io/PYSTILT/guides/slant_columns.html).
 
 ## Particle transforms
 

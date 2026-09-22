@@ -1,30 +1,21 @@
 """
-Observation-domain models and sensor interfaces for science workflows.
+Column and satellite observation helpers: the X-STILT port.
 
-Particle weighting (averaging kernel, pressure weighting, lifetime decay) lives
-in :mod:`stilt.transforms`.
+Everything here happens before a simulation. Soundings are grouped into
+overpasses, a subset is chosen to run, extra receptors are spread across a
+pixel, and a slant line of sight is laid out as points. The functions take
+and return plain arrays and tuples so they work on whatever table your
+product reader produces; the results become :class:`~stilt.Receptor`
+objects. Particle weighting (averaging kernel, pressure weighting, lifetime
+decay) happens after the run and lives in :mod:`stilt.transforms`.
 """
 
-from .builders import build_slant_receptor, slant_points
-from .geometry import HorizontalGeometry, ViewingGeometry
-from .observation import Observation
-from .scenes import Scene, group_by_overpass, group_observations
-from .selection import (
-    filter_observations,
-    jitter_observation,
-    select_observations_spatial,
-)
+from .selection import group_by_overpass, jitter_points, select_observations_spatial
+from .slant import slant_points
 
 __all__ = [
-    "HorizontalGeometry",
-    "Observation",
-    "Scene",
     "group_by_overpass",
-    "group_observations",
-    "ViewingGeometry",
-    "build_slant_receptor",
-    "filter_observations",
-    "jitter_observation",
+    "jitter_points",
     "select_observations_spatial",
     "slant_points",
 ]

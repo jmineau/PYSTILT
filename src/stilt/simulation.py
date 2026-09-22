@@ -599,7 +599,7 @@ class Simulation:
             before rasterization (any object with ``apply(particles, context)``).
         context : TransformContext, optional
             Context handed to every transform. Defaults to one built from the
-            receptor and footprint name; pass your own to attach an observation.
+            receptor, footprint name, and project store.
         **kwargs
             Forwarded to ``FootprintConfig`` when *config* is not given.
         """
@@ -644,6 +644,7 @@ class Simulation:
                     receptor=self.receptor if traj is None else traj.receptor,
                     footprint_name=stored_name,
                     is_error=error,
+                    store=self._store,
                 ),
             )
         foot = Footprint.calculate(

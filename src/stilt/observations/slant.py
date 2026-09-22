@@ -1,15 +1,11 @@
-"""Slant line-of-sight geometry and the observation-to-receptor builder."""
+"""Slant line-of-sight geometry."""
 
 from __future__ import annotations
 
 import math
-import warnings
 
 import numpy as np
 from numpy.typing import ArrayLike
-
-from stilt.observations.observation import Observation
-from stilt.receptors import Receptor
 
 _EARTH_RADIUS_M = 6_371_000.0
 
@@ -36,7 +32,7 @@ def slant_points(
 
     Altitudes are returned unchanged, in whatever datum they were given. Use
     mean-sea-level altitudes for a slant; terrain-following (AGL) heights
-    would bend the path.
+    would bend the path. Pass the result to :meth:`stilt.Receptor.from_points`.
     """
     alts = np.asarray(altitudes, dtype=float).ravel()
     if alts.size == 0:
@@ -54,41 +50,4 @@ def slant_points(
     return list(zip(lons.tolist(), lats.tolist(), alts.tolist(), strict=True))
 
 
-def build_slant_receptor(observation: Observation, altitudes: ArrayLike) -> Receptor:
-    """
-    Build a slant receptor from an observation's viewing angles.
-
-    ``altitudes`` are the release altitudes along the line of sight, in the
-    observation's ``altitude_ref``. The path passes through the observation's
-    location at ``observation.altitude`` (the station or surface altitude),
-    which is required. Choose the samples to suit the run, for example
-    ``np.linspace(obs.altitude, min(obs.altitude + 3000, model_top), 20)``.
-    See :func:`slant_points` for the angle conventions.
-
-    Returns a :class:`~stilt.MultiPointReceptor`; with a zenith angle of 0 and
-    two altitudes the path is vertical and a :class:`~stilt.ColumnReceptor`
-    comes back instead.
-    """
-    if observation.viewing is None:
-        raise ValueError("A slant receptor requires Observation.viewing.")
-    if observation.altitude is None:
-        raise ValueError(
-            "A slant receptor requires Observation.altitude as the anchor."
-        )
-    if observation.altitude_ref == "agl":
-        warnings.warn(
-            "Slant receptor built with AGL altitudes; terrain-following heights "
-            "bend the line of sight. Use altitude_ref='msl'.",
-            stacklevel=2,
-        )
-    points = slant_points(
-        observation.longitude,
-        observation.latitude,
-        altitudes,
-        zenith=observation.viewing.zenith_angle,
-        azimuth=observation.viewing.azimuth_angle,
-        anchor=observation.altitude,
-    )
-    return Receptor.from_points(
-        observation.time, points, altitude_ref=observation.altitude_ref
-    )
+__all__ = ["slant_points"]

@@ -67,7 +67,7 @@ design and column-weighting concepts.  Full X-STILT feature parity is
 
    * - Feature
      - Status
-   * - ``stilt.observations`` layer (``Observation``, ``Scene``, receptor builders, selection)
+   * - ``stilt.observations`` helpers (overpass grouping, sounding selection, jitter, slant geometry)
      - Implemented
    * - Column receptor support
      - Implemented
@@ -81,6 +81,8 @@ design and column-weighting concepts.  Full X-STILT feature parity is
      - Implemented (see the *Slant Columns* guide)
    * - User-defined transforms via ``kind: my.module.Class``
      - Implemented
+   * - Per-sounding averaging kernels in batch runs (``averaging_kernel`` with ``table:``)
+     - Implemented
    * - Product readers (OCO-2/3, TROPOMI, TCCON)
      - Out of scope; see *Adding your own instrument*
    * - Inventory coupling and background estimation
@@ -91,9 +93,6 @@ Future plans
 
 In priority order:
 
-- **Per-observation weighting in batch runs**: each sounding's own averaging
-  kernel applied inside ``stilt run`` and Slurm jobs, not only in a loop
-  after the run.
 - **Observation-layer maturation**: transport-error propagation to retrieved
   columns, driven by real column-receptor users.
 - **Spatial geometries and footprint aggregation** (implemented): footprints

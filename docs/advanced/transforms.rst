@@ -72,6 +72,44 @@ The usual satellite or TCCON column weighting is ``averaging_kernel``
 followed by ``pressure_weighting``. Listing nothing leaves every particle
 with equal weight, which is standard STILT behaviour.
 
+One kernel per receptor
+-----------------------
+
+A satellite product gives every sounding its own averaging kernel, and an
+EM27 kernel changes with solar zenith angle. Instead of inline ``levels``
+and ``values``, name a table in the project:
+
+.. code-block:: yaml
+
+   footprints:
+     column:
+       grid: slv
+       transforms:
+         - kind: averaging_kernel
+           table: kernels.parquet
+           coordinate: pres
+         - kind: pressure_weighting
+
+The table has one ``receptor`` id per sounding and one ``level`` / ``value``
+row per kernel point (Parquet or CSV). Build it with
+:func:`~stilt.transforms.averaging_kernel_table` from the receptors you
+registered and the kernels from your product, and write it next to
+``receptors.csv``:
+
+.. code-block:: python
+
+   from stilt.transforms import averaging_kernel_table
+
+   table = averaging_kernel_table(receptors, levels=df.ak_pressure, values=df.ak)
+   table.to_parquet(model.project.directory / "kernels.parquet")
+
+``levels`` is one array per receptor, or a single array when every kernel
+shares a grid. When the footprint is generated the transform looks up the
+receptor's id in the table, so it works the same in a notebook, under
+``stilt run``, and on Slurm and Kubernetes workers, which resolve the
+relative path against the project root. A receptor with no row is an
+error.
+
 In Python
 ---------
 
@@ -146,9 +184,11 @@ Three rules keep this predictable:
   be *read* (the entry becomes an :class:`~stilt.transforms.UnresolvedTransform`),
   but a project config naming one fails validation with the import error.
 - **Use the context for anything outside the table.** ``context.receptor``
-  gives the release time and location, ``context.is_error`` says whether
-  this is the error trajectory, and ``context.observation`` carries the
-  observation when the caller attached one. The built-ins ignore it.
+  gives the receptor (its ``id`` keys any per-receptor input file),
+  ``context.is_error`` says whether this is the error trajectory, and
+  ``context.store`` is the project store, whose ``local_path(key)`` turns
+  a path relative to the project root into a readable file wherever the
+  worker runs. That is how the ``averaging_kernel`` table is found.
 
 A plain class works too (``kind`` imports it and calls ``cls(**keys)``), but
 it cannot be written back to config or into a footprint's netCDF, so prefer

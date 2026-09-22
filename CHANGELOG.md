@@ -8,6 +8,17 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **One averaging kernel per receptor inside batch runs.** `averaging_kernel`
+  takes `table: kernels.parquet` (or `.csv`) instead of inline
+  `levels`/`values`: a long table of `receptor, level, value` rows in the
+  project, looked up by the receptor id when each footprint is generated.
+  The path is relative to the project root and is resolved through the new
+  `TransformContext.store`, so `stilt run`, Slurm arrays and Kubernetes
+  workers apply each sounding's own kernel; a receptor with no row is an
+  error. `stilt.transforms.averaging_kernel_table(receptors, levels, values)`
+  builds the table from the registered receptors and the product's kernels
+  (`levels` per receptor, or one shared grid). This replaces the post-run
+  `generate_footprint(..., transforms=obs.transforms)` loop.
 - **Slant Columns guide** (`docs/guides/slant_columns.rst`): building a
   slant receptor from viewing angles for a ground-based solar tracker
   (EM27/SUN) or an off-nadir satellite sounding, the altitude and azimuth
@@ -40,8 +51,32 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   heights along a slant are recovered from the particles (0.1.0a12), and a
   close-spaced slant is exercised through HYSPLIT in the test suite.
 
+### Changed
+
+- **`stilt.observations` works on tables, not observation objects.** A
+  product reader keeps its soundings as a DataFrame; `group_by_overpass(times)`
+  returns overpass labels aligned to the input for `df.groupby`,
+  `select_observations_spatial(longitudes, latitudes, ...)` returns the
+  selected row indices, and `jitter_points(polygon, n)` returns points across
+  a pixel outline. `slant_points` is unchanged. Product filtering is a pandas
+  mask.
+- `dump_transform` (and the `transforms` attribute stored in footprint
+  netCDF files) omits fields that are `None`.
+
 ### Removed
 
+- `Observation`, `Scene`, `HorizontalGeometry`, `ViewingGeometry`,
+  `group_observations`, `filter_observations`, `jitter_observation`, and
+  `build_slant_receptor`. The library read only the receptor inputs from an
+  `Observation` (time, location, altitude, angles, pixel outline) and the
+  kernel, which now lives in the kernel table; the rest was carried for the
+  user, who already has it in their own table. Slant receptors are
+  `Receptor.from_points(time, slant_points(...), altitude_ref="msl")`.
+  Synthesising a pixel outline from a resolution and orientation is gone with
+  `HorizontalGeometry`; pass the product's corner coordinates (or your own
+  shapely polygon) to `jitter_points`.
+- `TransformContext.observation`: never populated. `TransformContext.store`
+  takes its place.
 - `LineOfSight` and `Observation.line_of_sight`: the altitude samples are an
   argument to `build_slant_receptor`, and clipping is the caller's choice of
   samples (`surface_altitude=` / `model_top_altitude=` are gone).
