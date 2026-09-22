@@ -1,7 +1,7 @@
 """
 Stochastic Time-Inverted Lagrangian Transport (STILT) Model.
 
-A python implementation of the R-STILT model framework.
+A python implementation of the STILT-R model framework.
 """
 
 from __future__ import annotations

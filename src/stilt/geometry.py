@@ -2,7 +2,7 @@
 Spatial geometries: the state geometry footprints are aggregated onto.
 
 Footprints are always *computed* on a rectilinear raster
-(:class:`~stilt.config.Grid`), which preserves the STILT kernel and R-STILT
+(:class:`~stilt.config.Grid`), which preserves the STILT kernel and STILT-R
 parity.  An inversion's state vector may live on any other geometry: a
 coarser or shifted grid, hexagons, polygons from a shapefile, nested grids,
 or cells of an existing geometry merged into super-cells.  Because a

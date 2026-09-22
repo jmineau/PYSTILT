@@ -2,7 +2,7 @@
 Verify PYSTILT's SETUP.CFG matches calc_trajectory.r's physics namelist.
 
 The R helper calc_trajectory.r passes an explicit 40-parameter namelist to
-R-STILT's write_setup().  PYSTILT builds its SETUP.CFG from TransportParams
+STILT-R's write_setup().  PYSTILT builds its SETUP.CFG from TransportParams
 defaults.  This module checks that every physics-affecting entry agrees, so
 that a silent default divergence is caught before it can affect trajectories.
 
@@ -27,7 +27,7 @@ pytestmark = [pytest.mark.fidelity]
 # ---------------------------------------------------------------------------
 
 # Every key here corresponds to a parameter that affects particle trajectories
-# or footprint sensitivity.  Value is what calc_trajectory.r passes to R-STILT.
+# or footprint sensitivity.  Value is what calc_trajectory.r passes to STILT-R.
 _R_PHYSICS_NAMELIST: dict[str, float] = {
     "capemin": -1.0,
     "delt": 1.0,
@@ -55,7 +55,7 @@ _R_PHYSICS_NAMELIST: dict[str, float] = {
     "vscales": -1.0,
 }
 
-# Columns R-STILT's varsiwant always requests.  The trajectory parquet must
+# Columns STILT-R's varsiwant always requests.  The trajectory parquet must
 # contain all of these; PYSTILT may add extras (e.g. pres) without consequence.
 _R_VARSIWANT: list[str] = [
     "time",
@@ -124,7 +124,7 @@ def test_setup_cfg_physics_matches_r_namelist(scenario_outputs: dict) -> None:
 @integration
 def test_trajectory_contains_all_r_varsiwant_columns(scenario_outputs: dict) -> None:
     """
-    Trajectory parquet exposes every column R-STILT's varsiwant requests.
+    Trajectory parquet exposes every column STILT-R's varsiwant requests.
 
     PYSTILT may output additional columns beyond R's list without issue, but
     the R-required columns must all be present so the trajectory comparison

@@ -1,5 +1,5 @@
 #!/usr/bin/env Rscript
-# Emit intermediate R-STILT calc_footprint tables for Python parity tests.
+# Emit intermediate STILT-R calc_footprint tables for Python parity tests.
 #
 # Args:
 #   1  particles_parquet

@@ -58,7 +58,7 @@ def _calc_digits(res: float) -> int:
 
 
 def _interpolation_times(time_sign: int) -> np.ndarray:
-    """Exact R-STILT early-time interpolation schedule in minutes."""
+    """Exact STILT-R early-time interpolation schedule in minutes."""
     times = np.concatenate(
         [
             np.arange(0, 101, dtype=float) / 10,
@@ -81,7 +81,7 @@ def _grid_cell_starts(minimum: float, maximum: float, resolution: float) -> np.n
     rounding error proportional to the bounds' magnitude (``40.93 - 40.45`` is
     ``0.4799999999999969``).  The tolerance is sized to that error, divided by
     the resolution, so the final intended cell is kept (48 cells here at 0.01,
-    as R-STILT's ``seq()`` gives) while a genuinely partial cell is still
+    as STILT-R's ``seq()`` gives) while a genuinely partial cell is still
     dropped.
     """
     if resolution <= 0:
@@ -441,7 +441,7 @@ def _interpolate_particle_tracks(p: pd.DataFrame, *, t_new: np.ndarray) -> pd.Da
         sorted_time = source_time[order]
         unique_time, unique_idx = np.unique(sorted_time, return_index=True)
 
-        # Mirror R-STILT's full_join(expand.grid(...), by = c("indx", "time")):
+        # Mirror STILT-R's full_join(expand.grid(...), by = c("indx", "time")):
         # original rows keep every column, while inserted rows only receive the
         # interpolated long/lati/foot values below.  A later dropna() therefore
         # matches R's na.omit() across all columns.

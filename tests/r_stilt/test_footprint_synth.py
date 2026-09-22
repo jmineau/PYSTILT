@@ -1,5 +1,5 @@
 """
-Synthetic footprint comparison tests: PYSTILT vs R-STILT on hand-crafted
+Synthetic footprint comparison tests: PYSTILT vs STILT-R on hand-crafted
 particle DataFrames, bypassing HYSPLIT entirely.
 
 Exercises code paths the seeded end-to-end tests cannot reliably target:
@@ -17,7 +17,7 @@ Exercises code paths the seeded end-to-end tests cannot reliably target:
 Each test:
   1. Constructs a minimal synthetic particle DataFrame.
   2. Runs PYSTILT's Python implementation.
-  3. Writes particles to a tmp parquet and calls the matching R-STILT function
+  3. Writes particles to a tmp parquet and calls the matching STILT-R function
      via Rscript.
   4. Compares both results at rtol=1e-7.
 
@@ -88,7 +88,7 @@ def _r_footprint(
     smooth_factor: float = 1.0,
     time_integrate: bool = False,
 ) -> xr.Dataset:
-    """Call R-STILT calc_footprint on *particles*, return xr.Dataset."""
+    """Call STILT-R calc_footprint on *particles*, return xr.Dataset."""
     tmp_path.mkdir(parents=True, exist_ok=True)
     p_path = tmp_path / "particles.parquet"
     nc_path = tmp_path / "r_foot.nc"
@@ -410,7 +410,7 @@ def _r_plume_dilution(
     numpar: int = 1000,
     veght: float = _VEGHT,
 ) -> pd.DataFrame:
-    """Call R-STILT calc_plume_dilution on *particles*, return DataFrame."""
+    """Call STILT-R calc_plume_dilution on *particles*, return DataFrame."""
     p_in = tmp_path / "particles_in.parquet"
     p_out = tmp_path / "particles_out.parquet"
     particles.to_parquet(p_in, index=False)
@@ -487,7 +487,7 @@ def _particles(
 def _assert_footprint_close(
     py_ds: xr.Dataset, r_ds: xr.Dataset, *, label: str = ""
 ) -> None:
-    """Compare PYSTILT and R-STILT footprint datasets."""
+    """Compare PYSTILT and STILT-R footprint datasets."""
     prefix = f"[{label}] " if label else ""
 
     # Coord tolerance must scale with magnitude: longlat coords are <360°,
@@ -527,7 +527,7 @@ def test_single_particle_gaussian(rscript, r_stilt_dir, tmp_path):
     """
     Cluster of particles at grid centre → Gaussian blob centred on (-112, 40.5).
 
-    R-STILT's kernel bandwidth requires ≥2 particles so that var(long) is
+    STILT-R's kernel bandwidth requires ≥2 particles so that var(long) is
     non-NA.  We use 100 particles drawn from a tight normal distribution;
     this is realistic (STILT always runs an ensemble) and exercises the full
     Gaussian rasterization path.  Both tools must agree on kernel shape,
@@ -568,7 +568,7 @@ def test_all_outside_domain(rscript, r_stilt_dir, tmp_path):
         "PYSTILT: expected zero footprint for out-of-domain particles"
     )
     assert np.all(r_ds.foot.values == 0), (
-        "R-STILT: expected zero footprint for out-of-domain particles"
+        "STILT-R: expected zero footprint for out-of-domain particles"
     )
 
 
@@ -596,7 +596,7 @@ def test_irregular_grid_extent_matches_r_cell_centers(rscript, r_stilt_dir, tmp_
     """
     Domain spans that are not exact multiples of resolution keep complete cells.
 
-    R-STILT uses lower-left cell starts from head(seq(xmn, xmx, by = xres), -1).
+    STILT-R uses lower-left cell starts from head(seq(xmn, xmx, by = xres), -1).
     PYSTILT should expose the matching cell centers without inventing a partial
     upper-bound cell.
     """
@@ -648,7 +648,7 @@ def test_utm_projection_matches_r(rscript, r_stilt_dir, tmp_path):
         text=True,
     )
     if r_proj4.returncode != 0:
-        pytest.skip("R proj4 package is required for R-STILT non-longlat comparison")
+        pytest.skip("R proj4 package is required for STILT-R non-longlat comparison")
 
     projection = "+proj=utm +zone=12 +datum=WGS84 +units=m +no_defs"
     Transformer.from_crs("EPSG:4326", projection, always_xy=True)
@@ -715,7 +715,7 @@ def test_time_integrate(rscript, r_stilt_dir, tmp_path):
     r_ds = _r_footprint(tmp_path / "r", rscript, r_stilt_dir, p, time_integrate=True)
 
     assert py_ds.foot.values.shape[0] == 1, "PYSTILT: expected single time layer"
-    assert r_ds.foot.values.shape[0] == 1, "R-STILT: expected single time layer"
+    assert r_ds.foot.values.shape[0] == 1, "STILT-R: expected single time layer"
     _assert_footprint_close(py_ds, r_ds, label="time_integrate")
 
 
@@ -794,7 +794,7 @@ def test_hnf_dilution_active(rscript, r_stilt_dir, tmp_path):
         py_result["foot"].values,
         r_result["foot"].values,
         rtol=1e-7,
-        err_msg="[hnf_active] corrected foot disagrees between PYSTILT and R-STILT",
+        err_msg="[hnf_active] corrected foot disagrees between PYSTILT and STILT-R",
     )
     np.testing.assert_allclose(
         py_result["foot_no_hnf_dilution"].values,
@@ -837,7 +837,7 @@ def test_hnf_dilution_inactive(rscript, r_stilt_dir, tmp_path):
         py_result["foot"].values,
         r_result["foot"].values,
         rtol=1e-7,
-        err_msg="[hnf_inactive] foot disagrees between PYSTILT and R-STILT",
+        err_msg="[hnf_inactive] foot disagrees between PYSTILT and STILT-R",
     )
 
 
@@ -888,9 +888,9 @@ def test_early_interpolation_with_hysplit_columns_matches_r_na_omit(
     rscript, r_stilt_dir, tmp_path
 ):
     """
-    Fast early tracks with extra HYSPLIT columns follow R-STILT's na.omit path.
+    Fast early tracks with extra HYSPLIT columns follow STILT-R's na.omit path.
 
-    R-STILT requests sub-minute interpolation here, but inserted rows have NA
+    STILT-R requests sub-minute interpolation here, but inserted rows have NA
     for non-interpolated HYSPLIT columns such as zagl/mlht/dens, so na.omit()
     removes those inserted rows.  PYSTILT must preserve that behavior for real
     trajectory tables even though minimal synthetic tables can still densify.
@@ -930,7 +930,7 @@ def test_early_interpolation_with_hysplit_columns_matches_r_na_omit(
 
 def test_calc_footprint_intermediate_tables_match_r(rscript, r_stilt_dir, tmp_path):
     """
-    R-STILT parity at the main calc_footprint intermediate stages.
+    STILT-R parity at the main calc_footprint intermediate stages.
 
     Final footprint agreement can hide where a future drift starts.  This
     checks the post-interpolation particle table, rtime calculation, half-open
@@ -970,7 +970,7 @@ def test_calc_footprint_intermediate_tables_match_r(rscript, r_stilt_dir, tmp_pa
 
 def test_calc_footprint_utm_intermediate_tables_match_r(rscript, r_stilt_dir, tmp_path):
     """
-    R-STILT parity for projected calc_footprint intermediate stages.
+    STILT-R parity for projected calc_footprint intermediate stages.
 
     This extends the final UTM footprint comparison by checking that both tools
     project particle coordinates and grid limits the same way before computing
@@ -991,7 +991,7 @@ def test_calc_footprint_utm_intermediate_tables_match_r(rscript, r_stilt_dir, tm
         text=True,
     )
     if r_proj4.returncode != 0:
-        pytest.skip("R proj4 package is required for R-STILT non-longlat comparison")
+        pytest.skip("R proj4 package is required for STILT-R non-longlat comparison")
 
     projection = "+proj=utm +zone=12 +datum=WGS84 +units=m +no_defs"
     Transformer.from_crs("EPSG:4326", projection, always_xy=True)
@@ -1082,7 +1082,7 @@ def test_mass_conservation_smooth_zero(rscript, r_stilt_dir, tmp_path):
         float(r_ds.foot.values.sum()),
         expected_sum,
         rtol=1e-6,
-        err_msg="R-STILT smooth_factor=0 footprint violates mass conservation.",
+        err_msg="STILT-R smooth_factor=0 footprint violates mass conservation.",
     )
     np.testing.assert_allclose(
         py_ds.foot.values.astype(np.float64),
@@ -1180,7 +1180,7 @@ def test_latitude_kernel_scaling(rscript, r_stilt_dir, tmp_path):
     """
     Kernel bandwidth scales with cos(lat) for longlat projections.
 
-    R-STILT computes grid_conv = cos(lat * π/180) and divides it into the
+    STILT-R computes grid_conv = cos(lat * π/180) and divides it into the
     bandwidth: w = smooth_factor * 0.06 * di * ti / grid_conv.  At lat=60°
     (cos≈0.50) the kernel is ~1.9× wider than at lat=20° (cos≈0.94).
 
@@ -1219,7 +1219,7 @@ def test_global_grid_matches_r(rscript, r_stilt_dir, tmp_path):
     """
     Global 360°-wide grid (xmin=-180, xmax=180).
 
-    R-STILT (calc_footprint.r:87-91) detects ``xdist == 0`` and re-anchors
+    STILT-R (calc_footprint.r:87-91) detects ``xdist == 0`` and re-anchors
     bounds to [-180, 180]; PYSTILT's _wrap_antimeridian_longitudes returns
     the same anchoring with ``wrapped=False``.  The full pipeline must agree
     on a wide-grid scenario where the kernel doesn't span the antimeridian.

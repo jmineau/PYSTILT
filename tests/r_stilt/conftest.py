@@ -38,7 +38,7 @@ def scenario_outputs(request, met_dir, rscript, r_stilt_dir, tmp_path_factory) -
     """
     Run one seeded PYSTILT simulation per scenario and return output paths.
 
-    Also runs R-STILT calc_trajectory.r once per scenario so the result can be
+    Also runs STILT-R calc_trajectory.r once per scenario so the result can be
     shared by test_trajectory_matches_r and test_footprint_matches_r without
     paying a second HYSPLIT invocation.
     """

@@ -23,7 +23,7 @@ large batch runs, and streaming queue workers.
 PYSTILT is in alpha development. No backward compatibility guarantees before v1.0.
 
 The core transport is stable: HYSPLIT execution, trajectory and footprint generation,
-numerical R-STILT parity, and the local and SLURM execution paths are all exercised by the
+numerical STILT-R parity, and the local and SLURM execution paths are all exercised by the
 test suite. The public API may change while the package settles.
 
 ## Choose a workflow
@@ -266,12 +266,12 @@ for footprint in footprints:
 If a footprint is tracked as `complete-empty`, no NetCDF file is expected for that footprint.
 The model APIs treat it as a successful terminal outcome while skipping missing file loads.
 
-## R-STILT parity
+## STILT-R parity
 
 PYSTILT footprints match the [uataq/stilt](https://github.com/uataq/stilt) R
 implementation on **numerical values** at `rtol=1e-7` per cell, validated by
 end-to-end fidelity scenarios against a **pinned upstream commit**.
-NetCDF output is not byte-compatible with R-STILT;
+NetCDF output is not byte-compatible with STILT-R;
 it should be read as generic CF-1.8 NetCDF.
 See [STILT-R.md](STILT-R.md) for more details.
 

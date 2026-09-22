@@ -125,7 +125,7 @@ typeCheckingMode = "basic"
 testpaths = ["tests"]
 markers = [
     "integration: end-to-end tests requiring real met files and HYSPLIT execution",
-    "fidelity: R-STILT live comparison tests (slow; require STILT_R_DIR and Rscript)",
+    "fidelity: STILT-R live comparison tests (slow; require STILT_R_DIR and Rscript)",
 ]
 env_files = [".env"]
 

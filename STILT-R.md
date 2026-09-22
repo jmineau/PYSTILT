@@ -1,4 +1,4 @@
-# R-STILT Parity Reference
+# STILT-R Parity Reference
 
 PYSTILT is validated against the [uataq/stilt](https://github.com/uataq/stilt)
 R implementation at a **pinned upstream commit**. This document records the
@@ -13,13 +13,13 @@ scope of the parity claim and the procedure for keeping it current.
 | Pin location | `.github/workflows/tests.yml` (env `STILT_R_SHA`) |
 | Last verified | 2026-06-25 |
 
-The SHA is the single source of truth for what "matches R-STILT" means in this
+The SHA is the single source of truth for what "matches STILT-R" means in this
 repository. Reviewers reading "tests pass" should interpret it as **tests pass
 against this exact commit**, not the upstream `main` branch.
 
 ## Scope of the parity claim
 
-PYSTILT matches R-STILT on **numerical footprint values** for the 20 fidelity
+PYSTILT matches STILT-R on **numerical footprint values** for the 20 fidelity
 scenarios in [tests/fixtures/r_stilt_reference.py](tests/fixtures/r_stilt_reference.py):
 
 | Quantity | Tolerance |
@@ -34,14 +34,14 @@ scenarios in [tests/fixtures/r_stilt_reference.py](tests/fixtures/r_stilt_refere
 
 ### What is **not** in scope
 
-- **NetCDF wire format**: R-STILT writes dims `(x, y, time)` with
+- **NetCDF wire format**: STILT-R writes dims `(x, y, time)` with
   `fill_value=-1`; PYSTILT writes `(time, lat, lon)` with xarray defaults.
-  Downstream R-based readers that expect the R-STILT byte layout are
+  Downstream R-based readers that expect the STILT-R byte layout are
   **not supported**; PYSTILT output should be read as a generic CF-1.8 NetCDF.
 - **Behavior on inputs outside the tested scenarios** — see "What is tested"
   below. Untested scenarios (long-duration backward >24h, polar latitudes
   >80°, very fine grids <0.001°, etc.) are unverified, not known to match.
-- **R-STILT versions other than the pinned SHA.** Upstream changes to
+- **STILT-R versions other than the pinned SHA.** Upstream changes to
   `calc_footprint.r`, `permute.f90`, or `calc_trajectory.r` are not
   automatically detected; the SHA must be bumped manually.
 
@@ -64,17 +64,17 @@ The 20 fidelity scenarios in `tests/fixtures/r_stilt_reference.py` cover:
 
 Additional synthetic tests in
 [tests/r_stilt/test_footprint_synth.py](tests/r_stilt/test_footprint_synth.py)
-exercise hand-crafted particle DataFrames against R-STILT to isolate specific
+exercise hand-crafted particle DataFrames against STILT-R to isolate specific
 code paths (single-particle Gaussian, boundary fenceposts, dateline crossing,
 global grid, latitude bandwidth scaling, etc.).
 
 ## Large-scale seed-matched validation
 
-Beyond the 20 CI fidelity scenarios, PYSTILT has been validated against R-STILT
+Beyond the 20 CI fidelity scenarios, PYSTILT has been validated against STILT-R
 on a **200-receptor, seed-matched, bit-for-bit campaign** spanning 2016–2024
 (WBB tower, Salt Lake Valley; 35 m AGL; 1000 particles; 24 h backward; HRRR;
 `krand=2`, `seed=42`; byte-identical v5.1.0 `hycs_std` on both sides). For each
-receptor the PYSTILT trajectory is compared to an independent R-STILT
+receptor the PYSTILT trajectory is compared to an independent STILT-R
 `calc_trajectory` run, and the PYSTILT footprint to R's `calc_footprint` of the
 same particles, at three resolutions (0.01°, 0.05°, 0.1°).
 
@@ -102,7 +102,7 @@ structural coverage of the CI fidelity scenarios with broad real-meteorology
 breadth. Reading identical met on both sides across the full date range requires
 the `find_met_files` dedup fix carried in the pinned SHA — HRRR archives can
 expose one physical file via both a top-level symlink and a `YYYY/MM/`
-subdirectory, which older R-STILT listed twice.
+subdirectory, which older STILT-R listed twice.
 
 ## Procedure for bumping the pinned SHA
 
@@ -124,7 +124,7 @@ subdirectory, which older R-STILT listed twice.
 
 ## Files watched for upstream drift
 
-These three R-STILT files materially influence the numerical output and
+These three STILT-R files materially influence the numerical output and
 should be diffed on every SHA bump:
 
 - `r/src/calc_footprint.r` — footprint construction, kernel, gridding

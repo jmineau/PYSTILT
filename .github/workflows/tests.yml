@@ -52,18 +52,18 @@ jobs:
         report_type: test_results
 
   integration:
-    name: Integration + R-STILT tests
+    name: Integration + STILT-R tests
     runs-on: ubuntu-latest  # HYSPLIT binary is linux_x64 only
 
     env:
-      # Pinned uataq/stilt commit used for R-STILT fidelity comparison.
+      # Pinned uataq/stilt commit used for STILT-R fidelity comparison.
       #
       # HOW TO UPDATE:
       #   1. Bump STILT_R_SHA to the new commit.
       #   2. Run the fidelity tests locally:
       #        STILT_R_DIR=stilt-r-src uv run pytest tests/r_stilt/ -v -m integration
       #   3. If tests pass  → commit the new SHA.
-      #      If tests diverge → read the diff; determine whether PYSTILT or R-STILT
+      #      If tests diverge → read the diff; determine whether PYSTILT or STILT-R
       #      changed and update whichever is wrong before committing the SHA bump.
       #
       # WHAT TO WATCH in uataq/stilt git log:
@@ -129,7 +129,7 @@ jobs:
         git -C stilt-r-src fetch --depth 1 https://github.com/uataq/stilt "$STILT_R_SHA"
         git -C stilt-r-src checkout FETCH_HEAD
 
-    - name: Populate R-STILT exe directory from bundled binaries
+    - name: Populate STILT-R exe directory from bundled binaries
       run: |
         mkdir -p stilt-r-src/exe
         cp stilt-r-src/bin/linux_x64/hycs_std stilt-r-src/exe/hycs_std
@@ -146,7 +146,7 @@ jobs:
         STILT_TEST_MET_DIR: ${{ github.workspace }}/tests/met_cache
       run: uv run pytest tests/ -v -m integration
 
-    - name: Run R-STILT synthetic footprint tests
+    - name: Run STILT-R synthetic footprint tests
       env:
         STILT_R_DIR: ${{ github.workspace }}/stilt-r-src
         STILT_TEST_MET_DIR: ${{ github.workspace }}/tests/met_cache

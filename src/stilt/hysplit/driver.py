@@ -141,7 +141,7 @@ class HYSPLITDriver:
         self.directory.mkdir(parents=True, exist_ok=True)
 
         # Symlink the binary from exe_dir and data files from data_dir (mirrors
-        # R-STILT). Only hycs_std is taken from exe_dir: a custom build directory
+        # STILT-R). Only hycs_std is taken from exe_dir: a custom build directory
         # usually holds a whole HYSPLIT exec/ tree we have no business linking.
         exe = self.exe_dir / HYCS_STD_FILE
         if not exe.is_file():

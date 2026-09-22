@@ -183,7 +183,7 @@ def footprint_config(grid):
 
 
 # ---------------------------------------------------------------------------
-# R-STILT fixtures (skip gracefully when R or STILT_R_DIR not available)
+# STILT-R fixtures (skip gracefully when R or STILT_R_DIR not available)
 # ---------------------------------------------------------------------------
 
 
@@ -197,7 +197,7 @@ def r_stilt_dir() -> Path:
             return path
     pytest.skip(
         "STILT_R_DIR not set or path not found. "
-        "Set STILT_R_DIR=/path/to/uataq-stilt to run R-STILT comparison tests."
+        "Set STILT_R_DIR=/path/to/uataq-stilt to run STILT-R comparison tests."
     )
 
 
@@ -217,7 +217,7 @@ def rscript(r_stilt_dir) -> str:  # noqa: ARG001
 
 @pytest.fixture(scope="session")
 def wbb_receptor():
-    """Single WBB-like receptor matching R-STILT tutorial parameters."""
+    """Single WBB-like receptor matching STILT-R tutorial parameters."""
     return reference_receptor()
 
 

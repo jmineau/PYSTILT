@@ -1,5 +1,5 @@
 #!/usr/bin/env Rscript
-# Call R-STILT's calc_plume_dilution on a synthetic particle parquet.
+# Call STILT-R's calc_plume_dilution on a synthetic particle parquet.
 #
 # Args (positional):
 #   1  particles_parquet  Input particle DataFrame (parquet)

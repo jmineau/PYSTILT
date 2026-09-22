@@ -1039,7 +1039,7 @@ def test_interpolate_early_timesteps_matches_r_na_omit_with_extra_columns():
 # ---------------------------------------------------------------------------
 # Mathematical invariants — no R required
 #
-# These properties must hold from pure math regardless of R-STILT agreement.
+# These properties must hold from pure math regardless of STILT-R agreement.
 # They are the foundation of using PYSTILT footprints in linear inversion:
 #   concentration = sum(footprint * flux)
 # If the footprint is not linear in the particle sensitivity values, or if

@@ -1,5 +1,5 @@
 #!/usr/bin/env Rscript
-# Call R-STILT's calc_footprint on a synthetic particle parquet.
+# Call STILT-R's calc_footprint on a synthetic particle parquet.
 #
 # Args (positional):
 #   1  particles_parquet  Input particle DataFrame (parquet)
@@ -82,7 +82,7 @@ if (need_anchors) {
 # Synthetic tests compare only lat/lon/foot values, so any valid POSIXct works.
 r_run_time <- as.POSIXct("2015-12-10 00:00:00", tz = "UTC")
 
-# Bounds always arrive in lon/lat (degrees); R-STILT's calc_footprint expects
+# Bounds always arrive in lon/lat (degrees); STILT-R's calc_footprint expects
 # the same convention and projects internally when projection != longlat.
 calc_footprint(p,
                r_run_time     = r_run_time,

@@ -1,5 +1,5 @@
 """
-Single source of truth for the seeded R-STILT reference cases.
+Single source of truth for the seeded STILT-R reference cases.
 
 Defines all canonical scenarios used by the PYSTILT fidelity integration tests.
 Each scenario is represented by a :class:`ReferenceScenario` instance that knows
@@ -92,7 +92,7 @@ _TRAJ_COLS_NO_HNF: tuple[str, ...] = (
 class ReferenceScenario:
     """
     All parameters needed to run a seeded PYSTILT fidelity case and compare
-    against R-STILT run live.
+    against STILT-R run live.
 
     Attributes
     ----------
@@ -254,7 +254,7 @@ class ReferenceScenario:
         return str(SimID.from_parts(REFERENCE_MET, self.make_receptor()))
 
     def r_sim_id(self) -> str:
-        """Return the R-STILT simulation ID (receptor part only, no met prefix)."""
+        """Return the STILT-R simulation ID (receptor part only, no met prefix)."""
         from stilt.simulation import SimID
 
         return str(SimID.from_parts(REFERENCE_MET, self.make_receptor()).receptor)
@@ -412,7 +412,7 @@ TIME_INTEGRATE = ReferenceScenario(
 
 #: Point receptor, smooth_factor=0 — pure binning, no Gaussian spread.
 #
-# R-STILT calls permute.f90 with a 1×1 kernel; PYSTILT uses np.bincount with no
+# STILT-R calls permute.f90 with a 1×1 kernel; PYSTILT uses np.bincount with no
 # convolution step.  This path is not exercised by any other fidelity scenario
 # and has different edge-case behaviour (particle at a cell boundary goes to
 # exactly one cell with full weight, not spread across neighbours).
@@ -666,7 +666,7 @@ HIGH_SMOOTH = ReferenceScenario(
 )
 
 #: Forward 6-hour run from 2021-01-14 12Z to 18Z — verifies time_sign=+1 in both
-#: PYSTILT footprint calculation and R-STILT.  Met files 20210114_12 and 20210114_18
+#: PYSTILT footprint calculation and STILT-R.  Met files 20210114_12 and 20210114_18
 #: are present in the test cache.
 FORWARD = ReferenceScenario(
     name="forward",
@@ -753,7 +753,7 @@ MSL_ALTITUDE = ReferenceScenario(
 #: XY wind-error trajectory — sets siguverr/tluverr/zcoruverr/horcoruverr,
 #: triggering a second HYSPLIT run with WINDERR.  Compares both the main
 #: trajectory (should be identical to POINT) and the error trajectory against
-#: R-STILT's second HYSPLIT run.
+#: STILT-R's second HYSPLIT run.
 WINDERR = ReferenceScenario(
     name="winderr",
     description=(

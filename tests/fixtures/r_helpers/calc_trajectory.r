@@ -1,5 +1,5 @@
 #!/usr/bin/env Rscript
-# Run R-STILT calc_trajectory for one receptor and write the particle table.
+# Run STILT-R calc_trajectory for one receptor and write the particle table.
 #
 # Args:
 #   1  output_parquet
@@ -59,7 +59,7 @@ for (f in list.files(src_dir, pattern = "\\.r$", full.names = TRUE)) {
 
 load_libs('arrow', 'dplyr', 'lubridate', 'ncdf4', 'raster', 'R.utils')
 
-# Upstream R-STILT write_setup.r does not expose SEED.  PYSTILT does, and the
+# Upstream STILT-R write_setup.r does not expose SEED.  PYSTILT does, and the
 # live fidelity tests pin krand/seed for deterministic HYSPLIT output, so wrap
 # R's writer and add SEED immediately before $END.
 write_setup_orig <- write_setup
@@ -74,7 +74,7 @@ write_setup <- function(..., file = "SETUP.CFG") {
 link_files(file.path(stilt_r_dir, "exe"), work_dir)
 met_files <- find_met_files(run_time, n_hours, met_dir, met_file_format, met_file_tres)
 if (length(met_files) < 1) {
-  stop("No meteorology files found for R-STILT trajectory run.")
+  stop("No meteorology files found for STILT-R trajectory run.")
 }
 
 varsiwant <- c("time", "indx", "long", "lati", "zagl", "foot", "mlht", "dens",
@@ -179,7 +179,7 @@ particle <- calc_trajectory(
   z_top = 25000
 )
 if (is.null(particle)) {
-  stop("R-STILT calc_trajectory returned NULL.")
+  stop("STILT-R calc_trajectory returned NULL.")
 }
 
 write_parquet(particle, output_parquet)

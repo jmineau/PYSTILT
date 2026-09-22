@@ -1,14 +1,14 @@
 """
-Integration fidelity tests: seeded PYSTILT vs R-STILT.
+Integration fidelity tests: seeded PYSTILT vs STILT-R.
 
 Each scenario in ``ALL_SCENARIOS`` runs as a parametrized test triple:
 
 1. ``test_setup_cfg_pins_krand_and_seed`` — SETUP.CFG written by PYSTILT
    contains the expected RNG controls for the scenario.
-2. ``test_trajectory_matches_r`` — PYSTILT particle table matches R-STILT's
+2. ``test_trajectory_matches_r`` — PYSTILT particle table matches STILT-R's
    at rtol=1e-7 when both run the same hycs_std binary.
 3. ``test_footprint_matches_r`` — Feed the PYSTILT trajectory (HNF-corrected
-   particles) to R-STILT's ``calc_footprint`` helper and compare the resulting
+   particles) to STILT-R's ``calc_footprint`` helper and compare the resulting
    footprint grid at rtol=1e-7.
 
 R is run directly for each test; no pre-committed fixtures are required and
@@ -141,7 +141,7 @@ def _assert_footprint_deep(
         r_foot,
         rtol=rtol,
         atol=atol,
-        err_msg=f"[{scenario.name}] Per-cell footprint values differ from R-STILT.",
+        err_msg=f"[{scenario.name}] Per-cell footprint values differ from STILT-R.",
     )
 
 
@@ -162,13 +162,13 @@ def _assert_hysplit_binary_matches_r(r_stilt_dir: Path) -> None:
     py_hycs = _bundled_exe_dir() / "hycs_std"
     r_hycs = r_stilt_dir / "exe" / "hycs_std"
     assert py_hycs.exists(), f"PYSTILT hycs_std not found: {py_hycs}"
-    assert r_hycs.exists(), f"R-STILT hycs_std not found: {r_hycs}"
+    assert r_hycs.exists(), f"STILT-R hycs_std not found: {r_hycs}"
     py_hash = _sha256_file(py_hycs)
     r_hash = _sha256_file(r_hycs)
     assert py_hash == r_hash, (
-        "PYSTILT and R-STILT must use the same hycs_std binary for trajectory "
+        "PYSTILT and STILT-R must use the same hycs_std binary for trajectory "
         f"fidelity tests.\nPYSTILT: {py_hycs} {py_hash}\n"
-        f"R-STILT: {r_hycs} {r_hash}"
+        f"STILT-R: {r_hycs} {r_hash}"
     )
 
 
@@ -186,7 +186,7 @@ def _sorted_trajectory(df: pd.DataFrame, columns: tuple[str, ...]) -> pd.DataFra
 
 def _trajectory_compare_columns(scenario: ReferenceScenario) -> tuple[str, ...]:
     if scenario.receptor_type == "multipoint" and scenario.hnf_plume:
-        # R-STILT has no direct PYSTILT-style multipoint receptor; when given
+        # STILT-R has no direct PYSTILT-style multipoint receptor; when given
         # multiple heights in one run, calc_trajectory treats them as a
         # column/line and assigns xhgt across the particle index range.  The
         # raw HYSPLIT trajectory and uncorrected foot still match exactly, but
@@ -204,7 +204,7 @@ def _r_footprint_from_traj(
     scenario: ReferenceScenario,
 ) -> xr.Dataset:
     """
-    Run R-STILT calc_footprint on a PYSTILT trajectory parquet and return the
+    Run STILT-R calc_footprint on a PYSTILT trajectory parquet and return the
     resulting footprint as an xarray Dataset.
 
     Feeds the HNF-corrected ``foot`` column directly to R so the comparison
@@ -296,10 +296,10 @@ def test_trajectory_matches_r(
     r_stilt_dir: Path,
 ) -> None:
     """
-    PYSTILT trajectory table matches R-STILT when both run the same hycs_std.
+    PYSTILT trajectory table matches STILT-R when both run the same hycs_std.
 
     This compares particle positions and footprint sensitivity columns after
-    R-STILT's trajectory read and HNF correction, before either implementation
+    STILT-R's trajectory read and HNF correction, before either implementation
     performs footprint gridding.
 
     R trajectory is pre-computed in the scenario_outputs fixture to avoid
@@ -319,14 +319,14 @@ def test_trajectory_matches_r(
 
     assert len(py_traj) == len(r_traj), (
         f"[{s.name}] trajectory row counts differ: "
-        f"PYSTILT={len(py_traj)}, R-STILT={len(r_traj)}"
+        f"PYSTILT={len(py_traj)}, STILT-R={len(r_traj)}"
     )
     assert set(compare_columns) <= set(py_traj.columns), (
         f"[{s.name}] PYSTILT trajectory missing comparison columns: "
         f"{sorted(set(compare_columns) - set(py_traj.columns))}"
     )
     assert set(compare_columns) <= set(r_traj.columns), (
-        f"[{s.name}] R-STILT trajectory missing comparison columns: "
+        f"[{s.name}] STILT-R trajectory missing comparison columns: "
         f"{sorted(set(compare_columns) - set(r_traj.columns))}"
     )
 
@@ -348,7 +348,7 @@ def test_trajectory_matches_r(
         r_sorted.drop(columns=["indx", "time"]).to_numpy(dtype=float),
         rtol=1e-7,
         atol=1e-10,
-        err_msg=f"[{s.name}] trajectory values differ from R-STILT live output.",
+        err_msg=f"[{s.name}] trajectory values differ from STILT-R live output.",
     )
 
 
@@ -360,7 +360,7 @@ def test_footprint_matches_r(
     tmp_path: Path,
 ) -> None:
     """
-    PYSTILT footprint matches R-STILT output when given the same particles.
+    PYSTILT footprint matches STILT-R output when given the same particles.
 
     Feeds the PYSTILT trajectory parquet (HNF-corrected foot column) directly
     to R's calc_footprint helper.  Uses a deep comparison that checks coordinate
@@ -389,7 +389,7 @@ def test_error_trajectory_matches_r(
     r_stilt_dir: Path,
 ) -> None:
     """
-    PYSTILT error trajectory matches R-STILT's second HYSPLIT run with WINDERR.
+    PYSTILT error trajectory matches STILT-R's second HYSPLIT run with WINDERR.
 
     Only runs for scenarios that have XY wind-error parameters (siguverr etc.).
     Both implementations write the same WINDERR file content and run the same
@@ -412,14 +412,14 @@ def test_error_trajectory_matches_r(
 
     assert len(py_error) == len(r_error), (
         f"[{s.name}] error trajectory row counts differ: "
-        f"PYSTILT={len(py_error)}, R-STILT={len(r_error)}"
+        f"PYSTILT={len(py_error)}, STILT-R={len(r_error)}"
     )
     assert set(compare_columns) <= set(py_error.columns), (
         f"[{s.name}] PYSTILT error trajectory missing columns: "
         f"{sorted(set(compare_columns) - set(py_error.columns))}"
     )
     assert set(compare_columns) <= set(r_error.columns), (
-        f"[{s.name}] R-STILT error trajectory missing columns: "
+        f"[{s.name}] STILT-R error trajectory missing columns: "
         f"{sorted(set(compare_columns) - set(r_error.columns))}"
     )
 
@@ -441,5 +441,5 @@ def test_error_trajectory_matches_r(
         r_sorted.drop(columns=["indx", "time"]).to_numpy(dtype=float),
         rtol=1e-7,
         atol=1e-10,
-        err_msg=f"[{s.name}] error trajectory values differ from R-STILT.",
+        err_msg=f"[{s.name}] error trajectory values differ from STILT-R.",
     )
