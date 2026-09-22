@@ -4,9 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Literal, cast
 
-from pydantic import BaseModel, ConfigDict
-
-from .fields import cfg_field
+from pydantic import BaseModel, ConfigDict, Field
 
 if TYPE_CHECKING:
     import numpy as np
@@ -36,10 +34,10 @@ class Bounds(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    xmin: float = cfg_field(..., description="Western longitude (degrees).")
-    xmax: float = cfg_field(..., description="Eastern longitude (degrees).")
-    ymin: float = cfg_field(..., description="Southern latitude (degrees).")
-    ymax: float = cfg_field(..., description="Northern latitude (degrees).")
+    xmin: float = Field(..., description="Western longitude (degrees).")
+    xmax: float = Field(..., description="Eastern longitude (degrees).")
+    ymin: float = Field(..., description="Southern latitude (degrees).")
+    ymax: float = Field(..., description="Northern latitude (degrees).")
 
 
 class Grid(Bounds):
@@ -47,15 +45,15 @@ class Grid(Bounds):
 
     model_config = ConfigDict(frozen=True)
 
-    xres: float = cfg_field(
+    xres: float = Field(
         ...,
         description="Cell width in projection units (degrees for longlat, metres for UTM, etc.).",
     )
-    yres: float = cfg_field(
+    yres: float = Field(
         ...,
         description="Cell height in projection units (degrees for longlat, metres for UTM, etc.).",
     )
-    projection: str = cfg_field(
+    projection: str = Field(
         "+proj=longlat",
         description=(
             "Output CRS as a PROJ string.  Bounds are always lon/lat; "

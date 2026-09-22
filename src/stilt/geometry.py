@@ -38,11 +38,10 @@ import numpy as np
 import pandas as pd
 import shapely
 import xarray as xr
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from scipy import sparse
 from shapely.geometry.base import BaseGeometry
 
-from stilt.config.fields import cfg_field
 from stilt.config.spatial import Grid
 
 # ---------------------------------------------------------------------------
@@ -129,11 +128,11 @@ class Mesh(BaseModel):
 
     model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
 
-    ids: tuple[str, ...] = cfg_field(..., description="Unique cell labels.")
-    geometries: tuple[Any, ...] = cfg_field(
+    ids: tuple[str, ...] = Field(..., description="Unique cell labels.")
+    geometries: tuple[Any, ...] = Field(
         ..., description="Shapely polygon per cell, in ``crs`` coordinates."
     )
-    crs: str = cfg_field("+proj=longlat", description="CRS of the polygons.")
+    crs: str = Field("+proj=longlat", description="CRS of the polygons.")
 
     @model_validator(mode="after")
     def _check(self) -> Mesh:

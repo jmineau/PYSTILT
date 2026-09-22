@@ -14,11 +14,7 @@ from stilt.config import (
     ModelParams,
     STILTParams,
     TransportParams,
-    build_control_entries,
-    build_setup_entries,
-    iter_documented_config_fields,
 )
-from stilt.config.model import _resolved_field_meta
 from stilt.transforms import AveragingKernel, FirstOrderLifetime, PressureWeighting
 
 
@@ -125,69 +121,32 @@ def test_stilt_params_ziscale_defaults_to_scalar_one():
     assert p.ziscale == 1.0
 
 
-def test_build_setup_entries_uses_metadata_targets():
+def test_setup_entries_route_transport_params_to_setup_cfg():
     p = STILTParams()
-    entries = build_setup_entries(p)
+    entries = p.setup_entries()
 
     assert entries["numpar"] == p.numpar
     assert entries["varsiwant"] == p.varsiwant
     assert entries["ichem"] == 8
     assert entries["idsp"] == 2
-    assert "emisshrs" not in entries
-    assert "w_option" not in entries
-    assert "z_top" not in entries
-    assert "ziscale" not in entries
+    # CONTROL / ZICONTROL / WINDERR fields never appear in SETUP.CFG
+    for name in ("n_hours", "emisshrs", "w_option", "z_top", "ziscale", "siguverr"):
+        assert name not in entries
+    # None-valued fields are omitted
     assert "seed" not in entries
+    assert "maxpar" in entries  # defaulted from numpar
 
 
-def test_build_setup_entries_includes_seed_when_set():
-    p = STILTParams(seed=17)
-    entries = build_setup_entries(p)
-
-    assert entries["seed"] == 17
+def test_setup_entries_include_seed_when_set():
+    assert STILTParams(seed=17).setup_entries()["seed"] == 17
 
 
-def test_build_control_entries_uses_control_targets():
-    p = STILTParams(emisshrs=0.5, w_option=1, z_top=12000.0)
-    entries = build_control_entries(p)
-
-    assert entries == {
-        "emisshrs": 0.5,
-        "w_option": 1,
-        "z_top": 12000.0,
-    }
-
-
-def test_resolved_field_meta_applies_defaults_and_overrides():
-    assert _resolved_field_meta(ModelParams, "numpar")["target"] == "setup"
-    assert _resolved_field_meta(TransportParams, "seed")["target"] == "setup"
-    assert _resolved_field_meta(TransportParams, "emisshrs")["target"] == "control"
-    assert _resolved_field_meta(TransportParams, "w_option")["target"] == "control"
-    assert _resolved_field_meta(TransportParams, "z_top")["target"] == "control"
-    assert _resolved_field_meta(TransportParams, "ziscale")["target"] == "zicontrol"
-    assert _resolved_field_meta(ErrorParams, "siguverr")["target"] == "winderr"
-    assert _resolved_field_meta(ErrorParams, "sigzierr")["target"] == "zierr"
-    assert _resolved_field_meta(TransportParams, "ichem")["visibility"] == "internal"
-
-
-def test_iter_documented_config_fields_hides_internal_transport_fields_by_default():
-    public_names = {
-        name
-        for model, name, _ in iter_documented_config_fields(TransportParams)
-        if model is TransportParams
-    }
-    internal_names = {
-        name
-        for model, name, _ in iter_documented_config_fields(
-            TransportParams, include_internal=True
-        )
-        if model is TransportParams
-    }
-
-    assert "kagl" not in public_names
-    assert "pinpf" not in public_names
-    assert "kagl" in internal_names
-    assert "pinpf" in internal_names
+def test_control_and_zicontrol_fields_are_transport_params():
+    for name in STILTParams.CONTROL_FIELDS - {"n_hours"}:
+        assert name in TransportParams.model_fields
+    assert "n_hours" in ModelParams.model_fields
+    for name in STILTParams.ZICONTROL_FIELDS:
+        assert name in TransportParams.model_fields
 
 
 # ---------------------------------------------------------------------------

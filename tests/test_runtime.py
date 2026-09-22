@@ -1,37 +1,43 @@
 """Tests for runtime-only deployment settings."""
 
-import pytest
-from pydantic import ValidationError
-
-from stilt.config import RuntimeSettings, resolve_runtime_settings
+from stilt.config import RuntimeSettings
 
 
-def test_runtime_settings_from_env(monkeypatch, tmp_path):
+def test_runtime_settings_read_environment(monkeypatch, tmp_path):
     monkeypatch.setenv("PYSTILT_DB_URL", "postgresql://user:pass@db/pystilt")
     monkeypatch.setenv("PYSTILT_CACHE_DIR", str(tmp_path / "cache"))
     monkeypatch.setenv("PYSTILT_COMPUTE_ROOT", str(tmp_path / "scratch"))
-    monkeypatch.setenv("PYSTILT_MAX_ROWS", "25")
 
-    runtime = RuntimeSettings.from_env()
+    runtime = RuntimeSettings()
 
     assert runtime.db_url == "postgresql://user:pass@db/pystilt"
     assert runtime.cache_dir == tmp_path / "cache"
     assert runtime.compute_root == tmp_path / "scratch"
-    assert runtime.max_rows == 25
 
 
-def test_resolve_runtime_settings_prefers_explicit_instance(tmp_path):
-    runtime = RuntimeSettings(
-        db_url="postgresql://explicit",
-        cache_dir=tmp_path / "cache",
-        max_rows=10,
-    )
+def test_runtime_settings_default_to_none(monkeypatch):
+    for name in ("PYSTILT_DB_URL", "PYSTILT_CACHE_DIR", "PYSTILT_COMPUTE_ROOT"):
+        monkeypatch.delenv(name, raising=False)
 
-    resolved = resolve_runtime_settings(runtime)
+    runtime = RuntimeSettings()
 
-    assert resolved is runtime
+    assert runtime.db_url is None
+    assert runtime.cache_dir is None
+    assert runtime.compute_root is None
 
 
-def test_runtime_settings_reject_non_positive_max_rows():
-    with pytest.raises(ValidationError):
-        RuntimeSettings(max_rows=0)
+def test_explicit_values_override_environment(monkeypatch, tmp_path):
+    monkeypatch.setenv("PYSTILT_DB_URL", "postgresql://from-env")
+
+    runtime = RuntimeSettings(db_url="postgresql://explicit", cache_dir=tmp_path)
+
+    assert runtime.db_url == "postgresql://explicit"
+    assert runtime.cache_dir == tmp_path
+
+
+def test_unknown_environment_variables_are_ignored(monkeypatch):
+    monkeypatch.setenv("PYSTILT_MAX_ROWS", "25")
+
+    runtime = RuntimeSettings()
+
+    assert not hasattr(runtime, "max_rows")

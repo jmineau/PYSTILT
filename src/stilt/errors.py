@@ -74,27 +74,19 @@ class MeteorologyError(SimulationError):
     """Meteorology selection/loading failed for a simulation."""
 
 
-class TrajectoryError(SimulationError):
-    """Trajectory-generation phase failed."""
-
-
-class FootprintError(SimulationError):
-    """Footprint-generation phase failed."""
-
-
-class HYSPLITTimeoutError(TrajectoryError):
+class HYSPLITTimeoutError(SimulationError):
     """hycs_std process exceeded the configured timeout."""
 
 
-class NoParticleOutputError(TrajectoryError):
+class NoParticleOutputError(SimulationError):
     """PARTICLE_STILT.DAT was not produced by hycs_std."""
 
 
-class EmptyTrajectoryError(TrajectoryError):
+class EmptyTrajectoryError(SimulationError):
     """PARTICLE_STILT.DAT exists but contains no trajectory data."""
 
 
-class HYSPLITFailureError(TrajectoryError):
+class HYSPLITFailureError(SimulationError):
     """
     hycs_std reported a recognizable failure phrase in the log.
 

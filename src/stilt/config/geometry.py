@@ -26,7 +26,6 @@ from typing import TYPE_CHECKING, Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from .fields import cfg_field
 from .spatial import Bounds
 
 if TYPE_CHECKING:
@@ -39,12 +38,12 @@ class FileGeometrySpec(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     kind: Literal["file"] = "file"
-    path: str = cfg_field(..., description="Path to the vector file.")
-    ids: str | None = cfg_field(
+    path: str = Field(..., description="Path to the vector file.")
+    ids: str | None = Field(
         None, description="Attribute column to use as cell ids (default: row index)."
     )
-    layer: str | None = cfg_field(None, description="Layer name for multi-layer files.")
-    where: str | None = cfg_field(
+    layer: str | None = Field(None, description="Layer name for multi-layer files.")
+    where: str | None = Field(
         None, description="Optional attribute filter (OGR SQL WHERE clause)."
     )
 
@@ -66,8 +65,8 @@ class H3GeometrySpec(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     kind: Literal["h3"] = "h3"
-    resolution: int = cfg_field(..., description="H3 resolution (0-15).", ge=0, le=15)
-    bounds: Bounds = cfg_field(..., description="Lon/lat box the hexagons must cover.")
+    resolution: int = Field(..., description="H3 resolution (0-15).", ge=0, le=15)
+    bounds: Bounds = Field(..., description="Lon/lat box the hexagons must cover.")
 
     def build(self) -> Mesh:
         """Generate the hexagons (requires the ``h3`` package)."""
@@ -82,14 +81,14 @@ class WindowsGeometrySpec(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     kind: Literal["windows"] = "windows"
-    coords: list[tuple[float, float]] = cfg_field(
+    coords: list[tuple[float, float]] = Field(
         ..., description="Window centres as (x, y) pairs."
     )
-    size: float | tuple[float, float] = cfg_field(
+    size: float | tuple[float, float] = Field(
         ..., description="Window width, or (width, height), in CRS units."
     )
-    ids: list[str] | None = cfg_field(None, description="Optional label per point.")
-    crs: str = cfg_field("+proj=longlat", description="CRS of the coordinates.")
+    ids: list[str] | None = Field(None, description="Optional label per point.")
+    crs: str = Field("+proj=longlat", description="CRS of the coordinates.")
 
     def build(self) -> Mesh:
         """Build the windows as a :class:`stilt.Mesh`."""

@@ -67,13 +67,13 @@ PYSTILT keeps the public config flat for alpha users: fields such as `seed`,
 `ModelConfig(...)` and `Model(...)`. Do not introduce nested user-facing
 parameter objects unless the public API is deliberately redesigned.
 
-Use `cfg_field()` when a field needs PYSTILT metadata such as `visibility`,
-`target`, or a HYSPLIT `namelist` alias. Prefer class `DEFAULT_TARGET` values
-for whole parameter groups, and override `target` only when a field routes
-somewhere different, such as `control`, `zicontrol`, `winderr`, or `zierr`.
-
-When adding a routed field, update the config routing tests so contributors can
-see which generated HYSPLIT input file the field affects.
+Config fields are plain pydantic `Field(default, description=...)`. Every
+`TransportParams` field is written to HYSPLIT's `SETUP.CFG` by
+`STILTParams.setup_entries()` unless it is listed in
+`STILTParams.CONTROL_FIELDS` (read from `CONTROL`) or `ZICONTROL_FIELDS`;
+`ErrorParams` fields go to `WINDERR` / `ZIERR`. When you add a field that
+HYSPLIT reads from somewhere other than `SETUP.CFG`, add it to the matching
+set and to the routing test in `tests/test_config.py`.
 
 ## Project store and completion
 

@@ -1,9 +1,8 @@
 from pathlib import Path
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from .fields import cfg_field
 from .spatial import Bounds
 
 
@@ -26,11 +25,11 @@ class MetConfig(BaseModel):
 
     model_config = ConfigDict(extra="allow")
 
-    directory: Path = cfg_field(
+    directory: Path = Field(
         ...,
         description="Directory containing ARL meteorology files for this met stream.",
     )
-    source: str | None = cfg_field(
+    source: str | None = Field(
         None,
         description=(
             "arlmet source name for automatic downloading from NOAA archives "
@@ -40,57 +39,51 @@ class MetConfig(BaseModel):
             "may be specified as additional inline fields."
         ),
     )
-    backend: Literal["s3", "ftp", "http"] = cfg_field(
+    backend: Literal["s3", "ftp", "http"] = Field(
         "s3",
         description="Download backend when source is set. One of 's3', 'ftp', or 'http'.",
-        visibility="advanced",
     )
-    file_format: str | None = cfg_field(
+    file_format: str | None = Field(
         None,
         description=(
             "Datetime format string used to discover meteorology filenames. "
             "Required when source is not set (archive mode)."
         ),
     )
-    file_tres: str | None = cfg_field(
+    file_tres: str | None = Field(
         None,
         description=(
             "Nominal time spacing between meteorology files. "
             "Required when source is not set (archive mode)."
         ),
     )
-    n_min: int = cfg_field(
+    n_min: int = Field(
         1,
         description="Minimum number of meteorology files required for a run.",
     )
-    subgrid_enable: bool = cfg_field(
+    subgrid_enable: bool = Field(
         False,
         description="Enable meteorology subgridding before the run.",
-        visibility="advanced",
     )
-    subgrid_bounds: Bounds | None = cfg_field(
+    subgrid_bounds: Bounds | None = Field(
         None,
         description="Bounds used for meteorology subgridding.",
-        visibility="advanced",
     )
-    subgrid_buffer: float = cfg_field(
+    subgrid_buffer: float = Field(
         0.2,
         description="Buffer added around the receptor domain when subgridding meteorology.",
-        visibility="advanced",
     )
-    subgrid_levels: int | None = cfg_field(
+    subgrid_levels: int | None = Field(
         None,
         description="Number of vertical levels to keep when subgridding meteorology.",
-        visibility="advanced",
     )
-    subgrid_dir: Path | None = cfg_field(
+    subgrid_dir: Path | None = Field(
         None,
         description=(
             "Directory to cache subgridded met files. "
             "Defaults to <directory>/subgrid when not set. "
             "Shared across all simulations that use this met stream."
         ),
-        visibility="advanced",
     )
 
     @model_validator(mode="after")

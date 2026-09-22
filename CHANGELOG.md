@@ -8,6 +8,20 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **Config fields are plain pydantic `Field`s.** `cfg_field` and its
+  `visibility` / `target` / `namelist` metadata are gone, along with
+  `iter_documented_config_fields`, `CONFIG_DOC_MODELS`,
+  `build_setup_entries` and `build_control_entries`. What HYSPLIT reads from
+  `SETUP.CFG` is now `STILTParams.setup_entries()`: every `TransportParams`
+  field except `STILTParams.CONTROL_FIELDS` and `ZICONTROL_FIELDS`, plus
+  `numpar` and `varsiwant`.
+- `RuntimeSettings` is one `pydantic-settings` class read from `PYSTILT_*`
+  (`db_url`, `cache_dir`, `compute_root`); `RuntimeSettings.from_env()`,
+  `resolve_runtime_settings()`, and the never-used `max_rows` /
+  `PYSTILT_MAX_ROWS` are removed.
+- `TrajectoryError` and `FootprintError` were never raised; the HYSPLIT
+  errors now subclass `SimulationError` directly.
+
 - **The observation layer is the X-STILT port and nothing else.** Removed the
   `Sensor` / `BaseSensor` / `PointSensor` / `ColumnSensor` facade,
   `UncertaintyBudget` / `UncertaintyComponent` and

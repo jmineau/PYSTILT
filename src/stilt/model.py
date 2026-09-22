@@ -24,7 +24,6 @@ from stilt.config import (
     ModelConfig,
     RuntimeSettings,
     STILTParams,
-    resolve_runtime_settings,
 )
 from stilt.config.model import _config_or_kwargs
 from stilt.errors import ConfigValidationError
@@ -113,7 +112,7 @@ class Model:
         runtime: RuntimeSettings | None = None,
         **kwargs,
     ):
-        self.runtime = resolve_runtime_settings(runtime)
+        self.runtime = runtime if runtime is not None else RuntimeSettings()
         self.project = Project(project, cache_dir=self.runtime.cache_dir)
         self.compute_root = self._resolve_compute_root(compute_root)
         self._config = _config_or_kwargs(config, kwargs, ModelConfig)

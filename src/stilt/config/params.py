@@ -3,32 +3,26 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import ClassVar, Literal
+from typing import Any, ClassVar, Literal
 
 import pandas as pd
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from typing_extensions import Self
 
-from .fields import cfg_field
-
 
 class ModelParams(BaseModel):
     """Core STILT run controls."""
 
-    DEFAULT_TARGET: ClassVar[str | None] = None
-
-    n_hours: int = cfg_field(
+    n_hours: int = Field(
         -24,
         description="Number of hours to run each simulation; negative indicates backward in time.",
-        target="control",
     )
-    numpar: int = cfg_field(
+    numpar: int = Field(
         200,
         description=(
             "Number of particles released per simulation. Higher values reduce "
             "stochastic noise in footprints at the cost of runtime and memory."
         ),
-        target="setup",
     )
     hnf_plume: bool = Field(
         True,
@@ -91,7 +85,7 @@ class ModelParams(BaseModel):
             "temz",
             "zfx1",
         ]
-    ] = cfg_field(
+    ] = Field(
         default_factory=lambda: [
             "time",
             "indx",
@@ -112,15 +106,11 @@ class ModelParams(BaseModel):
             "'long', 'lati', 'zagl', 'foot', 'mlht', 'dens', 'samt', "
             "'sigw', 'tlgr'."
         ),
-        target="setup",
-        visibility="advanced",
     )
 
 
 class TransportParams(BaseModel):
     """HYSPLIT transport and turbulence parameterization."""
-
-    DEFAULT_TARGET: ClassVar[str | None] = "setup"
 
     capemin: float = Field(
         -1.0,
@@ -151,10 +141,9 @@ class TransportParams(BaseModel):
         "",
         description="Temporal emissions file name; blank disables file-driven emissions.",
     )
-    emisshrs: float = cfg_field(
+    emisshrs: float = Field(
         0.01,
         description="Duration of emissions in fractional hours.",
-        target="control",
     )
     frhmax: float = Field(3.0, description="Maximum horizontal puff-rounding value.")
     frhs: float = Field(
@@ -171,15 +160,13 @@ class TransportParams(BaseModel):
     hscale: int = Field(
         10800, description="Horizontal Lagrangian timescale in seconds."
     )
-    ichem: int = cfg_field(
+    ichem: int = Field(
         8,
         description="Chemistry mode; 8 selects STILT particle-in-cell output.",
-        visibility="internal",
     )
-    idsp: int = cfg_field(
+    idsp: int = Field(
         2,
         description="Dispersion scheme; 1 uses HYSPLIT and 2 uses STILT.",
-        visibility="internal",
     )
     initd: int = Field(
         0,
@@ -189,10 +176,9 @@ class TransportParams(BaseModel):
         1,
         description="Use 10 m winds and 2 m temperatures as the lowest meteorology level when available.",
     )
-    kagl: int = cfg_field(
+    kagl: int = Field(
         1,
         description="For trajectories, write heights as AGL (1) or MSL (0).",
-        visibility="internal",
     )
     kbls: int = Field(
         1,
@@ -233,15 +219,13 @@ class TransportParams(BaseModel):
         4,
         description="Random-number mode for turbulence, repeatability, and diagnostic no-mixing runs.",
     )
-    seed: int | None = cfg_field(
+    seed: int | None = Field(
         None,
         description=(
             "Optional HYSPLIT random-number seed written to SETUP.CFG. "
             "Use with krand values that preserve a fixed initial seed; krand=4 "
             "and 10-13 still randomize the initial seed."
         ),
-        target="setup",
-        visibility="advanced",
     )
     krnd: int = Field(6, description="Enhanced-merging interval in hours.")
     kspl: int = Field(1, description="Standard particle-splitting interval in hours.")
@@ -266,15 +250,13 @@ class TransportParams(BaseModel):
         1,
         description="Number of particle-size bins created around each pollutant size entry.",
     )
-    ncycl: int = cfg_field(
+    ncycl: int = Field(
         0,
         description="PARDUMP output cycle time.",
-        visibility="internal",
     )
-    ndump: int = cfg_field(
+    ndump: int = Field(
         0,
         description="Write particle dumps every n hours; 0 disables dumps.",
-        visibility="internal",
     )
     ninit: int = Field(
         1,
@@ -286,26 +268,22 @@ class TransportParams(BaseModel):
         description="Turbulence mode selector; 0 is on/default, 1 disables turbulence.",
     )
     nver: int = Field(0, description="Trajectory vertical split number.")
-    outdt: int = cfg_field(
+    outdt: int = Field(
         0,
         description="Minutes between STILT endpoint writes to PARTICLE.DAT; negative disables output.",
-        visibility="advanced",
     )
     p10f: int = Field(1, description="Dust threshold-velocity sensitivity factor.")
-    pinbc: str = cfg_field(
+    pinbc: str = Field(
         "",
         description="Particle input file used for boundary-condition particles.",
-        visibility="internal",
     )
-    pinpf: str = cfg_field(
+    pinpf: str = Field(
         "",
         description="Particle input file for initialization or boundary-condition runs.",
-        visibility="internal",
     )
-    poutf: str = cfg_field(
+    poutf: str = Field(
         "",
         description="Particle output file name.",
-        visibility="internal",
     )
     qcycle: int = Field(
         0, description="Emission cycling period in hours; 0 disables cycling."
@@ -353,10 +331,9 @@ class TransportParams(BaseModel):
         -1,
         description="Vertical Lagrangian timescale in seconds for stable PBL conditions.",
     )
-    w_option: int = cfg_field(
+    w_option: int = Field(
         0,
         description="Vertical motion method; 0 met vertical velocity, 1 isob, 2 isen, 3 dens, 4 sigma.",
-        target="control",
     )
     wbbh: int = Field(
         0, description="Height where fixed vertical motion switches from rise to fall."
@@ -371,66 +348,53 @@ class TransportParams(BaseModel):
         False,
         description="Use the WRF vertical interpolation scheme for vertical velocity when true.",
     )
-    z_top: float = cfg_field(
+    z_top: float = Field(
         25000.0,
         description="Top of model domain, in meters above ground level; defaults to 25000.0",
-        target="control",
     )
-    zicontroltf: int = cfg_field(
+    zicontroltf: int = Field(
         0,
         description="Enable domain-wide PBL scaling from a ZICONTROL file.",
-        visibility="advanced",
     )
-    ziscale: float | list[float] | list[list[float]] = cfg_field(
+    ziscale: float | list[float] | list[list[float]] = Field(
         1.0,
         description=(
             "Manually scale the mixed-layer height. Scalars expand across the run; "
             "lists define shared hourly factors."
         ),
-        target="zicontrol",
-        visibility="advanced",
     )
 
 
 class ErrorParams(BaseModel):
     """Transport error trajectory parameters for XY and ZI perturbations."""
 
-    DEFAULT_TARGET: ClassVar[str | None] = None
-
-    siguverr: float | None = cfg_field(
+    siguverr: float | None = Field(
         None,
         description="Standard deviation of horizontal wind error [m/s]",
-        target="winderr",
     )
-    tluverr: float | None = cfg_field(
+    tluverr: float | None = Field(
         None,
         description="Standard deviation of horiztontal wind error timescale [min]",
-        target="winderr",
     )
-    zcoruverr: float | None = cfg_field(
+    zcoruverr: float | None = Field(
         None,
         description="Vertical correlation length scale of horizontal wind error [m]",
-        target="winderr",
     )
-    horcoruverr: float | None = cfg_field(
+    horcoruverr: float | None = Field(
         None,
         description="Horizontal correlation length scale of horizontal wind error [km]",
-        target="winderr",
     )
-    sigzierr: float | None = cfg_field(
+    sigzierr: float | None = Field(
         None,
         description="Standard deviation of mixed-layer height errors [%]",
-        target="zierr",
     )
-    tlzierr: float | None = cfg_field(
+    tlzierr: float | None = Field(
         None,
         description="Standard deviation of mixed layer height timescale [min]",
-        target="zierr",
     )
-    horcorzierr: float | None = cfg_field(
+    horcorzierr: float | None = Field(
         None,
         description="Horizontal correlation length scale of mixed-layer height errors [km]",
-        target="zierr",
     )
 
     XYERR_PARAMS: ClassVar[tuple[str, ...]] = (
@@ -487,9 +451,37 @@ class ErrorParams(BaseModel):
 
 
 class STILTParams(ModelParams, TransportParams, ErrorParams):
-    """All STILT/HYSPLIT parameters in one flat model."""
+    """
+    All STILT/HYSPLIT parameters in one flat model.
+
+    Every :class:`TransportParams` field is a ``SETUP.CFG`` namelist entry
+    except the few HYSPLIT reads from ``CONTROL`` or ``ZICONTROL``;
+    :meth:`setup_entries` applies that rule. :class:`ErrorParams` fields go to
+    ``WINDERR`` / ``ZIERR`` (see ``ErrorParams.XYERR_PARAMS`` / ``ZIERR_PARAMS``).
+    """
 
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
+
+    #: Fields HYSPLIT reads from CONTROL rather than SETUP.CFG.
+    CONTROL_FIELDS: ClassVar[frozenset[str]] = frozenset(
+        {"n_hours", "emisshrs", "w_option", "z_top"}
+    )
+    #: Fields written to ZICONTROL rather than SETUP.CFG.
+    ZICONTROL_FIELDS: ClassVar[frozenset[str]] = frozenset({"ziscale"})
+    #: ModelParams fields that are SETUP.CFG entries.
+    _MODEL_SETUP_FIELDS: ClassVar[frozenset[str]] = frozenset({"numpar", "varsiwant"})
+
+    def setup_entries(self) -> dict[str, Any]:
+        """Return the ``SETUP.CFG`` namelist entries (``None`` values omitted)."""
+        names = [
+            *(n for n in ModelParams.model_fields if n in self._MODEL_SETUP_FIELDS),
+            *(
+                n
+                for n in TransportParams.model_fields
+                if n not in self.CONTROL_FIELDS and n not in self.ZICONTROL_FIELDS
+            ),
+        ]
+        return {n: getattr(self, n) for n in names if getattr(self, n) is not None}
 
     @model_validator(mode="after")
     def _set_maxpar(self) -> Self:

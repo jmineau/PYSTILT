@@ -16,7 +16,6 @@ import pandas as pd
 
 from stilt.config import (
     STILTParams,
-    build_setup_entries,
     kmsl_from_vertical_reference,
 )
 from stilt.errors import (
@@ -314,7 +313,7 @@ class HYSPLITDriver:
 
     def _write_setup(self, winderrtf: int) -> None:
         """Write ``SETUP.CFG`` for the current HYSPLIT run."""
-        entries = build_setup_entries(self.params)
+        entries = self.params.setup_entries()
         entries["kmsl"] = self._resolved_kmsl()
         entries["ivmax"] = len(self.params.varsiwant)  # number of output variables
         entries["winderrtf"] = winderrtf

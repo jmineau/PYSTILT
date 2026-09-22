@@ -2,19 +2,19 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeVar
 
 import yaml
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from typing_extensions import Self
 
-from .fields import T, _field_meta, cfg_field
 from .footprint import FootprintConfig
 from .meteorology import MetConfig
-from .params import ErrorParams, ModelParams, STILTParams, TransportParams
-from .spatial import Bounds, Grid
+from .params import STILTParams
+from .spatial import Grid
+
+T = TypeVar("T", bound=BaseModel)
 
 _GRID_KEYS = frozenset({"xmin", "xmax", "ymin", "ymax", "xres", "yres", "projection"})
 _REQUIRED_GRID_KEYS = frozenset({"xmin", "xmax", "ymin", "ymax", "xres", "yres"})
@@ -25,24 +25,23 @@ class ModelConfig(STILTParams):
 
     model_config = ConfigDict(extra="forbid")
 
-    footprints: dict[str, FootprintConfig] = cfg_field(
+    footprints: dict[str, FootprintConfig] = Field(
         default_factory=dict,
         description="Named footprint products available for this model configuration.",
     )
-    grids: dict[str, Grid] = cfg_field(
+    grids: dict[str, Grid] = Field(
         default_factory=dict,
         description="Named grids referenced by footprint definitions.",
     )
-    mets: dict[str, MetConfig] = cfg_field(
+    mets: dict[str, MetConfig] = Field(
         default_factory=dict,
         description="Named meteorology streams available to the model.",
     )
-    execution: dict[str, Any] = cfg_field(
+    execution: dict[str, Any] = Field(
         default_factory=dict,
         description="Execution backend settings such as local, Slurm, or Kubernetes options.",
-        visibility="advanced",
     )
-    skip_existing: bool = cfg_field(
+    skip_existing: bool = Field(
         True,
         description=(
             "Skip simulations that already have output. "
@@ -162,77 +161,6 @@ class ModelConfig(STILTParams):
         return cls.model_validate(raw)
 
 
-CONFIG_DOC_MODELS: tuple[type[BaseModel], ...] = (
-    Bounds,
-    Grid,
-    MetConfig,
-    FootprintConfig,
-    ModelParams,
-    TransportParams,
-    ErrorParams,
-    ModelConfig,
-)
-
-
-def iter_documented_config_fields(
-    *models: type[BaseModel],
-    include_internal: bool = False,
-) -> Iterator[tuple[type[BaseModel], str, Any]]:
-    """Yield config fields in declaration order for docs or UI generation."""
-    if not models:
-        models = CONFIG_DOC_MODELS
-    for model in models:
-        for name, field in model.model_fields.items():
-            meta = _resolved_field_meta(model, name)
-            if meta["visibility"] == "internal" and not include_internal:
-                continue
-            yield model, name, field
-
-
-def _resolved_field_meta(model: type[BaseModel], name: str) -> dict[str, Any]:
-    """Return field metadata after applying class-level routing defaults."""
-    field = model.model_fields[name]
-    meta = _field_meta(field)
-    return {
-        **meta,
-        "target": meta.get("target", getattr(model, "DEFAULT_TARGET", None)),
-        "visibility": meta.get("visibility", "public"),
-        "namelist": meta.get("namelist", name),
-    }
-
-
-def _collect_target_entries(
-    params: BaseModel,
-    model: type[BaseModel],
-    *,
-    target: str,
-) -> dict[str, Any]:
-    """Collect config fields whose metadata routes them to one output target."""
-    entries: dict[str, Any] = {}
-    for name in model.model_fields:
-        meta = _resolved_field_meta(model, name)
-        if meta["target"] != target:
-            continue
-        value = getattr(params, name)
-        if value is None:
-            continue
-        entries[meta["namelist"]] = value
-    return entries
-
-
-def build_setup_entries(params: STILTParams) -> dict[str, Any]:
-    """Collect fields that belong in HYSPLIT ``SETUP.CFG``."""
-    entries: dict[str, Any] = {}
-    entries.update(_collect_target_entries(params, ModelParams, target="setup"))
-    entries.update(_collect_target_entries(params, TransportParams, target="setup"))
-    return entries
-
-
-def build_control_entries(params: STILTParams) -> dict[str, Any]:
-    """Collect fields that belong in HYSPLIT ``CONTROL``."""
-    return _collect_target_entries(params, TransportParams, target="control")
-
-
 def _config_or_kwargs(
     config: T | None,
     kwargs: dict,
@@ -248,10 +176,4 @@ def _config_or_kwargs(
     return config
 
 
-__all__ = [
-    "CONFIG_DOC_MODELS",
-    "ModelConfig",
-    "build_control_entries",
-    "build_setup_entries",
-    "iter_documented_config_fields",
-]
+__all__ = ["ModelConfig"]
