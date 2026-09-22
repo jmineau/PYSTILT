@@ -70,6 +70,32 @@ cell outside the flux field contributes nothing.
 Units are yours: a flux in µmol m⁻² s⁻¹ times a footprint in
 ppm per (µmol m⁻² s⁻¹) gives ppm.
 
+The emission error
+------------------
+
+The same product gives the enhancement's uncertainty from the flux field's
+own uncertainty. With ``sigma`` a field of one standard deviation per cell,
+in the flux's units, put it on the footprint's grid and take two limits:
+
+.. code-block:: python
+
+   s = sigma.reindex(lat=foot.data["lat"], lon=foot.data["lon"], method="nearest")
+   err_correlated = float((foot.data * s).sum())            # every cell errs the same way
+   err_independent = float(np.sqrt(((foot.data * s) ** 2).sum()))   # each cell on its own
+
+The first is the footprint times sigma summed over the grid, what X-STILT
+reports as the emission error on the column (``cal.emiss.err``, with sigma
+from the spread of several inventories). It assumes one shared error
+across all cells, so it is an upper bound. The second treats the cells as
+independent and is a lower bound. Real inventories sit between: their
+errors correlate over some distance, and the number in between needs that
+covariance, which is the prior error covariance of an inversion. fips
+computes it for every observation at once as
+``InverseProblem.prior_obs_error``, the footprint matrix times the prior
+covariance times its transpose, so an inversion setup gives the emission
+error for free. Add it to the transport error and the retrieval error in
+quadrature for the error budget of a modelled value.
+
 The transport error
 -------------------
 

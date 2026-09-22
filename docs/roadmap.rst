@@ -95,6 +95,9 @@ design and column-weighting concepts.  Full X-STILT feature parity is
      - Implemented
    * - Satellite-derived plume background (forward trajectories)
      - Implemented (see the *Plume Background* guide)
+   * - Emission-error propagation to the modelled enhancement
+     - A recipe on ``Footprint.enhancement`` (see the *Transport Error* guide); the
+       correlated case is fips's ``prior_obs_error``
    * - Inventory readers
      - Out of scope; a flux field is an xarray array
 

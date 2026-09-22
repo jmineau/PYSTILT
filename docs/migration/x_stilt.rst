@@ -66,6 +66,11 @@ parity is not a goal; the table shows what has an equivalent.
      - ``background/``
      - :func:`stilt.observations.background` against any xarray field
        (:doc:`/guides/background`)
+   * - Emission-error propagation (``cal.emiss.err``, footprint × inventory spread)
+     - ``error_functions/``
+     - the same product as the enhancement, ``foot.enhancement(sigma)``; with
+       a spatial correlation it is fips's ``prior_obs_error`` (see *The
+       emission error* in :doc:`/guides/transport_error`)
    * - Satellite-derived plume background (``compute_bg``, forward trajectories)
      - ``background/``
      - :func:`stilt.observations.plume_polygon` and

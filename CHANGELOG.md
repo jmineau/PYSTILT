@@ -6,6 +6,14 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **Emission-error recipe** in the Transport Error guide: the enhancement's
+  uncertainty from a per-cell flux sigma is the same footprint product,
+  bracketed by the fully correlated sum (X-STILT's `cal.emiss.err`) and the
+  independent root-sum-square; the correlated case is fips's new
+  `prior_obs_error`. No new API.
+
 ## [0.1.0a17] - 2026-09-22
 
 ### Added

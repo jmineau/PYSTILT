@@ -79,6 +79,7 @@ design and column-weighting concepts without trying to replicate every script.
 | Modelled enhancement from a flux field (`Footprint.enhancement`) | Implemented |
 | Background from a mole-fraction field at the trajectory endpoints (`background`) | Implemented |
 | Satellite-derived plume background (forward trajectories) | Implemented |
+| Emission-error propagation to the modelled enhancement | Recipe on `Footprint.enhancement`; correlated case in fips |
 | Inventory readers | Out of scope: a flux field is an xarray array |
 
 ## Installation
