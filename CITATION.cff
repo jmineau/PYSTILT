@@ -2,6 +2,13 @@ cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
 type: software
 title: "PYSTILT"
+# Concept DOI (always resolves to the latest release) — same convention as
+# pandas/astropy/xarray. `doi` is the shorthand GitHub's "Cite this
+# repository" popup actually renders in APA/BibTeX (it ignores
+# `identifiers`, per citation-file-format/ruby-cff's formatters);
+# `identifiers` is kept too for tools that prefer that form. Deliberately
+# not tracking the per-version DOI here — none of the above do either.
+doi: "10.5281/zenodo.22211796"
 abstract: "A Python implementation of the STILT Lagrangian atmospheric transport model."
 authors:
   - family-names: Mineau
@@ -11,6 +18,10 @@ authors:
     affiliation: "University of Utah"
 license: MIT
 repository-code: "https://github.com/jmineau/PYSTILT"
+identifiers:
+  - type: doi
+    value: "10.5281/zenodo.22211796"
+    description: "The concept DOI for all versions of PYSTILT."
 keywords:
   - stilt
   - hysplit
