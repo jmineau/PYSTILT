@@ -233,7 +233,7 @@ wheels = [
 
 [[package]]
 name = "arlmet"
-version = "0.1.0a1"
+version = "0.1.0a8"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
@@ -242,12 +242,24 @@ dependencies = [
     { name = "pandas", version = "3.0.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "pyproj", version = "3.7.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "pyproj", version = "3.7.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "typing-extensions" },
     { name = "xarray", version = "2025.6.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "xarray", version = "2026.2.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/06/eb/92c8d17d37d394159d1e731df4335e6df753062cf20623f070374c725072/arlmet-0.1.0a1.tar.gz", hash = "sha256:1fe19aef5a598c2fc375bbee0db26c5846f5a935f78586cd9b277580e4f79807", size = 84219, upload-time = "2026-05-11T10:36:34.071Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/45/03/4eb186ecf494ee203b21abfa3802f6f86e38c509f6c98c4be306e62ce2b0/arlmet-0.1.0a8.tar.gz", hash = "sha256:e916c47289def7e09b6bc27ab47b21970da88840a99a5d656eb9ce1ad00eed4c", size = 104876, upload-time = "2026-09-22T16:19:28.182Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/f0/a8/de8aa106f6e582929e6c3d23c917799b92ee77a819ae6fc6efa15ed8308c/arlmet-0.1.0a1-py3-none-any.whl", hash = "sha256:d8c32c02d96a8f7da10e22caeee36b07968c1b1ce4d54a144fd2ca417cd2acaa", size = 64850, upload-time = "2026-05-11T10:36:32.522Z" },
+    { url = "https://files.pythonhosted.org/packages/ba/be/263a7a155483171a2e059336d705d4506d9fcf82adda91e6e08f9b5f2552/arlmet-0.1.0a8-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:a0f495c46c2c96e75564119143545da2ed3faea934727cb30b5decff6ba77776", size = 80719, upload-time = "2026-09-22T16:19:12.161Z" },
+    { url = "https://files.pythonhosted.org/packages/b4/0c/7195119006e87bc137e32190b766f1fcec16dad5625133b075654999bb63/arlmet-0.1.0a8-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:d2f90eb29093c62be3f58e82be3668bf2504f3b7e56198364f356160bb937155", size = 81157, upload-time = "2026-09-22T16:19:13.629Z" },
+    { url = "https://files.pythonhosted.org/packages/f6/50/baff1e6afe4ef8754890e45e2a9cb79f51df844c62e2c2f5bbc57381cec5/arlmet-0.1.0a8-cp310-cp310-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:2defbf63771c26c4791cc12debe090ebcdc342ed16269d5fb2a5ea699f95e8d0", size = 89857, upload-time = "2026-09-22T16:19:14.921Z" },
+    { url = "https://files.pythonhosted.org/packages/ef/7e/fcc9596f91b1e5a8c87adf59228d4abb7a00c128fecd8a3ea754ce0fb38a/arlmet-0.1.0a8-cp310-cp310-win_amd64.whl", hash = "sha256:c5f67e54dcf6bfa498c0377aadc18fbc8f6195762b559dc68cde3b3c10927fcd", size = 83642, upload-time = "2026-09-22T16:19:16.232Z" },
+    { url = "https://files.pythonhosted.org/packages/d3/0c/af1575e56e5e3451e957ab24b9ceb2df53bd769e64caea37be312c9574ba/arlmet-0.1.0a8-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:974237bdb544c28e22a34a48ce31a9ee7874d89fc1230b73ca7a5b0c0e321b40", size = 80720, upload-time = "2026-09-22T16:19:17.639Z" },
+    { url = "https://files.pythonhosted.org/packages/87/e6/d8ce947ad77903fd379b29c01af95a5255dd208ee0d32c4e9644a97c7443/arlmet-0.1.0a8-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:c544272f6e49b507e122c5473fc8d52d8f99904573601dd5fa3336be6dbf1269", size = 81157, upload-time = "2026-09-22T16:19:18.896Z" },
+    { url = "https://files.pythonhosted.org/packages/cd/f2/8d06d096addaec34a18687a9b08cd6d266169397213768356d417a28ea3e/arlmet-0.1.0a8-cp311-cp311-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:f23f360f177cd55a16320df19e4ff36d62d54736c494535534a1a0525d6478b5", size = 89971, upload-time = "2026-09-22T16:19:20.143Z" },
+    { url = "https://files.pythonhosted.org/packages/11/a4/8af5e34ffa5936f436f215e2f60081beec205432e2593f6f005fe5604987/arlmet-0.1.0a8-cp311-cp311-win_amd64.whl", hash = "sha256:1e57c31521780b9f61609dad6bc89f8f4c49295c158ac4a36e1d15c52d4f4469", size = 83640, upload-time = "2026-09-22T16:19:21.622Z" },
+    { url = "https://files.pythonhosted.org/packages/47/5a/677e2b918ada43d5c486066a3aa50537d1a55778a12d88a264cf0e62d6f7/arlmet-0.1.0a8-cp312-cp312-macosx_10_13_x86_64.whl", hash = "sha256:1724e15f327b646fa0522e11b98b033754e29d4a3715b9bdb8608d782a9ac922", size = 80751, upload-time = "2026-09-22T16:19:22.881Z" },
+    { url = "https://files.pythonhosted.org/packages/56/25/6b61f1cec728fdc5a031f168adb40100799f89ae96fda32729dd613b58a4/arlmet-0.1.0a8-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:c36100a4af50458d4d8344fe8b0885597504e5f0eae7116466b477d16b25e8fc", size = 81178, upload-time = "2026-09-22T16:19:24.09Z" },
+    { url = "https://files.pythonhosted.org/packages/68/56/8c0b97250a7966c94fe993d26752a5fa2a5475bfa40fdc38cde9a24fb065/arlmet-0.1.0a8-cp312-cp312-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:91e68c5a71c01ce3b3aba3529637a57599dcc132703e3390dd14a8ca5bc5c073", size = 90446, upload-time = "2026-09-22T16:19:25.479Z" },
+    { url = "https://files.pythonhosted.org/packages/4c/a4/6e89749b6785c254fab1cb169277dc447efc2dae656b1908ef02a0c016f7/arlmet-0.1.0a8-cp312-cp312-win_amd64.whl", hash = "sha256:d9e7649442c9c169c390998ad25017e4d5a46c6e3c24a2a71c3b519b73c34f4d", size = 83660, upload-time = "2026-09-22T16:19:26.954Z" },
 ]
 
 [[package]]
@@ -3547,7 +3559,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "arlmet", specifier = ">=0.1.0a1" },
+    { name = "arlmet", specifier = ">=0.1.0a8" },
     { name = "fsspec", specifier = ">=2024.2" },
     { name = "gcsfs", marker = "extra == 'cloud'", specifier = ">=2024.2" },
     { name = "geopandas", marker = "extra == 'geometry'", specifier = ">=1.0" },

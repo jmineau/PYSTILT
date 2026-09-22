@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pystilt"
-version = "0.1.0a15"
+version = "0.1.0a16"
 description = "A Python implementation of the STILT Lagrangian atmospheric transport model."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -25,7 +25,7 @@ classifiers = [
     "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
-    "arlmet>=0.1.0a1",
+    "arlmet>=0.1.0a8",
     "fsspec>=2024.2",
     "netcdf4>=1.6.5",
     "numpy>=1.24",
