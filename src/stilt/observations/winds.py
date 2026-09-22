@@ -17,10 +17,12 @@ separated by ``h`` in that coordinate.
 separation coordinate and a grouping key that says which points may pair.
 :func:`fit_variogram` fits the model. :func:`wind_error_scales` runs the
 recipe on a table of upper-air errors and, optionally, a table of
-surface-station errors, and returns the four parameters. Producing the
-errors is arlmet's job::
+surface-station errors, and returns the four parameters. The errors
+themselves are the analysed wind minus the observed wind at each
+observation; arlmet samples the analysis at the observation points::
 
-    arlmet.sample_points(files, points, ["UWND", "VWND"], earth_relative=True)
+    met = arlmet.sample_points(files, points, ["UWND", "VWND"], earth_relative=True)
+    u_err = met["UWND"] - observed_u
 """
 
 from __future__ import annotations
