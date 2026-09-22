@@ -6,6 +6,8 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.0a15] - 2026-09-22
+
 ### Changed
 
 - **`transport_error` estimates Lin and Gerbig's (2005) variance difference
