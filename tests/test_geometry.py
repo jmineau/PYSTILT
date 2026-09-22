@@ -30,6 +30,16 @@ def test_grid_axes_cells_index_are_consistent():
     assert grid.min_cell_width == 0.1
 
 
+def test_grid_axes_keep_last_cell_for_inexact_bounds():
+    # 40.93 - 40.45 is 0.4799999999999969 in float64; the top row must survive.
+    grid = Grid(
+        xmin=-112.25, xmax=-111.75, ymin=40.45, ymax=40.93, xres=0.01, yres=0.01
+    )
+    x, y = grid.axes
+    assert (len(x), len(y)) == (50, 48)
+    assert y[-1] == 40.925
+
+
 def test_grid_from_geometry_derives_resolution_and_snapped_bounds():
     # Smallest cell 0.0095 wide / 4 = 0.002375 -> rounded down to 0.002
     mesh = Mesh.from_windows([(-111.9, 40.7), (-112.05, 40.6)], (0.0095, 0.03))

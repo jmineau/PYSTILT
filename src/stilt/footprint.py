@@ -75,14 +75,20 @@ def _grid_cell_starts(minimum: float, maximum: float, resolution: float) -> np.n
 
     Cells start at ``minimum`` and repeat by ``resolution`` while the complete
     cell remains inside ``[minimum, maximum]``.  Equivalently, ``maximum`` is an
-    outer grid boundary, not a cell start.  The small tolerance keeps common
-    decimal resolutions from losing the final intended cell to binary
-    floating-point roundoff.
+    outer grid boundary, not a cell start.
+
+    Decimal bounds are not exact in binary, so ``maximum - minimum`` carries a
+    rounding error proportional to the bounds' magnitude (``40.93 - 40.45`` is
+    ``0.4799999999999969``).  The tolerance is sized to that error, divided by
+    the resolution, so the final intended cell is kept (48 cells here at 0.01,
+    as R-STILT's ``seq()`` gives) while a genuinely partial cell is still
+    dropped.
     """
     if resolution <= 0:
         raise ValueError("Grid resolution must be positive.")
     quotient = (maximum - minimum) / resolution
-    tol = 10 * np.finfo(float).eps * max(abs(quotient), 1.0)
+    scale = max(abs(minimum), abs(maximum), abs(maximum - minimum))
+    tol = 16 * np.finfo(float).eps * scale / resolution
     n_cells = int(np.floor(quotient + tol))
     if n_cells < 1:
         raise ValueError("Grid extent must contain at least one complete cell.")

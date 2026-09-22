@@ -801,14 +801,9 @@ WINDERR = ReferenceScenario(
 #      small patch, so the kernel-padding logic gets tested on a near-empty
 #      grid.
 #
-# Bounds are chosen so that (max-min)/res evaluates to just over an integer
-# in float64 (within _grid_cell_starts' 10·eps tolerance).  Centred bounds
-# like (-112.1, -111.9) hit an asymmetric float-representation case where
-# q=19.999...863, just below the integer — _grid_cell_starts would drop a
-# cell vs R-STILT's seq() iteration.  (-112.0, -111.8) gives clean
-# q=20.000...284.  Receptor at -112, 40.5 sits at the western edge of the
-# lon range, so particles drifting west exit immediately on every step
-# regardless of synoptic wind direction; lat is centred on the receptor.
+# Receptor at -112, 40.5 sits at the western edge of the lon range, so
+# particles drifting west exit immediately on every step regardless of
+# synoptic wind direction; lat is centred on the receptor.
 SPARSE_TIGHT_DOMAIN = ReferenceScenario(
     name="sparse_tight_domain",
     description=(

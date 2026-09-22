@@ -6,6 +6,18 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **Grids lost their last row or column when the bounds were not exact in
+  binary.** The cell count `floor((max - min) / res)` used a tolerance scaled
+  to the cell count, but the rounding error in `max - min` scales with the
+  bounds' magnitude, so `ymin=40.45, ymax=40.93, yres=0.01` gave 47 rows
+  instead of 48, and a one-cell extent like `40.0-40.01` raised. About 40% of
+  0.01° extents starting on the 0.01° grid were affected; integer-degree
+  bounds were always exact. The tolerance now scales with the bounds, so
+  `Grid.axes` and footprint rasters have the intended cells and agree with
+  R-STILT's `seq()` count.
+
 ## [0.1.0a12] - 2026-09-21
 
 ### Added

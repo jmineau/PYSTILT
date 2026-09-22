@@ -87,6 +87,33 @@ def test_grid_cell_starts_keep_decimal_boundary_cell():
     assert starts[-1] == pytest.approx(-111.01)
 
 
+@pytest.mark.parametrize("resolution", [0.1, 0.05, 0.01, 0.002])
+@pytest.mark.parametrize("base", [40.0, -112.0, -180.0])
+def test_grid_cell_starts_keep_last_cell_for_inexact_bounds(base, resolution):
+    # Bounds on the 0.01 grid are not exact in binary; the rounding error in
+    # ``maximum - minimum`` must not cost the final cell (or the only cell).
+    for i in range(100):
+        minimum = round(base + i * 0.01, 10)
+        for k in range(1, 60):
+            maximum = round(minimum + k * resolution, 10)
+            assert len(_grid_cell_starts(minimum, maximum, resolution)) == k, (
+                minimum,
+                maximum,
+            )
+
+
+def test_grid_cell_starts_inexact_bound_examples():
+    assert len(_grid_cell_starts(40.45, 40.93, 0.01)) == 48
+    np.testing.assert_allclose(_grid_cell_starts(40.0, 40.01, 0.01), [40.0])
+
+
+def test_grid_cell_starts_still_drop_partial_cell():
+    # The tolerance covers float roundoff only, not a real shortfall.
+    assert len(_grid_cell_starts(40.45, 40.93 - 1e-8, 0.01)) == 47
+    with pytest.raises(ValueError, match="at least one complete cell"):
+        _grid_cell_starts(40.0, 40.01 - 1e-8, 0.01)
+
+
 def test_make_gauss_kernel_sigma_zero():
     k = _make_gauss_kernel((0.1, 0.1), sigma=0)
     assert k.shape == (1, 1)
