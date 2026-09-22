@@ -31,9 +31,8 @@ from stilt.store import Store
 from stilt.trajectory import Trajectories
 from stilt.transforms import (
     ParticleTransform,
-    ParticleTransformContext,
-    apply_particle_transforms,
-    build_particle_transforms,
+    TransformContext,
+    apply_transforms,
 )
 
 if TYPE_CHECKING:
@@ -576,7 +575,7 @@ class Simulation:
         write: bool = False,
         error: bool = False,
         transforms: Sequence[ParticleTransform] | None = None,
-        transform_context: ParticleTransformContext | None = None,
+        context: TransformContext | None = None,
         **kwargs,
     ) -> Footprint:
         """
@@ -596,12 +595,11 @@ class Simulation:
             If True, compute from the error trajectory instead of the main
             trajectory and store under ``"{name}_error"``.
         transforms : sequence, optional
-            Additional typed particle transforms applied after any declarative
-            ``config.transforms`` and before footprint rasterization.
-        transform_context : ParticleTransformContext, optional
-            Runtime context supplied to particle transforms. If omitted, a
-            default context is built from the receptor, footprint name, and
-            footprint config.
+            Extra particle transforms applied after ``config.transforms`` and
+            before rasterization (any object with ``apply(particles, context)``).
+        context : TransformContext, optional
+            Context handed to every transform. Defaults to one built from the
+            receptor and footprint name; pass your own to attach an observation.
         **kwargs
             Forwarded to ``FootprintConfig`` when *config* is not given.
         """
@@ -636,20 +634,17 @@ class Simulation:
             )
         else:
             particles = traj.data
-        resolved_transforms = build_particle_transforms(config.transforms)
-        if transforms is not None:
-            resolved_transforms.extend(transforms)
-        if resolved_transforms:
-            context = transform_context or ParticleTransformContext(
-                receptor=self.receptor if traj is None else traj.receptor,
-                footprint_name=stored_name,
-                footprint_config=config,
-                is_error=error,
-            )
-            particles = apply_particle_transforms(
+        all_transforms = [*config.transforms, *(transforms or [])]
+        if all_transforms:
+            particles = apply_transforms(
                 particles,
-                resolved_transforms,
-                context=context,
+                all_transforms,
+                context
+                or TransformContext(
+                    receptor=self.receptor if traj is None else traj.receptor,
+                    footprint_name=stored_name,
+                    is_error=error,
+                ),
             )
         foot = Footprint.calculate(
             particles,

@@ -1,22 +1,18 @@
-"""Observation-domain models and sensor interfaces for science workflows."""
+"""
+Observation-domain models and sensor interfaces for science workflows.
 
-from .apply import apply_vertical_operator
+Particle weighting (averaging kernel, pressure weighting, lifetime decay) lives
+in :mod:`stilt.transforms`.
+"""
+
 from .builders import (
     build_column_receptor,
     build_multipoint_receptor,
     build_point_receptor,
     build_slant_receptor,
 )
-from .chemistry import (
-    ChemistryContext,
-    ChemistryModel,
-    FirstOrderLifetimeChemistry,
-    NoOpChemistry,
-    apply_chemistry,
-)
 from .geometry import HorizontalGeometry, LineOfSight, ViewingGeometry
 from .observation import Observation
-from .operators import VerticalOperator
 from .scenes import (
     Scene,
     group_scenes_by_key,
@@ -32,38 +28,19 @@ from .selection import (
 )
 from .sensors import BaseSensor, ColumnSensor, PointSensor, Sensor
 from .uncertainty import UncertaintyBudget, UncertaintyComponent
-from .weighting import (
-    NoOpWeighting,
-    VerticalOperatorWeighting,
-    WeightingContext,
-    WeightingModel,
-    apply_weighting,
-)
 
 __all__ = [
     "BaseSensor",
-    "ChemistryContext",
-    "ChemistryModel",
     "ColumnSensor",
-    "FirstOrderLifetimeChemistry",
     "HorizontalGeometry",
     "LineOfSight",
-    "NoOpChemistry",
     "Observation",
     "PointSensor",
-    "NoOpWeighting",
     "Scene",
     "Sensor",
-    "VerticalOperator",
-    "VerticalOperatorWeighting",
     "ViewingGeometry",
     "UncertaintyBudget",
     "UncertaintyComponent",
-    "WeightingContext",
-    "WeightingModel",
-    "apply_chemistry",
-    "apply_vertical_operator",
-    "apply_weighting",
     "build_column_receptor",
     "build_multipoint_receptor",
     "build_point_receptor",

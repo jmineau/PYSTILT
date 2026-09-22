@@ -108,6 +108,20 @@ class ModelConfig(STILTParams):
         return data
 
     @model_validator(mode="after")
+    def _reject_unresolved_transforms(self) -> Self:
+        """A project config must be runnable: every transform class must import."""
+        from stilt.transforms import UnresolvedTransform
+
+        for name, cfg in self.footprints.items():
+            for t in cfg.transforms:
+                if isinstance(t, UnresolvedTransform):
+                    raise ValueError(
+                        f"Footprint '{name}' transform {t.kind!r} could not be "
+                        f"imported: {t.reason}"
+                    )
+        return self
+
+    @model_validator(mode="after")
     def _validate_mets(self) -> Self:
         """Ensure each configured meteorology stream has a unique name."""
         if not self.mets:

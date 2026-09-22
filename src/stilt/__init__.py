@@ -26,7 +26,7 @@ from .receptors import (
 )
 from .simulation import SimID, Simulation
 from .trajectory import Trajectories
-from .transforms import ParticleTransform
+from .transforms import ParticleTransform, TransformContext
 
 try:
     __version__ = _version("pystilt")
@@ -65,6 +65,7 @@ __all__ = [
     "SpatialTarget",
     # Meteorology
     "MetStream",
-    # Transforms
+    # Transforms (the interface; built-ins live in stilt.transforms)
     "ParticleTransform",
+    "TransformContext",
 ]

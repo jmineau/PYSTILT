@@ -71,7 +71,7 @@ design and column-weighting concepts without trying to replicate every script.
 | First-order lifetime decay transform | Implemented |
 | Declarative per-footprint transforms in config | Implemented |
 | Slant-column receptor support | In scope (pending HYSPLIT validation) |
-| Additional transform types | In scope |
+| User-defined transforms (`kind: my.module.Class`) | Implemented |
 | Specific sensor adapters (OCO-2/3, TROPOMI, TCCON) | Deferred |
 | Inventory coupling and background estimation | Deferred |
 
@@ -218,32 +218,29 @@ This layer currently focuses on:
 
 See `docs/advanced/observations.rst` for the intended workflow boundary.
 
-## Declarative transforms
+## Particle transforms
 
-Per-footprint transforms can be declared in config instead of embedded as
-ad hoc callbacks.
+Per-footprint transforms rescale each particle's influence before the
+footprint is rasterized. Declare them in config, or pass them in Python:
 
 ```yaml
 footprints:
   column:
     grid: slv
     transforms:
-      - kind: vertical_operator
-        mode: ak_pwf
+      - kind: averaging_kernel
         levels: [0.0, 1000.0, 2000.0]
-        values: [0.2, 0.5, 0.3]
-        coordinate: xhgt
+        values: [1.0, 0.8, 0.5]
+      - kind: pressure_weighting      # derived from the particles, X-STILT style
       - kind: first_order_lifetime
         lifetime_hours: 4.0
-        time_column: time
-        time_unit: min
+      - kind: mypkg.transforms.MyWeighting   # your own pydantic class with apply()
+        some_field: 3
 ```
 
-The built-in transform interface is intentionally small:
-
-- vertical operator weighting
-- first-order lifetime decay
-- runtime typed transforms for more advanced Python workflows
+A transform is any object with `apply(particles, context)`. See the
+[transforms guide](https://jmineau.github.io/PYSTILT/advanced/transforms.html)
+for the column-weighting science and for writing your own.
 
 ## Accessing results
 

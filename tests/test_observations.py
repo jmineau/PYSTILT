@@ -7,10 +7,10 @@ from stilt.observations import (
     HorizontalGeometry,
     Observation,
     Scene,
-    VerticalOperator,
     ViewingGeometry,
 )
 from stilt.receptors import PointReceptor
+from stilt.transforms import AveragingKernel
 
 
 def test_observation_normalizes_timestamp_and_keeps_geometry():
@@ -28,8 +28,7 @@ def test_observation_normalizes_timestamp_and_keeps_geometry():
         viewing_zenith_angle=18.0,
         relative_azimuth_angle=132.0,
     )
-    operator = VerticalOperator(
-        mode="ak",
+    kernel = AveragingKernel(
         levels=[0.0, 1000.0, 2000.0],
         values=[0.1, 0.6, 0.3],
     )
@@ -42,14 +41,14 @@ def test_observation_normalizes_timestamp_and_keeps_geometry():
         longitude=-111.9,
         geometry=geometry,
         viewing=viewing,
-        operator=operator,
+        transforms=[kernel],
         observation_id="sound-1",
     )
 
     assert isinstance(obs.time, pd.Timestamp)
     assert obs.geometry is geometry
     assert obs.viewing is viewing
-    assert obs.operator is operator
+    assert obs.transforms[0] is kernel
 
 
 def test_scene_exposes_observation_ids():

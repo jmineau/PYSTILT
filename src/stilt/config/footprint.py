@@ -4,12 +4,20 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, TypeAdapter, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    TypeAdapter,
+    field_serializer,
+    field_validator,
+    model_validator,
+)
+
+from stilt.transforms import dump_transform, load_transform
 
 from .fields import cfg_field
 from .geometry import GeometrySpec
 from .spatial import Grid
-from .transforms import ParticleTransformSpec
 
 _GEOMETRY_ADAPTER: TypeAdapter[Any] = TypeAdapter(GeometrySpec)
 
@@ -106,11 +114,26 @@ class FootprintConfig(BaseModel):
         ),
         visibility="advanced",
     )
-    transforms: list[ParticleTransformSpec] = cfg_field(
-        description="Declarative particle transforms applied before rasterizing the footprint.",
+    transforms: list[Any] = cfg_field(
+        description=(
+            "Particle transforms applied in order before rasterizing the footprint. "
+            "Each entry is a built-in kind (averaging_kernel, pressure_weighting, "
+            "first_order_lifetime) or a dotted import path to a user transform class."
+        ),
         default_factory=list,
         visibility="advanced",
     )
+
+    @field_validator("transforms", mode="before")
+    @classmethod
+    def _load_transforms(cls, value: Any) -> list[Any]:
+        if value is None:
+            return []
+        return [load_transform(item) for item in value]
+
+    @field_serializer("transforms")
+    def _dump_transforms(self, value: list[Any]) -> list[dict[str, Any]]:
+        return [dump_transform(item) for item in value]
 
     def replace(self, **updates: object) -> FootprintConfig:
         """Return a copy with updated fields for interactive iteration."""

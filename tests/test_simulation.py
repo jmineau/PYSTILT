@@ -7,7 +7,6 @@ import pytest
 import xarray as xr
 
 from stilt.config import (
-    FirstOrderLifetimeTransformSpec,
     FootprintConfig,
     Grid,
     MetConfig,
@@ -19,6 +18,7 @@ from stilt.meteorology import MetStream
 from stilt.simulation import ERROR_TRAJECTORY, TRAJECTORY, SimID, Simulation
 from stilt.store import LocalStore
 from stilt.trajectory import Trajectories
+from stilt.transforms import FirstOrderLifetime
 
 
 def _params(tmp_path=None, **kwargs) -> STILTParams:
@@ -480,14 +480,7 @@ def test_generate_footprint_applies_configured_particle_transforms(
         grid=base_config.grid,
         time_integrate=True,
         smooth_factor=0.0,
-        transforms=[
-            FirstOrderLifetimeTransformSpec(
-                kind="first_order_lifetime",
-                lifetime_hours=1.0,
-                time_column="time",
-                time_unit="min",
-            )
-        ],
+        transforms=[FirstOrderLifetime(lifetime_hours=1.0)],
     )
 
     base = sim.generate_footprint("base", base_config)
@@ -496,6 +489,84 @@ def test_generate_footprint_applies_configured_particle_transforms(
     assert base is not None
     assert transformed is not None
     assert float(transformed.data.sum()) < float(base.data.sum())
+
+
+class HalvingTransform:
+    """Python-side transform that halves ``foot`` and records its context."""
+
+    def __init__(self):
+        self.context = None
+
+    def apply(self, particles, context):
+        self.context = context
+        out = particles.copy()
+        out["foot"] = out["foot"] * 0.5
+        return out
+
+
+def _sim_with_particles(point_receptor, tmp_path):
+    sim = _sim(tmp_path, point_receptor)
+    particles = pd.DataFrame(
+        {
+            "time": [0.0, -60.0, -120.0],
+            "indx": [1, 1, 1],
+            "long": [-111.86, -111.86, -111.86],
+            "lati": [40.76, 40.76, 40.76],
+            "zagl": [50.0, 50.0, 50.0],
+            "foot": [1.0, 1.0, 1.0],
+        }
+    )
+    sim._trajectories = Trajectories.from_particles(
+        particles=particles,
+        receptor=point_receptor,
+        params=_params(tmp_path),
+        met_files=[tmp_path / "metfile"],
+    )
+    config = FootprintConfig(
+        grid=Grid(xmin=-114.0, xmax=-111.0, ymin=39.0, ymax=42.0, xres=0.1, yres=0.1),
+        time_integrate=True,
+        smooth_factor=0.0,
+    )
+    return sim, config
+
+
+def test_generate_footprint_applies_extra_python_transforms(point_receptor, tmp_path):
+    sim, config = _sim_with_particles(point_receptor, tmp_path)
+    halve = HalvingTransform()
+
+    base = sim.generate_footprint("base", config)
+    halved = sim.generate_footprint("halved", config, transforms=[halve])
+
+    assert float(base.data.sum()) > 0
+    assert float(halved.data.sum()) == pytest.approx(0.5 * float(base.data.sum()))
+    assert halve.context is not None
+    assert halve.context.receptor is sim.receptor
+    assert halve.context.footprint_name == "halved"
+    assert halve.context.is_error is False
+
+
+def test_generate_footprint_applies_dotted_path_config_transforms(
+    point_receptor, tmp_path
+):
+    sim, config = _sim_with_particles(point_receptor, tmp_path)
+    dotted = FootprintConfig(
+        grid=config.grid,
+        time_integrate=True,
+        smooth_factor=0.0,
+        transforms=[{"kind": f"{__name__}.{HalvingTransform.__name__}"}],
+    )
+    assert isinstance(dotted.transforms[0], HalvingTransform)
+    halve = dotted.transforms[0]
+
+    base = sim.generate_footprint("base", config)
+    halved = sim.generate_footprint("halved", dotted)
+
+    assert float(base.data.sum()) > 0
+    assert float(halved.data.sum()) == pytest.approx(0.5 * float(base.data.sum()))
+    assert halve.context is not None
+    assert halve.context.receptor is sim.receptor
+    assert halve.context.footprint_name == "halved"
+    assert halve.context.is_error is False
 
 
 def test_simulation_error_trajectories_none_when_no_file(point_receptor, tmp_path):

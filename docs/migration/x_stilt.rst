@@ -18,10 +18,10 @@ alpha.
      - :class:`stilt.observations.ColumnSensor` and receptor builders
    * - Vertical weighting
      - custom AK × PWF logic
-     - ``VerticalOperatorTransformSpec`` in ``FootprintConfig.transforms``
+     - ``averaging_kernel`` + ``pressure_weighting`` transforms (:doc:`/advanced/transforms`)
    * - First-order chemistry
      - chemistry hooks
-     - ``FirstOrderLifetimeTransformSpec``
+     - ``first_order_lifetime`` transform
    * - Scene grouping
      - product-level grouping logic
      - :class:`stilt.observations.Scene` plus grouping helpers

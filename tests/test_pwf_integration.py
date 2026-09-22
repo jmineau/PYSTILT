@@ -1,7 +1,7 @@
 """
 Integration tests for particle-derived pressure weighting.
 
-The unit tests in ``test_apply_vertical_operator.py`` use an isothermal
+The unit tests in ``test_transforms.py`` use an isothermal
 reference atmosphere, where ``ln p`` is exactly linear in height and the
 hypsometric fit is perfect by construction.  These tests run real HYSPLIT
 against real HRRR fields to check the two things that synthetic data cannot
@@ -21,11 +21,9 @@ import pytest
 from stilt.config import STILTParams
 from stilt.hysplit.driver import HYSPLITDriver
 from stilt.meteorology import MetStream
-from stilt.observations.apply import apply_vertical_operator
-from stilt.observations.operators import VerticalOperator
-from stilt.observations.weighting import _particle_pwf, _release_coordinate
 from stilt.receptors import ColumnReceptor
 from stilt.trajectory import Trajectories
+from stilt.transforms import PressureWeighting, particle_pwf, release_coordinate
 
 from .conftest import integration
 from .fixtures.r_stilt_reference import (
@@ -83,8 +81,8 @@ def test_hypsometric_fit_holds_on_a_real_winter_profile(met_dir, tmp_path):
     """
     _, particles = _column_trajectory(met_dir, tmp_path, "pwf_fit_winter")
 
-    pres = _release_coordinate(particles, "pres").to_numpy()
-    zagl = _release_coordinate(particles, "zagl").to_numpy()
+    pres = release_coordinate(particles, "pres").to_numpy()
+    zagl = release_coordinate(particles, "zagl").to_numpy()
     slope, intercept = np.polyfit(zagl, np.log(pres), 1)
 
     residual = pres - np.exp(intercept + slope * zagl)
@@ -102,7 +100,7 @@ def test_hypsometric_fit_holds_on_a_real_winter_profile(met_dir, tmp_path):
 def test_pwf_weights_are_physical_on_real_trajectories(met_dir, tmp_path):
     """Every particle carries positive weight spanning the hydrostatic ratio."""
     receptor, particles = _column_trajectory(met_dir, tmp_path, "pwf_physical")
-    _, pwf = _particle_pwf(particles, None)
+    _, pwf = particle_pwf(particles, None)
 
     assert (pwf > 0).all()
     # A 0-3 km column holds roughly a third of the atmosphere above WBB.
@@ -124,8 +122,8 @@ def test_pwf_fit_absorbs_first_step_particle_scatter(met_dir, tmp_path):
     """
     _, particles = _column_trajectory(met_dir, tmp_path, "pwf_scatter", numpar=1000)
 
-    xhgt = _release_coordinate(particles, "xhgt").to_numpy()
-    raw_pres = _release_coordinate(particles, "pres").to_numpy()
+    xhgt = release_coordinate(particles, "xhgt").to_numpy()
+    raw_pres = release_coordinate(particles, "pres").to_numpy()
 
     # Establish the premise: raw pressure really is non-monotone in height.
     ascending = np.argsort(xhgt)
@@ -139,7 +137,7 @@ def test_pwf_fit_absorbs_first_step_particle_scatter(met_dir, tmp_path):
         - np.concatenate((mids, [2 * levels[-1] - mids[-1]]))
     ) / levels[0]
 
-    _, fitted_pwf = _particle_pwf(particles, None)
+    _, fitted_pwf = particle_pwf(particles, None)
 
     # Both integrate to about the same column mass ...
     assert fitted_pwf.sum() == pytest.approx(raw_pwf.sum(), rel=0.05)
@@ -165,18 +163,12 @@ def test_pwf_is_independent_of_numpar_on_real_trajectories(met_dir, tmp_path):
     _, few = _column_trajectory(met_dir, tmp_path, "pwf_n100", numpar=100)
     _, many = _column_trajectory(met_dir, tmp_path, "pwf_n1000", numpar=1000)
 
-    _, pwf_few = _particle_pwf(few, None)
-    _, pwf_many = _particle_pwf(many, None)
+    _, pwf_few = particle_pwf(few, None)
+    _, pwf_many = particle_pwf(many, None)
     assert pwf_few.sum() == pytest.approx(pwf_many.sum(), rel=0.02)
 
-    ratio_few = (
-        apply_vertical_operator(few, VerticalOperator(mode="pwf"))["foot"].sum()
-        / few["foot"].sum()
-    )
-    ratio_many = (
-        apply_vertical_operator(many, VerticalOperator(mode="pwf"))["foot"].sum()
-        / many["foot"].sum()
-    )
+    ratio_few = PressureWeighting().apply(few)["foot"].sum() / few["foot"].sum()
+    ratio_many = PressureWeighting().apply(many)["foot"].sum() / many["foot"].sum()
     assert ratio_few == pytest.approx(ratio_many, rel=0.05)
 
 
@@ -184,7 +176,7 @@ def test_pwf_is_independent_of_numpar_on_real_trajectories(met_dir, tmp_path):
 def test_pwf_keeps_footprint_magnitude_comparable_to_unweighted(met_dir, tmp_path):
     """Weighting redistributes influence; it must not rescale it by numpar."""
     _, particles = _column_trajectory(met_dir, tmp_path, "pwf_magnitude")
-    weighted = apply_vertical_operator(particles, VerticalOperator(mode="pwf"))
+    weighted = PressureWeighting().apply(particles)
     ratio = weighted["foot"].sum() / particles["foot"].sum()
     assert 0.1 < ratio < 10.0
 
@@ -195,7 +187,7 @@ def test_pwf_deeper_column_covers_more_mass(met_dir, tmp_path):
     _, shallow = _column_trajectory(met_dir, tmp_path, "pwf_3km", top=3000.0)
     _, deep = _column_trajectory(met_dir, tmp_path, "pwf_8km", top=8000.0)
 
-    _, pwf_shallow = _particle_pwf(shallow, None)
-    _, pwf_deep = _particle_pwf(deep, None)
+    _, pwf_shallow = particle_pwf(shallow, None)
+    _, pwf_deep = particle_pwf(deep, None)
     assert pwf_deep.sum() > pwf_shallow.sum()
     assert 0.55 < pwf_deep.sum() < 0.80

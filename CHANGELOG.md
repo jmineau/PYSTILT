@@ -8,6 +8,38 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **Particle transforms are one class each.** `stilt.transforms` now holds
+  three pydantic transforms whose fields are their YAML keys and whose
+  `apply(particles, context)` does the work: `AveragingKernel`
+  (`kind: averaging_kernel`), `PressureWeighting` (`kind: pressure_weighting`)
+  and `FirstOrderLifetime` (`kind: first_order_lifetime`). The old
+  `vertical_operator` kind with its `mode` switch is gone: `mode: ak_pwf` is
+  now the first two listed in order, `mode: pwf` is the second alone, and
+  `mode: none` / `uniform` is an empty list. Transforms apply once, in list
+  order, to the unweighted particles and return a new frame; the
+  `foot_before_weight` / `foot_before_chemistry` restore guard is gone
+  (`ak_weight`, `xpres` and `pwf` diagnostic columns remain). Removed the
+  spec / adapter / model / context layers that sat between YAML and the
+  arithmetic: `stilt.config.transforms`, `stilt.observations.{apply,
+  weighting, chemistry, operators}`, `VerticalOperator`,
+  `apply_vertical_operator`, `*TransformSpec`, `ParticleTransformContext`,
+  `build_particle_transforms`, `apply_particle_transforms`, and the unused
+  `WeightingModel` / `ChemistryModel` protocols. The science functions
+  (`particle_pwf`, `ak_weights`, `release_coordinate`) are public in
+  `stilt.transforms`. `Observation.operator` is `Observation.transforms`.
+- `Simulation.generate_footprint(transform_context=)` is `context=`
+  (a `TransformContext`).
+
+### Added
+
+- **User-defined transforms from `config.yaml`.** A transform `kind`
+  containing a dot is an import path (`kind: mypkg.transforms.MyWeighting`);
+  the class is imported and built from the remaining keys, so custom
+  weightings reach Slurm and Kubernetes workers, which rebuild the model from
+  config alone. A stored footprint whose transform cannot be imported still
+  loads (the entry becomes an `UnresolvedTransform`); a project config naming
+  one fails validation. See the new *Particle Transforms* guide.
+
 - **The storage, registry, and execution layers were collapsed onto
   `Project` and `Simulation`.** A project is one root — a local
   directory or an `s3://`/`gs://` URI — and a store key is the only address an

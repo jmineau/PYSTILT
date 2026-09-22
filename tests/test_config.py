@@ -3,11 +3,10 @@
 import textwrap
 
 import pytest
-from pydantic import ValidationError
+from pydantic import BaseModel, ConfigDict, ValidationError
 
 from stilt.config import (
     ErrorParams,
-    FirstOrderLifetimeTransformSpec,
     FootprintConfig,
     Grid,
     MetConfig,
@@ -15,12 +14,28 @@ from stilt.config import (
     ModelParams,
     STILTParams,
     TransportParams,
-    VerticalOperatorTransformSpec,
     build_control_entries,
     build_setup_entries,
     iter_documented_config_fields,
 )
 from stilt.config.model import _resolved_field_meta
+from stilt.transforms import AveragingKernel, FirstOrderLifetime, PressureWeighting
+
+
+class ScaleFoot(BaseModel):
+    """A user transform, addressed in YAML by its dotted import path."""
+
+    model_config = ConfigDict(frozen=True)
+
+    factor: float = 1.0
+
+    def apply(self, particles, context=None):
+        out = particles.copy()
+        out["foot"] = out["foot"] * self.factor
+        return out
+
+
+SCALE_FOOT_KIND = f"{__name__}.ScaleFoot"
 
 # ---------------------------------------------------------------------------
 # ErrorParams.winderrtf
@@ -337,42 +352,53 @@ def test_model_config_yaml_roundtrip_with_footprint(tmp_path, point_receptor, gr
     assert loaded.footprints["slv_fine"].model_dump() == fc.model_dump()
 
 
+def _met_config(tmp_path):
+    return {
+        "hrrr": MetConfig(
+            directory=tmp_path / "met",
+            file_format="%Y%m%d_%H",
+            file_tres="1h",
+        )
+    }
+
+
 def test_model_config_yaml_roundtrip_with_footprint_transforms(tmp_path, grid):
     fc = FootprintConfig(
         grid=grid,
         transforms=[
-            VerticalOperatorTransformSpec(
-                kind="vertical_operator",
-                mode="ak_pwf",
-                levels=[0.0, 1000.0],
-                values=[0.2, 0.8],
-                coordinate="xhgt",
-            ),
-            FirstOrderLifetimeTransformSpec(
-                kind="first_order_lifetime",
-                lifetime_hours=4.0,
-                time_column="time",
-                time_unit="min",
-            ),
+            AveragingKernel(levels=[0.0, 1000.0], values=[0.2, 0.8], coordinate="xhgt"),
+            PressureWeighting(),
+            FirstOrderLifetime(lifetime_hours=4.0, time_column="time", time_unit="min"),
         ],
     )
-    cfg = ModelConfig(
-        mets={
-            "hrrr": MetConfig(
-                directory=tmp_path / "met",
-                file_format="%Y%m%d_%H",
-                file_tres="1h",
-            )
-        },
-        footprints={"slv_fine": fc},
-    )
+    cfg = ModelConfig(mets=_met_config(tmp_path), footprints={"slv_fine": fc})
     path = tmp_path / "config.yaml"
     cfg.to_yaml(path)
     loaded = ModelConfig.from_yaml(path)
     transforms = loaded.footprints["slv_fine"].transforms
-    assert len(transforms) == 2
-    assert transforms[0].model_dump() == fc.transforms[0].model_dump()
-    assert transforms[1].model_dump() == fc.transforms[1].model_dump()
+    assert len(transforms) == 3
+    assert transforms == fc.transforms
+    assert isinstance(transforms[0], AveragingKernel)
+    assert isinstance(transforms[1], PressureWeighting)
+    assert isinstance(transforms[2], FirstOrderLifetime)
+
+
+def test_model_config_yaml_roundtrip_with_user_transform(tmp_path, grid):
+    fc = FootprintConfig(grid=grid, transforms=[ScaleFoot(factor=2.5)])
+    cfg = ModelConfig(mets=_met_config(tmp_path), footprints={"slv_fine": fc})
+    path = tmp_path / "config.yaml"
+    cfg.to_yaml(path)
+
+    text = path.read_text()
+    assert f"kind: {SCALE_FOOT_KIND}" in text
+    assert "factor: 2.5" in text
+
+    loaded = ModelConfig.from_yaml(path)
+    transforms = loaded.footprints["slv_fine"].transforms
+    assert len(transforms) == 1
+    assert isinstance(transforms[0], ScaleFoot)
+    assert transforms[0].factor == pytest.approx(2.5)
+    assert transforms[0] == fc.transforms[0]
 
 
 def test_model_config_domain_ref_in_yaml(tmp_path):
@@ -484,15 +510,17 @@ def test_model_config_loads_footprint_transforms_from_yaml(tmp_path):
               xres: 0.05
               yres: 0.05
             transforms:
-              - kind: vertical_operator
-                mode: ak
+              - kind: averaging_kernel
                 levels: [0.0, 1000.0]
                 values: [0.3, 0.7]
                 coordinate: xhgt
+              - kind: pressure_weighting
               - kind: first_order_lifetime
                 lifetime_hours: 3.0
                 time_column: time
                 time_unit: min
+              - kind: {SCALE_FOOT_KIND}
+                factor: 0.5
     """)
     path = tmp_path / "config.yaml"
     path.write_text(yaml_text)
@@ -500,10 +528,46 @@ def test_model_config_loads_footprint_transforms_from_yaml(tmp_path):
     loaded = ModelConfig.from_yaml(path)
     transforms = loaded.footprints["weighted"].transforms
 
-    assert isinstance(transforms[0], VerticalOperatorTransformSpec)
-    assert transforms[0].mode == "ak"
-    assert isinstance(transforms[1], FirstOrderLifetimeTransformSpec)
-    assert transforms[1].lifetime_hours == pytest.approx(3.0)
+    assert len(transforms) == 4
+    assert isinstance(transforms[0], AveragingKernel)
+    assert transforms[0].levels == [0.0, 1000.0]
+    assert transforms[0].values == [0.3, 0.7]
+    assert transforms[0].coordinate == "xhgt"
+    assert isinstance(transforms[1], PressureWeighting)
+    assert transforms[1].surface_pressure is None
+    assert isinstance(transforms[2], FirstOrderLifetime)
+    assert transforms[2].lifetime_hours == pytest.approx(3.0)
+    assert isinstance(transforms[3], ScaleFoot)
+    assert transforms[3].factor == pytest.approx(0.5)
+
+
+def test_model_config_rejects_unimportable_transform_from_yaml(tmp_path):
+    yaml_text = textwrap.dedent(f"""\
+        n_hours: -24
+        numpar: 100
+        mets:
+          hrrr:
+            directory: {tmp_path / "met"}
+            file_format: "%Y%m%d_%H"
+            file_tres: 1h
+        footprints:
+          weighted:
+            grid:
+              xmin: -114.0
+              xmax: -111.0
+              ymin: 39.0
+              ymax: 42.0
+              xres: 0.05
+              yres: 0.05
+            transforms:
+              - kind: no_such_pkg_for_stilt_tests.transforms.MyKernel
+                levels: [0.0, 1000.0]
+    """)
+    path = tmp_path / "config.yaml"
+    path.write_text(yaml_text)
+
+    with pytest.raises(ValidationError, match="could not be imported"):
+        ModelConfig.from_yaml(path)
 
 
 def test_model_config_unknown_keys_raise(tmp_path):

@@ -25,6 +25,7 @@ from stilt.geometry import (
     same_crs,
 )
 from stilt.receptors import Receptor
+from stilt.transforms import dump_transform
 
 if TYPE_CHECKING:
     from stilt.visualization import FootprintPlotAccessor
@@ -1121,10 +1122,7 @@ class Footprint:
                 "is_empty": int(self.is_empty),
                 EMPTY_REASON_ATTR: self.empty_reason or "",
                 "transforms": json.dumps(
-                    [
-                        transform.model_dump(mode="json")
-                        for transform in self.config.transforms
-                    ]
+                    [dump_transform(t) for t in self.config.transforms]
                 ),
                 "time_created": dt.datetime.now(dt.timezone.utc)
                 .replace(tzinfo=None)

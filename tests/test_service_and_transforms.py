@@ -5,14 +5,11 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from stilt.config import (
-    FirstOrderLifetimeTransformSpec,
-    FootprintConfig,
-    ModelConfig,
-)
+from stilt.config import FootprintConfig, ModelConfig
 from stilt.errors import ConfigValidationError
 from stilt.execution import pull_simulations
 from stilt.model import Model
+from stilt.transforms import FirstOrderLifetime
 
 from .conftest import integration
 
@@ -69,14 +66,7 @@ def test_declarative_transform_config_changes_real_footprint(
             "baseline": FootprintConfig(grid=wbb_grid),
             "lifetime": FootprintConfig(
                 grid=wbb_grid,
-                transforms=[
-                    FirstOrderLifetimeTransformSpec(
-                        kind="first_order_lifetime",
-                        lifetime_hours=1.0,
-                        time_column="time",
-                        time_unit="min",
-                    )
-                ],
+                transforms=[FirstOrderLifetime(lifetime_hours=1.0)],
             ),
         },
     )

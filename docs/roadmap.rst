@@ -71,7 +71,7 @@ design and column-weighting concepts.  Full X-STILT feature parity is
      - Implemented
    * - Column receptor support
      - Implemented
-   * - Vertical operator particle transforms (averaging kernel / pressure weighting)
+   * - Averaging-kernel and pressure-weighting particle transforms
      - Implemented
    * - First-order lifetime decay transform
      - Implemented
@@ -79,8 +79,8 @@ design and column-weighting concepts.  Full X-STILT feature parity is
      - Implemented
    * - Slant-column receptor support
      - In scope (pending HYSPLIT vertical-coordinate validation)
-   * - Additional transform types
-     - In scope
+   * - User-defined transforms via ``kind: my.module.Class``
+     - Implemented
    * - Specific sensor adapters (OCO-2/3, TROPOMI, TCCON)
      - Deferred
    * - Inventory coupling and background estimation

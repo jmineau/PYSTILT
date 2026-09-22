@@ -41,16 +41,6 @@ Parameters
    ErrorParams
 
 
-Transform specifications
-------------------------
-
-.. autosummary::
-   :toctree: _api
-   :nosignatures:
-
-   VerticalOperatorTransformSpec
-   FirstOrderLifetimeTransformSpec
-
 Geometry specifications
 -----------------------
 

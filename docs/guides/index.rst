@@ -21,6 +21,7 @@ that do not belong in a first-run tutorial.
    :caption: Advanced Guides
 
    ../advanced/observations
+   ../advanced/transforms
    ../advanced/output_state
 
 .. toctree::

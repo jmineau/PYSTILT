@@ -52,8 +52,8 @@ ColumnReceptor
 Use when the measurement integrates over a vertical range at a single
 horizontal position.  HYSPLIT releases particles uniformly in height between
 ``bottom`` and ``top``.  To turn the result into a mass-weighted column
-footprint (with an optional averaging kernel), add a ``vertical_operator``
-transform — see :doc:`/advanced/observations`.
+footprint (with an optional averaging kernel), add ``pressure_weighting``
+and ``averaging_kernel`` transforms — see :doc:`/advanced/transforms`.
 
 .. code-block:: python
 

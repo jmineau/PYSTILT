@@ -4,14 +4,13 @@ from __future__ import annotations
 
 import datetime as dt
 from dataclasses import dataclass, field
-from typing import cast
+from typing import Any, cast
 
 import pandas as pd
 
 from stilt.config import VerticalReference, validate_vertical_reference
 
 from .geometry import HorizontalGeometry, LineOfSight, ViewingGeometry
-from .operators import VerticalOperator
 from .uncertainty import UncertaintyBudget
 
 
@@ -22,6 +21,10 @@ class Observation:
 
     Observations can be constructed directly by external parsers or via
     ``Sensor.make_observation()`` helpers in ``stilt.observations``.
+
+    ``transforms`` carries per-observation particle transforms — typically the
+    retrieval's own :class:`~stilt.transforms.AveragingKernel` — for the caller
+    to pass to :meth:`stilt.Simulation.generate_footprint`.
     """
 
     sensor: str
@@ -40,7 +43,7 @@ class Observation:
     geometry: HorizontalGeometry | None = None
     line_of_sight: LineOfSight | None = None
     viewing: ViewingGeometry | None = None
-    operator: VerticalOperator | None = None
+    transforms: list[Any] = field(default_factory=list)
     quality: dict[str, float | int | bool] = field(default_factory=dict)
     metadata: dict[str, object] = field(default_factory=dict)
 

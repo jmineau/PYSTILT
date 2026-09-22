@@ -2,6 +2,7 @@
 
 import builtins
 import datetime as dt
+import json
 import warnings
 
 import numpy as np
@@ -9,7 +10,7 @@ import pandas as pd
 import pytest
 import xarray as xr
 
-from stilt.config import FootprintConfig, Grid, VerticalOperatorTransformSpec
+from stilt.config import FootprintConfig, Grid
 from stilt.footprint import (
     Footprint,
     _calc_digits,
@@ -25,6 +26,7 @@ from stilt.footprint import (
 from stilt.geometry import Mesh, Zones
 from stilt.receptors import PointReceptor
 from stilt.trajectory import calc_plume_dilution
+from stilt.transforms import AveragingKernel, UnresolvedTransform
 
 
 def _make_footprint(
@@ -217,20 +219,10 @@ def test_netcdf_roundtrip_prefers_stored_name_attr(tmp_path):
     assert loaded.name == "stored"
 
 
-def test_netcdf_roundtrip_preserves_transform_specs(tmp_path):
+def test_netcdf_roundtrip_preserves_transforms(tmp_path):
     foot = _make_footprint(n_times=1)
-    foot.config = FootprintConfig(
-        grid=foot.grid,
-        transforms=[
-            VerticalOperatorTransformSpec(
-                kind="vertical_operator",
-                mode="ak",
-                levels=[0.0, 1000.0],
-                values=[0.1, 0.9],
-                coordinate="xhgt",
-            )
-        ],
-    )
+    kernel = AveragingKernel(levels=[0.0, 1000.0], values=[0.1, 0.9], coordinate="xhgt")
+    foot.config = FootprintConfig(grid=foot.grid, transforms=[kernel])
     sim_dir = tmp_path / "202301011200_-111.85_40.77_5"
     sim_dir.mkdir()
     path = sim_dir / "202301011200_-111.85_40.77_5_slv_foot.nc"
@@ -240,8 +232,51 @@ def test_netcdf_roundtrip_preserves_transform_specs(tmp_path):
 
     assert len(loaded.config.transforms) == 1
     transform = loaded.config.transforms[0]
-    assert isinstance(transform, VerticalOperatorTransformSpec)
-    assert transform.mode == "ak"
+    assert isinstance(transform, AveragingKernel)
+    assert transform == kernel
+
+
+def test_netcdf_with_unimportable_transform_still_loads(tmp_path):
+    # A footprint written where a user transform class was importable must
+    # still open on a machine without that package; the transform is kept as
+    # an UnresolvedTransform that only fails when applied.
+    foot = _make_footprint(n_times=1)
+    foot.config = FootprintConfig(
+        grid=foot.grid,
+        transforms=[AveragingKernel(levels=[0.0, 1000.0], values=[0.1, 0.9])],
+    )
+    sim_dir = tmp_path / "202301011200_-111.85_40.77_5"
+    sim_dir.mkdir()
+    original = sim_dir / "202301011200_-111.85_40.77_5_slv_foot.nc"
+    patched = sim_dir / "202301011200_-111.85_40.77_5_user_foot.nc"
+    foot.to_netcdf(original)
+
+    missing_kind = "no_such_pkg_for_stilt_tests.transforms.MyKernel"
+    ds = xr.open_dataset(original)
+    ds.load()
+    ds.close()
+    ds.attrs["transforms"] = json.dumps(
+        [{"kind": missing_kind, "levels": [0.0, 1000.0], "values": [0.1, 0.9]}]
+    )
+    ds.to_netcdf(patched)
+
+    loaded = Footprint.from_netcdf(patched)
+
+    assert len(loaded.config.transforms) == 1
+    transform = loaded.config.transforms[0]
+    assert isinstance(transform, UnresolvedTransform)
+    assert transform.kind == missing_kind
+    assert transform.reason
+    assert transform.model_dump()["levels"] == [0.0, 1000.0]
+    with pytest.raises(ImportError, match="could not be imported"):
+        transform.apply(pd.DataFrame({"indx": [1], "foot": [1.0]}))
+
+    # The unresolved transform survives another write/read unchanged.
+    rewritten = sim_dir / "202301011200_-111.85_40.77_5_again_foot.nc"
+    loaded.to_netcdf(rewritten)
+    again = Footprint.from_netcdf(rewritten)
+    assert isinstance(again.config.transforms[0], UnresolvedTransform)
+    assert again.config.transforms[0].kind == missing_kind
 
 
 def test_netcdf_roundtrip_preserves_empty_metadata(tmp_path, point_receptor):
