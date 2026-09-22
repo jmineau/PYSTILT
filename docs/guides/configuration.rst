@@ -55,7 +55,9 @@ The settings most people change
        (``slv`` above).
      - 0.01° (about 1 km) for a city; 0.1° for a region
    * - ``n_hours``
-     - How many hours to follow particles. Negative is backward in time.
+     - How many hours to follow particles. Negative is backward in time,
+       which footprints need; positive runs forward from the receptor
+       (:doc:`plume_background`).
      - ``-24`` to ``-72``
    * - ``numpar``
      - Particles released per simulation. More is smoother and slower.

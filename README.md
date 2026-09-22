@@ -78,7 +78,7 @@ design and column-weighting concepts without trying to replicate every script.
 | Transport error on the modelled enhancement (`transport_error`) | Implemented |
 | Modelled enhancement from a flux field (`Footprint.enhancement`) | Implemented |
 | Background from a mole-fraction field at the trajectory endpoints (`background`) | Implemented |
-| Satellite-derived plume background (forward trajectories) | Under consideration |
+| Satellite-derived plume background (forward trajectories) | Implemented |
 | Inventory readers | Out of scope: a flux field is an xarray array |
 
 ## Installation

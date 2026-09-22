@@ -94,7 +94,7 @@ design and column-weighting concepts.  Full X-STILT feature parity is
    * - Background from a mole-fraction field at the trajectory endpoints (``background``)
      - Implemented
    * - Satellite-derived plume background (forward trajectories)
-     - Under consideration
+     - Implemented (see the *Plume Background* guide)
    * - Inventory readers
      - Out of scope; a flux field is an xarray array
 

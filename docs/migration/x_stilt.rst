@@ -68,7 +68,9 @@ parity is not a goal; the table shows what has an equivalent.
        (:doc:`/guides/background`)
    * - Satellite-derived plume background (``compute_bg``, forward trajectories)
      - ``background/``
-     - not ported
+     - :func:`stilt.observations.plume_polygon` and
+       :func:`stilt.observations.plume_background` on forward runs
+       (:doc:`/guides/plume_background`)
 
 Moving a workflow over
 ----------------------

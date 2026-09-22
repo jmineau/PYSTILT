@@ -27,6 +27,8 @@ Each page answers one practical question. If you haven't yet, start with
   needs, from your meteorology and observed winds
 - :doc:`background`: what the receptor saw before the domain's fluxes,
   from a mole-fraction field at the trajectory endpoints
+- :doc:`plume_background`: the background from the soundings a forward-run
+  plume did not reach
 
 **Column and satellite measurements**
 
@@ -73,6 +75,7 @@ Each page answers one practical question. If you haven't yet, start with
    transport_error
    wind_errors
    background
+   plume_background
 
 .. toctree::
    :hidden:

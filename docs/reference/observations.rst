@@ -62,6 +62,23 @@ trajectory endpoints and weighted like the footprint (:doc:`/guides/background`)
    stilt.observations.backgrounds.endpoint_weights
    stilt.observations.backgrounds.vertical_dim
 
+Plume background
+----------------
+
+The plume a forward run puts over a satellite swath, and the background
+from the soundings beside it (:doc:`/guides/plume_background`).
+
+.. autosummary::
+   :toctree: _api
+   :nosignatures:
+
+   stilt.observations.plume_polygon
+   stilt.observations.Plume
+   stilt.observations.plume_background
+   stilt.observations.PlumeBackground
+   stilt.observations.plumes.kernel_density
+   stilt.observations.plumes.density_polygon
+
 Wind-error statistics
 ---------------------
 

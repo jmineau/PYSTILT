@@ -133,7 +133,9 @@ What this layer does not do
 
 It ships no readers for background or flux fields: a
 mole-fraction field comes in as an xarray array
-(:doc:`../guides/background`), a flux field the same way
+(:doc:`../guides/background`), or the background is taken from the swath
+itself around a forward-run plume (:doc:`../guides/plume_background`); a
+flux field comes in the same way
 (:doc:`../guides/transport_error`). The prior term of a column observation
 operator (pressure weight times one minus kernel times the a priori
 profile) belongs to the inversion, not the footprint.

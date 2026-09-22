@@ -38,6 +38,17 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `tests/data/products`; the OCO-2 reader on the documented Lite layout.
   New guide *Reading Retrieval Products* lists the columns and how to add
   an instrument.
+- **Plume background from forward runs**
+  (`stilt.observations.plume_polygon`, `plume_background`): outline the
+  plume a city puts over a satellite swath from the positions of
+  forward-run particles at overpass time (a kernel density cut at a
+  fraction of its maximum, the largest piece kept) and take the
+  background as the median of the good soundings beside the plume, per
+  side or pooled, with the spread and retrieval error in quadrature.
+  Forward runs are `n_hours > 0`; the new Plume Background guide has the
+  release recipe (a jittered box over the city every half hour before the
+  overpass) and the choices made. Set `hnf_plume: false` for forward runs
+  for now: its cumulative sum walks the particle rows in backward order.
 
 ## [0.1.0a16] - 2026-09-22
 

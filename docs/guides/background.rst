@@ -12,6 +12,8 @@ field sampled at every particle's endpoint and averaged over the particles
 is the background the receptor saw. X-STILT does this against CarbonTracker
 (``endpts.trajfoot``); PYSTILT does it with
 :func:`~stilt.observations.background` against any field you give it.
+For a satellite swath there is a second route, the background from the
+soundings a forward-run plume did not reach: :doc:`plume_background`.
 
 The field
 ---------
