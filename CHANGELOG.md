@@ -6,66 +6,24 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-### Changed
-
-- **Config fields are plain pydantic `Field`s.** `cfg_field` and its
-  `visibility` / `target` / `namelist` metadata are gone, along with
-  `iter_documented_config_fields`, `CONFIG_DOC_MODELS`,
-  `build_setup_entries` and `build_control_entries`. What HYSPLIT reads from
-  `SETUP.CFG` is now `STILTParams.setup_entries()`: every `TransportParams`
-  field except `STILTParams.CONTROL_FIELDS` and `ZICONTROL_FIELDS`, plus
-  `numpar` and `varsiwant`.
-- `RuntimeSettings` is one `pydantic-settings` class read from `PYSTILT_*`
-  (`db_url`, `cache_dir`, `compute_root`); `RuntimeSettings.from_env()`,
-  `resolve_runtime_settings()`, and the never-used `max_rows` /
-  `PYSTILT_MAX_ROWS` are removed.
-- `TrajectoryError` and `FootprintError` were never raised; the HYSPLIT
-  errors now subclass `SimulationError` directly.
-
-- **The observation layer is the X-STILT port and nothing else.** Removed the
-  `Sensor` / `BaseSensor` / `PointSensor` / `ColumnSensor` facade,
-  `UncertaintyBudget` / `UncertaintyComponent` and
-  `Observation.uncertainty_budget`, and the `make_scene` /
-  `group_scenes_by_{key,swath,metadata,time_gap}` helpers. `Scene` stays as a
-  small frozen dataclass (`id`, time-ordered `observations`, `metadata`,
-  `time`, `time_range`) with one method, `receptors(build)`, which maps any
-  observation-to-receptor callable over its members; two groupers remain,
-  `group_by_overpass(max_gap="30min")` (X-STILT's overpass finder) and
-  `group_observations(key=...)`. A new instrument is a reader that yields
-  `Observation`s plus, when needed, your own builder and transform; the
-  observations guide has the worked example.
-
-- **Particle transforms are one class each.** `stilt.transforms` now holds
-  three pydantic transforms whose fields are their YAML keys and whose
-  `apply(particles, context)` does the work: `AveragingKernel`
-  (`kind: averaging_kernel`), `PressureWeighting` (`kind: pressure_weighting`)
-  and `FirstOrderLifetime` (`kind: first_order_lifetime`). The old
-  `vertical_operator` kind with its `mode` switch is gone: `mode: ak_pwf` is
-  now the first two listed in order, `mode: pwf` is the second alone, and
-  `mode: none` / `uniform` is an empty list. Transforms apply once, in list
-  order, to the unweighted particles and return a new frame; the
-  `foot_before_weight` / `foot_before_chemistry` restore guard is gone
-  (`ak_weight`, `xpres` and `pwf` diagnostic columns remain). Removed the
-  spec / adapter / model / context layers that sat between YAML and the
-  arithmetic: `stilt.config.transforms`, `stilt.observations.{apply,
-  weighting, chemistry, operators}`, `VerticalOperator`,
-  `apply_vertical_operator`, `*TransformSpec`, `ParticleTransformContext`,
-  `build_particle_transforms`, `apply_particle_transforms`, and the unused
-  `WeightingModel` / `ChemistryModel` protocols. The science functions
-  (`particle_pwf`, `ak_weights`, `release_coordinate`) are public in
-  `stilt.transforms`. `Observation.operator` is `Observation.transforms`.
-- `Simulation.generate_footprint(transform_context=)` is `context=`
-  (a `TransformContext`).
+## [0.1.0a12] - 2026-09-21
 
 ### Added
 
-- **User-defined transforms from `config.yaml`.** A transform `kind`
+- **User-defined particle transforms from `config.yaml`.** A transform `kind`
   containing a dot is an import path (`kind: mypkg.transforms.MyWeighting`);
   the class is imported and built from the remaining keys, so custom
   weightings reach Slurm and Kubernetes workers, which rebuild the model from
   config alone. A stored footprint whose transform cannot be imported still
   loads (the entry becomes an `UnresolvedTransform`); a project config naming
   one fails validation. See the new *Particle Transforms* guide.
+- `exe_dir` setting (`STILTParams` / `config.yaml`) to run a custom `hycs_std`
+  build instead of the bundled binary. It reaches local, Slurm and queue
+  workers, is recorded with the trajectory parameters, and only `hycs_std` is
+  linked from the directory. A reused simulation directory is relinked when
+  the build changes.
+
+### Changed
 
 - **The storage, registry, and execution layers were collapsed onto
   `Project` and `Simulation`.** A project is one root — a local
@@ -102,6 +60,52 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `Model.status()` and `model.simulations.incomplete()` now count against the
   same set (receptors × mets); previously one used the manifest and the other
   did not.
+- **Particle transforms are one class each.** `stilt.transforms` now holds
+  three pydantic transforms whose fields are their YAML keys and whose
+  `apply(particles, context)` does the work: `AveragingKernel`
+  (`kind: averaging_kernel`), `PressureWeighting` (`kind: pressure_weighting`)
+  and `FirstOrderLifetime` (`kind: first_order_lifetime`). The old
+  `vertical_operator` kind with its `mode` switch is gone: `mode: ak_pwf` is
+  now the first two listed in order, `mode: pwf` is the second alone, and
+  `mode: none` / `uniform` is an empty list. Transforms apply once, in list
+  order, to the unweighted particles and return a new frame; the
+  `foot_before_weight` / `foot_before_chemistry` restore guard is gone
+  (`ak_weight`, `xpres` and `pwf` diagnostic columns remain). Removed the
+  spec / adapter / model / context layers that sat between YAML and the
+  arithmetic: `stilt.config.transforms`, `stilt.observations.{apply,
+  weighting, chemistry, operators}`, `VerticalOperator`,
+  `apply_vertical_operator`, `*TransformSpec`, `ParticleTransformContext`,
+  `build_particle_transforms`, `apply_particle_transforms`, and the unused
+  `WeightingModel` / `ChemistryModel` protocols. The science functions
+  (`particle_pwf`, `ak_weights`, `release_coordinate`) are public in
+  `stilt.transforms`. `Observation.operator` is `Observation.transforms`.
+- `Simulation.generate_footprint(transform_context=)` is `context=`
+  (a `TransformContext`).
+- **The observation layer is the X-STILT port and nothing else.** Removed the
+  `Sensor` / `BaseSensor` / `PointSensor` / `ColumnSensor` facade,
+  `UncertaintyBudget` / `UncertaintyComponent` and
+  `Observation.uncertainty_budget`, and the `make_scene` /
+  `group_scenes_by_{key,swath,metadata,time_gap}` helpers. `Scene` stays as a
+  small frozen dataclass (`id`, time-ordered `observations`, `metadata`,
+  `time`, `time_range`) with one method, `receptors(build)`, which maps any
+  observation-to-receptor callable over its members; two groupers remain,
+  `group_by_overpass(max_gap="30min")` (X-STILT's overpass finder) and
+  `group_observations(key=...)`. A new instrument is a reader that yields
+  `Observation`s plus, when needed, your own builder and transform; the
+  observations guide has the worked example.
+- **Config fields are plain pydantic `Field`s.** `cfg_field` and its
+  `visibility` / `target` / `namelist` metadata are gone, along with
+  `iter_documented_config_fields`, `CONFIG_DOC_MODELS`,
+  `build_setup_entries` and `build_control_entries`. What HYSPLIT reads from
+  `SETUP.CFG` is now `STILTParams.setup_entries()`: every `TransportParams`
+  field except `STILTParams.CONTROL_FIELDS` and `ZICONTROL_FIELDS`, plus
+  `numpar` and `varsiwant`.
+- `RuntimeSettings` is one `pydantic-settings` class read from `PYSTILT_*`
+  (`db_url`, `cache_dir`, `compute_root`); `RuntimeSettings.from_env()`,
+  `resolve_runtime_settings()`, and the never-used `max_rows` /
+  `PYSTILT_MAX_ROWS` are removed.
+- `TrajectoryError` and `FootprintError` were never raised; the HYSPLIT
+  errors now subclass `SimulationError` directly.
 
 ### Fixed
 
@@ -119,14 +123,17 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Removed the fallback that split particles as `numpar // n_locations` per
   release point. HYSPLIT rounds the per-location count up and truncates the
   last location, so that split was wrong.
-
-### Added
-
-- `exe_dir` setting (`STILTParams` / `config.yaml`) to run a custom `hycs_std`
-  build instead of the bundled binary. It reaches local, Slurm and queue
-  workers, is recorded with the trajectory parameters, and only `hycs_std` is
-  linked from the directory. A reused simulation directory is relinked when
-  the build changes.
+- **A receptor CSV could silently split into two receptors when its rows
+  straddled a pandas chunk boundary.** `read_receptors` left `r_idx` to type
+  inference; pandas types a large file one chunk at a time, so in a file
+  mixing numeric and string ids a receptor whose rows straddled a chunk
+  boundary came back part int, part str, and grouping split it into two
+  receptors with half the points each, with no warning beyond a
+  `DtypeWarning`. Found in the SLV TRAX project: a 38-point multipoint
+  receptor sitting across the 2**18-row boundary of a file mixing integer
+  crossing ids and string dwell ids ran as two 19-point receptors (7,979
+  loaded instead of 7,978). `r_idx` is only a grouping key, so it is now
+  always read as text.
 
 ## [0.1.0a11] - 2026-09-19
 
