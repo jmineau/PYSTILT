@@ -15,11 +15,12 @@ The **core transport** is stable and exercised by the test suite:
 - HYSPLIT trajectory and footprint generation
 - Numerical parity with `uataq/stilt <https://github.com/uataq/stilt>`_ (R-STILT) at ``rtol=1e-7`` per cell
 - Local and SLURM execution paths
-- Simulation registry (skip-existing, status tracking)
+- Skip-existing and status read from the outputs by key
 - Observation layer for science-facing workflows
 
-The core runtime simplification (a lean manifest-plus-Postgres registry with
-by-key completion) landed in June 2026.  Active development has moved to the
+The core runtime simplification landed in two steps: by-key completion in
+June 2026, and the collapse of the storage, registry, and execution layers onto
+``Project`` / ``Simulation`` in September 2026.  Active development has moved to the
 science boundary between footprints and inversion state grids (see
 *Future plans* below); the execution and observation tracks are maintained
 but not expanding.
@@ -43,9 +44,7 @@ execution backend.
      - Implemented
    * - Long-lived streaming mode (``stilt serve``)
      - Implemented
-   * - PostgreSQL-backed simulation registry for distributed coordination
-     - Implemented
-   * - Scene-based submission grouping (``stilt register --scene-id``)
+   * - PostgreSQL-backed work queue for distributed coordination
      - Implemented
    * - Thin CLI → ``Model`` → worker call path
      - Implemented

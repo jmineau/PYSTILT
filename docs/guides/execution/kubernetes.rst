@@ -64,7 +64,7 @@ Both patterns currently assume:
 
 - ``PYSTILT_DB_URL`` is available to workers (typically via a Kubernetes
   Secret).
-- Outputs are reachable from every pod.  In practice ``output_dir``
-  is usually a cloud URI such as ``s3://`` or ``gs://``.
+- The project is reachable from every pod.  In practice the project root
+  is a cloud URI such as ``s3://`` or ``gs://``.
 - Workers have a writable ``compute_root`` for staging meteorology and HYSPLIT
   files.  A pod-local path such as ``/tmp/pystilt`` works well here.

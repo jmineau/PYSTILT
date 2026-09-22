@@ -1,4 +1,4 @@
-"""Execution package public surface."""
+"""Execution: worker functions plus local, Slurm, and Kubernetes backends."""
 
 from .backends import (
     DispatchMode,
@@ -14,9 +14,12 @@ from .backends import (
 )
 from .backends.factory import resolve_backend
 from .backends.protocol import sigterm_as_interrupt
-from .entrypoints import pull_simulations, push_simulations
-from .execute import execute_batch, execute_task
-from .tasks import SimulationResult, SimulationTask
+from .worker import (
+    SimulationResult,
+    pull_simulations,
+    run_simulation,
+    run_simulations,
+)
 
 __all__ = [
     "DispatchMode",
@@ -27,14 +30,12 @@ __all__ = [
     "LocalExecutor",
     "LocalHandle",
     "SimulationResult",
-    "SimulationTask",
     "SlurmExecutor",
     "SlurmHandle",
-    "execute_batch",
-    "execute_task",
     "get_executor",
     "pull_simulations",
-    "push_simulations",
     "resolve_backend",
+    "run_simulation",
+    "run_simulations",
     "sigterm_as_interrupt",
 ]

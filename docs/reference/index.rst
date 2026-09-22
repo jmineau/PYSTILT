@@ -8,7 +8,7 @@ is grouped by workflow area, closer to how pandas organizes its reference:
 - ``stilt.config`` for output configuration and STILT parameter models
 - ``stilt.execution`` for local, Slurm, and Kubernetes execution
 - ``stilt.observations`` for scene, sensor, and transform objects
-- ``stilt.completion``, ``stilt.manifest``, and ``stilt.storage`` for output runtime state
+- ``stilt.project`` and ``stilt.store`` for project roots and output stores
 
 .. warning::
 
@@ -22,5 +22,5 @@ is grouped by workflow area, closer to how pandas organizes its reference:
    meteorology
    execution
    observations
-   storage
+   project
    hysplit

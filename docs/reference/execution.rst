@@ -1,8 +1,23 @@
 Execution
 =========
 
-The execution layer unifies local runs, Slurm arrays, and Kubernetes workers
-behind one task model.
+The execution layer is one worker function plus backends that launch it.
+:func:`~stilt.execution.run_simulation` runs a
+:class:`~stilt.Simulation` end to end and publishes its outputs;
+:func:`~stilt.execution.run_simulations` runs many for a model, inline or in
+one process pool; the executors decide where that happens.
+
+Worker functions
+----------------
+
+.. autosummary::
+   :toctree: _api
+   :nosignatures:
+
+   stilt.execution.run_simulation
+   stilt.execution.run_simulations
+   stilt.execution.pull_simulations
+   stilt.execution.SimulationResult
 
 Executors
 ---------
@@ -14,15 +29,3 @@ Executors
    stilt.execution.LocalExecutor
    stilt.execution.SlurmExecutor
    stilt.execution.KubernetesExecutor
-
-Queue helpers
--------------
-
-.. autosummary::
-   :toctree: _api
-   :nosignatures:
-
-   stilt.execution.pull_simulations
-   stilt.execution.push_simulations
-   stilt.execution.SimulationTask
-   stilt.execution.SimulationResult

@@ -4,18 +4,15 @@ Postgres-backed work queue for distributed (pull/serve) execution.
 The queue distributes work to claim-mode workers: simulations are enqueued
 ``pending``, atomically claimed (``FOR UPDATE SKIP LOCKED``), run, then marked
 ``done``/``failed``. It tracks **work status only** — whether outputs exist is
-decided by key from the store (see :mod:`stilt.completion`), never here.
+decided by key from the project store, never here.
 """
 
 from __future__ import annotations
 
-import json
 from collections.abc import Iterable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
-
-from stilt.receptors import Receptor
 
 if TYPE_CHECKING:
     from stilt.execution import SimulationResult
@@ -25,8 +22,6 @@ POSTGRES_PENDING_SIMULATIONS_SQL = "SELECT COUNT(*) FROM queue WHERE status = 'p
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS queue (
     sim_id     TEXT        NOT NULL PRIMARY KEY,
-    scene      TEXT,
-    receptor   JSONB       NOT NULL,
     status     TEXT        NOT NULL DEFAULT 'pending',
     error      TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -95,28 +90,17 @@ class PostgresQueue:
     def db_url(self) -> str:
         return self._db_url
 
-    def register(
-        self,
-        pairs: Iterable[tuple[str, Receptor]],
-        *,
-        scene_id: str | None = None,
-    ) -> None:
-        """Enqueue one or many simulations as pending work (idempotent)."""
-        rows = [
-            (sim_id, scene_id, json.dumps(receptor.to_dict()))
-            for sim_id, receptor in pairs
-        ]
+    def register(self, sim_ids: Iterable[str]) -> None:
+        """Enqueue simulations as pending work (idempotent; resets status)."""
+        rows = [(str(sim_id),) for sim_id in sim_ids]
         if not rows:
             return
         with _connect(self._db_url) as conn:
             with conn.cursor() as cur:
                 cur.executemany(
-                    "INSERT INTO queue (sim_id, scene, receptor) "
-                    "VALUES (%s, %s, %s::jsonb) "
+                    "INSERT INTO queue (sim_id) VALUES (%s) "
                     "ON CONFLICT (sim_id) DO UPDATE SET "
-                    "scene = COALESCE(EXCLUDED.scene, queue.scene), "
-                    "receptor = EXCLUDED.receptor, "
-                    "status = 'pending', updated_at = NOW()",
+                    "status = 'pending', error = NULL, updated_at = NOW()",
                     rows,
                 )
             conn.commit()

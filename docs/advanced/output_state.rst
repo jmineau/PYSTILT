@@ -1,63 +1,55 @@
 Output State And Shared Workers
 ===============================
 
-PYSTILT does not treat simulation execution as a purely ephemeral process. The
-package centers output state so that workers, CLI commands, and Python code can
-all agree on what exists and what still needs work. There is **no local
-database** — state is split between three small pieces.
+PYSTILT keeps no database of what has run. What exists is decided by the
+outputs themselves, so local processes, Slurm tasks, Kubernetes pods, and
+notebook code all agree without coordination.
+
+The project is the registry
+---------------------------
+
+A project is one root holding ``config.yaml`` and ``receptors.csv``. The
+simulations it defines are those receptors crossed with the configured met
+streams; ``model.simulations`` enumerates exactly that set. ``Model.register()``
+writes both files into the project store (local directory or ``s3://`` /
+``gs://`` URI) so any worker can rebuild the model from the root alone, and
+merges new receptor batches into ``receptors.csv``.
 
 Completion is by key
 --------------------
 
-A simulation is *complete* iff every artifact it is configured to produce exists
-in the store. Completion is computed by key from the outputs (see
-:mod:`stilt.completion`); nothing tracks output presence separately, so the
-store is always the source of truth. When wind-error params are set, the
-expected set includes the error trajectory.
+Every output has one address: a store key such as
+``simulations/by-id/<sim_id>/<sim_id>_traj.parquet``. A simulation is
+*complete* when every output it must produce exists under its keys
+(:meth:`stilt.Simulation.is_complete`): the trajectory, the error trajectory
+when wind-error params are set, and one netCDF or ``.empty`` marker per
+configured footprint. Nothing is listed; each check is one existence probe.
 
-The manifest
-------------
+Compute versus store
+--------------------
 
-The registry of registered simulations lives in the project's ``.stilt/``
-directory as ``manifest.parquet`` (see :mod:`stilt.manifest`). It holds only
-what is *not* derivable from the outputs — identity, receptor, scene label, and
-the configured footprint targets. It is read and written through a
-:class:`~stilt.storage.Store`, so it works on local filesystems and cloud object
-stores alike. Completion is never stored here.
+Workers run HYSPLIT under ``compute_root`` (a local scratch parent) and call
+:meth:`stilt.Simulation.publish` to copy outputs into the store. For a local
+project the default compute root *is* the store's ``simulations/by-id``
+directory, so publishing is a no-op. For a cloud project it uploads.
 
 The work queue
 --------------
 
-Claim-based workers need a backend that can atomically lock one pending
-simulation at a time. That backend is a lean PostgreSQL work queue
-(:class:`stilt.service.PostgresQueue`: enqueue → claim
-``FOR UPDATE SKIP LOCKED`` → done/failed), present only when ``PYSTILT_DB_URL``
-is set. It tracks *status* only — completion is still by key.
-
-``pull_simulations()`` and ``stilt pull-worker`` fail clearly if the model has
-no queue configured. Local projects have no database: the manifest is the
-registry and completion is by key.
-
-Rebuild behavior
-----------------
-
-.. code-block:: bash
-
-   stilt rebuild ./project
-
-Local projects have nothing to rebuild — completion is read directly from the
-outputs by key — so this just reports status. With a configured queue
-(``PYSTILT_DB_URL``) it rescans outputs back into the queue.
+Claim-based workers (``stilt pull-worker``, ``stilt serve``, Kubernetes) need a
+backend that can atomically lock one pending simulation at a time. That is a
+lean PostgreSQL work queue (:class:`stilt.service.PostgresQueue`: enqueue →
+claim ``FOR UPDATE SKIP LOCKED`` → done/failed), present only when
+``PYSTILT_DB_URL`` is set. It tracks *work status* only; completion is still by
+key. Local and Slurm workflows never touch it.
 
 Runtime environment
 -------------------
 
-The runtime-only settings are intentionally separate from ``config.yaml``. The
-important environment variables are:
+Runtime-only settings are separate from ``config.yaml``:
 
-- ``PYSTILT_DB_URL``
-- ``PYSTILT_CACHE_DIR``
-- ``PYSTILT_COMPUTE_ROOT``
-- ``PYSTILT_MAX_ROWS``
+- ``PYSTILT_DB_URL`` — the work queue
+- ``PYSTILT_CACHE_DIR`` — local cache for downloads from a remote store
+- ``PYSTILT_COMPUTE_ROOT`` — worker scratch parent
 
-This split keeps deployment concerns out of science configuration.
+Nothing here changes a simulation's result, only where and how it runs.

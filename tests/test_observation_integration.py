@@ -19,7 +19,7 @@ def _minimal_config(tmp_path):
     )
 
 
-def test_point_sensor_scene_bridges_into_model_register_pending(tmp_path):
+def test_point_sensor_scene_bridges_into_model_register(tmp_path):
     sensor = PointSensor(name="tower", supported_species=("co2",))
     observations = [
         sensor.make_observation(
@@ -42,7 +42,7 @@ def test_point_sensor_scene_bridges_into_model_register_pending(tmp_path):
     receptors = [sensor.build_receptor(obs) for obs in scene.observations]
 
     model = Model(project=tmp_path, config=_minimal_config(tmp_path))
-    sim_ids = model.register_pending(receptors=receptors, scene_id=scene.id)
+    sim_ids = model.register(receptors=receptors)
 
     assert scene.id == "tower-20230101120000"
     assert len(sim_ids) == 2

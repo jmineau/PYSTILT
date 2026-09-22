@@ -6,6 +6,44 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- **The storage, registry, and execution layers were collapsed onto
+  `Project` and `Simulation`.** A project is one root — a local
+  directory or an `s3://`/`gs://` URI — and a store key is the only address an
+  output has. The simulations a model defines are its receptors crossed with
+  its met streams; whether each is complete is read from the outputs by key
+  through `Simulation.is_complete()`, which is now the single definition of
+  completion (it was written seven times). Removed: `stilt.completion`,
+  `stilt.manifest` (the `.stilt/manifest.parquet` registry), `stilt.queries`,
+  the `stilt.storage` package (now flat `stilt.store` and `stilt.project`),
+  `stilt.execution.{tasks,execute,phases,entrypoints}` (now
+  `stilt.execution.worker`), `Model.layout` / `Model.storage` /
+  `Model.manifest`, the separate `output_dir` root everywhere, scene grouping
+  (`scene_id`, `scene_counts()`, `--scene-id`, `--by-scene`), the no-op
+  `stilt rebuild` / `Model.run(rebuild=)`, and the unread flat
+  `simulations/particles` / `simulations/footprints` symlink views.
+- `Model.register_pending()` is `Model.register()`. Registering an explicit
+  receptor batch now merges it into the project's `receptors.csv` instead of
+  overwriting it, which fixes a bug where a second batch made the first
+  batch's simulations unreachable through `model.simulations`.
+- `Model.project` is a `Project`; `Model.simulation(sim_id)` builds a handle.
+  `Simulation.resolve_output` is `Simulation.resolve`; `Simulation.files` and
+  `storage_key` are gone in favour of `key()`, `has_trajectory`,
+  `has_footprint()`, `expected_outputs()`, `is_complete()`, `publish()`.
+  Constructing a `Simulation` no longer creates its directory.
+- `SimulationResult` is `(sim_id, status, error)`; the ten other fields were
+  never read. `execute_task`/`execute_batch`/`push_simulations` are
+  `run_simulation`/`run_simulations`. The local executor runs
+  `run_simulations` on a background thread (one process pool, not two) so the
+  CLI can print progress. `Executor.start()` lost `output_dir`.
+- `PostgresQueue.register()` takes sim ids; the queue no longer stores a
+  receptor copy. `StatusCounts` moved to `stilt.model` with
+  `total`/`completed`/`pending` only.
+- `Model.status()` and `model.simulations.incomplete()` now count against the
+  same set (receptors × mets); previously one used the manifest and the other
+  did not.
+
 ### Fixed
 
 - **Multipoint and slant receptors assigned release heights (`xhgt`) to the
@@ -69,7 +107,7 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
-- **Spatial geometries** for footprint aggregation (plan 030). Footprints
+- **Spatial geometries** for footprint aggregation. Footprints
   are still computed on a rectilinear raster; moving one onto another
   geometry is a cached sparse overlap-weight matrix (`stilt.geometry.
   overlap_weights`), so Jacobian building is one matmul per footprint.

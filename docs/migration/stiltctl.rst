@@ -13,7 +13,7 @@ PYSTILT itself rather than a separate control-plane package.
      - PYSTILT equivalent
    * - Work submission
      - service-oriented submit API
-     - ``Model.register_pending()`` or ``stilt register``
+     - ``Model.register()`` or ``stilt register``
    * - Batch worker
      - queue worker job
      - ``stilt pull-worker`` or ``stilt push-worker``
@@ -25,7 +25,7 @@ PYSTILT itself rather than a separate control-plane package.
      - ``stilt.service.kubernetes`` helper functions
    * - Output registry
      - PostgreSQL queue tables
-     - ``.stilt/manifest.parquet`` manifest + optional PostgreSQL work queue via ``PYSTILT_DB_URL``
+     - ``receptors.csv`` × met streams, completion by key, plus an optional PostgreSQL work queue via ``PYSTILT_DB_URL``
 
 Why it matters
 --------------
@@ -39,7 +39,7 @@ What to re-check
 
 - database connectivity and secrets
 - whether your deployment is push-style or pull-style
-- whether project, output, and compute roots are distinct in your environment
+- whether the project root is a cloud URI and where workers get scratch (``compute_root``)
 - any Kubernetes YAML that assumed older CLI flags or resource names
 
 The service/runtime layer is still one of the least-settled parts of the alpha,

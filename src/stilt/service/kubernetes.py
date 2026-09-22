@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from stilt.storage import project_slug
+from stilt.project import project_slug
 
 from .postgres import POSTGRES_PENDING_SIMULATIONS_SQL
 
@@ -47,15 +47,12 @@ def worker_command(
     project: str,
     *,
     follow: bool = False,
-    output_dir: str | None = None,
     compute_root: str | None = None,
 ) -> list[str]:
     """Return a CLI command for batch or follow-mode queue workers."""
     command = ["stilt", "pull-worker", project]
     if follow:
         command.append("--follow")
-    if output_dir is not None:
-        command.extend(["--output-dir", output_dir])
     if compute_root is not None:
         command.extend(["--compute-root", compute_root])
     return command
@@ -64,13 +61,10 @@ def worker_command(
 def serve_command(
     project: str,
     *,
-    output_dir: str | None = None,
     compute_root: str | None = None,
 ) -> list[str]:
     """Return a CLI command for long-lived queue-service workers."""
     command = ["stilt", "serve", project]
-    if output_dir is not None:
-        command.extend(["--output-dir", output_dir])
     if compute_root is not None:
         command.extend(["--compute-root", compute_root])
     return command
@@ -160,7 +154,6 @@ def worker_job_manifest(
     image: str,
     n_workers: int = 1,
     namespace: str = "default",
-    output_dir: str | None = None,
     compute_root: str | None = None,
     db_secret: str | None = DEFAULT_DB_SECRET,
     pod_spec: Mapping[str, Any] | None = None,
@@ -172,7 +165,6 @@ def worker_job_manifest(
         command=worker_command(
             project,
             follow=False,
-            output_dir=output_dir,
             compute_root=compute_root,
         ),
         namespace=namespace,
@@ -189,7 +181,6 @@ def worker_deployment_manifest(
     image: str,
     replicas: int = 1,
     namespace: str = "default",
-    output_dir: str | None = None,
     compute_root: str | None = None,
     db_secret: str | None = DEFAULT_DB_SECRET,
     pod_spec: Mapping[str, Any] | None = None,
@@ -201,7 +192,6 @@ def worker_deployment_manifest(
         command=worker_command(
             project,
             follow=True,
-            output_dir=output_dir,
             compute_root=compute_root,
         ),
         namespace=namespace,
@@ -217,7 +207,6 @@ def service_deployment_manifest(
     image: str,
     replicas: int = 1,
     namespace: str = "default",
-    output_dir: str | None = None,
     compute_root: str | None = None,
     db_secret: str | None = DEFAULT_DB_SECRET,
     pod_spec: Mapping[str, Any] | None = None,
@@ -226,11 +215,7 @@ def service_deployment_manifest(
     return deployment_manifest(
         service_name(project),
         image=image,
-        command=serve_command(
-            project,
-            output_dir=output_dir,
-            compute_root=compute_root,
-        ),
+        command=serve_command(project, compute_root=compute_root),
         namespace=namespace,
         replicas=replicas,
         env=db_secret_env(db_secret),

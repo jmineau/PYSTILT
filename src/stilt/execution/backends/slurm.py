@@ -6,7 +6,6 @@ import logging
 import shlex
 import shutil
 import subprocess
-import tempfile
 import time
 from datetime import datetime
 from pathlib import Path
@@ -15,7 +14,8 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from .protocol import DispatchMode
 
-from stilt.storage import ProjectFiles, is_cloud_project, project_slug
+from stilt.project import project_slug
+from stilt.store import is_uri
 
 logger = logging.getLogger(__name__)
 
@@ -46,11 +46,10 @@ def _run_scheduler_query(
 
 
 def _write_chunks(
-    output_dir: Path,
+    chunk_dir: Path,
     sim_ids: list[str],
     *,
     n_workers: int,
-    batch_id: str,
 ) -> int:
     """
     Partition sim IDs into chunk files for array tasks.
@@ -59,7 +58,6 @@ def _write_chunks(
     """
     if not sim_ids:
         return 0
-    chunk_dir = ProjectFiles(output_dir).chunks_dir / batch_id
     chunk_dir.mkdir(parents=True, exist_ok=True)
     n_chunks = max(1, min(n_workers, len(sim_ids)))
     buckets: list[list[str]] = [[] for _ in range(n_chunks)]
@@ -74,13 +72,6 @@ def _write_chunks(
         )
         count += 1
     return count
-
-
-def _slurm_submission_root(project: str) -> Path:
-    """Return the local directory used for Slurm submission files."""
-    if is_cloud_project(project):
-        return Path(tempfile.mkdtemp(prefix=f"pystilt-slurm-{project_slug(project)}-"))
-    return Path(project)
 
 
 class SlurmHandle:
@@ -168,9 +159,9 @@ class SlurmExecutor:
     """
     Fire-and-forget executor that submits Slurm array jobs via ``sbatch``.
 
-    Always uses push dispatch — the coordinator writes immutable chunk files
-    before calling :meth:`start`, and ``SlurmExecutor`` derives the chunk
-    directory from ``spec.output_dir`` and ``spec.batch_id``.
+    Push dispatch: :meth:`start` writes immutable chunk files under
+    ``<project>/chunks/<batch>/`` and each array task runs
+    ``stilt push-worker`` on one chunk.
 
     Parameters
     ----------
@@ -261,28 +252,21 @@ class SlurmExecutor:
         *,
         project: str,
         n_workers: int | None = None,
-        output_dir: str | None = None,
         compute_root: str | None = None,
         skip_existing: bool | None = None,
     ) -> SlurmHandle:
         """Write chunk files, generate a submission script, submit via ``sbatch``."""
-        if is_cloud_project(project) or (
-            output_dir is not None and is_cloud_project(output_dir)
-        ):
-            raise ValueError(
-                "Slurm push dispatch currently requires local project and output roots."
-            )
+        if is_uri(project):
+            raise ValueError("Slurm push dispatch requires a local project root.")
 
-        output_target = output_dir or project
-        chunk_root = Path(output_target)
+        project_dir = Path(project)
         batch_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+        chunk_dir = project_dir / "chunks" / batch_id
         n = n_workers if n_workers is not None else self._n_workers
-        n_written = _write_chunks(chunk_root, pending, n_workers=n, batch_id=batch_id)
+        n_written = _write_chunks(chunk_dir, pending, n_workers=n)
         if not n_written:
             return SlurmHandle("none")
 
-        chunk_dir = ProjectFiles(chunk_root).chunks_dir / batch_id
-        project_dir = _slurm_submission_root(project)
         slurm_dir = project_dir / "slurm"
         logs_dir = slurm_dir / "logs"
         logs_dir.mkdir(parents=True, exist_ok=True)
@@ -291,11 +275,6 @@ class SlurmExecutor:
         directives = self._render_sbatch_directives(n_written, project=project)
 
         cpus_flag = f" --cpus {self._cpus_per_task}" if self._cpus_per_task > 1 else ""
-        output_flag = (
-            f" --output-dir {shlex.quote(output_target)}"
-            if output_dir is not None
-            else ""
-        )
         compute_flag = (
             f" --compute-root {shlex.quote(compute_root)}"
             if compute_root is not None
@@ -318,7 +297,7 @@ class SlurmExecutor:
             (
                 f"stilt push-worker {shlex.quote(project)}"
                 ' --chunk "$CHUNK_PATH"'
-                f"{cpus_flag}{output_flag}{compute_flag}{skip_flag}"
+                f"{cpus_flag}{compute_flag}{skip_flag}"
             ),
         ]
         script_path.write_text("\n".join(script_lines) + "\n")

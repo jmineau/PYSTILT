@@ -13,6 +13,8 @@ from stilt.receptors import (
     Receptor,
     _format_coord,
     read_receptors,
+    receptors_to_csv,
+    write_receptors,
 )
 
 # ---------------------------------------------------------------------------
@@ -506,3 +508,75 @@ def test_read_receptors_stacked_group_reports_r_idx(tmp_path):
     )
     with pytest.raises(ValueError, match="r_idx=0.*distinct horizontal"):
         read_receptors(csv)
+
+
+# ---------------------------------------------------------------------------
+# receptors_to_csv / write_receptors round trips
+# ---------------------------------------------------------------------------
+
+
+def test_receptors_to_csv_header_and_rows(point_receptor, column_receptor):
+    text = receptors_to_csv([point_receptor, column_receptor])
+    lines = text.splitlines()
+
+    assert lines[0] == "r_idx,time,longitude,latitude,altitude,altitude_ref"
+    # One row per constituent point: 1 (point) + 2 (column).
+    assert len(lines) == 1 + 1 + 2
+    assert [line.split(",")[0] for line in lines[1:]] == ["0", "1", "1"]
+    assert all(line.endswith(",agl") for line in lines[1:])
+
+
+def test_receptors_to_csv_empty_has_only_header():
+    assert receptors_to_csv([]).splitlines() == [
+        "r_idx,time,longitude,latitude,altitude,altitude_ref"
+    ]
+
+
+def test_write_receptors_round_trip_point(tmp_path, point_receptor):
+    path = write_receptors([point_receptor], tmp_path / "receptors.csv")
+    assert path == tmp_path / "receptors.csv"
+    assert read_receptors(path) == [point_receptor]
+
+
+def test_write_receptors_round_trip_column(tmp_path, column_receptor):
+    loaded = read_receptors(write_receptors([column_receptor], tmp_path / "r.csv"))
+    assert loaded == [column_receptor]
+    assert isinstance(loaded[0], ColumnReceptor)
+
+
+def test_write_receptors_round_trip_multipoint(tmp_path, multipoint_receptor):
+    loaded = read_receptors(write_receptors([multipoint_receptor], tmp_path / "r.csv"))
+    assert loaded == [multipoint_receptor]
+    assert isinstance(loaded[0], MultiPointReceptor)
+
+
+def test_write_receptors_round_trip_mixed_preserves_order_and_types(
+    tmp_path, point_receptor, column_receptor, multipoint_receptor
+):
+    original = [multipoint_receptor, point_receptor, column_receptor]
+    loaded = read_receptors(write_receptors(original, tmp_path / "r.csv"))
+
+    assert loaded == original
+    assert [type(r) for r in loaded] == [
+        MultiPointReceptor,
+        PointReceptor,
+        ColumnReceptor,
+    ]
+
+
+def test_write_receptors_round_trip_preserves_msl_reference(tmp_path):
+    original = [
+        PointReceptor("202301011200", -111.85, 40.77, 1500.0, altitude_ref="msl"),
+        ColumnReceptor(
+            "202301011200", -111.85, 40.77, 1300.0, 1800.0, altitude_ref="msl"
+        ),
+    ]
+    loaded = read_receptors(write_receptors(original, tmp_path / "r.csv"))
+    assert loaded == original
+    assert all(r.altitude_ref == "msl" for r in loaded)
+
+
+def test_write_receptors_creates_parent_directories(tmp_path, point_receptor):
+    path = write_receptors([point_receptor], tmp_path / "nested" / "dir" / "r.csv")
+    assert path.is_file()
+    assert read_receptors(path) == [point_receptor]

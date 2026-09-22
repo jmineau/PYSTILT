@@ -1,28 +1,84 @@
 """Tests for stilt.cli - Typer command-line interface."""
 
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import yaml
 from typer.testing import CliRunner
 
 import stilt.__main__
-from stilt.cli import _resolve_project_dir, app
-from stilt.completion import StatusCounts
+from stilt.cli import _resolve_project, app
 from stilt.config import FootprintConfig, Grid, ModelConfig
+from stilt.model import StatusCounts
+from stilt.project import SIMULATIONS_PREFIX
 
 runner = CliRunner()
 
 
-def _fake_state_for_cli_summary():
-    class _FakeState:
-        def counts(self):
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def _write_minimal_config(tmp_path):
+    """Write a minimal config.yaml + receptors.csv so _resolve_project succeeds."""
+    cfg = ModelConfig(
+        mets={
+            "hrrr": {
+                "directory": tmp_path / "met",
+                "file_format": "%Y%m%d_%H",
+                "file_tres": "1h",
+            }
+        },
+    )
+    cfg.to_yaml(tmp_path / "config.yaml")
+    (tmp_path / "receptors.csv").write_text(
+        "time,longitude,latitude,altitude\n2023-01-01 12:00:00,-111.85,40.77,5.0\n"
+    )
+
+
+class _FakeHandle:
+    detached = False
+
+    def wait(self):
+        return None
+
+
+def _fake_model_factory(captured: list[dict]):
+    """
+    Build a Model stand-in that records its constructor kwargs.
+
+    The stand-in exposes just enough surface for the CLI's startup summary,
+    progress line, and status print.
+    """
+
+    class _FakeModel:
+        def __init__(self, project, compute_root=None):
+            captured.append({"project": project, "compute_root": compute_root})
+            is_cloud = "://" in str(project)
+            self.project = SimpleNamespace(
+                root=project,
+                is_cloud=is_cloud,
+                simulations_dir=(
+                    None if is_cloud else Path(project) / SIMULATIONS_PREFIX
+                ),
+            )
+            self.compute_root = (
+                Path(compute_root)
+                if compute_root is not None
+                else self.project.simulations_dir
+            )
+            self.receptors = []
+            self.config = SimpleNamespace(execution={})
+
+        def status(self):
             return StatusCounts()
 
-        def rebuild(self):
-            return None
+        def run(self, executor=None, skip_existing=None, wait=True):
+            return _FakeHandle()
 
-    return _FakeState()
+    return _FakeModel
 
 
 def test_python_m_entrypoint_invokes_cli(monkeypatch):
@@ -40,31 +96,42 @@ def test_python_m_entrypoint_invokes_cli(monkeypatch):
 
 
 # ---------------------------------------------------------------------------
-# _resolve_project_dir helper
+# _resolve_project helper
 # ---------------------------------------------------------------------------
 
 
-def test_resolve_project_dir_exits_when_no_config_yaml(tmp_path):
+def test_resolve_project_exits_when_no_config_yaml(tmp_path):
     """Exits with code 1 when no config.yaml is found."""
     result = runner.invoke(app, ["run", str(tmp_path)])
     assert result.exit_code == 1
 
 
-def test_resolve_project_dir_returns_path_when_config_exists(tmp_path):
+def test_resolve_project_returns_path_when_config_exists(tmp_path):
     """Returns the resolved path when config.yaml is present."""
     (tmp_path / "config.yaml").write_text("n_hours: -24\n")
-    resolved = _resolve_project_dir(tmp_path)
+    resolved = _resolve_project(tmp_path)
     assert resolved == str(tmp_path.resolve())
 
 
-def test_resolve_project_dir_returns_cloud_uri_unchanged():
-    assert _resolve_project_dir("s3://bucket/project") == "s3://bucket/project"
+def test_resolve_project_returns_cloud_uri_unchanged():
+    assert _resolve_project("s3://bucket/project") == "s3://bucket/project"
 
 
-def test_resolve_project_dir_accepts_output_root_without_config(tmp_path):
-    (tmp_path / "simulations").mkdir()
-    resolved = _resolve_project_dir(tmp_path, require_inputs=False)
+def test_resolve_project_accepts_output_root_without_config(tmp_path):
+    (tmp_path / SIMULATIONS_PREFIX).mkdir(parents=True)
+    resolved = _resolve_project(tmp_path, require_inputs=False)
     assert resolved == str(tmp_path.resolve())
+
+
+def test_resolve_project_rejects_empty_dir_without_inputs_required(tmp_path):
+    from typer import Exit
+
+    try:
+        _resolve_project(tmp_path, require_inputs=False)
+    except Exit as exc:
+        assert exc.exit_code == 1
+    else:
+        raise AssertionError("expected typer.Exit")
 
 
 # ---------------------------------------------------------------------------
@@ -78,22 +145,15 @@ def test_status_exits_when_no_config(tmp_path):
 
 
 def test_status_prints_project_info(tmp_path):
-    """status command prints a summary line."""
+    """status prints one summary line with the project root and counts."""
     _write_minimal_config(tmp_path)
 
     result = runner.invoke(app, ["status", str(tmp_path)])
     assert result.exit_code == 0
-    assert "total=" in result.output
-    assert "completed=" in result.output
-
-
-def test_status_accepts_output_dir_without_project_arg(tmp_path):
-    (tmp_path / "simulations").mkdir()
-
-    result = runner.invoke(app, ["status", "--output-dir", str(tmp_path)])
-
-    assert result.exit_code == 0
-    assert "total=" in result.output
+    assert (
+        f"Project: {tmp_path.resolve()}  total=1  completed=0  pending=1"
+        in result.output
+    )
 
 
 def test_status_counts_full_simulation_completion(tmp_path):
@@ -101,7 +161,6 @@ def test_status_counts_full_simulation_completion(tmp_path):
     from stilt.model import Model
     from stilt.receptors import PointReceptor
     from stilt.simulation import SimID
-    from stilt.storage import ProjectFiles
 
     cfg = ModelConfig(
         mets={
@@ -124,7 +183,6 @@ def test_status_counts_full_simulation_completion(tmp_path):
             )
         },
     )
-    cfg.to_yaml(tmp_path / "config.yaml")
 
     receptor = PointReceptor(
         time="2023-01-01 12:00:00",
@@ -134,26 +192,48 @@ def test_status_counts_full_simulation_completion(tmp_path):
     )
     model = Model(project=tmp_path, config=cfg, receptors=[receptor])
     sid = str(SimID.from_parts("hrrr", receptor))
-    model.register_pending()
+    assert model.register() == [sid]
+
     # Trajectory exists but the required footprint does not → not complete.
-    files = ProjectFiles(tmp_path).simulation(sid)
-    files.directory.mkdir(parents=True, exist_ok=True)
-    files.trajectory_path.write_bytes(b"x")
+    sim = model.simulation(sid)
+    sim.directory.mkdir(parents=True, exist_ok=True)
+    sim.trajectories_path.write_bytes(b"x")
 
     result = runner.invoke(app, ["status", str(tmp_path)])
 
     assert result.exit_code == 0
-    assert "completed=0" in result.output
+    assert "total=1  completed=0  pending=1" in result.output
+
+    # Once the footprint is present too, the simulation counts as complete.
+    sim.footprint_path("slv").write_bytes(b"x")
+
+    result = runner.invoke(app, ["status", str(tmp_path)])
+
+    assert result.exit_code == 0
+    assert "total=1  completed=1  pending=0" in result.output
 
 
-def test_cli_help_lists_current_queue_commands():
+def test_cli_help_lists_current_commands():
     result = runner.invoke(app, ["--help"])
 
     assert result.exit_code == 0
-    assert "register" in result.output
-    assert "pull-worker" in result.output
-    assert "serve" in result.output
-    assert "enqueue" not in result.output
+    expected = {
+        "init",
+        "run",
+        "register",
+        "pull-worker",
+        "push-worker",
+        "serve",
+        "status",
+    }
+    for command in expected:
+        assert command in result.output
+
+    registered = {
+        cmd.name or cmd.callback.__name__.replace("_", "-")  # type: ignore[union-attr]
+        for cmd in app.registered_commands
+    }
+    assert registered == expected
 
 
 # ---------------------------------------------------------------------------
@@ -167,25 +247,24 @@ def test_run_exits_when_no_config(tmp_path):
 
 
 def test_run_invokes_model_run(tmp_path, monkeypatch):
-    """run command always calls model.run(wait=False) and completes inline for local."""
+    """run always calls model.run(wait=False) and waits inline for local handles."""
     _write_minimal_config(tmp_path)
 
     fake_handle = MagicMock()
     fake_handle.detached = False  # local execution -> inline wait
     calls: list = []
 
-    def fake_run(self, executor=None, skip_existing=None, rebuild=None, wait=True):
-        calls.append({"skip_existing": skip_existing, "rebuild": rebuild, "wait": wait})
+    def fake_run(self, executor=None, skip_existing=None, wait=True):
+        calls.append(
+            {"executor": executor, "skip_existing": skip_existing, "wait": wait}
+        )
         return fake_handle
 
-    monkeypatch.setattr("stilt.model.Model.run", fake_run)
+    monkeypatch.setattr("stilt.cli.Model.run", fake_run)
 
     result = runner.invoke(app, ["run", str(tmp_path)])
     assert result.exit_code == 0
-    assert len(calls) == 1
-    assert calls[0]["skip_existing"] is None  # no --no-skip flag, so None (use config)
-    assert calls[0]["rebuild"] is None
-    assert calls[0]["wait"] is False  # CLI always passes wait=False to model.run
+    assert calls == [{"executor": None, "skip_existing": None, "wait": False}]
     # Local handle — wait() must always be called so no orphan workers.
     fake_handle.wait.assert_called_once()
 
@@ -198,243 +277,109 @@ def test_run_prints_startup_and_wait_messages(tmp_path, monkeypatch):
     fake_handle.detached = False  # local execution -> inline wait
 
     monkeypatch.setattr(
-        "stilt.model.Model.run",
-        lambda self, executor=None, skip_existing=None, rebuild=None, wait=True,: (
-            fake_handle
-        ),
+        "stilt.cli.Model.run",
+        lambda self, executor=None, skip_existing=None, wait=True: fake_handle,
     )
 
     result = runner.invoke(app, ["run", str(tmp_path)])
 
     assert result.exit_code == 0
-    assert "Starting run:" in result.output
+    assert (
+        f"Starting run: project={tmp_path.resolve()}  backend=local  "
+        "dispatch=push  workers=1  skip=config"
+    ) in result.output
+    assert "Compute root:" not in result.output  # default compute root
+    assert "Receptors loaded: 1" in result.output
+    assert "Execution mode: local-blocking" in result.output
     assert "Workers launched. Waiting for completion..." in result.output
+    assert f"Project: {tmp_path.resolve()}  total=" in result.output
 
 
-def test_run_startup_summary_uses_explicit_roots(tmp_path, monkeypatch):
-    """run startup output uses project_root/output_root rather than project slug."""
+def test_run_startup_summary_uses_project_root_and_compute_root(tmp_path, monkeypatch):
+    """run startup output shows the project root and a non-default compute root."""
     _write_minimal_config(tmp_path)
-
-    class _FakeHandle:
-        detached = False
-
-        def wait(self):
-            return None
-
-    class _FakeModel:
-        def __init__(self, project, output_dir=None, compute_root=None):
-            self.project = "slug-only"
-            from types import SimpleNamespace
-
-            self.layout = SimpleNamespace(
-                project_root=project,
-                output_root=output_dir,
-                output_dir=str(Path(project) / ".cache" / "outputs"),
-                is_cloud_output=True,
-            )
-            self.compute_root = compute_root
-            self.receptors = []
-            self.config = type("Cfg", (), {"execution": {}})()
-            self.index = _fake_state_for_cli_summary()
-
-        def status(self, scene_id=None):
-            return self.index.counts()
-
-        def run(self, executor=None, skip_existing=None, rebuild=None, wait=True):
-            return _FakeHandle()
-
-    monkeypatch.setattr("stilt.cli.Model", _FakeModel)
+    captured: list[dict] = []
+    monkeypatch.setattr("stilt.cli.Model", _fake_model_factory(captured))
 
     compute_root = tmp_path / "scratch"
     result = runner.invoke(
-        app,
-        [
-            "run",
-            str(tmp_path),
-            "--output-dir",
-            "s3://bucket/project",
-            "--compute-root",
-            str(compute_root),
-        ],
+        app, ["run", str(tmp_path), "--compute-root", str(compute_root)]
     )
 
     assert result.exit_code == 0
     assert f"project={tmp_path.resolve()}" in result.output
-    assert "project=slug-only" not in result.output
-    assert "Output root: s3://bucket/project" in result.output
     assert f"Compute root: {compute_root}" in result.output
 
 
 def test_run_no_skip_passes_false(tmp_path, monkeypatch):
-    """--no-skip passes skip_existing=False to model.run()."""
+    """--no-skip passes skip_existing=False to model.run() and shows in the summary."""
     _write_minimal_config(tmp_path)
 
     fake_handle = MagicMock()
     fake_handle.detached = False  # local execution -> inline wait
     calls: list = []
 
-    def fake_run(self, executor=None, skip_existing=None, rebuild=None, wait=True):
+    def fake_run(self, executor=None, skip_existing=None, wait=True):
         calls.append(skip_existing)
         return fake_handle
 
-    monkeypatch.setattr("stilt.model.Model.run", fake_run)
+    monkeypatch.setattr("stilt.cli.Model.run", fake_run)
 
     result = runner.invoke(app, ["run", str(tmp_path), "--no-skip"])
     assert result.exit_code == 0
-    assert calls[0] is False
-
-
-def test_run_rebuild_flag_passes_true(tmp_path, monkeypatch):
-    _write_minimal_config(tmp_path)
-
-    fake_handle = MagicMock()
-    rebuild_calls: list[bool | None] = []
-
-    def fake_run(self, executor=None, skip_existing=None, rebuild=None, wait=True):
-        rebuild_calls.append(rebuild)
-        return fake_handle
-
-    monkeypatch.setattr("stilt.model.Model.run", fake_run)
-
-    result = runner.invoke(app, ["run", str(tmp_path), "--rebuild"])
-
-    assert result.exit_code == 0
-    assert rebuild_calls == [True]
-
-
-def test_run_no_rebuild_flag_passes_false(tmp_path, monkeypatch):
-    _write_minimal_config(tmp_path)
-
-    fake_handle = MagicMock()
-    rebuild_calls: list[bool | None] = []
-
-    def fake_run(self, executor=None, skip_existing=None, rebuild=None, wait=True):
-        rebuild_calls.append(rebuild)
-        return fake_handle
-
-    monkeypatch.setattr("stilt.model.Model.run", fake_run)
-
-    result = runner.invoke(app, ["run", str(tmp_path), "--no-rebuild"])
-
-    assert result.exit_code == 0
-    assert rebuild_calls == [False]
+    assert calls == [False]
+    assert "skip=no-skip" in result.output
 
 
 def test_run_accepts_cloud_project_uri(monkeypatch):
     """Cloud project URIs are forwarded unchanged into Model construction."""
     captured: list[dict] = []
-
-    class _FakeHandle:
-        detached = False
-
-        def wait(self):
-            return None
-
-    class _FakeModel:
-        def __init__(self, project, output_dir=None, compute_root=None):
-            captured.append(
-                {
-                    "project": project,
-                    "output_dir": output_dir,
-                    "compute_root": compute_root,
-                }
-            )
-            self.project = "project"
-            from types import SimpleNamespace
-
-            self.layout = SimpleNamespace(
-                project_root=project,
-                output_root=output_dir or project,
-                output_dir=None,
-                is_cloud_output=True,
-            )
-            self.compute_root = compute_root
-            self.receptors = []
-            self.config = type("Cfg", (), {"execution": {}})()
-            self.index = _fake_state_for_cli_summary()
-
-        def status(self, scene_id=None):
-            return self.index.counts()
-
-        def run(self, executor=None, skip_existing=None, rebuild=None, wait=True):
-            return _FakeHandle()
-
-    monkeypatch.setattr("stilt.cli.Model", _FakeModel)
+    monkeypatch.setattr("stilt.cli.Model", _fake_model_factory(captured))
 
     result = runner.invoke(app, ["run", "s3://bucket/project"])
 
     assert result.exit_code == 0
-    assert captured == [
-        {
-            "project": "s3://bucket/project",
-            "output_dir": None,
-            "compute_root": None,
-        }
-    ]
+    assert captured == [{"project": "s3://bucket/project", "compute_root": None}]
+    assert "project=s3://bucket/project" in result.output
 
 
-def test_run_forwards_output_dir_and_compute_root(tmp_path, monkeypatch):
-    """run forwards the new output-output and compute-root options."""
+def test_run_forwards_compute_root(tmp_path, monkeypatch):
+    """run forwards --compute-root into Model construction."""
     _write_minimal_config(tmp_path)
     captured: list[dict] = []
-
-    class _FakeHandle:
-        detached = False
-
-        def wait(self):
-            return None
-
-    class _FakeModel:
-        def __init__(self, project, output_dir=None, compute_root=None):
-            captured.append(
-                {
-                    "project": project,
-                    "output_dir": output_dir,
-                    "compute_root": compute_root,
-                }
-            )
-            self.project = "project"
-            from types import SimpleNamespace
-
-            self.layout = SimpleNamespace(
-                project_root=project,
-                output_root=output_dir or project,
-                output_dir=output_dir,
-                is_cloud_output=output_dir is not None,
-            )
-            self.compute_root = compute_root
-            self.receptors = []
-            self.config = type("Cfg", (), {"execution": {}})()
-            self.index = _fake_state_for_cli_summary()
-
-        def status(self, scene_id=None):
-            return self.index.counts()
-
-        def run(self, executor=None, skip_existing=None, rebuild=None, wait=True):
-            return _FakeHandle()
-
-    monkeypatch.setattr("stilt.cli.Model", _FakeModel)
+    monkeypatch.setattr("stilt.cli.Model", _fake_model_factory(captured))
 
     result = runner.invoke(
         app,
-        [
-            "run",
-            str(tmp_path),
-            "--output-dir",
-            "s3://bucket/project",
-            "--compute-root",
-            str(tmp_path / "scratch"),
-        ],
+        ["run", str(tmp_path), "--compute-root", str(tmp_path / "scratch")],
     )
 
     assert result.exit_code == 0
     assert captured == [
         {
             "project": str(tmp_path.resolve()),
-            "output_dir": "s3://bucket/project",
             "compute_root": str(tmp_path / "scratch"),
         }
     ]
+
+
+def test_run_config_option_resolves_project_from_its_parent(tmp_path, monkeypatch):
+    """--config PATH uses the config file's parent as the project root."""
+    _write_minimal_config(tmp_path)
+    captured: list[dict] = []
+    monkeypatch.setattr("stilt.cli.Model", _fake_model_factory(captured))
+
+    result = runner.invoke(app, ["run", "--config", str(tmp_path / "config.yaml")])
+
+    assert result.exit_code == 0
+    assert captured == [{"project": str(tmp_path.resolve()), "compute_root": None}]
+
+
+def test_run_config_option_exits_when_file_missing(tmp_path):
+    result = runner.invoke(app, ["run", "--config", str(tmp_path / "nope.yaml")])
+
+    assert result.exit_code == 1
+    assert "config file not found" in result.output
 
 
 def test_run_backend_override_builds_executor(tmp_path, monkeypatch):
@@ -443,13 +388,15 @@ def test_run_backend_override_builds_executor(tmp_path, monkeypatch):
 
     _write_minimal_config(tmp_path)
 
+    fake_handle = MagicMock()
+    fake_handle.detached = False
     captured_executor = []
 
-    def fake_run(self, executor=None, skip_existing=None, rebuild=None, wait=True):
+    def fake_run(self, executor=None, skip_existing=None, wait=True):
         captured_executor.append(executor)
-        return MagicMock()
+        return fake_handle
 
-    monkeypatch.setattr("stilt.model.Model.run", fake_run)
+    monkeypatch.setattr("stilt.cli.Model.run", fake_run)
 
     result = runner.invoke(
         app, ["run", str(tmp_path), "--backend", "local", "--n-workers", "4"]
@@ -458,6 +405,7 @@ def test_run_backend_override_builds_executor(tmp_path, monkeypatch):
     assert len(captured_executor) == 1
     assert isinstance(captured_executor[0], LocalExecutor)
     assert captured_executor[0].n_workers == 4
+    assert "workers=4" in result.output
 
 
 def test_run_slurm_fire_and_forget(tmp_path, monkeypatch):
@@ -470,14 +418,15 @@ def test_run_slurm_fire_and_forget(tmp_path, monkeypatch):
     fake_handle.wait = MagicMock()
 
     monkeypatch.setattr(
-        "stilt.model.Model.run",
-        lambda self, executor=None, skip_existing=None, rebuild=None, wait=True,: (
-            fake_handle
-        ),
+        "stilt.cli.Model.run",
+        lambda self, executor=None, skip_existing=None, wait=True: fake_handle,
     )
 
-    result = runner.invoke(app, ["run", str(tmp_path)])
+    result = runner.invoke(
+        app, ["run", str(tmp_path), "--backend", "slurm", "--n-workers", "2"]
+    )
     assert result.exit_code == 0
+    assert "Execution mode: submit-and-return" in result.output
     assert "Submitted job: 12345" in result.output
     # --wait not passed → fire-and-forget, handle.wait() must NOT be called.
     fake_handle.wait.assert_not_called()
@@ -493,25 +442,22 @@ def test_run_slurm_with_wait_flag_blocks(tmp_path, monkeypatch):
     fake_handle.wait = MagicMock()
 
     monkeypatch.setattr(
-        "stilt.model.Model.run",
-        lambda self, executor=None, skip_existing=None, rebuild=None, wait=True,: (
-            fake_handle
-        ),
+        "stilt.cli.Model.run",
+        lambda self, executor=None, skip_existing=None, wait=True: fake_handle,
     )
 
-    result = runner.invoke(app, ["run", str(tmp_path), "--wait"])
+    result = runner.invoke(
+        app,
+        ["run", str(tmp_path), "--backend", "slurm", "--n-workers", "2", "--wait"],
+    )
     assert result.exit_code == 0
+    assert "Execution mode: submit-and-wait" in result.output
     assert "Waiting for job completion..." in result.output
     fake_handle.wait.assert_called_once()
 
 
-# ---------------------------------------------------------------------------
-# run --no-wait prints job_id (legacy test name kept for reference)
-# ---------------------------------------------------------------------------
-
-
-def test_run_no_wait_prints_job_id(tmp_path, monkeypatch):
-    """Slurm fire-and-forget path prints the submitted job ID."""
+def test_run_detached_handle_prints_job_id(tmp_path, monkeypatch):
+    """Any detached handle (e.g. Slurm) prints the submitted job ID."""
     from stilt.execution import SlurmHandle
 
     _write_minimal_config(tmp_path)
@@ -519,10 +465,8 @@ def test_run_no_wait_prints_job_id(tmp_path, monkeypatch):
     fake_handle = SlurmHandle("42")
     fake_handle.wait = MagicMock()
     monkeypatch.setattr(
-        "stilt.model.Model.run",
-        lambda self, executor=None, skip_existing=None, rebuild=None, wait=True,: (
-            fake_handle
-        ),
+        "stilt.cli.Model.run",
+        lambda self, executor=None, skip_existing=None, wait=True: fake_handle,
     )
 
     result = runner.invoke(app, ["run", str(tmp_path)])
@@ -531,7 +475,7 @@ def test_run_no_wait_prints_job_id(tmp_path, monkeypatch):
 
 
 # ---------------------------------------------------------------------------
-# worker command
+# pull-worker command
 # ---------------------------------------------------------------------------
 
 
@@ -540,26 +484,20 @@ def test_pull_worker_exits_when_no_config(tmp_path):
     assert result.exit_code == 1
 
 
-# ---------------------------------------------------------------------------
-# worker command
-# ---------------------------------------------------------------------------
-
-
-def test_pull_worker_calls_pull_worker_loop(tmp_path, monkeypatch):
+def test_pull_worker_calls_pull_simulations(tmp_path, monkeypatch):
     """pull-worker calls pull_simulations on the model."""
     _write_minimal_config(tmp_path)
 
     loop_calls: list[dict] = []
 
-    def fake_loop(model, follow=False, poll_interval=10.0):
+    def fake_loop(model, follow=False, poll_interval=10.0, *, skip_existing=None):
         loop_calls.append({"follow": follow})
 
     monkeypatch.setattr("stilt.cli.pull_simulations", fake_loop)
 
     result = runner.invoke(app, ["pull-worker", str(tmp_path)])
     assert result.exit_code == 0
-    assert len(loop_calls) == 1
-    assert loop_calls[0]["follow"] is False
+    assert loop_calls == [{"follow": False}]
 
 
 def test_pull_worker_follow_flag_forwarded(tmp_path, monkeypatch):
@@ -568,104 +506,74 @@ def test_pull_worker_follow_flag_forwarded(tmp_path, monkeypatch):
 
     loop_calls: list[dict] = []
 
-    def fake_loop(model, follow=False, poll_interval=10.0):
+    def fake_loop(model, follow=False, poll_interval=10.0, *, skip_existing=None):
         loop_calls.append({"follow": follow})
 
     monkeypatch.setattr("stilt.cli.pull_simulations", fake_loop)
 
     result = runner.invoke(app, ["pull-worker", str(tmp_path), "--follow"])
     assert result.exit_code == 0
-    assert loop_calls[0]["follow"] is True
+    assert loop_calls == [{"follow": True}]
 
 
 def test_pull_worker_accepts_cloud_project_uri(monkeypatch):
     """pull-worker can bootstrap from a cloud project ref."""
     captured: list[dict] = []
-
-    class _FakeModel:
-        def __init__(self, project, output_dir=None, compute_root=None):
-            captured.append(
-                {
-                    "project": project,
-                    "output_dir": output_dir,
-                    "compute_root": compute_root,
-                }
-            )
-
-    monkeypatch.setattr("stilt.cli.Model", _FakeModel)
+    monkeypatch.setattr("stilt.cli.Model", _fake_model_factory(captured))
     monkeypatch.setattr(
         "stilt.cli.pull_simulations",
-        lambda model, follow=False, poll_interval=10.0: None,
+        lambda model, follow=False, poll_interval=10.0, skip_existing=None: None,
     )
 
     result = runner.invoke(app, ["pull-worker", "gs://bucket/project"])
 
     assert result.exit_code == 0
-    assert captured == [
-        {
-            "project": "gs://bucket/project",
-            "output_dir": None,
-            "compute_root": None,
-        }
-    ]
+    assert captured == [{"project": "gs://bucket/project", "compute_root": None}]
 
 
-def test_pull_worker_forwards_output_dir_and_compute_root(tmp_path, monkeypatch):
-    """pull-worker forwards output-output and compute-root bootstrap options."""
+def test_pull_worker_forwards_compute_root(tmp_path, monkeypatch):
+    """pull-worker forwards --compute-root into Model construction."""
     _write_minimal_config(tmp_path)
     captured: list[dict] = []
-
-    class _FakeModel:
-        def __init__(self, project, output_dir=None, compute_root=None):
-            captured.append(
-                {
-                    "project": project,
-                    "output_dir": output_dir,
-                    "compute_root": compute_root,
-                }
-            )
-
-    monkeypatch.setattr("stilt.cli.Model", _FakeModel)
+    monkeypatch.setattr("stilt.cli.Model", _fake_model_factory(captured))
     monkeypatch.setattr(
         "stilt.cli.pull_simulations",
-        lambda model, follow=False, poll_interval=10.0: None,
+        lambda model, follow=False, poll_interval=10.0, skip_existing=None: None,
     )
 
     result = runner.invoke(
         app,
-        [
-            "pull-worker",
-            str(tmp_path),
-            "--output-dir",
-            "gs://bucket/project",
-            "--compute-root",
-            str(tmp_path / "scratch"),
-        ],
+        ["pull-worker", str(tmp_path), "--compute-root", str(tmp_path / "scratch")],
     )
 
     assert result.exit_code == 0
     assert captured == [
         {
             "project": str(tmp_path.resolve()),
-            "output_dir": "gs://bucket/project",
             "compute_root": str(tmp_path / "scratch"),
         }
     ]
 
 
-def test_push_worker_calls_push_simulations(tmp_path, monkeypatch):
+# ---------------------------------------------------------------------------
+# push-worker command
+# ---------------------------------------------------------------------------
+
+
+def test_push_worker_calls_run_simulations(tmp_path, monkeypatch):
     _write_minimal_config(tmp_path)
     chunk = tmp_path / "task_0.txt"
-    chunk.write_text("hrrr_202301011200_abc\nhrrr_202301011200_def\n")
+    chunk.write_text("hrrr_202301011200_abc\n\nhrrr_202301011200_def\n")
 
     sim_list_calls: list[dict] = []
 
-    def fake_run(model, sim_ids, n_cores=1, skip_existing=None):
+    def fake_run(model, sim_ids, *, n_cores=1, skip_existing=None):
         sim_list_calls.append(
             {"sim_ids": sim_ids, "n_cores": n_cores, "skip_existing": skip_existing}
         )
+        return []
 
-    monkeypatch.setattr("stilt.cli.push_simulations", fake_run)
+    monkeypatch.setattr("stilt.cli.run_simulations", fake_run)
 
     result = runner.invoke(
         app,
@@ -678,6 +586,58 @@ def test_push_worker_calls_push_simulations(tmp_path, monkeypatch):
             "sim_ids": ["hrrr_202301011200_abc", "hrrr_202301011200_def"],
             "n_cores": 4,
             "skip_existing": None,
+        }
+    ]
+
+
+def test_push_worker_forwards_skip_existing_flags(tmp_path, monkeypatch):
+    _write_minimal_config(tmp_path)
+    chunk = tmp_path / "task_0.txt"
+    chunk.write_text("hrrr_202301011200_abc\n")
+
+    seen: list[bool | None] = []
+
+    def fake_run(model, sim_ids, *, n_cores=1, skip_existing=None):
+        seen.append(skip_existing)
+        return []
+
+    monkeypatch.setattr("stilt.cli.run_simulations", fake_run)
+
+    base = ["push-worker", str(tmp_path), "--chunk", str(chunk)]
+    assert runner.invoke(app, [*base, "--skip-existing"]).exit_code == 0
+    assert runner.invoke(app, [*base, "--no-skip-existing"]).exit_code == 0
+    assert seen == [True, False]
+
+
+def test_push_worker_forwards_compute_root(tmp_path, monkeypatch):
+    _write_minimal_config(tmp_path)
+    chunk = tmp_path / "task_0.txt"
+    chunk.write_text("hrrr_202301011200_abc\n")
+    captured: list[dict] = []
+
+    monkeypatch.setattr("stilt.cli.Model", _fake_model_factory(captured))
+    monkeypatch.setattr(
+        "stilt.cli.run_simulations",
+        lambda model, sim_ids, n_cores=1, skip_existing=None: [],
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "push-worker",
+            str(tmp_path),
+            "--chunk",
+            str(chunk),
+            "--compute-root",
+            str(tmp_path / "scratch"),
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert captured == [
+        {
+            "project": str(tmp_path.resolve()),
+            "compute_root": str(tmp_path / "scratch"),
         }
     ]
 
@@ -700,13 +660,13 @@ def test_serve_exits_when_no_config(tmp_path):
     assert result.exit_code == 1
 
 
-def test_serve_calls_worker_loop_in_follow_mode(tmp_path, monkeypatch):
+def test_serve_calls_pull_simulations_in_follow_mode(tmp_path, monkeypatch):
     """serve is the user-facing long-lived queue consumer command."""
     _write_minimal_config(tmp_path)
 
     loop_calls: list[dict] = []
 
-    def fake_loop(model, follow=False, poll_interval=10.0):
+    def fake_loop(model, follow=False, poll_interval=10.0, *, skip_existing=None):
         loop_calls.append({"follow": follow})
 
     monkeypatch.setattr("stilt.cli.pull_simulations", fake_loop)
@@ -718,126 +678,42 @@ def test_serve_calls_worker_loop_in_follow_mode(tmp_path, monkeypatch):
 
 def test_serve_accepts_cloud_project_uri(monkeypatch):
     captured: list[dict] = []
-
-    class _FakeModel:
-        def __init__(self, project, output_dir=None, compute_root=None):
-            captured.append(
-                {
-                    "project": project,
-                    "output_dir": output_dir,
-                    "compute_root": compute_root,
-                }
-            )
-
-    monkeypatch.setattr("stilt.cli.Model", _FakeModel)
+    monkeypatch.setattr("stilt.cli.Model", _fake_model_factory(captured))
     monkeypatch.setattr(
         "stilt.cli.pull_simulations",
-        lambda model, follow=False, poll_interval=10.0: None,
+        lambda model, follow=False, poll_interval=10.0, skip_existing=None: None,
     )
 
     result = runner.invoke(app, ["serve", "gs://bucket/project"])
 
     assert result.exit_code == 0
-    assert captured == [
-        {
-            "project": "gs://bucket/project",
-            "output_dir": None,
-            "compute_root": None,
-        }
-    ]
+    assert captured == [{"project": "gs://bucket/project", "compute_root": None}]
 
 
-def test_serve_forwards_output_dir_and_compute_root(tmp_path, monkeypatch):
+def test_serve_forwards_compute_root(tmp_path, monkeypatch):
     _write_minimal_config(tmp_path)
     captured: list[dict] = []
     loop_calls: list[dict] = []
 
-    class _FakeModel:
-        def __init__(self, project, output_dir=None, compute_root=None):
-            captured.append(
-                {
-                    "project": project,
-                    "output_dir": output_dir,
-                    "compute_root": compute_root,
-                }
-            )
-
-    def fake_loop(model, follow=False, poll_interval=10.0):
+    def fake_loop(model, follow=False, poll_interval=10.0, *, skip_existing=None):
         loop_calls.append({"follow": follow})
 
-    monkeypatch.setattr("stilt.cli.Model", _FakeModel)
+    monkeypatch.setattr("stilt.cli.Model", _fake_model_factory(captured))
     monkeypatch.setattr("stilt.cli.pull_simulations", fake_loop)
 
     result = runner.invoke(
         app,
-        [
-            "serve",
-            str(tmp_path),
-            "--output-dir",
-            "gs://bucket/project",
-            "--compute-root",
-            str(tmp_path / "scratch"),
-        ],
+        ["serve", str(tmp_path), "--compute-root", str(tmp_path / "scratch")],
     )
 
     assert result.exit_code == 0
     assert captured == [
         {
             "project": str(tmp_path.resolve()),
-            "output_dir": "gs://bucket/project",
             "compute_root": str(tmp_path / "scratch"),
         }
     ]
     assert loop_calls == [{"follow": True}]
-
-
-# ---------------------------------------------------------------------------
-# rebuild command
-# ---------------------------------------------------------------------------
-
-
-def test_rebuild_exits_when_no_config(tmp_path):
-    result = runner.invoke(app, ["rebuild", str(tmp_path)])
-    assert result.exit_code == 1
-
-
-def test_rebuild_prints_status_without_a_queue(tmp_path):
-    """Without a queue, rebuild is a no-op that just reports status."""
-    _write_minimal_config(tmp_path)
-
-    result = runner.invoke(app, ["rebuild", str(tmp_path)])
-    assert result.exit_code == 0
-    assert "total=" in result.output
-
-
-def test_rebuild_accepts_output_dir_without_project_arg(tmp_path):
-    (tmp_path / "simulations").mkdir()
-
-    result = runner.invoke(app, ["rebuild", "--output-dir", str(tmp_path)])
-
-    assert result.exit_code == 0
-
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-
-def _write_minimal_config(tmp_path):
-    """Write a minimal config.yaml so _resolve_project_dir succeeds."""
-    cfg = ModelConfig(
-        mets={
-            "hrrr": {
-                "directory": tmp_path / "met",
-                "file_format": "%Y%m%d_%H",
-                "file_tres": "1h",
-            }
-        },
-    )
-    cfg.to_yaml(tmp_path / "config.yaml")
-    (tmp_path / "receptors.csv").write_text(
-        "time,longitude,latitude,altitude\n2023-01-01 12:00:00,-111.85,40.77,5.0\n"
-    )
 
 
 # ---------------------------------------------------------------------------
@@ -850,27 +726,27 @@ def test_register_exits_when_no_config(tmp_path):
     assert result.exit_code == 1
 
 
-def test_register_registers_receptors(tmp_path, monkeypatch):
-    """register command calls the model registration boundary and prints the count."""
+def test_register_registers_project_receptors(tmp_path, monkeypatch):
+    """register calls Model.register() with no receptors and prints the count."""
     _write_minimal_config(tmp_path)
 
     register_calls: list = []
 
-    def fake_register_pending(model, receptors=None, scene_id=None):
+    def fake_register(model, receptors=None):
         del model
-        register_calls.append({"receptors": receptors, "scene_id": scene_id})
+        register_calls.append(receptors)
         return ["sim_id_1", "sim_id_2"]
 
-    monkeypatch.setattr("stilt.cli.Model.register_pending", fake_register_pending)
+    monkeypatch.setattr("stilt.cli.Model.register", fake_register)
 
     result = runner.invoke(app, ["register", str(tmp_path)])
     assert result.exit_code == 0
-    assert "2" in result.output
-    assert len(register_calls) == 1
+    assert "Registered 2 simulation(s)." in result.output
+    assert register_calls == [None]
 
 
 def test_register_with_receptors_file(tmp_path, monkeypatch):
-    """--receptors PATH loads receptors from file."""
+    """--receptors PATH loads receptors from file and passes them to register()."""
     _write_minimal_config(tmp_path)
 
     receptors_csv = tmp_path / "my_receptors.csv"
@@ -880,86 +756,33 @@ def test_register_with_receptors_file(tmp_path, monkeypatch):
 
     register_calls: list = []
 
-    def fake_register_pending(model, receptors=None, scene_id=None):
+    def fake_register(model, receptors=None):
         del model
-        register_calls.append({"receptors": receptors, "scene_id": scene_id})
+        register_calls.append(receptors)
         return ["sim_id_1"]
 
-    monkeypatch.setattr("stilt.cli.Model.register_pending", fake_register_pending)
+    monkeypatch.setattr("stilt.cli.Model.register", fake_register)
 
     result = runner.invoke(
         app, ["register", str(tmp_path), "--receptors", str(receptors_csv)]
     )
     assert result.exit_code == 0
+    assert "Registered 1 simulation(s)." in result.output
     assert len(register_calls) == 1
-    assert register_calls[0]["receptors"] is not None
-    assert len(register_calls[0]["receptors"]) == 1
+    assert register_calls[0] is not None
+    assert len(register_calls[0]) == 1
 
 
-def test_register_forwards_scene_id(tmp_path, monkeypatch):
+def test_register_writes_project_inputs(tmp_path):
+    """Without mocks, register persists config.yaml + receptors.csv and reports ids."""
     _write_minimal_config(tmp_path)
 
-    register_calls: list = []
-
-    def fake_register_pending(model, receptors=None, scene_id=None):
-        del model
-        register_calls.append({"receptors": receptors, "scene_id": scene_id})
-        return ["sim_id_1"]
-
-    monkeypatch.setattr("stilt.cli.Model.register_pending", fake_register_pending)
-
-    result = runner.invoke(app, ["register", str(tmp_path), "--scene-id", "scene-a"])
+    result = runner.invoke(app, ["register", str(tmp_path)])
 
     assert result.exit_code == 0
-    assert len(register_calls) == 1
-    assert register_calls[0]["scene_id"] == "scene-a"
-    assert register_calls[0]["receptors"] is not None
-
-
-def test_status_filters_one_scene(tmp_path, monkeypatch):
-    _write_minimal_config(tmp_path)
-
-    class _FakeModel:
-        def __init__(self, project, output_dir=None):
-            self.project = "my_project"
-
-        def status(self, scene_id=None):
-            assert scene_id == "scene-a"
-            return StatusCounts(total=2, completed=1, running=0, pending=1, failed=0)
-
-    monkeypatch.setattr("stilt.cli.Model", _FakeModel)
-
-    result = runner.invoke(app, ["status", str(tmp_path), "--scene-id", "scene-a"])
-
-    assert result.exit_code == 0
-    assert "Scene: scene-a" in result.output
-    assert "total=2" in result.output
-
-
-def test_status_groups_counts_by_scene(tmp_path, monkeypatch):
-    _write_minimal_config(tmp_path)
-
-    class _FakeModel:
-        def __init__(self, project, output_dir=None):
-            self.project = "my_project"
-
-        def scene_counts(self):
-            return {
-                "scene-a": StatusCounts(
-                    total=2, completed=1, running=0, pending=1, failed=0
-                ),
-                "scene-b": StatusCounts(
-                    total=1, completed=0, running=0, pending=1, failed=0
-                ),
-            }
-
-    monkeypatch.setattr("stilt.cli.Model", _FakeModel)
-
-    result = runner.invoke(app, ["status", str(tmp_path), "--by-scene"])
-
-    assert result.exit_code == 0
-    assert "Scene: scene-a" in result.output
-    assert "Scene: scene-b" in result.output
+    assert "Registered 1 simulation(s)." in result.output
+    assert (tmp_path / "config.yaml").exists()
+    assert (tmp_path / "receptors.csv").exists()
 
 
 # ---------------------------------------------------------------------------

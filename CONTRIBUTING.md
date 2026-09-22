@@ -75,35 +75,25 @@ somewhere different, such as `control`, `zicontrol`, `winderr`, or `zierr`.
 When adding a routed field, update the config routing tests so contributors can
 see which generated HYSPLIT input file the field affects.
 
-## Adding index backends
+## Project store and completion
 
-PYSTILT index backends implement the `SimulationIndex` protocol in
-`src/stilt/index/protocol.py`. The SQLite and PostgreSQL implementations share
-most CRUD behavior through `_SqlIndex` in `src/stilt/index/base.py`; a new SQL
-backend should reuse that base unless it has a materially different transaction
-model.
-
-For a SQL backend, provide:
-- a connection factory returning context-managed connections with dict-style row access
-- placeholder, boolean, timestamp, and JSON-cast dialect constants
-- `_execute_match_ids()` for efficient `sim_id` filtering in that dialect
-- `_table_columns()` for schema validation
-- tests for registration, counts, summaries, reset/rebuild behavior, and pruning
-
-Completion semantics are shared through `build_index_predicates()` in
-`src/stilt/index/sql.py`. Do not copy/paste the completed, pending, or
-prune-eligible predicates into backend modules; pass only the dialect-specific
-JSON traversal fragments.
+A project is one root (`stilt.project.Project`) over a `Store`
+(`stilt.store`: `LocalStore`, `FsspecStore`). Every output is addressed by a
+store key; `Simulation` owns the filenames, keys, presence checks, and the one
+definition of completion (`Simulation.is_complete()`). Do not add a second
+"does this output exist" check anywhere else — call the `Simulation` method.
+Adding a store backend means implementing the five-method `Store` protocol.
 
 ## Adding execution backends
 
 Execution backends implement the `Executor` and `JobHandle` protocols in
 `src/stilt/execution/backends/protocol.py`. The coordinator relies on the
 executor's `dispatch` mode:
-- `push` executors receive an explicit list of pending simulation IDs and should
-  publish output files before the coordinator rebuilds local state
-- `pull` executors claim work from the shared index and should preserve claim
-  transactions until a simulation result is recorded or released
+- `push` executors receive an explicit list of pending simulation IDs and run
+  them through `stilt.execution.run_simulations` (directly or via the
+  `stilt push-worker` CLI); outputs are published by `Simulation.publish()`
+- `pull` executors launch workers that claim from the Postgres queue and should
+  preserve claim transactions until a simulation result is recorded or released
 
 Backend `start()` methods should return quickly with a handle. `wait()` should
 raise on backend-level failure states rather than treating “not queued anymore”

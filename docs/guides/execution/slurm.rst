@@ -11,8 +11,8 @@ How it works
 
 Running ``stilt run`` with ``backend: slurm``:
 
-1. Registers pending simulations in the manifest.
-2. Writes immutable chunk files under ``<output>/chunks/<batch_id>/``.
+1. Persists ``config.yaml`` and ``receptors.csv`` and finds the incomplete simulations.
+2. Writes immutable chunk files under ``<project>/chunks/<batch_id>/``.
 3. Renders a submission script under ``<project>/slurm/``.
 4. Submits a Slurm array job — one task per chunk — via ``sbatch``.
 

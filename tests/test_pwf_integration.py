@@ -1,5 +1,5 @@
 """
-Integration tests for particle-derived pressure weighting (plan 042).
+Integration tests for particle-derived pressure weighting.
 
 The unit tests in ``test_apply_vertical_operator.py`` use an isothermal
 reference atmosphere, where ``ln p`` is exactly linear in height and the

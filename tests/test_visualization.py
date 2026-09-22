@@ -373,44 +373,40 @@ def test_simulation_map_show_receptor_false(receptor):
 def test_model_availability_empty():
     from unittest.mock import MagicMock
 
-    class _FakeState:
-        def sim_ids(self):
-            return []
-
     model = MagicMock()
-    model.index = _FakeState()
+    model.simulations.keys.return_value = []
 
     ax = ModelPlotAccessor(model).availability()
     assert ax is not None
 
 
-def test_model_availability_with_sims(tmp_path):
+def test_model_availability_with_sims(tmp_path, receptor):
+    from stilt.config import ModelConfig
     from stilt.model import Model
-    from stilt.simulation import SimID
 
-    r = PointReceptor(
-        time=dt.datetime(2023, 1, 1, 12),
-        longitude=-111.85,
-        latitude=40.77,
-        altitude=5.0,
+    config = ModelConfig(
+        mets={
+            "hrrr": {
+                "directory": tmp_path / "met",
+                "file_format": "%Y%m%d_%H",
+                "file_tres": "1h",
+            }
+        },
     )
+    model = Model(project=tmp_path, config=config, receptors=[receptor])
+    assert len(model.simulations.keys()) == 1
 
-    model = Model(project=tmp_path)
-    model.manifest.register([(str(SimID.from_parts("hrrr", r)), r)])
     ax = model.plot.availability()
     assert ax is not None
+    assert len(ax.patches) == 1
 
 
 def test_model_availability_reuses_ax():
     from unittest.mock import MagicMock
 
-    class _FakeState:
-        def sim_ids(self):
-            return []
-
     _, existing = plt.subplots()
     model = MagicMock()
-    model.index = _FakeState()
+    model.simulations.keys.return_value = []
 
     ax = ModelPlotAccessor(model).availability(ax=existing)
     assert ax is existing

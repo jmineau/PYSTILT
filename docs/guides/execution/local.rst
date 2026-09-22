@@ -21,9 +21,8 @@ Or override at the CLI without touching config.yaml:
 
    stilt run ./project --backend local --n-workers 4
 
-``n_workers: 1`` runs all simulations inline in the calling process (no
-subprocess pool).  ``n_workers > 1`` spawns a ``joblib``-backed process pool.
-The CLI always blocks until all local workers finish.
+``n_workers: 1`` runs all simulations in one worker; ``n_workers > 1`` uses a
+``multiprocessing`` pool.  The CLI always blocks until all local workers finish.
 
 Python and notebook usage
 -------------------------
@@ -57,14 +56,14 @@ Build a model in memory and call ``run()``:
 
    model.run()
 
-``model.run()`` is equivalent to ``stilt run`` from the CLI — it registers
-pending simulations and dispatches them through the configured backend.
+``model.run()`` is equivalent to ``stilt run`` from the CLI — it persists the
+inputs and dispatches every incomplete simulation through the configured backend.
 
 Querying outputs
 ----------------
 
-``model.simulations`` is a lazy collection backed by the manifest of registered
-simulations.  Use it to inspect or filter completed work without re-running:
+``model.simulations`` is every receptor crossed with every met stream.  Use it
+to inspect or filter completed work without re-running:
 
 .. code-block:: python
 
@@ -85,14 +84,14 @@ For more control, split registration from execution:
 
 .. code-block:: python
 
-   sim_ids = model.register_pending(scene_id="tower-20230715")
+   sim_ids = model.register()
 
-At that point the project inputs and simulation registry are stored.  You can
-then decide whether to:
+At that point ``config.yaml`` and ``receptors.csv`` are in the project store
+and any worker can rebuild the model from the root.  You can then:
 
 - call ``model.run()`` immediately
-- dispatch ``push_simulations()`` directly with custom worker arguments
-- drain claims later with ``pull_simulations()``
+- call ``run_simulations(model, sim_ids, n_cores=...)`` yourself
+- drain a queue later with ``pull_simulations()``
 
 This pattern is useful when generating receptors programmatically before
 handing off to a long-running workflow.

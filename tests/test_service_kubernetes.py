@@ -46,6 +46,18 @@ def test_worker_command_follow_mode_includes_follow_flag():
     ]
 
 
+def test_worker_command_forwards_compute_root_only():
+    command = worker_command("/data/project", compute_root="/tmp/pystilt")
+    assert command == [
+        "stilt",
+        "pull-worker",
+        "/data/project",
+        "--compute-root",
+        "/tmp/pystilt",
+    ]
+    assert "--output-dir" not in command
+
+
 def test_serve_command_uses_service_cli():
     assert serve_command("/data/project") == [
         "stilt",
@@ -54,13 +66,24 @@ def test_serve_command_uses_service_cli():
     ]
 
 
+def test_serve_command_forwards_compute_root_only():
+    command = serve_command("/data/project", compute_root="/tmp/pystilt")
+    assert command == [
+        "stilt",
+        "serve",
+        "/data/project",
+        "--compute-root",
+        "/tmp/pystilt",
+    ]
+    assert "--output-dir" not in command
+
+
 def test_worker_job_manifest_structure():
     manifest = worker_job_manifest(
         "/data/project",
         image="img",
         n_workers=2,
         namespace="stilt",
-        output_dir="gs://bucket/project",
         compute_root="/tmp/pystilt",
     )
     assert manifest["kind"] == "Job"
@@ -72,11 +95,10 @@ def test_worker_job_manifest_structure():
         "stilt",
         "pull-worker",
         "/data/project",
-        "--output-dir",
-        "gs://bucket/project",
         "--compute-root",
         "/tmp/pystilt",
     ]
+    assert "--output-dir" not in container["command"]
 
 
 def test_worker_deployment_manifest_matches_follow_worker_shape():
@@ -117,6 +139,7 @@ def test_service_deployment_manifest_uses_serve_cli():
         "serve",
         "/data/project",
     ]
+    assert "--output-dir" not in container["command"]
 
 
 def test_scaled_object_manifest_uses_pending_query():

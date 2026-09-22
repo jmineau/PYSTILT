@@ -35,15 +35,13 @@ def test_pull_simulations_requires_runtime_queue_backend(
         receptors=[wbb_receptor],
     )
 
-    sim_ids = model.register_pending()
+    sim_ids = model.register()
     assert len(sim_ids) == 1
 
     pending = model.status()
     assert pending.total == 1
     assert pending.pending == 1
-    assert pending.running == 0
     assert pending.completed == 0
-    assert pending.failed == 0
 
     with pytest.raises(ConfigValidationError, match="Postgres work queue"):
         pull_simulations(model, poll_interval=0.1)

@@ -7,7 +7,7 @@ import hashlib
 import json
 import re
 from abc import ABC, abstractmethod
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, TypeAlias, cast
 
@@ -600,6 +600,52 @@ def read_receptors(path: str | Path) -> list[Receptor]:
     return _point_receptors_from_rows(df)
 
 
+def receptors_to_csv(receptors: Iterable[Receptor]) -> str:
+    """
+    Serialise receptors to the CSV text that :func:`read_receptors` reads.
+
+    One row per constituent point, grouped by ``r_idx`` so column and
+    multipoint receptors round-trip.
+    """
+    import csv
+    from io import StringIO
+
+    buffer = StringIO()
+    writer = csv.DictWriter(
+        buffer,
+        fieldnames=[
+            "r_idx",
+            "time",
+            "longitude",
+            "latitude",
+            "altitude",
+            "altitude_ref",
+        ],
+    )
+    writer.writeheader()
+    for idx, receptor in enumerate(receptors):
+        for lat, lon, altitude in receptor:
+            writer.writerow(
+                {
+                    "r_idx": idx,
+                    "time": receptor.time.isoformat(sep=" "),
+                    "longitude": float(lon),
+                    "latitude": float(lat),
+                    "altitude": float(altitude),
+                    "altitude_ref": receptor.altitude_ref,
+                }
+            )
+    return buffer.getvalue()
+
+
+def write_receptors(receptors: Iterable[Receptor], path: str | Path) -> Path:
+    """Write receptors to a CSV file readable by :func:`read_receptors`."""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(receptors_to_csv(receptors))
+    return path
+
+
 def _receptor_from_group(group: pd.DataFrame) -> Receptor:
     """Build one receptor from a grouped receptor CSV slice."""
     refs = {str(v).lower() for v in group["altitude_ref"].tolist()}
@@ -632,4 +678,6 @@ __all__ = [
     "Receptor",
     "ReceptorID",
     "read_receptors",
+    "receptors_to_csv",
+    "write_receptors",
 ]

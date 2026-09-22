@@ -38,8 +38,8 @@ package. The intended boundary is:
 Scene-aware registration
 ------------------------
 
-Scenes are first-class enough to matter operationally. You can register a batch
-of receptors with a scene ID:
+Scenes are an in-memory grouping. Build receptors from a scene and register
+them with the model:
 
 .. code-block:: python
 
@@ -56,9 +56,9 @@ of receptors with a scene ID:
 
    [scene] = sensor.group_scenes(observations)
    receptors = [sensor.build_receptor(obs) for obs in scene.observations]
-   sim_ids = model.register_pending(receptors=receptors, scene_id=scene.id)
+   sim_ids = model.register(receptors=receptors)
 
-That scene ID then flows into grouped status queries.
+The returned ids identify the scene's simulations for later queries.
 
 Declarative transforms
 ----------------------

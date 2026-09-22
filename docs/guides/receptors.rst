@@ -115,7 +115,7 @@ with any receptor type.
 
 ``receptor.id``
    A :class:`ReceptorID` string in ``YYYYMMDDHHMM_{location}`` format.
-   Used as the unique key throughout the storage and manifest layers.
+   Combined with a met name it forms the simulation id and output keys.
 
 ``receptor.time``
    A naive UTC :class:`datetime.datetime`.

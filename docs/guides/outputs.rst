@@ -82,18 +82,15 @@ You can also load a footprint directly:
 
    foot = Footprint.from_netcdf(sim.footprint_path("default"))
 
-Terminal footprint states
--------------------------
+Empty footprints
+----------------
 
-Named footprints are tracked durably with one of three terminal outcomes:
-
-- ``complete``
-- ``complete-empty``
-- ``failed``
-
-``complete-empty`` is important. It means the run succeeded, but no footprint
-file is expected. Model-level footprint loaders skip those cases gracefully
-instead of treating them as missing-data failures.
+A run can succeed and still produce no footprint (no particle touched the
+grid). PYSTILT then writes a ``<sim_id>_<name>_foot.empty`` marker next to
+where the netCDF would be. ``Simulation.has_footprint(name)`` and
+``model.footprints[name].missing()`` treat the marker as complete, while
+``model.footprints[name].paths()`` and ``load()`` skip it because there is
+nothing to load.
 
 Cross-simulation access
 -----------------------

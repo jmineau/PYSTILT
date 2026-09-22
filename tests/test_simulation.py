@@ -16,8 +16,8 @@ from stilt.config import (
 from stilt.errors import HYSPLITTimeoutError
 from stilt.footprint import Footprint
 from stilt.meteorology import MetStream
-from stilt.simulation import SimID, Simulation
-from stilt.storage import LocalStore
+from stilt.simulation import ERROR_TRAJECTORY, TRAJECTORY, SimID, Simulation
+from stilt.store import LocalStore
 from stilt.trajectory import Trajectories
 
 
@@ -146,7 +146,7 @@ def test_simulation_status_none_when_dir_missing(point_receptor, tmp_path):
         params=_params(tmp_path),
         meteorology=met,
     )
-    sim.directory.rmdir()
+    assert not sim.directory.exists()
     assert sim.status is None
 
 
@@ -736,3 +736,378 @@ def test_run_trajectories_error_only_skips_main_run(
     assert sim.error_trajectories is not None
     # The existing main trajectory is left untouched (not recomputed/overwritten).
     assert sim.trajectories_path.read_bytes() == original_main
+
+
+# ---------------------------------------------------------------------------
+# Construction, keys, and directory creation
+# ---------------------------------------------------------------------------
+
+
+class _FakeMet:
+    def required_files(self, **kwargs):
+        return []
+
+    def stage_files_for_simulation(self, **kwargs):
+        return []
+
+
+def _fake_runner_returning(particles, error_particles=None):
+    class _Result:
+        stdout = "ok"
+
+    _Result.particles = particles
+    _Result.error_particles = error_particles
+
+    class _FakeRunner:
+        def __init__(self, **kwargs):
+            pass
+
+        def prepare(self):
+            return None
+
+        def execute(self, timeout, rm_dat, *, error_only=False):
+            return _Result()
+
+    return _FakeRunner
+
+
+def test_construction_does_not_create_directory(point_receptor, tmp_path):
+    sid = str(SimID.from_parts("hrrr", point_receptor))
+    sim_dir = tmp_path / "simulations" / "by-id" / sid
+    mc = _met_config(tmp_path)
+    met = MetStream(
+        "hrrr",
+        directory=mc.directory,
+        file_format=mc.file_format,
+        file_tres=mc.file_tres,
+    )
+
+    sim = Simulation(
+        directory=sim_dir,
+        receptor=point_receptor,
+        params=_params(tmp_path),
+        meteorology=met,
+    )
+
+    assert sim.directory == sim_dir
+    assert not sim_dir.exists()
+    assert not sim.has_trajectory
+    assert sim.status is None
+
+
+def test_run_trajectories_creates_directory(monkeypatch, point_receptor, tmp_path):
+    sid = str(SimID.from_parts("hrrr", point_receptor))
+    sim_dir = tmp_path / "simulations" / "by-id" / sid
+    mc = _met_config(tmp_path)
+    met = MetStream(
+        "hrrr",
+        directory=mc.directory,
+        file_format=mc.file_format,
+        file_tres=mc.file_tres,
+    )
+    sim = Simulation(
+        directory=sim_dir,
+        receptor=point_receptor,
+        params=_params(tmp_path),
+        meteorology=met,
+    )
+    assert not sim_dir.exists()
+
+    monkeypatch.setattr(
+        "stilt.simulation.HYSPLITDriver", _fake_runner_returning(_particles_df())
+    )
+    monkeypatch.setattr(sim, "meteorology", _FakeMet())
+
+    sim.run_trajectories(timeout=1, rm_dat=False, write=True)
+
+    assert sim_dir.is_dir()
+    assert sim.trajectories_path.exists()
+    assert sim.has_trajectory
+    assert sim.log_path.read_text() == "ok"
+
+
+def test_key_prefix_and_key(point_receptor, tmp_path):
+    sim = _sim(tmp_path, point_receptor)
+    sid = str(sim.id)
+
+    assert sim.key_prefix == f"simulations/by-id/{sid}"
+    assert sim.key(sim.trajectories_path) == (
+        f"simulations/by-id/{sid}/{sid}_traj.parquet"
+    )
+    assert sim.key(sim.error_trajectories_path) == (
+        f"simulations/by-id/{sid}/{sid}_error.parquet"
+    )
+    assert sim.key(sim.log_path) == f"simulations/by-id/{sid}/stilt.log"
+    assert sim.key(sim.footprint_path("slv")) == (
+        f"simulations/by-id/{sid}/{sid}_slv_foot.nc"
+    )
+    assert sim.key(sim.empty_footprint_path("slv")) == (
+        f"simulations/by-id/{sid}/{sid}_slv_foot.empty"
+    )
+    # Only the basename matters: an out-of-tree path maps onto this sim's prefix.
+    assert sim.key("elsewhere/stilt.log") == f"simulations/by-id/{sid}/stilt.log"
+
+
+def test_resolve_prefers_local_then_store_then_none(point_receptor, tmp_path):
+    storage_root = tmp_path / "remote"
+    sim = _sim(tmp_path / "cache", point_receptor, store=LocalStore(storage_root))
+
+    assert sim.resolve(sim.log_path) is None
+
+    remote_log = storage_root / sim.key_prefix / "stilt.log"
+    remote_log.parent.mkdir(parents=True)
+    remote_log.write_text("remote")
+    assert sim.resolve(sim.log_path) == remote_log
+
+    sim.log_path.write_text("local")
+    assert sim.resolve(sim.log_path) == sim.log_path
+
+
+# ---------------------------------------------------------------------------
+# Expected outputs and completion (ported from tests/test_completion.py)
+# ---------------------------------------------------------------------------
+
+
+def _touch(sim, kind, name=""):
+    path = {
+        "traj": sim.trajectories_path,
+        "error": sim.error_trajectories_path,
+        "foot": sim.footprint_path(name),
+        "empty": sim.empty_footprint_path(name),
+    }[kind]
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(b"x")
+
+
+def test_expected_outputs_without_error(point_receptor, tmp_path):
+    sim = _sim(tmp_path, point_receptor)
+    assert sim.expected_outputs(["default"]) == (TRAJECTORY, "default")
+    assert sim.expected_outputs() == (TRAJECTORY,)
+
+
+def test_expected_outputs_with_error_includes_error_trajectory(
+    point_receptor, tmp_path
+):
+    sim = _sim(tmp_path, point_receptor, **_ERR)
+    assert sim.params.error_enabled
+    assert sim.expected_outputs(["default"]) == (
+        TRAJECTORY,
+        ERROR_TRAJECTORY,
+        "default",
+    )
+
+
+def test_expected_outputs_never_requires_error_footprint(point_receptor, tmp_path):
+    """error_enabled gates the error trajectory, never an error footprint."""
+    sim = _sim(tmp_path, point_receptor, **_ERR)
+    assert "default_error" not in sim.expected_outputs(["default"])
+
+
+def test_is_complete_when_error_not_expected(point_receptor, tmp_path):
+    sim = _sim(tmp_path, point_receptor)
+    _touch(sim, "traj")
+    _touch(sim, "foot", "default")
+    assert sim.is_complete(["default"]) is True
+
+
+def test_incomplete_when_error_expected_but_missing(point_receptor, tmp_path):
+    sim = _sim(tmp_path, point_receptor, **_ERR)
+    _touch(sim, "traj")
+    _touch(sim, "foot", "default")
+    assert sim.is_complete(["default"]) is False
+
+
+def test_complete_when_error_present(point_receptor, tmp_path):
+    sim = _sim(tmp_path, point_receptor, **_ERR)
+    _touch(sim, "traj")
+    _touch(sim, "error")
+    _touch(sim, "foot", "default")
+    assert sim.is_complete(["default"]) is True
+
+
+def test_empty_footprint_marker_counts_complete(point_receptor, tmp_path):
+    sim = _sim(tmp_path, point_receptor)
+    _touch(sim, "traj")
+    _touch(sim, "empty", "default")
+    assert sim.is_complete(["default"]) is True
+
+
+def test_incomplete_when_trajectory_missing(point_receptor, tmp_path):
+    sim = _sim(tmp_path, point_receptor)
+    _touch(sim, "foot", "default")
+    assert sim.is_complete(["default"]) is False
+
+
+def test_incomplete_when_footprint_missing(point_receptor, tmp_path):
+    sim = _sim(tmp_path, point_receptor)
+    _touch(sim, "traj")
+    assert sim.is_complete(["default"]) is False
+    assert sim.is_complete() is True
+
+
+def test_is_complete_checks_trajectory_first(monkeypatch, point_receptor, tmp_path):
+    """With no trajectory, footprints are never inspected."""
+    sim = _sim(tmp_path, point_receptor)
+    _touch(sim, "foot", "default")
+    checked: list[str] = []
+
+    def _spy_has_footprint(name):
+        checked.append(name)
+        return True
+
+    monkeypatch.setattr(sim, "has_footprint", _spy_has_footprint)
+
+    assert sim.is_complete(["default"]) is False
+    assert checked == []
+
+
+# ---------------------------------------------------------------------------
+# has_footprint / missing_footprints / has_output / markers
+# ---------------------------------------------------------------------------
+
+
+def test_has_footprint_from_netcdf_or_marker(point_receptor, tmp_path):
+    sim = _sim(tmp_path, point_receptor)
+    assert not sim.has_footprint("slv")
+
+    _touch(sim, "foot", "slv")
+    assert sim.has_footprint("slv")
+
+    _touch(sim, "empty", "other")
+    assert sim.has_footprint("other")
+    assert not sim.has_footprint("missing")
+
+
+def test_has_footprint_falls_back_to_store(point_receptor, tmp_path):
+    storage_root = tmp_path / "remote"
+    sim = _sim(tmp_path / "cache", point_receptor, store=LocalStore(storage_root))
+    remote = storage_root / sim.key(sim.footprint_path("slv"))
+    remote.parent.mkdir(parents=True)
+    remote.write_bytes(b"x")
+
+    assert sim.has_footprint("slv")
+    assert not sim.has_footprint("other")
+
+
+def test_missing_footprints(point_receptor, tmp_path):
+    sim = _sim(tmp_path, point_receptor)
+    _touch(sim, "foot", "a")
+    _touch(sim, "empty", "b")
+
+    assert sim.missing_footprints(["a", "b", "c", "d"]) == ["c", "d"]
+    assert sim.missing_footprints([]) == []
+
+
+def test_has_output_dispatches_by_name(point_receptor, tmp_path):
+    sim = _sim(tmp_path, point_receptor)
+    assert not sim.has_output(TRAJECTORY)
+    assert not sim.has_output(ERROR_TRAJECTORY)
+    assert not sim.has_output("slv")
+
+    _touch(sim, "traj")
+    _touch(sim, "error")
+    _touch(sim, "foot", "slv")
+
+    assert sim.has_output(TRAJECTORY)
+    assert sim.has_output(ERROR_TRAJECTORY)
+    assert sim.has_output("slv")
+    assert sim.has_trajectory
+    assert sim.has_error_trajectory
+
+
+def test_write_and_clear_empty_footprint_marker(point_receptor, tmp_path):
+    sim = _sim(tmp_path, point_receptor)
+    marker = sim.write_empty_footprint_marker("slv")
+
+    assert marker == sim.empty_footprint_path("slv")
+    assert marker.name.endswith("_slv_foot.empty")
+    assert marker.exists()
+    assert sim.has_footprint("slv")
+
+    sim.clear_empty_footprint_marker("slv")
+    assert not marker.exists()
+    assert not sim.has_footprint("slv")
+    # Clearing twice is harmless.
+    sim.clear_empty_footprint_marker("slv")
+
+
+# ---------------------------------------------------------------------------
+# publish
+# ---------------------------------------------------------------------------
+
+
+def _write_all_outputs(sim):
+    sim.directory.mkdir(parents=True, exist_ok=True)
+    sim.log_path.write_text("log")
+    sim.trajectories_path.write_bytes(b"traj")
+    sim.error_trajectories_path.write_bytes(b"error")
+    sim.footprint_path("slv").write_bytes(b"foot")
+    sim.write_empty_footprint_marker("empty")
+
+
+def test_publish_copies_outputs_into_store(point_receptor, tmp_path):
+    storage_root = tmp_path / "output"
+    store = LocalStore(storage_root)
+    sim = _sim(tmp_path / "compute", point_receptor, store=store)
+    _write_all_outputs(sim)
+
+    sim.publish()
+
+    published = storage_root / sim.key_prefix
+    assert (published / "stilt.log").read_text() == "log"
+    assert (published / sim.trajectories_path.name).read_bytes() == b"traj"
+    assert (published / sim.error_trajectories_path.name).read_bytes() == b"error"
+    assert (published / sim.footprint_path("slv").name).read_bytes() == b"foot"
+    assert (published / sim.empty_footprint_path("empty").name).exists()
+    assert not list(published.glob("*.tmp"))
+    # Nothing is written outside the by-id layout.
+    assert sorted(p.name for p in storage_root.iterdir()) == ["simulations"]
+
+
+def test_publish_skips_missing_outputs(point_receptor, tmp_path):
+    storage_root = tmp_path / "output"
+    sim = _sim(tmp_path / "compute", point_receptor, store=LocalStore(storage_root))
+    sim.trajectories_path.write_bytes(b"traj")
+
+    sim.publish()
+
+    published = storage_root / sim.key_prefix
+    assert (published / sim.trajectories_path.name).read_bytes() == b"traj"
+    assert not (published / "stilt.log").exists()
+    assert not (published / sim.error_trajectories_path.name).exists()
+
+
+def test_publish_noop_when_store_root_contains_sim_directory(point_receptor, tmp_path):
+    """When the store's location for the sim *is* its directory, nothing is copied."""
+    sim = _sim(tmp_path, point_receptor, store=LocalStore(tmp_path))
+    assert sim.directory == LocalStore(tmp_path).path(sim.key_prefix)
+    _write_all_outputs(sim)
+    before = {
+        p.name: p.stat().st_mtime_ns for p in sim.directory.iterdir() if p.is_file()
+    }
+
+    sim.publish()
+
+    after = {
+        p.name: p.stat().st_mtime_ns for p in sim.directory.iterdir() if p.is_file()
+    }
+    assert after == before
+    assert not list(sim.directory.glob("*.tmp"))
+    assert sim.trajectories_path.read_bytes() == b"traj"
+
+
+def test_publish_noop_without_store(point_receptor, tmp_path):
+    sim = _sim(tmp_path, point_receptor)
+    _write_all_outputs(sim)
+    sim.publish()  # must not raise
+    assert sim.trajectories_path.read_bytes() == b"traj"
+
+
+def test_publish_without_directory_is_noop(point_receptor, tmp_path):
+    storage_root = tmp_path / "output"
+    sim = _sim(tmp_path / "compute", point_receptor, store=LocalStore(storage_root))
+    sim.directory.rmdir()
+
+    sim.publish()
+
+    assert not (storage_root / sim.key_prefix).exists()

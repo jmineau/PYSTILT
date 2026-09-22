@@ -30,10 +30,10 @@ test suite. The public API may change while the package settles.
 
 - **One-off transport runs** for local analysis and notebooks:
   use `Model.run()` or `stilt run`.
-- **Queue-backed batch or service runs** for HPC/cloud execution:
-  use `Model.register_pending()`, `stilt register`, `stilt pull-worker`, and
-  `stilt serve` with a PostgreSQL-backed queue index configured via
-  `PYSTILT_DB_URL`.
+- **Queue-backed batch or service runs** for cloud execution:
+  use `Model.register()`, `stilt register`, `stilt pull-worker`, and
+  `stilt serve` with a PostgreSQL work queue configured via `PYSTILT_DB_URL`.
+  Slurm needs no database: `stilt run --backend slurm`.
 - **Observation-driven workflows** for science-facing code:
   use `stilt.observations` to turn normalized observations into `Receptor`
   objects before feeding them into the same runtime.
@@ -141,7 +141,7 @@ foot = sim.get_footprint("default")
 ## Quickstart: queue/service runtime
 
 ```bash
-# Queue workers require a PostgreSQL-backed queue index.
+# Queue workers require a PostgreSQL work queue.
 export PYSTILT_DB_URL=postgresql://user:pass@host:5432/pystilt
 
 # Initialize project files (config.yaml and receptors.csv)
@@ -150,8 +150,8 @@ stilt init ./my_project
 # Run with local workers (blocks until complete)
 stilt run ./my_project --backend local --n-workers 8
 
-# Register one grouped scene submission
-stilt register ./my_project --scene-id daily_2026_04_13
+# Persist inputs and enqueue every simulation (receptors x mets)
+stilt register ./my_project
 
 # Drain queue from worker processes (batch mode)
 stilt pull-worker ./my_project
@@ -170,13 +170,13 @@ import stilt
 from stilt.execution import pull_simulations
 
 model = stilt.Model(project="./my_project")
-model.register_pending(scene_id="daily_2026_04_14")
+model.register()
 pull_simulations(model, follow=False)  # batch mode
-print(model.status(scene_id="daily_2026_04_14"))
+print(model.status())
 ```
 
-In all modes, workers claim simulations from the PostgreSQL-backed index and
-write terminal state directly back to the same registry.
+Workers claim simulations from the queue and record done/failed there;
+whether outputs exist is always read from the project itself.
 
 ## Quickstart: observation layer
 
@@ -202,7 +202,7 @@ observations = [
 receptors = [sensor.build_receptor(obs) for obs in scene.observations]
 
 model = stilt.Model(project="./my_project")  # existing project config on disk
-model.register_pending(receptors=receptors, scene_id=scene.id)
+model.register(receptors=receptors)
 ```
 
 Direct `Observation(...)` construction is still available when you already

@@ -1,68 +1,58 @@
 Project Layout And Output State
 ================================
 
-PYSTILT separates three concepts that are often mixed together in older
-workflows:
+PYSTILT has two locations, not three:
 
 ``project``
-   The science-facing project root. This is where ``config.yaml`` and
-   ``receptors.csv`` normally live.
-
-``output_dir``
-   The output root. This is where the manifest registry (under ``.stilt/``) and
-   simulation artifacts live. By default it is the same as ``project``.
+   The project root: a local directory or an object-store URI (``s3://``,
+   ``gs://``). ``config.yaml``, ``receptors.csv``, and every simulation
+   output live here.
 
 ``compute_root``
-   A compute-local parent directory for worker scratch directories. This is
-   especially useful when outputs live on object storage or a slower
-   shared filesystem.
+   A local parent directory for worker scratch. Defaults to the project's
+   ``simulations/by-id`` for a local project (so nothing is copied) and to a
+   temp directory for a cloud project (outputs are uploaded when a
+   simulation finishes).
 
-Default local layout
---------------------
-
-When project and output roots are the same, PYSTILT uses:
+Layout
+------
 
 .. code-block:: text
 
    project/
      config.yaml
      receptors.csv
-     .stilt/
-       manifest.parquet
      simulations/
        by-id/
          <sim_id>/
+           stilt.log
+           <sim_id>_traj.parquet
+           <sim_id>_error.parquet          # when wind-error params are set
+           <sim_id>_<footprint>_foot.nc
+           <sim_id>_<footprint>_foot.empty # legitimately empty footprint
 
-Separate input and output roots
--------------------------------
-
-You can keep human-edited inputs in one place and output results in another:
+Cloud projects
+--------------
 
 .. code-block:: python
 
    model = stilt.Model(
-       project="./inputs/wbb_july_case",
-       output_dir="gs://my-bucket/wbb_july_case",
+       project="gs://my-bucket/wbb_july_case",
        compute_root="/scratch/$USER/pystilt",
    )
 
-This is the right model when:
+Workers stage meteorology and run HYSPLIT under ``compute_root`` and publish
+outputs to the bucket. ``PYSTILT_CACHE_DIR`` controls where remote outputs are
+cached when read back.
 
-- project inputs are version-controlled locally
-- outputs belong in object storage
-- workers need fast local scratch space for staging meteorology and HYSPLIT files
+How inputs are loaded
+---------------------
 
-How configuration is loaded
----------------------------
-
-``Model.config`` is loaded lazily:
-
-- from the local project root when ``config.yaml`` is present
-- otherwise from output storage if the project has already been bootstrapped
-
-The same rule applies to receptors. ``Model.register_pending()`` is the output
-boundary that publishes config and receptor inputs before simulations are
-registered in the manifest.
+``Model.config`` and ``Model.receptors`` are loaded lazily from the project
+store unless given at construction. ``Model.register()`` writes them into the
+store; ``Model.run()`` calls it first, so workers launched on other machines can
+rebuild the model from the root alone. Registering an explicit receptor batch
+merges it into ``receptors.csv`` (deduplicated by receptor id).
 
 Simulation identity
 -------------------
@@ -75,17 +65,18 @@ Each simulation ID has the form:
 
 For point receptors, ``location_id`` is a coordinate triple. For column
 receptors it ends in ``_X``. For multipoint receptors, PYSTILT uses a stable
-hash-based location ID.
+hash-based location ID. ``model.simulations`` is every receptor crossed with
+every met stream.
 
 Status model
 ------------
 
-Status is computed by key from the outputs on disk (joined against the manifest
-of registered simulations). In the current alpha, the useful mental model is:
+Completion is read from the outputs by key (:meth:`stilt.Simulation.is_complete`):
 
-- trajectories move through ``pending``, ``running``, ``complete``, or ``failed``
-- footprints are tracked per footprint name
-- ``complete-empty`` is a successful terminal footprint outcome
-- ``skip_existing=True`` avoids rerunning complete work
+- a simulation is complete when its trajectory, its error trajectory (if
+  configured), and every configured footprint exist
+- an ``.empty`` marker is a successful terminal footprint outcome
+- ``skip_existing=True`` (the default) re-dispatches only incomplete simulations
 
-Use ``stilt status`` or ``Model.status()`` to inspect project-level counts.
+Use ``stilt status`` or ``Model.status()`` for project-level counts and
+``model.simulations.incomplete()`` for the ids.

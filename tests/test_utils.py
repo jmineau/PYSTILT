@@ -1,6 +1,7 @@
 """Tests for sigterm_as_interrupt."""
 
 import signal
+import threading
 
 import pytest
 
@@ -26,4 +27,23 @@ def test_sigterm_as_interrupt_restores_after_exception():
     original = signal.getsignal(signal.SIGTERM)
     with pytest.raises(KeyboardInterrupt), sigterm_as_interrupt():
         signal.raise_signal(signal.SIGTERM)
+    assert signal.getsignal(signal.SIGTERM) == original
+
+
+def test_sigterm_as_interrupt_is_noop_outside_main_thread():
+    """Called from a non-main thread, the SIGTERM handler is left untouched."""
+    original = signal.getsignal(signal.SIGTERM)
+    seen: dict[str, object] = {}
+
+    def _worker() -> None:
+        with sigterm_as_interrupt():
+            seen["inside"] = signal.getsignal(signal.SIGTERM)
+        seen["after"] = signal.getsignal(signal.SIGTERM)
+
+    thread = threading.Thread(target=_worker)
+    thread.start()
+    thread.join()
+
+    assert seen["inside"] == original
+    assert seen["after"] == original
     assert signal.getsignal(signal.SIGTERM) == original

@@ -27,8 +27,8 @@ from stilt.errors import (
 )
 from stilt.hysplit.control import ControlFile
 from stilt.hysplit.namelist import NameList
+from stilt.project import resolve_directory
 from stilt.receptors import Receptor
-from stilt.storage import resolve_directory
 
 CONTROL_FILE = "CONTROL"
 SETUP_FILE = "SETUP.CFG"

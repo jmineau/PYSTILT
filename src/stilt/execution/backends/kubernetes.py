@@ -131,7 +131,6 @@ class KubernetesExecutor:
         *,
         project: str,
         n_workers: int | None = None,
-        output_dir: str | None = None,
         compute_root: str | None = None,
         skip_existing: bool | None = None,
     ) -> KubernetesHandle:
@@ -143,7 +142,6 @@ class KubernetesExecutor:
             image=self._image,
             n_workers=n,
             namespace=self._namespace,
-            output_dir=output_dir,
             compute_root=compute_root,
             db_secret=self._db_secret,
             pod_spec=self._pod_spec,

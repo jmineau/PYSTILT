@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from concurrent.futures import ProcessPoolExecutor, as_completed
+import threading
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -12,82 +12,50 @@ __all__ = ["LocalExecutor", "LocalHandle"]
 
 
 class LocalHandle:
-    """Handle for local execution."""
+    """Handle for local execution: joins the worker thread on ``wait()``."""
 
-    def __init__(
-        self,
-        futures: list | None = None,
-        pool: ProcessPoolExecutor | None = None,
-        *,
-        completed: bool | None = None,
-    ) -> None:
-        self._futures = futures
-        self._pool = pool
-        self._completed = (
-            completed if completed is not None else futures is None and pool is None
-        )
+    def __init__(self, thread: threading.Thread | None = None) -> None:
+        self._thread = thread
+        self._error: BaseException | None = None
 
     @property
     def job_id(self) -> str:
-        """Return the synthetic identifier used for local execution."""
         return "local"
 
     @property
     def detached(self) -> bool:
-        """Local workers run in this process and must be awaited inline."""
+        """Local workers belong to this process and must be awaited."""
         return False
 
+    @property
+    def done(self) -> bool:
+        return self._thread is None or not self._thread.is_alive()
+
     def wait(self) -> None:
-        """Wait for all local worker futures and then shut down the pool."""
-        if self._completed:
-            return
-        try:
-            if self._futures is not None and self._pool is not None:
-                try:
-                    for future in as_completed(self._futures):
-                        future.result()
-                finally:
-                    self._pool.shutdown(wait=False)
-        finally:
-            self._completed = True
-
-
-def _local_worker_entrypoint(
-    project: str,
-    sim_ids: list[str],
-    output_dir: str | None = None,
-    compute_root: str | None = None,
-    skip_existing: bool | None = None,
-) -> None:
-    """Entry point for spawned local worker processes."""
-    from stilt.model import Model
-
-    from ..entrypoints import push_simulations
-
-    push_simulations(
-        Model(project=project, output_dir=output_dir, compute_root=compute_root),
-        sim_ids,
-        skip_existing=skip_existing,
-    )
+        """Block until the local workers finish; re-raise any worker error."""
+        if self._thread is not None:
+            self._thread.join()
+            self._thread = None
+        if self._error is not None:
+            error, self._error = self._error, None
+            raise error
 
 
 class LocalExecutor:
     """
-    Local executor: runs simulations in-process (n=1) or across a process pool (n>1).
+    Run simulations in this process (``n_workers=1``) or a local process pool.
 
-    Uses push dispatch — pending sim IDs are distributed directly without chunk
-    files or queue claims. The coordinator collects results after
-    execution.
+    Work runs on a background thread so callers (the CLI) can report progress
+    while waiting; ``LocalHandle.wait()`` joins it.
     """
 
     dispatch: DispatchMode = "push"
 
-    def __init__(self, n_workers: int) -> None:
+    def __init__(self, n_workers: int = 1) -> None:
         self._n_workers = n_workers
 
     @property
     def n_workers(self) -> int:
-        """Return the default worker count used by this executor."""
         return self._n_workers
 
     def start(
@@ -96,48 +64,31 @@ class LocalExecutor:
         *,
         project: str,
         n_workers: int | None = None,
-        output_dir: str | None = None,
         compute_root: str | None = None,
         skip_existing: bool | None = None,
     ) -> LocalHandle:
-        """Run pending simulations in-process or distribute across a process pool."""
         if not pending:
-            return LocalHandle(completed=True)
+            return LocalHandle()
 
         n = n_workers if n_workers is not None else self._n_workers
+        handle = LocalHandle()
 
-        if n <= 1:
+        def _work() -> None:
             from stilt.model import Model
 
-            from ..entrypoints import push_simulations
+            from ..worker import run_simulations
 
-            push_simulations(
-                Model(
-                    project=project,
-                    output_dir=output_dir,
-                    compute_root=compute_root,
-                ),
-                pending,
-                skip_existing=skip_existing,
-            )
-            return LocalHandle(completed=True)
+            try:
+                run_simulations(
+                    Model(project=project, compute_root=compute_root),
+                    pending,
+                    n_cores=n,
+                    skip_existing=skip_existing,
+                )
+            except BaseException as exc:  # surfaced by wait()
+                handle._error = exc
 
-        # Partition pending sims across worker processes.
-        partitions: list[list[str]] = [[] for _ in range(n)]
-        for i, sim_id in enumerate(pending):
-            partitions[i % n].append(sim_id)
-        partitions = [p for p in partitions if p]
-
-        pool = ProcessPoolExecutor(max_workers=len(partitions))
-        futures = [
-            pool.submit(
-                _local_worker_entrypoint,
-                project,
-                partition,
-                output_dir,
-                compute_root,
-                skip_existing,
-            )
-            for partition in partitions
-        ]
-        return LocalHandle(futures, pool)
+        thread = threading.Thread(target=_work, name="pystilt-local", daemon=True)
+        handle._thread = thread
+        thread.start()
+        return handle

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import contextlib
 import signal
+import threading
 from typing import Literal, Protocol
 
 DispatchMode = Literal["push", "pull"]
@@ -11,11 +12,19 @@ DispatchMode = Literal["push", "pull"]
 
 @contextlib.contextmanager
 def sigterm_as_interrupt():
-    """Temporarily convert SIGTERM into KeyboardInterrupt."""
+    """
+    Temporarily convert SIGTERM into ``KeyboardInterrupt``.
+
+    Signal handlers can only be installed from the main thread; elsewhere
+    this is a no-op so worker code can run in a background thread.
+    """
+    if threading.current_thread() is not threading.main_thread():
+        yield
+        return
+
     previous = signal.getsignal(signal.SIGTERM)
 
     def _handle(signum: int, frame: object) -> None:
-        """Translate SIGTERM into ``KeyboardInterrupt`` for worker loops."""
         raise KeyboardInterrupt
 
     signal.signal(signal.SIGTERM, _handle)
@@ -34,7 +43,7 @@ class JobHandle(Protocol):
 
     @property
     def job_id(self) -> str:
-        """Return the backend-specific job identifier."""
+        """Backend-specific job identifier."""
         ...
 
     @property
@@ -43,9 +52,8 @@ class JobHandle(Protocol):
         Whether the launched work runs independently of this process.
 
         ``True`` for backends whose workers survive the submitting process
-        (Slurm, Kubernetes) — the caller may return immediately without
-        orphaning work. ``False`` for in-process backends (local) whose workers
-        must be awaited inline.
+        (Slurm, Kubernetes). ``False`` for the local backend, whose workers
+        must be awaited before this process exits.
         """
         ...
 
@@ -56,18 +64,17 @@ class JobHandle(Protocol):
 
 class Executor(Protocol):
     """
-    Worker-launch protocol: start workers, get a :class:`JobHandle` back immediately.
+    Worker-launch protocol: start workers, get a :class:`JobHandle` back.
 
-    Implementors declare a ``dispatch`` class attribute (``"push"`` or ``"pull"``).
-    The coordinator reads this to handle dispatch-specific queue setup
-    before/after calling :meth:`start`.
+    ``dispatch`` says whether the executor is handed the pending ids
+    (``"push"``) or whether its workers claim from the queue (``"pull"``).
     """
 
     dispatch: DispatchMode
 
     @property
     def n_workers(self) -> int:
-        """Return the executor's default worker count."""
+        """Default worker count."""
         ...
 
     def start(
@@ -76,11 +83,10 @@ class Executor(Protocol):
         *,
         project: str,
         n_workers: int | None = None,
-        output_dir: str | None = None,
         compute_root: str | None = None,
         skip_existing: bool | None = None,
     ) -> JobHandle:
-        """Launch workers for one project and return a handle immediately."""
+        """Launch workers for one project root and return a handle."""
         ...
 
 

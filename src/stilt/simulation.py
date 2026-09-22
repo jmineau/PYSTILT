@@ -5,7 +5,7 @@ from __future__ import annotations
 import datetime as dt
 import logging
 import re
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
@@ -20,8 +20,14 @@ from stilt.errors import (
 from stilt.footprint import Footprint
 from stilt.hysplit import HYSPLITDriver
 from stilt.meteorology import MetID, MetStream
+from stilt.project import (
+    SIMULATION_LOG_FILENAME,
+    SIMULATION_MET_DIRNAME,
+    resolve_directory,
+    simulation_prefix,
+)
 from stilt.receptors import LocationID, Receptor, ReceptorID
-from stilt.storage import SimulationFiles, Store, resolve_directory
+from stilt.store import Store
 from stilt.trajectory import Trajectories
 from stilt.transforms import (
     ParticleTransform,
@@ -38,6 +44,9 @@ logger = logging.getLogger(__name__)
 _ERROR_PARAM_FIELDS = frozenset(ErrorParams.XYERR_PARAMS) | frozenset(
     ErrorParams.ZIERR_PARAMS
 )
+
+TRAJECTORY = "trajectory"
+ERROR_TRAJECTORY = "error_trajectory"
 
 
 def _read_trajectory_params(path: Path) -> STILTParams | None:
@@ -138,7 +147,27 @@ class SimID(str):
 
 
 class Simulation:
-    """Container for running and reading a STILT simulation."""
+    """
+    Container for running and reading one STILT simulation.
+
+    A simulation owns its output filenames, their store keys, and the single
+    definition of which outputs exist and whether the simulation is complete.
+
+    Parameters
+    ----------
+    meteorology, receptor, params
+        What to run.
+    directory
+        Compute-local working directory. Its basename must be the simulation
+        id. A temporary directory is created when omitted. Nothing is created
+        on disk until an output is written.
+    exe_dir
+        Directory holding a custom ``hycs_std`` build.
+    store
+        Output store the outputs are published to and read back from when
+        they are not on local disk. When the store's location for this
+        simulation *is* ``directory``, publishing is a no-op.
+    """
 
     def __init__(
         self,
@@ -159,15 +188,10 @@ class Simulation:
         self._exe_dir = exe_dir
         self._store = store
 
-        # The sim ID is derived from the directory name
-        # This dientangles the sim ID from the receptor and met,
-        # allowing users to rename sim directories without breaking functionality.
-        # The Model object in coordination with the service workers
-        # then assigns the met_YYYYMMDDHHMM_location_id format to the sim directory name.
+        # The sim ID is derived from the directory name so a Model can lay out
+        # `{project}/simulations/by-id/{sim_id}` and ad-hoc runs still work.
         self.id = SimID(self.directory.name)
-        self.files = SimulationFiles(self.directory, str(self.id))
-
-        self.directory.mkdir(parents=True, exist_ok=True)
+        self.key_prefix = simulation_prefix(str(self.id))
 
         # Lazy state
         self._source_met_files: list[Path] | None = None
@@ -181,42 +205,139 @@ class Simulation:
         """Compact developer-facing simulation representation."""
         return f"Simulation(id={self.id!r}, directory={str(self.directory)!r})"
 
+    # -- Paths and keys --------------------------------------------------------
+
     @property
     def met_dir(self) -> Path:
         """Compute-local meteorology staging directory."""
-        return self.files.met_dir
+        return self.directory / SIMULATION_MET_DIRNAME
 
     @property
     def log_path(self) -> Path:
         """Compute-local HYSPLIT log path."""
-        return self.files.log_path
+        return self.directory / SIMULATION_LOG_FILENAME
 
     @property
     def trajectories_path(self) -> Path:
         """Compute-local trajectory parquet path."""
-        return self.files.trajectory_path
+        return self.directory / f"{self.id}_traj.parquet"
 
     @property
     def error_trajectories_path(self) -> Path:
         """Compute-local error-trajectory parquet path."""
-        return self.files.error_trajectory_path
+        return self.directory / f"{self.id}_error.parquet"
 
     def footprint_path(self, name: str = "") -> Path:
-        """Compute-local footprint path for one footprint name."""
-        return self.files.footprint_path(name)
+        """Compute-local footprint netCDF path for one footprint name."""
+        suffix = f"_{name}" if name else ""
+        return self.directory / f"{self.id}{suffix}_foot.nc"
 
-    def storage_key(self, path: Path) -> str:
-        """Return the canonical storage key for one simulation output path."""
-        return self.files.key(path)
+    def empty_footprint_path(self, name: str = "") -> Path:
+        """Compute-local marker path recording that a footprint is legitimately empty."""
+        return self.footprint_path(name).with_suffix(".empty")
 
-    def resolve_output(self, path: Path) -> Path | None:
-        """Return a local path to one output from disk or the output store."""
+    def key(self, path: str | Path) -> str:
+        """Return the store key for one file under this simulation's directory."""
+        return f"{self.key_prefix}/{Path(path).name}"
+
+    def resolve(self, path: Path) -> Path | None:
+        """Return a local path to one output from disk or the store, else ``None``."""
         if path.exists():
             return path
-        key = self.storage_key(path)
-        if self._store is not None and self._store.exists(key):
-            return self._store.local_path(key)
+        if self._store is not None:
+            key = self.key(path)
+            if self._store.exists(key):
+                return self._store.local_path(key)
         return None
+
+    # -- Presence and completion -----------------------------------------------
+
+    @property
+    def has_trajectory(self) -> bool:
+        """Whether the main trajectory parquet exists on disk or in the store."""
+        return self.resolve(self.trajectories_path) is not None
+
+    @property
+    def has_error_trajectory(self) -> bool:
+        """Whether the error-trajectory parquet exists on disk or in the store."""
+        return self.resolve(self.error_trajectories_path) is not None
+
+    def has_footprint(self, name: str) -> bool:
+        """
+        Whether one named footprint is complete.
+
+        The empty marker counts: a run that legitimately produced no footprint
+        is a terminal outcome, not missing work.
+        """
+        return (
+            self.resolve(self.footprint_path(name)) is not None
+            or self.resolve(self.empty_footprint_path(name)) is not None
+        )
+
+    def missing_footprints(self, names: Iterable[str]) -> list[str]:
+        """Return the footprint names among *names* that are not yet complete."""
+        return [name for name in names if not self.has_footprint(name)]
+
+    def expected_outputs(self, footprints: Iterable[str] = ()) -> tuple[str, ...]:
+        """
+        Return the outputs this simulation must produce to be complete.
+
+        Always the trajectory, plus the error trajectory when wind-error
+        params are set, plus one entry per footprint name. Error *footprints*
+        are never required.
+        """
+        outputs = [TRAJECTORY]
+        if self.params.error_enabled:
+            outputs.append(ERROR_TRAJECTORY)
+        outputs.extend(footprints)
+        return tuple(outputs)
+
+    def has_output(self, output: str) -> bool:
+        """Whether one named output (trajectory, error_trajectory, or footprint) exists."""
+        if output == TRAJECTORY:
+            return self.has_trajectory
+        if output == ERROR_TRAJECTORY:
+            return self.has_error_trajectory
+        return self.has_footprint(output)
+
+    def is_complete(self, footprints: Iterable[str] = ()) -> bool:
+        """
+        Whether every expected output exists.
+
+        Checks the trajectory first so the common incomplete case costs one
+        existence check.
+        """
+        return all(self.has_output(o) for o in self.expected_outputs(footprints))
+
+    def publish(self) -> None:
+        """
+        Copy this simulation's local outputs into the store.
+
+        A no-op when there is no store or when the store's location for this
+        simulation is already ``directory``.
+        """
+        if self._store is None:
+            return
+        for path in (
+            self.log_path,
+            self.trajectories_path,
+            self.error_trajectories_path,
+        ):
+            self._store.publish_file(path, self.key(path))
+        if self.directory.exists():
+            for path in sorted(self.directory.glob(f"{self.id}*_foot.*")):
+                self._store.publish_file(path, self.key(path))
+
+    def write_empty_footprint_marker(self, name: str = "") -> Path:
+        """Create the empty-footprint marker for one named footprint."""
+        marker = self.empty_footprint_path(name)
+        marker.parent.mkdir(parents=True, exist_ok=True)
+        marker.touch(exist_ok=True)
+        return marker
+
+    def clear_empty_footprint_marker(self, name: str = "") -> None:
+        """Remove the empty-footprint marker for one named footprint."""
+        self.empty_footprint_path(name).unlink(missing_ok=True)
 
     @property
     def plot(self) -> SimulationPlotAccessor:
@@ -256,18 +377,18 @@ class Simulation:
     @property
     def status(self) -> str | None:
         """
-        Current status of this simulation directory.
+        Current status of this simulation.
 
         Returns
         -------
         str or None
             ``'complete'`` if the trajectory parquet exists, a
             ``'failed:<reason>'`` string if HYSPLIT failed, or ``None`` if the
-            simulation directory does not yet exist.
+            simulation has not run.
         """
-        if self.resolve_output(self.trajectories_path) is not None:
+        if self.has_trajectory:
             return "complete"
-        log_path = self.resolve_output(self.log_path)
+        log_path = self.resolve(self.log_path)
         if log_path is None:
             return None
         return f"failed:{identify_failure_reason(log_path.parent)}"
@@ -318,7 +439,7 @@ class Simulation:
         FileNotFoundError
             If the log has not been written yet.
         """
-        log_path = self.resolve_output(self.log_path)
+        log_path = self.resolve(self.log_path)
         if log_path is None:
             raise FileNotFoundError(f"Log file not found: {self.log_path}")
         return log_path.read_text()
@@ -340,7 +461,7 @@ class Simulation:
             The footprint if the file exists on disk, otherwise ``None``.
         """
         if name not in self._footprints:
-            path = self.resolve_output(self.footprint_path(name))
+            path = self.resolve(self.footprint_path(name))
             if path is None:
                 return None
             self._footprints[name] = Footprint.from_netcdf(path)
@@ -359,9 +480,9 @@ class Simulation:
         """
         if self.params.winderrtf <= 0:
             return False
-        if self.resolve_output(self.error_trajectories_path) is not None:
+        if self.has_error_trajectory:
             return False
-        main_path = self.resolve_output(self.trajectories_path)
+        main_path = self.resolve(self.trajectories_path)
         if main_path is None:
             return False
         stored = _read_trajectory_params(main_path)
@@ -386,7 +507,7 @@ class Simulation:
             Defaults to ``params.rm_dat``.
         write : bool
             If True, persist trajectories (and error trajectories if present) to
-            ``self.traj_path`` / ``self.error_path``.
+            ``self.trajectories_path`` / ``self.error_trajectories_path``.
 
         Raises
         ------
@@ -397,6 +518,8 @@ class Simulation:
             rm_dat = self.params.rm_dat
         if timeout is None:
             timeout = getattr(self.params, "timeout", None)
+
+        self.directory.mkdir(parents=True, exist_ok=True)
 
         # If the main trajectory already exists with matching (non-error) params
         # and only the error trajectory is needed, run the error pass alone — the
@@ -554,7 +677,7 @@ class Simulation:
         Trajectories or None
         """
         if not self._trajectories:
-            traj_path = self.resolve_output(self.trajectories_path)
+            traj_path = self.resolve(self.trajectories_path)
             if traj_path is not None:
                 self._trajectories = Trajectories.from_parquet(traj_path)
         return self._trajectories
@@ -571,7 +694,10 @@ class Simulation:
         Trajectories or None
         """
         if not self._error_trajectories:
-            error_path = self.resolve_output(self.error_trajectories_path)
+            error_path = self.resolve(self.error_trajectories_path)
             if error_path is not None:
                 self._error_trajectories = Trajectories.from_parquet(error_path)
         return self._error_trajectories
+
+
+__all__ = ["ERROR_TRAJECTORY", "TRAJECTORY", "SimID", "Simulation"]

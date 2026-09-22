@@ -2,6 +2,7 @@
 
 import subprocess
 import sys
+import threading
 import types
 
 import pytest
@@ -22,230 +23,159 @@ from stilt.execution import (
 # ---------------------------------------------------------------------------
 
 
-def test_local_executor_start_calls_execute_simulations_inline(tmp_path, monkeypatch):
-    """LocalExecutor.start() runs assigned simulations inline when n_workers <= 1."""
-    calls = []
+class _FakeModel:
+    """Records the constructor arguments LocalExecutor passes to Model."""
 
-    def fake_push_simulations(model, sim_ids, n_cores=1, skip_existing=None):
+    def __init__(self, project, compute_root=None):
+        self.project = project
+        self.compute_root = compute_root
+
+
+@pytest.fixture
+def local_calls(monkeypatch):
+    """
+    Capture the run_simulations call made on the executor's worker thread.
+
+    ``local.py`` imports ``Model`` from ``stilt.model`` and ``run_simulations``
+    from ``stilt.execution.worker`` lazily inside the thread, so patching those
+    module attributes is enough.
+    """
+    calls: list[dict] = []
+
+    def fake_run_simulations(model, sim_ids, *, n_cores=1, skip_existing=None):
         calls.append(
             {
+                "model": model,
                 "sim_ids": sim_ids,
                 "n_cores": n_cores,
                 "skip_existing": skip_existing,
             }
         )
 
-    # LocalExecutor.start() imports these names locally in inline mode.
-    monkeypatch.setattr(
-        "stilt.model.Model",
-        lambda project, output_dir=None, compute_root=None: object(),
-    )
-    monkeypatch.setattr(
-        "stilt.execution.entrypoints.push_simulations",
-        fake_push_simulations,
-    )
+    monkeypatch.setattr("stilt.model.Model", _FakeModel)
+    monkeypatch.setattr("stilt.execution.worker.run_simulations", fake_run_simulations)
+    return calls
 
+
+def test_local_executor_start_runs_simulations_on_worker_thread(tmp_path, local_calls):
+    """start() builds a Model from the project root and runs the pending ids."""
     ex = LocalExecutor(n_workers=1)
     handle = ex.start(
         ["sim-a", "sim-b"],
         project=str(tmp_path),
-        n_workers=1,
+        compute_root="/scratch/pystilt",
+        skip_existing=False,
     )
-
-    assert isinstance(handle, LocalHandle)
-    assert calls == [
-        {
-            "sim_ids": ["sim-a", "sim-b"],
-            "n_cores": 1,
-            "skip_existing": None,
-        }
-    ]
-
-
-def test_local_handle_job_id():
-    assert LocalHandle().job_id == "local"
-
-
-def test_local_handle_wait_is_noop_for_inline():
-    assert LocalHandle().wait() is None
-
-
-def test_local_executor_start_spawns_workers(tmp_path, monkeypatch):
-    """LocalExecutor.start() partitions assigned sim IDs across worker processes."""
-    submitted = []
-
-    class FakePool:
-        def __init__(self, max_workers):
-            self._max = max_workers
-
-        def submit(self, func, *args):
-            submitted.append(args)
-
-            class FakeFuture:
-                def result(self):
-                    return None
-
-            return FakeFuture()
-
-        def shutdown(self, wait=False):
-            pass
-
-    monkeypatch.setattr("stilt.execution.backends.local.ProcessPoolExecutor", FakePool)
-
-    ex = LocalExecutor(n_workers=3)
-    handle = ex.start(
-        ["sim-a", "sim-b", "sim-c", "sim-d", "sim-e"],
-        project=str(tmp_path),
-        n_workers=3,
-    )
-
-    assert isinstance(handle, LocalHandle)
-    assert len(submitted) == 3
-    # Each call: (project_str, sim_id_partition, output_dir, compute_root)
-    for args in submitted:
-        assert args[0] == str(tmp_path)
-        assert args[2] is None
-        assert args[3] is None
-    assert [args[1] for args in submitted] == [
-        ["sim-a", "sim-d"],
-        ["sim-b", "sim-e"],
-        ["sim-c"],
-    ]
-
-
-def test_local_handle_wait_process_mode(tmp_path, monkeypatch):
-    class FakeFuture:
-        def result(self):
-            return None
-
-    from concurrent.futures import ProcessPoolExecutor
-
-    pool = ProcessPoolExecutor.__new__(ProcessPoolExecutor)
-    handle = LocalHandle([FakeFuture()], pool)
-    assert handle.job_id == "local"
-
-
-def test_local_handle_wait_is_idempotent():
-    class FakePool:
-        def __init__(self):
-            self.calls = 0
-
-        def shutdown(self, wait=False):
-            self.calls += 1
-            return None
-
-    from concurrent.futures import Future
-
-    pool = FakePool()
-    future = Future()
-    future.set_result(None)
-    handle = LocalHandle([future], pool)
-    handle.wait()
     handle.wait()
 
-    assert pool.calls == 1
+    assert isinstance(handle, LocalHandle)
+    assert handle.done
+    [call] = local_calls
+    assert isinstance(call["model"], _FakeModel)
+    assert call["model"].project == str(tmp_path)
+    assert call["model"].compute_root == "/scratch/pystilt"
+    assert call["sim_ids"] == ["sim-a", "sim-b"]
+    assert call["n_cores"] == 1
+    assert call["skip_existing"] is False
 
 
-def test_local_executor_n_workers_override(tmp_path, monkeypatch):
+def test_local_executor_start_returns_before_work_finishes(tmp_path, monkeypatch):
+    release = threading.Event()
+    started = threading.Event()
+
+    def blocking_run_simulations(model, sim_ids, *, n_cores=1, skip_existing=None):
+        started.set()
+        release.wait(timeout=5)
+
+    monkeypatch.setattr("stilt.model.Model", _FakeModel)
+    monkeypatch.setattr(
+        "stilt.execution.worker.run_simulations", blocking_run_simulations
+    )
+
+    handle = LocalExecutor(n_workers=1).start(["sim-a"], project=str(tmp_path))
+
+    assert started.wait(timeout=5)
+    assert not handle.done
+    release.set()
+    handle.wait()
+    assert handle.done
+
+
+def test_local_executor_forwards_none_skip_existing(tmp_path, local_calls):
+    LocalExecutor(n_workers=1).start(["sim-a"], project=str(tmp_path)).wait()
+
+    assert local_calls[0]["skip_existing"] is None
+    assert local_calls[0]["model"].compute_root is None
+
+
+def test_local_executor_n_workers_override(tmp_path, local_calls):
     """Explicit n_workers kwarg overrides the instance default."""
-    submitted = []
+    LocalExecutor(n_workers=5).start(
+        ["sim-a", "sim-b", "sim-c"], project=str(tmp_path), n_workers=2
+    ).wait()
 
-    class FakePool:
-        def __init__(self, max_workers):
-            self._max = max_workers
-
-        def submit(self, func, *args):
-            submitted.append(args)
-
-            class FakeFuture:
-                def result(self):
-                    return None
-
-            return FakeFuture()
-
-        def shutdown(self, wait=False):
-            pass
-
-    monkeypatch.setattr("stilt.execution.backends.local.ProcessPoolExecutor", FakePool)
-
-    ex = LocalExecutor(n_workers=5)
-    ex.start(
-        ["sim-a", "sim-b", "sim-c"],
-        project=str(tmp_path),
-        n_workers=2,
-    )
-    assert len(submitted) == 2  # override used, not 5
+    assert local_calls[0]["n_cores"] == 2
 
 
-def test_local_executor_uses_instance_n_workers_when_omitted(tmp_path, monkeypatch):
-    submitted = []
+def test_local_executor_uses_instance_n_workers_when_omitted(tmp_path, local_calls):
+    LocalExecutor(n_workers=3).start(["sim-a", "sim-b"], project=str(tmp_path)).wait()
 
-    class FakePool:
-        def __init__(self, max_workers):
-            self._max = max_workers
-
-        def submit(self, func, *args):
-            submitted.append(args)
-
-            class FakeFuture:
-                def result(self):
-                    return None
-
-            return FakeFuture()
-
-        def shutdown(self, wait=False):
-            pass
-
-    monkeypatch.setattr("stilt.execution.backends.local.ProcessPoolExecutor", FakePool)
-
-    ex = LocalExecutor(n_workers=3)
-    ex.start(
-        ["sim-a", "sim-b", "sim-c"],
-        project=str(tmp_path),
-    )
-    assert len(submitted) == 3
+    assert local_calls[0]["n_cores"] == 3
 
 
-def test_local_executor_start_noops_when_pending_is_empty(tmp_path):
-    ex = LocalExecutor(n_workers=5)
-    handle = ex.start(
-        [],
-        project=str(tmp_path),
-        n_workers=2,
-    )
+def test_local_executor_start_noops_when_pending_is_empty(tmp_path, local_calls):
+    handle = LocalExecutor(n_workers=5).start([], project=str(tmp_path), n_workers=2)
+
     assert isinstance(handle, LocalHandle)
+    assert handle.done
+    handle.wait()
+    assert local_calls == []
 
 
-def test_local_executor_push_dispatch_submits_chunk_workers(tmp_path, monkeypatch):
-    submitted = []
+def test_local_executor_wait_reraises_worker_exception(tmp_path, monkeypatch):
+    def failing_run_simulations(model, sim_ids, *, n_cores=1, skip_existing=None):
+        raise RuntimeError("worker boom")
 
-    class FakePool:
-        def __init__(self, max_workers):
-            self._max = max_workers
-
-        def submit(self, func, *args):
-            submitted.append(args)
-
-            class FakeFuture:
-                def result(self):
-                    return None
-
-            return FakeFuture()
-
-        def shutdown(self, wait=False):
-            pass
-
-    monkeypatch.setattr("stilt.execution.backends.local.ProcessPoolExecutor", FakePool)
-
-    ex = LocalExecutor(n_workers=5)
-    ex.start(
-        ["sim-a", "sim-b", "sim-c"],
-        project=str(tmp_path),
-        n_workers=2,
+    monkeypatch.setattr("stilt.model.Model", _FakeModel)
+    monkeypatch.setattr(
+        "stilt.execution.worker.run_simulations", failing_run_simulations
     )
-    assert len(submitted) == 2
-    assert submitted[0][1] == ["sim-a", "sim-c"]
-    assert submitted[1][1] == ["sim-b"]
+
+    handle = LocalExecutor(n_workers=1).start(["sim-a"], project=str(tmp_path))
+
+    with pytest.raises(RuntimeError, match="worker boom"):
+        handle.wait()
+    # The error is surfaced once; a second wait() is a no-op.
+    handle.wait()
+    assert handle.done
+
+
+def test_local_executor_dispatch_is_push():
+    assert LocalExecutor().dispatch == "push"
+    assert LocalExecutor(n_workers=4).n_workers == 4
+
+
+def test_local_handle_job_id_and_detached():
+    handle = LocalHandle()
+    assert handle.job_id == "local"
+    assert handle.detached is False
+
+
+def test_local_handle_without_thread_is_done_and_wait_is_noop():
+    handle = LocalHandle()
+    assert handle.done
+    assert handle.wait() is None
+    assert handle.wait() is None
+
+
+def test_local_handle_wait_joins_thread():
+    finished = threading.Event()
+    thread = threading.Thread(target=finished.set)
+    handle = LocalHandle(thread)
+    thread.start()
+    handle.wait()
+    assert finished.is_set()
+    assert handle.done
 
 
 # ---------------------------------------------------------------------------
@@ -349,19 +279,32 @@ def test_slurm_executor_start_renders_chunk_worker_script(tmp_path, monkeypatch)
     assert isinstance(handle, SlurmHandle)
     assert handle.job_id == "777"
 
+    # Chunk files live under <project>/chunks/<batch>/task_N.txt, one per task.
+    [batch_dir] = list((tmp_path / "chunks").iterdir())
+    chunk_files = sorted(batch_dir.glob("task_*.txt"))
+    assert [p.name for p in chunk_files] == [f"task_{i}.txt" for i in range(4)]
+    assert chunk_files[0].read_text() == "sim-0\n"
+    assert handle._chunk_dir == batch_dir
+
     # Script should call 'stilt push-worker <project>' with one resolved chunk path.
     slurm_dir = tmp_path / "slurm"
     scripts = list(slurm_dir.glob("submit_*.sh"))
     assert len(scripts) == 1
+    assert scripts[0].name == f"submit_{batch_dir.name}.sh"
     script_text = scripts[0].read_text()
     assert f"stilt push-worker {tmp_path}" in script_text
-    assert "CHUNK_PATH=" in script_text
+    assert f"CHUNK_PATH={batch_dir}/task_${{SLURM_ARRAY_TASK_ID}}.txt" in script_text
     assert '--chunk "$CHUNK_PATH"' in script_text
     assert "#SBATCH --job-name=pystilt-" in script_text
+    assert f"#SBATCH --output={slurm_dir / 'logs'}/%a.out" in script_text
+    assert "--output-dir" not in script_text
+    assert "--compute-root" not in script_text
+    assert "skip-existing" not in script_text
+    assert calls == [["sbatch", str(scripts[0])]]
 
 
-def test_slurm_executor_start_with_output_dir_and_compute_root(tmp_path, monkeypatch):
-    """Rendered worker scripts include the output-dir and compute-root flags."""
+def test_slurm_executor_start_with_compute_root_and_cpus(tmp_path, monkeypatch):
+    """Rendered worker scripts include the compute-root and cpus flags."""
     import subprocess
 
     def fake_run(cmd, **kwargs):
@@ -371,18 +314,21 @@ def test_slurm_executor_start_with_output_dir_and_compute_root(tmp_path, monkeyp
 
     monkeypatch.setattr("stilt.execution.backends.slurm.subprocess.run", fake_run)
 
-    ex = SlurmExecutor.from_config({"backend": "slurm", "n_workers": 1})
+    ex = SlurmExecutor.from_config(
+        {"backend": "slurm", "n_workers": 1, "cpus_per_task": 4}
+    )
     ex.start(
         ["sim-a"],
         project=str(tmp_path),
         n_workers=1,
-        output_dir=str(tmp_path / "output"),
         compute_root="/scratch/pystilt",
     )
 
     script_text = list((tmp_path / "slurm").glob("submit_*.sh"))[0].read_text()
-    assert f"--output-dir {tmp_path / 'output'}" in script_text
     assert "--compute-root /scratch/pystilt" in script_text
+    assert "--cpus 4" in script_text
+    assert "#SBATCH --cpus-per-task=4" in script_text
+    assert "--output-dir" not in script_text
 
 
 def test_slurm_executor_start_renders_skip_existing_override(tmp_path, monkeypatch):
@@ -407,27 +353,18 @@ def test_slurm_executor_start_renders_skip_existing_override(tmp_path, monkeypat
     assert "--no-skip-existing" in script_text
 
 
-def test_slurm_executor_start_cloud_project_uses_local_submission_root(
-    tmp_path, monkeypatch
-):
-    """Cloud projects are rejected for Slurm push dispatch."""
+def test_slurm_executor_rejects_uri_project(monkeypatch):
+    """Cloud (URI) projects are rejected for Slurm push dispatch before sbatch."""
+    monkeypatch.setattr(
+        "stilt.execution.backends.slurm.subprocess.run",
+        lambda *a, **k: pytest.fail("sbatch must not run"),
+    )
     ex = SlurmExecutor.from_config({"backend": "slurm", "n_workers": 1})
-    with pytest.raises(ValueError, match="requires local project and output roots"):
+    with pytest.raises(ValueError, match="requires a local project root"):
         ex.start(
             ["sim-a"],
             project="s3://bucket/my_proj",
             n_workers=1,
-        )
-
-
-def test_slurm_executor_rejects_cloud_output_dir(tmp_path):
-    ex = SlurmExecutor.from_config({"backend": "slurm", "n_workers": 1})
-    with pytest.raises(ValueError, match="requires local project and output roots"):
-        ex.start(
-            ["sim-a"],
-            project=str(tmp_path),
-            n_workers=1,
-            output_dir="s3://bucket/my_proj",
         )
 
 
@@ -729,27 +666,25 @@ def test_kubernetes_executor_start_uses_instance_n_workers_when_omitted(
     assert container["command"] == ["stilt", "pull-worker", "/data/myproj"]
 
 
-def test_kubernetes_executor_start_includes_output_dir_and_compute_root(monkeypatch):
+def test_kubernetes_executor_start_includes_compute_root(monkeypatch):
     ex = KubernetesExecutor(image="img")
     applied: list[dict] = []
     monkeypatch.setattr(ex, "_apply", lambda m: applied.append(m))
     ex.start(
         ["sim-a"],
-        project="/data/myproj",
+        project="gs://bucket/myproj",
         n_workers=1,
-        output_dir="gs://bucket/project",
         compute_root="/tmp/pystilt",
     )
     container = applied[0]["spec"]["template"]["spec"]["containers"][0]
     assert container["command"] == [
         "stilt",
         "pull-worker",
-        "/data/myproj",
-        "--output-dir",
-        "gs://bucket/project",
+        "gs://bucket/myproj",
         "--compute-root",
         "/tmp/pystilt",
     ]
+    assert applied[0]["metadata"]["name"] == "stilt-myproj"
 
 
 def test_kubernetes_executor_apply_creates_job(monkeypatch):

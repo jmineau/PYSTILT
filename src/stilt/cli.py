@@ -1,11 +1,8 @@
 """
 STILT command-line interface.
 
-Thin Typer wrapper over the model and runtime APIs. Each command loads a
-project or output root, delegates to ``Model`` or execution helpers,
-and prints a brief status summary. All heavy lifting lives in ``model.py``,
-``service/``, and ``execution/``; this module has no orchestration logic of
-its own.
+Thin Typer wrapper over :class:`~stilt.model.Model` and the worker functions.
+Each command loads a project root, delegates, and prints a brief summary.
 
 Usage examples::
 
@@ -14,12 +11,11 @@ Usage examples::
     stilt run                         # run locally, block until done
     stilt run ./my_project --no-skip  # re-run all simulations
     stilt run --wait                  # submit to Slurm and block until done
-    stilt pull-worker ./my_project                  # drain pending simulations
+    stilt register ./my_project       # persist inputs / seed the work queue
     stilt push-worker ./my_project --chunk chunks/run_01/task_0.txt
-    stilt serve ./my_project                         # long-lived streaming mode
-    stilt register ./my_project --scene-id overpass_001       # register a scene group
-    stilt rebuild                     # report project status
-    stilt status                      # show status from cwd
+    stilt pull-worker ./my_project    # drain the Postgres work queue
+    stilt serve ./my_project          # long-lived queue worker
+    stilt status                      # show completion counts from cwd
 """
 
 from __future__ import annotations
@@ -34,15 +30,13 @@ import typer
 from stilt.execution import (
     get_executor,
     pull_simulations,
-    push_simulations,
     resolve_backend,
+    run_simulations,
 )
 from stilt.model import Model
+from stilt.project import CONFIG_KEY, RECEPTORS_KEY, SIMULATIONS_PREFIX
 from stilt.receptors import read_receptors
-from stilt.storage import (
-    ProjectFiles,
-    is_cloud_project,
-)
+from stilt.store import is_uri
 
 app = typer.Typer(
     name="stilt",
@@ -98,24 +92,17 @@ skip_existing: true  # skip simulation outputs that already exist
 # Shared options / arguments
 # ---------------------------------------------------------------------------
 
-_PROJECT_DIR_ARG = typer.Argument(
+_PROJECT_ARG = typer.Argument(
     None,
     help="Path or URI of the STILT project. Defaults to the current directory.",
 )
-_NEW_PROJECT_DIR_ARG = typer.Argument(
+_NEW_PROJECT_ARG = typer.Argument(
     None,
     help="Path to the new STILT project directory. Defaults to the current directory.",
 )
-_REQUIRED_PROJECT_DIR_ARG = typer.Argument(
-    ..., help="Path or URI of the STILT project."
-)
+_REQUIRED_PROJECT_ARG = typer.Argument(..., help="Path or URI of the STILT project.")
 _NO_SKIP = typer.Option(
     False, "--no-skip", help="Re-run simulations that already have output."
-)
-_OUTPUT_DIR = typer.Option(
-    None,
-    "--output-dir",
-    help="Output root. May be a local path or object-storage URI.",
 )
 _COMPUTE_ROOT = typer.Option(
     None,
@@ -124,18 +111,15 @@ _COMPUTE_ROOT = typer.Option(
 )
 
 
-def _resolve_project_dir(
-    path: str | Path | None, *, require_inputs: bool = True
-) -> str:
-    """Resolve a local root path or pass through a cloud project/output URI."""
+def _resolve_project(path: str | Path | None, *, require_inputs: bool = True) -> str:
+    """Resolve a local project root, or pass a cloud URI through unchanged."""
     raw = str(path or Path.cwd())
-    if is_cloud_project(raw):
+    if is_uri(raw):
         return raw
 
     resolved = Path(raw).resolve()
-    has_inputs = (resolved / "config.yaml").exists()
-    files = ProjectFiles(resolved)
-    has_outputs = files.simulations_dir.exists()
+    has_inputs = (resolved / CONFIG_KEY).exists()
+    has_outputs = (resolved / SIMULATIONS_PREFIX).exists()
     if require_inputs and not has_inputs:
         typer.echo(
             f"Error: '{resolved}' does not look like a STILT project directory "
@@ -145,25 +129,11 @@ def _resolve_project_dir(
         raise typer.Exit(code=1)
     if not require_inputs and not (has_inputs or has_outputs):
         typer.echo(
-            f"Error: '{resolved}' does not look like a STILT project or output root.",
+            f"Error: '{resolved}' does not look like a STILT project.",
             err=True,
         )
         raise typer.Exit(code=1)
     return str(resolved)
-
-
-def _resolve_model_root(
-    project_dir: str | Path | None,
-    output_dir: str | None,
-    *,
-    require_inputs: bool,
-) -> tuple[str, str | None]:
-    """Return the root passed to Model plus any separate output override."""
-    root = project_dir if project_dir is not None else output_dir
-    resolved = _resolve_project_dir(root, require_inputs=require_inputs)
-    if project_dir is not None:
-        return resolved, output_dir
-    return resolved, None
 
 
 # ---------------------------------------------------------------------------
@@ -172,51 +142,39 @@ def _resolve_model_root(
 
 
 @app.command()
-def init(
-    project_dir: Path = _NEW_PROJECT_DIR_ARG,
-) -> None:
+def init(project: Path = _NEW_PROJECT_ARG) -> None:
     """
     Scaffold a new STILT project directory with a default config.yaml.
 
     Creates a starter config.yaml and receptors.csv. Edit both files
     before running ``stilt run``.
-
-    Examples
-    --------
-    ::
-
-        stilt init
-        stilt init /path/to/project
     """
-    project_dir = (project_dir or Path.cwd()).resolve()
-    files = ProjectFiles(project_dir)
-    config_path = files.config_path
-    receptors_path = files.receptors_path
+    project = (project or Path.cwd()).resolve()
+    config_path = project / CONFIG_KEY
+    receptors_path = project / RECEPTORS_KEY
 
     if config_path.exists():
         typer.echo(
-            f"Error: '{project_dir}' already contains a config.yaml. Aborting.",
+            f"Error: '{project}' already contains a config.yaml. Aborting.",
             err=True,
         )
         raise typer.Exit(code=1)
 
-    project_dir.mkdir(parents=True, exist_ok=True)
-
+    project.mkdir(parents=True, exist_ok=True)
     config_path.write_text(_starter_config_yaml())
-
     receptors_path.write_text(
         "time,longitude,latitude,altitude\n"
         "# Example: 2023-01-01 12:00:00,-111.85,40.77,5\n"
     )
 
-    typer.echo(f"Initialized STILT project at '{project_dir}'")
+    typer.echo(f"Initialized STILT project at '{project}'")
     typer.echo("  config.yaml   — edit met directory and footprint settings")
     typer.echo("  receptors.csv — add receptor times/locations here")
 
 
 @app.command()
 def run(
-    project_dir: str | None = _PROJECT_DIR_ARG,
+    project: str | None = _PROJECT_ARG,
     config_path: Path | None = typer.Option(  # noqa: B008
         None,
         "--config",
@@ -238,55 +196,30 @@ def run(
         "--wait/--no-wait",
         help=(
             "Block until submitted Slurm jobs finish before returning. "
-            "By default, ``stilt run`` returns immediately after ``sbatch`` when "
-            "using backend: slurm (fire-and-forget). Local backends always "
-            "complete inline regardless of this flag."
+            "By default ``stilt run`` returns right after ``sbatch`` for "
+            "backend: slurm. Local runs always complete inline."
         ),
     ),
-    rebuild: bool | None = typer.Option(  # noqa: B008
-        None,
-        "--rebuild/--no-rebuild",
-        help=(
-            "Deprecated no-op (completion is read from outputs by key). "
-            "Defaults to auto: enabled when skip-existing is in effect."
-        ),
-    ),
-    output_dir: str | None = _OUTPUT_DIR,
     compute_root: str | None = _COMPUTE_ROOT,
 ) -> None:
     """
     Run trajectories (and footprints if configured).
 
-    Reads ``config.yaml`` in the project directory.  If footprint configs are
-    defined there, footprints are generated after trajectories.
-
-    For ``backend: local`` (default), the command always blocks until all
-    simulations complete.  For ``backend: slurm``, the command submits the
-    job array and returns immediately — use ``--wait`` to poll until done.
-    Pass ``--no-skip`` to re-run simulations that already have output.
+    Reads ``config.yaml`` in the project directory. For ``backend: local``
+    (default) the command blocks until all simulations complete. For
+    ``backend: slurm`` it submits the job array and returns — use ``--wait``
+    to poll until done. Pass ``--no-skip`` to re-run existing simulations.
     """
-    # Resolve project dir: --config parent takes precedence over positional arg.
     if config_path is not None:
-        resolved_dir = str(config_path.resolve().parent)
-        resolved_output = output_dir
-        if (
-            not (Path(resolved_dir) / "config.yaml").exists()
-            and not config_path.exists()
-        ):
+        resolved = str(config_path.resolve().parent)
+        if not (Path(resolved) / CONFIG_KEY).exists() and not config_path.exists():
             typer.echo(f"Error: config file not found: {config_path}", err=True)
             raise typer.Exit(code=1)
     else:
-        resolved_dir, resolved_output = _resolve_model_root(
-            project_dir, output_dir, require_inputs=True
-        )
+        resolved = _resolve_project(project, require_inputs=True)
 
-    model = Model(
-        project=resolved_dir,
-        output_dir=resolved_output,
-        compute_root=compute_root,
-    )
+    model = Model(project=resolved, compute_root=compute_root)
 
-    # Build executor override if --backend or --n-workers are given.
     executor = None
     execution = dict(model.config.execution or {})
     if backend is not None or n_workers is not None:
@@ -297,24 +230,9 @@ def run(
         executor = get_executor(execution)
 
     skip_existing = None if not no_skip else False
-    _print_run_start(
-        model,
-        execution=execution,
-        skip_existing=skip_existing,
-        wait=wait,
-    )
-    handle = model.run(
-        executor=executor,
-        skip_existing=skip_existing,
-        rebuild=rebuild,
-        wait=False,
-    )
-    # Decide inline-vs-detached from the handle's own `detached` property, not
-    # its concrete type. model.run() may return a wrapped handle (e.g.
-    # _RebuildOnCompleteHandle), which defeats isinstance checks and previously
-    # forced every backend into the blocking path. Inline backends (local) must
-    # be awaited here or their in-process workers are orphaned; detached
-    # backends (slurm, kubernetes) are fire-and-forget unless --wait is given.
+    _print_run_start(model, execution=execution, skip_existing=skip_existing, wait=wait)
+    handle = model.run(executor=executor, skip_existing=skip_existing, wait=False)
+
     if handle.detached:
         typer.echo(f"Submitted job: {handle.job_id}")
         if wait:
@@ -329,70 +247,38 @@ def run(
 
 @app.command("register")
 def register(
-    project_dir: str = _REQUIRED_PROJECT_DIR_ARG,
+    project: str = _REQUIRED_PROJECT_ARG,
     receptors_path: Path | None = typer.Option(  # noqa: B008
         None,
         "--receptors",
-        help=(
-            "Path to a receptors CSV to register. "
-            "Defaults to the project's receptors.csv."
-        ),
-    ),
-    output_dir: str | None = _OUTPUT_DIR,
-    scene_id: str | None = typer.Option(
-        None,
-        "--scene-id",
-        help="Optional grouping identifier for this scene submission.",
+        help="Receptors CSV to add to the project. Defaults to the project's own.",
     ),
 ) -> None:
-    """Register pending work with an optional scene grouping."""
-    resolved_dir, resolved_output = _resolve_model_root(
-        project_dir, output_dir, require_inputs=True
-    )
-    model = Model(project=resolved_dir, output_dir=resolved_output)
-
-    if receptors_path is not None:
-        receptors = read_receptors(receptors_path)
-    else:
-        receptors = model.receptors
-
-    registration = model.register_pending(receptors=receptors, scene_id=scene_id)
-    typer.echo(f"Registered {len(registration)} simulation(s).")
+    """Persist project inputs and, when a queue is configured, enqueue simulations."""
+    model = Model(project=_resolve_project(project, require_inputs=True))
+    receptors = read_receptors(receptors_path) if receptors_path is not None else None
+    sim_ids = model.register(receptors=receptors)
+    typer.echo(f"Registered {len(sim_ids)} simulation(s).")
 
 
 @app.command("pull-worker")
 def pull_worker(
-    project_dir: str = _REQUIRED_PROJECT_DIR_ARG,
+    project: str = _REQUIRED_PROJECT_ARG,
     follow: bool = typer.Option(
         False,
         "--follow/--no-follow",
-        help=(
-            "Keep polling when the queue is empty. "
-            "Use for long-lived streaming deployments (Kubernetes follow mode)."
-        ),
+        help="Keep polling when the queue is empty (long-lived deployments).",
     ),
-    output_dir: str | None = _OUTPUT_DIR,
     compute_root: str | None = _COMPUTE_ROOT,
 ) -> None:
     """
-    Drain pending simulations from the work queue.
+    Drain pending simulations from the Postgres work queue.
 
-    Atomically pulls and processes simulations until the queue is empty
+    Atomically claims and runs simulations until the queue is empty
     (batch mode) or indefinitely (``--follow``).
-
-    Examples
-    --------
-    ::
-
-        stilt pull-worker ./hrrr_24h
-        stilt pull-worker ./hrrr_24h --follow
     """
-    resolved_dir, resolved_output = _resolve_model_root(
-        project_dir, output_dir, require_inputs=True
-    )
     model = Model(
-        project=resolved_dir,
-        output_dir=resolved_output,
+        project=_resolve_project(project, require_inputs=True),
         compute_root=compute_root,
     )
     pull_simulations(model, follow=follow)
@@ -400,107 +286,47 @@ def pull_worker(
 
 @app.command("push-worker")
 def push_worker(
-    project_dir: str = _REQUIRED_PROJECT_DIR_ARG,
-    chunk: str = typer.Option(
-        ...,
-        "--chunk",
-        help="Path to one immutable chunk file.",
-    ),
+    project: str = _REQUIRED_PROJECT_ARG,
+    chunk: str = typer.Option(..., "--chunk", help="Path to one chunk file."),
     cpus: int = typer.Option(
-        1, "--cpus", help="Number of CPU cores to use for within-task parallelism."
+        1, "--cpus", help="Number of CPU cores to use within this task."
     ),
     skip_existing: bool | None = typer.Option(  # noqa: B008
         None,
         "--skip-existing/--no-skip-existing",
-        help=(
-            "Respect outputs that already exist. Defaults to config.yaml when omitted."
-        ),
+        help="Respect outputs that already exist. Defaults to config.yaml.",
     ),
-    output_dir: str | None = _OUTPUT_DIR,
     compute_root: str | None = _COMPUTE_ROOT,
 ) -> None:
-    """Run one immutable chunk shard without queue polling or heartbeats."""
-    resolved_dir, resolved_output = _resolve_model_root(
-        project_dir, output_dir, require_inputs=True
-    )
+    """Run the simulation ids listed in one chunk file (one per line)."""
     model = Model(
-        project=resolved_dir, output_dir=resolved_output, compute_root=compute_root
+        project=_resolve_project(project, require_inputs=True),
+        compute_root=compute_root,
     )
-    chunk_path = Path(chunk)
-    sim_ids = [s for line in chunk_path.read_text().splitlines() if (s := line.strip())]
-    push_simulations(model, sim_ids, n_cores=cpus, skip_existing=skip_existing)
+    sim_ids = [
+        s for line in Path(chunk).read_text().splitlines() if (s := line.strip())
+    ]
+    run_simulations(model, sim_ids, n_cores=cpus, skip_existing=skip_existing)
 
 
 @app.command()
 def serve(
-    project_dir: str = _REQUIRED_PROJECT_DIR_ARG,
-    output_dir: str | None = _OUTPUT_DIR,
+    project: str = _REQUIRED_PROJECT_ARG,
     compute_root: str | None = _COMPUTE_ROOT,
 ) -> None:
-    """
-    Run long-lived queue workers that keep polling for new simulations.
-
-    This is the user-facing streaming consumer command. It is equivalent to
-    ``stilt pull-worker --follow`` but uses language that better matches the
-    deployment model for always-on queue consumers.
-
-    Examples
-    --------
-    ::
-
-        stilt serve ./hrrr_24h
-    """
-    resolved_dir, resolved_output = _resolve_model_root(
-        project_dir, output_dir, require_inputs=True
-    )
+    """Run a long-lived queue worker (equivalent to ``pull-worker --follow``)."""
     model = Model(
-        project=resolved_dir,
-        output_dir=resolved_output,
+        project=_resolve_project(project, require_inputs=True),
         compute_root=compute_root,
     )
     pull_simulations(model, follow=True)
 
 
 @app.command()
-def rebuild(
-    project_dir: str | None = _PROJECT_DIR_ARG,
-    output_dir: str | None = _OUTPUT_DIR,
-) -> None:
-    """
-    Rebuild the work queue from simulation output on disk.
-
-    Local projects have no queue — completion is read directly from the outputs
-    by key, so there is nothing to rebuild and this just reports status. With a
-    configured queue (``PYSTILT_DB_URL``) it rescans outputs into the queue.
-    """
-    resolved_dir, resolved_output = _resolve_model_root(
-        project_dir, output_dir, require_inputs=False
-    )
-    model = Model(project=resolved_dir, output_dir=resolved_output)
+def status(project: str | None = _PROJECT_ARG) -> None:
+    """Show simulation completion counts for a project."""
+    model = Model(project=_resolve_project(project, require_inputs=True))
     _print_status(model)
-
-
-@app.command()
-def status(
-    project_dir: str | None = _PROJECT_DIR_ARG,
-    output_dir: str | None = _OUTPUT_DIR,
-    scene_id: str | None = typer.Option(
-        None,
-        "--scene-id",
-        help="Show counts for one registered scene only.",
-    ),
-    by_scene: bool = typer.Option(
-        False,
-        "--by-scene",
-        help="Print grouped counts for every registered scene.",
-    ),
-) -> None:
-    """Show simulation counts for a project."""
-    resolved_dir, resolved_output = _resolve_model_root(
-        project_dir, output_dir, require_inputs=False
-    )
-    model = Model(project=resolved_dir, output_dir=resolved_output)
-    _print_status(model, scene_id=scene_id, by_scene=by_scene)
 
 
 # ---------------------------------------------------------------------------
@@ -508,32 +334,16 @@ def status(
 # ---------------------------------------------------------------------------
 
 
-def _print_status(
-    model: Model,
-    *,
-    scene_id: str | None = None,
-    by_scene: bool = False,
-) -> None:
+def _format_counts(model: Model) -> str:
+    counts = model.status()
+    return (
+        f"total={counts.total}  completed={counts.completed}  pending={counts.pending}"
+    )
+
+
+def _print_status(model: Model) -> None:
     """Print a project status summary."""
-    if by_scene:
-        grouped = model.scene_counts()
-        if not grouped:
-            typer.echo("Scenes: none")
-            return
-        for name, status in grouped.items():
-            typer.echo(
-                f"Scene: {name}  total={status.total}  completed={status.completed}  "
-                f"running={status.running}  pending={status.pending}  failed={status.failed}"
-            )
-        return
-    status = model.status(scene_id=scene_id)
-    label = (
-        f"Scene: {scene_id}" if scene_id is not None else f"Project: {model.project}"
-    )
-    typer.echo(
-        f"{label}  total={status.total}  completed={status.completed}  "
-        f"running={status.running}  pending={status.pending}  failed={status.failed}"
-    )
+    typer.echo(f"Project: {model.project.root}  {_format_counts(model)}")
 
 
 def _print_run_start(
@@ -546,30 +356,18 @@ def _print_run_start(
     """Print a concise startup summary for ``stilt run``."""
     backend = resolve_backend(execution)
     executor = get_executor(execution)
-    dispatch = executor.dispatch
-    project_root = model.layout.project_root
-    output_root = model.layout.output_root
-    local_output_dir = model.layout.output_dir
-    is_cloud_output = model.layout.is_cloud_output
-    compute_root = model.compute_root
-    receptors = model.receptors
-    worker_count = executor.n_workers
     mode = "config" if skip_existing is None else "no-skip"
     typer.echo(
         "Starting run: "
-        f"project={project_root}  backend={backend}  dispatch={dispatch}  "
-        f"workers={worker_count}  skip={mode}"
+        f"project={model.project.root}  backend={backend}  "
+        f"dispatch={executor.dispatch}  workers={executor.n_workers}  skip={mode}"
     )
-    if output_root is not None and output_root != project_root:
-        typer.echo(f"Output root: {output_root}")
-    if compute_root is not None:
-        if is_cloud_output or local_output_dir is None:
-            typer.echo(f"Compute root: {compute_root}")
-        else:
-            default_compute_root = Path(str(local_output_dir)) / "simulations" / "by-id"
-            if str(compute_root) != str(default_compute_root):
-                typer.echo(f"Compute root: {compute_root}")
-    typer.echo(f"Receptors loaded: {len(receptors)}")
+    default_compute_root = (
+        None if model.project.is_cloud else model.project.simulations_dir
+    )
+    if model.compute_root != default_compute_root:
+        typer.echo(f"Compute root: {model.compute_root}")
+    typer.echo(f"Receptors loaded: {len(model.receptors)}")
     typer.echo(
         "Execution mode: " + ("submit-and-wait" if wait else "submit-and-return")
         if backend == "slurm"
@@ -580,14 +378,9 @@ def _print_run_start(
 def _format_progress_line(model: Model) -> str | None:
     """Return a one-line progress summary, or ``None`` if unavailable."""
     try:
-        status = model.status()
+        return f"Progress: {_format_counts(model)}"
     except Exception:
         return None
-    return (
-        "Progress: "
-        f"total={status.total}  completed={status.completed}  "
-        f"running={status.running}  pending={status.pending}  failed={status.failed}"
-    )
 
 
 def _wait_with_progress(
@@ -596,7 +389,7 @@ def _wait_with_progress(
     *,
     poll_interval: float = 5.0,
 ) -> None:
-    """Wait on a job handle while periodically printing queue progress."""
+    """Wait on a job handle while periodically printing progress."""
     done = threading.Event()
     errors: list[BaseException] = []
 

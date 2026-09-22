@@ -1,55 +1,58 @@
-"""Science-facing collection objects for STILT models."""
+"""
+Science-facing collection objects for STILT models.
+
+``SimulationCollection`` is the one query surface: the registered set is
+``receptors × mets``, every filter lives here, and every cross-simulation
+question (which are complete, which paths exist, load them all) is answered
+by asking each :class:`~stilt.simulation.Simulation` handle. The trajectory
+and footprint collections are thin views over it.
+"""
 
 from __future__ import annotations
 
 from collections.abc import Iterable, Iterator
 from pathlib import Path
-from typing import TYPE_CHECKING, Generic, Protocol, TypeVar, overload
+from typing import TYPE_CHECKING, cast, overload
 
-from stilt.completion import expected_artifacts, is_complete
-from stilt.config import STILTParams
+import pandas as pd
+
+from stilt.errors import ConfigValidationError
 from stilt.footprint import Footprint
-from stilt.manifest import Manifest
-from stilt.meteorology import MetStream
-from stilt.queries import (
-    filter_ids,
-    matching_ids,
-    missing_ids,
-    output_paths,
-    resolve_mets,
-)
 from stilt.receptors import PointReceptor, Receptor, read_receptors
-from stilt.simulation import SimID, Simulation
-from stilt.storage import (
-    ProjectFiles,
-    Storage,
-    Store,
-)
+from stilt.simulation import ERROR_TRAJECTORY, TRAJECTORY, SimID, Simulation
 from stilt.trajectory import Trajectories
 
 if TYPE_CHECKING:
     from stilt.model import Model
-
-TOutput = TypeVar("TOutput", covariant=True)
+    from stilt.project import Project
 
 
 class ReceptorCollection:
     """
     Sequence of receptors with positional and receptor-id access.
 
-    Access by position (``receptors[0]``, ``receptors[:3]``) or by
-    receptor identifier (``receptors[sim_id.receptor_id]``), symmetric with
-    the ``mets`` mapping.
+    Access by position (``receptors[0]``, ``receptors[:3]``) or by receptor
+    identifier (``receptors[sim_id.receptor]``).
+
+    Parameters
+    ----------
+    receptors
+        A receptor, an iterable of receptors or ``(time, lon, lat, alt)``
+        tuples, a path to a receptors CSV, or ``None`` to load the project's
+        ``receptors.csv`` lazily.
+    project
+        Project the receptors belong to; used to resolve relative paths and
+        to load ``receptors.csv`` when nothing explicit was given.
     """
 
     def __init__(
         self,
         receptors: Receptor | Iterable | str | Path | None,
         *,
-        storage: Storage,
+        project: Project,
     ):
         self._items, self._source_path = self._normalize(receptors)
-        self._storage = storage
+        self._project = project
         self._by_id: dict[str, Receptor] | None = None
 
     @staticmethod
@@ -82,41 +85,35 @@ class ReceptorCollection:
                     item if isinstance(item, Receptor) else PointReceptor(*item)
                     for item in items
                 ], None
-            raise TypeError(
-                "Receptors must be a receptor, a path, or an iterable of receptor "
-                "instances / (time, longitude, latitude, altitude) tuples."
-            )
         raise TypeError(
             "Receptors must be a receptor, a path, or an iterable of receptor "
             "instances / (time, longitude, latitude, altitude) tuples."
         )
 
+    @property
+    def source_path(self) -> Path | None:
+        """Return the constructor-supplied receptors path, resolved, if any."""
+        if self._source_path is None:
+            return None
+        if self._source_path.is_absolute() or self._project.is_cloud:
+            return self._source_path.resolve()
+        return self._project.directory / self._source_path
+
     def _load(self) -> list[Receptor]:
-        """Load and cache receptors from the best available output source."""
+        """Load and cache receptors from the best available source."""
         if self._items is not None:
             return self._items
         if self.source_path is not None:
             self._items = read_receptors(self.source_path)
             return self._items
-        loaded = self._storage.load_receptors()
+        loaded = self._project.load_receptors()
         if loaded is None:
             raise FileNotFoundError(
                 "No receptors available: no explicit receptors, no source path, "
-                "and no receptors.csv in the project root or output store."
+                f"and no receptors.csv in {self._project.root}."
             )
         self._items = loaded
         return self._items
-
-    @property
-    def source_path(self) -> Path | None:
-        """Return the original constructor-supplied receptors path, if any."""
-        if self._source_path is None:
-            return None
-        if self._source_path.is_absolute():
-            return self._source_path
-        if self._storage.is_cloud_project:
-            return self._source_path.resolve()
-        return self._storage.project_dir / self._source_path
 
     @property
     def _data(self) -> dict[str, Receptor]:
@@ -151,86 +148,78 @@ class ReceptorCollection:
         return len(self._load())
 
 
+def _time_bounds(
+    time_range: tuple | None,
+) -> tuple[pd.Timestamp, pd.Timestamp] | None:
+    if time_range is None:
+        return None
+    return cast(pd.Timestamp, pd.Timestamp(time_range[0])), cast(
+        pd.Timestamp, pd.Timestamp(time_range[1])
+    )
+
+
 class SimulationCollection:
     """
-    Lazy simulation collection backed by the manifest registry.
+    The simulations a model defines: its receptors crossed with its met streams.
 
-    This object is the science-facing boundary for simulation identity,
-    selection, and lazy handle construction.
-
-    Parameters
-    ----------
-    output_dir
-        Project output root used to construct per-simulation directories.
-    params
-        Shared STILT parameter set applied to every simulation handle.
-    mets
-        Configured meteorology sources keyed by met stream name.
-    receptors
-        Collection used to resolve receptors referenced by simulation ids.
-    footprint_names
-        Named footprints expected for complete output.
-    manifest
-        Manifest registry used for identity and selection.
-    store
-        Output store used by constructed simulation handles.
+    Mapping-like over simulation ids. Handles are built lazily and cached, and
+    building one has no side effects on disk.
     """
 
-    def __init__(
-        self,
-        output_dir: Path,
-        params: STILTParams,
-        mets: dict[str, MetStream],
-        receptors: ReceptorCollection,
-        footprint_names: list[str],
-        manifest: Manifest,
-        store: Store,
-    ):
-        self._output_dir = output_dir
-        self._params = params
-        self._mets = mets
-        self._receptors = receptors
-        self._footprint_names = footprint_names
-        self._manifest = manifest
-        self._store = store
+    def __init__(self, model: Model):
+        self._model = model
         self._cache: dict[str, Simulation] = {}
 
-    def _storage(self) -> Storage:
-        """Return a storage facade for by-key completion checks."""
-        return Storage(self._output_dir, self._output_dir, self._store)
+    # -- registered set --------------------------------------------------------
 
-    def _footprint_present(self, storage: Storage, sim_id: str, name: str) -> bool:
-        """Return whether one named footprint is complete (by key, incl. empty)."""
-        files = ProjectFiles(self._output_dir).simulation(sim_id)
-        return storage.exists(sim_id, files.footprint_path(name)) or storage.exists(
-            sim_id, files.empty_footprint_path(name)
-        )
+    def _pairs(self) -> Iterator[tuple[SimID, Receptor]]:
+        for met in self._model.mets:
+            for receptor in self._model.receptors:
+                yield SimID.from_parts(met, receptor), receptor
+
+    def keys(self) -> list[str]:
+        """Return every simulation id (receptors × mets), sorted."""
+        return sorted(str(sim_id) for sim_id, _ in self._pairs())
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(self.keys())
+
+    def __len__(self) -> int:
+        return len(self._model.mets) * len(self._model.receptors)
+
+    def __contains__(self, sim_id: object) -> bool:
+        if not isinstance(sim_id, str):
+            return False
+        try:
+            sid = SimID(sim_id)
+        except ValueError:
+            return False
+        return sid.met in self._model.mets and sid.receptor in self._model.receptors
 
     def __getitem__(self, sim_id: str) -> Simulation:
         if sim_id not in self._cache:
-            self._cache[sim_id] = self._build(SimID(sim_id))
+            self._cache[sim_id] = self._model.simulation(sim_id)
         return self._cache[sim_id]
 
-    def __contains__(self, sim_id: str) -> bool:
-        return self._manifest.has(sim_id)
-
-    def __iter__(self) -> Iterator[str]:
-        return iter(self._manifest.sim_ids())
-
-    def __len__(self) -> int:
-        return self._manifest.count()
-
-    def keys(self) -> list[str]:
-        """Return all registered simulation identifiers."""
-        return self._manifest.sim_ids()
-
     def items(self) -> Iterator[tuple[str, Simulation]]:
-        """Yield ``(sim_id, Simulation)`` pairs for all registered simulations."""
+        """Yield ``(sim_id, Simulation)`` pairs."""
         return ((sid, self[sid]) for sid in self)
 
     def values(self) -> Iterator[Simulation]:
-        """Yield :class:`Simulation` objects for all registered simulations."""
+        """Yield :class:`Simulation` handles."""
         return (self[sid] for sid in self)
+
+    # -- filtering -------------------------------------------------------------
+
+    def _resolve_mets(self, mets: str | list[str] | None) -> set[str]:
+        available = set(self._model.mets)
+        if mets is None:
+            return available
+        requested = {mets} if isinstance(mets, str) else set(mets)
+        missing = sorted(requested - available)
+        if missing:
+            raise ConfigValidationError(f"Unknown met name(s): {missing}")
+        return requested
 
     def ids(
         self,
@@ -239,23 +228,36 @@ class SimulationCollection:
         time_range: tuple | None = None,
         location_ids: set[str] | None = None,
     ) -> list[str]:
-        """Return simulation identifiers matching the given filters."""
-        filtered = filter_ids(
-            self._manifest.sim_ids(),
-            mets=self._resolve_mets(mets),
-            time_range=time_range,
-            location_ids=location_ids,
-        )
+        """
+        Return simulation ids matching the filters.
 
-        if footprint is None or not filtered:
-            return filtered
-
-        storage = self._storage()
-        return [
-            sim_id
-            for sim_id in filtered
-            if self._footprint_present(storage, sim_id, footprint)
-        ]
+        Parameters
+        ----------
+        mets
+            Met stream name(s) to include. All configured streams by default.
+        footprint
+            When given, keep only simulations whose named footprint is complete.
+        time_range
+            ``(start, end)`` receptor-time bounds, inclusive.
+        location_ids
+            Receptor location ids to include.
+        """
+        wanted_mets = self._resolve_mets(mets)
+        bounds = _time_bounds(time_range)
+        out: list[str] = []
+        for sid, receptor in self._pairs():
+            if sid.met not in wanted_mets:
+                continue
+            if bounds is not None:
+                t = pd.Timestamp(receptor.time)
+                if t < bounds[0] or t > bounds[1]:
+                    continue
+            if location_ids is not None and sid.location not in location_ids:
+                continue
+            if footprint is not None and not self[sid].has_footprint(footprint):
+                continue
+            out.append(str(sid))
+        return sorted(out)
 
     def select(
         self,
@@ -264,16 +266,18 @@ class SimulationCollection:
         time_range: tuple | None = None,
         location_ids: set[str] | None = None,
     ) -> list[Simulation]:
-        """Return simulation handles matching the given filters."""
+        """Return simulation handles matching the filters (see :meth:`ids`)."""
         return [
-            self[sim_id]
-            for sim_id in self.ids(
+            self[sid]
+            for sid in self.ids(
                 mets=mets,
                 footprint=footprint,
                 time_range=time_range,
                 location_ids=location_ids,
             )
         ]
+
+    # -- completion ------------------------------------------------------------
 
     def incomplete(
         self,
@@ -282,244 +286,73 @@ class SimulationCollection:
         location_ids: set[str] | None = None,
     ) -> list[str]:
         """
-        Return simulation IDs not fully complete for the current model config.
+        Return ids of simulations that have not produced every configured output.
 
-        Completion is decided by the outputs on disk (by key), so the result
-        reflects what has actually been produced — including, when error params
-        are set, the error trajectory.
+        Completion is decided by the outputs on disk (by key): the trajectory,
+        the error trajectory when wind-error params are set, and every
+        footprint in ``config.footprints``.
         """
-        candidate_ids = matching_ids(
-            self._manifest,
-            receptors=self._receptors,
-            configured_mets=self._mets,
-            registered=False,
-            mets=mets,
-            time_range=time_range,
-            location_ids=location_ids,
-        )
-        expected = expected_artifacts(
-            self._footprint_names, error_enabled=self._params.error_enabled
-        )
-        storage = self._storage()
+        footprints = list(self._model.config.footprints)
         return [
-            sim_id
-            for sim_id in candidate_ids
-            if not is_complete(sim_id, expected, storage)
-        ]
-
-    def _resolve_mets(self, mets: str | list[str] | None) -> set[str]:
-        """Resolve an optional met-name filter against configured streams."""
-        return resolve_mets(self._mets, mets)
-
-    def _build(self, sim_id: SimID) -> Simulation:
-        """Build and cache a concrete simulation handle for one id."""
-        receptor = self._receptors[sim_id.receptor]
-        sim_dir = ProjectFiles(self._output_dir).simulation(str(sim_id)).directory
-        return Simulation(
-            directory=sim_dir,
-            receptor=receptor,
-            params=self._params,
-            meteorology=self._mets[sim_id.met],
-            store=self._store,
-        )
-
-
-class _OutputSpec(Protocol[TOutput]):
-    """Typed contract for one output simulation output family."""
-
-    def present(self, model: Model, sim_id: str) -> bool:
-        """Return whether this output exists for one simulation (by key)."""
-        ...
-
-    def local_path(self, model: Model, sim_id: str) -> Path:
-        """Return this output's project-local path for one simulation id."""
-        ...
-
-    def load_one(self, path: Path) -> TOutput:
-        """Load one resolved local output path."""
-        ...
-
-
-class _TrajectoryOutputSpec:
-    """
-    Output spec for main or error trajectory parquet files.
-
-    Parameters
-    ----------
-    error
-        When true, target error-trajectory outputs instead of main trajectories.
-    """
-
-    def __init__(self, *, error: bool = False):
-        self.error = error
-
-    def present(self, model: Model, sim_id: str) -> bool:
-        """Return whether the requested trajectory flavor exists, by key."""
-        return model.storage.exists(sim_id, self.local_path(model, sim_id))
-
-    def local_path(self, model: Model, sim_id: str) -> Path:
-        """Return the local path for this trajectory flavor and simulation."""
-        sim_files = ProjectFiles(model.layout.output_dir).simulation(sim_id)
-        return (
-            sim_files.error_trajectory_path if self.error else sim_files.trajectory_path
-        )
-
-    def load_one(self, path: Path) -> Trajectories:
-        """Load one trajectory parquet file into a `Trajectories` object."""
-        return Trajectories.from_parquet(path)
-
-
-class _NamedFootprintOutputSpec:
-    """
-    Output spec for one named footprint netCDF file.
-
-    Parameters
-    ----------
-    name
-        Footprint name to resolve for each simulation.
-    """
-
-    def __init__(self, name: str):
-        self.name = name
-
-    def present(self, model: Model, sim_id: str) -> bool:
-        """
-        Return whether this named footprint is complete, by key.
-
-        An empty-footprint marker counts as a (terminal, empty) completion.
-        """
-        files = ProjectFiles(model.layout.output_dir).simulation(sim_id)
-        return model.storage.exists(
-            sim_id, files.footprint_path(self.name)
-        ) or model.storage.exists(sim_id, files.empty_footprint_path(self.name))
-
-    def local_path(self, model: Model, sim_id: str) -> Path:
-        """Return the local netCDF path for this footprint and simulation."""
-        return (
-            ProjectFiles(model.layout.output_dir)
-            .simulation(sim_id)
-            .footprint_path(self.name)
-        )
-
-    def load_one(self, path: Path) -> Footprint:
-        """Load one footprint netCDF file into a `Footprint` object."""
-        return Footprint.from_netcdf(path)
-
-
-class _OutputAccessor(Generic[TOutput]):
-    """
-    Shared implementation of cross-simulation output accessors.
-
-    Subclasses/factories supply a typed output spec and inherit ``paths()`` /
-    ``load()`` / ``missing()`` with consistent filter semantics.
-
-    Parameters
-    ----------
-    model
-        Model that provides configuration, storage, and registry access.
-    spec
-        Output-family spec used to resolve presence, paths, and loading.
-    """
-
-    def __init__(
-        self,
-        model: Model,
-        spec: _OutputSpec[TOutput],
-    ):
-        self._model = model
-        self._spec = spec
-
-    def _configured_mets(self) -> Iterable[str] | None:
-        """Return configured met stream names when model config is available."""
-        return self._model.config.mets if self._model._config is not None else None
-
-    def _matching_ids(
-        self,
-        *,
-        registered: bool,
-        mets: str | list[str] | None,
-        time_range: tuple | None,
-        location_ids: set[str] | None,
-    ) -> list[str]:
-        """Return simulation ids matching common accessor filters."""
-        return matching_ids(
-            self._model.manifest,
-            receptors=self._model.receptors,
-            configured_mets=self._configured_mets(),
-            registered=registered,
-            mets=mets,
-            time_range=time_range,
-            location_ids=location_ids,
-        )
-
-    def paths(
-        self,
-        mets: str | list[str] | None = None,
-        time_range: tuple | None = None,
-        location_ids: set[str] | None = None,
-    ) -> list[Path]:
-        """Return local-accessible output paths for matching simulations."""
-        return output_paths(
-            self._model.storage,
-            self._matching_ids(
-                registered=True,
-                mets=mets,
-                time_range=time_range,
-                location_ids=location_ids,
-            ),
-            local_path=lambda sim_id: self._spec.local_path(self._model, sim_id),
-        )
-
-    def load(
-        self,
-        mets: str | list[str] | None = None,
-        time_range: tuple | None = None,
-        location_ids: set[str] | None = None,
-    ) -> list[TOutput]:
-        """Load matching outputs into their science-facing Python objects."""
-        return [
-            self._spec.load_one(path)
-            for path in self.paths(
+            sid
+            for sid in self.ids(
                 mets=mets, time_range=time_range, location_ids=location_ids
             )
+            if not self[sid].is_complete(footprints)
         ]
 
     def missing(
         self,
+        output: str,
         mets: str | list[str] | None = None,
         time_range: tuple | None = None,
         location_ids: set[str] | None = None,
     ) -> list[str]:
-        """Return simulation ids still missing this output family."""
-        return missing_ids(
-            self._matching_ids(
-                registered=False,
-                mets=mets,
-                time_range=time_range,
-                location_ids=location_ids,
-            ),
-            present=lambda sim_id: self._spec.present(self._model, sim_id),
-        )
+        """Return ids of matching simulations lacking one named output."""
+        return [
+            sid
+            for sid in self.ids(
+                mets=mets, time_range=time_range, location_ids=location_ids
+            )
+            if not self[sid].has_output(output)
+        ]
+
+    def paths(
+        self,
+        output: str,
+        mets: str | list[str] | None = None,
+        time_range: tuple | None = None,
+        location_ids: set[str] | None = None,
+    ) -> list[Path]:
+        """
+        Return local paths of one named output across matching simulations.
+
+        Only outputs that exist are returned; for footprints, empty markers
+        are skipped because there is no file to load.
+        """
+        out: list[Path] = []
+        for sim in self.select(
+            mets=mets, time_range=time_range, location_ids=location_ids
+        ):
+            path = sim.resolve(_output_path(sim, output))
+            if path is not None:
+                out.append(path)
+        return out
+
+
+def _output_path(sim: Simulation, output: str) -> Path:
+    if output == TRAJECTORY:
+        return sim.trajectories_path
+    if output == ERROR_TRAJECTORY:
+        return sim.error_trajectories_path
+    return sim.footprint_path(output)
 
 
 class TrajectoryCollection:
-    """
-    Science-facing accessor for trajectory outputs across simulations.
-
-    Parameters
-    ----------
-    model
-        Model that owns the registry, storage, and output layout.
-    """
+    """Cross-simulation accessor for trajectory parquet outputs."""
 
     def __init__(self, model: Model):
-        self._model = model
-        self._main = _OutputAccessor(model, _TrajectoryOutputSpec())
-        self._error = _OutputAccessor(model, _TrajectoryOutputSpec(error=True))
-
-    def _accessor(self, error: bool) -> _OutputAccessor[Trajectories]:
-        """Return the main or error trajectory accessor."""
-        return self._error if error else self._main
+        self._sims = model.simulations
 
     def paths(
         self,
@@ -529,9 +362,12 @@ class TrajectoryCollection:
         *,
         error: bool = False,
     ) -> list[Path]:
-        """Return local-accessible paths for matching trajectory outputs."""
-        return self._accessor(error).paths(
-            mets=mets, time_range=time_range, location_ids=location_ids
+        """Return local paths of existing trajectory (or error-trajectory) files."""
+        return self._sims.paths(
+            ERROR_TRAJECTORY if error else TRAJECTORY,
+            mets=mets,
+            time_range=time_range,
+            location_ids=location_ids,
         )
 
     def load(
@@ -542,10 +378,13 @@ class TrajectoryCollection:
         *,
         error: bool = False,
     ) -> list[Trajectories]:
-        """Load trajectories across matching simulations."""
-        return self._accessor(error).load(
-            mets=mets, time_range=time_range, location_ids=location_ids
-        )
+        """Load matching trajectories."""
+        return [
+            Trajectories.from_parquet(p)
+            for p in self.paths(
+                mets=mets, time_range=time_range, location_ids=location_ids, error=error
+            )
+        ]
 
     def missing(
         self,
@@ -553,31 +392,58 @@ class TrajectoryCollection:
         time_range: tuple | None = None,
         location_ids: set[str] | None = None,
     ) -> list[str]:
-        """Return simulation IDs missing completed trajectory output."""
-        return self._main.missing(
-            mets=mets, time_range=time_range, location_ids=location_ids
+        """Return ids of matching simulations without a trajectory."""
+        return self._sims.missing(
+            TRAJECTORY, mets=mets, time_range=time_range, location_ids=location_ids
         )
 
 
-class NamedFootprintCollection(_OutputAccessor[Footprint]):
-    """Science-facing accessor for one named footprint output across simulations."""
+class NamedFootprintCollection:
+    """Cross-simulation accessor for one named footprint output."""
 
     def __init__(self, model: Model, name: str):
         self.name = name
-        super().__init__(model, _NamedFootprintOutputSpec(name))
+        self._sims = model.simulations
 
-    def load(  # type: ignore[override]
+    def paths(
+        self,
+        mets: str | list[str] | None = None,
+        time_range: tuple | None = None,
+        location_ids: set[str] | None = None,
+    ) -> list[Path]:
+        """Return local paths of existing (non-empty) footprint files."""
+        return self._sims.paths(
+            self.name, mets=mets, time_range=time_range, location_ids=location_ids
+        )
+
+    def load(
         self,
         mets: str | list[str] | None = None,
         time_range: tuple | None = None,
         location_ids: set[str] | None = None,
     ) -> list[Footprint]:
-        """Load this named footprint across matching simulations."""
-        return super().load(mets=mets, time_range=time_range, location_ids=location_ids)
+        """Load matching footprints."""
+        return [
+            Footprint.from_netcdf(p)
+            for p in self.paths(
+                mets=mets, time_range=time_range, location_ids=location_ids
+            )
+        ]
+
+    def missing(
+        self,
+        mets: str | list[str] | None = None,
+        time_range: tuple | None = None,
+        location_ids: set[str] | None = None,
+    ) -> list[str]:
+        """Return ids of matching simulations whose footprint is not complete."""
+        return self._sims.missing(
+            self.name, mets=mets, time_range=time_range, location_ids=location_ids
+        )
 
 
 class FootprintCollection:
-    """Science-facing namespace for named footprint outputs."""
+    """Namespace of named footprint accessors: ``model.footprints["slv"]``."""
 
     def __init__(self, model: Model):
         self._model = model
@@ -595,9 +461,14 @@ class FootprintCollection:
         return len(self.names())
 
     def names(self) -> list[str]:
-        """Return configured footprint output names for this model."""
-        try:
-            return list(self._model.config.footprints)
-        except FileNotFoundError:
-            # No config on disk — recover the names from the registry.
-            return self._model.manifest.footprint_names()
+        """Return the configured footprint names."""
+        return list(self._model.config.footprints)
+
+
+__all__ = [
+    "FootprintCollection",
+    "NamedFootprintCollection",
+    "ReceptorCollection",
+    "SimulationCollection",
+    "TrajectoryCollection",
+]
