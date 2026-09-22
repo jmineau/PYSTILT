@@ -20,7 +20,7 @@ winds into the wind-error settings that run needs.
 """
 
 from .backgrounds import Background, background, particle_background
-from .products import read_oco2, read_tccon, read_tropomi_ch4
+from .readers import read_oco2, read_tccon, read_tropomi_ch4
 from .selection import group_by_overpass, jitter_points, select_observations_spatial
 from .slant import pressure_altitudes, slant_points
 from .uncertainty import TransportError, transport_error

@@ -44,7 +44,7 @@ parity is not a goal; the table shows what has an equivalent.
    * - Product readers (OCO-2/3, TROPOMI, TCCON)
      - ``column_obs/*``
      - :func:`~stilt.observations.read_oco2`, :func:`~stilt.observations.read_tropomi_ch4`,
-       :func:`~stilt.observations.read_tccon` (:doc:`/guides/products`); other products are your
+       :func:`~stilt.observations.read_tccon` (:doc:`/guides/readers`); other products are your
        reader producing the same table
    * - Transport error on the modelled column (``cal.trajfoot.stat``, ``cal.trans.err``)
      - ``error_functions/``

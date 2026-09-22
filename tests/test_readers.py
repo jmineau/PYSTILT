@@ -1,4 +1,4 @@
-"""Tests for stilt.observations.products against sample product files."""
+"""Tests for stilt.observations.readers against sample product files."""
 
 from pathlib import Path
 

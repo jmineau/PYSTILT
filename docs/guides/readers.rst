@@ -2,7 +2,7 @@ Reading Retrieval Products
 ==========================
 
 A column retrieval arrives as a product file: a TROPOMI orbit, an OCO-2
-Lite file, a TCCON site file. :mod:`stilt.observations.products` reads
+Lite file, a TCCON site file. :mod:`stilt.observations.readers` reads
 those into a table of soundings with one row per sounding and the same
 columns whichever instrument they came from, so the rest of the workflow
 (:doc:`../advanced/observations`) does not know or care which product it
@@ -164,7 +164,7 @@ Adding an instrument
 --------------------
 
 Copy the module closest to your product under
-``stilt/observations/products/`` (``tropomi.py`` for a swath product,
+``stilt/observations/readers/`` (``tropomi.py`` for a swath product,
 ``tccon.py`` for a ground station) and change what it reads: the reader is
 where the product's conventions live, and the columns above are the
 contract. Keep it a function that returns the table. Give it a small slice

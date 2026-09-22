@@ -22,7 +22,7 @@ Product readers
 ---------------
 
 One module per instrument, each returning a table of soundings with the
-columns in :doc:`/guides/products`.
+columns in :doc:`/guides/readers`.
 
 .. autosummary::
    :toctree: _api

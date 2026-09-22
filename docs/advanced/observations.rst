@@ -19,7 +19,7 @@ The four steps
 1. **Read** your product into a DataFrame with one row per sounding: time,
    longitude, latitude, the retrieval's averaging kernel, and whatever else
    you need (surface altitude, viewing angles, pixel corners, quality
-   flags). :doc:`../guides/products` has readers for TROPOMI, OCO-2 and
+   flags). :doc:`../guides/readers` has readers for TROPOMI, OCO-2 and
    TCCON files and the column names any other reader should produce.
 2. **Select** which soundings to run with pandas for quality flags and time
    windows, :func:`~stilt.observations.select_observations_spatial` for
@@ -125,7 +125,7 @@ product-specific columns your analysis wants. The reader is where the
 product's conventions live: unit conversions, quality flags, which variable
 holds the kernel, rebuilding the pressure grid from surface pressure and
 layer thickness. Everything after that is the same for every instrument.
-:doc:`../guides/products` lists the columns and shows the module layout to
+:doc:`../guides/readers` lists the columns and shows the module layout to
 copy.
 
 What this layer does not do

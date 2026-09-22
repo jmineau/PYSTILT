@@ -27,7 +27,7 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   isothermal scale height, or the retrieval's temperature profile. Levels
   below the surface or above `top=` are dropped and the result starts at
   the surface. The slant columns guide has the recipe.
-- **Product readers** (`stilt.observations.products`, one module per
+- **Product readers** (`stilt.observations.readers`, one module per
   instrument): `read_tropomi_ch4` (operational S5P L2 CH4 orbits and the
   TROPOMI+GOSAT blended files), `read_oco2` (OCO-2/3 Lite XCO2) and
   `read_tccon` (GGG2020 public site files) return a table of soundings
