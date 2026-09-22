@@ -6,6 +6,8 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.0a14] - 2026-09-22
+
 ### Added
 
 - **Transport error on the modelled enhancement**, X-STILT's method (Wu et
