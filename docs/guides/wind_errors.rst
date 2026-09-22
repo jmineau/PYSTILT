@@ -165,7 +165,9 @@ against the 3 km HRRR analysis:
 which became ``siguverr: 2.6``, ``zcoruverr: 450``, ``horcoruverr: 14`` and
 ``tluverr: 260``. The time scale from the hourly stations, 207 min for u
 and 221 min for v, agrees with the sondes' extrapolated 212 to 312 min, and
-the recipe above gives 2.5 m/s, 480 m, 214 min and 14 km. For comparison Lin and Gerbig found about 120 km, 4 hours
-and 900 m for an 80 km analysis over the eastern United States, and
-X-STILT's HRRR defaults of 5 km, 60 min and 100 m produce no detectable
-perturbation at all (:doc:`transport_error`).
+the recipe above gives 2.5 m/s, 480 m, 214 min and 14 km. For comparison
+Lin and Gerbig found about 120 km, 4 hours and 900 m for an 80 km analysis
+over the eastern United States. The scales matter as much as the standard
+deviation: with a horizontal scale of a few kilometres the perturbation
+averages out along the trajectory and nothing is measured
+(:doc:`transport_error`).

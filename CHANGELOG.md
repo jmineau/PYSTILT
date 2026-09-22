@@ -36,8 +36,8 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `sd` (clipped square root), and `enhancement_perturbed`. `percentile` now
   defaults to `1.0` (every particle) and X-STILT's behaviour is available as
   `percentile=0.99, regression=True`. The Transport Error guide now explains
-  that HYSPLIT decorrelates the wind error over distance travelled, so
-  X-STILT's 5 km HRRR `horcoruverr` produces no detectable perturbation, and
+  that HYSPLIT decorrelates the wind error over distance travelled, so a
+  `horcoruverr` of a few kilometres produces no detectable perturbation, and
   that the scales must come from an analysis-versus-radiosonde comparison.
 
 ## [0.1.0a14] - 2026-09-22

@@ -39,10 +39,10 @@ particles spread only a percent or two more than the unperturbed ones. Lin
 and Gerbig derived their scales from variograms of analysis minus radiosonde
 winds and got about 120 km, 4 hours and 900 m for an 80 km analysis.
 Derive yours the same way for the meteorology and region you use
-(:doc:`wind_errors`); the values above were used for HRRR over the Salt
-Lake Valley. Do not reuse
-X-STILT's HRRR defaults (5 km, 60 min, 100 m): PYSTILT's validation found
-they produce no detectable perturbation.
+(:doc:`wind_errors`); the values above were derived for HRRR over the
+Salt Lake Valley. Values taken from another analysis, or guessed small to
+be safe, are worse than they look: PYSTILT's validation found that scales
+of a few kilometres and an hour produce no detectable perturbation at all.
 
 The modelled enhancement
 ------------------------
