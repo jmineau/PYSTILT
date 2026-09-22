@@ -44,9 +44,18 @@ parity is not a goal; the table shows what has an equivalent.
    * - Product readers (OCO-2/3, TROPOMI, TCCON)
      - ``column_obs/*``
      - your code, producing a table with one row per sounding
-   * - Transport error to XCO2, background methods
-     - ``error_functions/``, ``background/``
-     - not ported; error trajectories and ``FootprintConfig.error`` are the building block
+   * - Transport error on the modelled column (``cal.trajfoot.stat``, ``cal.trans.err``)
+     - ``error_functions/``
+     - :func:`stilt.observations.transport_error` on the main and error particles (:doc:`/guides/transport_error`)
+   * - Modelled enhancement from an inventory (``ff.trajfoot``)
+     - ``error_functions/``, ``run.xco2ff.sim``
+     - :meth:`stilt.Footprint.enhancement`, :func:`stilt.flux.particle_enhancement`
+   * - Wind / mixing-height error statistics from radiosondes
+     - ``get.uverr``, ``get.zierr``
+     - not ported; set ``siguverr`` and friends yourself
+   * - Background methods
+     - ``background/``
+     - not ported
 
 Moving a workflow over
 ----------------------

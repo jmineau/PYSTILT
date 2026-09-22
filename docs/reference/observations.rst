@@ -15,3 +15,16 @@ including per-receptor averaging-kernel tables, lives in :doc:`transforms`.
    stilt.observations.select_observations_spatial
    stilt.observations.jitter_points
    stilt.observations.slant_points
+
+Transport error
+---------------
+
+The transport error on the modelled enhancement from wind-perturbed
+trajectories (:doc:`/guides/transport_error`).
+
+.. autosummary::
+   :toctree: _api
+   :nosignatures:
+
+   stilt.observations.transport_error
+   stilt.observations.TransportError

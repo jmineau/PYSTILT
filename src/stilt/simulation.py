@@ -639,13 +639,7 @@ class Simulation:
             particles = apply_transforms(
                 particles,
                 all_transforms,
-                context
-                or TransformContext(
-                    receptor=self.receptor if traj is None else traj.receptor,
-                    footprint_name=stored_name,
-                    is_error=error,
-                    store=self._store,
-                ),
+                context or self.transform_context(stored_name, error=error),
             )
         foot = Footprint.calculate(
             particles,
@@ -657,6 +651,24 @@ class Simulation:
         if write:
             foot.to_netcdf(self.footprint_path(stored_name))
         return foot
+
+    def transform_context(
+        self, name: str = "", error: bool = False
+    ) -> TransformContext:
+        """
+        The :class:`~stilt.TransformContext` this simulation hands its transforms.
+
+        Carries the receptor, the footprint *name*, whether the particles are
+        the error trajectories, and the project store (so a transform can read
+        per-receptor inputs such as an averaging-kernel table). Use it to apply
+        a footprint's transforms outside :meth:`generate_footprint`.
+        """
+        return TransformContext(
+            receptor=self.receptor,
+            footprint_name=name,
+            is_error=error,
+            store=self._store,
+        )
 
     # -- Lazy trajectory loading -----------------------------------------------
 

@@ -85,6 +85,10 @@ design and column-weighting concepts.  Full X-STILT feature parity is
      - Implemented
    * - Product readers (OCO-2/3, TROPOMI, TCCON)
      - Out of scope; see *Adding your own instrument*
+   * - Transport error on the modelled enhancement (``transport_error``)
+     - Implemented
+   * - Modelled enhancement from a flux field (``Footprint.enhancement``)
+     - Implemented
    * - Inventory coupling and background estimation
      - Deferred
 
@@ -93,8 +97,9 @@ Future plans
 
 In priority order:
 
-- **Observation-layer maturation**: transport-error propagation to retrieved
-  columns, driven by real column-receptor users.
+- **Observation-layer maturation**: slant altitudes from a retrieval's
+  pressure levels; background estimation, driven by real column-receptor
+  users.
 - **Spatial geometries and footprint aggregation** (implemented): footprints
   are computed on a rectilinear raster and aggregated onto any state geometry
   (:class:`stilt.Grid`, :class:`stilt.Mesh` from shapefiles / H3 hexagons /

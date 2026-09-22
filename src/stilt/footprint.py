@@ -1175,6 +1175,42 @@ class Footprint:
         end_ts = _naive_utc_timestamp(end)
         return self.data.sel(time=slice(start_ts, end_ts)).sum("time")
 
+    def enhancement(self, flux: xr.DataArray) -> xr.DataArray:
+        """
+        The modelled enhancement at the receptor: ``foot × flux`` summed over the grid.
+
+        One value per footprint time step, so ``.sum()`` is the total. ``flux``
+        is sampled at the footprint's cell centres (see
+        :func:`stilt.flux.sample_flux`); regrid a flux whose cells are much
+        smaller than the footprint's before calling. A flux with a ``time``
+        dimension is sampled at each footprint time step. Units: the flux's
+        times the footprint's, so µmol m⁻² s⁻¹ gives ppm.
+        """
+        from stilt.flux import sample_flux
+
+        y_dim, x_dim = self.data.dims[-2], self.data.dims[-1]
+        yy, xx = np.meshgrid(
+            self.data[y_dim].to_numpy(), self.data[x_dim].to_numpy(), indexing="ij"
+        )
+        shape = yy.shape
+        if "time" in flux.dims:
+            layers = [
+                sample_flux(flux, xx.ravel(), yy.ravel(), np.full(xx.size, t)).reshape(
+                    shape
+                )
+                for t in self.data["time"].to_numpy()
+            ]
+            sampled = np.stack(layers)
+        else:
+            sampled = sample_flux(flux, xx.ravel(), yy.ravel()).reshape(shape)[None]
+        values = (self.data.to_numpy() * sampled).sum(axis=(1, 2))
+        return xr.DataArray(
+            values,
+            dims=["time"],
+            coords={"time": self.data["time"]},
+            name="enhancement",
+        )
+
     def _resolve_target(
         self,
         target: Grid | xr.DataArray | xr.Dataset | list[tuple[float, float]],

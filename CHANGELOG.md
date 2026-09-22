@@ -8,6 +8,25 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Transport error on the modelled enhancement**, X-STILT's method (Wu et
+  al., 2018). `stilt.observations.transport_error(particles,
+  error_particles, flux, transforms=, context=, levels=, length_scale=,
+  percentile=)` takes a simulation's main and wind-perturbed particle
+  tables and a flux field, computes each particle's enhancement, and turns
+  the extra ensemble spread under the perturbation into a transport-error
+  standard deviation: per release level, with the regression scaling of the
+  variance difference, and combined over levels with an exponential
+  vertical correlation (356 m default). The footprint's transforms are
+  applied to both tables first so the error is weighted like the footprint.
+  Returns a `TransportError` with `sd`, `enhancement`, and the per-level
+  table. See the new *Transport Error* guide.
+- `Footprint.enhancement(flux)`: the modelled enhancement per footprint time
+  step for an `xarray` flux field on `lat`/`lon` (optionally `time`).
+  `stilt.flux.sample_flux` and `stilt.flux.particle_enhancement` are the
+  building blocks (nearest cell; outside the field counts as zero).
+- `Simulation.transform_context(name, error=False)`: the context a
+  simulation hands its transforms, for applying a footprint's transforms
+  outside `generate_footprint`.
 - **One averaging kernel per receptor inside batch runs.** `averaging_kernel`
   takes `table: kernels.parquet` (or `.csv`) instead of inline
   `levels`/`values`: a long table of `receptor, level, value` rows in the

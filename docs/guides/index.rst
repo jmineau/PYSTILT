@@ -21,6 +21,8 @@ Each page answers one practical question. If you haven't yet, start with
 **Working with results**
 
 - :doc:`outputs`: load, plot, and aggregate footprints and trajectories
+- :doc:`transport_error`: the modelled enhancement for a flux field, and
+  how uncertain the transport makes it
 
 **Column and satellite measurements**
 
@@ -62,6 +64,7 @@ Each page answers one practical question. If you haven't yet, start with
    :caption: Working with results
 
    outputs
+   transport_error
 
 .. toctree::
    :hidden:

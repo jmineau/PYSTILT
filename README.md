@@ -74,6 +74,8 @@ design and column-weighting concepts without trying to replicate every script.
 | User-defined transforms (`kind: my.module.Class`) | Implemented |
 | Per-sounding averaging kernels in batch runs (`averaging_kernel` with `table:`) | Implemented |
 | Product readers (OCO-2/3, TROPOMI, TCCON) | Out of scope: your reader produces a table of soundings |
+| Transport error on the modelled enhancement (`transport_error`) | Implemented |
+| Modelled enhancement from a flux field (`Footprint.enhancement`) | Implemented |
 | Inventory coupling and background estimation | Deferred |
 
 ## Installation

@@ -1236,3 +1236,20 @@ def test_generate_footprint_uses_the_receptor_kernel_from_a_project_table(
 
     assert sums[column_receptor.id] > 0
     assert sums[other.id] == pytest.approx(0.25 * sums[column_receptor.id])
+
+
+def test_transform_context_carries_receptor_name_error_flag_and_store(
+    point_receptor, tmp_path
+):
+    from stilt.store import LocalStore
+
+    store = LocalStore(tmp_path)
+    sim = _sim(tmp_path, point_receptor, store=store)
+
+    ctx = sim.transform_context("column", error=True)
+
+    assert ctx.receptor is point_receptor
+    assert ctx.footprint_name == "column"
+    assert ctx.is_error is True
+    assert ctx.store is store
+    assert _sim(tmp_path, point_receptor).transform_context().store is None

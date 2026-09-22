@@ -69,3 +69,17 @@ cached; these helpers are in :mod:`stilt.geometry`.
    geometry.check_resolution
    geometry.same_crs
    geometry.is_longlat_crs
+
+Flux fields
+-----------
+
+Sampling a surface flux field under a footprint (:meth:`Footprint.enhancement`)
+or along particles, in :mod:`stilt.flux`.
+
+.. autosummary::
+   :toctree: _api
+   :nosignatures:
+
+   flux.sample_flux
+   flux.particle_enhancement
+   flux.horizontal_dims
