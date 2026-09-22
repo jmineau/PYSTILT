@@ -3,11 +3,12 @@ Transport Error
 
 A footprint says where a measurement's air came from according to one
 meteorological analysis. The analysis has errors, so the modelled
-enhancement does too. PYSTILT estimates that error the way X-STILT does
-(Wu et al., 2018): run the particles a second time with an extra random
-wind component, and take the additional spread of the modelled enhancement
-across the ensemble as the transport error. An inversion uses the result as
-the transport part of its model-data mismatch for each observation.
+enhancement does too. PYSTILT estimates that error with the method of Lin
+and Gerbig (2005): run the particles a second time with an extra random
+wind component that has the statistics of the meteorology's errors, and
+take the extra spread of the modelled enhancement across the ensemble as
+the transport-error variance. An inversion uses the result as the transport
+part of its model-data mismatch for each observation.
 
 Run with wind errors
 --------------------
@@ -17,19 +18,30 @@ Give the transport the error statistics of the meteorology in
 
 .. code-block:: yaml
 
-   siguverr: 2.0        # wind speed error, m/s
-   tluverr: 3600        # its correlation time, s
-   zcoruverr: 500       # its vertical correlation length, m
-   horcoruverr: 40      # its horizontal correlation length, km
+   siguverr: 2.6        # wind speed error, m/s
+   tluverr: 260         # its correlation time, min
+   zcoruverr: 450       # its vertical correlation length, m
+   horcoruverr: 14      # its horizontal correlation length, km
 
 Every simulation then writes a second particle table next to the main one,
 ``sim.error_trajectories``, whose particles saw the perturbed winds. Mixed
 layer height errors (``sigzierr``, ``tlzierr``, ``horcorzierr``) work the
 same way. ``FootprintConfig.error: true`` also rasterizes the perturbed
 particles as an ``{name}_error`` footprint, which is handy for plotting but
-not needed for what follows. The error run doubles the transport cost; the
-wind statistics come from comparing the meteorology with radiosondes or
-surface stations, which PYSTILT does not do.
+not needed for what follows. The error run doubles the transport cost.
+
+**The correlation scales decide whether there is anything to measure.**
+HYSPLIT decorrelates the wind error both over time (``tluverr``) and over
+the distance a particle travels (``horcoruverr``). At 10 m/s a particle
+covers 5 km in eight minutes, so a 5 km horizontal scale makes the error
+white noise that averages out along the trajectory, and the perturbed
+particles spread only a percent or two more than the unperturbed ones. Lin
+and Gerbig derived their scales from variograms of analysis minus radiosonde
+winds and got about 120 km, 4 hours and 900 m for an 80 km analysis.
+Derive yours the same way for the meteorology and region you use; the
+values above were used for HRRR over the Salt Lake Valley. Do not reuse
+X-STILT's HRRR defaults (5 km, 60 min, 100 m): PYSTILT's validation found
+they produce no detectable perturbation.
 
 The modelled enhancement
 ------------------------
@@ -73,15 +85,41 @@ particle tables and the flux field:
            context=sim.transform_context("column"),
        )
        rows.append({"receptor": sim.receptor.id, "enhancement": result.enhancement,
-                    "transport_sd": result.sd})
+                    "variance": result.variance, "noise": result.noise})
    errors = pd.DataFrame(rows).set_index("receptor")
 
-``result.sd`` is the transport-error standard deviation of the modelled
-enhancement, in the same units as the enhancement. Pass the footprint's
-transforms and the simulation's context so the error is weighted the way
-the footprint is: the averaging kernel (including one from a per-receptor
-table), pressure weighting, and any lifetime decay are applied to both
-particle tables first. For a tower receptor there is nothing to pass.
+``result.variance`` is the transport-error variance of the modelled
+enhancement, in the enhancement's units squared, and ``result.sd`` its
+square root. Pass the footprint's transforms and the simulation's context
+so the error is weighted the way the footprint is: the averaging kernel
+(including one from a per-receptor table), pressure weighting, and any
+lifetime decay are applied to both particle tables first. For a tower
+receptor there is nothing to pass.
+
+Is the estimate meaningful?
+---------------------------
+
+``variance`` is the difference of two sample variances, each from a few
+thousand particles, so it is noisy and comes out negative some of the
+time. That is not a bug. Two things tell you whether a value means
+anything:
+
+- ``result.noise`` is the standard deviation of ``variance`` you would get
+  with no wind error at all, estimated by splitting the unperturbed
+  particles into random halves and treating one half as the perturbed run.
+  A ``variance`` within two or three times ``noise`` is unresolved.
+- Over many receptors, aggregate the signed ``variance`` with a median (by
+  hour, season, or site) rather than clipping each value at zero; clipping
+  turns noise into a positive error. ``result.sd`` clips for convenience
+  and is the number to use only once the variance is resolved.
+
+The signal is strongest when turbulence spreads the particles least: stable
+nights and winter. On a convective afternoon the unperturbed particles are
+already spread over the whole boundary layer, the wind perturbation adds
+little, and the estimate sits at its noise floor. PYSTILT's own validation
+on a Salt Lake Valley column found exactly that with 3 000 particles; a
+year of tower receptors gave 12 to 15 ppb in stable conditions and 2 to
+3 ppb, barely resolved, in the afternoon.
 
 What the numbers mean
 ---------------------
@@ -90,29 +128,34 @@ What the numbers mean
 point receptor):
 
 - ``mean_orig`` / ``mean_err``: the mean per-particle enhancement without
-  and with the perturbation. Their weighted sum over levels is
-  ``result.enhancement``, the same number the footprint gives.
+  and with the perturbation. Their weighted sums over levels are
+  ``result.enhancement`` (the same number the footprint gives) and
+  ``result.enhancement_perturbed``.
 - ``var_orig`` / ``var_err``: the ensemble variance of the per-particle
-  enhancement, after dropping the top 1% of particles per level
-  (``percentile``), which keeps a few particles that hit a point source
-  from dominating.
-- ``dvar``: the raw difference. It is noisy and can be negative, so
-  ``sd_trans`` comes from a weighted regression of ``var_err`` on
-  ``var_orig`` across the levels with a positive difference, evaluated at
-  every level (Wu et al., 2018, appendix). With only one such level the
-  raw difference is used, clipped at zero.
+  enhancement, and ``dvar`` their difference: Lin and Gerbig's equation 4
+  for that level.
+- ``sd_trans``: the signed square root of ``dvar``.
 - ``weight``: the level's share of the particles, which is its share of
   the column once the transforms are applied.
 
 The column value combines the levels with an exponential vertical error
-correlation, ``sqrt(Σ w_i w_j sd_i sd_j exp(-|h_i - h_j| / L))``.
-``length_scale`` is X-STILT's empirical 356 m; ``None`` treats the levels as
-uncorrelated, and a very large value adds them linearly. Column particles
-are grouped into ``levels`` equal-width release-height bins (20 by
-default); a multipoint or slant receptor uses its own release heights.
+correlation, ``Σ w_i w_j s_i s_j exp(-|h_i - h_j| / L)`` with the signed
+``dvar`` on the diagonal. ``length_scale`` is X-STILT's empirical 356 m;
+``None`` treats the levels as uncorrelated, and a very large value adds
+them linearly. Column particles are grouped into ``levels`` equal-width
+release-height bins (20 by default); a multipoint or slant receptor uses
+its own release heights.
 
-Two limits are worth knowing. The method measures how much the perturbed
-winds move particles between flux cells, so it says little when the flux
-field is uniform, and it depends on the wind statistics you gave the run. And
-it is the error in transport only: emission, background and retrieval
-errors are separate terms.
+Two options reproduce X-STILT (Wu et al., 2018) rather than Lin and Gerbig.
+``percentile=0.99`` drops the top 1% of particles per level before the
+variance, which tames a few particles that cross a point source at the
+cost of a small bias. ``regression=True`` replaces each level's difference
+with a line fitted through the levels whose difference was positive; that
+selection biases the slope above one, so under pure sampling noise it
+reports a positive error at every level. Both are off by default.
+
+Two limits remain. The method measures how much the perturbed winds move
+particles between flux cells, so it says little when the flux field is
+uniform, and it depends on the wind statistics you gave the run. And it is
+the error in transport only: emission, background and retrieval errors are
+separate terms.

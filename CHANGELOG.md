@@ -6,6 +6,24 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- **`transport_error` estimates Lin and Gerbig's (2005) variance difference
+  directly** instead of X-STILT's regression-scaled version. Validation on a
+  real HRRR column (`stilt/validation/transport_error/`) showed the
+  regression turns sampling noise into a positive error: it fits only the
+  levels whose variance happened to rise, so under no perturbation at all it
+  reported a third of the enhancement in summer and three quarters in
+  winter. The result now carries the signed `variance` (negative values are
+  noise, aggregate them with a median), `noise` (the estimator's own
+  standard deviation, from random halves of the unperturbed particles),
+  `sd` (clipped square root), and `enhancement_perturbed`. `percentile` now
+  defaults to `1.0` (every particle) and X-STILT's behaviour is available as
+  `percentile=0.99, regression=True`. The Transport Error guide now explains
+  that HYSPLIT decorrelates the wind error over distance travelled, so
+  X-STILT's 5 km HRRR `horcoruverr` produces no detectable perturbation, and
+  that the scales must come from an analysis-versus-radiosonde comparison.
+
 ## [0.1.0a14] - 2026-09-22
 
 ### Added

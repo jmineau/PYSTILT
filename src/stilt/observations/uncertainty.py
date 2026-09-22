@@ -1,15 +1,23 @@
 """
 Transport error on the modelled enhancement, from wind-perturbed trajectories.
 
-This is X-STILT's column transport-error method (Wu et al., 2018, GMD,
-``cal.trajfoot.stat`` / ``scale.dvar`` / ``cal.var.cov`` / ``cal.trans.err``).
-A simulation run with wind-error settings (``siguverr`` and friends in
+The method is Lin and Gerbig (2005, GRL, doi:10.1029/2004GL021127). A
+simulation run with wind-error settings (``siguverr`` and friends in
 :class:`~stilt.config.STILTParams`) writes a second particle table whose
-transport carries an extra random wind component. Each particle's enhancement
-is its ``foot × flux`` summed along its trajectory; the spread of that value
-across the ensemble is larger with the perturbation, and the increase in
-variance is the transport error. Column receptors get a value per release
-level, combined with the column weighting and a vertical error correlation.
+transport carries an extra random wind component with the statistics of the
+meteorology's errors. Each particle's enhancement is its ``foot × flux``
+summed along its trajectory. The perturbed particles sample more of the flux
+field, so the variance of that enhancement across the ensemble is larger,
+and the increase is the transport-error variance (their equation 4):
+
+    var_transport = var(enhancement | perturbed) − var(enhancement | unperturbed)
+
+For a column receptor the difference is taken per release level and the
+levels are combined with the column weighting and a vertical error
+correlation, following X-STILT (Wu et al., 2018, GMD). The difference of two
+sample variances is noisy and can be negative; it is returned signed, with
+an estimate of its own noise, so a batch of receptors can be aggregated with
+a median and a single value can be judged against its noise floor.
 """
 
 from __future__ import annotations
@@ -34,21 +42,38 @@ class TransportError:
     """
     Result of :func:`transport_error`.
 
-    ``sd`` is the transport-error standard deviation of the modelled
-    enhancement, in the flux's units times the footprint's (ppm for a flux
-    in µmol m⁻² s⁻¹). ``enhancement`` is the modelled enhancement itself from
-    the unperturbed particles. ``levels`` has one row per release level:
-    ``height`` (m, mean release height), ``n`` particles, ``weight`` (its share
-    of the column), ``mean`` / ``var`` of the per-particle enhancement without
-    (``_orig``) and with (``_err``) the perturbation, ``dvar`` their raw
-    difference, and ``sd_trans`` the transport error at that level after the
-    regression scaling.
+    All values are in the flux's units times the footprint's (ppm for a flux
+    in µmol m⁻² s⁻¹).
+
+    ``variance`` is the signed transport-error variance of the modelled
+    enhancement: the extra ensemble variance the wind perturbation produced.
+    A negative value is sampling noise. ``noise`` is the standard deviation
+    of ``variance`` expected with no perturbation at all, estimated from
+    random halves of the unperturbed particles; ``variance`` is resolved
+    only when it is several times ``noise``. ``sd`` is ``sqrt(variance)``,
+    or ``0`` when the variance is negative.
+
+    ``enhancement`` and ``enhancement_perturbed`` are the modelled
+    enhancement from the unperturbed and the perturbed particles. ``levels``
+    has one row per release level: ``height`` (m, mean release height),
+    ``n`` particles, ``weight`` (its share of the column), ``mean`` / ``var``
+    of the per-particle enhancement without (``_orig``) and with (``_err``)
+    the perturbation, ``dvar`` their difference, and ``sd_trans`` the signed
+    square root of ``dvar`` (or X-STILT's regression-scaled value with
+    ``regression=True``).
     """
 
-    sd: float
+    variance: float
+    noise: float
     enhancement: float
+    enhancement_perturbed: float
     levels: pd.DataFrame
     length_scale: float | None
+
+    @property
+    def sd(self) -> float:
+        """Transport-error standard deviation; ``0`` when ``variance`` is negative."""
+        return float(np.sqrt(max(self.variance, 0.0)))
 
 
 def _level_bins(
@@ -90,14 +115,17 @@ def _level_stats(values: np.ndarray, percentile: float) -> tuple[float, float]:
 
 def _scale_dvar(levels: pd.DataFrame) -> np.ndarray:
     """
-    Transport-error sd per level from the variance difference, Wu et al. (2018).
+    X-STILT's regression-scaled transport-error sd per level (Wu et al., 2018).
 
-    The per-level ``var_err − var_orig`` is noisy and can go negative. Over the
-    levels where it is positive, ``var_err`` is regressed on ``var_orig``
-    (weighted by ``1 / var_err``), the fitted line is evaluated at every level,
-    and its excess over ``var_orig`` is the scaled transport-error variance.
-    With fewer than two positive levels the raw difference is used, clipped
-    at zero.
+    Over the levels where ``var_err − var_orig`` is positive, ``var_err`` is
+    regressed on ``var_orig`` (weighted by ``1 / var_err``), the fitted line
+    is evaluated at every level, and its excess over ``var_orig`` is the
+    scaled transport-error variance. With fewer than two positive levels the
+    raw difference is used, clipped at zero.
+
+    Selecting the positive levels biases the slope above one, so under pure
+    sampling noise this reports a positive error at every level. It is kept
+    for reproducing X-STILT results and is off by default.
     """
     var_orig = levels["var_orig"].to_numpy(dtype=float)
     var_err = levels["var_err"].to_numpy(dtype=float)
@@ -113,6 +141,120 @@ def _scale_dvar(levels: pd.DataFrame) -> np.ndarray:
     return np.sqrt(np.clip(np.nan_to_num(scaled, nan=0.0), 0.0, None))
 
 
+def _signed_sqrt(values: np.ndarray) -> np.ndarray:
+    v = np.nan_to_num(np.asarray(values, dtype=float), nan=0.0)
+    return np.sign(v) * np.sqrt(np.abs(v))
+
+
+def _combine(
+    levels: pd.DataFrame, length_scale: float | None, *, regression: bool
+) -> float:
+    """
+    Column variance: ``Σ_i w_i² v_i + Σ_{i≠j} w_i w_j s_i s_j corr_ij``.
+
+    ``s`` is the per-level ``sd_trans``. On the diagonal ``v`` is the signed
+    variance difference itself (so a level whose spread fell contributes
+    negatively), or ``s²`` for X-STILT's regression-scaled values, which are
+    never negative. The cross terms use the signed square roots so correlated
+    levels of like sign add and unlike sign cancel.
+    """
+    w = levels["weight"].to_numpy(dtype=float)
+    s = levels["sd_trans"].to_numpy(dtype=float)
+    h = levels["height"].to_numpy(dtype=float)
+    if regression:
+        diag = s**2
+    else:
+        diag = np.nan_to_num(levels["dvar"].to_numpy(dtype=float), nan=0.0)
+    if length_scale is None:
+        corr = np.eye(len(h))
+    else:
+        corr = np.exp(-np.abs(h[:, None] - h[None, :]) / length_scale)
+    prod = w[:, None] * w[None, :] * s[:, None] * s[None, :] * corr
+    np.fill_diagonal(prod, w**2 * diag)
+    return float(prod.sum())
+
+
+def _level_table(
+    x_orig: pd.Series,
+    x_err: pd.Series,
+    label_orig: pd.Series,
+    label_err: pd.Series,
+    level_height: pd.Series,
+    *,
+    percentile: float,
+    regression: bool,
+) -> pd.DataFrame:
+    rows = []
+    n_total = len(x_orig)
+    for lvl, height in level_height.items():
+        idx_o = label_orig.index.to_numpy()[(label_orig == lvl).to_numpy()]
+        idx_e = label_err.index.to_numpy()[(label_err == lvl).to_numpy()]
+        mean_o, var_o = _level_stats(x_orig.reindex(idx_o).to_numpy(), percentile)
+        mean_e, var_e = _level_stats(x_err.reindex(idx_e).to_numpy(), percentile)
+        rows.append(
+            {
+                "height": float(height),
+                "n": int(len(idx_o)),
+                "weight": len(idx_o) / n_total,
+                "mean_orig": mean_o,
+                "mean_err": mean_e,
+                "var_orig": var_o,
+                "var_err": var_e,
+            }
+        )
+    table = pd.DataFrame(rows)
+    table["dvar"] = table["var_err"] - table["var_orig"]
+    table["sd_trans"] = (
+        _scale_dvar(table) if regression else _signed_sqrt(table["dvar"].to_numpy())
+    )
+    return table
+
+
+def _noise(
+    x_orig: pd.Series,
+    label_orig: pd.Series,
+    level_height: pd.Series,
+    *,
+    splits: int,
+    percentile: float,
+    regression: bool,
+    length_scale: float | None,
+) -> float:
+    """
+    Standard deviation of the estimator under no perturbation.
+
+    The unperturbed particles are split into two random halves within each
+    level and treated as the main and perturbed tables; the spread of that
+    estimate over ``splits`` random splits, scaled from half to full
+    ensembles by ``1/sqrt(2)``, is the noise of ``variance``.
+    """
+    if splits < 2:
+        return float("nan")
+    rng = np.random.default_rng(0)
+    indx = x_orig.index.to_numpy()
+    lab = label_orig.reindex(indx).to_numpy()
+    estimates = []
+    for _ in range(splits):
+        half = np.zeros(len(indx), dtype=bool)
+        for lvl in np.unique(lab[np.isfinite(lab)]):
+            members = np.flatnonzero(lab == lvl)
+            chosen = rng.permutation(members)[: len(members) // 2]
+            half[chosen] = True
+        a, b = x_orig.iloc[half], x_orig.iloc[~half]
+        table = _level_table(
+            a,
+            b,
+            label_orig.reindex(a.index),
+            label_orig.reindex(b.index),
+            level_height,
+            percentile=percentile,
+            regression=regression,
+        )
+        table["weight"] = table["n"] / table["n"].sum()
+        estimates.append(_combine(table, length_scale, regression=regression))
+    return float(np.std(estimates, ddof=1) / np.sqrt(2.0))
+
+
 def transport_error(
     particles: pd.DataFrame,
     error_particles: pd.DataFrame,
@@ -122,10 +264,12 @@ def transport_error(
     context: TransformContext | None = None,
     levels: int | Sequence[float] = 20,
     length_scale: float | None = DEFAULT_LENGTH_SCALE,
-    percentile: float = 0.99,
+    percentile: float = 1.0,
+    regression: bool = False,
+    noise_splits: int = 16,
 ) -> TransportError:
     """
-    Transport-error standard deviation of the modelled enhancement.
+    Transport-error variance of the modelled enhancement (Lin and Gerbig, 2005).
 
     Parameters
     ----------
@@ -147,24 +291,47 @@ def transport_error(
         receptor is one level.
     length_scale
         Vertical e-folding length of the error correlation between levels,
-        in metres; ``None`` treats levels as uncorrelated.
+        in metres (X-STILT's 356 m); ``None`` treats levels as uncorrelated.
+        Irrelevant for a point receptor.
     percentile
-        Per level, values above this quantile are dropped before the
-        variance is taken (X-STILT removes the top 1%). Means use every
-        particle.
+        Per level, drop particles above this quantile of the enhancement
+        before taking the variance. ``1.0`` keeps every particle (Lin and
+        Gerbig); X-STILT uses ``0.99`` to tame a few particles that cross a
+        point source. Means always use every particle.
+    regression
+        Use X-STILT's regression scaling of the per-level variance
+        differences (see :func:`_scale_dvar`) instead of the signed
+        differences. Biased upward under sampling noise; for reproducing
+        X-STILT results.
+    noise_splits
+        Random half-splits of the unperturbed particles used to estimate
+        ``noise``; ``0`` skips it.
 
     Notes
     -----
-    Per level ``l`` with ``n_l`` of ``N`` particles, the transport error
-    ``sd_l`` comes from the increase in the variance of the per-particle
-    enhancement under the perturbation (see :func:`_scale_dvar`), and the
-    column value is ``sqrt(Σ_ij w_i w_j sd_i sd_j exp(-|h_i - h_j| / L))``
-    with ``w_l = n_l / N`` and ``h`` the level heights. Because the transforms
-    are applied to the particles first, the level statistics are already in
-    column-weighted units and the weights are the particle counts.
+    Per level ``l`` with ``n_l`` of ``N`` particles, ``dvar_l`` is the change
+    in the variance of the per-particle enhancement under the perturbation,
+    ``s_l = sign(dvar_l) sqrt(|dvar_l|)``, and the column variance is
+    ``Σ_ij w_i w_j s_i s_j exp(-|h_i - h_j| / L)`` with ``w_l = n_l / N`` and
+    ``h`` the level heights; for one level it is ``dvar`` itself. Because
+    the transforms are applied to the particles first, the level statistics
+    are already in column-weighted units and the weights are the particle
+    counts.
+
+    The signal is the extra spread the perturbation adds, so it is small
+    when the wind error decorrelates quickly (HYSPLIT decorrelates it with
+    the distance a particle travels as well as with time) and when turbulent
+    dispersion already spreads the particles widely, as in a convective
+    afternoon. Judge a single value against ``noise``; over many receptors,
+    aggregate the signed ``variance`` with a median rather than clipping
+    each one at zero.
     """
     if not 0 < percentile <= 1:
         raise ValueError("percentile must be in (0, 1].")
+    if length_scale is not None and length_scale <= 0:
+        raise ValueError("length_scale must be > 0 or None.")
+    if noise_splits < 0:
+        raise ValueError("noise_splits must be >= 0.")
     if context is None:
         context = _default_context()
     transforms = list(transforms)
@@ -193,44 +360,29 @@ def transport_error(
         pd.cut(h_err, edges, labels=False, include_lowest=True), index=h_err.index
     ).astype(float)
 
-    rows = []
-    n_total = len(x_orig)
-    for lvl, height in level_height.items():
-        idx_o = label_orig.index.to_numpy()[(label_orig == lvl).to_numpy()]
-        idx_e = label_err.index.to_numpy()[(label_err == lvl).to_numpy()]
-        mean_o, var_o = _level_stats(x_orig.reindex(idx_o).to_numpy(), percentile)
-        mean_e, var_e = _level_stats(x_err.reindex(idx_e).to_numpy(), percentile)
-        rows.append(
-            {
-                "height": float(height),
-                "n": int(len(idx_o)),
-                "weight": len(idx_o) / n_total,
-                "mean_orig": mean_o,
-                "mean_err": mean_e,
-                "var_orig": var_o,
-                "var_err": var_e,
-            }
-        )
-    table = pd.DataFrame(rows)
-    table["dvar"] = table["var_err"] - table["var_orig"]
-    table["sd_trans"] = _scale_dvar(table)
-
-    w = table["weight"].to_numpy()
-    sd = table["sd_trans"].to_numpy()
-    h = table["height"].to_numpy()
-    if length_scale is None:
-        corr = np.eye(len(h))
-    else:
-        if length_scale <= 0:
-            raise ValueError("length_scale must be > 0 or None.")
-        corr = np.exp(-np.abs(h[:, None] - h[None, :]) / length_scale)
-    total_var = float(
-        (w[:, None] * w[None, :] * sd[:, None] * sd[None, :] * corr).sum()
+    table = _level_table(
+        x_orig,
+        x_err,
+        label_orig,
+        label_err,
+        level_height,
+        percentile=percentile,
+        regression=regression,
     )
-    enhancement = float(np.nansum(w * table["mean_orig"].to_numpy()))
+    w = table["weight"].to_numpy()
     return TransportError(
-        sd=float(np.sqrt(total_var)),
-        enhancement=enhancement,
+        variance=_combine(table, length_scale, regression=regression),
+        noise=_noise(
+            x_orig,
+            label_orig,
+            level_height,
+            splits=noise_splits,
+            percentile=percentile,
+            regression=regression,
+            length_scale=length_scale,
+        ),
+        enhancement=float(np.nansum(w * table["mean_orig"].to_numpy())),
+        enhancement_perturbed=float(np.nansum(w * table["mean_err"].to_numpy())),
         levels=table,
         length_scale=length_scale,
     )
