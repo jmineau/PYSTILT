@@ -74,7 +74,7 @@ design and column-weighting concepts without trying to replicate every script.
 | Slant altitudes from a retrieval's pressure levels (`pressure_altitudes`) | Implemented |
 | User-defined transforms (`kind: my.module.Class`) | Implemented |
 | Per-sounding averaging kernels in batch runs (`averaging_kernel` with `table:`) | Implemented |
-| Product readers (OCO-2/3, TROPOMI, TCCON) | Out of scope: your reader produces a table of soundings |
+| Product readers (OCO-2/3, TROPOMI, TCCON) | Implemented: `read_tropomi_ch4`, `read_oco2`, `read_tccon`; other instruments as one module each |
 | Transport error on the modelled enhancement (`transport_error`) | Implemented |
 | Modelled enhancement from a flux field (`Footprint.enhancement`) | Implemented |
 | Background from a mole-fraction field at the trajectory endpoints (`background`) | Implemented |
@@ -193,10 +193,10 @@ the right kernel to the right receptor:
 
 ```python
 import stilt
-from stilt.observations import group_by_overpass
+from stilt.observations import group_by_overpass, read_tropomi_ch4
 from stilt.transforms import averaging_kernel_table
 
-df = read_my_product(path)                       # your reader: time, longitude, latitude, ak_pressure, ak, ...
+df = read_tropomi_ch4(path)                      # or read_oco2 / read_tccon / your own reader of the same shape
 df["overpass"] = group_by_overpass(df["time"])   # label rows by overpass; thin with pandas or select_observations_spatial
 
 model = stilt.Model(project="./my_project")      # existing project config on disk

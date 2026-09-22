@@ -30,6 +30,8 @@ Each page answers one practical question. If you haven't yet, start with
 
 **Column and satellite measurements**
 
+- :doc:`products`: read a TROPOMI, OCO-2 or TCCON file into a table of
+  soundings, or add your own instrument
 - :doc:`../advanced/observations`: from satellite soundings or column
   retrievals to receptors
 - :doc:`slant_columns`: instruments that look along a tilted path
@@ -76,6 +78,7 @@ Each page answers one practical question. If you haven't yet, start with
    :hidden:
    :caption: Column and satellite measurements
 
+   products
    ../advanced/observations
    slant_columns
    ../advanced/transforms

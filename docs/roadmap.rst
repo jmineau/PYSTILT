@@ -86,7 +86,7 @@ design and column-weighting concepts.  Full X-STILT feature parity is
    * - Per-sounding averaging kernels in batch runs (``averaging_kernel`` with ``table:``)
      - Implemented
    * - Product readers (OCO-2/3, TROPOMI, TCCON)
-     - Out of scope; see *Adding your own instrument*
+     - Implemented (see *Reading Retrieval Products*); other instruments as one module each
    * - Transport error on the modelled enhancement (``transport_error``)
      - Implemented
    * - Modelled enhancement from a flux field (``Footprint.enhancement``)
@@ -103,9 +103,9 @@ Future plans
 
 In priority order:
 
-- **Observation-layer maturation**: product readers as documented examples
-  and a multi-realization transport error, driven by real column-receptor
-  users.
+- **Observation-layer maturation**: readers for the instruments users bring
+  (EM27/SUN, MethaneAIR/MethaneSAT) and a multi-realization transport error,
+  driven by real column-receptor users.
 - **Spatial geometries and footprint aggregation** (implemented): footprints
   are computed on a rectilinear raster and aggregated onto any state geometry
   (:class:`stilt.Grid`, :class:`stilt.Mesh` from shapefiles / H3 hexagons /

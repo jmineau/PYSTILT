@@ -43,7 +43,9 @@ parity is not a goal; the table shows what has an equivalent.
      - standard PYSTILT footprints from column / slant receptors
    * - Product readers (OCO-2/3, TROPOMI, TCCON)
      - ``column_obs/*``
-     - your code, producing a table with one row per sounding
+     - :func:`~stilt.observations.read_oco2`, :func:`~stilt.observations.read_tropomi_ch4`,
+       :func:`~stilt.observations.read_tccon` (:doc:`/guides/products`); other products are your
+       reader producing the same table
    * - Transport error on the modelled column (``cal.trajfoot.stat``, ``cal.trans.err``)
      - ``error_functions/``
      - :func:`stilt.observations.transport_error` on the main and error particles (:doc:`/guides/transport_error`)

@@ -19,7 +19,8 @@ The four steps
 1. **Read** your product into a DataFrame with one row per sounding: time,
    longitude, latitude, the retrieval's averaging kernel, and whatever else
    you need (surface altitude, viewing angles, pixel corners, quality
-   flags). Product readers live outside PYSTILT.
+   flags). :doc:`../guides/products` has readers for TROPOMI, OCO-2 and
+   TCCON files and the column names any other reader should produce.
 2. **Select** which soundings to run with pandas for quality flags and time
    windows, :func:`~stilt.observations.select_observations_spatial` for
    X-STILT's near-field plus background sampling, and
@@ -48,14 +49,14 @@ A worked example
    import pandas as pd
    import stilt
    from stilt import ColumnReceptor
-   from stilt.observations import group_by_overpass, select_observations_spatial
+   from stilt.observations import group_by_overpass, read_tropomi_ch4, select_observations_spatial
    from stilt.transforms import averaging_kernel_table
 
    model = stilt.Model(project="./xch4")
 
    # 1. read: one row per sounding, kernels as arrays in two columns
-   df = read_my_product(path)          # your reader
-   df = df[df.qa_value > 0.5]           # quality flags are a pandas filter
+   df = read_tropomi_ch4(path)          # or read_oco2, read_tccon, or your own
+   df = df[df.good]                     # quality flags are a pandas filter
 
    # 2. select: label overpasses, then thin each one to X-STILT's grid
    df["overpass"] = group_by_overpass(df["time"])
@@ -124,11 +125,13 @@ product-specific columns your analysis wants. The reader is where the
 product's conventions live: unit conversions, quality flags, which variable
 holds the kernel, rebuilding the pressure grid from surface pressure and
 layer thickness. Everything after that is the same for every instrument.
+:doc:`../guides/products` lists the columns and shows the module layout to
+copy.
 
 What this layer does not do
 ---------------------------
 
-It ships no product readers and no readers for background fields: a
+It ships no readers for background or flux fields: a
 mole-fraction field comes in as an xarray array
 (:doc:`../guides/background`), a flux field the same way
 (:doc:`../guides/transport_error`). The prior term of a column observation

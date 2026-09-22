@@ -18,6 +18,20 @@ including per-receptor averaging-kernel tables, lives in :doc:`transforms`.
    stilt.observations.slant_points
    stilt.observations.pressure_altitudes
 
+Product readers
+---------------
+
+One module per instrument, each returning a table of soundings with the
+columns in :doc:`/guides/products`.
+
+.. autosummary::
+   :toctree: _api
+   :nosignatures:
+
+   stilt.observations.read_tropomi_ch4
+   stilt.observations.read_oco2
+   stilt.observations.read_tccon
+
 Transport error
 ---------------
 
