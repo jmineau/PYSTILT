@@ -52,7 +52,7 @@ See the full [roadmap](https://jmineau.github.io/PYSTILT/roadmap.html) for more 
 |---|---|
 | Pull-mode queue workers (`stilt pull-worker`) | Implemented |
 | Long-lived streaming mode (`stilt serve`) | Implemented |
-| PostgreSQL-backed simulation registry | Implemented |
+| PostgreSQL-backed work queue for distributed coordination | Implemented |
 | Thin CLI → Model → worker call path | Implemented |
 | Kubernetes worker deployment | Partial |
 | Cloud object store outputs (GCS, S3) | In scope |
@@ -66,10 +66,10 @@ design and column-weighting concepts without trying to replicate every script.
 |---|---|
 | `stilt.observations` layer (`Observation`, `Scene`, receptor builders, selection) | Implemented |
 | Column receptor support | Implemented |
-| Vertical operator particle transforms (AK / pressure weighting) | Implemented |
+| Averaging-kernel and pressure-weighting particle transforms | Implemented |
 | First-order lifetime decay transform | Implemented |
 | Declarative per-footprint transforms in config | Implemented |
-| Slant-column receptor support | In scope (pending HYSPLIT validation) |
+| Slant-column receptor support | Implemented |
 | User-defined transforms (`kind: my.module.Class`) | Implemented |
 | Product readers (OCO-2/3, TROPOMI, TCCON) | Out of scope: your reader produces `Observation` objects |
 | Inventory coupling and background estimation | Deferred |
@@ -185,7 +185,7 @@ PYSTILT groups, selects, and turns them into receptors:
 
 ```python
 import stilt
-from stilt.observations import Observation, build_point_receptor, group_by_overpass
+from stilt.observations import Observation, group_by_overpass
 
 observations = [
     Observation(sensor="tower", species="co2", time="2023-01-01 12:00:00",
@@ -196,10 +196,12 @@ observations = [
 
 model = stilt.Model(project="./my_project")  # existing project config on disk
 for scene in group_by_overpass(observations):
-    model.register(receptors=scene.receptors(build_point_receptor))
+    receptors = [stilt.PointReceptor(o.time, o.longitude, o.latitude, o.altitude) for o in scene]
+    model.register(receptors=receptors)
 ```
 
-`scene.receptors()` takes any observation-to-receptor callable, so a custom
+An observation is plain data; build receptors from it with the `Receptor`
+classes, or with `build_slant_receptor` for a slant column. A custom
 instrument is a reader plus, when needed, your own builder and transform. See
 the [observations guide](https://jmineau.github.io/PYSTILT/advanced/observations.html).
 

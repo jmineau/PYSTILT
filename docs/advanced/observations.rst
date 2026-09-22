@@ -23,19 +23,17 @@ built-in functions; your code provides the reader and any custom pieces.
    :func:`~stilt.observations.jitter_observation` for extra receptors inside
    a large pixel. Group them into a :class:`~stilt.observations.Scene` per
    overpass with :func:`~stilt.observations.group_by_overpass`.
-3. **Build receptors** with :func:`~stilt.observations.build_point_receptor`,
-   :func:`~stilt.observations.build_column_receptor`,
-   :func:`~stilt.observations.build_slant_receptor`, or your own function.
+3. **Build receptors** from each observation's coordinates with the
+   :class:`~stilt.Receptor` classes directly, or with
+   :func:`~stilt.observations.build_slant_receptor` for a slant path.
 4. **Weight** with particle transforms (:doc:`transforms`), per footprint in
    ``config.yaml`` or per observation through ``observation.transforms``.
 
 .. code-block:: python
 
-   from functools import partial
-
+   from stilt import ColumnReceptor
    from stilt.observations import (
        Observation,
-       build_column_receptor,
        group_by_overpass,
        select_observations_spatial,
    )
@@ -53,7 +51,7 @@ built-in functions; your code provides the reader and any custom pieces.
            background_cols=10, background_rows=10,
            domain_lon_range=(-113.5, -110.5), domain_lat_range=(39.5, 42.0),
        )
-       receptors = [build_column_receptor(o, bottom=0, top=3000) for o in chosen]
+       receptors = [ColumnReceptor(o.time, o.longitude, o.latitude, 0, 3000) for o in chosen]
        model.register(receptors=receptors)
 
    model.run()
@@ -63,15 +61,14 @@ Observation
 
 One normalized record: ``sensor``, ``species``, ``time``, ``latitude``,
 ``longitude``, optional ``value`` / ``units`` / ``uncertainty``, an
-``observation_id``, an ``altitude`` with its reference, and three optional
-geometry records for column and satellite products:
+``observation_id``, an ``altitude`` with its reference (the station or
+surface altitude, where a slant path is anchored), and two optional geometry
+records for column and satellite products:
 
 - :class:`~stilt.observations.HorizontalGeometry` — the pixel footprint
   (corners, ellipse, or center plus resolution) used by jitter and selection.
-- :class:`~stilt.observations.ViewingGeometry` — solar and viewing angles,
-  used by the slant builder.
-- :class:`~stilt.observations.LineOfSight` — how to sample altitudes along
-  the slant path.
+- :class:`~stilt.observations.ViewingGeometry` — the zenith and azimuth
+  angles of the line of sight, used by the slant builder.
 
 ``transforms`` holds per-observation particle transforms, typically the
 retrieval's own :class:`~stilt.transforms.AveragingKernel`. Anything the core
@@ -98,8 +95,9 @@ receptor builder, and possibly a transform.
 
 .. code-block:: python
 
+   import numpy as np
    import pandas as pd
-   from stilt.observations import Observation, ViewingGeometry, LineOfSight, build_slant_receptor
+   from stilt.observations import Observation, ViewingGeometry, build_slant_receptor
    from stilt.receptors import Receptor
    from stilt.transforms import AveragingKernel
 
@@ -119,13 +117,7 @@ receptor builder, and possibly a transform.
                observation_id=row.sounding_id,
                altitude=row.surface_elevation,
                altitude_ref="msl",
-               viewing=ViewingGeometry(
-                   viewing_zenith_angle=row.vza, viewing_azimuth_angle=row.vaa
-               ),
-               line_of_sight=LineOfSight(
-                   altitude_ref="msl", start_altitude=row.surface_elevation,
-                   end_altitude=row.surface_elevation + 3000, count=20,
-               ),
+               viewing=ViewingGeometry(zenith_angle=row.vza, azimuth_angle=row.vaa),
                transforms=[AveragingKernel(levels=row.ak_levels, values=row.ak)],
                metadata={"orbit": row.orbit},
            )
@@ -134,17 +126,20 @@ receptor builder, and possibly a transform.
 
 
    def my_receptor(obs: Observation) -> Receptor:
-       """Builder: slant receptor, clipped to the model top used in this project."""
-       return build_slant_receptor(obs, model_top_altitude=obs.altitude + 3000)
+       """Builder: 20 points up the slant from the surface to 3 km above it."""
+       return build_slant_receptor(obs, np.linspace(obs.altitude, obs.altitude + 3000, 20))
 
 
+   pairs = []  # (observation, receptor) across every overpass
    for scene in group_by_overpass(read_my_product(path)):
        receptors = scene.receptors(my_receptor)
        model.register(receptors=receptors)
+       pairs.extend(zip(scene, receptors))
    model.run()
 
    # apply each sounding's own averaging kernel when generating its footprint
-   for obs, receptor in zip(scene, receptors):
+   config = model.config.footprints["column"]
+   for obs, receptor in pairs:
        sim = model.simulations[f"hrrr_{receptor.id}"]
        sim.generate_footprint("column", config, transforms=obs.transforms, write=True)
 

@@ -20,11 +20,7 @@ def test_observation_normalizes_timestamp_and_keeps_geometry():
         swath=2,
         resolution_km=(2.0, 7.0),
     )
-    viewing = ViewingGeometry(
-        solar_zenith_angle=45.0,
-        viewing_zenith_angle=18.0,
-        relative_azimuth_angle=132.0,
-    )
+    viewing = ViewingGeometry(zenith_angle=18.0, azimuth_angle=132.0)
     kernel = AveragingKernel(
         levels=[0.0, 1000.0, 2000.0],
         values=[0.1, 0.6, 0.3],

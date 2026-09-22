@@ -20,10 +20,10 @@ The **core transport** is stable and exercised by the test suite:
 
 The core runtime simplification landed in two steps: by-key completion in
 June 2026, and the collapse of the storage, registry, and execution layers onto
-``Project`` / ``Simulation`` in September 2026.  Active development has moved to the
-science boundary between footprints and inversion state grids (see
-*Future plans* below); the execution and observation tracks are maintained
-but not expanding.
+``Project`` / ``Simulation`` in September 2026.  Active development is on the
+observation layer: column and slant-column workflows for satellite and
+ground-based instruments (see *Future plans* below).  The execution and
+service track is maintained but not expanding.
 
 Execution and orchestration (from stiltctl)
 -------------------------------------------
@@ -78,7 +78,7 @@ design and column-weighting concepts.  Full X-STILT feature parity is
    * - Declarative per-footprint transforms in config YAML
      - Implemented
    * - Slant-column receptor support
-     - In scope (pending HYSPLIT vertical-coordinate validation)
+     - Implemented (see the *Slant Columns* guide)
    * - User-defined transforms via ``kind: my.module.Class``
      - Implemented
    * - Product readers (OCO-2/3, TROPOMI, TCCON)
@@ -91,6 +91,11 @@ Future plans
 
 In priority order:
 
+- **Per-observation weighting in batch runs**: each sounding's own averaging
+  kernel applied inside ``stilt run`` and Slurm jobs, not only in a loop
+  after the run.
+- **Observation-layer maturation**: transport-error propagation to retrieved
+  columns, driven by real column-receptor users.
 - **Spatial geometries and footprint aggregation** (implemented): footprints
   are computed on a rectilinear raster and aggregated onto any state geometry
   (:class:`stilt.Grid`, :class:`stilt.Mesh` from shapefiles / H3 hexagons /
@@ -99,7 +104,3 @@ In priority order:
   geometry, ``FootprintConfig.geometry`` naming it in YAML, and
   ``Trajectories.footprint`` regenerating footprints from stored particles.
   Still to come: a YAML form for ``Zones``.
-- **Slant receptor geometry**: satellite-geometry receptors once
-  HYSPLIT vertical-coordinate behavior is validated.
-- **Observation-layer maturation**: slant validation and transport-error
-  propagation to retrieved columns, driven by real column-receptor users.

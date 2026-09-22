@@ -1,252 +1,94 @@
-"""Observation-to-receptor conversion helpers."""
+"""Slant line-of-sight geometry and the observation-to-receptor builder."""
 
 from __future__ import annotations
 
 import math
+import warnings
 
 import numpy as np
+from numpy.typing import ArrayLike
 
-from stilt.config import VerticalReference
-from stilt.observations.geometry import LineOfSight
 from stilt.observations.observation import Observation
-from stilt.receptors import ColumnReceptor, MultiPointReceptor, PointReceptor, Receptor
+from stilt.receptors import Receptor
 
 _EARTH_RADIUS_M = 6_371_000.0
 
 
-def build_point_receptor(
-    observation: Observation,
-    *,
-    altitude: float | None = None,
-) -> PointReceptor:
-    """
-    Build a point receptor for one observation.
-
-    If ``altitude`` is omitted, the observation altitude is used.
-    """
-    receptor_altitude = observation.altitude if altitude is None else altitude
-    if receptor_altitude is None:
-        raise ValueError(
-            "A point receptor altitude is required. Pass `altitude=` or set "
-            "`Observation.altitude`."
-        )
-    return PointReceptor(
-        time=observation.time,
-        longitude=observation.longitude,
-        latitude=observation.latitude,
-        altitude=receptor_altitude,
-        altitude_ref=observation.altitude_ref,
-    )
-
-
-def build_column_receptor(
-    observation: Observation,
-    *,
-    bottom: float,
-    top: float,
-    altitude_ref: VerticalReference = "agl",
-) -> ColumnReceptor:
-    """Build a vertical-column receptor centered on one observation."""
-    return ColumnReceptor(
-        time=observation.time,
-        longitude=observation.longitude,
-        latitude=observation.latitude,
-        bottom=bottom,
-        top=top,
-        altitude_ref=altitude_ref,
-    )
-
-
-def build_multipoint_receptor(
-    observation: Observation,
-    *,
-    points: list[tuple[float, float, float]],
-    altitude_ref: VerticalReference = "agl",
-) -> MultiPointReceptor:
-    """Build a multipoint receptor from explicit release points."""
-    r = Receptor.from_points(observation.time, points, altitude_ref=altitude_ref)
-    if not isinstance(r, MultiPointReceptor):
-        raise ValueError(
-            "build_multipoint_receptor requires at least 2 distinct points."
-        )
-    return r
-
-
-def _sample_los_altitudes(
-    line_of_sight: LineOfSight,
-    *,
-    surface_altitude: float | None = None,
-    max_altitude: float | None = None,
-) -> list[float]:
-    """Return altitude samples for one LOS definition."""
-    if line_of_sight.altitude_levels:
-        altitudes = [float(v) for v in line_of_sight.altitude_levels]
-    else:
-        assert line_of_sight.start_altitude is not None
-        assert line_of_sight.end_altitude is not None
-        if line_of_sight.count is not None:
-            if line_of_sight.count < 2:
-                raise ValueError("LineOfSight.count must be >= 2.")
-            altitudes = np.linspace(
-                line_of_sight.start_altitude,
-                line_of_sight.end_altitude,
-                line_of_sight.count,
-            ).tolist()
-        else:
-            assert line_of_sight.frequency is not None
-            if line_of_sight.frequency <= 0:
-                raise ValueError("LineOfSight.frequency must be positive.")
-            altitude_range = abs(
-                line_of_sight.end_altitude - line_of_sight.start_altitude
-            )
-            count = max(2, int(round(altitude_range / line_of_sight.frequency)) + 1)
-            altitudes = np.linspace(
-                line_of_sight.start_altitude,
-                line_of_sight.end_altitude,
-                count,
-            ).tolist()
-
-    lower_bound = 0.0 if line_of_sight.altitude_ref == "agl" else None
-    if surface_altitude is not None and line_of_sight.altitude_ref == "msl":
-        lower_bound = surface_altitude
-    if lower_bound is not None:
-        altitudes = [v for v in altitudes if v >= lower_bound]
-    if max_altitude is not None:
-        altitudes = [v for v in altitudes if v <= max_altitude]
-    if not altitudes:
-        raise ValueError("LOS sampling produced no receptor points after clipping.")
-    return altitudes
-
-
-def _resolved_los_surface_altitude(
-    observation: Observation,
-    line_of_sight: LineOfSight,
-    *,
-    surface_altitude: float | None = None,
-) -> float | None:
-    """Return the effective lower clipping altitude for one LOS."""
-    if surface_altitude is not None:
-        return surface_altitude
-    if line_of_sight.surface_altitude is not None:
-        return line_of_sight.surface_altitude
-    if (
-        line_of_sight.altitude_ref == "msl"
-        and observation.altitude_ref == "msl"
-        and observation.altitude is not None
-    ):
-        return float(observation.altitude)
-    return None
-
-
-def _resolved_los_max_altitude(
-    line_of_sight: LineOfSight,
-    *,
-    model_top_altitude: float | None = None,
-) -> float | None:
-    """Return the effective upper clipping altitude for one LOS."""
-    if model_top_altitude is not None:
-        return model_top_altitude
-    return line_of_sight.max_altitude
-
-
-def _offset_lon_lat(
-    *,
+def slant_points(
     longitude: float,
     latitude: float,
-    east_m: float,
-    north_m: float,
-) -> tuple[float, float]:
-    """Move a point in local tangent-plane ENU coordinates."""
-    lat_rad = math.radians(latitude)
-    dlat = north_m / _EARTH_RADIUS_M
-    dlon = east_m / (_EARTH_RADIUS_M * math.cos(lat_rad))
-    return (
-        longitude + math.degrees(dlon),
-        latitude + math.degrees(dlat),
-    )
-
-
-def build_slant_receptor(
-    observation: Observation,
+    altitudes: ArrayLike,
     *,
-    line_of_sight: LineOfSight | None = None,
-    surface_altitude: float | None = None,
-    model_top_altitude: float | None = None,
-) -> MultiPointReceptor:
+    zenith: float,
+    azimuth: float,
+    anchor: float | None = None,
+) -> list[tuple[float, float, float]]:
     """
-    Build a slant multipoint receptor from observation LOS geometry.
+    ``(longitude, latitude, altitude)`` points along a line of sight.
 
-    When explicit clipping values are omitted, the builder uses the strongest
-    available hints:
+    Each altitude sits ``(altitude - anchor) * tan(zenith)`` metres from
+    ``(longitude, latitude)`` along the ``azimuth`` bearing, on a local flat
+    tangent plane. ``zenith`` is degrees from the local vertical and
+    ``azimuth`` is degrees clockwise from north: the bearing from the ground
+    point toward the instrument or the sun, which is the direction the path
+    rises toward. ``anchor`` is the altitude at which the path passes through
+    ``(longitude, latitude)`` and defaults to the first altitude.
 
-    - anchor altitude: ``LineOfSight.anchor_altitude`` -> ``Observation.altitude``
-    - surface clipping for MSL LOS: explicit ``surface_altitude`` ->
-      ``LineOfSight.surface_altitude`` -> ``Observation.altitude`` when the
-      observation altitude is also MSL
-    - model-top clipping: explicit ``model_top_altitude`` ->
-      ``LineOfSight.max_altitude``
+    Altitudes are returned unchanged, in whatever datum they were given. Use
+    mean-sea-level altitudes for a slant; terrain-following (AGL) heights
+    would bend the path.
     """
-    los = line_of_sight or observation.line_of_sight
-    if los is None:
-        raise ValueError(
-            "A slant receptor requires Observation.line_of_sight or an explicit "
-            "`line_of_sight=` argument."
-        )
+    alts = np.asarray(altitudes, dtype=float).ravel()
+    if alts.size == 0:
+        raise ValueError("slant_points requires at least one altitude.")
+    if not 0 <= zenith < 90:
+        raise ValueError("slant_points zenith must be in [0, 90) degrees.")
+    if anchor is None:
+        anchor = float(alts[0])
+
+    horizontal_m = (alts - anchor) * math.tan(math.radians(zenith))
+    deg_per_m_lat = 1.0 / (math.radians(1.0) * _EARTH_RADIUS_M)
+    deg_per_m_lon = deg_per_m_lat / math.cos(math.radians(latitude))
+    lons = longitude + horizontal_m * math.sin(math.radians(azimuth)) * deg_per_m_lon
+    lats = latitude + horizontal_m * math.cos(math.radians(azimuth)) * deg_per_m_lat
+    return list(zip(lons.tolist(), lats.tolist(), alts.tolist(), strict=True))
+
+
+def build_slant_receptor(observation: Observation, altitudes: ArrayLike) -> Receptor:
+    """
+    Build a slant receptor from an observation's viewing angles.
+
+    ``altitudes`` are the release altitudes along the line of sight, in the
+    observation's ``altitude_ref``. The path passes through the observation's
+    location at ``observation.altitude`` (the station or surface altitude),
+    which is required. Choose the samples to suit the run, for example
+    ``np.linspace(obs.altitude, min(obs.altitude + 3000, model_top), 20)``.
+    See :func:`slant_points` for the angle conventions.
+
+    Returns a :class:`~stilt.MultiPointReceptor`; with a zenith angle of 0 and
+    two altitudes the path is vertical and a :class:`~stilt.ColumnReceptor`
+    comes back instead.
+    """
     if observation.viewing is None:
-        raise ValueError("A slant receptor requires Observation.viewing geometry.")
-    if observation.viewing.viewing_zenith_angle is None:
+        raise ValueError("A slant receptor requires Observation.viewing.")
+    if observation.altitude is None:
         raise ValueError(
-            "A slant receptor requires ViewingGeometry.viewing_zenith_angle."
+            "A slant receptor requires Observation.altitude as the anchor."
         )
-    if observation.viewing.viewing_azimuth_angle is None:
-        raise ValueError(
-            "A slant receptor requires ViewingGeometry.viewing_azimuth_angle."
+    if observation.altitude_ref == "agl":
+        warnings.warn(
+            "Slant receptor built with AGL altitudes; terrain-following heights "
+            "bend the line of sight. Use altitude_ref='msl'.",
+            stacklevel=2,
         )
-
-    viewing_zenith = float(observation.viewing.viewing_zenith_angle)
-    viewing_azimuth = float(observation.viewing.viewing_azimuth_angle)
-    if viewing_zenith < 0 or viewing_zenith >= 90:
-        raise ValueError(
-            "Slant receptor viewing_zenith_angle must be in [0, 90) degrees."
-        )
-
-    altitudes = _sample_los_altitudes(
-        los,
-        surface_altitude=_resolved_los_surface_altitude(
-            observation,
-            los,
-            surface_altitude=surface_altitude,
-        ),
-        max_altitude=_resolved_los_max_altitude(
-            los,
-            model_top_altitude=model_top_altitude,
-        ),
+    points = slant_points(
+        observation.longitude,
+        observation.latitude,
+        altitudes,
+        zenith=observation.viewing.zenith_angle,
+        azimuth=observation.viewing.azimuth_angle,
+        anchor=observation.altitude,
     )
-    anchor_altitude = (
-        los.anchor_altitude
-        if los.anchor_altitude is not None
-        else observation.altitude
-        if observation.altitude is not None
-        else altitudes[0]
+    return Receptor.from_points(
+        observation.time, points, altitude_ref=observation.altitude_ref
     )
-
-    zenith_rad = math.radians(viewing_zenith)
-    azimuth_rad = math.radians(viewing_azimuth)
-
-    points: list[tuple[float, float, float]] = []
-    for altitude in altitudes:
-        delta_altitude = altitude - anchor_altitude
-        horizontal_distance = delta_altitude * math.tan(zenith_rad)
-        east_m = horizontal_distance * math.sin(azimuth_rad)
-        north_m = horizontal_distance * math.cos(azimuth_rad)
-        longitude, latitude = _offset_lon_lat(
-            longitude=observation.longitude,
-            latitude=observation.latitude,
-            east_m=east_m,
-            north_m=north_m,
-        )
-        points.append((longitude, latitude, altitude))
-
-    r = Receptor.from_points(observation.time, points, altitude_ref=los.altitude_ref)
-    assert isinstance(r, MultiPointReceptor)
-    return r

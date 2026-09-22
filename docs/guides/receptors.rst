@@ -92,7 +92,8 @@ line-of-sight geometry).
 
 All three coordinate arrays must have the same length.  The location
 identifier is an order-independent SHA-256 hash of the point set, so
-reordering the points produces the same simulation ID.
+reordering the points produces the same simulation ID.  To build the points
+from viewing angles rather than by hand, see :doc:`slant_columns`.
 
 .. warning::
 

@@ -72,10 +72,10 @@ class Scene:
         """
         Build one receptor per observation with *build*.
 
-        *build* is any callable from an observation to a receptor: a built-in
-        such as :func:`~stilt.observations.build_slant_receptor`,
-        ``functools.partial(build_column_receptor, bottom=0, top=3000)``, or
-        your own function.
+        *build* is any callable from an observation to a receptor:
+        ``lambda o: ColumnReceptor(o.time, o.longitude, o.latitude, 0, 3000)``,
+        a :func:`~stilt.observations.build_slant_receptor` call with your
+        altitude samples, or your own function.
         """
         return [build(obs) for obs in self.observations]
 

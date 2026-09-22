@@ -2,7 +2,8 @@
 
 from stilt.config import ModelConfig
 from stilt.model import Model
-from stilt.observations import Observation, build_point_receptor, group_by_overpass
+from stilt.observations import Observation, group_by_overpass
+from stilt.receptors import PointReceptor
 
 
 def _minimal_config(tmp_path):
@@ -42,7 +43,9 @@ def test_scene_receptors_register_into_model(tmp_path):
     ]
 
     [scene] = group_by_overpass(observations)
-    receptors = scene.receptors(build_point_receptor)
+    receptors = scene.receptors(
+        lambda o: PointReceptor(o.time, o.longitude, o.latitude, 30.0)
+    )
 
     model = Model(project=tmp_path, config=_minimal_config(tmp_path))
     sim_ids = model.register(receptors=receptors)

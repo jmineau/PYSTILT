@@ -1,15 +1,11 @@
 """Tests for Scene and the observation grouping helpers."""
 
-from functools import partial
-
 import pandas as pd
 import pytest
 
 from stilt.observations import (
     Observation,
     Scene,
-    build_column_receptor,
-    build_point_receptor,
     group_by_overpass,
     group_observations,
 )
@@ -63,12 +59,17 @@ def test_scene_receptors_maps_any_builder():
         id="s", observations=(_obs("2023-01-01 12:00:00"), _obs("2023-01-01 12:01:00"))
     )
 
-    points = scene.receptors(build_point_receptor)
-    columns = scene.receptors(partial(build_column_receptor, bottom=0.0, top=3000.0))
+    def point(obs: Observation) -> PointReceptor:
+        assert obs.altitude is not None
+        return PointReceptor(obs.time, obs.longitude, obs.latitude, obs.altitude)
 
     def custom(obs: Observation) -> PointReceptor:
         return PointReceptor(obs.time, obs.longitude, obs.latitude, 5.0)
 
+    points = scene.receptors(point)
+    columns = scene.receptors(
+        lambda o: ColumnReceptor(o.time, o.longitude, o.latitude, 0.0, 3000.0)
+    )
     customs = scene.receptors(custom)
 
     assert all(isinstance(r, PointReceptor) for r in points)

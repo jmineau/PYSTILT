@@ -6,6 +6,45 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **Slant Columns guide** (`docs/guides/slant_columns.rst`): building a
+  slant receptor from viewing angles for a ground-based solar tracker
+  (EM27/SUN) or an off-nadir satellite sounding, the altitude and azimuth
+  conventions, and how to weight the result. `ViewingGeometry` and
+  `build_slant_receptor` now document the azimuth convention (clockwise from
+  north, bearing from the ground point toward the instrument or the sun),
+  and a test pins it.
+
+- `stilt.observations.slant_points(longitude, latitude, altitudes, zenith=,
+  azimuth=, anchor=None)`: the slant line-of-sight geometry as a pure
+  function, so a ground-based instrument can build a receptor from plain
+  numbers with `Receptor.from_points` and no `Observation`.
+
+### Changed
+
+- **Slant receptor pipeline simplified.** `build_slant_receptor(observation,
+  altitudes)` takes the altitude samples directly; the path is anchored at
+  `observation.altitude` (now required) in `observation.altitude_ref`, and
+  the builder warns when that is AGL. `ViewingGeometry` is two required
+  fields, `zenith_angle` and `azimuth_angle`, validated on construction;
+  product-specific angles belong in `Observation.metadata`.
+- Roadmap: slant-column receptor support is marked implemented. Release
+  heights along a slant are recovered from the particles (0.1.0a12), and a
+  close-spaced slant is exercised through HYSPLIT in the test suite.
+
+### Removed
+
+- `LineOfSight` and `Observation.line_of_sight`: the altitude samples are an
+  argument to `build_slant_receptor`, and clipping is the caller's choice of
+  samples (`surface_altitude=` / `model_top_altitude=` are gone).
+- `ViewingGeometry.solar_zenith_angle`, `solar_azimuth_angle`,
+  `relative_azimuth_angle`, `scan_angle`, `glint_angle`: never read.
+- `build_point_receptor`, `build_column_receptor`,
+  `build_multipoint_receptor`: they only forwarded observation fields to a
+  receptor constructor; call `PointReceptor` / `ColumnReceptor` /
+  `Receptor.from_points` directly.
+
 ## [0.1.0a13] - 2026-09-21
 
 ### Fixed

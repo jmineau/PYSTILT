@@ -2,7 +2,7 @@ Observations
 ============
 
 The observation layer is still alpha. It defines the normalized observation,
-scene grouping, receptor builders, and selection helpers used for column and
+scene grouping, the slant receptor builder, and selection helpers used for column and
 satellite-style workflows (:doc:`/advanced/observations`). Particle weighting
 lives in :doc:`transforms`.
 
@@ -25,7 +25,6 @@ Geometry
 
    stilt.observations.HorizontalGeometry
    stilt.observations.ViewingGeometry
-   stilt.observations.LineOfSight
 
 Builders, grouping, and selection
 ---------------------------------
@@ -34,10 +33,8 @@ Builders, grouping, and selection
    :toctree: _api
    :nosignatures:
 
-   stilt.observations.build_point_receptor
-   stilt.observations.build_column_receptor
+   stilt.observations.slant_points
    stilt.observations.build_slant_receptor
-   stilt.observations.build_multipoint_receptor
    stilt.observations.group_by_overpass
    stilt.observations.group_observations
    stilt.observations.filter_observations

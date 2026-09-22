@@ -15,10 +15,10 @@ more generic than X-STILT in this alpha.
      - PYSTILT equivalent
    * - Column receptor (``minagl`` / ``maxagl``, ``agl`` levels)
      - ``get.recp.sensorv2.r``
-     - :func:`stilt.observations.build_column_receptor` → :class:`stilt.ColumnReceptor`
+     - :class:`stilt.ColumnReceptor` from the observation's coordinates
    * - Slant column (``run_slant``)
      - ``get.recp.sensorv2.r``
-     - :func:`stilt.observations.build_slant_receptor` from ``ViewingGeometry`` + ``LineOfSight``
+     - :func:`stilt.observations.build_slant_receptor` from ``ViewingGeometry`` + your altitude samples (:func:`stilt.observations.slant_points` underneath)
    * - Sounding selection (near-field + background)
      - ``sel.obs4recpv2``
      - :func:`stilt.observations.select_observations_spatial`
@@ -50,6 +50,6 @@ Practical migration strategy
 1. write a reader that turns your product into ``Observation`` objects
    (see *Adding your own instrument* in :doc:`/advanced/observations`)
 2. group by overpass and select soundings with the built-in helpers
-3. build receptors with a built-in or your own builder
+3. build receptors from each observation, with ``build_slant_receptor`` for slants
 4. put the averaging kernel on each observation's ``transforms`` and
    ``pressure_weighting`` in the footprint config

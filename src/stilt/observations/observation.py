@@ -10,7 +10,7 @@ import pandas as pd
 
 from stilt.config import VerticalReference, validate_vertical_reference
 
-from .geometry import HorizontalGeometry, LineOfSight, ViewingGeometry
+from .geometry import HorizontalGeometry, ViewingGeometry
 
 
 @dataclass(slots=True)
@@ -22,9 +22,11 @@ class Observation:
     core does not model (retrieval quality flags, orbit numbers, an
     uncertainty decomposition) goes in ``quality`` or ``metadata``.
 
-    ``transforms`` carries per-observation particle transforms — typically the
-    retrieval's own :class:`~stilt.transforms.AveragingKernel` — for the caller
-    to pass to :meth:`stilt.Simulation.generate_footprint`.
+    ``altitude`` is the instrument or surface altitude in ``altitude_ref``;
+    the slant builder anchors the line of sight there. ``transforms`` carries
+    per-observation particle transforms — typically the retrieval's own
+    :class:`~stilt.transforms.AveragingKernel` — for the caller to pass to
+    :meth:`stilt.Simulation.generate_footprint`.
     """
 
     sensor: str
@@ -40,7 +42,6 @@ class Observation:
     altitude: float | None = None
     altitude_ref: VerticalReference = "agl"
     geometry: HorizontalGeometry | None = None
-    line_of_sight: LineOfSight | None = None
     viewing: ViewingGeometry | None = None
     transforms: list[Any] = field(default_factory=list)
     quality: dict[str, float | int | bool] = field(default_factory=dict)

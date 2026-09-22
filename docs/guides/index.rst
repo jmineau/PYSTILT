@@ -11,6 +11,7 @@ that do not belong in a first-run tutorial.
 
    project_layout
    receptors
+   slant_columns
    configuration
    meteorology
    outputs
