@@ -32,15 +32,13 @@ trajectories (:doc:`/guides/transport_error`).
 Wind-error statistics
 ---------------------
 
-The wind-error settings a transport-error run needs, from
-analysis-minus-observation winds (:doc:`/guides/wind_errors`).
+Variograms of analysis-minus-observation winds, from which the wind-error
+settings of a transport-error run are derived (:doc:`/guides/wind_errors`).
 
 .. autosummary::
    :toctree: _api
    :nosignatures:
 
-   stilt.observations.wind_error_scales
-   stilt.observations.WindErrorScales
    stilt.observations.variogram
    stilt.observations.fit_variogram
    stilt.observations.VariogramFit

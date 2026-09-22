@@ -5,12 +5,8 @@ import pandas as pd
 import pytest
 
 from stilt.config import ErrorParams
-from stilt.observations import (
-    VariogramFit,
-    fit_variogram,
-    variogram,
-    wind_error_scales,
-)
+from stilt.observations import VariogramFit, fit_variogram, variogram
+from stilt.observations.selection import _haversine_km
 
 
 def _ar1(n: int, sigma: float, length: float, step: float, rng) -> np.ndarray:
@@ -111,39 +107,37 @@ def test_fit_variogram_needs_points():
         fit_variogram([100.0], [1.0])
 
 
-# -- wind_error_scales ------------------------------------------------------------
+# -- the guide's recipe on synthetic fields ---------------------------------------
 
 
-@pytest.fixture(scope="module")
-def synthetic_errors():
-    """Upper-air and surface error tables with known scales."""
+def _scale(errors, lag, group, bins) -> float:
+    table = variogram(errors, lag, group=group, bins=bins)
+    return fit_variogram(table["lag"], table["gamma"], sigma=errors.std()).length
+
+
+def test_recipe_recovers_known_scales():
+    """The Wind Error Statistics guide's recipe, on fields with known statistics."""
     rng = np.random.default_rng(7)
     sigma, l_z, l_t, l_x = 2.0, 500.0, 300.0, 15.0
 
-    # upper air: 400 launches, 12 h apart, levels every 100 m to 3 km, vertical
+    # upper air: 400 launches 12 h apart, levels every 100 m to 3 km, vertical
     # correlation exp(-dz / l_z), launches independent
     heights = np.arange(0.0, 3001.0, 100.0)
     cov_z = sigma**2 * np.exp(-np.abs(heights[:, None] - heights[None, :]) / l_z)
     launches = pd.date_range("2024-01-01", periods=400, freq="12h")
-    u = _correlated(cov_z, len(launches), rng)
-    v = _correlated(cov_z, len(launches), rng)
     upper = pd.DataFrame(
         {
             "time": np.repeat(launches, len(heights)),
             "height": np.tile(heights, len(launches)),
-            "u_err": u.ravel(),
-            "v_err": v.ravel(),
+            "u_err": _correlated(cov_z, len(launches), rng).ravel(),
+            "v_err": _correlated(cov_z, len(launches), rng).ravel(),
         }
     )
 
-    # surface: 16 stations on a 4x4 grid ~10 km apart, hourly for 120 days;
-    # separable covariance exp(-d / l_x) * exp(-dt / l_t)
-    lon = -112.2 + 0.12 * np.arange(4)
-    lat = 40.5 + 0.09 * np.arange(4)
-    lons, lats = np.meshgrid(lon, lat)
+    # surface: 16 stations on a 4x4 grid ~10 km apart, hourly for 120 days,
+    # separable covariance exp(-d / l_x) exp(-dt / l_t)
+    lons, lats = np.meshgrid(-112.2 + 0.12 * np.arange(4), 40.5 + 0.09 * np.arange(4))
     lons, lats = lons.ravel(), lats.ravel()
-    from stilt.observations.selection import _haversine_km
-
     dist = np.array(
         [_haversine_km(lo, la, lons, lats) for lo, la in zip(lons, lats, strict=True)]
     )
@@ -152,69 +146,48 @@ def synthetic_errors():
 
     def field():
         z = np.stack([_ar1(len(hours), sigma, l_t, 60.0, rng) for _ in lons], axis=1)
-        return z @ chol_x.T  # (time, station)
+        return (z @ chol_x.T).ravel()
 
-    us, vs = field(), field()
     surface = pd.DataFrame(
         {
             "time": np.repeat(hours, len(lons)),
             "site": np.tile([f"S{i}" for i in range(len(lons))], len(hours)),
             "lon": np.tile(lons, len(hours)),
             "lat": np.tile(lats, len(hours)),
-            "u_err": us.ravel(),
-            "v_err": vs.ravel(),
+            "u_err": field(),
+            "v_err": field(),
         }
     )
-    return upper, surface, dict(sigma=sigma, l_z=l_z, l_t=l_t, l_x=l_x)
 
-
-def test_wind_error_scales_recovers_known_scales(synthetic_errors):
-    upper, surface, truth = synthetic_errors
-    scales = wind_error_scales(upper, surface)
-    assert scales.siguverr == pytest.approx(truth["sigma"], rel=0.1)
-    assert scales.zcoruverr == pytest.approx(truth["l_z"], rel=0.2)
-    assert scales.tluverr == pytest.approx(truth["l_t"], rel=0.2)
-    assert scales.horcoruverr == pytest.approx(truth["l_x"], rel=0.25)
-
-    fits = scales.fits
-    assert set(fits.index) == {
-        (c, k) for c in ("u", "v") for k in ("height", "time", "distance")
-    }
-    assert fits.loc[("u", "time"), "source"] == "surface"
-    assert fits.loc[("u", "height"), "source"] == "upper"
-    assert abs(fits.loc[("u", "height"), "bias"]) < 0.3
-    assert set(scales.variograms) == set(fits.index)
-    assert {"lag", "gamma", "n"} <= set(scales.variograms[("v", "distance")].columns)
-
-    params = ErrorParams(**scales.to_dict())
-    assert params.winderrtf == 1
-
-
-def test_wind_error_scales_time_from_upper_without_surface(synthetic_errors):
-    upper, _, truth = synthetic_errors
-    scales = wind_error_scales(upper)
-    assert scales.horcoruverr is None
-    assert "horcoruverr" not in scales.to_dict()
-    assert scales.fits.loc[("u", "time"), "source"] == "upper"
-    # launches are independent: the first resolved lag (720 min) already sits at
-    # the sill, so the fitted scale is far below the resolution of the data
-    assert scales.tluverr < 720.0
-    assert scales.zcoruverr == pytest.approx(truth["l_z"], rel=0.2)
-    with pytest.raises(ValueError, match="surface table"):
-        wind_error_scales(upper, time_from="surface")
-
-
-def test_wind_error_scales_height_range_and_columns(synthetic_errors):
-    upper, surface, _ = synthetic_errors
-    with pytest.raises(ValueError, match="No upper-air rows"):
-        wind_error_scales(upper, height_range=(5000.0, 6000.0))
-    with pytest.raises(ValueError, match="missing columns"):
-        wind_error_scales(upper.drop(columns=["height"]))
-    with pytest.raises(ValueError, match="missing columns"):
-        wind_error_scales(upper, surface.drop(columns=["lat"]))
-    # restricting the layer changes the pairs but keeps the layout
-    scales = wind_error_scales(upper, surface, height_range=(0.0, 1000.0))
-    assert (
-        scales.fits.loc[("u", "height"), "n_pairs"]
-        < wind_error_scales(upper, surface).fits.loc[("u", "height"), "n_pairs"]
+    # the recipe
+    layer = upper[upper["height"].between(0, 3000)]
+    minutes = (surface["time"] - pd.Timestamp("2000-01-01")) / pd.Timedelta("1min")
+    components = ("u_err", "v_err")
+    siguverr = np.mean([layer[c].std() for c in components])
+    zcoruverr = np.mean(
+        [
+            _scale(layer[c], layer["height"], layer["time"], range(0, 3100, 100))
+            for c in components
+        ]
     )
+    tluverr = np.mean(
+        [
+            _scale(surface[c], minutes, surface["site"], range(0, 14401, 60))
+            for c in components
+        ]
+    )
+    horcoruverr = np.mean(
+        [
+            _scale(surface[c], surface[["lon", "lat"]], surface["time"], range(0, 51))
+            for c in components
+        ]
+    )
+
+    assert siguverr == pytest.approx(sigma, rel=0.1)
+    assert zcoruverr == pytest.approx(l_z, rel=0.2)
+    assert tluverr == pytest.approx(l_t, rel=0.2)
+    assert horcoruverr == pytest.approx(l_x, rel=0.25)
+    params = ErrorParams(
+        siguverr=siguverr, tluverr=tluverr, zcoruverr=zcoruverr, horcoruverr=horcoruverr
+    )
+    assert params.winderrtf == 1

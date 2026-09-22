@@ -29,9 +29,9 @@ Done over pairs of heights it gives ``zcoruverr``, over pairs of times
 Each scale needs data that resolves it. Radiosonde profiles resolve height
 but launch twelve hours apart, so they cannot say anything about a time
 scale of a few hours; hourly surface stations resolve time and horizontal
-distance but sit at the bottom of the layer. :func:`~stilt.observations.wind_error_scales`
-therefore takes the standard deviation and the vertical scale from the
-profiles, and the time and horizontal scales from the stations.
+distance but sit at the bottom of the layer. So the recipe below takes the
+standard deviation and the vertical scale from the profiles, and the time
+and horizontal scales from the stations.
 
 Step 1: the errors
 ------------------
@@ -80,62 +80,65 @@ Valley numbers below.
 Step 2: the scales
 ------------------
 
+:func:`~stilt.observations.variogram` builds the empirical variogram from
+an error array, the coordinate the separation is measured in, and a
+``group`` label that says which points may be paired; the lag can also be
+two columns of longitude and latitude, for great-circle distances in
+kilometres. :func:`~stilt.observations.fit_variogram` fits the exponential
+model with the sill fixed at the known variance. Everything else is the
+choices below, which are yours to change:
+
 .. code-block:: python
 
-   from stilt.observations import wind_error_scales
+   import numpy as np
+   from stilt.observations import fit_variogram, variogram
 
-   scales = wind_error_scales(upper, surface, height_range=(0, 3000))
-   scales.to_dict()
-   # {'siguverr': 2.6, 'tluverr': 260.0, 'zcoruverr': 450.0, 'horcoruverr': 14.0}
+   def scale(errors, lag, group, bins):
+       table = variogram(errors, lag, group=group, bins=bins)
+       return fit_variogram(table["lag"], table["gamma"], sigma=errors.std()).length
 
-``height_range`` is the layer, in metres above ground, whose errors matter
-for your transport: the boundary layer and a little above for a surface
-receptor, more for a column. ``scales.fits`` lists the fit for each
-component and coordinate with its sample size and the error's bias (mean),
-which Lin and Gerbig ignore and the perturbation does not represent, and
-``scales.variograms`` holds the empirical curves so you can see how well the
-model fits:
+   layer = upper[upper["height"].between(0, 3000)]        # m above ground
+   minutes = (surface["time"] - pd.Timestamp("2000-01-01")) / pd.Timedelta("1min")
+   components = ("u_err", "v_err")
+
+   siguverr = np.mean([layer[c].std() for c in components])
+   zcoruverr = np.mean([scale(layer[c], layer["height"], layer["time"],
+                              range(0, 3100, 100)) for c in components])
+   tluverr = np.mean([scale(surface[c], minutes, surface["site"],
+                            range(0, 14401, 60)) for c in components])
+   horcoruverr = np.mean([scale(surface[c], surface[["lon", "lat"]], surface["time"],
+                                range(0, 51)) for c in components])
+
+Line by line: the layer is the height range whose errors matter for your
+transport, the boundary layer and a little above for a surface receptor
+and more for a column. The vertical variogram pairs levels within one
+launch (``group`` is the launch time) at 100 m separations. The time
+variogram pairs hours within one station out to ten days. The horizontal
+variogram pairs stations at one time out to 50 km. Each is fitted with the
+standard deviation of the errors it was built from, and u and v are done
+separately and averaged. The bias (mean error) is ignored, as in Lin and
+Gerbig; the perturbation does not represent it.
+
+The four values go into ``config.yaml`` under the same names, or straight
+into :class:`~stilt.config.ErrorParams`. Look at the fits before trusting
+them:
 
 .. code-block:: python
 
    import matplotlib.pyplot as plt
-   from stilt.observations import VariogramFit
 
-   table = scales.variograms[("u", "height")]
-   fit = scales.fits.loc[("u", "height")]
-   plt.scatter(table["lag"], table["gamma"], s=8)
-   plt.plot(table["lag"], VariogramFit(fit["sigma"], fit["length"])(table["lag"]))
-
-The four values go into ``config.yaml`` under the same names, or straight
-into :class:`~stilt.config.ErrorParams`. Without a surface table the time
-scale comes from pairs of launches at the same height, which only tells you
-whether the errors are still correlated twelve hours later, and
-``horcoruverr`` is left for you to set.
-
-Seasonal and diurnal values are worth a look: filter both tables and call
-again. For the Salt Lake Valley the horizontal scale ranged from 9 km in
-summer to 20 km in winter.
-
-The pieces
-----------
-
-:func:`~stilt.observations.variogram` and
-:func:`~stilt.observations.fit_variogram` are the two steps
-``wind_error_scales`` is made of, for other coordinates, other pairing
-rules or other quantities:
-
-.. code-block:: python
-
-   from stilt.observations import fit_variogram, variogram
-
-   table = variogram(upper["u_err"], upper["height"], group=upper["time"],
+   table = variogram(layer["u_err"], layer["height"], group=layer["time"],
                      bins=range(0, 3100, 100))
-   fit = fit_variogram(table["lag"], table["gamma"], sigma=upper["u_err"].std())
+   fit = fit_variogram(table["lag"], table["gamma"], sigma=layer["u_err"].std())
+   plt.scatter(table["lag"], table["gamma"], s=8)
+   plt.plot(table["lag"], fit(table["lag"]))
 
-``group`` says which points may be paired: the launch for a vertical
-variogram, the station for a time variogram, the time for a horizontal one.
-``lag`` is the coordinate the separation is measured in, or two columns of
-longitude and latitude for great-circle distances in kilometres.
+Seasonal and diurnal values are worth a look: filter both tables and run
+the recipe again. For the Salt Lake Valley the horizontal scale ranged
+from 9 km in summer to 20 km in winter. Without surface stations the time
+scale can only come from pairs of launches at the same height, which says
+whether the errors are still correlated twelve hours later and little
+else, and ``horcoruverr`` has to come from somewhere else.
 
 Salt Lake Valley, HRRR, 2024
 ----------------------------

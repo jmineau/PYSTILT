@@ -10,25 +10,18 @@ objects. Particle weighting (averaging kernel, pressure weighting, lifetime
 decay) happens after the run and lives in :mod:`stilt.transforms`. After
 the run, :func:`transport_error` turns a simulation's main and
 wind-perturbed particles plus a flux field into the transport error on the
-modelled enhancement, and :func:`wind_error_scales` derives the wind-error
-settings that run needs from analysis-minus-observation winds.
+modelled enhancement, and :func:`variogram` and :func:`fit_variogram` turn
+analysis-minus-observation winds into the wind-error settings that run needs.
 """
 
 from .selection import group_by_overpass, jitter_points, select_observations_spatial
 from .slant import slant_points
 from .uncertainty import TransportError, transport_error
-from .winds import (
-    VariogramFit,
-    WindErrorScales,
-    fit_variogram,
-    variogram,
-    wind_error_scales,
-)
+from .winds import VariogramFit, fit_variogram, variogram
 
 __all__ = [
     "TransportError",
     "VariogramFit",
-    "WindErrorScales",
     "fit_variogram",
     "group_by_overpass",
     "jitter_points",
@@ -36,5 +29,4 @@ __all__ = [
     "slant_points",
     "transport_error",
     "variogram",
-    "wind_error_scales",
 ]
