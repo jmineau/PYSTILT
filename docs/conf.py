@@ -75,8 +75,7 @@ html_css_files = ["custom.css"]
 
 html_theme_options = {
     "announcement": (
-        "PYSTILT is in alpha. Expect API and workflow changes while the "
-        "execution and observation layers settle."
+        "PYSTILT is in alpha: names and options may change between releases."
     ),
     "github_url": "https://github.com/jmineau/PYSTILT",
     "show_toc_level": 2,

@@ -1,30 +1,104 @@
-Trajectory And Footprint Outputs
-================================
+Load And Plot Results
+=====================
 
-PYSTILT writes two main science outputs:
+Every simulation produces two things:
 
-- trajectory ensembles as Parquet
-- footprints as NetCDF
+- a **footprint** for each footprint name in your settings (NetCDF files),
+- the **trajectories**: every particle's path (a Parquet file).
 
-Both are available through ``Simulation`` objects and through model-level
-collections.
+This page shows how to look at them, load them for analysis, and add
+footprints up over areas you care about.
 
-Trajectory outputs
-------------------
+Quick look
+----------
 
-Each successful simulation writes a self-contained trajectory parquet:
+Open the project, pick a simulation, and plot:
 
 .. code-block:: python
 
-   sim = next(model.simulations.values())
-   print(sim.trajectories_path)
+   import stilt
 
-   trajectories = sim.trajectories
-   if trajectories is not None:
-       df = trajectories.data
-       print(df.columns.tolist())
+   model = stilt.Model(project="./my_project")
+   sim = next(model.simulations.values())      # the first simulation
 
-Important trajectory columns commonly used in analysis include:
+   sim.get_footprint("slv").plot.map()          # footprint, summed over time
+   sim.trajectories.plot.map()                  # particle paths
+   sim.plot.map("slv")                          # receptor, particles, and footprint together
+
+To pick a particular simulation, index by its ID:
+
+.. code-block:: python
+
+   model.simulations.keys()                     # all simulation IDs
+   sim = model.simulations["hrrr_202307151800_-111.848_40.766_10"]
+
+Plotting needs the ``visualization`` extra. With cartopy installed, maps get
+coastlines and state borders. Other plots:
+
+- ``foot.plot.facet()``: one panel per hour
+- ``receptor.plot.map()``: where the receptor is
+- ``model.plot.availability()``: which receptor times and locations have
+  results
+
+Footprints
+----------
+
+.. code-block:: python
+
+   foot = sim.get_footprint("slv")      # None if it doesn't exist yet
+   foot.data                            # an xarray.DataArray
+   foot.time_range                      # (start, end) of the footprint's hours
+   foot.receptor                        # the receptor it belongs to
+
+``foot.data`` has dimensions ``(time, lat, lon)``, one map per hour back from
+the receptor, in units of ppm per (µmol m⁻² s⁻¹). (With
+``time_integrate: true`` in the footprint settings there is a single map
+instead.) To sum over time:
+
+.. code-block:: python
+
+   total = foot.integrate_over_time()
+
+To open a footprint file directly, without a model:
+
+.. code-block:: python
+
+   foot = stilt.Footprint.from_netcdf("path/to/..._slv_foot.nc")
+
+Each file also records the receptor and the settings used to make it.
+
+Many simulations at once
+------------------------
+
+``model.footprints`` and ``model.trajectories`` work across the whole
+project:
+
+.. code-block:: python
+
+   footprints = model.footprints["slv"].load()           # list of Footprint
+   paths = model.footprints["slv"].paths()               # file paths only
+   not_done = model.footprints["slv"].missing()          # simulation IDs
+
+   trajectories = model.trajectories.load()
+
+All of these accept filters:
+
+.. code-block:: python
+
+   model.footprints["slv"].load(
+       mets="hrrr",
+       time_range=("2023-07-01", "2023-07-31 23:00"),   # receptor times, inclusive
+   )
+
+Trajectories
+------------
+
+.. code-block:: python
+
+   traj = sim.trajectories        # None if it doesn't exist yet
+   df = traj.data                 # pandas DataFrame, one row per particle per time step
+
+The columns you are most likely to use:
 
 .. list-table::
    :header-rows: 1
@@ -50,93 +124,51 @@ Important trajectory columns commonly used in analysis include:
      - Mixed-layer height, turbulence statistics, and pressure fields often
        used in diagnostics
 
-You can also load a trajectory object directly from disk:
+To open a trajectory file directly:
 
 .. code-block:: python
 
-   from stilt import Trajectories
-
-   traj = Trajectories.from_parquet(sim.trajectories_path)
-
-Footprint outputs
------------------
-
-Footprints are stored as NetCDF and exposed as :class:`stilt.Footprint`
-wrappers around an ``xarray.DataArray``:
-
-.. code-block:: python
-
-   foot = sim.get_footprint("default")
-   if foot is not None:
-       print(foot.data.dims)
-       print(foot.time_range)
-
-The standard footprint data shape is ``(time, lat, lon)`` unless
-``time_integrate=True`` was requested in the footprint config.
-
-You can also load a footprint directly:
-
-.. code-block:: python
-
-   from stilt import Footprint
-
-   foot = Footprint.from_netcdf(sim.footprint_path("default"))
+   traj = stilt.Trajectories.from_parquet("path/to/..._traj.parquet")
 
 Empty footprints
 ----------------
 
-A run can succeed and still produce no footprint (no particle touched the
-grid). PYSTILT then writes a ``<sim_id>_<name>_foot.empty`` marker next to
-where the netCDF would be. ``Simulation.has_footprint(name)`` and
-``model.footprints[name].missing()`` treat the marker as complete, while
-``model.footprints[name].paths()`` and ``load()`` skip it because there is
-nothing to load.
+Sometimes a simulation runs fine but no particle ever reaches the footprint
+grid, usually because the grid is too small or is not upwind. PYSTILT then
+writes a small ``<simulation id>_<name>_foot.empty`` file instead of a NetCDF.
+The simulation counts as finished (so reruns skip it), but ``load()`` and
+``paths()`` leave it out because there is nothing to load. If you see many
+of these, make your footprint grid bigger.
 
-Cross-simulation access
------------------------
+Adding footprints up over areas
+-------------------------------
 
-The model collections are usually the cleanest way to work across many runs:
-
-.. code-block:: python
-
-   all_traj_paths = model.trajectories.paths()
-   missing_traj = model.trajectories.missing()
-
-   footprint_paths = model.footprints["default"].paths()
-   footprints = model.footprints["default"].load()
-
-Time integration and aggregation
---------------------------------
-
-Footprints expose two especially useful analysis helpers:
+To get the influence of specific areas, such as counties, hexagons, or small
+windows around point sources, use :meth:`~stilt.Footprint.aggregate`. It adds
+up footprint cells into your areas and, optionally, into time bins:
 
 .. code-block:: python
 
-   total = foot.integrate_over_time()
+   import pandas as pd
 
+   bins = pd.interval_range(
+       start=foot.time_range[0], end=foot.time_range[1], freq="1h"
+   )
    aggregated = foot.aggregate(
        target=[(-111.97, 40.515), (-112.015, 40.779)],
-       time_bins=pd.interval_range(
-           start=foot.time_range[0],
-           end=foot.time_range[1],
-           freq="1h",
-       ),
+       time_bins=bins,
    )
 
-``integrate_over_time()`` collapses the time dimension.
+Each footprint cell's value is added into the target area it overlaps
+(split by area where a cell straddles two targets), so the total influence is
+preserved. This is what you want when multiplying by emissions.
 
-``aggregate()`` conservatively regrids the footprint onto a *spatial
-geometry* and groups the result by time bins.  Because a footprint is an
-extensive, per-cell sensitivity, native cells are **summed** (by area
-overlap) into each target cell rather than sampled -- the right behavior for
-inventory- or grid-style flux applications.
+Footprints are always calculated on a regular latitude/longitude grid, which
+keeps them identical to STILT-R's. The overlap between that grid and your
+areas is worked out once and reused, so adding up thousands of footprints is
+fast.
 
-Footprints are always *computed* on a rectilinear raster (this keeps the
-STILT kernel and R-STILT parity).  Any other state geometry is reached by a
-sparse overlap-weight matrix that is built once per (raster, geometry) pair
-and cached, so aggregating thousands of footprints is one matmul each.
-
-The target is the state geometry of your inversion:
+The target can be:
 
 - :class:`stilt.Grid` -- every cell of a rectilinear grid; ``grid.index``
   gives the matching ``(lon, lat)`` state index.
@@ -177,7 +209,7 @@ Polygon overlaps are computed with shapely by default.  If the optional
 `exactextract <https://github.com/isciences/exactextract>`_ package is
 installed (``pip install exactextract``; it is not a PYSTILT dependency) it is
 used automatically and is roughly a hundred times faster on large rasters,
-with identical fractions.  Pass ``backend="shapely"`` or
+with identical results.  Pass ``backend="shapely"`` or
 ``backend="exactextract"`` to :func:`stilt.geometry.overlap_weights` to force
 one.  To choose a
 raster for a geometry up front, or to rebuild a stored footprint at higher
@@ -187,16 +219,5 @@ fidelity from its particles:
 
    hexes = stilt.Mesh.from_h3(8, bounds=state)
    grid = stilt.Grid.from_geometry(hexes, cells_per_target=4)   # snapped, rounded
-   traj = model.trajectories.load_one(path)
+   traj = sim.trajectories
    foot = traj.footprint(stilt.FootprintConfig(grid=grid))
-
-Plotting shortcuts
-------------------
-
-Common quick-look methods are:
-
-- ``trajectories.plot.map()``
-- ``foot.plot.map()``
-- ``foot.plot.facet()``
-- ``sim.plot.map()``
-- ``model.plot.availability()``

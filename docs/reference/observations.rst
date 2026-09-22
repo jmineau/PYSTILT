@@ -1,7 +1,7 @@
 Observations
 ============
 
-The observation layer is still alpha. It defines the normalized observation,
+The observation layer is still settling. It defines the normalized observation,
 scene grouping, the slant receptor builder, and selection helpers used for column and
 satellite-style workflows (:doc:`/advanced/observations`). Particle weighting
 lives in :doc:`transforms`.

@@ -1,9 +1,10 @@
 Meteorology
 ===========
 
-Meterology in PYSTILT has both a configuration layer and a runtime
-file-resolution layer. ``MetConfig`` describes a stream in ``config.yaml``;
-``MetStream`` handles runtime file resolution and staging.
+:class:`~stilt.config.MetConfig` holds a meteorology source's settings in
+``config.yaml``. :class:`~stilt.MetStream` does the work at run time: finding
+the files a simulation needs and linking them into its working folder. See
+:doc:`../guides/meteorology` for how to set it up.
 
 Runtime helpers
 ---------------

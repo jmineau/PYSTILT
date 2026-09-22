@@ -3,17 +3,16 @@ Configuration
 
 .. currentmodule:: stilt.config
 
-The main output project schema is :class:`stilt.config.ModelConfig`. It layers
-named meteorology streams, footprint definitions, and executor settings on top
-of the STILT parameter surface. The field tables below are rendered directly
-from the live Pydantic model metadata so the parameter descriptions stay in
-sync with the code.
+Everything that can go in ``config.yaml`` is a field of
+:class:`stilt.config.ModelConfig`: named meteorology sources
+(:class:`MetConfig`), named footprints (:class:`FootprintConfig`), the
+``execution`` section, and the STILT and HYSPLIT settings. The tables below
+are generated from the code, so they are always current.
 
 .. tip::
-  If you are new to PYSTILT, start with the :doc:`configuration guide <../guides/configuration>`
-  before diving into the reference details below. The guide focuses on the most common configuration
-  fields. This API reference is comprehensive and includes all fields, but it may be overwhelming
-  if you are just getting started.
+  New to PYSTILT? The :doc:`configuration guide <../guides/configuration>`
+  covers the handful of settings most projects need. This page lists all of
+  them.
 
 Config objects
 --------------

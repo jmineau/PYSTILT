@@ -1,17 +1,13 @@
 Configuration
 =============
 
-PYSTILT configuration is meant to describe one project: which meteorology files
-to use, which footprints to create, and the common run controls for HYSPLIT.
-The output file is ``config.yaml`` in the project root.
+A project's settings live in ``config.yaml`` in the project folder: which
+meteorology to use, which footprints to make, and how to run HYSPLIT. This
+page covers the settings most projects need. The
+:doc:`../reference/configuration` lists every option.
 
-Use :doc:`../reference/configuration` when you need every field and default.
-Use this guide when you are deciding what to write in ``config.yaml``.
-
-Minimal project config
-----------------------
-
-Most projects start with one meteorology stream and one footprint:
+A typical config.yaml
+---------------------
 
 .. code-block:: yaml
 
@@ -19,10 +15,10 @@ Most projects start with one meteorology stream and one footprint:
      hrrr:
        directory: /data/arl/hrrr
        file_format: "%Y%m%d_%H"
-       file_tres: 1h
+       file_tres: 6h
 
    footprints:
-     default:
+     slv:
        xmin: -114.0
        xmax: -111.0
        ymin: 39.0
@@ -32,76 +28,73 @@ Most projects start with one meteorology stream and one footprint:
 
    n_hours: -24
    numpar: 500
-   skip_existing: true
 
+``stilt init`` writes a commented starter file. When you build a
+:class:`~stilt.Model` in Python, the same settings are written to
+``config.yaml`` the first time you run it.
 
-What each section means
------------------------
+The settings most people change
+-------------------------------
 
-``mets``
-   Named meteorology streams. The name, such as ``hrrr``, becomes part of each
-   simulation ID. Each stream points at ARL files and defines how timestamps map
-   to filenames.
+.. list-table::
+   :header-rows: 1
+   :widths: 20 55 25
 
-``footprints``
-   Named footprint products. The simple form shown above is shorthand for a
-   ``FootprintConfig`` with an inline grid. You only need a nested ``grid`` key
-   when you want to be explicit.
+   * - Setting
+     - What it does
+     - Typical value
+   * - ``mets``
+     - Where the meteorology files are and how they are named. The name you
+       give each one (``hrrr`` above) goes into every simulation ID. See
+       :doc:`meteorology`.
+     - one entry
+   * - ``footprints``
+     - The map grid(s) to calculate footprints on: longitude range
+       (``xmin``/``xmax``), latitude range (``ymin``/``ymax``), and cell size
+       in degrees (``xres``/``yres``). Each footprint gets a name you choose
+       (``slv`` above).
+     - 0.01° (about 1 km) for a city; 0.1° for a region
+   * - ``n_hours``
+     - How many hours to follow particles. Negative is backward in time.
+     - ``-24`` to ``-72``
+   * - ``numpar``
+     - Particles released per simulation. More is smoother and slower.
+     - ``200`` to ``1000``
+   * - ``execution``
+     - Where to run. Leave it out to run on your own computer. See
+       :doc:`execution/index`.
+     - (omit)
+   * - ``skip_existing``
+     - Skip simulations whose outputs already exist.
+     - ``true`` (default)
 
-``n_hours`` and ``numpar``
-   The most common run controls. ``n_hours`` is negative for backward runs and
-   positive for forward runs. ``numpar`` controls particle count.
+Footprint options
+-----------------
 
-``execution``
-   Optional executor settings for Slurm or Kubernetes. Leave this out for local
-   runs.
+Besides the grid, each footprint accepts:
 
-``skip_existing``
-   Whether ``stilt run`` should avoid rerunning simulations whose required
-   outputs are already complete.
+``smooth_factor``
+   Scales the Gaussian smoothing applied to each particle's influence.
+   ``1.0`` (the default) is standard STILT; smaller values smooth less.
 
-Footprint grid shorthand
-------------------------
+``time_integrate``
+   ``true`` sums the footprint over time into a single map, making smaller
+   files. The default ``false`` keeps an hourly time dimension.
 
-The starter YAML uses the short form:
+``transforms``
+   Particle weighting steps, mainly for column measurements. See
+   :doc:`../advanced/transforms`.
 
-.. code-block:: yaml
+Several footprints at once
+--------------------------
 
-   footprints:
-     default:
-       xmin: -114.0
-       xmax: -111.0
-       ymin: 39.0
-       ymax: 42.0
-       xres: 0.01
-       yres: 0.01
-
-This is equivalent to:
-
-.. code-block:: yaml
-
-   footprints:
-     default:
-       grid:
-         xmin: -114.0
-         xmax: -111.0
-         ymin: 39.0
-         ymax: 42.0
-         xres: 0.01
-         yres: 0.01
-
-Use the nested form if it reads better for your workflow or if you are
-generating config files programmatically.
-
-Multiple outputs
-----------------
-
-You can define more than one named footprint:
+You can make more than one footprint from the same particles, for example a
+fine grid over the city and a coarse one over the region:
 
 .. code-block:: yaml
 
    footprints:
-     near_field:
+     city:
        xmin: -114.0
        xmax: -111.0
        ymin: 39.0
@@ -116,18 +109,33 @@ You can define more than one named footprint:
        ymax: 50.0
        xres: 0.1
        yres: 0.1
-       smooth_factor: 1.0
 
-Each named footprint is tracked separately: a simulation is complete only once
-every configured footprint exists for it.
+Each footprint gets its own file. Adding a footprint to an existing project
+and running again calculates just the new footprint for every simulation.
 
-Footprints for a state geometry
--------------------------------
+The grid can also be written under a ``grid:`` key. The two forms mean the
+same thing:
 
-When the footprint exists to feed an inversion whose state lives on a
-non-rectilinear geometry (a shapefile, H3 hexagons, point-source windows),
-name that geometry instead of the raster and let PYSTILT derive a raster
-fine enough to resolve it (:meth:`stilt.Grid.from_geometry`):
+.. code-block:: yaml
+
+   footprints:
+     city:
+       grid:
+         xmin: -114.0
+         xmax: -111.0
+         ymin: 39.0
+         ymax: 42.0
+         xres: 0.01
+         yres: 0.01
+
+Footprints for shapefiles, hexagons, or point sources
+-----------------------------------------------------
+
+If you will add footprints up over irregular areas, such as counties from a
+shapefile, H3 hexagons, or small windows around point sources, you can name
+those areas instead of a grid. PYSTILT then picks a grid fine enough to
+resolve them (:meth:`stilt.Grid.from_geometry`). This needs the ``geometry``
+extra:
 
 .. code-block:: yaml
 
@@ -167,62 +175,88 @@ edited after the footprints were computed.
    polygons assigned by cell centre) and will be added once a project needs
    its zoning to live in the config.
 
-Execution examples
-------------------
+Running on a cluster
+--------------------
 
-Local execution does not need an ``execution`` section. For Slurm, add one:
+To run on Slurm instead of your own computer, add an ``execution`` section:
 
 .. code-block:: yaml
 
    execution:
      backend: slurm
-     account: lin-group
-     partition: lin
+     n_workers: 100          # number of Slurm array tasks
+     account: my-account
+     partition: my-partition
      time: "02:00:00"
-     memory: 8G
+     mem: 8G
 
-Executor-specific fields are passed to the configured backend. Keep project
-science controls, such as ``numpar`` and footprint grids, outside this section.
+Everything besides ``backend``, ``n_workers``, ``cpus_per_task``,
+``array_parallelism``, and ``setup`` is passed to ``sbatch``. See
+:doc:`execution/slurm`.
 
-Python equivalent
------------------
+The same settings in Python
+---------------------------
 
-The same configuration can be built from Python:
+Every ``config.yaml`` key can be passed to :class:`~stilt.Model` directly,
+as plain dictionaries:
 
 .. code-block:: python
 
    import stilt
+
+   model = stilt.Model(
+       project="./my_project",
+       mets={
+           "hrrr": {
+               "directory": "/data/arl/hrrr",
+               "file_format": "%Y%m%d_%H",
+               "file_tres": "6h",
+           }
+       },
+       footprints={
+           "slv": {
+               "xmin": -114.0, "xmax": -111.0,
+               "ymin": 39.0, "ymax": 42.0,
+               "xres": 0.01, "yres": 0.01,
+           }
+       },
+       n_hours=-24,
+       numpar=500,
+   )
+
+or as typed objects, which your editor can autocomplete and check:
+
+.. code-block:: python
 
    config = stilt.ModelConfig(
        mets={
            "hrrr": stilt.MetConfig(
                directory="/data/arl/hrrr",
                file_format="%Y%m%d_%H",
-               file_tres="1h",
+               file_tres="6h",
            )
        },
        footprints={
-           "default": stilt.FootprintConfig(
+           "slv": stilt.FootprintConfig(
                grid=stilt.Grid(
-                   xmin=-114.0,
-                   xmax=-111.0,
-                   ymin=39.0,
-                   ymax=42.0,
-                   xres=0.01,
-                   yres=0.01,
+                   xmin=-114.0, xmax=-111.0,
+                   ymin=39.0, ymax=42.0,
+                   xres=0.01, yres=0.01,
                )
            )
        },
        n_hours=-24,
        numpar=500,
-       skip_existing=True,
    )
+   model = stilt.Model(project="./my_project", config=config)
 
-Advanced parameters
--------------------
+Advanced HYSPLIT settings
+-------------------------
 
-PYSTILT exposes lower-level HYSPLIT/STILT parameters for compatibility and
-experimentation. Keep them out of starter configs unless you know why you are
-changing them.
+``config.yaml`` also accepts HYSPLIT and STILT's lower-level settings
+(turbulence, time step, output variables, and so on) under the same names
+STILT-R uses. Most projects never change them; the
+:doc:`../reference/configuration` describes each one.
 
-Unknown keys are rejected when YAML is loaded.
+Typos are caught early: an unknown key in ``config.yaml`` is an error when the
+file is loaded, before anything runs.

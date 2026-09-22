@@ -1,11 +1,12 @@
 Execution
 =========
 
-The execution layer is one worker function plus backends that launch it.
-:func:`~stilt.execution.run_simulation` runs a
-:class:`~stilt.Simulation` end to end and publishes its outputs;
-:func:`~stilt.execution.run_simulations` runs many for a model, inline or in
-one process pool; the executors decide where that happens.
+Most users only need ``model.run()`` or ``stilt run``
+(:doc:`../guides/execution/index`). Underneath,
+:func:`~stilt.execution.run_simulation` runs one
+:class:`~stilt.Simulation` from start to finish and saves its outputs,
+:func:`~stilt.execution.run_simulations` runs many, and the executors decide
+where that happens: on this machine, on Slurm, or on Kubernetes.
 
 Worker functions
 ----------------

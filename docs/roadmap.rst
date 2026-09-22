@@ -13,9 +13,9 @@ Current status
 The **core transport** is stable and exercised by the test suite:
 
 - HYSPLIT trajectory and footprint generation
-- Numerical parity with `uataq/stilt <https://github.com/uataq/stilt>`_ (R-STILT) at ``rtol=1e-7`` per cell
+- Numerical parity with `uataq/stilt <https://github.com/uataq/stilt>`_ (STILT-R) at ``rtol=1e-7`` per cell
 - Local and SLURM execution paths
-- Skip-existing and status read from the outputs by key
+- Reruns that skip finished simulations, with status read from the output files
 - Observation layer for science-facing workflows
 
 The core runtime simplification landed in two steps: by-key completion in

@@ -1,12 +1,11 @@
 Project And Store
 =================
 
-A project is one root — a local directory or an object-store URI — holding
-``config.yaml``, ``receptors.csv``, and ``simulations/by-id/``. Every output is
-addressed by a *store key* relative to that root, and whether a simulation is
-complete is read from the store by key (see :meth:`stilt.Simulation.is_complete`).
-There is no registry: the simulations a project defines are its receptors
-crossed with its met streams.
+A project is one folder (or cloud bucket path) holding ``config.yaml``,
+``receptors.csv``, and ``simulations/by-id/``. Every output's location is
+given relative to that folder, and a simulation is finished when its outputs
+exist there (see :doc:`../advanced/output_state`). Most users never use
+these classes directly; :class:`stilt.Model` does.
 
 Project
 -------

@@ -1,103 +1,81 @@
-Execution
-=========
+Where To Run
+============
 
-PYSTILT supports three execution backends. All three share the same output
-project model — the same config, the same output layout, and the same CLI
-commands.  The backend controls only *how work gets dispatched to workers*.
+The same project can run on your computer, on an HPC cluster, or (experimentally)
+in the cloud. Only the ``execution`` section of ``config.yaml`` changes; your
+receptors, meteorology, footprints, and outputs stay the same.
 
-Backends
---------
+.. list-table::
+   :header-rows: 1
+   :widths: 18 52 30
+
+   * - Backend
+     - Use it when
+     - Setup
+   * - :doc:`local`
+     - You're working in a notebook or script, or have up to a few hundred
+       simulations. This is the default.
+     - Nothing
+   * - :doc:`slurm`
+     - You have thousands of simulations and access to an HPC cluster that
+       uses Slurm.
+     - An ``execution`` section with your account and partition
+   * - :doc:`kubernetes`
+     - You're running in the cloud. **Experimental.**
+     - A container image, a PostgreSQL database, and a cloud bucket
 
 .. toctree::
    :maxdepth: 1
+   :hidden:
 
    local
    slurm
    kubernetes
 
-Dispatch models
----------------
+Commands you'll use
+-------------------
 
-**Push dispatch** (``local``, ``slurm``)
-   The coordinator enumerates pending simulation IDs and sends work directly to
-   workers — either inline in the current process or by writing chunk files for
-   a Slurm array.
+``stilt init <project>``
+   Create a project folder with a starter ``config.yaml`` and
+   ``receptors.csv``.
 
-**Pull dispatch** (``kubernetes``)
-   Workers independently claim pending simulations from a shared work queue.
-   The coordinator registers work and returns; pods drain the queue
-   autonomously.
+``stilt run <project>``
+   Run every simulation that isn't finished yet. On your computer it waits
+   until they are done; on Slurm it submits the jobs and returns (add
+   ``--wait`` to wait). ``model.run()`` does the same from Python.
 
-Choosing a backend
-------------------
+``stilt status <project>``
+   Count finished and remaining simulations.
 
-``local``
-   Default. Best for notebooks, workstation runs, and small receptor sets.
-   Runs inline with ``n_workers: 1`` or uses a local process pool. No
-   infrastructure required.
+``stilt run`` also accepts ``--backend`` and ``--n-workers`` to override
+``config.yaml`` for one run, and ``--no-skip`` to rerun everything.
 
-``slurm``
-   Best for large receptor sets on HPC clusters with shared filesystems.
-   Writes immutable chunk files and submits a Slurm array job whose tasks each
-   call ``stilt push-worker``. Project and output roots must be local or
-   shared-filesystem paths.
+Commands PYSTILT runs for you
+-----------------------------
 
-``kubernetes``
-   For cloud-native or container-scale deployments backed by a PostgreSQL work
-   queue and object-store outputs. Requires more infrastructure than the
-   other two backends.
-
-   .. note::
-      The Kubernetes backend is not yet fully implemented. See
-      :doc:`kubernetes` for the current status.
-
-CLI primitives
---------------
-
-These commands surface the executor model regardless of backend:
-
-``stilt run``
-   Register pending simulations and launch workers using the configured
-   executor.  For ``local``, blocks until done.  For ``slurm``, submits the
-   array and returns (fire-and-forget); use ``--wait`` to block.
-
-``stilt register``
-   Publish project inputs and register simulations without launching any
-   workers.  Useful for separating the planning step from execution.
+You won't usually type these; they are what ``stilt run`` launches on each
+Slurm task or cloud worker. They're listed so you recognize them in job
+scripts and logs.
 
 ``stilt push-worker``
-   Execute one immutable chunk of simulation IDs without queue polling or
-   heartbeats.  Used by Slurm task array elements.
+   Runs one fixed list of simulations. Each Slurm array task runs one.
 
-``stilt pull-worker``
-   Claim and execute pending simulations from the work queue.  Used by
-   Kubernetes pods and long-lived local workers.
+``stilt pull-worker`` / ``stilt serve``
+   Take simulations one at a time from a shared queue (PostgreSQL) until it is
+   empty, or, for ``serve``, indefinitely. Used by cloud workers.
 
-``stilt serve``
-   Like ``pull-worker --follow``: keeps polling indefinitely for new claimable
-   work.  Use for always-on queue consumers.
+``stilt register``
+   Saves the project's settings and receptors without running anything.
 
-Simulation state and delivery guarantees
------------------------------------------
+When a simulation fails
+-----------------------
 
-These semantics apply across all backends.
+A failed simulation doesn't stop the others. Its error is in the
+simulation's ``stilt.log``, and it stays unfinished, so the next
+``stilt run`` tries it again. Fix the cause (often missing meteorology) and
+run again; finished simulations are skipped. In Python,
+``sim.status`` gives a short failure reason and ``sim.log`` the full log.
 
-.. list-table::
-   :header-rows: 1
-   :widths: 25 75
-
-   * - Area
-     - Current behavior
-   * - Delivery guarantee
-     - At-least-once processing. A simulation can be retried after interruption
-       or failure.
-   * - Trajectory status
-     - ``pending → running → complete`` or ``failed``.
-   * - Footprint status
-     - ``complete``, ``complete-empty``, or ``failed`` per footprint name.
-   * - Empty footprint
-     - Treated as terminal success (``complete-empty``), not failure. No NetCDF
-       file is written or expected for empty footprints.
-   * - Reruns
-     - ``skip_existing=True`` avoids rework for already complete outputs.
-       ``skip_existing=False`` forces a full rerun regardless of prior state.
+A footprint that is empty because no particle reached the grid is not a
+failure. It is recorded with a ``.empty`` file and counts as finished (see
+:doc:`../outputs`).

@@ -1,10 +1,11 @@
-Migrating From X-STILT
-======================
+Coming From X-STILT
+===================
 
-X-STILT users usually care about column-aware receptor geometry, averaging
-kernel and pressure weighting, and product-driven overpass workflows. PYSTILT
-ports those as small objects and functions rather than as scripts, and stays
-more generic than X-STILT in this alpha.
+PYSTILT includes the main pieces of X-STILT's column and satellite workflow:
+column and slant receptors, sounding selection, averaging kernels, and
+pressure weighting. They are Python functions and objects you combine in
+your own script rather than one large script to configure. Full X-STILT
+parity is not a goal; the table shows what has an equivalent.
 
 .. list-table::
    :header-rows: 1
@@ -44,8 +45,8 @@ more generic than X-STILT in this alpha.
      - ``error_functions/``, ``background/``
      - not ported; error trajectories and ``FootprintConfig.error`` are the building block
 
-Practical migration strategy
-----------------------------
+Moving a workflow over
+----------------------
 
 1. write a reader that turns your product into ``Observation`` objects
    (see *Adding your own instrument* in :doc:`/advanced/observations`)

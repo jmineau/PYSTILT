@@ -1,12 +1,17 @@
-Kubernetes
-==========
+In The Cloud (Kubernetes)
+=========================
 
 .. warning::
 
-   The Kubernetes backend is **not yet fully implemented**.  The config keys,
-   manifest helpers, and pull-dispatch wiring described here are present in
-   the codebase but have not been validated end-to-end.  Use ``local`` or
-   ``slurm`` for production work.  Contributions are welcome.
+   The Kubernetes backend is **experimental and not yet fully tested**. The
+   pieces described here exist in the code but haven't been validated end to
+   end. Use :doc:`local` or :doc:`slurm` for real work. Contributions are
+   welcome.
+
+This page is for people running PYSTILT on cloud infrastructure. Unlike the
+local and Slurm backends, cloud workers don't get a fixed list of
+simulations. Each one repeatedly takes the next unfinished simulation from a
+shared queue in a PostgreSQL database until the queue is empty.
 
 PYSTILT supports two Kubernetes-oriented patterns:
 
@@ -18,8 +23,8 @@ PYSTILT supports two Kubernetes-oriented patterns:
 
 Both patterns depend on a shared PostgreSQL-backed work queue.
 
-Batch-mode executor
--------------------
+Run a batch of workers
+----------------------
 
 The executor path creates a Kubernetes Job whose pods run:
 
@@ -42,8 +47,8 @@ Use this when you want a single bounded drain of currently pending
 simulations: all pods start together, process until the queue is empty, and
 exit.
 
-Service-style workers
----------------------
+Always-on workers
+-----------------
 
 For always-on execution, ``stilt.service.kubernetes`` exposes helper functions
 for rendering:
@@ -57,8 +62,8 @@ This path is separate from ``KubernetesExecutor``: it targets deployments
 where pods keep polling for new work as it arrives, rather than draining a
 fixed batch.
 
-Required runtime pieces
------------------------
+What you need
+-------------
 
 Both patterns currently assume:
 

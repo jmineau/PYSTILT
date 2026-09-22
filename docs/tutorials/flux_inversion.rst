@@ -1,26 +1,35 @@
-Tutorial: Footprint Aggregation And Flux Estimation
-===================================================
+Tutorial: From Footprints To Concentrations
+===========================================
 
-This tutorial shows the next common step after generating footprints: combine
-them with a flux description to estimate concentration enhancements.
+A footprint says how much each grid cell influences a measurement. Multiply it
+by how much each cell emits, add it all up, and you get the concentration
+increase the measurement should show (its *enhancement* above background).
+This is the link between transport and emissions that inversions are built
+on.
+
+The units make this work. Footprints are in ppm per (µmol m⁻² s⁻¹). Multiply
+by fluxes in µmol m⁻² s⁻¹ and sum over cells and hours, and the result is in
+ppm.
 
 What you'll learn
 -----------------
 
-- how to aggregate footprint sensitivity at discrete source locations
-- how to convolve integrated footprints with a gridded inventory
-- how to build a simple modeled enhancement time series
+- how to model enhancements from a few point sources
+- how to model enhancements from a gridded emissions inventory
+- how to compare modeled and observed concentrations
 
 Starting point
 --------------
 
-Assume you already have a project with footprints, for example from
-:doc:`wbb_stationary`.
+This tutorial uses the project and ``model`` from :doc:`wbb_stationary`.
+Any project with footprints works.
 
-Point-source aggregation
-------------------------
+A few point sources
+-------------------
 
-Use :meth:`stilt.Footprint.aggregate` when you have discrete source locations:
+For a handful of known sources, add up each footprint over a small window
+around each source with :meth:`stilt.Footprint.aggregate`, then multiply by
+the source's flux:
 
 .. code-block:: python
 
@@ -31,6 +40,7 @@ Use :meth:`stilt.Footprint.aggregate` when you have discrete source locations:
 
    footprints = model.footprints["wbb"].load(mets="hrrr")
 
+   # longitude, latitude, flux (µmol m⁻² s⁻¹, averaged over the window)
    sources = {
        "landfill": (-111.970, 40.515, 45.0),
        "wwtp": (-112.015, 40.779, 120.0),
@@ -59,11 +69,12 @@ Use :meth:`stilt.Footprint.aggregate` when you have discrete source locations:
 
    modeled = pd.concat(rows, axis=1).T
 
-Gridded inventory convolution
------------------------------
+A gridded inventory
+-------------------
 
-For gridded inventories, integrate the footprint over time and multiply cell by
-cell:
+For an emissions map, put the inventory on the footprint's grid, multiply cell
+by cell, and sum. The inventory must be in µmol m⁻² s⁻¹. Summing the
+footprint over time first assumes emissions are constant over the 24 hours:
 
 .. code-block:: python
 
@@ -93,14 +104,20 @@ Comparing with observations
 
    import matplotlib.pyplot as plt
 
+   # observed CH4 minus background, in ppm
    observed = pd.read_csv("observations.csv", index_col="time", parse_dates=True)
 
    fig, ax = plt.subplots(figsize=(12, 4))
-   observed["ch4_ppm"].plot(ax=ax, label="Observed", color="k", alpha=0.7)
+   observed["ch4_enhancement_ppm"].plot(ax=ax, label="Observed", color="k", alpha=0.7)
    modeled["enhancement_ppm"].plot(ax=ax, label="Modeled enhancement", color="tab:red")
    ax.legend()
-   ax.set_ylabel("CH4 (ppm)")
+   ax.set_ylabel("CH4 enhancement (ppm)")
    plt.tight_layout()
 
-This is still only the footprint-times-flux part of an inversion workflow, but
-it is the central bridge from transport to emissions analysis.
+The modeled values are enhancements only. Before comparing, subtract a
+background (the concentration of air arriving from outside the domain) from
+the observations, or add one to the model.
+
+This is the forward half of an inversion. An inversion goes the other way:
+it adjusts the emissions until the modeled enhancements best match the
+observations.

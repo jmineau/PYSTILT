@@ -23,6 +23,13 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **Documentation rewritten for new users.** Plain-language landing page and
+  "What Is STILT?"; a quickstart that goes from one receptor to a footprint
+  map; a glossary; user-guide pages organized by task; a STILT-R settings
+  mapping table; and a Slurm guide covering the `setup:` option. Examples
+  were checked against the current API.
+- The R implementation is referred to as **STILT-R** throughout docs,
+  docstrings, and comments.
 - **Slant receptor pipeline simplified.** `build_slant_receptor(observation,
   altitudes)` takes the altitude samples directly; the path is anchored at
   `observation.altitude` (now required) in `observation.altitude_ref`, and
@@ -57,7 +64,7 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   0.01° extents starting on the 0.01° grid were affected; integer-degree
   bounds were always exact. The tolerance now scales with the bounds, so
   `Grid.axes` and footprint rasters have the intended cells and agree with
-  R-STILT's `seq()` count.
+  STILT-R's `seq()` count.
 
 ## [0.1.0a12] - 2026-09-21
 
@@ -414,7 +421,7 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [0.1.0a1] - 2026-05-12
 
 First public alpha of PYSTILT — a typed Python implementation of the
-[R-STILT](https://github.com/uataq/stilt) framework for Stochastic
+[STILT-R](https://github.com/uataq/stilt) framework for Stochastic
 Time-Inverted Lagrangian Transport modeling.
 
 ### Core transport
@@ -484,7 +491,7 @@ Time-Inverted Lagrangian Transport modeling.
 
 ### Tests
 
-- **R-STILT parity**: 20 fidelity scenarios in `tests/fixtures/r_stilt_reference.py`
+- **STILT-R parity**: 20 fidelity scenarios in `tests/fixtures/r_stilt_reference.py`
   validate PYSTILT footprints against a pinned commit of
   [uataq/stilt](https://github.com/uataq/stilt) (`e2feb358`) at `rtol=1e-7`
   per cell; scenarios cover point/column/multipoint receptors, 6 h and 24 h

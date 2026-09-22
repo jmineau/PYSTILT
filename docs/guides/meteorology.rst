@@ -1,83 +1,100 @@
 Meteorology
 ===========
 
-STILT requires gridded meteorological fields in NOAA ARL format. PYSTILT
-supports two ways to provide them:
+STILT moves particles with gridded weather-model fields: winds, temperature,
+turbulence, and boundary-layer height. These must be in NOAA's :term:`ARL`
+format, which NOAA publishes for HRRR, NAM, GDAS, GFS, and other models.
 
-- **Archive mode** — point PYSTILT at a directory of ARL files you already
-  have. PYSTILT globs for the right files at runtime.
-- **Source mode** — let PYSTILT download from NOAA archives automatically
-  via the `arl-met <https://github.com/jmineau/arl-met>`_ package.
+You can give PYSTILT meteorology in two ways:
 
-Both modes stage the required files into each simulation's compute-local
-directory. Both support optional spatial subsetting.
+- **Use files you already have**, such as a research group's archive.
+- **Download them from NOAA.** PYSTILT fetches the files it needs and keeps
+  them for later runs.
 
-``MetConfig``
-   Output configuration stored in ``config.yaml``.
+Each meteorology source gets a name in ``config.yaml`` (``hrrr`` below). The
+name goes into every simulation ID, so you can run the same receptors with
+several sources and compare.
 
-``MetStream``
-   The runtime object that resolves and stages required files for one named
-   met stream.
+Use files you already have
+--------------------------
 
+Tell PYSTILT the folder, the pattern of the filenames, and how many hours
+each file covers:
 
-Archive mode
-------------
+.. code-block:: yaml
 
-Point ``directory`` at your ARL file tree and tell PYSTILT how filenames
-encode time:
+   mets:
+     hrrr:
+       directory: /data/met/hrrr
+       file_format: "%Y%m%d_%H"
+       file_tres: 6h
+
+``directory``
+   The folder holding the files. Subfolders are searched too.
+
+``file_format``
+   The filenames with the date replaced by `strftime codes
+   <https://docs.python.org/3/library/datetime.html#format-codes>`_: ``%Y``
+   year, ``%m`` month, ``%d`` day, ``%H`` hour. Files named
+   ``20230715_18`` match ``"%Y%m%d_%H"``; files named
+   ``hysplit.20230715.18z.hrrra`` match ``"hysplit.%Y%m%d.%Hz.hrrra"``.
+
+``file_tres``
+   How much time each file covers, such as ``1h``, ``3h``, or ``6h``.
+
+For each simulation, PYSTILT works out which files cover the receptor time
+and the ``n_hours`` before it, and looks for exactly those. If the files
+aren't there, the simulation fails with a clear error instead of running
+with incomplete meteorology. ``n_min`` sets the minimum
+number of files a run needs (default 1).
+
+In Python the same settings are a dictionary or a :class:`~stilt.MetConfig`:
 
 .. code-block:: python
-
-   import stilt
 
    hrrr = stilt.MetConfig(
        directory="/data/met/hrrr",
        file_format="%Y%m%d_%H",
-       file_tres="1h",
-       n_min=2,
+       file_tres="6h",
    )
 
-You can register multiple streams in one ``ModelConfig``:
+Several sources at once:
 
-.. code-block:: python
+.. code-block:: yaml
 
-   config = stilt.ModelConfig(
-       mets={
-           "hrrr": hrrr,
-           "gfs": stilt.MetConfig(
-               directory="/data/met/gfs",
-               file_format="gfs_%Y%m%d_%H",
-               file_tres="3h",
-           ),
-       },
-   )
-
-How file selection works
-~~~~~~~~~~~~~~~~~~~~~~~~
-
-At runtime, ``MetStream.required_files()`` computes the simulation time window,
-derives the required filename patterns from ``file_format`` and ``file_tres``,
-and globs for matching ARL files recursively under ``directory``. Each expected
-time step triggers one targeted search rather than a full directory scan, which
-keeps I/O proportional to the number of time steps needed rather than the size
-of the archive.
-
-If too few files are found, the run fails clearly instead of silently starting
-with incomplete meteorology.
+   mets:
+     hrrr:
+       directory: /data/met/hrrr
+       file_format: "%Y%m%d_%H"
+       file_tres: 6h
+     gfs:
+       directory: /data/met/gfs
+       file_format: "gfs_%Y%m%d_%H"
+       file_tres: 3h
 
 
-Source mode (automatic download)
----------------------------------
+Download from NOAA
+------------------
 
-Set ``source`` to an arlmet source name to have PYSTILT fetch ARL files from
-NOAA archives automatically:
+Set ``source`` to one of NOAA's products and ``directory`` to where the
+downloads should go. You don't need ``file_format`` or ``file_tres``:
 
-.. code-block:: python
+.. code-block:: yaml
 
-   hrrr = stilt.MetConfig(
-       source="hrrr",
-       directory="/data/met/hrrr",  # local cache directory
-   )
+   mets:
+     hrrr:
+       source: hrrr
+       directory: /data/met/hrrr     # downloads are kept here
+
+Downloading needs the ``cloud`` extra: ``pip install "pystilt[cloud]"``.
+The downloads are handled by the `arl-met <https://github.com/jmineau/arl-met>`_ package.
+
+.. warning::
+
+   NOAA's files cover a whole continent or the globe, so each one is large
+   (often gigabytes), and the full file is downloaded before any cropping.
+   Crop to your region (below) so what is kept is small, and download on a
+   machine with a fast connection and plenty of disk space.
 
 Available sources:
 
@@ -137,28 +154,23 @@ supports a ``domain`` parameter:
        directory="/data/met/nams_ak",
    )
 
-The ``backend`` field selects the download source (default ``"s3"``):
+The ``backend`` field picks where to download from (default ``"s3"``,
+NOAA's archive on AWS):
 
 .. code-block:: python
 
    MetConfig(source="gdas1", directory="/data/met/gdas1", backend="ftp")
 
-Downloaded files are cached in ``directory``. Re-running with the same config
-skips already-downloaded files.
-
-.. note::
-
-   Download mode requires ``fsspec`` and ``s3fs`` (for the default S3
-   backend). Install with: ``pip install pystilt[cloud]``
+Files already in ``directory`` are not downloaded again.
 
 
-Subsetting
-----------
+Cropping to your region
+-----------------------
 
-Setting ``subgrid_enable=True`` restricts the meteorology to a spatial
-bounding box before staging. This is strongly recommended for global products
-(GFS, GDAS, Reanalysis) and useful on HPC where compute nodes have limited
-memory.
+Setting ``subgrid_enable=True`` crops the meteorology to a box around your
+region before HYSPLIT reads it. Smaller files mean faster runs and less
+memory. This is strongly recommended for global products (GFS, GDAS,
+Reanalysis) and helps on clusters where nodes have limited memory.
 
 .. code-block:: python
 
@@ -172,13 +184,13 @@ memory.
        subgrid_buffer=0.5,   # degrees added on each side (default 0.2)
    )
 
-In **source mode**, subsetting is applied during download — the cropped file
-is cached directly so subsequent runs reuse it.
+When **downloading**, each file is cropped right after download and only the
+cropped copy is kept.
 
-In **archive mode**, subsetting is applied the first time a file is needed.
+With **your own files**, each file is cropped the first time it is needed.
 Cropped copies are cached in ``subgrid_dir`` (defaults to
 ``<directory>/subgrid``) and reused by all simulations that share the same
-met stream. Set ``subgrid_dir`` explicitly to use a shared cache across
+meteorology source. Set ``subgrid_dir`` explicitly to use a shared cache across
 multiple projects:
 
 .. code-block:: python
@@ -202,14 +214,11 @@ Use ``subgrid_levels`` to also reduce the number of vertical levels:
    )
 
 
-Staging into compute-local space
----------------------------------
+Where HYSPLIT reads the files
+-----------------------------
 
-``Simulation.met_files`` stages the selected meteorology files into the
-simulation's compute-local ``met/`` directory using link-or-copy semantics.
-
-This matters when:
-
-- your archive is read-only
-- workers use a slower shared filesystem for output
-- HYSPLIT should read from a short local path in scratch space
+Before each simulation, PYSTILT links (or, if linking isn't possible,
+copies) the meteorology files it needs into that simulation's working
+folder, and HYSPLIT reads them from there. Your archive is never modified, so
+it can be read-only, and on a cluster HYSPLIT can read from fast local
+scratch space (see ``compute_root`` in :doc:`project_layout`).

@@ -146,6 +146,7 @@ anchors the path at that altitude:
 
 .. code-block:: python
 
+   import numpy as np
    from stilt.observations import build_slant_receptor, group_by_overpass
 
    def slant(obs):

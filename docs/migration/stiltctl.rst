@@ -1,8 +1,10 @@
-Migrating From stiltctl
-=======================
+Coming From stiltctl
+====================
 
-The clearest architectural change is that queue-backed execution is now part of
-PYSTILT itself rather than a separate control-plane package.
+For stiltctl users running STILT on cloud infrastructure. In PYSTILT the
+work queue and workers are part of the package itself, not a separate
+service. That part of PYSTILT is still experimental
+(:doc:`../guides/execution/kubernetes`).
 
 .. list-table::
    :header-rows: 1
@@ -23,22 +25,21 @@ PYSTILT itself rather than a separate control-plane package.
    * - Kubernetes manifests
      - Helm / KEDA / helper tooling
      - ``stilt.service.kubernetes`` helper functions
-   * - Output registry
+   * - Tracking what has run
      - PostgreSQL queue tables
-     - ``receptors.csv`` × met streams, completion by key, plus an optional PostgreSQL work queue via ``PYSTILT_DB_URL``
+     - the outputs themselves (:doc:`../advanced/output_state`), plus a PostgreSQL work queue via ``PYSTILT_DB_URL`` for cloud workers
 
 Why it matters
 --------------
 
 - one package now owns the science-facing model and the worker runtime
-- local, HPC, and cloud execution all share one output project model
+- local, HPC, and cloud runs all use the same project folder layout
 - fewer cross-package compatibility problems
 
 What to re-check
 ----------------
 
 - database connectivity and secrets
-- whether your deployment is push-style or pull-style
 - whether the project root is a cloud URI and where workers get scratch (``compute_root``)
 - any Kubernetes YAML that assumed older CLI flags or resource names
 

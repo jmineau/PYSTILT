@@ -1,112 +1,83 @@
-Local Executor
-==============
+On Your Computer
+================
 
-The ``local`` backend is the default.  It runs simulations directly on the
-current machine, either in a single process or across a local process pool.
-This is the right choice for notebooks, workstation batch runs, and anything
-that fits on one machine.
+Running locally is the default. With no ``execution`` section in
+``config.yaml``, simulations run one after another in the current process.
+This is the right choice for notebooks, scripts, and anything that finishes
+in a reasonable time on one machine.
 
-Configuration
--------------
+Use several CPU cores
+---------------------
+
+To run several simulations at once, set ``n_workers``:
 
 .. code-block:: yaml
 
    execution:
      backend: local
-     n_workers: 4   # omit or set to 1 for single-process
+     n_workers: 4
 
-Or override at the CLI without touching config.yaml:
+or for a single run from the command line:
 
 .. code-block:: bash
 
-   stilt run ./project --backend local --n-workers 4
+   stilt run ./my_project --n-workers 4
 
-``n_workers: 1`` runs all simulations in one worker; ``n_workers > 1`` uses a
-``multiprocessing`` pool.  The CLI always blocks until all local workers finish.
+Each worker is a separate process running one simulation at a time, so
+``n_workers`` should be at most the number of CPU cores you have.
 
-Python and notebook usage
+From Python or a notebook
 -------------------------
-
-Build a model in memory and call ``run()``:
 
 .. code-block:: python
 
    import stilt
 
    model = stilt.Model(
-       project="./case",
-       receptors=[
-           stilt.PointReceptor(
-               time="2023-01-01 12:00:00",
-               longitude=-111.85,
-               latitude=40.77,
-               altitude=5.0,
-           )
-       ],
-       config=stilt.ModelConfig(
-           mets={
-               "hrrr": stilt.MetConfig(
-                   directory="/data/hrrr",
-                   file_format="%Y%m%d_%H",
-                   file_tres="1h",
-               )
-           }
-       ),
+       project="./my_project",
+       receptors=receptors,
+       mets={"hrrr": {"directory": "/data/hrrr", "file_format": "%Y%m%d_%H", "file_tres": "6h"}},
+       footprints={"slv": {"xmin": -114, "xmax": -111, "ymin": 39, "ymax": 42, "xres": 0.01, "yres": 0.01}},
+       execution={"backend": "local", "n_workers": 4},
    )
 
    model.run()
 
-``model.run()`` is equivalent to ``stilt run`` from the CLI — it persists the
-inputs and dispatches every incomplete simulation through the configured backend.
+``model.run()`` does the same as ``stilt run``: it saves ``config.yaml`` and
+``receptors.csv`` to the project folder, runs every unfinished simulation,
+and returns when they are done.
 
-Querying outputs
-----------------
-
-``model.simulations`` is every receptor crossed with every met stream.  Use it
-to inspect or filter completed work without re-running:
+Then check on the results:
 
 .. code-block:: python
 
-   ids = model.simulations.ids()
-   incomplete = model.simulations.incomplete()
+   model.status()                          # finished vs remaining
+   model.simulations.incomplete()          # IDs still to run
+   footprints = model.footprints["slv"].load()
 
-For cross-simulation access, use the model-level collections:
+Python or the command line?
+---------------------------
 
-.. code-block:: python
+Use **Python** when you're exploring in a notebook, generating receptors in
+code, or want to analyze results right after the run.
 
-   trajectory_paths = model.trajectories.paths()
-   footprints = model.footprints["default"].load()
+Use the **command line** when the project is already set up on disk, or when
+running from a batch script.
 
-Register first, execute later
-------------------------------
+Both read and write the same project folder, so you can mix them: set up and
+run with ``stilt run``, then analyze in a notebook with
+``stilt.Model(project=...)``.
 
-For more control, split registration from execution:
+Advanced: save now, run later
+-----------------------------
+
+``model.register()`` saves the settings and receptors to the project folder
+without running anything, and returns the simulation IDs:
 
 .. code-block:: python
 
    sim_ids = model.register()
 
-At that point ``config.yaml`` and ``receptors.csv`` are in the project store
-and any worker can rebuild the model from the root.  You can then:
-
-- call ``model.run()`` immediately
-- call ``run_simulations(model, sim_ids, n_cores=...)`` yourself
-- drain a queue later with ``pull_simulations()``
-
-This pattern is useful when generating receptors programmatically before
-handing off to a long-running workflow.
-
-When to use Python vs the CLI
-------------------------------
-
-Prefer the **Python API** when:
-
-- iterating in a notebook
-- generating receptors programmatically
-- you want direct access to model collections and output objects after a run
-
-Prefer the **CLI** when:
-
-- the project already lives on disk with a config.yaml
-- launching workers from batch scripts or container entrypoints
-- you want a clean shell boundary around registration, status, and serving
+Any machine that can see the folder can then run the project, with
+``stilt run``, or directly with
+:func:`stilt.execution.run_simulations`.

@@ -1,12 +1,12 @@
-Observations And Scenes
-=======================
+Satellite And Column Observations
+=================================
 
-``stilt.observations`` is the science-facing layer above :class:`stilt.Receptor`
-for measurements and retrievals that are not already STILT receptors: tower
-records with metadata, TCCON columns, satellite soundings with viewing
-geometry and averaging kernels. It ports X-STILT's observation handling as a
-small set of objects and functions, each of which you can replace with your
-own.
+A single tower measurement becomes a receptor directly. Satellite soundings,
+column retrievals (TCCON, EM27/SUN), and other observations with viewing
+geometry and averaging kernels need more steps: choosing which soundings to
+run, turning each into the right receptor, and weighting the particles
+afterwards. ``stilt.observations`` provides the pieces for that, following
+X-STILT, as small objects and functions you can replace with your own.
 
 The four steps
 --------------
@@ -25,7 +25,8 @@ built-in functions; your code provides the reader and any custom pieces.
    overpass with :func:`~stilt.observations.group_by_overpass`.
 3. **Build receptors** from each observation's coordinates with the
    :class:`~stilt.Receptor` classes directly, or with
-   :func:`~stilt.observations.build_slant_receptor` for a slant path.
+   :func:`~stilt.observations.build_slant_receptor` for a slant path
+   (:doc:`../guides/slant_columns`).
 4. **Weight** with particle transforms (:doc:`transforms`), per footprint in
    ``config.yaml`` or per observation through ``observation.transforms``.
 

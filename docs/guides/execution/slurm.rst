@@ -1,106 +1,104 @@
-Slurm
-=====
+On An HPC Cluster (Slurm)
+=========================
 
-The ``slurm`` backend is the HPC path for large receptor sets on shared
-filesystems.  It uses push dispatch: the coordinator writes immutable chunk
-files and submits a Slurm array job whose tasks each call ``stilt
-push-worker``.
+For thousands of simulations, run them as a Slurm job array. PYSTILT splits
+the unfinished simulations into groups, writes the job script, and submits
+it. You don't write any Slurm scripts yourself.
 
-How it works
-------------
+Your project folder must be on a filesystem that the compute nodes can see
+(a shared home, group, or scratch space).
 
-Running ``stilt run`` with ``backend: slurm``:
+Set it up
+---------
 
-1. Persists ``config.yaml`` and ``receptors.csv`` and finds the incomplete simulations.
-2. Writes immutable chunk files under ``<project>/chunks/<batch_id>/``.
-3. Renders a submission script under ``<project>/slurm/``.
-4. Submits a Slurm array job — one task per chunk — via ``sbatch``.
-
-Workers run ``stilt push-worker`` independently; no inter-task communication
-is required after submission.
-
-Configuration
--------------
-
-Minimal config:
+Add an ``execution`` section to ``config.yaml``:
 
 .. code-block:: yaml
 
    execution:
      backend: slurm
-     n_workers: 200
-     partition: mypartition
-     account: myaccount
-     time: "00:20:00"
+     n_workers: 200              # number of array tasks
+     account: my-account
+     partition: my-partition
+     time: "02:00:00"            # time limit per array task
+     mem: 4G
+     setup:                      # shell commands run at the start of each task
+       - module load miniforge3
+       - conda activate my-env
 
-Full example with common knobs:
+``setup`` matters: each task runs the ``stilt`` command, so it must be able to
+find the Python environment where PYSTILT is installed.
 
-.. code-block:: yaml
+Then submit:
 
-   execution:
-     backend: slurm
-     n_workers: 200
-     partition: mypartition
-     account: myaccount
-     time: "00:20:00"
-     mem: 2G
-     cpus-per-task: 2
-     array_parallelism: 50
+.. code-block:: bash
 
-Key options
------------
+   stilt run ./my_project
 
-``n_workers``
-   Number of chunk shards to create, and therefore the maximum array-task
-   count.  Each worker processes its chunk sequentially; tune this alongside
-   ``array_parallelism`` to control cluster load.
+``stilt run`` prints the Slurm job ID and returns once the job is submitted.
+Add ``--wait`` to keep watching until it finishes.
 
-``cpus-per-task``
-   Passed through both to Slurm (``#SBATCH --cpus-per-task``) and to
-   ``stilt push-worker --cpus`` so that each task uses a matching local process
-   pool for within-chunk parallelism.
+Options
+-------
+
+``n_workers`` (required)
+   How many array tasks to split the simulations into. With 10,000
+   simulations and ``n_workers: 200``, each task runs 50 one after another.
+   Set ``time`` long enough for one task's share.
+
+``cpus_per_task``
+   CPUs per array task (default 1). With more than one, each task runs that
+   many simulations at the same time.
 
 ``array_parallelism``
-   Limits simultaneously active array tasks via the ``%N`` Slurm syntax
-   (e.g. ``--array=0-199%50``).  Useful for staying within fair-share limits.
+   The most tasks allowed to run at once, to stay within your group's limits.
+   ``array_parallelism: 50`` becomes ``--array=0-199%50``.
 
-Any additional keys in the ``execution`` block are forwarded to ``sbatch`` as
-``--key=value`` flags, with underscores converted to dashes.
+``setup``
+   Shell commands to run at the start of each task, before PYSTILT: loading
+   modules, activating an environment, setting environment variables.
 
-Submitting from the CLI
------------------------
+Anything else
+   Every other key is passed to ``sbatch`` as a flag, with underscores turned
+   into dashes: ``mem_per_cpu: 2G`` becomes ``--mem-per-cpu=2G``, and
+   ``qos: normal`` becomes ``--qos=normal``.
 
-Fire-and-forget (common for production runs):
-
-.. code-block:: bash
-
-   stilt run /path/to/project
-
-The CLI prints the submitted job ID and returns after ``sbatch`` accepts the
-array.
-
-Block until the array finishes (useful for debugging or scripted workflows):
+Watch progress and rerun
+------------------------
 
 .. code-block:: bash
 
-   stilt run /path/to/project --wait
+   squeue -u "$USER"            # Slurm's view
+   stilt status ./my_project    # finished vs remaining simulations
 
-Monitoring and reruns
----------------------
-
-Use the Slurm scheduler and ``stilt status`` together:
+If tasks time out, are preempted, or fail, just run the same command again:
 
 .. code-block:: bash
 
-   squeue -u "$USER"
-   stilt status /path/to/project
+   stilt run ./my_project
 
-Rerunning the same ``stilt run`` is safe — completed simulations are skipped
-by default.  Use ``--no-skip`` only when you want to force a full rerun.
+Only unfinished simulations are submitted. Use ``--no-skip`` to force
+everything to run again.
 
-Current constraint
-------------------
+What PYSTILT writes
+-------------------
 
-The Slurm backend currently requires both the project root and the output
-output root to be local or shared filesystem paths.  Cloud URIs
-(``s3://``, ``gs://``, etc.) are not supported for this backend.
+Each submission adds:
+
+.. code-block:: text
+
+   my_project/
+     chunks/<date_time>/task_0.txt, task_1.txt, ...   # simulation IDs for each task
+     slurm/submit_<date_time>.sh                      # the script given to sbatch
+     slurm/logs/0.out, 0.err, ...                     # output from each task
+
+Each array task runs ``stilt push-worker`` on its ``task_N.txt`` list. If a
+task fails, look in ``slurm/logs/`` for task-level problems (for example, the
+environment not activating) and in each simulation's ``stilt.log`` for
+HYSPLIT problems.
+
+Limitations
+-----------
+
+The project must be a local or shared-filesystem folder. Projects stored in
+cloud buckets (``s3://``, ``gs://``) can't use the Slurm backend.

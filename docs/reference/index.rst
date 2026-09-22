@@ -1,19 +1,21 @@
 API Reference
 =============
 
-This page gives an overview of the documented PYSTILT API. The public surface
-is grouped by workflow area, closer to how pandas organizes its reference:
+Every public class and function, grouped by what it's for. If you're
+looking for how to do something rather than what a function takes, the
+:doc:`../guides/index` is a better starting point.
 
-- ``stilt`` for project models, receptors, simulations, and outputs
-- ``stilt.config`` for output configuration and STILT parameter models
-- ``stilt.execution`` for local, Slurm, and Kubernetes execution
-- ``stilt.transforms`` for particle transforms (averaging kernel, pressure weighting, lifetime)
-- ``stilt.observations`` for observations, scenes, receptor builders, and selection
-- ``stilt.project`` and ``stilt.store`` for project roots and output stores
-
-.. warning::
-
-   PYSTILT is still in alpha. Expect APIs and workflow changes.
+- :doc:`core`: ``Model``, receptors, simulations, trajectories, footprints,
+  and spatial geometries
+- :doc:`configuration`: every ``config.yaml`` option
+- :doc:`meteorology`: finding and staging meteorology files
+- :doc:`execution`: running simulations locally, on Slurm, or on Kubernetes
+- :doc:`transforms`: particle weighting (averaging kernel, pressure
+  weighting, lifetime)
+- :doc:`observations`: observations, scenes, and receptor builders for
+  column and satellite work
+- :doc:`project`: project folders and storage backends
+- :doc:`hysplit`: the low-level HYSPLIT driver
 
 .. toctree::
    :maxdepth: 2

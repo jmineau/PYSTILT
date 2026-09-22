@@ -3,10 +3,7 @@
 Migration
 =========
 
-The migration docs now keep the table-driven style because it is the fastest
-way to translate old mental models into the current alpha package.
-
-Use these pages as concept maps rather than promises of full feature parity.
+Where to find things in PYSTILT if you're used to another STILT tool.
 
 - :doc:`r_stilt`
 - :doc:`x_stilt`

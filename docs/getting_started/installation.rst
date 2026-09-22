@@ -1,66 +1,61 @@
 Installation
 ============
 
-Package install
+Install PYSTILT
 ---------------
 
-Install the base transport package with:
+.. code-block:: bash
+
+   pip install "pystilt[visualization]"
+
+This installs PYSTILT, the ``stilt`` command-line tool, and matplotlib for
+plotting. Check that it worked:
 
 .. code-block:: bash
 
-   pip install pystilt
+   stilt --help
 
-Install optional extras for projections, spatial geometries (shapefiles via
-geopandas, H3 hexagons), visualization, cloud storage, Slurm, and
-Kubernetes-oriented workflows with:
+Optional extras
+---------------
 
-.. code-block:: bash
+Add extras in the brackets to turn on more features, for example
+``pip install "pystilt[visualization,geometry]"``.
 
-   pip install "pystilt[complete]"
+.. list-table::
+   :header-rows: 1
+   :widths: 22 78
 
-Developer install
------------------
+   * - Extra
+     - Adds
+   * - ``visualization``
+     - Plotting (``.plot.map()`` on footprints, trajectories, and receptors).
+   * - ``projection``
+     - Footprint grids in projected coordinates (anything other than
+       latitude/longitude).
+   * - ``geometry``
+     - Adding footprints up over shapefiles, counties, or H3 hexagons.
+   * - ``cloud``
+     - Downloading meteorology from NOAA, and projects stored in ``s3://``
+       or ``gs://`` buckets.
+   * - ``complete``
+     - Everything above.
 
-From a source checkout, the repository already includes a ``uv.lock`` and a
-``justfile``. A typical developer setup is:
+For maps with coastlines and state borders, also install
+`cartopy <https://scitools.org.uk/cartopy/>`_ (easiest with
+``conda install -c conda-forge cartopy``). PYSTILT uses it automatically when
+it is available.
 
-.. code-block:: bash
+HYSPLIT is included
+-------------------
 
-   uv sync --group dev
+PYSTILT runs NOAA's HYSPLIT program to move particles, and a copy is included
+in the package for:
 
-Bundled HYSPLIT binaries
-------------------------
+- Linux (x86_64)
+- macOS (Intel, x86_64)
 
-PYSTILT resolves bundled HYSPLIT binaries from ``stilt.hysplit.bin`` when it
-can. The current source tree ships platform-specific bundles for:
+On other platforms, or to use your own HYSPLIT build, compile ``hycs_std``
+yourself and point PYSTILT at the folder that contains it with ``exe_dir``
+in ``config.yaml``.
 
-- Linux ``x86_64``
-- macOS ``x86_64``
-
-If your platform is not bundled, the driver expects a compatible ``hycs_std``
-binary available from a directory you provide.
-
-Runtime dependencies you still need to supply
----------------------------------------------
-
-PYSTILT does not manufacture your meteorology archive. You still need:
-
-- ARL-formatted meteorology files for the met streams in ``config.yaml``
-- a writable project or output root
-- PostgreSQL when running claim-based shared workers
-- Slurm or Kubernetes infrastructure when using those executors
-
-Build the docs locally
-----------------------
-
-The repo includes a docs build target:
-
-.. code-block:: bash
-
-   just build-docs
-
-or directly:
-
-.. code-block:: bash
-
-   uv run sphinx-build -M html docs docs/_build
+Next: :doc:`quickstart`.

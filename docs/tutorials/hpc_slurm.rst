@@ -1,81 +1,96 @@
-Tutorial: HPC / Slurm Execution
-===============================
+Tutorial: Scaling Up On A Slurm Cluster
+=======================================
 
-This tutorial shows the standard Slurm pathway for large receptor sets on a
-shared filesystem.
+A year of hourly receptors at one site is almost 9,000 simulations. That's
+too many for a laptop, but a job array on an HPC cluster handles it easily.
+This tutorial moves a project to Slurm.
 
 What you'll learn
 -----------------
 
-- how to scaffold a project
-- how to switch from local execution to ``backend: slurm``
-- how ``stilt run`` maps onto chunk files and array tasks
-- how to monitor and rerun a project safely
+- how to set up a project on a cluster
+- how to switch it from local to Slurm execution
+- how to monitor it and recover from failures
 
-Scaffold a project
-------------------
+Step 1: Create the project on the cluster
+-----------------------------------------
+
+Log in to the cluster, activate the environment where PYSTILT is installed,
+and create a project on a filesystem the compute nodes can see:
 
 .. code-block:: bash
 
-   stilt init /path/to/slv_project
+   stilt init /path/to/shared/slv_2023
 
-Then edit ``config.yaml`` and populate ``receptors.csv``.
+Edit ``config.yaml`` (meteorology and footprint grid, as in
+:doc:`../getting_started/quickstart`) and fill in ``receptors.csv``, or
+generate receptors in Python and pass them to :class:`stilt.Model` as in
+:doc:`wbb_stationary`.
 
-Add Slurm execution settings
-----------------------------
+Step 2: Add Slurm settings
+--------------------------
+
+Add an ``execution`` section to ``config.yaml``. Use your own account and
+partition, and the commands you normally use to activate your environment:
 
 .. code-block:: yaml
 
    execution:
      backend: slurm
-     n_workers: 200
-     partition: notchpeak
-     account: my_account
-     time: "00:20:00"
+     n_workers: 200            # 200 array tasks, about 45 simulations each
+     account: my-account
+     partition: my-partition
+     time: "04:00:00"
      mem_per_cpu: 2G
-     cpus_per_task: 1
-     array_parallelism: 50
+     array_parallelism: 50     # at most 50 tasks running at once
+     setup:
+       - module load miniforge3
+       - conda activate my-env
 
-Submit
-------
+To choose ``time``: time a few simulations locally first (for example by
+running a small test project), multiply by the number per task, and add a
+safety margin. If tasks run out of time, nothing is lost; the next step
+covers resubmitting.
 
-.. code-block:: bash
-
-   stilt run /path/to/slv_project
-
-This normally returns as soon as ``sbatch`` accepts the array job.
-
-``--wait`` is available:
-
-.. code-block:: bash
-
-   stilt run /path/to/slv_project --wait
-
-but it is mainly a convenience for debugging or small demonstrations, not the
-usual HPC pattern.
-
-What happens under the hood
----------------------------
-
-Each array task consumes one immutable chunk file through:
+Step 3: Submit
+--------------
 
 .. code-block:: bash
 
-   stilt push-worker /path/to/slv_project --chunk /path/to/task.txt --cpus 1
+   stilt run /path/to/shared/slv_2023
 
-That means:
+This prints the Slurm job ID and returns. You can log out; the job runs on
+its own.
 
-- no worker-side queue polling is required for Slurm
-- each array task has a fixed work assignment
-- reruns are driven by output status and ``skip_existing``
-
-Monitor and rerun
------------------
+Step 4: Monitor
+---------------
 
 .. code-block:: bash
 
-   squeue -u "$USER"
-   stilt status /path/to/slv_project
+   squeue -u "$USER"                         # Slurm's view of the array
+   stilt status /path/to/shared/slv_2023     # finished vs remaining simulations
 
-To resume after interruption, simply run the same command again. Completed work
-is skipped by default.
+Task output is in ``slurm/logs/`` inside the project. If every task fails
+immediately, check there first: the most common cause is ``setup`` not
+activating the environment, so ``stilt`` can't be found.
+
+Step 5: Resubmit what's left
+----------------------------
+
+When the array finishes, some simulations may not have: tasks that ran out
+of time, were preempted, or hit missing meteorology. Run the same command
+again:
+
+.. code-block:: bash
+
+   stilt run /path/to/shared/slv_2023
+
+Only the unfinished simulations are submitted. Repeat until
+``stilt status`` shows none remaining. For simulations that keep failing,
+read their ``stilt.log``.
+
+Next
+----
+
+- Every Slurm option: :doc:`../guides/execution/slurm`
+- Analyze the results: :doc:`../guides/outputs`

@@ -1,5 +1,5 @@
-Particle Transforms
-===================
+Particle Weighting (Transforms)
+===============================
 
 A footprint is the mean surface influence of a simulation's particles. A
 *transform* changes how much each particle counts before that mean is taken,
