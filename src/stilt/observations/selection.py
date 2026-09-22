@@ -58,9 +58,12 @@ def group_by_overpass(
 
 
 def _haversine_km(
-    lon1: float, lat1: float, lon2: np.ndarray, lat2: np.ndarray
+    lon1: np.ndarray | float,
+    lat1: np.ndarray | float,
+    lon2: np.ndarray | float,
+    lat2: np.ndarray | float,
 ) -> np.ndarray:
-    """Great-circle distance in kilometres from one point to many."""
+    """Great-circle distance in kilometres, broadcasting over the inputs."""
     d_lat = np.radians(lat2 - lat1)
     d_lon = np.radians(lon2 - lon1)
     a = (

@@ -50,9 +50,15 @@ parity is not a goal; the table shows what has an equivalent.
    * - Modelled enhancement from an inventory (``ff.trajfoot``)
      - ``error_functions/``, ``run.xco2ff.sim``
      - :meth:`stilt.Footprint.enhancement`, :func:`stilt.flux.particle_enhancement`
-   * - Wind / mixing-height error statistics from radiosondes
-     - ``get.uverr``, ``get.zierr``
-     - not ported; set ``siguverr`` and friends yourself
+   * - Wind error statistics from radiosondes and surface stations
+     - ``get.uverr``, ``get.siguverr``, ``cal.wind.err``
+     - :func:`~stilt.observations.wind_error_scales` fits all four scales
+       (X-STILT derives only ``siguverr`` and prescribes the rest); sampling
+       the met at observations is ``arlmet.sample_points`` rather than a
+       HYSPLIT run per sonde
+   * - Mixing-height error statistics
+     - ``get.zierr``
+     - not ported; set ``sigzierr`` and friends yourself
    * - Background methods
      - ``background/``
      - not ported

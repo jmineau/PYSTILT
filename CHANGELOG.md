@@ -6,6 +6,20 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **Wind-error statistics** (`stilt.observations.wind_error_scales`,
+  `variogram`, `fit_variogram`): derive `siguverr`, `tluverr`, `zcoruverr`
+  and `horcoruverr` from analysis-minus-observation winds the way Lin and
+  Gerbig (2005) did, by fitting exponential variograms of the error over
+  height, time and distance. Each scale comes from the data that resolves
+  it: the standard deviation and vertical scale from radiosonde profiles,
+  the time and horizontal scales from hourly surface stations (sondes
+  twelve hours apart cannot resolve a time scale of a few hours). Sampling
+  the meteorology at the observations is `arlmet.sample_points(...,
+  earth_relative=True)` (arlmet 0.1.0a8+). New guide: Wind Error
+  Statistics, with the Salt Lake Valley HRRR 2024 values
+
 ## [0.1.0a15] - 2026-09-22
 
 ### Changed

@@ -23,6 +23,8 @@ Each page answers one practical question. If you haven't yet, start with
 - :doc:`outputs`: load, plot, and aggregate footprints and trajectories
 - :doc:`transport_error`: the modelled enhancement for a flux field, and
   how uncertain the transport makes it
+- :doc:`wind_errors`: the wind-error statistics a transport-error run
+  needs, from your meteorology and observed winds
 
 **Column and satellite measurements**
 
@@ -65,6 +67,7 @@ Each page answers one practical question. If you haven't yet, start with
 
    outputs
    transport_error
+   wind_errors
 
 .. toctree::
    :hidden:

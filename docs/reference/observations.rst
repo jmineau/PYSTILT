@@ -28,3 +28,19 @@ trajectories (:doc:`/guides/transport_error`).
 
    stilt.observations.transport_error
    stilt.observations.TransportError
+
+Wind-error statistics
+---------------------
+
+The wind-error settings a transport-error run needs, from
+analysis-minus-observation winds (:doc:`/guides/wind_errors`).
+
+.. autosummary::
+   :toctree: _api
+   :nosignatures:
+
+   stilt.observations.wind_error_scales
+   stilt.observations.WindErrorScales
+   stilt.observations.variogram
+   stilt.observations.fit_variogram
+   stilt.observations.VariogramFit
