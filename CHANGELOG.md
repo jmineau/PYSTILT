@@ -6,6 +6,8 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.0a13] - 2026-09-21
+
 ### Fixed
 
 - **Grids lost their last row or column when the bounds were not exact in
