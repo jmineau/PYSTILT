@@ -25,8 +25,15 @@ Give the transport the error statistics of the meteorology in
 
 Every simulation then writes a second particle table next to the main one,
 ``sim.error_trajectories``, whose particles saw the perturbed winds. Mixed
-layer height errors (``sigzierr``, ``tlzierr``, ``horcorzierr``) work the
-same way. ``FootprintConfig.error: true`` also rasterizes the perturbed
+layer height errors (``sigzierr``, ``tlzierr``, ``horcorzierr``) are set
+the same way, but HYSPLIT applies them differently: each particle's
+footprint increment is multiplied by an independent random factor with that
+standard deviation, and its path is unchanged. Because the factors are
+independent between particles, their effect on the receptor enhancement
+averages away, and their effect on the ensemble variance is small compared
+with the sampling noise of a few thousand particles. PYSTILT's validation
+could not resolve a 50 % mixed-layer error with 3 000 particles.
+``FootprintConfig.error: true`` also rasterizes the perturbed
 particles as an ``{name}_error`` footprint, which is handy for plotting but
 not needed for what follows. The error run doubles the transport cost.
 
