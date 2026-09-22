@@ -241,3 +241,30 @@ def test_regression_flag_reproduces_xstilt_scaling():
     )
     assert xstilt.variance >= 0
     assert xstilt.variance > 0 > signed.levels["dvar"].min()
+
+
+def test_background_field_adds_the_endpoint_spread_to_the_error():
+    from stilt.observations import background
+
+    field = xr.DataArray(
+        np.tile([0.0, 1.0, 2.0], (3, 1)),
+        dims=["lat", "lon"],
+        coords={"lat": [40.0, 41.0, 42.0], "lon": [-112.0, -111.0, -110.0]},
+    )
+    main = _column(spread=1.0, seed=7)  # every endpoint at lon -111: background 1
+    err = _column(spread=1.0, seed=8)
+    err["long"] = np.where(np.arange(len(err)) % 2 == 0, -112.0, -110.0)  # 0 or 2
+
+    still = transport_error(main, main.copy(), FLUX, background=field, noise_splits=0)
+    moved = transport_error(
+        main, err, FLUX, background=field, length_scale=None, noise_splits=0
+    )
+
+    assert still.background == pytest.approx(1.0)
+    assert still.background == pytest.approx(background(main, field).value)
+    assert still.enhancement == pytest.approx(main["foot"].mean() + 1.0)
+    assert still.variance == pytest.approx(0.0)
+    # the perturbed endpoints alternate between 0 and 2: +1 variance per level,
+    # combined uncorrelated over four equal levels -> sum(w^2) = 0.25
+    assert moved.variance == pytest.approx(0.25, rel=0.4)
+    assert transport_error(main, err, FLUX, noise_splits=0).background == 0.0

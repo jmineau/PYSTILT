@@ -29,6 +29,23 @@ trajectories (:doc:`/guides/transport_error`).
    stilt.observations.transport_error
    stilt.observations.TransportError
 
+Background
+----------
+
+The background mole fraction at a receptor, from a field sampled at the
+trajectory endpoints and weighted like the footprint (:doc:`/guides/background`).
+
+.. autosummary::
+   :toctree: _api
+   :nosignatures:
+
+   stilt.observations.background
+   stilt.observations.Background
+   stilt.observations.particle_background
+   stilt.observations.backgrounds.sample_field
+   stilt.observations.backgrounds.endpoint_weights
+   stilt.observations.backgrounds.vertical_dim
+
 Wind-error statistics
 ---------------------
 

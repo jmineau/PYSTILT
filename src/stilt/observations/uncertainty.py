@@ -31,6 +31,12 @@ import pandas as pd
 import xarray as xr
 
 from stilt.flux import particle_enhancement
+from stilt.observations.backgrounds import (
+    default_context,
+    endpoint_weights,
+    fill_missing,
+    particle_background,
+)
 from stilt.transforms import TransformContext, apply_transforms, release_coordinate
 
 #: X-STILT's empirical mean vertical correlation length of transport errors, m.
@@ -61,6 +67,14 @@ class TransportError:
     the perturbation, ``dvar`` their difference, and ``sd_trans`` the signed
     square root of ``dvar`` (or X-STILT's regression-scaled value with
     ``regression=True``).
+
+    With a ``background`` field the per-particle values are the modelled
+    mole fraction, enhancement plus background at the particle's endpoint,
+    so ``enhancement`` and ``enhancement_perturbed`` are then modelled mole
+    fractions and ``variance`` includes the background's response to the
+    wind errors. ``background`` is the weighted background from the
+    unperturbed particles (``0`` when no field was given), so
+    ``enhancement - background`` is the enhancement alone.
     """
 
     variance: float
@@ -69,6 +83,7 @@ class TransportError:
     enhancement_perturbed: float
     levels: pd.DataFrame
     length_scale: float | None
+    background: float = 0.0
 
     @property
     def sd(self) -> float:
@@ -267,6 +282,7 @@ def transport_error(
     percentile: float = 1.0,
     regression: bool = False,
     noise_splits: int = 16,
+    background: xr.DataArray | None = None,
 ) -> TransportError:
     """
     Transport-error variance of the modelled enhancement (Lin and Gerbig, 2005).
@@ -306,6 +322,12 @@ def transport_error(
     noise_splits
         Random half-splits of the unperturbed particles used to estimate
         ``noise``; ``0`` skips it.
+    background
+        A background field to sample at each particle's endpoint (see
+        :func:`~stilt.observations.background`). Wind errors move the
+        endpoints as well as the surface contact, so with a field the
+        statistics are of the modelled mole fraction, enhancement plus
+        background per particle, as X-STILT computes them.
 
     Notes
     -----
@@ -333,24 +355,35 @@ def transport_error(
     if noise_splits < 0:
         raise ValueError("noise_splits must be >= 0.")
     if context is None:
-        context = _default_context()
+        context = default_context()
     transforms = list(transforms)
 
-    tables = []
+    tables, backgrounds = [], []
     for table, is_error in ((particles, False), (error_particles, True)):
+        ctx = TransformContext(
+            receptor=context.receptor,
+            footprint_name=context.footprint_name,
+            is_error=is_error,
+            store=context.store,
+        )
+        if background is not None:
+            # each particle's background, weighted like its enhancement
+            weights = endpoint_weights(table, transforms, ctx)
+            sampled = fill_missing(particle_background(table, background), weights)
+            backgrounds.append(weights * sampled)
         if transforms:
-            ctx = TransformContext(
-                receptor=context.receptor,
-                footprint_name=context.footprint_name,
-                is_error=is_error,
-                store=context.store,
-            )
             table = apply_transforms(table, transforms, ctx)
         tables.append(table)
     main, err = tables
 
     x_orig = particle_enhancement(main, flux)
     x_err = particle_enhancement(err, flux)
+    background_value = 0.0
+    if backgrounds:
+        b_orig, b_err = backgrounds
+        x_orig = x_orig + b_orig.reindex(x_orig.index)
+        x_err = x_err + b_err.reindex(x_err.index)
+        background_value = float(b_orig.mean())
     h_orig = _release_heights(main)
     h_err = _release_heights(err)
 
@@ -385,6 +418,7 @@ def transport_error(
         enhancement_perturbed=float(np.nansum(w * table["mean_err"].to_numpy())),
         levels=table,
         length_scale=length_scale,
+        background=background_value,
     )
 
 
@@ -413,18 +447,6 @@ def _edges_from_levels(
     edges = np.linspace(lo, hi, levels + 1)
     edges[0], edges[-1] = -np.inf, np.inf
     return edges
-
-
-def _default_context() -> TransformContext:
-    """
-    A placeholder context for transforms that do not read it.
-
-    Transforms that do (an averaging-kernel ``table``) need the real one from
-    ``sim.transform_context(name)``.
-    """
-    from stilt.receptors import PointReceptor
-
-    return TransformContext(receptor=PointReceptor("2000-01-01", 0.0, 0.0, 0.0))
 
 
 __all__ = ["DEFAULT_LENGTH_SCALE", "TransportError", "transport_error"]

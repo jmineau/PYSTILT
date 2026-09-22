@@ -60,7 +60,11 @@ parity is not a goal; the table shows what has an equivalent.
    * - Mixing-height error statistics
      - ``get.zierr``
      - not ported; set ``sigzierr`` and friends yourself
-   * - Background methods
+   * - Background from trajectory endpoints (``endpts.trajfoot``, CarbonTracker)
+     - ``background/``
+     - :func:`stilt.observations.background` against any xarray field
+       (:doc:`/guides/background`)
+   * - Satellite-derived plume background (``compute_bg``, forward trajectories)
      - ``background/``
      - not ported
 

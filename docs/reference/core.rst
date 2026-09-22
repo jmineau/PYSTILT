@@ -83,3 +83,4 @@ or along particles, in :mod:`stilt.flux`.
    flux.sample_flux
    flux.particle_enhancement
    flux.horizontal_dims
+   flux.nearest_cell

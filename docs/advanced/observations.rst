@@ -128,9 +128,9 @@ layer thickness. Everything after that is the same for every instrument.
 What this layer does not do
 ---------------------------
 
-It ships no product readers, no background estimation, and no propagation of
-transport error to retrieved columns. Error trajectories and
-``FootprintConfig.error`` provide the transport-error building block; the
-rest is application code. The prior term of a column observation operator
-(pressure weight times one minus kernel times the a priori profile) belongs
-to the inversion, not the footprint.
+It ships no product readers and no readers for background fields: a
+mole-fraction field comes in as an xarray array
+(:doc:`../guides/background`), a flux field the same way
+(:doc:`../guides/transport_error`). The prior term of a column observation
+operator (pressure weight times one minus kernel times the a priori
+profile) belongs to the inversion, not the footprint.

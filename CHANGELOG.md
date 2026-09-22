@@ -6,6 +6,20 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **Background from trajectory endpoints**
+  (`stilt.observations.background`): sample a mole-fraction field (a
+  global model or a curtain, as an xarray array; or values you sampled
+  yourself, one per particle) at each particle's endpoint and average
+  over the particles with the same transforms that weight the footprint,
+  so the background and the enhancement add to the modelled mole
+  fraction. `transport_error` takes the same field as `background=` so
+  the wind errors' effect on the endpoints is part of the error. The new
+  Background guide has the field layout and the choices made.
+  `stilt.trajectory.endpoint_rows` and `stilt.flux.nearest_cell` are
+  the shared pieces.
+
 ## [0.1.0a16] - 2026-09-22
 
 ### Added

@@ -89,8 +89,12 @@ design and column-weighting concepts.  Full X-STILT feature parity is
      - Implemented
    * - Modelled enhancement from a flux field (``Footprint.enhancement``)
      - Implemented
-   * - Inventory coupling and background estimation
-     - Deferred
+   * - Background from a mole-fraction field at the trajectory endpoints (``background``)
+     - Implemented
+   * - Satellite-derived plume background (forward trajectories)
+     - Under consideration
+   * - Inventory readers
+     - Out of scope; a flux field is an xarray array
 
 Future plans
 ------------
@@ -98,8 +102,8 @@ Future plans
 In priority order:
 
 - **Observation-layer maturation**: slant altitudes from a retrieval's
-  pressure levels; background estimation, driven by real column-receptor
-  users.
+  pressure levels; product readers as documented examples; a
+  multi-realization transport error, driven by real column-receptor users.
 - **Spatial geometries and footprint aggregation** (implemented): footprints
   are computed on a rectilinear raster and aggregated onto any state geometry
   (:class:`stilt.Grid`, :class:`stilt.Mesh` from shapefiles / H3 hexagons /

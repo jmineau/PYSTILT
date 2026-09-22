@@ -55,6 +55,22 @@ def _write_parquet_table(
 _MIN_RELIABLE_SPACING_M = 1000.0
 
 
+def endpoint_rows(particles: pd.DataFrame) -> pd.DataFrame:
+    """
+    The row at the far end of each particle's trajectory: its largest ``|time|``.
+
+    One row per ``indx`` with every column of *particles*. The far end is
+    where the air came from for a backward run and where it went for a
+    forward run; a particle that left the domain early ends where it left.
+    """
+    p = particles.reset_index(drop=True)
+    if p.empty:
+        return p
+    reach = p["time"].abs()
+    last = reach.groupby(p["indx"], sort=False).idxmax().to_numpy(dtype=int)
+    return p.iloc[last]
+
+
 def _multipoint_release_heights(
     p: pd.DataFrame, receptor: MultiPointReceptor
 ) -> pd.Series:
@@ -191,15 +207,14 @@ class Trajectories:
         if self.data.empty:
             return pd.DataFrame(columns=pd.Index(cols))
 
-        reach = self.data["time"].abs()
-        ep = self.data.loc[reach.groupby(self.data["indx"], sort=False).idxmax()]
+        ep = endpoint_rows(self.data)
 
         if "datetime" in ep.columns:
             end_time = pd.to_datetime(ep["datetime"]).to_numpy()
         else:
             end_time = (
                 pd.Timestamp(self.receptor.time)
-                + pd.to_timedelta(ep["time"], unit="min")
+                + pd.to_timedelta(ep["time"].to_numpy(dtype=float), unit="min")
             ).to_numpy()
 
         return pd.DataFrame(

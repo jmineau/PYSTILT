@@ -28,7 +28,7 @@ def horizontal_dims(data: xr.DataArray) -> tuple[str, str]:
     )
 
 
-def _nearest_cell(coords: np.ndarray, values: np.ndarray) -> np.ndarray:
+def nearest_cell(coords: np.ndarray, values: np.ndarray) -> np.ndarray:
     """
     Index of the cell whose centre is nearest each value, or ``-1`` outside.
 
@@ -72,8 +72,8 @@ def sample_flux(
     ys = np.asarray(y, dtype=float).ravel()
     if xs.shape != ys.shape:
         raise ValueError("x and y must have the same length.")
-    ix = _nearest_cell(flux[x_dim].to_numpy(), xs)
-    iy = _nearest_cell(flux[y_dim].to_numpy(), ys)
+    ix = nearest_cell(flux[x_dim].to_numpy(), xs)
+    iy = nearest_cell(flux[y_dim].to_numpy(), ys)
     inside = (ix >= 0) & (iy >= 0)
 
     indexers: dict[str, xr.DataArray] = {
@@ -120,4 +120,4 @@ def particle_enhancement(particles: pd.DataFrame, flux: xr.DataArray) -> pd.Seri
     return pd.Series(sums, index=pd.Index(unique, name="indx"), name="enhancement")
 
 
-__all__ = ["horizontal_dims", "particle_enhancement", "sample_flux"]
+__all__ = ["horizontal_dims", "nearest_cell", "particle_enhancement", "sample_flux"]

@@ -165,5 +165,7 @@ reports a positive error at every level. Both are off by default.
 Two limits remain. The method measures how much the perturbed winds move
 particles between flux cells, so it says little when the flux field is
 uniform, and it depends on the wind statistics you gave the run. And it is
-the error in transport only: emission, background and retrieval errors are
-separate terms.
+the error in transport only: emission and retrieval errors are separate
+terms. The background's share of the transport error, from the wind errors
+moving the trajectory endpoints, is included when you pass a background
+field (:doc:`background`).

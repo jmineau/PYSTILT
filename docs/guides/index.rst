@@ -25,6 +25,8 @@ Each page answers one practical question. If you haven't yet, start with
   how uncertain the transport makes it
 - :doc:`wind_errors`: the wind-error statistics a transport-error run
   needs, from your meteorology and observed winds
+- :doc:`background`: what the receptor saw before the domain's fluxes,
+  from a mole-fraction field at the trajectory endpoints
 
 **Column and satellite measurements**
 
@@ -68,6 +70,7 @@ Each page answers one practical question. If you haven't yet, start with
    outputs
    transport_error
    wind_errors
+   background
 
 .. toctree::
    :hidden:

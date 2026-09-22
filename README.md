@@ -76,7 +76,9 @@ design and column-weighting concepts without trying to replicate every script.
 | Product readers (OCO-2/3, TROPOMI, TCCON) | Out of scope: your reader produces a table of soundings |
 | Transport error on the modelled enhancement (`transport_error`) | Implemented |
 | Modelled enhancement from a flux field (`Footprint.enhancement`) | Implemented |
-| Inventory coupling and background estimation | Deferred |
+| Background from a mole-fraction field at the trajectory endpoints (`background`) | Implemented |
+| Satellite-derived plume background (forward trajectories) | Under consideration |
+| Inventory readers | Out of scope: a flux field is an xarray array |
 
 ## Installation
 
