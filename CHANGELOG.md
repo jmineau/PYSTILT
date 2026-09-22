@@ -19,6 +19,14 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Background guide has the field layout and the choices made.
   `stilt.trajectory.endpoint_rows` and `stilt.flux.nearest_cell` are
   the shared pieces.
+- **Slant altitudes from a retrieval's pressure levels**
+  (`stilt.observations.pressure_altitudes`): convert a sounding's pressure
+  levels (OCO-2 `pressure_levels`, TROPOMI's surface pressure and interval)
+  to MSL altitudes for `slant_points`, anchored at the sounding's surface
+  pressure and altitude, with the standard-atmosphere lapse rate, an
+  isothermal scale height, or the retrieval's temperature profile. Levels
+  below the surface or above `top=` are dropped and the result starts at
+  the surface. The slant columns guide has the recipe.
 
 ## [0.1.0a16] - 2026-09-22
 

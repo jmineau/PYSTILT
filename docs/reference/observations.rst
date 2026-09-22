@@ -2,8 +2,9 @@ Observations
 ============
 
 Helpers for column and satellite workflows: overpass grouping, sounding
-selection, pixel jitter, and slant line-of-sight geometry
-(:doc:`/advanced/observations`). They work on plain arrays and tables and
+selection, pixel jitter, and slant line-of-sight geometry with altitudes
+from a retrieval's pressure levels (:doc:`/advanced/observations`,
+:doc:`/guides/slant_columns`). They work on plain arrays and tables and
 produce the inputs to :class:`~stilt.Receptor` objects. Particle weighting,
 including per-receptor averaging-kernel tables, lives in :doc:`transforms`.
 
@@ -15,6 +16,7 @@ including per-receptor averaging-kernel tables, lives in :doc:`transforms`.
    stilt.observations.select_observations_spatial
    stilt.observations.jitter_points
    stilt.observations.slant_points
+   stilt.observations.pressure_altitudes
 
 Transport error
 ---------------

@@ -71,6 +71,7 @@ design and column-weighting concepts without trying to replicate every script.
 | First-order lifetime decay transform | Implemented |
 | Declarative per-footprint transforms in config | Implemented |
 | Slant-column receptor support | Implemented |
+| Slant altitudes from a retrieval's pressure levels (`pressure_altitudes`) | Implemented |
 | User-defined transforms (`kind: my.module.Class`) | Implemented |
 | Per-sounding averaging kernels in batch runs (`averaging_kernel` with `table:`) | Implemented |
 | Product readers (OCO-2/3, TROPOMI, TCCON) | Out of scope: your reader produces a table of soundings |
@@ -221,7 +222,8 @@ footprints:
       - kind: pressure_weighting
 ```
 
-Slant paths come from `slant_points` and `Receptor.from_points`. See the
+Slant paths come from `slant_points` and `Receptor.from_points`, with
+`pressure_altitudes` turning a retrieval's pressure levels into the altitudes. See the
 [observations guide](https://jmineau.github.io/PYSTILT/advanced/observations.html)
 and the [slant columns guide](https://jmineau.github.io/PYSTILT/guides/slant_columns.html).
 

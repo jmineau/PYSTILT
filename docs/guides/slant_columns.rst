@@ -8,7 +8,8 @@ satellite. PYSTILT represents that path as a
 :class:`~stilt.MultiPointReceptor` whose points step up the line of sight,
 runs all of them in **one** simulation, and weights the particles afterwards.
 This page walks through the geometry conventions, an EM27/SUN example, and
-the satellite variant.
+the satellite variant, including slant samples on the retrieval's own
+pressure levels.
 
 Geometry
 --------
@@ -170,6 +171,43 @@ sounding's surface altitude (MSL):
        for row in df.itertuples()
    ]
    model.register(receptors=receptors)
+
+Altitudes from the retrieval's pressure levels
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Retrievals define their vertical grid in pressure: OCO-2 reports
+``pressure_levels`` per sounding, and TROPOMI's layers are
+``surface_pressure`` minus multiples of ``pressure_interval``. To put the
+slant samples on those layers instead of an even spacing in height,
+:func:`~stilt.observations.pressure_altitudes` converts the levels to MSL
+altitudes with the hypsometric equation, anchored at the sounding's surface
+pressure and surface altitude:
+
+.. code-block:: python
+
+   from stilt.observations import pressure_altitudes, slant_points
+
+   levels = pressure_altitudes(
+       row.pressure_levels,                   # hPa, in the product's order
+       surface_pressure=row.surface_pressure,  # hPa
+       surface_altitude=row.surface_altitude,  # m MSL
+       top=row.surface_altitude + 3000.0,      # keep the levels you want to resolve
+   )
+   points = slant_points(
+       row.longitude, row.latitude, levels, zenith=row.vza, azimuth=row.vaa
+   )
+
+The result is sorted from the surface upward, so the first altitude anchors
+the path at the sounding's location whatever order the product lists its
+levels in; levels below the surface are dropped, and ``top`` drops the
+levels above it (the meteorology's top is a sensible cap). Without a
+temperature the conversion uses the standard-atmosphere lapse rate from the
+surface, which reproduces the U.S. Standard Atmosphere below 11 km and is
+within a few percent of a real profile. Pass ``temperature=`` as one
+temperature per level (K) when the retrieval or its prior gives one, or as a
+single temperature for an isothermal scale height. Points on pressure levels
+are still points in height to HYSPLIT; the pressure weighting and averaging
+kernel below apply unchanged.
 
 :doc:`../advanced/observations` walks through selecting the soundings first
 and writing their kernels to the project. Many satellite workflows

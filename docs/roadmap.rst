@@ -79,6 +79,8 @@ design and column-weighting concepts.  Full X-STILT feature parity is
      - Implemented
    * - Slant-column receptor support
      - Implemented (see the *Slant Columns* guide)
+   * - Slant altitudes from a retrieval's pressure levels (``pressure_altitudes``)
+     - Implemented
    * - User-defined transforms via ``kind: my.module.Class``
      - Implemented
    * - Per-sounding averaging kernels in batch runs (``averaging_kernel`` with ``table:``)
@@ -101,9 +103,9 @@ Future plans
 
 In priority order:
 
-- **Observation-layer maturation**: slant altitudes from a retrieval's
-  pressure levels; product readers as documented examples; a
-  multi-realization transport error, driven by real column-receptor users.
+- **Observation-layer maturation**: product readers as documented examples
+  and a multi-realization transport error, driven by real column-receptor
+  users.
 - **Spatial geometries and footprint aggregation** (implemented): footprints
   are computed on a rectilinear raster and aggregated onto any state geometry
   (:class:`stilt.Grid`, :class:`stilt.Mesh` from shapefiles / H3 hexagons /

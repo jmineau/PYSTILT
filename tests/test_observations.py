@@ -10,6 +10,7 @@ from shapely.geometry import Point, Polygon
 from stilt.observations import (
     group_by_overpass,
     jitter_points,
+    pressure_altitudes,
     select_observations_spatial,
     slant_points,
 )
@@ -243,3 +244,103 @@ def test_jitter_points_rejects_bad_inputs():
         jitter_points(_PIXEL, 2, method="hexagonal")  # type: ignore[arg-type]
     with pytest.raises(ValueError, match="zero-area"):
         jitter_points([(0.0, 0.0), (1.0, 1.0), (2.0, 2.0)], 2)
+
+
+# -- pressure_altitudes ----------------------------------------------------------
+
+
+def test_pressure_altitudes_reproduce_the_standard_atmosphere():
+    """U.S. Standard Atmosphere geopotential heights of the mandatory levels."""
+    z = pressure_altitudes(
+        [850.0, 700.0, 500.0, 300.0], surface_pressure=1013.25, surface_altitude=0.0
+    )
+    np.testing.assert_allclose(z, [1457.0, 3012.0, 5574.0, 9164.0], atol=1.0)
+
+
+def test_pressure_altitudes_start_at_the_surface_and_sort_upward():
+    """Product order (OCO-2 lists top to bottom) does not matter; surface first."""
+    z = pressure_altitudes(
+        [500.0, 700.0, 870.0], surface_pressure=870.0, surface_altitude=1300.0
+    )
+    assert z[0] == pytest.approx(1300.0)
+    assert np.all(np.diff(z) > 0)
+
+
+def test_pressure_altitudes_isothermal_uses_the_scale_height():
+    t_k = 250.0
+    scale_height = 287.05 * t_k / 9.80665
+    z = pressure_altitudes(
+        [800.0, 400.0], surface_pressure=1000.0, surface_altitude=100.0, temperature=t_k
+    )
+    expected = 100.0 + scale_height * np.log(1000.0 / np.array([800.0, 400.0]))
+    np.testing.assert_allclose(z, expected)
+
+
+def test_pressure_altitudes_constant_profile_matches_the_scalar():
+    levels = [950.0, 800.0, 600.0, 400.0]
+    scalar = pressure_altitudes(
+        levels, surface_pressure=1000.0, surface_altitude=0.0, temperature=260.0
+    )
+    profile = pressure_altitudes(
+        levels,
+        surface_pressure=1000.0,
+        surface_altitude=0.0,
+        temperature=[260.0] * 4,
+    )
+    np.testing.assert_allclose(profile, scalar)
+
+
+def test_pressure_altitudes_profile_integrates_layer_means():
+    """Two layers with different temperatures: hypsometric sum of the two."""
+    levels = np.array([800.0, 600.0])
+    temps = np.array([280.0, 260.0])
+    z = pressure_altitudes(
+        levels, surface_pressure=1000.0, surface_altitude=0.0, temperature=temps
+    )
+    k = 287.05 / 9.80665
+    dz1 = k * 280.0 * np.log(1000.0 / 800.0)  # surface layer takes T of level 1
+    dz2 = k * 270.0 * np.log(800.0 / 600.0)
+    np.testing.assert_allclose(z, [dz1, dz1 + dz2])
+
+
+def test_pressure_altitudes_drop_underground_levels_and_cap_at_top():
+    z = pressure_altitudes(
+        [1000.0, 900.0, 700.0, 500.0, 300.0],
+        surface_pressure=900.0,
+        surface_altitude=1000.0,
+        top=6000.0,
+    )
+    assert z[0] == pytest.approx(1000.0)
+    assert len(z) == 3  # 900, 700, 500; 1000 hPa is underground, 300 hPa is above top
+    assert z.max() <= 6000.0
+
+
+def test_pressure_altitudes_reject_bad_inputs():
+    with pytest.raises(ValueError, match="at least one"):
+        pressure_altitudes([], surface_pressure=1000.0, surface_altitude=0.0)
+    with pytest.raises(ValueError, match="positive"):
+        pressure_altitudes([0.0, 500.0], surface_pressure=1000.0, surface_altitude=0.0)
+    with pytest.raises(ValueError, match="one value per"):
+        pressure_altitudes(
+            [900.0, 500.0],
+            surface_pressure=1000.0,
+            surface_altitude=0.0,
+            temperature=[250.0],
+        )
+    with pytest.raises(ValueError, match="at or above the surface"):
+        pressure_altitudes([1050.0], surface_pressure=1000.0, surface_altitude=0.0)
+    with pytest.raises(ValueError, match="below top"):
+        pressure_altitudes(
+            [500.0], surface_pressure=1000.0, surface_altitude=0.0, top=100.0
+        )
+
+
+def test_pressure_altitudes_feed_slant_points():
+    """The documented recipe: retrieval levels -> altitudes -> slant points."""
+    alts = pressure_altitudes(
+        [870.0, 800.0, 700.0, 600.0], surface_pressure=870.0, surface_altitude=1300.0
+    )
+    points = slant_points(-111.9, 40.7, alts, zenith=30.0, azimuth=90.0)
+    assert points[0][2] == pytest.approx(1300.0)
+    assert points[0][0] == pytest.approx(-111.9)  # anchored at the surface point
+    assert points[-1][0] > -111.9  # higher points lean east
