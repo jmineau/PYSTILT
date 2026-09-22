@@ -1,15 +1,12 @@
-"""Tests for observation-domain models and sensor interfaces."""
+"""Tests for observation-domain models."""
 
 import pandas as pd
 
 from stilt.observations import (
-    BaseSensor,
     HorizontalGeometry,
     Observation,
-    Scene,
     ViewingGeometry,
 )
-from stilt.receptors import PointReceptor
 from stilt.transforms import AveragingKernel
 
 
@@ -49,48 +46,3 @@ def test_observation_normalizes_timestamp_and_keeps_geometry():
     assert obs.geometry is geometry
     assert obs.viewing is viewing
     assert obs.transforms[0] is kernel
-
-
-def test_scene_exposes_observation_ids():
-    obs = Observation(
-        sensor="tccon",
-        species="xco2",
-        time="2023-01-01T00:00:00Z",
-        latitude=40.7,
-        longitude=-111.9,
-        observation_id="obs-1",
-    )
-    scene = Scene(id="my-scene", sensor="tccon", observations=[obs])
-
-    assert scene.observation_ids == ["obs-1"]
-
-
-def test_base_sensor_groups_scene_and_allows_receptor_building():
-    obs = Observation(
-        sensor="tower",
-        species="co2",
-        time="2023-01-01 12:00:00",
-        latitude=40.7,
-        longitude=-111.9,
-    )
-
-    class TowerSensor(BaseSensor):
-        name = "tower"
-        supported_species = ("co2",)
-
-        def build_receptor(self, observation: Observation) -> PointReceptor:
-            return PointReceptor(
-                time=observation.time,
-                longitude=observation.longitude,
-                latitude=observation.latitude,
-                altitude=30.0,
-            )
-
-    sensor = TowerSensor()
-
-    receptor = sensor.build_receptor(obs)
-    scenes = sensor.group_scenes([obs])
-
-    assert receptor.altitude == 30.0
-    assert scenes[0].sensor == "tower"
-    assert scenes[0].observations == [obs]

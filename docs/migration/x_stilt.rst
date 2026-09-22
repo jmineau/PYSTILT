@@ -1,10 +1,10 @@
 Migrating From X-STILT
 ======================
 
-X-STILT users usually care about column-aware geometry, weighting and chemistry
-transforms, and product-driven observation workflows. PYSTILT now has first
-building blocks for those, but it remains more generic than X-STILT in this
-alpha.
+X-STILT users usually care about column-aware receptor geometry, averaging
+kernel and pressure weighting, and product-driven overpass workflows. PYSTILT
+ports those as small objects and functions rather than as scripts, and stays
+more generic than X-STILT in this alpha.
 
 .. list-table::
    :header-rows: 1
@@ -13,36 +13,43 @@ alpha.
    * - X-STILT concept
      - X-STILT API / file
      - PYSTILT equivalent
-   * - Column receptor definition
-     - X-STILT column setup scripts
-     - :class:`stilt.observations.ColumnSensor` and receptor builders
-   * - Vertical weighting
-     - custom AK × PWF logic
+   * - Column receptor (``minagl`` / ``maxagl``, ``agl`` levels)
+     - ``get.recp.sensorv2.r``
+     - :func:`stilt.observations.build_column_receptor` → :class:`stilt.ColumnReceptor`
+   * - Slant column (``run_slant``)
+     - ``get.recp.sensorv2.r``
+     - :func:`stilt.observations.build_slant_receptor` from ``ViewingGeometry`` + ``LineOfSight``
+   * - Sounding selection (near-field + background)
+     - ``sel.obs4recpv2``
+     - :func:`stilt.observations.select_observations_spatial`
+   * - Jittered receptors in a pixel (``jitterTF``)
+     - ``jitter.obs4recp.r``
+     - :func:`stilt.observations.jitter_observation`
+   * - Overpass grouping
+     - ``get_timestr`` / overpass search
+     - :func:`stilt.observations.group_by_overpass` → :class:`stilt.observations.Scene`
+   * - Vertical weighting (AK × PWF)
+     - ``wgt.trajec.foot*.r``
      - ``averaging_kernel`` + ``pressure_weighting`` transforms (:doc:`/advanced/transforms`)
    * - First-order chemistry
-     - chemistry hooks
+     - ``chem_lifetime``
      - ``first_order_lifetime`` transform
-   * - Scene grouping
-     - product-level grouping logic
-     - :class:`stilt.observations.Scene` plus grouping helpers
    * - Column footprint outputs
      - X-STILT column products
-     - standard PYSTILT footprint outputs from column/slant receptors
-   * - Observation normalization
-     - built-in product readers
-     - generic ``Observation`` and sensor interfaces
-
-Current boundary
-----------------
-
-PYSTILT intentionally stops at a generic observation layer. It does not yet
-ship a large catalog of product-specific X-STILT file readers or retrieval
-pipelines inside the core package.
+     - standard PYSTILT footprints from column / slant receptors
+   * - Product readers (OCO-2/3, TROPOMI, TCCON)
+     - ``column_obs/*``
+     - your code, producing :class:`stilt.observations.Observation`
+   * - Transport error to XCO2, background methods
+     - ``error_functions/``, ``background/``
+     - not ported; error trajectories and ``FootprintConfig.error`` are the building block
 
 Practical migration strategy
 ----------------------------
 
-1. normalize your product data into ``Observation`` objects
-2. use ``PointSensor`` or ``ColumnSensor`` to build receptors
-3. encode reusable transforms declaratively where possible
-4. keep product-specific I/O in your application layer until the alpha API settles
+1. write a reader that turns your product into ``Observation`` objects
+   (see *Adding your own instrument* in :doc:`/advanced/observations`)
+2. group by overpass and select soundings with the built-in helpers
+3. build receptors with a built-in or your own builder
+4. put the averaging kernel on each observation's ``transforms`` and
+   ``pressure_weighting`` in the footprint config

@@ -11,7 +11,6 @@ import pandas as pd
 from stilt.config import VerticalReference, validate_vertical_reference
 
 from .geometry import HorizontalGeometry, LineOfSight, ViewingGeometry
-from .uncertainty import UncertaintyBudget
 
 
 @dataclass(slots=True)
@@ -19,8 +18,9 @@ class Observation:
     """
     One normalized measurement record independent of raw file format.
 
-    Observations can be constructed directly by external parsers or via
-    ``Sensor.make_observation()`` helpers in ``stilt.observations``.
+    Product readers live outside PYSTILT; they produce these. Anything the
+    core does not model (retrieval quality flags, orbit numbers, an
+    uncertainty decomposition) goes in ``quality`` or ``metadata``.
 
     ``transforms`` carries per-observation particle transforms — typically the
     retrieval's own :class:`~stilt.transforms.AveragingKernel` — for the caller
@@ -35,7 +35,6 @@ class Observation:
     value: float | None = None
     units: str | None = None
     uncertainty: float | None = None
-    uncertainty_budget: UncertaintyBudget | None = None
     observation_id: str | None = None
     platform: str | None = None
     altitude: float | None = None
@@ -53,5 +52,3 @@ class Observation:
             raise ValueError("Observation.time must be a valid timestamp.")
         self.time = cast(pd.Timestamp, parsed)
         self.altitude_ref = validate_vertical_reference(self.altitude_ref)
-        if self.uncertainty is None and self.uncertainty_budget is not None:
-            self.uncertainty = self.uncertainty_budget.total

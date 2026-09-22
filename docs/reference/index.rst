@@ -8,7 +8,7 @@ is grouped by workflow area, closer to how pandas organizes its reference:
 - ``stilt.config`` for output configuration and STILT parameter models
 - ``stilt.execution`` for local, Slurm, and Kubernetes execution
 - ``stilt.transforms`` for particle transforms (averaging kernel, pressure weighting, lifetime)
-- ``stilt.observations`` for scene, sensor, and receptor-builder objects
+- ``stilt.observations`` for observations, scenes, receptor builders, and selection
 - ``stilt.project`` and ``stilt.store`` for project roots and output stores
 
 .. warning::

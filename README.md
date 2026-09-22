@@ -53,7 +53,6 @@ See the full [roadmap](https://jmineau.github.io/PYSTILT/roadmap.html) for more 
 | Pull-mode queue workers (`stilt pull-worker`) | Implemented |
 | Long-lived streaming mode (`stilt serve`) | Implemented |
 | PostgreSQL-backed simulation registry | Implemented |
-| Scene-based submission grouping | Implemented |
 | Thin CLI → Model → worker call path | Implemented |
 | Kubernetes worker deployment | Partial |
 | Cloud object store outputs (GCS, S3) | In scope |
@@ -65,14 +64,14 @@ design and column-weighting concepts without trying to replicate every script.
 
 | Feature | Status |
 |---|---|
-| `stilt.observations` layer (`Observation`, `Scene`, sensor families) | Implemented |
+| `stilt.observations` layer (`Observation`, `Scene`, receptor builders, selection) | Implemented |
 | Column receptor support | Implemented |
 | Vertical operator particle transforms (AK / pressure weighting) | Implemented |
 | First-order lifetime decay transform | Implemented |
 | Declarative per-footprint transforms in config | Implemented |
 | Slant-column receptor support | In scope (pending HYSPLIT validation) |
 | User-defined transforms (`kind: my.module.Class`) | Implemented |
-| Specific sensor adapters (OCO-2/3, TROPOMI, TCCON) | Deferred |
+| Product readers (OCO-2/3, TROPOMI, TCCON) | Out of scope: your reader produces `Observation` objects |
 | Inventory coupling and background estimation | Deferred |
 
 ## Installation
@@ -180,40 +179,35 @@ whether outputs exist is always read from the project itself.
 
 ## Quickstart: observation layer
 
-PYSTILT also includes a narrow science-facing layer in `stilt.observations`.
-It is designed to sit above `Receptor`, not replace the transport/runtime core.
+`stilt.observations` sits above `Receptor` for measurements and retrievals
+that are not already receptors. Your reader produces `Observation` objects;
+PYSTILT groups, selects, and turns them into receptors:
 
 ```python
 import stilt
-from stilt.observations import PointSensor
+from stilt.observations import Observation, build_point_receptor, group_by_overpass
 
-sensor = PointSensor(name="tower", supported_species=("co2",))
 observations = [
-    sensor.make_observation(
-        time="2023-01-01 12:00:00",
-        latitude=40.77,
-        longitude=-111.85,
-        altitude=30.0,
-        observation_id="tower-001",
-    )
+    Observation(sensor="tower", species="co2", time="2023-01-01 12:00:00",
+                latitude=40.77, longitude=-111.85, altitude=30.0, observation_id="tower-001"),
+    Observation(sensor="tower", species="co2", time="2023-01-01 12:05:00",
+                latitude=40.78, longitude=-111.84, altitude=30.0, observation_id="tower-002"),
 ]
 
-[scene] = sensor.group_scenes(observations)
-receptors = [sensor.build_receptor(obs) for obs in scene.observations]
-
 model = stilt.Model(project="./my_project")  # existing project config on disk
-model.register(receptors=receptors)
+for scene in group_by_overpass(observations):
+    model.register(receptors=scene.receptors(build_point_receptor))
 ```
 
-Direct `Observation(...)` construction is still available when you already
-have a separate product-specific normalization layer. The sensor helper just
-keeps the common path less repetitive.
+`scene.receptors()` takes any observation-to-receptor callable, so a custom
+instrument is a reader plus, when needed, your own builder and transform. See
+the [observations guide](https://jmineau.github.io/PYSTILT/advanced/observations.html).
 
 This layer currently focuses on:
 
 - normalized `Observation` and `Scene` objects
-- geometry/operator metadata
-- generic point/column sensor families
+- horizontal, viewing, and line-of-sight geometry
+- overpass scenes, sounding selection, jitter
 - observation-to-receptor conversion
 
 See `docs/advanced/observations.rst` for the intended workflow boundary.

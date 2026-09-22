@@ -1,9 +1,10 @@
 Observations
 ============
 
-The observation layer is still alpha, but it already defines the core scene,
-sensor, and receptor-builder objects used for column and satellite-style
-workflows. Particle weighting lives in :doc:`transforms`.
+The observation layer is still alpha. It defines the normalized observation,
+scene grouping, receptor builders, and selection helpers used for column and
+satellite-style workflows (:doc:`/advanced/observations`). Particle weighting
+lives in :doc:`transforms`.
 
 Observation models
 ------------------
@@ -14,8 +15,6 @@ Observation models
 
    stilt.observations.Observation
    stilt.observations.Scene
-   stilt.observations.PointSensor
-   stilt.observations.ColumnSensor
 
 Geometry
 --------
@@ -28,8 +27,8 @@ Geometry
    stilt.observations.ViewingGeometry
    stilt.observations.LineOfSight
 
-Builders and grouping
----------------------
+Builders, grouping, and selection
+---------------------------------
 
 .. autosummary::
    :toctree: _api
@@ -38,6 +37,9 @@ Builders and grouping
    stilt.observations.build_point_receptor
    stilt.observations.build_column_receptor
    stilt.observations.build_slant_receptor
-   stilt.observations.group_scenes_by_time_gap
-   stilt.observations.group_scenes_by_swath
-   stilt.observations.group_scenes_by_metadata
+   stilt.observations.build_multipoint_receptor
+   stilt.observations.group_by_overpass
+   stilt.observations.group_observations
+   stilt.observations.filter_observations
+   stilt.observations.select_observations_spatial
+   stilt.observations.jitter_observation

@@ -13,44 +13,26 @@ from .builders import (
 )
 from .geometry import HorizontalGeometry, LineOfSight, ViewingGeometry
 from .observation import Observation
-from .scenes import (
-    Scene,
-    group_scenes_by_key,
-    group_scenes_by_metadata,
-    group_scenes_by_swath,
-    group_scenes_by_time_gap,
-    make_scene,
-)
+from .scenes import Scene, group_by_overpass, group_observations
 from .selection import (
     filter_observations,
     jitter_observation,
     select_observations_spatial,
 )
-from .sensors import BaseSensor, ColumnSensor, PointSensor, Sensor
-from .uncertainty import UncertaintyBudget, UncertaintyComponent
 
 __all__ = [
-    "BaseSensor",
-    "ColumnSensor",
     "HorizontalGeometry",
     "LineOfSight",
     "Observation",
-    "PointSensor",
     "Scene",
-    "Sensor",
+    "group_by_overpass",
+    "group_observations",
     "ViewingGeometry",
-    "UncertaintyBudget",
-    "UncertaintyComponent",
     "build_column_receptor",
     "build_multipoint_receptor",
     "build_point_receptor",
     "build_slant_receptor",
     "filter_observations",
-    "group_scenes_by_key",
-    "group_scenes_by_metadata",
-    "group_scenes_by_swath",
-    "group_scenes_by_time_gap",
     "jitter_observation",
-    "make_scene",
     "select_observations_spatial",
 ]

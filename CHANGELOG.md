@@ -8,6 +8,19 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **The observation layer is the X-STILT port and nothing else.** Removed the
+  `Sensor` / `BaseSensor` / `PointSensor` / `ColumnSensor` facade,
+  `UncertaintyBudget` / `UncertaintyComponent` and
+  `Observation.uncertainty_budget`, and the `make_scene` /
+  `group_scenes_by_{key,swath,metadata,time_gap}` helpers. `Scene` stays as a
+  small frozen dataclass (`id`, time-ordered `observations`, `metadata`,
+  `time`, `time_range`) with one method, `receptors(build)`, which maps any
+  observation-to-receptor callable over its members; two groupers remain,
+  `group_by_overpass(max_gap="30min")` (X-STILT's overpass finder) and
+  `group_observations(key=...)`. A new instrument is a reader that yields
+  `Observation`s plus, when needed, your own builder and transform; the
+  observations guide has the worked example.
+
 - **Particle transforms are one class each.** `stilt.transforms` now holds
   three pydantic transforms whose fields are their YAML keys and whose
   `apply(particles, context)` does the work: `AveragingKernel`

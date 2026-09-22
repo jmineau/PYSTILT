@@ -67,7 +67,7 @@ design and column-weighting concepts.  Full X-STILT feature parity is
 
    * - Feature
      - Status
-   * - ``stilt.observations`` layer (``Observation``, ``Scene``, ``PointSensor``, ``ColumnSensor``)
+   * - ``stilt.observations`` layer (``Observation``, ``Scene``, receptor builders, selection)
      - Implemented
    * - Column receptor support
      - Implemented
@@ -81,8 +81,8 @@ design and column-weighting concepts.  Full X-STILT feature parity is
      - In scope (pending HYSPLIT vertical-coordinate validation)
    * - User-defined transforms via ``kind: my.module.Class``
      - Implemented
-   * - Specific sensor adapters (OCO-2/3, TROPOMI, TCCON)
-     - Deferred
+   * - Product readers (OCO-2/3, TROPOMI, TCCON)
+     - Out of scope; see *Adding your own instrument*
    * - Inventory coupling and background estimation
      - Deferred
 
@@ -101,6 +101,5 @@ In priority order:
   Still to come: a YAML form for ``Zones``.
 - **Slant receptor geometry**: satellite-geometry receptors once
   HYSPLIT vertical-coordinate behavior is validated.
-- **Observation-layer maturation**: specific sensor
-  adapters, weighting pipelines, and chemistry hooks after the observation
-  foundation proves stable.
+- **Observation-layer maturation**: slant validation and transport-error
+  propagation to retrieved columns, driven by real column-receptor users.

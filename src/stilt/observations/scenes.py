@@ -1,166 +1,147 @@
-"""Helpers for grouping observations into scenes."""
+"""
+Scenes: the observations from one overpass, handled as a unit.
+
+X-STILT works one satellite overpass at a time: select the soundings from
+it, build a receptor for each, run them, evaluate them together. A
+:class:`Scene` is that group with a name and whatever metadata the overpass
+carries. It has no durable state; the simulations it produced are found the
+usual way, by receptor time and location.
+"""
 
 from __future__ import annotations
 
 from collections import defaultdict
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Hashable, Iterable, Iterator, Sequence
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, cast
 
 import pandas as pd
+
+from stilt.receptors import Receptor
 
 from .observation import Observation
 
 
-@dataclass(slots=True)
+def _time(obs: Observation) -> pd.Timestamp:
+    return cast(pd.Timestamp, pd.Timestamp(obs.time))
+
+
+@dataclass(frozen=True, slots=True)
 class Scene:
-    """A logical grouping of related observations, typically sensor-defined."""
+    """
+    A named group of observations, typically one overpass.
+
+    Parameters
+    ----------
+    id
+        Label for the group (for example ``"oco2-202301151830"``).
+    observations
+        The member observations; stored in time order.
+    metadata
+        Anything shared by the group: orbit, swath, site, selection settings.
+    """
 
     id: str
-    sensor: str
-    observations: list[Observation]
+    observations: tuple[Observation, ...]
     metadata: dict[str, Any] = field(default_factory=dict)
 
+    def __post_init__(self) -> None:
+        if not self.observations:
+            raise ValueError("A Scene needs at least one observation.")
+        object.__setattr__(
+            self, "observations", tuple(sorted(self.observations, key=_time))
+        )
+
+    def __len__(self) -> int:
+        return len(self.observations)
+
+    def __iter__(self) -> Iterator[Observation]:
+        return iter(self.observations)
+
     @property
-    def observation_ids(self) -> list[str | None]:
-        """Observation identifiers in the same order as ``observations``."""
-        return [obs.observation_id for obs in self.observations]
+    def time(self) -> pd.Timestamp:
+        """Time of the first observation."""
+        return _time(self.observations[0])
+
+    @property
+    def time_range(self) -> tuple[pd.Timestamp, pd.Timestamp]:
+        """First and last observation times."""
+        return self.time, _time(self.observations[-1])
+
+    def receptors(self, build: Callable[[Observation], Receptor]) -> list[Receptor]:
+        """
+        Build one receptor per observation with *build*.
+
+        *build* is any callable from an observation to a receptor: a built-in
+        such as :func:`~stilt.observations.build_slant_receptor`,
+        ``functools.partial(build_column_receptor, bottom=0, top=3000)``, or
+        your own function.
+        """
+        return [build(obs) for obs in self.observations]
 
 
-def make_scene(
+def _scene_id(prefix: str, members: Sequence[Observation], label: object) -> str:
+    return f"{prefix if prefix else members[0].sensor + '-'}{label}"
+
+
+def group_observations(
     observations: Iterable[Observation],
+    key: Callable[[Observation], Hashable],
     *,
-    scene_id: str | None = None,
-    sensor: str | None = None,
-    metadata: dict[str, Any] | None = None,
-) -> Scene:
-    """Build one scene from an ordered collection of observations."""
-    items = sorted(list(observations), key=lambda obs: obs.time)
-    if not items:
-        raise ValueError("At least one observation is required to build a scene.")
-    resolved_sensor = sensor or items[0].sensor
-    resolved_id = scene_id or f"{resolved_sensor}-{items[0].time:%Y%m%d%H%M%S}"
-    return Scene(
-        id=resolved_id,
-        sensor=resolved_sensor,
-        observations=items,
-        metadata=dict(metadata or {}),
-    )
-
-
-def group_scenes_by_key(
-    observations: Iterable[Observation],
-    *,
-    key: Callable[[Observation], object],
-    scene_prefix: str | None = None,
-    metadata_factory: Callable[[object], dict[str, Any]] | None = None,
+    prefix: str = "",
 ) -> list[Scene]:
-    """Group observations by an arbitrary key function."""
-    grouped: dict[object, list[Observation]] = defaultdict(list)
-    for observation in observations:
-        grouped[key(observation)].append(observation)
+    """
+    Group observations into scenes by an arbitrary key.
 
-    scenes: list[Scene] = []
-    for group_key, members in sorted(
-        grouped.items(), key=lambda item: min(obs.time for obs in item[1])
-    ):
-        first = min(members, key=lambda obs: obs.time)
-        prefix = scene_prefix or first.sensor
-        group_str = str(group_key)
-        metadata = (
-            metadata_factory(group_key)
-            if metadata_factory is not None
-            else {"group_key": group_str}
+    Scenes are ordered by their first observation time and named
+    ``f"{prefix}{key}"``; ``prefix`` defaults to the first member's sensor
+    name plus a hyphen. The key is kept in ``scene.metadata["key"]``.
+    """
+    groups: dict[Hashable, list[Observation]] = defaultdict(list)
+    for obs in observations:
+        groups[key(obs)].append(obs)
+    scenes = [
+        Scene(
+            id=_scene_id(prefix, members, group_key),
+            observations=tuple(members),
+            metadata={"key": group_key},
         )
-        scenes.append(
-            make_scene(
-                members,
-                scene_id=f"{prefix}-{group_str}",
-                sensor=first.sensor,
-                metadata=metadata,
-            )
-        )
-    return scenes
+        for group_key, members in groups.items()
+    ]
+    return sorted(scenes, key=lambda s: s.time)
 
 
-def group_scenes_by_time_gap(
+def group_by_overpass(
     observations: Iterable[Observation],
     *,
-    max_gap: str | pd.Timedelta,
-    scene_prefix: str | None = None,
+    max_gap: str | pd.Timedelta = "30min",
+    prefix: str = "",
 ) -> list[Scene]:
-    """Group temporally adjacent observations into scenes."""
-    items = sorted(list(observations), key=lambda obs: obs.time)
+    """
+    Split observations into overpasses wherever consecutive times differ by more than *max_gap*.
+
+    This is the X-STILT overpass finder: soundings from one satellite pass
+    are seconds apart, passes are hours apart. Scenes are named
+    ``f"{prefix}{YYYYMMDDHHMM}"`` from their first observation.
+    """
+    items = sorted(observations, key=_time)
     if not items:
         return []
-
-    max_gap = pd.to_timedelta(max_gap)
+    gap = pd.Timedelta(max_gap)
     groups: list[list[Observation]] = [[items[0]]]
-    for observation in items[1:]:
-        previous = groups[-1][-1]
-        if (pd.Timestamp(observation.time) - pd.Timestamp(previous.time)) <= max_gap:
-            groups[-1].append(observation)
+    for obs in items[1:]:
+        if _time(obs) - _time(groups[-1][-1]) <= gap:
+            groups[-1].append(obs)
         else:
-            groups.append([observation])
-
-    scenes: list[Scene] = []
-    for idx, group in enumerate(groups, start=1):
-        prefix = scene_prefix or group[0].sensor
-        scenes.append(
-            make_scene(
-                group,
-                scene_id=f"{prefix}-{group[0].time:%Y%m%d%H%M%S}-g{idx}",
-                metadata={"grouping": "time_gap", "max_gap": str(max_gap)},
-            )
+            groups.append([obs])
+    return [
+        Scene(
+            id=_scene_id(prefix, members, f"{_time(members[0]):%Y%m%d%H%M}"),
+            observations=tuple(members),
+            metadata={"max_gap": str(gap)},
         )
-    return scenes
+        for members in groups
+    ]
 
 
-def group_scenes_by_swath(
-    observations: Iterable[Observation],
-    *,
-    scene_prefix: str | None = None,
-) -> list[Scene]:
-    """Group observations by ``HorizontalGeometry.swath``."""
-
-    def _swath_key(observation: Observation) -> object:
-        geometry = observation.geometry
-        if geometry is None or geometry.swath is None:
-            raise ValueError(
-                "All observations must define geometry.swath for swath grouping."
-            )
-        return geometry.swath
-
-    return group_scenes_by_key(
-        observations,
-        key=_swath_key,
-        scene_prefix=scene_prefix,
-        metadata_factory=lambda swath: {"grouping": "swath", "swath": swath},
-    )
-
-
-def group_scenes_by_metadata(
-    observations: Iterable[Observation],
-    *,
-    key: str,
-    scene_prefix: str | None = None,
-) -> list[Scene]:
-    """Group observations by a metadata field."""
-
-    def _metadata_key(observation: Observation) -> object:
-        if key not in observation.metadata:
-            raise ValueError(
-                f"All observations must define metadata[{key!r}] for scene grouping."
-            )
-        return observation.metadata[key]
-
-    return group_scenes_by_key(
-        observations,
-        key=_metadata_key,
-        scene_prefix=scene_prefix,
-        metadata_factory=lambda value: {
-            "grouping": "metadata",
-            "key": key,
-            "value": value,
-        },
-    )
+__all__ = ["Scene", "group_by_overpass", "group_observations"]
