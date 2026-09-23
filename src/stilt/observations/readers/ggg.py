@@ -121,7 +121,8 @@ def read_ggg_oof(path: str | Path, species: str = "xch4") -> pd.DataFrame:
             f"read_ggg_oof: {path.name} data line {nhead + 1 + bad[0]} has "
             f"{len(rows[bad[0]])} fields, expected {len(names)}."
         )
-    raw = pd.DataFrame(rows, columns=names)
+    # pd.Index, not the bare list: pandas 2.x stubs reject a list[str] here
+    raw = pd.DataFrame(rows, columns=pd.Index(names))
     numeric = [n for n in names if n != "spectrum"]
     raw[numeric] = raw[numeric].apply(pd.to_numeric, errors="coerce")
     if missing is not None:
