@@ -7,7 +7,7 @@ import hashlib
 import json
 import re
 from abc import ABC, abstractmethod
-from collections.abc import Iterable, Iterator
+from collections.abc import Hashable, Iterable, Iterator
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, TypeAlias, cast
 
@@ -529,7 +529,11 @@ def read_receptors(path: str | Path) -> list[Receptor]:
     # ids, a receptor whose rows straddle a chunk boundary comes back part int, part str,
     # and groupby splits it into two receptors with half the points each -- silently.
     header = pd.read_csv(path, nrows=0).columns
-    dtype = {c: str for c in header if str(c).lower() == "r_idx"}
+    # Annotated with ``Hashable`` keys because that is what the reader's own
+    # signature asks for; a ``dict[str, ...]`` is not assignable to it.
+    dtype: dict[Hashable, type[str]] = {
+        c: str for c in header if str(c).lower() == "r_idx"
+    }
     df = pd.read_csv(path, parse_dates=["time"], dtype=dtype)
 
     original_columns = [str(col).lower() for col in df.columns]

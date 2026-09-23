@@ -53,7 +53,7 @@ def scenario_outputs(request, met_dir, rscript, r_stilt_dir, tmp_path_factory) -
     print(f"\n[PROFILE] {scenario.name} PYSTILT sim: {time.perf_counter() - t0:.1f}s")
 
     sim_id = scenario.py_sim_id()
-    sim_dir = model.layout.project_dir / "simulations" / "by-id" / sim_id
+    sim_dir = model.project.simulation_dir(sim_id)
 
     traj_files = list(sim_dir.glob("*_traj.parquet"))
     foot_files = list(sim_dir.glob("*_foot.nc"))
