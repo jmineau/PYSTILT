@@ -54,6 +54,10 @@ jobs:
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          # Re-running a tag (a moved tag, a retried job) must not fail on a
+          # version PyPI already has.
+          skip-existing: true
 
   create-github-release:
     name: Create GitHub Release
