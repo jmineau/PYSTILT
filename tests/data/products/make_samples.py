@@ -14,11 +14,18 @@ source files at hand when a product changes::
 The OCO-2 sample is synthetic: it follows the OCO-2 Lite v11 layout (variable
 names, groups, dimensions, units) with made-up values, because Lite files sit
 behind an Earthdata login. Replace it with a real slice when one is available.
+
+The GGG samples are a Salt Lake City EM27/SUN day (``--oof``, contacts removed
+from the header) and one of EGI's 2014 example private files (``--ggg-private``)::
+
+    uv run python tests/data/products/make_samples.py --no-oco2 \\
+        --oof ha20220602.vav.ada.aia.oof --ggg-private xa20140709_20140709.private.nc
 """
 
 from __future__ import annotations
 
 import argparse
+import re
 from pathlib import Path
 
 import numpy as np
@@ -48,12 +55,14 @@ def copy_subset(src: Path, dst: Path, keep: set[str], slices: dict[str, slice]) 
                 if prefix + vname not in keep:
                     continue
                 var.set_auto_maskandscale(False)
+                var.set_auto_chartostring(False)
                 fill = getattr(var, "_FillValue", None)
                 is_str = var.dtype is str or getattr(var.dtype, "kind", "") in "US"
                 out = dg.createVariable(
                     vname, var.dtype, var.dimensions, fill_value=fill, zlib=not is_str
                 )
                 out.set_auto_maskandscale(False)  # raw bytes in, raw bytes out
+                out.set_auto_chartostring(False)
                 for a in var.ncattrs():
                     if a != "_FillValue":
                         out.setncattr(a, var.getncattr(a))
@@ -173,6 +182,85 @@ def tccon(src: Path) -> None:
         "prior_temperature",
     }
     copy_subset(src, HERE / src.name, keep, {"time": slice(0, 24)})
+
+
+def oof(src: Path, rows: int = 12) -> None:
+    """
+    The header and the first spectra of a GGG2020 .oof file.
+
+    The header's contact section and the EGI run notes are replaced by
+    placeholders; everything the reader needs (the line count, ``missing:``,
+    ``format:``, the flag table, the column line) is kept as written.
+    """
+    lines = src.read_text().splitlines()
+    nhead, ncol = (int(v) for v in re.split(r"[\s,]+", lines[0].strip())[:2])
+    header, column_line = lines[1 : nhead - 1], lines[nhead - 1]
+    out: list[str] = []
+    skipping = False
+    for line in header:
+        if line.startswith("1. DATA SOURCE AND CONTACTS"):
+            out += [line, "", "[contact details removed from this test sample]", ""]
+            skipping = True
+            continue
+        if skipping:
+            if line.startswith("----"):
+                skipping = False
+                out.append(line)
+            continue
+        if line.startswith(("Retrievals were run on system:", "and were run by:")):
+            out.append(line.split(":", 1)[0] + ": [removed]")
+            continue
+        out.append(line)
+    out += [
+        f"Subset of {src.name}: header and the first {rows} spectra, made by",
+        "tests/data/products/make_samples.py for the PYSTILT test suite. Not for science use.",
+    ]
+    data = [line for line in lines[nhead:] if line.strip()][:rows]
+    body = [f"{len(out) + 2:4d} {ncol:11d}", *out, column_line, *data]
+    (HERE / src.name).write_text("\n".join(body) + "\n")
+
+
+def ggg_private(src: Path) -> None:
+    """A GGG2020 private file (EGI example run) with the variables the reader uses."""
+    keep = {
+        "time",
+        "prior_time",
+        "spectrum",
+        "year",
+        "day",
+        "hour",
+        "lat",
+        "long",
+        "zobs",
+        "zmin",
+        "solzen",
+        "azim",
+        "pout",
+        "xch4",
+        "xch4_error",
+        "xco2",
+        "xco2_error",
+        "xco",
+        "xco_error",
+        "flag",
+        "flagged_var_name",
+        "prior_index",
+        "prior_altitude",
+        "prior_pressure",
+        "prior_1ch4",
+        "prior_1co2",
+        "prior_1co",
+        "ak_altitude",
+        "ak_pressure",
+        "ak_slant_xch4_bin",
+        "ak_slant_xco2_bin",
+        "ak_slant_xco_bin",
+        "ak_xch4",
+        "ak_xco2",
+        "ak_xco",
+        "o2_7885_am_o2",
+    }
+    copy_subset(src, HERE / src.name, keep, {})
 
 
 def oco2_synthetic() -> None:
@@ -382,6 +470,8 @@ def main() -> None:
     ap.add_argument("--tropomi", type=Path)
     ap.add_argument("--blended", type=Path)
     ap.add_argument("--tccon", type=Path)
+    ap.add_argument("--oof", type=Path, help="a GGG2020 *.vav.ada.aia.oof file")
+    ap.add_argument("--ggg-private", type=Path, help="a GGG2020 *.private.nc file")
     ap.add_argument("--no-oco2", action="store_true")
     a = ap.parse_args()
     if a.tropomi:
@@ -390,6 +480,10 @@ def main() -> None:
         blended(a.blended)
     if a.tccon:
         tccon(a.tccon)
+    if a.oof:
+        oof(a.oof)
+    if a.ggg_private:
+        ggg_private(a.ggg_private)
     if not a.no_oco2:
         oco2_synthetic()
 

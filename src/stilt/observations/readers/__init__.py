@@ -11,12 +11,20 @@ the sun, pressures are hPa, and altitudes are metres above mean sea level.
 
 A reader keeps its product's conventions in one place: which variable holds
 the retrieval, its fill values and quality flag, how the pressure grid is
-rebuilt, which way the layers run. A product not covered here is one more
-module of the same shape; see that guide.
+rebuilt, which way the layers run. GGG's ``.oof`` and netCDF outputs
+(TCCON, and EM27/SUN through EGI) share one module. A product not covered
+here is one more module of the same shape; see that guide.
 """
 
+from .ggg import read_ggg_netcdf, read_ggg_oof
 from .oco import read_oco2
 from .tccon import read_tccon
 from .tropomi import read_tropomi_ch4
 
-__all__ = ["read_oco2", "read_tccon", "read_tropomi_ch4"]
+__all__ = [
+    "read_ggg_netcdf",
+    "read_ggg_oof",
+    "read_oco2",
+    "read_tccon",
+    "read_tropomi_ch4",
+]

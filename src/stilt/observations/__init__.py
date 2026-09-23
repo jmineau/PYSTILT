@@ -3,7 +3,8 @@ Column and satellite observation helpers: the X-STILT port.
 
 Everything here happens before a simulation. A product file is read into a
 table of soundings (:func:`read_tropomi_ch4`, :func:`read_oco2`,
-:func:`read_tccon`, or your own reader of the same shape), soundings are
+:func:`read_tccon`, :func:`read_ggg_oof`, :func:`read_ggg_netcdf`, or your
+own reader of the same shape), soundings are
 grouped into overpasses, a subset is chosen to run, extra receptors are spread across a
 pixel, and a slant line of sight is laid out as points, at altitudes
 taken from the retrieval's pressure levels if you like. The functions take
@@ -23,7 +24,13 @@ winds into the wind-error settings that run needs.
 
 from .backgrounds import Background, background, particle_background
 from .plumes import Plume, PlumeBackground, plume_background, plume_polygon
-from .readers import read_oco2, read_tccon, read_tropomi_ch4
+from .readers import (
+    read_ggg_netcdf,
+    read_ggg_oof,
+    read_oco2,
+    read_tccon,
+    read_tropomi_ch4,
+)
 from .selection import group_by_overpass, jitter_points, select_observations_spatial
 from .slant import pressure_altitudes, slant_points
 from .uncertainty import TransportError, transport_error
@@ -43,6 +50,8 @@ __all__ = [
     "plume_background",
     "plume_polygon",
     "pressure_altitudes",
+    "read_ggg_netcdf",
+    "read_ggg_oof",
     "read_oco2",
     "read_tccon",
     "read_tropomi_ch4",

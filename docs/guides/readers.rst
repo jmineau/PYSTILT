@@ -2,7 +2,8 @@ Reading Retrieval Products
 ==========================
 
 A column retrieval arrives as a product file: a TROPOMI orbit, an OCO-2
-Lite file, a TCCON site file. :mod:`stilt.observations.readers` reads
+Lite file, a TCCON site file, a day of EM27/SUN spectra from GGG.
+:mod:`stilt.observations.readers` reads
 those into a table of soundings with one row per sounding and the same
 columns whichever instrument they came from, so the rest of the workflow
 (:doc:`../advanced/observations`) does not know or care which product it
@@ -42,12 +43,47 @@ The readers
      - TCCON GGG2020 public site files from CaltechDATA
        (``*.public.nc``, ``*.public.qc.nc``)
      - the Indianapolis GGG2020.R0 file
+   * - :func:`~stilt.observations.read_ggg_oof`
+     - GGG2020 ``.oof`` files (``*.vav.ada.aia.oof``), one instrument-day
+       each; how EGI delivers EM27/SUN retrievals
+     - Salt Lake City EM27/SUN days from 2022 (``ha``)
+   * - :func:`~stilt.observations.read_ggg_netcdf`
+     - GGG2020 netCDF files: ``*.private.nc`` from a run, and the public
+       files ``read_tccon`` is a name for
+     - EGI's 2014 example private files for the layout; the per-spectrum
+       kernel follows GGG's slant-xgas interpolation, not checked against a
+       public file from the same site
 
 The satellite readers take ``lon_range`` and ``lat_range`` to keep only
-the pixels in a box, which matters on a whole orbit; the TCCON reader takes
-a ``species`` (``xco2``, ``xch4``, ``xco``, ...) and a ``time_range``, which
-matters on a multi-year site file. Nothing else is filtered: quality flags
-become the ``good`` column and the choice is yours.
+the pixels in a box, which matters on a whole orbit; the GGG readers take
+a ``species`` (``xco2``, ``xch4``, ``xco``, ...) and the netCDF ones a
+``time_range``, which matters on a multi-year site file. Nothing else is
+filtered: quality flags become the ``good`` column and the choice is yours.
+
+EM27/SUN
+~~~~~~~~
+
+An EM27/SUN processed with GGG (through EGI) gives one ``.oof`` per
+instrument-day and, from the same run, one ``*.private.nc``. The ``.oof``
+has the soundings but no averaging kernel and no prior, so
+:func:`~stilt.observations.read_ggg_oof` leaves the ``ak``, ``ak_pressure``
+and ``pressure_levels`` columns out rather than fake them; the kernels come
+from the private file (:func:`~stilt.observations.read_ggg_netcdf`) or from
+a site kernel table keyed by solar zenith angle, as the :doc:`slant_columns`
+guide shows. Read a campaign as one table:
+
+.. code-block:: python
+
+   from pathlib import Path
+   import pandas as pd
+   from stilt.observations import read_ggg_oof
+
+   days = sorted(Path("EM27_oof/ha").glob("ha*.vav.ada.aia.oof"))
+   df = pd.concat([read_ggg_oof(p, "xch4") for p in days], ignore_index=True)
+   df = df[df.good]
+
+An EM27 processed with PROFFAST (the COCCON pipeline) writes a different
+file; that reader is still to be written against a real file.
 
 The columns
 -----------
@@ -113,7 +149,10 @@ and these where the product has them:
        :func:`~stilt.observations.jitter_points`.
 
 Product-specific columns keep product names (``qa_value``,
-``quality_flag``, ``operation_mode``, ``xch4_uncorrected``, ...).
+``quality_flag``, ``operation_mode``, ``xch4_uncorrected``, ``flag``,
+``zmin``, the other ``x<gas>`` columns of a GGG file, ...). A private GGG
+file adds ``ak_extrapolated``, true where the spectrum's slant xgas lay
+outside the kernel table.
 
 From a file to receptors
 ------------------------
@@ -171,5 +210,5 @@ contract. Keep it a function that returns the table. Give it a small slice
 of a real file under ``tests/data/products`` and a test that checks the
 columns, the units, and that the vertical arrays start at the surface;
 ``tests/data/products/make_samples.py`` shows how the existing slices were
-cut. EM27/SUN (PROFFAST), MethaneAIR and MethaneSAT readers are welcome
-this way; the maintainers have no files for them.
+cut. EM27/SUN through PROFFAST, MethaneAIR and MethaneSAT readers are
+welcome this way; the maintainers have no files for them.

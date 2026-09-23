@@ -5,10 +5,13 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import pytest
+from netCDF4 import Dataset
 
 import stilt
 from stilt.observations import (
     pressure_altitudes,
+    read_ggg_netcdf,
+    read_ggg_oof,
     read_oco2,
     read_tccon,
     read_tropomi_ch4,
@@ -27,6 +30,8 @@ BLENDED = (
 )
 TCCON = DATA / "if20120823_20121201.public.qc.nc"
 OCO2 = DATA / "oco2_LtCO2_231019_B11210Ar_synthetic.nc4"
+OOF = DATA / "ha20220602.vav.ada.aia.oof"
+GGG_PRIVATE = DATA / "xa20140709_20140709.private.nc"
 
 REQUIRED = [
     "sounding_id",
@@ -239,3 +244,122 @@ def test_oco2_recipe_with_pressure_altitudes():
         altitude_ref="msl",
     )
     assert receptor.altitudes[0] == pytest.approx(r.surface_altitude)
+
+
+# -- GGG2020: EM27/SUN .oof and private netCDF ---------------------------------
+
+
+def test_ggg_oof_columns_units_and_time():
+    df = read_ggg_oof(OOF)
+    assert len(df) == 12
+    assert (
+        df.sounding_id.is_unique and df.sounding_id.iloc[0] == "ha20220602s0e00a.0001"
+    )
+    assert pd.api.types.is_datetime64_dtype(df.time) and df.time.dt.tz is None
+    # year 2022, day 153, 14.840 UT hours -> 2022-06-02 14:50:24
+    assert df.time.iloc[0] == pd.Timestamp("2022-06-02 14:50:24")
+    assert (df.species == "xch4").all() and (df.units == "ppm").all()
+    assert df.good.dtype == bool and (df.good == (df.flag == 0)).all()
+    row = df.iloc[0]
+    assert row.latitude == pytest.approx(40.766) and row.longitude == pytest.approx(
+        -111.847
+    )
+    assert row.surface_altitude == pytest.approx(1470.0)  # zobs km -> m
+    assert row.surface_pressure == pytest.approx(853.3)
+    assert row.zenith == pytest.approx(59.92) and row.azimuth == pytest.approx(85.53)
+    assert row.solar_zenith == row.zenith and 0 <= row.azimuth < 360
+    assert row.value == pytest.approx(1.8698) and row.uncertainty == pytest.approx(
+        0.0020
+    )
+    # no kernel or prior in a .oof: the columns are absent, not faked
+    for col in ("ak", "ak_pressure", "pressure_levels", "altitude_levels"):
+        assert col not in df.columns
+    # the other column variables ride along under their own names
+    assert 400 < df.xco2.iloc[0] < 440 and df.xco2_error.iloc[0] > 0
+    assert 1.0 < df.zmin.iloc[0] < 2.0
+    co = read_ggg_oof(OOF, "xco")
+    assert (co.units == "ppb").all() and 50 < co.value.iloc[0] < 200
+    luft = read_ggg_oof(OOF, "xluft")
+    assert (luft.units == "").all() and 0.99 < luft.value.iloc[0] < 1.01
+
+
+def test_ggg_oof_errors():
+    with pytest.raises(ValueError, match="column variable"):
+        read_ggg_oof(OOF, "ch4")
+    with pytest.raises(ValueError, match="no 'xhf' column"):
+        read_ggg_oof(OOF, "xhf")
+
+
+def test_ggg_oof_slant_recipe_windows():
+    """The EM27 recipe: one receptor per averaging window from the solar angles."""
+    df = read_ggg_oof(OOF)
+    windows = (
+        df[df.good]
+        .set_index("time")[
+            ["longitude", "latitude", "surface_altitude", "zenith", "azimuth"]
+        ]
+        .resample("10min")
+        .mean()
+        .dropna()
+    )
+    assert len(windows) >= 1
+    w = windows.iloc[0]
+    alts = np.linspace(w.surface_altitude, w.surface_altitude + 3000.0, 20)
+    points = slant_points(
+        w.longitude, w.latitude, alts, zenith=w.zenith, azimuth=w.azimuth
+    )
+    receptor = stilt.Receptor.from_points(windows.index[0], points, altitude_ref="msl")
+    assert len(receptor) == 20
+    # morning at ~15 UT in Salt Lake City: the sun is east, so the path leans east
+    assert receptor.longitudes[-1] > receptor.longitudes[0]
+
+
+def test_ggg_private_netcdf_expands_kernels_and_shares_priors():
+    df = read_ggg_netcdf(GGG_PRIVATE, "xch4")
+    _check_common(df)
+    assert len(df) == 4
+    assert df.sounding_id.iloc[0] == "xa20140709s0e00a.0001"  # private files keep names
+    assert (df.species == "xch4").all() and (df.units == "ppm").all()
+    assert (df.good == (df.flag == 0)).all() if "flag" in df.columns else True
+    row = df.iloc[0]
+    assert row.surface_altitude == pytest.approx(240.0, abs=20)  # zobs km -> m
+    assert 900 < row.surface_pressure < 1050
+    assert 79 < row.zenith < 81
+    # kernel: 51 levels on the site's median-pressure grid, surface first
+    assert (
+        len(row.ak) == 51 and len(row.ak_pressure) == 51 and row.ak_pressure[0] > 1000
+    )
+    with Dataset(GGG_PRIVATE) as ds:
+        table = np.asarray(ds["ak_xch4"][:], dtype=float)
+        bins = np.asarray(ds["ak_slant_xch4_bin"][:], dtype=float)
+        am = float(ds["o2_7885_am_o2"][0])
+    slant = row.value * am
+    assert bins[0] < slant < bins[-1] and not row.ak_extrapolated
+    # each level is the linear interpolation of that level's table row at the slant xgas
+    expected = np.array([np.interp(slant, bins, table[k]) for k in range(51)])
+    assert row.ak == pytest.approx(expected)
+    assert (table.min(axis=1) <= row.ak + 1e-9).all() and (
+        row.ak - 1e-9 <= table.max(axis=1)
+    ).all()
+    # priors: the four spectra share one prior_index, so one prior row
+    assert all(
+        np.array_equal(r.pressure_levels, row.pressure_levels) for r in df.itertuples()
+    )
+    assert row.pressure_levels[0] > 900 and np.all(
+        np.diff(row.pressure_levels) < 0
+    )  # atm -> hPa
+    assert row.altitude_levels[0] == 0.0 and row.altitude_levels[-1] == 70_000.0
+    assert len(row.apriori) == 51 and 1.5 < row.apriori[0] < 2.1  # 'parts' -> ppm
+    co2 = read_ggg_netcdf(GGG_PRIVATE, "xco2")
+    assert (co2.units == "ppm").all() and 380 < co2.value.iloc[0] < 420
+    assert 380 < co2.iloc[0].apriori[0] < 420
+
+
+def test_read_tccon_is_the_public_ggg_layout():
+    a = read_tccon(TCCON, "xch4")
+    b = read_ggg_netcdf(TCCON, "xch4")
+    pd.testing.assert_frame_equal(a, b)
+    assert not a.ak_extrapolated.any()  # public kernels are stored per spectrum
+    row = a.iloc[0]
+    # the public prior_ch4 is in ppb; apriori is in the species' ppm
+    assert 1.5 < row.apriori[0] < 2.1

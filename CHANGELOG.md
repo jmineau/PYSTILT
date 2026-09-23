@@ -93,6 +93,19 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `hycs_std` and `krand=2` it changes nothing, and `krand=4` randomizes the
   seed itself, so it is not a route to reproducible or distinct draws.
 
+- **GGG readers for EM27/SUN** (`stilt.observations.readers.ggg`):
+  `read_ggg_oof` reads a GGG2020 `.oof` (one instrument-day, how EGI delivers
+  EM27/SUN retrievals) into the readers' sounding table; it carries no
+  kernel or prior, so those columns are left out rather than faked.
+  `read_ggg_netcdf` reads the run's `*.private.nc` — kernels are stored as
+  a table against slant xgas and are interpolated per spectrum the way
+  GGG's public writer does, priors are shared through `prior_index` — as
+  well as the public files, so `read_tccon` is now that function under the
+  network's name. Priors come back in the species' units (the public
+  `prior_ch4` is ppb, `xch4` ppm). Checked against Salt Lake City EM27 days
+  and EGI's example private files; the slant guide's EM27 recipe now reads
+  real files.
+
 ## [0.1.0a17] - 2026-09-22
 
 ### Added

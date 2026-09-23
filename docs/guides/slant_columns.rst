@@ -56,8 +56,10 @@ heights STILT uses.
 EM27/SUN example
 ----------------
 
-An EM27 retrieval (for example PROFFAST output) gives one column value per
-spectrum with the solar zenith and azimuth angles at that time. The sun
+An EM27 retrieval gives one column value per spectrum with the solar
+zenith and azimuth angles at that time. GGG (through EGI) writes a ``.oof``
+per instrument-day, which :func:`~stilt.observations.read_ggg_oof` reads
+into the same table the other readers produce (:doc:`readers`). The sun
 moves about 15° per hour, so build one receptor per averaging window rather
 than one per day. The points come from :func:`~stilt.observations.slant_points`
 and the receptor from :meth:`stilt.Receptor.from_points`.
@@ -65,24 +67,27 @@ and the receptor from :meth:`stilt.Receptor.from_points`.
 .. code-block:: python
 
    import numpy as np
-   import pandas as pd
    import stilt
-   from stilt.observations import slant_points
+   from stilt.observations import read_ggg_oof, slant_points
 
-   LON, LAT = -111.848, 40.766
-   STATION_ALT = 1300.0  # m MSL
-   ALTITUDES = np.linspace(STATION_ALT, STATION_ALT + 3000.0, 20)
-
-   df = pd.read_csv("em27_2023-07-15.csv", parse_dates=["time"])
-   windows = df.set_index("time").resample("10min").mean().dropna()
+   df = read_ggg_oof("ha20230715.vav.ada.aia.oof", "xch4")
+   df = df[df.good]
+   windows = (
+       df.set_index("time")[["longitude", "latitude", "surface_altitude", "zenith", "azimuth"]]
+       .resample("10min").mean().dropna()
+   )
 
    receptors = [
        stilt.Receptor.from_points(
            t,
-           slant_points(LON, LAT, ALTITUDES, zenith=row.sza, azimuth=row.saa),
+           slant_points(
+               w.longitude, w.latitude,
+               np.linspace(w.surface_altitude, w.surface_altitude + 3000.0, 20),
+               zenith=w.zenith, azimuth=w.azimuth,
+           ),
            altitude_ref="msl",
        )
-       for t, row in windows.iterrows()
+       for t, w in windows.iterrows()
    ]
    model.register(receptors=receptors)
    model.run()
@@ -115,18 +120,25 @@ receptor covers, so the footprint is complete for the surface fluxes; the
 column above the receptor top is background.
 
 The averaging kernel is different. An EM27 kernel changes with the solar
-zenith angle, so each window has its own. Write them into the project as a
+zenith angle, so each window has its own. A ``.oof`` does not carry it: take
+it from the run's ``*.private.nc`` with
+:func:`~stilt.observations.read_ggg_netcdf`, which expands GGG's kernel
+table per spectrum, or from a site table keyed by solar zenith angle
+(PROFFAST tabulates one that way). Write the kernels into the project as a
 table keyed by receptor, with
 :func:`~stilt.transforms.averaging_kernel_table`, and let the footprint's
 ``averaging_kernel`` transform look each one up:
 
 .. code-block:: python
 
+   from stilt.observations import read_ggg_netcdf
    from stilt.transforms import averaging_kernel_table
 
-   # PROFFAST tabulates the kernel by solar zenith angle on one altitude grid
-   kernels = [kernel_for_sza(row.sza) for _, row in windows.iterrows()]
-   table = averaging_kernel_table(receptors, levels=AK_ALTITUDES, values=kernels)
+   ak = read_ggg_netcdf("ha20230715_20230715.private.nc", "xch4").set_index("time")
+   # one kernel per window: the spectrum nearest the window's midpoint
+   nearest = ak.index.get_indexer(windows.index + pd.Timedelta("5min"), method="nearest")
+   kernels = [ak.ak.iloc[i] for i in nearest]
+   table = averaging_kernel_table(receptors, levels=ak.ak_pressure.iloc[0], values=kernels)
    table.to_parquet(model.project.directory / "kernels.parquet")
 
 .. code-block:: yaml
@@ -137,10 +149,11 @@ table keyed by receptor, with
        transforms:
          - kind: averaging_kernel
            table: kernels.parquet
+           coordinate: pres
          - kind: pressure_weighting
 
-The kernel's ``levels`` are heights above ground by default; use
-``coordinate: pres`` for a kernel on pressure levels. If one kernel is a good
+The kernel's ``levels`` are heights above ground by default; the GGG kernel
+sits on pressures, hence ``coordinate: pres``. If one kernel is a good
 enough approximation for a campaign, give it inline as ``levels`` and
 ``values`` instead of a table.
 
