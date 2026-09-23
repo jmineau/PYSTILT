@@ -148,9 +148,6 @@ def test_project_local_directories(local_project, tmp_path):
     root = tmp_path / "proj"
     assert local_project.directory == root
     assert local_project.simulations_dir == root / "simulations" / "by-id"
-    assert local_project.simulation_dir("sim-1") == (
-        root / "simulations" / "by-id" / "sim-1"
-    )
 
 
 def test_project_cloud_directories_raise_type_error(memory_project):
@@ -158,8 +155,6 @@ def test_project_cloud_directories_raise_type_error(memory_project):
         _ = memory_project.directory
     with pytest.raises(TypeError):
         _ = memory_project.simulations_dir
-    with pytest.raises(TypeError):
-        memory_project.simulation_dir("sim-1")
 
 
 def test_project_str_is_root(any_project):

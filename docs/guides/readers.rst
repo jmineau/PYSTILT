@@ -46,13 +46,15 @@ The readers
    * - :func:`~stilt.observations.read_ggg_oof`
      - GGG2020 ``.oof`` files (``*.vav.ada.aia.oof``), one instrument-day
        each; how EGI delivers EM27/SUN retrievals
-     - Salt Lake City EM27/SUN days from 2022 (``ha``)
+     - real EM27/SUN days during development; the committed sample is
+       synthetic, on the same layout
    * - :func:`~stilt.observations.read_ggg_netcdf`
      - GGG2020 netCDF files: ``*.private.nc`` from a run, and the public
        files ``read_tccon`` is a name for
-     - EGI's 2014 example private files for the layout; the per-spectrum
-       kernel follows GGG's slant-xgas interpolation, not checked against a
-       public file from the same site
+     - the public layout against a real TCCON file; the private layout and
+       its per-spectrum kernel follow GGG's slant-xgas interpolation and are
+       exercised on a synthetic sample, not yet checked against a public file
+       from the same run
 
 The satellite readers take ``lon_range`` and ``lat_range`` to keep only
 the pixels in a box, which matters on a whole orbit; the GGG readers take

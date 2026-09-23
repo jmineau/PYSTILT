@@ -50,27 +50,6 @@ class ModelConfig(STILTParams):
         ),
     )
 
-    @classmethod
-    def basic(
-        cls,
-        *,
-        mets: dict[str, MetConfig],
-        n_hours: int = -24,
-        numpar: int = 200,
-        footprints: dict[str, FootprintConfig] | None = None,
-        skip_existing: bool = True,
-        **kwargs: Any,
-    ) -> Self:
-        """Build a science-facing config with the most common controls."""
-        return cls(
-            mets=mets,
-            n_hours=n_hours,
-            numpar=numpar,
-            footprints=footprints or {},
-            skip_existing=skip_existing,
-            **kwargs,
-        )
-
     @model_validator(mode="before")
     @classmethod
     def _resolve_nested_configs(cls, data: dict) -> dict:

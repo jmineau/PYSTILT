@@ -30,8 +30,8 @@ BLENDED = (
 )
 TCCON = DATA / "if20120823_20121201.public.qc.nc"
 OCO2 = DATA / "oco2_LtCO2_231019_B11210Ar_synthetic.nc4"
-OOF = DATA / "ha20220602.vav.ada.aia.oof"
-GGG_PRIVATE = DATA / "xa20140709_20140709.private.nc"
+OOF = DATA / "zz20230715.vav.ada.aia.oof"
+GGG_PRIVATE = DATA / "zz20230715_20230715.private.nc"
 
 REQUIRED = [
     "sounding_id",
@@ -253,24 +253,25 @@ def test_ggg_oof_columns_units_and_time():
     df = read_ggg_oof(OOF)
     assert len(df) == 12
     assert (
-        df.sounding_id.is_unique and df.sounding_id.iloc[0] == "ha20220602s0e00a.0001"
+        df.sounding_id.is_unique and df.sounding_id.iloc[0] == "zz20230715s0e00a.0001"
     )
     assert pd.api.types.is_datetime64_dtype(df.time) and df.time.dt.tz is None
-    # year 2022, day 153, 14.840 UT hours -> 2022-06-02 14:50:24
-    assert df.time.iloc[0] == pd.Timestamp("2022-06-02 14:50:24")
+    # year 2023, day 196, 16.000 UT hours -> 2023-07-15 16:00:00
+    assert df.time.iloc[0] == pd.Timestamp("2023-07-15 16:00:00")
     assert (df.species == "xch4").all() and (df.units == "ppm").all()
     assert df.good.dtype == bool and (df.good == (df.flag == 0)).all()
     row = df.iloc[0]
-    assert row.latitude == pytest.approx(40.766) and row.longitude == pytest.approx(
-        -111.847
+    assert row.latitude == pytest.approx(40.77) and row.longitude == pytest.approx(
+        -111.85
     )
-    assert row.surface_altitude == pytest.approx(1470.0)  # zobs km -> m
+    assert row.surface_altitude == pytest.approx(1450.0)  # zobs km -> m
     assert row.surface_pressure == pytest.approx(853.3)
-    assert row.zenith == pytest.approx(59.92) and row.azimuth == pytest.approx(85.53)
+    assert row.zenith == pytest.approx(40.0) and row.azimuth == pytest.approx(110.0)
     assert row.solar_zenith == row.zenith and 0 <= row.azimuth < 360
     assert row.value == pytest.approx(1.8698) and row.uncertainty == pytest.approx(
         0.0020
     )
+    assert not df.good.all() and df.good.sum() == 11  # one flagged spectrum
     # no kernel or prior in a .oof: the columns are absent, not faked
     for col in ("ak", "ak_pressure", "pressure_levels", "altitude_levels"):
         assert col not in df.columns
@@ -318,7 +319,7 @@ def test_ggg_private_netcdf_expands_kernels_and_shares_priors():
     df = read_ggg_netcdf(GGG_PRIVATE, "xch4")
     _check_common(df)
     assert len(df) == 4
-    assert df.sounding_id.iloc[0] == "xa20140709s0e00a.0001"  # private files keep names
+    assert df.sounding_id.iloc[0] == "zz20230715s0e00a.0001"  # private files keep names
     assert (df.species == "xch4").all() and (df.units == "ppm").all()
     assert (df.good == (df.flag == 0)).all() if "flag" in df.columns else True
     row = df.iloc[0]

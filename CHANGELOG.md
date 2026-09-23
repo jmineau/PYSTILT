@@ -6,6 +6,17 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- Removed `ModelConfig.basic` (it only forwarded to the constructor with
+  defaults the fields already declare) and `Project.simulation_dir` (a
+  simulation's directory comes from the model's compute root, which can sit
+  outside the project on a Slurm worker). Neither had a caller.
+- The GGG reader samples under `tests/data/products` are synthetic files on
+  the GGG2020 `.oof` and `*.private.nc` layouts rather than slices of an
+  instrument team's retrievals. They keep the formats' quirks, including the
+  `.oof` header's variable count exceeding the number of columns written.
+
 ## [0.1.0a18] - 2026-09-23
 
 ### Added

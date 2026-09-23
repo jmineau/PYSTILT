@@ -121,10 +121,6 @@ class Project:
         """Local ``simulations/by-id`` directory. Raises for cloud projects."""
         return self.directory / SIMULATIONS_PREFIX
 
-    def simulation_dir(self, sim_id: str) -> Path:
-        """Local output directory for one simulation. Raises for cloud projects."""
-        return self.simulations_dir / sim_id
-
     # -- inputs ----------------------------------------------------------------
 
     @property
