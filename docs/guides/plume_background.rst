@@ -54,7 +54,6 @@ particles. In PYSTILT each release is a
        mets={"hrrr": met},
        n_hours=12,                  # positive: forward in time
        numpar=1000,
-       hnf_plume=False,             # the near-field plume correction is for backward runs
    )
    forward.run()
 

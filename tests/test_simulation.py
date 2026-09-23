@@ -1,5 +1,6 @@
 """Tests for stilt.simulation (SimID and Simulation behavior)."""
 
+import datetime as dt
 from pathlib import Path
 
 import pandas as pd
@@ -449,6 +450,13 @@ def test_simulation_time_range_backward(point_receptor, tmp_path):
     start, stop = sim.time_range
     assert stop == point_receptor.time
     assert start < stop
+
+
+def test_simulation_time_range_forward(point_receptor, tmp_path):
+    sim = _sim(tmp_path, point_receptor, n_hours=24)
+    start, stop = sim.time_range
+    assert start == point_receptor.time
+    assert stop - start == dt.timedelta(hours=24)
 
 
 def test_generate_footprint_applies_configured_particle_transforms(

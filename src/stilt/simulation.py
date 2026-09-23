@@ -370,7 +370,7 @@ class Simulation:
             stop = r_time
         else:
             start = r_time
-            stop = r_time + dt.timedelta(hours=self.params.n_hours + 1)
+            stop = r_time + dt.timedelta(hours=self.params.n_hours)
         return start, stop
 
     @property

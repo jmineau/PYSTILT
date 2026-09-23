@@ -196,6 +196,20 @@ def test_calc_plume_dilution_adds_reference_column():
     assert out["foot_no_hnf_dilution"].iloc[0] == pytest.approx(1e-5)
 
 
+def test_calc_plume_dilution_grows_outward_from_release_when_forward():
+    """A forward run accumulates sigma from the release point, not the far end."""
+    backward = _particles_basic().drop(columns=["zagl"]).assign(xhgt=[5.0, 5.0])
+    forward = backward.assign(time=-backward["time"])
+
+    back_out = calc_plume_dilution(particles=backward, r_zagl=None, veght=0.5)
+    fwd_out = calc_plume_dilution(particles=forward, r_zagl=None, veght=0.5)
+
+    # sigma depends on |time| only, so mirroring the track must not change foot
+    assert fwd_out["foot"].to_numpy() == pytest.approx(back_out["foot"].to_numpy())
+    # foot scales as 1 / plume, so it shrinks as the plume grows away from release
+    assert fwd_out["foot"].iloc[0] > fwd_out["foot"].iloc[1]
+
+
 def test_from_particles_column_receptor_assigns_xhgt(column_receptor, tmp_path):
     particles = _particles_basic().assign(indx=[1, 2])
     traj = Trajectories.from_particles(

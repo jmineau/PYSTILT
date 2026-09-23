@@ -456,9 +456,12 @@ def calc_plume_dilution(
     start_h = p["xhgt"] if "xhgt" in p.columns else r_zagl
     if start_h is None:
         raise ValueError("r_zagl must be provided if 'xhgt' is not in particles.")
-    # cumsum must accumulate within each particle track in descending time order
+    # The plume grows outward from the release point, so the cumsum must walk
+    # each particle track in order of elapsed time since release. That is
+    # |time| ascending, which covers forward runs as well as backward ones.
+    p["elapsed"] = abs_time_s
     p["plume"] = start_h + (
-        p.sort_values("time", ascending=False)
+        p.sort_values("elapsed")
         .groupby("indx", sort=False)["sigma"]
         .cumsum()
         .reindex(p.index)
@@ -468,4 +471,4 @@ def calc_plume_dilution(
         0.02897 / (p["plume"] * p["dens"]) * p["samt"] * 60,
         p["foot"],
     )
-    return p.drop(columns=["sigma", "pbl_mixing", "plume"])
+    return p.drop(columns=["sigma", "pbl_mixing", "plume", "elapsed"])

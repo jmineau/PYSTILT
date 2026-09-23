@@ -377,3 +377,78 @@ def test_geometry_footprint(tmp_path, wbb_receptor, met_dir):
     assert agg.index.tolist() == ["wbb", "nw"]
     assert agg.loc["wbb"].sum() > 0  # the receptor sits inside its own window
     assert agg.to_numpy().sum() <= float(foot.data.sum()) + 1e-12
+
+
+# ---------------------------------------------------------------------------
+# Forward run (n_hours > 0)
+# ---------------------------------------------------------------------------
+
+
+@integration
+def test_forward_run(tmp_path, met_dir, wbb_grid):
+    """A forward simulation runs end to end and carries a forward time axis."""
+    from stilt.config import FootprintConfig, ModelConfig
+    from stilt.footprint import Footprint
+    from stilt.receptors import PointReceptor
+
+    from .fixtures.r_stilt_reference import (
+        REFERENCE_ALTITUDE,
+        REFERENCE_KRAND,
+        REFERENCE_LATITUDE,
+        REFERENCE_LONGITUDE,
+        REFERENCE_MET_FILE_FORMAT,
+        REFERENCE_SEED,
+        REFERENCE_SUMMER_TIME,
+    )
+
+    # The 2021-07-15 06:00-11:59 block holds the whole +3 h window.
+    receptor = PointReceptor(
+        REFERENCE_SUMMER_TIME,
+        REFERENCE_LONGITUDE,
+        REFERENCE_LATITUDE,
+        REFERENCE_ALTITUDE,
+    )
+    config = ModelConfig(
+        mets={
+            "hrrr": {
+                "directory": met_dir,
+                "file_format": REFERENCE_MET_FILE_FORMAT,
+                "file_tres": "6h",
+            }
+        },
+        n_hours=3,
+        numpar=100,
+        krand=REFERENCE_KRAND,
+        seed=REFERENCE_SEED,
+        hnf_plume=True,  # exercises calc_plume_dilution on a forward track
+        footprints={"default": FootprintConfig(grid=wbb_grid)},
+    )
+
+    model = Model(project=tmp_path / "forward", config=config, receptors=[receptor])
+    model.run()
+
+    sid = _sim_id(receptor)
+    sim = model.simulations[sid]
+    assert sim.has_trajectory, f"no trajectory for {sid}"
+
+    particles = sim.trajectories.data
+    assert len(particles) > 0
+    # HYSPLIT reports elapsed minutes signed by run direction
+    assert (particles["time"] >= 0).all()
+    assert particles["time"].max() > 0
+    assert "foot_no_hnf_dilution" in particles.columns
+
+    start, stop = sim.time_range
+    assert start == receptor.time
+    assert stop == receptor.time + pd.Timedelta(hours=3)
+
+    foot_files = list(sim.directory.glob("*_foot.nc"))
+    assert foot_files, f"no footprint NetCDF in {sim.directory}"
+    foot = Footprint.from_netcdf(foot_files[0])
+    times = pd.DatetimeIndex(foot.data["time"].values)
+    # hourly layers running forward, inside the window time_range reports
+    assert times.is_monotonic_increasing
+    assert times.min() >= pd.Timestamp(start)
+    assert times.max() <= pd.Timestamp(stop)
+    assert set(times.to_series().diff().dropna()) == {pd.Timedelta(hours=1)}
+    assert float(foot.data.sum()) > 0

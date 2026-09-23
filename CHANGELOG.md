@@ -14,6 +14,18 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   independent root-sum-square; the correlated case is fips's new
   `prior_obs_error`. No new API.
 
+### Fixed
+
+- **Near-field plume dilution in forward runs**: `hnf_plume` accumulated the
+  plume's vertical spread from the far end of the track back to the release
+  point when `n_hours` was positive, so forward footprints carried the wrong
+  dilution depth. The cumulative sum now walks each particle in order of
+  elapsed time since release, which is the same order as before for backward
+  runs — their footprints are unchanged. The plume-background guide no longer
+  tells forward users to disable the correction.
+- **`Simulation.time_range`** spanned `n_hours + 1` hours for a forward run;
+  it now spans `n_hours` in both directions.
+
 ## [0.1.0a17] - 2026-09-22
 
 ### Added
