@@ -198,7 +198,7 @@ multiple projects:
    MetConfig(
        directory="/data/met/hrrr",
        file_format="%Y%m%d_%H",
-       file_tres="1h",
+       file_tres="6h",
        subgrid_enable=True,
        subgrid_bounds=Bounds(xmin=-114, xmax=-110, ymin=39, ymax=42),
        subgrid_dir="/scratch/met_subgrid/hrrr_slv",

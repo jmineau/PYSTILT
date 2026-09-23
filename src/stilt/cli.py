@@ -58,7 +58,7 @@ mets:
   hrrr:  # Unique name for this met source.
     directory: /path/to/arl/meteorology
     file_format: "%Y%m%d_%H"
-    file_tres: 1h  # Temporal resolution of met files.
+    file_tres: 6h  # Hours each met file covers; the docs' HRRR files hold six.
 
 
 # Named footprint products to compute for each receptor.

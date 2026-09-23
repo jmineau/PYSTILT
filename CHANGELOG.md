@@ -106,6 +106,18 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   and EGI's example private files; the slant guide's EM27 recipe now reads
   real files.
 
+### Changed
+
+- `stilt init` writes `file_tres: 6h` in the starter config, matching every
+  example in the docs (six-hour HRRR blocks); it said `1h`, so a new user
+  following the quickstart hit a met-file mismatch on the first run.
+- Forward runs (positive `n_hours`) are listed as a supported mode in the
+  README and roadmap; they were only mentioned inside the plume-background
+  guide.
+- The `seed` field's description says what was measured: with the bundled
+  `hycs_std` and `krand=2` it changes nothing, and `krand=4` randomizes the
+  seed itself, so it is not a route to reproducible or distinct draws.
+
 ## [0.1.0a17] - 2026-09-22
 
 ### Added

@@ -79,6 +79,7 @@ design and column-weighting concepts without trying to replicate every script.
 | Modelled enhancement from a flux field (`Footprint.enhancement`) | Implemented |
 | Background from a mole-fraction field at the trajectory endpoints (`background`) | Implemented |
 | Satellite-derived plume background (forward trajectories) | Implemented |
+| Forward runs (positive `n_hours`) for plume and dispersion studies | Implemented; see the plume-background guide |
 | Emission-error propagation to the modelled enhancement | Recipe on `Footprint.enhancement`; correlated case in fips |
 | Inventory readers | Out of scope: a flux field is an xarray array |
 
@@ -118,8 +119,8 @@ model = stilt.Model(
         mets={
             "hrrr": stilt.MetConfig(
                 directory="/data/hrrr",
-                file_format="hrrr_%Y%m%d.arl",
-                file_tres="1h",
+                file_format="%Y%m%d_%H",
+                file_tres="6h",
             )
         },
         footprints={

@@ -222,9 +222,11 @@ class TransportParams(BaseModel):
     seed: int | None = Field(
         None,
         description=(
-            "Optional HYSPLIT random-number seed written to SETUP.CFG. "
-            "Use with krand values that preserve a fixed initial seed; krand=4 "
-            "and 10-13 still randomize the initial seed."
+            "Random-number seed written to SETUP.CFG. Do not rely on it: with "
+            "the bundled hycs_std and krand=2, runs with different seeds came "
+            "out identical (neither the turbulence nor the wind-error draw "
+            "changed), and krand=4 and 10-13 randomize the seed themselves. "
+            "Only krand=4 gives a different draw from run to run."
         ),
     )
     krnd: int = Field(6, description="Enhanced-merging interval in hours.")
