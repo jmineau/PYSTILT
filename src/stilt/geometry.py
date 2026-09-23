@@ -613,8 +613,17 @@ def overlap_weights(
 
 
 def check_resolution(geometry: Geometry, xres: float, yres: float, crs: str) -> None:
-    """Warn when the raster is too coarse to resolve the smallest target cell."""
+    """
+    Warn when the raster is too coarse to resolve the smallest target cell.
+
+    The warning is about the error in rasterizing a *polygon* boundary, so it
+    does not apply to a rectilinear target in the raster's own CRS: there the
+    overlap is computed exactly per axis at any resolution ratio, including
+    the identity case of a footprint aggregated onto its own grid.
+    """
     width = geometry.min_cell_width
+    if isinstance(geometry, Grid) and same_crs(geometry.projection, crs):
+        return  # exact per-axis overlap; no rasterization error to warn about
     if not same_crs(
         geometry.crs if not isinstance(geometry, Grid) else geometry.projection, crs
     ):

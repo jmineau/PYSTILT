@@ -7,7 +7,7 @@ import os
 import warnings
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, NamedTuple, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 import pandas as pd
@@ -22,7 +22,6 @@ from stilt.geometry import (
     Zones,
     check_resolution,
     overlap_weights,
-    same_crs,
 )
 from stilt.receptors import Receptor
 from stilt.transforms import dump_transform
@@ -136,48 +135,6 @@ def _infer_axis_resolution(
     return float(fallback)
 
 
-def _edges_from_centers(
-    centers: np.ndarray, resolution: float | None = None
-) -> np.ndarray:
-    """
-    Cell edges (length N+1) from ascending cell ``centers``.
-
-    Interior edges are the midpoints between neighbours; the two outer edges
-    extend the outermost cells symmetrically.  ``resolution`` is only needed to
-    size a single-cell axis (no neighbours to infer width from).
-    """
-    c = np.asarray(centers, dtype=float)
-    if c.size == 1:
-        if resolution is None:
-            raise ValueError("resolution is required to build edges for a single cell.")
-        half = float(resolution) / 2.0
-        return np.array([c[0] - half, c[0] + half])
-    mids = (c[:-1] + c[1:]) / 2.0
-    first = c[0] - (mids[0] - c[0])
-    last = c[-1] + (c[-1] - mids[-1])
-    return np.concatenate(([first], mids, [last]))
-
-
-def _overlap_fraction_matrix(
-    src_edges: np.ndarray, dst_edges: np.ndarray
-) -> np.ndarray:
-    """
-    Per-axis conservative regridding weights.
-
-    Returns ``P`` of shape ``(N_dst, N_src)`` where
-    ``P[d, s] = length(src cell s ∩ dst cell d) / length(src cell s)`` — the
-    fraction of source cell ``s`` that lies inside destination cell ``d``.
-    Normalizing by the *source* length (not the destination) is what makes the
-    regrid conserve the footprint **sum** rather than its area-mean.
-    """
-    s_lo, s_hi = src_edges[:-1], src_edges[1:]
-    d_lo, d_hi = dst_edges[:-1], dst_edges[1:]
-    lo = np.maximum(s_lo[None, :], d_lo[:, None])
-    hi = np.minimum(s_hi[None, :], d_hi[:, None])
-    overlap = np.clip(hi - lo, 0.0, None)
-    return overlap / (s_hi - s_lo)[None, :]
-
-
 def _regular_axis(centers: np.ndarray, resolution: float) -> np.ndarray:
     """
     Reconstruct the full ascending regular axis covering ``centers``.
@@ -194,29 +151,17 @@ def _regular_axis(centers: np.ndarray, resolution: float) -> np.ndarray:
 
 
 def _nearest_index(axis: np.ndarray, values: np.ndarray) -> np.ndarray:
-    """Index into ascending ``axis`` of the entry nearest each of ``values``."""
+    """
+    Index into ascending ``axis`` of the entry nearest each of ``values``.
+
+    Matched by nearest rather than by equality: a grid's axes are rounded to
+    10 decimals while a caller's coordinates are not, so two descriptions of
+    the same cell need not compare equal.
+    """
     idx = np.clip(np.searchsorted(axis, values), 0, axis.size - 1)
     left = np.clip(idx - 1, 0, axis.size - 1)
     choose_left = np.abs(axis[left] - values) <= np.abs(axis[idx] - values)
     return np.where(choose_left, left, idx)
-
-
-class _AggTarget(NamedTuple):
-    """
-    Normalized aggregation target: the requested cells plus their full axes.
-
-    ``cell_x``/``cell_y`` are the flattened target cell centers in result order
-    (a possibly non-rectangular subset). ``axis_x``/``axis_y`` are the full,
-    ascending, regular axes the cells live on — used to build the per-axis
-    overlap weights and to drop mass that lands in absent cells.
-    """
-
-    cell_x: np.ndarray
-    cell_y: np.ndarray
-    axis_x: np.ndarray
-    axis_y: np.ndarray
-    res_x: float
-    res_y: float
 
 
 def _build_footprint_array(
@@ -1217,25 +1162,28 @@ class Footprint:
         resolution: float | tuple[float, float] | None,
         x_dim: str,
         y_dim: str,
-    ) -> _AggTarget:
+    ) -> tuple[Grid, np.ndarray, np.ndarray]:
         """
-        Normalize a lattice aggregation target into cells plus full regular axes.
+        Normalize a lattice target into a full grid plus the cells to report.
 
         Accepts a :class:`~stilt.config.Grid`, an xarray grid (``lon``/``lat``
         or ``x``/``y`` coordinates; ``NaN`` cells in a 2-D DataArray are treated
         as masked-out), or a plain list of ``(x, y)`` cell centers (with
         ``resolution``).
+
+        The returned grid is the complete regular rectangle the requested cells
+        live on, even when they are a non-rectangular subset of it: the weights
+        are built on that rectangle so native mass landing in an absent cell is
+        dropped rather than folded into a neighbour. The two arrays are the
+        requested cell centers, in the order the result should carry.
         """
         px = np.asarray(self.data[x_dim].values, dtype=float)
         py = np.asarray(self.data[y_dim].values, dtype=float)
-        grid = self.config.grid
+        native = self.config.grid
 
         if isinstance(target, Grid):
-            axis_x, axis_y = target.axes
             cell_x, cell_y = target.cells
-            return _AggTarget(
-                cell_x, cell_y, axis_x, axis_y, float(target.xres), float(target.yres)
-            )
+            return target, cell_x, cell_y
 
         if isinstance(target, xr.DataArray | xr.Dataset):
             tx = (
@@ -1258,8 +1206,7 @@ class Footprint:
                 )
             # Enumerate cells in the grid's NATIVE coordinate order (x outer,
             # y inner) so the result rows match the caller's grid layout even
-            # when an axis is stored descending. The overlap math needs ascending
-            # edges, so the axes themselves are sorted separately below.
+            # when an axis is stored descending.
             raw_x = np.asarray(target[tx].values, dtype=float)
             raw_y = np.asarray(target[ty].values, dtype=float)
             xx, yy = np.meshgrid(raw_x, raw_y, indexing="ij")
@@ -1271,15 +1218,9 @@ class Footprint:
             ):
                 active = ~np.isnan(target.transpose(tx, ty).to_numpy()).ravel()
                 cell_x, cell_y = cell_x[active], cell_y[active]
-            axis_x, axis_y = np.sort(raw_x), np.sort(raw_y)
-            return _AggTarget(
-                cell_x,
-                cell_y,
-                axis_x,
-                axis_y,
-                _infer_axis_resolution(axis_x, px, grid.xres),
-                _infer_axis_resolution(axis_y, py, grid.yres),
-            )
+            res_x = _infer_axis_resolution(np.sort(raw_x), px, native.xres)
+            res_y = _infer_axis_resolution(np.sort(raw_y), py, native.yres)
+            return self._enclosing_grid(cell_x, cell_y, res_x, res_y), cell_x, cell_y
 
         arr = np.asarray(target, dtype=float)
         if arr.ndim != 2 or arr.shape[1] != 2:
@@ -1294,15 +1235,24 @@ class Footprint:
             if res_x <= 0 or res_y <= 0:
                 raise ValueError("resolution must be positive.")
         else:
-            res_x = _infer_axis_resolution(cell_x, px, grid.xres)
-            res_y = _infer_axis_resolution(cell_y, py, grid.yres)
-        return _AggTarget(
-            cell_x,
-            cell_y,
-            _regular_axis(cell_x, res_x),
-            _regular_axis(cell_y, res_y),
-            res_x,
-            res_y,
+            res_x = _infer_axis_resolution(cell_x, px, native.xres)
+            res_y = _infer_axis_resolution(cell_y, py, native.yres)
+        return self._enclosing_grid(cell_x, cell_y, res_x, res_y), cell_x, cell_y
+
+    def _enclosing_grid(
+        self, cell_x: np.ndarray, cell_y: np.ndarray, res_x: float, res_y: float
+    ) -> Grid:
+        """The complete regular grid of resolution ``res`` covering these centers."""
+        axis_x = _regular_axis(cell_x, res_x)
+        axis_y = _regular_axis(cell_y, res_y)
+        return Grid(
+            xmin=float(axis_x[0] - res_x / 2),
+            xmax=float(axis_x[-1] + res_x / 2),
+            ymin=float(axis_y[0] - res_y / 2),
+            ymax=float(axis_y[-1] + res_y / 2),
+            xres=res_x,
+            yres=res_y,
+            projection=self.config.grid.projection,
         )
 
     def aggregate(
@@ -1362,56 +1312,26 @@ class Footprint:
         y_dim = "lat" if is_latlon else "y"
 
         self._check_geometry_hash(target)
-        native_crs = self.config.grid.projection
-        if isinstance(target, (Mesh, Zones)) or (
-            isinstance(target, Grid) and not same_crs(target.projection, native_crs)
-        ):
+        if isinstance(target, (Mesh, Zones, Grid)):
             return self._aggregate_geometry(target, time_bins, x_dim, y_dim)
 
-        tgt = self._resolve_target(target, resolution, x_dim, y_dim)
-        coord_index = pd.MultiIndex.from_arrays(
-            [tgt.cell_x, tgt.cell_y], names=[x_dim, y_dim]
+        # A lattice target (xarray grid or coords list) is the same operator:
+        # build the complete grid its cells live on, aggregate onto that, then
+        # take the requested cells. Mass landing in a cell the caller left out
+        # is dropped, never folded into a neighbour.
+        grid, cell_x, cell_y = self._resolve_target(target, resolution, x_dim, y_dim)
+        wanted = pd.MultiIndex.from_arrays([cell_x, cell_y], names=[x_dim, y_dim])
+        if len(cell_x) == 0:
+            return pd.DataFrame(0.0, index=wanted, columns=_time_bin_columns(time_bins))
+        full = self._aggregate_geometry(grid, time_bins, x_dim, y_dim)
+        # Select by position, not by index lookup: the grid's axes are rounded
+        # while the caller's coordinates are not, so equal cells need not
+        # compare equal. Rows of ``full`` run x outer, y inner.
+        axis_x, axis_y = grid.axes
+        pos = _nearest_index(axis_x, cell_x) * len(axis_y) + _nearest_index(
+            axis_y, cell_y
         )
-        columns = _time_bin_columns(time_bins)
-        result = pd.DataFrame(0.0, index=coord_index, columns=columns)
-
-        ntime = int(self.data.sizes.get("time", 0))
-        if self.data.size == 0 or len(tgt.cell_x) == 0 or ntime == 0:
-            return result
-
-        # Per-axis conservative weights: the fraction of each native cell that
-        # overlaps each target cell on the full regular axes.  The 2-D weight
-        # operator W = Py (x) Px is never formed; it is applied per time bin as
-        # ``lattice = Py @ F @ Px.T`` then indexed onto the requested cells.
-        px = np.asarray(self.data[x_dim].values, dtype=float)
-        py = np.asarray(self.data[y_dim].values, dtype=float)
-        weight_x = _overlap_fraction_matrix(
-            _edges_from_centers(px, self.config.grid.xres),
-            _edges_from_centers(tgt.axis_x, tgt.res_x),
-        )
-        weight_y = _overlap_fraction_matrix(
-            _edges_from_centers(py, self.config.grid.yres),
-            _edges_from_centers(tgt.axis_y, tgt.res_y),
-        )
-        col = _nearest_index(tgt.axis_x, tgt.cell_x)
-        row = _nearest_index(tgt.axis_y, tgt.cell_y)
-
-        data_arr = self.data.transpose("time", y_dim, x_dim).to_numpy()
-        native_times = _utc_index(self.data["time"].values).tz_localize(None)
-        for interval, left_edge in zip(time_bins, columns, strict=False):
-            left = _naive_utc_timestamp(interval.left)
-            right = _naive_utc_timestamp(interval.right)
-            if left is None or right is None:
-                raise ValueError(
-                    f"Could not convert interval bounds to UTC timestamps: {interval}"
-                )
-            in_bin = np.asarray((native_times >= left) & (native_times < right))
-            if not in_bin.any():
-                continue
-            f_bin = data_arr[in_bin].sum(axis=0)  # (Ny, Nx)
-            lattice = weight_y @ f_bin @ weight_x.T  # (Ty, Tx)
-            result[left_edge] = lattice[row, col]
-        return result
+        return pd.DataFrame(full.to_numpy()[pos], index=wanted, columns=full.columns)
 
     def _check_geometry_hash(self, target: object) -> None:
         """Warn when aggregating onto a mesh other than the one this raster was derived for."""
