@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Literal, cast
 
+import numpy as np
 from pydantic import BaseModel, ConfigDict, Field
 
 if TYPE_CHECKING:
-    import numpy as np
     import pandas as pd
     import xarray as xr
 
@@ -27,6 +27,89 @@ def validate_vertical_reference(reference: str) -> VerticalReference:
 def kmsl_from_vertical_reference(reference: VerticalReference) -> int:
     """Map a vertical reference onto the HYSPLIT ``KMSL`` control value."""
     return 0 if reference == "agl" else 1
+
+
+def _grid_cell_starts(minimum: float, maximum: float, resolution: float) -> np.ndarray:
+    """
+    Return lower-left cell starts for a half-open grid extent.
+
+    Cells start at ``minimum`` and repeat by ``resolution`` while the complete
+    cell remains inside ``[minimum, maximum]``.  Equivalently, ``maximum`` is an
+    outer grid boundary, not a cell start.
+
+    Decimal bounds are not exact in binary, so ``maximum - minimum`` carries a
+    rounding error proportional to the bounds' magnitude (``40.93 - 40.45`` is
+    ``0.4799999999999969``).  The tolerance is sized to that error, divided by
+    the resolution, so the final intended cell is kept (48 cells here at 0.01,
+    as STILT-R's ``seq()`` gives) while a genuinely partial cell is still
+    dropped.
+    """
+    if resolution <= 0:
+        raise ValueError("Grid resolution must be positive.")
+    quotient = (maximum - minimum) / resolution
+    scale = max(abs(minimum), abs(maximum), abs(maximum - minimum))
+    tol = 16 * np.finfo(float).eps * scale / resolution
+    n_cells = int(np.floor(quotient + tol))
+    if n_cells < 1:
+        raise ValueError("Grid extent must contain at least one complete cell.")
+    return minimum + np.arange(n_cells, dtype=float) * resolution
+
+
+def _cf_grid_mapping_attrs(projection: str) -> dict[str, object]:
+    """Return CF-style grid-mapping attributes for a PROJ string."""
+    attrs: dict[str, object] = {"proj4_params": projection}
+    try:
+        from pyproj import CRS
+    except ImportError:
+        if "+proj=longlat" in projection:
+            attrs["grid_mapping_name"] = "latitude_longitude"
+        return attrs
+
+    crs = CRS.from_user_input(projection)
+    attrs.update(crs.to_cf())
+    wkt = crs.to_wkt()
+    attrs["spatial_ref"] = wkt
+    attrs["crs_wkt"] = wkt
+    return {
+        key: value
+        for key, value in attrs.items()
+        if isinstance(value, str | int | float | np.number)
+    }
+
+
+def cf_axis_attrs(dim: str) -> dict[str, str]:
+    """
+    CF attributes for one coordinate axis: ``lon``, ``lat``, ``x`` or ``y``.
+
+    Shared so a grid written straight to xarray and a footprint written to
+    netCDF describe their axes identically.
+    """
+    return {
+        "lon": {
+            "standard_name": "longitude",
+            "long_name": "longitude",
+            "units": "degrees_east",
+            "axis": "X",
+        },
+        "lat": {
+            "standard_name": "latitude",
+            "long_name": "latitude",
+            "units": "degrees_north",
+            "axis": "Y",
+        },
+        "x": {
+            "standard_name": "projection_x_coordinate",
+            "long_name": "x coordinate of projection",
+            "units": "m",
+            "axis": "X",
+        },
+        "y": {
+            "standard_name": "projection_y_coordinate",
+            "long_name": "y coordinate of projection",
+            "units": "m",
+            "axis": "Y",
+        },
+    }[dim]
 
 
 class Bounds(BaseModel):
@@ -195,10 +278,6 @@ class Grid(Bounds):
         resolution exactly.  ``pyproj`` is required only for non-longlat
         projections.
         """
-        import numpy as np
-
-        from stilt.footprint import _grid_cell_starts
-
         xmin, xmax, ymin, ymax = self.xmin, self.xmax, self.ymin, self.ymax
         if not self.is_longlat:
             from pyproj import Transformer
@@ -215,8 +294,6 @@ class Grid(Bounds):
     @property
     def cells(self) -> tuple[np.ndarray, np.ndarray]:
         """Every cell centre as flat ``(x, y)`` arrays, x outer / y inner."""
-        import numpy as np
-
         x, y = self.axes
         xx, yy = np.meshgrid(x, y, indexing="ij")
         return xx.ravel(), yy.ravel()
@@ -249,8 +326,6 @@ class Grid(Bounds):
         """
         import xarray as xr
 
-        from stilt.footprint import _cf_grid_mapping_attrs
-
         is_longlat = self.is_longlat
         x_centers, y_centers = self.axes
         x_dim, y_dim = ("lon", "lat") if is_longlat else ("x", "y")
@@ -258,33 +333,9 @@ class Grid(Bounds):
         ds = xr.Dataset(coords={x_dim: x_centers, y_dim: y_centers})
         ds.attrs["Conventions"] = "CF-1.8"
         ds["crs"] = xr.DataArray(0, attrs=_cf_grid_mapping_attrs(self.projection))
-        if is_longlat:
-            ds[x_dim].attrs.update(
-                standard_name="longitude",
-                long_name="longitude",
-                units="degrees_east",
-                axis="X",
-            )
-            ds[y_dim].attrs.update(
-                standard_name="latitude",
-                long_name="latitude",
-                units="degrees_north",
-                axis="Y",
-            )
-        else:
-            ds[x_dim].attrs.update(
-                standard_name="projection_x_coordinate",
-                long_name="x coordinate of projection",
-                units="m",
-                axis="X",
-            )
-            ds[y_dim].attrs.update(
-                standard_name="projection_y_coordinate",
-                long_name="y coordinate of projection",
-                units="m",
-                axis="Y",
-            )
+        ds[x_dim].attrs.update(cf_axis_attrs(x_dim))
+        ds[y_dim].attrs.update(cf_axis_attrs(y_dim))
         return ds
 
 
-__all__ = ["Bounds", "Grid"]
+__all__ = ["Bounds", "Grid", "cf_axis_attrs"]

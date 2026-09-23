@@ -2,7 +2,6 @@
 
 import datetime as dt
 import json
-import math
 import os
 import warnings
 from dataclasses import dataclass
@@ -16,6 +15,11 @@ from scipy.ndimage import convolve as _convolve
 from typing_extensions import Self
 
 from stilt.config import FootprintConfig, Grid
+from stilt.config.spatial import (
+    _cf_grid_mapping_attrs,
+    _grid_cell_starts,
+    cf_axis_attrs,
+)
 from stilt.geometry import (
     Mesh,
     SpatialTarget,
@@ -47,15 +51,6 @@ def _make_gauss_kernel(rs: tuple[float, float], sigma: float) -> np.ndarray:
     return np.where(np.isnan(w), 1.0, w)
 
 
-def _calc_digits(res: float) -> int:
-    """Decimal digits needed to round coordinates at a given resolution."""
-    if res <= 0:
-        raise ValueError("Resolution must be positive")
-    if res < 1:
-        return int(math.ceil(math.log10(1 / res))) + 1
-    return max(int(-math.log10(res)), 0)
-
-
 def _interpolation_times(time_sign: int) -> np.ndarray:
     """Exact STILT-R early-time interpolation schedule in minutes."""
     times = np.concatenate(
@@ -66,32 +61,6 @@ def _interpolation_times(time_sign: int) -> np.ndarray:
         ]
     )
     return times * time_sign
-
-
-def _grid_cell_starts(minimum: float, maximum: float, resolution: float) -> np.ndarray:
-    """
-    Return lower-left cell starts for a half-open grid extent.
-
-    Cells start at ``minimum`` and repeat by ``resolution`` while the complete
-    cell remains inside ``[minimum, maximum]``.  Equivalently, ``maximum`` is an
-    outer grid boundary, not a cell start.
-
-    Decimal bounds are not exact in binary, so ``maximum - minimum`` carries a
-    rounding error proportional to the bounds' magnitude (``40.93 - 40.45`` is
-    ``0.4799999999999969``).  The tolerance is sized to that error, divided by
-    the resolution, so the final intended cell is kept (48 cells here at 0.01,
-    as STILT-R's ``seq()`` gives) while a genuinely partial cell is still
-    dropped.
-    """
-    if resolution <= 0:
-        raise ValueError("Grid resolution must be positive.")
-    quotient = (maximum - minimum) / resolution
-    scale = max(abs(minimum), abs(maximum), abs(maximum - minimum))
-    tol = 16 * np.finfo(float).eps * scale / resolution
-    n_cells = int(np.floor(quotient + tol))
-    if n_cells < 1:
-        raise ValueError("Grid extent must contain at least one complete cell.")
-    return minimum + np.arange(n_cells, dtype=float) * resolution
 
 
 def _utc_index(values: Any) -> pd.DatetimeIndex:
@@ -212,70 +181,15 @@ def _empty_footprint_data(data: xr.DataArray, reason: str) -> xr.DataArray:
     return data
 
 
-def _cf_grid_mapping_attrs(projection: str) -> dict[str, object]:
-    """Return CF-style grid-mapping attributes for a PROJ string."""
-    attrs: dict[str, object] = {"proj4_params": projection}
-    try:
-        from pyproj import CRS
-    except ImportError:
-        if "+proj=longlat" in projection:
-            attrs["grid_mapping_name"] = "latitude_longitude"
-        return attrs
-
-    crs = CRS.from_user_input(projection)
-    attrs.update(crs.to_cf())
-    wkt = crs.to_wkt()
-    attrs["spatial_ref"] = wkt
-    attrs["crs_wkt"] = wkt
-    return {
-        key: value
-        for key, value in attrs.items()
-        if isinstance(value, str | int | float | np.number)
-    }
-
-
 def _with_cf_metadata(ds: xr.Dataset, *, grid: Grid) -> xr.Dataset:
     """Attach CF-friendly coordinates and CRS metadata to a footprint dataset."""
     ds.attrs.setdefault("Conventions", "CF-1.8")
     ds["crs"] = xr.DataArray(0, attrs=_cf_grid_mapping_attrs(grid.projection))
     ds["foot"].attrs["grid_mapping"] = "crs"
 
-    if "lon" in ds.coords:
-        ds["lon"].attrs.update(
-            {
-                "standard_name": "longitude",
-                "long_name": "longitude",
-                "units": "degrees_east",
-                "axis": "X",
-            }
-        )
-    if "lat" in ds.coords:
-        ds["lat"].attrs.update(
-            {
-                "standard_name": "latitude",
-                "long_name": "latitude",
-                "units": "degrees_north",
-                "axis": "Y",
-            }
-        )
-    if "x" in ds.coords:
-        ds["x"].attrs.update(
-            {
-                "standard_name": "projection_x_coordinate",
-                "long_name": "x coordinate of projection",
-                "units": "m",
-                "axis": "X",
-            }
-        )
-    if "y" in ds.coords:
-        ds["y"].attrs.update(
-            {
-                "standard_name": "projection_y_coordinate",
-                "long_name": "y coordinate of projection",
-                "units": "m",
-                "axis": "Y",
-            }
-        )
+    for dim in ("lon", "lat", "x", "y"):
+        if dim in ds.coords:
+            ds[dim].attrs.update(cf_axis_attrs(dim))
     if "time" in ds.coords:
         ds["time"].attrs.update({"standard_name": "time", "axis": "T"})
     return ds

@@ -11,12 +11,10 @@ import pytest
 import xarray as xr
 
 from stilt.config import FootprintConfig, Grid
+from stilt.config.spatial import _cf_grid_mapping_attrs, _grid_cell_starts
 from stilt.footprint import (
     Footprint,
-    _calc_digits,
-    _cf_grid_mapping_attrs,
     _compute_kernel_bandwidths,
-    _grid_cell_starts,
     _interpolate_early_timesteps,
     _interpolation_times,
     _make_gauss_kernel,
@@ -60,17 +58,6 @@ def _make_footprint(
         attrs={"units": "ppm (umol-1 m2 s)"},
     )
     return Footprint(receptor=receptor, config=config, data=data, name="slv")
-
-
-def test_calc_digits_values():
-    assert _calc_digits(0.01) == 3
-    assert _calc_digits(0.1) == 2
-    assert _calc_digits(1.0) == 0
-
-
-def test_calc_digits_invalid():
-    with pytest.raises(ValueError):
-        _calc_digits(0.0)
 
 
 def test_grid_cell_starts_use_complete_half_open_cells():

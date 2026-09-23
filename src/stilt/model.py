@@ -177,21 +177,7 @@ class Model:
         """Named met streams, resolved from config."""
         if self._mets is None:
             self._mets = {
-                name: MetStream(
-                    name,
-                    directory=cfg.directory,
-                    file_format=cfg.file_format,
-                    file_tres=cfg.file_tres,
-                    n_min=cfg.n_min,
-                    source_type=cfg.source,
-                    source_kwargs=cfg.source_kwargs,
-                    backend=cfg.backend,
-                    subgrid_enable=cfg.subgrid_enable,
-                    subgrid_bounds=cfg.subgrid_bounds,
-                    subgrid_buffer=cfg.subgrid_buffer,
-                    subgrid_levels=cfg.subgrid_levels,
-                    subgrid_dir=cfg.subgrid_dir,
-                )
+                name: MetStream.from_config(name, cfg)
                 for name, cfg in self.config.mets.items()
             }
         return self._mets

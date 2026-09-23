@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 import pandas as pd
 
+from stilt.config import MetConfig
 from stilt.errors import ConfigValidationError, MeteorologyError
 
 if TYPE_CHECKING:
@@ -112,6 +113,25 @@ class MetStream:
 
         # Lazily constructed arlmet source instance (source mode only)
         self._arlmet_source: ArlmetSource | None = None
+
+    @classmethod
+    def from_config(cls, name: str, config: MetConfig) -> MetStream:
+        """Build a stream from its config entry, so callers do not restate the fields."""
+        return cls(
+            name,
+            directory=config.directory,
+            file_format=config.file_format,
+            file_tres=config.file_tres,
+            n_min=config.n_min,
+            source_type=config.source,
+            source_kwargs=config.source_kwargs,
+            backend=config.backend,
+            subgrid_enable=config.subgrid_enable,
+            subgrid_bounds=config.subgrid_bounds,
+            subgrid_buffer=config.subgrid_buffer,
+            subgrid_levels=config.subgrid_levels,
+            subgrid_dir=config.subgrid_dir,
+        )
 
     # ------------------------------------------------------------------
     # Internal helpers

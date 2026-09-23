@@ -37,12 +37,12 @@ import pytest
 import xarray as xr
 
 from stilt.config import FootprintConfig, Grid
+from stilt.config.spatial import _grid_cell_starts
 from stilt.footprint import (
     Footprint,
     _build_buffered_grid,
     _compute_kernel_bandwidths,
     _filter_and_rasterize_particles,
-    _grid_cell_starts,
     _interpolate_early_timesteps,
     _make_gauss_kernel,
     _project_particles_to_crs,
