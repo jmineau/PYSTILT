@@ -29,6 +29,7 @@ def _in_ranges(
     lon_range: tuple[float, float] | None,
     lat_range: tuple[float, float] | None,
 ) -> np.ndarray:
+    """Return a mask of the points inside the longitude and latitude ranges."""
     keep = np.isfinite(lon) & np.isfinite(lat)
     if lon_range is not None:
         keep &= (lon >= lon_range[0]) & (lon <= lon_range[1])

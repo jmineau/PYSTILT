@@ -25,6 +25,7 @@ def sigterm_as_interrupt():
     previous = signal.getsignal(signal.SIGTERM)
 
     def _handle(signum: int, frame: object) -> None:
+        """Turn SIGTERM into KeyboardInterrupt so cleanup runs."""
         raise KeyboardInterrupt
 
     signal.signal(signal.SIGTERM, _handle)

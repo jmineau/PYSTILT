@@ -335,6 +335,7 @@ def status(project: str | None = _PROJECT_ARG) -> None:
 
 
 def _format_counts(model: Model) -> str:
+    """Format a model's simulation counts for one status line."""
     counts = model.status()
     return (
         f"total={counts.total}  completed={counts.completed}  pending={counts.pending}"
@@ -394,6 +395,7 @@ def _wait_with_progress(
     errors: list[BaseException] = []
 
     def _wait() -> None:
+        """Wait on the handle in a worker thread, storing any exception."""
         try:
             handle.wait()  # type: ignore[attr-defined]
         except BaseException as exc:  # pragma: no cover - re-raised in caller thread

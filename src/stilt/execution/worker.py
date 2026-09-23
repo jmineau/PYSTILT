@@ -158,6 +158,7 @@ _POOL_SKIP: bool = True
 
 
 def _raise_interrupt(signum: int, frame: object) -> None:
+    """Turn a signal into KeyboardInterrupt so cleanup runs."""
     raise KeyboardInterrupt
 
 
@@ -172,6 +173,7 @@ def _init_pool_worker(project: str, compute_root: str, skip_existing: bool) -> N
 
 
 def _pool_run(item: tuple[int, str]) -> tuple[int, SimulationResult]:
+    """Run one simulation in a pool worker, returning its index and result."""
     idx, sim_id = item
     assert _POOL_MODEL is not None
     return idx, _run_one(_POOL_MODEL, sim_id, _POOL_SKIP)

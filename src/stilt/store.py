@@ -78,17 +78,21 @@ class LocalStore:
         return self.root / key.strip("/")
 
     def exists(self, key: str) -> bool:
+        """Return whether the key has been written."""
         return self.path(key).exists()
 
     def read_bytes(self, key: str) -> bytes:
+        """Read the key's bytes."""
         return self.path(key).read_bytes()
 
     def write_bytes(self, key: str, data: bytes) -> None:
+        """Write bytes to the key, creating parent directories."""
         path = self.path(key)
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(data)
 
     def publish_file(self, local_path: str | Path, key: str) -> None:
+        """Copy a finished local file into the store; a missing source is ignored."""
         src = Path(local_path)
         if not src.exists():
             return
@@ -104,6 +108,7 @@ class LocalStore:
             tmp.unlink(missing_ok=True)
 
     def local_path(self, key: str) -> Path:
+        """Return a local path for the key; the store is already local."""
         return self.path(key)
 
 
@@ -124,6 +129,7 @@ class FsspecStore:
         return f"FsspecStore({self.root!r})"
 
     def _cache(self) -> Path:
+        """Return the download cache directory, creating a temporary one if needed."""
         if self._cache_dir is None:
             self._cache_dir = Path(tempfile.mkdtemp(prefix="pystilt_cache_"))
         self._cache_dir.mkdir(parents=True, exist_ok=True)
@@ -136,12 +142,15 @@ class FsspecStore:
         return f"{root}/{clean}" if root else clean
 
     def exists(self, key: str) -> bool:
+        """Return whether the key has been written."""
         return self.fs.exists(self._fs_key(key))
 
     def read_bytes(self, key: str) -> bytes:
+        """Read the key's bytes from the remote filesystem."""
         return self.fs.cat(self._fs_key(key))
 
     def write_bytes(self, key: str, data: bytes) -> None:
+        """Write bytes to the key, creating parent prefixes."""
         fs_key = self._fs_key(key)
         parent = posixpath.dirname(fs_key)
         if parent:
@@ -150,6 +159,7 @@ class FsspecStore:
             handle.write(data)
 
     def publish_file(self, local_path: str | Path, key: str) -> None:
+        """Upload a finished local file to the key; a missing source is ignored."""
         src = Path(local_path)
         if not src.exists():
             return
@@ -160,6 +170,7 @@ class FsspecStore:
         self.fs.put_file(str(src), fs_key)
 
     def local_path(self, key: str) -> Path:
+        """Download the key to the cache and return the local path."""
         local = fsspec.open_local(
             f"simplecache::{uri_join(self.root, key)}",
             simplecache={"cache_storage": str(self._cache())},

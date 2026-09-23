@@ -20,6 +20,7 @@ class LocalHandle:
 
     @property
     def job_id(self) -> str:
+        """Return the handle's job id; local runs have no scheduler id."""
         return "local"
 
     @property
@@ -29,6 +30,7 @@ class LocalHandle:
 
     @property
     def done(self) -> bool:
+        """Return whether the worker thread has finished."""
         return self._thread is None or not self._thread.is_alive()
 
     def wait(self) -> None:
@@ -56,6 +58,7 @@ class LocalExecutor:
 
     @property
     def n_workers(self) -> int:
+        """Return the number of worker processes."""
         return self._n_workers
 
     def start(
@@ -67,6 +70,7 @@ class LocalExecutor:
         compute_root: str | None = None,
         skip_existing: bool | None = None,
     ) -> LocalHandle:
+        """Start the pending simulations on a local worker pool."""
         if not pending:
             return LocalHandle()
 
@@ -74,6 +78,7 @@ class LocalExecutor:
         handle = LocalHandle()
 
         def _work() -> None:
+            """Run the pending simulations, recording the result."""
             from stilt.model import Model
 
             from ..worker import run_simulations

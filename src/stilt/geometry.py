@@ -90,6 +90,7 @@ def _transform_geometries(
     tr = Transformer.from_crs(src, dst, always_xy=True)
 
     def _fn(coords: np.ndarray) -> np.ndarray:
+        """Reproject one array of coordinates."""
         x, y = tr.transform(coords[:, 0], coords[:, 1])
         return np.column_stack((x, y))
 
@@ -136,6 +137,7 @@ class Mesh(BaseModel):
 
     @model_validator(mode="after")
     def _check(self) -> Mesh:
+        """Validate that ids and geometries line up and are non-empty."""
         if len(self.ids) == 0:
             raise ValueError("Mesh requires at least one cell.")
         if len(self.ids) != len(self.geometries):
@@ -326,6 +328,7 @@ class Zones(BaseModel):
 
     @model_validator(mode="after")
     def _check(self) -> Zones:
+        """Validate that labels line up with the base geometry."""
         n = len(self.base.index)
         if len(self.labels) != n:
             raise ValueError(
@@ -407,6 +410,7 @@ SpatialTarget = Geometry | xr.DataArray | xr.Dataset | list[tuple[float, float]]
 
 
 def _geometry_key(geometry: Geometry) -> str:
+    """Return a cache key identifying the geometry."""
     if isinstance(geometry, Grid):
         return "grid:" + geometry.model_dump_json()
     return f"{type(geometry).__name__.lower()}:{geometry.hash}"
@@ -415,6 +419,7 @@ def _geometry_key(geometry: Geometry) -> str:
 def _raster_key(
     x: np.ndarray, y: np.ndarray, xres: float, yres: float, crs: str
 ) -> str:
+    """Return a cache key identifying a raster's axes and projection."""
     h = hashlib.sha256()
     h.update(np.ascontiguousarray(x, dtype=float).tobytes())
     h.update(np.ascontiguousarray(y, dtype=float).tobytes())
@@ -436,6 +441,7 @@ def _overlap_1d(src_edges: np.ndarray, dst_edges: np.ndarray) -> sparse.csr_matr
 
 
 def _edges(centers: np.ndarray, res: float) -> np.ndarray:
+    """Return cell edges from cell centres and a resolution."""
     c = np.asarray(centers, dtype=float)
     return np.concatenate(([c[0] - res / 2], c + res / 2))
 
@@ -455,6 +461,7 @@ def _grid_weights(
 
 
 def _exactextract_available() -> bool:
+    """Return whether the optional exactextract backend is importable."""
     try:
         import exactextract  # noqa: F401  # pyright: ignore[reportMissingImports]
     except ImportError:
@@ -545,6 +552,7 @@ Backend = Literal["auto", "shapely", "exactextract"]
 def _polygon_weights(
     mesh: Mesh, x: np.ndarray, y: np.ndarray, xres: float, yres: float, backend: str
 ) -> sparse.csr_matrix:
+    """Build the sparse cell-to-polygon overlap weights for a mesh."""
     if backend == "auto":
         backend = "exactextract" if _exactextract_available() else "shapely"
     if backend == "exactextract":

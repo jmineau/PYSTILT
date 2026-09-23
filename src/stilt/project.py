@@ -129,10 +129,12 @@ class Project:
 
     @property
     def has_config(self) -> bool:
+        """Return whether a config has been written to the project."""
         return self.store.exists(CONFIG_KEY)
 
     @property
     def has_receptors(self) -> bool:
+        """Return whether receptors have been written to the project."""
         return self.store.exists(RECEPTORS_KEY)
 
     def load_config(self) -> ModelConfig:

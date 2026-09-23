@@ -60,6 +60,7 @@ def _tropomi_operational(
     lon_range: tuple[float, float] | None,
     lat_range: tuple[float, float] | None,
 ) -> pd.DataFrame:
+    """Read an operational S5P L2 CH4 orbit into the shared sounding columns."""
     p = ds["PRODUCT"]
     geo = p["SUPPORT_DATA/GEOLOCATIONS"]
     det = p["SUPPORT_DATA/DETAILED_RESULTS"]
@@ -76,6 +77,7 @@ def _tropomi_operational(
     si, gi = sl - s0, gp - g0
 
     def pick(var: Any) -> np.ndarray:
+        """Read one variable over the selected scanline/ground-pixel box."""
         return _float(var, (0, slice(s0, s1), slice(g0, g1)))[si, gi]
 
     time_utc = np.asarray(p["time_utc"][0, s0:s1]).astype(str)
@@ -134,6 +136,7 @@ def _tropomi_blended(
     lon_range: tuple[float, float] | None,
     lat_range: tuple[float, float] | None,
 ) -> pd.DataFrame:
+    """Read a TROPOMI+GOSAT blended file into the shared sounding columns."""
     lat = _float(ds["latitude"])
     lon = _float(ds["longitude"])
     keep = _in_ranges(lon, lat, lon_range, lat_range)
@@ -142,6 +145,7 @@ def _tropomi_blended(
     ri = ii - i0
 
     def pick(var: Any) -> np.ndarray:
+        """Read one variable over the selected soundings."""
         return _float(var, slice(i0, i1))[ri]
 
     times = pd.to_datetime(np.asarray(ds["time_utc"][i0:i1]).astype(str)[ri])
@@ -185,6 +189,7 @@ def _tropomi_blended(
 
 
 def _tropomi_frame(ids: list[str], columns: dict[str, Any]) -> pd.DataFrame:
+    """Assemble the read columns into the shared sounding table."""
     df = pd.DataFrame(columns, index=pd.RangeIndex(len(ids)))
     df["species"] = "xch4"
     df["units"] = "ppb"

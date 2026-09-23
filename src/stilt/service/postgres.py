@@ -66,6 +66,7 @@ class PostgresClaim:
 
     @property
     def released(self) -> bool:
+        """Return whether the claim has been released."""
         return self._released
 
     def record(self, result: SimulationResult) -> None:
@@ -88,6 +89,7 @@ class PostgresQueue:
 
     @property
     def db_url(self) -> str:
+        """Return the queue's database URL."""
         return self._db_url
 
     def register(self, sim_ids: Iterable[str]) -> None:

@@ -46,6 +46,7 @@ def read_oco2(
         ri = ii - i0
 
         def pick(var: Any) -> np.ndarray:
+            """Read one variable over the selected soundings."""
             return _float(var, slice(i0, i1))[ri]
 
         sounding = ds["Sounding"]

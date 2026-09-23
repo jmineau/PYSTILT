@@ -184,6 +184,7 @@ class PlumeBackground:
 
 
 def _stats(values: np.ndarray, uncertainties: np.ndarray) -> dict[str, float]:
+    """Summarise a set of soundings: count, mean, median, spread and error."""
     n = int(values.size)
     if n == 0:
         return {

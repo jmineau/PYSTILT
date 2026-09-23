@@ -157,6 +157,7 @@ def _scale_dvar(levels: pd.DataFrame) -> np.ndarray:
 
 
 def _signed_sqrt(values: np.ndarray) -> np.ndarray:
+    """Take the square root while keeping the sign of a signed variance."""
     v = np.nan_to_num(np.asarray(values, dtype=float), nan=0.0)
     return np.sign(v) * np.sqrt(np.abs(v))
 
@@ -199,6 +200,7 @@ def _level_table(
     percentile: float,
     regression: bool,
 ) -> pd.DataFrame:
+    """Build the per-release-level table of means, variances and weights."""
     rows = []
     n_total = len(x_orig)
     for lvl, height in level_height.items():

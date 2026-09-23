@@ -68,6 +68,7 @@ class NameList:
 
     @staticmethod
     def _format(value) -> str:
+        """Format one value in Fortran namelist syntax."""
         if isinstance(value, bool):
             return "TRUE" if value else "FALSE"
         if isinstance(value, list):

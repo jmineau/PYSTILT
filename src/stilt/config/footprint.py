@@ -122,12 +122,14 @@ class FootprintConfig(BaseModel):
     @field_validator("transforms", mode="before")
     @classmethod
     def _load_transforms(cls, value: Any) -> list[Any]:
+        """Build transform objects from their configured mappings."""
         if value is None:
             return []
         return [load_transform(item) for item in value]
 
     @field_serializer("transforms")
     def _dump_transforms(self, value: list[Any]) -> list[dict[str, Any]]:
+        """Serialise the transforms back to plain mappings."""
         return [dump_transform(item) for item in value]
 
     def replace(self, **updates: object) -> FootprintConfig:

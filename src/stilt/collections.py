@@ -151,6 +151,7 @@ class ReceptorCollection:
 def _time_bounds(
     time_range: tuple | None,
 ) -> tuple[pd.Timestamp, pd.Timestamp] | None:
+    """Normalise a time range into a pair of timestamps."""
     if time_range is None:
         return None
     return cast(pd.Timestamp, pd.Timestamp(time_range[0])), cast(
@@ -173,6 +174,7 @@ class SimulationCollection:
     # -- registered set --------------------------------------------------------
 
     def _pairs(self) -> Iterator[tuple[SimID, Receptor]]:
+        """Yield every (simulation id, receptor) pair, receptors times mets."""
         for met in self._model.mets:
             for receptor in self._model.receptors:
                 yield SimID.from_parts(met, receptor), receptor
@@ -212,6 +214,7 @@ class SimulationCollection:
     # -- filtering -------------------------------------------------------------
 
     def _resolve_mets(self, mets: str | list[str] | None) -> set[str]:
+        """Resolve a met-name filter to a set of configured met streams."""
         available = set(self._model.mets)
         if mets is None:
             return available
@@ -341,6 +344,7 @@ class SimulationCollection:
 
 
 def _output_path(sim: Simulation, output: str) -> Path:
+    """Return the path of one of a simulation's named outputs."""
     if output == TRAJECTORY:
         return sim.trajectories_path
     if output == ERROR_TRAJECTORY:

@@ -267,6 +267,7 @@ def averaging_kernel_table(
 
 
 def _read_kernel_table(path: str) -> dict[str, tuple[np.ndarray, np.ndarray]]:
+    """Read a per-receptor averaging-kernel table from parquet or CSV."""
     suffix = Path(path).suffix.lower()
     if suffix in {".parquet", ".pq"}:
         table = pd.read_parquet(path)
@@ -295,6 +296,7 @@ def _read_kernel_table(path: str) -> dict[str, tuple[np.ndarray, np.ndarray]]:
 def _cached_kernel_table(
     path: str, _mtime: float | None
 ) -> dict[str, tuple[np.ndarray, np.ndarray]]:
+    """Cache :func:`_read_kernel_table` by path and modification time."""
     return _read_kernel_table(path)
 
 
@@ -347,6 +349,7 @@ class AveragingKernel(BaseModel):
 
     @model_validator(mode="after")
     def _inline_or_table(self) -> Self:
+        """Reject a kernel that gives both inline levels/values and a table."""
         inline = self.levels is not None or self.values is not None
         if self.table is not None:
             if inline:
@@ -396,6 +399,7 @@ class AveragingKernel(BaseModel):
     def apply(
         self, particles: pd.DataFrame, context: TransformContext | None = None
     ) -> pd.DataFrame:
+        """Weight each particle by the averaging kernel at its level."""
         levels, values = self.kernel(context)
         weights = ak_weights(particles, levels, values, self.coordinate)
         out = particles.copy()
@@ -432,6 +436,7 @@ class PressureWeighting(BaseModel):
     def apply(
         self, particles: pd.DataFrame, context: TransformContext | None = None
     ) -> pd.DataFrame:
+        """Weight each particle by its share of the column's air mass."""
         xpres, pwf = particle_pwf(particles, self.surface_pressure)
         out = particles.copy()
         indx = out["indx"].to_numpy()
@@ -463,6 +468,7 @@ class FirstOrderLifetime(BaseModel):
     def apply(
         self, particles: pd.DataFrame, context: TransformContext | None = None
     ) -> pd.DataFrame:
+        """Decay each particle's contribution by its age and the lifetime."""
         if self.time_column not in particles.columns:
             raise ValueError(
                 f"Particle DataFrame has no column {self.time_column!r} required "
@@ -500,6 +506,7 @@ class UnresolvedTransform(BaseModel):
     def apply(
         self, particles: pd.DataFrame, context: TransformContext | None = None
     ) -> pd.DataFrame:
+        """Raise: the configured transform could not be imported."""
         raise ImportError(
             f"Transform {self.kind!r} could not be imported: {self.reason}. "
             "Install the package that defines it on this machine."
@@ -519,6 +526,7 @@ def transform_kind(transform: Any) -> str:
 
 
 def _import_kind(kind: str) -> type:
+    """Import and return the class named by a ``module.Class`` string."""
     module_name, _, attr = kind.rpartition(".")
     module = importlib.import_module(module_name)
     try:

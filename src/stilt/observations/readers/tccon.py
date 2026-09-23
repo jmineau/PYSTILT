@@ -63,6 +63,7 @@ def read_tccon(
         ri = ii - i0
 
         def pick(var: Any) -> np.ndarray:
+            """Read one variable over the selected times."""
             return _float(var, slice(i0, i1))[ri]
 
         site = str(getattr(ds, "long_name", path.stem[:2]))
