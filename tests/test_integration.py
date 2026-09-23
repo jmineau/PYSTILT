@@ -12,6 +12,7 @@ Skip them:
     pytest tests/ -m "not integration"
 """
 
+import numpy as np
 import pandas as pd
 import xarray as xr
 
@@ -452,3 +453,52 @@ def test_forward_run(tmp_path, met_dir, wbb_grid):
     assert times.max() <= pd.Timestamp(stop)
     assert set(times.to_series().diff().dropna()) == {pd.Timedelta(hours=1)}
     assert float(foot.data.sum()) > 0
+
+
+# ---------------------------------------------------------------------------
+# Error realizations
+# ---------------------------------------------------------------------------
+
+
+@integration
+def test_error_realizations(tmp_path, wbb_receptor, traj_only_config):
+    """Two error realizations run, differ from each other, and resume one at a time."""
+    config = traj_only_config.model_copy(
+        update={
+            "siguverr": 2.0,
+            "tluverr": 60.0,
+            "zcoruverr": 500.0,
+            "horcoruverr": 40.0,
+            "krand": 4,  # HYSPLIT seeds the perturbation from the clock only here
+            "error_realizations": 2,
+        }
+    )
+    model = Model(
+        project=tmp_path / "realizations", config=config, receptors=[wbb_receptor]
+    )
+    model.run()
+
+    sim = model.simulations[_sim_id(wbb_receptor)]
+    assert sim.error_realizations == (0, 1)
+    assert sim.missing_error_realizations == []
+    assert sim.is_complete()
+    assert sim.error_trajectories_path(1).exists()
+    log_text = sim.log_path.read_text()
+    assert "=== error[0] run ===" in log_text
+    assert "=== error[1] run ===" in log_text
+
+    e0, e1 = (t.data for t in sim.all_error_trajectories)
+    assert len(e0) > 0 and len(e1) > 0
+    # krand=4: each pass draws its own perturbation, so per-particle sums differ
+    s0 = e0.groupby("indx")["foot"].sum()
+    s1 = e1.groupby("indx")["foot"].sum().reindex(s0.index)
+    assert not np.allclose(s0.to_numpy(), s1.to_numpy())
+
+    # Resume: drop one realization, rerun with skip_existing, main is untouched.
+    main_bytes = sim.trajectories_path.read_bytes()
+    sim.error_trajectories_path(1).unlink()
+    assert sim.missing_error_realizations == [1]
+    model.run(skip_existing=True)
+    assert sim.trajectories_path.read_bytes() == main_bytes
+    assert sim.error_trajectories_path(1).exists()
+    assert sim.is_complete()

@@ -275,8 +275,8 @@ def test_execute_ignores_stale_main_particles_after_error_run_timeout(
     result = runner.execute(timeout=5, rm_dat=False)
 
     assert len(result.particles) == 1
-    assert result.error_particles is None
-    assert "=== error run failed ===" in runner.log_path.read_text()
+    assert result.error_particles == {}
+    assert "=== error run [0] failed ===" in runner.log_path.read_text()
 
 
 def test_terminate_process_escalates_when_group_kill_does_not_finish(
@@ -697,3 +697,84 @@ def test_exe_dir_is_not_written_to_setup_cfg(tmp_path, point_receptor):
     runner = _exe_driver(tmp_path, point_receptor, params_exe=build)
     runner.prepare()
     assert "exe_dir" not in (tmp_path / "sim" / "SETUP.CFG").read_text().lower()
+
+
+# -- error realizations ------------------------------------------------------------
+
+_ERR_VARS = ["time", "indx", "long", "lati", "zagl", "foot"]
+
+
+def _error_runner(tmp_path, point_receptor, **overrides) -> HYSPLITDriver:
+    params = dict(
+        n_hours=-24,
+        numpar=10,
+        rm_dat=False,
+        hnf_plume=False,  # the six-column particle rows below carry no plume vars
+        siguverr=1.0,
+        tluverr=60.0,
+        zcoruverr=500.0,
+        horcoruverr=40.0,
+        varsiwant=_ERR_VARS,
+    )
+    params.update(overrides)
+    return HYSPLITDriver(
+        directory=tmp_path,
+        receptor=point_receptor,
+        params=STILTParams(**params),
+        met_files=[tmp_path / "met" / "dummy"],
+        exe_dir=tmp_path,
+    )
+
+
+def test_execute_runs_one_error_pass_per_realization(
+    tmp_path, point_receptor, monkeypatch
+):
+    runner = _error_runner(tmp_path, point_receptor, krand=4, error_realizations=3)
+    labels: list[str] = []
+    setups: list[int] = []
+
+    def fake_run(timeout: int | None, *, label: str = "main") -> None:
+        labels.append(label)
+        foot = 1e-5 if label == "main" else 1e-5 * (len(labels) + 1)
+        _write_particle_dat(
+            runner.particle_stilt_path, rows=[[-60, 1, -111.9, 40.7, 10.0, foot]]
+        )
+
+    monkeypatch.setattr(runner, "_run", fake_run)
+    monkeypatch.setattr(runner, "_write_winderr", lambda: None)
+    monkeypatch.setattr(runner, "_write_zierr", lambda: None)
+    monkeypatch.setattr(
+        runner, "_write_setup", lambda winderrtf: setups.append(winderrtf)
+    )
+
+    result = runner.execute(timeout=5, rm_dat=False, error_realizations=[0, 1, 2])
+
+    assert labels == ["main", "error[0]", "error[1]", "error[2]"]
+    assert setups == [1]  # SETUP.CFG written once for the error passes (XY only)
+    assert len(result.particles) == 1
+    assert sorted(result.error_particles) == [0, 1, 2]
+    foots = [float(result.error_particles[k]["foot"].iloc[0]) for k in (0, 1, 2)]
+    assert len(set(foots)) == 3  # each realization parsed its own particle file
+
+
+def test_one_failed_realization_does_not_lose_the_others(
+    tmp_path, point_receptor, monkeypatch
+):
+    runner = _error_runner(tmp_path, point_receptor, krand=4, error_realizations=3)
+
+    def fake_run(timeout: int | None, *, label: str = "main") -> None:
+        if label == "error[1]":
+            raise HYSPLITTimeoutError("realization 1 timed out", str(tmp_path))
+        _write_particle_dat(
+            runner.particle_stilt_path, rows=[[-60, 1, -111.9, 40.7, 10.0, 1e-5]]
+        )
+
+    monkeypatch.setattr(runner, "_run", fake_run)
+    monkeypatch.setattr(runner, "_write_winderr", lambda: None)
+    monkeypatch.setattr(runner, "_write_zierr", lambda: None)
+    monkeypatch.setattr(runner, "_write_setup", lambda winderrtf: None)
+
+    result = runner.execute(timeout=5, rm_dat=False, error_realizations=[0, 1, 2])
+
+    assert sorted(result.error_particles) == [0, 2]
+    assert "=== error run [1] failed ===" in runner.log_path.read_text()

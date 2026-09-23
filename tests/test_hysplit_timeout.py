@@ -23,7 +23,9 @@ class _StopDriver:
     def prepare(self):
         pass
 
-    def execute(self, timeout=None, rm_dat=None, error_only=False):
+    def execute(
+        self, timeout=None, rm_dat=None, error_only=False, error_realizations=(0,)
+    ):
         _StopDriver.seen["timeout"] = timeout
         raise RuntimeError("stop before running HYSPLIT")
 

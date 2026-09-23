@@ -196,7 +196,7 @@ class Simulation:
         self._source_met_files: list[Path] | None = None
         self._met_files: list[Path] | None = None
         self._trajectories = None
-        self._error_trajectories = None
+        self._error_trajectories: dict[int, Trajectories] = {}
         self._footprints: dict[str, Footprint] = {}
         self._plot: SimulationPlotAccessor | None = None
 
@@ -221,10 +221,22 @@ class Simulation:
         """Compute-local trajectory parquet path."""
         return self.directory / f"{self.id}_traj.parquet"
 
+    def error_trajectories_path(self, realization: int = 0) -> Path:
+        """
+        Compute-local error-trajectory parquet path for one realization.
+
+        Realization 0 keeps the unsuffixed name, so projects run before
+        ``error_realizations`` existed still resolve.
+        """
+        suffix = f"_{realization}" if realization else ""
+        return self.directory / f"{self.id}_error{suffix}.parquet"
+
     @property
-    def error_trajectories_path(self) -> Path:
-        """Compute-local error-trajectory parquet path."""
-        return self.directory / f"{self.id}_error.parquet"
+    def error_realizations(self) -> tuple[int, ...]:
+        """Realization indices this simulation is configured to produce."""
+        if not self.params.error_enabled:
+            return ()
+        return tuple(range(self.params.error_realizations))
 
     def footprint_path(self, name: str = "") -> Path:
         """Compute-local footprint netCDF path for one footprint name."""
@@ -258,8 +270,27 @@ class Simulation:
 
     @property
     def has_error_trajectory(self) -> bool:
-        """Whether the error-trajectory parquet exists on disk or in the store."""
-        return self.resolve(self.error_trajectories_path) is not None
+        """Whether every configured error realization exists on disk or in the store."""
+        return not self.missing_error_realizations
+
+    @property
+    def _error_realizations_on_disk(self) -> tuple[int, ...]:
+        """Configured realizations, or just realization 0 when none is configured."""
+        return self.error_realizations or (0,)
+
+    @property
+    def missing_error_realizations(self) -> list[int]:
+        """
+        Realization indices whose error parquet is not yet available.
+
+        With no wind error configured this still checks realization 0, so
+        ``has_error_trajectory`` keeps answering whether the file exists.
+        """
+        return [
+            k
+            for k in self._error_realizations_on_disk
+            if self.resolve(self.error_trajectories_path(k)) is None
+        ]
 
     def has_footprint(self, name: str) -> bool:
         """
@@ -317,11 +348,11 @@ class Simulation:
         """
         if self._store is None:
             return
-        for path in (
-            self.log_path,
-            self.trajectories_path,
-            self.error_trajectories_path,
-        ):
+        paths = [self.log_path, self.trajectories_path]
+        paths.extend(
+            self.error_trajectories_path(k) for k in self._error_realizations_on_disk
+        )
+        for path in paths:
             self._store.publish_file(path, self.key(path))
         if self.directory.exists():
             for path in sorted(self.directory.glob(f"{self.id}*_foot.*")):
@@ -494,7 +525,7 @@ class Simulation:
         write: bool = False,
     ) -> None:
         """
-        Run HYSPLIT, populating ``self.trajectories`` and ``self.error_trajectories``.
+        Run HYSPLIT, populating ``self.trajectories`` and the error realizations.
 
         Parameters
         ----------
@@ -505,8 +536,8 @@ class Simulation:
         rm_dat : bool, optional
             Defaults to ``params.rm_dat``.
         write : bool
-            If True, persist trajectories (and error trajectories if present) to
-            ``self.trajectories_path`` / ``self.error_trajectories_path``.
+            If True, persist trajectories (and any error realizations) to
+            ``self.trajectories_path`` / ``self.error_trajectories_path(k)``.
 
         Raises
         ------
@@ -525,6 +556,15 @@ class Simulation:
         # error run is independent of the main, so there's no need to recompute it.
         error_only = self._can_reuse_main_for_error()
 
+        # Only run the realizations that are still missing, so a preempted or
+        # partially complete simulation resumes instead of starting over. A
+        # deliberate full re-run (nothing missing) redoes every realization.
+        realizations: list[int] = []
+        if self.params.error_enabled:
+            realizations = self.missing_error_realizations or list(
+                self.error_realizations
+            )
+
         runner = HYSPLITDriver(
             directory=self.directory,
             receptor=self.receptor,
@@ -533,7 +573,12 @@ class Simulation:
             exe_dir=self._exe_dir,
         )
         runner.prepare()
-        result = runner.execute(timeout=timeout, rm_dat=rm_dat, error_only=error_only)
+        result = runner.execute(
+            timeout=timeout,
+            rm_dat=rm_dat,
+            error_only=error_only,
+            error_realizations=realizations,
+        )
 
         result_log = getattr(result, "log_path", None)
         if result_log is not None:
@@ -553,9 +598,11 @@ class Simulation:
                 met_files=self.source_met_files,
             )
 
-        if result.error_particles is not None and not result.error_particles.empty:
-            self._error_trajectories = Trajectories.from_particles(
-                result.error_particles,
+        for k, error_particles in result.error_particles.items():
+            if error_particles.empty:
+                continue
+            self._error_trajectories[k] = Trajectories.from_particles(
+                error_particles,
                 receptor=self.receptor,
                 params=self.params,
                 met_files=self.source_met_files,
@@ -565,8 +612,8 @@ class Simulation:
         if write:
             if self._trajectories is not None:
                 self._trajectories.to_parquet(self.trajectories_path)
-            if self._error_trajectories is not None:
-                self._error_trajectories.to_parquet(self.error_trajectories_path)
+            for k, traj in self._error_trajectories.items():
+                traj.to_parquet(self.error_trajectories_path(k))
 
     def generate_footprint(
         self,
@@ -690,22 +737,50 @@ class Simulation:
                 self._trajectories = Trajectories.from_parquet(traj_path)
         return self._trajectories
 
-    @property
-    def error_trajectories(self) -> Trajectories | None:
+    def error_trajectory(self, realization: int = 0) -> Trajectories | None:
         """
-        Error-trajectory particles, loaded from parquet on first access.
+        One error realization's particles, loaded from parquet on first access.
 
-        Returns ``None`` if no error parquet exists.
+        Returns ``None`` if that realization's parquet does not exist.
+
+        Parameters
+        ----------
+        realization : int
+            Realization index; 0 is the unsuffixed parquet.
 
         Returns
         -------
         Trajectories or None
         """
-        if not self._error_trajectories:
-            error_path = self.resolve(self.error_trajectories_path)
-            if error_path is not None:
-                self._error_trajectories = Trajectories.from_parquet(error_path)
-        return self._error_trajectories
+        if realization not in self._error_trajectories:
+            error_path = self.resolve(self.error_trajectories_path(realization))
+            if error_path is None:
+                return None
+            self._error_trajectories[realization] = Trajectories.from_parquet(
+                error_path
+            )
+        return self._error_trajectories[realization]
+
+    @property
+    def error_trajectories(self) -> Trajectories | None:
+        """
+        The first error realization, or ``None`` when it does not exist.
+
+        Use :meth:`all_error_trajectories` for the whole ensemble.
+        """
+        return self.error_trajectory(0)
+
+    @property
+    def all_error_trajectories(self) -> list[Trajectories]:
+        """
+        Every available error realization, in realization order.
+
+        Pass ``[t.data for t in sim.all_error_trajectories]`` to
+        :func:`stilt.observations.transport_error` to average the variance
+        over the ensemble.
+        """
+        found = (self.error_trajectory(k) for k in self.error_realizations)
+        return [traj for traj in found if traj is not None]
 
 
 __all__ = ["ERROR_TRAJECTORY", "TRAJECTORY", "SimID", "Simulation"]

@@ -268,3 +268,55 @@ def test_background_field_adds_the_endpoint_spread_to_the_error():
     # combined uncorrelated over four equal levels -> sum(w^2) = 0.25
     assert moved.variance == pytest.approx(0.25, rel=0.4)
     assert transport_error(main, err, FLUX, noise_splits=0).background == 0.0
+
+
+# -- realizations ------------------------------------------------------------------
+
+
+def test_one_realization_in_a_list_matches_the_bare_table():
+    main, err = _column(seed=1), _column(spread=np.sqrt(5.0), seed=2)
+    single = transport_error(main, err, FLUX)
+    listed = transport_error(main, [err], FLUX)
+
+    assert listed.variance == single.variance
+    assert listed.noise == single.noise
+    assert listed.realizations == single.realizations == 1
+
+
+def test_identical_realizations_keep_the_variance_and_tighten_the_noise():
+    main, err = _column(seed=1), _column(spread=np.sqrt(5.0), seed=2)
+    single = transport_error(main, err, FLUX)
+    triple = transport_error(main, [err, err.copy(), err.copy()], FLUX)
+
+    assert triple.realizations == 3
+    assert triple.variance == pytest.approx(single.variance)
+    assert triple.enhancement_perturbed == pytest.approx(single.enhancement_perturbed)
+    # the unperturbed side is shared, so the null spread only falls to sqrt((1+1/N)/2)
+    assert triple.noise == pytest.approx(single.noise * np.sqrt((1 + 1 / 3) / 2))
+
+
+def test_averaging_realizations_pulls_the_estimate_toward_the_truth():
+    """Independent draws of the same extra spread average toward its true value."""
+    n_levels, per_level, extra = 4, 400, 4.0
+    main = _column(n_levels, per_level, spread=1.0, seed=100)
+    errs = [
+        _column(n_levels, per_level, spread=np.sqrt(1.0 + extra), seed=200 + k)
+        for k in range(24)
+    ]
+    # uncorrelated levels of equal weight: sum_i w_i^2 dvar_i = extra / n_levels
+    truth = extra / n_levels
+
+    singles = np.array(
+        [transport_error(main, e, FLUX, length_scale=None).variance for e in errs]
+    )
+    pooled = transport_error(main, errs, FLUX, length_scale=None)
+
+    assert pooled.realizations == 24
+    assert abs(pooled.variance - truth) < np.median(np.abs(singles - truth))
+    assert pooled.variance == pytest.approx(truth, rel=0.15)
+
+
+def test_realizations_must_not_be_empty():
+    p = _column()
+    with pytest.raises(ValueError, match="at least one realization"):
+        transport_error(p, [], FLUX)

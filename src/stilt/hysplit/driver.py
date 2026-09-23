@@ -95,14 +95,15 @@ class HYSPLITResult:
     particles : pd.DataFrame or None
         Main particle positions and footprint columns from the PARDUMP file.
         ``None`` when the main run was skipped (error-only execution).
-    error_particles : pd.DataFrame or None
-        Error-trajectory particle data, or ``None`` if no error run was performed.
+    error_particles : dict[int, pd.DataFrame]
+        Error-trajectory particle data keyed by realization index. Empty when
+        no error run was performed; a realization whose run failed is absent.
     log_path : Path
         Combined log path containing streamed standard output from the run(s).
     """
 
     particles: pd.DataFrame | None
-    error_particles: pd.DataFrame | None
+    error_particles: dict[int, pd.DataFrame]
     log_path: Path
 
 
@@ -179,11 +180,12 @@ class HYSPLITDriver:
         rm_dat: bool,
         *,
         error_only: bool = False,
+        error_realizations: Sequence[int] = (0,),
     ) -> HYSPLITResult:
         """
-        Run HYSPLIT, optionally followed by an error trajectory run.
+        Run HYSPLIT, optionally followed by one or more error trajectory runs.
 
-        The error trajectory run only proceeds after main particles are
+        The error trajectory runs only proceed after main particles are
         successfully parsed - WINDERR/ZIERR are never written otherwise.
 
         Parameters
@@ -196,36 +198,42 @@ class HYSPLITDriver:
             save disk space.
         error_only : bool
             If ``True``, skip the main run and run only the (independent) error
-            trajectory. Used to backfill error trajectories without recomputing
-            an existing main trajectory. ``particles`` is ``None`` in this case.
+            trajectories. Used to backfill error trajectories without
+            recomputing an existing main trajectory. ``particles`` is ``None``
+            in this case.
+        error_realizations : sequence of int
+            Which error realizations to run, one HYSPLIT call each. They are
+            distinct draws only under ``krand=4``, where HYSPLIT seeds the
+            perturbation from the clock; the config validator enforces that.
 
         Returns
         -------
         HYSPLITResult
-            Parsed particles, optional error particles, and streamed log path.
+            Parsed particles, error particles by realization, and the log path.
         """
         particles = None
         if not error_only:
             self._run(timeout, label="main")
             particles = self._read_particles(rm_dat)
 
-        # --- Error trajectory (independent of the main run) ---
-        error_particles = None
+        # --- Error trajectories (independent of the main run and of each other) ---
+        error_particles: dict[int, pd.DataFrame] = {}
         if self.params.winderrtf > 0:
             self._write_winderr()
             self._write_zierr()
             self._write_setup(winderrtf=self.params.winderrtf)
-            self.particle_stilt_path.unlink(missing_ok=True)
-            self.particle_path.unlink(missing_ok=True)
+            for k in error_realizations:
+                self.particle_stilt_path.unlink(missing_ok=True)
+                self.particle_path.unlink(missing_ok=True)
 
-            try:
-                self._run(timeout, label="error")
-            except (HYSPLITTimeoutError, HYSPLITFailureError) as e:
-                with self.log_path.open("a", encoding="utf-8") as handle:
-                    handle.write(f"\n=== error run failed ===\n{e}\n")
+                try:
+                    self._run(timeout, label=f"error[{k}]")
+                except (HYSPLITTimeoutError, HYSPLITFailureError) as e:
+                    with self.log_path.open("a", encoding="utf-8") as handle:
+                        handle.write(f"\n=== error run [{k}] failed ===\n{e}\n")
 
-            if self.particle_stilt_path.exists():
-                error_particles = self._read_particles(rm_dat)
+                if self.particle_stilt_path.exists():
+                    error_particles[k] = self._read_particles(rm_dat)
 
         return HYSPLITResult(
             particles=particles,

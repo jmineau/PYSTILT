@@ -397,6 +397,21 @@ class ErrorParams(BaseModel):
         description="Horizontal correlation length scale of mixed-layer height errors [km]",
     )
 
+    error_realizations: int = Field(
+        1,
+        ge=1,
+        description=(
+            "Number of error trajectories to run per simulation. Each is an "
+            "independent draw of the perturbation field; transport_error "
+            "averages their variance estimates, which cuts the perturbed "
+            "side's sampling noise by 1/sqrt(N) (the shared main run bounds "
+            "the overall gain at sqrt(2)). More than one requires krand=4: "
+            "HYSPLIT draws the perturbation from the seed it randomizes only "
+            "in that mode, and the bundled hycs_std ignores SETUP.CFG's seed "
+            "for it, so other modes would repeat the same draw."
+        ),
+    )
+
     XYERR_PARAMS: ClassVar[tuple[str, ...]] = (
         "siguverr",
         "tluverr",
@@ -443,9 +458,9 @@ class ErrorParams(BaseModel):
         """
         Whether an error-trajectory mode is configured (XY and/or ZI).
 
-        When True, a run writes a wind-perturbed ``*_error`` trajectory
-        alongside the main trajectory, so completion checks should require
-        that error trajectory to be present.
+        When True, a run writes ``error_realizations`` wind-perturbed
+        ``*_error`` trajectories alongside the main trajectory, so completion
+        checks should require all of them to be present.
         """
         return self.winderrtf > 0
 
@@ -488,6 +503,19 @@ class STILTParams(ModelParams, TransportParams, ErrorParams):
         """Default ``maxpar`` to ``numpar`` when the user omits it."""
         if self.maxpar is None:
             self.maxpar = self.numpar
+        return self
+
+    @model_validator(mode="after")
+    def _validate_error_realizations(self) -> Self:
+        """Several realizations need HYSPLIT to draw a fresh perturbation each run."""
+        if self.error_realizations > 1 and self.krand != 4:
+            raise ValueError(
+                f"error_realizations={self.error_realizations} requires krand=4 "
+                f"(got krand={self.krand}): HYSPLIT randomizes the wind-error "
+                "draw only in that mode, and the bundled hycs_std ignores the "
+                "namelist seed for it, so every realization would repeat the "
+                "same perturbation."
+            )
         return self
 
     @model_validator(mode="after")

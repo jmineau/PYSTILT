@@ -13,6 +13,33 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   bracketed by the fully correlated sum (X-STILT's `cal.emiss.err`) and the
   independent root-sum-square; the correlated case is fips's new
   `prior_obs_error`. No new API.
+- **Several error realizations per simulation** (`error_realizations: N`
+  in `config.yaml`): the perturbed transport runs N times, each a different
+  perturbation draw, stored as `{sim}_error.parquet`,
+  `{sim}_error_1.parquet`, …; the main run is shared. Requires `krand: 4`
+  (the default) — HYSPLIT randomizes the wind-error draw only in that mode
+  and the bundled `hycs_std` ignores the namelist `seed` for it, so any
+  other mode is rejected at config time rather than silently repeating one
+  draw. Completion requires every realization and `skip_existing` reruns
+  only the missing ones, so a preempted job resumes. `transport_error` takes
+  the list and averages each level's perturbed mean and variance before
+  differencing. Its `noise` scales as `sqrt((1 + 1/N) / 2)`: the unperturbed
+  side is shared, so the gain is bounded by `sqrt(2)`. New:
+  `Simulation.error_trajectory(k)`, `Simulation.all_error_trajectories`,
+  `Simulation.error_realizations`, `Simulation.missing_error_realizations`,
+  `TransportError.realizations`.
+- **GGG readers for EM27/SUN** (`stilt.observations.readers.ggg`):
+  `read_ggg_oof` reads a GGG2020 `.oof` (one instrument-day, how EGI delivers
+  EM27/SUN retrievals) into the readers' sounding table; it carries no
+  kernel or prior, so those columns are left out rather than faked.
+  `read_ggg_netcdf` reads the run's `*.private.nc` — kernels are stored as
+  a table against slant xgas and are interpolated per spectrum the way
+  GGG's public writer does, priors are shared through `prior_index` — as
+  well as the public files, so `read_tccon` is now that function under the
+  network's name. Priors come back in the species' units (the public
+  `prior_ch4` is ppb, `xch4` ppm). Checked against Salt Lake City EM27 days
+  and EGI's example private files; the slant guide's EM27 recipe now reads
+  real files.
 
 ### Fixed
 
@@ -25,6 +52,46 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   tells forward users to disable the correction.
 - **`Simulation.time_range`** spanned `n_hours + 1` hours for a forward run;
   it now spans `n_hours` in both directions.
+
+### Changed
+
+- `Simulation.error_trajectories_path` is a method taking the realization
+  index (`()` is the unsuffixed first realization); `HYSPLITResult.error_particles`
+  is a dict keyed by realization, empty when no error run happened.
+- `stilt init` writes `file_tres: 6h` in the starter config, matching every
+  example in the docs (six-hour HRRR blocks); it said `1h`, so a new user
+  following the quickstart hit a met-file mismatch on the first run.
+- Forward runs (positive `n_hours`) are listed as a supported mode in the
+  README and roadmap; they were only mentioned inside the plume-background
+  guide.
+- The `seed` field's description says what was measured: with the bundled
+  `hycs_std` and `krand=2` it changes nothing, and `krand=4` randomizes the
+  seed itself, so it is not a route to reproducible or distinct draws.
+
+- **GGG readers for EM27/SUN** (`stilt.observations.readers.ggg`):
+  `read_ggg_oof` reads a GGG2020 `.oof` (one instrument-day, how EGI delivers
+  EM27/SUN retrievals) into the readers' sounding table; it carries no
+  kernel or prior, so those columns are left out rather than faked.
+  `read_ggg_netcdf` reads the run's `*.private.nc` — kernels are stored as
+  a table against slant xgas and are interpolated per spectrum the way
+  GGG's public writer does, priors are shared through `prior_index` — as
+  well as the public files, so `read_tccon` is now that function under the
+  network's name. Priors come back in the species' units (the public
+  `prior_ch4` is ppb, `xch4` ppm). Checked against Salt Lake City EM27 days
+  and EGI's example private files; the slant guide's EM27 recipe now reads
+  real files.
+
+### Changed
+
+- `stilt init` writes `file_tres: 6h` in the starter config, matching every
+  example in the docs (six-hour HRRR blocks); it said `1h`, so a new user
+  following the quickstart hit a met-file mismatch on the first run.
+- Forward runs (positive `n_hours`) are listed as a supported mode in the
+  README and roadmap; they were only mentioned inside the plume-background
+  guide.
+- The `seed` field's description says what was measured: with the bundled
+  `hycs_std` and `krand=2` it changes nothing, and `krand=4` randomizes the
+  seed itself, so it is not a route to reproducible or distinct draws.
 
 ## [0.1.0a17] - 2026-09-22
 

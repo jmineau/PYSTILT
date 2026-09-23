@@ -59,8 +59,14 @@ class TransportError:
     only when it is several times ``noise``. ``sd`` is ``sqrt(variance)``,
     or ``0`` when the variance is negative.
 
+    ``realizations`` is how many error realizations went into the estimate.
+    Their level variances are averaged before the difference is taken, so
+    ``variance`` has less noise than a single realization's, and ``noise``
+    is scaled to match (see :func:`transport_error`).
+
     ``enhancement`` and ``enhancement_perturbed`` are the modelled
-    enhancement from the unperturbed and the perturbed particles. ``levels``
+    enhancement from the unperturbed and the perturbed particles (the
+    perturbed one averaged over the realizations). ``levels``
     has one row per release level: ``height`` (m, mean release height),
     ``n`` particles, ``weight`` (its share of the column), ``mean`` / ``var``
     of the per-particle enhancement without (``_orig``) and with (``_err``)
@@ -84,6 +90,7 @@ class TransportError:
     levels: pd.DataFrame
     length_scale: float | None
     background: float = 0.0
+    realizations: int = 1
 
     @property
     def sd(self) -> float:
@@ -192,22 +199,33 @@ def _combine(
 
 def _level_table(
     x_orig: pd.Series,
-    x_err: pd.Series,
+    x_errs: Sequence[pd.Series],
     label_orig: pd.Series,
-    label_err: pd.Series,
+    label_errs: Sequence[pd.Series],
     level_height: pd.Series,
     *,
     percentile: float,
     regression: bool,
 ) -> pd.DataFrame:
-    """Build the per-release-level table of means, variances and weights."""
+    """
+    Build the per-release-level table of means, variances and weights.
+
+    The perturbed mean and variance of each level are averaged over the
+    error realizations (one ``x_errs`` / ``label_errs`` pair each) before
+    the difference ``dvar`` is taken.
+    """
     rows = []
     n_total = len(x_orig)
     for lvl, height in level_height.items():
         idx_o = label_orig.index.to_numpy()[(label_orig == lvl).to_numpy()]
-        idx_e = label_err.index.to_numpy()[(label_err == lvl).to_numpy()]
         mean_o, var_o = _level_stats(x_orig.reindex(idx_o).to_numpy(), percentile)
-        mean_e, var_e = _level_stats(x_err.reindex(idx_e).to_numpy(), percentile)
+        means_e, vars_e = [], []
+        for x_err, label_err in zip(x_errs, label_errs, strict=True):
+            idx_e = label_err.index.to_numpy()[(label_err == lvl).to_numpy()]
+            m, v = _level_stats(x_err.reindex(idx_e).to_numpy(), percentile)
+            means_e.append(m)
+            vars_e.append(v)
+        mean_e, var_e = _nanmean(means_e), _nanmean(vars_e)
         rows.append(
             {
                 "height": float(height),
@@ -225,6 +243,13 @@ def _level_table(
         _scale_dvar(table) if regression else _signed_sqrt(table["dvar"].to_numpy())
     )
     return table
+
+
+def _nanmean(values: Sequence[float]) -> float:
+    """Mean ignoring NaN; NaN when every value is NaN."""
+    arr = np.asarray(values, dtype=float)
+    finite = arr[np.isfinite(arr)]
+    return float(finite.mean()) if finite.size else float("nan")
 
 
 def _noise(
@@ -260,9 +285,9 @@ def _noise(
         a, b = x_orig.iloc[half], x_orig.iloc[~half]
         table = _level_table(
             a,
-            b,
+            [b],
             label_orig.reindex(a.index),
-            label_orig.reindex(b.index),
+            [label_orig.reindex(b.index)],
             level_height,
             percentile=percentile,
             regression=regression,
@@ -274,7 +299,7 @@ def _noise(
 
 def transport_error(
     particles: pd.DataFrame,
-    error_particles: pd.DataFrame,
+    error_particles: pd.DataFrame | Sequence[pd.DataFrame],
     flux: xr.DataArray,
     *,
     transforms: Sequence[Any] = (),
@@ -292,8 +317,11 @@ def transport_error(
     Parameters
     ----------
     particles, error_particles
-        The simulation's main and error-trajectory particle tables
-        (``sim.trajectories.data`` and ``sim.error_trajectories.data``).
+        The simulation's main particle table (``sim.trajectories.data``) and
+        one or more error-trajectory tables: ``sim.error_trajectories.data``
+        for a single realization, or
+        ``[t.data for t in sim.all_error_trajectories]`` for the ensemble
+        a run with ``error_realizations > 1`` produced.
     flux
         Surface flux field (see :mod:`stilt.flux`).
     transforms, context
@@ -342,6 +370,16 @@ def transport_error(
     are already in column-weighted units and the weights are the particle
     counts.
 
+    With several error realizations, each level's ``mean_err`` and
+    ``var_err`` are averaged over them before ``dvar`` is formed, so the
+    perturbed side's sampling noise falls as ``1/sqrt(N)``. The unperturbed
+    side is the same particles in every realization, so its noise does not
+    fall: with ``N`` realizations the null spread of ``variance`` is
+    ``sqrt((1 + 1/N) / 2)`` times the single-realization ``noise``, which
+    tends to ``1/sqrt(2)`` and not to zero. ``noise`` carries that factor.
+    Running more realizations therefore buys at most a ``sqrt(2)`` tighter
+    estimate; it does not turn an unresolved case into a resolved one.
+
     The signal is the extra spread the perturbation adds, so it is small
     when the wind error decorrelates quickly (HYSPLIT decorrelates it with
     the distance a particle travels as well as with time) and when turbulent
@@ -359,55 +397,73 @@ def transport_error(
     if context is None:
         context = default_context()
     transforms = list(transforms)
+    error_tables = (
+        [error_particles]
+        if isinstance(error_particles, pd.DataFrame)
+        else list(error_particles)
+    )
+    if not error_tables:
+        raise ValueError("error_particles must hold at least one realization.")
 
-    tables, backgrounds = [], []
-    for table, is_error in ((particles, False), (error_particles, True)):
+    def _prepare(
+        table: pd.DataFrame, is_error: bool
+    ) -> tuple[pd.Series, pd.Series, pd.Series | None]:
+        """Per-particle modelled value, release height, and weighted background."""
         ctx = TransformContext(
             receptor=context.receptor,
             footprint_name=context.footprint_name,
             is_error=is_error,
             store=context.store,
         )
+        sampled_background = None
         if background is not None:
             # each particle's background, weighted like its enhancement
             weights = endpoint_weights(table, transforms, ctx)
             sampled = fill_missing(particle_background(table, background), weights)
-            backgrounds.append(weights * sampled)
+            sampled_background = weights * sampled
         if transforms:
             table = apply_transforms(table, transforms, ctx)
-        tables.append(table)
-    main, err = tables
+        x = particle_enhancement(table, flux)
+        if sampled_background is not None:
+            x = x + sampled_background.reindex(x.index)
+        return x, _release_heights(table), sampled_background
 
-    x_orig = particle_enhancement(main, flux)
-    x_err = particle_enhancement(err, flux)
-    background_value = 0.0
-    if backgrounds:
-        b_orig, b_err = backgrounds
-        x_orig = x_orig + b_orig.reindex(x_orig.index)
-        x_err = x_err + b_err.reindex(x_err.index)
-        background_value = float(b_orig.mean())
-    h_orig = _release_heights(main)
-    h_err = _release_heights(err)
+    x_orig, h_orig, b_orig = _prepare(particles, is_error=False)
+    # the unperturbed particles' weighted background, reported separately
+    background_value = 0.0 if b_orig is None else float(b_orig.mean())
 
     label_orig, level_height = _level_bins(h_orig, levels)
     edges = _edges_from_levels(h_orig, level_height, levels)
-    label_err = pd.Series(
-        pd.cut(h_err, edges, labels=False, include_lowest=True), index=h_err.index
-    ).astype(float)
+
+    x_errs, label_errs = [], []
+    for err in error_tables:
+        x_err, h_err, _ = _prepare(err, is_error=True)
+        x_errs.append(x_err)
+        label_errs.append(
+            pd.Series(
+                pd.cut(h_err, edges, labels=False, include_lowest=True),
+                index=h_err.index,
+            ).astype(float)
+        )
 
     table = _level_table(
         x_orig,
-        x_err,
+        x_errs,
         label_orig,
-        label_err,
+        label_errs,
         level_height,
         percentile=percentile,
         regression=regression,
     )
+    n_real = len(error_tables)
+    # The main particles are shared by every realization, so only the
+    # perturbed side's noise averages down; see the Notes.
+    noise_factor = float(np.sqrt((1.0 + 1.0 / n_real) / 2.0))
     w = table["weight"].to_numpy()
     return TransportError(
         variance=_combine(table, length_scale, regression=regression),
-        noise=_noise(
+        noise=noise_factor
+        * _noise(
             x_orig,
             label_orig,
             level_height,
@@ -421,6 +477,7 @@ def transport_error(
         levels=table,
         length_scale=length_scale,
         background=background_value,
+        realizations=n_real,
     )
 
 

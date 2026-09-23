@@ -246,7 +246,7 @@ def test_simulation_run_trajectories_uses_source_met_files_in_metadata(
                     "foot": [1e-5],
                 }
             )
-            self.error_particles = None
+            self.error_particles = {}
 
     class _FakeRunner:
         def __init__(self, **kwargs):
@@ -255,7 +255,9 @@ def test_simulation_run_trajectories_uses_source_met_files_in_metadata(
         def prepare(self):
             return None
 
-        def execute(self, timeout, rm_dat, *, error_only=False):
+        def execute(
+            self, timeout, rm_dat, *, error_only=False, error_realizations=(0,)
+        ):
             return _Result()
 
     def _fake_from_particles(particles, *, receptor, params, met_files, is_error=False):
@@ -298,7 +300,9 @@ def test_run_trajectories_timeout_maps_to_domain_error(
         def prepare(self):
             return None
 
-        def execute(self, timeout, rm_dat, *, error_only=False):
+        def execute(
+            self, timeout, rm_dat, *, error_only=False, error_realizations=(0,)
+        ):
             raise HYSPLITTimeoutError("boom")
 
     monkeypatch.setattr("stilt.simulation.HYSPLITDriver", _FakeRunner)
@@ -333,16 +337,18 @@ def test_run_trajectories_sets_main_and_error_trajectories(
                     "foot": [1e-5],
                 }
             )
-            self.error_particles = pd.DataFrame(
-                {
-                    "time": [-60],
-                    "indx": [1],
-                    "long": [-111.9],
-                    "lati": [40.7],
-                    "zagl": [10.0],
-                    "foot": [2e-5],
-                }
-            )
+            self.error_particles = {
+                0: pd.DataFrame(
+                    {
+                        "time": [-60],
+                        "indx": [1],
+                        "long": [-111.9],
+                        "lati": [40.7],
+                        "zagl": [10.0],
+                        "foot": [2e-5],
+                    }
+                )
+            }
 
     class _FakeRunner:
         def __init__(self, **kwargs):
@@ -351,7 +357,9 @@ def test_run_trajectories_sets_main_and_error_trajectories(
         def prepare(self):
             return None
 
-        def execute(self, timeout, rm_dat, *, error_only=False):
+        def execute(
+            self, timeout, rm_dat, *, error_only=False, error_realizations=(0,)
+        ):
             return _Result()
 
     monkeypatch.setattr("stilt.simulation.HYSPLITDriver", _FakeRunner)
@@ -728,7 +736,7 @@ def _write_trajectory(sim, params, *, is_error: bool = False, foot: float = 1e-5
         met_files=[],
         is_error=is_error,
     )
-    path = sim.error_trajectories_path if is_error else sim.trajectories_path
+    path = sim.error_trajectories_path() if is_error else sim.trajectories_path
     path.parent.mkdir(parents=True, exist_ok=True)
     traj.to_parquet(path)
 
@@ -793,7 +801,7 @@ def test_run_trajectories_error_only_skips_main_run(
     class _Result:
         stdout = "ok"
         particles = None
-        error_particles = _particles_df(2e-5)
+        error_particles = {0: _particles_df(2e-5)}
 
     class _FakeRunner:
         def __init__(self, **kwargs):
@@ -802,7 +810,9 @@ def test_run_trajectories_error_only_skips_main_run(
         def prepare(self):
             return None
 
-        def execute(self, timeout, rm_dat, *, error_only=False):
+        def execute(
+            self, timeout, rm_dat, *, error_only=False, error_realizations=(0,)
+        ):
             captured["error_only"] = error_only
             return _Result()
 
@@ -835,7 +845,9 @@ def _fake_runner_returning(particles, error_particles=None):
         stdout = "ok"
 
     _Result.particles = particles
-    _Result.error_particles = error_particles
+    _Result.error_particles = (
+        {0: error_particles} if error_particles is not None else {}
+    )
 
     class _FakeRunner:
         def __init__(self, **kwargs):
@@ -844,7 +856,9 @@ def _fake_runner_returning(particles, error_particles=None):
         def prepare(self):
             return None
 
-        def execute(self, timeout, rm_dat, *, error_only=False):
+        def execute(
+            self, timeout, rm_dat, *, error_only=False, error_realizations=(0,)
+        ):
             return _Result()
 
     return _FakeRunner
@@ -913,7 +927,7 @@ def test_key_prefix_and_key(point_receptor, tmp_path):
     assert sim.key(sim.trajectories_path) == (
         f"simulations/by-id/{sid}/{sid}_traj.parquet"
     )
-    assert sim.key(sim.error_trajectories_path) == (
+    assert sim.key(sim.error_trajectories_path()) == (
         f"simulations/by-id/{sid}/{sid}_error.parquet"
     )
     assert sim.key(sim.log_path) == f"simulations/by-id/{sid}/stilt.log"
@@ -950,7 +964,7 @@ def test_resolve_prefers_local_then_store_then_none(point_receptor, tmp_path):
 def _touch(sim, kind, name=""):
     path = {
         "traj": sim.trajectories_path,
-        "error": sim.error_trajectories_path,
+        "error": sim.error_trajectories_path(),
         "foot": sim.footprint_path(name),
         "empty": sim.empty_footprint_path(name),
     }[kind]
@@ -1119,7 +1133,7 @@ def _write_all_outputs(sim):
     sim.directory.mkdir(parents=True, exist_ok=True)
     sim.log_path.write_text("log")
     sim.trajectories_path.write_bytes(b"traj")
-    sim.error_trajectories_path.write_bytes(b"error")
+    sim.error_trajectories_path().write_bytes(b"error")
     sim.footprint_path("slv").write_bytes(b"foot")
     sim.write_empty_footprint_marker("empty")
 
@@ -1135,7 +1149,7 @@ def test_publish_copies_outputs_into_store(point_receptor, tmp_path):
     published = storage_root / sim.key_prefix
     assert (published / "stilt.log").read_text() == "log"
     assert (published / sim.trajectories_path.name).read_bytes() == b"traj"
-    assert (published / sim.error_trajectories_path.name).read_bytes() == b"error"
+    assert (published / sim.error_trajectories_path().name).read_bytes() == b"error"
     assert (published / sim.footprint_path("slv").name).read_bytes() == b"foot"
     assert (published / sim.empty_footprint_path("empty").name).exists()
     assert not list(published.glob("*.tmp"))
@@ -1153,7 +1167,7 @@ def test_publish_skips_missing_outputs(point_receptor, tmp_path):
     published = storage_root / sim.key_prefix
     assert (published / sim.trajectories_path.name).read_bytes() == b"traj"
     assert not (published / "stilt.log").exists()
-    assert not (published / sim.error_trajectories_path.name).exists()
+    assert not (published / sim.error_trajectories_path().name).exists()
 
 
 def test_publish_noop_when_store_root_contains_sim_directory(point_receptor, tmp_path):
@@ -1261,3 +1275,131 @@ def test_transform_context_carries_receptor_name_error_flag_and_store(
     assert ctx.is_error is True
     assert ctx.store is store
     assert _sim(tmp_path, point_receptor).transform_context().store is None
+
+
+# -- error realizations ------------------------------------------------------------
+
+
+def _write_error_realization(sim, realization: int, foot: float = 2e-5) -> None:
+    traj = Trajectories.from_particles(
+        _particles_df(foot),
+        receptor=sim.receptor,
+        params=sim.params,
+        met_files=[],
+        is_error=True,
+    )
+    path = sim.error_trajectories_path(realization)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    traj.to_parquet(path)
+
+
+def test_error_trajectories_path_suffixes_realizations_after_the_first(
+    tmp_path, point_receptor
+):
+    sim = _sim(tmp_path, point_receptor, **_ERR, error_realizations=3)
+    assert sim.error_trajectories_path().name == f"{sim.id}_error.parquet"
+    assert sim.error_trajectories_path(0) == sim.error_trajectories_path()
+    assert sim.error_trajectories_path(2).name == f"{sim.id}_error_2.parquet"
+    assert sim.error_realizations == (0, 1, 2)
+
+
+def test_error_realizations_are_empty_without_wind_error(tmp_path, point_receptor):
+    sim = _sim(tmp_path, point_receptor, error_realizations=3)
+    assert sim.error_realizations == ()
+    # file-existence semantics survive for the unconfigured case
+    assert not sim.has_error_trajectory
+    _touch(sim, "error")
+    assert sim.has_error_trajectory
+
+
+def test_completion_requires_every_realization(tmp_path, point_receptor):
+    sim = _sim(tmp_path, point_receptor, **_ERR, error_realizations=3)
+    _write_trajectory(sim, sim.params)
+    _write_error_realization(sim, 0)
+
+    assert sim.missing_error_realizations == [1, 2]
+    assert not sim.has_error_trajectory
+    assert not sim.is_complete()
+    assert sim.error_trajectories is not None
+    assert sim.error_trajectory(1) is None
+    assert len(sim.all_error_trajectories) == 1
+
+    _write_error_realization(sim, 1)
+    _write_error_realization(sim, 2)
+
+    assert sim.missing_error_realizations == []
+    assert sim.has_error_trajectory
+    assert sim.is_complete()
+    ensemble = sim.all_error_trajectories
+    assert len(ensemble) == 3
+    assert all(t.is_error for t in ensemble)
+    assert ensemble[2] is sim.error_trajectory(2)
+
+
+def test_run_trajectories_requests_only_missing_realizations(
+    tmp_path, point_receptor, monkeypatch
+):
+    sim = _sim(tmp_path, point_receptor, **_ERR, error_realizations=3)
+    _write_trajectory(sim, sim.params)
+    _write_error_realization(sim, 0)
+    main_bytes = sim.trajectories_path.read_bytes()
+
+    asked: dict = {}
+
+    class _FakeMet:
+        def required_files(self, **kwargs):
+            return []
+
+        def stage_files_for_simulation(self, **kwargs):
+            return []
+
+    class _Result:
+        stdout = "ok"
+        particles = None
+        error_particles = {1: _particles_df(3e-5), 2: _particles_df(4e-5)}
+
+    class _FakeRunner:
+        def __init__(self, **kwargs):
+            pass
+
+        def prepare(self):
+            return None
+
+        def execute(
+            self, timeout, rm_dat, *, error_only=False, error_realizations=(0,)
+        ):
+            asked["error_only"] = error_only
+            asked["realizations"] = list(error_realizations)
+            return _Result()
+
+    monkeypatch.setattr("stilt.simulation.HYSPLITDriver", _FakeRunner)
+    sim.meteorology = _FakeMet()
+
+    sim.run_trajectories(write=True)
+
+    assert asked == {"error_only": True, "realizations": [1, 2]}
+    assert sim.trajectories_path.read_bytes() == main_bytes  # main untouched
+    assert sim.missing_error_realizations == []
+    assert sim.is_complete()
+    assert float(sim.error_trajectory(2).data["foot"].iloc[0]) == pytest.approx(4e-5)
+
+
+def test_publish_copies_every_realization(point_receptor, tmp_path):
+    storage_root = tmp_path / "output"
+    sim = _sim(
+        tmp_path / "compute",
+        point_receptor,
+        store=LocalStore(storage_root),
+        **_ERR,
+        error_realizations=2,
+    )
+    sim.directory.mkdir(parents=True, exist_ok=True)
+    sim.trajectories_path.write_bytes(b"traj")
+    sim.error_trajectories_path(0).write_bytes(b"e0")
+    sim.error_trajectories_path(1).write_bytes(b"e1")
+
+    sim.publish()
+
+    published = storage_root / sim.key_prefix
+    assert (published / sim.error_trajectories_path(0).name).read_bytes() == b"e0"
+    assert (published / sim.error_trajectories_path(1).name).read_bytes() == b"e1"

@@ -51,6 +51,50 @@ Salt Lake Valley. Values taken from another analysis, or guessed small to
 be safe, are worse than they look: PYSTILT's validation found that scales
 of a few kilometres and an hour produce no detectable perturbation at all.
 
+Several realizations
+~~~~~~~~~~~~~~~~~~~~
+
+One error run is one draw of the perturbation field, and its variance
+estimate carries the sampling noise of that draw. Ask for several:
+
+.. code-block:: yaml
+
+   error_realizations: 4
+
+Each simulation then runs the perturbed transport that many times and
+writes ``sim.error_trajectories_path(k)`` for each. Only the perturbed
+runs repeat; the main run is shared. This needs ``krand: 4`` (the
+default): HYSPLIT draws the perturbation field from a seed it randomizes
+only in that mode, and the bundled ``hycs_std`` ignores the namelist
+``seed`` for that draw, so any other mode would repeat the same field
+``N`` times. PYSTILT refuses the combination when it reads the config.
+The price is that realizations are not reproducible run to run. A simulation is complete when every
+realization exists, and ``skip_existing`` reruns only the realizations
+that are missing, so a preempted job picks up where it stopped.
+
+Pass the whole set to :func:`~stilt.observations.transport_error` as a
+list. It averages each level's perturbed mean and variance over the
+realizations before taking the difference:
+
+.. code-block:: python
+
+   err = transport_error(
+       sim.trajectories.data,
+       [t.data for t in sim.all_error_trajectories],
+       flux,
+   )
+   err.realizations  # 4
+
+What this buys is bounded. The perturbed side's sampling noise falls as
+``1/sqrt(N)``, but the unperturbed particles are the same in every
+realization, so their noise stays. The null spread of ``variance`` with
+``N`` realizations is ``sqrt((1 + 1/N) / 2)`` times the single-run
+``noise``, which tends to ``1/sqrt(2)``: at most a ``sqrt(2)`` tighter
+estimate, never a resolved one from an unresolved one. ``noise`` already
+carries the factor. Realizations earn their transport cost when a single
+run's ``variance`` sits within a factor of two of its ``noise``; when it
+is far below, the wind-error scales are the problem, not the sampling.
+
 The modelled enhancement
 ------------------------
 
@@ -141,7 +185,8 @@ anything:
 - ``result.noise`` is the standard deviation of ``variance`` you would get
   with no wind error at all, estimated by splitting the unperturbed
   particles into random halves and treating one half as the perturbed run.
-  A ``variance`` within two or three times ``noise`` is unresolved.
+  A ``variance`` within two or three times ``noise`` is unresolved. With
+  several realizations, ``noise`` already includes their (bounded) gain.
 - Over many receptors, aggregate the signed ``variance`` with a median (by
   hour, season, or site) rather than clipping each value at zero; clipping
   turns noise into a positive error. ``result.sd`` clips for convenience

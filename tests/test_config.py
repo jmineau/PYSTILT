@@ -657,3 +657,29 @@ def test_file_geometry_spec_layer_and_where(tmp_path):
     mesh = spec.build()
     assert mesh.ids == ("a", "b")
     assert FileGeometrySpec(path=str(gpkg), layer="other").build().ids == ("0",)
+
+
+# -- error realizations ------------------------------------------------------------
+
+
+def test_error_realizations_default_to_one():
+    from stilt.config import STILTParams
+
+    assert STILTParams().error_realizations == 1
+
+
+@pytest.mark.parametrize("krand", [0, 1, 2, 3, 12])
+def test_several_error_realizations_require_krand_4(krand):
+    from stilt.config import STILTParams
+
+    with pytest.raises(ValueError, match="requires krand=4"):
+        STILTParams(error_realizations=3, krand=krand)
+
+
+def test_several_error_realizations_accept_krand_4_and_one_accepts_any():
+    from stilt.config import STILTParams
+
+    assert STILTParams(error_realizations=3, krand=4).error_realizations == 3
+    assert STILTParams(error_realizations=1, krand=2).error_realizations == 1
+    with pytest.raises(ValueError):
+        STILTParams(error_realizations=0)

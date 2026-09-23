@@ -79,7 +79,7 @@ def _write_trajectory(model: Model, sim_id: str, *, error: bool = False) -> Path
     """Write a stub trajectory (or error-trajectory) output."""
     _sim_dir(model, sim_id)
     sim = model.simulation(sim_id)
-    path = sim.error_trajectories_path if error else sim.trajectories_path
+    path = sim.error_trajectories_path() if error else sim.trajectories_path
     path.write_bytes(b"stub")
     return path
 
@@ -124,7 +124,7 @@ def _write_real_trajectory(model: Model, sim_id: str, *, error=False) -> Path:
         met_files=[],
         is_error=error,
     )
-    path = sim.error_trajectories_path if error else sim.trajectories_path
+    path = sim.error_trajectories_path() if error else sim.trajectories_path
     traj.to_parquet(path)
     return path
 
@@ -1186,6 +1186,34 @@ def test_run_skip_existing_redispatches_missing_error_trajectory(
     assert exc.start_calls[0]["pending"] == [_sid(point_receptor)]
 
     _write_trajectory(model, _sid(point_receptor), error=True)
+    again = _CapturingExecutor()
+    model.run(executor=again, skip_existing=True)
+    assert not again.was_started
+
+
+def test_run_skip_existing_redispatches_missing_error_realization(
+    tmp_path, point_receptor
+):
+    """Completion counts every realization; skip_existing resumes the missing one."""
+    model = Model(
+        project=tmp_path,
+        config=_config(
+            tmp_path, include_footprint=False, error=True, error_realizations=2
+        ),
+        receptors=[point_receptor],
+    )
+    sid = _sid(point_receptor)
+    _write_trajectory(model, sid)
+    _write_trajectory(model, sid, error=True)  # realization 0 only
+    exc = _CapturingExecutor()
+
+    model.run(executor=exc, skip_existing=True)
+
+    assert exc.was_started
+    assert exc.start_calls[0]["pending"] == [sid]
+    assert model.simulation(sid).missing_error_realizations == [1]
+
+    model.simulation(sid).error_trajectories_path(1).write_bytes(b"stub")
     again = _CapturingExecutor()
     model.run(executor=again, skip_existing=True)
     assert not again.was_started

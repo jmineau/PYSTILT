@@ -348,7 +348,7 @@ def _output_path(sim: Simulation, output: str) -> Path:
     if output == TRAJECTORY:
         return sim.trajectories_path
     if output == ERROR_TRAJECTORY:
-        return sim.error_trajectories_path
+        return sim.error_trajectories_path()
     return sim.footprint_path(output)
 
 
