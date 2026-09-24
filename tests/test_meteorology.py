@@ -500,3 +500,55 @@ def test_required_files_backward_non_boundary_includes_ceil_file(tmp_path):
     assert "20230101_11" in names
     assert "20230101_12" in names
     assert "20230101_13" in names
+
+
+def _six_hourly_hrrr(tmp_path):
+    _touch_files(
+        tmp_path,
+        [
+            "20190122_18-23_hrrr",
+            "20190123_00-05_hrrr",
+            "20190123_06-11_hrrr",
+            "20190123_12-17_hrrr",
+            "20190123_18-23_hrrr",
+            "20190124_00-05_hrrr",
+        ],
+    )
+    return _make_met(tmp_path, "%Y%m%d_%H", "6h")
+
+
+def test_required_files_backward_mid_file_release_skips_next_file(tmp_path):
+    """A 19:06 release sits inside 18-23, so the next day's 00z file is not needed (#29)."""
+    met = _six_hourly_hrrr(tmp_path)
+    files = met.required_files(r_time=dt.datetime(2019, 1, 23, 19, 6), n_hours=-24)
+    assert [f.name for f in files] == [
+        "20190122_18-23_hrrr",
+        "20190123_00-05_hrrr",
+        "20190123_06-11_hrrr",
+        "20190123_12-17_hrrr",
+        "20190123_18-23_hrrr",
+    ]
+
+
+def test_required_files_backward_last_hour_release_includes_next_file(tmp_path):
+    """A 23:06 release interpolates against 00z, which is in the next file."""
+    met = _six_hourly_hrrr(tmp_path)
+    files = met.required_files(r_time=dt.datetime(2019, 1, 23, 23, 6), n_hours=-24)
+    assert files[-1].name == "20190124_00-05_hrrr"
+
+
+def test_required_files_backward_boundary_release_adds_nothing_later(tmp_path):
+    met = _six_hourly_hrrr(tmp_path)
+    files = met.required_files(r_time=dt.datetime(2019, 1, 23, 18), n_hours=-24)
+    assert files[-1].name == "20190123_18-23_hrrr"
+
+
+def test_required_files_ignores_backup_copies(tmp_path):
+    """Archive backups (name~<timestamp>~) must not be staged beside the real file (#30)."""
+    _touch_files(
+        tmp_path,
+        ["20200107_18-23_hrrr", "20200107_18-23_hrrr~20260403182134~"],
+    )
+    met = _make_met(tmp_path, "%Y%m%d_%H", "6h")
+    files = met.required_files(r_time=dt.datetime(2020, 1, 7, 20), n_hours=-1)
+    assert [f.name for f in files] == ["20200107_18-23_hrrr"]

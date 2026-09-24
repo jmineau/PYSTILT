@@ -232,7 +232,9 @@ class MetStream:
 
         if n_hours < 0:
             met_end_ceil = later.ceil(self.file_tres)  # type: ignore[arg-type]
-            if later < met_end_ceil:
+            # As in STILT-R: a release in the last hour of a file interpolates
+            # against the next file's first hour; anywhere else it doesn't.
+            if later.floor("h") + pd.Timedelta(hours=1) == met_end_ceil:
                 met_end = met_end_ceil
 
         met_times = pd.date_range(met_start, met_end, freq=self.file_tres)
@@ -241,10 +243,11 @@ class MetStream:
         files: list[Path] = []
         missing: list[str] = []
         for pattern in patterns:
+            # Backup copies (name~<timestamp>~, name.~1~, name~) all end in "~".
             matches = [
                 p
                 for p in self.directory.rglob(f"{pattern}*")
-                if p.is_file() and ".lock" not in p.name
+                if p.is_file() and ".lock" not in p.name and not p.name.endswith("~")
             ]
             if matches:
                 files.extend(matches)

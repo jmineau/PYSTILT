@@ -17,6 +17,22 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   instrument team's retrievals. They keep the formats' quirks, including the
   `.oof` header's variable count exceeding the number of columns written.
 
+### Fixed
+
+- **Backward runs staged a met file they did not need**
+  ([#29](https://github.com/jmineau/PYSTILT/issues/29)). The next file
+  after the release is needed only when the release falls in the last hour of
+  its file, where HYSPLIT interpolates against the next file's first hour.
+  STILT-R's `find_met_files` checks for that; PYSTILT added the next file for
+  any release off a file boundary. With 6-hourly HRRR, a 19:06 release pulled
+  in the next day's 00z file, and a defect in that file failed the run.
+  Selection now matches STILT-R. Hourly met is unaffected.
+- **The archive met search matched backup copies**
+  ([#30](https://github.com/jmineau/PYSTILT/issues/30)). The prefix glob also
+  found files like `20200107_18-23_hrrr~20260403182134~` next to the real
+  file, and a corrupt backup failed the run. Names ending in `~` are now
+  skipped.
+
 ## [0.1.0a18] - 2026-09-23
 
 ### Added
