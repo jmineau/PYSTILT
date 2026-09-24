@@ -32,6 +32,11 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   found files like `20200107_18-23_hrrr~20260403182134~` next to the real
   file, and a corrupt backup failed the run. Names ending in `~` are now
   skipped.
+- **Slurm array logs were overwritten by the next submission**
+  ([#31](https://github.com/jmineau/PYSTILT/issues/31)). Logs were named by
+  task id alone in `slurm/logs/`, so every array against a project reused the
+  same files. Each submission now writes to `slurm/logs/<date_time>/`, the
+  same key as its `chunks/<date_time>/` and `submit_<date_time>.sh`.
 
 ## [0.1.0a18] - 2026-09-23
 

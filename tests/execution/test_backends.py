@@ -296,7 +296,9 @@ def test_slurm_executor_start_renders_chunk_worker_script(tmp_path, monkeypatch)
     assert f"CHUNK_PATH={batch_dir}/task_${{SLURM_ARRAY_TASK_ID}}.txt" in script_text
     assert '--chunk "$CHUNK_PATH"' in script_text
     assert "#SBATCH --job-name=pystilt-" in script_text
-    assert f"#SBATCH --output={slurm_dir / 'logs'}/%a.out" in script_text
+    logs_dir = slurm_dir / "logs" / batch_dir.name
+    assert f"#SBATCH --output={logs_dir}/%a.out" in script_text
+    assert logs_dir.is_dir()
     assert "--output-dir" not in script_text
     assert "--compute-root" not in script_text
     assert "skip-existing" not in script_text

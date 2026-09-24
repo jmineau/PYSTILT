@@ -83,17 +83,18 @@ everything to run again.
 What PYSTILT writes
 -------------------
 
-Each submission adds:
+Each submission adds files under one ``<date_time>`` key, so a later
+submission never overwrites an earlier one's chunks or logs:
 
 .. code-block:: text
 
    my_project/
      chunks/<date_time>/task_0.txt, task_1.txt, ...   # simulation IDs for each task
      slurm/submit_<date_time>.sh                      # the script given to sbatch
-     slurm/logs/0.out, 0.err, ...                     # output from each task
+     slurm/logs/<date_time>/0.out, 0.err, ...         # output from each task
 
 Each array task runs ``stilt push-worker`` on its ``task_N.txt`` list. If a
-task fails, look in ``slurm/logs/`` for task-level problems (for example, the
+task fails, look in ``slurm/logs/<date_time>/`` for task-level problems (for example, the
 environment not activating) and in each simulation's ``stilt.log`` for
 HYSPLIT problems.
 

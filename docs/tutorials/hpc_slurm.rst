@@ -70,7 +70,8 @@ Step 4: Monitor
    squeue -u "$USER"                         # Slurm's view of the array
    stilt status /path/to/shared/slv_2023     # finished vs remaining simulations
 
-Task output is in ``slurm/logs/`` inside the project. If every task fails
+Task output is in ``slurm/logs/<date_time>/`` inside the project, one
+directory per submission. If every task fails
 immediately, check there first: the most common cause is ``setup`` not
 activating the environment, so ``stilt`` can't be found.
 

@@ -268,7 +268,8 @@ class SlurmExecutor:
             return SlurmHandle("none")
 
         slurm_dir = project_dir / "slurm"
-        logs_dir = slurm_dir / "logs"
+        # One directory per submission, so a later array never overwrites these.
+        logs_dir = slurm_dir / "logs" / batch_id
         logs_dir.mkdir(parents=True, exist_ok=True)
 
         script_path = slurm_dir / f"submit_{batch_id}.sh"
