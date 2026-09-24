@@ -6,6 +6,8 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.0a19] - 2026-09-24
+
 ### Changed
 
 - Removed `ModelConfig.basic` (it only forwarded to the constructor with
