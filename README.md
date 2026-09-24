@@ -288,7 +288,8 @@ implementation on **numerical values** at `rtol=1e-7` per cell, validated by
 end-to-end fidelity scenarios against a **pinned upstream commit**.
 NetCDF output is not byte-compatible with STILT-R;
 it should be read as generic CF-1.8 NetCDF.
-See [STILT-R.md](STILT-R.md) for more details.
+See the [STILT-R parity section](https://jmineau.github.io/PYSTILT/development.html#stilt-r-parity)
+of the development docs for more details.
 
 ## Documentation
 
