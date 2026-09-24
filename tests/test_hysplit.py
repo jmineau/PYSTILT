@@ -338,14 +338,19 @@ def test_write_setup_includes_seed_when_configured(tmp_path, point_receptor):
     runner = HYSPLITDriver(
         directory=tmp_path,
         receptor=point_receptor,
-        params=STILTParams(seed=17),
+        params=STILTParams(seed=17, krand=2),
         met_files=[tmp_path / "met" / "dummy"],
         exe_dir=tmp_path,
     )
     runner._write_setup(winderrtf=0)
     content = (tmp_path / "SETUP.CFG").read_text().lower()
 
-    assert "seed=17" in content
+    assert "seed=-18" in content  # -(|seed|+1): the value HYSPLIT honours
+
+    runner._write_setup(winderrtf=1, seed=43)
+    content = (tmp_path / "SETUP.CFG").read_text().lower()
+    assert "seed=-44" in content
+    assert "winderrtf=1" in content
 
 
 def test_write_setup_sets_winderrtf(tmp_path, point_receptor):
@@ -729,13 +734,17 @@ def test_execute_runs_one_error_pass_per_realization(
     monkeypatch.setattr(runner, "_write_winderr", lambda: None)
     monkeypatch.setattr(runner, "_write_zierr", lambda: None)
     monkeypatch.setattr(
-        runner, "_write_setup", lambda winderrtf: setups.append(winderrtf)
+        runner,
+        "_write_setup",
+        lambda winderrtf, seed=None: setups.append((winderrtf, seed)),
     )
 
     result = runner.execute(timeout=5, rm_dat=False, error_realizations=[0, 1, 2])
 
     assert labels == ["main", "error[0]", "error[1]", "error[2]"]
-    assert setups == [1]  # SETUP.CFG written once for the error passes (XY only)
+    assert setups == [
+        (1, None)
+    ]  # unseeded: SETUP.CFG written once for the error passes
     assert len(result.particles) == 1
     assert sorted(result.error_particles) == [0, 1, 2]
     foots = [float(result.error_particles[k]["foot"].iloc[0]) for k in (0, 1, 2)]
@@ -757,9 +766,38 @@ def test_one_failed_realization_does_not_lose_the_others(
     monkeypatch.setattr(runner, "_run", fake_run)
     monkeypatch.setattr(runner, "_write_winderr", lambda: None)
     monkeypatch.setattr(runner, "_write_zierr", lambda: None)
-    monkeypatch.setattr(runner, "_write_setup", lambda winderrtf: None)
+    monkeypatch.setattr(runner, "_write_setup", lambda winderrtf, seed=None: None)
 
     result = runner.execute(timeout=5, rm_dat=False, error_realizations=[0, 1, 2])
 
     assert sorted(result.error_particles) == [0, 2]
     assert "=== error run [1] failed ===" in runner.log_path.read_text()
+
+
+def test_seeded_realizations_rewrite_setup_with_their_own_seed(
+    tmp_path, point_receptor, monkeypatch
+):
+    runner = _error_runner(
+        tmp_path, point_receptor, krand=2, seed=42, error_realizations=3
+    )
+    setups: list[tuple[int, int | None]] = []
+
+    def fake_run(timeout: int | None, *, label: str = "main") -> None:
+        _write_particle_dat(
+            runner.particle_stilt_path, rows=[[-60, 1, -111.9, 40.7, 10.0, 1e-5]]
+        )
+
+    monkeypatch.setattr(runner, "_run", fake_run)
+    monkeypatch.setattr(runner, "_write_winderr", lambda: None)
+    monkeypatch.setattr(runner, "_write_zierr", lambda: None)
+    monkeypatch.setattr(
+        runner,
+        "_write_setup",
+        lambda winderrtf, seed=None: setups.append((winderrtf, seed)),
+    )
+
+    runner.execute(timeout=5, rm_dat=False, error_realizations=[0, 2])
+
+    # realization 0 shares the configured seed (as STILT-R's error run does);
+    # realization k runs with seed + k
+    assert setups == [(1, 42), (1, 44)]

@@ -194,8 +194,36 @@ def test_setup_entries_route_transport_params_to_setup_cfg():
     assert "maxpar" in entries  # defaulted from numpar
 
 
-def test_setup_entries_include_seed_when_set():
-    assert STILTParams(seed=17).setup_entries()["seed"] == 17
+def test_setup_entries_map_seed_to_negative_namelist_value():
+    # HYSPLIT's ran1 re-initializes only from a negative value; -(|seed|+1)
+    # keeps every seed distinct and off the unseeded default (state 1).
+    assert STILTParams(seed=17, krand=2).setup_entries()["seed"] == -18
+    assert STILTParams(seed=-17, krand=2).setup_entries()["seed"] == -18
+    assert STILTParams(seed=0, krand=2).setup_entries()["seed"] == -1
+    assert STILTParams.setup_seed(42) == -43
+
+
+def test_realization_seeds_are_distinct_and_start_at_the_main_seed():
+    p = STILTParams(seed=42, krand=2, error_realizations=3)
+    assert [p.realization_seed(k) for k in range(3)] == [42, 43, 44]
+    assert STILTParams().realization_seed(0) is None
+
+
+@pytest.mark.parametrize("krand", [0, 1, 3, 4, 10, 13])
+def test_seed_requires_krand_2(krand):
+    with pytest.raises(ValueError, match="requires krand=2"):
+        STILTParams(seed=1, krand=krand)
+
+
+@pytest.mark.parametrize("krand", [0, 1, 2, 3, 4, 10, 11, 12, 13])
+def test_krand_accepts_hysplit_modes(krand):
+    assert STILTParams(krand=krand).krand == krand
+
+
+@pytest.mark.parametrize("krand", [-1, 5, 9, 14, 20])
+def test_krand_rejects_undocumented_values(krand):
+    with pytest.raises(ValueError, match="not a HYSPLIT mode"):
+        STILTParams(krand=krand)
 
 
 def test_control_and_zicontrol_fields_are_transport_params():
@@ -232,6 +260,7 @@ def test_model_config_flat_construction(tmp_path):
         n_hours=-24,
         numpar=100,
         seed=42,
+        krand=2,
         mets={
             "hrrr": MetConfig(
                 directory=tmp_path / "met",
@@ -726,17 +755,18 @@ def test_error_realizations_default_to_one():
 
 
 @pytest.mark.parametrize("krand", [0, 1, 2, 3, 12])
-def test_several_error_realizations_require_krand_4(krand):
+def test_several_error_realizations_require_krand_4_or_a_seed(krand):
     from stilt.config import STILTParams
 
-    with pytest.raises(ValueError, match="requires krand=4"):
+    with pytest.raises(ValueError, match="requires krand=4 or krand=2 with a seed"):
         STILTParams(error_realizations=3, krand=krand)
 
 
-def test_several_error_realizations_accept_krand_4_and_one_accepts_any():
+def test_several_error_realizations_accept_krand_4_or_seeded_krand_2():
     from stilt.config import STILTParams
 
     assert STILTParams(error_realizations=3, krand=4).error_realizations == 3
+    assert STILTParams(error_realizations=3, krand=2, seed=7).error_realizations == 3
     assert STILTParams(error_realizations=1, krand=2).error_realizations == 1
     with pytest.raises(ValueError):
         STILTParams(error_realizations=0)

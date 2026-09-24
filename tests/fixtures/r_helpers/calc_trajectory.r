@@ -61,12 +61,15 @@ load_libs('arrow', 'dplyr', 'lubridate', 'ncdf4', 'raster', 'R.utils')
 
 # Upstream STILT-R write_setup.r does not expose SEED.  PYSTILT does, and the
 # live fidelity tests pin krand/seed for deterministic HYSPLIT output, so wrap
-# R's writer and add SEED immediately before $END.
+# R's writer and add SEED immediately before $END.  Apply PYSTILT's mapping
+# (STILTParams.setup_seed): HYSPLIT honours only a negative SEED, and
+# -(|seed|+1) keeps every seed distinct and off the unseeded default.
+setup_seed <- -(abs(seed) + 1)
 write_setup_orig <- write_setup
 write_setup <- function(..., file = "SETUP.CFG") {
   out <- write_setup_orig(..., file = file)
   txt <- readLines(out)
-  txt <- base::append(txt, paste0("SEED=", format(seed, scientific = FALSE), ","), after = length(txt) - 1)
+  txt <- base::append(txt, paste0("SEED=", format(setup_seed, scientific = FALSE), ","), after = length(txt) - 1)
   writeLines(txt, out)
   out
 }

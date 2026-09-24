@@ -6,6 +6,29 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **Reproducible runs and error realizations**
+  ([#28](https://github.com/jmineau/PYSTILT/issues/28)). `seed` now does what
+  it says: with `krand: 2` two runs with the same seed are bit-identical and
+  different seeds give different turbulence and wind-error draws. HYSPLIT's
+  generator re-initializes only from a negative namelist value and collapses
+  every value `>= -1` onto one stream, so PYSTILT writes `SEED = -(|seed| + 1)`
+  (`STILTParams.setup_seed`). Under `krand: 2` with a seed, error
+  realization `k` runs with `seed + k` (`STILTParams.realization_seed`;
+  realization 0 shares the main run's seed, as STILT-R's error run does),
+  so `error_realizations > 1` no longer requires `krand: 4`: the seeded route
+  is reproducible, the clock-seeded one is not. The fidelity fixture writes
+  the same mapped value on the STILT-R side.
+- **Mixed-layer height section** in the Transport Error guide: `ziscale` as
+  a shared, all-particle bracket on the mixed layer, one project per factor,
+  and why a column and a surface receptor respond differently. The X-STILT
+  migration table now maps `get.zierr` to `ziscale`.
+- **Radiosondes from IGRA2** in the Wind Error Statistics guide: a snippet
+  that reads NOAA's Integrated Global Radiosonde Archive through siphon into
+  the table the recipe starts from, so the recipe works for any sonde
+  station. It replaces X-STILT's `grab.raob`. No new API or dependency.
+
 ### Changed
 
 - **`zicontroltf` is derived from `ziscale`** and is no longer a setting.
@@ -14,6 +37,11 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   that still has a `zicontroltf` line no longer loads: delete the line,
   and set `ziscale: 1.0` if it holds `0` (STILT-R's unset value and
   PYSTILT's old default). A `ziscale` of 0 is rejected.
+- `krand` is checked against HYSPLIT's documented modes (0-4, 10-13). HYSPLIT
+  does not validate it, and any other value silently makes every turbulence
+  draw the same constant (or hangs). `seed` requires `krand: 2`: the bundled
+  `hycs_std` discards the seed under `krand: 4` and 10-13 and uses it only
+  for the initial turbulent velocity under `krand: 1`.
 
 ### Fixed
 
@@ -23,17 +51,6 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   scalar `ziscale` was repeated for every hour of the run. A config that
   would write more than 150 factors is now rejected; a list of up to 150
   covers the first hours of a longer run.
-
-### Added
-
-- **Mixed-layer height section** in the Transport Error guide: `ziscale` as
-  a shared, all-particle bracket on the mixed layer, one project per factor,
-  and why a column and a surface receptor respond differently. The X-STILT
-  migration table now maps `get.zierr` to `ziscale`.
-- **Radiosondes from IGRA2** in the Wind Error Statistics guide: a snippet
-  that reads NOAA's Integrated Global Radiosonde Archive through siphon into
-  the table the recipe starts from, so the recipe works for any sonde
-  station. It replaces X-STILT's `grab.raob`. No new API or dependency.
 
 ## [0.1.0a19] - 2026-09-24
 

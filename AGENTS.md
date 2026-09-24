@@ -325,6 +325,18 @@ Feature status lives in the roadmap tables in [README.md](README.md) and
   (`tests/test_hysplit_release_assignment.py` does).
 - **Transport-error settings** behave in ways that are easy to misread; see
   `docs/guides/transport_error.rst` before changing or validating them.
+- **The HYSPLIT seed is remapped.** `SETUP.CFG` gets `SEED = -(|seed| + 1)`
+  (`STILTParams.setup_seed`), not the user's value: HYSPLIT sets its generator
+  state to `-1 + SEED`, and under `krand=2` the generator (`ran1`)
+  re-initializes only from a negative value and collapses every state `>= -1`
+  onto one stream, so a positive `SEED` is inert. `krand=4` discards the seed
+  (clock draw with ~5000 distinct values), and `krand=1` uses it only for the
+  initial turbulent velocity, so `seed` requires `krand=2`. `krand` is
+  restricted to HYSPLIT's documented modes because any other value silently
+  degenerates the turbulence draws. Error realization `k` runs with
+  `seed + k`; realization 0 shares the main seed, as STILT-R's error run
+  does, which is what the `winderr` fidelity scenario relies on. The R
+  fidelity fixture applies the same seed mapping.
 - HYSPLIT binaries in `src/stilt/hysplit/bin/` are Linux x86-64. Real runs are
   heavy; on a shared HPC system run them through the Slurm backend or an
   allocation, not on a login node.

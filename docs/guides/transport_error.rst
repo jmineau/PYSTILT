@@ -65,14 +65,24 @@ estimate carries the sampling noise of that draw. Ask for several:
 
 Each simulation then runs the perturbed transport that many times and
 writes ``sim.error_trajectories_path(k)`` for each. Only the perturbed
-runs repeat; the main run is shared. This needs ``krand: 4`` (the
-default): HYSPLIT draws the perturbation field from a seed it randomizes
-only in that mode, and the bundled ``hycs_std`` ignores the namelist
-``seed`` for that draw, so any other mode would repeat the same field
-``N`` times. PYSTILT refuses the combination when it reads the config.
-The price is that realizations are not reproducible run to run. A simulation is complete when every
-realization exists, and ``skip_existing`` reruns only the realizations
-that are missing, so a preempted job picks up where it stopped.
+runs repeat; the main run is shared. Each realization needs its own draw
+of the perturbation field, and there are two ways to get one:
+
+- ``krand: 4`` (the default). HYSPLIT seeds every run from the clock, so
+  the realizations are independent but not reproducible. The clock seed
+  has only about 5000 distinct values, so at ``N = 100`` there is a 60 %
+  chance that two realizations are bit-identical copies; at the ``N`` of
+  a few used here that chance is negligible.
+- ``krand: 2`` with a ``seed``. PYSTILT runs realization ``k`` with the
+  seed ``seed + k``: realization 0 shares the main run's seed, as
+  STILT-R's error run does, and the others differ from it and from each
+  other. A rerun reproduces every one of them bit for bit.
+
+Any other combination would repeat the same field ``N`` times, and
+PYSTILT refuses it when it reads the config. A simulation is complete
+when every realization exists, and ``skip_existing`` reruns only the
+realizations that are missing, so a preempted job picks up where it
+stopped.
 
 Pass the whole set to :func:`~stilt.observations.transport_error` as a
 list. It averages each level's perturbed mean and variance over the

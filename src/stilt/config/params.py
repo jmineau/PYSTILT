@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any, ClassVar, Literal
 
 import pandas as pd
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from typing_extensions import Self
 
 
@@ -217,16 +217,27 @@ class TransportParams(BaseModel):
     )
     krand: int = Field(
         4,
-        description="Random-number mode for turbulence, repeatability, and diagnostic no-mixing runs.",
+        description=(
+            "HYSPLIT random-number mode. 0 lets HYSPLIT pick 2 (numpar <= 5000) "
+            "or 1; 1 draws turbulence from a precomputed table; 2 draws it on "
+            "the fly (deterministic, seedable); 3 turns mixing off (diagnostic); "
+            "4 seeds the generator from the clock, so every run differs (about "
+            "5000 distinct seeds); 10-13 are 0-3 with the intrinsic generator "
+            "randomized too. Any other value makes HYSPLIT's turbulence draws "
+            "degenerate silently, so it is rejected here."
+        ),
     )
     seed: int | None = Field(
         None,
         description=(
-            "Random-number seed written to SETUP.CFG. Do not rely on it: with "
-            "the bundled hycs_std and krand=2, runs with different seeds came "
-            "out identical (neither the turbulence nor the wind-error draw "
-            "changed), and krand=4 and 10-13 randomize the seed themselves. "
-            "Only krand=4 gives a different draw from run to run."
+            "Seed for a reproducible run; different values give different "
+            "runs. Requires krand=2: the bundled hycs_std discards the "
+            "namelist seed under krand=4 and 10-13 and barely uses it under "
+            "1. Written to SETUP.CFG as -(abs(seed) + 1) because HYSPLIT's "
+            "generator re-initializes only from a negative value and collapses "
+            "every value >= -1 onto one stream. Error realization k runs with "
+            "seed + k (realization 0 shares the configured seed, as STILT-R's "
+            "error run does), so realizations differ and reproduce."
         ),
     )
     krnd: int = Field(6, description="Enhanced-merging interval in hours.")
@@ -408,10 +419,10 @@ class ErrorParams(BaseModel):
             "independent draw of the perturbation field; transport_error "
             "averages their variance estimates, which cuts the perturbed "
             "side's sampling noise by 1/sqrt(N) (the shared main run bounds "
-            "the overall gain at sqrt(2)). More than one requires krand=4: "
-            "HYSPLIT draws the perturbation from the seed it randomizes only "
-            "in that mode, and the bundled hycs_std ignores SETUP.CFG's seed "
-            "for it, so other modes would repeat the same draw."
+            "the overall gain at sqrt(2)). More than one needs a fresh draw "
+            "per run: either krand=4 (clock-seeded, not reproducible) or "
+            "krand=2 with a seed (each realization gets its own seed and "
+            "reruns reproduce it)."
         ),
     )
 
@@ -489,6 +500,8 @@ class STILTParams(ModelParams, TransportParams, ErrorParams):
     #: Most hourly ZICONTROL factors HYSPLIT can hold (``ZIPRESC(150)`` in
     #: hymodelc.F); it reads more without a bounds check.
     MAX_ZISCALE_HOURS: ClassVar[int] = 150
+    #: ``krand`` values HYSPLIT documents (``hysetup.f``); others degenerate silently.
+    KRAND_VALUES: ClassVar[frozenset[int]] = frozenset({0, 1, 2, 3, 4, 10, 11, 12, 13})
     #: ModelParams fields that are SETUP.CFG entries.
     _MODEL_SETUP_FIELDS: ClassVar[frozenset[str]] = frozenset({"numpar", "varsiwant"})
 
@@ -504,7 +517,35 @@ class STILTParams(ModelParams, TransportParams, ErrorParams):
         ]
         entries = {n: getattr(self, n) for n in names if getattr(self, n) is not None}
         entries["zicontroltf"] = self.zicontroltf
+        if self.seed is not None:
+            entries["seed"] = self.setup_seed(self.seed)
         return entries
+
+    @staticmethod
+    def setup_seed(seed: int) -> int:
+        """
+        Map a user seed to the ``SEED`` value written to ``SETUP.CFG``.
+
+        HYSPLIT sets its generator state to ``-1 + SEED`` and, under
+        ``krand=2``, re-initializes only from a negative value, collapsing
+        every value ``>= -1`` onto the same stream. ``-(|seed| + 1)`` keeps the
+        state at ``-(|seed| + 2)``: negative, distinct per ``|seed|``, and never
+        the unseeded default. A patched HYSPLIT that honours ``SEED`` directly
+        maps a negative ``SEED`` to the same state, so the value is portable.
+        """
+        return -(abs(seed) + 1)
+
+    def realization_seed(self, realization: int) -> int | None:
+        """
+        Return the user seed for error realization ``realization``.
+
+        Realization 0 runs with the configured seed, exactly as STILT-R's single
+        error run does, and realization ``k`` with ``seed + k``. ``None`` when
+        unseeded.
+        """
+        if self.seed is None:
+            return None
+        return self.seed + realization
 
     @property
     def ziscale_factors(self) -> list[float] | None:
@@ -553,6 +594,30 @@ class STILTParams(ModelParams, TransportParams, ErrorParams):
             )
         return self
 
+    @field_validator("krand")
+    @classmethod
+    def _validate_krand(cls, value: int) -> int:
+        """Reject values HYSPLIT does not document; they degenerate silently."""
+        if value not in cls.KRAND_VALUES:
+            raise ValueError(
+                f"krand={value} is not a HYSPLIT mode (0-4 or 10-13): HYSPLIT does "
+                "not check it and any other value makes every turbulence draw the "
+                "same constant, or hangs."
+            )
+        return value
+
+    @model_validator(mode="after")
+    def _validate_seed(self) -> Self:
+        """A seed only reaches the turbulence draw under ``krand=2``."""
+        if self.seed is not None and self.krand != 2:
+            raise ValueError(
+                f"seed={self.seed} requires krand=2 (got krand={self.krand}): the "
+                "bundled hycs_std discards the namelist seed under krand=4 and "
+                "10-13 and uses it only for the initial turbulent velocity under "
+                "krand=1. Set krand=2, or drop the seed."
+            )
+        return self
+
     @model_validator(mode="after")
     def _set_maxpar(self) -> Self:
         """Default ``maxpar`` to ``numpar`` when the user omits it."""
@@ -563,13 +628,15 @@ class STILTParams(ModelParams, TransportParams, ErrorParams):
     @model_validator(mode="after")
     def _validate_error_realizations(self) -> Self:
         """Several realizations need HYSPLIT to draw a fresh perturbation each run."""
-        if self.error_realizations > 1 and self.krand != 4:
+        if self.error_realizations > 1 and not (
+            self.krand == 4 or (self.krand == 2 and self.seed is not None)
+        ):
             raise ValueError(
-                f"error_realizations={self.error_realizations} requires krand=4 "
-                f"(got krand={self.krand}): HYSPLIT randomizes the wind-error "
-                "draw only in that mode, and the bundled hycs_std ignores the "
-                "namelist seed for it, so every realization would repeat the "
-                "same perturbation."
+                f"error_realizations={self.error_realizations} requires krand=4 or "
+                f"krand=2 with a seed (got krand={self.krand}, seed={self.seed}): "
+                "under krand=4 HYSPLIT seeds each run from the clock; under "
+                "krand=2 PYSTILT gives each realization its own seed. Any other "
+                "mode would repeat the same perturbation."
             )
         return self
 

@@ -502,3 +502,43 @@ def test_error_realizations(tmp_path, wbb_receptor, traj_only_config):
     assert sim.trajectories_path.read_bytes() == main_bytes
     assert sim.error_trajectories_path(1).exists()
     assert sim.is_complete()
+
+
+@integration
+def test_seeded_error_realizations_differ_and_reproduce(
+    tmp_path, wbb_receptor, traj_only_config
+):
+    """krand=2 with a seed: realizations differ from each other and a rerun is bit-identical."""
+    config = traj_only_config.model_copy(
+        update={
+            "siguverr": 2.0,
+            "tluverr": 60.0,
+            "zcoruverr": 500.0,
+            "horcoruverr": 40.0,
+            "krand": 2,
+            "seed": 7,
+            "error_realizations": 2,
+        }
+    )
+
+    def run(project):
+        model = Model(project=project, config=config, receptors=[wbb_receptor])
+        model.run()
+        sim = model.simulations[_sim_id(wbb_receptor)]
+        assert sim.is_complete()
+        return sim
+
+    a = run(tmp_path / "a")
+    e0, e1 = (t.data for t in a.all_error_trajectories)
+    s0 = e0.groupby("indx")["foot"].sum()
+    s1 = e1.groupby("indx")["foot"].sum().reindex(s0.index)
+    assert not np.allclose(s0.to_numpy(), s1.to_numpy())
+    main = a.trajectories.data.groupby("indx")["foot"].sum().reindex(s0.index)
+    assert not np.allclose(main.to_numpy(), s0.to_numpy())
+
+    b = run(tmp_path / "b")
+    pd.testing.assert_frame_equal(a.trajectories.data, b.trajectories.data)
+    for k in (0, 1):
+        pd.testing.assert_frame_equal(
+            a.error_trajectory(k).data, b.error_trajectory(k).data
+        )

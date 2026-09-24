@@ -203,8 +203,11 @@ class HYSPLITDriver:
             in this case.
         error_realizations : sequence of int
             Which error realizations to run, one HYSPLIT call each. They are
-            distinct draws only under ``krand=4``, where HYSPLIT seeds the
-            perturbation from the clock; the config validator enforces that.
+            distinct draws under ``krand=4``, where HYSPLIT seeds each run from
+            the clock, or under ``krand=2`` with a seed, where ``SETUP.CFG`` is
+            rewritten with ``params.realization_seed(k)`` (``seed + k``) before
+            pass ``k``;
+            the config validator enforces one of the two.
 
         Returns
         -------
@@ -221,8 +224,15 @@ class HYSPLITDriver:
         if self.params.winderrtf > 0:
             self._write_winderr()
             self._write_zierr()
-            self._write_setup(winderrtf=self.params.winderrtf)
+            seeded = self.params.seed is not None
+            if not seeded:
+                self._write_setup(winderrtf=self.params.winderrtf)
             for k in error_realizations:
+                if seeded:
+                    self._write_setup(
+                        winderrtf=self.params.winderrtf,
+                        seed=self.params.realization_seed(k),
+                    )
                 self.particle_stilt_path.unlink(missing_ok=True)
                 self.particle_path.unlink(missing_ok=True)
 
@@ -319,9 +329,17 @@ class HYSPLITDriver:
             self.particle_path.unlink(missing_ok=True)
         return particles
 
-    def _write_setup(self, winderrtf: int) -> None:
-        """Write ``SETUP.CFG`` for the current HYSPLIT run."""
+    def _write_setup(self, winderrtf: int, seed: int | None = None) -> None:
+        """
+        Write ``SETUP.CFG`` for the current HYSPLIT run.
+
+        ``seed`` overrides the configured user seed for one run (an error
+        realization); it goes through the same ``STILTParams.setup_seed``
+        mapping as the configured one.
+        """
         entries = self.params.setup_entries()
+        if seed is not None:
+            entries["seed"] = self.params.setup_seed(seed)
         entries["kmsl"] = self._resolved_kmsl()
         entries["ivmax"] = len(self.params.varsiwant)  # number of output variables
         entries["winderrtf"] = winderrtf
