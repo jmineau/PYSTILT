@@ -6,6 +6,20 @@ Contributions are welcome: bug reports, documentation fixes, and code. See
 for conventions, and open issues on
 `GitHub <https://github.com/jmineau/PYSTILT/issues>`_.
 
+Use of AI coding agents
+-----------------------
+
+PYSTILT is developed with the help of AI coding agents, which write much of
+the code, tests, and documentation under the maintainer's direction. The
+maintainer sets the design and the science and reviews the changes. Numerical
+correctness does not rest on review alone: footprints are checked against
+STILT-R by the fidelity test suite (see :ref:`below <stilt-r-parity>`), and
+CI runs the unit, integration, and STILT-R tests on every push and pull
+request.
+
+If you contribute with an agent, ``AGENTS.md`` at the repository root is the
+orientation file it should read.
+
 Set up a development environment
 --------------------------------
 
@@ -23,6 +37,8 @@ Common tasks:
    just test             # run the test suite
    just quality-check    # lint, type-check, and test
    just build-docs       # build this documentation into docs/_build/html
+
+.. _stilt-r-parity:
 
 STILT-R parity
 --------------

@@ -291,6 +291,15 @@ it should be read as generic CF-1.8 NetCDF.
 See the [STILT-R parity section](https://jmineau.github.io/PYSTILT/development.html#stilt-r-parity)
 of the development docs for more details.
 
+## Use of AI coding agents
+
+PYSTILT is developed with the help of AI coding agents, which write much of
+the code, tests, and documentation under the maintainer's direction. The
+maintainer sets the design and the science and reviews the changes. Numerical
+correctness does not rest on review alone: footprints are checked against
+STILT-R by the fidelity test suite, and CI runs the unit, integration, and
+STILT-R tests on every push and pull request.
+
 ## Documentation
 
 Full documentation is available at [https://jmineau.github.io/PYSTILT/](https://jmineau.github.io/PYSTILT/)
