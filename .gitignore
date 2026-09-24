@@ -1,3 +1,8 @@
+# Personal coding-agent files (shared guidance is AGENTS.md)
+*.local.md
+.claude/settings.local.json
+.aider*
+
 # STILT-specific
 # Downloaded met file cache for integration tests (populated on demand via HRRRSource)
 tests/met_cache/

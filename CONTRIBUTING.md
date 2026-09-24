@@ -95,6 +95,10 @@ executor's `dispatch` mode:
 - `pull` executors launch workers that claim from the Postgres queue and should
   preserve claim transactions until a simulation result is recorded or released
 
+Register a new backend in `execution/backends/factory.py::resolve_backend`,
+re-export it from `execution/__init__.py`, and handle SIGTERM with
+`sigterm_as_interrupt` as the local, Slurm, and Kubernetes backends do.
+
 Backend `start()` methods should return quickly with a handle. `wait()` should
 raise on backend-level failure states rather than treating “not queued anymore”
 as success. Add tests for submission failure, terminal failure states,
@@ -107,14 +111,15 @@ the backend can prove the launched job is finished.
 ## Adding particle transforms
 
 Pre-footprint particle transforms implement the `ParticleTransform` protocol in
-`src/stilt/transforms.py`. A transform receives a particle `DataFrame` and an
-optional `ParticleTransformContext`, then returns a transformed `DataFrame`
-without mutating caller-owned data unexpectedly.
+`src/stilt/transforms.py`. A transform receives a particle `DataFrame` and a
+`TransformContext`, then returns a new `DataFrame` without mutating the
+caller's data.
 
-Declarative transforms should have a config spec in `src/stilt/config` and a
-builder branch in `build_particle_transform()`. Runtime-only transforms can be
-passed as objects that implement `apply(...)`, but public/documented transforms
-should prefer config specs so YAML round trips remain reproducible.
+A built-in transform is one pydantic class in `transforms.py`: its fields are
+the YAML keys, `kind` is a `Literal` discriminator, and `apply()` does the
+work. Add it to the `BuiltinTransform` union; nothing else needs wiring. Users
+can reference their own class by import path (`kind: my.module.Class`), so
+only generally useful transforms belong in PYSTILT.
 
 Add tests for:
 - config parsing and YAML round trip
