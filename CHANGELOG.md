@@ -6,6 +6,25 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- **`zicontroltf` is derived from `ziscale`** and is no longer a setting.
+  The mixed-layer height is scaled whenever `ziscale` is not 1.0, the way
+  `winderrtf` follows the wind-error parameters. Saved configs still load:
+  `zicontroltf: 1` is dropped, and `zicontroltf: 0` with `ziscale: 0`
+  (STILT-R's unset value and PYSTILT's old default) becomes `ziscale: 1.0`.
+  `zicontroltf: 0` next to any other factor is an error, since it used to
+  mean no scaling. A `ziscale` of 0 is rejected.
+
+### Fixed
+
+- **`ziscale` runs over 150 hours overflowed HYSPLIT's ZICONTROL array**
+  ([#36](https://github.com/jmineau/PYSTILT/issues/36)). HYSPLIT holds at
+  most 150 hourly factors and reads more without a bounds check, and a
+  scalar `ziscale` was repeated for every hour of the run. A config that
+  would write more than 150 factors is now rejected; a list of up to 150
+  covers the first hours of a longer run.
+
 ### Added
 
 - **Radiosondes from IGRA2** in the Wind Error Statistics guide: a snippet

@@ -360,38 +360,9 @@ class HYSPLITDriver:
                 encoding="utf-8",
             )
 
-    def _ziscale_values(self) -> list[float] | None:
-        """Return the ZICONTROL scale vector for this run, if enabled."""
-        if not self.params.zicontroltf:
-            return None
-
-        raw = self.params.ziscale
-        n_hours = max(abs(int(self.params.n_hours)), 1)
-
-        if isinstance(raw, int | float):
-            return [float(raw)] * n_hours
-
-        if not raw:
-            raise ValueError("ziscale cannot be empty when zicontroltf is enabled.")
-
-        first = raw[0]
-        if isinstance(first, list):
-            if len(raw) != 1:
-                raise ValueError(
-                    "Per-simulation ziscale lists are not supported in PYSTILT's "
-                    "flat config yet. Pass one shared vector for all simulations."
-                )
-            values = [float(v) for v in first]
-        else:
-            values = [float(v) for v in raw]  # type: ignore[arg-type]
-
-        if not values:
-            raise ValueError("ziscale cannot be empty when zicontroltf is enabled.")
-        return values
-
     def _write_zicontrol(self) -> None:
         """Write ZICONTROL when mixed-layer scaling is enabled."""
-        values = self._ziscale_values()
+        values = self.params.ziscale_factors
         if values is None:
             self.zicontrol_path.unlink(missing_ok=True)
             return

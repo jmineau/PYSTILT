@@ -354,15 +354,16 @@ class TransportParams(BaseModel):
         25000.0,
         description="Top of model domain, in meters above ground level; defaults to 25000.0",
     )
-    zicontroltf: int = Field(
-        0,
-        description="Enable domain-wide PBL scaling from a ZICONTROL file.",
-    )
     ziscale: float | list[float] | list[list[float]] = Field(
         1.0,
         description=(
-            "Manually scale the mixed-layer height. Scalars expand across the run; "
-            "lists define shared hourly factors."
+            "Factor on the mixed-layer height, written to HYSPLIT's ZICONTROL "
+            "file. 1.0 (the default) leaves it unscaled; any other value turns "
+            "scaling on. A scalar applies to every hour of the run; a list gives "
+            "one factor per hour from the release, and later hours are unscaled. "
+            "HYSPLIT applies kmix0 after the factor, so the mixed layer never "
+            "drops below kmix0. At most 150 hourly factors. A negative value "
+            "uses the meteorology's own PBL height where the met files carry one."
         ),
     )
 
@@ -485,6 +486,9 @@ class STILTParams(ModelParams, TransportParams, ErrorParams):
     )
     #: Fields written to ZICONTROL rather than SETUP.CFG.
     ZICONTROL_FIELDS: ClassVar[frozenset[str]] = frozenset({"ziscale"})
+    #: Most hourly ZICONTROL factors HYSPLIT can hold (``ZIPRESC(150)`` in
+    #: hymodelc.F); it reads more without a bounds check.
+    MAX_ZISCALE_HOURS: ClassVar[int] = 150
     #: ModelParams fields that are SETUP.CFG entries.
     _MODEL_SETUP_FIELDS: ClassVar[frozenset[str]] = frozenset({"numpar", "varsiwant"})
 
@@ -498,7 +502,87 @@ class STILTParams(ModelParams, TransportParams, ErrorParams):
                 if n not in self.CONTROL_FIELDS and n not in self.ZICONTROL_FIELDS
             ),
         ]
-        return {n: getattr(self, n) for n in names if getattr(self, n) is not None}
+        entries = {n: getattr(self, n) for n in names if getattr(self, n) is not None}
+        entries["zicontroltf"] = self.zicontroltf
+        return entries
+
+    @property
+    def ziscale_factors(self) -> list[float] | None:
+        """
+        Hourly mixed-layer factors for ZICONTROL, or ``None`` when unscaled.
+
+        A scalar ``ziscale`` is repeated for every hour of the run; a list is
+        used as given. All factors equal to 1.0 means no scaling.
+        """
+        if isinstance(self.ziscale, int | float):
+            values = [float(self.ziscale)] * max(abs(self.n_hours), 1)
+        else:
+            values = _hourly_ziscale(self.ziscale)
+        if all(v == 1.0 for v in values):
+            return None
+        return values
+
+    @property
+    def zicontroltf(self) -> int:
+        """HYSPLIT ZICONTROLTF flag: 1 when ``ziscale`` scales the mixed layer."""
+        return int(self.ziscale_factors is not None)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _drop_zicontroltf(cls, data: Any) -> Any:
+        """
+        Accept the ``zicontroltf`` key that configs saved before it was derived carry.
+
+        ``zicontroltf: 0`` meant no scaling whatever ``ziscale`` held. With
+        ``ziscale: 0``, STILT-R's unset value and PYSTILT's old default, that
+        becomes ``ziscale: 1.0``. With any other factor it is an error rather
+        than a silent switch to scaling.
+        """
+        if not isinstance(data, dict) or "zicontroltf" not in data:
+            return data
+        data = dict(data)
+        flag = data.pop("zicontroltf")
+        ziscale = data.get("ziscale", 1.0)
+        if isinstance(ziscale, list):
+            values = _hourly_ziscale(ziscale)
+        else:
+            values = [float(ziscale)]
+        if not flag and all(v == 0.0 for v in values):
+            data["ziscale"] = 1.0
+        elif not flag and any(v != 1.0 for v in values):
+            raise ValueError(
+                "zicontroltf is no longer a setting: the mixed layer is scaled "
+                f"whenever ziscale is not 1.0. This config has zicontroltf: {flag} "
+                f"with ziscale: {ziscale!r}, which meant no scaling; set "
+                "ziscale: 1.0 to keep that, or remove zicontroltf to scale."
+            )
+        return data
+
+    @model_validator(mode="after")
+    def _validate_ziscale(self) -> Self:
+        """Reject factors HYSPLIT would misread: empty, zero, or too many hours."""
+        if isinstance(self.ziscale, int | float):
+            values = [float(self.ziscale)]
+        else:
+            values = _hourly_ziscale(self.ziscale)
+        if not values:
+            raise ValueError("ziscale cannot be empty; use 1.0 for no scaling.")
+        if any(v == 0.0 for v in values):
+            raise ValueError(
+                "ziscale of 0 would collapse the mixed layer to kmix0. STILT-R "
+                "uses 0 to mean unset; use 1.0 for no scaling."
+            )
+        factors = self.ziscale_factors
+        if factors is not None and len(factors) > self.MAX_ZISCALE_HOURS:
+            raise ValueError(
+                f"ziscale gives {len(factors)} hourly factors, but HYSPLIT holds at "
+                f"most {self.MAX_ZISCALE_HOURS}. A scalar ziscale is repeated for "
+                "every hour, so it needs abs(n_hours) <= "
+                f"{self.MAX_ZISCALE_HOURS}; for longer runs give a list of up to "
+                f"{self.MAX_ZISCALE_HOURS} factors, after which the mixed layer "
+                "is unscaled."
+            )
+        return self
 
     @model_validator(mode="after")
     def _set_maxpar(self) -> Self:
@@ -531,6 +615,19 @@ class STILTParams(ModelParams, TransportParams, ErrorParams):
                     f"hnf_plume=True requires varsiwant to include: {sorted(missing)}"
                 )
         return self
+
+
+def _hourly_ziscale(raw: list[float] | list[list[float]]) -> list[float]:
+    """Flatten a ``ziscale`` list, allowing STILT-R's one-element nested form."""
+    items: list[Any] = list(raw)
+    if items and isinstance(items[0], list):
+        if len(items) != 1:
+            raise ValueError(
+                "Per-simulation ziscale lists are not supported. Pass one shared "
+                "list of hourly factors for all simulations."
+            )
+        items = list(items[0])
+    return [float(v) for v in items]
 
 
 __all__ = ["ErrorParams", "ModelParams", "STILTParams", "TransportParams"]

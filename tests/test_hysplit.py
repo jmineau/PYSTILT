@@ -488,7 +488,6 @@ def test_write_zicontrol_creates_file_from_shared_vector(tmp_path, point_recepto
         numpar=10,
         hnf_plume=False,
         varsiwant=["time", "indx", "long", "lati", "zagl", "foot"],
-        zicontroltf=1,
         ziscale=[0.8, 0.8, 0.9],
     )
     runner = HYSPLITDriver(
@@ -512,7 +511,6 @@ def test_write_zicontrol_expands_scalar_to_run_length(tmp_path, point_receptor):
         numpar=10,
         hnf_plume=False,
         varsiwant=["time", "indx", "long", "lati", "zagl", "foot"],
-        zicontroltf=1,
         ziscale=0.8,
     )
     runner = HYSPLITDriver(
@@ -529,25 +527,13 @@ def test_write_zicontrol_expands_scalar_to_run_length(tmp_path, point_receptor):
     assert lines == ["4", "0.8", "0.8", "0.8", "0.8"]
 
 
-def test_write_zicontrol_rejects_multiple_nested_vectors(tmp_path, point_receptor):
-    params = STILTParams(
-        n_hours=-24,
-        numpar=10,
-        hnf_plume=False,
-        varsiwant=["time", "indx", "long", "lati", "zagl", "foot"],
-        zicontroltf=1,
-        ziscale=[[0.8, 0.8], [0.9, 0.9]],
-    )
-    runner = HYSPLITDriver(
-        directory=tmp_path,
-        receptor=point_receptor,
-        params=params,
-        met_files=[],
-        exe_dir=tmp_path,
-    )
+def test_write_zicontrol_skips_file_when_unscaled(tmp_path, point_receptor):
+    (tmp_path / "ZICONTROL").write_text("stale")
+    runner = _make_runner(tmp_path, point_receptor)
 
-    with pytest.raises(ValueError, match="Per-simulation ziscale lists"):
-        runner._write_zicontrol()
+    runner._write_zicontrol()
+
+    assert not (tmp_path / "ZICONTROL").exists()
 
 
 # ---------------------------------------------------------------------------
@@ -593,8 +579,7 @@ def test_prepare_writes_zicontrol_when_enabled(tmp_path, point_receptor):
         numpar=10,
         hnf_plume=False,
         varsiwant=["time", "indx", "long", "lati", "zagl", "foot"],
-        zicontroltf=1,
-        ziscale=[1.0] * 24,
+        ziscale=[0.9] * 24,
     )
     runner = HYSPLITDriver(
         directory=sim_dir,

@@ -121,6 +121,78 @@ def test_stilt_params_ziscale_defaults_to_scalar_one():
     assert p.ziscale == 1.0
 
 
+def test_zicontroltf_is_derived_from_ziscale():
+    assert STILTParams().zicontroltf == 0
+    assert STILTParams().ziscale_factors is None
+    assert STILTParams(ziscale=[1.0, 1.0]).zicontroltf == 0
+    assert STILTParams(ziscale=0.8).zicontroltf == 1
+    assert STILTParams(ziscale=[1.0, 0.9]).zicontroltf == 1
+
+
+def test_ziscale_scalar_repeats_for_every_hour_and_list_is_used_as_given():
+    assert STILTParams(n_hours=-3, ziscale=0.8).ziscale_factors == [0.8, 0.8, 0.8]
+    assert STILTParams(n_hours=-24, ziscale=[0.8]).ziscale_factors == [0.8]
+    assert STILTParams(ziscale=[[0.8, 0.9]]).ziscale_factors == [0.8, 0.9]
+
+
+def test_setup_entries_write_the_derived_zicontroltf():
+    assert STILTParams().setup_entries()["zicontroltf"] == 0
+    assert STILTParams(ziscale=1.2).setup_entries()["zicontroltf"] == 1
+
+
+def test_saved_config_no_longer_carries_zicontroltf():
+    assert "zicontroltf" not in STILTParams(ziscale=0.8).model_dump()
+
+
+def test_old_config_zicontroltf_key_is_accepted_when_it_agrees():
+    assert STILTParams(zicontroltf=0, ziscale=1.0).zicontroltf == 0
+    assert STILTParams(zicontroltf=1, ziscale=0.8).zicontroltf == 1
+    assert STILTParams(zicontroltf=1, ziscale=1.0).zicontroltf == 0
+
+
+@pytest.mark.parametrize("ziscale", [0, 0.0, [0.0]])
+def test_old_config_unset_ziscale_pair_loads_unscaled(ziscale):
+    """zicontroltf: 0 with ziscale: 0 is STILT-R's unset pair and PYSTILT's old default."""
+    p = STILTParams(zicontroltf=0, ziscale=ziscale)
+    assert p.ziscale == 1.0
+    assert p.zicontroltf == 0
+
+
+@pytest.mark.parametrize("ziscale", [0.8, [1.0, 0.8]])
+def test_old_config_zicontroltf_off_with_a_factor_is_an_error(ziscale):
+    with pytest.raises(ValueError, match="zicontroltf is no longer a setting"):
+        STILTParams(zicontroltf=0, ziscale=ziscale)
+
+
+@pytest.mark.parametrize("ziscale", [0.0, [1.0, 0.0]])
+def test_ziscale_zero_is_rejected(ziscale):
+    with pytest.raises(ValueError, match="ziscale of 0"):
+        STILTParams(ziscale=ziscale)
+
+
+def test_ziscale_empty_list_is_rejected():
+    with pytest.raises(ValueError, match="cannot be empty"):
+        STILTParams(ziscale=[])
+
+
+def test_ziscale_rejects_multiple_per_simulation_lists():
+    with pytest.raises(ValueError, match="Per-simulation ziscale lists"):
+        STILTParams(ziscale=[[0.8, 0.8], [0.9, 0.9]])
+
+
+def test_ziscale_at_most_150_hourly_factors():
+    assert len(STILTParams(n_hours=-150, ziscale=0.8).ziscale_factors) == 150
+    assert STILTParams(n_hours=-240, ziscale=[0.8] * 150).zicontroltf == 1
+    with pytest.raises(ValueError, match="at most 150"):
+        STILTParams(n_hours=-151, ziscale=0.8)
+    with pytest.raises(ValueError, match="at most 150"):
+        STILTParams(ziscale=[0.8] * 151)
+
+
+def test_long_run_without_scaling_is_fine():
+    assert STILTParams(n_hours=-240).zicontroltf == 0
+
+
 def test_setup_entries_route_transport_params_to_setup_cfg():
     p = STILTParams()
     entries = p.setup_entries()
