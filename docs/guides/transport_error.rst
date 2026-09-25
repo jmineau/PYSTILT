@@ -32,7 +32,9 @@ standard deviation, and its path is unchanged. Because the factors are
 independent between particles, their effect on the receptor enhancement
 averages away, and their effect on the ensemble variance is small compared
 with the sampling noise of a few thousand particles. PYSTILT's validation
-could not resolve a 50 % mixed-layer error with 3 000 particles.
+could not resolve a 50 % mixed-layer error with 3 000 particles. For an
+error shared by every particle, scale the mixed layer instead
+(`Mixed-layer height`_).
 ``FootprintConfig.error: true`` also rasterizes the perturbed
 particles as an ``{name}_error`` footprint, which is handy for plotting but
 not needed for what follows. The error run doubles the transport cost.
@@ -240,3 +242,42 @@ the error in transport only: emission and retrieval errors are separate
 terms. The background's share of the transport error, from the wind errors
 moving the trajectory endpoints, is included when you pass a background
 field (:doc:`background`).
+
+Mixed-layer height
+------------------
+
+A real error in the mixed-layer height is shared: every particle in the
+valley sees the same layer that is too shallow or too deep. ``ziscale``
+represents that. It multiplies HYSPLIT's mixed-layer height by one factor
+for every particle, and runs with factors above and below 1.0 show how
+sensitive the enhancement is to the mixed layer.
+
+.. code-block:: yaml
+
+   ziscale: 0.8     # every hour of the run; a list gives one factor per hour
+
+Three things to know before running a bracket:
+
+- Changing ``ziscale`` in an existing project reruns nothing. A simulation
+  is identified by its receptor and meteorology, not by the settings, so
+  the finished ones count as complete. Run each factor as its own project
+  over the same receptors.
+- HYSPLIT applies ``kmix0`` (150 m by default) after the factor, so a mixed
+  layer already at that floor is not lowered further. The hours above it
+  still are.
+- HYSPLIT holds at most 150 hourly factors. A scalar ``ziscale`` is
+  repeated for every hour, so it needs ``abs(n_hours) <= 150``; a longer
+  run takes a list, and hours past its end are unscaled.
+
+How much it matters depends on the receptor. A column spans the mixed layer,
+and a change in its depth mostly moves footprint around inside the column:
+in PYSTILT's validation a 20 % shallower layer left a 0 to 3 km column's
+enhancement within its sampling noise. A surface receptor has no such
+averaging, and in a small test at a Salt Lake Valley tower a 40 % change
+moved the enhancement by a few tens of percent in most cases and hardly at
+all in others. Measure it for your own receptors.
+
+The bracket is a sensitivity, not an error. Turning it into one needs how
+far the meteorology's mixed-layer height is from the real one, for example
+against radiosonde profiles analysed with the same bulk Richardson
+definition HYSPLIT uses by default (``kmixd: 3``).

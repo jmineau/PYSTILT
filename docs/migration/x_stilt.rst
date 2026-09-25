@@ -60,9 +60,12 @@ parity is not a goal; the table shows what has an equivalent.
        the met at observations is ``arlmet.sample_points`` rather than a
        HYSPLIT run per sonde, and sondes come from IGRA2 through siphon.
        Recipe in the Wind Error Statistics guide
-   * - Mixing-height error statistics
+   * - Mixing-height scaling for the vertical transport error (``run_ver_err``, ``zisf``)
      - ``get.zierr``
-     - not ported; set ``sigzierr`` and friends yourself
+     - ``ziscale`` in ``config.yaml``, one project per factor (see
+       *Mixed-layer height* in :doc:`/guides/transport_error`). X-STILT sets
+       one constant factor and leaves the stochastic ``sigzierr`` unset;
+       PYSTILT has both
    * - Background from trajectory endpoints (``endpts.trajfoot``, CarbonTracker)
      - ``background/``
      - :func:`stilt.observations.background` against any xarray field

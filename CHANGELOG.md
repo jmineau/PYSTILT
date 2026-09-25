@@ -27,6 +27,10 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Mixed-layer height section** in the Transport Error guide: `ziscale` as
+  a shared, all-particle bracket on the mixed layer, one project per factor,
+  and why a column and a surface receptor respond differently. The X-STILT
+  migration table now maps `get.zierr` to `ziscale`.
 - **Radiosondes from IGRA2** in the Wind Error Statistics guide: a snippet
   that reads NOAA's Integrated Global Radiosonde Archive through siphon into
   the table the recipe starts from, so the recipe works for any sonde
