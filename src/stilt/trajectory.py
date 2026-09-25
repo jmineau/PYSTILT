@@ -145,7 +145,6 @@ class Trajectories:
         params: STILTParams,
         met_files: list[Path],
         data: pd.DataFrame,
-        is_error: bool = False,
     ):
         """
         Particle trajectory ensemble with associated metadata.
@@ -160,22 +159,16 @@ class Trajectories:
             Meteorology files used for this run.
         params : STILTParams
             Transport/model parameters used for this run.
-        is_error : bool, default=False
-            Whether this is a wind-error-perturbed run.
         """
         self.receptor = receptor
         self.params = params
         self.met_files = met_files
         self.data = data
-        self.is_error = is_error
         self._plot: TrajectoriesPlotAccessor | None = None
 
     def __repr__(self) -> str:
         """Compact developer-facing trajectory representation."""
-        return (
-            f"Trajectories(rows={len(self.data)!r}, "
-            f"is_error={self.is_error!r}, receptor={self.receptor.id!r})"
-        )
+        return f"Trajectories(rows={len(self.data)!r}, receptor={self.receptor.id!r})"
 
     def endpoints(self) -> pd.DataFrame:
         """
@@ -248,8 +241,8 @@ class Trajectories:
         """
         Load a Trajectories instance from a self-contained parquet file.
 
-        Metadata (receptor, params, met_files, is_error) is read from
-        Arrow schema metadata embedded by ``to_parquet``.
+        Metadata (receptor, params, met_files) is read from Arrow schema
+        metadata embedded by ``to_parquet``.
 
         Parameters
         ----------
@@ -268,7 +261,6 @@ class Trajectories:
         receptor = Receptor.from_dict(json.loads(meta[b"stilt:receptor"]))
         params = STILTParams.model_validate(json.loads(meta[b"stilt:params"]))
         met_files = [Path(p) for p in json.loads(meta[b"stilt:met_files"])]
-        is_error = json.loads(meta[b"stilt:is_error"])
 
         # Read data. `datetime` is written naive UTC by ``from_particles``; keep
         # it naive on read so the receptor/trajectory/footprint time axes align.
@@ -281,7 +273,6 @@ class Trajectories:
             params=params,
             met_files=met_files,
             data=data,
-            is_error=is_error,
         )
 
     @classmethod
@@ -291,7 +282,6 @@ class Trajectories:
         receptor: Receptor,
         params: STILTParams,
         met_files: list[Path],
-        is_error: bool = False,
     ) -> "Trajectories":
         """
         Build a Trajectories instance from raw HYSPLIT particle output.
@@ -310,8 +300,6 @@ class Trajectories:
             Transport/model parameters used for the run.
         met_files : list[Path]
             Meteorology files used for the run.
-        is_error : bool, default=False
-            Whether these are wind-error-perturbed particles.
         """
         p = particles.copy()
         numpar = int(p["indx"].max())  # type: ignore[arg-type]
@@ -335,7 +323,6 @@ class Trajectories:
             data=p,
             met_files=met_files,
             params=params,
-            is_error=is_error,
         )
 
     def footprint(self, config: "FootprintConfig", name: str = "") -> "Footprint":
@@ -362,8 +349,8 @@ class Trajectories:
         """
         Persist trajectory data and metadata to a self-contained parquet file.
 
-        Receptor, params, met_files, and is_error are stored in Arrow
-        schema metadata so ``from_parquet`` needs no sibling files.
+        Receptor, params, and met_files are stored in Arrow schema metadata
+        so ``from_parquet`` needs no sibling files.
 
         Parameters
         ----------
@@ -387,7 +374,6 @@ class Trajectories:
                 else json.dumps(self.params)
             ).encode(),
             b"stilt:met_files": json.dumps([str(p) for p in self.met_files]).encode(),
-            b"stilt:is_error": json.dumps(self.is_error).encode(),
         }
         existing = table.schema.metadata or {}
         table = table.replace_schema_metadata({**existing, **meta})

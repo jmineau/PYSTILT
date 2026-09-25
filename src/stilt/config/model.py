@@ -1,4 +1,4 @@
-"""Project-level config models and YAML/doc helpers."""
+"""Project-level config: flat defaults, met streams, and variants."""
 
 from __future__ import annotations
 
@@ -9,33 +9,40 @@ import yaml
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from typing_extensions import Self
 
-from .footprint import FootprintConfig
+from .footprint import FootprintParams
 from .meteorology import MetConfig
 from .params import STILTParams
-from .spatial import Grid
+from .variant import VARIANT_NAME_RE, VariantConfig, expand_variants
 
 T = TypeVar("T", bound=BaseModel)
 
-_GRID_KEYS = frozenset({"xmin", "xmax", "ymin", "ymax", "xres", "yres", "projection"})
-_REQUIRED_GRID_KEYS = frozenset({"xmin", "xmax", "ymin", "ymax", "xres", "yres"})
+#: ModelConfig fields that are not parameters a variant inherits.
+_PROJECT_FIELDS = frozenset({"mets", "variants", "execution", "skip_existing"})
 
 
-class ModelConfig(STILTParams):
-    """Project-level config: STILT params plus met and footprint definitions."""
+class ModelConfig(STILTParams, FootprintParams):
+    """
+    Project-level config.
+
+    The flat transport and footprint fields are the **defaults**; a variant is
+    ``{met: ..., <overrides>}`` merged onto them. With no ``variants`` given,
+    one variant per met is generated, named after the met.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
-    footprints: dict[str, FootprintConfig] = Field(
-        default_factory=dict,
-        description="Named footprint products available for this model configuration.",
-    )
-    grids: dict[str, Grid] = Field(
-        default_factory=dict,
-        description="Named grids referenced by footprint definitions.",
-    )
     mets: dict[str, MetConfig] = Field(
         default_factory=dict,
         description="Named meteorology streams available to the model.",
+    )
+    variants: dict[str, dict[str, Any]] = Field(
+        default_factory=dict,
+        description=(
+            "Named variants as overrides of the defaults. Each may set ``met`` "
+            "(required with several mets), ``realizations`` (run N times with "
+            "seed + k), or ``from`` (rasterize another variant's trajectory; "
+            "footprint fields only). Absent: one variant per met."
+        ),
     )
     execution: dict[str, Any] = Field(
         default_factory=dict,
@@ -50,86 +57,62 @@ class ModelConfig(STILTParams):
         ),
     )
 
-    @model_validator(mode="before")
-    @classmethod
-    def _resolve_nested_configs(cls, data: dict) -> dict:
-        """Expand named grid references in footprint configs before validation."""
-        if not isinstance(data, dict):
-            return data
-        grids_raw = data.get("grids") or {}
-        fp_raw = data.get("footprints") or {}
-        if fp_raw:
-            resolved = {}
-            for name, cfg in fp_raw.items():
-                if isinstance(cfg, dict):
-                    cfg = dict(cfg)
-                    grid_ref = cfg.get("grid")
-                    if isinstance(grid_ref, str):
-                        if grid_ref not in grids_raw:
-                            raise ValueError(
-                                f"Footprint '{name}' references unknown grid '{grid_ref}'"
-                            )
-                        cfg["grid"] = grids_raw[grid_ref]
-                    elif grid_ref is None:
-                        shorthand_keys = _REQUIRED_GRID_KEYS & set(cfg)
-                        if shorthand_keys == _REQUIRED_GRID_KEYS:
-                            cfg["grid"] = {
-                                key: cfg.pop(key) for key in _GRID_KEYS if key in cfg
-                            }
-                        elif cfg.get("geometry") is None:
-                            raise ValueError(
-                                f"Footprint '{name}' is missing a 'grid' key "
-                                "(or a 'geometry' to derive one from)."
-                            )
-                resolved[name] = cfg
-            data = {**data, "footprints": resolved}
-        return data
-
-    @model_validator(mode="after")
-    def _reject_unresolved_transforms(self) -> Self:
-        """A project config must be runnable: every transform class must import."""
-        from stilt.transforms import UnresolvedTransform
-
-        for name, cfg in self.footprints.items():
-            for t in cfg.transforms:
-                if isinstance(t, UnresolvedTransform):
-                    raise ValueError(
-                        f"Footprint '{name}' transform {t.kind!r} could not be "
-                        f"imported: {t.reason}"
-                    )
-        return self
-
     @model_validator(mode="after")
     def _validate_mets(self) -> Self:
-        """Ensure each configured meteorology stream has a unique name."""
+        """At least one met, each named so it can also name a variant."""
         if not self.mets:
             raise ValueError(
                 "ModelConfig.mets must contain at least one meteorology configuration"
             )
-        bad_keys = [k for k in self.mets if not k.isalnum()]
-        if bad_keys:
+        bad = [k for k in self.mets if not VARIANT_NAME_RE.fullmatch(k)]
+        if bad:
             raise ValueError(
-                f"Met keys must be alphanumeric (no underscores or special chars), got: {bad_keys}"
+                f"Met names must match {VARIANT_NAME_RE.pattern}, got: {bad}"
             )
         return self
+
+    @model_validator(mode="after")
+    def _validate_variants(self) -> Self:
+        """Resolve the variants once so a bad declaration fails at load time."""
+        from stilt.transforms import UnresolvedTransform
+
+        for name, variant in self.resolve_variants().items():
+            for t in variant.transforms:
+                if isinstance(t, UnresolvedTransform):
+                    raise ValueError(
+                        f"Variant {name!r} transform {t.kind!r} could not be "
+                        f"imported: {t.reason}"
+                    )
+        return self
+
+    def defaults(self) -> dict[str, Any]:
+        """The flat default parameters every variant starts from."""
+        return self.model_dump(exclude=set(_PROJECT_FIELDS))
+
+    def resolve_variants(self) -> dict[str, VariantConfig]:
+        """
+        One :class:`VariantConfig` per simulation name, in declaration order.
+
+        Realization groups are expanded (``hrrr-err`` with ``realizations: 3``
+        gives ``hrrr-err-0`` .. ``hrrr-err-2``).
+        """
+        declared = self.variants or {met: {"met": met} for met in self.mets}
+        return expand_variants(declared, self.defaults(), list(self.mets))
+
+    def to_stilt_params(self) -> STILTParams:
+        """The default transport parameters alone."""
+        return STILTParams(**self.model_dump(include=set(STILTParams.model_fields)))
 
     def to_yaml(self, path: str | Path) -> None:
         """Write the model config to a YAML file."""
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
         data = self.model_dump(mode="json", exclude=set())
-        for key in ("mets", "grids", "footprints", "execution"):
+        for key in ("mets", "variants", "execution"):
             if not data.get(key):
                 del data[key]
         with path.open("w") as f:
             yaml.safe_dump(data, f, default_flow_style=False, sort_keys=False)
-
-    def to_stilt_params(self) -> STILTParams:
-        """Project this model config onto the pure STILT run-parameter surface."""
-        data = self.model_dump(
-            exclude={"footprints", "grids", "mets", "execution", "skip_existing"}
-        )
-        return STILTParams(**data)
 
     @classmethod
     def from_yaml(cls, path: str | Path) -> Self:

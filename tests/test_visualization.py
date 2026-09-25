@@ -292,9 +292,9 @@ def test_simulation_map_no_data(receptor):
 
     sim = MagicMock()
     sim.receptor = receptor
-    sim.get_footprint.return_value = None
+    sim.footprint = None
     sim.trajectories = None
-    sim.id = "hrrr_202301011200_test"
+    sim.id = "202301011200_test/hrrr"
 
     ax = SimulationPlotAccessor(sim).map()
     assert ax is not None
@@ -305,9 +305,9 @@ def test_simulation_map_with_trajectories(receptor, minimal_trajectories):
 
     sim = MagicMock()
     sim.receptor = receptor
-    sim.get_footprint.return_value = None
+    sim.footprint = None
     sim.trajectories = minimal_trajectories
-    sim.id = "hrrr_202301011200_test"
+    sim.id = "202301011200_test/hrrr"
 
     ax = SimulationPlotAccessor(sim).map()
     assert ax is not None
@@ -318,9 +318,9 @@ def test_simulation_map_with_footprint(receptor, minimal_footprint):
 
     sim = MagicMock()
     sim.receptor = receptor
-    sim.get_footprint.return_value = minimal_footprint
+    sim.footprint = minimal_footprint
     sim.trajectories = None
-    sim.id = "hrrr_202301011200_test"
+    sim.id = "202301011200_test/hrrr"
 
     ax = SimulationPlotAccessor(sim).map()
     assert ax is not None
@@ -331,9 +331,9 @@ def test_simulation_map_met_bounds(receptor, grid):
 
     sim = MagicMock()
     sim.receptor = receptor
-    sim.get_footprint.return_value = None
+    sim.footprint = None
     sim.trajectories = None
-    sim.id = "hrrr_202301011200_test"
+    sim.id = "202301011200_test/hrrr"
 
     ax = SimulationPlotAccessor(sim).map(met_bounds=grid)
     assert ax is not None
@@ -344,9 +344,9 @@ def test_simulation_map_show_traj_false(receptor, minimal_trajectories):
 
     sim = MagicMock()
     sim.receptor = receptor
-    sim.get_footprint.return_value = None
+    sim.footprint = None
     sim.trajectories = minimal_trajectories
-    sim.id = "hrrr_202301011200_test"
+    sim.id = "202301011200_test/hrrr"
 
     ax = SimulationPlotAccessor(sim).map(show_traj=False)
     assert ax is not None
@@ -357,9 +357,9 @@ def test_simulation_map_show_receptor_false(receptor):
 
     sim = MagicMock()
     sim.receptor = receptor
-    sim.get_footprint.return_value = None
+    sim.footprint = None
     sim.trajectories = None
-    sim.id = "hrrr_202301011200_test"
+    sim.id = "202301011200_test/hrrr"
 
     ax = SimulationPlotAccessor(sim).map(show_receptor=False)
     assert ax is not None

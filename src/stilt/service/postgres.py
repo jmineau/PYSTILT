@@ -1,10 +1,11 @@
 """
 Postgres-backed work queue for distributed (pull/serve) execution.
 
-The queue distributes work to claim-mode workers: simulations are enqueued
-``pending``, atomically claimed (``FOR UPDATE SKIP LOCKED``), run, then marked
-``done``/``failed``. It tracks **work status only** — whether outputs exist is
-decided by key from the project store, never here.
+The queue distributes work to claim-mode workers: receptors are enqueued
+``pending``, atomically claimed (``FOR UPDATE SKIP LOCKED``), run (every
+variant of the receptor), then marked ``done``/``failed``. It tracks **work
+status only** — whether outputs exist is decided by key from the project
+store, never here. The ``sim_id`` column holds the receptor id.
 """
 
 from __future__ import annotations
@@ -15,7 +16,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from stilt.execution import SimulationResult
+    from stilt.execution import ReceptorResult
 
 POSTGRES_PENDING_SIMULATIONS_SQL = "SELECT COUNT(*) FROM queue WHERE status = 'pending'"
 
@@ -43,7 +44,7 @@ def _connect(db_url: str) -> Any:
     return psycopg.connect(db_url, row_factory=psycopg.rows.dict_row)  # pyright: ignore[reportArgumentType]
 
 
-def _status_for(result: SimulationResult) -> str:
+def _status_for(result: ReceptorResult) -> str:
     """Map a worker result onto a queue status."""
     if result.status == "interrupted":
         return "pending"
@@ -56,7 +57,7 @@ def _status_for(result: SimulationResult) -> str:
 class PostgresClaim:
     """One claimed work item, recorded inside its claim transaction."""
 
-    sim_id: str
+    receptor_id: str
     _conn: Any
     _released: bool = False
 
@@ -69,12 +70,12 @@ class PostgresClaim:
         """Return whether the claim has been released."""
         return self._released
 
-    def record(self, result: SimulationResult) -> None:
+    def record(self, result: ReceptorResult) -> None:
         """Persist the work status for this claim inside its transaction."""
         self._conn.execute(
             "UPDATE queue SET status = %s, error = %s, updated_at = NOW() "
             "WHERE sim_id = %s",
-            (_status_for(result), result.error, str(result.sim_id)),
+            (_status_for(result), result.error, self.receptor_id),
         )
 
 
@@ -92,9 +93,9 @@ class PostgresQueue:
         """Return the queue's database URL."""
         return self._db_url
 
-    def register(self, sim_ids: Iterable[str]) -> None:
-        """Enqueue simulations as pending work (idempotent; resets status)."""
-        rows = [(str(sim_id),) for sim_id in sim_ids]
+    def register(self, receptor_ids: Iterable[str]) -> None:
+        """Enqueue receptors as pending work (idempotent; resets status)."""
+        rows = [(str(rid),) for rid in receptor_ids]
         if not rows:
             return
         with _connect(self._db_url) as conn:
@@ -109,7 +110,7 @@ class PostgresQueue:
 
     @contextmanager
     def claim_one(self) -> Iterator[PostgresClaim | None]:
-        """Atomically claim one pending simulation for pull-mode execution."""
+        """Atomically claim one pending receptor for pull-mode execution."""
         with _connect(self._db_url) as conn:
             try:
                 row = conn.execute(
@@ -125,7 +126,7 @@ class PostgresQueue:
                     "WHERE sim_id = %s",
                     (row["sim_id"],),
                 )
-                claim = PostgresClaim(sim_id=row["sim_id"], _conn=conn)
+                claim = PostgresClaim(receptor_id=row["sim_id"], _conn=conn)
                 yield claim
                 if claim.released:
                     conn.rollback()

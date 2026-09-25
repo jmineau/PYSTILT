@@ -16,19 +16,26 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
-from stilt.config import MetConfig
+from stilt.config import MetConfig, ModelConfig
 from stilt.model import Model
 from stilt.simulation import SimID
 
 from .conftest import integration
+
+_XYERR = {"siguverr": 2.0, "tluverr": 60.0, "zcoruverr": 500.0, "horcoruverr": 40.0}
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
 
-def _sim_id(receptor, met: str = "hrrr") -> str:
-    return str(SimID.from_parts(met, receptor))
+def _sim_id(receptor, variant: str = "hrrr") -> SimID:
+    return SimID(receptor.id, variant)
+
+
+def _with(config: ModelConfig, **updates) -> ModelConfig:
+    """A validated copy of *config* with *updates* applied."""
+    return ModelConfig.model_validate({**config.model_dump(), **updates})
 
 
 # ---------------------------------------------------------------------------
@@ -49,11 +56,12 @@ def test_trajectory(tmp_path, wbb_receptor, traj_only_config):
     sid = _sim_id(wbb_receptor)
     sim_dir = model.project.directory / "simulations" / "by-id" / sid
 
-    parquet_files = list(sim_dir.glob("*.parquet"))
+    parquet_files = list(sim_dir.glob("*_traj.parquet"))
     assert parquet_files, f"No parquet found in {sim_dir}"
     assert len(pd.read_parquet(parquet_files[0])) > 0, "Trajectory parquet is empty"
     assert sid in model.simulations
     assert model.simulations[sid].has_trajectory
+    assert (sim_dir / "met").is_dir(), "met is staged inside the variant directory"
 
     log_file = sim_dir / "stilt.log"
     assert log_file.exists(), "stilt.log missing"
@@ -77,17 +85,15 @@ def test_footprint(tmp_path, wbb_receptor, wbb_config):
     )
     model.run()
 
-    sid = _sim_id(wbb_receptor)
-    sim_dir = model.project.directory / "simulations" / "by-id" / sid
+    sim = model.simulations[_sim_id(wbb_receptor)]
+    assert sim.footprint_path.exists(), f"No footprint NetCDF in {sim.directory}"
 
-    foot_files = list(sim_dir.glob("*_foot.nc"))
-    assert foot_files, f"No footprint NetCDF found in {sim_dir}"
-
-    ds = xr.open_dataset(foot_files[0])
+    ds = xr.open_dataset(sim.footprint_path)
     assert {"time", "lat", "lon"} <= set(ds.dims), f"Missing dims in {set(ds.dims)}"
     ds.close()
 
-    assert model.simulations[sid].has_footprint("default")
+    assert sim.has_footprint
+    assert sim.footprint is not None
 
 
 # ---------------------------------------------------------------------------
@@ -120,11 +126,11 @@ def test_failure_missing_met(tmp_path, wbb_receptor, traj_only_config):
     # run() must not raise: a per-simulation failure is captured, not fatal.
     model.run()
 
-    sid = _sim_id(wbb_receptor)
+    sim = model.simulations[_sim_id(wbb_receptor)]
     # The by-key store has no "failed" state, so the trajectory is simply absent
     # (incomplete). Failure is surfaced through the log-derived Simulation.status.
-    assert not model.simulations[sid].has_trajectory
-    assert model.simulations[sid].status == "failed:MISSING_MET_FILES"
+    assert not sim.has_trajectory
+    assert sim.status == "failed:MISSING_MET_FILES"
 
 
 # ---------------------------------------------------------------------------
@@ -142,27 +148,24 @@ def test_idempotency(tmp_path, wbb_receptor, traj_only_config):
     )
 
     model.run()
-    sid = _sim_id(wbb_receptor)
-    assert model.simulations[sid].has_trajectory
-
-    sim_dir = model.project.directory / "simulations" / "by-id" / sid
-    parquet = next(sim_dir.glob("*.parquet"))
-    mtime_before = parquet.stat().st_mtime
+    sim = model.simulations[_sim_id(wbb_receptor)]
+    assert sim.has_trajectory
+    mtime_before = sim.trajectories_path.stat().st_mtime
 
     model.run()  # skip_existing=True is the default
-    assert parquet.stat().st_mtime == mtime_before, (
+    assert sim.trajectories_path.stat().st_mtime == mtime_before, (
         "Parquet was overwritten on second run"
     )
 
 
 # ---------------------------------------------------------------------------
-# Column receptor - same lat/lon, two heights
+# Column and multipoint receptors
 # ---------------------------------------------------------------------------
 
 
 @integration
 def test_column(tmp_path, wbb_column_receptor, wbb_config):
-    """Column receptor produces trajectory and footprint; sim_id ends with _X."""
+    """Column receptor produces trajectory and footprint; its id ends with _X."""
     model = Model(
         project=tmp_path / "column",
         config=wbb_config,
@@ -171,17 +174,11 @@ def test_column(tmp_path, wbb_column_receptor, wbb_config):
     model.run()
 
     sid = _sim_id(wbb_column_receptor)
-    assert sid.endswith("_X"), f"Expected column sim_id to end '_X', got {sid!r}"
+    assert sid.receptor.endswith("_X"), f"Expected a column receptor id, got {sid}"
 
-    sim_dir = model.project.directory / "simulations" / "by-id" / sid
-    assert list(sim_dir.glob("*.parquet")), "No trajectory parquet"
-    assert list(sim_dir.glob("*_foot.nc")), "No footprint NetCDF"
-    assert model.simulations[sid].has_trajectory
-
-
-# ---------------------------------------------------------------------------
-# Multipoint receptor - different lat/lon/zagl
-# ---------------------------------------------------------------------------
+    sim = model.simulations[sid]
+    assert sim.has_trajectory
+    assert sim.footprint_path.exists(), "No footprint NetCDF"
 
 
 @integration
@@ -195,24 +192,23 @@ def test_multipoint(tmp_path, wbb_multipoint_receptor, multipoint_config):
     model.run()
 
     sid = _sim_id(wbb_multipoint_receptor)
-    assert "multi_" in sid, (
-        f"Expected multipoint sim_id to contain 'multi_', got {sid!r}"
-    )
+    assert "multi_" in sid.receptor, f"Expected a multipoint receptor id, got {sid}"
 
-    sim_dir = model.project.directory / "simulations" / "by-id" / sid
-    assert list(sim_dir.glob("*.parquet")), "No trajectory parquet"
-    assert list(sim_dir.glob("*_foot.nc")), "No footprint NetCDF"
-    assert model.simulations[sid].has_trajectory
+    sim = model.simulations[sid]
+    assert sim.has_trajectory
+    assert sim.footprint_path.exists(), "No footprint NetCDF"
 
 
 # ---------------------------------------------------------------------------
-# Multiple footprints - one trajectory, two named configs
+# A derived variant: a second footprint from the same particles
 # ---------------------------------------------------------------------------
 
 
 @integration
-def test_multifoot(tmp_path, wbb_receptor, multifoot_config):
-    """Single trajectory generates two named footprints at different resolutions."""
+def test_derived_variant_rasterizes_the_same_particles(
+    tmp_path, wbb_receptor, multifoot_config
+):
+    """``coarse: {from: hrrr}`` writes a coarser footprint and runs no HYSPLIT."""
     model = Model(
         project=tmp_path / "multifoot",
         config=multifoot_config,
@@ -220,13 +216,44 @@ def test_multifoot(tmp_path, wbb_receptor, multifoot_config):
     )
     model.run()
 
-    sid = _sim_id(wbb_receptor)
-    sim_dir = model.project.directory / "simulations" / "by-id" / sid
+    fine = model.simulations[_sim_id(wbb_receptor)]
+    coarse = model.simulations[_sim_id(wbb_receptor, "coarse")]
 
-    assert list(sim_dir.glob("*_fine_foot.nc")), "No 'fine' footprint NetCDF"
-    assert list(sim_dir.glob("*_coarse_foot.nc")), "No 'coarse' footprint NetCDF"
-    assert model.simulations[sid].has_footprint("fine")
-    assert model.simulations[sid].has_footprint("coarse")
+    assert fine.has_footprint and coarse.has_footprint
+    assert not (coarse.directory / "stilt.log").exists()
+    assert not list(coarse.directory.glob("*_traj.parquet"))
+    assert coarse.footprint is not None and fine.footprint is not None
+    assert coarse.footprint.grid.xres == 0.05
+    assert fine.footprint.grid.xres == 0.01
+    # Same particles, so the same total sensitivity inside the shared domain order.
+    assert float(coarse.footprint.data.sum()) > 0
+
+
+@integration
+def test_adding_a_derived_variant_runs_no_hysplit(
+    tmp_path, wbb_receptor, wbb_config, wbb_grid
+):
+    """A finished project grows a footprint-only variant; the trajectory is reused."""
+    project = tmp_path / "grow"
+    first = Model(project=project, config=wbb_config, receptors=[wbb_receptor])
+    first.run()
+    base = first.simulations[_sim_id(wbb_receptor)]
+    traj_mtime = base.trajectories_path.stat().st_mtime
+    log_before = base.log_path.read_text()
+
+    grown = Model(
+        project=project,
+        config=_with(
+            wbb_config,
+            variants={"hrrr": {}, "s2": {"from": "hrrr", "smooth_factor": 2}},
+        ),
+    )
+    assert grown.simulations.incomplete().keys() == [_sim_id(wbb_receptor, "s2")]
+    grown.run()
+
+    assert base.trajectories_path.stat().st_mtime == traj_mtime
+    assert base.log_path.read_text() == log_before
+    assert grown.simulations.incomplete().keys() == []
 
 
 # ---------------------------------------------------------------------------
@@ -257,57 +284,113 @@ def test_cli_run(tmp_path, wbb_config, wbb_receptor):
     )
     assert "completed=1" in result.output
 
-    sid = _sim_id(wbb_receptor)
-    sim_dir = project_dir / "simulations" / "by-id" / sid
-    assert list(sim_dir.glob("*.parquet")), "CLI run: no trajectory parquet"
+    sim_dir = project_dir / "simulations" / "by-id" / _sim_id(wbb_receptor)
+    assert list(sim_dir.glob("*_traj.parquet")), "CLI run: no trajectory parquet"
     assert list(sim_dir.glob("*_foot.nc")), "CLI run: no footprint NetCDF"
 
 
 # ---------------------------------------------------------------------------
-# Error trajectory - winderrtf > 0
+# Wind-error variants
 # ---------------------------------------------------------------------------
 
 
 @integration
-def test_error_trajectory(tmp_path, wbb_receptor, traj_only_config):
-    """XY wind error params trigger a second HYSPLIT run; error parquet is saved."""
-    error_config = traj_only_config.model_copy(
-        update={
-            "siguverr": 1.0,
-            "tluverr": 60.0,
-            "zcoruverr": 500.0,
-            "horcoruverr": 40.0,
-        }
-    )
-    model = Model(
-        project=tmp_path / "error_traj",
-        config=error_config,
-        receptors=[wbb_receptor],
-    )
+def test_error_variant(tmp_path, wbb_receptor, traj_only_config):
+    """A variant with WINDERR fields is its own HYSPLIT run with perturbed winds."""
+    config = _with(traj_only_config, variants={"hrrr": {}, "hrrr-err": _XYERR})
+    model = Model(project=tmp_path / "error", config=config, receptors=[wbb_receptor])
     model.run()
 
-    sid = _sim_id(wbb_receptor)
-    sim_dir = model.project.directory / "simulations" / "by-id" / sid
+    main = model.simulations[_sim_id(wbb_receptor)]
+    err = model.simulations[_sim_id(wbb_receptor, "hrrr-err")]
 
-    main_files = list(sim_dir.glob("*_traj.parquet"))
-    error_files = list(sim_dir.glob("*_error.parquet"))
+    assert (err.directory / "WINDERR").exists()
+    assert not (main.directory / "WINDERR").exists()
+    assert "winderrtf=1" in (err.directory / "SETUP.CFG").read_text().lower()
 
-    assert main_files, "No main trajectory parquet"
-    assert error_files, "No error trajectory parquet — winderrtf path not triggered"
-
-    main_traj = pd.read_parquet(main_files[0])
-    error_traj = pd.read_parquet(error_files[0])
-
-    assert len(main_traj) > 0, "Main trajectory is empty"
-    assert len(error_traj) > 0, "Error trajectory is empty"
-    assert set(main_traj.columns) == set(error_traj.columns), (
-        "Error trajectory has different columns than main trajectory"
-    )
+    main_traj = main.trajectories.data
+    error_traj = err.trajectories.data
+    assert len(main_traj) > 0 and len(error_traj) > 0
+    assert set(main_traj.columns) == set(error_traj.columns)
     assert (
         not main_traj["long"]
         .reset_index(drop=True)
         .equals(error_traj["long"].reset_index(drop=True))
     ), "Error trajectory identical to main — wind perturbation had no effect"
+    assert err.trajectories.params.winderrtf == 1
+
+
+@integration
+def test_error_realizations(tmp_path, wbb_receptor, traj_only_config):
+    """Two realizations run, differ from each other, and resume one at a time."""
+    config = _with(
+        traj_only_config,
+        krand=4,  # HYSPLIT seeds each run from the clock
+        variants={"hrrr": {}, "err": {**_XYERR, "realizations": 2}},
+    )
+    model = Model(
+        project=tmp_path / "realizations", config=config, receptors=[wbb_receptor]
+    )
+    model.run()
+
+    sims = model.simulations.sel(variant="err")
+    assert sims.variants == ["err-0", "err-1"]
+    assert sims.incomplete().keys() == []
+
+    e0, e1 = (t.data for t in sims.trajectories.load())
+    s0 = e0.groupby("indx")["foot"].sum()
+    s1 = e1.groupby("indx")["foot"].sum().reindex(s0.index)
+    assert not np.allclose(s0.to_numpy(), s1.to_numpy())
+
+    # Resume: drop one realization; only it reruns.
+    main = model.simulations[_sim_id(wbb_receptor)]
+    err0 = model.simulations[_sim_id(wbb_receptor, "err-0")]
+    err1 = model.simulations[_sim_id(wbb_receptor, "err-1")]
+    main_bytes = main.trajectories_path.read_bytes()
+    err0_bytes = err0.trajectories_path.read_bytes()
+    err1.trajectories_path.unlink()
+    assert model.simulations.incomplete().keys() == [err1.id]
+
+    model.run(skip_existing=True)
+
+    assert main.trajectories_path.read_bytes() == main_bytes
+    assert err0.trajectories_path.read_bytes() == err0_bytes
+    assert err1.trajectories_path.exists()
+
+
+@integration
+def test_seeded_error_realizations_differ_and_reproduce(
+    tmp_path, wbb_receptor, traj_only_config
+):
+    """krand=2 with a seed: realizations differ and a rerun is bit-identical."""
+    config = _with(
+        traj_only_config,
+        krand=2,
+        seed=7,
+        variants={"hrrr": {}, "err": {**_XYERR, "realizations": 2}},
+    )
+
+    def run(project):
+        model = Model(project=project, config=config, receptors=[wbb_receptor])
+        model.run()
+        assert model.simulations.incomplete().keys() == []
+        return model
+
+    a = run(tmp_path / "a")
+    e0, e1 = (t.data for t in a.simulations.sel(variant="err").trajectories.load())
+    s0 = e0.groupby("indx")["foot"].sum()
+    s1 = e1.groupby("indx")["foot"].sum().reindex(s0.index)
+    assert not np.allclose(s0.to_numpy(), s1.to_numpy())
+    main = a.simulations[_sim_id(wbb_receptor)].trajectories.data
+    s_main = main.groupby("indx")["foot"].sum().reindex(s0.index)
+    assert not np.allclose(s_main.to_numpy(), s0.to_numpy())
+
+    b = run(tmp_path / "b")
+    for variant in ("hrrr", "err-0", "err-1"):
+        pd.testing.assert_frame_equal(
+            a.simulations[_sim_id(wbb_receptor, variant)].trajectories.data,
+            b.simulations[_sim_id(wbb_receptor, variant)].trajectories.data,
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -318,7 +401,6 @@ def test_error_trajectory(tmp_path, wbb_receptor, traj_only_config):
 @integration
 def test_geometry_footprint(tmp_path, wbb_receptor, met_dir):
     """A footprint named by geometry derives its raster, runs, and aggregates."""
-    from stilt.config import ModelConfig
     from stilt.footprint import Footprint
 
     from .fixtures.r_stilt_reference import (
@@ -346,25 +428,25 @@ def test_geometry_footprint(tmp_path, wbb_receptor, met_dir):
         numpar=100,
         krand=REFERENCE_KRAND,
         seed=REFERENCE_SEED,
-        footprints={"sources": {"geometry": spec, "cells_per_target": 10}},
+        geometry=spec,
+        cells_per_target=10,
     )
-    fc = config.footprints["sources"]
+    fc = config.footprint
+    assert fc is not None
     assert fc.grid.xres == fc.grid.yres == 0.05  # 0.5 / 10
     assert fc.geometry_hash
 
     model = Model(project=tmp_path / "geom", config=config, receptors=[wbb_receptor])
     model.run()
 
-    sid = _sim_id(wbb_receptor)
-    sim_dir = model.project.directory / "simulations" / "by-id" / sid
-    foot_files = list(sim_dir.glob("*_foot.nc"))
-    assert len(foot_files) == 1, foot_files
-    foot = Footprint.from_netcdf(foot_files[0])
+    sim = model.simulations[_sim_id(wbb_receptor)]
+    assert sim.has_footprint
+    foot = Footprint.from_netcdf(sim.footprint_path)
     assert foot.config.grid == fc.grid
     assert foot.config.geometry == fc.geometry
     assert foot.config.geometry_hash == fc.geometry_hash
-    assert model.simulations[sid].has_footprint("sources")
 
+    assert fc.geometry is not None
     mesh = fc.geometry.build()
     r_time = pd.Timestamp(wbb_receptor.time)
     bins = pd.interval_range(
@@ -388,7 +470,6 @@ def test_geometry_footprint(tmp_path, wbb_receptor, met_dir):
 @integration
 def test_forward_run(tmp_path, met_dir, wbb_grid):
     """A forward simulation runs end to end and carries a forward time axis."""
-    from stilt.config import FootprintConfig, ModelConfig
     from stilt.footprint import Footprint
     from stilt.receptors import PointReceptor
 
@@ -422,15 +503,15 @@ def test_forward_run(tmp_path, met_dir, wbb_grid):
         krand=REFERENCE_KRAND,
         seed=REFERENCE_SEED,
         hnf_plume=True,  # exercises calc_plume_dilution on a forward track
-        footprints={"default": FootprintConfig(grid=wbb_grid)},
+        grid=wbb_grid,
     )
 
     model = Model(project=tmp_path / "forward", config=config, receptors=[receptor])
     model.run()
 
-    sid = _sim_id(receptor)
-    sim = model.simulations[sid]
-    assert sim.has_trajectory, f"no trajectory for {sid}"
+    sim = model.simulations[_sim_id(receptor)]
+    assert sim.has_trajectory, f"no trajectory for {sim.id}"
+    assert sim.trajectories is not None
 
     particles = sim.trajectories.data
     assert len(particles) > 0
@@ -443,9 +524,8 @@ def test_forward_run(tmp_path, met_dir, wbb_grid):
     assert start == receptor.time
     assert stop == receptor.time + pd.Timedelta(hours=3)
 
-    foot_files = list(sim.directory.glob("*_foot.nc"))
-    assert foot_files, f"no footprint NetCDF in {sim.directory}"
-    foot = Footprint.from_netcdf(foot_files[0])
+    assert sim.footprint_path.exists(), f"no footprint NetCDF in {sim.directory}"
+    foot = Footprint.from_netcdf(sim.footprint_path)
     times = pd.DatetimeIndex(foot.data["time"].values)
     # hourly layers running forward, inside the window time_range reports
     assert times.is_monotonic_increasing
@@ -453,92 +533,3 @@ def test_forward_run(tmp_path, met_dir, wbb_grid):
     assert times.max() <= pd.Timestamp(stop)
     assert set(times.to_series().diff().dropna()) == {pd.Timedelta(hours=1)}
     assert float(foot.data.sum()) > 0
-
-
-# ---------------------------------------------------------------------------
-# Error realizations
-# ---------------------------------------------------------------------------
-
-
-@integration
-def test_error_realizations(tmp_path, wbb_receptor, traj_only_config):
-    """Two error realizations run, differ from each other, and resume one at a time."""
-    config = traj_only_config.model_copy(
-        update={
-            "siguverr": 2.0,
-            "tluverr": 60.0,
-            "zcoruverr": 500.0,
-            "horcoruverr": 40.0,
-            "krand": 4,  # HYSPLIT seeds the perturbation from the clock only here
-            "error_realizations": 2,
-        }
-    )
-    model = Model(
-        project=tmp_path / "realizations", config=config, receptors=[wbb_receptor]
-    )
-    model.run()
-
-    sim = model.simulations[_sim_id(wbb_receptor)]
-    assert sim.error_realizations == (0, 1)
-    assert sim.missing_error_realizations == []
-    assert sim.is_complete()
-    assert sim.error_trajectories_path(1).exists()
-    log_text = sim.log_path.read_text()
-    assert "=== error[0] run ===" in log_text
-    assert "=== error[1] run ===" in log_text
-
-    e0, e1 = (t.data for t in sim.all_error_trajectories)
-    assert len(e0) > 0 and len(e1) > 0
-    # krand=4: each pass draws its own perturbation, so per-particle sums differ
-    s0 = e0.groupby("indx")["foot"].sum()
-    s1 = e1.groupby("indx")["foot"].sum().reindex(s0.index)
-    assert not np.allclose(s0.to_numpy(), s1.to_numpy())
-
-    # Resume: drop one realization, rerun with skip_existing, main is untouched.
-    main_bytes = sim.trajectories_path.read_bytes()
-    sim.error_trajectories_path(1).unlink()
-    assert sim.missing_error_realizations == [1]
-    model.run(skip_existing=True)
-    assert sim.trajectories_path.read_bytes() == main_bytes
-    assert sim.error_trajectories_path(1).exists()
-    assert sim.is_complete()
-
-
-@integration
-def test_seeded_error_realizations_differ_and_reproduce(
-    tmp_path, wbb_receptor, traj_only_config
-):
-    """krand=2 with a seed: realizations differ from each other and a rerun is bit-identical."""
-    config = traj_only_config.model_copy(
-        update={
-            "siguverr": 2.0,
-            "tluverr": 60.0,
-            "zcoruverr": 500.0,
-            "horcoruverr": 40.0,
-            "krand": 2,
-            "seed": 7,
-            "error_realizations": 2,
-        }
-    )
-
-    def run(project):
-        model = Model(project=project, config=config, receptors=[wbb_receptor])
-        model.run()
-        sim = model.simulations[_sim_id(wbb_receptor)]
-        assert sim.is_complete()
-        return sim
-
-    a = run(tmp_path / "a")
-    e0, e1 = (t.data for t in a.all_error_trajectories)
-    s0 = e0.groupby("indx")["foot"].sum()
-    s1 = e1.groupby("indx")["foot"].sum().reindex(s0.index)
-    assert not np.allclose(s0.to_numpy(), s1.to_numpy())
-    main = a.trajectories.data.groupby("indx")["foot"].sum().reindex(s0.index)
-    assert not np.allclose(main.to_numpy(), s0.to_numpy())
-
-    b = run(tmp_path / "b")
-    pd.testing.assert_frame_equal(a.trajectories.data, b.trajectories.data)
-    for k in (0, 1):
-        pd.testing.assert_frame_equal(
-            a.error_trajectory(k).data, b.error_trajectory(k).data
-        )

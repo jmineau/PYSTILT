@@ -82,12 +82,10 @@ doesn't exist:
        mets={"hrrr": met},          # "hrrr" is a name you choose
        n_hours=-24,                 # follow the air 24 hours back in time
        numpar=200,                  # number of particles to release
-       footprints={
-           "slc": {                 # a name you choose for this footprint
-               "xmin": -113.0, "xmax": -110.5,   # longitude range
-               "ymin": 40.0,   "ymax": 42.0,     # latitude range
-               "xres": 0.01,   "yres": 0.01,     # grid cell size in degrees
-           }
+       grid={                       # the footprint grid
+           "xmin": -113.0, "xmax": -110.5,   # longitude range
+           "ymin": 40.0,   "ymax": 42.0,     # latitude range
+           "xres": 0.01,   "yres": 0.01,     # grid cell size in degrees
        },
    )
 
@@ -102,7 +100,7 @@ What these settings mean:
    but take longer. 200 is fine for a first try; 500 to 1000 is common for
    research.
 
-``footprints``
+``grid``
    The map grid the footprint is calculated on. Make it big enough to
    include the areas upwind of your site. The resolution here, 0.01°, is
    about 1 km.
@@ -121,13 +119,15 @@ when it is done.
 Step 4: Look at the footprint
 -----------------------------
 
-Each receptor and met combination is one :term:`simulation`. Grab the one you
-just ran and plot its footprint:
+Each receptor is run once per :term:`variant`; with the settings above
+there is one variant, named after the met source, ``hrrr``. One receptor
+under one variant is one :term:`simulation`. Grab the one you just ran and
+plot its footprint:
 
 .. code-block:: python
 
-   sim = next(model.simulations.values())
-   foot = sim.get_footprint("slc")
+   sim = next(iter(model.simulations))
+   foot = sim.footprint
 
    foot.plot.map()
 
@@ -163,13 +163,14 @@ Everything is in the project folder:
      receptors.csv               # your receptors
      simulations/
        by-id/
-         hrrr_202307151800_-111.848_40.766_10/
-           stilt.log                                          # HYSPLIT log
-           hrrr_202307151800_-111.848_40.766_10_traj.parquet  # particle paths
-           hrrr_202307151800_-111.848_40.766_10_slc_foot.nc   # footprint
+         202307151800_-111.848_40.766_10/                # the receptor
+           hrrr/                                         # the variant
+             stilt.log                                   # HYSPLIT log
+             202307151800_-111.848_40.766_10_traj.parquet  # particle paths
+             202307151800_-111.848_40.766_10_foot.nc       # footprint
 
-The folder name is the :term:`simulation ID`: met name, receptor time,
-longitude, latitude, and altitude.
+The two folder names are the :term:`simulation ID`: the receptor (time,
+longitude, latitude, and altitude) and the variant.
 
 Because your settings and receptors are saved in the folder, you can open the
 project again later without repeating them:
@@ -202,14 +203,13 @@ above:
        file_format: "%Y%m%d_%H"
        file_tres: 6h
 
-   footprints:
-     slc:
-       xmin: -113.0
-       xmax: -110.5
-       ymin: 40.0
-       ymax: 42.0
-       xres: 0.01
-       yres: 0.01
+   grid:
+     xmin: -113.0
+     xmax: -110.5
+     ymin: 40.0
+     ymax: 42.0
+     xres: 0.01
+     yres: 0.01
 
    n_hours: -24
    numpar: 200

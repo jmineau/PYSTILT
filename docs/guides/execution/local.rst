@@ -37,7 +37,7 @@ From Python or a notebook
        project="./my_project",
        receptors=receptors,
        mets={"hrrr": {"directory": "/data/hrrr", "file_format": "%Y%m%d_%H", "file_tres": "6h"}},
-       footprints={"slv": {"xmin": -114, "xmax": -111, "ymin": 39, "ymax": 42, "xres": 0.01, "yres": 0.01}},
+       grid={"xmin": -114, "xmax": -111, "ymin": 39, "ymax": 42, "xres": 0.01, "yres": 0.01},
        execution={"backend": "local", "n_workers": 4},
    )
 
@@ -52,8 +52,8 @@ Then check on the results:
 .. code-block:: python
 
    model.status()                          # finished vs remaining
-   model.simulations.incomplete()          # IDs still to run
-   footprints = model.footprints["slv"].load()
+   model.simulations.status()              # one row per simulation
+   footprints = model.footprint.load()
 
 Python or the command line?
 ---------------------------
@@ -72,12 +72,12 @@ Advanced: save now, run later
 -----------------------------
 
 ``model.register()`` saves the settings and receptors to the project folder
-without running anything, and returns the simulation IDs:
+without running anything, and returns the receptor IDs:
 
 .. code-block:: python
 
-   sim_ids = model.register()
+   receptor_ids = model.register()
 
 Any machine that can see the folder can then run the project, with
-``stilt run``, or directly with
-:func:`stilt.execution.run_simulations`.
+``stilt run``, or directly with :func:`stilt.execution.run_receptors`, which
+runs every variant of each receptor it is given.

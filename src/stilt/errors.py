@@ -70,6 +70,16 @@ class ConfigValidationError(SimulationError):
     """Model or run configuration is invalid or internally inconsistent."""
 
 
+class ConfigChangedError(ConfigValidationError):
+    """
+    A registered variant now resolves to different settings than ``config.yaml``.
+
+    The project's ``config.yaml`` is the record of what produced its outputs.
+    Changing a variant's settings under the same name would leave outputs that
+    no longer match it; declare a new variant, or pass ``allow_changes``.
+    """
+
+
 class MeteorologyError(SimulationError):
     """Meteorology selection/loading failed for a simulation."""
 

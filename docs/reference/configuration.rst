@@ -5,8 +5,9 @@ Configuration
 
 Everything that can go in ``config.yaml`` is a field of
 :class:`stilt.config.ModelConfig`: named meteorology sources
-(:class:`MetConfig`), named footprints (:class:`FootprintConfig`), the
-``execution`` section, and the STILT and HYSPLIT settings. The tables below
+(:class:`MetConfig`), the footprint settings (:class:`FootprintParams`),
+named ``variants`` resolved into :class:`VariantConfig`, the ``execution``
+section, and the STILT and HYSPLIT settings. The tables below
 are generated from the code, so they are always current.
 
 .. tip::
@@ -22,7 +23,9 @@ Config objects
    :nosignatures:
 
    ModelConfig
+   VariantConfig
    MetConfig
+   FootprintParams
    FootprintConfig
    Bounds
    Grid
@@ -43,7 +46,7 @@ Parameters
 Geometry specifications
 -----------------------
 
-Declarative state geometries for ``FootprintConfig.geometry``; each has a
+Declarative state geometries for the ``geometry`` footprint setting; each has a
 ``build()`` returning a :class:`stilt.Mesh`.
 
 .. autosummary::

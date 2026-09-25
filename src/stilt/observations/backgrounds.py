@@ -242,7 +242,7 @@ def background(
         ``CarbonTracker.sample`` on ``sim.trajectories.endpoints()``.
     transforms, context
         The footprint's particle transforms and the context to apply them
-        with (``config.transforms`` and ``sim.transform_context(name)``), so
+        with (``sim.footprint_config.transforms`` and ``sim.transform_context()``), so
         the background is weighted the way the footprint is and adds to its
         enhancement. For a tower receptor there is nothing to pass.
 
@@ -272,7 +272,7 @@ def default_context() -> TransformContext:
     A placeholder context for transforms that do not read it.
 
     Transforms that do (an averaging-kernel ``table``) need the real one from
-    ``sim.transform_context(name)``.
+    ``sim.transform_context()``.
     """
     from stilt.receptors import PointReceptor
 

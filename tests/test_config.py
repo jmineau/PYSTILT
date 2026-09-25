@@ -204,7 +204,7 @@ def test_setup_entries_map_seed_to_negative_namelist_value():
 
 
 def test_realization_seeds_are_distinct_and_start_at_the_main_seed():
-    p = STILTParams(seed=42, krand=2, error_realizations=3)
+    p = STILTParams(seed=42, krand=2)
     assert [p.realization_seed(k) for k in range(3)] == [42, 43, 44]
     assert STILTParams().realization_seed(0) is None
 
@@ -280,22 +280,21 @@ def test_model_config_requires_nonempty_mets():
         ModelConfig(mets={})
 
 
-def test_model_config_rejects_non_alphanumeric_met_keys(tmp_path):
+def test_model_config_rejects_met_keys_that_cannot_name_a_variant(tmp_path):
     mc = MetConfig(directory=tmp_path / "met", file_format="%Y%m%d_%H", file_tres="1h")
-    with pytest.raises(Exception, match="alphanumeric"):
+    with pytest.raises(Exception, match="must match"):
         ModelConfig(mets={"hrrr_v2": mc})
 
 
-def test_model_config_footprints_field(tmp_path, point_receptor, grid):
-    """footprints dict accepted directly at construction."""
-    fc = FootprintConfig(grid=grid)
+def test_model_config_footprint_fields_are_flat(tmp_path, grid):
+    """The footprint settings sit beside the transport ones and form the footprint."""
     mc = MetConfig(directory=tmp_path / "met", file_format="%Y%m%d_%H", file_tres="1h")
-    cfg = ModelConfig(
-        mets={"hrrr": mc},
-        footprints={"slv": fc},
-    )
-    assert "slv" in cfg.footprints
-    assert cfg.footprints["slv"].model_dump() == fc.model_dump()
+    cfg = ModelConfig(mets={"hrrr": mc}, grid=grid, smooth_factor=0.5)
+    foot = cfg.footprint
+    assert foot is not None
+    assert foot.grid == grid
+    assert foot.smooth_factor == 0.5
+    assert ModelConfig(mets={"hrrr": mc}).footprint is None
 
 
 # ---------------------------------------------------------------------------
@@ -377,9 +376,8 @@ def test_model_config_accepts_execution_dict_with_extra_fields(tmp_path):
     assert cfg.execution["image"] == "my/stilt:latest"
 
 
-def test_model_config_yaml_roundtrip_with_footprint(tmp_path, point_receptor, grid):
-    """FootprintConfig survives a to_yaml/from_yaml roundtrip."""
-    fc = FootprintConfig(grid=grid)
+def test_model_config_yaml_roundtrip_with_footprint(tmp_path, grid):
+    """The footprint settings survive a to_yaml/from_yaml roundtrip."""
     cfg = ModelConfig(
         mets={
             "hrrr": MetConfig(
@@ -388,13 +386,14 @@ def test_model_config_yaml_roundtrip_with_footprint(tmp_path, point_receptor, gr
                 file_tres="1h",
             )
         },
-        footprints={"slv_fine": fc},
+        grid=grid,
+        time_integrate=True,
     )
     path = tmp_path / "config.yaml"
     cfg.to_yaml(path)
     loaded = ModelConfig.from_yaml(path)
-    assert "slv_fine" in loaded.footprints
-    assert loaded.footprints["slv_fine"].model_dump() == fc.model_dump()
+    assert loaded.footprint is not None
+    assert loaded.footprint.model_dump() == cfg.footprint.model_dump()
 
 
 def _met_config(tmp_path):
@@ -408,29 +407,28 @@ def _met_config(tmp_path):
 
 
 def test_model_config_yaml_roundtrip_with_footprint_transforms(tmp_path, grid):
-    fc = FootprintConfig(
-        grid=grid,
-        transforms=[
-            AveragingKernel(levels=[0.0, 1000.0], values=[0.2, 0.8], coordinate="xhgt"),
-            PressureWeighting(),
-            FirstOrderLifetime(lifetime_hours=4.0, time_column="time", time_unit="min"),
-        ],
-    )
-    cfg = ModelConfig(mets=_met_config(tmp_path), footprints={"slv_fine": fc})
+    given = [
+        AveragingKernel(levels=[0.0, 1000.0], values=[0.2, 0.8], coordinate="xhgt"),
+        PressureWeighting(),
+        FirstOrderLifetime(lifetime_hours=4.0, time_column="time", time_unit="min"),
+    ]
+    cfg = ModelConfig(mets=_met_config(tmp_path), grid=grid, transforms=given)
     path = tmp_path / "config.yaml"
     cfg.to_yaml(path)
     loaded = ModelConfig.from_yaml(path)
-    transforms = loaded.footprints["slv_fine"].transforms
+    transforms = loaded.transforms
     assert len(transforms) == 3
-    assert transforms == fc.transforms
+    assert transforms == given
     assert isinstance(transforms[0], AveragingKernel)
     assert isinstance(transforms[1], PressureWeighting)
     assert isinstance(transforms[2], FirstOrderLifetime)
+    assert loaded.resolve_variants()["hrrr"].footprint.transforms == given
 
 
 def test_model_config_yaml_roundtrip_with_user_transform(tmp_path, grid):
-    fc = FootprintConfig(grid=grid, transforms=[ScaleFoot(factor=2.5)])
-    cfg = ModelConfig(mets=_met_config(tmp_path), footprints={"slv_fine": fc})
+    cfg = ModelConfig(
+        mets=_met_config(tmp_path), grid=grid, transforms=[ScaleFoot(factor=2.5)]
+    )
     path = tmp_path / "config.yaml"
     cfg.to_yaml(path)
 
@@ -439,15 +437,15 @@ def test_model_config_yaml_roundtrip_with_user_transform(tmp_path, grid):
     assert "factor: 2.5" in text
 
     loaded = ModelConfig.from_yaml(path)
-    transforms = loaded.footprints["slv_fine"].transforms
+    transforms = loaded.transforms
     assert len(transforms) == 1
     assert isinstance(transforms[0], ScaleFoot)
     assert transforms[0].factor == pytest.approx(2.5)
-    assert transforms[0] == fc.transforms[0]
+    assert transforms[0] == cfg.transforms[0]
 
 
-def test_model_config_domain_ref_in_yaml(tmp_path):
-    """Footprint config loaded from YAML with named grid reference."""
+def test_model_config_variant_grid_in_yaml(tmp_path):
+    """A variant may carry its own grid; the others inherit the default."""
     yaml_text = textwrap.dedent(f"""\
         n_hours: -24
         numpar: 100
@@ -456,39 +454,16 @@ def test_model_config_domain_ref_in_yaml(tmp_path):
             directory: {tmp_path / "met"}
             file_format: "%Y%m%d_%H"
             file_tres: 1h
-        grids:
-          slv:
-            xmin: -114.0
-            xmax: -111.0
-            ymin: 39.0
-            ymax: 42.0
-            xres: 0.01
-            yres: 0.01
-        footprints:
-          slv_fine:
-            grid: slv
-    """)
-    path = tmp_path / "config.yaml"
-    path.write_text(yaml_text)
-    loaded = ModelConfig.from_yaml(path)
-    assert "slv_fine" in loaded.footprints
-    fc = loaded.footprints["slv_fine"]
-    assert fc.grid.xmin == -114.0
-    assert fc.grid.xres == 0.01
-
-
-def test_model_config_inline_bounds_in_yaml(tmp_path):
-    """Footprint config with inline grid definition."""
-    yaml_text = textwrap.dedent(f"""\
-        n_hours: -24
-        numpar: 100
-        mets:
-          hrrr:
-            directory: {tmp_path / "met"}
-            file_format: "%Y%m%d_%H"
-            file_tres: 1h
-        footprints:
-          slv_coarse:
+        grid:
+          xmin: -114.0
+          xmax: -111.0
+          ymin: 39.0
+          ymax: 42.0
+          xres: 0.01
+          yres: 0.01
+        variants:
+          hrrr: {{}}
+          coarse:
             grid:
               xmin: -114.0
               xmax: -111.0
@@ -499,15 +474,14 @@ def test_model_config_inline_bounds_in_yaml(tmp_path):
     """)
     path = tmp_path / "config.yaml"
     path.write_text(yaml_text)
-    loaded = ModelConfig.from_yaml(path)
-    assert "slv_coarse" in loaded.footprints
-    fc = loaded.footprints["slv_coarse"]
-    assert fc.grid.xres == 0.05
-    assert fc.grid.xmin == -114.0
+    variants = ModelConfig.from_yaml(path).resolve_variants()
+    assert variants["hrrr"].grid.xres == 0.01
+    assert variants["coarse"].grid.xres == 0.05
+    assert variants["coarse"].grid.xmin == -114.0
 
 
-def test_model_config_footprint_grid_shorthand_in_yaml(tmp_path):
-    """Footprint config accepts grid bounds directly under the footprint name."""
+def test_model_config_inline_grid_in_yaml(tmp_path):
+    """The default grid is a mapping under ``grid``."""
     yaml_text = textwrap.dedent(f"""\
         n_hours: -24
         numpar: 100
@@ -516,24 +490,50 @@ def test_model_config_footprint_grid_shorthand_in_yaml(tmp_path):
             directory: {tmp_path / "met"}
             file_format: "%Y%m%d_%H"
             file_tres: 1h
-        footprints:
-          slv_coarse:
-            xmin: -114.0
-            xmax: -111.0
-            ymin: 39.0
-            ymax: 42.0
-            xres: 0.05
-            yres: 0.05
-            smooth_factor: 0.75
+        grid:
+          xmin: -114.0
+          xmax: -111.0
+          ymin: 39.0
+          ymax: 42.0
+          xres: 0.05
+          yres: 0.05
+        smooth_factor: 0.75
     """)
     path = tmp_path / "config.yaml"
     path.write_text(yaml_text)
     loaded = ModelConfig.from_yaml(path)
-    fc = loaded.footprints["slv_coarse"]
+    assert loaded.grid is not None
+    assert loaded.grid.xres == 0.05
+    assert loaded.grid.xmin == -114.0
+    assert loaded.smooth_factor == 0.75
 
-    assert fc.grid.xmin == -114.0
-    assert fc.grid.xres == 0.05
-    assert fc.smooth_factor == 0.75
+
+def test_model_config_null_grid_means_trajectory_only(tmp_path):
+    yaml_text = textwrap.dedent(f"""\
+        n_hours: -24
+        numpar: 100
+        mets:
+          hrrr:
+            directory: {tmp_path / "met"}
+            file_format: "%Y%m%d_%H"
+            file_tres: 1h
+        grid:
+          xmin: -114.0
+          xmax: -111.0
+          ymin: 39.0
+          ymax: 42.0
+          xres: 0.05
+          yres: 0.05
+        variants:
+          hrrr: {{}}
+          traj:
+            grid: null
+    """)
+    path = tmp_path / "config.yaml"
+    path.write_text(yaml_text)
+    variants = ModelConfig.from_yaml(path).resolve_variants()
+    assert variants["hrrr"].footprint is not None
+    assert variants["traj"].footprint is None
 
 
 def test_model_config_loads_footprint_transforms_from_yaml(tmp_path):
@@ -545,33 +545,31 @@ def test_model_config_loads_footprint_transforms_from_yaml(tmp_path):
             directory: {tmp_path / "met"}
             file_format: "%Y%m%d_%H"
             file_tres: 1h
-        footprints:
-          weighted:
-            grid:
-              xmin: -114.0
-              xmax: -111.0
-              ymin: 39.0
-              ymax: 42.0
-              xres: 0.05
-              yres: 0.05
-            transforms:
-              - kind: averaging_kernel
-                levels: [0.0, 1000.0]
-                values: [0.3, 0.7]
-                coordinate: xhgt
-              - kind: pressure_weighting
-              - kind: first_order_lifetime
-                lifetime_hours: 3.0
-                time_column: time
-                time_unit: min
-              - kind: {SCALE_FOOT_KIND}
-                factor: 0.5
+        grid:
+          xmin: -114.0
+          xmax: -111.0
+          ymin: 39.0
+          ymax: 42.0
+          xres: 0.05
+          yres: 0.05
+        transforms:
+          - kind: averaging_kernel
+            levels: [0.0, 1000.0]
+            values: [0.3, 0.7]
+            coordinate: xhgt
+          - kind: pressure_weighting
+          - kind: first_order_lifetime
+            lifetime_hours: 3.0
+            time_column: time
+            time_unit: min
+          - kind: {SCALE_FOOT_KIND}
+            factor: 0.5
     """)
     path = tmp_path / "config.yaml"
     path.write_text(yaml_text)
 
     loaded = ModelConfig.from_yaml(path)
-    transforms = loaded.footprints["weighted"].transforms
+    transforms = loaded.transforms
 
     assert len(transforms) == 4
     assert isinstance(transforms[0], AveragingKernel)
@@ -595,18 +593,16 @@ def test_model_config_rejects_unimportable_transform_from_yaml(tmp_path):
             directory: {tmp_path / "met"}
             file_format: "%Y%m%d_%H"
             file_tres: 1h
-        footprints:
-          weighted:
-            grid:
-              xmin: -114.0
-              xmax: -111.0
-              ymin: 39.0
-              ymax: 42.0
-              xres: 0.05
-              yres: 0.05
-            transforms:
-              - kind: no_such_pkg_for_stilt_tests.transforms.MyKernel
-                levels: [0.0, 1000.0]
+        grid:
+          xmin: -114.0
+          xmax: -111.0
+          ymin: 39.0
+          ymax: 42.0
+          xres: 0.05
+          yres: 0.05
+        transforms:
+          - kind: no_such_pkg_for_stilt_tests.transforms.MyKernel
+            levels: [0.0, 1000.0]
     """)
     path = tmp_path / "config.yaml"
     path.write_text(yaml_text)
@@ -707,18 +703,18 @@ def test_model_config_yaml_roundtrip_with_geometry(tmp_path):
         },
         n_hours=-6,
         numpar=100,
-        footprints={
-            "cells": {"geometry": {"kind": "file", "path": str(shp), "ids": "NAME"}}
-        },
+        geometry={"kind": "file", "path": str(shp), "ids": "NAME"},
     )
-    fc = config.footprints["cells"]
+    fc = config.footprint
+    assert fc is not None
     assert fc.grid.xres == pytest.approx(0.02)  # 0.1 / 4 -> 0.025 -> 0.02
     assert fc.geometry is not None and fc.geometry.kind == "file"
 
     path = tmp_path / "config.yaml"
     config.to_yaml(path)
     loaded = ModelConfig.from_yaml(path)
-    lfc = loaded.footprints["cells"]
+    lfc = loaded.footprint
+    assert lfc is not None
     assert lfc.grid == fc.grid
     assert lfc.geometry == fc.geometry
     assert lfc.geometry.build().ids == ("a", "b")
@@ -745,28 +741,138 @@ def test_file_geometry_spec_layer_and_where(tmp_path):
     assert FileGeometrySpec(path=str(gpkg), layer="other").build().ids == ("0",)
 
 
-# -- error realizations ------------------------------------------------------------
+# -- variants --------------------------------------------------------------------
 
 
-def test_error_realizations_default_to_one():
-    from stilt.config import STILTParams
+def _variant_config(tmp_path, **kwargs):
+    return ModelConfig(mets=_met_config(tmp_path), **kwargs)
 
-    assert STILTParams().error_realizations == 1
+
+def test_variants_default_to_one_per_met(tmp_path):
+    mc = _met_config(tmp_path)["hrrr"]
+    cfg = ModelConfig(mets={"hrrr": mc, "gfs": mc}, ziscale=0.9)
+    variants = cfg.resolve_variants()
+    assert list(variants) == ["hrrr", "gfs"]
+    assert variants["gfs"].met == "gfs"
+    assert variants["gfs"].ziscale == 0.9
+    assert variants["hrrr"].stilt_params() == cfg.to_stilt_params()
+
+
+def test_variant_overrides_merge_onto_the_defaults(tmp_path):
+    cfg = _variant_config(
+        tmp_path, numpar=50, variants={"hrrr": {}, "zi08": {"ziscale": 0.8}}
+    )
+    variants = cfg.resolve_variants()
+    assert variants["zi08"].numpar == 50
+    assert variants["zi08"].ziscale == 0.8
+    assert variants["hrrr"].ziscale == 1.0
+    assert variants["zi08"].differences(variants["hrrr"]) == [
+        "group",
+        "name",
+        "ziscale",
+    ]
+
+
+def test_variant_must_name_its_met_when_there_are_several(tmp_path):
+    mc = _met_config(tmp_path)["hrrr"]
+    with pytest.raises(ValueError, match="must name its met"):
+        ModelConfig(mets={"hrrr": mc, "gfs": mc}, variants={"a": {}})
+    with pytest.raises(ValueError, match="unknown met"):
+        ModelConfig(mets={"hrrr": mc}, variants={"a": {"met": "nam"}})
+
+
+@pytest.mark.parametrize("name", ["Hrrr", "hrrr_v2", "-x", "a b"])
+def test_variant_names_are_plain(tmp_path, name):
+    with pytest.raises(ValueError, match="must match"):
+        _variant_config(tmp_path, variants={name: {}})
+
+
+def test_realizations_expand_into_numbered_variants_with_their_own_seed(tmp_path):
+    cfg = _variant_config(
+        tmp_path,
+        krand=2,
+        seed=42,
+        variants={
+            "hrrr": {},
+            "err": {
+                "siguverr": 1.0,
+                "tluverr": 60.0,
+                "zcoruverr": 500.0,
+                "horcoruverr": 40.0,
+                "realizations": 3,
+            },
+        },
+    )
+    variants = cfg.resolve_variants()
+    assert list(variants) == ["hrrr", "err-0", "err-1", "err-2"]
+    assert [variants[f"err-{k}"].seed for k in range(3)] == [42, 43, 44]
+    assert all(variants[f"err-{k}"].group == "err" for k in range(3))
+    assert [variants[f"err-{k}"].realization for k in range(3)] == [0, 1, 2]
+    assert variants["err-1"].winderrtf == 1
+    assert variants["hrrr"].winderrtf == 0
 
 
 @pytest.mark.parametrize("krand", [0, 1, 2, 3, 12])
-def test_several_error_realizations_require_krand_4_or_a_seed(krand):
-    from stilt.config import STILTParams
-
+def test_several_realizations_require_krand_4_or_a_seed(tmp_path, krand):
     with pytest.raises(ValueError, match="requires krand=4 or krand=2 with a seed"):
-        STILTParams(error_realizations=3, krand=krand)
+        _variant_config(tmp_path, krand=krand, variants={"e": {"realizations": 3}})
 
 
-def test_several_error_realizations_accept_krand_4_or_seeded_krand_2():
-    from stilt.config import STILTParams
+def test_several_realizations_accept_krand_4_or_seeded_krand_2(tmp_path):
+    a = _variant_config(tmp_path, krand=4, variants={"e": {"realizations": 3}})
+    assert len(a.resolve_variants()) == 3
+    b = _variant_config(tmp_path, krand=2, seed=7, variants={"e": {"realizations": 2}})
+    assert len(b.resolve_variants()) == 2
+    with pytest.raises(ValueError, match="realizations must be >= 1"):
+        _variant_config(tmp_path, variants={"e": {"realizations": 0}})
 
-    assert STILTParams(error_realizations=3, krand=4).error_realizations == 3
-    assert STILTParams(error_realizations=3, krand=2, seed=7).error_realizations == 3
-    assert STILTParams(error_realizations=1, krand=2).error_realizations == 1
-    with pytest.raises(ValueError):
-        STILTParams(error_realizations=0)
+
+def test_realization_names_may_not_collide_with_declared_variants(tmp_path):
+    with pytest.raises(ValueError, match="collides"):
+        _variant_config(
+            tmp_path, krand=4, variants={"e": {"realizations": 2}, "e-1": {}}
+        )
+
+
+def test_derived_variant_reuses_the_parent_trajectory_settings(tmp_path, grid):
+    cfg = _variant_config(
+        tmp_path,
+        grid=grid,
+        variants={"hrrr": {"ziscale": 0.8}, "s2": {"from": "hrrr", "smooth_factor": 2}},
+    )
+    variants = cfg.resolve_variants()
+    s2 = variants["s2"]
+    assert s2.is_derived and s2.derived_from == "hrrr"
+    assert s2.met == "hrrr"
+    assert s2.ziscale == 0.8
+    assert s2.smooth_factor == 2
+    assert s2.stilt_params() == variants["hrrr"].stilt_params()
+
+
+@pytest.mark.parametrize(
+    ("variants", "match"),
+    [
+        ({"s2": {"from": "nope"}}, "unknown variant"),
+        ({"a": {}, "b": {"from": "a"}, "c": {"from": "b"}}, "itself derived"),
+        ({"a": {}, "b": {"from": "a", "ziscale": 0.8}}, "only override footprint"),
+        ({"a": {}, "b": {"from": "a", "met": "hrrr"}}, "only override footprint"),
+        ({"e": {"realizations": 2}, "b": {"from": "e"}}, "realization group"),
+    ],
+)
+def test_derived_variant_rules(tmp_path, variants, match):
+    with pytest.raises(ValueError, match=match):
+        _variant_config(tmp_path, krand=4, variants=variants)
+
+
+def test_variants_survive_a_yaml_roundtrip_as_written(tmp_path, grid):
+    declared = {
+        "hrrr": {},
+        "zi08": {"ziscale": 0.8},
+        "s2": {"from": "hrrr", "smooth_factor": 2},
+    }
+    cfg = _variant_config(tmp_path, grid=grid, variants=declared)
+    path = tmp_path / "config.yaml"
+    cfg.to_yaml(path)
+    loaded = ModelConfig.from_yaml(path)
+    assert loaded.variants == declared
+    assert list(loaded.resolve_variants()) == ["hrrr", "zi08", "s2"]

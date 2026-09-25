@@ -11,16 +11,20 @@ What's in a project folder
 .. code-block:: text
 
    my_project/
-     config.yaml                     # settings: meteorology, footprints, run options
+     config.yaml                     # settings: meteorology, variants, run options
      receptors.csv                   # where and when to release particles
      simulations/
        by-id/
-         <simulation id>/            # one folder per simulation
-           stilt.log                               # run log: check here when a run fails
-           <simulation id>_traj.parquet            # particle paths
-           <simulation id>_<footprint>_foot.nc     # one file per named footprint
-           <simulation id>_<footprint>_foot.empty  # instead of .nc when the footprint is empty
-           <simulation id>_error.parquet           # only when wind-error settings are used
+         <receptor id>/              # one folder per receptor
+           <variant>/                # one folder per simulation
+             stilt.log                     # run log: check here when a run fails
+             <receptor id>_traj.parquet    # particle paths
+             <receptor id>_foot.nc         # the footprint, when the variant has a grid
+             <receptor id>_foot.empty      # instead of .nc when the footprint is empty
+             met/, CONTROL, SETUP.CFG ...  # HYSPLIT inputs, kept for debugging
+
+A variant declared with ``from:`` has only its footprint and the log of any
+error; its particles are the other variant's.
 
 A Slurm run also creates ``chunks/`` and ``slurm/`` folders with the job
 scripts and logs (:doc:`execution/slurm`).
@@ -28,20 +32,22 @@ scripts and logs (:doc:`execution/slurm`).
 Simulation IDs
 --------------
 
-Each simulation is named after its meteorology and receptor:
+A simulation is a receptor under a variant, and its id is the two joined by
+a slash, which is also its folder below ``simulations/by-id``:
 
 .. code-block:: text
 
-   {met name}_{YYYYMMDDHHMM}_{location}
+   {YYYYMMDDHHMM}_{location}/{variant}
 
-   hrrr_202307151800_-111.848_40.766_10
+   202307151800_-111.848_40.766_10/hrrr
 
 For point receptors the location is longitude, latitude, and altitude. Column
 receptors end in ``_X``. Multipoint receptors use a short hash of their
 points, which stays the same if you reorder them.
 
-A project runs every receptor with every met source, so 100 receptors and
-two met sources make 200 simulations.
+A project runs every receptor under every variant, so 100 receptors and
+three variants make 300 simulations. With no ``variants`` in
+``config.yaml`` there is one per met source (:doc:`configuration`).
 
 Opening a project again
 -----------------------
@@ -76,19 +82,20 @@ Reruns skip finished work
 Before running, PYSTILT checks which simulations are finished and runs only
 the rest. A simulation is finished when all of its outputs exist:
 
-- the trajectory file,
-- the error trajectory file, if wind-error settings are used,
-- a footprint file (or ``.empty`` marker) for every footprint in
-  ``config.yaml``.
+- the trajectory file, unless the variant is declared with ``from:``,
+- the footprint file (or ``.empty`` marker), if the variant has a grid.
 
-So after an interruption, a failed Slurm task, or adding a new footprint to
-``config.yaml``, just run again. Only what's missing will run.
+So after an interruption, a failed Slurm task, or adding a variant to
+``config.yaml``, just run again. Only what's missing will run: a new
+variant runs for every receptor and nothing else is touched. Changing the
+settings of a variant that already ran is refused (:doc:`configuration`).
 
 To list what is not finished yet:
 
 .. code-block:: python
 
-   model.simulations.incomplete()       # list of simulation IDs
+   model.simulations.incomplete().keys()   # (receptor, variant) ids
+   model.simulations.status()              # a table of every simulation
 
 To force everything to run again, pass ``skip_existing=False`` to
 ``model.run()``, or ``--no-skip`` to ``stilt run``.

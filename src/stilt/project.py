@@ -5,15 +5,14 @@ A project is one root — a local directory or an object-store URI — holding::
 
     config.yaml
     receptors.csv
-    simulations/by-id/<sim_id>/<sim_id>_traj.parquet
-    simulations/by-id/<sim_id>/<sim_id>_error.parquet
-    simulations/by-id/<sim_id>/<sim_id>_<footprint>_foot.nc
-    simulations/by-id/<sim_id>/<sim_id>_<footprint>_foot.empty
-    simulations/by-id/<sim_id>/stilt.log
+    simulations/by-id/<receptor_id>/<variant>/<receptor_id>_traj.parquet
+    simulations/by-id/<receptor_id>/<variant>/<receptor_id>_foot.nc
+    simulations/by-id/<receptor_id>/<variant>/<receptor_id>_foot.empty
+    simulations/by-id/<receptor_id>/<variant>/stilt.log
 
 Everything is addressed by store key relative to the root. ``config.yaml`` and
 ``receptors.csv`` together *are* the project: the registered simulation set is
-their receptors crossed with the configured met streams.
+their receptors crossed with the configured variants.
 """
 
 from __future__ import annotations
@@ -61,8 +60,8 @@ def project_slug(root: str) -> str:
     return slug or "project"
 
 
-def simulation_prefix(sim_id: str) -> str:
-    """Return the store key prefix for one simulation's outputs."""
+def simulation_prefix(sim_id: object) -> str:
+    """Return the store key prefix for one simulation's outputs (``str(sim_id)``)."""
     return f"{SIMULATIONS_PREFIX}/{sim_id}"
 
 

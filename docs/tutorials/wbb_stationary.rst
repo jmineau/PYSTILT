@@ -60,12 +60,10 @@ Step 2: Set up the model
                "file_tres": "6h",
            }
        },
-       footprints={
-           "wbb": {
-               "xmin": -114.0, "xmax": -109.0,
-               "ymin": 39.0,   "ymax": 42.5,
-               "xres": 0.01,   "yres": 0.01,
-           }
+       grid={
+           "xmin": -114.0, "xmax": -109.0,
+           "ymin": 39.0,   "ymax": 42.5,
+           "xres": 0.01,   "yres": 0.01,
        },
        execution={"backend": "local", "n_workers": 4},   # 4 simulations at a time
    )
@@ -99,7 +97,7 @@ Load all 168 footprints, sum each over time, and average them:
    import matplotlib.pyplot as plt
    import xarray as xr
 
-   footprints = model.footprints["wbb"].load()
+   footprints = model.footprint.load()
 
    mean_foot = xr.concat(
        [foot.integrate_over_time().data for foot in footprints],

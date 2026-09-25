@@ -16,11 +16,16 @@ The **core transport** is stable and exercised by the test suite:
 - Numerical parity with `uataq/stilt <https://github.com/uataq/stilt>`_ (STILT-R) at ``rtol=1e-7`` per cell
 - Local and SLURM execution paths
 - Reruns that skip finished simulations, with status read from the output files
+- Receptors × variants: the same receptors under several named settings in
+  one project, with transport-error ensembles and extra footprints as
+  variants
 - Observation layer for science-facing workflows
 
-The core runtime simplification landed in two steps: by-key completion in
-June 2026, and the collapse of the storage, registry, and execution layers onto
-``Project`` / ``Simulation`` in September 2026.  Active development is on the
+The core runtime simplification landed in three steps: by-key completion in
+June 2026, the collapse of the storage, registry, and execution layers onto
+``Project`` / ``Simulation`` in September 2026, and receptors × variants
+replacing the receptor × met simulation with its attached error run, also in
+September 2026.  Active development is on the
 observation layer: column and slant-column workflows for satellite and
 ground-based instruments (see *Future plans* below).  The execution and
 service track is maintained but not expanding.

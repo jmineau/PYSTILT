@@ -15,10 +15,12 @@ from .backends import (
 from .backends.factory import resolve_backend
 from .backends.protocol import sigterm_as_interrupt
 from .worker import (
+    ReceptorResult,
     SimulationResult,
-    pull_simulations,
+    pull_receptors,
+    run_receptor,
+    run_receptors,
     run_simulation,
-    run_simulations,
 )
 
 __all__ = [
@@ -29,13 +31,15 @@ __all__ = [
     "KubernetesHandle",
     "LocalExecutor",
     "LocalHandle",
+    "ReceptorResult",
     "SimulationResult",
     "SlurmExecutor",
     "SlurmHandle",
     "get_executor",
-    "pull_simulations",
+    "pull_receptors",
     "resolve_backend",
+    "run_receptor",
+    "run_receptors",
     "run_simulation",
-    "run_simulations",
     "sigterm_as_interrupt",
 ]

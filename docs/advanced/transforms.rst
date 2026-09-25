@@ -12,7 +12,7 @@ A transform is any object with one method::
    def apply(self, particles: pd.DataFrame, context: TransformContext) -> pd.DataFrame
 
 It receives the particle table and returns a new one. Transforms are listed
-per footprint in ``config.yaml`` or passed to
+in ``config.yaml`` (as a default, or per variant) or passed to
 :meth:`stilt.Simulation.generate_footprint`, run once in order on the
 unweighted particles, and are recorded in the footprint's netCDF so a stored
 footprint knows how it was weighted.
@@ -22,16 +22,13 @@ Built-in transforms
 
 .. code-block:: yaml
 
-   footprints:
-     column:
-       grid: slv
-       transforms:
-         - kind: averaging_kernel
-           levels: [0, 500, 1000, 2000]
-           values: [1.0, 0.95, 0.8, 0.5]
-         - kind: pressure_weighting
-         - kind: first_order_lifetime
-           lifetime_hours: 4.0
+   transforms:
+     - kind: averaging_kernel
+       levels: [0, 500, 1000, 2000]
+       values: [1.0, 0.95, 0.8, 0.5]
+     - kind: pressure_weighting
+     - kind: first_order_lifetime
+       lifetime_hours: 4.0
 
 ``averaging_kernel`` — :class:`stilt.transforms.AveragingKernel`
    Multiplies each particle's ``foot`` by the kernel interpolated at the
@@ -81,14 +78,11 @@ and ``values``, name a table in the project:
 
 .. code-block:: yaml
 
-   footprints:
-     column:
-       grid: slv
-       transforms:
-         - kind: averaging_kernel
-           table: kernels.parquet
-           coordinate: pres
-         - kind: pressure_weighting
+   transforms:
+     - kind: averaging_kernel
+       table: kernels.parquet
+       coordinate: pres
+     - kind: pressure_weighting
 
 The table has one ``receptor`` id per sounding and one ``level`` / ``value``
 row per kernel point (Parquet or CSV). Build it with
@@ -167,12 +161,9 @@ the model's fields:
 
 .. code-block:: yaml
 
-   footprints:
-     bl:
-       grid: slv
-       transforms:
-         - kind: mypkg.transforms.BoundaryLayerOnly
-           max_height: 1200
+   transforms:
+     - kind: mypkg.transforms.BoundaryLayerOnly
+       max_height: 1200
 
 Three rules keep this predictable:
 
@@ -185,7 +176,7 @@ Three rules keep this predictable:
   but a project config naming one fails validation with the import error.
 - **Use the context for anything outside the table.** ``context.receptor``
   gives the receptor (its ``id`` keys any per-receptor input file),
-  ``context.is_error`` says whether this is the error trajectory, and
+  ``context.variant`` names the variant the footprint is for, and
   ``context.store`` is the project store, whose ``local_path(key)`` turns
   a path relative to the project root into a readable file wherever the
   worker runs. That is how the ``averaging_kernel`` table is found.

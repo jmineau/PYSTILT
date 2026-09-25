@@ -1,10 +1,13 @@
 """
-Worker-side execution: run one simulation, or many, for a model.
+Worker-side execution: run one simulation, one receptor, or many receptors.
 
 :func:`run_simulation` runs one :class:`~stilt.simulation.Simulation` end to
-end (trajectory, then every requested footprint) and publishes its outputs.
-:func:`run_simulations` runs a list of ids for a model, inline or in one
-process pool. :func:`pull_simulations` drains a Postgres work queue.
+end (HYSPLIT where a trajectory is missing, then the footprint) and publishes
+its outputs. The unit of work handed to workers is a **receptor**:
+:func:`run_receptor` runs every variant of one receptor, transport variants
+before the derived ones that rasterize their particles.
+:func:`run_receptors` runs a list of receptor ids for a model, inline or in
+one process pool. :func:`pull_receptors` drains a Postgres work queue.
 """
 
 from __future__ import annotations
@@ -14,11 +17,9 @@ import multiprocessing
 import signal
 import time
 import traceback
-from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Literal
 
-from stilt.config import FootprintConfig
 from stilt.errors import ConfigValidationError, SimulationError
 from stilt.simulation import Simulation
 
@@ -30,6 +31,15 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 Status = Literal["complete", "complete-empty", "failed", "error", "interrupted"]
+
+#: Worst outcome first, for summarising a receptor's simulations.
+_SEVERITY: tuple[Status, ...] = (
+    "interrupted",
+    "error",
+    "failed",
+    "complete-empty",
+    "complete",
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -45,6 +55,31 @@ class SimulationResult:
     sim_id: str
     status: Status
     error: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class ReceptorResult:
+    """
+    Outcome of running every simulation of one receptor.
+
+    ``status`` is the worst of the simulations' statuses; ``simulations``
+    holds each one.
+    """
+
+    receptor_id: str
+    status: Status
+    error: str | None = None
+    simulations: tuple[SimulationResult, ...] = field(default_factory=tuple)
+
+    @classmethod
+    def summarise(
+        cls, receptor_id: str, results: list[SimulationResult]
+    ) -> ReceptorResult:
+        """Fold simulation results into one receptor result."""
+        if not results:
+            return cls(receptor_id, "complete")
+        worst = min(results, key=lambda r: _SEVERITY.index(r.status))
+        return cls(receptor_id, worst.status, worst.error, tuple(results))
 
 
 def _append_error_log(sim: Simulation, *, phase: str, error: BaseException) -> None:
@@ -64,69 +99,48 @@ def _append_error_log(sim: Simulation, *, phase: str, error: BaseException) -> N
         f.write("\n".join(lines) + "\n")
 
 
-def _footprint_targets(
-    footprints: Mapping[str, FootprintConfig],
-) -> list[tuple[str, str, FootprintConfig, bool]]:
-    """Return ``(base_name, stored_name, config, is_error)`` in execution order."""
-    targets = []
-    for name, config in footprints.items():
-        targets.append((name, name, config, False))
-        if config.error:
-            targets.append((name, f"{name}_error", config, True))
-    return targets
-
-
-def run_simulation(
-    sim: Simulation,
-    footprints: Mapping[str, FootprintConfig] | None = None,
-    *,
-    skip_existing: bool = True,
-) -> SimulationResult:
+def run_simulation(sim: Simulation, *, skip_existing: bool = True) -> SimulationResult:
     """
     Run one simulation and publish its outputs.
 
-    With no footprints, only the trajectory is produced. With footprints, the
-    trajectory is run as needed and every footprint is computed in one pass
-    (the trajectory is loaded once). An empty footprint writes a marker so the
-    outcome is durable and skip-existing treats it as done.
+    HYSPLIT runs when the trajectory is missing (or always, without
+    ``skip_existing``); a derived simulation reads its parent's trajectory
+    instead. The footprint is rasterized when one is configured. An empty
+    footprint writes a marker so the outcome is durable and skip-existing
+    treats it as done.
 
     Parameters
     ----------
     sim
         The simulation handle to run.
-    footprints
-        Named footprint configs to produce.
     skip_existing
-        Skip footprints that already exist (netCDF or empty marker).
+        Skip outputs that already exist (trajectory parquet, footprint
+        netCDF or empty marker).
     """
     phase = "trajectory"
     try:
-        if not footprints:
-            sim.run_trajectories(write=True)
-            sim.publish()
-            return SimulationResult(str(sim.id), "complete")
-
-        statuses: dict[str, str] = {}
-        for base_name, stored_name, config, is_error in _footprint_targets(footprints):
-            phase = f"footprint:{stored_name}"
-            if skip_existing and sim.has_footprint(stored_name):
-                statuses[stored_name] = (
-                    "complete"
-                    if sim.resolve(sim.footprint_path(stored_name)) is not None
-                    else "complete-empty"
+        if sim.is_derived:
+            if sim.trajectories is None:
+                raise SimulationError(
+                    f"{sim.id} derives from {sim.parent.id}, which has no trajectory"  # type: ignore[union-attr]
                 )
-                continue
-            foot = sim.generate_footprint(base_name, config, write=True, error=is_error)
-            if foot is None or foot.is_empty:
-                sim.write_empty_footprint_marker(stored_name)
-                statuses[stored_name] = "complete-empty"
+        elif not (skip_existing and sim.has_trajectory):
+            sim.run_trajectories(write=True)
+
+        status: Status = "complete"
+        if sim.footprint_config is not None:
+            phase = "footprint"
+            if skip_existing and sim.has_footprint:
+                if sim.resolve(sim.footprint_path) is None:
+                    status = "complete-empty"
             else:
-                sim.clear_empty_footprint_marker(stored_name)
-                statuses[stored_name] = "complete"
+                foot = sim.generate_footprint(write=True)
+                if foot.is_empty:
+                    sim.write_empty_footprint_marker()
+                    status = "complete-empty"
+                else:
+                    sim.clear_empty_footprint_marker()
         sim.publish()
-        status: Status = (
-            "complete" if "complete" in statuses.values() else "complete-empty"
-        )
         return SimulationResult(str(sim.id), status)
     except Exception as error:
         logger.exception("simulation %s failed during %s: %s", sim.id, phase, error)
@@ -139,16 +153,27 @@ def run_simulation(
         return SimulationResult(str(sim.id), status, error=str(error))
 
 
-def _run_one(model: Model, sim_id: str, skip_existing: bool) -> SimulationResult:
-    """Run one id for *model*, normalising preemption into a result."""
+def run_receptor(
+    model: Model, receptor_id: str, *, skip_existing: bool = True
+) -> ReceptorResult:
+    """
+    Run every simulation of one receptor, transport variants first.
+
+    Derived variants come last so the trajectory they rasterize exists. A
+    preemption (``KeyboardInterrupt``) is normalised into an ``interrupted``
+    result.
+    """
+    sims = list(model.simulations.sel(receptor=receptor_id))
+    ordered = [s for s in sims if not s.is_derived] + [s for s in sims if s.is_derived]
+    results: list[SimulationResult] = []
     try:
-        return run_simulation(
-            model.simulation(sim_id),
-            model.config.footprints,
-            skip_existing=skip_existing,
-        )
+        for sim in ordered:
+            results.append(run_simulation(sim, skip_existing=skip_existing))
     except KeyboardInterrupt:
-        return SimulationResult(sim_id, "interrupted", error="Worker preempted")
+        results.append(
+            SimulationResult(str(sim.id), "interrupted", error="Worker preempted")
+        )
+    return ReceptorResult.summarise(receptor_id, results)
 
 
 # -- process pool -------------------------------------------------------------
@@ -172,22 +197,22 @@ def _init_pool_worker(project: str, compute_root: str, skip_existing: bool) -> N
     _POOL_SKIP = skip_existing
 
 
-def _pool_run(item: tuple[int, str]) -> tuple[int, SimulationResult]:
-    """Run one simulation in a pool worker, returning its index and result."""
-    idx, sim_id = item
+def _pool_run(item: tuple[int, str]) -> tuple[int, ReceptorResult]:
+    """Run one receptor in a pool worker, returning its index and result."""
+    idx, receptor_id = item
     assert _POOL_MODEL is not None
-    return idx, _run_one(_POOL_MODEL, sim_id, _POOL_SKIP)
+    return idx, run_receptor(_POOL_MODEL, receptor_id, skip_existing=_POOL_SKIP)
 
 
-def run_simulations(
+def run_receptors(
     model: Model,
-    sim_ids: list[str],
+    receptor_ids: list[str],
     *,
     n_cores: int = 1,
     skip_existing: bool | None = None,
-) -> list[SimulationResult]:
+) -> list[ReceptorResult]:
     """
-    Run a list of simulation ids for *model*, inline or in a process pool.
+    Run a list of receptor ids for *model*, inline or in a process pool.
 
     Pool workers rebuild the model from ``model.project.root``, so the
     project's inputs must already be persisted (``Model.register()`` does
@@ -197,9 +222,9 @@ def run_simulations(
     Parameters
     ----------
     model
-        The model the simulations belong to.
-    sim_ids
-        Simulation ids to run.
+        The model the receptors belong to.
+    receptor_ids
+        Receptor ids to run.
     n_cores
         Worker processes. ``1`` runs inline in this process.
     skip_existing
@@ -207,24 +232,24 @@ def run_simulations(
 
     Returns
     -------
-    list[SimulationResult]
+    list[ReceptorResult]
         One result per id, in input order (truncated after an interruption).
     """
     skip = model.config.skip_existing if skip_existing is None else skip_existing
-    if not sim_ids:
+    if not receptor_ids:
         return []
 
     if n_cores <= 1:
-        results: list[SimulationResult] = []
+        results: list[ReceptorResult] = []
         with sigterm_as_interrupt():
-            for sim_id in sim_ids:
-                result = _run_one(model, sim_id, skip)
+            for receptor_id in receptor_ids:
+                result = run_receptor(model, receptor_id, skip_existing=skip)
                 results.append(result)
                 if result.status == "interrupted":
                     break
         return results
 
-    ordered: dict[int, SimulationResult] = {}
+    ordered: dict[int, ReceptorResult] = {}
     pool = multiprocessing.Pool(
         n_cores,
         initializer=_init_pool_worker,
@@ -232,7 +257,9 @@ def run_simulations(
     )
     with sigterm_as_interrupt():
         try:
-            for idx, result in pool.imap_unordered(_pool_run, list(enumerate(sim_ids))):
+            for idx, result in pool.imap_unordered(
+                _pool_run, list(enumerate(receptor_ids))
+            ):
                 ordered[idx] = result
                 if result.status == "interrupted":
                     pool.terminate()
@@ -252,7 +279,7 @@ def run_simulations(
 # -- pull mode ----------------------------------------------------------------
 
 
-def pull_simulations(
+def pull_receptors(
     model: Model,
     follow: bool = False,
     poll_interval: float = 10.0,
@@ -292,12 +319,14 @@ def pull_simulations(
                 idle_sleep = min(idle_sleep * 2.0, max_idle_sleep)
                 continue
             idle_sleep = max(poll_interval, 0.1)
-            claim.record(_run_one(model, claim.sim_id, skip))
+            claim.record(run_receptor(model, claim.receptor_id, skip_existing=skip))
 
 
 __all__ = [
+    "ReceptorResult",
     "SimulationResult",
-    "pull_simulations",
+    "pull_receptors",
+    "run_receptor",
+    "run_receptors",
     "run_simulation",
-    "run_simulations",
 ]

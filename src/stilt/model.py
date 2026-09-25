@@ -15,18 +15,18 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from stilt.collections import (
-    FootprintCollection,
+    OutputCollection,
     ReceptorCollection,
     SimulationCollection,
-    TrajectoryCollection,
 )
 from stilt.config import (
     ModelConfig,
     RuntimeSettings,
     STILTParams,
+    VariantConfig,
 )
 from stilt.config.model import _config_or_kwargs
-from stilt.errors import ConfigValidationError
+from stilt.errors import ConfigChangedError, ConfigValidationError
 from stilt.execution import (
     Executor,
     JobHandle,
@@ -65,8 +65,8 @@ class Model:
 
     A project is one root — a local directory or object-store URI — holding
     ``config.yaml``, ``receptors.csv``, and ``simulations/by-id/``. The
-    simulations a model defines are its receptors crossed with its met
-    streams; whether each is complete is read from the outputs by key.
+    simulations a model defines are its receptors crossed with its variants;
+    whether each is complete is read from the outputs by key.
 
     Parameters
     ----------
@@ -94,10 +94,9 @@ class Model:
         Project root and store.
     config : ModelConfig
     receptors : ReceptorCollection
+    variants : dict[str, VariantConfig]
     mets : dict[str, MetStream]
     simulations : SimulationCollection
-    trajectories : TrajectoryCollection
-    footprints : FootprintCollection
     plot : ModelPlotAccessor
     queue : PostgresQueue or None
         Work queue for pull/serve workers; ``None`` unless ``PYSTILT_DB_URL`` is set.
@@ -118,13 +117,12 @@ class Model:
         self._config = _config_or_kwargs(config, kwargs, ModelConfig)
 
         self._mets: dict[str, MetStream] | None = None
-        self._params: STILTParams | None = None
+        self._variants: dict[str, VariantConfig] | None = None
         self._receptors: ReceptorCollection | None = None
         self._receptors_input = receptors
         self._queue: PostgresQueue | None = None
         self._simulations: SimulationCollection | None = None
-        self._trajectories: TrajectoryCollection | None = None
-        self._footprints: FootprintCollection | None = None
+        self._handles: dict[SimID, Simulation] = {}
         self._plot: ModelPlotAccessor | None = None
 
     def __repr__(self) -> str:
@@ -167,10 +165,15 @@ class Model:
 
     @property
     def params(self) -> STILTParams:
-        """Transport parameters shared by every simulation (from config)."""
-        if self._params is None:
-            self._params = self.config.to_stilt_params()
-        return self._params
+        """The default transport parameters (from config)."""
+        return self.config.to_stilt_params()
+
+    @property
+    def variants(self) -> dict[str, VariantConfig]:
+        """Resolved variants by simulation-level name, in config order."""
+        if self._variants is None:
+            self._variants = self.config.resolve_variants()
+        return self._variants
 
     @property
     def mets(self) -> dict[str, MetStream]:
@@ -189,14 +192,45 @@ class Model:
             self._queue = resolve_queue(self.runtime)
         return self._queue
 
-    def register(self, receptors: Iterable[Receptor] | None = None) -> list[str]:
+    def check_config(self) -> None:
         """
-        Persist the model's inputs to the project and return its simulation ids.
+        Refuse to change a registered variant's settings under its name.
+
+        ``config.yaml`` in the store is the record of what produced the
+        project's outputs. If a variant it declares now resolves differently,
+        outputs under that name would no longer match their config, so this
+        raises :class:`~stilt.errors.ConfigChangedError` naming the fields.
+        Declare a new variant for new settings.
+        """
+        if not self.project.has_config:
+            return
+        stored = self.project.load_config().resolve_variants()
+        changed = {
+            name: variant.differences(stored[name])
+            for name, variant in self.variants.items()
+            if name in stored and variant.differences(stored[name])
+        }
+        if changed:
+            detail = "; ".join(f"{n}: {', '.join(f)}" for n, f in changed.items())
+            raise ConfigChangedError(
+                f"config.yaml in {self.project.root} already defines these variants "
+                f"with different settings ({detail}). Declare a new variant for new "
+                "settings, or register(allow_changes=True) to overwrite the record."
+            )
+
+    def register(
+        self,
+        receptors: Iterable[Receptor] | None = None,
+        *,
+        allow_changes: bool = False,
+    ) -> list[str]:
+        """
+        Persist the model's inputs to the project and return its receptor ids.
 
         Writes ``config.yaml`` and ``receptors.csv`` into the project store so
         that workers (local processes, Slurm tasks, Kubernetes pods) can
         rebuild this model from the root alone. When a work queue is
-        configured, the simulations are enqueued as pending.
+        configured, the receptors are enqueued as pending work.
 
         Parameters
         ----------
@@ -205,12 +239,17 @@ class Model:
             receptors (deduplicated by id) and the merged set is written.
             When omitted, the model's own receptors are persisted — copying
             the source CSV byte-for-byte when they came from a file.
+        allow_changes : bool
+            Overwrite ``config.yaml`` even when a variant it already declares
+            now resolves differently (see :meth:`check_config`).
 
         Returns
         -------
         list[str]
-            Simulation ids for the receptors registered by this call.
+            Receptor ids registered by this call.
         """
+        if not allow_changes:
+            self.check_config()
         self.project.save_config(self.config)
 
         if receptors is None:
@@ -230,49 +269,53 @@ class Model:
             self._receptors_input = None
             self._receptors = None
             self._simulations = None
+            self._handles = {}
 
-        sim_ids = [
-            str(SimID.from_parts(met, receptor))
-            for met in self.mets
-            for receptor in batch
-        ]
+        receptor_ids = [str(r.id) for r in batch]
         if self.queue is not None:
-            self.queue.register(sim_ids)
-        return sim_ids
+            self.queue.register(receptor_ids)
+        return receptor_ids
 
     # -- Simulations -----------------------------------------------------------
 
-    def simulation(self, sim_id: str) -> Simulation:
-        """Build a handle for one simulation id (no side effects on disk)."""
-        sid = SimID(sim_id)
-        return Simulation(
-            directory=self.compute_root / sid,
-            receptor=self.receptors[sid.receptor],
-            params=self.params,
-            meteorology=self.mets[sid.met],
-            store=self.project.store,
-        )
+    def simulation(self, key: str | SimID | tuple[str, str]) -> Simulation:
+        """Build (and cache) the handle for one simulation id; no side effects on disk."""
+        sid = SimID.parse(key)
+        if sid not in self._handles:
+            variant = self.variants[sid.variant]
+            parent = (
+                self.simulation((sid.receptor, variant.derived_from))
+                if variant.derived_from is not None
+                else None
+            )
+            self._handles[sid] = Simulation(
+                receptor=self.receptors[sid.receptor],
+                meteorology=None if parent is not None else self.mets[variant.met],
+                params=variant.stilt_params(),
+                footprint=variant.footprint,
+                variant=sid.variant,
+                parent=parent,
+                directory=self.compute_root / sid,
+                store=self.project.store,
+            )
+        return self._handles[sid]
 
     @property
     def simulations(self) -> SimulationCollection:
-        """Simulations this model defines (receptors × mets)."""
+        """Simulations this model defines (receptors × variants)."""
         if self._simulations is None:
             self._simulations = SimulationCollection(self)
         return self._simulations
 
     @property
-    def trajectories(self) -> TrajectoryCollection:
-        """Cross-simulation trajectory accessor."""
-        if self._trajectories is None:
-            self._trajectories = TrajectoryCollection(self)
-        return self._trajectories
+    def trajectories(self) -> OutputCollection:
+        """Every simulation's trajectories (``simulations.trajectories``)."""
+        return self.simulations.trajectories
 
     @property
-    def footprints(self) -> FootprintCollection:
-        """Cross-simulation footprint accessor namespace."""
-        if self._footprints is None:
-            self._footprints = FootprintCollection(self)
-        return self._footprints
+    def footprint(self) -> OutputCollection:
+        """Every simulation's footprint (``simulations.footprint``)."""
+        return self.simulations.footprint
 
     @property
     def plot(self) -> ModelPlotAccessor:
@@ -285,13 +328,11 @@ class Model:
 
     def status(self) -> StatusCounts:
         """Return completion counts (total / completed / pending), read from the outputs."""
-        sim_ids = self.simulations.keys()
-        if not sim_ids:
+        total = len(self.simulations)
+        if not total:
             return StatusCounts()
-        incomplete = len(self.simulations.incomplete())
-        return StatusCounts(
-            total=len(sim_ids), completed=len(sim_ids) - incomplete, pending=incomplete
-        )
+        pending = len(self.simulations.incomplete())
+        return StatusCounts(total=total, completed=total - pending, pending=pending)
 
     # -- Execution -------------------------------------------------------------
 
@@ -302,11 +343,10 @@ class Model:
         wait: bool = True,
     ) -> JobHandle:
         """
-        Persist inputs, then start workers for every incomplete simulation.
+        Persist inputs, then start workers for every receptor with incomplete work.
 
-        When ``config.footprints`` is non-empty, workers run HYSPLIT as needed
-        and compute every footprint in one pass; otherwise only trajectories
-        are produced.
+        Workers run each of the receptor's simulations in turn: HYSPLIT where a
+        trajectory is missing, then the footprint where one is configured.
 
         Parameters
         ----------
@@ -333,20 +373,21 @@ class Model:
                 "Slurm execution currently requires a local project root."
             )
 
-        sim_ids = self.register()
-        if not sim_ids:
+        receptor_ids = self.register()
+        if not receptor_ids:
             logger.info("run: no receptors configured — nothing to do")
             return LocalHandle()
 
-        pending = self.simulations.incomplete() if resolved_skip else list(sim_ids)
+        pending = (
+            self.simulations.incomplete().receptors if resolved_skip else receptor_ids
+        )
         if not pending:
             logger.info("run: all simulations already complete — nothing to do")
             return LocalHandle()
 
-        names = list(self.config.footprints)
         logger.info(
-            "run(%s): starting %s workers for %d simulations",
-            ", ".join(names) if names else "trajectories",
+            "run(%s): starting %s workers for %d receptors",
+            ", ".join(self.variants),
             resolved_executor.dispatch,
             len(pending),
         )

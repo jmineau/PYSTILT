@@ -38,7 +38,7 @@ the source's flux:
 
    import stilt
 
-   footprints = model.footprints["wbb"].load(mets="hrrr")
+   footprints = model.simulations.sel(variant="hrrr").footprint.load()
 
    # longitude, latitude, flux (µmol m⁻² s⁻¹, averaged over the window)
    sources = {

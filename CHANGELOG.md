@@ -17,11 +17,11 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   (`STILTParams.setup_seed`). Under `krand: 2` with a seed, error
   realization `k` runs with `seed + k` (`STILTParams.realization_seed`;
   realization 0 shares the main run's seed, as STILT-R's error run does),
-  so `error_realizations > 1` no longer requires `krand: 4`: the seeded route
+  so several realizations no longer require `krand: 4`: the seeded route
   is reproducible, the clock-seeded one is not. The fidelity fixture writes
   the same mapped value on the STILT-R side.
 - **Mixed-layer height section** in the Transport Error guide: `ziscale` as
-  a shared, all-particle bracket on the mixed layer, one project per factor,
+  a shared, all-particle bracket on the mixed layer, one variant per factor,
   and why a column and a surface receptor respond differently. The X-STILT
   migration table now maps `get.zierr` to `ziscale`.
 - **Radiosondes from IGRA2** in the Wind Error Statistics guide: a snippet
@@ -31,6 +31,55 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **A project is receptors × variants**
+  ([#37](https://github.com/jmineau/PYSTILT/issues/37),
+  [#32](https://github.com/jmineau/PYSTILT/issues/32),
+  [#33](https://github.com/jmineau/PYSTILT/issues/33)). Breaking. The
+  top-level settings in `config.yaml` are defaults, and a new `variants`
+  section names sets of overrides (`hrrr-zi08: {ziscale: 0.8}`); with no
+  `variants` there is one per met, named after it. A simulation is one
+  receptor under one variant, one HYSPLIT call, with id
+  `<receptor_id>/<variant>` and outputs in
+  `simulations/by-id/<receptor_id>/<variant>/`. What changes:
+  - The wind-error run is a variant of its own (the error fields set on it)
+    instead of a second run attached to every simulation.
+    `error_realizations` becomes `realizations: N` on any variant, which
+    runs it as `<name>-0 .. <name>-(N-1)` with `seed + k`. Changing the
+    number of realizations no longer reruns anything else (#32), and every
+    realization has its own trajectory and, if wanted, footprint (#33).
+  - Footprint settings (`grid`, `smooth_factor`, `time_integrate`,
+    `transforms`, `geometry`) are flat defaults like the transport ones, and
+    each simulation has at most one footprint, `<receptor_id>_foot.nc`. The
+    named `footprints` dict, the `grids` dict, `FootprintConfig.error` and
+    `foot_names` are gone. `grid: null` means trajectory only. A variant with
+    `from: <other>` makes another footprint from that variant's particles
+    without running HYSPLIT.
+  - `Model.register()` refuses to change the settings of a variant that is
+    already in the project's `config.yaml` (`ConfigChangedError`), so outputs
+    always match the config they are filed under. `register(allow_changes=True)`
+    and `stilt register --force` override.
+  - Collections: `model.simulations` is a selection over receptors ×
+    variants with `sel(receptor=, variant=, time=, location=, where=)`,
+    `incomplete()` and `status()` (a DataFrame); `.trajectories` and
+    `.footprint` give one output over the selection. `TrajectoryCollection`,
+    `FootprintCollection`, `model.footprints[name]` and the `ids` / `select` /
+    `missing` / `paths` methods are removed.
+  - `SimID` is a `(receptor, variant)` pair. `Simulation.footprint` and
+    `footprint_path` take no name; `get_footprint`, `error_trajectories`,
+    `all_error_trajectories` and `Trajectories.is_error` are removed (a
+    trajectory's stored params say whether it was perturbed).
+    `TransformContext` carries `variant` instead of `footprint_name` and
+    `is_error`.
+  - Workers are handed receptors: `run_receptor` / `run_receptors` /
+    `pull_receptors` replace `run_simulations` / `pull_simulations`, and the
+    queue and Slurm chunk files hold receptor ids. The HYSPLIT driver makes
+    exactly one call per `execute()`. A failed realization now fails its
+    simulation instead of being dropped into the log.
+  - A simulation whose trajectory went missing is rerun even when its
+    footprint exists; before, a missing error realization could never be
+    backfilled once every footprint existed.
+  Projects made with earlier versions need their outputs moved into the new
+  layout.
 - **`zicontroltf` is derived from `ziscale`** and is no longer a setting.
   The mixed-layer height is scaled whenever `ziscale` is not 1.0, the way
   `winderrtf` follows the wind-error parameters. A saved `config.yaml`

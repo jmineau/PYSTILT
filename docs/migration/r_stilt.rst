@@ -30,7 +30,7 @@ The workflow side by side
      - ``stilt run my_project``
    * - Outputs
      - ``out/by-id/<id>/``, ``_traj.rds`` and ``_foot.nc``
-     - ``simulations/by-id/<id>/``, ``_traj.parquet`` and ``_foot.nc``
+     - ``simulations/by-id/<id>/<variant>/``, ``_traj.parquet`` and ``_foot.nc``
 
 ``run_stilt.r`` settings in PYSTILT
 -----------------------------------
@@ -54,11 +54,11 @@ The workflow side by side
      - ``mets: <name>: subgrid_enable``, ``subgrid_buffer``,
        ``subgrid_levels``
    * - ``xmn``, ``xmx``, ``ymn``, ``ymx``
-     - ``footprints: <name>: xmin``, ``xmax``, ``ymin``, ``ymax``
+     - ``grid: xmin``, ``xmax``, ``ymin``, ``ymax``
    * - ``xres``, ``yres``, ``projection``
-     - ``footprints: <name>: xres``, ``yres``, ``projection``
+     - ``grid: xres``, ``yres``, ``projection``
    * - ``smooth_factor``, ``time_integrate``
-     - ``footprints: <name>: smooth_factor``, ``time_integrate``
+     - same names, top level
    * - ``n_hours``, ``numpar``, ``hnf_plume``, ``rm_dat``, ``timeout``,
        ``varsiwant``
      - same names, top level
@@ -67,14 +67,14 @@ The workflow side by side
      - same names, top level
    * - wind and mixing-depth error settings (``siguverr``, ``tluverr``,
        ``sigzierr``, …)
-     - same names, top level
+     - same names, on a separate variant (:doc:`../guides/transport_error`)
    * - ``slurm = TRUE``, ``n_nodes``, ``n_cores``, ``slurm_options``
      - ``execution: backend: slurm``, ``n_workers``, ``cpus_per_task``,
        plus ``sbatch`` options (:doc:`../guides/execution/slurm`)
    * - ``n_cores`` without Slurm
      - ``execution: n_workers``
    * - ``before_footprint`` / ``before_trajec`` functions
-     - ``transforms`` on a footprint (:doc:`../advanced/transforms`)
+     - ``transforms`` (:doc:`../advanced/transforms`)
    * - ``stilt_wd``, ``output_wd``
      - the project folder
    * - ``lib.loc``
@@ -82,15 +82,19 @@ The workflow side by side
 
 A few differences worth knowing:
 
-- **Meteorology has a name.** Each meteorology source is named (``hrrr``),
-  and the name starts every simulation ID, so one project can run the same
-  receptors with several meteorology products.
-- **Footprints have names.** You can make several footprints (grids) from one
-  set of particles, each with its own file. Adding a footprint to an existing
-  project calculates it from the saved trajectories without rerunning
-  HYSPLIT.
+- **Settings have names.** A project runs its receptors under named
+  *variants*: a meteorology source plus any settings that differ from the
+  defaults (:doc:`../guides/configuration`). One project can run the same
+  receptors with several meteorology products, a ``ziscale`` bracket, or a
+  second footprint grid, each in its own folder.
+- **The error run is a variant.** STILT-R runs HYSPLIT a second time with
+  the wind-error settings and stores both particle sets in one
+  ``_traj.rds``. In PYSTILT that second run is a variant of its own, with its
+  own folder and log, and it can repeat several times
+  (:doc:`../guides/transport_error`).
 - **Reruns are automatic.** ``stilt run`` skips simulations whose outputs
   already exist, so rerunning after a failure only runs what's missing.
+  Adding a variant runs only the new variant.
 
 Receptors
 ---------
@@ -114,15 +118,14 @@ Trajectories are Parquet files instead of R ``.rds`` files. They open in
 Python (pandas, :class:`stilt.Trajectories`) and in R (``arrow::read_parquet``).
 Footprints are NetCDF as before, with dimensions ``(time, lat, lon)``.
 
-Simulation IDs gain the met name at the front:
-``hrrr_201507050000_-111.8472_40.7665_21`` instead of
-``201507050000_-111.8472_40.7665_21``.
+STILT-R's simulation ID is PYSTILT's receptor ID, and each variant is a
+folder below it: ``201507050000_-111.8472_40.7665_21/hrrr``.
 
 Moving a project over
 ---------------------
 
 1. Copy your ``run_stilt.r`` settings into ``config.yaml`` using the table
-   above. Start with one meteorology source and one footprint.
+   above. Start with one meteorology source and no ``variants``.
 2. Write your receptors to ``receptors.csv``.
 3. Run a few receptors you already have STILT-R results for and compare the
    footprints.

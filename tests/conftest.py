@@ -263,9 +263,7 @@ def wbb_config(met_dir, wbb_grid) -> ModelConfig:
         },
         n_hours=-6,
         numpar=100,
-        footprints={
-            "default": FootprintConfig(grid=wbb_grid),
-        },
+        grid=wbb_grid,
     )
 
 
@@ -287,7 +285,7 @@ def traj_only_config(met_dir) -> ModelConfig:
 
 @pytest.fixture(scope="session")
 def multifoot_config(met_dir, wbb_grid) -> ModelConfig:
-    """Config with two named footprints at different resolutions."""
+    """Config with a second, coarser footprint derived from the same particles."""
     coarse_grid = Grid(
         xmin=-113.0, xmax=-111.0, ymin=39.5, ymax=41.5, xres=0.05, yres=0.05
     )
@@ -301,9 +299,10 @@ def multifoot_config(met_dir, wbb_grid) -> ModelConfig:
         },
         n_hours=-6,
         numpar=100,
-        footprints={
-            "fine": FootprintConfig(grid=wbb_grid),
-            "coarse": FootprintConfig(grid=coarse_grid),
+        grid=wbb_grid,
+        variants={
+            "hrrr": {},
+            "coarse": {"from": "hrrr", "grid": coarse_grid.model_dump()},
         },
     )
 
@@ -322,5 +321,5 @@ def multipoint_config(met_dir) -> ModelConfig:
         },
         n_hours=-6,
         numpar=100,
-        footprints={"default": FootprintConfig(grid=grid)},
+        grid=grid,
     )

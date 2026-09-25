@@ -115,7 +115,6 @@ def test_to_from_parquet_roundtrip(point_receptor, tmp_path):
         receptor=point_receptor,
         params=_params(tmp_path, hnf_plume=False),
         met_files=[Path("/tmp/met1")],
-        is_error=True,
     )
     path = tmp_path / "traj.parquet"
     traj.to_parquet(path)
@@ -123,7 +122,8 @@ def test_to_from_parquet_roundtrip(point_receptor, tmp_path):
     loaded = Trajectories.from_parquet(path)
     assert len(loaded.data) == 2
     assert loaded.receptor.id == point_receptor.id
-    assert loaded.is_error is True
+    assert loaded.params == traj.params
+    assert loaded.met_files == [Path("/tmp/met1")]
 
 
 def test_to_parquet_is_atomic_on_failure(point_receptor, tmp_path, monkeypatch):

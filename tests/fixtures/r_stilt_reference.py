@@ -216,6 +216,11 @@ class ReferenceScenario:
             time_integrate=self.time_integrate,
         )
 
+    @property
+    def error_variant(self) -> str | None:
+        """Name of the wind-error variant, when the scenario has one."""
+        return f"{REFERENCE_MET}-err" if self.siguverr is not None else None
+
     def make_model_config(self, met_dir):
         """Return a :class:`~stilt.config.ModelConfig` configured for this scenario."""
         from stilt.config import ModelConfig
@@ -234,30 +239,33 @@ class ReferenceScenario:
             "seed": self.seed,
             "hnf_plume": self.hnf_plume,
             "varsiwant": REFERENCE_VARSIWANT,
-            "footprints": {"default": self.make_footprint_config()},
+            **self.make_footprint_config().model_dump(),
         }
-        if self.siguverr is not None:
-            config.update(
-                {
+        if self.error_variant is not None:
+            # STILT-R's error run: a second HYSPLIT call with WINDERR and the
+            # same seed. In PYSTILT that is a variant of its own, with no
+            # footprint (STILT-R rasterizes only the unperturbed particles).
+            config["variants"] = {
+                REFERENCE_MET: {},
+                self.error_variant: {
                     "siguverr": self.siguverr,
                     "tluverr": self.tluverr,
                     "zcoruverr": self.zcoruverr,
                     "horcoruverr": self.horcoruverr,
-                }
-            )
+                    "grid": None,
+                },
+            }
         return ModelConfig.model_validate(config)
 
-    def py_sim_id(self) -> str:
-        """Return the PYSTILT simulation ID (``met_YYYYMMDDHHMM_location``)."""
+    def py_sim_id(self, variant: str = REFERENCE_MET) -> str:
+        """Return the PYSTILT simulation id (``{receptor_id}/{variant}``)."""
         from stilt.simulation import SimID
 
-        return str(SimID.from_parts(REFERENCE_MET, self.make_receptor()))
+        return str(SimID(self.make_receptor().id, variant))
 
     def r_sim_id(self) -> str:
-        """Return the STILT-R simulation ID (receptor part only, no met prefix)."""
-        from stilt.simulation import SimID
-
-        return str(SimID.from_parts(REFERENCE_MET, self.make_receptor()).receptor)
+        """Return the STILT-R simulation ID (the receptor id)."""
+        return str(self.make_receptor().id)
 
 
 # ---------------------------------------------------------------------------

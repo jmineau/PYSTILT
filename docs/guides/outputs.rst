@@ -1,10 +1,15 @@
 Load And Plot Results
 =====================
 
-Every simulation produces two things:
+A simulation is one receptor run under one variant (:doc:`configuration`).
+It produces up to two things:
 
-- a **footprint** for each footprint name in your settings (NetCDF files),
-- the **trajectories**: every particle's path (a Parquet file).
+- the **trajectories**: every particle's path (a Parquet file),
+- the **footprint**, when the variant has a grid (a NetCDF file).
+
+A variant declared with ``from:`` has no trajectories of its own: its
+footprint is made from another variant's particles, and
+``sim.trajectories`` returns those.
 
 This page shows how to look at them, load them for analysis, and add
 footprints up over areas you care about.
@@ -19,18 +24,19 @@ Open the project, pick a simulation, and plot:
    import stilt
 
    model = stilt.Model(project="./my_project")
-   sim = next(model.simulations.values())      # the first simulation
+   sim = next(iter(model.simulations))          # the first simulation
 
-   sim.get_footprint("slv").plot.map()          # footprint, summed over time
+   sim.footprint.plot.map()                     # footprint, summed over time
    sim.trajectories.plot.map()                  # particle paths
-   sim.plot.map("slv")                          # receptor, particles, and footprint together
+   sim.plot.map()                               # receptor, particles, and footprint together
 
-To pick a particular simulation, index by its ID:
+To pick a particular simulation, index by receptor id and variant:
 
 .. code-block:: python
 
-   model.simulations.keys()                     # all simulation IDs
-   sim = model.simulations["hrrr_202307151800_-111.848_40.766_10"]
+   model.simulations.keys()                     # all (receptor, variant) ids
+   sim = model.simulations["202307151800_-111.848_40.766_10", "hrrr"]
+   sim = model.simulations["202307151800_-111.848_40.766_10/hrrr"]   # same thing
 
 Plotting needs the ``visualization`` extra. With cartopy installed, maps get
 coastlines and state borders. Other plots:
@@ -45,7 +51,7 @@ Footprints
 
 .. code-block:: python
 
-   foot = sim.get_footprint("slv")      # None if it doesn't exist yet
+   foot = sim.footprint                 # None if it doesn't exist yet
    foot.data                            # an xarray.DataArray
    foot.time_range                      # (start, end) of the footprint's hours
    foot.receptor                        # the receptor it belongs to
@@ -63,32 +69,45 @@ To open a footprint file directly, without a model:
 
 .. code-block:: python
 
-   foot = stilt.Footprint.from_netcdf("path/to/..._slv_foot.nc")
+   foot = stilt.Footprint.from_netcdf("path/to/..._foot.nc")
 
 Each file also records the receptor and the settings used to make it.
 
 Many simulations at once
 ------------------------
 
-``model.footprints`` and ``model.trajectories`` work across the whole
-project:
+``model.simulations`` is every receptor under every variant. Narrow it
+with ``sel`` and take an output from the result:
 
 .. code-block:: python
 
-   footprints = model.footprints["slv"].load()           # list of Footprint
-   paths = model.footprints["slv"].paths()               # file paths only
-   not_done = model.footprints["slv"].missing()          # simulation IDs
-
-   trajectories = model.trajectories.load()
-
-All of these accept filters:
-
-.. code-block:: python
-
-   model.footprints["slv"].load(
-       mets="hrrr",
-       time_range=("2023-07-01", "2023-07-31 23:00"),   # receptor times, inclusive
+   sims = model.simulations.sel(
+       variant="hrrr",
+       time=slice("2023-07-01", "2023-07-31 23:00"),    # receptor times, inclusive
    )
+   footprints = sims.footprint.load()                   # list of Footprint
+   paths = sims.footprint.paths()                       # file paths only
+   trajectories = sims.trajectories.load()
+
+``sel`` takes ``receptor``, ``variant``, ``time``, ``location`` (a location
+id or several), and ``where`` (a function of the receptor); each call
+narrows the one before, and every argument accepts one value or a list.
+A realization group's name selects all of its realizations
+(``sel(variant="hrrr-err")``). ``model.footprint`` and
+``model.trajectories`` are shorthands for the whole project.
+
+To see what is left to do:
+
+.. code-block:: python
+
+   model.simulations.incomplete()                        # a selection, like sel()
+   model.simulations.sel(variant="hrrr").footprint.missing()
+   model.simulations.status()                            # a DataFrame, one row per simulation
+
+``status()`` has a ``trajectory`` and a ``footprint`` column, empty where
+the variant does not produce that output, and a ``complete`` column. It
+checks every simulation, so it takes a while on a large project stored in
+the cloud. ``stilt status`` prints the totals.
 
 Trajectories
 ------------
@@ -135,7 +154,7 @@ Empty footprints
 
 Sometimes a simulation runs fine but no particle ever reaches the footprint
 grid, usually because the grid is too small or is not upwind. PYSTILT then
-writes a small ``<simulation id>_<name>_foot.empty`` file instead of a NetCDF.
+writes a small ``<receptor id>_foot.empty`` file instead of a NetCDF.
 The simulation counts as finished (so reruns skip it), but ``load()`` and
 ``paths()`` leave it out because there is nothing to load. If you see many
 of these, make your footprint grid bigger.

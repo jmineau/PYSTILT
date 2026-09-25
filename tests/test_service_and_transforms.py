@@ -5,9 +5,9 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from stilt.config import FootprintConfig, ModelConfig
+from stilt.config import ModelConfig
 from stilt.errors import ConfigValidationError
-from stilt.execution import pull_simulations
+from stilt.execution import pull_receptors
 from stilt.model import Model
 from stilt.transforms import FirstOrderLifetime
 
@@ -20,12 +20,12 @@ def _footprint_total(footprint) -> float:
 
 
 @integration
-def test_pull_simulations_requires_runtime_queue_backend(
+def test_pull_receptors_requires_runtime_queue_backend(
     tmp_path,
     wbb_receptor,
     wbb_config,
 ):
-    """pull_simulations should fail clearly when no Postgres work queue is configured."""
+    """pull_receptors should fail clearly when no Postgres work queue is configured."""
     model = Model(
         project=tmp_path / "service_queue",
         config=wbb_config,
@@ -41,7 +41,7 @@ def test_pull_simulations_requires_runtime_queue_backend(
     assert pending.completed == 0
 
     with pytest.raises(ConfigValidationError, match="Postgres work queue"):
-        pull_simulations(model, poll_interval=0.1)
+        pull_receptors(model, poll_interval=0.1)
 
 
 @integration
@@ -62,12 +62,13 @@ def test_declarative_transform_config_changes_real_footprint(
         },
         n_hours=-6,
         numpar=100,
-        footprints={
-            "baseline": FootprintConfig(grid=wbb_grid),
-            "lifetime": FootprintConfig(
-                grid=wbb_grid,
-                transforms=[FirstOrderLifetime(lifetime_hours=1.0)],
-            ),
+        grid=wbb_grid,
+        variants={
+            "hrrr": {},
+            "lifetime": {
+                "from": "hrrr",
+                "transforms": [FirstOrderLifetime(lifetime_hours=1.0)],
+            },
         },
     )
 
@@ -78,8 +79,8 @@ def test_declarative_transform_config_changes_real_footprint(
     )
     model.run()
 
-    [baseline] = model.footprints["baseline"].load()
-    [lifetime] = model.footprints["lifetime"].load()
+    [baseline] = model.simulations.sel(variant="hrrr").footprint.load()
+    [lifetime] = model.simulations.sel(variant="lifetime").footprint.load()
 
     assert len(lifetime.config.transforms) == 1
 

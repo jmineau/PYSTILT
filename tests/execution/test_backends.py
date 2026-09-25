@@ -34,26 +34,26 @@ class _FakeModel:
 @pytest.fixture
 def local_calls(monkeypatch):
     """
-    Capture the run_simulations call made on the executor's worker thread.
+    Capture the run_receptors call made on the executor's worker thread.
 
-    ``local.py`` imports ``Model`` from ``stilt.model`` and ``run_simulations``
+    ``local.py`` imports ``Model`` from ``stilt.model`` and ``run_receptors``
     from ``stilt.execution.worker`` lazily inside the thread, so patching those
     module attributes is enough.
     """
     calls: list[dict] = []
 
-    def fake_run_simulations(model, sim_ids, *, n_cores=1, skip_existing=None):
+    def fake_run_receptors(model, receptor_ids, *, n_cores=1, skip_existing=None):
         calls.append(
             {
                 "model": model,
-                "sim_ids": sim_ids,
+                "receptor_ids": receptor_ids,
                 "n_cores": n_cores,
                 "skip_existing": skip_existing,
             }
         )
 
     monkeypatch.setattr("stilt.model.Model", _FakeModel)
-    monkeypatch.setattr("stilt.execution.worker.run_simulations", fake_run_simulations)
+    monkeypatch.setattr("stilt.execution.worker.run_receptors", fake_run_receptors)
     return calls
 
 
@@ -74,7 +74,7 @@ def test_local_executor_start_runs_simulations_on_worker_thread(tmp_path, local_
     assert isinstance(call["model"], _FakeModel)
     assert call["model"].project == str(tmp_path)
     assert call["model"].compute_root == "/scratch/pystilt"
-    assert call["sim_ids"] == ["sim-a", "sim-b"]
+    assert call["receptor_ids"] == ["sim-a", "sim-b"]
     assert call["n_cores"] == 1
     assert call["skip_existing"] is False
 
@@ -83,14 +83,12 @@ def test_local_executor_start_returns_before_work_finishes(tmp_path, monkeypatch
     release = threading.Event()
     started = threading.Event()
 
-    def blocking_run_simulations(model, sim_ids, *, n_cores=1, skip_existing=None):
+    def blocking_run_receptors(model, receptor_ids, *, n_cores=1, skip_existing=None):
         started.set()
         release.wait(timeout=5)
 
     monkeypatch.setattr("stilt.model.Model", _FakeModel)
-    monkeypatch.setattr(
-        "stilt.execution.worker.run_simulations", blocking_run_simulations
-    )
+    monkeypatch.setattr("stilt.execution.worker.run_receptors", blocking_run_receptors)
 
     handle = LocalExecutor(n_workers=1).start(["sim-a"], project=str(tmp_path))
 
@@ -133,13 +131,11 @@ def test_local_executor_start_noops_when_pending_is_empty(tmp_path, local_calls)
 
 
 def test_local_executor_wait_reraises_worker_exception(tmp_path, monkeypatch):
-    def failing_run_simulations(model, sim_ids, *, n_cores=1, skip_existing=None):
+    def failing_run_receptors(model, receptor_ids, *, n_cores=1, skip_existing=None):
         raise RuntimeError("worker boom")
 
     monkeypatch.setattr("stilt.model.Model", _FakeModel)
-    monkeypatch.setattr(
-        "stilt.execution.worker.run_simulations", failing_run_simulations
-    )
+    monkeypatch.setattr("stilt.execution.worker.run_receptors", failing_run_receptors)
 
     handle = LocalExecutor(n_workers=1).start(["sim-a"], project=str(tmp_path))
 

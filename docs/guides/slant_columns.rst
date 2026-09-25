@@ -108,11 +108,8 @@ particles before they become a footprint (:doc:`../advanced/transforms`):
 
 .. code-block:: yaml
 
-   footprints:
-     column:
-       grid: slv
-       transforms:
-         - kind: pressure_weighting
+   transforms:
+     - kind: pressure_weighting
 
 ``pressure_weighting`` is derived from the particles and needs nothing
 supplied. The weights sum to the fraction of the atmosphere's mass the
@@ -143,14 +140,11 @@ table keyed by receptor, with
 
 .. code-block:: yaml
 
-   footprints:
-     column:
-       grid: slv
-       transforms:
-         - kind: averaging_kernel
-           table: kernels.parquet
-           coordinate: pres
-         - kind: pressure_weighting
+   transforms:
+     - kind: averaging_kernel
+       table: kernels.parquet
+       coordinate: pres
+     - kind: pressure_weighting
 
 The kernel's ``levels`` are heights above ground by default; the GGG kernel
 sits on pressures, hence ``coordinate: pres``. If one kernel is a good

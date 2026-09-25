@@ -10,8 +10,6 @@ import pandas as pd
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
-from stilt.simulation import SimID
-
 if TYPE_CHECKING:
     import cartopy  # type: ignore[import-untyped]
 
@@ -493,7 +491,6 @@ class SimulationPlotAccessor:
 
     def map(
         self,
-        foot_name: str = "",
         show_traj: bool = True,
         show_receptor: bool = True,
         log: bool = True,
@@ -515,8 +512,6 @@ class SimulationPlotAccessor:
 
         Parameters
         ----------
-        foot_name : str
-            Name of the footprint to display (default ``""``).
         show_traj : bool
             Overlay particle trajectory scatter if trajectories exist.
         show_receptor : bool
@@ -546,7 +541,7 @@ class SimulationPlotAccessor:
         Axes
         """
         sim = self._sim
-        foot = sim.get_footprint(foot_name)
+        foot = sim.footprint
         traj = sim.trajectories
 
         # Determine map extent: prefer footprint grid, fall back to traj bounds
@@ -647,16 +642,15 @@ class ModelPlotAccessor:
             fig = plt.gcf()
         assert ax is not None
 
-        sim_ids = self._model.simulations.keys()
-        if not sim_ids:
+        receptors = list(self._model.receptors)
+        if not receptors:
             return ax
 
-        for sim_id in sim_ids:
-            sid = SimID(sim_id)
+        for receptor in receptors:
             ax.barh(  # type: ignore[arg-type]
-                y=sid.location,
+                y=receptor.location_id,
                 width=pd.Timedelta(hours=1),  # type: ignore[arg-type]
-                left=sid.time,  # type: ignore[arg-type]
+                left=receptor.time,  # type: ignore[arg-type]
                 height=0.6,
                 align="center",
                 edgecolor="black",

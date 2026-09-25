@@ -158,7 +158,7 @@ def test_context_receptor_reaches_transforms(point_receptor):
 
     class Recorder:
         def apply(self, particles, context):
-            seen.append((context.receptor, context.is_error))
+            seen.append(context.receptor)
             return particles
 
     p = _column(n_levels=1, per_level=10)
@@ -170,7 +170,7 @@ def test_context_receptor_reaches_transforms(point_receptor):
         context=TransformContext(receptor=point_receptor),
     )
 
-    assert seen == [(point_receptor, False), (point_receptor, True)]
+    assert seen == [point_receptor, point_receptor]
 
 
 def test_rejects_bad_arguments():

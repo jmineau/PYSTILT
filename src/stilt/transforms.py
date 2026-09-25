@@ -5,20 +5,17 @@ A transform is any object with ``apply(particles, context) -> DataFrame``.
 The built-in ones are pydantic models whose fields are their ``config.yaml``
 keys, so the same object describes the transform and performs it::
 
-    footprints:
-      column:
-        grid: slv
-        transforms:
-          - kind: averaging_kernel
-            levels: [0, 500, 1000]
-            values: [1.0, 0.9, 0.7]
-          - kind: pressure_weighting
+    transforms:
+      - kind: averaging_kernel
+        levels: [0, 500, 1000]
+        values: [1.0, 0.9, 0.7]
+      - kind: pressure_weighting
 
 An averaging kernel that differs per receptor (every satellite sounding has
 its own) comes from a table in the project instead::
 
-          - kind: averaging_kernel
-            table: kernels.parquet
+      - kind: averaging_kernel
+        table: kernels.parquet
 
 A ``kind`` containing a dot is an import path to a user-defined transform
 class (see the *Custom transforms* guide). Transforms run once, in list order,
@@ -60,16 +57,14 @@ class TransformContext:
     What a transform may know about the footprint it is applied for.
 
     ``receptor`` is the receptor the particles were released from (its ``id``
-    keys per-receptor inputs such as an averaging-kernel table),
-    ``footprint_name`` the footprint being generated, ``is_error`` whether
-    these are the error trajectories, and ``store`` the project store, so
-    files named relative to the project root can be found wherever the
-    footprint is generated.
+    keys per-receptor inputs such as an averaging-kernel table), ``variant``
+    the variant the footprint is generated for, and ``store`` the project
+    store, so files named relative to the project root can be found wherever
+    the footprint is generated.
     """
 
     receptor: Receptor
-    footprint_name: str = ""
-    is_error: bool = False
+    variant: str = ""
     store: Store | None = None
 
 

@@ -42,25 +42,31 @@ Glossary
 
    met name
       The name you give a meteorology source in your settings, such as
-      ``hrrr``. It becomes the first part of each :term:`simulation ID`, so
-      the same receptor can be run with several meteorology products side by
-      side.
+      ``hrrr``. With no :term:`variants <variant>` declared, each met source
+      is a variant of the same name, so the same receptor can be run with
+      several meteorology products side by side.
+
+   variant
+      One named set of settings every receptor is run under: a met source
+      plus any settings that differ from the defaults in ``config.yaml``,
+      such as a different ``ziscale``, a wind-error run, or another
+      footprint grid. See :doc:`../guides/configuration`.
 
    HYSPLIT
       NOAA's particle transport program, written in Fortran. PYSTILT runs it
       to move particles and includes a copy for Linux and macOS (Intel).
 
    simulation
-      One receptor run with one meteorology source: one set of trajectories
-      and its footprints. A project with 100 receptors and 2 met sources has
-      200 simulations.
+      One receptor run under one :term:`variant`: one set of trajectories and
+      at most one footprint. A project with 100 receptors and 3 variants has
+      300 simulations.
 
    simulation ID
       The name of a simulation and of its output folder, such as
-      ``hrrr_202307151800_-111.848_40.766_10``: met name, receptor time
-      (``YYYYMMDDHHMM``), then longitude, latitude, and altitude. Column
-      receptors end in ``_X``; multipoint receptors use a short hash instead
-      of coordinates.
+      ``202307151800_-111.848_40.766_10/hrrr``: the receptor id (receptor
+      time as ``YYYYMMDDHHMM``, then longitude, latitude, and altitude), a
+      slash, and the variant. Column receptors end in ``_X``; multipoint
+      receptors use a short hash instead of coordinates.
 
    project
       A folder holding your settings (``config.yaml``), your receptors

@@ -23,9 +23,7 @@ class _StopDriver:
     def prepare(self):
         pass
 
-    def execute(
-        self, timeout=None, rm_dat=None, error_only=False, error_realizations=(0,)
-    ):
+    def execute(self, timeout=None, rm_dat=None):
         _StopDriver.seen["timeout"] = timeout
         raise RuntimeError("stop before running HYSPLIT")
 
@@ -40,13 +38,11 @@ def sim(monkeypatch, tmp_path):
         s = object.__new__(simmod.Simulation)
         s.directory = tmp_path
         s.receptor = None
+        s.parent = None
         s.params = STILTParams(timeout=timeout)
         s._exe_dir = None
         monkeypatch.setattr(
             type(s), "met_files", property(lambda self: []), raising=False
-        )
-        monkeypatch.setattr(
-            type(s), "_can_reuse_main_for_error", lambda self: False, raising=False
         )
         return s
 

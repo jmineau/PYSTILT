@@ -13,20 +13,31 @@ part of its model-data mismatch for each observation.
 Run with wind errors
 --------------------
 
-Give the transport the error statistics of the meteorology in
-``config.yaml`` (the same names as STILT-R):
+The perturbed run is a :doc:`variant <configuration>` of its own: the same
+receptors under the same meteorology, with the error statistics of that
+meteorology added (the same names as STILT-R):
 
 .. code-block:: yaml
 
-   siguverr: 2.6        # wind speed error, m/s
-   tluverr: 260         # its correlation time, min
-   zcoruverr: 450       # its vertical correlation length, m
-   horcoruverr: 14      # its horizontal correlation length, km
+   variants:
+     hrrr: {}                 # the unperturbed run
+     hrrr-err:                # the same run with perturbed winds
+       siguverr: 2.6          # wind speed error, m/s
+       tluverr: 260           # its correlation time, min
+       zcoruverr: 450         # its vertical correlation length, m
+       horcoruverr: 14        # its horizontal correlation length, km
+       grid: null             # particles only; transport_error needs no footprint
 
-Every simulation then writes a second particle table next to the main one,
-``sim.error_trajectories``, whose particles saw the perturbed winds. Mixed
-layer height errors (``sigzierr``, ``tlzierr``, ``horcorzierr``) are set
-the same way, but HYSPLIT applies them differently: each particle's
+Every receptor then has a second simulation whose particles saw the
+perturbed winds, ``model.simulations[rid, "hrrr-err"].trajectories``. It is
+an ordinary HYSPLIT run with its own directory, log, and ``WINDERR`` file,
+so it can be added to a finished project later: only the new variant runs.
+Leave ``grid`` set on the error variant if you want a perturbed footprint
+for plotting; nothing below needs one. The error run doubles the transport
+cost.
+
+Mixed layer height errors (``sigzierr``, ``tlzierr``, ``horcorzierr``) are
+set the same way, but HYSPLIT applies them differently: each particle's
 footprint increment is multiplied by an independent random factor with that
 standard deviation, and its path is unchanged. Because the factors are
 independent between particles, their effect on the receptor enhancement
@@ -35,9 +46,6 @@ with the sampling noise of a few thousand particles. PYSTILT's validation
 could not resolve a 50 % mixed-layer error with 3 000 particles. For an
 error shared by every particle, scale the mixed layer instead
 (`Mixed-layer height`_).
-``FootprintConfig.error: true`` also rasterizes the perturbed
-particles as an ``{name}_error`` footprint, which is handy for plotting but
-not needed for what follows. The error run doubles the transport cost.
 
 **The correlation scales decide whether there is anything to measure.**
 HYSPLIT decorrelates the wind error both over time (``tluverr``) and over
@@ -57,15 +65,19 @@ Several realizations
 ~~~~~~~~~~~~~~~~~~~~
 
 One error run is one draw of the perturbation field, and its variance
-estimate carries the sampling noise of that draw. Ask for several:
+estimate carries the sampling noise of that draw. Ask for several on the
+error variant:
 
 .. code-block:: yaml
 
-   error_realizations: 4
+   hrrr-err:
+     siguverr: 2.6
+     # ...
+     realizations: 4          # hrrr-err-0 .. hrrr-err-3
 
-Each simulation then runs the perturbed transport that many times and
-writes ``sim.error_trajectories_path(k)`` for each. Only the perturbed
-runs repeat; the main run is shared. Each realization needs its own draw
+The variant then runs four times per receptor, as four simulations named
+``hrrr-err-0`` to ``hrrr-err-3``. Only the perturbed runs repeat; the
+unperturbed ``hrrr`` run is shared. Each realization needs its own draw
 of the perturbation field, and there are two ways to get one:
 
 - ``krand: 4`` (the default). HYSPLIT seeds every run from the clock, so
@@ -74,15 +86,18 @@ of the perturbation field, and there are two ways to get one:
   chance that two realizations are bit-identical copies; at the ``N`` of
   a few used here that chance is negligible.
 - ``krand: 2`` with a ``seed``. PYSTILT runs realization ``k`` with the
-  seed ``seed + k``: realization 0 shares the main run's seed, as
+  seed ``seed + k``: realization 0 shares the unperturbed run's seed, as
   STILT-R's error run does, and the others differ from it and from each
   other. A rerun reproduces every one of them bit for bit.
 
 Any other combination would repeat the same field ``N`` times, and
-PYSTILT refuses it when it reads the config. A simulation is complete
-when every realization exists, and ``skip_existing`` reruns only the
-realizations that are missing, so a preempted job picks up where it
-stopped.
+PYSTILT refuses it when it reads the config. Each realization is its own
+simulation, so ``skip_existing`` reruns only the ones that are missing and
+a preempted job picks up where it stopped. Raising ``realizations`` later
+adds simulations and touches nothing that exists, with one catch: going
+from 1 to more renames the single run ``hrrr-err`` to ``hrrr-err-0``, so
+PYSTILT sees ``hrrr-err-0`` as new. Declare ``realizations`` up front if
+you expect to want more than one.
 
 Pass the whole set to :func:`~stilt.observations.transport_error` as a
 list. It averages each level's perturbed mean and variance over the
@@ -90,9 +105,10 @@ realizations before taking the difference:
 
 .. code-block:: python
 
+   sims = model.simulations.sel(receptor=rid)
    err = transport_error(
-       sim.trajectories.data,
-       [t.data for t in sim.all_error_trajectories],
+       sims[rid, "hrrr"].trajectories.data,
+       [t.data for t in sims.sel(variant="hrrr-err").trajectories.load()],
        flux,
    )
    err.realizations  # 4
@@ -119,7 +135,7 @@ cell outside the flux field contributes nothing.
 .. code-block:: python
 
    flux = xr.open_dataarray("ch4_flux.nc")          # µmol m⁻² s⁻¹ on lat/lon
-   foot = model.simulations[sim_id].get_footprint("column")
+   foot = model.simulations[rid, "hrrr"].footprint
    enhancement = foot.enhancement(flux)             # ppm per footprint time step
    total = float(enhancement.sum())
 
@@ -155,24 +171,23 @@ quadrature for the error budget of a modelled value.
 The transport error
 -------------------
 
-:func:`~stilt.observations.transport_error` takes a simulation's two
-particle tables and the flux field:
+:func:`~stilt.observations.transport_error` takes the unperturbed and
+perturbed particle tables of one receptor and the flux field:
 
 .. code-block:: python
 
    import pandas as pd
    from stilt.observations import transport_error
 
-   config = model.config.footprints["column"]
    rows = []
-   for sim_id in model.simulations.ids(footprint="column"):
-       sim = model.simulations[sim_id]
+   for sim in model.simulations.sel(variant="hrrr"):
+       err = model.simulations[sim.id.receptor, "hrrr-err"]
        result = transport_error(
            sim.trajectories.data,
-           sim.error_trajectories.data,
+           err.trajectories.data,
            flux,
-           transforms=config.transforms,
-           context=sim.transform_context("column"),
+           transforms=sim.footprint_config.transforms,
+           context=sim.transform_context(),
        )
        rows.append({"receptor": sim.receptor.id, "enhancement": result.enhancement,
                     "variance": result.variance, "noise": result.noise})
@@ -260,18 +275,21 @@ A real error in the mixed-layer height is shared: every particle in the
 valley sees the same layer that is too shallow or too deep. ``ziscale``
 represents that. It multiplies HYSPLIT's mixed-layer height by one factor
 for every particle, and runs with factors above and below 1.0 show how
-sensitive the enhancement is to the mixed layer.
+sensitive the enhancement is to the mixed layer. Declare the bracket as
+variants of the same project:
 
 .. code-block:: yaml
 
-   ziscale: 0.8     # every hour of the run; a list gives one factor per hour
+   variants:
+     hrrr: {}
+     hrrr-zi06: {ziscale: 0.6}   # every hour of the run; a list gives one factor per hour
+     hrrr-zi14: {ziscale: 1.4}
 
-Three things to know before running a bracket:
+Two things to know before running a bracket:
 
-- Changing ``ziscale`` in an existing project reruns nothing. A simulation
-  is identified by its receptor and meteorology, not by the settings, so
-  the finished ones count as complete. Run each factor as its own project
-  over the same receptors.
+- Under ``krand: 2`` with a ``seed``, every variant draws the same
+  turbulence, so the difference between variants is the mixed layer alone.
+  Without a seed each run adds its own sampling noise to the difference.
 - HYSPLIT applies ``kmix0`` (150 m by default) after the factor, so a mixed
   layer already at that floor is not lowered further. The hours above it
   still are.

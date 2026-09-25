@@ -50,17 +50,15 @@ The background at a receptor
 
    from stilt.observations import background
 
-   config = model.config.footprints["column"]
    rows = []
-   for sim_id in model.simulations.ids(footprint="column"):
-       sim = model.simulations[sim_id]
+   for sim in model.simulations.sel(variant="hrrr"):
        bg = background(
            sim.trajectories.data,
            field,
-           transforms=config.transforms,
-           context=sim.transform_context("column"),
+           transforms=sim.footprint_config.transforms,
+           context=sim.transform_context(),
        )
-       enhancement = float(sim.get_footprint("column").enhancement(flux).sum())
+       enhancement = float(sim.footprint.enhancement(flux).sum())
        rows.append({"receptor": sim.receptor.id, "background": bg.value,
                     "enhancement": enhancement, "modelled": bg.value + enhancement})
 
@@ -98,9 +96,10 @@ background per particle:
 
 .. code-block:: python
 
+   err = model.simulations[sim.id.receptor, "hrrr-err"]
    result = transport_error(
-       sim.trajectories.data, sim.error_trajectories.data, flux,
-       transforms=config.transforms, context=sim.transform_context("column"),
+       sim.trajectories.data, err.trajectories.data, flux,
+       transforms=sim.footprint_config.transforms, context=sim.transform_context(),
        background=field,
    )
    result.enhancement - result.background   # the enhancement alone

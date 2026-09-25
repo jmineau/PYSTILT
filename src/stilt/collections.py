@@ -1,25 +1,24 @@
 """
 Science-facing collection objects for STILT models.
 
-``SimulationCollection`` is the one query surface: the registered set is
-``receptors × mets``, every filter lives here, and every cross-simulation
-question (which are complete, which paths exist, load them all) is answered
-by asking each :class:`~stilt.simulation.Simulation` handle. The trajectory
-and footprint collections are thin views over it.
+``SimulationCollection`` is the one query surface: an ordered selection over
+the registered set ``receptors × variants``, narrowed by :meth:`sel`. Every
+cross-simulation question (which are complete, which outputs exist, load
+them all) is answered by asking each :class:`~stilt.simulation.Simulation`
+handle. ``OutputCollection`` is the view of one output over a selection.
 """
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Iterator
+from collections.abc import Callable, Iterable, Iterator
 from pathlib import Path
-from typing import TYPE_CHECKING, cast, overload
+from typing import TYPE_CHECKING, overload
 
 import pandas as pd
 
-from stilt.errors import ConfigValidationError
 from stilt.footprint import Footprint
 from stilt.receptors import PointReceptor, Receptor, read_receptors
-from stilt.simulation import ERROR_TRAJECTORY, TRAJECTORY, SimID, Simulation
+from stilt.simulation import FOOTPRINT, TRAJECTORY, SimID, Simulation
 from stilt.trajectory import Trajectories
 
 if TYPE_CHECKING:
@@ -32,7 +31,7 @@ class ReceptorCollection:
     Sequence of receptors with positional and receptor-id access.
 
     Access by position (``receptors[0]``, ``receptors[:3]``) or by receptor
-    identifier (``receptors[sim_id.receptor]``).
+    identifier (``receptors[sim_id.receptor]``). :meth:`sel` narrows.
 
     Parameters
     ----------
@@ -122,6 +121,37 @@ class ReceptorCollection:
             self._by_id = {r.id: r for r in self._load()}
         return self._by_id
 
+    def sel(
+        self,
+        *,
+        time: slice | tuple | str | pd.Timestamp | None = None,
+        location: str | Iterable[str] | None = None,
+        where: Callable[[Receptor], bool] | None = None,
+    ) -> ReceptorCollection:
+        """
+        Return the receptors matching every given filter.
+
+        Parameters
+        ----------
+        time
+            A ``slice(start, stop)`` or ``(start, stop)`` pair of inclusive
+            bounds, or one timestamp.
+        location
+            One location id or several.
+        where
+            Predicate on the :class:`~stilt.Receptor`.
+        """
+        items = list(self._load())
+        if time is not None:
+            start, stop = _time_bounds(time)
+            items = [r for r in items if start <= pd.Timestamp(r.time) <= stop]
+        if location is not None:
+            wanted = {location} if isinstance(location, str) else set(location)
+            items = [r for r in items if r.location_id in wanted]
+        if where is not None:
+            items = [r for r in items if where(r)]
+        return ReceptorCollection(items, project=self._project)
+
     @overload
     def __getitem__(self, item: int | str) -> Receptor: ...
 
@@ -148,331 +178,225 @@ class ReceptorCollection:
         return len(self._load())
 
 
+def _timestamp(value: object) -> pd.Timestamp:
+    """Parse one time-selector bound; NaT is not a bound."""
+    ts = pd.Timestamp(value)  # type: ignore[arg-type]
+    if not isinstance(ts, pd.Timestamp):
+        raise ValueError(f"Not a time: {value!r}")
+    return ts
+
+
 def _time_bounds(
-    time_range: tuple | None,
-) -> tuple[pd.Timestamp, pd.Timestamp] | None:
-    """Normalise a time range into a pair of timestamps."""
-    if time_range is None:
-        return None
-    return cast(pd.Timestamp, pd.Timestamp(time_range[0])), cast(
-        pd.Timestamp, pd.Timestamp(time_range[1])
-    )
+    time: slice | tuple | str | pd.Timestamp,
+) -> tuple[pd.Timestamp, pd.Timestamp]:
+    """Normalise a time selector into inclusive ``(start, stop)`` timestamps."""
+    if isinstance(time, slice):
+        start, stop = time.start, time.stop
+    elif isinstance(time, tuple):
+        start, stop = time
+    else:
+        start = stop = time
+    lo = _timestamp(start) if start is not None else pd.Timestamp.min
+    hi = _timestamp(stop) if stop is not None else pd.Timestamp.max
+    return lo, hi
 
 
 class SimulationCollection:
     """
-    The simulations a model defines: its receptors crossed with its met streams.
+    An ordered selection of a model's simulations (``receptors × variants``).
 
-    Mapping-like over simulation ids. Handles are built lazily and cached, and
-    building one has no side effects on disk.
+    ``model.simulations`` is the whole registered set; :meth:`sel`,
+    :meth:`incomplete` and :meth:`OutputCollection.missing` return narrower
+    collections, so filters compose. Handles are built lazily and cached on
+    the model; building one has no side effects on disk.
     """
 
-    def __init__(self, model: Model):
+    def __init__(self, model: Model, keys: list[SimID] | None = None):
         self._model = model
-        self._cache: dict[str, Simulation] = {}
+        self._keys = keys
 
     # -- registered set --------------------------------------------------------
 
-    def _pairs(self) -> Iterator[tuple[SimID, Receptor]]:
-        """Yield every (simulation id, receptor) pair, receptors times mets."""
-        for met in self._model.mets:
-            for receptor in self._model.receptors:
-                yield SimID.from_parts(met, receptor), receptor
+    def keys(self) -> list[SimID]:
+        """The selected simulation ids, receptor-major, variants in config order."""
+        if self._keys is None:
+            self._keys = [
+                SimID(receptor.id, variant)
+                for receptor in self._model.receptors
+                for variant in self._model.variants
+            ]
+        return list(self._keys)
 
-    def keys(self) -> list[str]:
-        """Return every simulation id (receptors × mets), sorted."""
-        return sorted(str(sim_id) for sim_id, _ in self._pairs())
-
-    def __iter__(self) -> Iterator[str]:
-        return iter(self.keys())
+    def __iter__(self) -> Iterator[Simulation]:
+        return (self[key] for key in self.keys())
 
     def __len__(self) -> int:
-        return len(self._model.mets) * len(self._model.receptors)
+        return len(self.keys())
 
-    def __contains__(self, sim_id: object) -> bool:
-        if not isinstance(sim_id, str):
-            return False
+    def __contains__(self, key: object) -> bool:
         try:
-            sid = SimID(sim_id)
-        except ValueError:
+            sid = SimID.parse(key)  # type: ignore[arg-type]
+        except (ValueError, TypeError):
             return False
-        return sid.met in self._model.mets and sid.receptor in self._model.receptors
+        return sid in self.keys()
 
-    def __getitem__(self, sim_id: str) -> Simulation:
-        if sim_id not in self._cache:
-            self._cache[sim_id] = self._model.simulation(sim_id)
-        return self._cache[sim_id]
+    def __getitem__(self, key: str | SimID | tuple[str, str]) -> Simulation:
+        sid = SimID.parse(key)
+        if sid not in self.keys():
+            raise KeyError(str(sid))
+        return self._model.simulation(sid)
 
-    def items(self) -> Iterator[tuple[str, Simulation]]:
-        """Yield ``(sim_id, Simulation)`` pairs."""
-        return ((sid, self[sid]) for sid in self)
+    @property
+    def receptors(self) -> list[str]:
+        """Receptor ids in the selection, in order, without repeats."""
+        return list(dict.fromkeys(key.receptor for key in self.keys()))
 
-    def values(self) -> Iterator[Simulation]:
-        """Yield :class:`Simulation` handles."""
-        return (self[sid] for sid in self)
+    @property
+    def variants(self) -> list[str]:
+        """Variant names in the selection, in order, without repeats."""
+        return list(dict.fromkeys(key.variant for key in self.keys()))
 
-    # -- filtering -------------------------------------------------------------
+    # -- selection -------------------------------------------------------------
 
-    def _resolve_mets(self, mets: str | list[str] | None) -> set[str]:
-        """Resolve a met-name filter to a set of configured met streams."""
-        available = set(self._model.mets)
-        if mets is None:
-            return available
-        requested = {mets} if isinstance(mets, str) else set(mets)
-        missing = sorted(requested - available)
-        if missing:
-            raise ConfigValidationError(f"Unknown met name(s): {missing}")
-        return requested
-
-    def ids(
+    def sel(
         self,
-        mets: str | list[str] | None = None,
-        footprint: str | None = None,
-        time_range: tuple | None = None,
-        location_ids: set[str] | None = None,
-    ) -> list[str]:
+        *,
+        receptor: str | Iterable[str] | None = None,
+        variant: str | Iterable[str] | None = None,
+        time: slice | tuple | str | pd.Timestamp | None = None,
+        location: str | Iterable[str] | None = None,
+        where: Callable[[Receptor], bool] | None = None,
+    ) -> SimulationCollection:
         """
-        Return simulation ids matching the filters.
+        Narrow the selection.
 
         Parameters
         ----------
-        mets
-            Met stream name(s) to include. All configured streams by default.
-        footprint
-            When given, keep only simulations whose named footprint is complete.
-        time_range
-            ``(start, end)`` receptor-time bounds, inclusive.
-        location_ids
-            Receptor location ids to include.
+        receptor
+            One receptor id or several.
+        variant
+            One variant name or several. A realization group's name
+            (``hrrr-err``) selects every realization.
+        time, location, where
+            Receptor filters, as :meth:`ReceptorCollection.sel`.
         """
-        wanted_mets = self._resolve_mets(mets)
-        bounds = _time_bounds(time_range)
-        out: list[str] = []
-        for sid, receptor in self._pairs():
-            if sid.met not in wanted_mets:
-                continue
-            if bounds is not None:
-                t = pd.Timestamp(receptor.time)
-                if t < bounds[0] or t > bounds[1]:
-                    continue
-            if location_ids is not None and sid.location not in location_ids:
-                continue
-            if footprint is not None and not self[sid].has_footprint(footprint):
-                continue
-            out.append(str(sid))
-        return sorted(out)
-
-    def select(
-        self,
-        mets: str | list[str] | None = None,
-        footprint: str | None = None,
-        time_range: tuple | None = None,
-        location_ids: set[str] | None = None,
-    ) -> list[Simulation]:
-        """Return simulation handles matching the filters (see :meth:`ids`)."""
-        return [
-            self[sid]
-            for sid in self.ids(
-                mets=mets,
-                footprint=footprint,
-                time_range=time_range,
-                location_ids=location_ids,
-            )
-        ]
+        keys = self.keys()
+        if receptor is not None:
+            wanted = {receptor} if isinstance(receptor, str) else set(receptor)
+            keys = [k for k in keys if k.receptor in wanted]
+        if variant is not None:
+            wanted = {variant} if isinstance(variant, str) else set(variant)
+            groups = {name: v.group for name, v in self._model.variants.items()}
+            keys = [
+                k
+                for k in keys
+                if k.variant in wanted or groups.get(k.variant) in wanted
+            ]
+        if time is not None or location is not None or where is not None:
+            ids = {
+                r.id
+                for r in self._model.receptors.sel(
+                    time=time, location=location, where=where
+                )
+            }
+            keys = [k for k in keys if k.receptor in ids]
+        return SimulationCollection(self._model, keys)
 
     # -- completion ------------------------------------------------------------
 
-    def incomplete(
-        self,
-        mets: str | list[str] | None = None,
-        time_range: tuple | None = None,
-        location_ids: set[str] | None = None,
-    ) -> list[str]:
-        """
-        Return ids of simulations that have not produced every configured output.
-
-        Completion is decided by the outputs on disk (by key): the trajectory,
-        the error trajectory when wind-error params are set, and every
-        footprint in ``config.footprints``.
-        """
-        footprints = list(self._model.config.footprints)
-        return [
-            sid
-            for sid in self.ids(
-                mets=mets, time_range=time_range, location_ids=location_ids
-            )
-            if not self[sid].is_complete(footprints)
-        ]
-
-    def missing(
-        self,
-        output: str,
-        mets: str | list[str] | None = None,
-        time_range: tuple | None = None,
-        location_ids: set[str] | None = None,
-    ) -> list[str]:
-        """Return ids of matching simulations lacking one named output."""
-        return [
-            sid
-            for sid in self.ids(
-                mets=mets, time_range=time_range, location_ids=location_ids
-            )
-            if not self[sid].has_output(output)
-        ]
-
-    def paths(
-        self,
-        output: str,
-        mets: str | list[str] | None = None,
-        time_range: tuple | None = None,
-        location_ids: set[str] | None = None,
-    ) -> list[Path]:
-        """
-        Return local paths of one named output across matching simulations.
-
-        Only outputs that exist are returned; for footprints, empty markers
-        are skipped because there is no file to load.
-        """
-        out: list[Path] = []
-        for sim in self.select(
-            mets=mets, time_range=time_range, location_ids=location_ids
-        ):
-            path = sim.resolve(_output_path(sim, output))
-            if path is not None:
-                out.append(path)
-        return out
-
-
-def _output_path(sim: Simulation, output: str) -> Path:
-    """Return the path of one of a simulation's named outputs."""
-    if output == TRAJECTORY:
-        return sim.trajectories_path
-    if output == ERROR_TRAJECTORY:
-        return sim.error_trajectories_path()
-    return sim.footprint_path(output)
-
-
-class TrajectoryCollection:
-    """Cross-simulation accessor for trajectory parquet outputs."""
-
-    def __init__(self, model: Model):
-        self._sims = model.simulations
-
-    def paths(
-        self,
-        mets: str | list[str] | None = None,
-        time_range: tuple | None = None,
-        location_ids: set[str] | None = None,
-        *,
-        error: bool = False,
-    ) -> list[Path]:
-        """Return local paths of existing trajectory (or error-trajectory) files."""
-        return self._sims.paths(
-            ERROR_TRAJECTORY if error else TRAJECTORY,
-            mets=mets,
-            time_range=time_range,
-            location_ids=location_ids,
+    def incomplete(self) -> SimulationCollection:
+        """The simulations that have not produced every expected output."""
+        return SimulationCollection(
+            self._model, [key for key in self.keys() if not self[key].is_complete()]
         )
 
-    def load(
-        self,
-        mets: str | list[str] | None = None,
-        time_range: tuple | None = None,
-        location_ids: set[str] | None = None,
-        *,
-        error: bool = False,
-    ) -> list[Trajectories]:
-        """Load matching trajectories."""
-        return [
-            Trajectories.from_parquet(p)
-            for p in self.paths(
-                mets=mets, time_range=time_range, location_ids=location_ids, error=error
+    def status(self) -> pd.DataFrame:
+        """
+        One row per simulation with a column per output.
+
+        ``trajectory`` and ``footprint`` are ``True`` when the output exists,
+        ``False`` when it is expected and missing, and ``NA`` when the
+        simulation does not produce it. ``complete`` is the completion rule.
+        """
+        rows = []
+        for sim in self:
+            expected = sim.expected_outputs()
+            rows.append(
+                {
+                    "receptor": str(sim.id.receptor),
+                    "variant": sim.variant,
+                    TRAJECTORY: sim.has_trajectory if TRAJECTORY in expected else pd.NA,
+                    FOOTPRINT: sim.has_footprint if FOOTPRINT in expected else pd.NA,
+                    "complete": sim.is_complete(),
+                }
             )
-        ]
-
-    def missing(
-        self,
-        mets: str | list[str] | None = None,
-        time_range: tuple | None = None,
-        location_ids: set[str] | None = None,
-    ) -> list[str]:
-        """Return ids of matching simulations without a trajectory."""
-        return self._sims.missing(
-            TRAJECTORY, mets=mets, time_range=time_range, location_ids=location_ids
+        columns = ["receptor", "variant", TRAJECTORY, FOOTPRINT, "complete"]
+        return pd.DataFrame(rows, columns=columns).astype(
+            {TRAJECTORY: "boolean", FOOTPRINT: "boolean", "complete": "bool"}
         )
 
+    # -- outputs ---------------------------------------------------------------
 
-class NamedFootprintCollection:
-    """Cross-simulation accessor for one named footprint output."""
+    @property
+    def trajectories(self) -> OutputCollection:
+        """The trajectories of the selected simulations that run HYSPLIT."""
+        return OutputCollection(self, TRAJECTORY)
 
-    def __init__(self, model: Model, name: str):
-        self.name = name
-        self._sims = model.simulations
+    @property
+    def footprint(self) -> OutputCollection:
+        """The footprints of the selected simulations that produce one."""
+        return OutputCollection(self, FOOTPRINT)
 
-    def paths(
-        self,
-        mets: str | list[str] | None = None,
-        time_range: tuple | None = None,
-        location_ids: set[str] | None = None,
-    ) -> list[Path]:
-        """Return local paths of existing (non-empty) footprint files."""
-        return self._sims.paths(
-            self.name, mets=mets, time_range=time_range, location_ids=location_ids
+
+class OutputCollection:
+    """
+    One output (``trajectory`` or ``footprint``) over a simulation selection.
+
+    Covers only the simulations that produce the output: derived variants
+    have no trajectory of their own, and a variant without a grid has no
+    footprint.
+    """
+
+    def __init__(self, simulations: SimulationCollection, output: str):
+        if output not in (TRAJECTORY, FOOTPRINT):
+            raise ValueError(f"Unknown output {output!r}")
+        self._sims = simulations
+        self.output = output
+
+    def _producers(self) -> list[Simulation]:
+        """Simulations for which this output is expected."""
+        return [sim for sim in self._sims if self.output in sim.expected_outputs()]
+
+    def _path(self, sim: Simulation) -> Path:
+        return (
+            sim.trajectories_path if self.output == TRAJECTORY else sim.footprint_path
         )
 
-    def load(
-        self,
-        mets: str | list[str] | None = None,
-        time_range: tuple | None = None,
-        location_ids: set[str] | None = None,
-    ) -> list[Footprint]:
-        """Load matching footprints."""
-        return [
-            Footprint.from_netcdf(p)
-            for p in self.paths(
-                mets=mets, time_range=time_range, location_ids=location_ids
-            )
-        ]
+    def paths(self) -> list[Path]:
+        """
+        Local paths of the outputs that exist.
 
-    def missing(
-        self,
-        mets: str | list[str] | None = None,
-        time_range: tuple | None = None,
-        location_ids: set[str] | None = None,
-    ) -> list[str]:
-        """Return ids of matching simulations whose footprint is not complete."""
-        return self._sims.missing(
-            self.name, mets=mets, time_range=time_range, location_ids=location_ids
+        Empty footprints have no file, so they are not listed here; they still
+        count as complete (see :meth:`missing`).
+        """
+        found = (sim.resolve(self._path(sim)) for sim in self._producers())
+        return [path for path in found if path is not None]
+
+    def load(self) -> list[Trajectories] | list[Footprint]:
+        """Load every existing output."""
+        if self.output == TRAJECTORY:
+            return [Trajectories.from_parquet(p) for p in self.paths()]
+        return [Footprint.from_netcdf(p) for p in self.paths()]
+
+    def missing(self) -> SimulationCollection:
+        """The producing simulations whose output does not exist yet."""
+        return SimulationCollection(
+            self._sims._model,
+            [sim.id for sim in self._producers() if not sim.has_output(self.output)],
         )
-
-
-class FootprintCollection:
-    """Namespace of named footprint accessors: ``model.footprints["slv"]``."""
-
-    def __init__(self, model: Model):
-        self._model = model
-        self._cache: dict[str, NamedFootprintCollection] = {}
-
-    def __getitem__(self, name: str) -> NamedFootprintCollection:
-        if name not in self._cache:
-            self._cache[name] = NamedFootprintCollection(self._model, name)
-        return self._cache[name]
-
-    def __iter__(self) -> Iterator[str]:
-        return iter(self.names())
 
     def __len__(self) -> int:
-        return len(self.names())
-
-    def names(self) -> list[str]:
-        """Return the configured footprint names."""
-        return list(self._model.config.footprints)
+        return len(self._producers())
 
 
-__all__ = [
-    "FootprintCollection",
-    "NamedFootprintCollection",
-    "ReceptorCollection",
-    "SimulationCollection",
-    "TrajectoryCollection",
-]
+__all__ = ["OutputCollection", "ReceptorCollection", "SimulationCollection"]

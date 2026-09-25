@@ -29,9 +29,9 @@ import typer
 
 from stilt.execution import (
     get_executor,
-    pull_simulations,
+    pull_receptors,
     resolve_backend,
-    run_simulations,
+    run_receptors,
 )
 from stilt.model import Model
 from stilt.project import CONFIG_KEY, RECEPTORS_KEY, SIMULATIONS_PREFIX
@@ -61,16 +61,22 @@ mets:
     file_tres: 6h  # Hours each met file covers; the docs' HRRR files hold six.
 
 
-# Named footprint products to compute for each receptor.
-# For multiple footprints, define reusable top-level grids and reference them by name.
-footprints:
-  default:  # Name of this footprint product.
-    xmin: -113.0
-    xmax: -110.5
-    ymin: 40.0
-    ymax: 42.0
-    xres: 0.01
-    yres: 0.01
+# Footprint grid. Remove it (or set grid: null) for trajectory-only runs.
+grid:
+  xmin: -113.0
+  xmax: -110.5
+  ymin: 40.0
+  ymax: 42.0
+  xres: 0.01
+  yres: 0.01
+
+
+# Variants are optional: without them, every receptor runs once per met
+# stream with the settings above. Declare variants to run the same receptors
+# under other settings, e.g. a wind-error ensemble or a mixed-layer bracket:
+# variants:
+#   hrrr: {}
+#   hrrr-zi08: {ziscale: 0.8}
 
 
 # Common run controls. Negative n_hours means backward in time.
@@ -253,12 +259,19 @@ def register(
         "--receptors",
         help="Receptors CSV to add to the project. Defaults to the project's own.",
     ),
+    force: bool = typer.Option(
+        False,
+        "--force",
+        help="Overwrite config.yaml even if a registered variant's settings changed.",
+    ),
 ) -> None:
-    """Persist project inputs and, when a queue is configured, enqueue simulations."""
+    """Persist project inputs and, when a queue is configured, enqueue receptors."""
     model = Model(project=_resolve_project(project, require_inputs=True))
     receptors = read_receptors(receptors_path) if receptors_path is not None else None
-    sim_ids = model.register(receptors=receptors)
-    typer.echo(f"Registered {len(sim_ids)} simulation(s).")
+    receptor_ids = model.register(receptors=receptors, allow_changes=force)
+    typer.echo(
+        f"Registered {len(receptor_ids)} receptor(s) x {len(model.variants)} variant(s)."
+    )
 
 
 @app.command("pull-worker")
@@ -272,16 +285,16 @@ def pull_worker(
     compute_root: str | None = _COMPUTE_ROOT,
 ) -> None:
     """
-    Drain pending simulations from the Postgres work queue.
+    Drain pending receptors from the Postgres work queue.
 
-    Atomically claims and runs simulations until the queue is empty
+    Atomically claims and runs receptors until the queue is empty
     (batch mode) or indefinitely (``--follow``).
     """
     model = Model(
         project=_resolve_project(project, require_inputs=True),
         compute_root=compute_root,
     )
-    pull_simulations(model, follow=follow)
+    pull_receptors(model, follow=follow)
 
 
 @app.command("push-worker")
@@ -298,15 +311,15 @@ def push_worker(
     ),
     compute_root: str | None = _COMPUTE_ROOT,
 ) -> None:
-    """Run the simulation ids listed in one chunk file (one per line)."""
+    """Run the receptor ids listed in one chunk file (one per line)."""
     model = Model(
         project=_resolve_project(project, require_inputs=True),
         compute_root=compute_root,
     )
-    sim_ids = [
+    receptor_ids = [
         s for line in Path(chunk).read_text().splitlines() if (s := line.strip())
     ]
-    run_simulations(model, sim_ids, n_cores=cpus, skip_existing=skip_existing)
+    run_receptors(model, receptor_ids, n_cores=cpus, skip_existing=skip_existing)
 
 
 @app.command()
@@ -319,7 +332,7 @@ def serve(
         project=_resolve_project(project, require_inputs=True),
         compute_root=compute_root,
     )
-    pull_simulations(model, follow=True)
+    pull_receptors(model, follow=True)
 
 
 @app.command()
@@ -369,6 +382,7 @@ def _print_run_start(
     if model.compute_root != default_compute_root:
         typer.echo(f"Compute root: {model.compute_root}")
     typer.echo(f"Receptors loaded: {len(model.receptors)}")
+    typer.echo(f"Variants: {', '.join(model.variants)}")
     typer.echo(
         "Execution mode: " + ("submit-and-wait" if wait else "submit-and-return")
         if backend == "slurm"

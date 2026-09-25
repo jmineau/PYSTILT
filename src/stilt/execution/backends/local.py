@@ -70,7 +70,7 @@ class LocalExecutor:
         compute_root: str | None = None,
         skip_existing: bool | None = None,
     ) -> LocalHandle:
-        """Start the pending simulations on a local worker pool."""
+        """Start the pending receptors on a local worker pool."""
         if not pending:
             return LocalHandle()
 
@@ -78,13 +78,13 @@ class LocalExecutor:
         handle = LocalHandle()
 
         def _work() -> None:
-            """Run the pending simulations, recording the result."""
+            """Run the pending receptors, recording the result."""
             from stilt.model import Model
 
-            from ..worker import run_simulations
+            from ..worker import run_receptors
 
             try:
-                run_simulations(
+                run_receptors(
                     Model(project=project, compute_root=compute_root),
                     pending,
                     n_cores=n,

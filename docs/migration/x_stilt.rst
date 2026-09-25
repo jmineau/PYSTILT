@@ -48,7 +48,7 @@ parity is not a goal; the table shows what has an equivalent.
        reader producing the same table
    * - Transport error on the modelled column (``cal.trajfoot.stat``, ``cal.trans.err``)
      - ``error_functions/``
-     - :func:`stilt.observations.transport_error` on the main and error particles (:doc:`/guides/transport_error`)
+     - :func:`stilt.observations.transport_error` on the particles of an unperturbed and a wind-error variant (:doc:`/guides/transport_error`); X-STILT's separate ``outerr_`` tree becomes one more variant
    * - Modelled enhancement from an inventory (``ff.trajfoot``)
      - ``error_functions/``, ``run.xco2ff.sim``
      - :meth:`stilt.Footprint.enhancement`, :func:`stilt.flux.particle_enhancement`
@@ -62,7 +62,7 @@ parity is not a goal; the table shows what has an equivalent.
        Recipe in the Wind Error Statistics guide
    * - Mixing-height scaling for the vertical transport error (``run_ver_err``, ``zisf``)
      - ``get.zierr``
-     - ``ziscale`` in ``config.yaml``, one project per factor (see
+     - ``ziscale`` on one variant per factor, in the same project (see
        *Mixed-layer height* in :doc:`/guides/transport_error`). X-STILT sets
        one constant factor and leaves the stochastic ``sigzierr`` unset;
        PYSTILT has both

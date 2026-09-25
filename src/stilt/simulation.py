@@ -1,17 +1,16 @@
-"""Simulation execution and output loading for STILT runs."""
+"""One simulation: a receptor run under one variant, its outputs and completion."""
 
 from __future__ import annotations
 
 import datetime as dt
 import logging
-import re
-from collections.abc import Iterable, Sequence
+from collections.abc import Sequence
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, NamedTuple, cast
 
 import pandas as pd
 
-from stilt.config import ErrorParams, FootprintConfig, STILTParams
+from stilt.config import FootprintConfig, STILTParams
 from stilt.config.model import _config_or_kwargs
 from stilt.errors import (
     EmptyTrajectoryError,
@@ -19,14 +18,14 @@ from stilt.errors import (
 )
 from stilt.footprint import Footprint
 from stilt.hysplit import HYSPLITDriver
-from stilt.meteorology import MetID, MetStream
+from stilt.meteorology import MetStream
 from stilt.project import (
     SIMULATION_LOG_FILENAME,
     SIMULATION_MET_DIRNAME,
     resolve_directory,
     simulation_prefix,
 )
-from stilt.receptors import LocationID, Receptor, ReceptorID
+from stilt.receptors import Receptor, ReceptorID
 from stilt.store import Store
 from stilt.trajectory import Trajectories
 from stilt.transforms import (
@@ -40,126 +39,67 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-_ERROR_PARAM_FIELDS = frozenset(ErrorParams.XYERR_PARAMS) | frozenset(
-    ErrorParams.ZIERR_PARAMS
-)
-
 TRAJECTORY = "trajectory"
-ERROR_TRAJECTORY = "error_trajectory"
+FOOTPRINT = "footprint"
 
 
-def _read_trajectory_params(path: Path) -> STILTParams | None:
-    """Read just the stored params from a trajectory parquet's Arrow metadata."""
-    import json
-
-    import pyarrow.parquet as pq
-
-    try:
-        meta = pq.ParquetFile(path).schema_arrow.metadata
-    except Exception:
-        return None
-    if not meta or b"stilt:params" not in meta:
-        return None
-    try:
-        return STILTParams.model_validate(json.loads(meta[b"stilt:params"]))
-    except Exception:
-        return None
-
-
-def _params_match_ignoring_error(a: STILTParams, b: STILTParams) -> bool:
-    """Return whether two param sets agree on everything but the error params."""
-    da = a.model_dump()
-    db = b.model_dump()
-    for field in _ERROR_PARAM_FIELDS:
-        da.pop(field, None)
-        db.pop(field, None)
-    return da == db
-
-
-class SimID(str):
+class SimID(NamedTuple):
     """
-    Structured representation of a PYSTILT simulation ID.
+    Identity of one simulation: a receptor under a variant.
 
-    Format: ``{met}_{YYYYMMDDHHMM}_{location_id}``
-
-    Behaves as a plain string — dict keys, path joins, and comparisons all
-    work without ``str()`` conversion.  Attributes ``met``, ``time``,
-    and ``location_id`` are parsed from the string on construction.
-
-    Create via the canonical string::
-
-        SimID("hrrr_202301011200_-111.85_40.77_5")
-
-    Or from parts::
-
-        SimID.from_parts(met="hrrr", receptor=r)
+    Its string form is ``"{receptor_id}/{variant}"``, which is also the
+    simulation's path below ``simulations/by-id/``.
     """
 
-    met: MetID
     receptor: ReceptorID
-    time: dt.datetime
-    location: LocationID
+    variant: str
 
-    def __new__(cls, id_str: str) -> SimID:
-        """Create from canonical ``'{met}_{YYYYMMDDHHMM}_{location_id}'`` string."""
-        if not re.fullmatch(r"[a-z0-9]+_\d{12}_.+", id_str):
-            raise ValueError(
-                f"Invalid sim_id format: {id_str!r}. "
-                "Expected '{met}_{YYYYMMDDHHMM}_{location_id}'."
-            )
-        instance = super().__new__(cls, id_str)
-        met_str, recep_str = id_str.split("_", 1)
-        receptor_id = ReceptorID(recep_str)
-
-        instance.met = MetID(met_str)
-        instance.receptor = receptor_id
-        instance.time = receptor_id.time
-        instance.location = receptor_id.location
-        return instance
-
-    @classmethod
-    def from_parts(
-        cls,
-        met: MetID | str,
-        receptor: Receptor,
-    ) -> SimID:
-        """
-        Build a :class:`SimID` from constituent parts.
-
-        Parameters
-        ----------
-        met : MetID | str
-            ID of the meteorology configuration (e.g. ``'hrrr'``).
-            Cannot contain underscores.
-        receptor : Receptor
-            Source receptor; provides the release time and location ID.
-
-        Returns
-        -------
-        SimID
-        """
-        return cls(f"{met}_{receptor.id}")
+    def __str__(self) -> str:
+        return f"{self.receptor}/{self.variant}"
 
     def __fspath__(self) -> str:
-        """Allow Path joins like ``base / sim_id`` without manual str() conversion."""
+        """Allow ``root / sim_id`` to build the simulation directory."""
         return str(self)
+
+    @classmethod
+    def parse(cls, value: str | SimID | tuple[str, str]) -> SimID:
+        """Build a :class:`SimID` from its string form or a ``(receptor, variant)`` pair."""
+        if isinstance(value, SimID):
+            return value
+        if isinstance(value, tuple):
+            receptor, variant = value
+        else:
+            receptor, sep, variant = str(value).partition("/")
+            if not sep or not variant:
+                raise ValueError(
+                    f"Invalid sim id {value!r}; expected '{{receptor_id}}/{{variant}}'."
+                )
+        return cls(ReceptorID(receptor), variant)
 
 
 class Simulation:
     """
-    Container for running and reading one STILT simulation.
+    One receptor under one variant: a HYSPLIT run, or a footprint derived
+    from another simulation's particles.
 
     A simulation owns its output filenames, their store keys, and the single
-    definition of which outputs exist and whether the simulation is complete.
+    definition of which outputs exist and whether it is complete.
 
     Parameters
     ----------
-    meteorology, receptor, params
-        What to run.
+    receptor, meteorology, params
+        What to run. ``meteorology`` may be ``None`` for a derived simulation.
+    footprint
+        Footprint product to rasterize, or ``None`` for a trajectory-only run.
+    variant
+        Variant name; the simulation id is ``receptor.id / variant``. Defaults
+        to the met stream's name.
+    parent
+        The simulation whose trajectory this one rasterizes (a ``from:``
+        variant). Such a simulation never runs HYSPLIT.
     directory
-        Compute-local working directory. Its basename must be the simulation
-        id. A temporary directory is created when omitted. Nothing is created
-        on disk until an output is written.
+        Compute-local working directory. A temporary one is created when
+        omitted. Nothing is created on disk until an output is written.
     exe_dir
         Directory holding a custom ``hycs_std`` build.
     store
@@ -170,39 +110,56 @@ class Simulation:
 
     def __init__(
         self,
-        meteorology: MetStream,
         receptor: Receptor,
+        meteorology: MetStream | None,
         params: STILTParams,
+        footprint: FootprintConfig | None = None,
+        *,
+        variant: str | None = None,
+        parent: Simulation | None = None,
         directory: str | Path | None = None,
         exe_dir: Path | None = None,
         store: Store | None = None,
     ):
-        if directory is None:
-            scratch_dir = resolve_directory(prefix="pystilt_")
-            directory = scratch_dir / SimID.from_parts(meteorology.id, receptor)
-        self.directory = resolve_directory(directory)
-        self.meteorology = meteorology
+        if variant is None:
+            if meteorology is None:
+                raise ValueError("A simulation needs a variant name or a met stream.")
+            variant = str(meteorology.id)
+        if parent is None and meteorology is None:
+            raise ValueError("A simulation that runs HYSPLIT needs a met stream.")
+        self.id = SimID(receptor.id, variant)
         self.receptor = receptor
+        self.meteorology = meteorology
         self.params = params
+        self.footprint_config = footprint
+        self.parent = parent
+        if directory is None:
+            directory = resolve_directory(prefix="pystilt_") / self.id
+        self.directory = resolve_directory(directory)
+        self.key_prefix = simulation_prefix(self.id)
         self._exe_dir = exe_dir
         self._store = store
-
-        # The sim ID is derived from the directory name so a Model can lay out
-        # `{project}/simulations/by-id/{sim_id}` and ad-hoc runs still work.
-        self.id = SimID(self.directory.name)
-        self.key_prefix = simulation_prefix(str(self.id))
 
         # Lazy state
         self._source_met_files: list[Path] | None = None
         self._met_files: list[Path] | None = None
-        self._trajectories = None
-        self._error_trajectories: dict[int, Trajectories] = {}
-        self._footprints: dict[str, Footprint] = {}
+        self._trajectories: Trajectories | None = None
+        self._footprint: Footprint | None = None
         self._plot: SimulationPlotAccessor | None = None
 
     def __repr__(self) -> str:
         """Compact developer-facing simulation representation."""
-        return f"Simulation(id={self.id!r}, directory={str(self.directory)!r})"
+        return f"Simulation(id={str(self.id)!r}, directory={str(self.directory)!r})"
+
+    @property
+    def variant(self) -> str:
+        """Variant name."""
+        return self.id.variant
+
+    @property
+    def is_derived(self) -> bool:
+        """Whether this simulation rasterizes another simulation's trajectory."""
+        return self.parent is not None
 
     # -- Paths and keys --------------------------------------------------------
 
@@ -218,34 +175,20 @@ class Simulation:
 
     @property
     def trajectories_path(self) -> Path:
-        """Compute-local trajectory parquet path."""
-        return self.directory / f"{self.id}_traj.parquet"
-
-    def error_trajectories_path(self, realization: int = 0) -> Path:
-        """
-        Compute-local error-trajectory parquet path for one realization.
-
-        Realization 0 keeps the unsuffixed name, so projects run before
-        ``error_realizations`` existed still resolve.
-        """
-        suffix = f"_{realization}" if realization else ""
-        return self.directory / f"{self.id}_error{suffix}.parquet"
+        """Compute-local trajectory parquet path (the parent's when derived)."""
+        if self.parent is not None:
+            return self.parent.trajectories_path
+        return self.directory / f"{self.id.receptor}_traj.parquet"
 
     @property
-    def error_realizations(self) -> tuple[int, ...]:
-        """Realization indices this simulation is configured to produce."""
-        if not self.params.error_enabled:
-            return ()
-        return tuple(range(self.params.error_realizations))
+    def footprint_path(self) -> Path:
+        """Compute-local footprint netCDF path."""
+        return self.directory / f"{self.id.receptor}_foot.nc"
 
-    def footprint_path(self, name: str = "") -> Path:
-        """Compute-local footprint netCDF path for one footprint name."""
-        suffix = f"_{name}" if name else ""
-        return self.directory / f"{self.id}{suffix}_foot.nc"
-
-    def empty_footprint_path(self, name: str = "") -> Path:
-        """Compute-local marker path recording that a footprint is legitimately empty."""
-        return self.footprint_path(name).with_suffix(".empty")
+    @property
+    def empty_footprint_path(self) -> Path:
+        """Compute-local marker recording that the footprint is legitimately empty."""
+        return self.footprint_path.with_suffix(".empty")
 
     def key(self, path: str | Path) -> str:
         """Return the store key for one file under this simulation's directory."""
@@ -265,79 +208,50 @@ class Simulation:
 
     @property
     def has_trajectory(self) -> bool:
-        """Whether the main trajectory parquet exists on disk or in the store."""
+        """Whether the trajectory parquet exists on disk or in the store."""
+        if self.parent is not None:
+            return self.parent.has_trajectory
         return self.resolve(self.trajectories_path) is not None
 
     @property
-    def has_error_trajectory(self) -> bool:
-        """Whether every configured error realization exists on disk or in the store."""
-        return not self.missing_error_realizations
-
-    @property
-    def _error_realizations_on_disk(self) -> tuple[int, ...]:
-        """Configured realizations, or just realization 0 when none is configured."""
-        return self.error_realizations or (0,)
-
-    @property
-    def missing_error_realizations(self) -> list[int]:
+    def has_footprint(self) -> bool:
         """
-        Realization indices whose error parquet is not yet available.
-
-        With no wind error configured this still checks realization 0, so
-        ``has_error_trajectory`` keeps answering whether the file exists.
-        """
-        return [
-            k
-            for k in self._error_realizations_on_disk
-            if self.resolve(self.error_trajectories_path(k)) is None
-        ]
-
-    def has_footprint(self, name: str) -> bool:
-        """
-        Whether one named footprint is complete.
+        Whether the footprint is complete.
 
         The empty marker counts: a run that legitimately produced no footprint
         is a terminal outcome, not missing work.
         """
         return (
-            self.resolve(self.footprint_path(name)) is not None
-            or self.resolve(self.empty_footprint_path(name)) is not None
+            self.resolve(self.footprint_path) is not None
+            or self.resolve(self.empty_footprint_path) is not None
         )
 
-    def missing_footprints(self, names: Iterable[str]) -> list[str]:
-        """Return the footprint names among *names* that are not yet complete."""
-        return [name for name in names if not self.has_footprint(name)]
-
-    def expected_outputs(self, footprints: Iterable[str] = ()) -> tuple[str, ...]:
+    def expected_outputs(self) -> tuple[str, ...]:
         """
-        Return the outputs this simulation must produce to be complete.
+        The outputs this simulation must produce to be complete.
 
-        Always the trajectory, plus the error trajectory when wind-error
-        params are set, plus one entry per footprint name. Error *footprints*
-        are never required.
+        The trajectory unless derived, plus the footprint when a grid is set.
         """
-        outputs = [TRAJECTORY]
-        if self.params.error_enabled:
-            outputs.append(ERROR_TRAJECTORY)
-        outputs.extend(footprints)
+        outputs = [] if self.is_derived else [TRAJECTORY]
+        if self.footprint_config is not None:
+            outputs.append(FOOTPRINT)
         return tuple(outputs)
 
     def has_output(self, output: str) -> bool:
-        """Whether one named output (trajectory, error_trajectory, or footprint) exists."""
+        """Whether one named output (``trajectory`` or ``footprint``) exists."""
         if output == TRAJECTORY:
             return self.has_trajectory
-        if output == ERROR_TRAJECTORY:
-            return self.has_error_trajectory
-        return self.has_footprint(output)
+        if output == FOOTPRINT:
+            return self.has_footprint
+        raise ValueError(f"Unknown output {output!r}")
 
-    def is_complete(self, footprints: Iterable[str] = ()) -> bool:
-        """
-        Whether every expected output exists.
+    def missing_outputs(self) -> tuple[str, ...]:
+        """The expected outputs that do not exist yet."""
+        return tuple(o for o in self.expected_outputs() if not self.has_output(o))
 
-        Checks the trajectory first so the common incomplete case costs one
-        existence check.
-        """
-        return all(self.has_output(o) for o in self.expected_outputs(footprints))
+    def is_complete(self) -> bool:
+        """Whether every expected output exists."""
+        return not self.missing_outputs()
 
     def publish(self) -> None:
         """
@@ -348,26 +262,22 @@ class Simulation:
         """
         if self._store is None:
             return
-        paths = [self.log_path, self.trajectories_path]
-        paths.extend(
-            self.error_trajectories_path(k) for k in self._error_realizations_on_disk
-        )
+        paths = [self.log_path, self.footprint_path, self.empty_footprint_path]
+        if not self.is_derived:
+            paths.append(self.trajectories_path)
         for path in paths:
             self._store.publish_file(path, self.key(path))
-        if self.directory.exists():
-            for path in sorted(self.directory.glob(f"{self.id}*_foot.*")):
-                self._store.publish_file(path, self.key(path))
 
-    def write_empty_footprint_marker(self, name: str = "") -> Path:
-        """Create the empty-footprint marker for one named footprint."""
-        marker = self.empty_footprint_path(name)
+    def write_empty_footprint_marker(self) -> Path:
+        """Create the empty-footprint marker."""
+        marker = self.empty_footprint_path
         marker.parent.mkdir(parents=True, exist_ok=True)
         marker.touch(exist_ok=True)
         return marker
 
-    def clear_empty_footprint_marker(self, name: str = "") -> None:
-        """Remove the empty-footprint marker for one named footprint."""
-        self.empty_footprint_path(name).unlink(missing_ok=True)
+    def clear_empty_footprint_marker(self) -> None:
+        """Remove the empty-footprint marker."""
+        self.empty_footprint_path.unlink(missing_ok=True)
 
     @property
     def plot(self) -> SimulationPlotAccessor:
@@ -412,11 +322,11 @@ class Simulation:
         Returns
         -------
         str or None
-            ``'complete'`` if the trajectory parquet exists, a
+            ``'complete'`` if every expected output exists, a
             ``'failed:<reason>'`` string if HYSPLIT failed, or ``None`` if the
             simulation has not run.
         """
-        if self.has_trajectory:
+        if self.is_complete():
             return "complete"
         log_path = self.resolve(self.log_path)
         if log_path is None:
@@ -425,11 +335,19 @@ class Simulation:
 
     # -- Lazy accessors --------------------------------------------------------
 
+    def _met_stream(self) -> MetStream:
+        """The met stream, from the parent when derived."""
+        if self.meteorology is not None:
+            return self.meteorology
+        if self.parent is not None:
+            return self.parent._met_stream()
+        raise ValueError(f"{self.id} has no met stream.")
+
     @property
     def source_met_files(self) -> list[Path]:
         """Archive/source met files required for this simulation's time window."""
         if not self._source_met_files:
-            self._source_met_files = self.meteorology.required_files(
+            self._source_met_files = self._met_stream().required_files(
                 r_time=self.receptor.time,
                 n_hours=self.params.n_hours,
             )
@@ -442,13 +360,9 @@ class Simulation:
 
         The output/source archive paths remain available via
         :attr:`source_met_files`.
-
-        Returns
-        -------
-        list[Path]
         """
         if not self._met_files:
-            self._met_files = self.meteorology.stage_files_for_simulation(
+            self._met_files = self._met_stream().stage_files_for_simulation(
                 r_time=self.receptor.time,
                 n_hours=self.params.n_hours,
                 target_dir=self.met_dir,
@@ -460,10 +374,6 @@ class Simulation:
         """
         Contents of the HYSPLIT stdout log file.
 
-        Returns
-        -------
-        str
-
         Raises
         ------
         FileNotFoundError
@@ -474,49 +384,32 @@ class Simulation:
             raise FileNotFoundError(f"Log file not found: {self.log_path}")
         return log_path.read_text()
 
-    # -- Footprints ------------------------------------------------------------
-
-    def get_footprint(self, name: str) -> Footprint | None:
+    @property
+    def trajectories(self) -> Trajectories | None:
         """
-        Return a named footprint, loading from disk if not already cached.
+        Particle trajectories, loaded from parquet on first access.
 
-        Parameters
-        ----------
-        name : str
-            Footprint name (matches the key used in :attr:`foot_configs`).
-
-        Returns
-        -------
-        Footprint or None
-            The footprint if the file exists on disk, otherwise ``None``.
+        A derived simulation returns its parent's. ``None`` if no trajectory
+        parquet exists and the simulation has not been run in this process.
         """
-        if name not in self._footprints:
-            path = self.resolve(self.footprint_path(name))
-            if path is None:
-                return None
-            self._footprints[name] = Footprint.from_netcdf(path)
-        return self._footprints[name]
+        if self.parent is not None:
+            return self.parent.trajectories
+        if self._trajectories is None:
+            traj_path = self.resolve(self.trajectories_path)
+            if traj_path is not None:
+                self._trajectories = Trajectories.from_parquet(traj_path)
+        return self._trajectories
+
+    @property
+    def footprint(self) -> Footprint | None:
+        """The footprint, loaded from disk on first access; ``None`` if absent."""
+        if self._footprint is None:
+            path = self.resolve(self.footprint_path)
+            if path is not None:
+                self._footprint = Footprint.from_netcdf(path)
+        return self._footprint
 
     # -- Execution -------------------------------------------------------------
-
-    def _can_reuse_main_for_error(self) -> bool:
-        """
-        Whether to run only the error pass, reusing an existing main trajectory.
-
-        True when an error trajectory is configured (``winderrtf > 0``) but not
-        yet present, the main trajectory already exists, and its stored params
-        match the current config on everything but the error params. Lets an
-        error-trajectory backfill skip recomputing the (expensive) main run.
-        """
-        if self.params.winderrtf <= 0:
-            return False
-        if self.has_error_trajectory:
-            return False
-        main_path = self.resolve(self.trajectories_path)
-        if main_path is None:
-            return False
-        stored = _read_trajectory_params(main_path)
-        return stored is not None and _params_match_ignoring_error(stored, self.params)
 
     def run_trajectories(
         self,
@@ -525,46 +418,33 @@ class Simulation:
         write: bool = False,
     ) -> None:
         """
-        Run HYSPLIT, populating ``self.trajectories`` and the error realizations.
+        Run HYSPLIT once, populating ``self.trajectories``.
 
         Parameters
         ----------
         timeout : int, optional
-            Wall-clock cap in seconds for each hycs_std run. Defaults to
-            ``params.timeout``, so a project can cap wedged HYSPLIT processes from
-            ``config.yaml`` without every caller passing it.
+            Wall-clock cap in seconds for the hycs_std run. Defaults to
+            ``params.timeout``.
         rm_dat : bool, optional
             Defaults to ``params.rm_dat``.
         write : bool
-            If True, persist trajectories (and any error realizations) to
-            ``self.trajectories_path`` / ``self.error_trajectories_path(k)``.
+            If True, persist the trajectories to ``self.trajectories_path``.
 
         Raises
         ------
         HYSPLITTimeoutError, HYSPLITFailureError, NoParticleOutputError,
         EmptyTrajectoryError
         """
+        if self.is_derived:
+            raise ValueError(
+                f"{self.id} is derived from {self.parent.id}; it has no HYSPLIT run."  # type: ignore[union-attr]
+            )
         if rm_dat is None:
             rm_dat = self.params.rm_dat
         if timeout is None:
-            timeout = getattr(self.params, "timeout", None)
+            timeout = self.params.timeout
 
         self.directory.mkdir(parents=True, exist_ok=True)
-
-        # If the main trajectory already exists with matching (non-error) params
-        # and only the error trajectory is needed, run the error pass alone — the
-        # error run is independent of the main, so there's no need to recompute it.
-        error_only = self._can_reuse_main_for_error()
-
-        # Only run the realizations that are still missing, so a preempted or
-        # partially complete simulation resumes instead of starting over. A
-        # deliberate full re-run (nothing missing) redoes every realization.
-        realizations: list[int] = []
-        if self.params.error_enabled:
-            realizations = self.missing_error_realizations or list(
-                self.error_realizations
-            )
-
         runner = HYSPLITDriver(
             directory=self.directory,
             receptor=self.receptor,
@@ -573,12 +453,7 @@ class Simulation:
             exe_dir=self._exe_dir,
         )
         runner.prepare()
-        result = runner.execute(
-            timeout=timeout,
-            rm_dat=rm_dat,
-            error_only=error_only,
-            error_realizations=realizations,
-        )
+        result = runner.execute(timeout=timeout, rm_dat=rm_dat)
 
         result_log = getattr(result, "log_path", None)
         if result_log is not None:
@@ -588,199 +463,100 @@ class Simulation:
         elif hasattr(result, "stdout"):
             self.log_path.write_text(str(cast(Any, result).stdout))
 
-        if not error_only:
-            if result.particles is None or result.particles.empty:
-                raise EmptyTrajectoryError(f"No trajectory data for {self.id}")
-            self._trajectories = Trajectories.from_particles(
-                result.particles,
-                receptor=self.receptor,
-                params=self.params,
-                met_files=self.source_met_files,
-            )
-
-        for k, error_particles in result.error_particles.items():
-            if error_particles.empty:
-                continue
-            self._error_trajectories[k] = Trajectories.from_particles(
-                error_particles,
-                receptor=self.receptor,
-                params=self.params,
-                met_files=self.source_met_files,
-                is_error=True,
-            )
-
+        if result.particles is None or result.particles.empty:
+            raise EmptyTrajectoryError(f"No trajectory data for {self.id}")
+        self._trajectories = Trajectories.from_particles(
+            result.particles,
+            receptor=self.receptor,
+            params=self.params,
+            met_files=self.source_met_files,
+        )
         if write:
-            if self._trajectories is not None:
-                self._trajectories.to_parquet(self.trajectories_path)
-            for k, traj in self._error_trajectories.items():
-                traj.to_parquet(self.error_trajectories_path(k))
+            self._trajectories.to_parquet(self.trajectories_path)
 
     def generate_footprint(
         self,
-        name: str,
         config: FootprintConfig | None = None,
         write: bool = False,
-        error: bool = False,
         transforms: Sequence[ParticleTransform] | None = None,
         context: TransformContext | None = None,
         **kwargs,
     ) -> Footprint:
         """
-        Compute a named footprint and store it in the footprint cache.
+        Rasterize the footprint from the trajectories.
+
+        Runs HYSPLIT first when no trajectory exists yet. The result is kept on
+        ``self.footprint``.
 
         Parameters
         ----------
-        name : str
-            Base label for this footprint (e.g. ``"slv"``).  When
-            *error* is True, ``"_error"`` is appended automatically so
-            the footprint is stored as ``"slv_error"``.
         config : FootprintConfig, optional
-            Footprint configuration.  Mutually exclusive with ``**kwargs``.
+            Footprint settings. Defaults to the simulation's own; pass one
+            (or keyword arguments) to try other settings in memory.
         write : bool
-            If True, write the footprint netCDF to the sim directory.
-        error : bool
-            If True, compute from the error trajectory instead of the main
-            trajectory and store under ``"{name}_error"``.
+            If True, write the footprint netCDF to the simulation directory.
         transforms : sequence, optional
             Extra particle transforms applied after ``config.transforms`` and
             before rasterization (any object with ``apply(particles, context)``).
         context : TransformContext, optional
             Context handed to every transform. Defaults to one built from the
-            receptor, footprint name, and project store.
+            receptor, variant, and project store.
         **kwargs
             Forwarded to ``FootprintConfig`` when *config* is not given.
         """
         config = _config_or_kwargs(config, kwargs, FootprintConfig)
         if config is None:
+            config = self.footprint_config
+        if config is None:
             raise TypeError(
-                "Must provide 'config' or keyword arguments for FootprintConfig."
+                f"{self.id} has no footprint settings; pass a FootprintConfig."
             )
 
-        traj = self.error_trajectories if error else self.trajectories
-
+        traj = self.trajectories
         if traj is None:
-            # Auto-run, threading write so callers with write=False stay in-memory.
-            # timeout=None picks up params.timeout inside run_trajectories.
             self.run_trajectories(write=write)
-            traj = self.error_trajectories if error else self.trajectories
+            traj = self.trajectories
 
-        stored_name = f"{name}_error" if error else name
         if traj is None:
-            particles = (
-                self.trajectories.data.head(0).copy()
-                if self.trajectories is not None
-                else pd.DataFrame(
-                    {
-                        "time": pd.Series(dtype="float64"),
-                        "indx": pd.Series(dtype="int64"),
-                        "long": pd.Series(dtype="float64"),
-                        "lati": pd.Series(dtype="float64"),
-                        "foot": pd.Series(dtype="float64"),
-                    }
-                )
+            particles = pd.DataFrame(
+                {
+                    "time": pd.Series(dtype="float64"),
+                    "indx": pd.Series(dtype="int64"),
+                    "long": pd.Series(dtype="float64"),
+                    "lati": pd.Series(dtype="float64"),
+                    "foot": pd.Series(dtype="float64"),
+                }
             )
         else:
             particles = traj.data
         all_transforms = [*config.transforms, *(transforms or [])]
         if all_transforms:
             particles = apply_transforms(
-                particles,
-                all_transforms,
-                context or self.transform_context(stored_name, error=error),
+                particles, all_transforms, context or self.transform_context()
             )
         foot = Footprint.calculate(
             particles,
             receptor=self.receptor if traj is None else traj.receptor,
             config=config,
-            name=stored_name,
+            name=self.variant,
         )
-        self._footprints[stored_name] = foot
+        self._footprint = foot
         if write:
-            foot.to_netcdf(self.footprint_path(stored_name))
+            foot.to_netcdf(self.footprint_path)
         return foot
 
-    def transform_context(
-        self, name: str = "", error: bool = False
-    ) -> TransformContext:
+    def transform_context(self) -> TransformContext:
         """
         The :class:`~stilt.TransformContext` this simulation hands its transforms.
 
-        Carries the receptor, the footprint *name*, whether the particles are
-        the error trajectories, and the project store (so a transform can read
-        per-receptor inputs such as an averaging-kernel table). Use it to apply
-        a footprint's transforms outside :meth:`generate_footprint`.
+        Carries the receptor, the variant name, and the project store (so a
+        transform can read per-receptor inputs such as an averaging-kernel
+        table). Use it to apply the footprint's transforms outside
+        :meth:`generate_footprint`.
         """
         return TransformContext(
-            receptor=self.receptor,
-            footprint_name=name,
-            is_error=error,
-            store=self._store,
+            receptor=self.receptor, variant=self.variant, store=self._store
         )
 
-    # -- Lazy trajectory loading -----------------------------------------------
 
-    @property
-    def trajectories(self) -> Trajectories | None:
-        """
-        Main particle trajectories, loaded from parquet on first access.
-
-        Returns ``None`` if no trajectory parquet exists and the simulation
-        has not been run in this process.
-
-        Returns
-        -------
-        Trajectories or None
-        """
-        if not self._trajectories:
-            traj_path = self.resolve(self.trajectories_path)
-            if traj_path is not None:
-                self._trajectories = Trajectories.from_parquet(traj_path)
-        return self._trajectories
-
-    def error_trajectory(self, realization: int = 0) -> Trajectories | None:
-        """
-        One error realization's particles, loaded from parquet on first access.
-
-        Returns ``None`` if that realization's parquet does not exist.
-
-        Parameters
-        ----------
-        realization : int
-            Realization index; 0 is the unsuffixed parquet.
-
-        Returns
-        -------
-        Trajectories or None
-        """
-        if realization not in self._error_trajectories:
-            error_path = self.resolve(self.error_trajectories_path(realization))
-            if error_path is None:
-                return None
-            self._error_trajectories[realization] = Trajectories.from_parquet(
-                error_path
-            )
-        return self._error_trajectories[realization]
-
-    @property
-    def error_trajectories(self) -> Trajectories | None:
-        """
-        The first error realization, or ``None`` when it does not exist.
-
-        Use :meth:`all_error_trajectories` for the whole ensemble.
-        """
-        return self.error_trajectory(0)
-
-    @property
-    def all_error_trajectories(self) -> list[Trajectories]:
-        """
-        Every available error realization, in realization order.
-
-        Pass ``[t.data for t in sim.all_error_trajectories]`` to
-        :func:`stilt.observations.transport_error` to average the variance
-        over the ensemble.
-        """
-        found = (self.error_trajectory(k) for k in self.error_realizations)
-        return [traj for traj in found if traj is not None]
-
-
-__all__ = ["ERROR_TRAJECTORY", "TRAJECTORY", "SimID", "Simulation"]
+__all__ = ["FOOTPRINT", "TRAJECTORY", "SimID", "Simulation"]

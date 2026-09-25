@@ -317,16 +317,16 @@ def transport_error(
     Parameters
     ----------
     particles, error_particles
-        The simulation's main particle table (``sim.trajectories.data``) and
-        one or more error-trajectory tables: ``sim.error_trajectories.data``
-        for a single realization, or
-        ``[t.data for t in sim.all_error_trajectories]`` for the ensemble
-        a run with ``error_realizations > 1`` produced.
+        The unperturbed particle table of a receptor
+        (``sim.trajectories.data``) and one or more particle tables from a
+        wind-error variant of the same receptor: one table, or a list for a
+        variant with ``realizations: N``
+        (``[t.data for t in sims.sel(variant="hrrr-err").trajectories.load()]``).
     flux
         Surface flux field (see :mod:`stilt.flux`).
     transforms, context
         The footprint's particle transforms and the context to apply them
-        with (``config.transforms`` and ``sim.transform_context(name)``), so
+        with (``sim.footprint_config.transforms`` and ``sim.transform_context()``), so
         the error is weighted the way the footprint is (averaging kernel,
         pressure weighting, lifetime decay). Applied to both tables.
     levels
@@ -406,15 +406,10 @@ def transport_error(
         raise ValueError("error_particles must hold at least one realization.")
 
     def _prepare(
-        table: pd.DataFrame, is_error: bool
+        table: pd.DataFrame,
     ) -> tuple[pd.Series, pd.Series, pd.Series | None]:
         """Per-particle modelled value, release height, and weighted background."""
-        ctx = TransformContext(
-            receptor=context.receptor,
-            footprint_name=context.footprint_name,
-            is_error=is_error,
-            store=context.store,
-        )
+        ctx = context
         sampled_background = None
         if background is not None:
             # each particle's background, weighted like its enhancement
@@ -428,7 +423,7 @@ def transport_error(
             x = x + sampled_background.reindex(x.index)
         return x, _release_heights(table), sampled_background
 
-    x_orig, h_orig, b_orig = _prepare(particles, is_error=False)
+    x_orig, h_orig, b_orig = _prepare(particles)
     # the unperturbed particles' weighted background, reported separately
     background_value = 0.0 if b_orig is None else float(b_orig.mean())
 
@@ -437,7 +432,7 @@ def transport_error(
 
     x_errs, label_errs = [], []
     for err in error_tables:
-        x_err, h_err, _ = _prepare(err, is_error=True)
+        x_err, h_err, _ = _prepare(err)
         x_errs.append(x_err)
         label_errs.append(
             pd.Series(

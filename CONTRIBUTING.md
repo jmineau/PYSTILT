@@ -90,7 +90,7 @@ Execution backends implement the `Executor` and `JobHandle` protocols in
 `src/stilt/execution/backends/protocol.py`. The coordinator relies on the
 executor's `dispatch` mode:
 - `push` executors receive an explicit list of pending simulation IDs and run
-  them through `stilt.execution.run_simulations` (directly or via the
+  them through `stilt.execution.run_receptors` (directly or via the
   `stilt push-worker` CLI); outputs are published by `Simulation.publish()`
 - `pull` executors launch workers that claim from the Postgres queue and should
   preserve claim transactions until a simulation result is recorded or released

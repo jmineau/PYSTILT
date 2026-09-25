@@ -42,6 +42,26 @@ Simulation objects
    Trajectories
    Footprint
 
+Collections
+-----------
+
+``model.simulations`` is a :class:`~stilt.collections.SimulationCollection`
+over receptors × variants; :meth:`~stilt.collections.SimulationCollection.sel`
+narrows it and ``.trajectories`` / ``.footprint`` give an
+:class:`~stilt.collections.OutputCollection` of one output.
+
+.. currentmodule:: stilt.collections
+
+.. autosummary::
+   :toctree: _api
+   :nosignatures:
+
+   SimulationCollection
+   OutputCollection
+   ReceptorCollection
+
+.. currentmodule:: stilt
+
 Spatial geometries
 ------------------
 

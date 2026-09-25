@@ -101,8 +101,7 @@ def _aged_particles() -> pd.DataFrame:
 def test_transform_context_defaults(point_receptor):
     ctx = TransformContext(receptor=point_receptor)
     assert ctx.receptor is point_receptor
-    assert ctx.footprint_name == ""
-    assert ctx.is_error is False
+    assert ctx.variant == ""
     assert ctx.store is None
 
 
@@ -540,9 +539,7 @@ def test_apply_transforms_passes_context_through(point_receptor):
             seen.append(context)
             return particles
 
-    ctx = TransformContext(
-        receptor=point_receptor, footprint_name="column", is_error=True
-    )
+    ctx = TransformContext(receptor=point_receptor, variant="column")
     apply_transforms(_make_particles(), [Recorder()], ctx)
     assert seen == [ctx]
 

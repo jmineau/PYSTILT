@@ -226,57 +226,37 @@ def test_run_raises_clear_error_when_executable_missing(tmp_path, point_receptor
 def test_run_times_out_and_keeps_labeled_log_output(tmp_path, point_receptor):
     runner = _make_runner(tmp_path, point_receptor)
     exe = tmp_path / "hycs_std"
-    exe.write_text("#!/usr/bin/env bash\necho 'starting main run'\nsleep 30\n")
+    exe.write_text("#!/usr/bin/env bash\necho 'starting hycs_std'\nsleep 30\n")
     exe.chmod(0o755)
 
     with pytest.raises(HYSPLITTimeoutError, match="timed out"):
         runner._run(timeout=1)
 
     log_text = runner.log_path.read_text()
-    assert "=== main run ===" in log_text
-    assert "starting main run" in log_text
+    assert "=== hycs_std run ===" in log_text
+    assert "starting hycs_std" in log_text
 
 
-def test_execute_ignores_stale_main_particles_after_error_run_timeout(
+def test_execute_discards_stale_particles_from_a_previous_run(
     tmp_path, point_receptor, monkeypatch
 ):
-    runner = HYSPLITDriver(
-        directory=tmp_path,
-        receptor=point_receptor,
-        params=STILTParams(
-            n_hours=-24,
-            numpar=10,
-            hnf_plume=False,
-            rm_dat=False,
-            siguverr=1.0,
-            tluverr=60.0,
-            zcoruverr=500.0,
-            horcoruverr=40.0,
-            varsiwant=["time", "indx", "long", "lati", "zagl", "foot"],
-        ),
-        met_files=[tmp_path / "met" / "dummy"],
-        exe_dir=tmp_path,
+    runner = _make_runner(tmp_path, point_receptor, rm_dat_default=False)
+    _write_particle_dat(
+        runner.particle_stilt_path, rows=[[-60, 1, -111.9, 40.7, 10.0, 9e-5]]
     )
 
-    def fake_run(timeout: int | None, *, label: str = "main") -> None:
-        if label == "main":
-            _write_particle_dat(
-                runner.particle_stilt_path,
-                rows=[[-60, 1, -111.9, 40.7, 10.0, 1e-5]],
-            )
-            return
-        raise HYSPLITTimeoutError("error run timed out", str(tmp_path))
+    def fake_run(timeout: int | None, *, label: str = "hycs_std") -> None:
+        assert not runner.particle_stilt_path.exists()
+        _write_particle_dat(
+            runner.particle_stilt_path, rows=[[-60, 1, -111.9, 40.7, 10.0, 1e-5]]
+        )
 
     monkeypatch.setattr(runner, "_run", fake_run)
-    monkeypatch.setattr(runner, "_write_winderr", lambda: None)
-    monkeypatch.setattr(runner, "_write_zierr", lambda: None)
-    monkeypatch.setattr(runner, "_write_setup", lambda winderrtf: None)
 
     result = runner.execute(timeout=5, rm_dat=False)
 
-    assert len(result.particles) == 1
-    assert result.error_particles == {}
-    assert "=== error run [0] failed ===" in runner.log_path.read_text()
+    assert float(result.particles["foot"].iloc[0]) == pytest.approx(1e-5)
+    assert result.log_path == runner.log_path
 
 
 def test_terminate_process_escalates_when_group_kill_does_not_finish(
@@ -324,7 +304,7 @@ def test_terminate_process_escalates_when_group_kill_does_not_finish(
 
 def test_write_setup_creates_cfg(tmp_path, point_receptor):
     runner = _make_runner(tmp_path, point_receptor)
-    runner._write_setup(winderrtf=0)
+    runner._write_setup()
     cfg = tmp_path / "SETUP.CFG"
     assert cfg.exists()
     content = cfg.read_text()
@@ -342,30 +322,25 @@ def test_write_setup_includes_seed_when_configured(tmp_path, point_receptor):
         met_files=[tmp_path / "met" / "dummy"],
         exe_dir=tmp_path,
     )
-    runner._write_setup(winderrtf=0)
+    runner._write_setup()
     content = (tmp_path / "SETUP.CFG").read_text().lower()
 
     assert "seed=-18" in content  # -(|seed|+1): the value HYSPLIT honours
+    assert "winderrtf=0" in content
 
-    runner._write_setup(winderrtf=1, seed=43)
+
+def test_write_setup_sets_winderrtf_from_error_params(tmp_path, point_receptor):
+    runner = _make_runner_with_xyerr(tmp_path, point_receptor)
+    runner._write_setup()
     content = (tmp_path / "SETUP.CFG").read_text().lower()
-    assert "seed=-44" in content
     assert "winderrtf=1" in content
-
-
-def test_write_setup_sets_winderrtf(tmp_path, point_receptor):
-    runner = _make_runner(tmp_path, point_receptor)
-    runner._write_setup(winderrtf=3)
-    cfg = tmp_path / "SETUP.CFG"
-    content = cfg.read_text()
-    assert "winderrtf" in content.lower()
 
 
 def test_write_setup_removes_existing_cfg(tmp_path, point_receptor):
     runner = _make_runner(tmp_path, point_receptor)
     cfg = tmp_path / "SETUP.CFG"
     cfg.write_text("old content")
-    runner._write_setup(winderrtf=0)
+    runner._write_setup()
     assert "old content" not in cfg.read_text()
 
 
@@ -378,7 +353,7 @@ def test_write_setup_derives_kmsl_from_msl_receptor(tmp_path, point_receptor):
         altitude_ref="msl",
     )
     runner = _make_runner(tmp_path, receptor)
-    runner._write_setup(winderrtf=0)
+    runner._write_setup()
     content = (tmp_path / "SETUP.CFG").read_text().lower()
     assert "kmsl=1" in content
 
@@ -408,7 +383,7 @@ def test_write_setup_rejects_conflicting_explicit_kmsl(tmp_path, point_receptor)
     )
 
     with pytest.raises(ValueError, match="conflicts with receptor altitude_ref"):
-        runner._write_setup(winderrtf=0)
+        runner._write_setup()
 
 
 # ---------------------------------------------------------------------------
@@ -716,88 +691,42 @@ def _error_runner(tmp_path, point_receptor, **overrides) -> HYSPLITDriver:
     )
 
 
-def test_execute_runs_one_error_pass_per_realization(
+def test_perturbed_run_writes_winderr_and_winderrtf_once(
     tmp_path, point_receptor, monkeypatch
 ):
-    runner = _error_runner(tmp_path, point_receptor, krand=4, error_realizations=3)
+    """A perturbed variant is one HYSPLIT call with WINDERR and winderrtf set."""
+    runner = _error_runner(tmp_path, point_receptor)
+    monkeypatch.setattr(runner, "_write_zicontrol", lambda: None)
     labels: list[str] = []
-    setups: list[int] = []
 
-    def fake_run(timeout: int | None, *, label: str = "main") -> None:
+    def fake_run(timeout: int | None, *, label: str = "hycs_std") -> None:
         labels.append(label)
-        foot = 1e-5 if label == "main" else 1e-5 * (len(labels) + 1)
         _write_particle_dat(
-            runner.particle_stilt_path, rows=[[-60, 1, -111.9, 40.7, 10.0, foot]]
+            runner.particle_stilt_path, rows=[[-60, 1, -111.9, 40.7, 10.0, 1e-5]]
         )
 
     monkeypatch.setattr(runner, "_run", fake_run)
-    monkeypatch.setattr(runner, "_write_winderr", lambda: None)
-    monkeypatch.setattr(runner, "_write_zierr", lambda: None)
-    monkeypatch.setattr(
-        runner,
-        "_write_setup",
-        lambda winderrtf, seed=None: setups.append((winderrtf, seed)),
-    )
 
-    result = runner.execute(timeout=5, rm_dat=False, error_realizations=[0, 1, 2])
+    runner._write_setup()
+    runner._write_winderr()
+    runner._write_zierr()
+    result = runner.execute(timeout=5, rm_dat=False)
 
-    assert labels == ["main", "error[0]", "error[1]", "error[2]"]
-    assert setups == [
-        (1, None)
-    ]  # unseeded: SETUP.CFG written once for the error passes
+    assert labels == ["hycs_std"]
+    assert runner.winderr_path.exists()
+    assert not runner.zierr_path.exists()
+    assert "winderrtf=1" in runner.setup_path.read_text().lower()
     assert len(result.particles) == 1
-    assert sorted(result.error_particles) == [0, 1, 2]
-    foots = [float(result.error_particles[k]["foot"].iloc[0]) for k in (0, 1, 2)]
-    assert len(set(foots)) == 3  # each realization parsed its own particle file
 
 
-def test_one_failed_realization_does_not_lose_the_others(
-    tmp_path, point_receptor, monkeypatch
-):
-    runner = _error_runner(tmp_path, point_receptor, krand=4, error_realizations=3)
+def test_unperturbed_run_removes_a_stale_winderr(tmp_path, point_receptor):
+    """Reusing a directory from a perturbed run must not keep its WINDERR."""
+    _error_runner(tmp_path, point_receptor)._write_winderr()
+    assert (tmp_path / "WINDERR").exists()
 
-    def fake_run(timeout: int | None, *, label: str = "main") -> None:
-        if label == "error[1]":
-            raise HYSPLITTimeoutError("realization 1 timed out", str(tmp_path))
-        _write_particle_dat(
-            runner.particle_stilt_path, rows=[[-60, 1, -111.9, 40.7, 10.0, 1e-5]]
-        )
+    runner = _make_runner(tmp_path, point_receptor)
+    runner._write_winderr()
+    runner._write_zierr()
 
-    monkeypatch.setattr(runner, "_run", fake_run)
-    monkeypatch.setattr(runner, "_write_winderr", lambda: None)
-    monkeypatch.setattr(runner, "_write_zierr", lambda: None)
-    monkeypatch.setattr(runner, "_write_setup", lambda winderrtf, seed=None: None)
-
-    result = runner.execute(timeout=5, rm_dat=False, error_realizations=[0, 1, 2])
-
-    assert sorted(result.error_particles) == [0, 2]
-    assert "=== error run [1] failed ===" in runner.log_path.read_text()
-
-
-def test_seeded_realizations_rewrite_setup_with_their_own_seed(
-    tmp_path, point_receptor, monkeypatch
-):
-    runner = _error_runner(
-        tmp_path, point_receptor, krand=2, seed=42, error_realizations=3
-    )
-    setups: list[tuple[int, int | None]] = []
-
-    def fake_run(timeout: int | None, *, label: str = "main") -> None:
-        _write_particle_dat(
-            runner.particle_stilt_path, rows=[[-60, 1, -111.9, 40.7, 10.0, 1e-5]]
-        )
-
-    monkeypatch.setattr(runner, "_run", fake_run)
-    monkeypatch.setattr(runner, "_write_winderr", lambda: None)
-    monkeypatch.setattr(runner, "_write_zierr", lambda: None)
-    monkeypatch.setattr(
-        runner,
-        "_write_setup",
-        lambda winderrtf, seed=None: setups.append((winderrtf, seed)),
-    )
-
-    runner.execute(timeout=5, rm_dat=False, error_realizations=[0, 2])
-
-    # realization 0 shares the configured seed (as STILT-R's error run does);
-    # realization k runs with seed + k
-    assert setups == [(1, 42), (1, 44)]
+    assert not (tmp_path / "WINDERR").exists()
+    assert not (tmp_path / "ZIERR").exists()

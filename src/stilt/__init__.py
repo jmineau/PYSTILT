@@ -10,6 +10,7 @@ from .config import (
     MetConfig,
     ModelConfig,
     RuntimeSettings,
+    VariantConfig,
 )
 from .footprint import Footprint
 from .geometry import Geometry, Mesh, SpatialTarget, Zones
@@ -45,6 +46,7 @@ __all__ = [
     "Bounds",
     "MetConfig",
     "RuntimeSettings",
+    "VariantConfig",
     # Data objects (returned by Model methods)
     "Simulation",
     "SimID",

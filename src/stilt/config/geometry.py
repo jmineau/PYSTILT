@@ -9,13 +9,15 @@ is omitted the config derives one with :meth:`stilt.Grid.from_geometry`.
 
 .. code-block:: yaml
 
-   footprints:
-     counties:
-       geometry:
-         kind: file
-         path: counties.shp
-         ids: NAME
-     hexes:
+   geometry:                     # the default footprint's geometry
+     kind: file
+     path: counties.shp
+     ids: NAME
+
+   variants:
+     hrrr: {}
+     hrrr-hexes:                   # a second footprint from the same particles
+       from: hrrr
        geometry: {kind: h3, resolution: 8, bounds: {xmin: -112.3, xmax: -111.6, ymin: 40.4, ymax: 41.0}}
        cells_per_target: 4
 """

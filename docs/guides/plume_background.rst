@@ -72,8 +72,8 @@ forward runs, and outline them:
 
    window = (overpass - pd.Timedelta(minutes=3), overpass + pd.Timedelta(minutes=3))
    rows = []
-   for sim_id in forward.simulations:
-       p = forward.simulations[sim_id].trajectories.data
+   for sim in forward.simulations:
+       p = sim.trajectories.data
        rows.append(p[p["datetime"].between(*window)])
    particles = pd.concat(rows)
 

@@ -2,8 +2,9 @@ Configuration
 =============
 
 A project's settings live in ``config.yaml`` in the project folder: which
-meteorology to use, which footprints to make, and how to run HYSPLIT. This
-page covers the settings most projects need. The
+meteorology to use, which footprint to make, and how to run HYSPLIT. This
+page covers the settings most projects need, and `Variants`_ covers running
+the same receptors under several settings. The
 :doc:`../reference/configuration` lists every option.
 
 A typical config.yaml
@@ -17,14 +18,13 @@ A typical config.yaml
        file_format: "%Y%m%d_%H"
        file_tres: 6h
 
-   footprints:
-     slv:
-       xmin: -114.0
-       xmax: -111.0
-       ymin: 39.0
-       ymax: 42.0
-       xres: 0.01
-       yres: 0.01
+   grid:
+     xmin: -114.0
+     xmax: -111.0
+     ymin: 39.0
+     ymax: 42.0
+     xres: 0.01
+     yres: 0.01
 
    n_hours: -24
    numpar: 500
@@ -44,15 +44,15 @@ The settings most people change
      - What it does
      - Typical value
    * - ``mets``
-     - Where the meteorology files are and how they are named. The name you
-       give each one (``hrrr`` above) goes into every simulation ID. See
-       :doc:`meteorology`.
+     - Where the meteorology files are and how they are named. With no
+       ``variants``, each one (``hrrr`` above) is run for every receptor and
+       names its simulations. See :doc:`meteorology`.
      - one entry
-   * - ``footprints``
-     - The map grid(s) to calculate footprints on: longitude range
+   * - ``grid``
+     - The map grid to calculate the footprint on: longitude range
        (``xmin``/``xmax``), latitude range (``ymin``/``ymax``), and cell size
-       in degrees (``xres``/``yres``). Each footprint gets a name you choose
-       (``slv`` above).
+       in degrees (``xres``/``yres``). Leave it out, or set it to ``null``,
+       to keep only the particle trajectories.
      - 0.01° (about 1 km) for a city; 0.1° for a region
    * - ``n_hours``
      - How many hours to follow particles. Negative is backward in time,
@@ -73,7 +73,8 @@ The settings most people change
 Footprint options
 -----------------
 
-Besides the grid, each footprint accepts:
+Besides the grid, the footprint takes these settings, next to ``grid`` at
+the top level of ``config.yaml``:
 
 ``smooth_factor``
    Scales the Gaussian smoothing applied to each particle's influence.
@@ -87,48 +88,89 @@ Besides the grid, each footprint accepts:
    Particle weighting steps, mainly for column measurements. See
    :doc:`../advanced/transforms`.
 
-Several footprints at once
---------------------------
+Variants
+--------
 
-You can make more than one footprint from the same particles, for example a
-fine grid over the city and a coarse one over the region:
+Every receptor is run once per **variant**. A variant is a name, a met
+stream, and any settings that differ from the ones written at the top level
+of ``config.yaml``, which are the defaults. With no ``variants`` section,
+there is one variant per met stream, named after it, so the typical config
+above runs each receptor once as ``hrrr``.
 
-.. code-block:: yaml
-
-   footprints:
-     city:
-       xmin: -114.0
-       xmax: -111.0
-       ymin: 39.0
-       ymax: 42.0
-       xres: 0.01
-       yres: 0.01
-
-     regional:
-       xmin: -125.0
-       xmax: -100.0
-       ymin: 30.0
-       ymax: 50.0
-       xres: 0.1
-       yres: 0.1
-
-Each footprint gets its own file. Adding a footprint to an existing project
-and running again calculates just the new footprint for every simulation.
-
-The grid can also be written under a ``grid:`` key. The two forms mean the
-same thing:
+Declare variants to run the same receptors under other settings:
 
 .. code-block:: yaml
 
-   footprints:
-     city:
-       grid:
-         xmin: -114.0
-         xmax: -111.0
-         ymin: 39.0
-         ymax: 42.0
-         xres: 0.01
-         yres: 0.01
+   variants:
+     hrrr: {}                     # the defaults with the hrrr met
+     hrrr-zi08: {ziscale: 0.8}    # a mixed-layer sensitivity
+     hrrr-np3k: {numpar: 3000}    # a particle-count check
+     hrrr-err:                    # a wind-error run (see transport_error)
+       siguverr: 2.6
+       tluverr: 260
+       zcoruverr: 450
+       horcoruverr: 14
+       grid: null                 # particles only
+
+Each variant of each receptor is one simulation, stored in
+``simulations/by-id/<receptor>/<variant>/`` (:doc:`project_layout`), and
+every variant uses the same list of receptors. A variant may set:
+
+``met``
+   Which met stream to use. Needed only when ``mets`` has more than one entry.
+
+``realizations``
+   Run the variant ``N`` times as ``<name>-0`` to ``<name>-(N-1)``, each
+   with ``seed + k``. This is how a transport-error ensemble is declared
+   (:doc:`transport_error`). It needs ``krand: 4``, or ``krand: 2`` with a
+   ``seed``, so the runs differ.
+
+any other setting
+   Transport settings (``numpar``, ``ziscale``, turbulence, error
+   statistics) and footprint settings (``grid``, ``smooth_factor``,
+   ``time_integrate``, ``transforms``) override the defaults for that
+   variant only.
+
+Names use lowercase letters, digits, and hyphens, because they become
+directory names.
+
+A second footprint from the same particles
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A footprint is cheap to make from stored particles; the HYSPLIT run is the
+expensive part. ``from:`` declares a variant that re-uses another variant's
+trajectory and changes only the footprint:
+
+.. code-block:: yaml
+
+   variants:
+     hrrr: {}
+     hrrr-regional:
+       from: hrrr
+       grid: {xmin: -125.0, xmax: -100.0, ymin: 30.0, ymax: 50.0, xres: 0.1, yres: 0.1}
+     hrrr-ak:
+       from: hrrr
+       transforms: [{kind: averaging_kernel, table: kernels.parquet}]
+
+A ``from:`` variant runs no HYSPLIT and may set only footprint settings.
+Adding one to a finished project and running again calculates just its
+footprints from the stored particles. For a coarser grid you may not need a
+variant at all: :meth:`stilt.Footprint.aggregate` sums a fine footprint onto
+coarser cells or irregular areas after the fact.
+
+Changing a variant
+~~~~~~~~~~~~~~~~~~
+
+``config.yaml`` in the project is the record of what produced its outputs.
+Once a project is registered, running it with a variant whose settings
+changed (including a changed default the variant inherits) stops with an
+error that names the changed settings, because the finished outputs would no
+longer match their name. Declare a new variant for new settings. To
+overwrite the record anyway, pass ``allow_changes=True`` to
+:meth:`stilt.Model.register` or ``--force`` to ``stilt register``, then run
+with ``skip_existing: false`` to redo the outputs. Settings that do not
+change a result, such as ``execution`` and ``skip_existing``, can change
+freely.
 
 Footprints for shapefiles, hexagons, or point sources
 -----------------------------------------------------
@@ -141,19 +183,27 @@ extra:
 
 .. code-block:: yaml
 
-   footprints:
-     counties:
-       geometry:
-         kind: file          # shapefile / GeoPackage / GeoJSON (needs geopandas)
-         path: counties.shp
-         ids: NAME           # attribute column used as cell ids
-     hexes:
+   geometry:
+     kind: file          # shapefile / GeoPackage / GeoJSON (needs geopandas)
+     path: counties.shp
+     ids: NAME           # attribute column used as cell ids
+
+The other kinds are ``h3`` hexagons and ``windows`` around point sources;
+different geometries for the same particles are variants with ``from:``:
+
+.. code-block:: yaml
+
+   variants:
+     hrrr: {}
+     hrrr-hexes:
+       from: hrrr
        geometry:
          kind: h3            # needs the h3 package
          resolution: 8
          bounds: {xmin: -112.3, xmax: -111.6, ymin: 40.4, ymax: 41.0}
        cells_per_target: 4   # native cells across the smallest hexagon (default)
-     sources:
+     hrrr-sources:
+       from: hrrr
        geometry:
          kind: windows
          coords: [[-111.97, 40.515], [-112.015, 40.779]]
@@ -163,8 +213,8 @@ extra:
 The derived ``grid`` is written back into the config, so the geometry object
 is never needed to read a stored footprint.  Give both ``grid`` and
 ``geometry`` to pin the raster explicitly; ``geometry`` is then kept as a
-record and ``config.geometry.build()`` returns the :class:`stilt.Mesh` to
-aggregate onto.  A content hash of the built geometry (``geometry_hash``) is
+record and ``sim.footprint_config.geometry.build()`` returns the
+:class:`stilt.Mesh` to aggregate onto.  A content hash of the built geometry (``geometry_hash``) is
 stored with the config and in each footprint file; ``Footprint.aggregate``
 warns if the mesh it is handed no longer matches, which catches a shapefile
 edited after the footprints were computed.
@@ -215,13 +265,12 @@ as plain dictionaries:
                "file_tres": "6h",
            }
        },
-       footprints={
-           "slv": {
-               "xmin": -114.0, "xmax": -111.0,
-               "ymin": 39.0, "ymax": 42.0,
-               "xres": 0.01, "yres": 0.01,
-           }
+       grid={
+           "xmin": -114.0, "xmax": -111.0,
+           "ymin": 39.0, "ymax": 42.0,
+           "xres": 0.01, "yres": 0.01,
        },
+       variants={"hrrr": {}, "hrrr-zi08": {"ziscale": 0.8}},
        n_hours=-24,
        numpar=500,
    )
@@ -238,19 +287,16 @@ or as typed objects, which your editor can autocomplete and check:
                file_tres="6h",
            )
        },
-       footprints={
-           "slv": stilt.FootprintConfig(
-               grid=stilt.Grid(
-                   xmin=-114.0, xmax=-111.0,
-                   ymin=39.0, ymax=42.0,
-                   xres=0.01, yres=0.01,
-               )
-           )
-       },
+       grid=stilt.Grid(
+           xmin=-114.0, xmax=-111.0,
+           ymin=39.0, ymax=42.0,
+           xres=0.01, yres=0.01,
+       ),
        n_hours=-24,
        numpar=500,
    )
    model = stilt.Model(project="./my_project", config=config)
+   model.variants          # {"hrrr": VariantConfig(...)}: every variant, resolved
 
 Advanced HYSPLIT settings
 -------------------------

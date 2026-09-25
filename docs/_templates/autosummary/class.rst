@@ -79,16 +79,14 @@ Methods
 .. autosummary::
    :toctree:
 
-   ~{{ objname }}.from_parts
+   ~{{ objname }}.parse
 
 Attributes
 ----------
 
 .. autosummary::
-   ~{{ objname }}.location
-   ~{{ objname }}.met
    ~{{ objname }}.receptor
-   ~{{ objname }}.time
+   ~{{ objname }}.variant
 {% else %}
 .. class-signature:: {{ fullname }}
 

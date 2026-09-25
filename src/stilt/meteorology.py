@@ -24,7 +24,7 @@ class MetID(str):
     def __new__(cls, name: str):
         if "_" in name:
             raise ValueError(
-                "MetID cannot contain underscores, which are reserved for delimiting sim_id components."
+                "MetID cannot contain underscores, which are reserved for delimiting receptor id components."
             )
         return super().__new__(cls, name)
 

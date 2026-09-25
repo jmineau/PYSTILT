@@ -60,10 +60,15 @@ messages. Existing identifiers such as the `r_stilt` test fixtures and
 
 **There is no index, manifest, or registry.** A project is one root
 (`stilt.project.Project`) over a store (`stilt.store`). The simulations it
-defines are `receptors.csv × config.mets`. Whether a simulation is complete is
-decided **by key**, by `Simulation.is_complete()`: that method is the single
-definition of "done". The optional Postgres work queue in `stilt.service`
-tracks work status only.
+defines are **receptors × variants**: `receptors.csv` crossed with the named
+variants in `config.yaml` (one per met when none are declared). A simulation
+is one receptor under one variant, one HYSPLIT call, `SimID(receptor,
+variant)`, stored at `simulations/by-id/<receptor>/<variant>/`. Whether a
+simulation is complete is decided **by key**, by `Simulation.is_complete()`:
+that method is the single definition of "done". `config.yaml` is the record
+of the settings that produced the outputs; `Model.register()` refuses to
+change a registered variant (`ConfigChangedError`). The optional Postgres
+work queue in `stilt.service` tracks work status only, per receptor.
 
 `stilt.__all__` (plus the `__all__` of each subpackage) is the public surface;
 everything else is internal and can change.
@@ -77,7 +82,7 @@ src/stilt/
   project.py         Project: one root (local dir or URI), its store and key
                      layout; loads/saves config.yaml and receptors.csv
   store.py           Store protocol and the local / fsspec implementations
-  simulation.py      Simulation, SimID: per-receptor outputs, their store keys,
+  simulation.py      Simulation, SimID: one receptor × variant, its outputs, store keys,
                      completion, and publishing from the compute root
   receptors.py       receptor types (point, multipoint, column) and IDs
   trajectory.py      Trajectories: particle output container + Parquet I/O
@@ -88,7 +93,8 @@ src/stilt/
   meteorology.py     MetStream: ARL file discovery and staging (via arlmet)
   transforms.py      pre-footprint particle transforms (averaging kernel,
                      pressure weighting, lifetime decay) and their YAML I/O
-  collections.py     the query surface over receptors × mets and their outputs
+  collections.py     SimulationCollection (receptors × variants, .sel()) and
+                     OutputCollection (one output over a selection)
   errors.py          failure reasons and structured error types
   visualization.py   matplotlib helpers (optional dependency)
 
@@ -115,8 +121,10 @@ docs/                Sphinx (pydata-sphinx-theme)
    enqueues; `stilt pull-worker` drains the queue, `stilt serve` runs
    long-lived. Requires `PYSTILT_DB_URL` pointing at PostgreSQL. The queue
    (`model.queue`) records status; completion is still by key. The Slurm
-   backend instead pushes fixed chunks of simulation IDs to
-   `stilt push-worker`, with no queue.
+   backend instead pushes fixed chunks of receptor IDs to
+   `stilt push-worker`, with no queue. On every path the unit of work is a
+   receptor: `run_receptor` runs its HYSPLIT variants, then the `from:`
+   variants that rasterize their particles.
 3. **Observation-driven**: a reader yields a DataFrame of soundings;
    `stilt.observations` helpers thin and group it; each row becomes a
    `Receptor`; `averaging_kernel_table` writes the kernels into the project;
@@ -129,8 +137,13 @@ tend to break them.
 
 ### Configuration
 
-- `ModelConfig` is the root. It composes `MetConfig`, a dict of named
-  `FootprintConfig`s, and `Grid` / `Bounds`.
+- `ModelConfig` is the root: flat transport (`STILTParams`) and footprint
+  (`FootprintParams`) defaults, `mets`, and `variants` (overrides of the
+  defaults). `ModelConfig.resolve_variants()` turns them into one
+  `VariantConfig` per simulation name, expanding `realizations: N` into
+  `<name>-0..N-1` with `seed + k`. A `from:` variant may override only
+  footprint fields and reuses its parent's trajectory. `grid: null` means
+  trajectory only. There is no named-footprints dict.
 - Every field is a plain pydantic `Field(default, description=...)` and the
   public config stays flat (`ModelConfig(numpar=..., seed=...)`). CONTRIBUTING
   explains how a field is routed to `SETUP.CFG`, `CONTROL`, `WINDERR`, or
@@ -138,7 +151,7 @@ tend to break them.
 - `RuntimeSettings` is one `pydantic-settings` class reading `PYSTILT_*`
   environment variables (`db_url`, `cache_dir`, `compute_root`);
   `Model(runtime=...)` overrides it.
-- Particle transforms are declared per footprint in YAML
+- Particle transforms are declared as a default or per variant in YAML
   (`transforms: [{kind: ...}]`); `kind` may also be the import path of a user
   class.
 
@@ -152,11 +165,11 @@ is a store key relative to it (see `project.py`):
   config.yaml                 ModelConfig (user-authored)
   receptors.csv               receptor list; register() merges new batches
   simulations/
-    by-id/<sim_id>/
-      stilt.log               HYSPLIT log
+    by-id/<receptor_id>/<variant>/
+      stilt.log               HYSPLIT log (one run per directory)
       met/                    staged meteorology (compute-local only)
-      *_traj.parquet          trajectories (+ *_error.parquet)
-      *_<name>_foot.nc        footprints, or *_foot.empty markers
+      <receptor_id>_traj.parquet   trajectories (absent for a from: variant)
+      <receptor_id>_foot.nc        the footprint, or <receptor_id>_foot.empty
   chunks/, slurm/             Slurm push-dispatch artefacts (local projects)
 ```
 
@@ -282,9 +295,12 @@ Feature status lives in the roadmap tables in [README.md](README.md) and
 
 - **`Model.simulations` is a lazy, mapping-like `SimulationCollection`**, not
   a list.
-- **Empty footprints are successes.** `model.footprints[name].load(...)`
-  treats `.empty` simulations as complete with no file; code that iterates
-  results must accept a missing payload.
+- **Empty footprints are successes.** `model.footprint.load()` treats
+  `.empty` simulations as complete with no file; code that iterates results
+  must accept a missing payload.
+- **`realizations: 1 -> N` renames the run.** `hrrr-err` becomes
+  `hrrr-err-0`, so the drift check sees a new variant and the old directory
+  is orphaned. Realization 0 is never aliased to the unsuffixed name.
 - **HYSPLIT line-source chaining.** In `emspnt.f`, consecutive CONTROL
   starting locations at the same lat/lon become one vertical line source and
   only the last pair is released. That is how `ColumnReceptor` works (two
@@ -333,9 +349,10 @@ Feature status lives in the roadmap tables in [README.md](README.md) and
   (clock draw with ~5000 distinct values), and `krand=1` uses it only for the
   initial turbulent velocity, so `seed` requires `krand=2`. `krand` is
   restricted to HYSPLIT's documented modes because any other value silently
-  degenerates the turbulence draws. Error realization `k` runs with
-  `seed + k`; realization 0 shares the main seed, as STILT-R's error run
-  does, which is what the `winderr` fidelity scenario relies on. The R
+  degenerates the turbulence draws. Realization `k` of a variant runs with
+  `seed + k`; realization 0, and a single wind-error variant, share the
+  default seed, as STILT-R's error run does, which is what the `winderr`
+  fidelity scenario (an `hrrr-err` variant) relies on. The R
   fidelity fixture applies the same seed mapping.
 - HYSPLIT binaries in `src/stilt/hysplit/bin/` are Linux x86-64. Real runs are
   heavy; on a shared HPC system run them through the Slurm backend or an

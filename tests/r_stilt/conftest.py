@@ -52,8 +52,7 @@ def scenario_outputs(request, met_dir, rscript, r_stilt_dir, tmp_path_factory) -
     model.run()
     print(f"\n[PROFILE] {scenario.name} PYSTILT sim: {time.perf_counter() - t0:.1f}s")
 
-    sim_id = scenario.py_sim_id()
-    sim_dir = model.simulations[sim_id].directory
+    sim_dir = model.simulations[scenario.py_sim_id()].directory
 
     traj_files = list(sim_dir.glob("*_traj.parquet"))
     foot_files = list(sim_dir.glob("*_foot.nc"))
@@ -63,8 +62,10 @@ def scenario_outputs(request, met_dir, rscript, r_stilt_dir, tmp_path_factory) -
     if not foot_files:
         pytest.fail(f"[{scenario.name}] No footprint NetCDF found in {sim_dir}")
 
-    error_traj_files = list(sim_dir.glob("*_error.parquet"))
-    error_traj_path = error_traj_files[0] if error_traj_files else None
+    error_traj_path = None
+    if scenario.error_variant is not None:
+        err = model.simulations[scenario.py_sim_id(scenario.error_variant)]
+        error_traj_path = err.trajectories_path if err.has_trajectory else None
 
     # Skip R trajectory run for scenarios whose transport is identical to another.
     # test_trajectory_matches_r will pytest.skip() when r_traj is None.

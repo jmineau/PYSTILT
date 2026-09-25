@@ -24,7 +24,8 @@ PYSTILT is in alpha development. No backward compatibility guarantees before v1.
 
 The core transport is stable: HYSPLIT execution, trajectory and footprint generation,
 numerical STILT-R parity, and the local and SLURM execution paths are all exercised by the
-test suite. The public API may change while the package settles.
+test suite. A project runs its receptors under named variants (settings, error ensembles,
+extra footprints). The public API may change while the package settles.
 
 ## Choose a workflow
 
@@ -69,7 +70,7 @@ design and column-weighting concepts without trying to replicate every script.
 | Column receptor support | Implemented |
 | Averaging-kernel and pressure-weighting particle transforms | Implemented |
 | First-order lifetime decay transform | Implemented |
-| Declarative per-footprint transforms in config | Implemented |
+| Declarative transforms in config (default or per variant) | Implemented |
 | Slant-column receptor support | Implemented |
 | Slant altitudes from a retrieval's pressure levels (`pressure_altitudes`) | Implemented |
 | User-defined transforms (`kind: my.module.Class`) | Implemented |
@@ -123,28 +124,50 @@ model = stilt.Model(
                 file_tres="6h",
             )
         },
-        footprints={
-            "default": stilt.FootprintConfig(
-                grid=stilt.Grid(
-                    xmin=-113.0,
-                    xmax=-110.5,
-                    ymin=40.0,
-                    ymax=42.0,
-                    xres=0.01,
-                    yres=0.01,
-                )
-            )
-        },
+        grid=stilt.Grid(
+            xmin=-113.0,
+            xmax=-110.5,
+            ymin=40.0,
+            ymax=42.0,
+            xres=0.01,
+            yres=0.01,
+        ),
     ),
 )
 
 handle = model.run()
 handle.wait()
 
-sim = list(model.simulations.values())[0]
+sim = model.simulations[receptor.id, "hrrr"]    # a receptor under a variant
 traj = sim.trajectories
-foot = sim.get_footprint("default")
+foot = sim.footprint
 ```
+
+## Variants: the same receptors under other settings
+
+A project is its receptors crossed with its **variants**. The top-level
+settings in `config.yaml` are defaults; each variant names its met and
+overrides what it changes. With no `variants`, there is one per met.
+
+```yaml
+variants:
+  hrrr: {}                                  # the defaults
+  hrrr-zi08: {ziscale: 0.8}                 # a mixed-layer sensitivity
+  hrrr-err:                                 # wind-error ensemble for transport_error
+    siguverr: 2.6
+    tluverr: 260
+    zcoruverr: 450
+    horcoruverr: 14
+    realizations: 4                         # hrrr-err-0 .. hrrr-err-3
+    grid: null                              # particles only
+  hrrr-ak:                                  # another footprint from the hrrr particles
+    from: hrrr
+    transforms: [{kind: averaging_kernel, table: kernels.parquet}]
+```
+
+Each receptor under each variant is one simulation in
+`simulations/by-id/<receptor>/<variant>/`. Adding a variant runs only the
+new simulations; changing the settings of one that already ran is refused.
 
 ## Quickstart: queue/service runtime
 
@@ -158,7 +181,7 @@ stilt init ./my_project
 # Run with local workers (blocks until complete)
 stilt run ./my_project --backend local --n-workers 8
 
-# Persist inputs and enqueue every simulation (receptors x mets)
+# Persist inputs and enqueue every receptor (each worker runs all its variants)
 stilt register ./my_project
 
 # Drain queue from worker processes (batch mode)
@@ -175,15 +198,15 @@ The same queue model is available in Python:
 
 ```python
 import stilt
-from stilt.execution import pull_simulations
+from stilt.execution import pull_receptors
 
 model = stilt.Model(project="./my_project")
 model.register()
-pull_simulations(model, follow=False)  # batch mode
+pull_receptors(model, follow=False)  # batch mode
 print(model.status())
 ```
 
-Workers claim simulations from the queue and record done/failed there;
+Workers claim receptors from the queue and record done/failed there;
 whether outputs exist is always read from the project itself.
 
 ## Quickstart: column and satellite soundings
@@ -214,14 +237,12 @@ model.run()
 with the footprint declared once in `config.yaml`:
 
 ```yaml
-footprints:
-  column:
-    grid: slv
-    transforms:
-      - kind: averaging_kernel
-        table: kernels.parquet
-        coordinate: pres
-      - kind: pressure_weighting
+grid: {xmin: -114.0, xmax: -111.0, ymin: 39.0, ymax: 42.0, xres: 0.01, yres: 0.01}
+transforms:
+  - kind: averaging_kernel
+    table: kernels.parquet
+    coordinate: pres
+  - kind: pressure_weighting
 ```
 
 Slant paths come from `slant_points` and `Receptor.from_points`, with
@@ -231,22 +252,20 @@ and the [slant columns guide](https://jmineau.github.io/PYSTILT/guides/slant_col
 
 ## Particle transforms
 
-Per-footprint transforms rescale each particle's influence before the
-footprint is rasterized. Declare them in config, or pass them in Python:
+Transforms rescale each particle's influence before the footprint is
+rasterized. Declare them in config (as a default, or per variant), or pass
+them in Python:
 
 ```yaml
-footprints:
-  column:
-    grid: slv
-    transforms:
-      - kind: averaging_kernel
-        levels: [0.0, 1000.0, 2000.0]
-        values: [1.0, 0.8, 0.5]
-      - kind: pressure_weighting      # derived from the particles, X-STILT style
-      - kind: first_order_lifetime
-        lifetime_hours: 4.0
-      - kind: mypkg.transforms.MyWeighting   # your own pydantic class with apply()
-        some_field: 3
+transforms:
+  - kind: averaging_kernel
+    levels: [0.0, 1000.0, 2000.0]
+    values: [1.0, 0.8, 0.5]
+  - kind: pressure_weighting      # derived from the particles, X-STILT style
+  - kind: first_order_lifetime
+    lifetime_hours: 4.0
+  - kind: mypkg.transforms.MyWeighting   # your own pydantic class with apply()
+    some_field: 3
 ```
 
 A transform is any object with `apply(particles, context)`. See the
@@ -258,14 +277,14 @@ for the column-weighting science and for writing your own.
 ```python
 import pandas as pd
 
-for sim in model.simulations.values():
+for sim in model.simulations.sel(variant="hrrr"):
     traj = sim.trajectories
-    foot = sim.get_footprint("default")
+    foot = sim.footprint
 
-# Load footprints across all matching simulations
-footprints = model.footprints["default"].load(
-    time_range=("2023-01-01", "2023-01-31")
-)
+# Load footprints across a selection of simulations
+footprints = model.simulations.sel(
+    variant="hrrr", time=slice("2023-01-01", "2023-01-31")
+).footprint.load()
 
 coords = [(-111.9, 40.7), (-111.8, 40.8)]
 time_bins = pd.interval_range(

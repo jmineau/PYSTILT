@@ -1,8 +1,8 @@
-"""Footprint config models."""
+"""Footprint settings: the fields a variant carries and the resolved product."""
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, ClassVar
 
 from pydantic import (
     BaseModel,
@@ -22,23 +22,23 @@ from .spatial import Grid
 _GEOMETRY_ADAPTER: TypeAdapter[Any] = TypeAdapter(GeometrySpec)
 
 
-class FootprintConfig(BaseModel):
+class FootprintParams(BaseModel):
     """
-    Settings for a single named footprint product.
+    Footprint settings as they appear in a config: defaults and per-variant.
 
-    Give ``grid`` to set the native raster directly, or ``geometry`` to name
-    the state geometry the footprint serves and let the raster be derived
-    from it (:meth:`stilt.Grid.from_geometry`).  When both are given the
-    explicit ``grid`` wins and ``geometry`` is kept as a record.
+    ``grid`` is the native raster. Leave it ``None`` (and give no
+    ``geometry``) for a variant that produces only a trajectory. Give
+    ``geometry`` instead to name the state geometry the footprint serves and
+    let the raster be derived from it (:meth:`stilt.Grid.from_geometry`); when
+    both are given the explicit ``grid`` wins and ``geometry`` is kept as a
+    record.
     """
 
-    model_config = ConfigDict(frozen=True)
-
-    grid: Grid = Field(
-        ...,
+    grid: Grid | None = Field(
+        None,
         description=(
-            "Spatial domain and resolution for the footprint. May be omitted "
-            "when ``geometry`` is given, in which case it is derived."
+            "Spatial domain and resolution of the footprint. ``None`` with no "
+            "``geometry`` means no footprint: a trajectory-only run."
         ),
     )
     geometry: GeometrySpec | None = Field(
@@ -60,6 +60,35 @@ class FootprintConfig(BaseModel):
             "a stored footprint can detect that the geometry file changed later. "
             "Filled automatically; not needed when ``geometry`` is unset."
         ),
+    )
+    smooth_factor: float = Field(
+        1.0,
+        description="Factor by which to linearly scale footprint smoothing. Defaults to 1",
+    )
+    time_integrate: bool = Field(
+        False,
+        description="If True, sum the footprint over all time steps to produce a single 2-D layer.",
+    )
+    transforms: list[Any] = Field(
+        description=(
+            "Particle transforms applied in order before rasterizing the footprint. "
+            "Each entry is a built-in kind (averaging_kernel, pressure_weighting, "
+            "first_order_lifetime) or a dotted import path to a user transform class."
+        ),
+        default_factory=list,
+    )
+
+    #: The footprint fields, the only ones a derived variant may override.
+    FIELDS: ClassVar[frozenset[str]] = frozenset(
+        {
+            "grid",
+            "geometry",
+            "cells_per_target",
+            "geometry_hash",
+            "smooth_factor",
+            "time_integrate",
+            "transforms",
+        }
     )
 
     @model_validator(mode="before")
@@ -95,30 +124,6 @@ class FootprintConfig(BaseModel):
             out["geometry_hash"] = mesh.hash
         return out
 
-    smooth_factor: float = Field(
-        1.0,
-        description="Factor by which to linearly scale footprint smoothing. Defaults to 1",
-    )
-    time_integrate: bool = Field(
-        False,
-        description="If True, sum the footprint over all time steps to produce a single 2-D layer.",
-    )
-    error: bool = Field(
-        default=False,
-        description=(
-            "If True, also compute an error footprint from the error trajectories "
-            'and store it alongside the main footprint under "{name}_error".'
-        ),
-    )
-    transforms: list[Any] = Field(
-        description=(
-            "Particle transforms applied in order before rasterizing the footprint. "
-            "Each entry is a built-in kind (averaging_kernel, pressure_weighting, "
-            "first_order_lifetime) or a dotted import path to a user transform class."
-        ),
-        default_factory=list,
-    )
-
     @field_validator("transforms", mode="before")
     @classmethod
     def _load_transforms(cls, value: Any) -> list[Any]:
@@ -132,22 +137,39 @@ class FootprintConfig(BaseModel):
         """Serialise the transforms back to plain mappings."""
         return [dump_transform(item) for item in value]
 
+    @property
+    def footprint(self) -> FootprintConfig | None:
+        """The footprint product these settings describe, or ``None`` without a grid."""
+        if self.grid is None:
+            return None
+        return FootprintConfig(
+            grid=self.grid,
+            geometry=self.geometry,
+            cells_per_target=self.cells_per_target,
+            geometry_hash=self.geometry_hash,
+            smooth_factor=self.smooth_factor,
+            time_integrate=self.time_integrate,
+            transforms=list(self.transforms),
+        )
+
+
+class FootprintConfig(FootprintParams):
+    """
+    One footprint product: :class:`FootprintParams` with the grid resolved.
+
+    This is what :meth:`stilt.Footprint.calculate` takes and what a stored
+    footprint's attributes round-trip to.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    grid: Grid = Field(
+        ..., description="Spatial domain and resolution of the footprint."
+    )
+
     def replace(self, **updates: object) -> FootprintConfig:
         """Return a copy with updated fields for interactive iteration."""
         return self.model_copy(update=updates)
 
 
-def foot_names(foot_configs: dict[str, FootprintConfig]) -> list[str]:
-    """Return all requested footprint output names, including error outputs."""
-    names: list[str] = []
-    for name, cfg in foot_configs.items():
-        names.append(name)
-        if cfg.error:
-            names.append(f"{name}_error")
-    return names
-
-
-__all__ = [
-    "FootprintConfig",
-    "foot_names",
-]
+__all__ = ["FootprintConfig", "FootprintParams"]

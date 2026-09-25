@@ -92,18 +92,13 @@ class HYSPLITResult:
 
     Attributes
     ----------
-    particles : pd.DataFrame or None
-        Main particle positions and footprint columns from the PARDUMP file.
-        ``None`` when the main run was skipped (error-only execution).
-    error_particles : dict[int, pd.DataFrame]
-        Error-trajectory particle data keyed by realization index. Empty when
-        no error run was performed; a realization whose run failed is absent.
+    particles : pd.DataFrame
+        Particle positions and footprint columns from ``PARTICLE_STILT.DAT``.
     log_path : Path
-        Combined log path containing streamed standard output from the run(s).
+        Log path holding the run's streamed standard output.
     """
 
-    particles: pd.DataFrame | None
-    error_particles: dict[int, pd.DataFrame]
+    particles: pd.DataFrame
     log_path: Path
 
 
@@ -170,90 +165,39 @@ class HYSPLITDriver:
             met_files=self.met_files,
         ).write(self.control_path)
 
-        # Write SETUP.CFG with winderrtf=0 (error trajectory rewrites this later)
-        self._write_setup(winderrtf=0)
+        # SETUP.CFG carries winderrtf; WINDERR / ZIERR exist only when perturbed.
+        self._write_setup()
         self._write_zicontrol()
+        self._write_winderr()
+        self._write_zierr()
 
-    def execute(
-        self,
-        timeout: int | None,
-        rm_dat: bool,
-        *,
-        error_only: bool = False,
-        error_realizations: Sequence[int] = (0,),
-    ) -> HYSPLITResult:
+    def execute(self, timeout: int | None, rm_dat: bool) -> HYSPLITResult:
         """
-        Run HYSPLIT, optionally followed by one or more error trajectory runs.
-
-        The error trajectory runs only proceed after main particles are
-        successfully parsed - WINDERR/ZIERR are never written otherwise.
+        Run HYSPLIT once and parse its particle output.
 
         Parameters
         ----------
         timeout : int or None
-            Wall-time limit in seconds for each HYSPLIT call. ``None`` disables
+            Wall-time limit in seconds for the HYSPLIT call. ``None`` disables
             the timeout.
         rm_dat : bool
             If ``True``, delete the raw ``PARTICLE.DAT`` file after parsing to
             save disk space.
-        error_only : bool
-            If ``True``, skip the main run and run only the (independent) error
-            trajectories. Used to backfill error trajectories without
-            recomputing an existing main trajectory. ``particles`` is ``None``
-            in this case.
-        error_realizations : sequence of int
-            Which error realizations to run, one HYSPLIT call each. They are
-            distinct draws under ``krand=4``, where HYSPLIT seeds each run from
-            the clock, or under ``krand=2`` with a seed, where ``SETUP.CFG`` is
-            rewritten with ``params.realization_seed(k)`` (``seed + k``) before
-            pass ``k``;
-            the config validator enforces one of the two.
 
         Returns
         -------
         HYSPLITResult
-            Parsed particles, error particles by realization, and the log path.
+            Parsed particles and the log path.
         """
-        particles = None
-        if not error_only:
-            self._run(timeout, label="main")
-            particles = self._read_particles(rm_dat)
-
-        # --- Error trajectories (independent of the main run and of each other) ---
-        error_particles: dict[int, pd.DataFrame] = {}
-        if self.params.winderrtf > 0:
-            self._write_winderr()
-            self._write_zierr()
-            seeded = self.params.seed is not None
-            if not seeded:
-                self._write_setup(winderrtf=self.params.winderrtf)
-            for k in error_realizations:
-                if seeded:
-                    self._write_setup(
-                        winderrtf=self.params.winderrtf,
-                        seed=self.params.realization_seed(k),
-                    )
-                self.particle_stilt_path.unlink(missing_ok=True)
-                self.particle_path.unlink(missing_ok=True)
-
-                try:
-                    self._run(timeout, label=f"error[{k}]")
-                except (HYSPLITTimeoutError, HYSPLITFailureError) as e:
-                    with self.log_path.open("a", encoding="utf-8") as handle:
-                        handle.write(f"\n=== error run [{k}] failed ===\n{e}\n")
-
-                if self.particle_stilt_path.exists():
-                    error_particles[k] = self._read_particles(rm_dat)
-
-        return HYSPLITResult(
-            particles=particles,
-            error_particles=error_particles,
-            log_path=self.log_path,
-        )
+        self.particle_stilt_path.unlink(missing_ok=True)
+        self.particle_path.unlink(missing_ok=True)
+        self._run(timeout, label="hycs_std")
+        particles = self._read_particles(rm_dat)
+        return HYSPLITResult(particles=particles, log_path=self.log_path)
 
     # -- Private helpers -------------------------------------------------------
 
-    def _run(self, timeout: int | None, *, label: str = "main") -> None:
+    def _run(self, timeout: int | None, *, label: str = "hycs_std") -> None:
         """Run hycs_std, streaming output to the log file."""
         if not self.hycs_std_path.exists():
             raise FileNotFoundError(
@@ -329,20 +273,12 @@ class HYSPLITDriver:
             self.particle_path.unlink(missing_ok=True)
         return particles
 
-    def _write_setup(self, winderrtf: int, seed: int | None = None) -> None:
-        """
-        Write ``SETUP.CFG`` for the current HYSPLIT run.
-
-        ``seed`` overrides the configured user seed for one run (an error
-        realization); it goes through the same ``STILTParams.setup_seed``
-        mapping as the configured one.
-        """
+    def _write_setup(self) -> None:
+        """Write ``SETUP.CFG``; ``winderrtf`` follows from the error params."""
         entries = self.params.setup_entries()
-        if seed is not None:
-            entries["seed"] = self.params.setup_seed(seed)
         entries["kmsl"] = self._resolved_kmsl()
         entries["ivmax"] = len(self.params.varsiwant)  # number of output variables
-        entries["winderrtf"] = winderrtf
+        entries["winderrtf"] = self.params.winderrtf
 
         nl = NameList("SETUP")
         nl.update(entries)
@@ -361,22 +297,26 @@ class HYSPLITDriver:
         return self.params.kmsl
 
     def _write_winderr(self) -> None:
-        """Write ``WINDERR`` when wind perturbations are enabled."""
+        """Write ``WINDERR`` when wind perturbations are enabled, else remove it."""
         params = self.params._xyerr_params()
         if all(v is not None for v in params.values()):
             self.winderr_path.write_text(
                 "\n".join(str(v) for v in params.values()) + "\n",
                 encoding="utf-8",
             )
+        else:
+            self.winderr_path.unlink(missing_ok=True)
 
     def _write_zierr(self) -> None:
-        """Write ``ZIERR`` when mixed-layer perturbations are enabled."""
+        """Write ``ZIERR`` when mixed-layer perturbations are enabled, else remove it."""
         params = self.params._zierr_params()
         if all(v is not None for v in params.values()):
             self.zierr_path.write_text(
                 "\n".join(str(v) for v in params.values()) + "\n",
                 encoding="utf-8",
             )
+        else:
+            self.zierr_path.unlink(missing_ok=True)
 
     def _write_zicontrol(self) -> None:
         """Write ZICONTROL when mixed-layer scaling is enabled."""

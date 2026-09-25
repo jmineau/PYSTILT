@@ -460,7 +460,7 @@ def test_error_trajectory_matches_r(
 
     error_traj_path = scenario_outputs.get("error_traj")
     if error_traj_path is None:
-        pytest.fail(f"[{s.name}] PYSTILT produced no *_error.parquet in sim dir")
+        pytest.fail(f"[{s.name}] PYSTILT produced no trajectory for the error variant")
 
     compare_columns = _trajectory_compare_columns(s)
     py_error = pd.read_parquet(error_traj_path)

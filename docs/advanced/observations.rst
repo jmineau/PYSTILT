@@ -87,14 +87,11 @@ with the footprint declared once in ``config.yaml``:
 
 .. code-block:: yaml
 
-   footprints:
-     column:
-       grid: slv
-       transforms:
-         - kind: averaging_kernel
-           table: kernels.parquet
-           coordinate: pres
-         - kind: pressure_weighting
+   transforms:
+     - kind: averaging_kernel
+       table: kernels.parquet
+       coordinate: pres
+     - kind: pressure_weighting
 
 The kernel table is an input file beside ``receptors.csv``: one ``receptor``
 id per sounding and one ``level`` / ``value`` row per kernel point. It can be
