@@ -53,12 +53,13 @@ parity is not a goal; the table shows what has an equivalent.
      - ``error_functions/``, ``run.xco2ff.sim``
      - :meth:`stilt.Footprint.enhancement`, :func:`stilt.flux.particle_enhancement`
    * - Wind error statistics from radiosondes and surface stations
-     - ``get.uverr``, ``get.siguverr``, ``cal.wind.err``
+     - ``get.uverr``, ``get.siguverr``, ``cal.wind.err``, ``grab.raob``
      - :func:`~stilt.observations.variogram` and
        :func:`~stilt.observations.fit_variogram` give all four scales
        (X-STILT derives only ``siguverr`` and prescribes the rest); sampling
        the met at observations is ``arlmet.sample_points`` rather than a
-       HYSPLIT run per sonde. Recipe in the Wind Error Statistics guide
+       HYSPLIT run per sonde, and sondes come from IGRA2 through siphon.
+       Recipe in the Wind Error Statistics guide
    * - Mixing-height error statistics
      - ``get.zierr``
      - not ported; set ``sigzierr`` and friends yourself

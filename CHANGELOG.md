@@ -6,6 +6,13 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **Radiosondes from IGRA2** in the Wind Error Statistics guide: a snippet
+  that reads NOAA's Integrated Global Radiosonde Archive through siphon into
+  the table the recipe starts from, so the recipe works for any sonde
+  station. It replaces X-STILT's `grab.raob`. No new API or dependency.
+
 ## [0.1.0a19] - 2026-09-24
 
 ### Changed

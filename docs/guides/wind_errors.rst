@@ -77,6 +77,43 @@ Reading the observations is up to you. The sonde reader in
 `lair <https://github.com/jmineau/lair>`_ was used for the Salt Lake
 Valley numbers below.
 
+For radiosondes anywhere in the world, NOAA's Integrated Global Radiosonde
+Archive (IGRA2) is the usual source, and
+`siphon <https://unidata.github.io/siphon/>`_ reads it
+(``pip install siphon``). Stations are named by their IGRA2 identifier,
+which for a WMO station is a two-letter country code, ``M``, and the WMO
+number padded to eight digits (Salt Lake City, WMO 72572, is
+``USM00072572``); the station
+list is ``igra2-station-list.txt`` on the NCEI archive. This builds the
+``sondes`` table above:
+
+.. code-block:: python
+
+   import datetime as dt
+   from siphon.simplewebservice.igra2 import IGRAUpperAir
+
+   levels, launches = IGRAUpperAir.request_data(
+       [dt.datetime(2024, 1, 1), dt.datetime(2024, 12, 31, 23)], "USM00072572"
+   )
+   launches = launches.drop_duplicates("date")[["date", "latitude", "longitude"]]
+   levels = levels.merge(launches, on="date")
+   surface = levels["lvltyp2"] == 1                 # IGRA2's surface level
+   elevation = levels["height"].where(surface).groupby(levels["date"]).transform("max")
+   sondes = pd.DataFrame({
+       "time": levels["date"],
+       "lon": levels["longitude"], "lat": levels["latitude"],
+       "height": levels["height"],                  # geopotential height, m
+       "elevation": elevation,
+       "u": levels["u_wind"], "v": levels["v_wind"],
+   }).dropna()
+
+Each call downloads the station's whole period of record and keeps the
+dates asked for, so ask for the full period once rather than a launch at a
+time. ``time`` is the nominal launch hour (00 or 12 UTC); the balloon is
+released up to an hour before it. Levels without a height, which IGRA2
+reports on some significant levels, are dropped; so are launches with no
+surface level, since their heights above ground are unknown.
+
 Step 2: the scales
 ------------------
 
