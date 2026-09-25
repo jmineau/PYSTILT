@@ -234,7 +234,7 @@ class MetStream:
             met_end_ceil = later.ceil(self.file_tres)  # type: ignore[arg-type]
             # As in STILT-R: a release in the last hour of a file interpolates
             # against the next file's first hour; anywhere else it doesn't.
-            if later.floor("h") + pd.Timedelta(hours=1) == met_end_ceil:
+            if later.floor("h") + pd.Timedelta(hours=1) == met_end_ceil:  # type: ignore[arg-type]
                 met_end = met_end_ceil
 
         met_times = pd.date_range(met_start, met_end, freq=self.file_tres)
