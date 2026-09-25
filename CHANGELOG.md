@@ -10,11 +10,10 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - **`zicontroltf` is derived from `ziscale`** and is no longer a setting.
   The mixed-layer height is scaled whenever `ziscale` is not 1.0, the way
-  `winderrtf` follows the wind-error parameters. Saved configs still load:
-  `zicontroltf: 1` is dropped, and `zicontroltf: 0` with `ziscale: 0`
-  (STILT-R's unset value and PYSTILT's old default) becomes `ziscale: 1.0`.
-  `zicontroltf: 0` next to any other factor is an error, since it used to
-  mean no scaling. A `ziscale` of 0 is rejected.
+  `winderrtf` follows the wind-error parameters. A saved `config.yaml`
+  that still has a `zicontroltf` line no longer loads: delete the line,
+  and set `ziscale: 1.0` if it holds `0` (STILT-R's unset value and
+  PYSTILT's old default). A `ziscale` of 0 is rejected.
 
 ### Fixed
 

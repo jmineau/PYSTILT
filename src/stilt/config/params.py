@@ -527,37 +527,6 @@ class STILTParams(ModelParams, TransportParams, ErrorParams):
         """HYSPLIT ZICONTROLTF flag: 1 when ``ziscale`` scales the mixed layer."""
         return int(self.ziscale_factors is not None)
 
-    @model_validator(mode="before")
-    @classmethod
-    def _drop_zicontroltf(cls, data: Any) -> Any:
-        """
-        Accept the ``zicontroltf`` key that configs saved before it was derived carry.
-
-        ``zicontroltf: 0`` meant no scaling whatever ``ziscale`` held. With
-        ``ziscale: 0``, STILT-R's unset value and PYSTILT's old default, that
-        becomes ``ziscale: 1.0``. With any other factor it is an error rather
-        than a silent switch to scaling.
-        """
-        if not isinstance(data, dict) or "zicontroltf" not in data:
-            return data
-        data = dict(data)
-        flag = data.pop("zicontroltf")
-        ziscale = data.get("ziscale", 1.0)
-        if isinstance(ziscale, list):
-            values = _hourly_ziscale(ziscale)
-        else:
-            values = [float(ziscale)]
-        if not flag and all(v == 0.0 for v in values):
-            data["ziscale"] = 1.0
-        elif not flag and any(v != 1.0 for v in values):
-            raise ValueError(
-                "zicontroltf is no longer a setting: the mixed layer is scaled "
-                f"whenever ziscale is not 1.0. This config has zicontroltf: {flag} "
-                f"with ziscale: {ziscale!r}, which meant no scaling; set "
-                "ziscale: 1.0 to keep that, or remove zicontroltf to scale."
-            )
-        return data
-
     @model_validator(mode="after")
     def _validate_ziscale(self) -> Self:
         """Reject factors HYSPLIT would misread: empty, zero, or too many hours."""

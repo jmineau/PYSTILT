@@ -144,24 +144,9 @@ def test_saved_config_no_longer_carries_zicontroltf():
     assert "zicontroltf" not in STILTParams(ziscale=0.8).model_dump()
 
 
-def test_old_config_zicontroltf_key_is_accepted_when_it_agrees():
-    assert STILTParams(zicontroltf=0, ziscale=1.0).zicontroltf == 0
-    assert STILTParams(zicontroltf=1, ziscale=0.8).zicontroltf == 1
-    assert STILTParams(zicontroltf=1, ziscale=1.0).zicontroltf == 0
-
-
-@pytest.mark.parametrize("ziscale", [0, 0.0, [0.0]])
-def test_old_config_unset_ziscale_pair_loads_unscaled(ziscale):
-    """zicontroltf: 0 with ziscale: 0 is STILT-R's unset pair and PYSTILT's old default."""
-    p = STILTParams(zicontroltf=0, ziscale=ziscale)
-    assert p.ziscale == 1.0
-    assert p.zicontroltf == 0
-
-
-@pytest.mark.parametrize("ziscale", [0.8, [1.0, 0.8]])
-def test_old_config_zicontroltf_off_with_a_factor_is_an_error(ziscale):
-    with pytest.raises(ValueError, match="zicontroltf is no longer a setting"):
-        STILTParams(zicontroltf=0, ziscale=ziscale)
+def test_zicontroltf_is_not_a_setting():
+    with pytest.raises(ValidationError, match="zicontroltf"):
+        STILTParams(zicontroltf=1)
 
 
 @pytest.mark.parametrize("ziscale", [0.0, [1.0, 0.0]])
