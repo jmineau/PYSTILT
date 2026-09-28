@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import datetime as dt
 import logging
+import shutil
 from collections.abc import Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, NamedTuple, cast
@@ -267,6 +268,24 @@ class Simulation:
             paths.append(self.trajectories_path)
         for path in paths:
             self._store.publish_file(path, self.key(path))
+
+    def delete(self) -> None:
+        """
+        Remove this simulation's outputs from the store and its working directory.
+
+        Afterwards the simulation is incomplete and reruns on the next run. A
+        derived simulation loses only its footprint; its parent's trajectory is
+        the parent's to delete.
+        """
+        paths = [self.log_path, self.footprint_path, self.empty_footprint_path]
+        if not self.is_derived:
+            paths.append(self.trajectories_path)
+        if self._store is not None:
+            for path in paths:
+                self._store.delete(self.key(path))
+        shutil.rmtree(self.directory, ignore_errors=True)
+        self._trajectories = None
+        self._footprint = None
 
     def write_empty_footprint_marker(self) -> Path:
         """Create the empty-footprint marker."""

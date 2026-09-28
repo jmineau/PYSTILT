@@ -209,7 +209,7 @@ def run_receptors(
     receptor_ids: list[str],
     *,
     n_cores: int = 1,
-    skip_existing: bool | None = None,
+    skip_existing: bool = True,
 ) -> list[ReceptorResult]:
     """
     Run a list of receptor ids for *model*, inline or in a process pool.
@@ -228,14 +228,14 @@ def run_receptors(
     n_cores
         Worker processes. ``1`` runs inline in this process.
     skip_existing
-        Skip outputs that already exist. Defaults to ``config.skip_existing``.
+        Skip outputs that already exist.
 
     Returns
     -------
     list[ReceptorResult]
         One result per id, in input order (truncated after an interruption).
     """
-    skip = model.config.skip_existing if skip_existing is None else skip_existing
+    skip = skip_existing
     if not receptor_ids:
         return []
 
@@ -284,7 +284,7 @@ def pull_receptors(
     follow: bool = False,
     poll_interval: float = 10.0,
     *,
-    skip_existing: bool | None = None,
+    skip_existing: bool = True,
 ) -> None:
     """
     Drain the model's Postgres work queue through atomic claims.
@@ -298,7 +298,7 @@ def pull_receptors(
     poll_interval
         Base sleep between empty polls; backs off up to 60 s.
     skip_existing
-        Skip outputs that already exist. Defaults to ``config.skip_existing``.
+        Skip outputs that already exist.
     """
     queue = model.queue
     if queue is None:
@@ -306,7 +306,7 @@ def pull_receptors(
             "Pull-mode workers require a Postgres work queue. "
             "Configure it via PYSTILT_DB_URL."
         )
-    skip = model.config.skip_existing if skip_existing is None else skip_existing
+    skip = skip_existing
 
     idle_sleep = max(poll_interval, 0.1)
     max_idle_sleep = min(60.0, max(idle_sleep, poll_interval * 8))

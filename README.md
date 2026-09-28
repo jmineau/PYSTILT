@@ -167,7 +167,9 @@ variants:
 
 Each receptor under each variant is one simulation in
 `simulations/by-id/<receptor>/<variant>/`. Adding a variant runs only the
-new simulations; changing the settings of one that already ran is refused.
+new simulations. Changing the settings of one that already ran is refused:
+give the new settings a new name, or `stilt rm --variant NAME` to delete
+its outputs and rerun it.
 
 ## Quickstart: queue/service runtime
 
@@ -192,6 +194,9 @@ stilt serve ./my_project
 
 # Check project status
 stilt status ./my_project
+
+# Delete a variant's outputs so it reruns as new
+stilt rm ./my_project --variant hrrr-zi08
 ```
 
 The same queue model is available in Python:

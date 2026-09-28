@@ -281,11 +281,7 @@ class SlurmExecutor:
             if compute_root is not None
             else ""
         )
-        skip_flag = (
-            ""
-            if skip_existing is None
-            else (" --skip-existing" if skip_existing else " --no-skip-existing")
-        )
+        skip_flag = " --no-skip" if skip_existing is False else ""
         script_lines = [
             "#!/bin/bash",
             directives,

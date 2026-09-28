@@ -92,7 +92,7 @@ of the perturbation field, and there are two ways to get one:
 
 Any other combination would repeat the same field ``N`` times, and
 PYSTILT refuses it when it reads the config. Each realization is its own
-simulation, so ``skip_existing`` reruns only the ones that are missing and
+simulation, so a rerun does only the ones that are missing and
 a preempted job picks up where it stopped. Raising ``realizations`` later
 adds simulations and touches nothing that exists, with one catch: going
 from 1 to more renames the single run ``hrrr-err`` to ``hrrr-err-0``, so

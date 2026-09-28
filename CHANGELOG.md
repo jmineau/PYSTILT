@@ -78,6 +78,34 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   - A simulation whose trajectory went missing is rerun even when its
     footprint exists; before, a missing error realization could never be
     backfilled once every footprint existed.
+- **The settings a variant ran with are recorded apart from `config.yaml`**
+  ([#38](https://github.com/jmineau/PYSTILT/issues/38)). `register()` writes
+  the fully resolved settings of every variant to `simulations/variants.yaml`
+  and compares against that record, so a setting changed in `config.yaml`
+  with an editor is refused just like one changed in Python (before, the
+  command-line path compared the file with itself and accepted anything).
+  `config.yaml` and `receptors.csv` are now the user's files: a `config.yaml`
+  loaded from the project is never rewritten, one given to `Model` in Python
+  is written without defaults (it used to become a dump of every HYSPLIT
+  setting), and receptors added later are appended to `receptors.csv` in its
+  own columns, keeping `r_idx` and any extra column. `allow_changes` and
+  `stilt register --force` are gone; the way to rerun a variant under the
+  same name is `Model.remove(name)` / `stilt rm --variant NAME`, which
+  deletes its outputs (and those of variants derived from it) and its record
+  entry. `Simulation.delete()` does the same for one simulation.
+  `stilt status` lists variants in the record that `config.yaml` no longer
+  declares. `skip_existing` is no longer a config setting (it stays on
+  `Model.run()`, `stilt run --no-skip`, and `stilt push-worker --no-skip`).
+  A variant's `grid` override now updates the default grid field by field.
+  Met settings that change results (`subgrid_*`, `n_min`, `file_tres`) are
+  part of the record; `directory` is not. Geometry specs (`kind: file`,
+  `h3`, `windows`) now require `kind` when built in Python too.
+- **Cloud projects read their inputs and cache their outputs by key.**
+  `FsspecStore.local_path` downloads a key into the cache directory under its
+  own path instead of through fsspec's `simplecache`, and writing or deleting
+  a key drops its cached copy; `config.yaml` and `receptors.csv` are read
+  straight from the store. Before, a rewritten `receptors.csv` could be
+  served stale from the cache for the life of the directory.
   Projects made with earlier versions need their outputs moved into the new
   layout.
 - **`zicontroltf` is derived from `ziscale`** and is no longer a setting.

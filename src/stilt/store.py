@@ -58,6 +58,10 @@ class Store(Protocol):
         """Return a local filesystem path holding the bytes under *key*."""
         ...
 
+    def delete(self, key: str) -> None:
+        """Remove *key*; a missing key is not an error."""
+        ...
+
 
 class LocalStore:
     """
@@ -111,13 +115,19 @@ class LocalStore:
         """Return a local path for the key; the store is already local."""
         return self.path(key)
 
+    def delete(self, key: str) -> None:
+        """Remove the key's file if it exists."""
+        self.path(key).unlink(missing_ok=True)
+
 
 class FsspecStore:
     """
     Store backed by an ``fsspec`` filesystem (``s3://``, ``gs://``, ``memory://``, ...).
 
-    ``local_path`` downloads through ``simplecache`` into *cache_dir* (a temp
-    directory when omitted).
+    ``local_path`` downloads a key once into *cache_dir* (a temp directory
+    when omitted), mirroring the key layout. Writing or deleting a key drops
+    its cached copy, so a rewritten input or a rerun output is never served
+    stale.
     """
 
     def __init__(self, root: str, cache_dir: str | Path | None = None) -> None:
@@ -149,6 +159,11 @@ class FsspecStore:
         """Read the key's bytes from the remote filesystem."""
         return self.fs.cat(self._fs_key(key))
 
+    def _forget(self, key: str) -> None:
+        """Drop the cached copy of *key*, if any."""
+        if self._cache_dir is not None:
+            (self._cache_dir / key.strip("/")).unlink(missing_ok=True)
+
     def write_bytes(self, key: str, data: bytes) -> None:
         """Write bytes to the key, creating parent prefixes."""
         fs_key = self._fs_key(key)
@@ -157,6 +172,7 @@ class FsspecStore:
             self.fs.makedirs(parent, exist_ok=True)
         with self.fs.open(fs_key, "wb") as handle:
             handle.write(data)
+        self._forget(key)
 
     def publish_file(self, local_path: str | Path, key: str) -> None:
         """Upload a finished local file to the key; a missing source is ignored."""
@@ -168,16 +184,24 @@ class FsspecStore:
         if parent:
             self.fs.makedirs(parent, exist_ok=True)
         self.fs.put_file(str(src), fs_key)
+        self._forget(key)
 
     def local_path(self, key: str) -> Path:
-        """Download the key to the cache and return the local path."""
-        local = fsspec.open_local(
-            f"simplecache::{uri_join(self.root, key)}",
-            simplecache={"cache_storage": str(self._cache())},
-        )
-        if not isinstance(local, str):
-            raise TypeError(f"Expected one local path for {key!r}, got {type(local)!r}")
-        return Path(local)
+        """Download the key into the cache (once) and return the local path."""
+        local = self._cache() / key.strip("/")
+        if not local.exists():
+            local.parent.mkdir(parents=True, exist_ok=True)
+            tmp = local.with_suffix(local.suffix + ".tmp")
+            self.fs.get_file(self._fs_key(key), str(tmp))
+            tmp.replace(local)
+        return local
+
+    def delete(self, key: str) -> None:
+        """Remove the key from the remote filesystem if it exists."""
+        fs_key = self._fs_key(key)
+        if self.fs.exists(fs_key):
+            self.fs.rm(fs_key)
+        self._forget(key)
 
 
 def make_store(root: str | Path, *, cache_dir: str | Path | None = None) -> Store:

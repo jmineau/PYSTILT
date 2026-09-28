@@ -76,7 +76,10 @@ def _fake_model_factory(captured: list[dict]):
         def status(self):
             return StatusCounts()
 
-        def run(self, executor=None, skip_existing=None, wait=True):
+        def orphans(self):
+            return []
+
+        def run(self, executor=None, skip_existing=True, wait=True):
             return _FakeHandle()
 
     return _FakeModel
@@ -220,6 +223,7 @@ def test_cli_help_lists_current_commands():
         "push-worker",
         "serve",
         "status",
+        "rm",
     }
     for command in expected:
         assert command in result.output
@@ -259,7 +263,7 @@ def test_run_invokes_model_run(tmp_path, monkeypatch):
 
     result = runner.invoke(app, ["run", str(tmp_path)])
     assert result.exit_code == 0
-    assert calls == [{"executor": None, "skip_existing": None, "wait": False}]
+    assert calls == [{"executor": None, "skip_existing": True, "wait": False}]
     # Local handle — wait() must always be called so no orphan workers.
     fake_handle.wait.assert_called_once()
 
@@ -281,7 +285,7 @@ def test_run_prints_startup_and_wait_messages(tmp_path, monkeypatch):
     assert result.exit_code == 0
     assert (
         f"Starting run: project={tmp_path.resolve()}  backend=local  "
-        "dispatch=push  workers=1  skip=config"
+        "dispatch=push  workers=1  skip=existing"
     ) in result.output
     assert "Compute root:" not in result.output  # default compute root
     assert "Receptors loaded: 1" in result.output
@@ -584,7 +588,7 @@ def test_push_worker_calls_run_receptors(tmp_path, monkeypatch):
         {
             "receptor_ids": ["202301011200_abc", "202301011200_def"],
             "n_cores": 4,
-            "skip_existing": None,
+            "skip_existing": True,
         }
     ]
 
@@ -603,8 +607,8 @@ def test_push_worker_forwards_skip_existing_flags(tmp_path, monkeypatch):
     monkeypatch.setattr("stilt.cli.run_receptors", fake_run)
 
     base = ["push-worker", str(tmp_path), "--chunk", str(chunk)]
-    assert runner.invoke(app, [*base, "--skip-existing"]).exit_code == 0
-    assert runner.invoke(app, [*base, "--no-skip-existing"]).exit_code == 0
+    assert runner.invoke(app, base).exit_code == 0
+    assert runner.invoke(app, [*base, "--no-skip"]).exit_code == 0
     assert seen == [True, False]
 
 
@@ -731,7 +735,7 @@ def test_register_registers_project_receptors(tmp_path, monkeypatch):
 
     register_calls: list = []
 
-    def fake_register(model, receptors=None, *, allow_changes=False):
+    def fake_register(model, receptors=None):
         del model
         register_calls.append(receptors)
         return ["rid_1", "rid_2"]
@@ -755,7 +759,7 @@ def test_register_with_receptors_file(tmp_path, monkeypatch):
 
     register_calls: list = []
 
-    def fake_register(model, receptors=None, *, allow_changes=False):
+    def fake_register(model, receptors=None):
         del model
         register_calls.append(receptors)
         return ["rid_1"]
@@ -827,7 +831,6 @@ def test_init_writes_science_first_commented_config(tmp_path):
         "numpar",
         "varsiwant",
         "hnf_plume",
-        "skip_existing",
     ]
     assert parsed["grid"]["xmin"] == -113.0
     loaded = ModelConfig.from_yaml(project / "config.yaml")
@@ -836,8 +839,7 @@ def test_init_writes_science_first_commented_config(tmp_path):
     assert "# variants:" in text
     assert text.index("mets:") < text.index("grid:")
     assert text.index("grid:") < text.index("n_hours:")
-    assert text.index("numpar:") < text.index("skip_existing:")
-    assert text.index("skip_existing:") < text.index("# execution:")
+    assert text.index("numpar:") < text.index("# execution:")
 
 
 def test_init_config_omits_advanced_and_internal_knobs(tmp_path):

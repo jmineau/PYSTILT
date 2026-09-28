@@ -39,7 +39,7 @@ class FileGeometrySpec(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    kind: Literal["file"] = "file"
+    kind: Literal["file"]
     path: str = Field(..., description="Path to the vector file.")
     ids: str | None = Field(
         None, description="Attribute column to use as cell ids (default: row index)."
@@ -66,7 +66,7 @@ class H3GeometrySpec(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    kind: Literal["h3"] = "h3"
+    kind: Literal["h3"]
     resolution: int = Field(..., description="H3 resolution (0-15).", ge=0, le=15)
     bounds: Bounds = Field(..., description="Lon/lat box the hexagons must cover.")
 
@@ -82,7 +82,7 @@ class WindowsGeometrySpec(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    kind: Literal["windows"] = "windows"
+    kind: Literal["windows"]
     coords: list[tuple[float, float]] = Field(
         ..., description="Window centres as (x, y) pairs."
     )

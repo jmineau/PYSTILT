@@ -66,9 +66,6 @@ The settings most people change
      - Where to run. Leave it out to run on your own computer. See
        :doc:`execution/index`.
      - (omit)
-   * - ``skip_existing``
-     - Skip simulations whose outputs already exist.
-     - ``true`` (default)
 
 Footprint options
 -----------------
@@ -154,23 +151,42 @@ trajectory and changes only the footprint:
 
 A ``from:`` variant runs no HYSPLIT and may set only footprint settings.
 Adding one to a finished project and running again calculates just its
-footprints from the stored particles. For a coarser grid you may not need a
-variant at all: :meth:`stilt.Footprint.aggregate` sums a fine footprint onto
-coarser cells or irregular areas after the fact.
+footprints from the stored particles. A ``grid`` given in a variant updates
+the default grid field by field, so a coarser version of the same domain is
+just ``grid: {xres: 0.1, yres: 0.1}``. You may not need a variant at all:
+:meth:`stilt.Footprint.aggregate` sums a fine footprint onto coarser cells or
+irregular areas after the fact.
 
-Changing a variant
-~~~~~~~~~~~~~~~~~~
+Changing a variant that has run
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-``config.yaml`` in the project is the record of what produced its outputs.
-Once a project is registered, running it with a variant whose settings
-changed (including a changed default the variant inherits) stops with an
-error that names the changed settings, because the finished outputs would no
-longer match their name. Declare a new variant for new settings. To
-overwrite the record anyway, pass ``allow_changes=True`` to
-:meth:`stilt.Model.register` or ``--force`` to ``stilt register``, then run
-with ``skip_existing: false`` to redo the outputs. Settings that do not
-change a result, such as ``execution`` and ``skip_existing``, can change
-freely.
+The first time a project runs, PYSTILT writes the full settings of every
+variant to ``simulations/variants.yaml``. That file is the record of what
+produced the outputs (``config.yaml`` is yours to edit, and PYSTILT never
+rewrites it). Running again with a variant whose settings changed, including
+a changed default that the variant inherits, stops with an error naming the
+settings, because the finished outputs would no longer match their name:
+
+.. code-block:: text
+
+   ConfigChangedError: These settings already ran under their name in ./my_project
+   (hrrr: ziscale). Declare a new variant for the new settings, or remove the
+   old outputs first (Model.remove / stilt rm --variant).
+
+You have two ways forward:
+
+- **Give the new settings a new name.** Add ``hrrr-zi08: {ziscale: 0.8}``
+  and put ``hrrr`` back as it was. Only the new variant runs.
+- **Remove the old outputs.** ``stilt rm --variant hrrr`` (or
+  ``model.remove("hrrr")``) deletes every simulation of that variant and
+  forgets its settings, so it runs again as new on the next run. Variants
+  declared with ``from: hrrr`` are removed with it, since their footprints
+  came from its particles.
+
+Settings that do not change a result can change freely: ``execution``, the
+HYSPLIT ``timeout``, ``rm_dat``, and where the meteorology files are
+(``directory``). Taking a variant out of ``config.yaml`` does not delete
+anything; ``stilt status`` lists such variants until you remove them.
 
 Footprints for shapefiles, hexagons, or point sources
 -----------------------------------------------------

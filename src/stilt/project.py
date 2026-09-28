@@ -3,8 +3,9 @@ A STILT project root and its file layout.
 
 A project is one root — a local directory or an object-store URI — holding::
 
-    config.yaml
-    receptors.csv
+    config.yaml                    the user's settings (never rewritten)
+    receptors.csv                  the user's receptors (only appended to)
+    simulations/variants.yaml      PYSTILT's record of every variant that ran
     simulations/by-id/<receptor_id>/<variant>/<receptor_id>_traj.parquet
     simulations/by-id/<receptor_id>/<variant>/<receptor_id>_foot.nc
     simulations/by-id/<receptor_id>/<variant>/<receptor_id>_foot.empty
@@ -12,15 +13,20 @@ A project is one root — a local directory or an object-store URI — holding::
 
 Everything is addressed by store key relative to the root. ``config.yaml`` and
 ``receptors.csv`` together *are* the project: the registered simulation set is
-their receptors crossed with the configured variants.
+their receptors crossed with the configured variants. The record holds the
+fully resolved settings of every variant ever registered, so a variant's
+settings cannot change under its name once it has outputs.
 """
 
 from __future__ import annotations
 
 import re
 import tempfile
+from io import StringIO
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
+
+import yaml
 
 from stilt.store import Store, is_uri, make_store
 
@@ -30,6 +36,7 @@ if TYPE_CHECKING:
 
 CONFIG_KEY = "config.yaml"
 RECEPTORS_KEY = "receptors.csv"
+RECORD_KEY = "simulations/variants.yaml"
 SIMULATIONS_PREFIX = "simulations/by-id"
 SIMULATION_LOG_FILENAME = "stilt.log"
 SIMULATION_MET_DIRNAME = "met"
@@ -141,10 +148,11 @@ class Project:
                 f"No config.yaml found in {self.root}. "
                 "Create one with ModelConfig.to_yaml()."
             )
-        return ModelConfig.from_yaml(self.store.local_path(CONFIG_KEY))
+        raw = yaml.safe_load(self.store.read_bytes(CONFIG_KEY).decode()) or {}
+        return ModelConfig.model_validate(raw)
 
     def save_config(self, config: ModelConfig) -> None:
-        """Write ``config.yaml`` to the store."""
+        """Write ``config.yaml`` to the store (only defaults that were changed)."""
         with tempfile.TemporaryDirectory(prefix="pystilt_config_") as tmp:
             path = Path(tmp) / CONFIG_KEY
             config.to_yaml(path)
@@ -156,22 +164,63 @@ class Project:
 
         if not self.has_receptors:
             return None
-        return read_receptors(self.store.local_path(RECEPTORS_KEY))
+        return read_receptors(StringIO(self.store.read_bytes(RECEPTORS_KEY).decode()))
 
-    def save_receptors(self, receptors: list[Receptor]) -> None:
-        """Write *receptors* to ``receptors.csv`` in the store."""
-        from stilt.receptors import receptors_to_csv
+    def add_receptors(
+        self, receptors: list[Receptor], *, source: str | Path | None = None
+    ) -> list[Receptor]:
+        """
+        Add *receptors* to ``receptors.csv`` and return the ones that were new.
 
-        self.store.write_bytes(RECEPTORS_KEY, receptors_to_csv(receptors).encode())
+        A project without a receptors file gets *source* copied byte for byte
+        when given, else the receptors written out. An existing file is never
+        rewritten: receptors it does not hold yet are appended in its own
+        columns (:func:`stilt.receptors.append_receptors_csv`).
+        """
+        from stilt.receptors import append_receptors_csv, receptors_to_csv
 
-    def copy_receptors(self, source: str | Path) -> None:
-        """Copy an existing receptors CSV byte-for-byte into the store."""
-        self.store.publish_file(source, RECEPTORS_KEY)
+        if not self.has_receptors:
+            if source is not None:
+                self.store.publish_file(source, RECEPTORS_KEY)
+            else:
+                self.store.write_bytes(
+                    RECEPTORS_KEY, receptors_to_csv(receptors).encode()
+                )
+            return list(receptors)
+        known = {r.id for r in self.load_receptors() or []}
+        new = [r for r in receptors if r.id not in known]
+        if new:
+            text = self.store.read_bytes(RECEPTORS_KEY).decode()
+            self.store.write_bytes(
+                RECEPTORS_KEY, append_receptors_csv(text, new).encode()
+            )
+        return new
+
+    # -- record ----------------------------------------------------------------
+
+    def load_record(self) -> dict[str, dict[str, Any]]:
+        """
+        The record of what has run: ``{"mets": {...}, "variants": {...}}``.
+
+        Each entry is the full dump of a :class:`~stilt.config.MetConfig` or
+        :class:`~stilt.config.VariantConfig` as it was when registered. Empty
+        when nothing has been registered yet.
+        """
+        if not self.store.exists(RECORD_KEY):
+            return {"mets": {}, "variants": {}}
+        raw = yaml.safe_load(self.store.read_bytes(RECORD_KEY).decode()) or {}
+        return {"mets": raw.get("mets") or {}, "variants": raw.get("variants") or {}}
+
+    def save_record(self, record: dict[str, dict[str, Any]]) -> None:
+        """Write the record back (see :meth:`load_record`)."""
+        text = yaml.safe_dump(record, default_flow_style=False, sort_keys=False)
+        self.store.write_bytes(RECORD_KEY, text.encode())
 
 
 __all__ = [
     "CONFIG_KEY",
     "RECEPTORS_KEY",
+    "RECORD_KEY",
     "SIMULATIONS_PREFIX",
     "SIMULATION_LOG_FILENAME",
     "SIMULATION_MET_DIRNAME",

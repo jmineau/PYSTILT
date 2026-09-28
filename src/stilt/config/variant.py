@@ -25,6 +25,9 @@ VARIANT_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 #: Keys a variant declaration may carry besides parameter overrides.
 VARIANT_KEYS = frozenset({"met", "from", "realizations"})
 
+#: Fields that change no output, so the record does not compare them.
+UNRECORDED_FIELDS = frozenset({"timeout", "rm_dat", "exe_dir"})
+
 
 class VariantConfig(STILTParams, FootprintParams):
     """
@@ -72,11 +75,21 @@ class VariantConfig(STILTParams, FootprintParams):
         """The transport parameters alone, as stored with a trajectory."""
         return STILTParams(**self.model_dump(include=set(STILTParams.model_fields)))
 
-    def differences(self, other: VariantConfig) -> list[str]:
-        """Names of the fields on which *other* differs from this variant."""
-        mine = self.model_dump(mode="json")
-        theirs = other.model_dump(mode="json")
-        return sorted(k for k in mine if mine[k] != theirs.get(k))
+    def record(self) -> dict[str, Any]:
+        """This variant as stored in the project's record (a full JSON dump)."""
+        return self.model_dump(mode="json")
+
+    def differences(self, recorded: dict[str, Any]) -> list[str]:
+        """
+        Names of the fields on which this variant differs from *recorded*.
+
+        *recorded* is an entry of the project's record (:meth:`record`).
+        Fields that change no output (:data:`UNRECORDED_FIELDS`) are skipped.
+        """
+        mine = self.record()
+        return sorted(
+            k for k in mine if k not in UNRECORDED_FIELDS and mine[k] != recorded.get(k)
+        )
 
 
 def expand_variants(
@@ -120,7 +133,7 @@ def expand_variants(
         if parent is None:
             continue
         _check_derived(group, parent, spec, declared)
-        merged = {**merged_by_group[parent], **spec}
+        merged = _override(merged_by_group[parent], spec)
         runs[group] = [
             VariantConfig(name=group, group=group, derived_from=parent, **merged)
         ]
@@ -144,7 +157,20 @@ def _merge_transport(
     realizations = int(spec.pop("realizations", 1))
     if realizations < 1:
         raise ValueError(f"Variant {group!r}: realizations must be >= 1")
-    return {**defaults, **spec, "met": met}, realizations
+    return {**_override(defaults, spec), "met": met}, realizations
+
+
+def _override(base: dict[str, Any], spec: dict[str, Any]) -> dict[str, Any]:
+    """
+    Apply a variant's overrides to *base*.
+
+    A ``grid`` mapping updates the base grid field by field, so a variant can
+    change only the resolution; ``grid: null`` still removes the footprint.
+    """
+    merged = {**base, **spec}
+    if isinstance(spec.get("grid"), dict) and isinstance(base.get("grid"), dict):
+        merged["grid"] = {**base["grid"], **spec["grid"]}
+    return merged
 
 
 def _expand_realizations(
@@ -207,4 +233,10 @@ def _check_derived(
         )
 
 
-__all__ = ["VARIANT_KEYS", "VARIANT_NAME_RE", "VariantConfig", "expand_variants"]
+__all__ = [
+    "UNRECORDED_FIELDS",
+    "VARIANT_KEYS",
+    "VARIANT_NAME_RE",
+    "VariantConfig",
+    "expand_variants",
+]

@@ -65,7 +65,12 @@ scripts and logs.
    empty, or, for ``serve``, indefinitely. Used by cloud workers.
 
 ``stilt register``
-   Saves the project's settings and receptors without running anything.
+   Saves the project's settings and receptors without running anything, and
+   enqueues the receptors when a queue is configured.
+
+``stilt rm --variant NAME``
+   Deletes a variant's outputs so it runs again as new
+   (:doc:`../configuration`).
 
 When a simulation fails
 -----------------------

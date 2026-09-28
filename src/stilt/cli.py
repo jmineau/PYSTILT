@@ -16,6 +16,7 @@ Usage examples::
     stilt pull-worker ./my_project    # drain the Postgres work queue
     stilt serve ./my_project          # long-lived queue worker
     stilt status                      # show completion counts from cwd
+    stilt rm --variant hrrr-zi08      # delete a variant's outputs to rerun it
 """
 
 from __future__ import annotations
@@ -84,7 +85,6 @@ n_hours: -24
 numpar: 1000
 varsiwant: [time, indx, long, lati, zagl, foot, mlht, pres, dens, samt, sigw, tlgr]
 hnf_plume: true  # rescale footprints via a gaussian plume model in the hyper-near field
-skip_existing: true  # skip simulation outputs that already exist
 
 
 # Execution is optional. Local execution is the default.
@@ -235,9 +235,8 @@ def run(
             execution["n_workers"] = n_workers
         executor = get_executor(execution)
 
-    skip_existing = None if not no_skip else False
-    _print_run_start(model, execution=execution, skip_existing=skip_existing, wait=wait)
-    handle = model.run(executor=executor, skip_existing=skip_existing, wait=False)
+    _print_run_start(model, execution=execution, skip_existing=not no_skip, wait=wait)
+    handle = model.run(executor=executor, skip_existing=not no_skip, wait=False)
 
     if handle.detached:
         typer.echo(f"Submitted job: {handle.job_id}")
@@ -259,19 +258,38 @@ def register(
         "--receptors",
         help="Receptors CSV to add to the project. Defaults to the project's own.",
     ),
-    force: bool = typer.Option(
-        False,
-        "--force",
-        help="Overwrite config.yaml even if a registered variant's settings changed.",
-    ),
 ) -> None:
     """Persist project inputs and, when a queue is configured, enqueue receptors."""
     model = Model(project=_resolve_project(project, require_inputs=True))
     receptors = read_receptors(receptors_path) if receptors_path is not None else None
-    receptor_ids = model.register(receptors=receptors, allow_changes=force)
+    receptor_ids = model.register(receptors=receptors)
     typer.echo(
         f"Registered {len(receptor_ids)} receptor(s) x {len(model.variants)} variant(s)."
     )
+
+
+@app.command("rm")
+def rm(
+    project: str | None = _PROJECT_ARG,
+    variant: str = typer.Option(
+        ..., "--variant", help="Variant (or realization group) whose outputs to delete."
+    ),
+    yes: bool = typer.Option(False, "--yes", "-y", help="Do not ask for confirmation."),
+) -> None:
+    """
+    Delete a variant's outputs so it runs again as new.
+
+    Use it after changing a variant's settings under the same name, or to
+    drop a variant that config.yaml no longer declares. Variants derived from
+    it with ``from:`` are deleted with it.
+    """
+    model = Model(project=_resolve_project(project, require_inputs=True))
+    if not yes and not typer.confirm(
+        f"Delete every simulation of variant {variant!r} in {model.project.root}?"
+    ):
+        raise typer.Exit(code=1)
+    deleted = model.remove(variant)
+    typer.echo(f"Deleted {len(deleted)} simulation(s) of {variant!r}.")
 
 
 @app.command("pull-worker")
@@ -304,11 +322,7 @@ def push_worker(
     cpus: int = typer.Option(
         1, "--cpus", help="Number of CPU cores to use within this task."
     ),
-    skip_existing: bool | None = typer.Option(  # noqa: B008
-        None,
-        "--skip-existing/--no-skip-existing",
-        help="Respect outputs that already exist. Defaults to config.yaml.",
-    ),
+    no_skip: bool = _NO_SKIP,
     compute_root: str | None = _COMPUTE_ROOT,
 ) -> None:
     """Run the receptor ids listed in one chunk file (one per line)."""
@@ -319,7 +333,7 @@ def push_worker(
     receptor_ids = [
         s for line in Path(chunk).read_text().splitlines() if (s := line.strip())
     ]
-    run_receptors(model, receptor_ids, n_cores=cpus, skip_existing=skip_existing)
+    run_receptors(model, receptor_ids, n_cores=cpus, skip_existing=not no_skip)
 
 
 @app.command()
@@ -358,19 +372,25 @@ def _format_counts(model: Model) -> str:
 def _print_status(model: Model) -> None:
     """Print a project status summary."""
     typer.echo(f"Project: {model.project.root}  {_format_counts(model)}")
+    orphans = model.orphans()
+    if orphans:
+        typer.echo(
+            "Variants with outputs that config.yaml no longer declares: "
+            f"{', '.join(orphans)}  (delete with: stilt rm --variant NAME)"
+        )
 
 
 def _print_run_start(
     model: Model,
     *,
     execution: dict[str, Any],
-    skip_existing: bool | None,
+    skip_existing: bool,
     wait: bool,
 ) -> None:
     """Print a concise startup summary for ``stilt run``."""
     backend = resolve_backend(execution)
     executor = get_executor(execution)
-    mode = "config" if skip_existing is None else "no-skip"
+    mode = "existing" if skip_existing else "no-skip"
     typer.echo(
         "Starting run: "
         f"project={model.project.root}  backend={backend}  "

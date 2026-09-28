@@ -65,10 +65,15 @@ variants in `config.yaml` (one per met when none are declared). A simulation
 is one receptor under one variant, one HYSPLIT call, `SimID(receptor,
 variant)`, stored at `simulations/by-id/<receptor>/<variant>/`. Whether a
 simulation is complete is decided **by key**, by `Simulation.is_complete()`:
-that method is the single definition of "done". `config.yaml` is the record
-of the settings that produced the outputs; `Model.register()` refuses to
-change a registered variant (`ConfigChangedError`). The optional Postgres
-work queue in `stilt.service` tracks work status only, per receptor.
+that method is the single definition of "done". `simulations/variants.yaml`
+is the record of the resolved settings every variant ran with;
+`Model.register()` compares against it and refuses to change a recorded
+variant (`ConfigChangedError`), and `Model.remove()` deletes a variant's
+outputs and record entry together. `config.yaml` and `receptors.csv` are the
+user's inputs: PYSTILT never rewrites a `config.yaml` loaded from the
+project (one given in Python is written out without defaults) and only
+appends to `receptors.csv`. The optional Postgres work queue in
+`stilt.service` tracks work status only, per receptor.
 
 `stilt.__all__` (plus the `__all__` of each subpackage) is the public surface;
 everything else is internal and can change.
@@ -162,8 +167,9 @@ is a store key relative to it (see `project.py`):
 
 ```
 <project>/
-  config.yaml                 ModelConfig (user-authored)
-  receptors.csv               receptor list; register() merges new batches
+  config.yaml                 ModelConfig (user-authored; never rewritten once loaded)
+  receptors.csv               receptor list; register() appends new receptors
+  simulations/variants.yaml   the record: resolved settings of every variant that ran
   simulations/
     by-id/<receptor_id>/<variant>/
       stilt.log               HYSPLIT log (one run per directory)
@@ -187,7 +193,8 @@ empty footprint writes a `.empty` marker, which counts as complete.
   iff its expected outputs exist in the store. Never add a second "does this
   output exist" check, a completion registry, or a manifest; call the
   `Simulation` method.
-- **State lives in the project store** (config.yaml, receptors.csv, outputs)
+- **State lives in the project store** (config.yaml, receptors.csv, the
+  variants record, outputs)
   and, on the queue path, in Postgres. Anything kept in a process-local
   variable silently diverges between `run`, `pull-worker`, and `serve`.
 - **The CLI stays thin.** `cli.py` adapts arguments to `Model` / service /

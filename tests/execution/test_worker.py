@@ -480,17 +480,17 @@ def test_run_receptors_empty_ids_returns_empty(tmp_path, receptor, monkeypatch):
     assert run_receptors(model, [], n_cores=1) == []
 
 
-def test_run_receptors_inline_default_skip_reads_config(
+def test_run_receptors_inline_skips_existing_by_default(
     tmp_path, receptor, monkeypatch
 ):
-    model = _model(tmp_path, [receptor], skip_existing=False)
+    model = _model(tmp_path, [receptor])
     calls: list[dict] = []
     monkeypatch.setattr(worker, "run_simulation", _fake_run_simulation(calls))
 
     run_receptors(model, [str(receptor.id)], n_cores=1)
-    run_receptors(model, [str(receptor.id)], n_cores=1, skip_existing=True)
+    run_receptors(model, [str(receptor.id)], n_cores=1, skip_existing=False)
 
-    assert [c["skip_existing"] for c in calls] == [False, True]
+    assert [c["skip_existing"] for c in calls] == [True, False]
 
 
 def test_run_receptors_inline_stops_after_interrupt(
@@ -593,13 +593,13 @@ def fake_pool(monkeypatch):
 def test_run_receptors_pool_rebuilds_model_and_orders_results(
     tmp_path, receptor, other_receptor, monkeypatch, fake_pool
 ):
-    model = _model(tmp_path, [receptor, other_receptor], skip_existing=False)
+    model = _model(tmp_path, [receptor, other_receptor])
     # Pool workers rebuild the Model from the project root: persist inputs.
     ids = model.register()
     calls: list[dict] = []
     monkeypatch.setattr(worker, "run_simulation", _fake_run_simulation(calls))
 
-    results = run_receptors(model, ids, n_cores=2)
+    results = run_receptors(model, ids, n_cores=2, skip_existing=False)
 
     [pool] = fake_pool.instances
     assert pool.n_cores == 2
@@ -695,10 +695,8 @@ class _FakeQueue:
         yield self._pending.pop(0) if self._pending else None
 
 
-def _pull_model(queue, *, skip_existing: bool = True) -> SimpleNamespace:
-    return SimpleNamespace(
-        queue=queue, config=SimpleNamespace(skip_existing=skip_existing)
-    )
+def _pull_model(queue) -> SimpleNamespace:
+    return SimpleNamespace(queue=queue)
 
 
 def test_pull_receptors_requires_a_queue():
@@ -719,7 +717,7 @@ def test_pull_receptors_records_result_on_claim(monkeypatch):
 
     monkeypatch.setattr(worker, "run_receptor", fake)
 
-    pull_receptors(_pull_model(queue, skip_existing=False), follow=False)
+    pull_receptors(_pull_model(queue), follow=False, skip_existing=False)
 
     assert calls == [(RID, False)]
     assert claim.recorded == [ReceptorResult(RID, "complete")]

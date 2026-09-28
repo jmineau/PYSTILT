@@ -88,7 +88,7 @@ class LocalExecutor:
                     Model(project=project, compute_root=compute_root),
                     pending,
                     n_cores=n,
-                    skip_existing=skip_existing,
+                    skip_existing=True if skip_existing is None else skip_existing,
                 )
             except BaseException as exc:  # surfaced by wait()
                 handle._error = exc

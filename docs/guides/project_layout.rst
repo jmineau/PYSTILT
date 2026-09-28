@@ -11,9 +11,10 @@ What's in a project folder
 .. code-block:: text
 
    my_project/
-     config.yaml                     # settings: meteorology, variants, run options
-     receptors.csv                   # where and when to release particles
+     config.yaml                     # your settings: meteorology, variants, run options
+     receptors.csv                   # your receptors: where and when to release particles
      simulations/
+       variants.yaml                 # PYSTILT's record of the settings each variant ran with
        by-id/
          <receptor id>/              # one folder per receptor
            <variant>/                # one folder per simulation
@@ -25,6 +26,12 @@ What's in a project folder
 
 A variant declared with ``from:`` has only its footprint and the log of any
 error; its particles are the other variant's.
+
+The two files at the top are yours: PYSTILT reads them and never rewrites
+them (if you build the project in Python instead, it writes them for you the
+first time, and receptors added later are appended). ``variants.yaml`` is
+PYSTILT's: the full settings of every variant that has run, which is how a
+changed setting is caught (:doc:`configuration`). Don't edit it.
 
 A Slurm run also creates ``chunks/`` and ``slurm/`` folders with the job
 scripts and logs (:doc:`execution/slurm`).
@@ -68,8 +75,9 @@ From the command line:
 
    stilt status ./my_project
 
-To add receptors to an existing project, pass them in. They are merged into
-``receptors.csv``, and receptors already in the file are not duplicated:
+To add receptors to an existing project, pass them in. New ones are appended
+to ``receptors.csv`` in its own columns, and receptors already in the file
+are left alone:
 
 .. code-block:: python
 
@@ -88,7 +96,8 @@ the rest. A simulation is finished when all of its outputs exist:
 So after an interruption, a failed Slurm task, or adding a variant to
 ``config.yaml``, just run again. Only what's missing will run: a new
 variant runs for every receptor and nothing else is touched. Changing the
-settings of a variant that already ran is refused (:doc:`configuration`).
+settings of a variant that already ran is refused; remove its outputs first
+(:doc:`configuration`).
 
 To list what is not finished yet:
 
@@ -97,7 +106,9 @@ To list what is not finished yet:
    model.simulations.incomplete().keys()   # (receptor, variant) ids
    model.simulations.status()              # a table of every simulation
 
-To force everything to run again, pass ``skip_existing=False`` to
+To rerun one variant, delete its outputs with ``stilt rm --variant NAME``
+or ``model.remove(NAME)``; to rerun one simulation, ``sim.delete()``. To
+force everything to run again, pass ``skip_existing=False`` to
 ``model.run()``, or ``--no-skip`` to ``stilt run``.
 
 Storing a project in the cloud

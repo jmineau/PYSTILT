@@ -14,7 +14,6 @@ from stilt.project import (
     resolve_directory,
     simulation_prefix,
 )
-from stilt.receptors import read_receptors, write_receptors
 from stilt.store import FsspecStore, LocalStore
 
 # ---------------------------------------------------------------------------
@@ -215,7 +214,7 @@ def test_project_load_receptors_none_when_absent(any_project):
 
 
 def test_project_receptors_round_trip_points(any_project, point_receptor):
-    any_project.save_receptors([point_receptor])
+    assert any_project.add_receptors([point_receptor]) == [point_receptor]
 
     assert any_project.has_receptors
     assert any_project.store.exists(RECEPTORS_KEY)
@@ -227,7 +226,7 @@ def test_project_receptors_round_trip_preserves_groups(
 ):
     """r_idx grouping survives, so column/multipoint receptors come back intact."""
     receptors = [point_receptor, column_receptor, multipoint_receptor]
-    any_project.save_receptors(receptors)
+    any_project.add_receptors(receptors)
 
     loaded = any_project.load_receptors()
     assert loaded == receptors
@@ -235,32 +234,55 @@ def test_project_receptors_round_trip_preserves_groups(
     assert [len(r) for r in loaded] == [1, 2, 3]
 
 
-def test_project_save_receptors_overwrites(
+def test_project_add_receptors_appends_only_new_ones(
     any_project, point_receptor, column_receptor
 ):
-    any_project.save_receptors([point_receptor])
-    any_project.save_receptors([column_receptor])
-    assert any_project.load_receptors() == [column_receptor]
+    any_project.add_receptors([point_receptor])
+    assert any_project.add_receptors([point_receptor, column_receptor]) == [
+        column_receptor
+    ]
+    assert any_project.load_receptors() == [point_receptor, column_receptor]
 
 
-def test_project_copy_receptors_byte_for_byte(any_project, tmp_path, point_receptor):
+def test_project_add_receptors_copies_a_source_csv_byte_for_byte(
+    any_project, tmp_path, point_receptor
+):
     # A hand-written CSV using the short column names that read_receptors accepts.
     source = tmp_path / "input_receptors.csv"
     source.write_text("time,lati,long,zagl\n2023-01-01 12:00:00,40.77,-111.85,5.0\n")
 
-    any_project.copy_receptors(source)
+    any_project.add_receptors([point_receptor], source=source)
 
     assert any_project.has_receptors
     assert any_project.store.read_bytes(RECEPTORS_KEY) == source.read_bytes()
     assert any_project.load_receptors() == [point_receptor]
 
 
-def test_project_copy_receptors_matches_write_receptors_output(
-    any_project, tmp_path, multipoint_receptor
+def test_project_add_receptors_appends_in_the_files_own_columns(
+    any_project, tmp_path, point_receptor, column_receptor
 ):
-    source = write_receptors([multipoint_receptor], tmp_path / "written.csv")
-    any_project.copy_receptors(source)
-    assert any_project.store.read_bytes(RECEPTORS_KEY) == source.read_bytes()
-    assert read_receptors(any_project.store.local_path(RECEPTORS_KEY)) == [
-        multipoint_receptor
+    """A hand-written file keeps its columns, its r_idx values, and extra columns."""
+    text = (
+        "r_idx,time,lati,long,zagl,scene\n"
+        "1155,2023-01-01 12:00:00,40.77,-111.85,5.0,A\n"
+    )
+    any_project.store.write_bytes(RECEPTORS_KEY, text.encode())
+
+    assert any_project.add_receptors([point_receptor, column_receptor]) == [
+        column_receptor
     ]
+
+    stored = any_project.store.read_bytes(RECEPTORS_KEY).decode()
+    assert stored.startswith(text)  # the original bytes are untouched
+    lines = stored.splitlines()
+    assert lines[1].split(",")[0] == "1155"
+    assert lines[2].split(",")[0] == "1156" and lines[2].endswith(",")
+    assert any_project.load_receptors() == [point_receptor, column_receptor]
+
+
+def test_project_add_receptors_refuses_a_group_without_r_idx(
+    any_project, column_receptor
+):
+    any_project.store.write_bytes(RECEPTORS_KEY, b"time,lati,long,zagl\n")
+    with pytest.raises(ValueError, match="r_idx"):
+        any_project.add_receptors([column_receptor])

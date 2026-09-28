@@ -99,10 +99,10 @@ def test_local_executor_start_returns_before_work_finishes(tmp_path, monkeypatch
     assert handle.done
 
 
-def test_local_executor_forwards_none_skip_existing(tmp_path, local_calls):
+def test_local_executor_defaults_skip_existing_to_true(tmp_path, local_calls):
     LocalExecutor(n_workers=1).start(["sim-a"], project=str(tmp_path)).wait()
 
-    assert local_calls[0]["skip_existing"] is None
+    assert local_calls[0]["skip_existing"] is True
     assert local_calls[0]["model"].compute_root is None
 
 
@@ -348,7 +348,7 @@ def test_slurm_executor_start_renders_skip_existing_override(tmp_path, monkeypat
     )
 
     script_text = list((tmp_path / "slurm").glob("submit_*.sh"))[0].read_text()
-    assert "--no-skip-existing" in script_text
+    assert "--no-skip" in script_text
 
 
 def test_slurm_executor_rejects_uri_project(monkeypatch):

@@ -9,7 +9,7 @@ import re
 from abc import ABC, abstractmethod
 from collections.abc import Hashable, Iterable, Iterator
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, TypeAlias, cast
+from typing import IO, TYPE_CHECKING, Any, TypeAlias, cast
 
 import numpy as np
 import pandas as pd
@@ -522,13 +522,15 @@ class MultiPointReceptor(Receptor):
         }
 
 
-def read_receptors(path: str | Path) -> list[Receptor]:
-    """Load receptors from a CSV file."""
+def read_receptors(path: str | Path | IO[str]) -> list[Receptor]:
+    """Load receptors from a CSV file (a path or an open text stream)."""
     # r_idx is a grouping key, so read it as text. Left to inference, pandas parses a large
     # file in chunks and types each chunk separately: in a file mixing numeric and string
     # ids, a receptor whose rows straddle a chunk boundary comes back part int, part str,
     # and groupby splits it into two receptors with half the points each -- silently.
     header = pd.read_csv(path, nrows=0).columns
+    if hasattr(path, "seek"):
+        path.seek(0)  # type: ignore[union-attr]
     # Annotated loosely because the reader's own signature spells this mapping
     # with invariant value types, which no precise annotation here satisfies.
     dtype: dict[Hashable, Any] = {c: str for c in header if str(c).lower() == "r_idx"}
@@ -640,6 +642,93 @@ def receptors_to_csv(receptors: Iterable[Receptor]) -> str:
     return buffer.getvalue()
 
 
+#: Column names :func:`read_receptors` accepts for each receptor field.
+_CSV_ALIASES = {
+    "time": ("time",),
+    "longitude": ("longitude", "long", "lon"),
+    "latitude": ("latitude", "lati", "lat"),
+    "altitude": ("altitude", "zagl", "zmsl", "z"),
+    "r_idx": ("r_idx",),
+    "altitude_ref": ("altitude_ref", "height_ref"),
+}
+
+
+def append_receptors_csv(text: str, receptors: Iterable[Receptor]) -> str:
+    """
+    Return *text* (an existing receptors CSV) with rows for *receptors* appended.
+
+    The file's own header decides the columns and their order, so a
+    hand-written file keeps its column names, its ``r_idx`` values, and any
+    extra columns (left empty on the new rows). New receptors continue the
+    ``r_idx`` numbering after the largest one in the file.
+    """
+    import csv
+    from io import StringIO
+
+    rows = list(csv.reader(StringIO(text)))
+    if not rows:
+        return receptors_to_csv(receptors)
+    header = rows[0]
+    lower = [h.strip().lower() for h in header]
+
+    def column(field: str) -> str | None:
+        return next(
+            (header[i] for i, h in enumerate(lower) if h in _CSV_ALIASES[field]), None
+        )
+
+    columns = {field: column(field) for field in _CSV_ALIASES}
+    missing = [
+        f for f in ("time", "longitude", "latitude", "altitude") if columns[f] is None
+    ]
+    if missing:
+        raise ValueError(f"receptors.csv lacks a column for {missing}; cannot append.")
+    c_time, c_lon, c_lat, c_alt = (
+        str(columns[f]) for f in ("time", "longitude", "latitude", "altitude")
+    )
+    file_ref = {"zagl": "agl", "zmsl": "msl"}.get(c_alt.lower())
+
+    receptors = list(receptors)
+    idx_column = columns["r_idx"]
+    if idx_column is None and any(len(list(r)) > 1 for r in receptors):
+        raise ValueError(
+            "receptors.csv has no r_idx column, so a column or multipoint receptor "
+            "cannot be appended; add an r_idx column to the file."
+        )
+    next_idx = 0
+    if idx_column is not None:
+        position = header.index(idx_column)
+        numeric = [
+            int(r[position])
+            for r in rows[1:]
+            if r[position].strip().lstrip("-").isdigit()
+        ]
+        next_idx = max(numeric, default=-1) + 1
+
+    ref_column = columns["altitude_ref"]
+    buffer = StringIO()
+    writer = csv.DictWriter(buffer, fieldnames=header, restval="")
+    for k, receptor in enumerate(receptors):
+        if ref_column is None and file_ref not in (None, receptor.altitude_ref):
+            raise ValueError(
+                f"receptors.csv altitudes are {file_ref}; receptor {receptor.id} is "
+                f"{receptor.altitude_ref}. Add an altitude_ref column to mix them."
+            )
+        for lat, lon, altitude in receptor:
+            row: dict[str, Any] = {
+                c_time: receptor.time.isoformat(sep=" "),
+                c_lon: float(lon),
+                c_lat: float(lat),
+                c_alt: float(altitude),
+            }
+            if idx_column is not None:
+                row[idx_column] = next_idx + k
+            if ref_column is not None:
+                row[ref_column] = receptor.altitude_ref
+            writer.writerow(row)
+    body = text if text.endswith("\n") else text + "\n"
+    return body + buffer.getvalue()
+
+
 def write_receptors(receptors: Iterable[Receptor], path: str | Path) -> Path:
     """Write receptors to a CSV file readable by :func:`read_receptors`."""
     path = Path(path)
@@ -680,6 +769,7 @@ __all__ = [
     "Receptor",
     "ReceptorID",
     "read_receptors",
+    "append_receptors_csv",
     "receptors_to_csv",
     "write_receptors",
 ]

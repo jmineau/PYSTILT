@@ -17,7 +17,7 @@ from .variant import VARIANT_NAME_RE, VariantConfig, expand_variants
 T = TypeVar("T", bound=BaseModel)
 
 #: ModelConfig fields that are not parameters a variant inherits.
-_PROJECT_FIELDS = frozenset({"mets", "variants", "execution", "skip_existing"})
+_PROJECT_FIELDS = frozenset({"mets", "variants", "execution"})
 
 
 class ModelConfig(STILTParams, FootprintParams):
@@ -47,14 +47,6 @@ class ModelConfig(STILTParams, FootprintParams):
     execution: dict[str, Any] = Field(
         default_factory=dict,
         description="Execution backend settings such as local, Slurm, or Kubernetes options.",
-    )
-    skip_existing: bool = Field(
-        True,
-        description=(
-            "Skip simulations that already have output. "
-            "Set False to force re-run all simulations. "
-            "Can be overridden at call time via model.run(skip_existing=...)."
-        ),
     )
 
     @model_validator(mode="after")
@@ -104,13 +96,16 @@ class ModelConfig(STILTParams, FootprintParams):
         return STILTParams(**self.model_dump(include=set(STILTParams.model_fields)))
 
     def to_yaml(self, path: str | Path) -> None:
-        """Write the model config to a YAML file."""
+        """
+        Write the config to a YAML file, leaving out settings at their defaults.
+
+        The file is meant to be read and edited by hand, so it holds only what
+        was set. The full resolved settings of each variant are kept in the
+        project's record (:meth:`stilt.Project.load_record`), not here.
+        """
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
-        data = self.model_dump(mode="json", exclude=set())
-        for key in ("mets", "variants", "execution"):
-            if not data.get(key):
-                del data[key]
+        data = self.model_dump(mode="json", exclude_unset=True)
         with path.open("w") as f:
             yaml.safe_dump(data, f, default_flow_style=False, sort_keys=False)
 

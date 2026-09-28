@@ -36,11 +36,18 @@ model from the project folder alone. New receptors are merged into
 
 Because the files are the record, the settings that made them have to be
 recorded too, or a changed setting would leave outputs that no longer match
-their name. ``config.yaml`` is that record. Before overwriting it,
-``register()`` resolves every variant in the stored and the new config and
-refuses to go on if a variant that already exists would change
-(:class:`stilt.errors.ConfigChangedError`). A new variant is always fine:
-its simulations simply do not exist yet.
+their name. ``simulations/variants.yaml`` is that record: the fully resolved
+settings of every variant that has ever been registered, plus the mets. It
+is separate from ``config.yaml`` on purpose. ``config.yaml`` is the user's
+file, edited by hand or written from a config given in Python, and PYSTILT
+compares against the record, not the file, so the check holds whether a
+setting was changed in a notebook or in an editor. ``register()`` resolves
+every variant and refuses to go on if one that is already recorded would
+change (:class:`stilt.errors.ConfigChangedError`). A new variant is always
+fine: its simulations simply do not exist yet. ``Model.remove()`` deletes a
+variant's outputs and its record entry together, so the two never disagree.
+The record is a list of settings, not of outputs: which simulations exist is
+still read from their files.
 
 The unit of work
 ----------------

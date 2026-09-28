@@ -162,6 +162,7 @@ Everything is in the project folder:
      config.yaml                 # your settings
      receptors.csv               # your receptors
      simulations/
+       variants.yaml             # PYSTILT's record of the settings that ran
        by-id/
          202307151800_-111.848_40.766_10/                # the receptor
            hrrr/                                         # the variant

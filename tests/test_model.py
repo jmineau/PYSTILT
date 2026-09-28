@@ -498,8 +498,8 @@ def test_register_preserves_project_receptors_csv(tmp_path):
     assert csv.read_text() == original
 
 
-def test_register_without_args_keeps_existing_receptors_csv(tmp_path):
-    """In-memory receptors do not overwrite a receptors.csv already in the project."""
+def test_register_appends_in_memory_receptors_to_existing_csv(tmp_path):
+    """In-memory receptors are appended to a receptors.csv already in the project."""
     rec_a, rec_b = _receptor(12), _receptor(13)
     Model(project=tmp_path, config=_config(tmp_path), receptors=[rec_a]).register()
 
@@ -508,7 +508,7 @@ def test_register_without_args_keeps_existing_receptors_csv(tmp_path):
     ).register()
 
     assert ids == [_rid(rec_b)]
-    assert [r.id for r in Model(project=tmp_path).receptors] == [rec_a.id]
+    assert [r.id for r in Model(project=tmp_path).receptors] == [rec_a.id, rec_b.id]
 
 
 def test_register_explicit_batch_merges_with_existing_receptors(tmp_path):
@@ -597,8 +597,132 @@ def test_register_refuses_to_change_a_registered_variant(tmp_path, point_recepto
         Model(project=tmp_path, config=changed).register()
     assert Model(project=tmp_path).variants["hrrr"].ziscale == 1.0  # not overwritten
 
-    Model(project=tmp_path, config=changed).register(allow_changes=True)
-    assert Model(project=tmp_path).variants["hrrr"].ziscale == 0.8
+
+def test_register_refuses_a_config_yaml_edited_in_place(tmp_path, point_receptor):
+    """The record, not config.yaml, is what a changed setting is compared with."""
+    Model(
+        project=tmp_path, config=_config(tmp_path), receptors=[point_receptor]
+    ).register()
+    text = (tmp_path / CONFIG_KEY).read_text()
+    (tmp_path / CONFIG_KEY).write_text(text + "ziscale: 0.8\n")
+
+    with pytest.raises(ConfigChangedError, match="hrrr: ziscale"):
+        Model(project=tmp_path).register()  # the CLI path: config from the project
+
+
+def test_register_refuses_a_changed_met(tmp_path, point_receptor):
+    Model(
+        project=tmp_path, config=_config(tmp_path), receptors=[point_receptor]
+    ).register()
+    moved = _config(tmp_path)
+    moved.mets["hrrr"] = moved.mets["hrrr"].model_copy(
+        update={"directory": tmp_path / "x"}
+    )
+    Model(project=tmp_path, config=moved).register()  # where the files are is cosmetic
+
+    subgridded = _config(tmp_path)
+    subgridded.mets["hrrr"] = subgridded.mets["hrrr"].model_copy(
+        update={"subgrid_enable": True}
+    )
+    with pytest.raises(ConfigChangedError, match="met hrrr: subgrid_enable"):
+        Model(project=tmp_path, config=subgridded).register()
+
+
+def test_register_never_rewrites_an_existing_config_yaml(tmp_path, point_receptor):
+    (tmp_path / CONFIG_KEY).write_text(
+        "# my notes\n"
+        f"mets:\n  hrrr: {{directory: {tmp_path / 'met'}, file_format: '%Y%m%d_%H', file_tres: 6h}}\n"
+        "numpar: 10\n"
+    )
+    before = (tmp_path / CONFIG_KEY).read_text()
+
+    Model(project=tmp_path, receptors=[point_receptor]).register()
+    Model(project=tmp_path).run(executor=_CapturingExecutor())
+
+    assert (tmp_path / CONFIG_KEY).read_text() == before
+
+
+def test_register_writes_a_short_config_and_a_full_record(tmp_path, point_receptor):
+    model = Model(
+        project=tmp_path,
+        config=_config(tmp_path, numpar=50),
+        receptors=[point_receptor],
+    )
+    model.register()
+
+    text = (tmp_path / CONFIG_KEY).read_text()
+    assert "numpar: 50" in text and "capemin" not in text
+    record = model.project.load_record()
+    assert record["variants"]["hrrr"]["numpar"] == 50
+    assert "capemin" in record["variants"]["hrrr"]
+    assert set(record["mets"]) == {"hrrr"}
+
+
+def test_orphans_are_recorded_variants_the_config_dropped(tmp_path, point_receptor):
+    Model(
+        project=tmp_path,
+        config=_config(tmp_path, variants={"hrrr": {}, "zi08": {"ziscale": 0.8}}),
+        receptors=[point_receptor],
+    ).register()
+
+    model = Model(project=tmp_path, config=_config(tmp_path, variants={"hrrr": {}}))
+    assert model.orphans() == ["zi08"]
+    model.register()
+    assert model.orphans() == ["zi08"]  # registering never forgets a variant
+
+
+def test_remove_deletes_a_variant_and_what_derives_from_it(tmp_path, point_receptor):
+    model = Model(
+        project=tmp_path,
+        config=_config(
+            tmp_path,
+            variants={
+                "hrrr": {},
+                "hrrr-s2": {"from": "hrrr", "smooth_factor": 2.0},
+                "zi08": {"ziscale": 0.8},
+            },
+        ),
+        receptors=[point_receptor],
+    )
+    model.register()
+    for variant in ("hrrr", "zi08"):
+        _write_trajectory(model, _sid(point_receptor, variant))
+        _write_footprint(model, _sid(point_receptor, variant))
+    _write_footprint(model, _sid(point_receptor, "hrrr-s2"))
+    assert model.simulations.incomplete().keys() == []
+
+    deleted = model.remove("hrrr")
+
+    assert deleted == [_sid(point_receptor, "hrrr"), _sid(point_receptor, "hrrr-s2")]
+    assert not model.simulation(_sid(point_receptor, "hrrr")).directory.exists()
+    assert not model.simulation(_sid(point_receptor, "hrrr-s2")).directory.exists()
+    assert model.simulation(_sid(point_receptor, "zi08")).is_complete()
+    assert set(model.project.load_record()["variants"]) == {"zi08"}
+    # The variant is new again: changed settings under its name are accepted.
+    Model(
+        project=tmp_path,
+        config=_config(
+            tmp_path, variants={"hrrr": {"numpar": 7}, "zi08": {"ziscale": 0.8}}
+        ),
+    ).register()
+
+
+def test_remove_takes_a_realization_group_or_an_orphan(tmp_path, point_receptor):
+    model = Model(
+        project=tmp_path,
+        config=_config(tmp_path, variants={"hrrr": {}, "err": {"realizations": 2}}),
+        receptors=[point_receptor],
+    )
+    model.register()
+    for name in ("err-0", "err-1"):
+        _write_trajectory(model, _sid(point_receptor, name))
+
+    assert [s.variant for s in model.remove("err")] == ["err-0", "err-1"]
+
+    trimmed = Model(project=tmp_path, config=_config(tmp_path, variants={"hrrr": {}}))
+    assert trimmed.orphans() == []
+    with pytest.raises(KeyError):
+        trimmed.remove("err")
 
 
 def test_register_refuses_a_changed_default_that_reaches_a_variant(tmp_path):
@@ -617,7 +741,7 @@ def test_register_allows_new_variants_and_cosmetic_changes(tmp_path, point_recep
 
     grown = _config(
         tmp_path,
-        skip_existing=False,
+        timeout=5,
         execution={"backend": "local"},
         variants={"hrrr": {}, "zi08": {"ziscale": 0.8}},
     )
@@ -983,19 +1107,6 @@ def test_run_propagates_skip_existing_false(tmp_path, point_receptor):
     exc = _CapturingExecutor()
 
     _run_model(tmp_path, point_receptor, exc, skip_existing=False)
-
-    assert exc.start_calls[0]["skip_existing"] is False
-
-
-def test_run_skip_existing_defaults_to_config(tmp_path, point_receptor):
-    model = Model(
-        project=tmp_path,
-        config=_config(tmp_path, skip_existing=False),
-        receptors=[point_receptor],
-    )
-    exc = _CapturingExecutor()
-
-    model.run(executor=exc)
 
     assert exc.start_calls[0]["skip_existing"] is False
 

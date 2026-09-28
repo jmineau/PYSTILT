@@ -72,11 +72,12 @@ class ConfigValidationError(SimulationError):
 
 class ConfigChangedError(ConfigValidationError):
     """
-    A registered variant now resolves to different settings than ``config.yaml``.
+    A variant that has already run now resolves to different settings.
 
-    The project's ``config.yaml`` is the record of what produced its outputs.
-    Changing a variant's settings under the same name would leave outputs that
-    no longer match it; declare a new variant, or pass ``allow_changes``.
+    The project's record holds the settings each variant ran with. Changing
+    them under the same name would leave outputs that no longer match their
+    name; declare a new variant, or remove the old one (``Model.remove``,
+    ``stilt rm``) to rerun it.
     """
 
 
