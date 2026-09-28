@@ -55,7 +55,7 @@ The background at a receptor
        bg = background(
            sim.trajectories.data,
            field,
-           transforms=sim.footprint_config.transforms,
+           transforms=sim.config.transforms,
            context=sim.transform_context(),
        )
        enhancement = float(sim.footprint.enhancement(flux).sum())
@@ -99,7 +99,7 @@ background per particle:
    err = model.simulations[sim.id.receptor, "hrrr-err"]
    result = transport_error(
        sim.trajectories.data, err.trajectories.data, flux,
-       transforms=sim.footprint_config.transforms, context=sim.transform_context(),
+       transforms=sim.config.transforms, context=sim.transform_context(),
        background=field,
    )
    result.enhancement - result.background   # the enhancement alone

@@ -123,6 +123,16 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
     (use `model.simulations.trajectories` / `.footprint`), `stilt run
     --config PATH`, receptors given as bare tuples (pass `Receptor`
     objects or a CSV path), and the unused `VARIANT_KEYS`.
+- **`Simulation` takes its variant**
+  ([#41](https://github.com/jmineau/PYSTILT/issues/41)).
+  `Simulation(receptor, config, met=..., parent=..., directory=..., store=...)`
+  takes the resolved `VariantConfig` instead of `meteorology`, `params`,
+  `footprint` and `variant` separately; `sim.config` is the variant,
+  `sim.params` and `sim.footprint_config` are read from it, and the
+  `exe_dir` argument is gone (`STILTParams.exe_dir` already covers it).
+  `expected_outputs()`, `has_output()` and `missing_outputs()` are replaced
+  by the `runs_hysplit` and `makes_footprint` properties;
+  `generate_footprint()` takes a `FootprintConfig`, not keyword arguments.
 - **Cloud projects read their inputs and cache their outputs by key.**
   `FsspecStore.local_path` downloads a key into the cache directory under its
   own path instead of through fsspec's `simplecache`, and writing or deleting

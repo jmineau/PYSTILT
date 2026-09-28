@@ -326,7 +326,7 @@ def transport_error(
         Surface flux field (see :mod:`stilt.flux`).
     transforms, context
         The footprint's particle transforms and the context to apply them
-        with (``sim.footprint_config.transforms`` and ``sim.transform_context()``), so
+        with (``sim.config.transforms`` and ``sim.transform_context()``), so
         the error is weighted the way the footprint is (averaging kernel,
         pressure weighting, lifetime decay). Applied to both tables.
     levels

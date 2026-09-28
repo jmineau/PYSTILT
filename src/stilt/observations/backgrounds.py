@@ -242,7 +242,7 @@ def background(
         ``CarbonTracker.sample`` on ``sim.trajectories.endpoints()``.
     transforms, context
         The footprint's particle transforms and the context to apply them
-        with (``sim.footprint_config.transforms`` and ``sim.transform_context()``), so
+        with (``sim.config.transforms`` and ``sim.transform_context()``), so
         the background is weighted the way the footprint is and adds to its
         enhancement. For a tower receptor there is nothing to pass.
 

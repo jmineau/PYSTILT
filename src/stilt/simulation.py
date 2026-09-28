@@ -7,12 +7,9 @@ import logging
 import shutil
 from collections.abc import Sequence
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, NamedTuple, cast
+from typing import TYPE_CHECKING, NamedTuple
 
-import pandas as pd
-
-from stilt.config import FootprintConfig, STILTParams
-from stilt.config.model import _config_or_kwargs
+from stilt.config import FootprintConfig, STILTParams, VariantConfig
 from stilt.errors import (
     EmptyTrajectoryError,
     identify_failure_reason,
@@ -39,9 +36,6 @@ if TYPE_CHECKING:
     from stilt.visualization import SimulationPlotAccessor
 
 logger = logging.getLogger(__name__)
-
-TRAJECTORY = "trajectory"
-FOOTPRINT = "footprint"
 
 
 class SimID(NamedTuple):
@@ -88,21 +82,21 @@ class Simulation:
 
     Parameters
     ----------
-    receptor, meteorology, params
-        What to run. ``meteorology`` may be ``None`` for a derived simulation.
-    footprint
-        Footprint product to rasterize, or ``None`` for a trajectory-only run.
-    variant
-        Variant name; the simulation id is ``receptor.id / variant``. Defaults
-        to the met stream's name.
+    receptor
+        Where and when particles are released.
+    config
+        The resolved variant this receptor runs under: transport settings,
+        footprint settings, and the variant name (``config.name`` is the
+        simulation's variant, so ``id == receptor.id / config.name``).
+    met
+        The met stream to run HYSPLIT with. ``None`` only for a derived
+        simulation, which uses its parent's particles.
     parent
         The simulation whose trajectory this one rasterizes (a ``from:``
         variant). Such a simulation never runs HYSPLIT.
     directory
         Compute-local working directory. A temporary one is created when
         omitted. Nothing is created on disk until an output is written.
-    exe_dir
-        Directory holding a custom ``hycs_std`` build.
     store
         Output store the outputs are published to and read back from when
         they are not on local disk. When the store's location for this
@@ -112,33 +106,26 @@ class Simulation:
     def __init__(
         self,
         receptor: Receptor,
-        meteorology: MetStream | None,
-        params: STILTParams,
-        footprint: FootprintConfig | None = None,
+        config: VariantConfig,
         *,
-        variant: str | None = None,
+        met: MetStream | None = None,
         parent: Simulation | None = None,
         directory: str | Path | None = None,
-        exe_dir: Path | None = None,
         store: Store | None = None,
     ):
-        if variant is None:
-            if meteorology is None:
-                raise ValueError("A simulation needs a variant name or a met stream.")
-            variant = str(meteorology.id)
-        if parent is None and meteorology is None:
+        if parent is None and met is None:
             raise ValueError("A simulation that runs HYSPLIT needs a met stream.")
-        self.id = SimID(receptor.id, variant)
+        self.id = SimID(receptor.id, config.name)
         self.receptor = receptor
-        self.meteorology = meteorology
-        self.params = params
-        self.footprint_config = footprint
+        self.config = config
+        self.met = met
+        self.params: STILTParams = config.stilt_params()
+        self.footprint_config: FootprintConfig | None = config.footprint
         self.parent = parent
         if directory is None:
             directory = resolve_directory(prefix="pystilt_") / self.id
         self.directory = resolve_directory(directory)
         self.key_prefix = simulation_prefix(self.id)
-        self._exe_dir = exe_dir
         self._store = store
 
         # Lazy state
@@ -227,32 +214,21 @@ class Simulation:
             or self.resolve(self.empty_footprint_path) is not None
         )
 
-    def expected_outputs(self) -> tuple[str, ...]:
-        """
-        The outputs this simulation must produce to be complete.
+    @property
+    def runs_hysplit(self) -> bool:
+        """Whether this simulation produces its own trajectory (it is not derived)."""
+        return self.parent is None
 
-        The trajectory unless derived, plus the footprint when a grid is set.
-        """
-        outputs = [] if self.is_derived else [TRAJECTORY]
-        if self.footprint_config is not None:
-            outputs.append(FOOTPRINT)
-        return tuple(outputs)
-
-    def has_output(self, output: str) -> bool:
-        """Whether one named output (``trajectory`` or ``footprint``) exists."""
-        if output == TRAJECTORY:
-            return self.has_trajectory
-        if output == FOOTPRINT:
-            return self.has_footprint
-        raise ValueError(f"Unknown output {output!r}")
-
-    def missing_outputs(self) -> tuple[str, ...]:
-        """The expected outputs that do not exist yet."""
-        return tuple(o for o in self.expected_outputs() if not self.has_output(o))
+    @property
+    def makes_footprint(self) -> bool:
+        """Whether this simulation produces a footprint (its variant has a grid)."""
+        return self.footprint_config is not None
 
     def is_complete(self) -> bool:
-        """Whether every expected output exists."""
-        return not self.missing_outputs()
+        """Whether every expected output exists: the trajectory unless derived, the footprint if a grid is set."""
+        return (not self.runs_hysplit or self.has_trajectory) and (
+            not self.makes_footprint or self.has_footprint
+        )
 
     def publish(self) -> None:
         """
@@ -356,8 +332,8 @@ class Simulation:
 
     def _met_stream(self) -> MetStream:
         """The met stream, from the parent when derived."""
-        if self.meteorology is not None:
-            return self.meteorology
+        if self.met is not None:
+            return self.met
         if self.parent is not None:
             return self.parent._met_stream()
         raise ValueError(f"{self.id} has no met stream.")
@@ -469,20 +445,12 @@ class Simulation:
             receptor=self.receptor,
             params=self.params,
             met_files=self.met_files,
-            exe_dir=self._exe_dir,
         )
         runner.prepare()
         result = runner.execute(timeout=timeout, rm_dat=rm_dat)
-
-        result_log = getattr(result, "log_path", None)
-        if result_log is not None:
-            result_log_path = Path(result_log)
-            if result_log_path != self.log_path and result_log_path.exists():
-                self.log_path.write_text(result_log_path.read_text())
-        elif hasattr(result, "stdout"):
-            self.log_path.write_text(str(cast(Any, result).stdout))
-
-        if result.particles is None or result.particles.empty:
+        if result.log_path != self.log_path and result.log_path.exists():
+            self.log_path.write_text(result.log_path.read_text())
+        if result.particles.empty:
             raise EmptyTrajectoryError(f"No trajectory data for {self.id}")
         self._trajectories = Trajectories.from_particles(
             result.particles,
@@ -499,7 +467,6 @@ class Simulation:
         write: bool = False,
         transforms: Sequence[ParticleTransform] | None = None,
         context: TransformContext | None = None,
-        **kwargs,
     ) -> Footprint:
         """
         Rasterize the footprint from the trajectories.
@@ -510,8 +477,8 @@ class Simulation:
         Parameters
         ----------
         config : FootprintConfig, optional
-            Footprint settings. Defaults to the simulation's own; pass one
-            (or keyword arguments) to try other settings in memory.
+            Footprint settings. Defaults to the variant's own; pass one to try
+            other settings in memory (``sim.footprint_config.replace(...)``).
         write : bool
             If True, write the footprint netCDF to the simulation directory.
         transforms : sequence, optional
@@ -520,10 +487,7 @@ class Simulation:
         context : TransformContext, optional
             Context handed to every transform. Defaults to one built from the
             receptor, variant, and project store.
-        **kwargs
-            Forwarded to ``FootprintConfig`` when *config* is not given.
         """
-        config = _config_or_kwargs(config, kwargs, FootprintConfig)
         if config is None:
             config = self.footprint_config
         if config is None:
@@ -535,29 +499,16 @@ class Simulation:
         if traj is None:
             self.run_trajectories(write=write)
             traj = self.trajectories
+        assert traj is not None  # run_trajectories raises rather than leaving None
 
-        if traj is None:
-            particles = pd.DataFrame(
-                {
-                    "time": pd.Series(dtype="float64"),
-                    "indx": pd.Series(dtype="int64"),
-                    "long": pd.Series(dtype="float64"),
-                    "lati": pd.Series(dtype="float64"),
-                    "foot": pd.Series(dtype="float64"),
-                }
-            )
-        else:
-            particles = traj.data
+        particles = traj.data
         all_transforms = [*config.transforms, *(transforms or [])]
         if all_transforms:
             particles = apply_transforms(
                 particles, all_transforms, context or self.transform_context()
             )
         foot = Footprint.calculate(
-            particles,
-            receptor=self.receptor if traj is None else traj.receptor,
-            config=config,
-            name=self.variant,
+            particles, receptor=traj.receptor, config=config, name=self.variant
         )
         self._footprint = foot
         if write:
@@ -578,4 +529,4 @@ class Simulation:
         )
 
 
-__all__ = ["FOOTPRINT", "TRAJECTORY", "SimID", "Simulation"]
+__all__ = ["SimID", "Simulation"]

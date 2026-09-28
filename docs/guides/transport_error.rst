@@ -184,7 +184,7 @@ perturbed particle tables of one receptor and the flux field:
            sim.trajectories.data,
            err.trajectories.data,
            flux,
-           transforms=sim.footprint_config.transforms,
+           transforms=sim.config.transforms,
            context=sim.transform_context(),
        )
        rows.append({"receptor": sim.receptor.id, "enhancement": result.enhancement,

@@ -234,7 +234,7 @@ different geometries for the same particles are variants with ``from:``:
 The derived ``grid`` is written back into the config, so the geometry object
 is never needed to read a stored footprint.  Give both ``grid`` and
 ``geometry`` to pin the raster explicitly; ``geometry`` is then kept as a
-record and ``sim.footprint_config.geometry.build()`` returns the
+record and ``sim.config.geometry.build()`` returns the
 :class:`stilt.Mesh` to aggregate onto.  A content hash of the built geometry (``geometry_hash``) is
 stored with the config and in each footprint file; ``Footprint.aggregate``
 warns if the mesh it is handed no longer matches, which catches a shapefile

@@ -6,7 +6,14 @@ from types import SimpleNamespace
 
 import pytest
 
-from stilt.config import FootprintConfig, Grid, MetConfig, ModelConfig, STILTParams
+from stilt.config import (
+    FootprintConfig,
+    Grid,
+    MetConfig,
+    ModelConfig,
+    STILTParams,
+    VariantConfig,
+)
 from stilt.errors import ConfigValidationError, SimulationError
 from stilt.execution import worker
 from stilt.execution.worker import (
@@ -71,15 +78,20 @@ def store(tmp_path) -> LocalStore:
     return LocalStore(tmp_path / "store")
 
 
-def _make_sim(tmp_path, receptor, met, params, store, *, footprint=None, **kwargs):
+def _variant(params, *, name="hrrr", footprint=None, derived_from=None):
+    data = {**params.model_dump(), **(footprint.model_dump() if footprint else {})}
+    return VariantConfig(
+        name=name, group=name, met="hrrr", derived_from=derived_from, **data
+    )
+
+
+def _make_sim(tmp_path, receptor, met, params, store, *, footprint=None):
     return Simulation(
-        receptor=receptor,
-        meteorology=met,
-        params=params,
-        footprint=footprint,
+        receptor,
+        _variant(params, footprint=footprint),
+        met=met,
         directory=tmp_path / "compute" / SimID(receptor.id, "hrrr"),
         store=store,
-        **kwargs,
     )
 
 
@@ -424,11 +436,13 @@ def test_run_simulation_derived_never_runs_hysplit(
 ):
     parent = _make_sim(tmp_path, receptor, met, params, store)
     derived = Simulation(
-        receptor=receptor,
-        meteorology=None,
-        params=params,
-        footprint=FootprintConfig(grid=GRID, smooth_factor=2.0),
-        variant="hrrr-s2",
+        receptor,
+        _variant(
+            params,
+            name="hrrr-s2",
+            footprint=FootprintConfig(grid=GRID, smooth_factor=2.0),
+            derived_from="hrrr",
+        ),
         parent=parent,
         directory=tmp_path / "compute" / SimID(receptor.id, "hrrr-s2"),
         store=store,

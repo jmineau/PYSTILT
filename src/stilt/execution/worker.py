@@ -125,7 +125,7 @@ def run_simulation(sim: Simulation, *, skip_existing: bool = True) -> Simulation
             sim.run_trajectories(write=True)
             ran_hysplit = True
 
-        if sim.footprint_config is not None and not (
+        if sim.makes_footprint and not (
             skip_existing and not ran_hysplit and sim.has_footprint
         ):
             phase = "footprint"

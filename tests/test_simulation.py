@@ -12,11 +12,13 @@ from stilt.config import (
     Grid,
     MetConfig,
     STILTParams,
+    VariantConfig,
 )
 from stilt.errors import HYSPLITTimeoutError
 from stilt.footprint import Footprint
+from stilt.hysplit.driver import HYSPLITResult
 from stilt.meteorology import MetStream
-from stilt.simulation import FOOTPRINT, TRAJECTORY, SimID, Simulation
+from stilt.simulation import SimID, Simulation
 from stilt.store import LocalStore
 from stilt.trajectory import Trajectories
 from stilt.transforms import FirstOrderLifetime
@@ -29,6 +31,21 @@ def _params(**kwargs) -> STILTParams:
     data = {"n_hours": -24, "numpar": 10, "hnf_plume": False}
     data.update(kwargs)
     return STILTParams(**data)
+
+
+def _variant(
+    name="hrrr",
+    footprint: FootprintConfig | None = None,
+    derived_from=None,
+    **overrides,
+) -> VariantConfig:
+    """A resolved variant with the test transport defaults and an optional footprint."""
+    data = {"n_hours": -24, "numpar": 10, "hnf_plume": False, **overrides}
+    if footprint is not None:
+        data.update(footprint.model_dump())
+    return VariantConfig(
+        name=name, group=name, met="hrrr", derived_from=derived_from, **data
+    )
 
 
 def _met(tmp_path, **kwargs) -> MetStream:
@@ -67,11 +84,9 @@ def _sim(
     if mkdir:
         sim_dir.mkdir(parents=True, exist_ok=True)
     return Simulation(
-        receptor=receptor,
-        meteorology=_met(tmp_path, **(met_kwargs or {})),
-        params=_params(**param_overrides),
-        footprint=footprint,
-        variant=variant,
+        receptor,
+        _variant(variant, footprint=footprint, **param_overrides),
+        met=_met(tmp_path, **(met_kwargs or {})),
         directory=sim_dir,
         store=store,
     )
@@ -124,20 +139,18 @@ class _FakeMet:
 
 
 def _fake_runner_returning(particles):
-    class _Result:
-        def __init__(self):
-            self.stdout = "ok"
-            self.particles = particles
+    """A stand-in HYSPLITDriver that writes ``stilt.log`` and returns *particles*."""
 
     class _FakeRunner:
-        def __init__(self, **kwargs):
-            pass
+        def __init__(self, *, directory, **kwargs):
+            self.log_path = Path(directory) / "stilt.log"
 
         def prepare(self):
             return None
 
         def execute(self, timeout, rm_dat):
-            return _Result()
+            self.log_path.write_text("ok")
+            return HYSPLITResult(particles=particles, log_path=self.log_path)
 
     return _FakeRunner
 
@@ -189,21 +202,16 @@ def test_construction_does_not_create_directory(point_receptor, tmp_path):
     assert sim.outcome is None
 
 
-def test_variant_defaults_to_the_met_name(point_receptor, tmp_path):
-    sim = Simulation(
-        receptor=point_receptor, meteorology=_met(tmp_path), params=_params()
-    )
-    assert sim.id == SimID(point_receptor.id, "hrrr")
-    assert sim.directory.parts[-2:] == (str(point_receptor.id), "hrrr")
+def test_simulation_id_is_receptor_and_variant_name(point_receptor, tmp_path):
+    sim = Simulation(point_receptor, _variant("zi08"), met=_met(tmp_path))
+    assert sim.id == SimID(point_receptor.id, "zi08")
+    assert sim.directory.parts[-2:] == (str(point_receptor.id), "zi08")
+    assert sim.params.numpar == 10 and sim.footprint_config is None
 
 
 def test_a_simulation_needs_a_met_stream_unless_derived(point_receptor, tmp_path):
-    with pytest.raises(ValueError):
-        Simulation(receptor=point_receptor, meteorology=None, params=_params())
     with pytest.raises(ValueError, match="needs a met stream"):
-        Simulation(
-            receptor=point_receptor, meteorology=None, params=_params(), variant="x"
-        )
+        Simulation(point_receptor, _variant())
 
 
 def test_output_paths_live_in_the_variant_directory(point_receptor, tmp_path):
@@ -281,19 +289,17 @@ def test_meteorology_subgrid_enable_accepts_bool(point_receptor, tmp_path):
             "subgrid_bounds": Bounds(xmin=-114, xmax=-110, ymin=39, ymax=42),
         },
     )
-    assert sim.meteorology is not None
-    assert sim.meteorology.subgrid_enable is True
+    assert sim.met is not None
+    assert sim.met.subgrid_enable is True
 
 
 def test_simulation_met_files_stage_into_the_variant_directory(
     point_receptor, tmp_path
 ):
     sim = _sim(tmp_path, point_receptor)
-    assert sim.meteorology is not None
-    sim.meteorology.directory.mkdir(parents=True, exist_ok=True)
-    source = sim.meteorology.directory / point_receptor.time.strftime(
-        sim.meteorology.file_format
-    )
+    assert sim.met is not None
+    sim.met.directory.mkdir(parents=True, exist_ok=True)
+    source = sim.met.directory / point_receptor.time.strftime(sim.met.file_format)
     source.touch()
 
     staged = sim.met_files
@@ -316,7 +322,7 @@ def test_run_trajectories_uses_source_met_files_in_metadata(
     source_dir.mkdir(parents=True)
     source_file = source_dir / point_receptor.time.strftime("%Y%m%d_%H")
     source_file.touch()
-    sim.meteorology = MetStream(
+    sim.met = MetStream(
         "hrrr", directory=source_dir, file_format="%Y%m%d_%H", file_tres="1h"
     )
     seen: dict[str, list[Path]] = {}
@@ -324,6 +330,7 @@ def test_run_trajectories_uses_source_met_files_in_metadata(
 
     class _Recording(runner):
         def __init__(self, **kwargs):
+            super().__init__(**kwargs)
             seen["runner_met_files"] = kwargs["met_files"]
 
     def _fake_from_particles(particles, *, receptor, params, met_files):
@@ -362,7 +369,7 @@ def test_run_trajectories_timeout_maps_to_domain_error(
             raise HYSPLITTimeoutError("boom")
 
     monkeypatch.setattr("stilt.simulation.HYSPLITDriver", _FakeRunner)
-    monkeypatch.setattr(sim, "meteorology", _FakeMet())
+    monkeypatch.setattr(sim, "met", _FakeMet())
 
     with pytest.raises(HYSPLITTimeoutError):
         sim.run_trajectories(timeout=1, rm_dat=False)
@@ -375,7 +382,7 @@ def test_run_trajectories_creates_directory_and_writes(
     monkeypatch.setattr(
         "stilt.simulation.HYSPLITDriver", _fake_runner_returning(_particles_df())
     )
-    monkeypatch.setattr(sim, "meteorology", _FakeMet())
+    monkeypatch.setattr(sim, "met", _FakeMet())
 
     sim.run_trajectories(timeout=1, rm_dat=False, write=True)
 
@@ -394,7 +401,7 @@ def test_perturbed_params_are_stored_with_the_trajectory(
     monkeypatch.setattr(
         "stilt.simulation.HYSPLITDriver", _fake_runner_returning(_particles_df())
     )
-    monkeypatch.setattr(sim, "meteorology", _FakeMet())
+    monkeypatch.setattr(sim, "met", _FakeMet())
 
     sim.run_trajectories(write=True)
 
@@ -406,11 +413,8 @@ def test_perturbed_params_are_stored_with_the_trajectory(
 def test_derived_simulation_refuses_to_run_hysplit(point_receptor, tmp_path):
     parent = _sim(tmp_path, point_receptor)
     derived = Simulation(
-        receptor=point_receptor,
-        meteorology=None,
-        params=parent.params,
-        footprint=FOOT,
-        variant="hrrr-s2",
+        point_receptor,
+        _variant("hrrr-s2", footprint=FOOT, derived_from="hrrr"),
         parent=parent,
     )
     with pytest.raises(ValueError, match="derived"):
@@ -500,11 +504,8 @@ def test_derived_simulation_reads_its_parent_trajectory(point_receptor, tmp_path
     parent = _sim(tmp_path, point_receptor)
     _write_trajectory(parent.trajectories_path, point_receptor, tmp_path)
     derived = Simulation(
-        receptor=point_receptor,
-        meteorology=None,
-        params=parent.params,
-        footprint=FOOT,
-        variant="hrrr-s2",
+        point_receptor,
+        _variant("hrrr-s2", footprint=FOOT, derived_from="hrrr"),
         parent=parent,
         directory=tmp_path
         / "simulations"
@@ -517,7 +518,7 @@ def test_derived_simulation_reads_its_parent_trajectory(point_receptor, tmp_path
     assert derived.has_trajectory
     assert derived.trajectories is parent.trajectories
     assert derived.footprint_path.parent == derived.directory
-    assert derived._met_stream() is parent.meteorology
+    assert derived._met_stream() is parent.met
 
 
 # ---------------------------------------------------------------------------
@@ -705,24 +706,20 @@ def _touch(path: Path) -> None:
     path.write_bytes(b"x")
 
 
-def test_expected_outputs(point_receptor, tmp_path):
-    assert _sim(tmp_path, point_receptor).expected_outputs() == (TRAJECTORY,)
-    assert _sim(tmp_path, point_receptor, footprint=FOOT).expected_outputs() == (
-        TRAJECTORY,
-        FOOTPRINT,
-    )
+def test_what_a_simulation_produces(point_receptor, tmp_path):
+    traj_only = _sim(tmp_path, point_receptor)
+    assert traj_only.runs_hysplit and not traj_only.makes_footprint
+    both = _sim(tmp_path, point_receptor, footprint=FOOT)
+    assert both.runs_hysplit and both.makes_footprint
 
 
-def test_trajectory_only_simulation_is_complete_with_its_trajectory(
-    point_receptor, tmp_path
-):
-    sim = _sim(tmp_path, point_receptor)
+def test_is_complete_needs_every_expected_output(point_receptor, tmp_path):
+    sim = _sim(tmp_path, point_receptor, footprint=FOOT)
     assert not sim.is_complete()
-    assert sim.missing_outputs() == (TRAJECTORY,)
-
     _touch(sim.trajectories_path)
+    assert not sim.is_complete()
+    _touch(sim.footprint_path)
     assert sim.is_complete()
-    assert sim.outcome == "complete"
 
 
 def test_completion_requires_the_footprint_when_one_is_configured(
@@ -731,7 +728,6 @@ def test_completion_requires_the_footprint_when_one_is_configured(
     sim = _sim(tmp_path, point_receptor, footprint=FOOT)
     _touch(sim.trajectories_path)
     assert not sim.is_complete()
-    assert sim.missing_outputs() == (FOOTPRINT,)
 
     _touch(sim.footprint_path)
     assert sim.is_complete()
@@ -743,7 +739,8 @@ def test_completion_requires_the_trajectory_even_when_the_footprint_exists(
     """A lost trajectory makes the simulation incomplete; the worker backfills it."""
     sim = _sim(tmp_path, point_receptor, footprint=FOOT)
     _touch(sim.footprint_path)
-    assert sim.missing_outputs() == (TRAJECTORY,)
+    assert sim.has_footprint and not sim.has_trajectory
+    assert not sim.is_complete()
 
 
 def test_empty_footprint_marker_counts_complete(point_receptor, tmp_path):
@@ -761,32 +758,15 @@ def test_has_footprint_falls_back_to_store(point_receptor, tmp_path):
     assert sim.has_footprint
 
 
-def test_has_output_dispatches_by_name(point_receptor, tmp_path):
-    sim = _sim(tmp_path, point_receptor, footprint=FOOT)
-    assert not sim.has_output(TRAJECTORY)
-    assert not sim.has_output(FOOTPRINT)
-
-    _touch(sim.trajectories_path)
-    _touch(sim.footprint_path)
-
-    assert sim.has_output(TRAJECTORY)
-    assert sim.has_output(FOOTPRINT)
-    with pytest.raises(ValueError, match="Unknown output"):
-        sim.has_output("error_trajectory")
-
-
 def test_derived_simulation_needs_only_its_footprint(point_receptor, tmp_path):
     parent = _sim(tmp_path, point_receptor)
     derived = Simulation(
-        receptor=point_receptor,
-        meteorology=None,
-        params=parent.params,
-        footprint=FOOT,
-        variant="hrrr-s2",
+        point_receptor,
+        _variant("hrrr-s2", footprint=FOOT, derived_from="hrrr"),
         parent=parent,
         directory=tmp_path / "d",
     )
-    assert derived.expected_outputs() == (FOOTPRINT,)
+    assert not derived.runs_hysplit and derived.makes_footprint
     _touch(derived.footprint_path)
     assert derived.is_complete()
 
@@ -856,11 +836,8 @@ def test_publish_derived_does_not_copy_the_parent_trajectory(point_receptor, tmp
     parent = _sim(tmp_path / "compute", point_receptor, store=store)
     parent.trajectories_path.write_bytes(b"traj")
     derived = Simulation(
-        receptor=point_receptor,
-        meteorology=None,
-        params=parent.params,
-        footprint=FOOT,
-        variant="hrrr-s2",
+        point_receptor,
+        _variant("hrrr-s2", footprint=FOOT, derived_from="hrrr"),
         parent=parent,
         directory=tmp_path
         / "compute"

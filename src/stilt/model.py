@@ -353,11 +353,9 @@ class Model:
             else None
         )
         return Simulation(
-            receptor=self.receptors[sid.receptor],
-            meteorology=None if parent is not None else self.mets[variant.met],
-            params=variant.stilt_params(),
-            footprint=variant.footprint,
-            variant=sid.variant,
+            self.receptors[sid.receptor],
+            variant,
+            met=None if parent is not None else self.mets[variant.met],
             parent=parent,
             directory=self.compute_root / sid,
             store=self.project.store,

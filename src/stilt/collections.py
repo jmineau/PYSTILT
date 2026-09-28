@@ -18,12 +18,16 @@ import pandas as pd
 
 from stilt.footprint import Footprint
 from stilt.receptors import Receptor, read_receptors
-from stilt.simulation import FOOTPRINT, TRAJECTORY, SimID, Simulation
+from stilt.simulation import SimID, Simulation
 from stilt.trajectory import Trajectories
 
 if TYPE_CHECKING:
     from stilt.model import Model
     from stilt.project import Project
+
+#: The two outputs a simulation can produce, as ``status()`` columns.
+TRAJECTORY = "trajectory"
+FOOTPRINT = "footprint"
 
 
 class ReceptorCollection:
@@ -315,18 +319,16 @@ class SimulationCollection:
         ``False`` when it is expected and missing, and ``NA`` when the
         simulation does not produce it. ``complete`` is the completion rule.
         """
-        rows = []
-        for sim in self:
-            expected = sim.expected_outputs()
-            rows.append(
-                {
-                    "receptor": str(sim.id.receptor),
-                    "variant": sim.variant,
-                    TRAJECTORY: sim.has_trajectory if TRAJECTORY in expected else pd.NA,
-                    FOOTPRINT: sim.has_footprint if FOOTPRINT in expected else pd.NA,
-                    "complete": sim.is_complete(),
-                }
-            )
+        rows = [
+            {
+                "receptor": str(sim.id.receptor),
+                "variant": sim.variant,
+                TRAJECTORY: sim.has_trajectory if sim.runs_hysplit else pd.NA,
+                FOOTPRINT: sim.has_footprint if sim.makes_footprint else pd.NA,
+                "complete": sim.is_complete(),
+            }
+            for sim in self
+        ]
         columns = ["receptor", "variant", TRAJECTORY, FOOTPRINT, "complete"]
         return pd.DataFrame(rows, columns=columns).astype(
             {TRAJECTORY: "boolean", FOOTPRINT: "boolean", "complete": "bool"}
@@ -362,7 +364,12 @@ class OutputCollection:
 
     def _producers(self) -> list[Simulation]:
         """Simulations for which this output is expected."""
-        return [sim for sim in self._sims if self.output in sim.expected_outputs()]
+        if self.output == TRAJECTORY:
+            return [sim for sim in self._sims if sim.runs_hysplit]
+        return [sim for sim in self._sims if sim.makes_footprint]
+
+    def _exists(self, sim: Simulation) -> bool:
+        return sim.has_trajectory if self.output == TRAJECTORY else sim.has_footprint
 
     def _path(self, sim: Simulation) -> Path:
         return (
@@ -391,7 +398,7 @@ class OutputCollection:
         """The producing simulations whose output does not exist yet."""
         return SimulationCollection(
             self._sims._model,
-            [sim.id for sim in self._producers() if not sim.has_output(self.output)],
+            [sim.id for sim in self._producers() if not self._exists(sim)],
         )
 
     def __len__(self) -> int:

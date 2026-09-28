@@ -10,7 +10,12 @@ import pandas as pd
 import pytest
 import xarray as xr
 
-from stilt.collections import OutputCollection, SimulationCollection
+from stilt.collections import (
+    FOOTPRINT,
+    TRAJECTORY,
+    OutputCollection,
+    SimulationCollection,
+)
 from stilt.config import Grid, MetConfig, ModelConfig, RuntimeSettings
 from stilt.errors import ConfigChangedError, ConfigValidationError
 from stilt.execution import LocalHandle, SlurmExecutor
@@ -18,7 +23,7 @@ from stilt.footprint import Footprint
 from stilt.model import Model
 from stilt.project import CONFIG_KEY, RECEPTORS_KEY
 from stilt.receptors import PointReceptor
-from stilt.simulation import FOOTPRINT, TRAJECTORY, SimID, Simulation
+from stilt.simulation import SimID, Simulation
 from stilt.trajectory import Trajectories
 
 matplotlib.use("Agg")
@@ -412,7 +417,7 @@ def test_simulation_handles_carry_the_variant_settings(tmp_path, point_receptor)
     assert zi.params.ziscale == 0.8
     assert zi.footprint_config == base.footprint_config
     assert s2.parent is base
-    assert s2.meteorology is None
+    assert s2.met is None
     assert s2.footprint_config is not None and s2.footprint_config.smooth_factor == 2
     assert s2.directory == model.compute_root / _sid(point_receptor, "s2")
     assert model.simulation(str(_sid(point_receptor))) is base  # cached
