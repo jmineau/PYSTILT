@@ -93,6 +93,10 @@ the rest. A simulation is finished when all of its outputs exist:
 - the trajectory file, unless the variant is declared with ``from:``,
 - the footprint file (or ``.empty`` marker), if the variant has a grid.
 
+If the trajectory is missing, HYSPLIT runs again and the footprint is
+remade from the new particles, along with the footprints of any ``from:``
+variants, so a footprint never outlives the particles it came from.
+
 So after an interruption, a failed Slurm task, or adding a variant to
 ``config.yaml``, just run again. Only what's missing will run: a new
 variant runs for every receptor and nothing else is touched. Changing the

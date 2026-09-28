@@ -122,6 +122,12 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **A rerun of a missing trajectory kept the old footprint**
+  ([#39](https://github.com/jmineau/PYSTILT/issues/39)). When HYSPLIT runs
+  for a simulation, its footprint is now remade from the new particles even
+  under `skip_existing`, and so are the footprints of variants derived from
+  it with `from:`. Before, a lost or deleted trajectory came back next to a
+  footprint made from different particles.
 - **`ziscale` runs over 150 hours overflowed HYSPLIT's ZICONTROL array**
   ([#36](https://github.com/jmineau/PYSTILT/issues/36)). HYSPLIT holds at
   most 150 hourly factors and reads more without a bounds check, and a

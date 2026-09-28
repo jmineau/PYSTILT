@@ -186,7 +186,7 @@ def test_run_simulation_trajectory_only_publishes_and_completes(
 
     result = run_simulation(sim)
 
-    assert result == SimulationResult(str(sim.id), "complete")
+    assert result == SimulationResult(str(sim.id), "complete", ran_hysplit=True)
     # publish() copied the trajectory into the store under its key.
     assert store.exists(sim.key(sim.trajectories_path))
     assert store.read_bytes(sim.key(sim.trajectories_path)) == b"traj"
@@ -355,27 +355,68 @@ def test_run_simulation_skip_existing_false_regenerates(fsim, monkeypatch):
     assert calls == [True]
 
 
-def test_run_simulation_backfills_a_missing_trajectory_when_the_footprint_exists(
+def test_run_simulation_backfills_a_missing_trajectory_and_remakes_the_footprint(
     tmp_path, receptor, met, params, store, monkeypatch
 ):
-    """A lost trajectory is rerun even though the footprint is already there."""
+    """A lost trajectory is rerun, and the old footprint is remade from the new particles."""
     s = _make_sim(
         tmp_path, receptor, met, params, store, footprint=FootprintConfig(grid=GRID)
     )
     s.directory.mkdir(parents=True)
     s.footprint_path.write_bytes(b"nc")
-    calls: list[bool] = []
+    calls: list[str] = []
     monkeypatch.setattr(
         s,
         "run_trajectories",
-        lambda **k: calls.append(True) or _write_stub_trajectory(s),
+        lambda **k: calls.append("hysplit") or _write_stub_trajectory(s),
     )
     monkeypatch.setattr(
-        s, "generate_footprint", lambda **k: pytest.fail("footprint already exists")
+        s,
+        "generate_footprint",
+        lambda **k: calls.append("footprint") or _StubFootprint(is_empty=False),
     )
 
-    assert run_simulation(s).status == "complete"
-    assert calls == [True]
+    result = run_simulation(s)
+
+    assert result.status == "complete" and result.ran_hysplit
+    assert calls == ["hysplit", "footprint"]
+
+
+def test_run_receptor_remakes_derived_footprints_when_the_parent_reran(
+    tmp_path, receptor, monkeypatch
+):
+    model = _model(
+        tmp_path,
+        [receptor],
+        grid=GRID,
+        variants={"hrrr": {}, "hrrr-s2": {"from": "hrrr", "smooth_factor": 2.0}},
+    )
+    model.register()
+    parent = model.simulation((receptor.id, "hrrr"))
+    derived = model.simulation((receptor.id, "hrrr-s2"))
+    for sim in (parent, derived):
+        sim.directory.mkdir(parents=True, exist_ok=True)
+        sim.footprint_path.write_bytes(b"nc")
+    calls: list[str] = []
+
+    def fake_hysplit(**kwargs):
+        calls.append("hysplit")
+        _write_stub_trajectory(parent)
+        parent._trajectories = "stub"  # the derived run reads this, not the stub file
+
+    monkeypatch.setattr(parent, "run_trajectories", fake_hysplit)
+    for sim in (parent, derived):
+
+        def fake_generate(name=sim.variant, **kwargs):
+            calls.append(name)
+            return _StubFootprint(is_empty=False)
+
+        monkeypatch.setattr(sim, "generate_footprint", fake_generate)
+
+    result = run_receptor(model, str(receptor.id))
+
+    assert result.status == "complete"
+    assert calls == ["hysplit", "hrrr", "hrrr-s2"]
 
 
 def test_run_simulation_derived_never_runs_hysplit(

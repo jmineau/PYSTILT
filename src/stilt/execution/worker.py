@@ -55,6 +55,7 @@ class SimulationResult:
     sim_id: str
     status: Status
     error: str | None = None
+    ran_hysplit: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -105,9 +106,10 @@ def run_simulation(sim: Simulation, *, skip_existing: bool = True) -> Simulation
 
     HYSPLIT runs when the trajectory is missing (or always, without
     ``skip_existing``); a derived simulation reads its parent's trajectory
-    instead. The footprint is rasterized when one is configured. An empty
-    footprint writes a marker so the outcome is durable and skip-existing
-    treats it as done.
+    instead. The footprint is rasterized when one is configured, and always
+    when HYSPLIT ran in this call, so a footprint never outlives the
+    particles it was made from. An empty footprint writes a marker so the
+    outcome is durable and skip-existing treats it as done.
 
     Parameters
     ----------
@@ -118,6 +120,7 @@ def run_simulation(sim: Simulation, *, skip_existing: bool = True) -> Simulation
         netCDF or empty marker).
     """
     phase = "trajectory"
+    ran_hysplit = False
     try:
         if sim.is_derived:
             if sim.trajectories is None:
@@ -126,11 +129,12 @@ def run_simulation(sim: Simulation, *, skip_existing: bool = True) -> Simulation
                 )
         elif not (skip_existing and sim.has_trajectory):
             sim.run_trajectories(write=True)
+            ran_hysplit = True
 
         status: Status = "complete"
         if sim.footprint_config is not None:
             phase = "footprint"
-            if skip_existing and sim.has_footprint:
+            if skip_existing and not ran_hysplit and sim.has_footprint:
                 if sim.resolve(sim.footprint_path) is None:
                     status = "complete-empty"
             else:
@@ -141,7 +145,7 @@ def run_simulation(sim: Simulation, *, skip_existing: bool = True) -> Simulation
                 else:
                     sim.clear_empty_footprint_marker()
         sim.publish()
-        return SimulationResult(str(sim.id), status)
+        return SimulationResult(str(sim.id), status, ran_hysplit=ran_hysplit)
     except Exception as error:
         logger.exception("simulation %s failed during %s: %s", sim.id, phase, error)
         try:
@@ -159,16 +163,21 @@ def run_receptor(
     """
     Run every simulation of one receptor, transport variants first.
 
-    Derived variants come last so the trajectory they rasterize exists. A
-    preemption (``KeyboardInterrupt``) is normalised into an ``interrupted``
-    result.
+    Derived variants come last so the trajectory they rasterize exists, and
+    one whose parent ran HYSPLIT in this call is regenerated even under
+    ``skip_existing``. A preemption (``KeyboardInterrupt``) is normalised
+    into an ``interrupted`` result.
     """
     sims = list(model.simulations.sel(receptor=receptor_id))
     ordered = [s for s in sims if not s.is_derived] + [s for s in sims if s.is_derived]
     results: list[SimulationResult] = []
     try:
         for sim in ordered:
-            results.append(run_simulation(sim, skip_existing=skip_existing))
+            skip = skip_existing
+            if sim.is_derived:
+                reran = {r.sim_id for r in results if r.ran_hysplit}
+                skip = skip_existing and str(sim.parent.id) not in reran  # type: ignore[union-attr]
+            results.append(run_simulation(sim, skip_existing=skip))
     except KeyboardInterrupt:
         results.append(
             SimulationResult(str(sim.id), "interrupted", error="Worker preempted")
