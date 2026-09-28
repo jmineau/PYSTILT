@@ -35,10 +35,9 @@ def test_pull_receptors_requires_runtime_queue_backend(
     sim_ids = model.register()
     assert len(sim_ids) == 1
 
-    pending = model.status()
-    assert pending.total == 1
-    assert pending.pending == 1
-    assert pending.completed == 0
+    status = model.status()
+    assert len(status) == 1
+    assert not status["complete"].any()
 
     with pytest.raises(ConfigValidationError, match="Postgres work queue"):
         pull_receptors(model, poll_interval=0.1)
@@ -79,8 +78,8 @@ def test_declarative_transform_config_changes_real_footprint(
     )
     model.run()
 
-    [baseline] = model.simulations.sel(variant="hrrr").footprint.load()
-    [lifetime] = model.simulations.sel(variant="lifetime").footprint.load()
+    [baseline] = model.simulations.sel(variant="hrrr").footprint.load().values()
+    [lifetime] = model.simulations.sel(variant="lifetime").footprint.load().values()
 
     assert len(lifetime.config.transforms) == 1
 

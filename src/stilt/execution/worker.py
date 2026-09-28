@@ -30,16 +30,10 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-Status = Literal["complete", "complete-empty", "failed", "error", "interrupted"]
+Status = Literal["complete", "failed", "error", "interrupted"]
 
 #: Worst outcome first, for summarising a receptor's simulations.
-_SEVERITY: tuple[Status, ...] = (
-    "interrupted",
-    "error",
-    "failed",
-    "complete-empty",
-    "complete",
-)
+_SEVERITY: tuple[Status, ...] = ("interrupted", "error", "failed", "complete")
 
 
 @dataclass(frozen=True, slots=True)
@@ -131,21 +125,17 @@ def run_simulation(sim: Simulation, *, skip_existing: bool = True) -> Simulation
             sim.run_trajectories(write=True)
             ran_hysplit = True
 
-        status: Status = "complete"
-        if sim.footprint_config is not None:
+        if sim.footprint_config is not None and not (
+            skip_existing and not ran_hysplit and sim.has_footprint
+        ):
             phase = "footprint"
-            if skip_existing and not ran_hysplit and sim.has_footprint:
-                if sim.resolve(sim.footprint_path) is None:
-                    status = "complete-empty"
+            foot = sim.generate_footprint(write=True)
+            if foot.is_empty:
+                sim.write_empty_footprint_marker()
             else:
-                foot = sim.generate_footprint(write=True)
-                if foot.is_empty:
-                    sim.write_empty_footprint_marker()
-                    status = "complete-empty"
-                else:
-                    sim.clear_empty_footprint_marker()
+                sim.clear_empty_footprint_marker()
         sim.publish()
-        return SimulationResult(str(sim.id), status, ran_hysplit=ran_hysplit)
+        return SimulationResult(str(sim.id), "complete", ran_hysplit=ran_hysplit)
     except Exception as error:
         logger.exception("simulation %s failed during %s: %s", sim.id, phase, error)
         try:

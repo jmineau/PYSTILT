@@ -337,7 +337,7 @@ def test_error_realizations(tmp_path, wbb_receptor, traj_only_config):
     assert sims.variants == ["err-0", "err-1"]
     assert sims.incomplete().keys() == []
 
-    e0, e1 = (t.data for t in sims.trajectories.load())
+    e0, e1 = (t.data for t in sims.trajectories.load().values())
     s0 = e0.groupby("indx")["foot"].sum()
     s1 = e1.groupby("indx")["foot"].sum().reindex(s0.index)
     assert not np.allclose(s0.to_numpy(), s1.to_numpy())
@@ -377,7 +377,9 @@ def test_seeded_error_realizations_differ_and_reproduce(
         return model
 
     a = run(tmp_path / "a")
-    e0, e1 = (t.data for t in a.simulations.sel(variant="err").trajectories.load())
+    e0, e1 = (
+        t.data for t in a.simulations.sel(variant="err").trajectories.load().values()
+    )
     s0 = e0.groupby("indx")["foot"].sum()
     s1 = e1.groupby("indx")["foot"].sum().reindex(s0.index)
     assert not np.allclose(s0.to_numpy(), s1.to_numpy())

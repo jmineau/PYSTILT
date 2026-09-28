@@ -868,6 +868,14 @@ def test_several_realizations_accept_krand_4_or_seeded_krand_2(tmp_path):
         _variant_config(tmp_path, variants={"e": {"realizations": 0}})
 
 
+def test_declaring_realizations_always_makes_a_group(tmp_path):
+    """A group of one is ``e-0``, so raising the count later only adds runs."""
+    cfg = _variant_config(tmp_path, variants={"e": {"realizations": 1}, "single": {}})
+    assert list(cfg.resolve_variants()) == ["e-0", "single"]
+    assert cfg.resolve_variants()["e-0"].group == "e"
+    assert cfg.resolve_variants()["single"].realization is None
+
+
 def test_realization_names_may_not_collide_with_declared_variants(tmp_path):
     with pytest.raises(ValueError, match="collides"):
         _variant_config(

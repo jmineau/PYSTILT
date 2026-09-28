@@ -10,20 +10,16 @@ import logging
 import os
 import tempfile
 from collections.abc import Iterable
-from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from stilt.collections import (
-    OutputCollection,
-    ReceptorCollection,
-    SimulationCollection,
-)
+import pandas as pd
+
+from stilt.collections import ReceptorCollection, SimulationCollection
 from stilt.config import (
     MetConfig,
     ModelConfig,
     RuntimeSettings,
-    STILTParams,
     VariantConfig,
 )
 from stilt.config.model import _config_or_kwargs
@@ -59,15 +55,6 @@ def _met_differences(met: MetConfig, recorded: dict) -> list[str]:
         for k in mine
         if k not in _UNRECORDED_MET_FIELDS and mine[k] != recorded.get(k)
     )
-
-
-@dataclass(frozen=True, slots=True)
-class StatusCounts:
-    """Completion counts for one project."""
-
-    total: int = 0
-    completed: int = 0
-    pending: int = 0
 
 
 class Model:
@@ -179,11 +166,6 @@ class Model:
                 self._receptors_input, project=self.project
             )
         return self._receptors
-
-    @property
-    def params(self) -> STILTParams:
-        """The default transport parameters (from config)."""
-        return self.config.to_stilt_params()
 
     @property
     def variants(self) -> dict[str, VariantConfig]:
@@ -389,16 +371,6 @@ class Model:
         return self._simulations
 
     @property
-    def trajectories(self) -> OutputCollection:
-        """Every simulation's trajectories (``simulations.trajectories``)."""
-        return self.simulations.trajectories
-
-    @property
-    def footprint(self) -> OutputCollection:
-        """Every simulation's footprint (``simulations.footprint``)."""
-        return self.simulations.footprint
-
-    @property
     def plot(self) -> ModelPlotAccessor:
         """Plotting namespace (e.g. ``model.plot.availability()``)."""
         if self._plot is None:
@@ -407,13 +379,9 @@ class Model:
             self._plot = ModelPlotAccessor(self)
         return self._plot
 
-    def status(self) -> StatusCounts:
-        """Return completion counts (total / completed / pending), read from the outputs."""
-        total = len(self.simulations)
-        if not total:
-            return StatusCounts()
-        pending = len(self.simulations.incomplete())
-        return StatusCounts(total=total, completed=total - pending, pending=pending)
+    def status(self) -> pd.DataFrame:
+        """One row per simulation with its outputs and completion (:meth:`SimulationCollection.status`)."""
+        return self.simulations.status()
 
     # -- Execution -------------------------------------------------------------
 
@@ -489,4 +457,4 @@ class Model:
         return handle
 
 
-__all__ = ["Model", "StatusCounts"]
+__all__ = ["Model"]

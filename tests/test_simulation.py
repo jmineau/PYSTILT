@@ -186,7 +186,7 @@ def test_construction_does_not_create_directory(point_receptor, tmp_path):
 
     assert not sim.directory.exists()
     assert not sim.has_trajectory
-    assert sim.status is None
+    assert sim.outcome is None
 
 
 def test_variant_defaults_to_the_met_name(point_receptor, tmp_path):
@@ -487,13 +487,13 @@ def test_status_reads_outputs_and_log_from_the_store(point_receptor, tmp_path):
     remote = storage_root / sim.key(sim.trajectories_path)
     remote.parent.mkdir(parents=True)
     _write_trajectory(remote, point_receptor, storage_root)
-    assert sim.status == "complete"
+    assert sim.outcome == "complete"
 
     remote.unlink()
     (remote.parent / "stilt.log").write_text(
         "Insufficient number of meteorological files found"
     )
-    assert "MISSING_MET_FILES" in str(sim.status)
+    assert "MISSING_MET_FILES" in str(sim.outcome)
 
 
 def test_derived_simulation_reads_its_parent_trajectory(point_receptor, tmp_path):
@@ -722,7 +722,7 @@ def test_trajectory_only_simulation_is_complete_with_its_trajectory(
 
     _touch(sim.trajectories_path)
     assert sim.is_complete()
-    assert sim.status == "complete"
+    assert sim.outcome == "complete"
 
 
 def test_completion_requires_the_footprint_when_one_is_configured(

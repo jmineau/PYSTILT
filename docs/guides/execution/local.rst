@@ -51,9 +51,8 @@ Then check on the results:
 
 .. code-block:: python
 
-   model.status()                          # finished vs remaining
-   model.simulations.status()              # one row per simulation
-   footprints = model.footprint.load()
+   model.status()                          # one row per simulation, with a "complete" column
+   footprints = model.simulations.footprint.load()   # {simulation id: Footprint}
 
 Python or the command line?
 ---------------------------

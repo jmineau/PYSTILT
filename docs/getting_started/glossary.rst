@@ -46,11 +46,27 @@ Glossary
       is a variant of the same name, so the same receptor can be run with
       several meteorology products side by side.
 
+   defaults
+      The settings written at the top level of ``config.yaml``. Every
+      :term:`variant` starts from them and overrides what it changes; a
+      variant with no overrides runs them as they are.
+
    variant
       One named set of settings every receptor is run under: a met source
-      plus any settings that differ from the defaults in ``config.yaml``,
-      such as a different ``ziscale``, a wind-error run, or another
-      footprint grid. See :doc:`../guides/configuration`.
+      plus any settings that differ from the :term:`defaults` in
+      ``config.yaml``, such as a different ``ziscale``, a wind-error run, or
+      another footprint grid. See :doc:`../guides/configuration`.
+
+   realization
+      One member of a variant declared with ``realizations: N``: the same
+      settings run ``N`` times with a different random seed each, named
+      ``<variant>-0`` to ``<variant>-(N-1)``. Used for transport-error
+      ensembles (:doc:`../guides/transport_error`).
+
+   derived variant
+      A variant declared with ``from: <other>``. It makes another footprint
+      (a different grid, smoothing, or particle weighting) from that
+      variant's stored particles without running HYSPLIT again.
 
    HYSPLIT
       NOAA's particle transport program, written in Fortran. PYSTILT runs it

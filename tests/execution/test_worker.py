@@ -158,7 +158,7 @@ def test_receptor_result_reports_the_worst_simulation():
     results = [
         SimulationResult("r/a", "complete"),
         SimulationResult("r/b", "failed", error="boom"),
-        SimulationResult("r/c", "complete-empty"),
+        SimulationResult("r/c", "complete"),
     ]
     summary = ReceptorResult.summarise("r", results)
     assert summary.status == "failed"
@@ -284,7 +284,7 @@ def test_run_simulation_empty_footprint_writes_marker(fsim, store, monkeypatch):
 
     result = run_simulation(fsim)
 
-    assert result.status == "complete-empty"
+    assert result.status == "complete"
     assert fsim.empty_footprint_path.exists()
     assert not fsim.footprint_path.exists()
     # publish() covers the ``.empty`` marker too.
@@ -336,7 +336,7 @@ def test_run_simulation_skips_existing_empty_marker(fsim, monkeypatch):
         lambda **k: pytest.fail("empty footprint must not be regenerated"),
     )
 
-    assert run_simulation(fsim, skip_existing=True).status == "complete-empty"
+    assert run_simulation(fsim, skip_existing=True).status == "complete"
 
 
 def test_run_simulation_skip_existing_false_regenerates(fsim, monkeypatch):

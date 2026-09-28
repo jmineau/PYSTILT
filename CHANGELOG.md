@@ -100,6 +100,29 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Met settings that change results (`subgrid_*`, `n_min`, `file_tres`) are
   part of the record; `directory` is not. Geometry specs (`kind: file`,
   `h3`, `windows`) now require `kind` when built in Python too.
+- **Names and surface cleanup after variants**
+  ([#40](https://github.com/jmineau/PYSTILT/issues/40)).
+  - A variant that declares `realizations` is always a numbered group, even
+    at `1` (`hrrr-err-0`), so raising the count later only adds simulations
+    instead of renaming `hrrr-err` to `hrrr-err-0`.
+  - `stilt init` writes a `variants:` section with one empty entry, since
+    declaring any variant replaces the automatic one-per-met list.
+  - `OutputCollection.paths()` and `load()` return dictionaries keyed by
+    simulation id instead of bare lists.
+  - One `status`: `Model.status()` returns the per-simulation table
+    (`StatusCounts` is gone), `stilt status` prints totals and per-variant
+    counts, and `Simulation.status` is now `Simulation.outcome`.
+  - `sel()` raises `KeyError` for a receptor id or variant name the project
+    does not have; the time, location, and predicate filters may still
+    select nothing.
+  - The worker's `complete-empty` status is gone: an empty footprint is
+    `complete` with its `.empty` marker.
+  - The Postgres queue column is `receptor_id` (it has held receptor ids
+    since the variants change).
+  - Removed: `Model.params`, `Model.trajectories` and `Model.footprint`
+    (use `model.simulations.trajectories` / `.footprint`), `stilt run
+    --config PATH`, receptors given as bare tuples (pass `Receptor`
+    objects or a CSV path), and the unused `VARIANT_KEYS`.
 - **Cloud projects read their inputs and cache their outputs by key.**
   `FsspecStore.local_path` downloads a key into the cache directory under its
   own path instead of through fsspec's `simplecache`, and writing or deleting

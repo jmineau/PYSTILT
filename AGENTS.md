@@ -305,9 +305,12 @@ Feature status lives in the roadmap tables in [README.md](README.md) and
 - **Empty footprints are successes.** `model.footprint.load()` treats
   `.empty` simulations as complete with no file; code that iterates results
   must accept a missing payload.
-- **`realizations: 1 -> N` renames the run.** `hrrr-err` becomes
-  `hrrr-err-0`, so the drift check sees a new variant and the old directory
-  is orphaned. Realization 0 is never aliased to the unsuffixed name.
+- **Declaring `realizations` makes a numbered group, even at 1.** `hrrr-err`
+  with `realizations: 1` is `hrrr-err-0`, so raising the count later only
+  adds simulations. Realization 0 is never aliased to the unsuffixed name.
+- **Declared variants replace the per-met defaults.** With a `variants`
+  section only its entries run; the starter config writes `hrrr: {}` so the
+  unchanged run stays visible.
 - **HYSPLIT line-source chaining.** In `emspnt.f`, consecutive CONTROL
   starting locations at the same lat/lon become one vertical line source and
   only the last pair is released. That is how `ColumnReceptor` works (two

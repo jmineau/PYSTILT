@@ -334,9 +334,9 @@ class Simulation:
         return start, stop
 
     @property
-    def status(self) -> str | None:
+    def outcome(self) -> str | None:
         """
-        Current status of this simulation.
+        How this simulation ended, read from its outputs and log.
 
         Returns
         -------

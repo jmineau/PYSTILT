@@ -321,7 +321,7 @@ def transport_error(
         (``sim.trajectories.data``) and one or more particle tables from a
         wind-error variant of the same receptor: one table, or a list for a
         variant with ``realizations: N``
-        (``[t.data for t in sims.sel(variant="hrrr-err").trajectories.load()]``).
+        (``[t.data for t in sims.sel(variant="hrrr-err").trajectories.load().values()]``).
     flux
         Surface flux field (see :mod:`stilt.flux`).
     transforms, context

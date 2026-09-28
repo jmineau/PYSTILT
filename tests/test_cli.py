@@ -4,13 +4,13 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
+import pandas as pd
 import yaml
 from typer.testing import CliRunner
 
 import stilt.__main__
 from stilt.cli import _resolve_project, app
 from stilt.config import Grid, ModelConfig
-from stilt.model import StatusCounts
 from stilt.project import SIMULATIONS_PREFIX
 
 runner = CliRunner()
@@ -74,7 +74,9 @@ def _fake_model_factory(captured: list[dict]):
             self.config = SimpleNamespace(execution={})
 
         def status(self):
-            return StatusCounts()
+            return pd.DataFrame(
+                columns=["receptor", "variant", "trajectory", "footprint", "complete"]
+            )
 
         def orphans(self):
             return []
@@ -360,25 +362,6 @@ def test_run_forwards_compute_root(tmp_path, monkeypatch):
             "compute_root": str(tmp_path / "scratch"),
         }
     ]
-
-
-def test_run_config_option_resolves_project_from_its_parent(tmp_path, monkeypatch):
-    """--config PATH uses the config file's parent as the project root."""
-    _write_minimal_config(tmp_path)
-    captured: list[dict] = []
-    monkeypatch.setattr("stilt.cli.Model", _fake_model_factory(captured))
-
-    result = runner.invoke(app, ["run", "--config", str(tmp_path / "config.yaml")])
-
-    assert result.exit_code == 0
-    assert captured == [{"project": str(tmp_path.resolve()), "compute_root": None}]
-
-
-def test_run_config_option_exits_when_file_missing(tmp_path):
-    result = runner.invoke(app, ["run", "--config", str(tmp_path / "nope.yaml")])
-
-    assert result.exit_code == 1
-    assert "config file not found" in result.output
 
 
 def test_run_backend_override_builds_executor(tmp_path, monkeypatch):
@@ -827,6 +810,7 @@ def test_init_writes_science_first_commented_config(tmp_path):
     assert list(parsed) == [
         "mets",
         "grid",
+        "variants",
         "n_hours",
         "numpar",
         "varsiwant",
@@ -836,7 +820,7 @@ def test_init_writes_science_first_commented_config(tmp_path):
     loaded = ModelConfig.from_yaml(project / "config.yaml")
     assert loaded.grid is not None and loaded.grid.xmin == -113.0
     assert list(loaded.resolve_variants()) == ["hrrr"]
-    assert "# variants:" in text
+    assert parsed["variants"] == {"hrrr": {}}
     assert text.index("mets:") < text.index("grid:")
     assert text.index("grid:") < text.index("n_hours:")
     assert text.index("numpar:") < text.index("# execution:")

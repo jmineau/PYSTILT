@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING, overload
 import pandas as pd
 
 from stilt.footprint import Footprint
-from stilt.receptors import PointReceptor, Receptor, read_receptors
+from stilt.receptors import Receptor, read_receptors
 from stilt.simulation import FOOTPRINT, TRAJECTORY, SimID, Simulation
 from stilt.trajectory import Trajectories
 
@@ -67,26 +67,11 @@ class ReceptorCollection:
             return [receptors], None
         if isinstance(receptors, Iterable):
             items = list(receptors)
-            if not items:
-                return [], None
             if all(isinstance(item, Receptor) for item in items):
-                return list(items), None
-            if len(items) == 4 and not any(
-                isinstance(item, Iterable) and not isinstance(item, (str, bytes))
-                for item in items
-            ):
-                return [PointReceptor(*items)], None
-            if all(
-                isinstance(item, Iterable) and not isinstance(item, (str, bytes))
-                for item in items
-            ):
-                return [
-                    item if isinstance(item, Receptor) else PointReceptor(*item)
-                    for item in items
-                ], None
+                return items, None
         raise TypeError(
-            "Receptors must be a receptor, a path, or an iterable of receptor "
-            "instances / (time, longitude, latitude, altitude) tuples."
+            "Receptors must be a Receptor, an iterable of Receptors, or a path to "
+            "a receptors CSV."
         )
 
     @property
@@ -279,14 +264,26 @@ class SimulationCollection:
             (``hrrr-err``) selects every realization.
         time, location, where
             Receptor filters, as :meth:`ReceptorCollection.sel`.
+
+        Raises
+        ------
+        KeyError
+            For a receptor id or variant name the model does not define. The
+            other filters may legitimately select nothing.
         """
         keys = self.keys()
         if receptor is not None:
             wanted = {receptor} if isinstance(receptor, str) else set(receptor)
+            unknown = wanted - {r.id for r in self._model.receptors}
+            if unknown:
+                raise KeyError(f"Unknown receptor id(s): {sorted(unknown)}")
             keys = [k for k in keys if k.receptor in wanted]
         if variant is not None:
             wanted = {variant} if isinstance(variant, str) else set(variant)
             groups = {name: v.group for name, v in self._model.variants.items()}
+            unknown = wanted - set(groups) - set(groups.values())
+            if unknown:
+                raise KeyError(f"Unknown variant(s): {sorted(unknown)}")
             keys = [
                 k
                 for k in keys
@@ -372,21 +369,23 @@ class OutputCollection:
             sim.trajectories_path if self.output == TRAJECTORY else sim.footprint_path
         )
 
-    def paths(self) -> list[Path]:
+    def paths(self) -> dict[SimID, Path]:
         """
-        Local paths of the outputs that exist.
+        Local paths of the outputs that exist, keyed by simulation id.
 
         Empty footprints have no file, so they are not listed here; they still
         count as complete (see :meth:`missing`).
         """
-        found = (sim.resolve(self._path(sim)) for sim in self._producers())
-        return [path for path in found if path is not None]
+        found = ((sim.id, sim.resolve(self._path(sim))) for sim in self._producers())
+        return {sid: path for sid, path in found if path is not None}
 
-    def load(self) -> list[Trajectories] | list[Footprint]:
-        """Load every existing output."""
+    def load(self) -> dict[SimID, Trajectories] | dict[SimID, Footprint]:
+        """Load every existing output, keyed by simulation id."""
         if self.output == TRAJECTORY:
-            return [Trajectories.from_parquet(p) for p in self.paths()]
-        return [Footprint.from_netcdf(p) for p in self.paths()]
+            return {
+                sid: Trajectories.from_parquet(p) for sid, p in self.paths().items()
+            }
+        return {sid: Footprint.from_netcdf(p) for sid, p in self.paths().items()}
 
     def missing(self) -> SimulationCollection:
         """The producing simulations whose output does not exist yet."""

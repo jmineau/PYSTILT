@@ -22,9 +22,6 @@ from .params import STILTParams
 #: Variant (and met) names: lowercase, digits and hyphens; they become directory names.
 VARIANT_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 
-#: Keys a variant declaration may carry besides parameter overrides.
-VARIANT_KEYS = frozenset({"met", "from", "realizations"})
-
 #: Fields that change no output, so the record does not compare them.
 UNRECORDED_FIELDS = frozenset({"timeout", "rm_dat", "exe_dir"})
 
@@ -34,9 +31,9 @@ class VariantConfig(STILTParams, FootprintParams):
     One resolved variant: met, transport params, and footprint settings.
 
     Built by :meth:`~stilt.config.ModelConfig.resolve_variants`; not read
-    from YAML directly. ``name`` is the simulation-level name (a realization
-    group ``hrrr-err`` with ``realizations: 3`` yields ``hrrr-err-0`` to
-    ``hrrr-err-2``), ``group`` the name as declared.
+    from YAML directly. ``name`` is the simulation-level name (a variant that
+    declares ``realizations`` is a group: ``hrrr-err`` with ``realizations: 3``
+    yields ``hrrr-err-0`` to ``hrrr-err-2``), ``group`` the name as declared.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -143,8 +140,13 @@ def expand_variants(
 
 def _merge_transport(
     group: str, spec: dict[str, Any], defaults: dict[str, Any], mets: list[str]
-) -> tuple[dict[str, Any], int]:
-    """Merge a transport variant onto the defaults; return it and its realization count."""
+) -> tuple[dict[str, Any], int | None]:
+    """
+    Merge a transport variant onto the defaults.
+
+    Returns the merged parameters and the declared realization count, or
+    ``None`` when the variant does not declare ``realizations``.
+    """
     met = spec.pop("met", None)
     if met is None:
         if len(mets) != 1:
@@ -154,9 +156,11 @@ def _merge_transport(
         met = mets[0]
     if met not in mets:
         raise ValueError(f"Variant {group!r} names unknown met {met!r}")
-    realizations = int(spec.pop("realizations", 1))
-    if realizations < 1:
-        raise ValueError(f"Variant {group!r}: realizations must be >= 1")
+    realizations = spec.pop("realizations", None)
+    if realizations is not None:
+        realizations = int(realizations)
+        if realizations < 1:
+            raise ValueError(f"Variant {group!r}: realizations must be >= 1")
     return {**_override(defaults, spec), "met": met}, realizations
 
 
@@ -176,14 +180,22 @@ def _override(base: dict[str, Any], spec: dict[str, Any]) -> dict[str, Any]:
 def _expand_realizations(
     group: str,
     merged: dict[str, Any],
-    realizations: int,
+    realizations: int | None,
     declared: dict[str, dict[str, Any]],
 ) -> list[VariantConfig]:
-    """One variant, or ``group-0 .. group-(N-1)`` each with ``seed + k``."""
+    """
+    One variant, or, when ``realizations`` is declared, a group.
+
+    A group's simulations are ``group-0 .. group-(N-1)``, each with
+    ``seed + k``; a group of one is ``group-0``, so raising ``N`` later only
+    adds simulations.
+    """
     base = VariantConfig(name=group, group=group, **merged)
-    if realizations == 1:
+    if realizations is None:
         return [base]
-    if not (base.krand == 4 or (base.krand == 2 and base.seed is not None)):
+    if realizations > 1 and not (
+        base.krand == 4 or (base.krand == 2 and base.seed is not None)
+    ):
         raise ValueError(
             f"Variant {group!r}: realizations={realizations} requires krand=4 "
             f"or krand=2 with a seed (got krand={base.krand}, seed={base.seed}): "
@@ -220,7 +232,7 @@ def _check_derived(
         raise ValueError(
             f"Variant {name!r} derives from {parent!r}, which is itself derived"
         )
-    if int(parent_spec.get("realizations", 1)) != 1:
+    if "realizations" in parent_spec:
         raise ValueError(
             f"Variant {name!r} derives from realization group {parent!r}; "
             "derive from a single run"
@@ -235,7 +247,6 @@ def _check_derived(
 
 __all__ = [
     "UNRECORDED_FIELDS",
-    "VARIANT_KEYS",
     "VARIANT_NAME_RE",
     "VariantConfig",
     "expand_variants",

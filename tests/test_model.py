@@ -15,7 +15,7 @@ from stilt.config import Grid, MetConfig, ModelConfig, RuntimeSettings
 from stilt.errors import ConfigChangedError, ConfigValidationError
 from stilt.execution import LocalHandle, SlurmExecutor
 from stilt.footprint import Footprint
-from stilt.model import Model, StatusCounts
+from stilt.model import Model
 from stilt.project import CONFIG_KEY, RECEPTORS_KEY
 from stilt.receptors import PointReceptor
 from stilt.simulation import FOOTPRINT, TRAJECTORY, SimID, Simulation
@@ -184,32 +184,6 @@ def test_receptors_from_csv(tmp_path):
     assert model.receptors.source_path == csv
 
 
-def test_receptors_from_single_tuple(tmp_path):
-    model = Model(
-        project=tmp_path, receptors=("2023-01-01 12:00:00", -111.85, 40.77, 5.0)
-    )
-
-    assert len(model.receptors) == 1
-    assert isinstance(model.receptors[0], PointReceptor)
-    assert model.receptors[0].latitude == pytest.approx(40.77)
-    assert model.receptors[0].longitude == pytest.approx(-111.85)
-
-
-def test_receptors_from_sequence_of_tuples(tmp_path):
-    model = Model(
-        project=tmp_path,
-        receptors=[
-            ("2023-01-01 12:00:00", -111.85, 40.77, 5.0),
-            ("2023-01-01 13:00:00", -111.86, 40.78, 10.0),
-        ],
-    )
-
-    assert len(model.receptors) == 2
-    assert all(isinstance(r, PointReceptor) for r in model.receptors)
-    assert f"{model.receptors[1].time:%Y%m%d%H%M}" == "202301011300"
-    assert model.receptors[1].altitude == pytest.approx(10.0)
-
-
 def test_model_accepts_empty_receptor_list(tmp_path):
     model = Model(project=tmp_path, config=_config(tmp_path), receptors=[])
 
@@ -231,11 +205,17 @@ def test_receptors_support_lookup_by_receptor_id(tmp_path, point_receptor):
 
 
 def test_receptors_are_normalized_once(tmp_path):
-    model = Model(
-        project=tmp_path, receptors=("2023-01-01 12:00:00", -111.85, 40.77, 5.0)
-    )
+    model = Model(project=tmp_path, receptors=[_receptor(12)])
 
     assert model.receptors is model.receptors
+
+
+def test_receptors_must_be_receptor_objects_or_a_path(tmp_path):
+    model = Model(
+        project=tmp_path, receptors=[("2023-01-01 12:00", -111.85, 40.77, 5.0)]
+    )
+    with pytest.raises(TypeError, match="Receptor"):
+        len(model.receptors)
 
 
 def test_receptors_raise_when_nothing_available(tmp_path):
@@ -436,11 +416,6 @@ def test_simulation_handles_carry_the_variant_settings(tmp_path, point_receptor)
     assert s2.footprint_config is not None and s2.footprint_config.smooth_factor == 2
     assert s2.directory == model.compute_root / _sid(point_receptor, "s2")
     assert model.simulation(str(_sid(point_receptor))) is base  # cached
-
-
-def test_model_params_are_the_default_transport_params(tmp_path):
-    model = Model(project=tmp_path, config=_config(tmp_path, numpar=321))
-    assert model.params.numpar == 321
 
 
 # ---------------------------------------------------------------------------
@@ -818,7 +793,8 @@ def test_sel_by_variant_and_realization_group(tmp_path, point_receptor):
     assert sims.sel(variant="err").variants == ["err-0", "err-1", "err-2"]
     assert sims.sel(variant="err-1").variants == ["err-1"]
     assert sims.sel(variant=["hrrr", "err-2"]).variants == ["hrrr", "err-2"]
-    assert len(sims.sel(variant="nope")) == 0
+    with pytest.raises(KeyError):
+        sims.sel(variant="nope")
 
 
 def test_sel_by_receptor_time_location_and_predicate(tmp_path):
@@ -907,10 +883,10 @@ def test_status_frame_marks_outputs_a_variant_does_not_produce(
 def test_trajectories_paths_load_and_missing(tmp_path):
     rec_a, rec_b = _receptor(12), _receptor(13)
     model = Model(project=tmp_path, config=_config(tmp_path), receptors=[rec_a, rec_b])
-    trajectories = model.trajectories
+    trajectories = model.simulations.trajectories
 
     assert isinstance(trajectories, OutputCollection)
-    assert trajectories.paths() == []
+    assert trajectories.paths() == {}
 
     path = _write_real_trajectory(model, _sid(rec_a))
 
@@ -922,12 +898,12 @@ def test_trajectories_paths_load_and_missing(tmp_path):
         / "hrrr"
         / f"{_rid(rec_a)}_traj.parquet"
     )
-    assert trajectories.paths() == [path]
-    [loaded] = trajectories.load()
+    assert trajectories.paths() == {_sid(rec_a): path}
+    [loaded] = trajectories.load().values()
     assert isinstance(loaded, Trajectories)
     assert loaded.receptor.id == rec_a.id
     assert trajectories.missing().keys() == [_sid(rec_b)]
-    assert model.simulations.sel(time="2023-01-01 13:00").trajectories.paths() == []
+    assert model.simulations.sel(time="2023-01-01 13:00").trajectories.paths() == {}
 
 
 def test_trajectories_exclude_derived_variants(tmp_path, point_receptor):
@@ -937,11 +913,11 @@ def test_trajectories_exclude_derived_variants(tmp_path, point_receptor):
     model = Model(project=tmp_path, config=config, receptors=[point_receptor])
     _write_trajectory(model, _sid(point_receptor))
 
-    assert len(model.trajectories) == 1
-    assert model.trajectories.paths() == [
-        model.simulation(_sid(point_receptor)).trajectories_path
-    ]
-    assert len(model.footprint) == 2
+    assert len(model.simulations.trajectories) == 1
+    assert model.simulations.trajectories.paths() == {
+        _sid(point_receptor): model.simulation(_sid(point_receptor)).trajectories_path
+    }
+    assert len(model.simulations.footprint) == 2
 
 
 def test_footprint_paths_exclude_empty_markers(tmp_path):
@@ -955,15 +931,15 @@ def test_footprint_paths_exclude_empty_markers(tmp_path):
     _write_footprint(model, _sid(rec_empty), empty=True)
 
     assert foot_path.name == f"{_rid(rec_done)}_foot.nc"
-    assert model.footprint.paths() == [foot_path]
-    assert model.footprint.missing().keys() == [_sid(rec_missing)]
+    assert model.simulations.footprint.paths() == {_sid(rec_done): foot_path}
+    assert model.simulations.footprint.missing().keys() == [_sid(rec_missing)]
 
 
 def test_footprint_excludes_trajectory_only_variants(tmp_path, point_receptor):
     config = _config(tmp_path, variants={"hrrr": {}, "traj": {"grid": None}})
     model = Model(project=tmp_path, config=config, receptors=[point_receptor])
 
-    assert model.footprint.missing().variants == ["hrrr"]
+    assert model.simulations.footprint.missing().variants == ["hrrr"]
     assert model.simulations.sel(variant="traj").footprint.missing().keys() == []
 
 
@@ -973,8 +949,10 @@ def test_footprint_load_by_variant(tmp_path, point_receptor):
     for variant in ("hrrr", "zi08"):
         _write_real_footprint(model, _sid(point_receptor, variant))
 
-    assert len(model.footprint.load()) == 2
-    [foot] = model.simulations.sel(variant="zi08").footprint.load()
+    assert len(model.simulations.footprint.load()) == 2
+    loaded = model.simulations.sel(variant="zi08").footprint.load()
+    assert list(loaded) == [_sid(point_receptor, "zi08")]
+    [foot] = loaded.values()
     assert isinstance(foot, Footprint)
     assert foot.name == "zi08"
     assert not foot.is_empty
@@ -997,10 +975,10 @@ def test_outputs_fall_back_to_project_store(tmp_path, point_receptor):
     foot.write_bytes(b"stub")
 
     assert model.simulation(sid).directory == (tmp_path / "scratch").resolve() / sid
-    assert model.trajectories.paths() == [traj]
-    assert model.footprint.paths() == [foot]
+    assert model.simulations.trajectories.paths() == {sid: traj}
+    assert model.simulations.footprint.paths() == {sid: foot}
     assert model.simulations.incomplete().keys() == []
-    assert model.simulations[sid].status == "complete"
+    assert model.simulations[sid].outcome == "complete"
 
 
 # ---------------------------------------------------------------------------
@@ -1008,27 +986,42 @@ def test_outputs_fall_back_to_project_store(tmp_path, point_receptor):
 # ---------------------------------------------------------------------------
 
 
-def test_status_counts_empty_project(tmp_path):
+def test_status_is_the_simulation_table(tmp_path):
     model = Model(project=tmp_path, config=_config(tmp_path), receptors=[])
+    assert list(model.status().columns) == [
+        "receptor",
+        "variant",
+        "trajectory",
+        "footprint",
+        "complete",
+    ]
+    assert model.status().empty
 
-    assert model.status() == StatusCounts(total=0, completed=0, pending=0)
-
-
-def test_status_counts_reflect_outputs_on_disk(tmp_path):
     rec_a, rec_b = _receptor(12), _receptor(13)
     model = Model(project=tmp_path, config=_config(tmp_path), receptors=[rec_a, rec_b])
-
-    assert model.status() == StatusCounts(total=2, completed=0, pending=2)
+    assert model.status()["complete"].tolist() == [False, False]
 
     _write_trajectory(model, _sid(rec_a))
-    assert model.status() == StatusCounts(total=2, completed=0, pending=2)
-
     _write_footprint(model, _sid(rec_a))
-    assert model.status() == StatusCounts(total=2, completed=1, pending=1)
-
     _write_trajectory(model, _sid(rec_b))
     _write_footprint(model, _sid(rec_b), empty=True)
-    assert model.status() == StatusCounts(total=2, completed=2, pending=0)
+    assert model.status()["complete"].tolist() == [True, True]
+
+
+def test_sel_raises_for_unknown_receptor_or_variant(tmp_path, point_receptor):
+    model = Model(
+        project=tmp_path,
+        config=_config(tmp_path, variants={"hrrr": {}, "err": {"realizations": 2}}),
+        receptors=[point_receptor],
+    )
+    assert model.simulations.sel(variant="err").variants == ["err-0", "err-1"]
+    assert (
+        model.simulations.sel(time="2020-01-01").keys() == []
+    )  # a filter may be empty
+    with pytest.raises(KeyError, match="hrr"):
+        model.simulations.sel(variant="hrr")
+    with pytest.raises(KeyError, match="nope"):
+        model.simulations.sel(receptor="nope")
 
 
 # ---------------------------------------------------------------------------

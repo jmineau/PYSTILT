@@ -97,10 +97,10 @@ Load all 168 footprints, sum each over time, and average them:
    import matplotlib.pyplot as plt
    import xarray as xr
 
-   footprints = model.footprint.load()
+   footprints = model.simulations.footprint.load()   # {simulation id: Footprint}
 
    mean_foot = xr.concat(
-       [foot.integrate_over_time().data for foot in footprints],
+       [foot.integrate_over_time().data for foot in footprints.values()],
        dim="receptor",
    ).mean("receptor")
 

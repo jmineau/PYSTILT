@@ -94,7 +94,10 @@ of ``config.yaml``, which are the defaults. With no ``variants`` section,
 there is one variant per met stream, named after it, so the typical config
 above runs each receptor once as ``hrrr``.
 
-Declare variants to run the same receptors under other settings:
+Once you write a ``variants`` section, only the variants in it run. Keep an
+entry with no overrides (``hrrr: {}`` below) for the run with the defaults
+as they are; the name is yours to choose. Declare more to run the same
+receptors under other settings:
 
 .. code-block:: yaml
 
@@ -117,10 +120,12 @@ every variant uses the same list of receptors. A variant may set:
    Which met stream to use. Needed only when ``mets`` has more than one entry.
 
 ``realizations``
-   Run the variant ``N`` times as ``<name>-0`` to ``<name>-(N-1)``, each
-   with ``seed + k``. This is how a transport-error ensemble is declared
-   (:doc:`transport_error`). It needs ``krand: 4``, or ``krand: 2`` with a
-   ``seed``, so the runs differ.
+   Make the variant a numbered group: it runs ``N`` times as ``<name>-0``
+   to ``<name>-(N-1)``, each with ``seed + k``. This is how a transport-error
+   ensemble is declared (:doc:`transport_error`). More than one needs
+   ``krand: 4``, or ``krand: 2`` with a ``seed``, so the runs differ. A
+   group is always numbered, even at ``realizations: 1``, so raising the
+   count later only adds runs.
 
 any other setting
    Transport settings (``numpar``, ``ziscale``, turbulence, error

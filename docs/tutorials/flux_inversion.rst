@@ -54,7 +54,7 @@ the source's flux:
    fluxes = np.array([flux for _, _, flux in sources.values()])
 
    rows = []
-   for foot in footprints:
+   for foot in footprints.values():
        start, end = foot.time_range
        bins = pd.interval_range(start=start, end=end, freq="1h")
        sensitivity = foot.aggregate(target=targets, time_bins=bins)  # indexed by cell id
@@ -83,7 +83,7 @@ footprint over time first assumes emissions are constant over the 24 hours:
    inventory = xr.open_dataarray("inventory.nc")
 
    enhancements = []
-   for foot in footprints:
+   for foot in footprints.values():
        integrated = foot.integrate_over_time().data
        inventory_on_grid = inventory.interp(
            lat=integrated.lat,

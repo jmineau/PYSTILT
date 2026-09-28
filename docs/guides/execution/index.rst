@@ -79,7 +79,7 @@ A failed simulation doesn't stop the others. Its error is in the
 simulation's ``stilt.log``, and it stays unfinished, so the next
 ``stilt run`` tries it again. Fix the cause (often missing meteorology) and
 run again; finished simulations are skipped. In Python,
-``sim.status`` gives a short failure reason and ``sim.log`` the full log.
+``sim.outcome`` gives a short failure reason and ``sim.log`` the full log.
 
 A footprint that is empty because no particle reached the grid is not a
 failure. It is recorded with a ``.empty`` file and counts as finished (see

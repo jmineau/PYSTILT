@@ -85,16 +85,24 @@ with ``sel`` and take an output from the result:
        variant="hrrr",
        time=slice("2023-07-01", "2023-07-31 23:00"),    # receptor times, inclusive
    )
-   footprints = sims.footprint.load()                   # list of Footprint
-   paths = sims.footprint.paths()                       # file paths only
+   footprints = sims.footprint.load()                   # {simulation id: Footprint}
+   paths = sims.footprint.paths()                       # {simulation id: Path}
    trajectories = sims.trajectories.load()
+
+Both are dictionaries keyed by simulation id, so you always know which
+receptor a result belongs to:
+
+.. code-block:: python
+
+   for sid, foot in footprints.items():
+       print(sid.receptor, float(foot.integrate_over_time().data.sum()))
 
 ``sel`` takes ``receptor``, ``variant``, ``time``, ``location`` (a location
 id or several), and ``where`` (a function of the receptor); each call
 narrows the one before, and every argument accepts one value or a list.
 A realization group's name selects all of its realizations
-(``sel(variant="hrrr-err")``). ``model.footprint`` and
-``model.trajectories`` are shorthands for the whole project.
+(``sel(variant="hrrr-err")``). A receptor id or variant name the project
+does not have is an error; the other filters may select nothing.
 
 To see what is left to do:
 
@@ -105,9 +113,10 @@ To see what is left to do:
    model.simulations.status()                            # a DataFrame, one row per simulation
 
 ``status()`` has a ``trajectory`` and a ``footprint`` column, empty where
-the variant does not produce that output, and a ``complete`` column. It
-checks every simulation, so it takes a while on a large project stored in
-the cloud. ``stilt status`` prints the totals.
+the variant does not produce that output, and a ``complete`` column
+(``model.status()`` is the same table). It checks every simulation, so it
+takes a while on a large project stored in the cloud. ``stilt status``
+prints the totals, per variant when there are several.
 
 Trajectories
 ------------

@@ -298,12 +298,12 @@ time_bins = pd.interval_range(
     freq="1h",
 )
 
-for footprint in footprints:
+for sid, footprint in footprints.items():          # keyed by (receptor, variant)
     hourly = footprint.aggregate(target=coords, time_bins=time_bins)
 ```
 
-If a footprint is tracked as `complete-empty`, no NetCDF file is expected for that footprint.
-The model APIs treat it as a successful terminal outcome while skipping missing file loads.
+A simulation whose particles never reached the grid has a `.empty` marker
+instead of a NetCDF file. It counts as finished, and `load()` leaves it out.
 
 ## STILT-R parity
 

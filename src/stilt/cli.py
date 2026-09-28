@@ -72,12 +72,14 @@ grid:
   yres: 0.01
 
 
-# Variants are optional: without them, every receptor runs once per met
-# stream with the settings above. Declare variants to run the same receptors
-# under other settings, e.g. a wind-error ensemble or a mixed-layer bracket:
-# variants:
-#   hrrr: {}
-#   hrrr-zi08: {ziscale: 0.8}
+# Variants. Every receptor runs once per variant, with the settings in this
+# file as the defaults. An entry with no overrides runs the defaults as they
+# are; add others to run the same receptors under other settings, e.g. a
+# mixed-layer bracket or a wind-error ensemble (see the docs). Only the
+# variants listed here run.
+variants:
+  hrrr: {}
+#  hrrr-zi08: {ziscale: 0.8}
 
 
 # Common run controls. Negative n_hours means backward in time.
@@ -181,11 +183,6 @@ def init(project: Path = _NEW_PROJECT_ARG) -> None:
 @app.command()
 def run(
     project: str | None = _PROJECT_ARG,
-    config_path: Path | None = typer.Option(  # noqa: B008
-        None,
-        "--config",
-        help="Path to config.yaml. Project dir defaults to its parent.",
-    ),
     no_skip: bool = _NO_SKIP,
     backend: str | None = typer.Option(
         None,
@@ -216,14 +213,7 @@ def run(
     ``backend: slurm`` it submits the job array and returns — use ``--wait``
     to poll until done. Pass ``--no-skip`` to re-run existing simulations.
     """
-    if config_path is not None:
-        resolved = str(config_path.resolve().parent)
-        if not (Path(resolved) / CONFIG_KEY).exists() and not config_path.exists():
-            typer.echo(f"Error: config file not found: {config_path}", err=True)
-            raise typer.Exit(code=1)
-    else:
-        resolved = _resolve_project(project, require_inputs=True)
-
+    resolved = _resolve_project(project, require_inputs=True)
     model = Model(project=resolved, compute_root=compute_root)
 
     executor = None
@@ -361,17 +351,24 @@ def status(project: str | None = _PROJECT_ARG) -> None:
 # ---------------------------------------------------------------------------
 
 
+def _counts(table: Any) -> str:
+    """Format one ``total / completed / pending`` line from a status table."""
+    done = int(table["complete"].sum())
+    return f"total={len(table)}  completed={done}  pending={len(table) - done}"
+
+
 def _format_counts(model: Model) -> str:
     """Format a model's simulation counts for one status line."""
-    counts = model.status()
-    return (
-        f"total={counts.total}  completed={counts.completed}  pending={counts.pending}"
-    )
+    return _counts(model.status())
 
 
 def _print_status(model: Model) -> None:
-    """Print a project status summary."""
-    typer.echo(f"Project: {model.project.root}  {_format_counts(model)}")
+    """Print a project status summary, per variant when there are several."""
+    table = model.status()
+    typer.echo(f"Project: {model.project.root}  {_counts(table)}")
+    if len(model.variants) > 1:
+        for variant, rows in table.groupby("variant", sort=False):
+            typer.echo(f"  {variant}: {_counts(rows)}")
     orphans = model.orphans()
     if orphans:
         typer.echo(

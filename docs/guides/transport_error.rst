@@ -94,10 +94,8 @@ Any other combination would repeat the same field ``N`` times, and
 PYSTILT refuses it when it reads the config. Each realization is its own
 simulation, so a rerun does only the ones that are missing and
 a preempted job picks up where it stopped. Raising ``realizations`` later
-adds simulations and touches nothing that exists, with one catch: going
-from 1 to more renames the single run ``hrrr-err`` to ``hrrr-err-0``, so
-PYSTILT sees ``hrrr-err-0`` as new. Declare ``realizations`` up front if
-you expect to want more than one.
+adds simulations and touches nothing that exists: a variant that declares
+``realizations`` is always a numbered group, even at ``1`` (``hrrr-err-0``).
 
 Pass the whole set to :func:`~stilt.observations.transport_error` as a
 list. It averages each level's perturbed mean and variance over the
@@ -108,7 +106,7 @@ realizations before taking the difference:
    sims = model.simulations.sel(receptor=rid)
    err = transport_error(
        sims[rid, "hrrr"].trajectories.data,
-       [t.data for t in sims.sel(variant="hrrr-err").trajectories.load()],
+       [t.data for t in sims.sel(variant="hrrr-err").trajectories.load().values()],
        flux,
    )
    err.realizations  # 4
