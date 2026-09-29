@@ -495,8 +495,9 @@ class Model:
             Skip simulations whose outputs all exist. ``False`` runs every
             simulation again.
         wait : bool, default True
-            Block until the workers finish. With ``False`` the handle is
-            returned right away, which suits a Slurm submission.
+            Block until the workers finish. With ``False`` a Slurm or
+            Kubernetes run returns once it is submitted. A local run always
+            finishes before this returns.
 
         Returns
         -------

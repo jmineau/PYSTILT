@@ -17,6 +17,14 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **Local runs happen in the calling thread**
+  ([#48](https://github.com/jmineau/PYSTILT/issues/48)). `LocalExecutor`
+  ran receptors on a background thread that `Model.run` then waited on.
+  Signals reach only the main thread, so Ctrl-C or a Slurm time limit
+  stopped the process without the worker's clean `interrupted` handling.
+  `LocalExecutor.start` now runs the receptors itself, and
+  `model.run(wait=False)` no longer returns early for a local run.
+  `LocalHandle.done` is removed.
 - **One footprint settings class**
   ([#48](https://github.com/jmineau/PYSTILT/issues/48)). Breaking.
   `FootprintParams` is merged into `FootprintConfig`, whose `grid` is now

@@ -34,10 +34,10 @@ class _FakeModel:
 @pytest.fixture
 def local_calls(monkeypatch):
     """
-    Capture the run_receptors call made on the executor's worker thread.
+    Capture the run_receptors call made by LocalExecutor.start.
 
     ``local.py`` imports ``Model`` from ``stilt.model`` and ``run_receptors``
-    from ``stilt.execution.worker`` lazily inside the thread, so patching those
+    from ``stilt.execution.worker`` inside ``start``, so patching those
     module attributes is enough.
     """
     calls: list[dict] = []
@@ -57,7 +57,9 @@ def local_calls(monkeypatch):
     return calls
 
 
-def test_local_executor_start_runs_simulations_on_worker_thread(tmp_path, local_calls):
+def test_local_executor_start_runs_the_receptors_before_returning(
+    tmp_path, local_calls
+):
     """start() builds a Model from the project root and runs the pending ids."""
     ex = LocalExecutor(n_workers=1)
     handle = ex.start(
@@ -66,10 +68,8 @@ def test_local_executor_start_runs_simulations_on_worker_thread(tmp_path, local_
         compute_root="/scratch/pystilt",
         skip_existing=False,
     )
-    handle.wait()
 
     assert isinstance(handle, LocalHandle)
-    assert handle.done
     [call] = local_calls
     assert isinstance(call["model"], _FakeModel)
     assert call["model"].project == str(tmp_path)
@@ -79,35 +79,30 @@ def test_local_executor_start_runs_simulations_on_worker_thread(tmp_path, local_
     assert call["skip_existing"] is False
 
 
-def test_local_executor_start_returns_before_work_finishes(tmp_path, monkeypatch):
-    release = threading.Event()
-    started = threading.Event()
+def test_local_executor_runs_in_the_calling_thread(tmp_path, monkeypatch):
+    """Signals reach only the main thread, so the run must happen there."""
+    seen = []
 
-    def blocking_run_receptors(model, receptor_ids, *, n_cores=1, skip_existing=None):
-        started.set()
-        release.wait(timeout=5)
+    def record_thread(model, receptor_ids, *, n_cores=1, skip_existing=None):
+        seen.append(threading.current_thread())
 
     monkeypatch.setattr("stilt.model.Model", _FakeModel)
-    monkeypatch.setattr("stilt.execution.worker.run_receptors", blocking_run_receptors)
+    monkeypatch.setattr("stilt.execution.worker.run_receptors", record_thread)
 
-    handle = LocalExecutor(n_workers=1).start(["sim-a"], project=str(tmp_path))
+    LocalExecutor().start(["sim-a"], project=str(tmp_path))
 
-    assert started.wait(timeout=5)
-    assert not handle.done
-    release.set()
-    handle.wait()
-    assert handle.done
+    assert seen == [threading.current_thread()]
 
 
 def test_local_executor_defaults_skip_existing_to_true(tmp_path, local_calls):
-    LocalExecutor(n_workers=1).start(["sim-a"], project=str(tmp_path)).wait()
+    LocalExecutor(n_workers=1).start(["sim-a"], project=str(tmp_path))
 
     assert local_calls[0]["skip_existing"] is True
     assert local_calls[0]["model"].compute_root is None
 
 
 def test_local_executor_passes_n_workers_as_pool_size(tmp_path, local_calls):
-    LocalExecutor(n_workers=3).start(["sim-a", "sim-b"], project=str(tmp_path)).wait()
+    LocalExecutor(n_workers=3).start(["sim-a", "sim-b"], project=str(tmp_path))
 
     assert local_calls[0]["n_cores"] == 3
 
@@ -116,25 +111,19 @@ def test_local_executor_start_noops_when_pending_is_empty(tmp_path, local_calls)
     handle = LocalExecutor(n_workers=5).start([], project=str(tmp_path))
 
     assert isinstance(handle, LocalHandle)
-    assert handle.done
     handle.wait()
     assert local_calls == []
 
 
-def test_local_executor_wait_reraises_worker_exception(tmp_path, monkeypatch):
+def test_local_executor_raises_worker_errors_from_start(tmp_path, monkeypatch):
     def failing_run_receptors(model, receptor_ids, *, n_cores=1, skip_existing=None):
         raise RuntimeError("worker boom")
 
     monkeypatch.setattr("stilt.model.Model", _FakeModel)
     monkeypatch.setattr("stilt.execution.worker.run_receptors", failing_run_receptors)
 
-    handle = LocalExecutor(n_workers=1).start(["sim-a"], project=str(tmp_path))
-
     with pytest.raises(RuntimeError, match="worker boom"):
-        handle.wait()
-    # The error is surfaced once; a second wait() is a no-op.
-    handle.wait()
-    assert handle.done
+        LocalExecutor(n_workers=1).start(["sim-a"], project=str(tmp_path))
 
 
 def test_local_executor_dispatch_is_push():
@@ -146,23 +135,7 @@ def test_local_handle_job_id_and_detached():
     handle = LocalHandle()
     assert handle.job_id == "local"
     assert handle.detached is False
-
-
-def test_local_handle_without_thread_is_done_and_wait_is_noop():
-    handle = LocalHandle()
-    assert handle.done
     assert handle.wait() is None
-    assert handle.wait() is None
-
-
-def test_local_handle_wait_joins_thread():
-    finished = threading.Event()
-    thread = threading.Thread(target=finished.set)
-    handle = LocalHandle(thread)
-    thread.start()
-    handle.wait()
-    assert finished.is_set()
-    assert handle.done
 
 
 # ---------------------------------------------------------------------------

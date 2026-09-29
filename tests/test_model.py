@@ -1164,7 +1164,6 @@ def test_run_skip_existing_omits_complete_receptors(tmp_path, point_receptor):
 
     assert not exc.was_started
     assert isinstance(handle, LocalHandle)
-    assert handle.done
 
 
 def test_run_skip_existing_redispatches_missing_footprint(tmp_path, point_receptor):
@@ -1262,7 +1261,6 @@ def test_run_returns_completed_handle_without_receptors(tmp_path):
 
     assert not exc.was_started
     assert isinstance(handle, LocalHandle)
-    assert handle.done
 
 
 def test_run_rejects_slurm_on_cloud_project(tmp_path, point_receptor):

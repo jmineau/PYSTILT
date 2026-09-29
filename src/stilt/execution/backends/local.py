@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import threading
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -12,11 +11,7 @@ __all__ = ["LocalExecutor", "LocalHandle"]
 
 
 class LocalHandle:
-    """Handle to a local run, which runs on a background thread."""
-
-    def __init__(self, thread: threading.Thread | None = None) -> None:
-        self._thread = thread
-        self._error: BaseException | None = None
+    """Handle to a local run, which has already finished when it is returned."""
 
     @property
     def job_id(self) -> str:
@@ -28,27 +23,16 @@ class LocalHandle:
         """Always False, since local workers stop when this process exits."""
         return False
 
-    @property
-    def done(self) -> bool:
-        """Whether the run has finished."""
-        return self._thread is None or not self._thread.is_alive()
-
     def wait(self) -> None:
-        """Block until the run finishes, raising any error it raised."""
-        if self._thread is not None:
-            self._thread.join()
-            self._thread = None
-        if self._error is not None:
-            error, self._error = self._error, None
-            raise error
+        """Return at once: the run finished inside :meth:`LocalExecutor.start`."""
 
 
 class LocalExecutor:
     """
     Run receptors on this machine, in one process or a process pool.
 
-    The run happens on a background thread, so :meth:`start` returns at
-    once. Call ``wait()`` on the handle to block until it finishes.
+    :meth:`start` runs the receptors and returns when they are done, so
+    Ctrl-C and SIGTERM reach the workers and stop them cleanly.
 
     Parameters
     ----------
@@ -74,29 +58,16 @@ class LocalExecutor:
         compute_root: str | None = None,
         skip_existing: bool | None = None,
     ) -> LocalHandle:
-        """Start running ``pending`` receptors and return a handle."""
-        if not pending:
-            return LocalHandle()
-
-        handle = LocalHandle()
-
-        def _work() -> None:
-            """Run the receptors, keeping any error for ``wait()``."""
+        """Run ``pending`` receptors and return a handle once they are done."""
+        if pending:
             from stilt.model import Model
 
             from ..worker import run_receptors
 
-            try:
-                run_receptors(
-                    Model(project=project, compute_root=compute_root),
-                    pending,
-                    n_cores=self._n_workers,
-                    skip_existing=True if skip_existing is None else skip_existing,
-                )
-            except BaseException as exc:  # surfaced by wait()
-                handle._error = exc
-
-        thread = threading.Thread(target=_work, name="pystilt-local", daemon=True)
-        handle._thread = thread
-        thread.start()
-        return handle
+            run_receptors(
+                Model(project=project, compute_root=compute_root),
+                pending,
+                n_cores=self._n_workers,
+                skip_existing=True if skip_existing is None else skip_existing,
+            )
+        return LocalHandle()
