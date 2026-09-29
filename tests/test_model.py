@@ -908,7 +908,6 @@ def test_trajectories_paths_load_and_missing(tmp_path):
     [loaded] = trajectories.load().values()
     assert isinstance(loaded, Trajectories)
     assert loaded.receptor.id == rec_a.id
-    assert trajectories.missing().keys() == [_sid(rec_b)]
     assert model.simulations.sel(time="2023-01-01 13:00").trajectories.paths() == {}
 
 
@@ -938,15 +937,14 @@ def test_footprint_paths_exclude_empty_markers(tmp_path):
 
     assert foot_path.name == f"{_rid(rec_done)}_foot.nc"
     assert model.simulations.footprint.paths() == {_sid(rec_done): foot_path}
-    assert model.simulations.footprint.missing().keys() == [_sid(rec_missing)]
 
 
 def test_footprint_excludes_trajectory_only_variants(tmp_path, point_receptor):
     config = _config(tmp_path, variants={"hrrr": {}, "traj": {"grid": None}})
     model = Model(project=tmp_path, config=config, receptors=[point_receptor])
 
-    assert model.simulations.footprint.missing().variants == ["hrrr"]
-    assert model.simulations.sel(variant="traj").footprint.missing().keys() == []
+    assert len(model.simulations.footprint) == 1
+    assert len(model.simulations.sel(variant="traj").footprint) == 0
 
 
 def test_footprint_load_by_variant(tmp_path, point_receptor):

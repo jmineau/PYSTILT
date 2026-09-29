@@ -122,9 +122,8 @@ To see what is left to do:
 
 .. code-block:: python
 
-   model.simulations.incomplete()                        # a selection, like sel()
-   model.simulations.sel(variant="hrrr").footprint.missing()
-   model.simulations.status()                            # a DataFrame, one row per simulation
+   model.simulations.incomplete()   # a selection, like sel()
+   model.simulations.status()       # a DataFrame, one row per simulation
 
 ``status()`` has a ``trajectory`` and a ``footprint`` column that say
 whether each output exists. They are blank where the variant does not make

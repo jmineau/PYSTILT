@@ -201,9 +201,8 @@ class SimulationCollection:
     ``model.simulations`` holds every receptor under every variant, receptor
     by receptor with variants in config order. Index it by
     ``(receptor_id, variant)`` or ``"<receptor_id>/<variant>"``. Iterating
-    gives :class:`~stilt.Simulation` objects. :meth:`sel`, :meth:`incomplete`
-    and :meth:`OutputCollection.missing` return smaller collections, so
-    filters can be chained.
+    gives :class:`~stilt.Simulation` objects. :meth:`sel` and
+    :meth:`incomplete` return smaller collections, so filters can be chained.
 
     Examples
     --------
@@ -409,9 +408,6 @@ class OutputCollection:
             return [sim for sim in self._sims if not sim.is_derived]
         return [sim for sim in self._sims if sim.makes_footprint]
 
-    def _exists(self, sim: Simulation) -> bool:
-        return sim.has_trajectory if self.output == TRAJECTORY else sim.has_footprint
-
     def _path(self, sim: Simulation) -> Path:
         return (
             sim.trajectories_path if self.output == TRAJECTORY else sim.footprint_path
@@ -441,13 +437,6 @@ class OutputCollection:
                 sid: Trajectories.from_parquet(p) for sid, p in self.paths().items()
             }
         return {sid: Footprint.from_netcdf(p) for sid, p in self.paths().items()}
-
-    def missing(self) -> SimulationCollection:
-        """Return the simulations whose output does not exist yet."""
-        return SimulationCollection(
-            self._sims._model,
-            [sim.id for sim in self._producers() if not self._exists(sim)],
-        )
 
     def __len__(self) -> int:
         return len(self._producers())
