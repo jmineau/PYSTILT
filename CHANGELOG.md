@@ -60,6 +60,10 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Removed
 
+- xarray-grid and `(x, y)`-list targets of `Footprint.aggregate`, and its
+  `resolution` argument. Pass a `stilt.Grid`, `stilt.Mesh`, or
+  `stilt.Zones`; anything else raises `TypeError`.
+
 Code with no callers or a second way to do the same thing
 ([#48](https://github.com/jmineau/PYSTILT/issues/48)). Breaking where
 public.

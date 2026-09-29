@@ -38,7 +38,6 @@ from typing import Any, Literal
 import numpy as np
 import pandas as pd
 import shapely
-import xarray as xr
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from scipy import sparse
 from shapely.geometry.base import BaseGeometry
@@ -409,7 +408,7 @@ class Zones(BaseModel):
 Geometry = Grid | Mesh | Zones
 """A geometry a footprint can be aggregated onto."""
 
-SpatialTarget = Geometry | xr.DataArray | xr.Dataset | list[tuple[float, float]]
+SpatialTarget = Geometry
 """Every form :meth:`stilt.Footprint.aggregate` accepts as a target."""
 
 

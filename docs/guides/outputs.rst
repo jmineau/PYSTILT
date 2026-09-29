@@ -228,9 +228,10 @@ The target can be:
   points (``Mesh.from_windows``). Rows are the polygon ids.
 - a :class:`stilt.Zones`, which merges the cells of a grid or mesh into
   larger groups by label.
-- an xarray grid with ``lon``/``lat`` or ``x``/``y`` coordinates. ``NaN``
-  cells in a 2-D DataArray are left out.
-- a list of ``(x, y)`` cell centres on a regular lattice.
+
+For cells given some other way, such as an xarray grid or a list of cell
+centres, build the :class:`stilt.Grid` they lie on and select the rows you
+need from the result.
 
 .. code-block:: python
 

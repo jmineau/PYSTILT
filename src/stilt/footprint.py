@@ -91,50 +91,6 @@ def _naive_utc_timestamp(
     return cast(pd.Timestamp, ts.tz_convert(None) if ts.tzinfo is not None else ts)
 
 
-def _infer_axis_resolution(
-    centers: np.ndarray, native_centers: np.ndarray, fallback: float
-) -> float:
-    """
-    Return the cell spacing along one axis of a regular grid.
-
-    This is the smallest gap between distinct ``centers``. With a single
-    center, the footprint's own spacing (``native_centers``) is used, then
-    ``fallback``.
-    """
-    for candidate in (centers, native_centers):
-        unique = np.unique(np.round(np.asarray(candidate, dtype=float), 9))
-        if unique.size >= 2:
-            return float(np.diff(unique).min())
-    return float(fallback)
-
-
-def _regular_axis(centers: np.ndarray, resolution: float) -> np.ndarray:
-    """
-    Return the full ascending regular axis that covers ``centers``.
-
-    The centers may be a subset of a regular grid. Building the full axis
-    lets footprint values in cells missing from the subset be dropped
-    instead of added to a neighbouring cell.
-    """
-    c = np.asarray(centers, dtype=float)
-    lo, hi = float(c.min()), float(c.max())
-    n = int(round((hi - lo) / resolution)) + 1
-    return np.round(lo + np.arange(n) * resolution, 10)
-
-
-def _nearest_index(axis: np.ndarray, values: np.ndarray) -> np.ndarray:
-    """
-    Return the index of the entry in ascending ``axis`` nearest each value.
-
-    A grid's axes are rounded to 10 decimals and a caller's coordinates are
-    not, so the same cell may not compare equal.
-    """
-    idx = np.clip(np.searchsorted(axis, values), 0, axis.size - 1)
-    left = np.clip(idx - 1, 0, axis.size - 1)
-    choose_left = np.abs(axis[left] - values) <= np.abs(axis[idx] - values)
-    return np.where(choose_left, left, idx)
-
-
 def _build_footprint_array(
     *,
     foot_arr: np.ndarray,
@@ -1074,109 +1030,10 @@ class Footprint:
             name="enhancement",
         )
 
-    def _resolve_target(
-        self,
-        target: Grid | xr.DataArray | xr.Dataset | list[tuple[float, float]],
-        resolution: float | tuple[float, float] | None,
-        x_dim: str,
-        y_dim: str,
-    ) -> tuple[Grid, np.ndarray, np.ndarray]:
-        """
-        Return the full grid a lattice target lies on, and the cells it asks for.
-
-        The target is a :class:`~stilt.config.Grid`, an xarray grid with
-        ``lon``/``lat`` or ``x``/``y`` coordinates (``NaN`` cells of a 2-D
-        DataArray are left out), or a list of ``(x, y)`` cell centres.
-
-        The grid is the full rectangle the cells lie on, even when they
-        cover only part of it. Weights built on the full rectangle drop
-        footprint values in cells the target leaves out. The two arrays are
-        the requested cell centres, in the order of the result.
-        """
-        px = np.asarray(self.data[x_dim].values, dtype=float)
-        py = np.asarray(self.data[y_dim].values, dtype=float)
-        native = self.grid
-
-        if isinstance(target, Grid):
-            cell_x, cell_y = target.cells
-            return target, cell_x, cell_y
-
-        if isinstance(target, xr.DataArray | xr.Dataset):
-            tx = (
-                "lon"
-                if "lon" in target.coords
-                else "x"
-                if "x" in target.coords
-                else None
-            )
-            ty = (
-                "lat"
-                if "lat" in target.coords
-                else "y"
-                if "y" in target.coords
-                else None
-            )
-            if tx is None or ty is None:
-                raise ValueError(
-                    "target grid must have 'lon'/'lat' or 'x'/'y' coordinates."
-                )
-            # Enumerate cells in the grid's NATIVE coordinate order (x outer,
-            # y inner) so the result rows match the caller's grid layout even
-            # when an axis is stored descending.
-            raw_x = np.asarray(target[tx].values, dtype=float)
-            raw_y = np.asarray(target[ty].values, dtype=float)
-            xx, yy = np.meshgrid(raw_x, raw_y, indexing="ij")
-            cell_x, cell_y = xx.ravel(), yy.ravel()
-            if (
-                isinstance(target, xr.DataArray)
-                and target.ndim == 2
-                and bool(target.isnull().any())
-            ):
-                active = ~np.isnan(target.transpose(tx, ty).to_numpy()).ravel()
-                cell_x, cell_y = cell_x[active], cell_y[active]
-            res_x = _infer_axis_resolution(np.sort(raw_x), px, native.xres)
-            res_y = _infer_axis_resolution(np.sort(raw_y), py, native.yres)
-            return self._enclosing_grid(cell_x, cell_y, res_x, res_y), cell_x, cell_y
-
-        arr = np.asarray(target, dtype=float)
-        if arr.ndim != 2 or arr.shape[1] != 2:
-            raise ValueError("coords must be a list of (x, y) pairs or an xarray grid.")
-        cell_x, cell_y = arr[:, 0], arr[:, 1]
-        if resolution is not None:
-            res_x, res_y = (
-                (float(resolution), float(resolution))
-                if isinstance(resolution, (int, float))
-                else (float(resolution[0]), float(resolution[1]))
-            )
-            if res_x <= 0 or res_y <= 0:
-                raise ValueError("resolution must be positive.")
-        else:
-            res_x = _infer_axis_resolution(cell_x, px, native.xres)
-            res_y = _infer_axis_resolution(cell_y, py, native.yres)
-        return self._enclosing_grid(cell_x, cell_y, res_x, res_y), cell_x, cell_y
-
-    def _enclosing_grid(
-        self, cell_x: np.ndarray, cell_y: np.ndarray, res_x: float, res_y: float
-    ) -> Grid:
-        """Return the regular grid with the given resolution that covers these centres."""
-        axis_x = _regular_axis(cell_x, res_x)
-        axis_y = _regular_axis(cell_y, res_y)
-        return Grid(
-            xmin=float(axis_x[0] - res_x / 2),
-            xmax=float(axis_x[-1] + res_x / 2),
-            ymin=float(axis_y[0] - res_y / 2),
-            ymax=float(axis_y[-1] + res_y / 2),
-            xres=res_x,
-            yres=res_y,
-            projection=self.grid.projection,
-        )
-
     def aggregate(
         self,
         target: SpatialTarget,
         time_bins: pd.IntervalIndex,
-        *,
-        resolution: float | tuple[float, float] | None = None,
     ) -> pd.DataFrame:
         """
         Sum the footprint onto the cells of another grid or set of polygons, per time bin.
@@ -1198,19 +1055,13 @@ class Footprint:
             - :class:`~stilt.Mesh`, any polygons (a shapefile, H3 hexagons,
               nested grids). Rows are indexed by cell id.
             - :class:`~stilt.Zones`, groups of the cells of a grid or mesh.
-            - An xarray grid with ``lon``/``lat`` or ``x``/``y``
-              coordinates. ``NaN`` cells of a 2-D DataArray are left out.
-            - A list of ``(x, y)`` centres of cells on a regular grid.
+              Use it to keep only some cells of a grid.
 
             A target in another coordinate system is projected onto the
             footprint grid.
         time_bins : pandas.IntervalIndex
             Time intervals to sum over, such as the time steps of a flux
             inventory. Each includes its left edge and excludes its right.
-        resolution : float or tuple of float, optional
-            Cell size of a list-of-centres target. By default it is taken
-            from the spacing of the centres, or the footprint's own
-            resolution when there is only one.
 
         Returns
         -------
@@ -1224,26 +1075,13 @@ class Footprint:
         x_dim = "lon" if is_latlon else "x"
         y_dim = "lat" if is_latlon else "y"
 
+        if not isinstance(target, (Grid, Mesh, Zones)):
+            raise TypeError(
+                "aggregate target must be a stilt.Grid, stilt.Mesh, or stilt.Zones, "
+                f"not {type(target).__name__}."
+            )
         self._check_geometry_hash(target)
-        if isinstance(target, (Mesh, Zones, Grid)):
-            return self._aggregate_geometry(target, time_bins, x_dim, y_dim)
-
-        # For an xarray grid or a list of centres, sum onto the full grid the
-        # cells lie on and then take the requested cells, so values in cells
-        # the caller left out are dropped.
-        grid, cell_x, cell_y = self._resolve_target(target, resolution, x_dim, y_dim)
-        wanted = pd.MultiIndex.from_arrays([cell_x, cell_y], names=[x_dim, y_dim])
-        if len(cell_x) == 0:
-            return pd.DataFrame(0.0, index=wanted, columns=_time_bin_columns(time_bins))
-        full = self._aggregate_geometry(grid, time_bins, x_dim, y_dim)
-        # Select by position. The grid's axes are rounded and the caller's
-        # coordinates are not, so equal cells may not compare equal. Rows of
-        # ``full`` run x outer, y inner.
-        axis_x, axis_y = grid.axes
-        pos = _nearest_index(axis_x, cell_x) * len(axis_y) + _nearest_index(
-            axis_y, cell_y
-        )
-        return pd.DataFrame(full.to_numpy()[pos], index=wanted, columns=full.columns)
+        return self._aggregate_geometry(target, time_bins, x_dim, y_dim)
 
     def _check_geometry_hash(self, target: object) -> None:
         """Warn when the target mesh differs from the one the footprint grid was chosen for."""

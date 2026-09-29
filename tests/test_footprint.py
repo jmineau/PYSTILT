@@ -114,7 +114,7 @@ def test_aggregate_returns_dataframe():
     foot.data.loc[t0, 39.05, -113.95] = 1e-4
 
     bins = pd.interval_range(start=t0, periods=1, freq="1h", closed="left")
-    result = foot.aggregate(target=[(-113.95, 39.05)], time_bins=bins)
+    result = foot.aggregate(target=_one_cell(-113.95, 39.05, 0.1), time_bins=bins)
 
     assert isinstance(result, pd.DataFrame)
     assert result.iloc[0, 0] == pytest.approx(1e-4)
@@ -131,7 +131,7 @@ def test_aggregate_multiple_bins():
     foot.data.loc[t2, 39.05, -113.95] = 3e-4
 
     bins = pd.interval_range(start=t0, periods=3, freq="1h", closed="left")
-    result = foot.aggregate(target=[(-113.95, 39.05)], time_bins=bins)
+    result = foot.aggregate(target=_one_cell(-113.95, 39.05, 0.1), time_bins=bins)
 
     assert list(result.columns) == list(bins.left)
     assert result.iloc[0, 0] == pytest.approx(1e-4)
@@ -357,7 +357,7 @@ def test_aggregate_zero_values_in_domain():
     t0 = pd.Timestamp("2023-01-01 12:00")
     bins = pd.interval_range(start=t0, periods=1, freq="1h", closed="left")
     # -113.95 and 39.05 are valid cell centers in the footprint
-    result = foot.aggregate(target=[(-113.95, 39.05)], time_bins=bins)
+    result = foot.aggregate(target=_one_cell(-113.95, 39.05, 0.1), time_bins=bins)
     assert isinstance(result, pd.DataFrame)
     assert result.shape == (1, 1)
 
@@ -414,6 +414,24 @@ def _block_centers(n_blocks: int, res: float, origin: float = 0.0) -> np.ndarray
     return origin + (np.arange(n_blocks) + 0.5) * res
 
 
+def _grid_over(xs, ys, res: float) -> Grid:
+    """The regular grid whose cell centers span ``xs`` by ``ys`` at ``res``."""
+    xs, ys = np.asarray(xs, dtype=float), np.asarray(ys, dtype=float)
+    return Grid(
+        xmin=float(xs.min() - res / 2),
+        xmax=float(xs.max() + res / 2),
+        ymin=float(ys.min() - res / 2),
+        ymax=float(ys.max() + res / 2),
+        xres=res,
+        yres=res,
+    )
+
+
+def _one_cell(x: float, y: float, res: float) -> Grid:
+    """A one-cell grid centered on ``(x, y)``."""
+    return _grid_over([x], [y], res)
+
+
 def test_aggregate_conserves_integral():
     """Uniform fine footprint fully inside a coarse grid: each cell == v * Npix."""
     native_res, coarse_res = 0.01, 0.03  # 3x3 native pixels per coarse cell
@@ -423,12 +441,10 @@ def test_aggregate_conserves_integral():
         fine, fine, np.full((len(fine), len(fine)), v), xres=native_res, yres=native_res
     )
     coarse = _block_centers(2, coarse_res)  # centers 0.015, 0.045
-    coords = [(float(x), float(y)) for y in coarse for x in coarse]
 
     t0 = pd.Timestamp("2023-01-01 12:00")
     bins = pd.interval_range(start=t0, periods=1, freq="1h", closed="left")
-    # resolution=None exercises the inference path that fips relies on.
-    result = foot.aggregate(target=coords, time_bins=bins)
+    result = foot.aggregate(_grid_over(coarse, coarse, coarse_res), time_bins=bins)
 
     assert result.to_numpy() == pytest.approx(v * 9)  # 3x3 native pixels per cell
     assert result.to_numpy().sum() == pytest.approx(v * 36)  # full native integral
@@ -442,13 +458,12 @@ def test_aggregate_block_sum_exact():
     foot = _foot_on_grid(fine, fine, vals, xres=native_res, yres=native_res)
 
     coarse = _block_centers(2, coarse_res)
-    coords = [(float(x), float(y)) for y in coarse for x in coarse]
     t0 = pd.Timestamp("2023-01-01 12:00")
     bins = pd.interval_range(start=t0, periods=1, freq="1h", closed="left")
-    result = foot.aggregate(target=coords, time_bins=bins, resolution=coarse_res)
+    result = foot.aggregate(_grid_over(coarse, coarse, coarse_res), time_bins=bins)
 
     half = coarse_res / 2
-    for (cx, cy), value in zip(coords, result.to_numpy().ravel(), strict=True):
+    for (cx, cy), value in zip(result.index, result.to_numpy().ravel(), strict=True):
         in_x = (fine >= cx - half) & (fine < cx + half)
         in_y = (fine >= cy - half) & (fine < cy + half)
         expected = vals[np.ix_(in_y, in_x)].sum()
@@ -464,29 +479,27 @@ def test_aggregate_drops_out_of_domain():
         fine, fine, np.ones((len(fine), len(fine))), xres=native_res, yres=native_res
     )
     # Single coarse cell covering only the lower-left 2x2 native pixels.
-    coords = [(0.01, 0.01)]
     t0 = pd.Timestamp("2023-01-01 12:00")
     bins = pd.interval_range(start=t0, periods=1, freq="1h", closed="left")
-    result = foot.aggregate(target=coords, time_bins=bins, resolution=0.02)
+    result = foot.aggregate(_one_cell(0.01, 0.01, 0.02), time_bins=bins)
 
     # 4 in-domain pixels of value 1; the other 12 exterior pixels are dropped.
     assert result.to_numpy().sum() == pytest.approx(4.0)
 
 
 def test_aggregate_matched_resolution_identity():
-    """coords == native centers returns each native pixel value unchanged."""
+    """A target equal to the native grid returns each native pixel value unchanged."""
     res = 0.1
     lons = np.array([-113.95, -113.85])
     lats = np.array([39.05, 39.15])
     vals = np.array([[1.0, 2.0], [3.0, 4.0]])  # [lat, lon]
     foot = _foot_on_grid(lons, lats, vals, xres=res, yres=res)
 
-    coords = [(float(x), float(y)) for y in lats for x in lons]
     t0 = pd.Timestamp("2023-01-01 12:00")
     bins = pd.interval_range(start=t0, periods=1, freq="1h", closed="left")
-    result = foot.aggregate(target=coords, time_bins=bins, resolution=res)
+    result = foot.aggregate(_grid_over(lons, lats, res), time_bins=bins)
 
-    for (cx, cy), value in zip(coords, result.to_numpy().ravel(), strict=True):
+    for (cx, cy), value in zip(result.index, result.to_numpy().ravel(), strict=True):
         j = int(np.argmin(np.abs(lons - cx)))
         i = int(np.argmin(np.abs(lats - cy)))
         assert value == pytest.approx(vals[i, j])
@@ -503,15 +516,11 @@ def test_aggregate_total_invariance_to_target_resolution():
     t0 = pd.Timestamp("2023-01-01 12:00")
     bins = pd.interval_range(start=t0, periods=1, freq="1h", closed="left")
 
-    native_coords = [(float(x), float(y)) for y in fine for x in fine]
     coarse = _block_centers(2, coarse_res)
-    coarse_coords = [(float(x), float(y)) for y in coarse for x in coarse]
-
-    total_native = (
-        foot.aggregate(native_coords, bins, resolution=native_res).to_numpy().sum()
-    )
+    native_grid = _grid_over(fine, fine, native_res)
+    total_native = foot.aggregate(native_grid, bins).to_numpy().sum()
     total_coarse = (
-        foot.aggregate(coarse_coords, bins, resolution=coarse_res).to_numpy().sum()
+        foot.aggregate(_grid_over(coarse, coarse, coarse_res), bins).to_numpy().sum()
     )
 
     assert total_native == pytest.approx(vals.sum())
@@ -532,36 +541,11 @@ def test_aggregate_time_binning():
     )  # (time, lat, lon)
     foot = _foot_on_grid(lons, lats, vals, xres=res, yres=res)
 
-    coords = [(float(x), float(y)) for y in lats for x in lons]
     t0 = pd.Timestamp("2023-01-01 12:00")
     bins = pd.interval_range(start=t0, periods=3, freq="1h", closed="left")
-    result = foot.aggregate(target=coords, time_bins=bins, resolution=res)
+    result = foot.aggregate(_grid_over(lons, lats, res), time_bins=bins)
 
     assert result.to_numpy().sum() == pytest.approx(vals.sum())
-
-
-def test_aggregate_accepts_xarray_grid():
-    """An xarray grid target gives the same result as the equivalent coords list."""
-    native_res, coarse_res = 0.01, 0.05
-    fine = _block_centers(10, native_res)
-    rng = np.random.default_rng(1)
-    vals = rng.uniform(0, 1e-3, (len(fine), len(fine)))
-    foot = _foot_on_grid(fine, fine, vals, xres=native_res, yres=native_res)
-
-    coarse = _block_centers(2, coarse_res)
-    grid = xr.Dataset(coords={"lon": coarse, "lat": coarse})
-    coords = [
-        (float(x), float(y)) for x in coarse for y in coarse
-    ]  # lon outer, lat inner
-
-    t0 = pd.Timestamp("2023-01-01 12:00")
-    bins = pd.interval_range(start=t0, periods=1, freq="1h", closed="left")
-
-    via_grid = foot.aggregate(grid, bins)
-    via_coords = foot.aggregate(coords, bins, resolution=coarse_res)
-
-    np.testing.assert_allclose(via_grid.to_numpy(), via_coords.to_numpy(), rtol=1e-9)
-    assert via_grid.to_numpy().sum() == pytest.approx(vals.sum())
 
 
 def test_aggregate_misaligned_conserves_and_splits():
@@ -575,11 +559,10 @@ def test_aggregate_misaligned_conserves_and_splits():
     # coarse cells whose edges (-0.025, 0.025, 0.075, 0.125) cut through native
     # cells yet fully cover the native domain [0, 0.10].
     coarse = np.array([0.0, 0.05, 0.10])
-    coords = [(float(x), float(y)) for x in coarse for y in coarse]
     t0 = pd.Timestamp("2023-01-01 12:00")
     bins = pd.interval_range(start=t0, periods=1, freq="1h", closed="left")
 
-    result = foot.aggregate(coords, bins, resolution=coarse_res)
+    result = foot.aggregate(_grid_over(coarse, coarse, coarse_res), bins)
     # full coverage with split native cells -> all native mass retained
     assert result.to_numpy().sum() == pytest.approx(vals.sum())
 
@@ -596,7 +579,7 @@ def test_aggregate_splits_native_cell_by_area():
     # cells by 0.75 and the upper/right by 0.25 on each axis.
     t0 = pd.Timestamp("2023-01-01 12:00")
     bins = pd.interval_range(start=t0, periods=1, freq="1h", closed="left")
-    result = foot.aggregate([(0.0075, 0.0075)], bins, resolution=res)
+    result = foot.aggregate(_one_cell(0.0075, 0.0075, res), bins)
 
     fx = fy = np.array([0.75, 0.25])
     expected = float((fy[:, None] * fx[None, :] * vals).sum())  # 1.75
@@ -611,70 +594,18 @@ def test_aggregate_finer_target_downscaling_conserves():
     foot = _foot_on_grid(coarse, coarse, vals, xres=native_res, yres=native_res)
 
     fine = _block_centers(15, fine_res)  # 3 native cells x 5 = 15 fine cells per axis
-    coords = [(float(x), float(y)) for x in fine for y in fine]
     t0 = pd.Timestamp("2023-01-01 12:00")
     bins = pd.interval_range(start=t0, periods=1, freq="1h", closed="left")
 
-    result = foot.aggregate(coords, bins, resolution=fine_res)
+    fine_grid = _grid_over(fine, fine, fine_res)
+    result = foot.aggregate(fine_grid, bins)
     assert result.to_numpy().sum() == pytest.approx(vals.sum())
     # each native cell spreads uniformly over its k*k fine sub-cells
     expected_corner = vals[0, 0] / (k * k)
     assert result.to_numpy().max() == pytest.approx(vals.max() / (k * k))
-    assert float(result.loc[(fine[0], fine[0])].iloc[0]) == pytest.approx(
+    first_x, first_y = fine_grid.axes[0][0], fine_grid.axes[1][0]
+    assert float(result.loc[(first_x, first_y)].iloc[0]) == pytest.approx(
         expected_corner
-    )
-
-
-def test_aggregate_xarray_nan_mask_drops_cells():
-    """NaN cells in a 2-D DataArray grid are excluded from the result and its sum."""
-    native_res, coarse_res = 0.01, 0.05
-    fine = _block_centers(10, native_res)
-    foot = _foot_on_grid(
-        fine, fine, np.ones((len(fine), len(fine))), xres=native_res, yres=native_res
-    )
-    coarse = _block_centers(2, coarse_res)
-    # mask out one of the four coarse cells (dims lat, lon)
-    grid = xr.DataArray(
-        np.array([[1.0, 1.0], [1.0, np.nan]]),
-        dims=["lat", "lon"],
-        coords={"lat": coarse, "lon": coarse},
-    )
-    t0 = pd.Timestamp("2023-01-01 12:00")
-    bins = pd.interval_range(start=t0, periods=1, freq="1h", closed="left")
-
-    result = foot.aggregate(grid, bins)
-    assert result.shape[0] == 3  # one cell dropped
-    # the masked cell's native mass is dropped, not folded into neighbours
-    assert result.to_numpy().sum() == pytest.approx(75.0)  # 3 of 4 quadrants, 25 each
-
-
-def test_aggregate_xarray_grid_preserves_native_axis_order():
-    """A grid with descending lat keeps the caller's cell order (not re-sorted)."""
-    native_res, coarse_res = 0.01, 0.05
-    fine = _block_centers(10, native_res)
-    rng = np.random.default_rng(3)
-    vals = rng.uniform(0, 1e-3, (len(fine), len(fine)))
-    foot = _foot_on_grid(fine, fine, vals, xres=native_res, yres=native_res)
-
-    coarse = _block_centers(2, coarse_res)
-    # lat stored DESCENDING (a common grid convention)
-    grid = xr.Dataset(coords={"lon": coarse, "lat": coarse[::-1]})
-    result = foot.aggregate(
-        grid,
-        pd.interval_range(start=pd.Timestamp("2023-01-01 12:00"), periods=1, freq="1h"),
-    )
-
-    # rows follow from_product([lon, lat_descending]) — lon outer, lat inner
-    expected_index = [(float(x), float(y)) for x in coarse for y in coarse[::-1]]
-    assert list(result.index) == expected_index
-    # and the values are still correct (compare to ascending-grid result)
-    asc = foot.aggregate(
-        xr.Dataset(coords={"lon": coarse, "lat": coarse}),
-        pd.interval_range(start=pd.Timestamp("2023-01-01 12:00"), periods=1, freq="1h"),
-    )
-    assert result.to_numpy().sum() == pytest.approx(asc.to_numpy().sum())
-    assert float(result.loc[(coarse[0], coarse[1])].iloc[0]) == pytest.approx(
-        float(asc.loc[(coarse[0], coarse[1])].iloc[0])
     )
 
 
@@ -691,16 +622,15 @@ def test_grid_to_xarray_longlat_centers():
     assert ds["lat"].attrs["units"] == "degrees_north"
 
 
-def test_grid_to_xarray_aggregate_roundtrip_is_identity():
-    """Aggregating a footprint onto its own grid (via to_xarray) is the identity."""
+def test_aggregate_onto_own_grid_is_identity():
+    """Aggregating a footprint onto its own grid is the identity."""
     foot = _make_footprint(n_times=1)
     t0 = pd.Timestamp("2023-01-01 12:00")
     foot.data.loc[t0, 39.05, -113.95] = 1e-4
     foot.data.loc[t0, 39.15, -113.85] = 3e-4
 
-    grid_ds = foot.config.grid.to_xarray()
     bins = pd.interval_range(start=t0, periods=1, freq="1h", closed="left")
-    result = foot.aggregate(grid_ds, bins)
+    result = foot.aggregate(foot.config.grid, bins)
 
     # identity round-trip: the two seeded native cells reappear unchanged.
     assert result.shape == (4, 1)
@@ -1454,24 +1384,15 @@ def test_compute_kernel_bandwidths_two_coincident_particles_returns_zero_sigma()
 # ---------------------------------------------------------------------------
 
 
-def test_aggregate_grid_target_matches_xarray_target():
-    """A Grid target gives the same values and cell order as its to_xarray form."""
-    native_res, coarse_res = 0.01, 0.03
-    fine = _block_centers(6, native_res)
-    vals = np.arange(36, dtype=float).reshape(len(fine), len(fine))
-    foot = _foot_on_grid(fine, fine, vals, xres=native_res, yres=native_res)
-    grid = Grid(
-        xmin=0.0, xmax=0.06, ymin=0.0, ymax=0.06, xres=coarse_res, yres=coarse_res
-    )
-
+def test_aggregate_rejects_targets_that_are_not_geometries():
+    """An xarray grid or a list of centres is not a target; build a Grid instead."""
+    foot = _make_footprint(n_times=1)
     t0 = pd.Timestamp("2023-01-01 12:00")
     bins = pd.interval_range(start=t0, periods=1, freq="1h", closed="left")
-    via_grid = foot.aggregate(grid, bins)
-    via_xr = foot.aggregate(grid.to_xarray(), bins)
-
-    assert via_grid.index.equals(grid.index)
-    np.testing.assert_allclose(via_grid.to_numpy(), via_xr.to_numpy())
-    assert via_grid.to_numpy().sum() == pytest.approx(vals.sum())
+    with pytest.raises(TypeError, match="Grid, stilt.Mesh, or stilt.Zones"):
+        foot.aggregate(foot.config.grid.to_xarray(), bins)  # type: ignore[arg-type]
+    with pytest.raises(TypeError, match="Grid, stilt.Mesh, or stilt.Zones"):
+        foot.aggregate([(-113.95, 39.05)], bins)  # type: ignore[arg-type]
 
 
 def test_aggregate_mesh_window_sums_exactly():
