@@ -175,6 +175,14 @@ def run_receptor(
     return ReceptorResult.summarise(receptor_id, results)
 
 
+def _log_result(result: ReceptorResult, done: int, total: int) -> None:
+    """One line per finished receptor: the run's progress log."""
+    detail = f": {result.error}" if result.error else ""
+    logger.info(
+        "[%d/%d] %s %s%s", done, total, result.receptor_id, result.status, detail
+    )
+
+
 # -- process pool -------------------------------------------------------------
 
 _POOL_MODEL: Model | None = None
@@ -234,16 +242,16 @@ def run_receptors(
     list[ReceptorResult]
         One result per id, in input order (truncated after an interruption).
     """
-    skip = skip_existing
     if not receptor_ids:
         return []
 
     if n_cores <= 1:
         results: list[ReceptorResult] = []
         with sigterm_as_interrupt():
-            for receptor_id in receptor_ids:
-                result = run_receptor(model, receptor_id, skip_existing=skip)
+            for i, receptor_id in enumerate(receptor_ids, 1):
+                result = run_receptor(model, receptor_id, skip_existing=skip_existing)
                 results.append(result)
+                _log_result(result, i, len(receptor_ids))
                 if result.status == "interrupted":
                     break
         return results
@@ -252,7 +260,7 @@ def run_receptors(
     pool = multiprocessing.Pool(
         n_cores,
         initializer=_init_pool_worker,
-        initargs=(model.project.root, str(model.compute_root), skip),
+        initargs=(model.project.root, str(model.compute_root), skip_existing),
     )
     with sigterm_as_interrupt():
         try:
@@ -260,6 +268,7 @@ def run_receptors(
                 _pool_run, list(enumerate(receptor_ids))
             ):
                 ordered[idx] = result
+                _log_result(result, len(ordered), len(receptor_ids))
                 if result.status == "interrupted":
                     pool.terminate()
                     break
@@ -305,8 +314,6 @@ def pull_receptors(
             "Pull-mode workers require a Postgres work queue. "
             "Configure it via PYSTILT_DB_URL."
         )
-    skip = skip_existing
-
     idle_sleep = max(poll_interval, 0.1)
     max_idle_sleep = min(60.0, max(idle_sleep, poll_interval * 8))
     while True:
@@ -318,7 +325,9 @@ def pull_receptors(
                 idle_sleep = min(idle_sleep * 2.0, max_idle_sleep)
                 continue
             idle_sleep = max(poll_interval, 0.1)
-            claim.record(run_receptor(model, claim.receptor_id, skip_existing=skip))
+            claim.record(
+                run_receptor(model, claim.receptor_id, skip_existing=skip_existing)
+            )
 
 
 __all__ = [

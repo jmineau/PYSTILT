@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from stilt.store import FsspecStore, LocalStore, Store, is_uri, make_store, uri_join
+from stilt.store import FsspecStore, LocalStore, Store, is_uri, make_store
 
 # ---------------------------------------------------------------------------
 # Protocol / factory
@@ -34,7 +34,7 @@ def test_make_store_returns_fsspec_store_for_remote_uri(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# is_uri / uri_join
+# is_uri
 # ---------------------------------------------------------------------------
 
 
@@ -50,27 +50,6 @@ def test_is_uri_true_for_scheme_roots(root):
 def test_is_uri_false_for_local_paths(root):
     assert not is_uri(root)
     assert not is_uri(Path(root))
-
-
-def test_uri_join_on_uri_root():
-    assert uri_join("s3://bucket/project", "simulations", "by-id") == (
-        "s3://bucket/project/simulations/by-id"
-    )
-
-
-def test_uri_join_strips_slashes_and_skips_empty_parts():
-    assert uri_join("s3://bucket/project/", "/simulations/", "", "by-id/") == (
-        "s3://bucket/project/simulations/by-id"
-    )
-
-
-def test_uri_join_with_no_parts_returns_root_without_trailing_slash():
-    assert uri_join("s3://bucket/project/") == "s3://bucket/project"
-
-
-def test_uri_join_on_local_root(tmp_path):
-    joined = uri_join(str(tmp_path), "simulations", "by-id")
-    assert joined == str(tmp_path / "simulations" / "by-id")
 
 
 # ---------------------------------------------------------------------------

@@ -1,6 +1,5 @@
 """Tests for stilt.project (project root, layout helpers, and input persistence)."""
 
-import os
 from pathlib import Path
 
 import pytest
@@ -162,16 +161,6 @@ def test_project_str_is_root(any_project):
 
 def test_project_repr_includes_root(any_project):
     assert any_project.root in repr(any_project)
-
-
-def test_project_fspath_local(local_project, tmp_path):
-    assert os.fspath(local_project) == str(tmp_path / "proj")
-    assert Path(local_project) == tmp_path / "proj"
-
-
-def test_project_fspath_cloud_raises(memory_project):
-    with pytest.raises(TypeError):
-        os.fspath(memory_project)
 
 
 # ---------------------------------------------------------------------------

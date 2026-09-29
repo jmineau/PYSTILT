@@ -20,6 +20,10 @@ def _arlmet_source_names() -> frozenset[str]:
     )
 
 
+#: Met fields that change no output: where the files are, not what they hold.
+UNRECORDED_MET_FIELDS = frozenset({"directory", "subgrid_dir"})
+
+
 class MetConfig(BaseModel):
     """Meteorology file discovery, optional downloading, and optional subgridding."""
 
@@ -110,3 +114,16 @@ class MetConfig(BaseModel):
     def source_kwargs(self) -> dict[str, Any]:
         """Extra fields passed as keyword arguments to the arlmet source constructor."""
         return dict(self.model_extra) if self.model_extra else {}
+
+    def record(self) -> dict[str, Any]:
+        """This met as stored in the project's record (a full JSON dump)."""
+        return self.model_dump(mode="json")
+
+    def differences(self, recorded: dict[str, Any]) -> list[str]:
+        """Names of the result-affecting fields on which this met differs from *recorded*."""
+        mine = self.record()
+        return sorted(
+            k
+            for k in mine
+            if k not in UNRECORDED_MET_FIELDS and mine[k] != recorded.get(k)
+        )

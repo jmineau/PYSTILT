@@ -203,47 +203,57 @@ class SimulationCollection:
     def __init__(self, model: Model, keys: list[SimID] | None = None):
         self._model = model
         self._keys = keys
+        self._key_set: frozenset[SimID] | None = None
 
     # -- registered set --------------------------------------------------------
 
-    def keys(self) -> list[SimID]:
-        """The selected simulation ids, receptor-major, variants in config order."""
+    def _all(self) -> list[SimID]:
+        """The selected ids, built once: receptor-major, variants in config order."""
         if self._keys is None:
             self._keys = [
                 SimID(receptor.id, variant)
                 for receptor in self._model.receptors
                 for variant in self._model.variants
             ]
-        return list(self._keys)
+        return self._keys
+
+    def _members(self) -> frozenset[SimID]:
+        if self._key_set is None:
+            self._key_set = frozenset(self._all())
+        return self._key_set
+
+    def keys(self) -> list[SimID]:
+        """The selected simulation ids, receptor-major, variants in config order."""
+        return list(self._all())
 
     def __iter__(self) -> Iterator[Simulation]:
-        return (self[key] for key in self.keys())
+        return (self._model.simulation(key) for key in self._all())
 
     def __len__(self) -> int:
-        return len(self.keys())
+        return len(self._all())
 
     def __contains__(self, key: object) -> bool:
         try:
             sid = SimID.parse(key)  # type: ignore[arg-type]
         except (ValueError, TypeError):
             return False
-        return sid in self.keys()
+        return sid in self._members()
 
     def __getitem__(self, key: str | SimID | tuple[str, str]) -> Simulation:
         sid = SimID.parse(key)
-        if sid not in self.keys():
+        if sid not in self._members():
             raise KeyError(str(sid))
         return self._model.simulation(sid)
 
     @property
     def receptors(self) -> list[str]:
         """Receptor ids in the selection, in order, without repeats."""
-        return list(dict.fromkeys(key.receptor for key in self.keys()))
+        return list(dict.fromkeys(key.receptor for key in self._all()))
 
     @property
     def variants(self) -> list[str]:
         """Variant names in the selection, in order, without repeats."""
-        return list(dict.fromkeys(key.variant for key in self.keys()))
+        return list(dict.fromkeys(key.variant for key in self._all()))
 
     # -- selection -------------------------------------------------------------
 
@@ -275,7 +285,7 @@ class SimulationCollection:
             For a receptor id or variant name the model does not define. The
             other filters may legitimately select nothing.
         """
-        keys = self.keys()
+        keys = self._all()
         if receptor is not None:
             wanted = {receptor} if isinstance(receptor, str) else set(receptor)
             unknown = wanted - {r.id for r in self._model.receptors}
@@ -308,7 +318,7 @@ class SimulationCollection:
     def incomplete(self) -> SimulationCollection:
         """The simulations that have not produced every expected output."""
         return SimulationCollection(
-            self._model, [key for key in self.keys() if not self[key].is_complete()]
+            self._model, [sim.id for sim in self if not sim.is_complete()]
         )
 
     def status(self) -> pd.DataFrame:
@@ -323,7 +333,7 @@ class SimulationCollection:
             {
                 "receptor": str(sim.id.receptor),
                 "variant": sim.variant,
-                TRAJECTORY: sim.has_trajectory if sim.runs_hysplit else pd.NA,
+                TRAJECTORY: sim.has_trajectory if not sim.is_derived else pd.NA,
                 FOOTPRINT: sim.has_footprint if sim.makes_footprint else pd.NA,
                 "complete": sim.is_complete(),
             }
@@ -365,7 +375,7 @@ class OutputCollection:
     def _producers(self) -> list[Simulation]:
         """Simulations for which this output is expected."""
         if self.output == TRAJECTORY:
-            return [sim for sim in self._sims if sim.runs_hysplit]
+            return [sim for sim in self._sims if not sim.is_derived]
         return [sim for sim in self._sims if sim.makes_footprint]
 
     def _exists(self, sim: Simulation) -> bool:

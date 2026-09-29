@@ -22,7 +22,6 @@ Usage examples::
 from __future__ import annotations
 
 import logging
-import threading
 from pathlib import Path
 from typing import Any
 
@@ -35,7 +34,7 @@ from stilt.execution import (
     run_receptors,
 )
 from stilt.model import Model
-from stilt.project import CONFIG_KEY, RECEPTORS_KEY, SIMULATIONS_PREFIX
+from stilt.project import CONFIG_KEY, RECEPTORS_KEY
 from stilt.receptors import read_receptors
 from stilt.store import is_uri
 
@@ -119,25 +118,17 @@ _COMPUTE_ROOT = typer.Option(
 )
 
 
-def _resolve_project(path: str | Path | None, *, require_inputs: bool = True) -> str:
-    """Resolve a local project root, or pass a cloud URI through unchanged."""
+def _resolve_project(path: str | Path | None) -> str:
+    """Resolve a local project root (it must hold a config.yaml), or pass a URI through."""
     raw = str(path or Path.cwd())
     if is_uri(raw):
         return raw
 
     resolved = Path(raw).resolve()
-    has_inputs = (resolved / CONFIG_KEY).exists()
-    has_outputs = (resolved / SIMULATIONS_PREFIX).exists()
-    if require_inputs and not has_inputs:
+    if not (resolved / CONFIG_KEY).exists():
         typer.echo(
             f"Error: '{resolved}' does not look like a STILT project directory "
             "(no config.yaml found).",
-            err=True,
-        )
-        raise typer.Exit(code=1)
-    if not require_inputs and not (has_inputs or has_outputs):
-        typer.echo(
-            f"Error: '{resolved}' does not look like a STILT project.",
             err=True,
         )
         raise typer.Exit(code=1)
@@ -213,8 +204,11 @@ def run(
     ``backend: slurm`` it submits the job array and returns — use ``--wait``
     to poll until done. Pass ``--no-skip`` to re-run existing simulations.
     """
-    resolved = _resolve_project(project, require_inputs=True)
+    resolved = _resolve_project(project)
     model = Model(project=resolved, compute_root=compute_root)
+    # Progress is the worker's one line per finished receptor.
+    logging.basicConfig(level=logging.WARNING, format="%(message)s")
+    logging.getLogger("stilt.execution.worker").setLevel(logging.INFO)
 
     executor = None
     execution = dict(model.config.execution or {})
@@ -230,14 +224,13 @@ def run(
 
     if handle.detached:
         typer.echo(f"Submitted job: {handle.job_id}")
-        if wait:
-            typer.echo("Waiting for job completion...")
-            _wait_with_progress(model, handle)
-            _print_status(model)
+        if not wait:
+            return
+        typer.echo("Waiting for job completion (squeue shows its tasks)...")
     else:
-        typer.echo("Workers launched. Waiting for completion...")
-        _wait_with_progress(model, handle)
-        _print_status(model)
+        typer.echo("Workers launched; one line per receptor as it finishes.")
+    handle.wait()
+    _print_status(model)
 
 
 @app.command("register")
@@ -250,7 +243,7 @@ def register(
     ),
 ) -> None:
     """Persist project inputs and, when a queue is configured, enqueue receptors."""
-    model = Model(project=_resolve_project(project, require_inputs=True))
+    model = Model(project=_resolve_project(project))
     receptors = read_receptors(receptors_path) if receptors_path is not None else None
     receptor_ids = model.register(receptors=receptors)
     typer.echo(
@@ -273,7 +266,7 @@ def rm(
     drop a variant that config.yaml no longer declares. Variants derived from
     it with ``from:`` are deleted with it.
     """
-    model = Model(project=_resolve_project(project, require_inputs=True))
+    model = Model(project=_resolve_project(project))
     if not yes and not typer.confirm(
         f"Delete every simulation of variant {variant!r} in {model.project.root}?"
     ):
@@ -299,7 +292,7 @@ def pull_worker(
     (batch mode) or indefinitely (``--follow``).
     """
     model = Model(
-        project=_resolve_project(project, require_inputs=True),
+        project=_resolve_project(project),
         compute_root=compute_root,
     )
     pull_receptors(model, follow=follow)
@@ -317,7 +310,7 @@ def push_worker(
 ) -> None:
     """Run the receptor ids listed in one chunk file (one per line)."""
     model = Model(
-        project=_resolve_project(project, require_inputs=True),
+        project=_resolve_project(project),
         compute_root=compute_root,
     )
     receptor_ids = [
@@ -333,7 +326,7 @@ def serve(
 ) -> None:
     """Run a long-lived queue worker (equivalent to ``pull-worker --follow``)."""
     model = Model(
-        project=_resolve_project(project, require_inputs=True),
+        project=_resolve_project(project),
         compute_root=compute_root,
     )
     pull_receptors(model, follow=True)
@@ -342,7 +335,7 @@ def serve(
 @app.command()
 def status(project: str | None = _PROJECT_ARG) -> None:
     """Show simulation completion counts for a project."""
-    model = Model(project=_resolve_project(project, require_inputs=True))
+    model = Model(project=_resolve_project(project))
     _print_status(model)
 
 
@@ -355,11 +348,6 @@ def _counts(table: Any) -> str:
     """Format one ``total / completed / pending`` line from a status table."""
     done = int(table["complete"].sum())
     return f"total={len(table)}  completed={done}  pending={len(table) - done}"
-
-
-def _format_counts(model: Model) -> str:
-    """Format a model's simulation counts for one status line."""
-    return _counts(model.status())
 
 
 def _print_status(model: Model) -> None:
@@ -405,55 +393,3 @@ def _print_run_start(
         if backend == "slurm"
         else "Execution mode: local-blocking"
     )
-
-
-def _format_progress_line(model: Model) -> str | None:
-    """Return a one-line progress summary, or ``None`` if unavailable."""
-    try:
-        return f"Progress: {_format_counts(model)}"
-    except Exception:
-        return None
-
-
-def _wait_with_progress(
-    model: Model,
-    handle: object,
-    *,
-    poll_interval: float = 5.0,
-) -> None:
-    """Wait on a job handle while periodically printing progress."""
-    done = threading.Event()
-    errors: list[BaseException] = []
-
-    def _wait() -> None:
-        """Wait on the handle in a worker thread, storing any exception."""
-        try:
-            handle.wait()  # type: ignore[attr-defined]
-        except BaseException as exc:  # pragma: no cover - re-raised in caller thread
-            errors.append(exc)
-        finally:
-            done.set()
-
-    thread = threading.Thread(target=_wait, daemon=True)
-    thread.start()
-
-    last_line: str | None = None
-    initial_line = _format_progress_line(model)
-    if initial_line is not None:
-        typer.echo(initial_line)
-        last_line = initial_line
-
-    while not done.wait(timeout=poll_interval):
-        line = _format_progress_line(model)
-        if line is None:
-            typer.echo("Progress: still running...")
-            continue
-        if line != last_line:
-            typer.echo(line)
-            last_line = line
-        else:
-            typer.echo(f"{line}  (no change)")
-
-    thread.join()
-    if errors:
-        raise errors[0]

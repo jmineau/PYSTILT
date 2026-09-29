@@ -708,9 +708,9 @@ def _touch(path: Path) -> None:
 
 def test_what_a_simulation_produces(point_receptor, tmp_path):
     traj_only = _sim(tmp_path, point_receptor)
-    assert traj_only.runs_hysplit and not traj_only.makes_footprint
+    assert not traj_only.is_derived and not traj_only.makes_footprint
     both = _sim(tmp_path, point_receptor, footprint=FOOT)
-    assert both.runs_hysplit and both.makes_footprint
+    assert not both.is_derived and both.makes_footprint
 
 
 def test_is_complete_needs_every_expected_output(point_receptor, tmp_path):
@@ -766,7 +766,7 @@ def test_derived_simulation_needs_only_its_footprint(point_receptor, tmp_path):
         parent=parent,
         directory=tmp_path / "d",
     )
-    assert not derived.runs_hysplit and derived.makes_footprint
+    assert derived.is_derived and derived.makes_footprint
     _touch(derived.footprint_path)
     assert derived.is_complete()
 

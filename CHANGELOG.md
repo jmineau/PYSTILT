@@ -130,8 +130,16 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `sim.params` and `sim.footprint_config` are read from it, and the
   `exe_dir` argument is gone (`STILTParams.exe_dir` already covers it).
   `expected_outputs()`, `has_output()` and `missing_outputs()` are replaced
-  by the `runs_hysplit` and `makes_footprint` properties;
+  by `is_derived` and the `makes_footprint` property;
   `generate_footprint()` takes a `FootprintConfig`, not keyword arguments.
+- **`stilt run` no longer polls the project for progress.** It used to walk
+  every simulation's outputs every five seconds, which on a large project is
+  minutes per poll over a network filesystem. The worker now logs one line
+  per finished receptor, Slurm progress is the scheduler's, and the status
+  summary is printed once at the end. Iterating a `SimulationCollection`
+  is linear now (it was quadratic in the number of simulations). Removed:
+  `Model.name` (use `model.project.name`), `uri_join`, and
+  `Project.__fspath__`.
 - **Cloud projects read their inputs and cache their outputs by key.**
   `FsspecStore.local_path` downloads a key into the cache directory under its
   own path instead of through fsspec's `simplecache`, and writing or deleting

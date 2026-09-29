@@ -17,12 +17,10 @@ import pandas as pd
 
 from stilt.collections import ReceptorCollection, SimulationCollection
 from stilt.config import (
-    MetConfig,
     ModelConfig,
     RuntimeSettings,
     VariantConfig,
 )
-from stilt.config.model import _config_or_kwargs
 from stilt.errors import ConfigChangedError, ConfigValidationError
 from stilt.execution import (
     Executor,
@@ -42,19 +40,6 @@ logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from stilt.visualization import ModelPlotAccessor
-
-#: Met fields that change no output: where the files are, not what they hold.
-_UNRECORDED_MET_FIELDS = frozenset({"directory", "subgrid_dir"})
-
-
-def _met_differences(met: MetConfig, recorded: dict) -> list[str]:
-    """Names of the result-affecting met fields on which *met* differs from the record."""
-    mine = met.model_dump(mode="json")
-    return sorted(
-        k
-        for k in mine
-        if k not in _UNRECORDED_MET_FIELDS and mine[k] != recorded.get(k)
-    )
 
 
 class Model:
@@ -115,7 +100,9 @@ class Model:
         self.runtime = runtime if runtime is not None else RuntimeSettings()
         self.project = Project(project, cache_dir=self.runtime.cache_dir)
         self.compute_root = self._resolve_compute_root(compute_root)
-        self._config = _config_or_kwargs(config, kwargs, ModelConfig)
+        if config is not None and kwargs:
+            raise TypeError("Cannot pass both a ModelConfig and keyword settings.")
+        self._config = ModelConfig(**kwargs) if kwargs else config
         # A config given here is the user's latest word and is written to the
         # project; one loaded from the project is never rewritten.
         self._config_given = self._config is not None
@@ -131,11 +118,6 @@ class Model:
 
     def __repr__(self) -> str:
         return f"Model(project={self.project.root!r})"
-
-    @property
-    def name(self) -> str:
-        """Human-readable project name."""
-        return self.project.name
 
     def _resolve_compute_root(self, compute_root: str | Path | None) -> Path:
         """Return the parent directory under which worker sim dirs are created."""
@@ -211,7 +193,7 @@ class Model:
                     changed[name] = diff
         for name, met in self.config.mets.items():
             if name in record["mets"]:
-                diff = _met_differences(met, record["mets"][name])
+                diff = met.differences(record["mets"][name])
                 if diff:
                     changed[f"met {name}"] = diff
         if changed:
@@ -279,10 +261,7 @@ class Model:
 
         record = self.project.load_record()
         record["mets"].update(
-            {
-                name: met.model_dump(mode="json")
-                for name, met in self.config.mets.items()
-            }
+            {name: met.record() for name, met in self.config.mets.items()}
         )
         record["variants"].update(
             {name: v.record() for name, v in self.variants.items()}
@@ -411,7 +390,6 @@ class Model:
         JobHandle
         """
         self._simulations = None
-        resolved_skip = skip_existing
         resolved_executor = executor or get_executor(self.config.execution or {})
         if isinstance(resolved_executor, SlurmExecutor) and self.project.is_cloud:
             raise ConfigValidationError(
@@ -424,7 +402,7 @@ class Model:
             return LocalHandle()
 
         pending = (
-            self.simulations.incomplete().receptors if resolved_skip else receptor_ids
+            self.simulations.incomplete().receptors if skip_existing else receptor_ids
         )
         if not pending:
             logger.info("run: all simulations already complete — nothing to do")
@@ -441,7 +419,7 @@ class Model:
             pending,
             project=self.project.root,
             compute_root=str(self.compute_root),
-            skip_existing=resolved_skip,
+            skip_existing=skip_existing,
         )
         if wait:
             logger.info("run: waiting for workers to finish...")

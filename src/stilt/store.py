@@ -22,18 +22,6 @@ def is_uri(root: str | Path) -> bool:
     return "://" in str(root)
 
 
-def uri_join(root: str, *parts: str) -> str:
-    """Join path fragments onto a local path or object-store URI."""
-    clean = [p.strip("/") for p in parts if p and p.strip("/")]
-    if is_uri(root):
-        base = root.rstrip("/")
-        return f"{base}/{'/'.join(clean)}" if clean else base
-    path = Path(root)
-    for part in clean:
-        path /= part
-    return str(path)
-
-
 @runtime_checkable
 class Store(Protocol):
     """Byte storage addressed by canonical output keys."""
@@ -217,5 +205,4 @@ __all__ = [
     "Store",
     "is_uri",
     "make_store",
-    "uri_join",
 ]

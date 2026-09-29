@@ -123,23 +123,6 @@ def test_resolve_project_returns_cloud_uri_unchanged():
     assert _resolve_project("s3://bucket/project") == "s3://bucket/project"
 
 
-def test_resolve_project_accepts_output_root_without_config(tmp_path):
-    (tmp_path / SIMULATIONS_PREFIX).mkdir(parents=True)
-    resolved = _resolve_project(tmp_path, require_inputs=False)
-    assert resolved == str(tmp_path.resolve())
-
-
-def test_resolve_project_rejects_empty_dir_without_inputs_required(tmp_path):
-    from typer import Exit
-
-    try:
-        _resolve_project(tmp_path, require_inputs=False)
-    except Exit as exc:
-        assert exc.exit_code == 1
-    else:
-        raise AssertionError("expected typer.Exit")
-
-
 # ---------------------------------------------------------------------------
 # status command
 # ---------------------------------------------------------------------------
@@ -292,7 +275,7 @@ def test_run_prints_startup_and_wait_messages(tmp_path, monkeypatch):
     assert "Compute root:" not in result.output  # default compute root
     assert "Receptors loaded: 1" in result.output
     assert "Execution mode: local-blocking" in result.output
-    assert "Workers launched. Waiting for completion..." in result.output
+    assert "Workers launched" in result.output
     assert f"Project: {tmp_path.resolve()}  total=" in result.output
 
 
@@ -434,7 +417,7 @@ def test_run_slurm_with_wait_flag_blocks(tmp_path, monkeypatch):
     )
     assert result.exit_code == 0
     assert "Execution mode: submit-and-wait" in result.output
-    assert "Waiting for job completion..." in result.output
+    assert "Waiting for job completion" in result.output
     fake_handle.wait.assert_called_once()
 
 

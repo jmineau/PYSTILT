@@ -3,18 +3,16 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, TypeVar
+from typing import Any
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import ConfigDict, Field, model_validator
 from typing_extensions import Self
 
 from .footprint import FootprintParams
 from .meteorology import MetConfig
 from .params import STILTParams
 from .variant import VARIANT_NAME_RE, VariantConfig, expand_variants
-
-T = TypeVar("T", bound=BaseModel)
 
 #: ModelConfig fields that are not parameters a variant inherits.
 _PROJECT_FIELDS = frozenset({"mets", "variants", "execution"})
@@ -95,9 +93,9 @@ class ModelConfig(STILTParams, FootprintParams):
         """The default transport parameters alone."""
         return STILTParams(**self.model_dump(include=set(STILTParams.model_fields)))
 
-    def to_yaml(self, path: str | Path) -> None:
+    def to_yaml(self, path: str | Path | None = None) -> str:
         """
-        Write the config to a YAML file, leaving out settings at their defaults.
+        Return the config as YAML, and write it to *path* when given.
 
         The file is meant to be read and edited by hand, so it holds only the
         top-level settings that were given; what was given is written in full
@@ -105,11 +103,13 @@ class ModelConfig(STILTParams, FootprintParams):
         each variant are kept in the project's record
         (:meth:`stilt.Project.load_record`), not here.
         """
-        path = Path(path)
-        path.parent.mkdir(parents=True, exist_ok=True)
         data = self.model_dump(mode="json", include=self.model_fields_set)
-        with path.open("w") as f:
-            yaml.safe_dump(data, f, default_flow_style=False, sort_keys=False)
+        text = yaml.safe_dump(data, default_flow_style=False, sort_keys=False)
+        if path is not None:
+            path = Path(path)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(text)
+        return text
 
     @classmethod
     def from_yaml(cls, path: str | Path) -> Self:
@@ -118,21 +118,6 @@ class ModelConfig(STILTParams, FootprintParams):
         with path.open() as f:
             raw: dict = yaml.safe_load(f) or {}
         return cls.model_validate(raw)
-
-
-def _config_or_kwargs(
-    config: T | None,
-    kwargs: dict,
-    cls: type[T],
-) -> T | None:
-    """Resolve a config-or-kwargs pair."""
-    if config is not None and kwargs:
-        raise TypeError(
-            f"Cannot pass both a {cls.__name__} instance and keyword arguments."
-        )
-    if kwargs:
-        return cls(**kwargs)
-    return config
 
 
 __all__ = ["ModelConfig"]

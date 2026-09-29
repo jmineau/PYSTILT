@@ -300,19 +300,12 @@ def test_met_config_subgrid_requires_bounds(tmp_path):
         )
 
 
-def test_model_name_and_repr(tmp_path):
+def test_model_repr(tmp_path):
     model = Model(project=tmp_path / "my_project")
 
-    assert model.name == "my_project"
+    assert model.project.name == "my_project"
     assert repr(model) == f"Model(project={str(tmp_path / 'my_project')!r})"
     assert model.project.root == str(tmp_path / "my_project")
-
-
-def test_model_name_for_cloud_project():
-    model = Model(project="memory://bucket/My_Project/")
-
-    assert model.project.is_cloud
-    assert model.name == "my-project"
 
 
 def test_compute_root_defaults_to_project_simulations_dir(tmp_path):

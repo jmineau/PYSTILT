@@ -522,6 +522,24 @@ class MultiPointReceptor(Receptor):
         }
 
 
+#: Column names :func:`read_receptors` accepts for each receptor field.
+_CSV_ALIASES = {
+    "time": ("time",),
+    "longitude": ("longitude", "long", "lon"),
+    "latitude": ("latitude", "lati", "lat"),
+    "altitude": ("altitude", "zagl", "zmsl", "z"),
+    "r_idx": ("r_idx",),
+    "altitude_ref": ("altitude_ref", "height_ref"),
+}
+
+#: Header spellings mapped onto the short names the reader works with.
+_CSV_RENAMES = {
+    alias: {"longitude": "long", "latitude": "lati", "altitude": "z"}.get(field, field)
+    for field, aliases in _CSV_ALIASES.items()
+    for alias in aliases
+}
+
+
 def read_receptors(path: str | Path | IO[str]) -> list[Receptor]:
     """Load receptors from a CSV file (a path or an open text stream)."""
     # r_idx is a grouping key, so read it as text. Left to inference, pandas parses a large
@@ -543,18 +561,8 @@ def read_receptors(path: str | Path | IO[str]) -> list[Receptor]:
     elif "zagl" in original_columns:
         inferred_altitude_ref = "agl"
 
-    cols = {
-        "latitude": "lati",
-        "longitude": "long",
-        "altitude": "z",
-        "zagl": "z",
-        "zmsl": "z",
-        "lat": "lati",
-        "lon": "long",
-        "height_ref": "altitude_ref",
-    }
     df.columns = df.columns.str.lower()
-    df = df.rename(columns=cols)
+    df = df.rename(columns=_CSV_RENAMES)
     if "altitude_ref" not in df.columns:
         df["altitude_ref"] = inferred_altitude_ref or "agl"
 
@@ -640,17 +648,6 @@ def receptors_to_csv(receptors: Iterable[Receptor]) -> str:
                 }
             )
     return buffer.getvalue()
-
-
-#: Column names :func:`read_receptors` accepts for each receptor field.
-_CSV_ALIASES = {
-    "time": ("time",),
-    "longitude": ("longitude", "long", "lon"),
-    "latitude": ("latitude", "lati", "lat"),
-    "altitude": ("altitude", "zagl", "zmsl", "z"),
-    "r_idx": ("r_idx",),
-    "altitude_ref": ("altitude_ref", "height_ref"),
-}
 
 
 def append_receptors_csv(text: str, receptors: Iterable[Receptor]) -> str:

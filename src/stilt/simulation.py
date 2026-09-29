@@ -215,20 +215,23 @@ class Simulation:
         )
 
     @property
-    def runs_hysplit(self) -> bool:
-        """Whether this simulation produces its own trajectory (it is not derived)."""
-        return self.parent is None
-
-    @property
     def makes_footprint(self) -> bool:
         """Whether this simulation produces a footprint (its variant has a grid)."""
         return self.footprint_config is not None
 
     def is_complete(self) -> bool:
         """Whether every expected output exists: the trajectory unless derived, the footprint if a grid is set."""
-        return (not self.runs_hysplit or self.has_trajectory) and (
+        return (self.is_derived or self.has_trajectory) and (
             not self.makes_footprint or self.has_footprint
         )
+
+    @property
+    def outputs(self) -> list[Path]:
+        """The files this simulation owns: log, footprint or marker, and its own trajectory."""
+        paths = [self.log_path, self.footprint_path, self.empty_footprint_path]
+        if not self.is_derived:
+            paths.append(self.trajectories_path)
+        return paths
 
     def publish(self) -> None:
         """
@@ -239,10 +242,7 @@ class Simulation:
         """
         if self._store is None:
             return
-        paths = [self.log_path, self.footprint_path, self.empty_footprint_path]
-        if not self.is_derived:
-            paths.append(self.trajectories_path)
-        for path in paths:
+        for path in self.outputs:
             self._store.publish_file(path, self.key(path))
 
     def delete(self) -> None:
@@ -253,11 +253,8 @@ class Simulation:
         derived simulation loses only its footprint; its parent's trajectory is
         the parent's to delete.
         """
-        paths = [self.log_path, self.footprint_path, self.empty_footprint_path]
-        if not self.is_derived:
-            paths.append(self.trajectories_path)
         if self._store is not None:
-            for path in paths:
+            for path in self.outputs:
                 self._store.delete(self.key(path))
         shutil.rmtree(self.directory, ignore_errors=True)
         self._trajectories = None

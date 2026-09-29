@@ -105,11 +105,6 @@ class Project:
     def __str__(self) -> str:
         return self.root
 
-    def __fspath__(self) -> str:
-        if self.is_cloud:
-            raise TypeError(f"Cloud project {self.root!r} has no local path.")
-        return self.root
-
     @property
     def name(self) -> str:
         """Human-readable project name (directory basename or URI slug)."""
@@ -152,11 +147,8 @@ class Project:
         return ModelConfig.model_validate(raw)
 
     def save_config(self, config: ModelConfig) -> None:
-        """Write ``config.yaml`` to the store (only defaults that were changed)."""
-        with tempfile.TemporaryDirectory(prefix="pystilt_config_") as tmp:
-            path = Path(tmp) / CONFIG_KEY
-            config.to_yaml(path)
-            self.store.publish_file(path, CONFIG_KEY)
+        """Write ``config.yaml`` to the store (only the settings that were given)."""
+        self.store.write_bytes(CONFIG_KEY, config.to_yaml().encode())
 
     def load_receptors(self) -> list[Receptor] | None:
         """Load ``receptors.csv`` from the store, or ``None`` when absent."""

@@ -270,9 +270,15 @@ def _r_footprint_from_traj(
             coords={"lat": lat, "lon": lon, "time": [0.0]},
         )
 
-    ds = xr.open_dataset(nc_path)
+    # Apply the fill value by hand: xarray's own masking of STILT-R's NetCDF
+    # (float32, _FillValue = -1) segfaults in some environments (#34), and
+    # this is what mask_and_scale would do.
+    ds = xr.open_dataset(nc_path, mask_and_scale=False)
     ds.load()
     ds.close()
+    fill = ds["foot"].attrs.get("_FillValue")
+    if fill is not None:
+        ds["foot"] = ds["foot"].where(ds["foot"] != fill)
     return _normalize_footprint_dims(ds)
 
 
