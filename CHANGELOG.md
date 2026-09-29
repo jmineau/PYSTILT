@@ -6,6 +6,26 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **Pressure weighting of multipoint and slant receptors**
+  ([#46](https://github.com/jmineau/PYSTILT/issues/46)). All particles
+  released from one point share a release height, so the slab between
+  neighbouring release pressures had zero width and only one particle per
+  point carried any weight. Each distinct release height now gets its slab
+  and the particles released there split it evenly, so the weighted
+  footprint no longer depends on how many particles each point released.
+- **Pressure weighting of MSL receptors**
+  ([#47](https://github.com/jmineau/PYSTILT/issues/47)). The hypsometric
+  fit was made against height above ground and evaluated at release
+  heights above sea level, so every release pressure of a receptor with
+  `altitude_ref="msl"` came out too low by the terrain height.
+  `PressureWeighting` now reads `altitude_ref` from the transform context
+  and, for MSL receptors, fits against `zagl + zsfc` and closes the bottom
+  slab at the terrain under the lowest point. Such receptors need `zsfc`
+  in `varsiwant`, which the slant column guide already asks for;
+  `particle_pwf` takes an `altitude_ref` argument.
+
 ## [0.1.0a20] - 2026-09-29
 
 ### Added

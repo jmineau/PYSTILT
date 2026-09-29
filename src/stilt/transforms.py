@@ -119,7 +119,9 @@ def release_coordinate(particles: pd.DataFrame, coordinate: str) -> pd.Series:
 
 
 def particle_pwf(
-    particles: pd.DataFrame, surface_pressure: float | None = None
+    particles: pd.DataFrame,
+    surface_pressure: float | None = None,
+    altitude_ref: Literal["agl", "msl"] = "agl",
 ) -> tuple[pd.Series, pd.Series]:
     """
     Return each particle's release pressure and pressure weight.
@@ -128,26 +130,37 @@ def particle_pwf(
     ``ln p = b + a·z`` is fit to the particles' first-step heights and
     pressures. The fit smooths out the one time step of turbulence between
     release and the first output, and gives a surface pressure when none is
-    supplied. It is evaluated at each particle's release height, and the
-    spacing between neighboring release pressures gives the air mass each
-    particle represents.
+    supplied. It is evaluated at each release height, and the spacing
+    between neighboring release pressures gives the air mass each release
+    height represents.
 
     HYSPLIT spreads column particles evenly over height, each placed at
-    random within its own ``1/numpar`` slab. Each particle therefore stands
-    for the slab centered on it. Slab edges sit midway between neighboring
-    release pressures, the surface closes the bottom slab, and the top slab
-    extends above its particle as far as it does below. X-STILT instead gives
-    each particle the layer below it, which shifts every weight down by half
-    a slab and leaves the lowest particle with almost none.
+    random within its own ``1/numpar`` slab. Each release height therefore
+    stands for the slab centered on it. Slab edges sit midway between
+    neighboring release pressures, the ground closes the bottom slab, and the
+    top slab extends above its release height as far as it does below.
+    X-STILT instead gives each particle the layer below it, which shifts
+    every weight down by half a slab and leaves the lowest particle with
+    almost none.
+
+    A multipoint receptor releases several particles from each point. Those
+    particles share one release height, so the point's slab is split evenly
+    among them.
 
     Parameters
     ----------
     particles : pandas.DataFrame
         Particle table with ``indx``, ``pres`` (hPa), and ``zagl`` (m), and
         optionally ``xhgt``, the release height (m). Without ``xhgt`` the
-        first-step ``zagl`` is used.
+        first-step height is used. An MSL receptor also needs ``zsfc``, the
+        terrain height (m above sea level).
     surface_pressure : float, optional
-        Surface pressure in hPa. Defaults to the fitted curve at ``z = 0``.
+        Surface pressure in hPa. Defaults to the fitted curve at the ground.
+    altitude_ref : {"agl", "msl"}, default "agl"
+        Vertical reference of the release heights, ``receptor.altitude_ref``.
+        With ``"msl"`` the fit is made against ``zagl + zsfc`` so that it can
+        be evaluated at the release heights, and the ground closing the
+        bottom slab is the terrain under the lowest release height.
 
     Returns
     -------
@@ -167,33 +180,64 @@ def particle_pwf(
             )
     pres = release_coordinate(particles, "pres")
     zagl = release_coordinate(particles, "zagl")
+
+    # Particle heights in the receptor's own vertical reference, so the fit
+    # can be evaluated at the release heights.
+    if altitude_ref == "msl":
+        if "zsfc" not in particles.columns:
+            raise ValueError(
+                "Pressure weighting for a receptor with altitude_ref='msl' "
+                "requires the 'zsfc' particle variable; include it in "
+                "STILTParams.varsiwant."
+            )
+        zsfc = release_coordinate(particles, "zsfc")
+        z_fit = zagl + zsfc
+    else:
+        zsfc = None
+        z_fit = zagl
     z_release = (
-        release_coordinate(particles, "xhgt") if "xhgt" in particles.columns else zagl
+        release_coordinate(particles, "xhgt") if "xhgt" in particles.columns else z_fit
     )
 
-    if zagl.nunique() < 2:
+    heights = np.unique(z_release.to_numpy())  # distinct release heights, ascending
+    if len(heights) < 2 or z_fit.nunique() < 2:
         raise ValueError(
             "Pressure weighting needs particles released over a range of heights "
             "(a ColumnReceptor); all particles share one release height."
         )
-    a, b = np.polyfit(zagl.to_numpy(), np.log(pres.to_numpy()), 1)
+    a, b = np.polyfit(z_fit.to_numpy(), np.log(pres.to_numpy()), 1)
     if a >= 0:
         raise ValueError(
             "Could not fit a pressure profile to the particles (pressure does "
             "not decrease with height)."
         )
+
+    # The ground closes the bottom slab: z = 0 above ground, or the terrain
+    # under the lowest release height above sea level.
+    z_ground = 0.0
+    if zsfc is not None:
+        at_bottom = z_release.to_numpy() == heights[0]
+        z_ground = float(np.median(zsfc.to_numpy()[at_bottom]))
     p_sfc = (
-        float(surface_pressure) if surface_pressure is not None else float(np.exp(b))
+        float(surface_pressure)
+        if surface_pressure is not None
+        else float(np.exp(b + a * z_ground))
     )
 
-    xpres = pd.Series(p_sfc * np.exp(a * z_release.to_numpy()), index=z_release.index)
-    ordered = xpres.sort_values(ascending=False)  # surface upward
-    levels = ordered.to_numpy()
+    xpres = pd.Series(
+        p_sfc * np.exp(a * (z_release.to_numpy() - z_ground)), index=z_release.index
+    )
 
+    # One slab per distinct release height, surface upward, shared evenly by
+    # the particles released at that height.
+    levels = p_sfc * np.exp(a * (heights - z_ground))
     mids = (levels[:-1] + levels[1:]) / 2.0
     lower_edges = np.concatenate(([p_sfc], mids))
     upper_edges = np.concatenate((mids, [2 * levels[-1] - mids[-1]]))
-    pwf = pd.Series((lower_edges - upper_edges) / p_sfc, index=ordered.index)
+    slab = (lower_edges - upper_edges) / p_sfc
+    level = np.searchsorted(heights, z_release.to_numpy())
+    count = np.bincount(level, minlength=len(heights))
+    pwf = pd.Series(slab[level] / count[level], index=z_release.index)
     return xpres, pwf
 
 
@@ -457,9 +501,10 @@ class PressureWeighting(BaseModel):
     pressures (see :func:`particle_pwf`). :meth:`stilt.Footprint.calculate`
     divides by the particle count, so the weights are multiplied by the
     number of particles and the weighted footprint does not change with
-    ``numpar``. Adds ``xpres`` (release pressure, hPa) and ``pwf`` columns.
-    Requires ``pres`` and ``zagl`` in ``varsiwant``, which are both in the
-    default.
+    ``numpar``. The particles of a multipoint receptor share their point's
+    weight evenly. Adds ``xpres`` (release pressure, hPa) and ``pwf``
+    columns. Requires ``pres`` and ``zagl`` in ``varsiwant``, which are both
+    in the default, and ``zsfc`` for a receptor with ``altitude_ref="msl"``.
     """
 
     model_config = ConfigDict(frozen=True)
@@ -477,8 +522,14 @@ class PressureWeighting(BaseModel):
     def apply(
         self, particles: pd.DataFrame, context: TransformContext | None = None
     ) -> pd.DataFrame:
-        """Return the particles with ``foot`` weighted by pressure."""
-        xpres, pwf = particle_pwf(particles, self.surface_pressure)
+        """
+        Return the particles with ``foot`` weighted by pressure.
+
+        The receptor's ``altitude_ref`` is read from ``context``. Without a
+        context the release heights are taken to be above ground.
+        """
+        altitude_ref = context.receptor.altitude_ref if context is not None else "agl"
+        xpres, pwf = particle_pwf(particles, self.surface_pressure, altitude_ref)
         out = particles.copy()
         indx = out["indx"].to_numpy()
         out["xpres"] = xpres.reindex(indx).to_numpy()

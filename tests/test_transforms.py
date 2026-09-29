@@ -18,6 +18,7 @@ from stilt.transforms import (
     averaging_kernel_table,
     dump_transform,
     load_transform,
+    particle_pwf,
     transform_kind,
 )
 
@@ -364,6 +365,151 @@ def test_pwf_rejects_single_release_height():
     p["zagl"] = 100.0
     with pytest.raises(ValueError, match="range of heights"):
         PressureWeighting().apply(p)
+
+
+def test_pwf_rejects_single_release_height_with_xhgt():
+    p = _column_particles(5)
+    p["xhgt"] = 100.0
+    with pytest.raises(ValueError, match="range of heights"):
+        PressureWeighting().apply(p)
+
+
+# -- shared release heights (multipoint receptors), GH-46 ---------------------
+
+
+def _multipoint_particles(
+    heights: list[float], per_point: int, zsfc: list[float] | None = None
+) -> pd.DataFrame:
+    """
+    Particles released from a few points, ``per_point`` at each height.
+
+    With ``zsfc`` the heights are above sea level, each point over its own
+    terrain, and pressure follows the isothermal atmosphere in MSL height.
+    """
+    xhgt = np.repeat(heights, per_point)
+    terrain = np.zeros_like(xhgt) if zsfc is None else np.repeat(zsfc, per_point)
+    zagl = xhgt - terrain
+    frame = pd.DataFrame(
+        {
+            "indx": np.arange(1, len(xhgt) + 1),
+            "time": -1.0,
+            "xhgt": xhgt,
+            "zagl": zagl,
+            "pres": P_SFC * np.exp(-xhgt / SCALE_HEIGHT),
+            "foot": 1.0,
+        }
+    )
+    if zsfc is not None:
+        frame["zsfc"] = terrain
+    return frame
+
+
+def _expected_level_pwf(heights: list[float], z_ground: float = 0.0) -> np.ndarray:
+    """Closed-form slab weight of each distinct release height."""
+    z = np.asarray(heights, dtype=float)
+    p_sfc = P_SFC * np.exp(-z_ground / SCALE_HEIGHT)
+    levels = P_SFC * np.exp(-z / SCALE_HEIGHT)
+    mids = (levels[:-1] + levels[1:]) / 2.0
+    lower = np.concatenate(([p_sfc], mids))
+    upper = np.concatenate((mids, [2 * levels[-1] - mids[-1]]))
+    return (lower - upper) / p_sfc
+
+
+def test_pwf_multipoint_shares_each_point_among_its_particles():
+    heights = [500.0, 1500.0, 2500.0]
+    p = _multipoint_particles(heights, per_point=5)
+    result = PressureWeighting().apply(p)
+
+    assert (result["pwf"] > 0).all()
+    per_point = result.groupby("xhgt")["pwf"]
+    # Every particle of a point carries the same weight ...
+    assert (per_point.nunique() == 1).all()
+    # ... and together they carry the point's slab.
+    assert per_point.sum().to_numpy() == pytest.approx(
+        _expected_level_pwf(heights), rel=1e-9
+    )
+
+
+def test_pwf_multipoint_matches_column_with_one_particle_per_point():
+    heights = [500.0, 1500.0, 2500.0]
+    many = PressureWeighting().apply(_multipoint_particles(heights, per_point=5))
+    one = PressureWeighting().apply(_multipoint_particles(heights, per_point=1))
+    assert many["pwf"].sum() == pytest.approx(one["pwf"].sum(), rel=1e-9)
+    # Footprint.calculate averages over particles, so the weighted footprint
+    # must not depend on how many particles each point released.
+    assert many["foot"].sum() / len(many) == pytest.approx(
+        one["foot"].sum() / len(one), rel=1e-9
+    )
+
+
+# -- release heights above sea level, GH-47 -----------------------------------
+
+
+def _msl_column_particles(n: int, station: float, z_top: float = 3000.0):
+    """A column above a station, with release heights above sea level."""
+    agl = _column_particles(n, z_top=z_top)
+    msl = agl.copy()
+    msl["xhgt"] = agl["xhgt"] + station
+    msl["zsfc"] = station
+    # Pressure follows MSL height; the station's surface pressure is lower.
+    for frame in (agl, msl):
+        frame["pres"] = P_SFC * np.exp(-(frame["zagl"] + station) / SCALE_HEIGHT)
+    return agl, msl
+
+
+def test_pwf_msl_column_matches_the_same_column_above_ground():
+    agl, msl = _msl_column_particles(10, station=1300.0)
+    xpres_agl, pwf_agl = particle_pwf(agl)
+    xpres_msl, pwf_msl = particle_pwf(msl, altitude_ref="msl")
+    assert xpres_msl.to_numpy() == pytest.approx(xpres_agl.to_numpy(), rel=1e-9)
+    assert pwf_msl.to_numpy() == pytest.approx(pwf_agl.to_numpy(), rel=1e-9)
+    # The fitted surface pressure is the station's, not sea level's.
+    assert xpres_msl.max() < P_SFC * np.exp(-1000.0 / SCALE_HEIGHT)
+
+
+def test_pwf_msl_column_evaluated_above_ground_would_be_wrong():
+    # The bug behind GH-47: evaluating an above-ground fit at MSL release
+    # heights puts every particle 1300 m too high.
+    _, msl = _msl_column_particles(10, station=1300.0)
+    _, wrong = particle_pwf(msl)  # altitude_ref left at "agl"
+    _, right = particle_pwf(msl, altitude_ref="msl")
+    assert wrong.sum() != pytest.approx(right.sum(), rel=0.05)
+
+
+def test_pwf_msl_slant_across_terrain_closes_at_ground_under_lowest_point():
+    heights = [1800.0, 2300.0, 2800.0]
+    terrain = [1300.0, 1600.0, 2000.0]
+    p = _multipoint_particles(heights, per_point=4, zsfc=terrain)
+    xpres, pwf = particle_pwf(p, altitude_ref="msl")
+
+    assert xpres.to_numpy() == pytest.approx(
+        P_SFC * np.exp(-p["xhgt"].to_numpy() / SCALE_HEIGHT), rel=1e-9
+    )
+    per_point = (
+        pd.Series(pwf.to_numpy(), index=p["xhgt"].to_numpy()).groupby(level=0).sum()
+    )
+    assert per_point.to_numpy() == pytest.approx(
+        _expected_level_pwf(heights, z_ground=terrain[0]), rel=1e-9
+    )
+
+
+def test_pwf_reads_altitude_ref_from_the_context():
+    from stilt.receptors import ColumnReceptor
+
+    _, msl = _msl_column_particles(10, station=1300.0)
+    receptor = ColumnReceptor(
+        "2023-07-15 18:00", -111.85, 40.77, 1300.0, 4300.0, altitude_ref="msl"
+    )
+    context = TransformContext(receptor=receptor)
+    _, expected = particle_pwf(msl, altitude_ref="msl")
+    result = PressureWeighting().apply(msl, context)
+    assert result["pwf"].to_numpy() == pytest.approx(expected.to_numpy(), rel=1e-9)
+
+
+def test_pwf_msl_requires_zsfc_variable():
+    _, msl = _msl_column_particles(5, station=1300.0)
+    with pytest.raises(ValueError, match="'zsfc'"):
+        particle_pwf(msl.drop(columns=["zsfc"]), altitude_ref="msl")
 
 
 def test_pwf_rejects_pressure_increasing_with_height():

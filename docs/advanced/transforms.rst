@@ -48,16 +48,22 @@ Built-in transforms
    The weights come from the particles themselves, as in X-STILT. PYSTILT
    fits a hypsometric curve, :math:`\ln p = b + a z`, to the particles'
    heights and pressures at their first output step. It evaluates the curve
-   at each release height to get the release pressure. Each particle then
-   stands for the slab of air centred on its release height, with the
-   surface closing the lowest slab. X-STILT gives each particle the layer
-   below it instead, which leaves a particle released at the surface
-   almost no weight.
+   at each release height to get the release pressure. Each release height
+   then stands for the slab of air centred on it, with the ground closing
+   the lowest slab. X-STILT gives each particle the layer below it instead,
+   which leaves a particle released at the surface almost no weight.
+
+   A multipoint receptor releases several particles from each point. They
+   share one release height, so the point's slab is split evenly among
+   them. The weighted footprint does not depend on how many particles each
+   point released.
 
    You do not need to supply anything. Pass ``surface_pressure`` (hPa) to
    use the retrieval's surface pressure in place of the fitted one. The
    transform needs ``pres`` and ``zagl`` in ``varsiwant``, and both are
-   there by default. It adds ``xpres`` (release pressure, hPa) and ``pwf``
+   there by default. A receptor with ``altitude_ref="msl"`` also needs
+   ``zsfc``, the terrain height, so the fit can be made against height
+   above sea level. It adds ``xpres`` (release pressure, hPa) and ``pwf``
    columns.
 
    The weights add up to the fraction of the atmosphere's mass the column

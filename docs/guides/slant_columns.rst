@@ -117,9 +117,12 @@ weight them before they become a footprint (see
      - kind: pressure_weighting
 
 ``pressure_weighting`` works everything out from the particles, so you give
-it no inputs. Its weights add up to the fraction of the atmosphere's mass
-that the receptor covers. The air above the receptor top is part of the
-background.
+it no inputs. Each point of the slant stands for its share of the air
+mass, split evenly among the particles released there. The weights add up
+to the fraction of the atmosphere's mass that the receptor covers. The air
+above the receptor top is part of the background. For an MSL receptor the
+transform needs ``zsfc`` in ``varsiwant``, as the release-height matching
+does.
 
 Each window needs its own averaging kernel, because an EM27/SUN kernel
 changes with the solar zenith angle. A ``.oof`` file does not have the

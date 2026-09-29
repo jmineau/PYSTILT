@@ -378,8 +378,14 @@ Feature status lives in the roadmap tables in [README.md](README.md) and
   `Trajectories.from_particles` relies on for `xhgt`.
 - **Pressure weighting is derived from the particles.**
   `PressureWeighting` fits `ln p = b + a·z` to the particles' first-step
-  `(zagl, pres)` and gives each particle the pressure slab centred on its
-  release height (`particle_pwf`). `AveragingKernel` holds only the kernel.
+  `(zagl, pres)` and gives each distinct release height the pressure slab
+  centred on it (`particle_pwf`), split evenly among the particles released
+  there (a multipoint receptor releases many per point). The fit is made in
+  the receptor's own datum: for `altitude_ref="msl"` it uses `zagl + zsfc`
+  (so `zsfc` must be in `varsiwant`) and the ground closing the bottom slab
+  is the terrain under the lowest point. `PressureWeighting.apply` reads
+  `altitude_ref` from the `TransformContext`; with no context it assumes
+  AGL. `AveragingKernel` holds only the kernel.
   `Footprint.calculate` divides by the particle count, so weights are scaled by
   `N`. Weights sum to the column's mass fraction (< 1) by design; the rest of
   the atmosphere is above the column top. This deliberately differs from
