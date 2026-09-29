@@ -68,8 +68,13 @@ class SimulationError(RuntimeError):
     """Base class for errors raised while running a simulation."""
 
 
-class ConfigValidationError(SimulationError):
-    """The model or run settings are invalid or contradict each other."""
+class ConfigValidationError(ValueError):
+    """
+    The model or run settings are invalid or contradict each other.
+
+    A ``ValueError``, not a :class:`SimulationError`: it is raised before
+    any simulation runs, so a worker never reports it as a failed run.
+    """
 
 
 class ConfigChangedError(ConfigValidationError):

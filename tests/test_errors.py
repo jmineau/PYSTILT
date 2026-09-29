@@ -3,6 +3,8 @@
 import pytest
 
 from stilt.errors import (
+    ConfigChangedError,
+    ConfigValidationError,
     EmptyTrajectoryError,
     FailureReason,
     HYSPLITFailureError,
@@ -80,6 +82,12 @@ def test_identify_failure_reason_unknown(tmp_path):
 
 def test_simulation_error_is_runtime_error():
     assert issubclass(SimulationError, RuntimeError)
+
+
+def test_config_errors_are_value_errors_not_simulation_errors():
+    for cls in (ConfigValidationError, ConfigChangedError):
+        assert issubclass(cls, ValueError)
+        assert not issubclass(cls, SimulationError)
 
 
 def test_all_subclasses_inherit_simulation_error():
