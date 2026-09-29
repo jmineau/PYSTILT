@@ -6,6 +6,29 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- **`HYSPLITFailureError` names the log**
+  ([#48](https://github.com/jmineau/PYSTILT/issues/48)). Breaking. It now
+  takes the HYSPLIT log path in place of an optional `sim_id`, and its
+  message says which failure was found and where the log is.
+
+### Removed
+
+Code with no callers or a second way to do the same thing
+([#48](https://github.com/jmineau/PYSTILT/issues/48)). Breaking where
+public.
+
+- `OutputCollection.missing()`. Use `simulations.incomplete()` or
+  `simulations.status()` to see what has not run.
+- The `n_workers` argument of `Executor.start`. Each executor takes
+  `n_workers` when it is built.
+- `LocalStore.path`, which returned the same path as `local_path`.
+- `FootprintParams.FIELDS`, `PostgresQueue.db_url`, and the
+  `SIMULATION_LOG_FILENAME` and `SIMULATION_MET_DIRNAME` constants of
+  `stilt.project`.
+- `Store` is no longer `runtime_checkable`.
+
 ## [0.1.0a21] - 2026-09-29
 
 ### Fixed
