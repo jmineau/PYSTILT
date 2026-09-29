@@ -926,7 +926,7 @@ def test_publish_derived_does_not_copy_the_parent_trajectory(point_receptor, tmp
 def test_publish_noop_when_store_root_contains_sim_directory(point_receptor, tmp_path):
     """When the store's location for the sim *is* its directory, nothing is copied."""
     sim = _sim(tmp_path, point_receptor, store=LocalStore(tmp_path))
-    assert sim.directory == LocalStore(tmp_path).path(sim.key_prefix)
+    assert sim.directory == LocalStore(tmp_path).local_path(sim.key_prefix)
     _write_all_outputs(sim)
     before = {
         p.name: p.stat().st_mtime_ns for p in sim.directory.iterdir() if p.is_file()

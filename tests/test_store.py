@@ -94,13 +94,16 @@ def test_local_store_file_round_trip(tmp_path):
 
     assert store.read_bytes("data/test.bin") == b"hello"
     assert store.exists("data/test.bin")
-    assert store.path("data/test.bin") == tmp_path / "output" / "data" / "test.bin"
-    assert store.local_path("data/test.bin") == store.path("data/test.bin")
+    assert (
+        store.local_path("data/test.bin") == tmp_path / "output" / "data" / "test.bin"
+    )
 
 
 def test_local_store_path_strips_leading_slash(tmp_path):
     store = LocalStore(tmp_path / "output")
-    assert store.path("/data/test.bin") == tmp_path / "output" / "data" / "test.bin"
+    assert (
+        store.local_path("/data/test.bin") == tmp_path / "output" / "data" / "test.bin"
+    )
 
 
 def test_publish_file_is_atomic_via_tmp_then_replace(tmp_path, monkeypatch):
@@ -150,7 +153,7 @@ def test_publish_file_noop_when_source_is_target(tmp_path):
     """Publishing a file onto its own key must not copy, truncate, or leave a tmp."""
     store = LocalStore(tmp_path / "output")
     store.write_bytes("data/out.bin", b"same")
-    target = store.path("data/out.bin")
+    target = store.local_path("data/out.bin")
     mtime = target.stat().st_mtime_ns
 
     store.publish_file(target, "data/out.bin")

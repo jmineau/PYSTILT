@@ -72,21 +72,21 @@ class LocalStore:
     def __repr__(self) -> str:
         return f"LocalStore({str(self.root)!r})"
 
-    def path(self, key: str) -> Path:
-        """Return the absolute local path for *key*."""
+    def local_path(self, key: str) -> Path:
+        """Return the absolute local path of *key*."""
         return self.root / key.strip("/")
 
     def exists(self, key: str) -> bool:
         """Return whether *key* exists."""
-        return self.path(key).exists()
+        return self.local_path(key).exists()
 
     def read_bytes(self, key: str) -> bytes:
         """Return the bytes stored under *key*."""
-        return self.path(key).read_bytes()
+        return self.local_path(key).read_bytes()
 
     def write_bytes(self, key: str, data: bytes) -> None:
         """Write *data* under *key*, creating parent directories."""
-        path = self.path(key)
+        path = self.local_path(key)
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(data)
 
@@ -95,7 +95,7 @@ class LocalStore:
         src = Path(local_path)
         if not src.exists():
             return
-        target = self.path(key)
+        target = self.local_path(key)
         target.parent.mkdir(parents=True, exist_ok=True)
         if src.resolve() == target.resolve():
             return
@@ -106,13 +106,9 @@ class LocalStore:
         finally:
             tmp.unlink(missing_ok=True)
 
-    def local_path(self, key: str) -> Path:
-        """Return the path of *key* (the same as :meth:`path`)."""
-        return self.path(key)
-
     def delete(self, key: str) -> None:
         """Remove the file for *key* if it exists."""
-        self.path(key).unlink(missing_ok=True)
+        self.local_path(key).unlink(missing_ok=True)
 
 
 class FsspecStore:
