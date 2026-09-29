@@ -57,12 +57,7 @@ def _grid_cell_starts(minimum: float, maximum: float, resolution: float) -> np.n
 def _cf_grid_mapping_attrs(projection: str) -> dict[str, object]:
     """Return CF-style grid-mapping attributes for a PROJ string."""
     attrs: dict[str, object] = {"proj4_params": projection}
-    try:
-        from pyproj import CRS
-    except ImportError:
-        if "+proj=longlat" in projection:
-            attrs["grid_mapping_name"] = "latitude_longitude"
-        return attrs
+    from pyproj import CRS
 
     crs = CRS.from_user_input(projection)
     attrs.update(crs.to_cf())

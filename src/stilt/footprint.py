@@ -344,12 +344,10 @@ def _project_particles_to_crs(
     Project particle positions and the grid bounds to the grid's CRS.
 
     Grid bounds are given in degrees and projected along with the
-    particles. Needs ``pyproj``.
+    particles.
     """
-    try:
-        from pyproj import Transformer
-    except ImportError as e:
-        raise ImportError("pyproj is required for non-longlat projections") from e
+    from pyproj import Transformer
+
     tr = Transformer.from_crs("EPSG:4326", projection, always_xy=True)
     p = p.copy()
     p["long"], p["lati"] = tr.transform(p["long"].values, p["lati"].values)

@@ -3491,6 +3491,8 @@ dependencies = [
     { name = "pyarrow" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
+    { name = "pyproj", version = "3.7.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "pyproj", version = "3.7.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "pyyaml" },
     { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "scipy", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
@@ -3515,19 +3517,11 @@ complete = [
     { name = "kubernetes" },
     { name = "matplotlib" },
     { name = "psycopg", extra = ["binary"] },
-    { name = "pyproj", version = "3.7.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "pyproj", version = "3.7.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "s3fs" },
 ]
 geometry = [
     { name = "geopandas" },
     { name = "h3" },
-    { name = "pyproj", version = "3.7.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "pyproj", version = "3.7.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-]
-projection = [
-    { name = "pyproj", version = "3.7.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "pyproj", version = "3.7.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
 ]
 visualization = [
     { name = "matplotlib" },
@@ -3573,11 +3567,9 @@ requires-dist = [
     { name = "pyarrow", specifier = ">=14.0" },
     { name = "pydantic", specifier = ">=2.0" },
     { name = "pydantic-settings", specifier = ">=2.0" },
-    { name = "pyproj", marker = "extra == 'geometry'", specifier = ">=3.5" },
-    { name = "pyproj", marker = "extra == 'projection'", specifier = ">=3.5" },
+    { name = "pyproj", specifier = ">=3.5" },
     { name = "pystilt", extras = ["cloud"], marker = "extra == 'complete'" },
     { name = "pystilt", extras = ["geometry"], marker = "extra == 'complete'" },
-    { name = "pystilt", extras = ["projection"], marker = "extra == 'complete'" },
     { name = "pystilt", extras = ["visualization"], marker = "extra == 'complete'" },
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "s3fs", marker = "extra == 'cloud'", specifier = ">=2024.2" },
@@ -3587,7 +3579,7 @@ requires-dist = [
     { name = "typing-extensions", specifier = ">=4.0" },
     { name = "xarray", specifier = ">=2023.6" },
 ]
-provides-extras = ["projection", "geometry", "visualization", "cloud", "complete"]
+provides-extras = ["geometry", "visualization", "cloud", "complete"]
 
 [package.metadata.requires-dev]
 dev = [

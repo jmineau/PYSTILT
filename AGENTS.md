@@ -261,7 +261,7 @@ redistribute. Synthetic samples should keep the real format's quirks.
   and run `pyright --venvpath <dir> src/stilt`.
   Fix types at the source rather than reaching for `typing.cast`.
 - Keep the `from __future__ import annotations` headers.
-- Runtime dependencies live in `[project]`; optional extras are `projection`, `geometry`,
+- Runtime dependencies live in `[project]`; optional extras are `geometry`,
   `visualization`, `cloud`, and `complete`. The `dev` dependency group pulls
   in `pystilt[complete]` plus the test, lint, type, and docs tooling.
 

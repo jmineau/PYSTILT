@@ -62,7 +62,7 @@ def is_longlat_crs(crs: str) -> bool:
         from pyproj import CRS
 
         return bool(CRS.from_user_input(crs).is_geographic)
-    except Exception:  # pragma: no cover - pyproj optional
+    except Exception:  # not a CRS pyproj can read
         return False
 
 
@@ -76,7 +76,7 @@ def same_crs(a: str, b: str) -> bool:
         from pyproj import CRS
 
         return CRS.from_user_input(a) == CRS.from_user_input(b)
-    except Exception:  # pragma: no cover - pyproj optional
+    except Exception:  # not a CRS pyproj can read
         return False
 
 

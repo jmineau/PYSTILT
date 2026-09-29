@@ -11,7 +11,7 @@ import pytest
 import xarray as xr
 
 from stilt.config import FootprintConfig, Grid
-from stilt.config.spatial import _cf_grid_mapping_attrs, _grid_cell_starts
+from stilt.config.spatial import _grid_cell_starts
 from stilt.errors import EmptyFootprintError
 from stilt.footprint import (
     Footprint,
@@ -106,26 +106,6 @@ def test_make_gauss_kernel_sigma_zero():
     k = _make_gauss_kernel((0.1, 0.1), sigma=0)
     assert k.shape == (1, 1)
     assert k[0, 0] == pytest.approx(1.0)
-
-
-def test_cf_grid_mapping_attrs_without_pyproj_uses_conservative_longlat_fallback(
-    monkeypatch,
-):
-    real_import = builtins.__import__
-
-    def fake_import(name, *args, **kwargs):
-        if name == "pyproj":
-            raise ImportError("pyproj unavailable")
-        return real_import(name, *args, **kwargs)
-
-    monkeypatch.setattr(builtins, "__import__", fake_import)
-
-    attrs = _cf_grid_mapping_attrs("+proj=longlat")
-
-    assert attrs == {
-        "proj4_params": "+proj=longlat",
-        "grid_mapping_name": "latitude_longitude",
-    }
 
 
 def test_aggregate_returns_dataframe():

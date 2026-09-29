@@ -31,6 +31,7 @@ dependencies = [
     "numpy>=1.24",
     "pandas>=2.0",
     "pyarrow>=14.0",
+    "pyproj>=3.5",
     "pydantic>=2.0",
     "pydantic-settings>=2.0",
     "pyyaml>=6.0",
@@ -42,13 +43,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-projection = [
-    "pyproj>=3.5",
-]
 geometry = [
     "geopandas>=1.0",
     "h3>=4.0",
-    "pyproj>=3.5",
 ]
 visualization = [
     "matplotlib>=3.7",
@@ -60,7 +57,6 @@ cloud = [
     "s3fs>=2024.2",
 ]
 complete = [
-    "pystilt[projection]",
     "pystilt[geometry]",
     "pystilt[visualization]",
     "pystilt[cloud]",

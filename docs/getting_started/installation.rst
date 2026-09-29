@@ -29,9 +29,6 @@ Extras add optional features. List them in the brackets, for example
      - Adds
    * - ``visualization``
      - Plotting (``.plot.map()`` on footprints, trajectories, and receptors).
-   * - ``projection``
-     - Footprint grids in projected coordinates (anything other than
-       latitude/longitude).
    * - ``geometry``
      - Adding footprints up over shapefiles, counties, or H3 hexagons.
    * - ``cloud``
