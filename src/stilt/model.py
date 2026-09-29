@@ -381,21 +381,14 @@ class Model:
             for n, m in record["mets"].items()
         }
 
-        def handle(receptor: Receptor, name: str) -> Simulation:
-            config = recorded[name]
-            parent = (
-                handle(receptor, config.derived_from)
-                if config.derived_from is not None
-                else None
-            )
-            return self._handle(SimID(receptor.id, name), config, parent, mets)
-
+        built: dict[SimID, Simulation] = {}
         deleted = []
         for receptor in self.receptors:
             for name in names:
-                handle(receptor, name).delete()
-                self._handles.pop(SimID(receptor.id, name), None)
-                deleted.append(SimID(receptor.id, name))
+                sid = SimID(receptor.id, name)
+                self._build(sid, recorded, mets, built).delete()
+                self._handles.pop(sid, None)
+                deleted.append(sid)
         for name in names:
             del record["variants"][name]
         self.project.save_record(record)
@@ -416,33 +409,36 @@ class Model:
         key : str, SimID or tuple of (str, str)
             ``"<receptor_id>/<variant>"`` or a ``(receptor_id, variant)`` pair.
         """
-        sid = SimID.parse(key)
-        if sid not in self._handles:
-            variant = self.variants[sid.variant]
-            parent = (
-                self.simulation((sid.receptor, variant.derived_from))
-                if variant.derived_from is not None
-                else None
-            )
-            self._handles[sid] = self._handle(sid, variant, parent, self.mets)
-        return self._handles[sid]
+        return self._build(SimID.parse(key), self.variants, self.mets, self._handles)
 
-    def _handle(
+    def _build(
         self,
         sid: SimID,
-        variant: VariantConfig,
-        parent: Simulation | None,
+        variants: dict[str, VariantConfig],
         mets: dict[str, MetStream],
+        built: dict[SimID, Simulation],
     ) -> Simulation:
-        """Build the simulation *sid* with the given variant settings and met streams."""
-        return Simulation(
-            self.receptors[sid.receptor],
-            variant,
-            met=None if parent is not None else mets[variant.met],
-            parent=parent,
-            directory=self.compute_root / sid,
-            store=self.project.store,
-        )
+        """
+        Return the simulation *sid*, building it and its parent into *built*.
+
+        A ``from:`` variant's parent is built first and shared through
+        *built*, so both use one object for the trajectories.
+        """
+        if sid not in built:
+            variant = variants[sid.variant]
+            parent = None
+            if variant.derived_from is not None:
+                parent_id = SimID(sid.receptor, variant.derived_from)
+                parent = self._build(parent_id, variants, mets, built)
+            built[sid] = Simulation(
+                self.receptors[sid.receptor],
+                variant,
+                met=None if parent is not None else mets[variant.met],
+                parent=parent,
+                directory=self.compute_root / sid,
+                store=self.project.store,
+            )
+        return built[sid]
 
     @property
     def simulations(self) -> SimulationCollection:
