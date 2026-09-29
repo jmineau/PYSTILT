@@ -36,13 +36,7 @@ def _build_arlmet_source(name: str, kwargs: dict[str, Any]) -> ArlmetSource:
     Downloading needs the ``cloud`` extra, which raises an ImportError on
     the first download when it is missing.
     """
-    try:
-        import arlmet.sources as _src
-    except ImportError as exc:  # pragma: no cover
-        raise ImportError(
-            "arlmet is required for source-mode meteorology. "
-            "Install with: pip install pystilt[cloud]"
-        ) from exc
+    import arlmet.sources as _src
 
     # Build registry dynamically from arlmet's public surface so new sources
     # are automatically available without changes here.
