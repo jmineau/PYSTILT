@@ -58,6 +58,12 @@ def test_resolve_directory_relative_name_resolves(tmp_path, monkeypatch):
     assert p.name == "subdir"
 
 
+def test_resolve_directory_nested_relative_path_resolves(tmp_path, monkeypatch):
+    """runs/a used to stay relative, which broke workers started elsewhere (#58)."""
+    monkeypatch.chdir(tmp_path)
+    assert resolve_directory("runs/a") == tmp_path.resolve() / "runs" / "a"
+
+
 def test_resolve_directory_string_input(tmp_path):
     p = resolve_directory(str(tmp_path))
     assert p == tmp_path

@@ -44,17 +44,14 @@ def resolve_directory(
     directory: str | Path | None = None, *, prefix: str = "pystilt_"
 ) -> Path:
     """
-    Return *directory* as a path, or a new temporary directory when omitted.
+    Return *directory* as an absolute path, or a new temporary directory when omitted.
 
-    A bare directory name is made absolute. Other paths are returned as
-    given.
+    A relative path is taken from the current directory, so a worker started
+    elsewhere still finds the same place.
     """
     if directory is None:
         return Path(tempfile.mkdtemp(prefix=prefix))
-    directory = Path(directory)
-    if directory.parent == Path("."):
-        directory = directory.resolve()
-    return directory
+    return Path(directory).resolve()
 
 
 def project_slug(root: str) -> str:
