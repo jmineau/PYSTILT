@@ -25,7 +25,6 @@ from stilt.trajectory import Trajectories
 from stilt.transforms import (
     ParticleTransform,
     TransformContext,
-    apply_transforms,
 )
 
 if TYPE_CHECKING:
@@ -546,8 +545,9 @@ class Simulation:
             Also write the footprint to :attr:`footprint_path`, and the
             trajectories when HYSPLIT had to run.
         transforms : sequence of ParticleTransform, optional
-            Extra particle transforms, applied after ``config.transforms``.
-            Any object with an ``apply(particles, context)`` method works.
+            Extra particle transforms, applied after ``config.transforms``
+            and recorded with them. Any object with an
+            ``apply(particles, context)`` method works.
         context : TransformContext, optional
             Passed to every transform. Defaults to
             :meth:`transform_context`.
@@ -576,15 +576,13 @@ class Simulation:
             traj = self.trajectories
         assert traj is not None  # run_trajectories raises rather than leaving None
 
-        particles = traj.data
-        all_transforms = [*config.transforms, *(transforms or [])]
-        if all_transforms:
-            particles = apply_transforms(
-                particles, all_transforms, context or self.transform_context()
+        if transforms:
+            config = config.model_copy(
+                update={"transforms": [*config.transforms, *transforms]}
             )
         try:
-            foot = Footprint.calculate(
-                particles, receptor=traj.receptor, config=config, name=self.variant
+            foot = traj.footprint(
+                config, name=self.variant, context=context or self.transform_context()
             )
         except EmptyFootprintError as error:
             self._footprint = None

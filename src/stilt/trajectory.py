@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 if TYPE_CHECKING:
     from stilt.config import FootprintConfig
     from stilt.footprint import Footprint
+    from stilt.transforms import TransformContext
     from stilt.visualization import TrajectoriesPlotAccessor
 
 
@@ -357,21 +358,32 @@ class Trajectories:
             params=params,
         )
 
-    def footprint(self, config: "FootprintConfig", name: str = "") -> "Footprint":
+    def footprint(
+        self,
+        config: "FootprintConfig",
+        name: str = "",
+        context: "TransformContext | None" = None,
+    ) -> "Footprint":
         """
         Calculate a footprint from these particles.
 
-        Use it for a footprint on another grid or with other smoothing,
-        instead of regridding a saved footprint. Particle transforms are not
-        applied. Same as :meth:`stilt.Footprint.calculate` with this run's
-        receptor.
+        This is how every footprint is made. ``config.transforms`` are
+        applied to the particles first, and the footprint records them. Use
+        it for a footprint on another grid, with other smoothing, or with
+        other transforms, instead of regridding a saved footprint. Same as
+        :meth:`stilt.Footprint.calculate` with this run's receptor.
 
         Parameters
         ----------
         config : FootprintConfig
-            Grid and smoothing settings.
+            Grid, smoothing, and particle transforms.
         name : str, optional
             Name of the footprint.
+        context : TransformContext, optional
+            Passed to every transform. :meth:`stilt.Simulation.transform_context`
+            gives one with the project store, which a transform needs to find
+            a file named relative to the project, such as an averaging-kernel
+            table. Defaults to one with the receptor and ``name`` only.
 
         Returns
         -------
@@ -384,7 +396,9 @@ class Trajectories:
         """
         from stilt.footprint import Footprint
 
-        return Footprint.calculate(self.data, self.receptor, config, name=name)
+        return Footprint.calculate(
+            self.data, self.receptor, config, name=name, context=context
+        )
 
     def to_parquet(self, path: str | Path) -> Path:
         """

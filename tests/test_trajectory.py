@@ -666,12 +666,22 @@ def test_trajectories_footprint_regenerates_on_new_grid(tmp_path):
     config = FootprintConfig(
         grid=Grid(xmin=-114.0, xmax=-113.0, ymin=39.0, ymax=40.0, xres=0.1, yres=0.1)
     )
+    from stilt.transforms import FirstOrderLifetime
+
     fp = traj.footprint(config, name="coarse")
     assert isinstance(fp, Footprint)
     assert fp.name == "coarse"
     assert fp.receptor == receptor
     assert fp.config.grid == config.grid
     assert float(fp.data.sum()) > 0
+
+    decayed = traj.footprint(
+        config.model_copy(
+            update={"transforms": [FirstOrderLifetime(lifetime_hours=0.5)]}
+        )
+    )
+    assert float(decayed.data.sum()) < float(fp.data.sum())
+    assert decayed.config.transforms == [FirstOrderLifetime(lifetime_hours=0.5)]
 
 
 def test_from_parquet_skips_stored_params_this_version_does_not_have(

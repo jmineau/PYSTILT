@@ -29,7 +29,13 @@ from stilt.geometry import (
     overlap_weights,
 )
 from stilt.receptors import Receptor
-from stilt.transforms import dump_transform, load_transform
+from stilt.transforms import (
+    TransformContext,
+    apply_transforms,
+    dump_transform,
+    load_transform,
+    transform_kind,
+)
 
 if TYPE_CHECKING:
     from stilt.visualization import FootprintPlotAccessor
@@ -572,6 +578,14 @@ def _accumulate_smoothed_footprint(
     return foot_arr
 
 
+def _record_transform(transform: Any) -> dict[str, Any]:
+    """Return a transform as recorded in a footprint file, its ``kind`` alone if it has no settings to write."""
+    try:
+        return dump_transform(transform)
+    except TypeError:
+        return {"kind": transform_kind(transform)}
+
+
 def _read_transform(spec: dict[str, Any], path: Path) -> Any:
     """Return a recorded transform, or its mapping when its class cannot be imported."""
     try:
@@ -745,11 +759,14 @@ class Footprint:
         receptor: Receptor,
         config: FootprintConfig,
         name: str = "",
+        context: TransformContext | None = None,
     ) -> Self:
         """
         Calculate a footprint from particles.
 
-        Follows STILT-R's ``calc_footprint``. Near the receptor, particle
+        The particle transforms in ``config.transforms`` are applied first,
+        in order, so the footprint records exactly the transforms it was
+        made with. The rest follows STILT-R's ``calc_footprint``. Near the receptor, particle
         tracks are interpolated to finer times when particles cross more
         than a grid cell per step. Each particle's ``foot`` is added to the
         cell it is in, and each time step is smoothed with a Gaussian kernel
@@ -766,9 +783,12 @@ class Footprint:
         receptor : Receptor
             Receptor the particles were released from.
         config : FootprintConfig
-            Grid and smoothing settings.
+            Grid, smoothing, and particle transforms.
         name : str, optional
             Name of the footprint, usually the variant name.
+        context : TransformContext, optional
+            Passed to every transform. Defaults to one holding ``receptor``
+            and ``name``, with no project store.
 
         Returns
         -------
@@ -777,6 +797,9 @@ class Footprint:
 
         Raises
         ------
+        ImportError
+            If a transform in ``config`` is a settings mapping that could not
+            be imported (as read back by :meth:`from_netcdf`).
         EmptyFootprintError
             If no particle is over the grid. ``reason`` is ``"no_particles"``
             when the table is empty and ``"outside_domain"`` otherwise.
@@ -784,6 +807,16 @@ class Footprint:
         grid = config.grid
         if grid is None:
             raise ValueError("A footprint needs settings with a grid.")
+        if config.transforms:
+            unresolved = [t["kind"] for t in config.transforms if isinstance(t, dict)]
+            if unresolved:
+                raise ImportError(
+                    f"Transforms {unresolved} could not be imported, so they "
+                    "cannot be applied."
+                )
+            if context is None:
+                context = TransformContext(receptor=receptor, variant=name)
+            particles = apply_transforms(particles, config.transforms, context)
         projection = grid.projection
         xmin, xmax, xres = grid.xmin, grid.xmax, grid.xres
         ymin, ymax, yres = grid.ymin, grid.ymax, grid.yres
@@ -948,7 +981,7 @@ class Footprint:
                 "smooth_factor": self.config.smooth_factor,
                 "time_integrate": int(self.config.time_integrate),
                 "transforms": json.dumps(
-                    [dump_transform(t) for t in self.config.transforms]
+                    [_record_transform(t) for t in self.config.transforms]
                 ),
                 "time_created": dt.datetime.now(dt.timezone.utc)
                 .replace(tzinfo=None)

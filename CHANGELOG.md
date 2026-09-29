@@ -17,6 +17,15 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **Every footprint applies and records the same transforms**
+  ([#54](https://github.com/jmineau/PYSTILT/issues/54)). `Footprint.calculate`
+  and `Trajectories.footprint` now apply `config.transforms` before
+  gridding; before, only `Simulation.generate_footprint` applied them, yet
+  every written footprint listed them. `generate_footprint` makes its
+  footprint through `Trajectories.footprint` and records its extra
+  `transforms` along with the variant's. Both take a `context` for the
+  transforms.
+
 - **Local runs happen in the calling thread**
   ([#48](https://github.com/jmineau/PYSTILT/issues/48)). `LocalExecutor`
   ran receptors on a background thread that `Model.run` then waited on.

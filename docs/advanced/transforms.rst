@@ -138,10 +138,12 @@ The same classes work directly on a simulation:
        ],
    )
 
-These run after the transforms in the variant's own footprint config. They
-are not recorded in a written footprint's netCDF file. To try other
-footprint settings without changing the project, pass
-``config=sim.footprint_config.model_copy(update={...})``.
+These run after the transforms in the variant's own footprint config, and
+the footprint records all of them. To try other footprint settings without
+changing the project, pass
+``config=sim.footprint_config.model_copy(update={...})``. Without a
+simulation, ``traj.footprint(config)`` applies ``config.transforms`` the
+same way.
 
 To see what a transform did, apply it to the particle table yourself:
 

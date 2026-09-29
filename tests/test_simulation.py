@@ -22,7 +22,7 @@ from stilt.meteorology import MetStream
 from stilt.simulation import SimID, Simulation
 from stilt.store import LocalStore
 from stilt.trajectory import Trajectories
-from stilt.transforms import FirstOrderLifetime
+from stilt.transforms import FirstOrderLifetime, transform_kind
 
 GRID = Grid(xmin=-114.0, xmax=-111.0, ymin=39.0, ymax=42.0, xres=0.1, yres=0.1)
 FOOT = FootprintConfig(grid=GRID, time_integrate=True, smooth_factor=0.0)
@@ -582,6 +582,21 @@ def test_generate_footprint_applies_extra_python_transforms(point_receptor, tmp_
     assert halve.context.variant == "hrrr-ak"
 
 
+def test_generate_footprint_records_the_transforms_it_applied(point_receptor, tmp_path):
+    """Extra transforms are applied and recorded with the variant's own (#54)."""
+    sim = _sim_with_particles(tmp_path, point_receptor)
+    halve = HalvingTransform()
+
+    foot = sim.generate_footprint(transforms=[halve], write=True)
+
+    assert foot.config.transforms == [*sim.footprint_config.transforms, halve]
+    stored = Footprint.from_netcdf(sim.footprint_path)
+    assert [transform_kind(t) for t in stored.config.transforms] == [
+        transform_kind(t) for t in foot.config.transforms
+    ]
+    assert transform_kind(stored.config.transforms[-1]).endswith("HalvingTransform")
+
+
 def test_generate_footprint_applies_dotted_path_config_transforms(
     point_receptor, tmp_path
 ):
@@ -791,8 +806,11 @@ def test_empty_marker_without_reason_reads_unknown(point_receptor, tmp_path):
 
 
 def _stub_trajectories(sim, receptor):
-    sim._trajectories = SimpleNamespace(
-        data=pd.DataFrame({"indx": [1], "foot": [1.0]}), receptor=receptor
+    sim._trajectories = Trajectories(
+        receptor=receptor,
+        params=STILTParams(),
+        met_files=[],
+        data=pd.DataFrame({"indx": [1], "foot": [1.0]}),
     )
 
 
