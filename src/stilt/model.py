@@ -27,7 +27,6 @@ from stilt.execution import (
     LocalHandle,
     SlurmExecutor,
     get_executor,
-    sigterm_as_interrupt,
 )
 from stilt.meteorology import MetStream
 from stilt.project import Project
@@ -544,13 +543,7 @@ class Model:
             skip_existing=skip_existing,
         )
         if wait:
-            logger.info("run: waiting for workers to finish...")
-            try:
-                with sigterm_as_interrupt():
-                    handle.wait()
-            except KeyboardInterrupt:
-                logger.warning("run interrupted")
-                raise
+            handle.wait()
 
         return handle
 

@@ -231,11 +231,11 @@ def test_run_exits_when_no_config(tmp_path):
 
 
 def test_run_invokes_model_run(tmp_path, monkeypatch):
-    """run always calls model.run(wait=False) and waits inline for local handles."""
+    """run builds the executor once and passes it to model.run."""
     _write_minimal_config(tmp_path)
 
     fake_handle = MagicMock()
-    fake_handle.detached = False  # local execution -> inline wait
+    fake_handle.detached = False  # local execution has finished
     calls: list = []
 
     def fake_run(self, executor=None, skip_existing=None, wait=True):
@@ -248,9 +248,14 @@ def test_run_invokes_model_run(tmp_path, monkeypatch):
 
     result = runner.invoke(app, ["run", str(tmp_path)])
     assert result.exit_code == 0
-    assert calls == [{"executor": None, "skip_existing": True, "wait": False}]
-    # Local handle — wait() must always be called so no orphan workers.
-    fake_handle.wait.assert_called_once()
+    from stilt.execution import LocalExecutor
+
+    [call] = calls
+    assert isinstance(call["executor"], LocalExecutor)
+    assert call["skip_existing"] is True
+    assert call["wait"] is False
+    # A local run is over when model.run returns, so there is nothing to wait for.
+    fake_handle.wait.assert_not_called()
 
 
 def test_run_prints_startup_and_wait_messages(tmp_path, monkeypatch):
@@ -258,7 +263,7 @@ def test_run_prints_startup_and_wait_messages(tmp_path, monkeypatch):
     _write_minimal_config(tmp_path)
 
     fake_handle = MagicMock()
-    fake_handle.detached = False  # local execution -> inline wait
+    fake_handle.detached = False  # local execution has finished
 
     monkeypatch.setattr(
         "stilt.cli.Model.run",
@@ -274,8 +279,7 @@ def test_run_prints_startup_and_wait_messages(tmp_path, monkeypatch):
     ) in result.output
     assert "Compute root:" not in result.output  # default compute root
     assert "Receptors loaded: 1" in result.output
-    assert "Execution mode: local-blocking" in result.output
-    assert "Workers launched" in result.output
+    assert "Execution mode: local, one line per receptor" in result.output
     assert f"Project: {tmp_path.resolve()}  total=" in result.output
 
 

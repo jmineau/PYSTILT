@@ -27,9 +27,9 @@ from typing import Any
 import typer
 
 from stilt.execution import (
+    Executor,
     get_executor,
     pull_receptors,
-    resolve_backend,
     run_receptors,
 )
 from stilt.model import Model
@@ -213,26 +213,28 @@ def run(
     logging.basicConfig(level=logging.WARNING, format="%(message)s")
     logging.getLogger("stilt.execution.worker").setLevel(logging.INFO)
 
-    executor = None
     execution = dict(model.config.execution or {})
-    if backend is not None or n_workers is not None:
-        if backend is not None:
-            execution["backend"] = backend
-        if n_workers is not None:
-            execution["n_workers"] = n_workers
-        executor = get_executor(execution)
+    if backend is not None:
+        execution["backend"] = backend
+    if n_workers is not None:
+        execution["n_workers"] = n_workers
+    executor = get_executor(execution)
 
-    _print_run_start(model, execution=execution, skip_existing=not no_skip, wait=wait)
+    _print_run_start(
+        model,
+        executor,
+        backend=execution.get("backend", "local"),
+        skip_existing=not no_skip,
+        wait=wait,
+    )
+    # A local run has finished when this returns; a Slurm job has been submitted.
     handle = model.run(executor=executor, skip_existing=not no_skip, wait=False)
-
     if handle.detached:
         typer.echo(f"Submitted job: {handle.job_id}")
         if not wait:
             return
         typer.echo("Waiting for job completion (squeue shows its tasks)...")
-    else:
-        typer.echo("Workers launched; one line per receptor as it finishes.")
-    handle.wait()
+        handle.wait()
     _print_status(model)
 
 
@@ -381,14 +383,13 @@ def _print_status(model: Model) -> None:
 
 def _print_run_start(
     model: Model,
+    executor: Executor,
     *,
-    execution: dict[str, Any],
+    backend: str,
     skip_existing: bool,
     wait: bool,
 ) -> None:
     """Print the settings ``stilt run`` is about to use."""
-    backend = resolve_backend(execution)
-    executor = get_executor(execution)
     mode = "existing" if skip_existing else "no-skip"
     typer.echo(
         "Starting run: "
@@ -404,6 +405,6 @@ def _print_run_start(
     typer.echo(f"Variants: {', '.join(model.variants)}")
     typer.echo(
         "Execution mode: " + ("submit-and-wait" if wait else "submit-and-return")
-        if backend == "slurm"
-        else "Execution mode: local-blocking"
+        if backend != "local"
+        else "Execution mode: local, one line per receptor as it finishes"
     )
