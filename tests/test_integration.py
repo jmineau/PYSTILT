@@ -96,6 +96,41 @@ def test_footprint(tmp_path, wbb_receptor, wbb_config):
     assert sim.footprint is not None
 
 
+@integration
+def test_empty_footprint(tmp_path, wbb_receptor, wbb_config):
+    """A grid the particles never reach leaves a marker with the reason, no NetCDF."""
+    far_grid = {
+        "xmin": -100.0,
+        "xmax": -99.0,
+        "ymin": 30.0,
+        "ymax": 31.0,
+        "xres": 0.1,
+        "yres": 0.1,
+    }
+    model = Model(
+        project=tmp_path / "empty",
+        config=_with(wbb_config, grid=far_grid),
+        receptors=[wbb_receptor],
+    )
+    model.run()
+
+    sim = model.simulations[_sim_id(wbb_receptor)]
+    assert sim.is_complete()
+    assert sim.has_trajectory
+    assert not sim.footprint_path.exists()
+    assert sim.empty_footprint_path.read_text().strip() == "outside_domain"
+    assert sim.empty_reason == "outside_domain"
+    assert sim.footprint is None
+    assert model.simulations.footprint.load() == {}
+    status = model.simulations.status()
+    assert bool(status["empty"].iloc[0]) and bool(status["complete"].iloc[0])
+
+    # A rerun has nothing to do and does not touch the marker.
+    before = sim.empty_footprint_path.stat().st_mtime_ns
+    model.run()
+    assert sim.empty_footprint_path.stat().st_mtime_ns == before
+
+
 # ---------------------------------------------------------------------------
 # Failure path - missing met files
 # ---------------------------------------------------------------------------

@@ -231,7 +231,11 @@ CI (`.github/workflows/`): `tests.yml`, `quality.yml`, `docs.yml`, and
 Plain `pytest` runs the unit tests. Two opt-in markers:
 
 - `-m integration`: end-to-end runs with real met files and HYSPLIT. Slow.
-  Met files are downloaded on demand into the ignored `tests/met_cache/`.
+  The `met_dir` fixture needs `STILT_TEST_MET_DIR` pointing at a directory
+  of HRRR ARL files, or `STILT_TEST_FETCH_MET=1` to download the seven 6 h
+  blocks it needs into the ignored `tests/met_cache/`. Once downloaded, set
+  `STILT_TEST_MET_DIR=tests/met_cache`; without either variable every
+  integration test is skipped.
 - `-m fidelity`: live comparison against STILT-R. Slow; needs `STILT_R_DIR`
   pointing at a STILT-R checkout and `Rscript` on `PATH`.
 
