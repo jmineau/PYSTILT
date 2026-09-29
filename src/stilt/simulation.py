@@ -541,7 +541,7 @@ class Simulation:
         config : FootprintConfig, optional
             Footprint settings. Defaults to the variant's own. Pass other
             settings to try them without a new variant, for example
-            ``sim.footprint_config.replace(smooth_factor=0.5)``.
+            ``sim.footprint_config.model_copy(update={"smooth_factor": 0.5})``.
         write : bool, default False
             Also write the footprint to :attr:`footprint_path`, and the
             trajectories when HYSPLIT had to run.

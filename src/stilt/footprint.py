@@ -589,7 +589,8 @@ class Footprint:
     receptor : Receptor
         Receptor the footprint belongs to.
     config : FootprintConfig
-        Grid and smoothing settings it was calculated with.
+        Grid and smoothing settings it was calculated with. ``grid`` must
+        be set.
     data : xarray.DataArray
         Values with dimensions ``(time, lat, lon)``, or ``(time, y, x)`` on
         a projected grid. Coordinates are cell centres, and ``time`` is the
@@ -612,8 +613,12 @@ class Footprint:
         data: xr.DataArray,
         name: str = "",
     ):
+        if config.grid is None:
+            raise ValueError("A footprint needs settings with a grid.")
         self.receptor = receptor
         self.config = config
+        #: Grid the footprint is on (``config.grid``).
+        self.grid: Grid = config.grid
         self.data = data
         self.name = name
         self._plot: FootprintPlotAccessor | None = None
@@ -626,11 +631,6 @@ class Footprint:
 
             self._plot = FootprintPlotAccessor(self)
         return self._plot
-
-    @property
-    def grid(self) -> Grid:
-        """Grid the footprint is on (``config.grid``)."""
-        return self.config.grid
 
     @property
     def time_range(self) -> tuple[dt.datetime, dt.datetime]:
@@ -764,6 +764,8 @@ class Footprint:
             when the table is empty and ``"outside_domain"`` otherwise.
         """
         grid = config.grid
+        if grid is None:
+            raise ValueError("A footprint needs settings with a grid.")
         projection = grid.projection
         xmin, xmax, xres = grid.xmin, grid.xmax, grid.xres
         ymin, ymax, yres = grid.ymin, grid.ymax, grid.yres
@@ -904,7 +906,7 @@ class Footprint:
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
 
-        grid = self.config.grid
+        grid = self.grid
 
         ds = xr.Dataset({"foot": self.data})
         if "time" in ds.coords:
@@ -1042,7 +1044,7 @@ class Footprint:
         """
         px = np.asarray(self.data[x_dim].values, dtype=float)
         py = np.asarray(self.data[y_dim].values, dtype=float)
-        native = self.config.grid
+        native = self.grid
 
         if isinstance(target, Grid):
             cell_x, cell_y = target.cells
@@ -1115,7 +1117,7 @@ class Footprint:
             ymax=float(axis_y[-1] + res_y / 2),
             xres=res_x,
             yres=res_y,
-            projection=self.config.grid.projection,
+            projection=self.grid.projection,
         )
 
     def aggregate(
@@ -1230,8 +1232,8 @@ class Footprint:
 
         px = np.asarray(self.data[x_dim].values, dtype=float)
         py = np.asarray(self.data[y_dim].values, dtype=float)
-        xres, yres = self.config.grid.xres, self.config.grid.yres
-        crs = self.config.grid.projection
+        xres, yres = self.grid.xres, self.grid.yres
+        crs = self.grid.projection
         check_resolution(target, xres, yres, crs)
         weights = overlap_weights(target, px, py, xres, yres, crs)
 

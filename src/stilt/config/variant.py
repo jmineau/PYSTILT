@@ -16,7 +16,7 @@ from typing import Any
 from pydantic import ConfigDict, Field, model_validator
 from typing_extensions import Self
 
-from .footprint import FootprintParams
+from .footprint import FootprintConfig
 from .params import STILTParams
 
 #: Pattern for variant and met names, which become directory names.
@@ -26,7 +26,7 @@ VARIANT_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 UNRECORDED_FIELDS = frozenset({"timeout", "rm_dat", "exe_dir"})
 
 
-class VariantConfig(STILTParams, FootprintParams):
+class VariantConfig(STILTParams, FootprintConfig):
     """
     The full settings of one variant: its met, transport, and footprint.
 
@@ -267,7 +267,7 @@ def _check_derived(
             f"Variant {name!r} derives from realization group {parent!r}; "
             "derive from a single run"
         )
-    footprint_fields = set(FootprintParams.model_fields)
+    footprint_fields = set(FootprintConfig.model_fields)
     extra = set(spec) - footprint_fields
     if extra:
         raise ValueError(

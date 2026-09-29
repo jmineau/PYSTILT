@@ -561,7 +561,7 @@ def test_generate_footprint_accepts_ad_hoc_settings(point_receptor, tmp_path):
     sim = _sim_with_particles(tmp_path, point_receptor)
     base = sim.generate_footprint()
     transformed = sim.generate_footprint(
-        FOOT.replace(transforms=[FirstOrderLifetime(lifetime_hours=1.0)])
+        FOOT.model_copy(update={"transforms": [FirstOrderLifetime(lifetime_hours=1.0)]})
     )
     assert float(transformed.data.sum()) < float(base.data.sum())
     assert not sim.footprint_path.exists()  # nothing written without write=True
@@ -657,7 +657,9 @@ def test_generate_footprint_uses_the_receptor_kernel_from_a_project_table(
         levels=[0.0, 3000.0],
         values=[[1.0, 1.0], [0.25, 0.25]],
     ).to_parquet(tmp_path / "kernels.parquet")
-    config = FOOT.replace(transforms=[AveragingKernel(table="kernels.parquet")])
+    config = FOOT.model_copy(
+        update={"transforms": [AveragingKernel(table="kernels.parquet")]}
+    )
 
     sums = {}
     for receptor in (column_receptor, other):

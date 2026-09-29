@@ -8,6 +8,13 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **One footprint settings class**
+  ([#48](https://github.com/jmineau/PYSTILT/issues/48)). Breaking.
+  `FootprintParams` is merged into `FootprintConfig`, whose `grid` is now
+  optional; `ModelConfig` and `VariantConfig` inherit it. `Footprint`
+  raises `ValueError` when given settings without a grid.
+  `FootprintConfig.replace(...)` is gone; use
+  `config.model_copy(update={...})`.
 - **`HYSPLITFailureError` names the log**
   ([#48](https://github.com/jmineau/PYSTILT/issues/48)). Breaking. It now
   takes the HYSPLIT log path in place of an optional `sim_id`, and its

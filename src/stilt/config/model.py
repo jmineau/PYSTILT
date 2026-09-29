@@ -9,7 +9,7 @@ import yaml
 from pydantic import ConfigDict, Field, model_validator
 from typing_extensions import Self
 
-from .footprint import FootprintParams
+from .footprint import FootprintConfig
 from .meteorology import MetConfig
 from .params import STILTParams
 from .variant import VARIANT_NAME_RE, VariantConfig, expand_variants
@@ -18,7 +18,7 @@ from .variant import VARIANT_NAME_RE, VariantConfig, expand_variants
 _PROJECT_FIELDS = frozenset({"mets", "variants", "execution"})
 
 
-class ModelConfig(STILTParams, FootprintParams):
+class ModelConfig(STILTParams, FootprintConfig):
     """
     A project's configuration, as read from ``config.yaml``.
 

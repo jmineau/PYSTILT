@@ -1,6 +1,6 @@
 """Configuration models for PYSTILT projects."""
 
-from .footprint import FootprintConfig, FootprintParams
+from .footprint import FootprintConfig
 from .geometry import (
     FileGeometrySpec,
     GeometrySpec,
@@ -25,7 +25,6 @@ __all__ = [
     "ErrorParams",
     "FileGeometrySpec",
     "FootprintConfig",
-    "FootprintParams",
     "GeometrySpec",
     "H3GeometrySpec",
     "Grid",

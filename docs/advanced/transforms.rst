@@ -141,7 +141,7 @@ The same classes work directly on a simulation:
 These run after the transforms in the variant's own footprint config. They
 are not recorded in a written footprint's netCDF file. To try other
 footprint settings without changing the project, pass
-``config=sim.footprint_config.replace(...)``.
+``config=sim.footprint_config.model_copy(update={...})``.
 
 To see what a transform did, apply it to the particle table yourself:
 

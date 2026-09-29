@@ -262,7 +262,7 @@ finer grid:
 
    hexes = stilt.Mesh.from_h3(8, bounds=state)
    grid = stilt.Grid.from_geometry(hexes, cells_per_target=4)
-   fine = sim.generate_footprint(sim.footprint_config.replace(grid=grid))
+   fine = sim.generate_footprint(sim.footprint_config.model_copy(update={"grid": grid}))
    by_hex = fine.aggregate(hexes, time_bins=bins)
 
 ``Grid.from_geometry`` picks a grid that covers the areas with at least four

@@ -143,7 +143,7 @@ tend to break them.
 ### Configuration
 
 - `ModelConfig` is the root: flat transport (`STILTParams`) and footprint
-  (`FootprintParams`) defaults, `mets`, and `variants` (overrides of the
+  (`FootprintConfig`) defaults, `mets`, and `variants` (overrides of the
   defaults). `ModelConfig.resolve_variants()` turns them into one
   `VariantConfig` per simulation name, expanding `realizations: N` into
   `<name>-0..N-1` with `seed + k`. A `from:` variant may override only

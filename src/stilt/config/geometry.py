@@ -107,7 +107,7 @@ GeometrySpec = Annotated[
     FileGeometrySpec | H3GeometrySpec | WindowsGeometrySpec,
     Field(discriminator="kind"),
 ]
-"""Any geometry spec accepted by ``FootprintParams.geometry``."""
+"""Any geometry spec accepted by ``FootprintConfig.geometry``."""
 
 
 __all__ = [

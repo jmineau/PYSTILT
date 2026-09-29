@@ -1,4 +1,4 @@
-"""Footprint settings for a config and for one footprint product."""
+"""Footprint settings."""
 
 from __future__ import annotations
 
@@ -6,7 +6,6 @@ from typing import Any
 
 from pydantic import (
     BaseModel,
-    ConfigDict,
     Field,
     TypeAdapter,
     field_serializer,
@@ -22,9 +21,12 @@ from .spatial import Grid
 _GEOMETRY_ADAPTER: TypeAdapter[Any] = TypeAdapter(GeometrySpec)
 
 
-class FootprintParams(BaseModel):
+class FootprintConfig(BaseModel):
     """
-    Footprint settings, as the config defaults or one variant's overrides.
+    Footprint settings: the grid, smoothing, and particle transforms.
+
+    The config and each variant hold these as their defaults and overrides,
+    and every footprint keeps the settings it was calculated with.
 
     ``grid`` is the raster the footprint is computed on. Leave both ``grid``
     and ``geometry`` unset for a variant that only produces trajectories.
@@ -129,35 +131,17 @@ class FootprintParams(BaseModel):
 
     @property
     def footprint(self) -> FootprintConfig | None:
-        """Footprint settings with a grid, or ``None`` for a trajectory-only variant."""
+        """
+        The footprint settings alone, or ``None`` without a grid.
+
+        On a :class:`~stilt.config.VariantConfig` this drops the transport
+        settings, leaving what a footprint is calculated and stored with.
+        """
         if self.grid is None:
             return None
         return FootprintConfig(
-            grid=self.grid,
-            geometry=self.geometry,
-            cells_per_target=self.cells_per_target,
-            geometry_hash=self.geometry_hash,
-            smooth_factor=self.smooth_factor,
-            time_integrate=self.time_integrate,
-            transforms=list(self.transforms),
+            **{name: getattr(self, name) for name in FootprintConfig.model_fields}
         )
 
 
-class FootprintConfig(FootprintParams):
-    """
-    Settings for one footprint, with the grid required.
-
-    :meth:`stilt.Footprint.calculate` takes one of these, and a stored
-    footprint's attributes load back into one.
-    """
-
-    model_config = ConfigDict(frozen=True)
-
-    grid: Grid = Field(..., description="Domain and resolution of the footprint.")
-
-    def replace(self, **updates: object) -> FootprintConfig:
-        """Return a copy with some fields changed."""
-        return self.model_copy(update=updates)
-
-
-__all__ = ["FootprintConfig", "FootprintParams"]
+__all__ = ["FootprintConfig"]
