@@ -18,12 +18,7 @@ from stilt.errors import (
 from stilt.footprint import Footprint
 from stilt.hysplit import HYSPLITDriver
 from stilt.meteorology import MetStream
-from stilt.project import (
-    SIMULATION_LOG_FILENAME,
-    SIMULATION_MET_DIRNAME,
-    resolve_directory,
-    simulation_prefix,
-)
+from stilt.project import resolve_directory, simulation_prefix
 from stilt.receptors import Receptor, ReceptorID
 from stilt.store import Store
 from stilt.trajectory import Trajectories
@@ -181,12 +176,12 @@ class Simulation:
     @property
     def met_dir(self) -> Path:
         """Directory where meteorology files are staged for HYSPLIT."""
-        return self.directory / SIMULATION_MET_DIRNAME
+        return self.directory / "met"
 
     @property
     def log_path(self) -> Path:
         """Path of the HYSPLIT log in the working directory."""
-        return self.directory / SIMULATION_LOG_FILENAME
+        return self.directory / "stilt.log"
 
     @property
     def trajectories_path(self) -> Path:

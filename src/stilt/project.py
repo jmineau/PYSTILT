@@ -38,8 +38,6 @@ CONFIG_KEY = "config.yaml"
 RECEPTORS_KEY = "receptors.csv"
 RECORD_KEY = "simulations/variants.yaml"
 SIMULATIONS_PREFIX = "simulations/by-id"
-SIMULATION_LOG_FILENAME = "stilt.log"
-SIMULATION_MET_DIRNAME = "met"
 
 
 def resolve_directory(
@@ -255,8 +253,6 @@ __all__ = [
     "RECEPTORS_KEY",
     "RECORD_KEY",
     "SIMULATIONS_PREFIX",
-    "SIMULATION_LOG_FILENAME",
-    "SIMULATION_MET_DIRNAME",
     "Project",
     "project_slug",
     "resolve_directory",
