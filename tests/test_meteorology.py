@@ -19,11 +19,10 @@ from stilt.meteorology import MetStream
 
 def _make_met(tmp_path: Path, file_format: str, tres: str, n_min: int = 1) -> MetStream:
     return MetStream(
-        met_id="hrrr",
-        directory=tmp_path,
-        file_format=file_format,
-        file_tres=tres,
-        n_min=n_min,
+        "hrrr",
+        MetConfig(
+            directory=tmp_path, file_format=file_format, file_tres=tres, n_min=n_min
+        ),
     )
 
 
@@ -105,12 +104,7 @@ def test_metconfig_rejects_an_option_the_source_does_not_take(tmp_path):
 
 
 def _make_source_met(tmp_path: Path, source: str = "hrrr", **kwargs) -> MetStream:
-    return MetStream(
-        met_id=source,
-        directory=tmp_path,
-        source_type=source,
-        **kwargs,
-    )
+    return MetStream(source, MetConfig(directory=tmp_path, source=source, **kwargs))
 
 
 def test_metsource_download_calls_fetch(tmp_path):
@@ -141,12 +135,14 @@ def test_metsource_download_with_subgrid_passes_bbox(tmp_path):
 
     bounds = Bounds(xmin=-114.0, xmax=-110.0, ymin=39.0, ymax=42.0)
     met = MetStream(
-        met_id="hrrr",
-        directory=tmp_path,
-        source_type="hrrr",
-        subgrid_enable=True,
-        subgrid_bounds=bounds,
-        subgrid_buffer=0.5,
+        "hrrr",
+        MetConfig(
+            directory=tmp_path,
+            source="hrrr",
+            subgrid_enable=True,
+            subgrid_bounds=bounds,
+            subgrid_buffer=0.5,
+        ),
     )
     met._arlmet_source = mock_source
 
@@ -182,13 +178,15 @@ def test_metsource_archive_subgrid_calls_extract_subset(tmp_path):
 
     bounds = Bounds(xmin=-114.0, xmax=-110.0, ymin=39.0, ymax=42.0)
     met = MetStream(
-        met_id="hrrr",
-        directory=source_dir,
-        file_format="%Y%m%d_%H",
-        file_tres="1h",
-        subgrid_enable=True,
-        subgrid_bounds=bounds,
-        subgrid_buffer=0.0,
+        "hrrr",
+        MetConfig(
+            directory=source_dir,
+            file_format="%Y%m%d_%H",
+            file_tres="1h",
+            subgrid_enable=True,
+            subgrid_bounds=bounds,
+            subgrid_buffer=0.0,
+        ),
     )
 
     target_dir = tmp_path / "sim" / "met"
@@ -220,12 +218,14 @@ def test_metsource_archive_subgrid_reuses_cache(tmp_path):
 
     bounds = Bounds(xmin=-114.0, xmax=-110.0, ymin=39.0, ymax=42.0)
     met = MetStream(
-        met_id="hrrr",
-        directory=source_dir,
-        file_format="%Y%m%d_%H",
-        file_tres="1h",
-        subgrid_enable=True,
-        subgrid_bounds=bounds,
+        "hrrr",
+        MetConfig(
+            directory=source_dir,
+            file_format="%Y%m%d_%H",
+            file_tres="1h",
+            subgrid_enable=True,
+            subgrid_bounds=bounds,
+        ),
     )
 
     # Pre-populate the cache
@@ -251,13 +251,15 @@ def test_metsource_archive_subgrid_levels(tmp_path):
 
     bounds = Bounds(xmin=-114.0, xmax=-110.0, ymin=39.0, ymax=42.0)
     met = MetStream(
-        met_id="hrrr",
-        directory=source_dir,
-        file_format="%Y%m%d_%H",
-        file_tres="1h",
-        subgrid_enable=True,
-        subgrid_bounds=bounds,
-        subgrid_levels=5,
+        "hrrr",
+        MetConfig(
+            directory=source_dir,
+            file_format="%Y%m%d_%H",
+            file_tres="1h",
+            subgrid_enable=True,
+            subgrid_bounds=bounds,
+            subgrid_levels=5,
+        ),
     )
 
     target_dir = tmp_path / "sim" / "met"
@@ -280,12 +282,14 @@ def test_metsource_archive_subgrid_auto_dir(tmp_path):
     source_dir.mkdir()
     bounds = Bounds(xmin=-114.0, xmax=-110.0, ymin=39.0, ymax=42.0)
     met = MetStream(
-        met_id="hrrr",
-        directory=source_dir,
-        file_format="%Y%m%d_%H",
-        file_tres="1h",
-        subgrid_enable=True,
-        subgrid_bounds=bounds,
+        "hrrr",
+        MetConfig(
+            directory=source_dir,
+            file_format="%Y%m%d_%H",
+            file_tres="1h",
+            subgrid_enable=True,
+            subgrid_bounds=bounds,
+        ),
     )
     assert met._resolved_subgrid_dir() == source_dir / "subgrid"
 
@@ -297,13 +301,15 @@ def test_metsource_archive_subgrid_custom_dir(tmp_path):
     source_dir.mkdir()
     bounds = Bounds(xmin=-114.0, xmax=-110.0, ymin=39.0, ymax=42.0)
     met = MetStream(
-        met_id="hrrr",
-        directory=source_dir,
-        file_format="%Y%m%d_%H",
-        file_tres="1h",
-        subgrid_enable=True,
-        subgrid_bounds=bounds,
-        subgrid_dir=custom_dir,
+        "hrrr",
+        MetConfig(
+            directory=source_dir,
+            file_format="%Y%m%d_%H",
+            file_tres="1h",
+            subgrid_enable=True,
+            subgrid_bounds=bounds,
+            subgrid_dir=custom_dir,
+        ),
     )
     assert met._resolved_subgrid_dir() == custom_dir
 

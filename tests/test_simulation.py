@@ -53,21 +53,7 @@ def _met(tmp_path, **kwargs) -> MetStream:
     mc = MetConfig(
         directory=tmp_path / "met", file_format="%Y%m%d_%H", file_tres="1h", **kwargs
     )
-    return MetStream(
-        "hrrr",
-        directory=mc.directory,
-        file_format=mc.file_format,
-        file_tres=mc.file_tres,
-        n_min=mc.n_min,
-        source_type=mc.source,
-        source_kwargs=mc.source_kwargs,
-        backend=mc.backend,
-        subgrid_enable=mc.subgrid_enable,
-        subgrid_bounds=mc.subgrid_bounds,
-        subgrid_buffer=mc.subgrid_buffer,
-        subgrid_levels=mc.subgrid_levels,
-        subgrid_dir=mc.subgrid_dir,
-    )
+    return MetStream("hrrr", mc)
 
 
 def _sim(
@@ -291,7 +277,7 @@ def test_meteorology_subgrid_enable_accepts_bool(point_receptor, tmp_path):
         },
     )
     assert sim.met is not None
-    assert sim.met.subgrid_enable is True
+    assert sim.met.config.subgrid_enable is True
 
 
 def test_simulation_met_files_stage_into_the_variant_directory(
@@ -300,7 +286,9 @@ def test_simulation_met_files_stage_into_the_variant_directory(
     sim = _sim(tmp_path, point_receptor)
     assert sim.met is not None
     sim.met.directory.mkdir(parents=True, exist_ok=True)
-    source = sim.met.directory / point_receptor.time.strftime(sim.met.file_format)
+    source = sim.met.directory / point_receptor.time.strftime(
+        sim.met.config.file_format
+    )
     source.touch()
 
     staged = sim.met_files
@@ -324,7 +312,7 @@ def test_run_trajectories_uses_source_met_files_in_metadata(
     source_file = source_dir / point_receptor.time.strftime("%Y%m%d_%H")
     source_file.touch()
     sim.met = MetStream(
-        "hrrr", directory=source_dir, file_format="%Y%m%d_%H", file_tres="1h"
+        "hrrr", MetConfig(directory=source_dir, file_format="%Y%m%d_%H", file_tres="1h")
     )
     seen: dict[str, list[Path]] = {}
     runner = _fake_runner_returning(_particles_df())

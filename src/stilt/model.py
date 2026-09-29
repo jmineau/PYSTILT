@@ -196,8 +196,7 @@ class Model:
         """Meteorology sources declared in the config, by name."""
         if self._mets is None:
             self._mets = {
-                name: MetStream.from_config(name, cfg)
-                for name, cfg in self.config.mets.items()
+                name: MetStream(name, cfg) for name, cfg in self.config.mets.items()
             }
         return self._mets
 
@@ -359,7 +358,7 @@ class Model:
         # Build everything from the record, since config.yaml may no longer
         # declare the variant, its parent, or its met.
         mets = {
-            n: MetStream.from_config(n, MetConfig.model_validate(m))
+            n: MetStream(n, MetConfig.model_validate(m))
             for n, m in record["mets"].items()
         }
 

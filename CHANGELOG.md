@@ -31,6 +31,11 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   before. `Footprint.from_netcdf` still reads a footprint that recorded such
   a transform: it warns and keeps that entry of `config.transforms` as its
   settings mapping.
+- **`MetStream` takes its `MetConfig`**
+  ([#48](https://github.com/jmineau/PYSTILT/issues/48)). Breaking.
+  `MetStream(name, config)` replaces the thirteen keyword arguments and
+  `MetStream.from_config`, and the settings are read from `stream.config`.
+  `MetID` is removed; met names are plain strings, checked by `ModelConfig`.
 - **`HYSPLITFailureError` names the log**
   ([#48](https://github.com/jmineau/PYSTILT/issues/48)). Breaking. It now
   takes the HYSPLIT log path in place of an optional `sim_id`, and its

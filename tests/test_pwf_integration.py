@@ -18,7 +18,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from stilt.config import STILTParams
+from stilt.config import MetConfig, STILTParams
 from stilt.hysplit.driver import HYSPLITDriver
 from stilt.meteorology import MetStream
 from stilt.receptors import ColumnReceptor
@@ -51,9 +51,9 @@ def _column_trajectory(
     params = STILTParams(n_hours=-2, numpar=numpar, hnf_plume=False, rm_dat=True)
     met_files = MetStream(
         "hrrr",
-        directory=met_dir,
-        file_format=REFERENCE_MET_FILE_FORMAT,
-        file_tres="6h",
+        MetConfig(
+            directory=met_dir, file_format=REFERENCE_MET_FILE_FORMAT, file_tres="6h"
+        ),
     ).required_files(r_time=receptor.time, n_hours=params.n_hours)
 
     driver = HYSPLITDriver(

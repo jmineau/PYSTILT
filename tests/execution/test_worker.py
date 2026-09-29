@@ -61,9 +61,7 @@ def other_receptor() -> Receptor:
 def met(tmp_path) -> MetStream:
     return MetStream(
         "hrrr",
-        directory=tmp_path / "met",
-        file_format="%Y%m%d_%H",
-        file_tres="1h",
+        MetConfig(directory=tmp_path / "met", file_format="%Y%m%d_%H", file_tres="1h"),
     )
 
 

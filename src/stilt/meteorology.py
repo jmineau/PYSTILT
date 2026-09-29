@@ -5,9 +5,10 @@ from __future__ import annotations
 import logging
 import shutil
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, cast
 
 import pandas as pd
+from pandas.tseries.frequencies import to_offset
 
 from stilt.config import MetConfig
 from stilt.config.meteorology import arlmet_sources
@@ -19,84 +20,31 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class MetID(str):
-    """Name of one meteorology stream. Underscores are not allowed."""
-
-    def __new__(cls, name: str):
-        if "_" in name:
-            raise ValueError(
-                "MetID cannot contain underscores, which are reserved for delimiting receptor id components."
-            )
-        return super().__new__(cls, name)
-
-
 class MetStream:
     """
     Meteorology files for one met stream, found locally or downloaded.
 
-    Without ``source_type``, files are found under ``directory`` from
-    ``file_format`` and ``file_tres``. With ``source_type`` set to an arlmet
+    Without ``source``, files are found under ``directory`` from
+    ``file_format`` and ``file_tres``. With ``source`` set to an arlmet
     source name, arlmet downloads the files, cropping them as it goes when
     subgridding is on. Local files are cropped with
     ``arlmet.extract_subset`` into ``subgrid_dir``, which all simulations
-    share. The parameters are the fields of
-    :class:`~stilt.config.MetConfig`; build one from a config with
-    :meth:`from_config`.
+    share.
+
+    Parameters
+    ----------
+    name : str
+        Name of the met in the config.
+    config : MetConfig
+        Its settings.
     """
 
-    def __init__(
-        self,
-        met_id: MetID | str,
-        directory: Path | str,
-        file_format: str | None = None,
-        file_tres: pd.Timedelta | str | None = None,
-        n_min: int = 1,
-        source_type: str | None = None,
-        source_kwargs: dict[str, Any] | None = None,
-        backend: str = "s3",
-        subgrid_enable: bool = False,
-        subgrid_bounds=None,
-        subgrid_buffer: float = 0.2,
-        subgrid_levels: int | None = None,
-        subgrid_dir: Path | None = None,
-    ):
-        self.id = MetID(met_id)
-        self.directory = Path(directory).expanduser().resolve()
-        self.file_format = file_format
-        self.file_tres = pd.to_timedelta(file_tres) if file_tres is not None else None
-        self.n_min = int(n_min)
-        self.source_type = source_type
-        self.source_kwargs = source_kwargs or {}
-        self.backend = backend
-        self.subgrid_enable = subgrid_enable
-        self.subgrid_bounds = subgrid_bounds
-        self.subgrid_buffer = subgrid_buffer
-        self.subgrid_levels = subgrid_levels
-        self.subgrid_dir = (
-            Path(subgrid_dir).expanduser().resolve() if subgrid_dir else None
-        )
-
-        # Lazily constructed arlmet source instance (source mode only)
+    def __init__(self, name: str, config: MetConfig):
+        self.name = name
+        self.config = config
+        #: ``config.directory``, made absolute.
+        self.directory = config.directory.expanduser().resolve()
         self._arlmet_source: ArlmetSource | None = None
-
-    @classmethod
-    def from_config(cls, name: str, config: MetConfig) -> MetStream:
-        """Return the stream for a met entry of the config."""
-        return cls(
-            name,
-            directory=config.directory,
-            file_format=config.file_format,
-            file_tres=config.file_tres,
-            n_min=config.n_min,
-            source_type=config.source,
-            source_kwargs=config.source_kwargs,
-            backend=config.backend,
-            subgrid_enable=config.subgrid_enable,
-            subgrid_bounds=config.subgrid_bounds,
-            subgrid_buffer=config.subgrid_buffer,
-            subgrid_levels=config.subgrid_levels,
-            subgrid_dir=config.subgrid_dir,
-        )
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -113,15 +61,15 @@ class MetStream:
     def _get_arlmet_source(self) -> ArlmetSource:
         """Return the arlmet source, building it on first use."""
         if self._arlmet_source is None:
-            assert self.source_type is not None
-            cls = arlmet_sources()[self.source_type]
-            self._arlmet_source = cls(**self.source_kwargs)
+            assert self.config.source is not None
+            cls = arlmet_sources()[self.config.source]
+            self._arlmet_source = cls(**self.config.source_kwargs)
         return self._arlmet_source
 
     def _effective_bbox(self) -> tuple[float, float, float, float]:
         """Return ``(west, south, east, north)`` of the subgrid bounds plus the buffer."""
-        b = self.subgrid_bounds
-        buf = self.subgrid_buffer
+        b = self.config.subgrid_bounds
+        buf = self.config.subgrid_buffer
         if b is None:
             raise ValueError("subgrid_bounds is required to compute effective bbox.")
         if buf is None or buf < 0:
@@ -130,17 +78,15 @@ class MetStream:
 
     def _resolved_subgrid_dir(self) -> Path:
         """Return the directory for cropped files, ``<directory>/subgrid`` by default."""
-        return (
-            self.subgrid_dir
-            if self.subgrid_dir is not None
-            else self.directory / "subgrid"
-        )
+        if self.config.subgrid_dir is None:
+            return self.directory / "subgrid"
+        return self.config.subgrid_dir.expanduser().resolve()
 
     def _level_indices(self) -> list[int] | None:
         """Return the indices of the lowest ``subgrid_levels`` levels, or None to keep all."""
-        if self.subgrid_levels is None:
+        if self.config.subgrid_levels is None:
             return None
-        return list(range(self.subgrid_levels))
+        return list(range(self.config.subgrid_levels))
 
     # ------------------------------------------------------------------
     # File resolution
@@ -152,7 +98,7 @@ class MetStream:
         t_start: pd.Timestamp = min(r_time, sim_end)  # type: ignore[assignment]
         t_end: pd.Timestamp = max(r_time, sim_end)  # type: ignore[assignment]
 
-        bbox = self._effective_bbox() if self.subgrid_enable else None
+        bbox = self._effective_bbox() if self.config.subgrid_enable else None
 
         source = self._get_arlmet_source()
         try:
@@ -160,7 +106,7 @@ class MetStream:
                 t_start,
                 t_end,
                 local_dir=self.directory,
-                backend=self.backend,
+                backend=self.config.backend,
                 bbox=bbox,
             )
         except ImportError as exc:
@@ -171,10 +117,10 @@ class MetStream:
             ) from exc
 
         n_files = len(files)
-        if n_files == 0 or n_files < self.n_min:
+        if n_files == 0 or n_files < self.config.n_min:
             raise MeteorologyError(
                 f"Insufficient number of meteorological files found. "
-                f"Found: {n_files}, Required: {self.n_min}."
+                f"Found: {n_files}, Required: {self.config.n_min}."
             )
         return files
 
@@ -200,7 +146,7 @@ class MetStream:
         """
         _r_time = cast(pd.Timestamp, pd.Timestamp(r_time))
 
-        if self.source_type is not None:
+        if self.config.source is not None:
             return self._fetch_from_source(_r_time, n_hours)
 
         # Archive-glob mode
@@ -209,18 +155,22 @@ class MetStream:
         earlier = min(_r_time, sim_end)
         later = max(_r_time, sim_end)
 
-        met_start = earlier.floor(self.file_tres)  # type: ignore[arg-type]
+        file_format, file_tres = self.config.file_format, self.config.file_tres
+        # MetConfig requires both when there is no source.
+        assert file_format is not None and file_tres is not None
+        tres = to_offset(pd.to_timedelta(file_tres)).freqstr
+        met_start = earlier.floor(tres)
         met_end = later
 
         if n_hours < 0:
-            met_end_ceil = later.ceil(self.file_tres)  # type: ignore[arg-type]
+            met_end_ceil = later.ceil(tres)
             # As in STILT-R: a release in the last hour of a file interpolates
             # against the next file's first hour; anywhere else it doesn't.
             if later.floor("h") + pd.Timedelta(hours=1) == met_end_ceil:  # type: ignore[arg-type]
                 met_end = met_end_ceil
 
-        met_times = pd.date_range(met_start, met_end, freq=self.file_tres)
-        patterns = list(dict.fromkeys(t.strftime(self.file_format) for t in met_times))  # type: ignore[arg-type]
+        met_times = pd.date_range(met_start, met_end, freq=tres)
+        patterns = list(dict.fromkeys(t.strftime(file_format) for t in met_times))
 
         files: list[Path] = []
         missing: list[str] = []
@@ -239,14 +189,14 @@ class MetStream:
         files = self._dedupe_matched_files(files)
 
         n_files = len(files)
-        if n_files == 0 or n_files < self.n_min:
+        if n_files == 0 or n_files < self.config.n_min:
             detail = ""
             if missing:
                 examples = ", ".join(missing[:3])
                 detail = f" Patterns not found in {self.directory}: {examples}."
             raise MeteorologyError(
                 f"Insufficient number of meteorological files found. "
-                f"Found: {n_files}, Required: {self.n_min}.{detail}"
+                f"Found: {n_files}, Required: {self.config.n_min}.{detail}"
             )
 
         if missing:
@@ -275,12 +225,12 @@ class MetStream:
         """
         Link met files into ``target_dir``, copying when a link fails.
 
-        With subgridding on and no ``source_type``, each file is cropped into
+        With subgridding on and no ``source``, each file is cropped into
         ``subgrid_dir`` first and the cropped copy is linked. Downloaded files
         were already cropped.
         """
         # Resolve subgridded paths for archive-mode subsetting
-        if self.subgrid_enable and self.source_type is None:
+        if self.config.subgrid_enable and self.config.source is None:
             files = self._subset_archive_files(files)
 
         target = Path(target_dir)
@@ -325,13 +275,7 @@ class MetStream:
 
     def _subset_archive_files(self, files: list[Path]) -> list[Path]:
         """Crop local files into ``subgrid_dir``, reusing crops that already exist."""
-        try:
-            from arlmet import extract_subset
-        except ImportError as exc:  # pragma: no cover
-            raise ImportError(
-                "arlmet is required for met subsetting. "
-                "Install with: pip install pystilt"
-            ) from exc
+        from arlmet import extract_subset
 
         subgrid_dir = self._resolved_subgrid_dir()
         subgrid_dir.mkdir(parents=True, exist_ok=True)
