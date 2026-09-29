@@ -73,8 +73,16 @@ class VariantConfig(STILTParams, FootprintParams):
         return STILTParams(**self.model_dump(include=set(STILTParams.model_fields)))
 
     def record(self) -> dict[str, Any]:
-        """This variant as stored in the project's record (a full JSON dump)."""
-        return self.model_dump(mode="json")
+        """
+        This variant as stored in the project's record (a full JSON dump).
+
+        ``maxpar`` is recorded as HYSPLIT receives it (``numpar`` when unset),
+        so the record says what ran rather than how it was spelled.
+        """
+        data = self.model_dump(mode="json")
+        if data["maxpar"] is None:
+            data["maxpar"] = self.numpar
+        return data
 
     def differences(self, recorded: dict[str, Any]) -> list[str]:
         """

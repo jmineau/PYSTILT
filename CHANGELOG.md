@@ -164,6 +164,13 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **A variant that raised `numpar` kept the default's `maxpar`.** `maxpar`
+  was filled in from `numpar` when the defaults were built, and variants
+  inherited the filled value, so `hrrr-np3k: {numpar: 3000}` over a default
+  of 1000 wrote `MAXPAR = 1000` and HYSPLIT capped the run there. `maxpar`
+  now stays unset unless given, and `SETUP.CFG` gets each variant's own
+  `numpar`. The record stores the value HYSPLIT received, so a variant run
+  under the old cap is reported as changed.
 - **A variant that set `geometry` was rastered on the inherited grid**
   ([#42](https://github.com/jmineau/PYSTILT/issues/42)). Overrides merged
   onto the resolved defaults, which already carried `grid` and

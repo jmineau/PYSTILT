@@ -111,9 +111,11 @@ def test_stilt_params_flat_construction():
 
 
 def test_stilt_params_maxpar_defaults_to_numpar():
-    """maxpar is None in TransportParams by default; STILTParams sets it from numpar."""
+    """maxpar stays unset in the config; SETUP.CFG gets numpar in its place."""
     p = STILTParams(numpar=500)
-    assert p.maxpar == 500
+    assert p.maxpar is None
+    assert p.setup_entries()["maxpar"] == 500
+    assert STILTParams(numpar=500, maxpar=800).setup_entries()["maxpar"] == 800
 
 
 def test_stilt_params_ziscale_defaults_to_scalar_one():
@@ -966,3 +968,24 @@ def test_variant_geometry_derives_its_own_grid_and_hash(tmp_path, grid, defaults
         assert variants[name].grid == expected
         assert variants[name].geometry_hash == mesh.hash
     assert variants["hrrr"].grid != expected
+
+
+def test_maxpar_follows_each_variants_numpar(tmp_path):
+    """A variant that raises numpar is not capped at the default's (the old validator did)."""
+    cfg = _variant_config(
+        tmp_path, numpar=1000, variants={"hrrr": {}, "np3k": {"numpar": 3000}}
+    )
+    variants = cfg.resolve_variants()
+    assert variants["hrrr"].stilt_params().setup_entries()["maxpar"] == 1000
+    assert variants["np3k"].stilt_params().setup_entries()["maxpar"] == 3000
+    # The record holds the value HYSPLIT got, so records written when maxpar was
+    # filled in from numpar still match, and a run capped at the default's
+    # numpar shows up as changed.
+    assert variants["np3k"].record()["maxpar"] == 3000
+    assert (
+        variants["hrrr"].differences({**variants["hrrr"].record(), "maxpar": 1000})
+        == []
+    )
+    assert variants["np3k"].differences(
+        {**variants["np3k"].record(), "maxpar": 1000}
+    ) == ["maxpar"]

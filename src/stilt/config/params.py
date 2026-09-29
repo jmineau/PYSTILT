@@ -255,7 +255,8 @@ class TransportParams(BaseModel):
         description="Maximum pollutant species carried on one particle, mainly for chemistry runs.",
     )
     maxpar: int | None = Field(
-        None, description="Maximum number of particles allowed in a simulation."
+        None,
+        description="Maximum number of particles allowed in a simulation; ``numpar`` when unset.",
     )
     mgmin: int = Field(10, description="Minimum meteorological subgrid size.")
     mhrs: int = Field(9999, description="Trajectory restart duration limit in hours.")
@@ -500,6 +501,7 @@ class STILTParams(ModelParams, TransportParams, ErrorParams):
             ),
         ]
         entries = {n: getattr(self, n) for n in names if getattr(self, n) is not None}
+        entries.setdefault("maxpar", self.numpar)
         entries["zicontroltf"] = self.zicontroltf
         if self.seed is not None:
             entries["seed"] = self.setup_seed(self.seed)
@@ -600,13 +602,6 @@ class STILTParams(ModelParams, TransportParams, ErrorParams):
                 "10-13 and uses it only for the initial turbulent velocity under "
                 "krand=1. Set krand=2, or drop the seed."
             )
-        return self
-
-    @model_validator(mode="after")
-    def _set_maxpar(self) -> Self:
-        """Default ``maxpar`` to ``numpar`` when the user omits it."""
-        if self.maxpar is None:
-            self.maxpar = self.numpar
         return self
 
     @model_validator(mode="after")
