@@ -161,6 +161,11 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   draw the same constant (or hangs). `seed` requires `krand: 2`: the bundled
   `hycs_std` discards the seed under `krand: 4` and 10-13 and uses it only
   for the initial turbulent velocity under `krand: 1`.
+- **Receptor labels.** Columns of `receptors.csv` that PYSTILT does not use
+  are kept on each receptor as `Receptor.attrs` and written back by
+  `receptors_to_csv` / appended rows, so `sel(where=lambda r:
+  r.attrs["scene"] == ...)` gathers a scene or a site without a second
+  table.
 - `config.yaml` written from a Python-built model always has a `variants`
   section (one empty entry per met when none was declared), each met holds
   only the fields that were given, and `mets` / `variants` come first.

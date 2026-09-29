@@ -143,6 +143,11 @@ share the same ``time``:
 Two rows at the same location make a :class:`ColumnReceptor`; rows at
 different locations make a :class:`MultiPointReceptor`.
 
+Any other column is kept on the receptor as ``attrs``, so a ``scene`` or
+``site`` label you add to the file is there when you select results
+(``model.simulations.sel(where=lambda r: r.attrs["scene"] == "A")``,
+:doc:`outputs`). Receptors added to a project later keep the file's columns.
+
 A project's ``receptors.csv`` is read automatically. To load a CSV yourself,
 use :func:`read_receptors`, or pass the path straight to the model:
 

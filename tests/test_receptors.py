@@ -2,6 +2,7 @@
 
 import datetime as dt
 import hashlib
+import io
 import json
 
 import pytest
@@ -580,3 +581,37 @@ def test_write_receptors_creates_parent_directories(tmp_path, point_receptor):
     path = write_receptors([point_receptor], tmp_path / "nested" / "dir" / "r.csv")
     assert path.is_file()
     assert read_receptors(path) == [point_receptor]
+
+
+def test_read_receptors_keeps_extra_columns_as_attrs(tmp_path):
+    csv = tmp_path / "receptors.csv"
+    csv.write_text(
+        "time,lati,long,zagl,r_idx,Scene,note\n"
+        "2023-01-01 12:00:00,40.77,-111.85,5.0,0,A,\n"
+        "2023-01-01 12:00:00,40.78,-111.86,5.0,0,A,\n"
+        "2023-01-01 13:00:00,40.79,-111.87,5.0,1,B,hello\n"
+    )
+    multi, point = read_receptors(csv)
+    assert isinstance(multi, MultiPointReceptor)
+    assert multi.attrs == {"Scene": "A", "note": None}
+    assert point.attrs == {"Scene": "B", "note": "hello"}
+
+
+def test_receptor_attrs_round_trip_through_csv(
+    tmp_path, point_receptor, column_receptor
+):
+    from stilt.receptors import append_receptors_csv, receptors_to_csv
+
+    point_receptor.attrs = {"scene": "A"}
+    text = receptors_to_csv([point_receptor, column_receptor])
+    assert text.splitlines()[0].endswith(",altitude_ref,scene")
+    back = read_receptors(io.StringIO(text))
+    assert back[0].attrs == {"scene": "A"}
+    assert back[1].attrs == {"scene": None}
+
+    extra = PointReceptor(
+        time="2023-02-01 00:00", longitude=-111.0, latitude=40.0, altitude=1.0
+    )
+    extra.attrs = {"scene": "C", "ignored": 1}
+    grown = read_receptors(io.StringIO(append_receptors_csv(text, [extra])))
+    assert grown[-1].attrs == {"scene": "C"}

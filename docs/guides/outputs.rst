@@ -100,6 +100,13 @@ receptor a result belongs to:
 ``sel`` takes ``receptor``, ``variant``, ``time``, ``location`` (a location
 id or several), and ``where`` (a function of the receptor); each call
 narrows the one before, and every argument accepts one value or a list.
+Extra columns of ``receptors.csv`` are on each receptor as ``attrs``, which
+is how to gather one satellite scene or one site:
+
+.. code-block:: python
+
+   scene = model.simulations.sel(variant="hrrr", where=lambda r: r.attrs["scene"] == "A")
+
 A realization group's name selects all of its realizations
 (``sel(variant="hrrr-err")``). A receptor id or variant name the project
 does not have is an error; the other filters may select nothing.

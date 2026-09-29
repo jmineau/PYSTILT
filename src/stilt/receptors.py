@@ -168,11 +168,23 @@ class ReceptorID(str):
 
 
 class Receptor(ABC):
-    """Abstract base for all STILT receptor types."""
+    """
+    Abstract base for all STILT receptor types.
+
+    Attributes
+    ----------
+    attrs : dict
+        Labels that ride along with the receptor: the columns of
+        ``receptors.csv`` that PYSTILT does not use itself (a scene, site,
+        or overpass name). They survive the CSV round trip and are there for
+        ``sel(where=lambda r: r.attrs["scene"] == ...)``; they are not part
+        of the receptor's identity.
+    """
 
     def __init__(self, time: TimeLike, altitude_ref: VerticalReference) -> None:
         self.time = _parse_time(time)
         self.altitude_ref: VerticalReference = validate_vertical_reference(altitude_ref)
+        self.attrs: dict[str, Any] = {}
         self._geometry = None
         self._plot: ReceptorPlotAccessor | None = None
 
@@ -541,7 +553,12 @@ _CSV_RENAMES = {
 
 
 def read_receptors(path: str | Path | IO[str]) -> list[Receptor]:
-    """Load receptors from a CSV file (a path or an open text stream)."""
+    """
+    Load receptors from a CSV file (a path or an open text stream).
+
+    Columns PYSTILT does not use are kept on each receptor as ``attrs``
+    (a group's first row speaks for the group).
+    """
     # r_idx is a grouping key, so read it as text. Left to inference, pandas parses a large
     # file in chunks and types each chunk separately: in a file mixing numeric and string
     # ids, a receptor whose rows straddle a chunk boundary comes back part int, part str,
@@ -554,7 +571,8 @@ def read_receptors(path: str | Path | IO[str]) -> list[Receptor]:
     dtype: dict[Hashable, Any] = {c: str for c in header if str(c).lower() == "r_idx"}
     df = pd.read_csv(path, parse_dates=["time"], dtype=dtype)
 
-    original_columns = [str(col).lower() for col in df.columns]
+    spelling = {str(col).lower(): str(col) for col in df.columns}
+    original_columns = list(spelling)
     inferred_altitude_ref = None
     if "zmsl" in original_columns:
         inferred_altitude_ref = "msl"
@@ -570,18 +588,35 @@ def read_receptors(path: str | Path | IO[str]) -> list[Receptor]:
     if not all(col in df.columns for col in required_cols):
         raise ValueError(f"Receptor file must contain columns: {required_cols}")
 
+    # The columns PYSTILT does not use become one ``attrs`` dict per row, in
+    # the file's own spelling, with empty cells as None.
+    extra = [
+        c for c in df.columns if c not in (*required_cols, "r_idx", "altitude_ref")
+    ]
+    labels = df[extra].astype(object).where(df[extra].notna(), None)
+    names = [spelling.get(c, c) for c in extra]
+    records = [
+        dict(zip(names, values, strict=True))
+        for values in labels.itertuples(index=False, name=None)
+    ]
+    if not extra:  # a frame with no columns iterates as no rows
+        records = [{} for _ in df.index]
+    df = df.drop(columns=extra).assign(attrs=records)
+
+    def _point_receptor(row: Any) -> PointReceptor:
+        receptor = PointReceptor(
+            time=row.time,
+            longitude=row.long,
+            latitude=row.lati,
+            altitude=row.z,
+            altitude_ref=row.altitude_ref,
+        )
+        receptor.attrs = row.attrs
+        return receptor
+
     def _point_receptors_from_rows(frame: pd.DataFrame) -> list[Receptor]:
         """Build one PointReceptor per row from a normalised receptor DataFrame."""
-        return [
-            PointReceptor(
-                time=cast(Any, row).time,
-                longitude=cast(Any, row).long,
-                latitude=cast(Any, row).lati,
-                altitude=cast(Any, row).z,
-                altitude_ref=cast(Any, row).altitude_ref,
-            )
-            for row in frame.itertuples(index=False)
-        ]
+        return [_point_receptor(row) for row in frame.itertuples(index=False)]
 
     if "r_idx" in df.columns:
         group_sizes = df.groupby("r_idx").size()
@@ -593,19 +628,13 @@ def read_receptors(path: str | Path | IO[str]) -> list[Receptor]:
         single_mask = ~df["r_idx"].isin(multi_keys)
         result: dict[object, Receptor] = {}
         for row in df[single_mask].itertuples(index=False):
-            r = cast(Any, row)
-            result[r.r_idx] = PointReceptor(
-                time=r.time,
-                longitude=r.long,
-                latitude=r.lati,
-                altitude=r.z,
-                altitude_ref=r.altitude_ref,
-            )
+            result[cast(Any, row).r_idx] = _point_receptor(row)
         for key, g in df[~single_mask].groupby("r_idx"):
             try:
                 result[key] = _receptor_from_group(cast(pd.DataFrame, g))
             except ValueError as exc:
                 raise ValueError(f"r_idx={key}: {exc}") from exc
+            result[key].attrs = g["attrs"].tolist()[0]
 
         return [result[k] for k in df["r_idx"].unique()]
 
@@ -617,11 +646,13 @@ def receptors_to_csv(receptors: Iterable[Receptor]) -> str:
     Serialise receptors to the CSV text that :func:`read_receptors` reads.
 
     One row per constituent point, grouped by ``r_idx`` so column and
-    multipoint receptors round-trip.
+    multipoint receptors round-trip. Receptor ``attrs`` become extra columns.
     """
     import csv
     from io import StringIO
 
+    receptors = list(receptors)
+    extra = list(dict.fromkeys(k for r in receptors for k in r.attrs))
     buffer = StringIO()
     writer = csv.DictWriter(
         buffer,
@@ -632,6 +663,7 @@ def receptors_to_csv(receptors: Iterable[Receptor]) -> str:
             "latitude",
             "altitude",
             "altitude_ref",
+            *extra,
         ],
     )
     writer.writeheader()
@@ -645,6 +677,7 @@ def receptors_to_csv(receptors: Iterable[Receptor]) -> str:
                     "latitude": float(lat),
                     "altitude": float(altitude),
                     "altitude_ref": receptor.altitude_ref,
+                    **{k: receptor.attrs.get(k, "") for k in extra},
                 }
             )
     return buffer.getvalue()
@@ -656,8 +689,9 @@ def append_receptors_csv(text: str, receptors: Iterable[Receptor]) -> str:
 
     The file's own header decides the columns and their order, so a
     hand-written file keeps its column names, its ``r_idx`` values, and any
-    extra columns (left empty on the new rows). New receptors continue the
-    ``r_idx`` numbering after the largest one in the file.
+    extra columns (filled from each receptor's ``attrs``, else left empty).
+    New receptors continue the ``r_idx`` numbering after the largest one in
+    the file.
     """
     import csv
     from io import StringIO
@@ -702,6 +736,7 @@ def append_receptors_csv(text: str, receptors: Iterable[Receptor]) -> str:
         next_idx = max(numeric, default=-1) + 1
 
     ref_column = columns["altitude_ref"]
+    extra = [h for h in header if h not in columns.values()]
     buffer = StringIO()
     writer = csv.DictWriter(buffer, fieldnames=header, restval="")
     for k, receptor in enumerate(receptors):
@@ -721,6 +756,7 @@ def append_receptors_csv(text: str, receptors: Iterable[Receptor]) -> str:
                 row[idx_column] = next_idx + k
             if ref_column is not None:
                 row[ref_column] = receptor.altitude_ref
+            row.update({h: receptor.attrs.get(h, "") for h in extra})
             writer.writerow(row)
     body = text if text.endswith("\n") else text + "\n"
     return body + buffer.getvalue()

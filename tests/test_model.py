@@ -1340,3 +1340,20 @@ def test_register_warns_about_orphans(tmp_path, point_receptor, caplog):
             project=tmp_path, config=_config(tmp_path, variants={"hrrr": {}})
         ).register()
     assert "zi08" in caplog.text and "stilt rm" in caplog.text
+
+
+def test_sel_where_uses_receptor_attrs(tmp_path):
+    (tmp_path / RECEPTORS_KEY).write_text(
+        "time,longitude,latitude,altitude,scene\n"
+        "2023-01-01 12:00:00,-111.85,40.77,5.0,A\n"
+        "2023-01-01 13:00:00,-111.85,40.77,5.0,B\n"
+        "2023-01-01 14:00:00,-111.85,40.77,5.0,A\n"
+    )
+    model = Model(project=tmp_path, config=_config(tmp_path))
+
+    scene_a = model.simulations.sel(where=lambda r: r.attrs["scene"] == "A")
+    assert len(scene_a) == 2
+    assert [str(s.id.receptor)[:12] for s in scene_a] == [
+        "202301011200",
+        "202301011400",
+    ]
