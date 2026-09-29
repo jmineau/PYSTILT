@@ -6,6 +6,11 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+This release simplifies the code before a larger redesign
+([#48](https://github.com/jmineau/PYSTILT/issues/48)). Most entries remove
+a second way of doing something. Items marked breaking change a public
+name or signature.
+
 ### Fixed
 
 - **Unknown keys in a met entry are an error**
@@ -14,71 +19,95 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `source` now rejects any unknown key. With a `source`, the extra keys
   must be options that arlmet source takes, such as `domain` for `nams`.
   A `config.yaml` with such a typo no longer loads until it is fixed.
-
-### Changed
-
 - **Every footprint applies and records the same transforms**
   ([#54](https://github.com/jmineau/PYSTILT/issues/54)). `Footprint.calculate`
   and `Trajectories.footprint` now apply `config.transforms` before
-  gridding; before, only `Simulation.generate_footprint` applied them, yet
+  gridding. Before, only `Simulation.generate_footprint` applied them, yet
   every written footprint listed them. `generate_footprint` makes its
   footprint through `Trajectories.footprint` and records its extra
   `transforms` along with the variant's. Both take a `context` for the
   transforms.
+- **Ctrl-C and SIGTERM stop a local run cleanly.** `LocalExecutor` ran
+  receptors on a background thread that `Model.run` then waited on.
+  Signals reach only the main thread, so an interrupt ended the process
+  without the worker's `interrupted` handling. `LocalExecutor.start` now
+  runs the receptors itself, so `model.run(wait=False)` no longer returns
+  early for a local run.
+- **A relative directory such as `runs/a` is made absolute**
+  ([#58](https://github.com/jmineau/PYSTILT/issues/58)). Only a bare name
+  was, so a worker started from another directory looked in the wrong
+  place.
+- **`sample_flux` wraps longitudes** to the flux field's convention, so a
+  flux on a 0 to 360 grid is no longer read as zero for negative
+  longitudes.
 
-- **Local runs happen in the calling thread**
-  ([#48](https://github.com/jmineau/PYSTILT/issues/48)). `LocalExecutor`
-  ran receptors on a background thread that `Model.run` then waited on.
-  Signals reach only the main thread, so Ctrl-C or a Slurm time limit
-  stopped the process without the worker's clean `interrupted` handling.
-  `LocalExecutor.start` now runs the receptors itself, and
-  `model.run(wait=False)` no longer returns early for a local run.
-  `LocalHandle.done` is removed.
-- **One footprint settings class**
-  ([#48](https://github.com/jmineau/PYSTILT/issues/48)). Breaking.
-  `FootprintParams` is merged into `FootprintConfig`, whose `grid` is now
-  optional; `ModelConfig` and `VariantConfig` inherit it. `Footprint`
-  raises `ValueError` when given settings without a grid.
-  `FootprintConfig.replace(...)` is gone; use
+### Changed
+
+- **One footprint settings class.** Breaking. `FootprintParams` is merged
+  into `FootprintConfig`, whose `grid` is now optional. `ModelConfig` and
+  `VariantConfig` inherit it. `Footprint` raises `ValueError` for settings
+  without a grid. `FootprintConfig.replace(...)` is gone; use
   `config.model_copy(update={...})`.
-- **A transform that cannot be imported raises `ImportError`**
-  ([#48](https://github.com/jmineau/PYSTILT/issues/48)). Breaking.
-  `UnresolvedTransform` is removed. `load_transform` raises for a `kind` it
-  cannot import, so a config naming one fails to load with that error, as
-  before. `Footprint.from_netcdf` still reads a footprint that recorded such
-  a transform: it warns and keeps that entry of `config.transforms` as its
+- **A transform named by import path must be an importable pydantic
+  model.** Breaking. `load_transform` raises `ImportError` for a class it
+  cannot import and `TypeError` for one that is not a pydantic model, so a
+  config naming either fails to load. `UnresolvedTransform` is removed.
+  `Footprint.from_netcdf` still reads a footprint that recorded such a
+  transform: it warns and keeps that entry of `config.transforms` as its
   settings mapping.
-- **`MetStream` takes its `MetConfig`**
-  ([#48](https://github.com/jmineau/PYSTILT/issues/48)). Breaking.
-  `MetStream(name, config)` replaces the thirteen keyword arguments and
-  `MetStream.from_config`, and the settings are read from `stream.config`.
-  `MetID` is removed; met names are plain strings, checked by `ModelConfig`.
-- **`HYSPLITFailureError` names the log**
-  ([#48](https://github.com/jmineau/PYSTILT/issues/48)). Breaking. It now
-  takes the HYSPLIT log path in place of an optional `sim_id`, and its
-  message says which failure was found and where the log is.
+- **`MetStream` takes its `MetConfig`.** Breaking. `MetStream(name, config)`
+  replaces the thirteen keyword arguments and `MetStream.from_config`, and
+  the settings are read from `stream.config`. `MetID` is removed; met names
+  are plain strings, checked by `ModelConfig`.
+- **`ConfigValidationError` is a `ValueError`.** Breaking. It and
+  `ConfigChangedError` no longer subclass `SimulationError`, which marks a
+  failed run.
+- **`HYSPLITFailureError` names the log.** Breaking. It takes the HYSPLIT
+  log path in place of an optional `sim_id`, and its message says which
+  failure was found and where the log is.
+- **The GGG readers need the species.** Breaking. `read_ggg_oof` defaulted
+  to `xch4` and `read_ggg_netcdf` and `read_tccon` to `xco2`. Now each call
+  names it, so none silently reads another gas. `read_tccon` is an alias of
+  `read_ggg_netcdf`.
+- **`Model(receptors="file.csv")` reads the file at once** and
+  `Model.register` writes the receptors out, with extra columns kept as
+  `attrs`. It no longer copies the file byte for byte.
+- **`FirstOrderLifetime` reads particle `time` in minutes.** Breaking. Its
+  `time_column` and `time_unit` settings and `HOURS_PER` are removed.
+- **`pyproj` is a required dependency**, as it already was through arlmet.
+  The `projection` extra is removed.
+- **`sample_field` and `vertical_dim` live in `stilt.flux`**, next to
+  `sample_flux`, which is `sample_field` with missing values as zero.
+- **`stilt run`** builds its executor once and waits only for a submitted
+  Slurm or Kubernetes job. Its banner reads "Execution mode: local, one line
+  per receptor as it finishes" for a local run.
 
 ### Removed
 
-- xarray-grid and `(x, y)`-list targets of `Footprint.aggregate`, and its
-  `resolution` argument. Pass a `stilt.Grid`, `stilt.Mesh`, or
-  `stilt.Zones`; anything else raises `TypeError`.
-
-Code with no callers or a second way to do the same thing
-([#48](https://github.com/jmineau/PYSTILT/issues/48)). Breaking where
+Code with no callers, or a second way to do the same thing. Breaking where
 public.
 
+- xarray-grid and `(x, y)`-list targets of `Footprint.aggregate`, and its
+  `resolution` argument. Pass a `stilt.Grid`, `stilt.Mesh`, or
+  `stilt.Zones`; anything else raises `TypeError`. To keep only some cells
+  of a grid, select rows of the result or use `Zones`.
+- The `regression` option of `observations.transport_error`, which
+  reproduced X-STILT's upward-biased fit through the positive levels.
+- The `backend` argument of `overlap_weights`. exactextract is still used
+  when it is installed.
 - `OutputCollection.missing()`. Use `simulations.incomplete()` or
   `simulations.status()` to see what has not run.
+- `ReceptorCollection.source_path` and the `source` argument of
+  `Project.add_receptors`.
 - The `n_workers` argument of `Executor.start`. Each executor takes
-  `n_workers` when it is built.
-- `LocalStore.path`, which returned the same path as `local_path`.
+  `n_workers` when it is built. `LocalHandle.done`.
+- `LocalStore.path`, which returned the same path as `local_path`. `Store`
+  is no longer `runtime_checkable`.
+- `VariantConfig.differences()`, `MetConfig.differences()`, and
+  `MetConfig.record()`. `Model.check_config` compares the record itself.
 - `FootprintParams.FIELDS`, `PostgresQueue.db_url`, and the
   `SIMULATION_LOG_FILENAME` and `SIMULATION_MET_DIRNAME` constants of
   `stilt.project`.
-- `Store` is no longer `runtime_checkable`.
-- `VariantConfig.differences()`, `MetConfig.differences()`, and
-  `MetConfig.record()`. `Model.check_config` compares the record itself.
 
 ## [0.1.0a21] - 2026-09-29
 
