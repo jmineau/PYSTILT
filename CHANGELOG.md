@@ -15,6 +15,13 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   raises `ValueError` when given settings without a grid.
   `FootprintConfig.replace(...)` is gone; use
   `config.model_copy(update={...})`.
+- **A transform that cannot be imported raises `ImportError`**
+  ([#48](https://github.com/jmineau/PYSTILT/issues/48)). Breaking.
+  `UnresolvedTransform` is removed. `load_transform` raises for a `kind` it
+  cannot import, so a config naming one fails to load with that error, as
+  before. `Footprint.from_netcdf` still reads a footprint that recorded such
+  a transform: it warns and keeps that entry of `config.transforms` as its
+  settings mapping.
 - **`HYSPLITFailureError` names the log**
   ([#48](https://github.com/jmineau/PYSTILT/issues/48)). Breaking. It now
   takes the HYSPLIT log path in place of an optional `sim_id`, and its

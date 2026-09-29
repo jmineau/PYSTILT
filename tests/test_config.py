@@ -609,7 +609,7 @@ def test_model_config_rejects_unimportable_transform_from_yaml(tmp_path):
     path = tmp_path / "config.yaml"
     path.write_text(yaml_text)
 
-    with pytest.raises(ValidationError, match="could not be imported"):
+    with pytest.raises(ImportError, match="could not be imported"):
         ModelConfig.from_yaml(path)
 
 

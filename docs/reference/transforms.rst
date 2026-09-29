@@ -26,7 +26,6 @@ Built-in transforms
    stilt.transforms.AveragingKernel
    stilt.transforms.PressureWeighting
    stilt.transforms.FirstOrderLifetime
-   stilt.transforms.UnresolvedTransform
 
 Averaging-kernel tables
 -----------------------

@@ -66,15 +66,7 @@ class ModelConfig(STILTParams, FootprintConfig):
     @model_validator(mode="after")
     def _validate_variants(self) -> Self:
         """Resolve the variants so a bad declaration fails when the config loads."""
-        from stilt.transforms import UnresolvedTransform
-
-        for name, variant in self.resolve_variants().items():
-            for t in variant.transforms:
-                if isinstance(t, UnresolvedTransform):
-                    raise ValueError(
-                        f"Variant {name!r} transform {t.kind!r} could not be "
-                        f"imported: {t.reason}"
-                    )
+        self.resolve_variants()
         return self
 
     def defaults(self) -> dict[str, Any]:

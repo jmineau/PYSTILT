@@ -13,7 +13,6 @@ from stilt.transforms import (
     ParticleTransform,
     PressureWeighting,
     TransformContext,
-    UnresolvedTransform,
     apply_transforms,
     averaging_kernel_table,
     dump_transform,
@@ -740,20 +739,14 @@ def test_load_transform_dotted_kind_plain_class():
     assert load_transform({"kind": PLAIN_SCALE_KIND}).factor == pytest.approx(1.0)
 
 
-def test_load_transform_nonexistent_module_yields_unresolved():
-    t = load_transform({"kind": MISSING_KIND, "levels": [0.0, 1.0]})
-    assert isinstance(t, UnresolvedTransform)
-    assert t.kind == MISSING_KIND
-    assert t.reason  # carries the original import error
-    assert t.model_dump()["levels"] == [0.0, 1.0]  # extra keys preserved
+def test_load_transform_nonexistent_module_raises():
     with pytest.raises(ImportError, match="could not be imported"):
-        t.apply(_make_particles())
+        load_transform({"kind": MISSING_KIND, "levels": [0.0, 1.0]})
 
 
-def test_load_transform_nonexistent_attribute_yields_unresolved():
-    t = load_transform({"kind": f"{__name__}.NoSuchClass"})
-    assert isinstance(t, UnresolvedTransform)
-    assert "NoSuchClass" in t.reason
+def test_load_transform_nonexistent_attribute_raises():
+    with pytest.raises(ImportError, match="NoSuchClass"):
+        load_transform({"kind": f"{__name__}.NoSuchClass"})
 
 
 def test_load_transform_class_without_apply_raises():
@@ -838,14 +831,9 @@ def test_dump_transform_user_pydantic_uses_dotted_path():
     }
 
 
-def test_dump_transform_unresolved_round_trips():
-    t = load_transform({"kind": MISSING_KIND, "levels": [0.0]})
-    dumped = dump_transform(t)
-    assert dumped["kind"] == MISSING_KIND
-    assert dumped["levels"] == [0.0]
-    again = load_transform(dumped)
-    assert isinstance(again, UnresolvedTransform)
-    assert again.kind == MISSING_KIND
+def test_dump_transform_returns_a_mapping_unchanged():
+    spec = {"kind": MISSING_KIND, "levels": [0.0]}
+    assert dump_transform(spec) == spec
 
 
 def test_dump_transform_rejects_plain_object():
@@ -863,7 +851,6 @@ def test_transform_kind():
     )
     assert transform_kind(ScaleFoot()) == SCALE_FOOT_KIND
     assert transform_kind(PlainScale()) == PLAIN_SCALE_KIND
-    assert transform_kind(UnresolvedTransform(kind=MISSING_KIND)) == MISSING_KIND
 
 
 # ---------------------------------------------------------------------------

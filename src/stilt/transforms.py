@@ -581,31 +581,6 @@ BuiltinTransform = Annotated[
 _BUILTIN_ADAPTER: TypeAdapter[Any] = TypeAdapter(BuiltinTransform)
 
 
-class UnresolvedTransform(BaseModel):
-    """
-    Placeholder for a transform whose class could not be imported.
-
-    Loading a config whose ``kind`` names a class that is not importable on
-    this machine, such as ``mypkg.transforms.MyKernel``, gives one of these,
-    so the config and its footprints can still be read. Applying it raises
-    the original import error.
-    """
-
-    model_config = ConfigDict(frozen=True, extra="allow")
-
-    kind: str
-    reason: str = Field(default="", exclude=True)
-
-    def apply(
-        self, particles: pd.DataFrame, context: TransformContext | None = None
-    ) -> pd.DataFrame:
-        """Raise an ImportError, since the transform could not be imported."""
-        raise ImportError(
-            f"Transform {self.kind!r} could not be imported: {self.reason}. "
-            "Install the package that defines it on this machine."
-        )
-
-
 # -- loading and dumping ------------------------------------------------------------
 
 
@@ -636,7 +611,11 @@ def load_transform(spec: Any) -> Any:
     mapping with a ``kind``. The ``kind`` is a built-in name or the import
     path of a class, which is built from the remaining keys
     (``cls.model_validate`` for a pydantic model, ``cls(**keys)`` otherwise).
-    A class that cannot be imported gives an :class:`UnresolvedTransform`.
+
+    Raises
+    ------
+    ImportError
+        If ``kind`` names a class that cannot be imported on this machine.
     """
     if hasattr(spec, "apply"):
         return spec
@@ -655,7 +634,10 @@ def load_transform(spec: Any) -> Any:
     try:
         cls = _import_kind(kind)
     except ImportError as exc:
-        return UnresolvedTransform(kind=kind, reason=str(exc), **fields)
+        raise ImportError(
+            f"Transform {kind!r} could not be imported ({exc}). Install the "
+            "package that defines it on this machine."
+        ) from exc
     if not callable(getattr(cls, "apply", None)):
         raise TypeError(f"{kind} does not define an apply() method.")
     if hasattr(cls, "model_validate"):
@@ -664,7 +646,14 @@ def load_transform(spec: Any) -> Any:
 
 
 def dump_transform(transform: Any) -> dict[str, Any]:
-    """Return the config mapping for one transform, the inverse of :func:`load_transform`."""
+    """
+    Return the config mapping for one transform, the inverse of :func:`load_transform`.
+
+    A mapping is returned as it is. A footprint read from a file keeps a
+    transform it cannot import that way.
+    """
+    if isinstance(transform, dict):
+        return dict(transform)
     if hasattr(transform, "model_dump"):
         data = dict(transform.model_dump(mode="json", exclude_none=True))
     else:
@@ -696,7 +685,6 @@ __all__ = [
     "ParticleTransform",
     "PressureWeighting",
     "TransformContext",
-    "UnresolvedTransform",
     "ak_weights",
     "apply_transforms",
     "averaging_kernel_table",

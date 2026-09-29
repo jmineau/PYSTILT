@@ -29,7 +29,7 @@ from stilt.geometry import (
     overlap_weights,
 )
 from stilt.receptors import Receptor
-from stilt.transforms import dump_transform
+from stilt.transforms import dump_transform, load_transform
 
 if TYPE_CHECKING:
     from stilt.visualization import FootprintPlotAccessor
@@ -572,6 +572,18 @@ def _accumulate_smoothed_footprint(
     return foot_arr
 
 
+def _read_transform(spec: dict[str, Any], path: Path) -> Any:
+    """Return a recorded transform, or its mapping when its class cannot be imported."""
+    try:
+        return load_transform(spec)
+    except ImportError as exc:
+        warnings.warn(
+            f"{path.name}: {exc} It is kept as its settings and cannot be applied.",
+            stacklevel=3,
+        )
+        return spec
+
+
 class Footprint:
     """
     Gridded footprint of one receptor.
@@ -683,7 +695,8 @@ class Footprint:
         -------
         Footprint
             The footprint, with its receptor and settings read from the
-            file's attributes.
+            file's attributes. A recorded transform whose class cannot be
+            imported here is kept as its settings mapping, with a warning.
         """
         path = Path(path).resolve()
 
@@ -706,10 +719,15 @@ class Footprint:
             ),
             smooth_factor=attrs.get("smooth_factor", 1.0),
             time_integrate=bool(attrs.get("time_integrate", False)),
-            transforms=json.loads(attrs.get("transforms", "[]")),
             geometry=json.loads(attrs["geometry"]) if "geometry" in attrs else None,
             geometry_hash=attrs.get("geometry_hash") or None,
         )
+        # model_copy skips validation, so a mapping stays a mapping.
+        transforms = [
+            _read_transform(spec, path)
+            for spec in json.loads(attrs.get("transforms", "[]"))
+        ]
+        foot_config = foot_config.model_copy(update={"transforms": transforms})
 
         name = attrs.get("name", "")
 
