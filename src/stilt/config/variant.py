@@ -267,11 +267,12 @@ def _check_derived(
             f"Variant {name!r} derives from realization group {parent!r}; "
             "derive from a single run"
         )
-    extra = set(spec) - FootprintParams.FIELDS
+    footprint_fields = set(FootprintParams.model_fields)
+    extra = set(spec) - footprint_fields
     if extra:
         raise ValueError(
             f"Variant {name!r} derives from {parent!r} and may only override "
-            f"footprint settings {sorted(FootprintParams.FIELDS)}; got {sorted(extra)}"
+            f"footprint settings {sorted(footprint_fields)}; got {sorted(extra)}"
         )
 
 

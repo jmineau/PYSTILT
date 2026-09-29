@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, ClassVar
+from typing import Any
 
 from pydantic import (
     BaseModel,
@@ -80,19 +80,6 @@ class FootprintParams(BaseModel):
             "``first_order_lifetime``) or the import path of your own class."
         ),
         default_factory=list,
-    )
-
-    #: The footprint fields, the only ones a derived variant may override.
-    FIELDS: ClassVar[frozenset[str]] = frozenset(
-        {
-            "grid",
-            "geometry",
-            "cells_per_target",
-            "geometry_hash",
-            "smooth_factor",
-            "time_integrate",
-            "transforms",
-        }
     )
 
     @model_validator(mode="before")
