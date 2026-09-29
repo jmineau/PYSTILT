@@ -970,6 +970,7 @@ def test_ak_table_requires_context_and_known_columns(tmp_path):
             _make_particles(2), TransformContext(receptor=a)
         )
 
+    (tmp_path / "kernels.json").write_text("{}")
     with pytest.raises(ValueError, match=".parquet or .csv"):
         AveragingKernel(table=str(tmp_path / "kernels.json")).apply(
             _make_particles(2), TransformContext(receptor=a)

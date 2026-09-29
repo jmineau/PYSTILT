@@ -337,8 +337,16 @@ def averaging_kernel_table(
     return pd.concat(frames, ignore_index=True)
 
 
-def _read_kernel_table(path: str) -> dict[str, tuple[np.ndarray, np.ndarray]]:
-    """Read a per-receptor averaging-kernel table from parquet or CSV."""
+@functools.lru_cache(maxsize=8)
+def _read_kernel_table(
+    path: str, mtime: float
+) -> dict[str, tuple[np.ndarray, np.ndarray]]:
+    """
+    Read a per-receptor averaging-kernel table from parquet or CSV.
+
+    Cached by ``path`` and its modification time ``mtime``, so an edited
+    table is read again.
+    """
     suffix = Path(path).suffix.lower()
     if suffix in {".parquet", ".pq"}:
         table = pd.read_parquet(path)
@@ -361,23 +369,6 @@ def _read_kernel_table(path: str) -> dict[str, tuple[np.ndarray, np.ndarray]]:
             group["value"].to_numpy(dtype=float),
         )
     return kernels
-
-
-@functools.lru_cache(maxsize=8)
-def _cached_kernel_table(
-    path: str, _mtime: float | None
-) -> dict[str, tuple[np.ndarray, np.ndarray]]:
-    """Cache :func:`_read_kernel_table` by path and modification time."""
-    return _read_kernel_table(path)
-
-
-def _load_kernel_table(path: str) -> dict[str, tuple[np.ndarray, np.ndarray]]:
-    """Read a kernel table, reusing the last read until the file changes."""
-    try:
-        mtime: float | None = os.stat(path).st_mtime
-    except OSError:
-        mtime = None
-    return _cached_kernel_table(path, mtime)
 
 
 class AveragingKernel(BaseModel):
@@ -456,7 +447,7 @@ class AveragingKernel(BaseModel):
         path = self.table
         if context.store is not None and not Path(path).is_absolute():
             path = str(context.store.local_path(path))
-        kernels = _load_kernel_table(path)
+        kernels = _read_kernel_table(path, os.stat(path).st_mtime)
         rid = str(context.receptor.id)
         try:
             levels, values = kernels[rid]
