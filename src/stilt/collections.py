@@ -1,11 +1,10 @@
 """
-Science-facing collection objects for STILT models.
+Collections of a model's receptors and simulations.
 
-``SimulationCollection`` is the one query surface: an ordered selection over
-the registered set ``receptors × variants``, narrowed by :meth:`sel`. Every
-cross-simulation question (which are complete, which outputs exist, load
-them all) is answered by asking each :class:`~stilt.simulation.Simulation`
-handle. ``OutputCollection`` is the view of one output over a selection.
+``model.simulations`` is a :class:`SimulationCollection` of every receptor
+under every variant. :meth:`SimulationCollection.sel` narrows it, and its
+``trajectories`` and ``footprint`` properties give an
+:class:`OutputCollection` for loading one output across the selection.
 """
 
 from __future__ import annotations
@@ -32,20 +31,20 @@ FOOTPRINT = "footprint"
 
 class ReceptorCollection:
     """
-    Sequence of receptors with positional and receptor-id access.
+    A model's receptors, by position or by receptor id.
 
-    Access by position (``receptors[0]``, ``receptors[:3]``) or by receptor
-    identifier (``receptors[sim_id.receptor]``). :meth:`sel` narrows.
+    Index by position (``receptors[0]``, ``receptors[:3]``) or by id
+    (``receptors["202307151800_-111.848_40.766_10"]``). :meth:`sel` filters.
+    The receptors are loaded on first use.
 
     Parameters
     ----------
-    receptors
-        A receptor, an iterable of receptors or ``(time, lon, lat, alt)``
-        tuples, a path to a receptors CSV, or ``None`` to load the project's
-        ``receptors.csv`` lazily.
-    project
-        Project the receptors belong to; used to resolve relative paths and
-        to load ``receptors.csv`` when nothing explicit was given.
+    receptors : Receptor, iterable of Receptor, str, Path or None
+        The receptors, the path of a receptors CSV, or ``None`` to use the
+        project's ``receptors.csv``.
+    project : Project
+        Project the receptors belong to. A relative CSV path is relative to
+        its directory.
     """
 
     def __init__(
@@ -62,7 +61,7 @@ class ReceptorCollection:
     def _normalize(
         receptors: Receptor | Iterable | str | Path | None,
     ) -> tuple[list[Receptor] | None, Path | None]:
-        """Normalize receptor inputs to either an in-memory list or a source path."""
+        """Split the constructor input into a receptor list or a CSV path."""
         if receptors is None:
             return None, None
         if isinstance(receptors, (str, Path)):
@@ -80,7 +79,7 @@ class ReceptorCollection:
 
     @property
     def source_path(self) -> Path | None:
-        """Return the constructor-supplied receptors path, resolved, if any."""
+        """Absolute path of the receptors CSV given to the constructor, or ``None``."""
         if self._source_path is None:
             return None
         if self._source_path.is_absolute() or self._project.is_cloud:
@@ -88,7 +87,7 @@ class ReceptorCollection:
         return self._project.directory / self._source_path
 
     def _load(self) -> list[Receptor]:
-        """Load and cache receptors from the best available source."""
+        """Return the receptors, reading them on first use."""
         if self._items is not None:
             return self._items
         if self.source_path is not None:
@@ -118,17 +117,22 @@ class ReceptorCollection:
         where: Callable[[Receptor], bool] | None = None,
     ) -> ReceptorCollection:
         """
-        Return the receptors matching every given filter.
+        Return the receptors that match every given filter.
 
         Parameters
         ----------
-        time
-            A ``slice(start, stop)`` or ``(start, stop)`` pair of inclusive
-            bounds, or one timestamp.
-        location
-            One location id or several.
-        where
-            Predicate on the :class:`~stilt.Receptor`.
+        time : slice, tuple, str or Timestamp, optional
+            ``slice(start, stop)`` or ``(start, stop)`` with inclusive bounds
+            (either may be ``None``), or a single time.
+        location : str or iterable of str, optional
+            One or more location ids.
+        where : callable, optional
+            Function that takes a :class:`~stilt.Receptor` and returns
+            ``True`` to keep it.
+
+        Returns
+        -------
+        ReceptorCollection
         """
         items = list(self._load())
         if time is not None:
@@ -178,7 +182,7 @@ def _timestamp(value: object) -> pd.Timestamp:
 def _time_bounds(
     time: slice | tuple | str | pd.Timestamp,
 ) -> tuple[pd.Timestamp, pd.Timestamp]:
-    """Normalise a time selector into inclusive ``(start, stop)`` timestamps."""
+    """Return a time selector as inclusive ``(start, stop)`` timestamps."""
     if isinstance(time, slice):
         start, stop = time.start, time.stop
     elif isinstance(time, tuple):
@@ -192,12 +196,20 @@ def _time_bounds(
 
 class SimulationCollection:
     """
-    An ordered selection of a model's simulations (``receptors × variants``).
+    An ordered selection of a model's simulations.
 
-    ``model.simulations`` is the whole registered set; :meth:`sel`,
-    :meth:`incomplete` and :meth:`OutputCollection.missing` return narrower
-    collections, so filters compose. Handles are built lazily and cached on
-    the model; building one has no side effects on disk.
+    ``model.simulations`` holds every receptor under every variant, receptor
+    by receptor with variants in config order. Index it by
+    ``(receptor_id, variant)`` or ``"<receptor_id>/<variant>"``. Iterating
+    gives :class:`~stilt.Simulation` objects. :meth:`sel`, :meth:`incomplete`
+    and :meth:`OutputCollection.missing` return smaller collections, so
+    filters can be chained.
+
+    Examples
+    --------
+    >>> sims = model.simulations.sel(variant="hrrr", time=("2023-07-01", "2023-07-31"))
+    >>> sims.status()
+    >>> feet = sims.footprint.load()
     """
 
     def __init__(self, model: Model, keys: list[SimID] | None = None):
@@ -208,7 +220,7 @@ class SimulationCollection:
     # -- registered set --------------------------------------------------------
 
     def _all(self) -> list[SimID]:
-        """The selected ids, built once: receptor-major, variants in config order."""
+        """Return the selected ids, receptor by receptor with variants in config order."""
         if self._keys is None:
             self._keys = [
                 SimID(receptor.id, variant)
@@ -223,7 +235,7 @@ class SimulationCollection:
         return self._key_set
 
     def keys(self) -> list[SimID]:
-        """The selected simulation ids, receptor-major, variants in config order."""
+        """Return the selected simulation ids, receptor by receptor with variants in config order."""
         return list(self._all())
 
     def __iter__(self) -> Iterator[Simulation]:
@@ -247,12 +259,12 @@ class SimulationCollection:
 
     @property
     def receptors(self) -> list[str]:
-        """Receptor ids in the selection, in order, without repeats."""
+        """Receptor ids in the selection, in order, each once."""
         return list(dict.fromkeys(key.receptor for key in self._all()))
 
     @property
     def variants(self) -> list[str]:
-        """Variant names in the selection, in order, without repeats."""
+        """Variant names in the selection, in order, each once."""
         return list(dict.fromkeys(key.variant for key in self._all()))
 
     # -- selection -------------------------------------------------------------
@@ -267,23 +279,27 @@ class SimulationCollection:
         where: Callable[[Receptor], bool] | None = None,
     ) -> SimulationCollection:
         """
-        Narrow the selection.
+        Return the simulations that match every given filter.
 
         Parameters
         ----------
-        receptor
-            One receptor id or several.
-        variant
-            One variant name or several. A realization group's name
-            (``hrrr-err``) selects every realization.
+        receptor : str or iterable of str, optional
+            One or more receptor ids.
+        variant : str or iterable of str, optional
+            One or more variant names. A realization group's name
+            (``hrrr-err``) selects all its realizations.
         time, location, where
-            Receptor filters, as :meth:`ReceptorCollection.sel`.
+            Receptor filters, as in :meth:`ReceptorCollection.sel`.
+
+        Returns
+        -------
+        SimulationCollection
 
         Raises
         ------
         KeyError
-            For a receptor id or variant name the model does not define. The
-            other filters may legitimately select nothing.
+            If a receptor id or variant name is not in the model. The other
+            filters raise nothing when they match no simulation.
         """
         keys = self._all()
         if receptor is not None:
@@ -316,18 +332,23 @@ class SimulationCollection:
     # -- completion ------------------------------------------------------------
 
     def incomplete(self) -> SimulationCollection:
-        """The simulations that have not produced every expected output."""
+        """Return the simulations that are missing an expected output."""
         return SimulationCollection(
             self._model, [sim.id for sim in self if not sim.is_complete()]
         )
 
     def status(self) -> pd.DataFrame:
         """
-        One row per simulation with a column per output.
+        Return one row per simulation saying which outputs exist.
 
-        ``trajectory`` and ``footprint`` are ``True`` when the output exists,
-        ``False`` when it is expected and missing, and ``NA`` when the
-        simulation does not produce it. ``complete`` is the completion rule.
+        Returns
+        -------
+        pandas.DataFrame
+            Columns ``receptor``, ``variant``, ``trajectory``, ``footprint``,
+            and ``complete``. ``trajectory`` and ``footprint`` are ``True``
+            when the output exists, ``False`` when it is missing, and ``NA``
+            when the simulation does not make it. ``complete`` is
+            :meth:`~stilt.Simulation.is_complete`.
         """
         rows = [
             {
@@ -348,22 +369,23 @@ class SimulationCollection:
 
     @property
     def trajectories(self) -> OutputCollection:
-        """The trajectories of the selected simulations that run HYSPLIT."""
+        """Trajectories of the selected simulations that run HYSPLIT."""
         return OutputCollection(self, TRAJECTORY)
 
     @property
     def footprint(self) -> OutputCollection:
-        """The footprints of the selected simulations that produce one."""
+        """Footprints of the selected simulations that make one."""
         return OutputCollection(self, FOOTPRINT)
 
 
 class OutputCollection:
     """
-    One output (``trajectory`` or ``footprint``) over a simulation selection.
+    One output, ``trajectory`` or ``footprint``, across a selection of simulations.
 
-    Covers only the simulations that produce the output: derived variants
-    have no trajectory of their own, and a variant without a grid has no
-    footprint.
+    Only simulations that make the output are included. A derived variant
+    has no trajectory of its own, and a variant without a grid has no
+    footprint. Get one from ``model.simulations.trajectories`` or
+    ``model.simulations.footprint``.
     """
 
     def __init__(self, simulations: SimulationCollection, output: str):
@@ -373,7 +395,7 @@ class OutputCollection:
         self.output = output
 
     def _producers(self) -> list[Simulation]:
-        """Simulations for which this output is expected."""
+        """Return the simulations that make this output."""
         if self.output == TRAJECTORY:
             return [sim for sim in self._sims if not sim.is_derived]
         return [sim for sim in self._sims if sim.makes_footprint]
@@ -388,16 +410,23 @@ class OutputCollection:
 
     def paths(self) -> dict[SimID, Path]:
         """
-        Local paths of the outputs that exist, keyed by simulation id.
+        Return local paths of the output files that exist, by simulation id.
 
-        Empty footprints have no file, so they are not listed here; they still
-        count as complete (see :meth:`missing`).
+        Files in a remote store are downloaded first.
         """
         found = ((sim.id, sim.resolve(self._path(sim))) for sim in self._producers())
         return {sid: path for sid, path in found if path is not None}
 
     def load(self) -> dict[SimID, Trajectories] | dict[SimID, Footprint]:
-        """Load every existing output, keyed by simulation id."""
+        """
+        Load every output that exists, by simulation id.
+
+        Returns
+        -------
+        dict
+            :class:`~stilt.Trajectories` or :class:`~stilt.Footprint`
+            objects keyed by :class:`~stilt.SimID`.
+        """
         if self.output == TRAJECTORY:
             return {
                 sid: Trajectories.from_parquet(p) for sid, p in self.paths().items()
@@ -405,7 +434,7 @@ class OutputCollection:
         return {sid: Footprint.from_netcdf(p) for sid, p in self.paths().items()}
 
     def missing(self) -> SimulationCollection:
-        """The producing simulations whose output does not exist yet."""
+        """Return the simulations whose output does not exist yet."""
         return SimulationCollection(
             self._sims._model,
             [sim.id for sim in self._producers() if not self._exists(sim)],

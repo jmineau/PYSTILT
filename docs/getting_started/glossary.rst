@@ -24,10 +24,10 @@ Glossary
       table (a Parquet file on disk).
 
    footprint
-      A map of how much each surface grid cell influenced a measurement: the
-      concentration change at the receptor per unit of surface emission in
-      that cell, in ppm per (µmol m⁻² s⁻¹). Multiply by an emissions map and
-      sum to get a modeled concentration increase. Stored as a
+      A map of how much each surface grid cell influenced a measurement.
+      Each value is the concentration change at the receptor per unit of
+      surface emission in that cell, in ppm per (µmol m⁻² s⁻¹). Multiply by
+      an emissions map and sum to get a modeled concentration increase. Stored as a
       :class:`~stilt.Footprint` (a NetCDF file on disk).
 
    meteorology
@@ -48,20 +48,21 @@ Glossary
 
    defaults
       The settings written at the top level of ``config.yaml``. Every
-      :term:`variant` starts from them and overrides what it changes; a
+      :term:`variant` starts from them and overrides what it changes. A
       variant with no overrides runs them as they are.
 
    variant
-      One named set of settings every receptor is run under: a met source
-      plus any settings that differ from the :term:`defaults` in
+      A named set of settings that every receptor is run under. It is a met
+      source plus any settings that differ from the :term:`defaults` in
       ``config.yaml``, such as a different ``ziscale``, a wind-error run, or
       another footprint grid. See :doc:`../guides/configuration`.
 
    realization
-      One member of a variant declared with ``realizations: N``: the same
-      settings run ``N`` times with a different random seed each, named
-      ``<variant>-0`` to ``<variant>-(N-1)``. Used for transport-error
-      ensembles (:doc:`../guides/transport_error`).
+      One member of a variant declared with ``realizations: N``. The same
+      settings run ``N`` times, named ``<variant>-0`` to
+      ``<variant>-(N-1)``, and each run gets its own random draws.
+      Realizations are used for transport-error ensembles
+      (:doc:`../guides/transport_error`).
 
    derived variant
       A variant declared with ``from: <other>``. It makes another footprint
@@ -79,10 +80,11 @@ Glossary
 
    simulation ID
       The name of a simulation and of its output folder, such as
-      ``202307151800_-111.848_40.766_10/hrrr``: the receptor id (receptor
-      time as ``YYYYMMDDHHMM``, then longitude, latitude, and altitude), a
-      slash, and the variant. Column receptors end in ``_X``; multipoint
-      receptors use a short hash instead of coordinates.
+      ``202307151800_-111.848_40.766_10/hrrr``. It is the receptor id, a
+      slash, and the variant name. The receptor id is the receptor time as
+      ``YYYYMMDDHHMM``, then the longitude, latitude, and altitude. Column
+      receptors end in ``_X`` instead of an altitude. Multipoint receptors
+      use ``multi_`` and a short hash instead of coordinates.
 
    project
       A folder holding your settings (``config.yaml``), your receptors
@@ -95,7 +97,7 @@ Glossary
 
    n_hours
       How many hours to follow the particles. Negative values run backward
-      in time, which is the usual case for measurements; ``-24`` means one
+      in time, which is the usual case for measurements. ``-24`` means one
       day back.
 
    AGL
@@ -122,14 +124,14 @@ Glossary
       Applying it weights particles released at each height accordingly.
 
    pressure weighting
-      Weighting column particles by the share of the air column's mass they
-      represent, because HYSPLIT releases them evenly in height, not in
-      mass.
+      Weighting column particles by the share of the column's air mass they
+      represent. HYSPLIT releases particles evenly in height, but air thins
+      with height, so a particle high in the column stands for less air.
 
    backend
-      Where the simulations run: ``local`` (your computer), ``slurm`` (an HPC
-      cluster), or ``kubernetes`` (cloud, experimental). Set in the
-      ``execution`` section of ``config.yaml``. See
+      Where the simulations run. The choices are ``local`` (your computer),
+      ``slurm`` (an HPC cluster), and ``kubernetes`` (cloud, experimental).
+      Set it in the ``execution`` section of ``config.yaml``. See
       :doc:`../guides/execution/index`.
 
    empty footprint

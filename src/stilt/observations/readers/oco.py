@@ -21,20 +21,29 @@ def read_oco2(
     """
     Read an OCO-2 or OCO-3 L2 Lite XCO2 file into a table of soundings.
 
-    Follows the Lite FP v10/v11 layout (``oco2_LtCO2_*.nc4``,
-    ``oco3_LtCO2_*.nc4``): the retrieval and its levels at the root, the
-    viewing geometry and surface altitude under ``Sounding``, the surface
-    pressure under ``Retrieval``. ``lon_range`` and ``lat_range`` keep only
-    the soundings inside a box.
+    Reads the Lite FP v10 and v11 files (``oco2_LtCO2_*.nc4``,
+    ``oco3_LtCO2_*.nc4``).
 
-    ``value`` is ``xco2`` in ppm with the product's fill as NaN; ``good`` is
-    ``xco2_quality_flag == 0``. The twenty ``pressure_levels`` and the
-    kernel on them (``ak_pressure``, ``ak``) are reordered from the surface
-    up (the file lists them from space down). ``apriori`` is the CO2 prior
-    profile on the same levels, ``pressure_weight`` the retrieval's pressure
-    weighting function, and ``apriori_column`` the prior XCO2. ``zenith`` and
-    ``azimuth`` are the sensor angles toward the satellite; the solar angles
-    are alongside.
+    Parameters
+    ----------
+    path : str or Path
+        The Lite file.
+    lon_range, lat_range : tuple of float, optional
+        ``(min, max)`` longitude and latitude, in degrees. Only soundings
+        inside the box are read.
+
+    Returns
+    -------
+    pandas.DataFrame
+        One row per sounding. ``value`` is XCO2 in ppm, with the product's
+        fill value as NaN. ``good`` is ``xco2_quality_flag == 0``.
+        ``pressure_levels`` are the 20 retrieval levels, and ``ak_pressure``
+        and ``ak`` the kernel on them, reordered to run from the surface up.
+        ``apriori`` is the CO2 prior profile on the same levels,
+        ``pressure_weight`` the retrieval's pressure weighting function, and
+        ``apriori_column`` the prior XCO2. ``zenith`` and ``azimuth`` are the
+        sensor angles toward the satellite, and ``solar_zenith`` and
+        ``solar_azimuth`` the solar angles.
     """
     path = Path(path)
     with Dataset(path) as ds:
@@ -46,7 +55,7 @@ def read_oco2(
         ri = ii - i0
 
         def pick(var: Any) -> np.ndarray:
-            """Read one variable over the selected soundings."""
+            """Return one variable for the selected soundings."""
             return _float(var, slice(i0, i1))[ri]
 
         sounding = ds["Sounding"]

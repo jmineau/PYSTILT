@@ -1,4 +1,9 @@
-"""PYSTILT public package surface."""
+"""
+PYSTILT, a Python implementation of the STILT transport model.
+
+Start with :class:`Model`, which runs receptors through HYSPLIT and loads
+their trajectories and footprints.
+"""
 
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _version

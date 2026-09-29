@@ -1,3 +1,5 @@
+"""Settings for one meteorology stream."""
+
 from pathlib import Path
 from typing import Any, Literal
 
@@ -7,7 +9,7 @@ from .spatial import Bounds
 
 
 def _arlmet_source_names() -> frozenset[str]:
-    """Return the set of valid arlmet source names from the installed package."""
+    """Return the source names the installed arlmet provides."""
     import arlmet.sources as _src
     from arlmet.sources import MeteorologySource
 
@@ -25,74 +27,80 @@ UNRECORDED_MET_FIELDS = frozenset({"directory", "subgrid_dir"})
 
 
 class MetConfig(BaseModel):
-    """Meteorology file discovery, optional downloading, and optional subgridding."""
+    """
+    Settings for one meteorology stream.
+
+    Give either ``source`` to download ARL files with arlmet, or
+    ``file_format`` and ``file_tres`` to find them in ``directory``. Extra
+    fields are passed to the arlmet source.
+    """
 
     model_config = ConfigDict(extra="allow")
 
     directory: Path = Field(
         ...,
-        description="Directory containing ARL meteorology files for this met stream.",
+        description="Directory holding the ARL meteorology files. Downloads are saved here.",
     )
     source: str | None = Field(
         None,
         description=(
-            "arlmet source name for automatic downloading from NOAA archives "
-            "(e.g. 'hrrr', 'nam12', 'gdas1', 'gfs0p25'). "
-            "When set, file_format and file_tres are not required. "
-            "Source-specific constructor arguments (e.g. domain='ak' for nams) "
-            "may be specified as additional inline fields."
+            "Name of an arlmet source to download files from NOAA archives, "
+            "such as ``hrrr``, ``nam12``, ``gdas1``, or ``gfs0p25``. When set, "
+            "``file_format`` and ``file_tres`` are not needed. Options for the "
+            "source (such as ``domain: ak``) go in the same entry."
         ),
     )
     backend: Literal["s3", "ftp", "http"] = Field(
         "s3",
-        description="Download backend when source is set. One of 's3', 'ftp', or 'http'.",
+        description="Where ``source`` downloads from: ``s3``, ``ftp``, or ``http``.",
     )
     file_format: str | None = Field(
         None,
         description=(
-            "Datetime format string used to discover meteorology filenames. "
-            "Required when source is not set (archive mode)."
+            "``strftime`` pattern for the start of each file name, such as "
+            "``%Y%m%d_%H``. Files whose names start with it are found anywhere "
+            "under ``directory``. Required when ``source`` is not set."
         ),
     )
     file_tres: str | None = Field(
         None,
         description=(
-            "Nominal time spacing between meteorology files. "
-            "Required when source is not set (archive mode)."
+            "Time covered by each file, as a pandas time string such as "
+            "``6h``. Required when ``source`` is not set."
         ),
     )
     n_min: int = Field(
         1,
-        description="Minimum number of meteorology files required for a run.",
+        description="Minimum number of files a simulation needs. Fewer fails the simulation.",
     )
     subgrid_enable: bool = Field(
         False,
-        description="Enable meteorology subgridding before the run.",
+        description="Crop the meteorology to ``subgrid_bounds`` before running.",
     )
     subgrid_bounds: Bounds | None = Field(
         None,
-        description="Bounds used for meteorology subgridding.",
+        description="Longitude/latitude box to crop the meteorology to.",
     )
     subgrid_buffer: float = Field(
         0.2,
-        description="Buffer added around the receptor domain when subgridding meteorology.",
+        description="Margin added to every side of ``subgrid_bounds``, in degrees.",
     )
     subgrid_levels: int | None = Field(
         None,
-        description="Number of vertical levels to keep when subgridding meteorology.",
+        description="Number of vertical levels to keep, counted from the surface. Unset keeps all.",
     )
     subgrid_dir: Path | None = Field(
         None,
         description=(
-            "Directory to cache subgridded met files. "
-            "Defaults to <directory>/subgrid when not set. "
-            "Shared across all simulations that use this met stream."
+            "Directory for the cropped files, shared by every simulation that "
+            "uses this meteorology. Unset uses ``<directory>/subgrid``. Used "
+            "only without ``source``, which crops files as it downloads them."
         ),
     )
 
     @model_validator(mode="after")
     def _validate_mode(self) -> "MetConfig":
-        """Enforce mode-specific requirements."""
+        """Check the source name and the fields each mode needs."""
         if self.source is not None:
             available = _arlmet_source_names()
             if self.source not in available:
@@ -112,15 +120,15 @@ class MetConfig(BaseModel):
 
     @property
     def source_kwargs(self) -> dict[str, Any]:
-        """Extra fields passed as keyword arguments to the arlmet source constructor."""
+        """Extra fields, passed as keyword arguments to the arlmet source."""
         return dict(self.model_extra) if self.model_extra else {}
 
     def record(self) -> dict[str, Any]:
-        """This met as stored in the project's record (a full JSON dump)."""
+        """Return this met as stored in the project's record."""
         return self.model_dump(mode="json")
 
     def differences(self, recorded: dict[str, Any]) -> list[str]:
-        """Names of the result-affecting fields on which this met differs from *recorded*."""
+        """Return the fields that affect results and differ from ``recorded``."""
         mine = self.record()
         return sorted(
             k

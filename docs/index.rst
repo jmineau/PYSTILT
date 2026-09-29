@@ -7,20 +7,20 @@ PYSTILT
 
 .. rst-class:: hero-copy
 
-PYSTILT is a Python version of STILT, the atmospheric transport model. It
-answers a question every trace-gas measurement raises: **where did this air
-come from?** Tell PYSTILT where and when you measured, point it at
-meteorology, and it gives you a footprint: a map of which upwind surface areas
-influenced your measurement, and by how much.
+PYSTILT is a Python version of STILT, an atmospheric transport model. It
+tells you where the air in a trace-gas measurement came from. Give PYSTILT the
+place and time of your measurement and some meteorology, and it computes a
+footprint. The footprint is a map of the upwind surface areas that influenced
+the measurement, and by how much.
 
-Use it for towers, aircraft, mobile platforms, and satellite or ground-based
-column measurements. Run one simulation on a laptop, or tens of thousands on
-an HPC cluster, with the same project.
+PYSTILT works for towers, aircraft, mobile platforms, and satellite or
+ground-based column measurements. The same project can run one simulation on a
+laptop or tens of thousands on an HPC cluster.
 
 .. note::
 
-   PYSTILT is in **alpha**. Names and options may still change between
-   releases. See the :doc:`roadmap` for what is settled and what is not.
+   PYSTILT is alpha software. Names and options may still change between
+   releases. The :doc:`roadmap` shows what is settled.
 
 .. grid:: 1 1 2 2
    :gutter: 2
@@ -43,18 +43,18 @@ an HPC cluster, with the same project.
       :link: guides/index
       :link-type: doc
 
-      Task-by-task help: describe your measurements, set up meteorology,
-      run on a cluster, and load and plot results.
+      How to describe your measurements, set up meteorology, run on a
+      cluster, and load and plot results.
 
    .. grid-item-card:: :fas:`graduation-cap` Tutorials
       :link: tutorials/index
       :link-type: doc
 
-      Worked examples: a week of footprints at a tower, and turning
-      footprints into modeled concentrations.
+      Complete examples. Run a week of tower footprints, turn footprints
+      into modeled concentrations, and scale up on a Slurm cluster.
 
    .. grid-item-card:: :fas:`right-left` Coming from STILT-R?
-      :link: migration/r_stilt
+      :link: migration/stilt_r
       :link-type: doc
 
       Where each ``run_stilt.r`` setting lives in PYSTILT.

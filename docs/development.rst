@@ -38,9 +38,9 @@ Common tasks:
 STILT-R parity
 --------------
 
-PYSTILT is validated against the `uataq/stilt <https://github.com/uataq/stilt>`_
-R implementation at a **pinned upstream commit**. This section records the
-scope of the parity claim and the procedure for keeping it current.
+PYSTILT is tested against a fixed commit of
+`STILT-R <https://github.com/uataq/stilt>`_. This section says what "matches
+STILT-R" covers and how to move to a newer STILT-R commit.
 
 Pinned upstream commit
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -59,127 +59,120 @@ Pinned upstream commit
    * - Last verified
      - 2026-06-25
 
-The SHA is the single source of truth for what "matches STILT-R" means in
-this repository. Reviewers reading "tests pass" should interpret it as
-**tests pass against this exact commit**, not the upstream ``main`` branch.
+When the fidelity tests pass, PYSTILT matches STILT-R at this commit. It
+says nothing about STILT-R's current ``main`` branch.
 
-Scope of the parity claim
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+What matches
+^^^^^^^^^^^^
 
-PYSTILT matches STILT-R on **numerical footprint values** for the 20
-fidelity scenarios in
-`tests/fixtures/r_stilt_reference.py <https://github.com/jmineau/PYSTILT/blob/main/tests/fixtures/r_stilt_reference.py>`_:
+PYSTILT's footprints match STILT-R's for the 20 fidelity scenarios in
+`tests/fixtures/r_stilt_reference.py <https://github.com/jmineau/PYSTILT/blob/main/tests/fixtures/r_stilt_reference.py>`_,
+within these tolerances:
 
 .. list-table::
    :header-rows: 1
 
    * - Quantity
      - Tolerance
-   * - Per-cell footprint
+   * - Footprint, per cell
      - ``rtol=1e-7, atol=1e-8``
-   * - Total footprint sum
+   * - Footprint total
      - ``rtol=1e-6``
-   * - Peak footprint
+   * - Footprint peak
      - ``rtol=1e-7``
+   * - Number of nonzero cells
+     - identical
    * - Intermediate tables (interpolation, rtime, gridding)
      - ``rtol=1e-12``
-   * - Trajectory positions + foot column after HNF
+   * - Trajectory positions and ``foot`` after the HNF correction
      - ``rtol=1e-7``
-   * - Coord arrays (longlat)
-     - ``rtol=1e-13, atol=1e-12``
-   * - Coord arrays (projected meters)
-     - ``rtol=1e-13`` (~sub-mm at UTM scale)
+   * - Grid coordinates, longitude/latitude
+     - ``atol=1e-12`` degrees
+   * - Grid coordinates, projected
+     - ``atol=1e-3`` m
 
-What is **not** in scope:
+The scenarios cover:
 
-- **NetCDF wire format**: STILT-R writes dims ``(x, y, time)`` with
-  ``fill_value=-1``; PYSTILT writes ``(time, lat, lon)`` with xarray
-  defaults. Downstream R-based readers that expect the STILT-R byte layout
-  are **not supported**; PYSTILT output should be read as a generic CF-1.8
-  NetCDF.
-- **Behavior on inputs outside the tested scenarios** -- see "What is
-  tested" below. Untested scenarios (long-duration backward >24h, polar
-  latitudes >80°, very fine grids <0.001°, etc.) are unverified, not known
-  to match.
-- **STILT-R versions other than the pinned SHA.** Upstream changes to
-  ``calc_footprint.r``, ``permute.f90``, or ``calc_trajectory.r`` are not
-  automatically detected; the SHA must be bumped manually.
+- point, column, and three-location multipoint receptors
+- 6 h and 24 h backward runs, and a 6 h forward run
+- the hyper-near-field (HNF) plume correction on (12 scenarios) and off
+- ``smooth_factor`` of 0, 0.5, 1, and 2
+- 0.01° and 0.05° longitude/latitude grids and a UTM grid
+- a 2° box, a receptor in the domain's corner, a receptor at the edge of
+  the met grid, and a small 0.1° domain that particles leave early
+- receptor heights above ground, above sea level (``kmsl=1``), and at 0.5 m
+- winter (stable) and summer (convective) HRRR
+- hourly footprints and ``time_integrate=True``
+- a wind-error run (``siguverr=1`` m/s)
 
-What is tested
-^^^^^^^^^^^^^^
-
-The 20 fidelity scenarios in ``tests/fixtures/r_stilt_reference.py`` cover:
-
-- **Receptor types**: point, column, three-location multipoint
-- **Direction**: 6h backward, 24h backward, 6h forward (``time_sign=+1``)
-- **HNF plume dilution**: on (12 scenarios) and off
-- **Smoothing**: ``smooth_factor`` in {0.0, 0.5, 1.0, 2.0}
-- **Grids**: 0.01° longlat, 0.05° coarse longlat, UTM projected
-- **Domains**: standard 2° box, edge-receptor (SW corner), met-grid edge,
-  tight sparse 0.1° (particles exit early), dateline-crossing (synthetic
-  test), global 360° (synthetic test)
-- **Altitude refs**: AGL, MSL (``kmsl=1``), low AGL (0.5 m)
-- **Meteorology**: winter HRRR (stable PBL), summer HRRR (convective PBL)
-- **Time integration**: hourly bins and ``time_integrate=True``
-- **Error trajectory**: WINDERR with ``siguverr=1 m/s``
-
-Additional synthetic tests in
+The synthetic tests in
 `tests/r_stilt/test_footprint_synth.py <https://github.com/jmineau/PYSTILT/blob/main/tests/r_stilt/test_footprint_synth.py>`_
-exercise hand-crafted particle DataFrames against STILT-R to isolate
-specific code paths (single-particle Gaussian, boundary fenceposts,
-dateline crossing, global grid, latitude bandwidth scaling, etc.).
+feed hand-made particle tables to both implementations to test single code
+paths: one Gaussian particle, cells on the grid boundary, the dateline, a
+global grid, and the latitude scaling of the kernel width.
 
-Large-scale seed-matched validation
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+What does not match
+^^^^^^^^^^^^^^^^^^^
 
-Beyond the 20 CI fidelity scenarios, PYSTILT has been validated against
-STILT-R on a **200-receptor, seed-matched, bit-for-bit campaign** spanning
-2016-2024 (WBB tower, Salt Lake Valley; 35 m AGL; 1000 particles; 24 h
-backward; HRRR; ``krand=2``, ``seed=42``; byte-identical v5.1.0
-``hycs_std`` on both sides). For each receptor the PYSTILT trajectory is
-compared to an independent STILT-R ``calc_trajectory`` run, and the PYSTILT
-footprint to R's ``calc_footprint`` of the same particles, at three
-resolutions (0.01°, 0.05°, 0.1°).
+- **The NetCDF layout.** STILT-R writes dimensions ``(x, y, time)`` with a
+  fill value of ``-1``. PYSTILT writes CF-1.8 NetCDF with dimensions
+  ``(time, lat, lon)``. Read PYSTILT files as ordinary CF NetCDF. Tools that
+  expect STILT-R's layout will not read them.
+- **Forward runs with the HNF correction.** STILT-R accumulates the plume
+  from the far end of a forward trajectory back toward the release point,
+  so its plume is widest at release. PYSTILT accumulates outward from the
+  release point. The two ``foot`` values differ on purpose, and
+  ``test_forward_hnf_foot_intentionally_differs_from_r`` guards the
+  difference.
+- **Untested inputs.** Runs longer than 24 h backward, latitudes above 80°,
+  and grids finer than 0.001° have not been compared.
+- **Other STILT-R commits.** Nothing detects upstream changes to
+  ``calc_footprint.r``, ``permute.f90``, or ``calc_trajectory.r``. Bump the
+  pinned SHA by hand (below).
 
-**Result: all 200 receptors match bit-for-bit.**
+Large-scale comparison
+^^^^^^^^^^^^^^^^^^^^^^
+
+Outside CI, PYSTILT was compared with STILT-R on 200 receptors at the WBB
+tower in the Salt Lake Valley, 2016 to 2024 (35 m above ground, 1000
+particles, 24 h backward, HRRR, ``krand=2`` and ``seed=42``, the same v5.1.0
+``hycs_std`` on both sides). For each receptor, the PYSTILT trajectory was
+compared with a separate STILT-R ``calc_trajectory`` run, and the PYSTILT
+footprint with STILT-R's ``calc_footprint`` of the same particles, at 0.01°,
+0.05°, and 0.1°. All 200 receptors matched.
 
 .. list-table::
    :header-rows: 1
 
    * - Quantity
-     - Agreement (max over 200 receptors)
+     - Agreement (worst of 200 receptors)
    * - Trajectory, per particle
-     - abs ``1.0e-17``, rel ``5.6e-16`` -- machine-exact (float64)
-   * - Footprint, per-cell relative error
+     - absolute ``1.0e-17``, relative ``5.6e-16`` (float64 round-off)
+   * - Footprint, per-cell relative difference
      - median ``~2e-8``, max ``~6e-8``
-   * - Footprint nonzero-cell set
-     - identical (e.g. 250,644 = 250,644 at 0.01°)
-   * - Footprint total mass
-     - rel ``~2e-8``
+   * - Footprint nonzero cells
+     - identical (for example 250,644 cells at 0.01°)
+   * - Footprint total
+     - relative ``~2e-8``
 
-The per-cell relative error is **uniform across cell magnitudes** -- the
-smallest cells (<0.01% of peak) agree as tightly as the largest, so small
-footprint values are not disproportionately wrong. This follows from the
-trajectories being bit-identical: the only footprint difference is
-float-summation order in the gridding/convolution, and footprints are
-stored as **``float32``** (eps ~ 1.2e-7). The observed ~2e-8 relative
-agreement is therefore **below the float32 storage floor** -- the two
-outputs agree to the precision the NetCDF format can represent.
-Mass-weighted relative error (what a flux inversion integrates) is ~2e-8.
+The trajectories are identical, so the footprint differences come only from
+the order in which floating-point sums are added. The relative difference is
+the same for small cells (under 0.01 % of the peak) as for large ones.
+Footprints are stored as ``float32``, whose precision is about ``1.2e-7``, so
+the two outputs agree to the precision the file can hold. The mass-weighted
+relative difference, which is what an inversion sums over, is also about
+``2e-8``.
 
-This is a one-time field-scale validation (not run in CI); it complements
-the structural coverage of the CI fidelity scenarios with broad
-real-meteorology breadth. Reading identical met on both sides across the
-full date range requires the ``find_met_files`` dedup fix carried in the
-pinned SHA -- HRRR archives can expose one physical file via both a
-top-level symlink and a ``YYYY/MM/`` subdirectory, which older STILT-R
-listed twice.
+Reading the same met files on both sides over the full date range needs the
+``find_met_files`` fix in the pinned STILT-R commit. HRRR archives can hold
+the same file both at the top level (as a symlink) and in a ``YYYY/MM/``
+subdirectory, and older STILT-R listed it twice.
 
-Procedure for bumping the pinned SHA
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Moving to a newer STILT-R commit
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-#. Bump ``STILT_R_SHA`` in ``.github/workflows/tests.yml``.
-#. Locally:
+#. Change ``STILT_R_SHA`` in ``.github/workflows/tests.yml``.
+#. Run the fidelity tests locally:
 
    .. code-block:: bash
 
@@ -187,26 +180,26 @@ Procedure for bumping the pinned SHA
       git -C stilt-r-src checkout <new-sha>
       STILT_R_DIR=$PWD/stilt-r-src uv run pytest tests/r_stilt/ -v -m integration
 
-#. If all fidelity scenarios pass at the existing tolerances, commit the
-   bump and update the "Last verified" date in this section.
+#. If every scenario passes at the current tolerances, commit the change and
+   update "Last verified" above.
 #. If a scenario fails, diff ``calc_footprint.r``, ``permute.f90``, and
-   ``calc_trajectory.r`` between the old and new SHA, identify the upstream
-   change, and decide:
+   ``calc_trajectory.r`` between the two commits to find the upstream change.
+   Then do one of the following:
 
-   - Mirror the change in PYSTILT, or
-   - Loosen the affected scenario's tolerance with a comment explaining why, or
-   - Hold the pin at the previous SHA.
+   - make the same change in PYSTILT,
+   - loosen that scenario's tolerance, with a comment saying why, or
+   - stay on the old commit.
 
-Files watched for upstream drift
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Files to diff on every bump
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-These three STILT-R files materially influence the numerical output and
-should be diffed on every SHA bump:
+These STILT-R files determine the numbers PYSTILT is compared against:
 
-- ``r/src/calc_footprint.r`` -- footprint construction, kernel, gridding
-- ``r/src/calc_trajectory.r`` -- HYSPLIT wrapper, RNG seeding, KRAND
-- ``r/src/permute.f90`` -- Fortran convolution accumulator
+- ``r/src/calc_footprint.r``: footprint kernel and gridding
+- ``r/src/calc_trajectory.r``: the HYSPLIT wrapper, random seed, and ``krand``
+- ``r/src/permute.f90``: the Fortran loop that adds each particle's kernel to
+  the grid
 
-Helper R scripts under ``tests/fixtures/r_helpers/`` re-export these for
-the synthetic comparison tests; bumping the SHA may require updating those
-if upstream signatures change.
+The R helper scripts in ``tests/fixtures/r_helpers/`` call these files for
+the synthetic tests. They may need updating if a function signature changes
+upstream.

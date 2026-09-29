@@ -1,16 +1,16 @@
 User Guide
 ==========
 
-Each page answers one practical question. If you haven't yet, start with
-:doc:`../getting_started/quickstart`.
+These pages show how to set up a project, run it, and use the results. If
+you are new to PYSTILT, start with :doc:`../getting_started/quickstart`.
 
 **Setting up a project**
 
-- :doc:`receptors`: describe where and when you measured (towers, columns,
+- :doc:`receptors`: where and when you measured (towers, columns,
   satellites)
 - :doc:`meteorology`: use your own ARL files or download them from NOAA
 - :doc:`configuration`: what goes in ``config.yaml``
-- :doc:`project_layout`: what's in a project folder, and how reruns work
+- :doc:`project_layout`: what is in a project folder, and how reruns work
 
 **Running simulations**
 
@@ -21,21 +21,21 @@ Each page answers one practical question. If you haven't yet, start with
 **Working with results**
 
 - :doc:`outputs`: load, plot, and aggregate footprints and trajectories
-- :doc:`transport_error`: the modelled enhancement for a flux field, and
-  how uncertain the transport makes it
-- :doc:`wind_errors`: the wind-error statistics a transport-error run
-  needs, from your meteorology and observed winds
-- :doc:`background`: what the receptor saw before the domain's fluxes,
-  from a mole-fraction field at the trajectory endpoints
-- :doc:`plume_background`: the background from the soundings a forward-run
+- :doc:`transport_error`: the modelled enhancement from a flux field, and
+  its transport uncertainty
+- :doc:`wind_errors`: estimate the wind-error statistics a transport-error
+  run needs
+- :doc:`background`: the mole fraction at the trajectory endpoints, as a
+  background for the receptor
+- :doc:`plume_background`: a background from the soundings a forward-run
   plume did not reach
 
 **Column and satellite measurements**
 
-- :doc:`readers`: read a TROPOMI, OCO-2 or TCCON file into a table of
+- :doc:`readers`: read TROPOMI, OCO-2 or TCCON files into a table of
   soundings, or add your own instrument
-- :doc:`../advanced/observations`: from satellite soundings or column
-  retrievals to receptors
+- :doc:`../advanced/observations`: turn satellite soundings or column
+  retrievals into receptors
 - :doc:`slant_columns`: instruments that look along a tilted path
   (EM27/SUN, TCCON, off-nadir satellites)
 - :doc:`../advanced/transforms`: averaging kernels, pressure weighting, and
@@ -43,7 +43,7 @@ Each page answers one practical question. If you haven't yet, start with
 
 **Coming from other STILT tools**
 
-- :doc:`../migration/r_stilt`
+- :doc:`../migration/stilt_r`
 - :doc:`../migration/x_stilt`
 - :doc:`../migration/stiltctl`
 
@@ -90,7 +90,7 @@ Each page answers one practical question. If you haven't yet, start with
    :hidden:
    :caption: Coming from other STILT tools
 
-   ../migration/r_stilt
+   ../migration/stilt_r
    ../migration/x_stilt
    ../migration/stiltctl
 

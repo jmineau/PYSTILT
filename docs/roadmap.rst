@@ -3,41 +3,41 @@ Roadmap
 
 .. note::
 
-   PYSTILT is alpha software (the ``0.1.0a`` series).  The public API may
-   change while the package settles.  No backward compatibility guarantees
-   before v1.0.
+   PYSTILT is alpha software (the ``0.1.0a`` series). The public API may
+   change between releases until v1.0.
 
 Current status
 --------------
 
-The **core transport** is stable and exercised by the test suite:
+These parts are stable and covered by the test suite:
 
-- HYSPLIT trajectory and footprint generation
-- Numerical parity with `uataq/stilt <https://github.com/uataq/stilt>`_ (STILT-R) at ``rtol=1e-7`` per cell
-- Local and SLURM execution paths
-- Reruns that skip finished simulations, with status read from the output files
-- Receptors × variants: the same receptors under several named settings in
-  one project, with transport-error ensembles and extra footprints as
-  variants
-- Observation layer for science-facing workflows
+- HYSPLIT trajectories and footprints
+- Footprints that match `uataq/stilt <https://github.com/uataq/stilt>`_
+  (STILT-R) at ``rtol=1e-7`` per cell
+- Running locally and on Slurm
+- Reruns that skip finished simulations, judged by which output files exist
+- Variants, which run the same receptors under several named settings in one
+  project. Transport-error ensembles and extra footprints are variants too.
+- Helpers for column and satellite observations
 
-The core runtime simplification landed in three steps: by-key completion in
-June 2026, the collapse of the storage, registry, and execution layers onto
-``Project`` / ``Simulation`` in September 2026, and receptors × variants
-replacing the receptor × met simulation with its attached error run, also in
-September 2026.  Active development is on the
-observation layer: column and slant-column workflows for satellite and
-ground-based instruments (see *Future plans* below).  The execution and
-service track is maintained but not expanding.
+Footprints can also be summed onto other geometries. A footprint is computed
+on a rectangular grid and then summed onto a :class:`stilt.Grid`, a
+:class:`stilt.Mesh` (from shapefiles, H3 hexagons, or windows around points),
+or :class:`stilt.Zones` (groups of cells), using cached overlap weights.
+``Grid.from_geometry`` picks a grid for a geometry, the ``geometry``
+footprint setting names one in YAML, and ``Trajectories.footprint`` makes new
+footprints from saved particles.
+
+Most new work is on column and slant-column workflows for satellite and
+ground-based instruments (see *Future plans* below). The execution and
+service code is maintained but not growing.
 
 Execution and orchestration (from stiltctl)
 -------------------------------------------
 
-`stiltctl <https://github.com/jmineau/air-tracker-stiltctl>`_ is a cloud-native
-STILT orchestration system.  PYSTILT borrows its thin CLI → model → worker
-call path: no separate service facade, no broad queue abstraction — just a
-direct connection from the CLI to ``Model`` and from ``Model`` to the
-execution backend.
+`stiltctl <https://github.com/jmineau/air-tracker-stiltctl>`_ runs STILT on
+cloud infrastructure. PYSTILT uses the same call path. The CLI calls
+``Model``, and ``Model`` hands the work to an execution backend.
 
 .. list-table::
    :header-rows: 1
@@ -62,9 +62,9 @@ Column and satellite science (from X-STILT)
 --------------------------------------------
 
 `X-STILT <https://github.com/uataq/X-STILT>`_ extends STILT for column and
-slant-path satellite retrievals.  PYSTILT absorbs X-STILT's observation-layer
-design and column-weighting concepts.  Full X-STILT feature parity is
-**not** a goal.
+slant-path satellite retrievals. PYSTILT ports X-STILT's ideas for handling
+observations and weighting columns. It does not try to match every X-STILT
+feature.
 
 .. list-table::
    :header-rows: 1
@@ -80,7 +80,7 @@ design and column-weighting concepts.  Full X-STILT feature parity is
      - Implemented
    * - First-order lifetime decay transform
      - Implemented
-   * - Declarative per-footprint transforms in config YAML
+   * - Declarative transforms in config YAML (default or per variant)
      - Implemented
    * - Slant-column receptor support
      - Implemented (see the *Slant Columns* guide)
@@ -113,14 +113,8 @@ Future plans
 
 In priority order:
 
-- **Observation-layer maturation**: readers for the instruments users bring
-  (EM27/SUN, MethaneAIR/MethaneSAT) and a multi-realization transport error,
-  driven by real column-receptor users.
-- **Spatial geometries and footprint aggregation** (implemented): footprints
-  are computed on a rectilinear raster and aggregated onto any state geometry
-  (:class:`stilt.Grid`, :class:`stilt.Mesh` from shapefiles / H3 hexagons /
-  point windows, :class:`stilt.Zones` super-cells) through cached sparse
-  overlap weights, with ``Grid.from_geometry`` deriving the raster for a
-  geometry, ``FootprintConfig.geometry`` naming it in YAML, and
-  ``Trajectories.footprint`` regenerating footprints from stored particles.
-  Still to come: a YAML form for ``Zones``.
+1. Readers for the instruments people bring, such as EM27/SUN and
+   MethaneAIR/MethaneSAT. Which ones come first depends on who is using
+   column receptors.
+2. A YAML form for :class:`stilt.Zones`, so the ``geometry`` footprint
+   setting can name groups of cells.

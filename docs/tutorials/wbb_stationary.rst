@@ -2,12 +2,12 @@ Tutorial: A Week Of Tower Footprints
 ====================================
 
 This tutorial runs hourly footprints for one week at a rooftop measurement
-site, then averages them into a single map showing which areas usually
+site. Then it averages them into one map that shows which areas usually
 influence the site.
 
-The site is WBB, a long-running greenhouse gas monitoring site on the roof of
-the William Browning Building at the University of Utah in Salt Lake City.
-The same steps work for any fixed site: change the coordinates.
+The site is WBB, a long-running greenhouse gas site on the roof of the
+William Browning Building at the University of Utah in Salt Lake City. The
+same steps work for any fixed site. Just change the coordinates.
 
 What you'll learn
 -----------------
@@ -16,8 +16,8 @@ What you'll learn
 - how to run them in parallel on your computer
 - how to load many footprints and combine them
 
-You'll need ARL meteorology covering 4 to 11 July 2015 (the week, plus the day
-before for the 24-hour back-trajectories). See
+You'll need ARL meteorology for 4 to 11 July 2015. That is the week plus the
+day before it, which the 24-hour back-trajectories reach into. See
 :doc:`../guides/meteorology`.
 
 Step 1: One receptor per hour
@@ -38,7 +38,7 @@ Step 1: One receptor per hour
        )
        for t in times
    ]
-   len(receptors)                 # 168: one per hour for 7 days
+   len(receptors)                 # 168, one per hour for 7 days
 
 If your measurement times are in a spreadsheet, save them as a CSV and use
 :func:`stilt.read_receptors` instead (see :doc:`../guides/receptors`).
@@ -78,9 +78,9 @@ Step 3: Run
 
    model.run()
 
-With 4 workers this takes a while (168 simulations). You can stop it at any
-time with Ctrl-C: running it again picks up where it left off. To check
-progress from another terminal:
+There are 168 simulations, so this takes a while with 4 workers. You can
+stop it at any time with Ctrl-C. Running it again picks up where it left
+off. To check progress from another terminal:
 
 .. code-block:: bash
 
@@ -89,7 +89,7 @@ progress from another terminal:
 Step 4: Average the footprints
 ------------------------------
 
-Load all 168 footprints, sum each over time, and average them:
+Load all 168 footprints, sum each one over time, and average them:
 
 .. code-block:: python
 
@@ -100,7 +100,7 @@ Load all 168 footprints, sum each over time, and average them:
    footprints = model.simulations.footprint.load()   # {simulation id: Footprint}
 
    mean_foot = xr.concat(
-       [foot.integrate_over_time().data for foot in footprints.values()],
+       [foot.integrate_over_time() for foot in footprints.values()],
        dim="receptor",
    ).mean("receptor")
 
@@ -115,14 +115,14 @@ Load all 168 footprints, sum each over time, and average them:
    ax.set_title("Mean footprint at WBB, 5–11 July 2015")
    plt.tight_layout()
 
-The color scale is logarithmic because footprints span several orders of
-magnitude: they are strongest right around the site and fall off with
-distance.
+Footprints are strongest right around the site and fall off quickly with
+distance. They span several orders of magnitude, so the color scale is
+logarithmic.
 
 Next
 ----
 
-- Turn these footprints into modeled concentrations:
-  :doc:`flux_inversion`
-- More ways to load and plot results: :doc:`../guides/outputs`
-- Run a whole year on a cluster: :doc:`hpc_slurm`
+- Turn these footprints into modeled concentrations in
+  :doc:`flux_inversion`.
+- See :doc:`../guides/outputs` for more ways to load and plot results.
+- Run a whole year on a cluster with :doc:`hpc_slurm`.

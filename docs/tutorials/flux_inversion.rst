@@ -1,15 +1,14 @@
 Tutorial: From Footprints To Concentrations
 ===========================================
 
-A footprint says how much each grid cell influences a measurement. Multiply it
-by how much each cell emits, add it all up, and you get the concentration
-increase the measurement should show (its *enhancement* above background).
-This is the link between transport and emissions that inversions are built
-on.
+A footprint says how much each grid cell influences a measurement. Multiply
+it by how much each cell emits and add it all up. The result is how much the
+emissions should raise the concentration at the receptor, called the
+*enhancement* above background. Inversions are built on this link between
+transport and emissions.
 
-The units make this work. Footprints are in ppm per (µmol m⁻² s⁻¹). Multiply
-by fluxes in µmol m⁻² s⁻¹ and sum over cells and hours, and the result is in
-ppm.
+The units work out directly. Footprints are in ppm per (µmol m⁻² s⁻¹). Fluxes
+in µmol m⁻² s⁻¹ times footprints, summed over cells and hours, give ppm.
 
 What you'll learn
 -----------------
@@ -27,13 +26,13 @@ Any project with footprints works.
 A few point sources
 -------------------
 
-For a handful of known sources, add up each footprint over a small window
-around each source with :meth:`stilt.Footprint.aggregate`, then multiply by
-the source's flux:
+For a handful of known sources, draw a small window around each one with
+:meth:`stilt.Mesh.from_windows`. :meth:`stilt.Footprint.aggregate` adds up
+the footprint inside each window. Multiply each sum by that source's flux and
+add them up.
 
 .. code-block:: python
 
-   import numpy as np
    import pandas as pd
 
    import stilt
@@ -46,35 +45,35 @@ the source's flux:
        "wwtp": (-112.015, 40.779, 120.0),
        "refinery": (-111.890, 40.650, 30.0),
    }
-   targets = stilt.Mesh.from_windows(
+   windows = stilt.Mesh.from_windows(
        [(lon, lat) for lon, lat, _ in sources.values()],
-       size=0.01,  # window size in degrees around each source
+       size=0.05,  # window width in degrees
        ids=list(sources),
    )
-   fluxes = np.array([flux for _, _, flux in sources.values()])
+   flux = pd.Series({name: f for name, (_, _, f) in sources.items()})
 
    rows = []
    for foot in footprints.values():
-       start, end = foot.time_range
-       bins = pd.interval_range(start=start, end=end, freq="1h")
-       sensitivity = foot.aggregate(target=targets, time_bins=bins)  # indexed by cell id
-       enhancement = (sensitivity.to_numpy() * fluxes[:, None]).sum(axis=0)
+       whole_run = pd.IntervalIndex.from_tuples([foot.time_range])
+       in_window = foot.aggregate(windows, whole_run).iloc[:, 0]  # one value per source
        rows.append(
-           pd.Series(
-               enhancement,
-               index=[interval.mid for interval in bins],
-               name=foot.receptor.id,
-           )
+           {"time": foot.receptor.time, "enhancement_ppm": (in_window * flux).sum()}
        )
 
-   modeled = pd.concat(rows, axis=1).T
+   modeled = pd.DataFrame(rows).set_index("time").sort_index()
+
+Make each window at least two footprint cells wide. A smaller window gets a
+warning, because the footprint is too coarse to say how much of a cell falls
+inside it.
 
 A gridded inventory
 -------------------
 
-For an emissions map, put the inventory on the footprint's grid, multiply cell
-by cell, and sum. The inventory must be in µmol m⁻² s⁻¹. Summing the
-footprint over time first assumes emissions are constant over the 24 hours:
+For an emissions map, :meth:`stilt.Footprint.enhancement` does the
+multiplication. The inventory is an :class:`xarray.DataArray` in
+µmol m⁻² s⁻¹ with ``lat`` and ``lon`` dimensions. Each footprint cell takes
+the flux of the inventory cell it falls in. If the inventory has a ``time``
+dimension, each footprint hour uses the nearest inventory time.
 
 .. code-block:: python
 
@@ -82,20 +81,16 @@ footprint over time first assumes emissions are constant over the 24 hours:
 
    inventory = xr.open_dataarray("inventory.nc")
 
-   enhancements = []
+   rows = []
    for foot in footprints.values():
-       integrated = foot.integrate_over_time().data
-       inventory_on_grid = inventory.interp(
-           lat=integrated.lat,
-           lon=integrated.lon,
-           method="linear",
-       )
-       enhancement = float((integrated * inventory_on_grid).sum(["lat", "lon"]))
-       enhancements.append(
-           {"time": foot.receptor.time, "enhancement_ppm": enhancement}
-       )
+       enhancement = float(foot.enhancement(inventory).sum())   # sum over hours
+       rows.append({"time": foot.receptor.time, "enhancement_ppm": enhancement})
 
-   modeled = pd.DataFrame(enhancements).set_index("time").sort_index()
+   modeled = pd.DataFrame(rows).set_index("time").sort_index()
+
+If the inventory cells are much smaller than the footprint cells, regrid it
+to the footprint grid first. Otherwise each footprint cell picks up one small
+inventory cell instead of the average over its area.
 
 Comparing with observations
 ---------------------------
@@ -114,10 +109,11 @@ Comparing with observations
    ax.set_ylabel("CH4 enhancement (ppm)")
    plt.tight_layout()
 
-The modeled values are enhancements only. Before comparing, subtract a
-background (the concentration of air arriving from outside the domain) from
-the observations, or add one to the model.
+The model gives only the enhancement. Before comparing, subtract a background
+from the observations, or add one to the model. The background is the
+concentration of the air arriving from outside the domain (see
+:doc:`../guides/background`).
 
-This is the forward half of an inversion. An inversion goes the other way:
-it adjusts the emissions until the modeled enhancements best match the
+This is the forward half of an inversion. An inversion goes the other way. It
+adjusts the emissions until the modeled enhancements best match the
 observations.

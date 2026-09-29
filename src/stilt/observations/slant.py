@@ -1,4 +1,4 @@
-"""Slant line-of-sight geometry."""
+"""Receptor points along a slant line of sight."""
 
 from __future__ import annotations
 
@@ -24,19 +24,33 @@ def slant_points(
     anchor: float | None = None,
 ) -> list[tuple[float, float, float]]:
     """
-    ``(longitude, latitude, altitude)`` points along a line of sight.
+    Return ``(longitude, latitude, altitude)`` points along a line of sight.
 
-    Each altitude sits ``(altitude - anchor) * tan(zenith)`` metres from
-    ``(longitude, latitude)`` along the ``azimuth`` bearing, on a local flat
-    tangent plane. ``zenith`` is degrees from the local vertical and
-    ``azimuth`` is degrees clockwise from north: the bearing from the ground
-    point toward the instrument or the sun, which is the direction the path
-    rises toward. ``anchor`` is the altitude at which the path passes through
-    ``(longitude, latitude)`` and defaults to the first altitude.
+    Each point is ``(altitude - anchor) * tan(zenith)`` meters from
+    ``(longitude, latitude)`` along the ``azimuth`` bearing, on a flat local
+    tangent plane. Pass the result to :meth:`stilt.Receptor.from_points`.
 
-    Altitudes are returned unchanged, in whatever datum they were given. Use
-    mean-sea-level altitudes for a slant; terrain-following (AGL) heights
-    would bend the path. Pass the result to :meth:`stilt.Receptor.from_points`.
+    Parameters
+    ----------
+    longitude, latitude : float
+        Where the path passes through ``anchor``, in degrees.
+    altitudes : array-like
+        Altitudes of the points, in meters. They are returned unchanged. Use
+        altitudes above sea level, since heights above ground would bend the
+        path with the terrain.
+    zenith : float
+        Angle of the path from the local vertical, in degrees, from 0 up to
+        90.
+    azimuth : float
+        Bearing toward the instrument or the sun, in degrees clockwise from
+        north. The path rises in this direction.
+    anchor : float, optional
+        Altitude at which the path passes through ``(longitude, latitude)``.
+        Defaults to the first altitude.
+
+    Returns
+    -------
+    list of (float, float, float)
     """
     alts = np.asarray(altitudes, dtype=float).ravel()
     if alts.size == 0:
@@ -63,37 +77,42 @@ def pressure_altitudes(
     top: float | None = None,
 ) -> np.ndarray:
     """
-    Mean-sea-level altitudes of a retrieval's pressure levels.
+    Return the altitudes above sea level of a retrieval's pressure levels.
 
-    Turns the pressure levels a sounding reports (OCO-2 ``pressure_levels``,
-    or TROPOMI's ``surface_pressure`` minus multiples of
-    ``pressure_interval``) into the ``altitudes`` argument of
-    :func:`slant_points`, so the slant samples follow the retrieval's own
-    layers. Pressures are in hPa and altitudes in metres above mean sea
-    level; ``surface_pressure`` and ``surface_altitude`` are the sounding's.
+    Use the result as the ``altitudes`` of :func:`slant_points`, so the
+    slant follows the retrieval's own layers. The pressure levels are, for
+    example, OCO-2's ``pressure_levels`` or TROPOMI's ``surface_pressure``
+    minus multiples of ``pressure_interval``. Altitudes come from the
+    hypsometric equation, integrated up from the surface.
 
-    Altitude follows the hypsometric equation upward from the surface. What
-    it assumes about temperature depends on ``temperature``:
+    Parameters
+    ----------
+    pressures : array-like
+        Pressure levels, in hPa, in any order.
+    surface_pressure : float
+        The sounding's surface pressure, in hPa. Levels at higher pressure
+        are below the surface and are dropped.
+    surface_altitude : float
+        The sounding's surface altitude, in meters above sea level.
+    temperature : float or array-like, optional
+        Temperature in K. ``None`` uses the standard atmosphere lapse rate of
+        6.5 K/km from a surface temperature of 288.15 K minus 6.5 K/km times
+        the surface altitude; this matches the U.S. Standard Atmosphere below
+        11 km. A single value assumes an isothermal atmosphere, with scale
+        height ``R_d T / g`` (7.3 km at 250 K). One value per level
+        integrates layer by layer with each layer's mean temperature, and the
+        layer between the surface and the first level takes the first
+        level's temperature. Use a profile when the retrieval or its prior
+        gives one.
+    top : float, optional
+        Drop levels above this altitude, in meters above sea level, such as
+        the top of the meteorology.
 
-    ``None``
-        The standard-atmosphere lapse rate of 6.5 K/km from a surface
-        temperature of 288.15 K minus 6.5 K/km times the surface altitude.
-        This reproduces the U.S. Standard Atmosphere below 11 km and is
-        within a few percent of a real profile.
-    a number
-        An isothermal atmosphere at that temperature (K), with scale height
-        ``R_d T / g``: 7.3 km at 250 K.
-    one temperature per level
-        Layer by layer with the mean temperature (K) of each layer, the way
-        a sounding is integrated. Use this when the retrieval or its prior
-        gives a temperature profile. The layer between the surface and the
-        first level takes the first level's temperature.
-
-    Levels below the surface (pressure above ``surface_pressure``) are
-    dropped, as are levels above ``top`` (metres MSL, for example the
-    meteorology's top). The result is sorted from the surface upward, so the
-    first altitude anchors the slant at the sounding's location whatever
-    order the product lists its levels in.
+    Returns
+    -------
+    numpy.ndarray
+        Altitudes in meters above sea level, from the surface upward, so the
+        first one anchors the slant at the sounding's location.
     """
     p = np.asarray(pressures, dtype=float).ravel()
     if p.size == 0:

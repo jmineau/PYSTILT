@@ -1,8 +1,8 @@
 Your First Footprint
 ====================
 
-This page takes you from one measurement to a footprint map. It uses Python;
-the same run from the command line is at the end.
+This page takes you from one measurement to a footprint map. It uses Python.
+The same run from the command line is at the end.
 
 You will:
 
@@ -11,17 +11,16 @@ You will:
 3. run the simulation
 4. plot the footprint
 
-Before you start: meteorology
------------------------------
+Before you start
+----------------
 
 STILT moves particles with wind fields from a weather model, stored as
 :term:`ARL`-format files. You need files covering your measurement time and
-the hours before it. There are two ways to get them.
+the hours before it.
 
-**You already have ARL files** (for example a group archive). You need three
-things: the folder they are in, a pattern describing their names, and how many
-hours each file covers. For files named like ``20230715_18``, each holding
-six hours:
+If you already have ARL files, for example in a group archive, tell PYSTILT
+the folder they are in, a pattern for their names, and how many hours each
+file covers. For files named like ``20230715_18``, each holding six hours:
 
 .. code-block:: python
 
@@ -31,8 +30,8 @@ six hours:
        "file_tres": "6h",            # each file covers 6 hours
    }
 
-**You don't have ARL files.** PYSTILT can download them from NOAA's archive
-into a folder you choose. This needs ``pip install "pystilt[cloud]"``:
+If you don't have ARL files, PYSTILT can download them from NOAA's archive
+into a folder you choose. This needs ``pip install "pystilt[cloud]"``.
 
 .. code-block:: python
 
@@ -71,8 +70,8 @@ Step 2: Set up the model
 ------------------------
 
 A :class:`~stilt.Model` combines your receptors, your meteorology, and the
-settings for the run. Everything lives in a project folder, created if it
-doesn't exist:
+settings for the run. Everything is saved in a project folder, which PYSTILT
+creates if it doesn't exist.
 
 .. code-block:: python
 
@@ -97,8 +96,8 @@ What these settings mean:
 
 ``numpar``
    How many particles to release. More particles give a smoother footprint
-   but take longer. 200 is fine for a first try; 500 to 1000 is common for
-   research.
+   but take longer. 200 is fine for a first try. Research runs often use
+   500 to 1000.
 
 ``grid``
    The map grid the footprint is calculated on. Make it big enough to
@@ -112,17 +111,17 @@ Step 3: Run
 
    model.run()
 
-This runs HYSPLIT, moves the particles, and calculates the footprint. A
+This runs HYSPLIT to move the particles, then calculates the footprint. A
 single simulation like this usually takes a minute or two. ``run()`` returns
 when it is done.
 
 Step 4: Look at the footprint
 -----------------------------
 
-Each receptor is run once per :term:`variant`; with the settings above
-there is one variant, named after the met source, ``hrrr``. One receptor
-under one variant is one :term:`simulation`, addressed by the receptor's id
-and the variant's name. Grab the one you just ran and plot its footprint:
+PYSTILT runs each receptor once per :term:`variant`. With the settings above
+there is one variant, named ``hrrr`` after the met source. One receptor under
+one variant is a :term:`simulation`. Look yours up by the receptor's id and
+the variant name, and plot its footprint:
 
 .. code-block:: python
 
@@ -131,17 +130,17 @@ and the variant's name. Grab the one you just ran and plot its footprint:
 
    foot.plot.map()
 
-You should see influence concentrated near the receptor and trailing off in
-the direction the air came from. The values are summed over all 24 hours; cells
-with more color influenced the measurement more.
+You should see the most influence near the receptor, trailing off in the
+direction the air came from. The map shows the footprint summed over all 24
+hours, on a log scale. Cells with more color influenced the measurement more.
 
 The footprint's data is an :class:`xarray.DataArray` with dimensions
 ``(time, lat, lon)`` and units of ppm per (µmol m⁻² s⁻¹):
 
 .. code-block:: python
 
-   foot.data                                      # hourly footprint
-   foot.integrate_over_time().data                # summed over time
+   foot.data                     # hourly footprint
+   foot.integrate_over_time()    # summed over time
 
 The particle paths are a :class:`pandas.DataFrame`, one row per particle per
 time step:
@@ -154,7 +153,7 @@ time step:
 What PYSTILT wrote
 ------------------
 
-Everything is in the project folder:
+Everything is in the project folder.
 
 .. code-block:: text
 
@@ -170,18 +169,21 @@ Everything is in the project folder:
              202307151800_-111.848_40.766_10_traj.parquet  # particle paths
              202307151800_-111.848_40.766_10_foot.nc       # footprint
 
-The two folder names are the :term:`simulation ID`: the receptor (time,
-longitude, latitude, and altitude) and the variant.
+HYSPLIT's own input files, such as ``CONTROL`` and ``SETUP.CFG``, are left
+in the simulation folder too. The two folder names together are the
+:term:`simulation ID`. The first is the receptor (time, longitude, latitude,
+and altitude) and the second is the variant.
 
-Because your settings and receptors are saved in the folder, you can open the
+Your settings and receptors are saved in the folder, so you can open the
 project again later without repeating them:
 
 .. code-block:: python
 
    model = stilt.Model(project="./my_first_project")
 
-Run ``model.run()`` again and nothing happens: PYSTILT sees the outputs
-already exist and skips them. Add more receptors and only the new ones run.
+If you call ``model.run()`` again, nothing happens. PYSTILT sees that the
+outputs already exist and skips them. If you add receptors, only the new ones
+run.
 
 The same run from the command line
 ----------------------------------
@@ -215,7 +217,8 @@ above:
    n_hours: -24
    numpar: 200
 
-Add your receptor to ``my_first_project/receptors.csv``:
+Replace the example line in ``my_first_project/receptors.csv`` with your
+receptor, so the file reads:
 
 .. code-block:: text
 

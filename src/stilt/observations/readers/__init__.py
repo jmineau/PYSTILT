@@ -2,18 +2,14 @@
 Readers for column retrieval products, one module per instrument.
 
 Each reader opens one product file and returns a :class:`pandas.DataFrame`
-with one row per sounding and a shared set of columns, so the rest of
-:mod:`stilt.observations` (selection, receptors, kernel tables, slant
-geometry) works the same whichever instrument the data came from. The
-*Reading Retrieval Products* guide lists the columns. Vertical arrays run from the surface
-upward, azimuths are degrees clockwise from north toward the instrument or
-the sun, pressures are hPa, and altitudes are metres above mean sea level.
+with one row per sounding and the same set of columns, so the rest of
+:mod:`stilt.observations` works the same for every instrument. The
+*Reading Retrieval Products* guide lists the columns and shows how to add a
+reader for another product.
 
-A reader keeps its product's conventions in one place: which variable holds
-the retrieval, its fill values and quality flag, how the pressure grid is
-rebuilt, which way the layers run. GGG's ``.oof`` and netCDF outputs
-(TCCON, and EM27/SUN through EGI) share one module. A product not covered
-here is one more module of the same shape; see that guide.
+In every reader, vertical arrays run from the surface upward, azimuths are
+degrees clockwise from north toward the instrument or the sun, pressures
+are in hPa, and altitudes are in meters above sea level.
 """
 
 from .ggg import read_ggg_netcdf, read_ggg_oof

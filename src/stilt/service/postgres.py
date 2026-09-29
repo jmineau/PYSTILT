@@ -1,11 +1,11 @@
 """
-Postgres-backed work queue for distributed (pull/serve) execution.
+PostgreSQL work queue for pull workers.
 
-The queue distributes work to claim-mode workers: receptors are enqueued
-``pending``, atomically claimed (``FOR UPDATE SKIP LOCKED``), run (every
-variant of the receptor), then marked ``done``/``failed``. It tracks **work
-status only** — whether outputs exist is decided by key from the project
-store, never here.
+Receptors are added as ``pending``. A worker claims one with
+``FOR UPDATE SKIP LOCKED``, so no other worker can take it, runs every
+variant of it, and marks it ``done`` or ``failed``. The queue records only
+this status. Whether a simulation is complete is decided by its outputs in
+the project.
 """
 
 from __future__ import annotations
@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS queue (
 
 
 def _connect(db_url: str) -> Any:
-    """Open one psycopg connection configured for dict-style rows."""
+    """Open a psycopg connection that returns rows as dicts."""
     try:
         import psycopg
         import psycopg.rows
@@ -45,7 +45,7 @@ def _connect(db_url: str) -> Any:
 
 
 def _status_for(result: ReceptorResult) -> str:
-    """Map a worker result onto a queue status."""
+    """Return the queue status for a receptor result. An interrupted receptor goes back to pending."""
     if result.status == "interrupted":
         return "pending"
     return "done" if result.status == "complete" else "failed"
@@ -53,23 +53,29 @@ def _status_for(result: ReceptorResult) -> str:
 
 @dataclass(slots=True)
 class PostgresClaim:
-    """One claimed work item, recorded inside its claim transaction."""
+    """
+    One claimed receptor.
+
+    The claim holds a database transaction open while the receptor runs. The
+    transaction commits when the claim ends, or rolls back if the worker
+    fails, which puts the receptor back in the queue.
+    """
 
     receptor_id: str
     _conn: Any
     _released: bool = False
 
     def release(self) -> None:
-        """Mark this claim for rollback instead of commit."""
+        """Roll back the claim when it ends, leaving the receptor pending."""
         self._released = True
 
     @property
     def released(self) -> bool:
-        """Return whether the claim has been released."""
+        """Whether :meth:`release` has been called."""
         return self._released
 
     def record(self, result: ReceptorResult) -> None:
-        """Persist the work status for this claim inside its transaction."""
+        """Set the receptor's queue status from its result."""
         self._conn.execute(
             "UPDATE queue SET status = %s, error = %s, updated_at = NOW() "
             "WHERE receptor_id = %s",
@@ -78,7 +84,16 @@ class PostgresClaim:
 
 
 class PostgresQueue:
-    """A Postgres work queue: enqueue → claim → done/failed."""
+    """
+    Work queue of receptors in a PostgreSQL database.
+
+    Creates the ``queue`` table if it does not exist.
+
+    Parameters
+    ----------
+    db_url : str
+        PostgreSQL connection URL.
+    """
 
     def __init__(self, db_url: str) -> None:
         self._db_url = db_url
@@ -88,11 +103,11 @@ class PostgresQueue:
 
     @property
     def db_url(self) -> str:
-        """Return the queue's database URL."""
+        """PostgreSQL connection URL of the queue."""
         return self._db_url
 
     def register(self, receptor_ids: Iterable[str]) -> None:
-        """Enqueue receptors as pending work (idempotent; resets status)."""
+        """Add receptors to the queue as pending, resetting any that are already there."""
         rows = [(str(rid),) for rid in receptor_ids]
         if not rows:
             return
@@ -108,7 +123,12 @@ class PostgresQueue:
 
     @contextmanager
     def claim_one(self) -> Iterator[PostgresClaim | None]:
-        """Atomically claim one pending receptor for pull-mode execution."""
+        """
+        Context manager that claims one pending receptor.
+
+        Yields a :class:`PostgresClaim`, or ``None`` when no receptor is
+        pending. The claim's status update is committed when the block ends.
+        """
         with _connect(self._db_url) as conn:
             try:
                 row = conn.execute(

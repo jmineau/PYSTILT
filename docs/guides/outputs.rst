@@ -1,23 +1,23 @@
 Load And Plot Results
 =====================
 
-A simulation is one receptor run under one variant (:doc:`configuration`).
-It produces up to two things:
+Each simulation is one receptor run under one variant
+(:doc:`configuration`). It writes up to two files:
 
-- the **trajectories**: every particle's path (a Parquet file),
-- the **footprint**, when the variant has a grid (a NetCDF file).
+- the **trajectories**, every particle's path, as a Parquet file
+- the **footprint**, as a NetCDF file, when the variant has a grid
 
-A variant declared with ``from:`` has no trajectories of its own: its
-footprint is made from another variant's particles, and
-``sim.trajectories`` returns those.
+A variant declared with ``from:`` makes its footprint from another
+variant's particles. It has no trajectory file of its own, and
+``sim.trajectories`` returns the other variant's.
 
-This page shows how to look at them, load them for analysis, and add
-footprints up over areas you care about.
+This page shows how to plot these outputs, load them for analysis, and add
+footprints up over the areas you care about.
 
 Quick look
 ----------
 
-Open the project, pick a simulation, and plot:
+Open the project, pick a simulation, and plot it:
 
 .. code-block:: python
 
@@ -38,78 +38,85 @@ To pick a particular simulation, index by receptor id and variant:
    sim = model.simulations["202307151800_-111.848_40.766_10", "hrrr"]
    sim = model.simulations["202307151800_-111.848_40.766_10/hrrr"]   # same thing
 
-Plotting needs the ``visualization`` extra. With cartopy installed, maps get
-coastlines and state borders. Other plots:
+Plotting needs the ``visualization`` extra. If cartopy is installed, maps
+also show coastlines and state borders. There are a few other plots:
 
-- ``foot.plot.facet()``: one panel per hour
-- ``receptor.plot.map()``: where the receptor is
-- ``model.plot.availability()``: which receptor times and locations have
-  results
+- ``foot.plot.facet()`` draws one panel per hour.
+- ``receptor.plot.map()`` shows where the receptor is.
+- ``model.plot.availability()`` shows which receptor times and locations
+  have results.
 
 Footprints
 ----------
 
 .. code-block:: python
 
-   foot = sim.footprint                 # None if it doesn't exist yet
+   foot = sim.footprint                 # None if there is no footprint file
    foot.data                            # an xarray.DataArray
    foot.time_range                      # (start, end) of the footprint's hours
    foot.receptor                        # the receptor it belongs to
 
-``foot.data`` has dimensions ``(time, lat, lon)``, one map per hour back from
-the receptor, in units of ppm per (µmol m⁻² s⁻¹). (With
-``time_integrate: true`` in the footprint settings there is a single map
-instead.) To sum over time:
+``foot.data`` has dimensions ``(time, lat, lon)``, or ``(time, y, x)`` on a
+projected grid. There is one map for each hour back from the receptor time,
+in units of ppm per (µmol m⁻² s⁻¹). With ``time_integrate: true`` in the
+footprint settings there is a single time step. To sum over time:
 
 .. code-block:: python
 
    total = foot.integrate_over_time()
 
-To open a footprint file directly, without a model:
+To open a footprint file without a model:
 
 .. code-block:: python
 
    foot = stilt.Footprint.from_netcdf("path/to/..._foot.nc")
 
-Each file also records the receptor and the settings used to make it.
+The file also records the receptor and the settings used to make it.
 
 Many simulations at once
 ------------------------
 
-``model.simulations`` is every receptor under every variant. Narrow it
-with ``sel`` and take an output from the result:
+``model.simulations`` holds every receptor under every variant. Narrow it
+with ``sel``, then load an output from the result:
 
 .. code-block:: python
 
    sims = model.simulations.sel(
        variant="hrrr",
-       time=slice("2023-07-01", "2023-07-31 23:00"),    # receptor times, inclusive
+       time=slice("2023-07-01", "2023-07-31 23:00"),    # receptor times, both ends included
    )
    footprints = sims.footprint.load()                   # {simulation id: Footprint}
    paths = sims.footprint.paths()                       # {simulation id: Path}
    trajectories = sims.trajectories.load()
 
-Both are dictionaries keyed by simulation id, so you always know which
-receptor a result belongs to:
+The results are dictionaries keyed by simulation id, so you always know
+which receptor a result belongs to:
 
 .. code-block:: python
 
    for sid, foot in footprints.items():
-       print(sid.receptor, float(foot.integrate_over_time().data.sum()))
+       print(sid.receptor, float(foot.integrate_over_time().sum()))
 
-``sel`` takes ``receptor``, ``variant``, ``time``, ``location`` (a location
-id or several), and ``where`` (a function of the receptor); each call
-narrows the one before, and every argument accepts one value or a list.
-Extra columns of ``receptors.csv`` are on each receptor as ``attrs``, which
-is how to gather one satellite scene or one site:
+``sel`` takes these filters, each as one value or a list:
+
+- ``receptor``, receptor ids
+- ``variant``, variant names. The name of a realization group, such as
+  ``hrrr-err``, selects all of its realizations.
+- ``time``, one receptor time or a ``slice`` of times
+- ``location``, location ids
+- ``where``, a function that takes a receptor and returns ``True`` to keep
+  it
+
+Each call narrows the one before. A receptor id or variant name that the
+project does not have raises ``KeyError``. The other filters may select
+nothing.
+
+Extra columns in ``receptors.csv`` are on each receptor as ``attrs``. Use
+them with ``where`` to gather one satellite scene or one site:
 
 .. code-block:: python
 
    scene = model.simulations.sel(variant="hrrr", where=lambda r: r.attrs["scene"] == "A")
-
-A realization group's name selects all of its realizations
-(``sel(variant="hrrr-err")``). A receptor id or variant name the project
-does not have is an error; the other filters may select nothing.
 
 To see what is left to do:
 
@@ -119,18 +126,19 @@ To see what is left to do:
    model.simulations.sel(variant="hrrr").footprint.missing()
    model.simulations.status()                            # a DataFrame, one row per simulation
 
-``status()`` has a ``trajectory`` and a ``footprint`` column, empty where
-the variant does not produce that output, and a ``complete`` column
-(``model.status()`` is the same table). It checks every simulation, so it
-takes a while on a large project stored in the cloud. ``stilt status``
-prints the totals, per variant when there are several.
+``status()`` has a ``trajectory`` and a ``footprint`` column that say
+whether each output exists. They are empty where the variant does not make
+that output. The ``complete`` column says whether the simulation is done.
+``model.status()`` returns the same table. It checks every simulation, so
+it is slow on a large project stored in the cloud. From the command line,
+``stilt status`` prints the totals, per variant when there are several.
 
 Trajectories
 ------------
 
 .. code-block:: python
 
-   traj = sim.trajectories        # None if it doesn't exist yet
+   traj = sim.trajectories        # None if there is no trajectory file
    df = traj.data                 # pandas DataFrame, one row per particle per time step
 
 The columns you are most likely to use:
@@ -144,22 +152,23 @@ The columns you are most likely to use:
    * - ``long`` / ``lati``
      - Particle longitude and latitude
    * - ``zagl``
-     - Particle height above ground level
+     - Particle height above ground, m
    * - ``time``
-     - Minutes from receptor time
+     - Minutes from the receptor time (negative for a backward run)
    * - ``datetime``
-     - Absolute timestamp derived by PYSTILT
+     - Time of the row, UTC
    * - ``foot``
-     - Instantaneous surface influence at the particle position
+     - The particle's influence from the surface at this step, in
+       ppm per (µmol m⁻² s⁻¹)
    * - ``indx``
-     - Particle identifier within the ensemble
+     - Particle number
    * - ``xhgt``
-     - Reconstructed release height for column or multipoint workflows when present
+     - Release height, for column and multipoint receptors
    * - ``mlht``, ``sigw``, ``tlgr``, ``pres``
-     - Mixed-layer height, turbulence statistics, and pressure fields often
-       used in diagnostics
+     - Mixed-layer height, vertical velocity spread, Lagrangian time scale,
+       and pressure
 
-To open a trajectory file directly:
+To open a trajectory file without a model:
 
 .. code-block:: python
 
@@ -169,61 +178,53 @@ Empty footprints
 ----------------
 
 Sometimes a simulation runs fine but no particle ever reaches the footprint
-grid, usually because the grid is too small or is not upwind. PYSTILT then
-writes a small ``<receptor id>_foot.empty`` file instead of a NetCDF.
-The simulation counts as finished (so reruns skip it), but ``load()`` and
-``paths()`` leave it out because there is nothing to load. If you see many
-of these, make your footprint grid bigger.
+grid. Usually the grid is too small or is not upwind. PYSTILT then writes a
+small ``<receptor id>_foot.empty`` file next to a NetCDF of zeros. The
+simulation counts as finished, so reruns skip it. ``sim.footprint`` loads
+the zeros, with ``is_empty`` set and ``empty_reason`` saying why. If you see
+many of these, make your footprint grid bigger.
 
 Adding footprints up over areas
 -------------------------------
 
-To get the influence of specific areas, such as counties, hexagons, or small
-windows around point sources, use :meth:`~stilt.Footprint.aggregate`. It adds
-up footprint cells into your areas and, optionally, into time bins:
+Footprints are always calculated on the regular grid in your config, as in
+STILT-R. To get the influence of other areas, such as counties, hexagons, or
+small windows around point sources, use :meth:`~stilt.Footprint.aggregate`.
+It adds up the footprint cells in each area, and the hours in each time
+bin:
 
 .. code-block:: python
 
    import pandas as pd
+   import stilt
 
    bins = pd.interval_range(
        start=foot.time_range[0], end=foot.time_range[1], freq="1h"
    )
-   aggregated = foot.aggregate(
-       target=[(-111.97, 40.515), (-112.015, 40.779)],
-       time_bins=bins,
-   )
-
-Each footprint cell's value is added into the target area it overlaps
-(split by area where a cell straddles two targets), so the total influence is
-preserved. This is what you want when multiplying by emissions.
-
-Footprints are always calculated on a regular latitude/longitude grid, which
-keeps them identical to STILT-R's. The overlap between that grid and your
-areas is worked out once and reused, so adding up thousands of footprints is
-fast.
-
-The target can be:
-
-- :class:`stilt.Grid` -- every cell of a rectilinear grid; ``grid.index``
-  gives the matching ``(lon, lat)`` state index.
-- :class:`stilt.Mesh` -- arbitrary polygons with ids: a shapefile
-  (``Mesh.from_file``), H3 hexagons (``Mesh.from_h3``), nested grids, or
-  point-source windows (``Mesh.from_windows``).  Results are indexed by
-  cell id.
-- :class:`stilt.Zones` -- labels that merge the cells of a grid or
-  mesh into super-cells.
-- An xarray grid (``lon``/``lat`` or ``x``/``y`` coordinates; ``NaN`` cells
-  in a 2-D DataArray are masked out) or a plain list of ``(x, y)`` cell
-  centers on a regular lattice.
-
-.. code-block:: python
-
-   import stilt
-
    state = stilt.Grid(xmin=-112.3, xmax=-111.6, ymin=40.4, ymax=41.0,
                       xres=0.02, yres=0.02)
    by_cell = foot.aggregate(state, time_bins=bins)        # index == state.index
+
+The result is a DataFrame with one row per area and one column per time
+bin, labelled by the start of the bin. A footprint cell that straddles two
+areas is split between them by area, so the total influence is kept. This
+is what you want before multiplying by emissions. Influence that falls
+outside every area is dropped.
+
+The target can be:
+
+- a :class:`stilt.Grid`. Rows follow ``grid.index``, one ``(lon, lat)``
+  pair per cell.
+- a :class:`stilt.Mesh` of polygons with ids: a shapefile
+  (``Mesh.from_file``), H3 hexagons (``Mesh.from_h3``), or windows around
+  points (``Mesh.from_windows``). Rows are the polygon ids.
+- a :class:`stilt.Zones`, which merges the cells of a grid or mesh into
+  larger groups by label.
+- an xarray grid with ``lon``/``lat`` or ``x``/``y`` coordinates. ``NaN``
+  cells in a 2-D DataArray are left out.
+- a list of ``(x, y)`` cell centres on a regular lattice.
+
+.. code-block:: python
 
    sources = stilt.Mesh.from_windows(
        [(-111.97, 40.515), (-112.015, 40.779)], 0.01, ids=["landfill", "wwtp"]
@@ -231,28 +232,32 @@ The target can be:
    by_source = foot.aggregate(sources, time_bins=bins)    # index == ["landfill", "wwtp"]
 
    counties = stilt.Mesh.from_file("counties.shp", ids="NAME")
-   by_county = foot.aggregate(counties, time_bins=bins)   # reprojected as needed
+   by_county = foot.aggregate(counties, time_bins=bins)
 
-   sectors = stilt.Zones.from_labels(state, labels)   # one label per grid cell
+   sectors = stilt.Zones.from_labels(state, labels)       # one label per cell of state
    by_sector = foot.aggregate(sectors, time_bins=bins)
 
-Geometries in another CRS are reprojected onto the footprint's raster.  The
-raster must be fine enough to resolve the target cells: ``aggregate`` warns
-when the smallest target cell spans fewer than two native cells.
-
-Polygon overlaps are computed with shapely by default.  If the optional
+Polygons in another coordinate system are reprojected onto the footprint
+grid. The overlaps between the footprint grid and your areas are worked out
+once and reused, so adding up thousands of footprints is fast. Polygon
+overlaps use shapely. If the optional
 `exactextract <https://github.com/isciences/exactextract>`_ package is
-installed (``pip install exactextract``; it is not a PYSTILT dependency) it is
-used automatically and is roughly a hundred times faster on large rasters,
-with identical results.  Pass ``backend="shapely"`` or
-``backend="exactextract"`` to :func:`stilt.geometry.overlap_weights` to force
-one.  To choose a
-raster for a geometry up front, or to rebuild a stored footprint at higher
-fidelity from its particles:
+installed (``pip install exactextract``), PYSTILT uses it instead. It gives
+the same result and is about a hundred times faster on large grids.
+
+The footprint grid must be fine enough to resolve your areas.
+``aggregate`` warns when the smallest area spans fewer than two footprint
+cells. In that case, calculate the footprint again from its particles on a
+finer grid:
 
 .. code-block:: python
 
    hexes = stilt.Mesh.from_h3(8, bounds=state)
-   grid = stilt.Grid.from_geometry(hexes, cells_per_target=4)   # snapped, rounded
-   traj = sim.trajectories
-   foot = traj.footprint(stilt.FootprintConfig(grid=grid))
+   grid = stilt.Grid.from_geometry(hexes, cells_per_target=4)
+   fine = sim.generate_footprint(sim.footprint_config.replace(grid=grid))
+   by_hex = fine.aggregate(hexes, time_bins=bins)
+
+``Grid.from_geometry`` picks a grid that covers the areas with at least four
+cells across the smallest one. ``generate_footprint`` applies the
+variant's particle transforms, as the stored footprint did, and does not
+overwrite the stored file.

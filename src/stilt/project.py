@@ -1,21 +1,21 @@
 """
-A STILT project root and its file layout.
+The files of a STILT project.
 
-A project is one root — a local directory or an object-store URI — holding::
+A project is a local directory or an object-store URI holding::
 
     config.yaml                    the user's settings (never rewritten)
     receptors.csv                  the user's receptors (only appended to)
-    simulations/variants.yaml      PYSTILT's record of every variant that ran
+    simulations/variants.yaml      the settings every variant ran with
     simulations/by-id/<receptor_id>/<variant>/<receptor_id>_traj.parquet
     simulations/by-id/<receptor_id>/<variant>/<receptor_id>_foot.nc
     simulations/by-id/<receptor_id>/<variant>/<receptor_id>_foot.empty
     simulations/by-id/<receptor_id>/<variant>/stilt.log
 
-Everything is addressed by store key relative to the root. ``config.yaml`` and
-``receptors.csv`` together *are* the project: the registered simulation set is
-their receptors crossed with the configured variants. The record holds the
-fully resolved settings of every variant ever registered, so a variant's
-settings cannot change under its name once it has outputs.
+Every file is addressed by its path relative to the root. The simulations a
+project defines are the receptors in ``receptors.csv`` crossed with the
+variants in ``config.yaml``. ``simulations/variants.yaml`` records the
+settings of every variant that has been registered, so those settings cannot
+change under the same name once the variant has outputs.
 """
 
 from __future__ import annotations
@@ -45,7 +45,12 @@ SIMULATION_MET_DIRNAME = "met"
 def resolve_directory(
     directory: str | Path | None = None, *, prefix: str = "pystilt_"
 ) -> Path:
-    """Return a resolved directory path, creating a temp root when omitted."""
+    """
+    Return *directory* as a path, or a new temporary directory when omitted.
+
+    A bare directory name is made absolute. Other paths are returned as
+    given.
+    """
     if directory is None:
         return Path(tempfile.mkdtemp(prefix=prefix))
     directory = Path(directory)
@@ -55,7 +60,7 @@ def resolve_directory(
 
 
 def project_slug(root: str) -> str:
-    """Derive a DNS-safe / filename-safe slug from a project path or URI."""
+    """Return a lowercase, hyphenated name for a project path or URI, safe for filenames and DNS."""
     raw = root.rstrip("/")
     if is_uri(raw):
         raw = raw.split("://", 1)[1]
@@ -68,21 +73,33 @@ def project_slug(root: str) -> str:
 
 
 def simulation_prefix(sim_id: object) -> str:
-    """Return the store key prefix for one simulation's outputs (``str(sim_id)``)."""
+    """Return the key prefix of one simulation's outputs, ``simulations/by-id/<receptor_id>/<variant>``."""
     return f"{SIMULATIONS_PREFIX}/{sim_id}"
 
 
 class Project:
     """
-    One STILT project root plus its store.
+    The files of one STILT project and the store that holds them.
+
+    Most code uses a project through :class:`stilt.Model`, which creates one
+    from its ``project`` argument.
 
     Parameters
     ----------
-    root
+    root : str or Path, optional
         Local directory or object-store URI. A temporary directory is created
         when omitted.
-    cache_dir
-        Local cache for downloads from a remote store.
+    cache_dir : str or Path, optional
+        Local cache for files downloaded from an object store.
+
+    Attributes
+    ----------
+    root : str
+        The project root as a string.
+    is_cloud : bool
+        Whether the root is an object-store URI.
+    store : Store
+        Reads and writes the project's files.
     """
 
     def __init__(
@@ -107,35 +124,42 @@ class Project:
 
     @property
     def name(self) -> str:
-        """Human-readable project name (directory basename or URI slug)."""
+        """Project name, from the directory name or a slug of the URI."""
         return project_slug(self.root) if self.is_cloud else Path(self.root).name
 
     @property
     def directory(self) -> Path:
-        """Local project directory. Raises for cloud projects."""
+        """Local project directory. Raises ``TypeError`` for a cloud project."""
         if self.is_cloud:
             raise TypeError(f"Cloud project {self.root!r} has no local directory.")
         return Path(self.root)
 
     @property
     def simulations_dir(self) -> Path:
-        """Local ``simulations/by-id`` directory. Raises for cloud projects."""
+        """Local ``simulations/by-id`` directory. Raises ``TypeError`` for a cloud project."""
         return self.directory / SIMULATIONS_PREFIX
 
     # -- inputs ----------------------------------------------------------------
 
     @property
     def has_config(self) -> bool:
-        """Return whether a config has been written to the project."""
+        """Whether the project has a ``config.yaml``."""
         return self.store.exists(CONFIG_KEY)
 
     @property
     def has_receptors(self) -> bool:
-        """Return whether receptors have been written to the project."""
+        """Whether the project has a ``receptors.csv``."""
         return self.store.exists(RECEPTORS_KEY)
 
     def load_config(self) -> ModelConfig:
-        """Load ``config.yaml`` from the store."""
+        """
+        Load the project's ``config.yaml``.
+
+        Raises
+        ------
+        FileNotFoundError
+            If the project has no ``config.yaml``.
+        """
         from stilt.config import ModelConfig
 
         if not self.has_config:
@@ -147,11 +171,11 @@ class Project:
         return ModelConfig.model_validate(raw)
 
     def save_config(self, config: ModelConfig) -> None:
-        """Write ``config.yaml`` to the store (only the settings that were given)."""
+        """Write *config* to ``config.yaml``, with only the settings that were given."""
         self.store.write_bytes(CONFIG_KEY, config.to_yaml().encode())
 
     def load_receptors(self) -> list[Receptor] | None:
-        """Load ``receptors.csv`` from the store, or ``None`` when absent."""
+        """Load the project's ``receptors.csv``, or return ``None`` when there is none."""
         from stilt.receptors import read_receptors
 
         if not self.has_receptors:
@@ -162,12 +186,25 @@ class Project:
         self, receptors: list[Receptor], *, source: str | Path | None = None
     ) -> list[Receptor]:
         """
-        Add *receptors* to ``receptors.csv`` and return the ones that were new.
+        Add receptors to ``receptors.csv`` and return the new ones.
 
-        A project without a receptors file gets *source* copied byte for byte
-        when given, else the receptors written out. An existing file is never
-        rewritten: receptors it does not hold yet are appended in its own
-        columns (:func:`stilt.receptors.append_receptors_csv`).
+        An existing file is only appended to. Receptors it already holds are
+        skipped, and new rows use the file's own columns
+        (:func:`stilt.receptors.append_receptors_csv`).
+
+        Parameters
+        ----------
+        receptors : list of Receptor
+            Receptors to add.
+        source : str or Path, optional
+            CSV file the receptors were read from. When the project has no
+            ``receptors.csv`` yet, this file is copied unchanged instead of
+            writing the receptors out.
+
+        Returns
+        -------
+        list of Receptor
+            The receptors that were not in the file before.
         """
         from stilt.receptors import append_receptors_csv, receptors_to_csv
 
@@ -192,11 +229,15 @@ class Project:
 
     def load_record(self) -> dict[str, dict[str, Any]]:
         """
-        The record of what has run: ``{"mets": {...}, "variants": {...}}``.
+        Return the settings every registered met and variant ran with.
 
-        Each entry is the full dump of a :class:`~stilt.config.MetConfig` or
-        :class:`~stilt.config.VariantConfig` as it was when registered. Empty
-        when nothing has been registered yet.
+        Returns
+        -------
+        dict
+            ``{"mets": {name: settings}, "variants": {name: settings}}``.
+            Each entry holds every field of a :class:`~stilt.config.MetConfig`
+            or :class:`~stilt.config.VariantConfig` as it was when
+            registered. Both are empty before anything is registered.
         """
         if not self.store.exists(RECORD_KEY):
             return {"mets": {}, "variants": {}}
@@ -204,7 +245,7 @@ class Project:
         return {"mets": raw.get("mets") or {}, "variants": raw.get("variants") or {}}
 
     def save_record(self, record: dict[str, dict[str, Any]]) -> None:
-        """Write the record back (see :meth:`load_record`)."""
+        """Write the record of registered settings (see :meth:`load_record`)."""
         text = yaml.safe_dump(record, default_flow_style=False, sort_keys=False)
         self.store.write_bytes(RECORD_KEY, text.encode())
 

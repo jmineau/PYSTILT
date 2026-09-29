@@ -15,17 +15,17 @@ What you'll learn
 Step 1: Create the project on the cluster
 -----------------------------------------
 
-Log in to the cluster, activate the environment where PYSTILT is installed,
-and create a project on a filesystem the compute nodes can see:
+Log in to the cluster and activate the environment where PYSTILT is
+installed. Then create a project on a filesystem the compute nodes can see:
 
 .. code-block:: bash
 
    stilt init /path/to/shared/slv_2023
 
-Edit ``config.yaml`` (meteorology and footprint grid, as in
-:doc:`../getting_started/quickstart`) and fill in ``receptors.csv``, or
-generate receptors in Python and pass them to :class:`stilt.Model` as in
-:doc:`wbb_stationary`.
+Edit ``config.yaml`` to set the meteorology and footprint grid, as in
+:doc:`../getting_started/quickstart`. Then fill in ``receptors.csv``. You can
+also generate receptors in Python and pass them to :class:`stilt.Model`, as
+in :doc:`wbb_stationary`.
 
 Step 2: Add Slurm settings
 --------------------------
@@ -37,7 +37,7 @@ partition, and the commands you normally use to activate your environment:
 
    execution:
      backend: slurm
-     n_workers: 200            # 200 array tasks, about 45 simulations each
+     n_workers: 200            # 200 array tasks, about 45 receptors each
      account: my-account
      partition: my-partition
      time: "04:00:00"
@@ -47,10 +47,9 @@ partition, and the commands you normally use to activate your environment:
        - module load miniforge3
        - conda activate my-env
 
-To choose ``time``: time a few simulations locally first (for example by
-running a small test project), multiply by the number per task, and add a
-safety margin. If tasks run out of time, nothing is lost; the next step
-covers resubmitting.
+To choose ``time``, first time a few simulations in a small test project.
+Multiply by the number of receptors per task and add a safety margin. If
+tasks run out of time, nothing is lost. Step 5 shows how to resubmit.
 
 Step 3: Submit
 --------------
@@ -59,8 +58,8 @@ Step 3: Submit
 
    stilt run /path/to/shared/slv_2023
 
-This prints the Slurm job ID and returns. You can log out; the job runs on
-its own.
+This prints the Slurm job ID and returns. You can log out while the job
+runs.
 
 Step 4: Monitor
 ---------------
@@ -70,25 +69,25 @@ Step 4: Monitor
    squeue -u "$USER"                         # Slurm's view of the array
    stilt status /path/to/shared/slv_2023     # finished vs remaining simulations
 
-Task output is in ``slurm/logs/<date_time>/`` inside the project, one
-directory per submission. If every task fails
-immediately, check there first: the most common cause is ``setup`` not
-activating the environment, so ``stilt`` can't be found.
+Task output is in ``slurm/logs/<date_time>/`` inside the project, with one
+folder per submission. If every task fails immediately, look there first.
+The most common cause is a ``setup`` that doesn't activate the environment,
+so the tasks can't find ``stilt``.
 
 Step 5: Resubmit what's left
 ----------------------------
 
-When the array finishes, some simulations may not have: tasks that ran out
-of time, were preempted, or hit missing meteorology. Run the same command
-again:
+Some simulations may be unfinished when the array ends. Their tasks may have
+run out of time or been preempted, or the meteorology they need may be
+missing. Once the job has left the queue, run the same command again:
 
 .. code-block:: bash
 
    stilt run /path/to/shared/slv_2023
 
 Only the unfinished simulations are submitted. Repeat until
-``stilt status`` shows none remaining. For simulations that keep failing,
-read their ``stilt.log``.
+``stilt status`` shows none remaining. If a simulation keeps failing, read
+its ``stilt.log``.
 
 Next
 ----

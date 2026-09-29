@@ -1,4 +1,4 @@
-"""Slurm execution backend."""
+"""Backend that submits workers as a Slurm job array."""
 
 from __future__ import annotations
 
@@ -19,21 +19,15 @@ from stilt.store import is_uri
 
 logger = logging.getLogger(__name__)
 
-# Number of times to retry a scheduler poll that times out before giving up.
-# A busy controller can be slow to answer squeue/sacct; a transient timeout
-# must not abort the wait (and, with the old code, destroy the chunk dir).
+# Number of tries for a scheduler query that times out. A busy controller can
+# be slow to answer squeue or sacct, and one slow answer should not end the wait.
 _POLL_RETRIES = 5
 
 
 def _run_scheduler_query(
     cmd: list[str], *, timeout: int = 30
 ) -> subprocess.CompletedProcess:
-    """
-    Run a scheduler query, retrying on transient timeouts.
-
-    A single slow response from a busy Slurm controller should not crash the
-    wait loop. Retries a few times before propagating the timeout.
-    """
+    """Run a Slurm query command, retrying when it times out."""
     last_exc: subprocess.TimeoutExpired | None = None
     for _ in range(_POLL_RETRIES):
         try:
@@ -52,7 +46,7 @@ def _write_chunks(
     n_workers: int,
 ) -> int:
     """
-    Partition sim IDs into chunk files for array tasks.
+    Split receptor ids round-robin into one chunk file per array task.
 
     Returns the number of chunk files written.
     """
@@ -75,7 +69,7 @@ def _write_chunks(
 
 
 class SlurmHandle:
-    """Handle for a fire-and-forget Slurm array job submitted via ``sbatch``."""
+    """Handle to a Slurm job array submitted with ``sbatch``."""
 
     def __init__(
         self,
@@ -89,23 +83,28 @@ class SlurmHandle:
 
     @property
     def job_id(self) -> str:
-        """Return the scheduler job id reported by ``sbatch``."""
+        """Job id reported by ``sbatch``."""
         return self._job_id
 
     @property
     def detached(self) -> bool:
-        """Slurm array tasks run independently of the submitting process."""
+        """Always True, since Slurm jobs run on after this process exits."""
         return True
 
     def wait(self) -> None:
-        """Poll ``squeue`` until the submitted job no longer appears."""
+        """
+        Block until the job leaves the Slurm queue.
+
+        Polls ``squeue`` every 30 s, then checks the final state with
+        ``sacct`` and raises ``RuntimeError`` if any task failed, was
+        cancelled, or timed out. The chunk files are deleted once the job has
+        left the queue.
+        """
         if self._completed:
             return
-        # Tracks whether we observed the job leave the scheduler queue. Chunk
-        # cleanup is gated on this, NOT on success: if wait() exits while the
-        # job is still queued/running (a poll timeout that outlives the retries,
-        # an interrupt, a SIGTERM), deleting the chunk files would starve the
-        # still-running array tasks (FileNotFoundError -> failed tasks).
+        # Chunk files are deleted only after the job has left the queue,
+        # whether or not it succeeded. If wait() exits early (a query that
+        # keeps timing out, an interrupt), tasks still to run need them.
         job_left_queue = False
         try:
             while True:
@@ -145,37 +144,37 @@ class SlurmHandle:
                 )
             self._completed = True
         finally:
-            # Delete chunk files only once the job has left the scheduler queue
-            # (success OR terminal failure — both mean no task will read them
-            # again). If wait() exits while the job is still queued/running,
-            # leave the chunks: deleting them would starve the remaining tasks.
-            # A leaked chunk dir on abnormal exit is harmless and cleaned up by
-            # the next run.
+            # Once the job has left the queue no task will read the chunks
+            # again. Otherwise they are left in place.
             if job_left_queue and self._chunk_dir is not None:
                 shutil.rmtree(self._chunk_dir, ignore_errors=True)
 
 
 class SlurmExecutor:
     """
-    Fire-and-forget executor that submits Slurm array jobs via ``sbatch``.
+    Run receptors as a Slurm job array submitted with ``sbatch``.
 
-    Push dispatch: :meth:`start` writes immutable chunk files under
-    ``<project>/chunks/<batch>/`` and each array task runs
-    ``stilt push-worker`` on one chunk.
+    :meth:`start` splits the receptor ids into one chunk file per array task
+    under ``<project>/chunks/<batch>/``, writes a submission script under
+    ``<project>/slurm/``, and submits it. Each task runs
+    ``stilt push-worker`` on its chunk. The project must be a local
+    directory.
 
     Parameters
     ----------
-    n_workers
-        Number of array tasks to use for the submission. Each task processes one chunk.
-    cpus_per_task
-        Number of CPUs to request per array task. This is passed to the push worker
-        via ``--cpus``, enabling parallel execution within each task if greater than 1.
-    array_parallelism
-        Maximum number of array tasks to run in parallel (``%N`` suffix).
-    setup
-        Optional list of shell commands to run before the push worker command.
+    n_workers : int
+        Number of array tasks.
+    cpus_per_task : int, default 1
+        CPUs per array task. With more than one, each task runs its
+        receptors in a process pool of that size.
+    array_parallelism : int, optional
+        Maximum number of array tasks running at once (the ``%N`` suffix
+        of ``--array``).
+    setup : list of str, optional
+        Shell commands to run before the worker, such as loading modules.
     **kwargs
-        Additional keyword arguments passed as ``--key=value`` sbatch directives.
+        Other ``sbatch`` options, written as ``#SBATCH --key=value``.
+        Underscores in keys become hyphens, and ``True`` writes a bare flag.
     """
 
     dispatch: DispatchMode = "push"
@@ -196,12 +195,12 @@ class SlurmExecutor:
 
     @property
     def n_workers(self) -> int:
-        """Return the default array-task count used by this executor."""
+        """Number of array tasks when :meth:`start` is not given one."""
         return self._n_workers
 
     @classmethod
     def from_config(cls, config: dict[str, Any]) -> SlurmExecutor:
-        """Build a Slurm executor from ``ModelConfig.execution`` values."""
+        """Return an executor for a config's ``execution`` settings, which must set ``n_workers``."""
         cfg = dict(config)
         cfg.pop("backend", None)
         n_workers = cfg.pop("n_workers", None)
@@ -223,13 +222,13 @@ class SlurmExecutor:
         )
 
     def _resolved_slurm_kwargs(self, project: str) -> dict[str, Any]:
-        """Return sbatch kwargs with PYSTILT defaults applied."""
+        """Return the ``sbatch`` options, with a default job name."""
         kwargs = dict(self._kwargs)
         kwargs.setdefault("job_name", f"pystilt-{project_slug(project)}")
         return kwargs
 
     def _render_sbatch_directives(self, n_workers: int, *, project: str) -> str:
-        """Render the ``#SBATCH`` directive block for one submission script."""
+        """Return the ``#SBATCH`` lines of a submission script."""
         lines: list[str] = []
         array_spec = f"0-{n_workers - 1}"
         if self._array_parallelism is not None:
@@ -255,7 +254,7 @@ class SlurmExecutor:
         compute_root: str | None = None,
         skip_existing: bool | None = None,
     ) -> SlurmHandle:
-        """Write chunk files, generate a submission script, submit via ``sbatch``."""
+        """Write the chunk files and submission script, submit it, and return a handle."""
         if is_uri(project):
             raise ValueError("Slurm push dispatch requires a local project root.")
 

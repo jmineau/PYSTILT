@@ -1,11 +1,11 @@
-"""STILT simulation error types and failure diagnostics."""
+"""Errors raised while running simulations, and the HYSPLIT failures they report."""
 
 from enum import Enum
 from pathlib import Path
 
 
 class FailureReason(str, Enum):
-    """Recognized HYSPLIT failure modes, parsed from stilt.log."""
+    """Why a HYSPLIT run failed, as read from its ``stilt.log``."""
 
     MISSING_MET_FILES = "MISSING_MET_FILES"
     MET_COVERAGE = "MET_COVERAGE"
@@ -36,16 +36,18 @@ FAILURE_PHRASES: dict[str, FailureReason] = {
 
 def identify_failure_reason(path: str | Path) -> FailureReason:
     """
-    Parse stilt.log to identify why a simulation failed.
+    Return why a simulation failed, from the messages in its ``stilt.log``.
 
     Parameters
     ----------
     path : str or Path
-        Simulation directory containing ``stilt.log``.
+        Simulation directory holding ``stilt.log``.
 
     Returns
     -------
     FailureReason
+        The reason for the first known message in the log. ``EMPTY_LOG``
+        when there is no log, and ``UNKNOWN`` when no known message matches.
     """
     log = Path(path) / "stilt.log"
     if not log.exists():
@@ -63,48 +65,55 @@ def identify_failure_reason(path: str | Path) -> FailureReason:
 
 
 class SimulationError(RuntimeError):
-    """Base class for STILT simulation execution errors."""
+    """Base class for errors raised while running a simulation."""
 
 
 class ConfigValidationError(SimulationError):
-    """Model or run configuration is invalid or internally inconsistent."""
+    """The model or run settings are invalid or contradict each other."""
 
 
 class ConfigChangedError(ConfigValidationError):
     """
-    A variant that has already run now resolves to different settings.
+    A variant that has already run now has different settings.
 
-    The project's record holds the settings each variant ran with. Changing
-    them under the same name would leave outputs that no longer match their
-    name; declare a new variant, or remove the old one (``Model.remove``,
-    ``stilt rm``) to rerun it.
+    The project records the settings each variant ran with, and its outputs
+    would no longer match its name if they changed. Declare a new variant
+    for the new settings, or delete the old outputs with
+    :meth:`stilt.Model.remove` (``stilt rm``) and run it again.
     """
 
 
 class MeteorologyError(SimulationError):
-    """Meteorology selection/loading failed for a simulation."""
+    """The meteorology files a simulation needs could not be found or staged."""
 
 
 class HYSPLITTimeoutError(SimulationError):
-    """hycs_std process exceeded the configured timeout."""
+    """HYSPLIT (``hycs_std``) ran longer than the configured timeout."""
 
 
 class NoParticleOutputError(SimulationError):
-    """PARTICLE_STILT.DAT was not produced by hycs_std."""
+    """HYSPLIT finished without writing ``PARTICLE_STILT.DAT``."""
 
 
 class EmptyTrajectoryError(SimulationError):
-    """PARTICLE_STILT.DAT exists but contains no trajectory data."""
+    """HYSPLIT ran, but its particle output holds no particles."""
 
 
 class HYSPLITFailureError(SimulationError):
     """
-    hycs_std reported a recognizable failure phrase in the log.
+    HYSPLIT wrote a known failure message to its log.
+
+    Parameters
+    ----------
+    reason : FailureReason
+        The failure the message identifies.
+    sim_id : str, optional
+        Label for the failed run, put in front of the message.
 
     Attributes
     ----------
     reason : FailureReason
-        The identified failure mode.
+        The failure the message identifies.
     """
 
     def __init__(self, reason: FailureReason, sim_id: str = ""):

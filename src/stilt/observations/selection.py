@@ -24,16 +24,28 @@ def group_by_overpass(
     """
     Label each time with the overpass it belongs to.
 
-    This is the X-STILT overpass finder: soundings from one satellite pass
-    are seconds apart and passes are hours apart, so a new group starts
-    wherever consecutive times (in time order) differ by more than
-    ``max_gap``. Each label is the group's first time as ``YYYYMMDDHHMM``.
+    Soundings from one satellite pass are seconds apart and passes are hours
+    apart, so a new overpass starts wherever sorted times differ by more
+    than ``max_gap``. This is X-STILT's overpass grouping.
 
-    The result is aligned with the input, so on a table of soundings::
+    Parameters
+    ----------
+    times : array-like or pandas.Series
+        Sounding times.
+    max_gap : str or pandas.Timedelta, default "30min"
+        Largest gap between soundings of one overpass.
 
-        df["overpass"] = group_by_overpass(df["time"])
-        for label, scene in df.groupby("overpass"):
-            ...
+    Returns
+    -------
+    pandas.Series
+        The first time of each sounding's overpass, as ``YYYYMMDDHHMM``,
+        aligned with ``times``.
+
+    Examples
+    --------
+    >>> df["overpass"] = group_by_overpass(df["time"])
+    >>> for label, scene in df.groupby("overpass"):
+    ...     ...
     """
     series = times if isinstance(times, pd.Series) else pd.Series(times)
     stamps = pd.to_datetime(series)
@@ -63,7 +75,7 @@ def _haversine_km(
     lon2: np.ndarray | float,
     lat2: np.ndarray | float,
 ) -> np.ndarray:
-    """Great-circle distance in kilometres, broadcasting over the inputs."""
+    """Return the great-circle distance in km, broadcasting over the inputs."""
     d_lat = np.radians(lat2 - lat1)
     d_lon = np.radians(lon2 - lon1)
     a = (
@@ -74,7 +86,7 @@ def _haversine_km(
 
 
 def _linspace(start: float, stop: float, n: int) -> list[float]:
-    """Return *n* evenly-spaced values from *start* to *stop* inclusive."""
+    """Return ``n`` evenly spaced values from ``start`` to ``stop``, or their midpoint when ``n`` is 1."""
     if n <= 0:
         return []
     if n == 1:
@@ -99,18 +111,33 @@ def select_observations_spatial(
     domain_lat_range: tuple[float, float],
 ) -> np.ndarray:
     """
-    Select soundings on a near-field plus background grid.
+    Select soundings densely near a site and sparsely across the domain.
 
-    Ports X-STILT's ``sel.obs4recpv2``: lay a dense grid of
-    ``near_field_cols × near_field_rows`` points over
-    ``site ± near_field_dlon/dlat`` and a sparse grid of
-    ``background_cols × background_rows`` points over the full domain, and
-    keep the sounding nearest (great-circle) to each grid point. Dense
-    coverage near the site is where the footprints matter most; the
-    background soundings support a concentration-difference analysis.
+    Lays a dense grid of points around the site and a sparse grid over the
+    whole domain, and keeps the sounding nearest to each grid point. The
+    dense soundings cover the site, where footprints matter most, and the
+    sparse ones give a background. This is X-STILT's ``sel.obs4recpv2``.
 
-    Returns the positional indices of the selected soundings, each once, in
-    ascending latitude. Use them as ``df.iloc[selected]``.
+    Parameters
+    ----------
+    longitudes, latitudes : array-like
+        Sounding positions, in degrees.
+    site_longitude, site_latitude : float
+        Center of the dense grid, in degrees.
+    near_field_dlon, near_field_dlat : float
+        Half-width and half-height of the dense grid, in degrees.
+    near_field_cols, near_field_rows : int
+        Number of dense grid points across and up.
+    background_cols, background_rows : int
+        Number of sparse grid points across and up.
+    domain_lon_range, domain_lat_range : tuple of float
+        ``(min, max)`` extent of the sparse grid, in degrees.
+
+    Returns
+    -------
+    numpy.ndarray
+        Positions of the selected soundings, each once, in order of
+        latitude. Use them as ``df.iloc[selected]``.
     """
     lons = np.asarray(longitudes, dtype=float).ravel()
     lats = np.asarray(latitudes, dtype=float).ravel()
@@ -146,7 +173,7 @@ def select_observations_spatial(
 
 
 def _sample_regular(polygon: Polygon, n: int) -> list[tuple[float, float]]:
-    """Sample approximately regular points inside a polygon."""
+    """Return ``n`` points on a regular grid inside a polygon."""
     minx, miny, maxx, maxy = polygon.bounds
     if polygon.area <= 0:
         raise ValueError("Cannot jitter within a zero-area polygon.")
@@ -164,7 +191,7 @@ def _sample_regular(polygon: Polygon, n: int) -> list[tuple[float, float]]:
 def _sample_random(
     polygon: Polygon, n: int, *, seed: int | None = None
 ) -> list[tuple[float, float]]:
-    """Sample random points inside a polygon."""
+    """Return ``n`` uniformly random points inside a polygon."""
     minx, miny, maxx, maxy = polygon.bounds
     rng = Random(seed)
     points: list[tuple[float, float]] = []
@@ -191,13 +218,27 @@ def jitter_points(
     seed: int | None = None,
 ) -> list[tuple[float, float]]:
     """
-    ``(longitude, latitude)`` points spread over one pixel.
+    Return ``(longitude, latitude)`` points spread over one pixel.
 
-    X-STILT's ``jitterTF``: instead of one receptor at a large pixel's
-    centre, run several across it and average their footprints. ``polygon``
-    is the pixel outline, as a shapely polygon or its corner coordinates.
-    ``"regular"`` lays the points on a grid clipped to the polygon;
-    ``"random"`` draws them uniformly with ``seed``.
+    Running several receptors across a large pixel and averaging their
+    footprints represents the pixel better than one receptor at its center.
+    This is X-STILT's ``jitterTF``.
+
+    Parameters
+    ----------
+    polygon : shapely.Polygon or sequence of (float, float)
+        Pixel outline, as a polygon or its corner coordinates.
+    n : int
+        Number of points.
+    method : {"regular", "random"}, default "regular"
+        ``"regular"`` places the points on a grid clipped to the polygon.
+        ``"random"`` draws them uniformly.
+    seed : int, optional
+        Random seed for ``method="random"``.
+
+    Returns
+    -------
+    list of (float, float)
     """
     if n <= 0:
         raise ValueError("n must be > 0")

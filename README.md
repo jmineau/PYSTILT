@@ -11,42 +11,253 @@
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![Pyright](https://img.shields.io/badge/pyright-checked-brightgreen.svg)](https://github.com/microsoft/pyright)
 
-PYSTILT is a Python implementation of the [STILT](https://uataq.github.io/stilt/) Lagrangian atmospheric transport model.
-It runs backward trajectories with [HYSPLIT](https://www.ready.noaa.gov/HYSPLIT.php) and computes receptor footprints
-that map where upwind surface fluxes influence a measurement.
-
-The project is in alpha and focused on a unified execution model that works for one-off runs,
-large batch runs, and streaming queue workers.
+PYSTILT is a Python version of the [STILT](https://uataq.github.io/stilt/) atmospheric transport model.
+It follows air backward in time from a measurement with [HYSPLIT](https://www.ready.noaa.gov/HYSPLIT.php)
+and computes a footprint, a map of which upwind surface areas influenced the measurement and by how much.
 
 ## Status
 
-PYSTILT is in alpha development. No backward compatibility guarantees before v1.0.
+PYSTILT is alpha software. There are no backward compatibility guarantees before v1.0, and the
+public API may still change.
 
-The core transport is stable: HYSPLIT execution, trajectory and footprint generation,
-numerical STILT-R parity, and the local and SLURM execution paths are all exercised by the
-test suite. A project runs its receptors under named variants (settings, error ensembles,
-extra footprints). The public API may change while the package settles.
+The transport core is stable. The test suite covers HYSPLIT runs, trajectories and footprints,
+agreement with STILT-R, and runs on a local machine and on Slurm.
 
-## Choose a workflow
+## Installation
 
-- **One-off transport runs** for local analysis and notebooks:
-  use `Model.run()` or `stilt run`.
-- **Queue-backed batch or service runs** for cloud execution:
-  use `Model.register()`, `stilt register`, `stilt pull-worker`, and
-  `stilt serve` with a PostgreSQL work queue configured via `PYSTILT_DB_URL`.
-  Slurm needs no database: `stilt run --backend slurm`.
-- **Column and satellite workflows** for science-facing code:
-  use `stilt.observations` to group, select, and lay out soundings as
-  `Receptor` objects, and a per-receptor averaging-kernel table to weight
-  them inside the same runtime.
+```bash
+pip install pystilt
+```
+
+For plotting, projected grids, aggregation over shapefiles, and cloud features (NOAA downloads,
+`s3://` and `gs://` projects, the Postgres work queue, Kubernetes), install everything:
+
+```bash
+pip install "pystilt[complete]"
+```
+
+## Quickstart
+
+Describe a measurement, point PYSTILT at meteorology and a footprint grid, and run:
+
+```python
+import stilt
+
+receptor = stilt.PointReceptor(
+    time="2023-07-15 18:00",   # UTC
+    longitude=-111.848,
+    latitude=40.766,
+    altitude=10,               # metres above ground
+)
+
+model = stilt.Model(
+    project="./my_project",
+    receptors=[receptor],
+    n_hours=-24,
+    numpar=100,
+    mets={
+        "hrrr": {
+            "directory": "/data/hrrr",
+            "file_format": "%Y%m%d_%H",
+            "file_tres": "6h",
+        }
+    },
+    grid={
+        "xmin": -113.0, "xmax": -110.5,
+        "ymin": 40.0, "ymax": 42.0,
+        "xres": 0.01, "yres": 0.01,
+    },
+)
+
+model.run()   # returns when the run is done
+
+sim = model.simulations[receptor.id, "hrrr"]
+traj = sim.trajectories
+foot = sim.footprint
+```
+
+Everything is saved in `./my_project`. Later you can open it again with
+`stilt.Model(project="./my_project")`, and a second `run()` only runs what is missing.
+
+## Command line
+
+```bash
+stilt init ./my_project          # write a starter config.yaml and receptors.csv
+stilt run ./my_project           # run every receptor that is not done yet
+stilt run ./my_project --n-workers 8   # the same, in 8 parallel processes
+stilt status ./my_project        # what has finished
+```
+
+To run on a Slurm cluster, add an `execution` section to `config.yaml`. `stilt run` then submits
+a job array and returns. No database is needed.
+
+```yaml
+execution:
+  backend: slurm
+  n_workers: 200          # array tasks
+  account: my-account     # other keys become #SBATCH options
+  partition: my-partition
+  time: "02:00:00"
+```
+
+## Variants
+
+A variant is a named set of settings. Every receptor runs once under each variant. The top-level
+settings in `config.yaml` are the defaults, and a variant lists only what it changes. With no
+`variants` section there is one variant per met, named after it.
+
+```yaml
+variants:
+  hrrr: {}                                  # the defaults
+  hrrr-zi08: {ziscale: 0.8}                 # mixed-layer height scaled by 0.8
+  hrrr-err:                                 # wind-error ensemble for transport_error
+    siguverr: 2.6
+    tluverr: 260
+    zcoruverr: 450
+    horcoruverr: 14
+    realizations: 4                         # hrrr-err-0 .. hrrr-err-3
+    grid: null                              # particles only, no footprint
+  hrrr-ak:                                  # another footprint from the hrrr particles
+    from: hrrr
+    transforms: [{kind: averaging_kernel, table: kernels.parquet}]
+```
+
+Each receptor under each variant is one simulation, stored in
+`simulations/by-id/<receptor>/<variant>/`. Adding a variant runs only the new simulations.
+PYSTILT refuses to change the settings of a variant that has already run. Give the new settings a
+new name, or delete the old outputs with `stilt rm --variant NAME` and run again.
+
+## Queue workers
+
+For large batches in the cloud, PYSTILT can hand out receptors from a PostgreSQL work queue.
+Point `PYSTILT_DB_URL` at the database, add the receptors to the queue, and start workers:
+
+```bash
+export PYSTILT_DB_URL=postgresql://user:pass@host:5432/pystilt
+
+stilt register ./my_project      # save the inputs and queue every receptor
+stilt pull-worker ./my_project   # run queued receptors until the queue is empty
+stilt serve ./my_project         # or keep waiting for new work
+```
+
+The same from Python:
+
+```python
+import stilt
+from stilt.execution import pull_receptors
+
+model = stilt.Model(project="./my_project")
+model.register()
+pull_receptors(model)
+print(model.status())
+```
+
+The queue only tracks which receptors are pending, done, or failed. Whether a simulation is
+finished is always decided by its output files in the project.
+
+## Column and satellite soundings
+
+Read the soundings into a table with one row per sounding. Group and thin the rows with
+`stilt.observations`, then make one receptor per row. Each sounding has its own averaging kernel,
+so write the kernels to a table in the project:
+
+```python
+import stilt
+from stilt.observations import group_by_overpass, read_tropomi_ch4
+from stilt.transforms import averaging_kernel_table
+
+df = read_tropomi_ch4(path)                      # or read_oco2, read_tccon, or your own reader
+df["overpass"] = group_by_overpass(df["time"])   # label rows by overpass
+
+model = stilt.Model(project="./my_project")      # a project with a config.yaml
+receptors = [stilt.ColumnReceptor(r.time, r.longitude, r.latitude, 0, 3000) for r in df.itertuples()]
+model.register(receptors=receptors)
+
+averaging_kernel_table(receptors, levels=df.ak_pressure, values=df.ak).to_parquet(
+    model.project.directory / "kernels.parquet"
+)
+model.run()
+```
+
+Then name the table in `config.yaml`:
+
+```yaml
+grid: {xmin: -114.0, xmax: -111.0, ymin: 39.0, ymax: 42.0, xres: 0.01, yres: 0.01}
+transforms:
+  - kind: averaging_kernel
+    table: kernels.parquet
+    coordinate: pres
+  - kind: pressure_weighting
+```
+
+For slanted lines of sight, use `slant_points` and `Receptor.from_points`.
+`pressure_altitudes` converts a retrieval's pressure levels to altitudes. See the
+[observations guide](https://jmineau.github.io/PYSTILT/advanced/observations.html)
+and the [slant columns guide](https://jmineau.github.io/PYSTILT/guides/slant_columns.html).
+
+## Particle transforms
+
+A transform changes how much each particle counts before the footprint is calculated. List them
+in `config.yaml`, as a default or for one variant:
+
+```yaml
+transforms:
+  - kind: averaging_kernel
+    levels: [0.0, 1000.0, 2000.0]
+    values: [1.0, 0.8, 0.5]
+  - kind: pressure_weighting
+  - kind: first_order_lifetime
+    lifetime_hours: 4.0
+  - kind: mypkg.transforms.MyWeighting   # your own pydantic class with an apply() method
+    some_field: 3
+```
+
+A transform is any object with an `apply(particles, context)` method. The
+[transforms guide](https://jmineau.github.io/PYSTILT/advanced/transforms.html)
+covers the column-weighting science and how to write your own.
+
+## Loading results
+
+```python
+import pandas as pd
+
+for sim in model.simulations.sel(variant="hrrr"):
+    traj = sim.trajectories
+    foot = sim.footprint
+
+# Load the footprints of a selection of simulations
+footprints = model.simulations.sel(
+    variant="hrrr", time=slice("2023-01-01", "2023-01-31")
+).footprint.load()
+
+coords = [(-111.9, 40.7), (-111.8, 40.8)]
+time_bins = pd.interval_range(
+    start=pd.Timestamp("2023-01-01 00:00"),
+    end=pd.Timestamp("2023-01-02 00:00"),
+    freq="1h",
+)
+
+for sim_id, footprint in footprints.items():       # keyed by (receptor, variant)
+    hourly = footprint.aggregate(target=coords, time_bins=time_bins)
+```
+
+If a simulation's particles never reach the grid, PYSTILT writes a small `.empty` file instead of
+a NetCDF. The simulation counts as finished, and `load()` leaves it out.
+
+## STILT-R parity
+
+PYSTILT footprints match the [STILT-R](https://github.com/uataq/stilt) footprints to a relative
+tolerance of 1e-7 in every grid cell. The test suite checks this against a pinned STILT-R
+commit. The NetCDF files are laid out differently from STILT-R's, so read them as standard
+CF-1.8 NetCDF. The [STILT-R parity section](https://jmineau.github.io/PYSTILT/development.html#stilt-r-parity)
+of the development docs has the details.
 
 ## Roadmap
 
-PYSTILT draws design and science inspiration from two sister projects:
-[X-STILT](https://github.com/uataq/X-STILT) for column and satellite science workflows, and
-[stiltctl](https://github.com/jmineau/air-tracker-stiltctl) for cloud-native execution
-patterns. The tables below track what has been absorbed and what remains in scope.
-See the full [roadmap](https://jmineau.github.io/PYSTILT/roadmap.html) for more details.
+PYSTILT borrows from two sister projects. [X-STILT](https://github.com/uataq/X-STILT) is the
+source of its column and satellite science, and [stiltctl](https://github.com/uataq/stiltctl)
+of its queue-based execution. The tables below show what PYSTILT has taken over so far. The full
+[roadmap](https://jmineau.github.io/PYSTILT/roadmap.html) has more detail.
 
 ### Execution and orchestration (from stiltctl)
 
@@ -61,8 +272,8 @@ See the full [roadmap](https://jmineau.github.io/PYSTILT/roadmap.html) for more 
 
 ### Column and satellite science (from X-STILT)
 
-Full X-STILT feature parity is not a goal. PYSTILT absorbs X-STILT's observation-layer
-design and column-weighting concepts without trying to replicate every script.
+PYSTILT does not try to match every X-STILT feature. It takes over X-STILT's approach to
+observations and column weighting, and leaves the rest.
 
 | Feature | Status |
 |---|---|
@@ -84,237 +295,6 @@ design and column-weighting concepts without trying to replicate every script.
 | Emission-error propagation to the modelled enhancement | Recipe on `Footprint.enhancement`; correlated case in fips |
 | Inventory readers | Out of scope: a flux field is an xarray array |
 
-## Installation
-
-```bash
-pip install pystilt
-```
-
-For Slurm, Kubernetes, projections, plotting, and cloud object stores:
-
-```bash
-pip install "pystilt[complete]"
-```
-
-## Quickstart: one-off run
-
-Define a receptor, configure meteorology and footprint grid, then run:
-
-```python
-import pandas as pd
-import stilt
-
-receptor = stilt.Receptor(
-    time=pd.Timestamp("2023-07-15 18:00", tz="UTC"),
-    latitude=40.766,
-    longitude=-111.848,
-    altitude=10,
-)
-
-model = stilt.Model(
-    project="./my_project",
-    receptors=[receptor],
-    config=stilt.ModelConfig(
-        n_hours=-24,
-        numpar=100,
-        mets={
-            "hrrr": stilt.MetConfig(
-                directory="/data/hrrr",
-                file_format="%Y%m%d_%H",
-                file_tres="6h",
-            )
-        },
-        grid=stilt.Grid(
-            xmin=-113.0,
-            xmax=-110.5,
-            ymin=40.0,
-            ymax=42.0,
-            xres=0.01,
-            yres=0.01,
-        ),
-    ),
-)
-
-handle = model.run()
-handle.wait()
-
-sim = model.simulations[receptor.id, "hrrr"]    # a receptor under a variant
-traj = sim.trajectories
-foot = sim.footprint
-```
-
-## Variants: the same receptors under other settings
-
-A project is its receptors crossed with its **variants**. The top-level
-settings in `config.yaml` are defaults; each variant names its met and
-overrides what it changes. With no `variants`, there is one per met.
-
-```yaml
-variants:
-  hrrr: {}                                  # the defaults
-  hrrr-zi08: {ziscale: 0.8}                 # a mixed-layer sensitivity
-  hrrr-err:                                 # wind-error ensemble for transport_error
-    siguverr: 2.6
-    tluverr: 260
-    zcoruverr: 450
-    horcoruverr: 14
-    realizations: 4                         # hrrr-err-0 .. hrrr-err-3
-    grid: null                              # particles only
-  hrrr-ak:                                  # another footprint from the hrrr particles
-    from: hrrr
-    transforms: [{kind: averaging_kernel, table: kernels.parquet}]
-```
-
-Each receptor under each variant is one simulation in
-`simulations/by-id/<receptor>/<variant>/`. Adding a variant runs only the
-new simulations. Changing the settings of one that already ran is refused:
-give the new settings a new name, or `stilt rm --variant NAME` to delete
-its outputs and rerun it.
-
-## Quickstart: queue/service runtime
-
-```bash
-# Queue workers require a PostgreSQL work queue.
-export PYSTILT_DB_URL=postgresql://user:pass@host:5432/pystilt
-
-# Initialize project files (config.yaml and receptors.csv)
-stilt init ./my_project
-
-# Run with local workers (blocks until complete)
-stilt run ./my_project --backend local --n-workers 8
-
-# Persist inputs and enqueue every receptor (each worker runs all its variants)
-stilt register ./my_project
-
-# Drain queue from worker processes (batch mode)
-stilt pull-worker ./my_project
-
-# Long-lived queue workers (streaming mode)
-stilt serve ./my_project
-
-# Check project status
-stilt status ./my_project
-
-# Delete a variant's outputs so it reruns as new
-stilt rm ./my_project --variant hrrr-zi08
-```
-
-The same queue model is available in Python:
-
-```python
-import stilt
-from stilt.execution import pull_receptors
-
-model = stilt.Model(project="./my_project")
-model.register()
-pull_receptors(model, follow=False)  # batch mode
-print(model.status())
-```
-
-Workers claim receptors from the queue and record done/failed there;
-whether outputs exist is always read from the project itself.
-
-## Quickstart: column and satellite soundings
-
-Your reader produces a table with one row per sounding. `stilt.observations`
-groups and selects rows, each row becomes a `Receptor`, and each sounding's
-averaging kernel goes into a table in the project so every runner applies
-the right kernel to the right receptor:
-
-```python
-import stilt
-from stilt.observations import group_by_overpass, read_tropomi_ch4
-from stilt.transforms import averaging_kernel_table
-
-df = read_tropomi_ch4(path)                      # or read_oco2 / read_tccon / your own reader of the same shape
-df["overpass"] = group_by_overpass(df["time"])   # label rows by overpass; thin with pandas or select_observations_spatial
-
-model = stilt.Model(project="./my_project")      # existing project config on disk
-receptors = [stilt.ColumnReceptor(r.time, r.longitude, r.latitude, 0, 3000) for r in df.itertuples()]
-model.register(receptors=receptors)
-
-averaging_kernel_table(receptors, levels=df.ak_pressure, values=df.ak).to_parquet(
-    model.project.directory / "kernels.parquet"
-)
-model.run()
-```
-
-with the footprint declared once in `config.yaml`:
-
-```yaml
-grid: {xmin: -114.0, xmax: -111.0, ymin: 39.0, ymax: 42.0, xres: 0.01, yres: 0.01}
-transforms:
-  - kind: averaging_kernel
-    table: kernels.parquet
-    coordinate: pres
-  - kind: pressure_weighting
-```
-
-Slant paths come from `slant_points` and `Receptor.from_points`, with
-`pressure_altitudes` turning a retrieval's pressure levels into the altitudes. See the
-[observations guide](https://jmineau.github.io/PYSTILT/advanced/observations.html)
-and the [slant columns guide](https://jmineau.github.io/PYSTILT/guides/slant_columns.html).
-
-## Particle transforms
-
-Transforms rescale each particle's influence before the footprint is
-rasterized. Declare them in config (as a default, or per variant), or pass
-them in Python:
-
-```yaml
-transforms:
-  - kind: averaging_kernel
-    levels: [0.0, 1000.0, 2000.0]
-    values: [1.0, 0.8, 0.5]
-  - kind: pressure_weighting      # derived from the particles, X-STILT style
-  - kind: first_order_lifetime
-    lifetime_hours: 4.0
-  - kind: mypkg.transforms.MyWeighting   # your own pydantic class with apply()
-    some_field: 3
-```
-
-A transform is any object with `apply(particles, context)`. See the
-[transforms guide](https://jmineau.github.io/PYSTILT/advanced/transforms.html)
-for the column-weighting science and for writing your own.
-
-## Accessing results
-
-```python
-import pandas as pd
-
-for sim in model.simulations.sel(variant="hrrr"):
-    traj = sim.trajectories
-    foot = sim.footprint
-
-# Load footprints across a selection of simulations
-footprints = model.simulations.sel(
-    variant="hrrr", time=slice("2023-01-01", "2023-01-31")
-).footprint.load()
-
-coords = [(-111.9, 40.7), (-111.8, 40.8)]
-time_bins = pd.interval_range(
-    start=pd.Timestamp("2023-01-01 00:00", tz="UTC"),
-    end=pd.Timestamp("2023-01-02 00:00", tz="UTC"),
-    freq="1h",
-)
-
-for sid, footprint in footprints.items():          # keyed by (receptor, variant)
-    hourly = footprint.aggregate(target=coords, time_bins=time_bins)
-```
-
-A simulation whose particles never reached the grid has a `.empty` marker
-instead of a NetCDF file. It counts as finished, and `load()` leaves it out.
-
-## STILT-R parity
-
-PYSTILT footprints match the [uataq/stilt](https://github.com/uataq/stilt) R
-implementation on **numerical values** at `rtol=1e-7` per cell, validated by
-end-to-end fidelity scenarios against a **pinned upstream commit**.
-NetCDF output is not byte-compatible with STILT-R;
-it should be read as generic CF-1.8 NetCDF.
-See the [STILT-R parity section](https://jmineau.github.io/PYSTILT/development.html#stilt-r-parity)
-of the development docs for more details.
-
 ## Use of AI coding agents
 
 This project is developed with the help of AI coding agents, directed and
@@ -322,15 +302,15 @@ reviewed by the maintainer, who owns the design and the science.
 
 ## Documentation
 
-Full documentation is available at [https://jmineau.github.io/PYSTILT/](https://jmineau.github.io/PYSTILT/)
+The full documentation is at [https://jmineau.github.io/PYSTILT/](https://jmineau.github.io/PYSTILT/).
 
 ## Contributing
 
-Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for how to set up and submit changes.
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+PYSTILT is released under the MIT License. See the LICENSE file.
 
 ## Author
 

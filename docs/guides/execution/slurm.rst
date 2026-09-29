@@ -2,11 +2,11 @@ On An HPC Cluster (Slurm)
 =========================
 
 For thousands of simulations, run them as a Slurm job array. PYSTILT splits
-the unfinished simulations into groups, writes the job script, and submits
-it. You don't write any Slurm scripts yourself.
+the unfinished receptors into lists, writes the job script, and submits it.
+You don't write any Slurm scripts yourself.
 
-Your project folder must be on a filesystem that the compute nodes can see
-(a shared home, group, or scratch space).
+Your project folder must be on a filesystem that the compute nodes can see,
+such as a shared home, group, or scratch space.
 
 Set it up
 ---------
@@ -26,8 +26,8 @@ Add an ``execution`` section to ``config.yaml``:
        - module load miniforge3
        - conda activate my-env
 
-``setup`` matters: each task runs the ``stilt`` command, so it must be able to
-find the Python environment where PYSTILT is installed.
+Each task runs the ``stilt`` command, so ``setup`` must activate the Python
+environment where PYSTILT is installed.
 
 Then submit:
 
@@ -42,26 +42,30 @@ Options
 -------
 
 ``n_workers`` (required)
-   How many array tasks to split the simulations into. With 10,000
-   simulations and ``n_workers: 200``, each task runs 50 one after another.
-   Set ``time`` long enough for one task's share.
+   How many array tasks to split the receptors into. With 10,000 receptors
+   and ``n_workers: 200``, each task runs 50 receptors one after another.
+   Each receptor runs once per variant, so set ``time`` long enough for one
+   task's share. If fewer receptors are left than ``n_workers``, PYSTILT
+   submits one task per receptor.
 
 ``cpus_per_task``
    CPUs per array task (default 1). With more than one, each task runs that
-   many simulations at the same time.
+   many receptors at the same time.
 
 ``array_parallelism``
    The most tasks allowed to run at once, to stay within your group's limits.
    ``array_parallelism: 50`` becomes ``--array=0-199%50``.
 
 ``setup``
-   Shell commands to run at the start of each task, before PYSTILT: loading
-   modules, activating an environment, setting environment variables.
+   Shell commands to run at the start of each task, before PYSTILT. Use it to
+   load modules, activate an environment, or set environment variables.
 
-Anything else
-   Every other key is passed to ``sbatch`` as a flag, with underscores turned
-   into dashes: ``mem_per_cpu: 2G`` becomes ``--mem-per-cpu=2G``, and
-   ``qos: normal`` becomes ``--qos=normal``.
+Any other key
+   Passed to ``sbatch`` as a flag, with underscores turned into dashes.
+   ``mem_per_cpu: 2G`` becomes ``--mem-per-cpu=2G``, and ``qos: normal``
+   becomes ``--qos=normal``. A key set to ``true``, such as
+   ``exclusive: true``, becomes a bare flag (``--exclusive``). If you don't
+   set ``job_name``, it is ``pystilt-`` followed by the project folder name.
 
 Watch progress and rerun
 ------------------------
@@ -71,20 +75,22 @@ Watch progress and rerun
    squeue -u "$USER"            # Slurm's view
    stilt status ./my_project    # finished vs remaining simulations
 
-If tasks time out, are preempted, or fail, just run the same command again:
+If tasks time out, are preempted, or fail, run the same command again once
+the job has left the queue:
 
 .. code-block:: bash
 
    stilt run ./my_project
 
-Only unfinished simulations are submitted. Use ``--no-skip`` to force
-everything to run again.
+Only unfinished receptors are submitted. Don't resubmit while the first job
+is still running. The receptors it hasn't finished yet would be submitted a
+second time. Use ``--no-skip`` to force everything to run again.
 
 What PYSTILT writes
 -------------------
 
-Each submission adds files under one ``<date_time>`` key, so a later
-submission never overwrites an earlier one's chunks or logs:
+Each submission gets its own ``<date_time>`` stamp, so a later submission
+never overwrites an earlier one's lists or logs:
 
 .. code-block:: text
 
@@ -93,14 +99,16 @@ submission never overwrites an earlier one's chunks or logs:
      slurm/submit_<date_time>.sh                      # the script given to sbatch
      slurm/logs/<date_time>/0.out, 0.err, ...         # output from each task
 
-Each array task runs ``stilt push-worker`` on its ``task_N.txt`` list, running
-every variant of each receptor in it. If a
-task fails, look in ``slurm/logs/<date_time>/`` for task-level problems (for example, the
-environment not activating) and in each simulation's ``stilt.log`` for
-HYSPLIT problems.
+Each array task runs ``stilt push-worker`` on its ``task_N.txt`` list. With
+``--wait``, PYSTILT deletes ``chunks/<date_time>/`` once the job leaves the
+queue.
+
+If a task fails, look in ``slurm/logs/<date_time>/`` for problems with the
+task itself, such as the environment not activating. Look in each
+simulation's ``stilt.log`` for HYSPLIT problems.
 
 Limitations
 -----------
 
-The project must be a local or shared-filesystem folder. Projects stored in
-cloud buckets (``s3://``, ``gs://``) can't use the Slurm backend.
+The project must be a folder on a local or shared filesystem. Projects
+stored in cloud buckets (``s3://``, ``gs://``) can't use the Slurm backend.

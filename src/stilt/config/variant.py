@@ -1,11 +1,11 @@
 """
-A variant: one complete configuration a receptor is run under.
+Variants: the complete settings a receptor is run under.
 
-A project is receptors crossed with variants. Each variant names its met,
-carries a full :class:`~stilt.config.STILTParams` and the footprint settings,
-and is one HYSPLIT call per receptor. ``config.yaml`` declares variants as
-overrides of its flat defaults; :meth:`ModelConfig.resolve_variants` turns
-them into :class:`VariantConfig` objects, one per simulation name.
+A project runs every receptor under every variant. A variant names its met
+and holds a full set of transport and footprint settings, and it is one
+HYSPLIT run per receptor. ``config.yaml`` declares variants as overrides of
+its defaults, and :meth:`ModelConfig.resolve_variants` turns them into one
+:class:`VariantConfig` per simulation name.
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ from typing_extensions import Self
 from .footprint import FootprintParams
 from .params import STILTParams
 
-#: Variant (and met) names: lowercase, digits and hyphens; they become directory names.
+#: Pattern for variant and met names, which become directory names.
 VARIANT_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 
 #: Fields that change no output, so the record does not compare them.
@@ -28,34 +28,37 @@ UNRECORDED_FIELDS = frozenset({"timeout", "rm_dat", "exe_dir"})
 
 class VariantConfig(STILTParams, FootprintParams):
     """
-    One resolved variant: met, transport params, and footprint settings.
+    The full settings of one variant: its met, transport, and footprint.
 
-    Built by :meth:`~stilt.config.ModelConfig.resolve_variants`; not read
-    from YAML directly. ``name`` is the simulation-level name (a variant that
-    declares ``realizations`` is a group: ``hrrr-err`` with ``realizations: 3``
-    yields ``hrrr-err-0`` to ``hrrr-err-2``), ``group`` the name as declared.
+    Built by :meth:`~stilt.config.ModelConfig.resolve_variants`. ``name`` is
+    the name its simulations run under and ``group`` the name declared in
+    ``config.yaml``. They differ only for realizations: ``hrrr-err`` with
+    ``realizations: 3`` gives ``hrrr-err-0`` to ``hrrr-err-2``.
     """
 
     model_config = ConfigDict(extra="forbid")
 
-    name: str = Field(description="Simulation-level variant name (directory name).")
-    group: str = Field(description="Variant name as declared in config.yaml.")
-    met: str = Field(description="Name of the met stream this variant runs with.")
+    name: str = Field(
+        description="Variant name its simulations run under, also their directory name."
+    )
+    group: str = Field(description="Variant name as declared in ``config.yaml``.")
+    met: str = Field(description="Name of the meteorology this variant runs with.")
     realization: int | None = Field(
         None,
-        description="Realization index within ``group``; ``None`` for a single run.",
+        description="Realization number within ``group``. ``None`` for a single run.",
     )
     derived_from: str | None = Field(
         None,
         description=(
-            "Variant whose trajectory this one rasterizes instead of running "
-            "HYSPLIT itself (``from:`` in config.yaml). Only footprint fields differ."
+            "Variant whose trajectories this one computes its footprint from, "
+            "instead of running HYSPLIT (``from:`` in ``config.yaml``). Only "
+            "footprint fields may differ from it."
         ),
     )
 
     @model_validator(mode="after")
     def _validate_name(self) -> Self:
-        """Names become directory names, so keep them plain."""
+        """Require names that are safe as directory names."""
         for value in (self.name, self.group):
             if not VARIANT_NAME_RE.fullmatch(value):
                 raise ValueError(
@@ -65,19 +68,19 @@ class VariantConfig(STILTParams, FootprintParams):
 
     @property
     def is_derived(self) -> bool:
-        """Whether this variant reuses another variant's trajectory."""
+        """Whether this variant reuses another variant's trajectories."""
         return self.derived_from is not None
 
     def stilt_params(self) -> STILTParams:
-        """The transport parameters alone, as stored with a trajectory."""
+        """Return the transport parameters alone, as stored with a trajectory."""
         return STILTParams(**self.model_dump(include=set(STILTParams.model_fields)))
 
     def record(self) -> dict[str, Any]:
         """
-        This variant as stored in the project's record (a full JSON dump).
+        Return this variant as stored in the project's record.
 
-        ``maxpar`` is recorded as HYSPLIT receives it (``numpar`` when unset),
-        so the record says what ran rather than how it was spelled.
+        ``maxpar`` is stored as HYSPLIT receives it, so an unset ``maxpar`` is
+        stored as ``numpar``.
         """
         data = self.model_dump(mode="json")
         if data["maxpar"] is None:
@@ -86,10 +89,11 @@ class VariantConfig(STILTParams, FootprintParams):
 
     def differences(self, recorded: dict[str, Any]) -> list[str]:
         """
-        Names of the fields on which this variant differs from *recorded*.
+        Return the names of the fields that differ from ``recorded``.
 
-        *recorded* is an entry of the project's record (:meth:`record`).
-        Fields that change no output (:data:`UNRECORDED_FIELDS`) are skipped.
+        ``recorded`` is this variant's entry in the project's record (see
+        :meth:`record`). Fields that change no output
+        (:data:`UNRECORDED_FIELDS`) are skipped.
         """
         mine = self.record()
         return sorted(
@@ -103,18 +107,24 @@ def expand_variants(
     mets: list[str],
 ) -> dict[str, VariantConfig]:
     """
-    Resolve declared variants into one :class:`VariantConfig` per simulation name.
+    Return one :class:`VariantConfig` per simulation name.
 
     Parameters
     ----------
-    declared
-        ``{name: overrides}`` as written in ``config.yaml``. Each may carry
-        ``met``, ``realizations`` and ``from`` besides parameter overrides.
-    defaults
-        The flat top-level parameters (transport and footprint fields).
-    mets
-        Configured met names; a variant's ``met`` defaults to the met of its
-        own name, else to the only one.
+    declared : dict
+        ``{name: overrides}`` as written in ``config.yaml``. Besides
+        parameter overrides, each may set ``met``, ``realizations``, and
+        ``from``.
+    defaults : dict
+        The top-level transport and footprint parameters.
+    mets : list of str
+        Met names in the config. A variant without ``met`` uses the met with
+        its own name, or the only met.
+
+    Returns
+    -------
+    dict
+        Variants by simulation name, in declared order.
     """
     for group in declared:
         if not VARIANT_NAME_RE.fullmatch(group):
@@ -151,10 +161,10 @@ def _merge_transport(
     group: str, spec: dict[str, Any], defaults: dict[str, Any], mets: list[str]
 ) -> tuple[dict[str, Any], int | None]:
     """
-    Merge a transport variant onto the defaults.
+    Merge a variant that runs HYSPLIT onto the defaults.
 
-    Returns the merged parameters and the declared realization count, or
-    ``None`` when the variant does not declare ``realizations``.
+    Returns the merged parameters and the declared realization count, which
+    is ``None`` when the variant does not declare ``realizations``.
     """
     met = spec.pop("met", None)
     if met is None:
@@ -179,13 +189,13 @@ def _merge_transport(
 
 def _override(base: dict[str, Any], spec: dict[str, Any]) -> dict[str, Any]:
     """
-    Apply a variant's overrides to *base*.
+    Apply a variant's overrides to ``base``.
 
     A ``grid`` mapping updates the base grid field by field, so a variant can
-    change only the resolution; ``grid: null`` still removes the footprint.
-    A variant that gives its own ``geometry`` drops the inherited ``grid`` and
-    ``geometry_hash``, so its raster and hash are derived from that geometry
-    rather than kept from the defaults'.
+    change only the resolution, and ``grid: null`` removes the footprint. A
+    variant that sets its own ``geometry`` drops the inherited
+    ``geometry_hash``, and the inherited ``grid`` unless it sets ``grid`` too,
+    so both are derived from its geometry.
     """
     merged = {**base, **spec}
     if isinstance(spec.get("grid"), dict) and isinstance(base.get("grid"), dict):
@@ -204,11 +214,11 @@ def _expand_realizations(
     declared: dict[str, dict[str, Any]],
 ) -> list[VariantConfig]:
     """
-    One variant, or, when ``realizations`` is declared, a group.
+    Return the variant, or its realizations when ``realizations`` is declared.
 
-    A group's simulations are ``group-0 .. group-(N-1)``, each with
-    ``seed + k``; a group of one is ``group-0``, so raising ``N`` later only
-    adds simulations.
+    Realization ``k`` is named ``<group>-k`` and runs with ``seed + k``. A
+    group of one is still ``<group>-0``, so raising ``realizations`` later
+    only adds simulations.
     """
     base = VariantConfig(name=group, group=group, **merged)
     if realizations is None:

@@ -1,4 +1,4 @@
-"""Kubernetes execution backend."""
+"""Backend that runs workers as a Kubernetes Job."""
 
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ from stilt.service.kubernetes import (
 
 
 class KubernetesHandle:
-    """Handle for one Kubernetes Job created by :class:`KubernetesExecutor`."""
+    """Handle to a Kubernetes Job started by :class:`KubernetesExecutor`."""
 
     def __init__(self, name: str, namespace: str) -> None:
         self._name = name
@@ -23,16 +23,16 @@ class KubernetesHandle:
 
     @property
     def job_id(self) -> str:
-        """Return the Kubernetes resource identifier for the launched workers."""
+        """Resource name of the Job, as ``job/<name>``."""
         return f"job/{self._name}"
 
     @property
     def detached(self) -> bool:
-        """Kubernetes Jobs run independently of the submitting process."""
+        """Always True, since the Job runs on after this process exits."""
         return True
 
     def wait(self) -> None:
-        """Poll the Job until completions are satisfied."""
+        """Block until the Job's pods have all succeeded or failed, polling every 15 s."""
         if self._completed:
             return
         import time
@@ -64,7 +64,25 @@ class KubernetesHandle:
 
 
 class KubernetesExecutor:
-    """Deploy batch-mode STILT pull workers as Kubernetes Jobs."""
+    """
+    Run pull workers as a Kubernetes Job.
+
+    The workers take receptors from the PostgreSQL work queue until it is
+    empty, so the receptors must be registered first.
+
+    Parameters
+    ----------
+    image : str
+        Container image with PYSTILT installed.
+    namespace : str, default "default"
+        Kubernetes namespace of the Job.
+    n_workers : int, default 1
+        Number of worker pods.
+    db_secret : str, default "pystilt-db"
+        Kubernetes secret holding the queue's ``PYSTILT_DB_URL``.
+    **pod_spec
+        Extra fields for the pod spec.
+    """
 
     dispatch: DispatchMode = "pull"
 
@@ -84,12 +102,12 @@ class KubernetesExecutor:
 
     @property
     def n_workers(self) -> int:
-        """Return the default Job parallelism for this executor."""
+        """Number of worker pods when :meth:`start` is not given one."""
         return self._n_workers
 
     @classmethod
     def from_config(cls, config: dict[str, Any]) -> KubernetesExecutor:
-        """Build a Kubernetes executor from ``ModelConfig.execution`` values."""
+        """Return an executor for a config's ``execution`` settings, which must set ``image``."""
         cfg = dict(config)
         cfg.pop("backend", None)
         return cls(
@@ -101,7 +119,7 @@ class KubernetesExecutor:
         )
 
     def _apply(self, manifest: dict) -> None:
-        """Create one Job manifest, tolerating already-exists conflicts."""
+        """Create the Job, doing nothing if a Job with its name already exists."""
         try:
             from kubernetes import client as k8s_client
             from kubernetes import config as k8s_cfg
@@ -134,7 +152,7 @@ class KubernetesExecutor:
         compute_root: str | None = None,
         skip_existing: bool | None = None,
     ) -> KubernetesHandle:
-        """Create the worker Job and return its handle."""
+        """Create the worker Job and return its handle. ``pending`` is not used."""
         name = service_name(project)
         n = n_workers if n_workers is not None else self._n_workers
         manifest = worker_job_manifest(

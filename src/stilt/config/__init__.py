@@ -1,4 +1,4 @@
-"""Configuration models and runtime bootstrap helpers for STILT runs."""
+"""Configuration models for PYSTILT projects."""
 
 from .footprint import FootprintConfig, FootprintParams
 from .geometry import (

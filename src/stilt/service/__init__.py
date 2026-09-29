@@ -1,11 +1,10 @@
 """
-Optional Postgres-backed work queue plus Kubernetes deployment helpers.
+The optional PostgreSQL work queue and Kubernetes manifest helpers.
 
-This is not a general service API.  ``stilt.service`` exposes only the lean
-queue (``PostgresQueue`` / ``resolve_queue``) used by ``stilt pull-worker``
-and ``stilt serve``, and ``stilt.service.kubernetes`` is the public
-namespace for manifest generation.  Local and SLURM workflows never need
-this package; ``model.queue`` is ``None`` unless ``PYSTILT_DB_URL`` is set.
+``stilt pull-worker`` and ``stilt serve`` take receptors from the queue
+(:class:`PostgresQueue`). ``stilt.service.kubernetes`` builds manifests for
+running those workers on Kubernetes. Local and Slurm runs do not use this
+package, and ``model.queue`` is ``None`` unless ``PYSTILT_DB_URL`` is set.
 """
 
 from __future__ import annotations

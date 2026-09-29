@@ -1,9 +1,11 @@
 """
-Output store backends.
+Storage for project files.
 
-A store maps *keys* (POSIX-style relative paths such as
-``simulations/by-id/<sim_id>/<sim_id>_traj.parquet``) onto bytes. The key is
-the only address an output has; local filesystem paths are derived from it.
+A store reads and writes bytes by key. A key is a file's path relative to
+the project root, such as
+``simulations/by-id/<receptor_id>/<variant>/<receptor_id>_traj.parquet``.
+:class:`LocalStore` keeps the files in a local directory and
+:class:`FsspecStore` in any fsspec filesystem (``s3://``, ``gs://``).
 """
 
 from __future__ import annotations
@@ -18,16 +20,16 @@ import fsspec
 
 
 def is_uri(root: str | Path) -> bool:
-    """Return True when *root* is an ``scheme://`` URI rather than a local path."""
+    """Return whether *root* is a URI such as ``s3://bucket/project``."""
     return "://" in str(root)
 
 
 @runtime_checkable
 class Store(Protocol):
-    """Byte storage addressed by canonical output keys."""
+    """Interface for reading and writing project files by key."""
 
     def exists(self, key: str) -> bool:
-        """Return whether *key* currently exists."""
+        """Return whether *key* exists."""
         ...
 
     def read_bytes(self, key: str) -> bytes:
@@ -39,15 +41,15 @@ class Store(Protocol):
         ...
 
     def publish_file(self, local_path: str | Path, key: str) -> None:
-        """Copy one local file into the store under *key* (no-op if missing)."""
+        """Copy a local file into the store under *key*. A missing file is skipped."""
         ...
 
     def local_path(self, key: str) -> Path:
-        """Return a local filesystem path holding the bytes under *key*."""
+        """Return a local path to the file stored under *key*."""
         ...
 
     def delete(self, key: str) -> None:
-        """Remove *key*; a missing key is not an error."""
+        """Remove *key*. A missing key is not an error."""
         ...
 
 
@@ -55,8 +57,13 @@ class LocalStore:
     """
     Store backed by a local directory.
 
-    ``publish_file`` writes to a sibling ``.tmp`` file and then renames it onto
-    the final key, so concurrent readers never observe a partial file.
+    ``publish_file`` copies to a temporary file and renames it into place, so
+    a reader never sees a partly written file.
+
+    Parameters
+    ----------
+    root : str or Path
+        Directory that keys are relative to.
     """
 
     def __init__(self, root: str | Path) -> None:
@@ -70,21 +77,21 @@ class LocalStore:
         return self.root / key.strip("/")
 
     def exists(self, key: str) -> bool:
-        """Return whether the key has been written."""
+        """Return whether *key* exists."""
         return self.path(key).exists()
 
     def read_bytes(self, key: str) -> bytes:
-        """Read the key's bytes."""
+        """Return the bytes stored under *key*."""
         return self.path(key).read_bytes()
 
     def write_bytes(self, key: str, data: bytes) -> None:
-        """Write bytes to the key, creating parent directories."""
+        """Write *data* under *key*, creating parent directories."""
         path = self.path(key)
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(data)
 
     def publish_file(self, local_path: str | Path, key: str) -> None:
-        """Copy a finished local file into the store; a missing source is ignored."""
+        """Copy a local file into the store under *key*. A missing file is skipped."""
         src = Path(local_path)
         if not src.exists():
             return
@@ -100,22 +107,29 @@ class LocalStore:
             tmp.unlink(missing_ok=True)
 
     def local_path(self, key: str) -> Path:
-        """Return a local path for the key; the store is already local."""
+        """Return the path of *key* (the same as :meth:`path`)."""
         return self.path(key)
 
     def delete(self, key: str) -> None:
-        """Remove the key's file if it exists."""
+        """Remove the file for *key* if it exists."""
         self.path(key).unlink(missing_ok=True)
 
 
 class FsspecStore:
     """
-    Store backed by an ``fsspec`` filesystem (``s3://``, ``gs://``, ``memory://``, ...).
+    Store backed by an fsspec filesystem such as ``s3://`` or ``gs://``.
 
-    ``local_path`` downloads a key once into *cache_dir* (a temp directory
-    when omitted), mirroring the key layout. Writing or deleting a key drops
-    its cached copy, so a rewritten input or a rerun output is never served
-    stale.
+    ``local_path`` downloads a file once into a local cache that mirrors the
+    key layout. Writing or deleting a key drops its cached copy, so a
+    rewritten file is downloaded again.
+
+    Parameters
+    ----------
+    root : str
+        URI that keys are relative to.
+    cache_dir : str or Path, optional
+        Local directory for downloaded files. A temporary directory is
+        created on first use when omitted.
     """
 
     def __init__(self, root: str, cache_dir: str | Path | None = None) -> None:
@@ -134,17 +148,17 @@ class FsspecStore:
         return self._cache_dir
 
     def _fs_key(self, key: str) -> str:
-        """Return the filesystem-native path for *key*."""
+        """Return the path of *key* inside the fsspec filesystem."""
         clean = key.strip("/")
         root = str(self._fs_root).rstrip("/")
         return f"{root}/{clean}" if root else clean
 
     def exists(self, key: str) -> bool:
-        """Return whether the key has been written."""
+        """Return whether *key* exists."""
         return self.fs.exists(self._fs_key(key))
 
     def read_bytes(self, key: str) -> bytes:
-        """Read the key's bytes from the remote filesystem."""
+        """Return the bytes stored under *key*."""
         return self.fs.cat(self._fs_key(key))
 
     def _forget(self, key: str) -> None:
@@ -153,7 +167,7 @@ class FsspecStore:
             (self._cache_dir / key.strip("/")).unlink(missing_ok=True)
 
     def write_bytes(self, key: str, data: bytes) -> None:
-        """Write bytes to the key, creating parent prefixes."""
+        """Write *data* under *key*."""
         fs_key = self._fs_key(key)
         parent = posixpath.dirname(fs_key)
         if parent:
@@ -163,7 +177,7 @@ class FsspecStore:
         self._forget(key)
 
     def publish_file(self, local_path: str | Path, key: str) -> None:
-        """Upload a finished local file to the key; a missing source is ignored."""
+        """Upload a local file to *key*. A missing file is skipped."""
         src = Path(local_path)
         if not src.exists():
             return
@@ -175,7 +189,7 @@ class FsspecStore:
         self._forget(key)
 
     def local_path(self, key: str) -> Path:
-        """Download the key into the cache (once) and return the local path."""
+        """Return a local copy of *key*, downloading it on first use."""
         local = self._cache() / key.strip("/")
         if not local.exists():
             local.parent.mkdir(parents=True, exist_ok=True)
@@ -185,7 +199,7 @@ class FsspecStore:
         return local
 
     def delete(self, key: str) -> None:
-        """Remove the key from the remote filesystem if it exists."""
+        """Remove *key* if it exists."""
         fs_key = self._fs_key(key)
         if self.fs.exists(fs_key):
             self.fs.rm(fs_key)
@@ -193,7 +207,21 @@ class FsspecStore:
 
 
 def make_store(root: str | Path, *, cache_dir: str | Path | None = None) -> Store:
-    """Return a ``LocalStore`` for local paths or an ``FsspecStore`` for URIs."""
+    """
+    Return the store for a project root.
+
+    Parameters
+    ----------
+    root : str or Path
+        Local directory or URI.
+    cache_dir : str or Path, optional
+        Download cache, used only for a URI.
+
+    Returns
+    -------
+    Store
+        :class:`FsspecStore` for a URI, else :class:`LocalStore`.
+    """
     if is_uri(root):
         return FsspecStore(str(root), cache_dir=cache_dir)
     return LocalStore(root)

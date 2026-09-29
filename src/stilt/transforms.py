@@ -1,9 +1,9 @@
 """
-Particle transforms: re-weight each particle's ``foot`` before rasterization.
+Particle transforms that reweight ``foot`` before the footprint is computed.
 
 A transform is any object with ``apply(particles, context) -> DataFrame``.
 The built-in ones are pydantic models whose fields are their ``config.yaml``
-keys, so the same object describes the transform and performs it::
+keys::
 
     transforms:
       - kind: averaging_kernel
@@ -17,14 +17,13 @@ its own) comes from a table in the project instead::
       - kind: averaging_kernel
         table: kernels.parquet
 
-A ``kind`` containing a dot is an import path to a user-defined transform
-class (see the *Custom transforms* guide). Transforms run once, in list order,
-on the unweighted particle table, and return a new table — they never mutate
-their input.
+A ``kind`` containing a dot is the import path of your own transform class
+(see the *Custom transforms* guide). Transforms run in list order, starting
+from the unweighted particle table. Each returns a new table and leaves its
+input unchanged.
 
-The science functions (:func:`particle_pwf`, :func:`ak_weights`) are the
-X-STILT column weighting port and are public so user transforms can build on
-them.
+:func:`particle_pwf` and :func:`ak_weights` hold the column weighting ported
+from X-STILT. They are public so your own transforms can use them.
 """
 
 from __future__ import annotations
@@ -54,13 +53,18 @@ if TYPE_CHECKING:
 @dataclass(frozen=True, slots=True)
 class TransformContext:
     """
-    What a transform may know about the footprint it is applied for.
+    Information about the simulation a transform is applied for.
 
-    ``receptor`` is the receptor the particles were released from (its ``id``
-    keys per-receptor inputs such as an averaging-kernel table), ``variant``
-    the variant the footprint is generated for, and ``store`` the project
-    store, so files named relative to the project root can be found wherever
-    the footprint is generated.
+    Attributes
+    ----------
+    receptor : Receptor
+        Receptor the particles were released from. Its ``id`` selects
+        per-receptor inputs such as a row of an averaging-kernel table.
+    variant : str
+        Variant the footprint is computed for.
+    store : Store or None
+        The project's store, used to find files named relative to the project
+        root.
     """
 
     receptor: Receptor
@@ -70,10 +74,10 @@ class TransformContext:
 
 @runtime_checkable
 class ParticleTransform(Protocol):
-    """Anything with ``apply(particles, context) -> DataFrame``."""
+    """Interface for a transform: any object with ``apply(particles, context) -> DataFrame``."""
 
     def apply(self, particles: pd.DataFrame, context: TransformContext) -> pd.DataFrame:
-        """Return a new particle table; never mutate *particles*."""
+        """Return a new, reweighted particle table, leaving ``particles`` unchanged."""
         ...
 
 
@@ -96,12 +100,12 @@ HOURS_PER: dict[str, float] = {
 
 def release_coordinate(particles: pd.DataFrame, coordinate: str) -> pd.Series:
     """
-    Return each particle's *release* value of ``coordinate``, indexed by ``indx``.
+    Return each particle's value of ``coordinate`` at release, indexed by ``indx``.
 
-    Release coordinates such as ``xhgt`` are constant along a trajectory, but
-    HYSPLIT diagnostics such as ``pres`` are written at every time step. The
-    row nearest the receptor time (smallest ``|time|`` when ``time`` is in
-    minutes; otherwise the first row) defines the release value.
+    Some columns, such as ``xhgt``, are constant along a trajectory. Others,
+    such as ``pres``, change at every time step. The release value is taken
+    from the row nearest the receptor time (smallest ``|time|``), or from the
+    first row when there is no numeric ``time`` column.
     """
     p = particles
     if "time" in p.columns and pd.api.types.is_numeric_dtype(p["time"]):
@@ -118,27 +122,42 @@ def particle_pwf(
     particles: pd.DataFrame, surface_pressure: float | None = None
 ) -> tuple[pd.Series, pd.Series]:
     """
-    Derive each particle's release pressure and pressure weight.
+    Return each particle's release pressure and pressure weight.
 
-    Follows X-STILT's ``get.wgt.*.func``: fit a hypsometric curve
-    ``ln p = b + a·z`` to the particles' first-step heights and pressures
-    (this smooths the one-time-step offset from the true release state and
-    yields a surface pressure when none is supplied), evaluate it at each
-    particle's release height, and turn the spacing between neighbouring
-    release pressures into the air mass each particle represents.
+    As in X-STILT's ``get.wgt.*.func``, a hypsometric curve
+    ``ln p = b + a·z`` is fit to the particles' first-step heights and
+    pressures. The fit smooths out the one time step of turbulence between
+    release and the first output, and gives a surface pressure when none is
+    supplied. It is evaluated at each particle's release height, and the
+    spacing between neighboring release pressures gives the air mass each
+    particle represents.
 
-    HYSPLIT spreads column particles evenly over height, each one randomized
-    within its own ``1/numpar`` slab, so a particle stands for the slab
-    centred on it: the cell edges sit midway between adjacent release
-    pressures, the surface closes the bottom, and the topmost cell mirrors its
-    lower half-width. (X-STILT instead gives each particle the layer *below*
-    it, which shifts every weight down by half a cell and leaves the lowest
-    particle with almost none.)
+    HYSPLIT spreads column particles evenly over height, each placed at
+    random within its own ``1/numpar`` slab. Each particle therefore stands
+    for the slab centered on it. Slab edges sit midway between neighboring
+    release pressures, the surface closes the bottom slab, and the top slab
+    extends above its particle as far as it does below. X-STILT instead gives
+    each particle the layer below it, which shifts every weight down by half
+    a slab and leaves the lowest particle with almost none.
 
-    Returns ``(xpres, pwf)`` indexed by ``indx``. ``pwf`` sums to the fraction
-    of the atmosphere's mass the column covers, ``(p_sfc - p_top) / p_sfc``;
-    the rest lies above the column top, where surface fluxes cannot reach the
-    receptor within the back-trajectory.
+    Parameters
+    ----------
+    particles : pandas.DataFrame
+        Particle table with ``indx``, ``pres`` (hPa), and ``zagl`` (m), and
+        optionally ``xhgt``, the release height (m). Without ``xhgt`` the
+        first-step ``zagl`` is used.
+    surface_pressure : float, optional
+        Surface pressure in hPa. Defaults to the fitted curve at ``z = 0``.
+
+    Returns
+    -------
+    xpres : pandas.Series
+        Release pressure of each particle in hPa, indexed by ``indx``.
+    pwf : pandas.Series
+        Pressure weight of each particle, indexed by ``indx``. The weights
+        sum to the fraction of the atmosphere's mass inside the column,
+        ``(p_sfc - p_top) / p_sfc``. The rest lies above the column top,
+        where surface fluxes do not reach the receptor.
     """
     for col in ("pres", "zagl"):
         if col not in particles.columns:
@@ -185,10 +204,28 @@ def ak_weights(
     coordinate: str = "xhgt",
 ) -> np.ndarray:
     """
-    Interpolate an averaging kernel to each row's particle release coordinate.
+    Return the averaging kernel at each particle's release coordinate.
 
-    One value per particle, taken at its release row and broadcast along its
-    whole trajectory. Outside ``levels`` the kernel is held at its end values.
+    The kernel is interpolated linearly to each particle's release value of
+    ``coordinate`` and repeated on every row of that particle. Outside
+    ``levels`` it is held at its end values.
+
+    Parameters
+    ----------
+    particles : pandas.DataFrame
+        Particle table with ``indx`` and ``coordinate``.
+    levels : list of float
+        Levels the kernel is given on, in the units of ``coordinate``.
+    values : list of float
+        Kernel value at each level.
+    coordinate : str, default "xhgt"
+        Particle column to interpolate on: ``xhgt`` (release height, m) or
+        ``pres`` (hPa).
+
+    Returns
+    -------
+    numpy.ndarray
+        Kernel value for each row of ``particles``.
     """
     if coordinate not in particles.columns:
         raise ValueError(
@@ -217,18 +254,27 @@ def averaging_kernel_table(
     values: Sequence[ArrayLike],
 ) -> pd.DataFrame:
     """
-    Build the per-receptor averaging-kernel table for :class:`AveragingKernel`.
+    Return a table of averaging kernels, one per receptor, for :class:`AveragingKernel`.
 
-    One kernel per receptor, in long form: a ``receptor`` column holding the
-    receptor id, and one ``level`` / ``value`` row per kernel point. Write it
-    into the project with ``.to_parquet()`` or ``.to_csv(index=False)`` and
-    name the file as ``table:`` in the footprint's ``averaging_kernel``
-    transform.
+    The table is in long form, with ``receptor``, ``level``, and ``value``
+    columns and one row per kernel level. Save it in the project with
+    ``.to_parquet()`` or ``.to_csv(index=False)`` and give the file name as
+    ``table`` in the ``averaging_kernel`` transform.
 
-    ``receptors`` are :class:`~stilt.Receptor` objects or their ids.
-    ``values`` holds one array per receptor. ``levels`` is either one array
-    per receptor (satellite retrievals, whose pressure grids differ per
-    sounding) or a single array shared by all of them (a fixed altitude grid).
+    Parameters
+    ----------
+    receptors : iterable
+        :class:`~stilt.Receptor` objects or their ids.
+    levels : sequence of array-like
+        One array of levels per receptor, as for satellite soundings whose
+        pressure grids differ, or a single array shared by all receptors.
+    values : sequence of array-like
+        One array of kernel values per receptor.
+
+    Returns
+    -------
+    pandas.DataFrame
+        The kernel table.
     """
     ids = [str(getattr(r, "id", r)) for r in receptors]
     value_arrays = [np.asarray(v, dtype=float).ravel() for v in values]
@@ -296,7 +342,7 @@ def _cached_kernel_table(
 
 
 def _load_kernel_table(path: str) -> dict[str, tuple[np.ndarray, np.ndarray]]:
-    """Read a kernel table once per file version (local files are keyed by mtime)."""
+    """Read a kernel table, reusing the last read until the file changes."""
     try:
         mtime: float | None = os.stat(path).st_mtime
     except OSError:
@@ -306,45 +352,45 @@ def _load_kernel_table(path: str) -> dict[str, tuple[np.ndarray, np.ndarray]]:
 
 class AveragingKernel(BaseModel):
     """
-    Weight each particle's ``foot`` by an averaging kernel at its release coordinate.
+    Transform that weights each particle's ``foot`` by an averaging kernel.
 
-    Give the kernel inline as ``levels`` and ``values``, or name a ``table``
-    holding one kernel per receptor (see :func:`averaging_kernel_table`); the
-    receptor's row is picked by ``context.receptor.id`` when the footprint is
-    generated. A relative ``table`` path is resolved against the project
-    root, so it works inside ``stilt run`` and on Slurm and Kubernetes
-    workers. A receptor missing from the table is an error.
+    Give the kernel as ``levels`` and ``values``, or name a ``table`` with
+    one kernel per receptor (see :func:`averaging_kernel_table`). A relative
+    ``table`` path is relative to the project root. A receptor missing from
+    the table is an error.
 
-    ``levels`` are release heights AGL in metres by default; set
-    ``coordinate: pres`` for a kernel on pressure levels (hPa). Fold any
-    instrument-specific factor (for example TCCON's wet-air scaling) into the
-    values. Adds an ``ak_weight`` column.
+    ``levels`` are release heights above ground in meters by default. Set
+    ``coordinate: pres`` for a kernel on pressure levels in hPa. Fold any
+    instrument-specific factor, such as TCCON's wet-air scaling, into the
+    values. The kernel weight is added as an ``ak_weight`` column.
     """
 
     model_config = ConfigDict(frozen=True)
 
     kind: Literal["averaging_kernel"] = "averaging_kernel"
     levels: list[float] | None = Field(
-        default=None, description="Vertical coordinates of the averaging-kernel values."
+        default=None,
+        description="Levels of the kernel, in meters above ground or hPa (see ``coordinate``).",
     )
     values: list[float] | None = Field(
-        default=None, description="Normalized averaging-kernel values at ``levels``."
+        default=None, description="Normalized averaging-kernel value at each level."
     )
     table: str | None = Field(
         default=None,
         description=(
-            "Per-receptor kernel table (.parquet or .csv with receptor, level, "
-            "value columns), relative to the project root."
+            "Table of kernels, one per receptor: a .parquet or .csv file with "
+            "``receptor``, ``level``, and ``value`` columns. A relative path is "
+            "relative to the project root."
         ),
     )
     coordinate: str = Field(
         default="xhgt",
-        description="Particle column the kernel is defined on ('xhgt' or 'pres').",
+        description="Particle column the levels refer to: ``xhgt`` (release height) or ``pres``.",
     )
 
     @model_validator(mode="after")
     def _inline_or_table(self) -> Self:
-        """Reject a kernel that gives both inline levels/values and a table."""
+        """Require either ``levels`` and ``values`` of equal length, or a ``table``."""
         inline = self.levels is not None or self.values is not None
         if self.table is not None:
             if inline:
@@ -368,7 +414,7 @@ class AveragingKernel(BaseModel):
     def kernel(
         self, context: TransformContext | None = None
     ) -> tuple[list[float], list[float]]:
-        """Return ``(levels, values)`` for the receptor in *context*."""
+        """Return ``(levels, values)`` of the kernel for the receptor in ``context``."""
         if self.table is None:
             assert self.levels is not None and self.values is not None
             return self.levels, self.values
@@ -394,7 +440,7 @@ class AveragingKernel(BaseModel):
     def apply(
         self, particles: pd.DataFrame, context: TransformContext | None = None
     ) -> pd.DataFrame:
-        """Weight each particle by the averaging kernel at its level."""
+        """Return the particles with ``foot`` weighted by the averaging kernel."""
         levels, values = self.kernel(context)
         weights = ak_weights(particles, levels, values, self.coordinate)
         out = particles.copy()
@@ -405,15 +451,15 @@ class AveragingKernel(BaseModel):
 
 class PressureWeighting(BaseModel):
     """
-    Weight each particle by the fraction of the column's air mass it represents.
+    Transform that weights each particle by its share of the column's air mass.
 
-    The pressure weighting function is derived from the particles' own
-    first-step heights and pressures (see :func:`particle_pwf`); nothing needs
-    to be supplied. Because :meth:`stilt.Footprint.calculate` divides by the
-    particle count, the weights are multiplied by ``n_particles`` so the
-    weighted footprint does not scale with ``numpar``. Adds ``xpres`` (release
-    pressure, hPa) and ``pwf`` columns. Requires ``pres`` and ``zagl`` in
-    ``varsiwant`` (both are defaults).
+    The weights come from the particles' own first-step heights and
+    pressures (see :func:`particle_pwf`). :meth:`stilt.Footprint.calculate`
+    divides by the particle count, so the weights are multiplied by the
+    number of particles and the weighted footprint does not change with
+    ``numpar``. Adds ``xpres`` (release pressure, hPa) and ``pwf`` columns.
+    Requires ``pres`` and ``zagl`` in ``varsiwant``, which are both in the
+    default.
     """
 
     model_config = ConfigDict(frozen=True)
@@ -423,15 +469,15 @@ class PressureWeighting(BaseModel):
         default=None,
         gt=0,
         description=(
-            "Surface pressure (hPa) closing the bottom of the column. "
-            "Estimated from the particles when omitted."
+            "Surface pressure at the bottom of the column, in hPa. Unset "
+            "estimates it from the particles."
         ),
     )
 
     def apply(
         self, particles: pd.DataFrame, context: TransformContext | None = None
     ) -> pd.DataFrame:
-        """Weight each particle by its share of the column's air mass."""
+        """Return the particles with ``foot`` weighted by pressure."""
         xpres, pwf = particle_pwf(particles, self.surface_pressure)
         out = particles.copy()
         indx = out["indx"].to_numpy()
@@ -443,18 +489,19 @@ class PressureWeighting(BaseModel):
 
 class FirstOrderLifetime(BaseModel):
     """
-    Decay each particle's ``foot`` by ``exp(-age / lifetime)``.
+    Transform that decays each particle's ``foot`` by ``exp(-age / lifetime)``.
 
-    ``age`` is the particle's transport time from ``time_column`` (minutes by
-    default) and ``lifetime_hours`` the species e-folding lifetime.
+    ``age`` is the particle's travel time, read from ``time_column``, and the
+    lifetime is the species' e-folding lifetime.
     """
 
     model_config = ConfigDict(frozen=True)
 
     kind: Literal["first_order_lifetime"] = "first_order_lifetime"
-    lifetime_hours: float = Field(gt=0, description="E-folding lifetime in hours.")
+    lifetime_hours: float = Field(gt=0, description="E-folding lifetime, in hours.")
     time_column: str = Field(
-        default="time", description="Particle column holding the transport age."
+        default="time",
+        description="Particle column holding the travel time since release.",
     )
     time_unit: Literal[
         "s", "sec", "seconds", "m", "min", "minutes", "h", "hr", "hours", "d", "days"
@@ -463,7 +510,7 @@ class FirstOrderLifetime(BaseModel):
     def apply(
         self, particles: pd.DataFrame, context: TransformContext | None = None
     ) -> pd.DataFrame:
-        """Decay each particle's contribution by its age and the lifetime."""
+        """Return the particles with ``foot`` decayed by age."""
         if self.time_column not in particles.columns:
             raise ValueError(
                 f"Particle DataFrame has no column {self.time_column!r} required "
@@ -485,12 +532,12 @@ _BUILTIN_ADAPTER: TypeAdapter[Any] = TypeAdapter(BuiltinTransform)
 
 class UnresolvedTransform(BaseModel):
     """
-    A transform whose class could not be imported.
+    Placeholder for a transform whose class could not be imported.
 
-    Produced when a stored config names a ``kind`` such as
-    ``mypkg.transforms.MyKernel`` and that module is not importable here, so
-    the config (and any footprint carrying it) can still be read. Applying it
-    raises with the original import error.
+    Loading a config whose ``kind`` names a class that is not importable on
+    this machine, such as ``mypkg.transforms.MyKernel``, gives one of these,
+    so the config and its footprints can still be read. Applying it raises
+    the original import error.
     """
 
     model_config = ConfigDict(frozen=True, extra="allow")
@@ -501,7 +548,7 @@ class UnresolvedTransform(BaseModel):
     def apply(
         self, particles: pd.DataFrame, context: TransformContext | None = None
     ) -> pd.DataFrame:
-        """Raise: the configured transform could not be imported."""
+        """Raise an ImportError, since the transform could not be imported."""
         raise ImportError(
             f"Transform {self.kind!r} could not be imported: {self.reason}. "
             "Install the package that defines it on this machine."
@@ -512,7 +559,7 @@ class UnresolvedTransform(BaseModel):
 
 
 def transform_kind(transform: Any) -> str:
-    """Return the ``kind`` a transform is declared by in config."""
+    """Return the ``kind`` that declares a transform in a config."""
     kind = getattr(transform, "kind", None)
     if isinstance(kind, str):
         return kind
@@ -532,13 +579,13 @@ def _import_kind(kind: str) -> type:
 
 def load_transform(spec: Any) -> Any:
     """
-    Return a transform for one config entry.
+    Return the transform for one config entry.
 
-    *spec* may already be a transform (anything with ``apply``), or a mapping
-    with a ``kind``: a built-in name, or a dotted import path to a user class
-    that is constructed from the remaining keys (``cls.model_validate`` for a
-    pydantic model, ``cls(**keys)`` otherwise). An unimportable path yields an
-    :class:`UnresolvedTransform` rather than failing the load.
+    ``spec`` is either a transform already (any object with ``apply``) or a
+    mapping with a ``kind``. The ``kind`` is a built-in name or the import
+    path of a class, which is built from the remaining keys
+    (``cls.model_validate`` for a pydantic model, ``cls(**keys)`` otherwise).
+    A class that cannot be imported gives an :class:`UnresolvedTransform`.
     """
     if hasattr(spec, "apply"):
         return spec
@@ -566,7 +613,7 @@ def load_transform(spec: Any) -> Any:
 
 
 def dump_transform(transform: Any) -> dict[str, Any]:
-    """Return the config mapping for one transform (inverse of :func:`load_transform`)."""
+    """Return the config mapping for one transform, the inverse of :func:`load_transform`."""
     if hasattr(transform, "model_dump"):
         data = dict(transform.model_dump(mode="json", exclude_none=True))
     else:
@@ -583,7 +630,7 @@ def apply_transforms(
     transforms: list[Any],
     context: TransformContext,
 ) -> pd.DataFrame:
-    """Apply *transforms* in order; returns *particles* itself when there are none."""
+    """Apply ``transforms`` in order. Returns ``particles`` itself when there are none."""
     for transform in transforms:
         particles = transform.apply(particles, context)
     return particles

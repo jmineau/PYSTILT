@@ -1,4 +1,4 @@
-"""Footprint computation and serialization for STILT runs."""
+"""Footprints of receptors, calculated from particles and applied to surface fluxes."""
 
 import datetime as dt
 import json
@@ -52,7 +52,7 @@ def _make_gauss_kernel(rs: tuple[float, float], sigma: float) -> np.ndarray:
 
 
 def _interpolation_times(time_sign: int) -> np.ndarray:
-    """Exact STILT-R early-time interpolation schedule in minutes."""
+    """Return STILT-R's interpolation times for the first 100 minutes, in minutes."""
     times = np.concatenate(
         [
             np.arange(0, 101, dtype=float) / 10,
@@ -64,7 +64,7 @@ def _interpolation_times(time_sign: int) -> np.ndarray:
 
 
 def _utc_index(values: Any) -> pd.DatetimeIndex:
-    """Return one UTC-normalized DatetimeIndex."""
+    """Return *values* as a UTC DatetimeIndex."""
     return pd.DatetimeIndex(pd.to_datetime(values, utc=True))
 
 
@@ -90,12 +90,11 @@ def _infer_axis_resolution(
     centers: np.ndarray, native_centers: np.ndarray, fallback: float
 ) -> float:
     """
-    Infer regular-grid cell spacing along one axis.
+    Return the cell spacing along one axis of a regular grid.
 
-    Uses the smallest gap between distinct target ``centers``.  If the target
-    has a single coordinate on this axis, falls back to the footprint's own
-    native pixel spacing, then to ``fallback`` (the configured grid
-    resolution).
+    This is the smallest gap between distinct ``centers``. With a single
+    center, the footprint's own spacing (``native_centers``) is used, then
+    ``fallback``.
     """
     for candidate in (centers, native_centers):
         unique = np.unique(np.round(np.asarray(candidate, dtype=float), 9))
@@ -106,12 +105,11 @@ def _infer_axis_resolution(
 
 def _regular_axis(centers: np.ndarray, resolution: float) -> np.ndarray:
     """
-    Reconstruct the full ascending regular axis covering ``centers``.
+    Return the full ascending regular axis that covers ``centers``.
 
-    A coords list may be a non-rectangular *subset* of a regular grid; rebuilding
-    the complete axis lets exterior native mass fall into (then be dropped from)
-    cells that are absent from the subset, instead of being folded into a
-    neighbour.
+    The centers may be a subset of a regular grid. Building the full axis
+    lets footprint values in cells missing from the subset be dropped
+    instead of added to a neighbouring cell.
     """
     c = np.asarray(centers, dtype=float)
     lo, hi = float(c.min()), float(c.max())
@@ -121,11 +119,10 @@ def _regular_axis(centers: np.ndarray, resolution: float) -> np.ndarray:
 
 def _nearest_index(axis: np.ndarray, values: np.ndarray) -> np.ndarray:
     """
-    Index into ascending ``axis`` of the entry nearest each of ``values``.
+    Return the index of the entry in ascending ``axis`` nearest each value.
 
-    Matched by nearest rather than by equality: a grid's axes are rounded to
-    10 decimals while a caller's coordinates are not, so two descriptions of
-    the same cell need not compare equal.
+    A grid's axes are rounded to 10 decimals and a caller's coordinates are
+    not, so the same cell may not compare equal.
     """
     idx = np.clip(np.searchsorted(axis, values), 0, axis.size - 1)
     left = np.clip(idx - 1, 0, axis.size - 1)
@@ -175,14 +172,14 @@ def _build_footprint_array(
 
 
 def _empty_footprint_data(data: xr.DataArray, reason: str) -> xr.DataArray:
-    """Return footprint data marked as an explicit zero-contribution output."""
+    """Return a copy of *data* marked as an empty footprint, with the reason."""
     data = data.copy()
     data.attrs[EMPTY_REASON_ATTR] = reason
     return data
 
 
 def _with_cf_metadata(ds: xr.Dataset, *, grid: Grid) -> xr.Dataset:
-    """Attach CF-friendly coordinates and CRS metadata to a footprint dataset."""
+    """Add CF coordinate and CRS attributes to a footprint dataset."""
     ds.attrs.setdefault("Conventions", "CF-1.8")
     ds["crs"] = xr.DataArray(0, attrs=_cf_grid_mapping_attrs(grid.projection))
     ds["foot"].attrs["grid_mapping"] = "crs"
@@ -197,7 +194,7 @@ def _with_cf_metadata(ds: xr.Dataset, *, grid: Grid) -> xr.Dataset:
 
 @dataclass(frozen=True, slots=True)
 class _BufferedGrid:
-    """Buffered output-grid geometry used during footprint accumulation."""
+    """Output grid padded by the widest smoothing kernel on each side."""
 
     glong_buf: np.ndarray
     glati_buf: np.ndarray
@@ -213,9 +210,9 @@ def _wrap_antimeridian_longitudes(
     p: pd.DataFrame, *, xmin: float, xmax: float
 ) -> tuple[pd.DataFrame, float, float, bool]:
     """
-    Wrap particle longitudes and domain bounds to 0-360 when the domain crosses the dateline.
+    Shift longitudes to 0 to 360 when the grid crosses the antimeridian.
 
-    Only meaningful for geographic CRS.  Returns ``(p, xmin, xmax, wrapped)``.
+    Only for longitude/latitude grids. Returns ``(p, xmin, xmax, wrapped)``.
     """
     xdist = ((180 - xmin) - (-180 - xmax)) % 360
     if xdist == 0:
@@ -233,13 +230,13 @@ def _interpolate_early_timesteps(
     p: pd.DataFrame, *, xres: float, yres: float, time_sign: int
 ) -> pd.DataFrame:
     """
-    Densify particle tracks for the first 100 minutes when inter-step movement > grid cell.
+    Add interpolated positions in the first 100 minutes when particles jump grid cells.
 
-    Near the receptor, particles move quickly relative to the grid.  If the
-    median inter-particle step exceeds one grid cell, insert sub-minute time
-    points (0.0-10.0 by 0.1 min, 10.2-20.0 by 0.2, 20.5-100.0 by 0.5) and
-    linearly interpolate positions and foot.  Foot values are rescaled after
-    interpolation to preserve the total influence in each time window.
+    Near the receptor, particles can move more than a grid cell per output
+    step. When the median step does, positions and ``foot`` are linearly
+    interpolated onto finer times (every 0.1 min to 10 min, 0.2 min to 20
+    min, and 0.5 min to 100 min). ``foot`` is then rescaled so each of those
+    three windows keeps its total, as STILT-R does.
     """
     early = cast(pd.DataFrame, p[np.abs(p["time"]) < 100])
     if early.empty:
@@ -346,13 +343,10 @@ def _project_particles_to_crs(
     ymax: float,
 ) -> tuple[pd.DataFrame, float, float, float, float]:
     """
-    Project lon/lat particles and lon/lat bounds to the output CRS.
+    Project particle positions and the grid bounds to the grid's CRS.
 
-    Grid bounds are always specified in lon/lat degrees; this function projects
-    them to the target CRS alongside the particle positions.
-
-    Only called for non-longlat projections.  ``pyproj`` is imported lazily
-    since the default longlat path does not need it.
+    Grid bounds are given in degrees and projected along with the
+    particles. Needs ``pyproj``.
     """
     try:
         from pyproj import Transformer
@@ -375,12 +369,13 @@ def _compute_kernel_bandwidths(
     p: pd.DataFrame, *, smooth_factor: float, is_longlat: bool
 ) -> tuple[pd.DataFrame, np.ndarray]:
     """
-    Return (kernel_df, w) where w is the per-rtime Gaussian sigma.
+    Return ``(kernel_df, w)``, the Gaussian kernel width for each ``rtime``.
 
-    Bandwidth ``w`` scales with particle spread (``di``) and elapsed time
-    (``ti``), corrected for grid convergence at high latitudes (``grid_conv``):
+    The width grows with the spread of the particles and the time since
+    release, as in STILT-R. On a longitude/latitude grid it is divided by
+    ``cos(lat)`` so it covers the same distance at high latitudes::
 
-        w = smooth_factor * 0.06 * varsum^(1/4) * (|rtime|/1440)^(1/2) / cos(lat)
+        w = smooth_factor * 0.06 * varsum**0.25 * (|rtime| / 1440)**0.5 / cos(lat)
     """
     kernel_df = (
         p.groupby("rtime")
@@ -424,9 +419,9 @@ def _build_buffered_grid(
     max_kernel: np.ndarray,
 ) -> _BufferedGrid:
     """
-    Extend the output grid by the largest kernel half-width on each side.
+    Pad the output grid by the size of the largest kernel on each side.
 
-    The buffer ensures particles near the domain edge are smoothed correctly.
+    The padding lets particles just outside the grid be smoothed into it.
     """
     xbuf = max_kernel.shape[0]
     ybuf = max_kernel.shape[1]
@@ -457,11 +452,11 @@ def _filter_and_rasterize_particles(
     time_integrate: bool,
 ) -> tuple[pd.DataFrame, np.ndarray]:
     """
-    Filter to in-domain particles, assign buffered-grid cells, aggregate, and add layer.
+    Sum ``foot`` by padded grid cell and time step for particles on the padded grid.
 
-    Returns ``(p, layers)`` where ``p`` has columns ``loi, lai, time, rtime,
-    foot, layer`` and ``layers`` is the sorted set of unique layer indices
-    (hour bins, or ``[0]`` when ``time_integrate`` is True).
+    Returns ``(p, layers)``. ``p`` has columns ``loi, lai, time, rtime,
+    foot, layer``, and ``layers`` holds the sorted hour indices, or ``[0]``
+    when ``time_integrate`` is set.
     """
     # Layer axis is derived from unfiltered particles so that empty
     # footprints still carry the right layer count downstream.
@@ -528,13 +523,12 @@ def _accumulate_smoothed_footprint(
     rs: tuple[float, float],
 ) -> np.ndarray:
     """
-    Scatter particle foot values onto the buffered grid and Gaussian-smooth per timestep.
+    Grid each time step's ``foot`` on the padded grid and smooth it with a Gaussian kernel.
 
-    Returns ``foot_arr`` of shape ``(n_lon_buf, n_lat_buf, n_layers)``.  Uses
-    ``np.bincount`` for the scatter (faster than ``np.add.at``) and confines
-    the convolution to the bounding box of nonzero cells (mathematically
-    equivalent to full-grid convolution because surroundings are zero and
-    ``mode='constant'`` zero-pads).
+    Returns an array of shape ``(n_lon_buf, n_lat_buf, n_layers)``. The
+    convolution covers only the bounding box of nonzero cells, which gives
+    the same result as the whole grid because the cells outside it are
+    zero.
     """
     foot_arr = np.zeros(
         (buffered.n_lon_buf, buffered.n_lat_buf, len(layers)), dtype=float
@@ -602,7 +596,7 @@ def _empty_footprint_result(
     layers: np.ndarray | None = None,
     reason: str,
 ) -> "Footprint":
-    """Build an explicit zero-valued footprint with an empty-reason attr."""
+    """Return a footprint of zeros on the grid, marked empty with *reason*."""
     glong = _grid_cell_starts(xmin, xmax, xres)
     glati = _grid_cell_starts(ymin, ymax, yres)
     n_lon = len(glong)
@@ -633,7 +627,37 @@ def _empty_footprint_result(
 
 
 class Footprint:
-    """STILT footprint container with grid metadata and data array."""
+    """
+    Gridded footprint of one receptor.
+
+    A footprint is the sensitivity of the concentration at the receptor to
+    the surface flux in each grid cell, in ppm per (µmol m⁻² s⁻¹). Multiply
+    it by a flux and sum over the grid to get the enhancement at the
+    receptor (:meth:`enhancement`).
+
+    Footprints normally come from a simulation (``sim.footprint``) or a
+    file (:meth:`from_netcdf`).
+
+    Parameters
+    ----------
+    receptor : Receptor
+        Receptor the footprint belongs to.
+    config : FootprintConfig
+        Grid and smoothing settings it was calculated with.
+    data : xarray.DataArray
+        Values with dimensions ``(time, lat, lon)``, or ``(time, y, x)`` on
+        a projected grid. Coordinates are cell centres, and ``time`` is the
+        start of each hour. A time-integrated footprint has one time, the
+        receptor time.
+    name : str, optional
+        Name of the footprint, usually the variant name.
+
+    Examples
+    --------
+    >>> foot = model.simulations[receptor.id, "hrrr"].footprint
+    >>> foot.integrate_over_time().plot()
+    >>> foot.enhancement(flux).sum()
+    """
 
     def __init__(
         self,
@@ -650,7 +674,7 @@ class Footprint:
 
     @property
     def plot(self) -> "FootprintPlotAccessor":
-        """Plotting namespace (e.g. ``foot.plot.map()``)."""
+        """Plotting methods, such as ``foot.plot.map()``."""
         if self._plot is None:
             from stilt.visualization import FootprintPlotAccessor
 
@@ -659,12 +683,22 @@ class Footprint:
 
     @property
     def grid(self) -> Grid:
-        """Convenience accessor for the footprint grid metadata from the config."""
+        """Grid the footprint is on (``config.grid``)."""
         return self.config.grid
 
     @property
     def time_range(self) -> tuple[dt.datetime, dt.datetime]:
-        """Get time range of footprint data."""
+        """
+        Start and end of the period the footprint covers.
+
+        The end is one time step after the last one. Both are the same for a
+        time-integrated footprint or one with a single time step.
+
+        Raises
+        ------
+        ValueError
+            If the footprint has no valid times.
+        """
         times = _utc_index(self.data.time.values)
         start = pd.Timestamp(cast(Any, times.min()))
         if str(start) == "NaT":
@@ -681,17 +715,21 @@ class Footprint:
 
     @property
     def empty_reason(self) -> str | None:
-        """Reason this footprint is an explicit zero-contribution output."""
+        """
+        Why the footprint is empty, or ``None`` when it is not.
+
+        ``"no_particles"`` when there were no particles and
+        ``"outside_domain"`` when none reached the grid.
+        """
         reason = self.data.attrs.get(EMPTY_REASON_ATTR)
         return str(reason) if reason else None
 
     @property
     def is_empty(self) -> bool:
-        """Return whether this footprint was explicitly marked empty."""
+        """Whether the footprint is empty (zero everywhere because no particles reached the grid)."""
         return self.empty_reason is not None
 
     def __repr__(self) -> str:
-        """Compact developer-facing footprint representation."""
         return (
             f"Footprint(name={self.name!r}, dims={dict(self.data.sizes)!r}, "
             f"is_empty={self.is_empty!r})"
@@ -702,22 +740,23 @@ class Footprint:
         cls, path: str | Path, *, chunks: Any | None = None, **kwargs: Any
     ) -> Self:
         """
-        Create a footprint from a netCDF file.
+        Read a footprint from a NetCDF file written by :meth:`to_netcdf`.
 
         Parameters
         ----------
         path : str or Path
-            NetCDF footprint file path.
-        chunks : dict, int, "auto", or None, optional
-            Forwarded to :func:`xarray.open_dataset` for dask-backed lazy
-            loading when requested.
+            Footprint file.
+        chunks : dict, int or "auto", optional
+            Passed to :func:`xarray.open_dataset` to load the data lazily
+            with dask.
         **kwargs
             Passed to :func:`xarray.open_dataset`.
 
         Returns
         -------
         Footprint
-            Reconstructed footprint with config parsed from global attributes.
+            The footprint, with its receptor and settings read from the
+            file's attributes.
         """
         path = Path(path).resolve()
 
@@ -770,25 +809,34 @@ class Footprint:
         name: str = "",
     ) -> Self:
         """
-        Calculate footprint from particle trajectories.
+        Calculate a footprint from particles.
+
+        Follows STILT-R's ``calc_footprint``. Near the receptor, particle
+        tracks are interpolated to finer times when particles cross more
+        than a grid cell per step. Each particle's ``foot`` is added to the
+        cell it is in, and each time step is smoothed with a Gaussian kernel
+        that widens with the particles' spread and age. The sum is divided by
+        the number of particles and binned by hour, unless
+        ``config.time_integrate`` is set.
 
         Parameters
         ----------
-        particles : pd.DataFrame
-            Particle data from ``Simulation.execute()``. Must include:
-            long, lati, indx, foot, time.
-        config : FootprintConfig
-            Grid and smoothing parameters.
+        particles : pandas.DataFrame
+            Particle table, such as ``Trajectories.data``, with columns
+            ``indx``, ``time`` (minutes since release), ``long``, ``lati``,
+            and ``foot``.
         receptor : Receptor
-            Receptor metadata for the returned Footprint.
+            Receptor the particles were released from.
+        config : FootprintConfig
+            Grid and smoothing settings.
         name : str, optional
-            Name for the footprint.
+            Name of the footprint, usually the variant name.
 
         Returns
         -------
         Footprint
-            Footprint object. Empty footprints are represented explicitly as a
-            zero-valued data array with empty metadata.
+            The footprint. When there are no particles or none reach the
+            grid, it is zero everywhere and :attr:`is_empty` is ``True``.
         """
         grid = config.grid
         projection = grid.projection
@@ -946,12 +994,15 @@ class Footprint:
 
     def to_netcdf(self, path: str | Path) -> Path:
         """
-        Write footprint to a netCDF file with CF-convention attributes.
+        Write the footprint to a CF-1.8 NetCDF file.
+
+        The receptor and footprint settings are stored as global attributes
+        so :meth:`from_netcdf` can rebuild the object.
 
         Parameters
         ----------
         path : str or Path
-            Destination file path.
+            File to write.
 
         Returns
         -------
@@ -1016,19 +1067,18 @@ class Footprint:
         self, start: dt.datetime | None = None, end: dt.datetime | None = None
     ) -> xr.DataArray:
         """
-        Integrate this footprint over an optional time range.
+        Sum the footprint over time.
 
         Parameters
         ----------
-        start : datetime, optional
-            Inclusive start bound.
-        end : datetime, optional
-            Inclusive end bound.
+        start, end : datetime, optional
+            First and last time step to include (UTC). All times are
+            included when omitted.
 
         Returns
         -------
-        xr.DataArray
-            Time-summed footprint.
+        xarray.DataArray
+            Footprint with the ``time`` dimension summed out.
         """
         start_ts = _naive_utc_timestamp(start)
         end_ts = _naive_utc_timestamp(end)
@@ -1036,14 +1086,25 @@ class Footprint:
 
     def enhancement(self, flux: xr.DataArray) -> xr.DataArray:
         """
-        The modelled enhancement at the receptor: ``foot × flux`` summed over the grid.
+        Return the modelled enhancement at the receptor, footprint times flux summed over the grid.
 
-        One value per footprint time step, so ``.sum()`` is the total. ``flux``
-        is sampled at the footprint's cell centres (see
-        :func:`stilt.flux.sample_flux`); regrid a flux whose cells are much
-        smaller than the footprint's before calling. A flux with a ``time``
-        dimension is sampled at each footprint time step. Units: the flux's
-        times the footprint's, so µmol m⁻² s⁻¹ gives ppm.
+        The flux is taken at each footprint cell centre from the nearest
+        flux cell (:func:`stilt.flux.sample_flux`). Regrid a flux with much
+        smaller cells than the footprint's before calling this.
+
+        Parameters
+        ----------
+        flux : xarray.DataArray
+            Surface flux on a ``lat``/``lon`` grid (``y``/``x`` for a
+            projected footprint), in µmol m⁻² s⁻¹ for an enhancement in
+            ppm. A flux with a ``time`` dimension is taken at each footprint
+            time step.
+
+        Returns
+        -------
+        xarray.DataArray
+            Enhancement for each footprint time step. ``.sum()`` gives the
+            total.
         """
         from stilt.flux import sample_flux
 
@@ -1078,18 +1139,16 @@ class Footprint:
         y_dim: str,
     ) -> tuple[Grid, np.ndarray, np.ndarray]:
         """
-        Normalize a lattice target into a full grid plus the cells to report.
+        Return the full grid a lattice target lies on, and the cells it asks for.
 
-        Accepts a :class:`~stilt.config.Grid`, an xarray grid (``lon``/``lat``
-        or ``x``/``y`` coordinates; ``NaN`` cells in a 2-D DataArray are treated
-        as masked-out), or a plain list of ``(x, y)`` cell centers (with
-        ``resolution``).
+        The target is a :class:`~stilt.config.Grid`, an xarray grid with
+        ``lon``/``lat`` or ``x``/``y`` coordinates (``NaN`` cells of a 2-D
+        DataArray are left out), or a list of ``(x, y)`` cell centres.
 
-        The returned grid is the complete regular rectangle the requested cells
-        live on, even when they are a non-rectangular subset of it: the weights
-        are built on that rectangle so native mass landing in an absent cell is
-        dropped rather than folded into a neighbour. The two arrays are the
-        requested cell centers, in the order the result should carry.
+        The grid is the full rectangle the cells lie on, even when they
+        cover only part of it. Weights built on the full rectangle drop
+        footprint values in cells the target leaves out. The two arrays are
+        the requested cell centres, in the order of the result.
         """
         px = np.asarray(self.data[x_dim].values, dtype=float)
         py = np.asarray(self.data[y_dim].values, dtype=float)
@@ -1156,7 +1215,7 @@ class Footprint:
     def _enclosing_grid(
         self, cell_x: np.ndarray, cell_y: np.ndarray, res_x: float, res_y: float
     ) -> Grid:
-        """The complete regular grid of resolution ``res`` covering these centers."""
+        """Return the regular grid with the given resolution that covers these centres."""
         axis_x = _regular_axis(cell_x, res_x)
         axis_y = _regular_axis(cell_y, res_y)
         return Grid(
@@ -1177,49 +1236,46 @@ class Footprint:
         resolution: float | tuple[float, float] | None = None,
     ) -> pd.DataFrame:
         """
-        Conservatively regrid the footprint onto a spatial target and sum over time.
+        Sum the footprint onto the cells of another grid or set of polygons, per time bin.
 
-        The footprint is an extensive, per-cell sensitivity (its units carry
-        ``m^2``), so coarsening it means **summing** native cells, not
-        averaging.  Each native cell is apportioned to the target cells it
-        overlaps by area fraction (a sum-conserving conservative regrid), and
-        native time steps are summed within each ``time_bins`` interval.  When
-        the target is an aligned coarsening of the native grid this reduces
-        exactly to a block-sum; when it is misaligned or finer, native cells are
-        split across targets by overlap area.  Native mass outside the target
-        grid is dropped, never folded into edge cells.
+        A footprint value belongs to its whole cell, so it is summed when
+        cells are combined. Each footprint cell is split among the target
+        cells it overlaps, in proportion to the overlapping area. For a
+        target whose cells are whole blocks of footprint cells, this is a
+        plain block sum. Footprint values outside the target are dropped.
+        Time steps are summed within each of ``time_bins``.
 
         Parameters
         ----------
         target : SpatialTarget
-            The state geometry to aggregate onto.  Preferred forms:
+            Cells to sum onto:
 
-            - :class:`~stilt.config.Grid` — every cell of a rectilinear grid,
-              in ``Grid.index`` order.
-            - :class:`~stilt.Mesh` — arbitrary polygons (shapefile, H3
-              hexagons, nested grids, point-source windows); results are
-              indexed by cell id.
-            - :class:`~stilt.Zones` — super-cells merging a grid or mesh.
+            - :class:`~stilt.config.Grid`, every cell of a regular grid, in
+              ``Grid.index`` order.
+            - :class:`~stilt.Mesh`, any polygons (a shapefile, H3 hexagons,
+              nested grids). Rows are indexed by cell id.
+            - :class:`~stilt.Zones`, groups of the cells of a grid or mesh.
+            - An xarray grid with ``lon``/``lat`` or ``x``/``y``
+              coordinates. ``NaN`` cells of a 2-D DataArray are left out.
+            - A list of ``(x, y)`` centres of cells on a regular grid.
 
-            Geometries in another CRS are reprojected onto the footprint's
-            native raster.  Also accepted: an xarray grid carrying
-            ``lon``/``lat`` (or ``x``/``y``) coordinates, where ``NaN`` cells in
-            a 2-D DataArray are treated as masked-out; and a plain list of
-            ``(x, y)`` cell centers (a regular lattice is assumed), in which
-            case ``resolution`` is used or inferred from the coordinate spacing.
-        time_bins : pd.IntervalIndex
-            Flux time intervals to sum over.
-        resolution : float or (float, float), optional
-            Target cell size, only used (and only needed) when ``target`` is a
-            bare coords list.  When omitted it is inferred from the coordinate
-            spacing, falling back to the native footprint resolution.
+            A target in another coordinate system is projected onto the
+            footprint grid.
+        time_bins : pandas.IntervalIndex
+            Time intervals to sum over, such as the time steps of a flux
+            inventory. Each includes its left edge and excludes its right.
+        resolution : float or tuple of float, optional
+            Cell size of a list-of-centres target. By default it is taken
+            from the spacing of the centres, or the footprint's own
+            resolution when there is only one.
 
         Returns
         -------
-        pd.DataFrame
-            Indexed by target cell (``(x, y)`` MultiIndex for grids, ``cell``
-            ids for meshes and zones) with one column per time bin
-            (labeled by bin left edge). Missing cell/bin combinations are 0.
+        pandas.DataFrame
+            One row per target cell and one column per time bin, labelled
+            by the bin's left edge. Rows are indexed by ``(x, y)`` for grid
+            targets and by cell id for meshes and zones. Cells and bins the
+            footprint does not reach are 0.
         """
         is_latlon = "lon" in self.data.dims and "lat" in self.data.dims
         x_dim = "lon" if is_latlon else "x"
@@ -1229,18 +1285,17 @@ class Footprint:
         if isinstance(target, (Mesh, Zones, Grid)):
             return self._aggregate_geometry(target, time_bins, x_dim, y_dim)
 
-        # A lattice target (xarray grid or coords list) is the same operator:
-        # build the complete grid its cells live on, aggregate onto that, then
-        # take the requested cells. Mass landing in a cell the caller left out
-        # is dropped, never folded into a neighbour.
+        # For an xarray grid or a list of centres, sum onto the full grid the
+        # cells lie on and then take the requested cells, so values in cells
+        # the caller left out are dropped.
         grid, cell_x, cell_y = self._resolve_target(target, resolution, x_dim, y_dim)
         wanted = pd.MultiIndex.from_arrays([cell_x, cell_y], names=[x_dim, y_dim])
         if len(cell_x) == 0:
             return pd.DataFrame(0.0, index=wanted, columns=_time_bin_columns(time_bins))
         full = self._aggregate_geometry(grid, time_bins, x_dim, y_dim)
-        # Select by position, not by index lookup: the grid's axes are rounded
-        # while the caller's coordinates are not, so equal cells need not
-        # compare equal. Rows of ``full`` run x outer, y inner.
+        # Select by position. The grid's axes are rounded and the caller's
+        # coordinates are not, so equal cells may not compare equal. Rows of
+        # ``full`` run x outer, y inner.
         axis_x, axis_y = grid.axes
         pos = _nearest_index(axis_x, cell_x) * len(axis_y) + _nearest_index(
             axis_y, cell_y
@@ -1248,7 +1303,7 @@ class Footprint:
         return pd.DataFrame(full.to_numpy()[pos], index=wanted, columns=full.columns)
 
     def _check_geometry_hash(self, target: object) -> None:
-        """Warn when aggregating onto a mesh other than the one this raster was derived for."""
+        """Warn when the target mesh differs from the one the footprint grid was chosen for."""
         expected = self.config.geometry_hash
         if not expected:
             return
@@ -1270,10 +1325,11 @@ class Footprint:
         y_dim: str,
     ) -> pd.DataFrame:
         """
-        Aggregate through the cached overlap-weight matrix of a geometry.
+        Sum onto a geometry with its cached overlap weights.
 
-        ``W`` (``n_cells × n_native``) holds the fraction of each native cell
-        inside each target cell, so each time bin is ``W @ F.ravel()``.
+        The weights ``W`` (``n_cells × n_native``) hold the fraction of each
+        footprint cell inside each target cell, so each time bin is
+        ``W @ F.ravel()``.
         """
         columns = _time_bin_columns(time_bins)
         result = pd.DataFrame(0.0, index=target.index, columns=columns)

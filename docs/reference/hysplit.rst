@@ -1,9 +1,11 @@
 HYSPLIT Integration
 ===================
 
-Most users should work through :class:`stilt.Model`. The public low-level
-surface is intentionally narrow: :class:`stilt.hysplit.HYSPLITDriver` is the
-supported entry point for direct driver work.
+:class:`stilt.hysplit.HYSPLITDriver` runs HYSPLIT once for one receptor in
+one folder. It writes the input files such as ``CONTROL`` and ``SETUP.CFG``,
+runs ``hycs_std``, and reads the particles it writes. :class:`stilt.Model`
+uses it for every simulation. Use it directly only to run HYSPLIT outside a
+project.
 
 .. autosummary::
    :toctree: _api

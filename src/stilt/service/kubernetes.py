@@ -1,4 +1,4 @@
-"""Kubernetes manifest helpers for queue-backed STILT services."""
+"""Kubernetes manifests for running PYSTILT queue workers."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ DEFAULT_CONTAINER_NAME = "stilt-worker"
 
 
 def service_name(project: str) -> str:
-    """Return a Kubernetes-safe default name for a STILT project/service."""
+    """Return a Kubernetes resource name for a project, ``stilt-<slug>``, at most 63 characters."""
     slug = project_slug(project)
     return f"stilt-{slug}"[:63]
 
@@ -27,7 +27,7 @@ def db_secret_env(
     env_name: str = DB_URL_ENV,
     secret_key: str = DB_URL_SECRET_KEY,
 ) -> list[dict[str, Any]]:
-    """Return a K8s env block that exposes the runtime DB URL from a Secret."""
+    """Return a container ``env`` list that sets ``PYSTILT_DB_URL`` from a Secret, or an empty list without one."""
     if not db_secret:
         return []
     return [
@@ -49,7 +49,7 @@ def worker_command(
     follow: bool = False,
     compute_root: str | None = None,
 ) -> list[str]:
-    """Return a CLI command for batch or follow-mode queue workers."""
+    """Return the ``stilt pull-worker`` command, with ``--follow`` if ``follow``."""
     command = ["stilt", "pull-worker", project]
     if follow:
         command.append("--follow")
@@ -63,7 +63,7 @@ def serve_command(
     *,
     compute_root: str | None = None,
 ) -> list[str]:
-    """Return a CLI command for long-lived queue-service workers."""
+    """Return the ``stilt serve`` command."""
     command = ["stilt", "serve", project]
     if compute_root is not None:
         command.extend(["--compute-root", compute_root])
@@ -81,7 +81,7 @@ def job_manifest(
     env: list[dict[str, Any]] | None = None,
     pod_spec: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Return a generic worker Job manifest."""
+    """Return a Job manifest running ``command`` in ``image``."""
     container: dict[str, Any] = {
         "name": DEFAULT_CONTAINER_NAME,
         "image": image,
@@ -120,7 +120,7 @@ def deployment_manifest(
     pod_spec: Mapping[str, Any] | None = None,
     labels: Mapping[str, str] | None = None,
 ) -> dict[str, Any]:
-    """Return a generic worker Deployment manifest."""
+    """Return a Deployment manifest running ``command`` in ``image``."""
     app_labels = {"app": name}
     if labels:
         app_labels.update(dict(labels))
@@ -158,7 +158,7 @@ def worker_job_manifest(
     db_secret: str | None = DEFAULT_DB_SECRET,
     pod_spec: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Return a Job manifest that drains a queue in batch mode."""
+    """Return a Job manifest whose ``n_workers`` pods run the queue until it is empty."""
     return job_manifest(
         service_name(project),
         image=image,
@@ -185,7 +185,7 @@ def worker_deployment_manifest(
     db_secret: str | None = DEFAULT_DB_SECRET,
     pod_spec: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Return a Deployment manifest that runs follow-mode worker pods."""
+    """Return a Deployment manifest whose pods keep taking work from the queue."""
     return deployment_manifest(
         service_name(project),
         image=image,
@@ -211,7 +211,7 @@ def service_deployment_manifest(
     db_secret: str | None = DEFAULT_DB_SECRET,
     pod_spec: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Return a Deployment manifest that runs the service-facing `stilt serve` CLI."""
+    """Return a Deployment manifest whose pods run ``stilt serve``."""
     return deployment_manifest(
         service_name(project),
         image=image,
@@ -233,7 +233,7 @@ def scaled_object_manifest(
     min_replica_count: int = 0,
     max_replica_count: int = 50,
 ) -> dict[str, Any]:
-    """Return a KEDA ScaledObject manifest for queue-depth-based autoscaling."""
+    """Return a KEDA ScaledObject manifest that scales ``name`` by the number of pending receptors."""
     return {
         "apiVersion": "keda.sh/v1alpha1",
         "kind": "ScaledObject",
@@ -264,7 +264,7 @@ def secret_manifest(
     namespace: str = "default",
     data: Mapping[str, str] | None = None,
 ) -> dict[str, Any]:
-    """Return a minimal Secret manifest for the runtime DB URL."""
+    """Return a Secret manifest holding ``PYSTILT_DB_URL``, with a placeholder URL by default."""
     return {
         "apiVersion": "v1",
         "kind": "Secret",

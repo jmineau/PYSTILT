@@ -1,45 +1,44 @@
 Satellite And Column Observations
 =================================
 
-A single tower measurement becomes a receptor directly. Satellite soundings
-and column retrievals (TCCON, EM27/SUN) need more steps: choosing which
-soundings to run, turning each into the right receptor, and weighting each
-one's particles with its own averaging kernel afterwards.
-``stilt.observations`` and ``stilt.transforms`` provide the pieces for that,
-following X-STILT, as small functions that work on the table your product
-reader produces.
+A tower measurement becomes a receptor directly. Satellite soundings and
+column retrievals (TCCON, EM27/SUN) take more steps. You choose which
+soundings to run, turn each one into a receptor, and weight each one's
+particles with its own averaging kernel. ``stilt.observations`` and
+``stilt.transforms`` have small functions for each step, ported from
+X-STILT. They work on the table your product reader returns.
 
-There is no observation object to fill in. A Level 2 file is already a
-table with one row per sounding, so keep it as a :class:`pandas.DataFrame`
-and hand PYSTILT the columns it needs.
+There is no observation class to fill in. A Level 2 file is already a table
+with one row per sounding. Keep it as a :class:`pandas.DataFrame` and pass
+PYSTILT the columns it needs.
 
 The four steps
 --------------
 
-1. **Read** your product into a DataFrame with one row per sounding: time,
-   longitude, latitude, the retrieval's averaging kernel, and whatever else
-   you need (surface altitude, viewing angles, pixel corners, quality
-   flags). :doc:`../guides/readers` has readers for TROPOMI, OCO-2 and
-   TCCON files and the column names any other reader should produce.
-2. **Select** which soundings to run with pandas for quality flags and time
-   windows, :func:`~stilt.observations.select_observations_spatial` for
-   X-STILT's near-field plus background sampling, and
-   :func:`~stilt.observations.group_by_overpass` to label each row with its
+1. **Read** the product into a DataFrame with one row per sounding. It
+   needs the time, longitude, latitude, and averaging kernel, plus whatever
+   else you use (surface altitude, viewing angles, pixel corners, quality
+   flags). :doc:`../guides/readers` has readers for TROPOMI, OCO-2, TCCON,
+   and GGG files, and lists the columns a reader should return.
+2. **Select** the soundings to run. Filter on quality flags and time with
+   pandas. :func:`~stilt.observations.select_observations_spatial` does
+   X-STILT's near-field plus background sampling.
+   :func:`~stilt.observations.group_by_overpass` labels each row with its
    overpass.
-3. **Build receptors**, one per row, with the :class:`~stilt.Receptor`
-   classes: :class:`~stilt.ColumnReceptor` for a nadir column,
-   :meth:`Receptor.from_points <stilt.Receptor.from_points>` over
+3. **Build receptors**, one per row. Use a :class:`~stilt.ColumnReceptor`
+   for a nadir column, or :meth:`Receptor.from_points
+   <stilt.Receptor.from_points>` with
    :func:`~stilt.observations.slant_points` for a slant path
-   (:doc:`../guides/slant_columns`), and
-   :func:`~stilt.observations.jitter_points` for several receptors across
-   one large pixel.
-4. **Weight** with particle transforms (:doc:`transforms`). Pressure
-   weighting is derived from the particles and is the same for every
-   receptor. The averaging kernel differs per sounding, so write the kernels
-   to a table in the project with
-   :func:`~stilt.transforms.averaging_kernel_table` and point the footprint's
-   ``averaging_kernel`` transform at it. Every runner, including Slurm
-   arrays, then applies the right kernel to the right receptor.
+   (:doc:`../guides/slant_columns`).
+   :func:`~stilt.observations.jitter_points` spreads several receptors
+   across one large pixel.
+4. **Weight** the particles with transforms (:doc:`transforms`). Pressure
+   weighting is worked out from the particles, so every receptor uses the
+   same setting. The averaging kernel differs per sounding. Write the
+   kernels to a table in the project with
+   :func:`~stilt.transforms.averaging_kernel_table` and point the
+   ``averaging_kernel`` transform at it. Every way of running the model,
+   Slurm included, then applies the right kernel to each receptor.
 
 A worked example
 ----------------
@@ -83,7 +82,7 @@ A worked example
 
    model.run()
 
-with the footprint declared once in ``config.yaml``:
+The footprint transforms go in ``config.yaml``:
 
 .. code-block:: yaml
 
@@ -93,46 +92,52 @@ with the footprint declared once in ``config.yaml``:
        coordinate: pres
      - kind: pressure_weighting
 
-The kernel table is an input file beside ``receptors.csv``: one ``receptor``
-id per sounding and one ``level`` / ``value`` row per kernel point. It can be
-Parquet or CSV, and the ``table`` path is relative to the project root, so a
-Slurm or Kubernetes worker that rebuilds the model from the project finds
-it. A receptor with no row in the table is an error, never silently
-unweighted.
+The kernel table is an input file, like ``receptors.csv``. It has a
+``receptor`` column with the receptor id, and one row per kernel point with
+its ``level`` and ``value``. It can be Parquet or CSV. The ``table`` path is
+relative to the project root, so a Slurm or Kubernetes worker finds it too.
+A receptor with no rows in the table raises an error.
 
 Kernels on pressure levels
 --------------------------
 
 Most satellite products give the kernel on the retrieval's own pressure
-grid, which differs per sounding because it hangs off the surface pressure.
-Pass those pressures as ``levels`` and set ``coordinate: pres``; the
-transform reads each particle's release pressure, so nothing has to be
-converted to height. OCO-2 kernels are values at levels, TROPOMI kernels are
-layer means: for a layer product pass the layer midpoints. A ground-based
-EM27 kernel is tabulated by solar zenith angle on a fixed altitude grid; pick
-the column for each window's zenith angle and pass the shared grid once as
-``levels``.
+grid. The grid differs per sounding because it starts at the surface
+pressure. Pass those pressures as ``levels`` and set ``coordinate: pres``.
+The transform then uses each particle's pressure at its first output step,
+so nothing has to be converted to height.
+
+OCO-2 kernels are values at levels. TROPOMI kernels are layer averages, so
+pass the layer midpoints (the TROPOMI reader's ``ak_pressure`` already
+holds them). GGG kernels are on a fixed pressure grid per site, which
+:func:`~stilt.observations.read_ggg_netcdf` returns as ``ak_pressure``.
+
+A PROFFAST EM27/SUN kernel is tabulated by solar zenith angle on a fixed
+altitude grid. Pick the kernel for each window's zenith angle and pass the
+shared grid once as ``levels``. Give the altitudes in the receptor's
+vertical reference, because the default coordinate is the release height
+``xhgt``.
 
 Adding your own instrument
 --------------------------
 
-Nothing is registered or subclassed. A new instrument is a reader that
-returns a DataFrame with the columns the steps above use, plus whatever
-product-specific columns your analysis wants. The reader is where the
-product's conventions live: unit conversions, quality flags, which variable
-holds the kernel, rebuilding the pressure grid from surface pressure and
-layer thickness. Everything after that is the same for every instrument.
-:doc:`../guides/readers` lists the columns and shows the module layout to
-copy.
+A new instrument needs only a reader, a function that returns a DataFrame
+with the columns the steps above use. Nothing is registered or subclassed.
+Add any product-specific columns your analysis needs. The reader handles
+the product's conventions, such as unit conversions, quality flags, which
+variable holds the kernel, and how to rebuild the pressure grid. The steps
+after reading are the same for every instrument. :doc:`../guides/readers`
+lists the columns and says which module to copy.
 
 What this layer does not do
 ---------------------------
 
-It ships no readers for background or flux fields: a
-mole-fraction field comes in as an xarray array
-(:doc:`../guides/background`), or the background is taken from the swath
-itself around a forward-run plume (:doc:`../guides/plume_background`); a
-flux field comes in the same way
-(:doc:`../guides/transport_error`). The prior term of a column observation
-operator (pressure weight times one minus kernel times the a priori
-profile) belongs to the inversion, not the footprint.
+It has no readers for background or flux fields. A background mole-fraction
+field comes in as an xarray array (:doc:`../guides/background`). The
+background can also come from the swath itself, beside a plume from a
+forward run (:doc:`../guides/plume_background`). A flux field also comes in
+as an xarray array (:doc:`../guides/transport_error`).
+
+The prior term of a column observation operator is left to the inversion.
+That term is the sum over levels of pressure weight × (1 − kernel) × prior
+profile.

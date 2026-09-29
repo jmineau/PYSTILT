@@ -1,22 +1,20 @@
 """
-STILT command-line interface.
+The ``stilt`` command-line interface.
 
-Thin Typer wrapper over :class:`~stilt.model.Model` and the worker functions.
-Each command loads a project root, delegates, and prints a brief summary.
+Each command opens a project with :class:`~stilt.Model`, calls it, and
+prints a short summary. Examples::
 
-Usage examples::
-
-    stilt init                        # scaffold a new project in cwd
-    stilt init ./my_project           # scaffold a new project in ./my_project
-    stilt run                         # run locally, block until done
-    stilt run ./my_project --no-skip  # re-run all simulations
-    stilt run --wait                  # submit to Slurm and block until done
-    stilt register ./my_project       # persist inputs / seed the work queue
+    stilt init                        # start a project in the current directory
+    stilt init ./my_project           # start a project in ./my_project
+    stilt run                         # run locally and wait until done
+    stilt run ./my_project --no-skip  # run every simulation again
+    stilt run --wait                  # with Slurm, wait for the jobs to finish
+    stilt register ./my_project       # save inputs and fill the work queue
     stilt push-worker ./my_project --chunk chunks/run_01/task_0.txt
-    stilt pull-worker ./my_project    # drain the Postgres work queue
-    stilt serve ./my_project          # long-lived queue worker
-    stilt status                      # show completion counts from cwd
-    stilt rm --variant hrrr-zi08      # delete a variant's outputs to rerun it
+    stilt pull-worker ./my_project    # run receptors from the Postgres queue
+    stilt serve ./my_project          # keep taking work from the queue
+    stilt status                      # count finished simulations
+    stilt rm --variant hrrr-zi08      # delete a variant's outputs to run it again
     stilt rm --variant hrrr --variant hrrr-zi08   # several at once
 """
 
@@ -41,7 +39,7 @@ from stilt.store import is_uri
 
 app = typer.Typer(
     name="stilt",
-    help="STILT model command-line interface.",
+    help="Run STILT simulations and check on a project.",
     no_args_is_help=True,
 )
 
@@ -49,7 +47,7 @@ logger = logging.getLogger(__name__)
 
 
 def _starter_config_yaml() -> str:
-    """Return the science-first commented starter config written by ``stilt init``."""
+    """Return the commented starter ``config.yaml`` written by ``stilt init``."""
     return """# PYSTILT project configuration
 # See docs for details: https://jmineau.github.io/PYSTILT
 
@@ -106,26 +104,26 @@ _PROJECT_ARG = typer.Argument(
 )
 _NEW_PROJECT_ARG = typer.Argument(
     None,
-    help="Path to the new STILT project directory. Defaults to the current directory.",
+    help="Directory for the new project. Defaults to the current directory.",
 )
 _REQUIRED_PROJECT_ARG = typer.Argument(..., help="Path or URI of the STILT project.")
 _NO_SKIP = typer.Option(
-    False, "--no-skip", help="Re-run simulations that already have output."
+    False, "--no-skip", help="Run simulations again even if their outputs exist."
 )
 _VARIANTS = typer.Option(
     ...,
     "--variant",
-    help="Variant (or realization group) whose outputs to delete; repeatable.",
+    help="Variant or realization group whose outputs to delete. Repeat for several.",
 )
 _COMPUTE_ROOT = typer.Option(
     None,
     "--compute-root",
-    help="Parent directory under which worker simulation dirs are created.",
+    help="Directory under which simulations run. Defaults to PYSTILT_COMPUTE_ROOT, then the project's simulations/by-id.",
 )
 
 
 def _resolve_project(path: str | Path | None) -> str:
-    """Resolve a local project root (it must hold a config.yaml), or pass a URI through."""
+    """Return the absolute project path, exiting if it has no config.yaml. A URI is returned unchanged."""
     raw = str(path or Path.cwd())
     if is_uri(raw):
         return raw
@@ -149,10 +147,10 @@ def _resolve_project(path: str | Path | None) -> str:
 @app.command()
 def init(project: Path = _NEW_PROJECT_ARG) -> None:
     """
-    Scaffold a new STILT project directory with a default config.yaml.
+    Create a new project with a starter config.yaml and receptors.csv.
 
-    Creates a starter config.yaml and receptors.csv. Edit both files
-    before running ``stilt run``.
+    Edit both files before running stilt run. Stops if the directory
+    already has a config.yaml.
     """
     project = (project or Path.cwd()).resolve()
     config_path = project / CONFIG_KEY
@@ -184,31 +182,30 @@ def run(
     backend: str | None = typer.Option(
         None,
         "--backend",
-        help="Override execution backend: local | slurm.",
+        help="Where to run: local or slurm. Overrides execution.backend in config.yaml.",
     ),
     n_workers: int | None = typer.Option(
         None,
         "--n-workers",
-        help="Override number of workers (overrides config.yaml execution.n_workers).",
+        help="Number of workers. Overrides execution.n_workers in config.yaml.",
     ),
     wait: bool = typer.Option(
         False,
         "--wait/--no-wait",
         help=(
-            "Block until submitted Slurm jobs finish before returning. "
-            "By default ``stilt run`` returns right after ``sbatch`` for "
-            "backend: slurm. Local runs always complete inline."
+            "Wait for submitted Slurm jobs to finish. Without it, a Slurm run "
+            "returns once the jobs are submitted. Local runs always wait."
         ),
     ),
     compute_root: str | None = _COMPUTE_ROOT,
 ) -> None:
     """
-    Run trajectories (and footprints if configured).
+    Run every unfinished simulation in a project.
 
-    Reads ``config.yaml`` in the project directory. For ``backend: local``
-    (default) the command blocks until all simulations complete. For
-    ``backend: slurm`` it submits the job array and returns — use ``--wait``
-    to poll until done. Pass ``--no-skip`` to re-run existing simulations.
+    Runs HYSPLIT for each receptor and variant, then the footprint when the
+    variant has a grid. Simulations whose outputs exist are skipped unless
+    --no-skip is given. A local run returns when all simulations are done.
+    A Slurm run submits a job array and returns. Add --wait to wait for it.
     """
     resolved = _resolve_project(project)
     model = Model(project=resolved, compute_root=compute_root)
@@ -245,10 +242,14 @@ def register(
     receptors_path: Path | None = typer.Option(  # noqa: B008
         None,
         "--receptors",
-        help="Receptors CSV to add to the project. Defaults to the project's own.",
+        help="Receptors CSV to add to the project. Defaults to the project's receptors.csv.",
     ),
 ) -> None:
-    """Persist project inputs and, when a queue is configured, enqueue receptors."""
+    """
+    Save a project's settings and receptors, and queue its receptors.
+
+    Receptors go to the Postgres work queue only when PYSTILT_DB_URL is set.
+    """
     model = Model(project=_resolve_project(project))
     receptors = read_receptors(receptors_path) if receptors_path is not None else None
     receptor_ids = model.register(receptors=receptors)
@@ -264,12 +265,12 @@ def rm(
     yes: bool = typer.Option(False, "--yes", "-y", help="Do not ask for confirmation."),
 ) -> None:
     """
-    Delete the outputs of one or more variants so they run again as new.
+    Delete the outputs of one or more variants so they run again.
 
-    Use it after changing a variant's settings under the same name (or a
-    default that several variants inherit), or to drop a variant that
-    config.yaml no longer declares. Variants derived from one with ``from:``
-    are deleted with it.
+    Use it after changing the settings of a variant that has already run,
+    including a default that the variant inherits, or to remove a variant
+    that config.yaml no longer lists. Variants that use its particles
+    through from: are deleted too.
     """
     model = Model(project=_resolve_project(project))
     names = ", ".join(repr(v) for v in variant)
@@ -292,10 +293,11 @@ def pull_worker(
     compute_root: str | None = _COMPUTE_ROOT,
 ) -> None:
     """
-    Drain pending receptors from the Postgres work queue.
+    Run receptors from the Postgres work queue.
 
-    Atomically claims and runs receptors until the queue is empty
-    (batch mode) or indefinitely (``--follow``).
+    Each receptor is claimed by one worker only. The worker stops when the
+    queue is empty, or keeps waiting for more work with --follow. Needs
+    PYSTILT_DB_URL.
     """
     model = Model(
         project=_resolve_project(project),
@@ -307,14 +309,20 @@ def pull_worker(
 @app.command("push-worker")
 def push_worker(
     project: str = _REQUIRED_PROJECT_ARG,
-    chunk: str = typer.Option(..., "--chunk", help="Path to one chunk file."),
+    chunk: str = typer.Option(
+        ..., "--chunk", help="File listing the receptor ids to run, one per line."
+    ),
     cpus: int = typer.Option(
-        1, "--cpus", help="Number of CPU cores to use within this task."
+        1, "--cpus", help="Number of receptors to run at once in this task."
     ),
     no_skip: bool = _NO_SKIP,
     compute_root: str | None = _COMPUTE_ROOT,
 ) -> None:
-    """Run the receptor ids listed in one chunk file (one per line)."""
+    """
+    Run the receptors listed in one chunk file.
+
+    Slurm array tasks call this, one chunk file per task.
+    """
     model = Model(
         project=_resolve_project(project),
         compute_root=compute_root,
@@ -330,7 +338,7 @@ def serve(
     project: str = _REQUIRED_PROJECT_ARG,
     compute_root: str | None = _COMPUTE_ROOT,
 ) -> None:
-    """Run a long-lived queue worker (equivalent to ``pull-worker --follow``)."""
+    """Keep running receptors from the work queue. Same as pull-worker --follow."""
     model = Model(
         project=_resolve_project(project),
         compute_root=compute_root,
@@ -340,7 +348,7 @@ def serve(
 
 @app.command()
 def status(project: str | None = _PROJECT_ARG) -> None:
-    """Show simulation completion counts for a project."""
+    """Count finished and pending simulations, per variant when there are several."""
     model = Model(project=_resolve_project(project))
     _print_status(model)
 
@@ -351,7 +359,7 @@ def status(project: str | None = _PROJECT_ARG) -> None:
 
 
 def _counts(table: Any) -> str:
-    """Format one ``total / completed / pending`` line from a status table."""
+    """Return a ``total / completed / pending`` line for a status table."""
     done = int(table["complete"].sum())
     return f"total={len(table)}  completed={done}  pending={len(table) - done}"
 
@@ -378,7 +386,7 @@ def _print_run_start(
     skip_existing: bool,
     wait: bool,
 ) -> None:
-    """Print a concise startup summary for ``stilt run``."""
+    """Print the settings ``stilt run`` is about to use."""
     backend = resolve_backend(execution)
     executor = get_executor(execution)
     mode = "existing" if skip_existing else "no-skip"

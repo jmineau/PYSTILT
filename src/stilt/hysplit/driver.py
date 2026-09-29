@@ -1,4 +1,4 @@
-"""HYSPLIT driver: binary resolution and simulation execution."""
+"""Set up and run one HYSPLIT simulation."""
 
 import os
 import platform
@@ -40,7 +40,7 @@ ZICONTROL_FILE = "ZICONTROL"
 
 
 def _bundled_exe_dir() -> Path:
-    """Return the bundled binary directory for the current platform."""
+    """Return the directory of the bundled ``hycs_std`` for this platform."""
     system = platform.system()
     if system == "Linux":
         subdir = "linux_x64"
@@ -55,17 +55,16 @@ def _bundled_exe_dir() -> Path:
 
 
 def _bundled_data_dir() -> Path:
-    """Return the bundled HYSPLIT data files directory."""
+    """Return the directory of HYSPLIT's bundled data tables."""
     return Path(str(pkg_files("stilt.hysplit") / "data"))
 
 
 def _read_particle_dat(path: Path, names: Sequence[str]) -> pd.DataFrame:
     """
-    Read one whitespace-delimited HYSPLIT particle output file.
+    Read a ``PARTICLE_STILT.DAT`` file, with ``names`` as its columns.
 
-    ``numpy.loadtxt`` is substantially cheaper than regex-based pandas parsing
-    for large numeric ``PARTICLE_STILT.DAT`` files while still handling
-    variable-width whitespace emitted by HYSPLIT.
+    ``numpy.loadtxt`` reads large files much faster than pandas and handles
+    HYSPLIT's variable-width spacing.
     """
     with warnings.catch_warnings():
         warnings.filterwarnings(
@@ -88,14 +87,15 @@ def _read_particle_dat(path: Path, names: Sequence[str]) -> pd.DataFrame:
 @dataclass
 class HYSPLITResult:
     """
-    Raw output from a single HYSPLIT execution.
+    Output of one HYSPLIT run.
 
     Attributes
     ----------
-    particles : pd.DataFrame
-        Particle positions and footprint columns from ``PARTICLE_STILT.DAT``.
+    particles : pandas.DataFrame
+        Particle table read from ``PARTICLE_STILT.DAT``, one column per
+        ``varsiwant`` variable.
     log_path : Path
-        Log path holding the run's streamed standard output.
+        Log file holding the run's standard output.
     """
 
     particles: pd.DataFrame
@@ -103,7 +103,25 @@ class HYSPLITResult:
 
 
 class HYSPLITDriver:
-    """Prepares and executes one HYSPLIT run in a simulation directory."""
+    """
+    Set up and run one HYSPLIT simulation in a directory.
+
+    Parameters
+    ----------
+    receptor : Receptor
+        Receptor to release particles from.
+    params : STILTParams
+        Transport and error settings.
+    met_files : list of Path
+        Meteorology files, in the order HYSPLIT should read them.
+    directory : Path, optional
+        Simulation directory to run in.
+    exe_dir : Path, optional
+        Directory holding ``hycs_std``. Defaults to ``params.exe_dir``, then
+        to the bundled build.
+    data_dir : Path, optional
+        Directory of HYSPLIT data tables. Defaults to the bundled tables.
+    """
 
     def __init__(
         self,
@@ -133,7 +151,13 @@ class HYSPLITDriver:
         self.data_dir = Path(data_dir) if data_dir is not None else _bundled_data_dir()
 
     def prepare(self) -> None:
-        """Create sim directory, symlink executables and data files, write CONTROL and SETUP.CFG."""
+        """
+        Create the simulation directory and write HYSPLIT's input files.
+
+        Links ``hycs_std`` and the data tables into the directory and writes
+        ``CONTROL`` and ``SETUP.CFG``, plus ``ZICONTROL``, ``WINDERR``, and
+        ``ZIERR`` when the settings call for them.
+        """
         self.directory.mkdir(parents=True, exist_ok=True)
 
         # Symlink the binary from exe_dir and data files from data_dir (mirrors
@@ -173,21 +197,28 @@ class HYSPLITDriver:
 
     def execute(self, timeout: int | None, rm_dat: bool) -> HYSPLITResult:
         """
-        Run HYSPLIT once and parse its particle output.
+        Run HYSPLIT once and read its particle output.
 
         Parameters
         ----------
         timeout : int or None
-            Wall-time limit in seconds for the HYSPLIT call. ``None`` disables
-            the timeout.
+            Time limit for the run, in seconds. ``None`` waits indefinitely.
         rm_dat : bool
-            If ``True``, delete the raw ``PARTICLE.DAT`` file after parsing to
-            save disk space.
+            Delete ``PARTICLE_STILT.DAT`` and ``PARTICLE.DAT`` after reading.
 
         Returns
         -------
         HYSPLITResult
-            Parsed particles and the log path.
+            The particles and the log path.
+
+        Raises
+        ------
+        HYSPLITTimeoutError
+            The run exceeded ``timeout``.
+        HYSPLITFailureError
+            The log shows a known HYSPLIT failure.
+        NoParticleOutputError
+            HYSPLIT wrote no ``PARTICLE_STILT.DAT``.
         """
         self.particle_stilt_path.unlink(missing_ok=True)
         self.particle_path.unlink(missing_ok=True)
@@ -198,7 +229,7 @@ class HYSPLITDriver:
     # -- Private helpers -------------------------------------------------------
 
     def _run(self, timeout: int | None, *, label: str = "hycs_std") -> None:
-        """Run hycs_std, streaming output to the log file."""
+        """Run ``hycs_std``, appending its output to the log file."""
         if not self.hycs_std_path.exists():
             raise FileNotFoundError(
                 f"HYSPLIT executable not found for {self.directory}: {self.hycs_std_path}"
@@ -224,7 +255,7 @@ class HYSPLITDriver:
         self._check_log_for_failure(segment_start)
 
     def _terminate_process(self, proc: subprocess.Popen[Any]) -> None:
-        """Terminate one HYSPLIT process group with SIGTERM→wait→SIGKILL escalation."""
+        """Stop a HYSPLIT process group with SIGTERM, then SIGKILL if it does not exit."""
         try:
             os.killpg(proc.pid, signal.SIGTERM)
         except ProcessLookupError:
@@ -245,11 +276,10 @@ class HYSPLITDriver:
 
     def _check_log_for_failure(self, start: int) -> None:
         """
-        Scan the new log segment for known HYSPLIT failure phrases.
+        Raise if the log written since byte ``start`` shows a known HYSPLIT failure.
 
-        ``start`` is a byte offset from ``stat().st_size``; ``seek()`` in text
-        mode is safe for byte-aligned positions on POSIX (no multi-byte chars
-        are written by hycs_std).
+        Seeking to a byte offset in text mode is safe here because
+        ``hycs_std`` writes no multi-byte characters.
         """
         with self.log_path.open("r", encoding="utf-8", errors="replace") as handle:
             handle.seek(start)
@@ -259,7 +289,7 @@ class HYSPLITDriver:
                         raise HYSPLITFailureError(reason, str(self.directory))
 
     def _read_particles(self, rm_dat: bool) -> pd.DataFrame:
-        """Read and optionally remove ``PARTICLE_STILT.DAT`` output."""
+        """Read ``PARTICLE_STILT.DAT``, deleting the particle files if ``rm_dat``."""
         particle_path = self.particle_stilt_path
         if not particle_path.exists():
             raise NoParticleOutputError(
@@ -274,7 +304,7 @@ class HYSPLITDriver:
         return particles
 
     def _write_setup(self) -> None:
-        """Write ``SETUP.CFG``; ``winderrtf`` follows from the error params."""
+        """Write ``SETUP.CFG``."""
         entries = self.params.setup_entries()
         entries["kmsl"] = self._resolved_kmsl()
         entries["ivmax"] = len(self.params.varsiwant)  # number of output variables
@@ -285,7 +315,7 @@ class HYSPLITDriver:
         nl.write(self.setup_path)
 
     def _resolved_kmsl(self) -> int:
-        """Return the effective KMSL value for this simulation."""
+        """Return ``KMSL`` for this receptor, raising if ``params.kmsl`` disagrees."""
         receptor_kmsl = kmsl_from_vertical_reference(self.receptor.altitude_ref)
         if self.params.kmsl is None:
             return receptor_kmsl
@@ -319,7 +349,7 @@ class HYSPLITDriver:
             self.zierr_path.unlink(missing_ok=True)
 
     def _write_zicontrol(self) -> None:
-        """Write ZICONTROL when mixed-layer scaling is enabled."""
+        """Write ``ZICONTROL`` when ``ziscale`` scales the mixed layer, else remove it."""
         values = self.params.ziscale_factors
         if values is None:
             self.zicontrol_path.unlink(missing_ok=True)

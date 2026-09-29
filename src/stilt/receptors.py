@@ -1,4 +1,11 @@
-"""Receptor data models for STILT simulations."""
+"""
+Receptors, the places and times particles are released from.
+
+A :class:`PointReceptor` releases from one point, a :class:`ColumnReceptor`
+from a vertical line, and a :class:`MultiPointReceptor` from several points
+at once (for example a slanted satellite sounding). :func:`read_receptors`
+reads them from a CSV file.
+"""
 
 from __future__ import annotations
 
@@ -47,12 +54,12 @@ def _validate_distinct_horizontal(lons, lats) -> None:
     """
     Raise if two points share a horizontal location.
 
-    HYSPLIT chains consecutive CONTROL starting locations that share a
-    latitude/longitude into a single vertical line source and only releases
-    from the last pair, so stacking several heights at one location in a
-    multipoint receptor silently drops all but the top segment.  PYSTILT also
-    maps particles back to their release altitude by horizontal position, so
-    duplicate locations cannot be told apart even when non-consecutive.
+    HYSPLIT joins consecutive starting locations at the same latitude and
+    longitude into one vertical line source and releases only from the last
+    pair. Several heights at one location in a multipoint receptor would
+    lose all but the top segment. PYSTILT can also match particles to their
+    release point by horizontal position, which cannot tell such points
+    apart even when they are not consecutive.
     """
     pts = np.column_stack((np.round(lons, 5), np.round(lats, 5)))
     if len(np.unique(pts, axis=0)) != len(pts):
@@ -67,7 +74,7 @@ def _validate_distinct_horizontal(lons, lats) -> None:
 
 
 def _format_coord(val: float) -> str:
-    """Format a coordinate float as an integer string when it is whole, else as-is."""
+    """Format a coordinate without a decimal point when it is a whole number."""
     return str(int(val)) if val == int(val) else str(val)
 
 
@@ -97,10 +104,16 @@ def _parse_time(time: TimeLike) -> dt.datetime:
 
 class LocationID(str):
     """
-    Unique spatial location identifier.
+    Identifier of a receptor's location.
 
-    Format: ``"{lon}_{lat}_{alt}"`` for points, ``"{lon}_{lat}_X"`` for
-    columns, or ``"multi_{10-char-sha256}"`` for multipoint receptors.
+    ``"<lon>_<lat>_<alt>"`` for a point, ``"<lon>_<lat>_X"`` for a column,
+    and ``"multi_<hash>"`` for a multipoint receptor, where ``<hash>`` is 10
+    hex characters of a SHA-256 of its points.
+
+    Raises
+    ------
+    ValueError
+        If the string has none of these forms.
     """
 
     _MULTI_PATTERN = re.compile(r"^multi_[0-9a-f]{10}$")
@@ -128,12 +141,27 @@ class LocationID(str):
 
 class ReceptorID(str):
     """
-    Unique receptor identifier: ``{YYYYMMDDHHMM}_{location_id}``.
+    Identifier of a receptor, ``"<YYYYMMDDHHMM>_<location_id>"``.
+
+    The time is the release time in UTC. The parsed parts are available as
+    ``time`` and ``location``.
 
     Parameters
     ----------
     id_str : str
-        Full receptor ID string in ``{YYYYMMDDHHMM}_{location_id}`` format.
+        The identifier, for example ``"202307151800_-111.848_40.766_10"``.
+
+    Attributes
+    ----------
+    time : datetime
+        Release time (UTC, naive).
+    location : LocationID
+        Location part of the id.
+
+    Raises
+    ------
+    ValueError
+        If *id_str* does not have this form.
     """
 
     time: dt.datetime
@@ -163,22 +191,30 @@ class ReceptorID(str):
         time: dt.datetime | pd.Timestamp,
         location_id: LocationID,
     ) -> ReceptorID:
-        """Build a ReceptorID from separate time and location components."""
+        """Build a ReceptorID from a release time and a location id."""
         return cls(f"{pd.Timestamp(time):%Y%m%d%H%M}_{location_id}")
 
 
 class Receptor(ABC):
     """
-    Abstract base for all STILT receptor types.
+    Base class for receptors.
+
+    Iterating a receptor yields ``(lat, lon, alt)`` for each release point.
+    Two receptors are equal when their type, time, points, and
+    ``altitude_ref`` match.
 
     Attributes
     ----------
+    time : datetime
+        Release time (UTC, naive).
+    altitude_ref : {"agl", "msl"}
+        Whether altitudes are above ground level or above mean sea level.
     attrs : dict
-        Labels that ride along with the receptor: the columns of
-        ``receptors.csv`` that PYSTILT does not use itself (a scene, site,
-        or overpass name). They survive the CSV round trip and are there for
-        ``sel(where=lambda r: r.attrs["scene"] == ...)``; they are not part
-        of the receptor's identity.
+        Extra labels, such as a site or scene name. These are the columns of
+        ``receptors.csv`` that PYSTILT does not use. They are kept when the
+        receptors are written back to CSV and can be used to filter, as in
+        ``model.simulations.sel(where=lambda r: r.attrs["site"] == "WBB")``.
+        They are not part of the receptor's id.
     """
 
     def __init__(self, time: TimeLike, altitude_ref: VerticalReference) -> None:
@@ -191,7 +227,7 @@ class Receptor(ABC):
     @property
     @abstractmethod
     def location_id(self) -> LocationID:
-        """Spatial location identifier that uniquely describes this receptor's position."""
+        """Identifier of this receptor's location."""
         ...
 
     @abstractmethod
@@ -204,7 +240,7 @@ class Receptor(ABC):
 
     @abstractmethod
     def to_dict(self) -> dict[str, object]:
-        """Serialize this receptor to a round-trippable dict including a ``"type"`` key."""
+        """Return this receptor as a dict that :meth:`from_dict` reads back."""
         ...
 
     @abstractmethod
@@ -214,24 +250,24 @@ class Receptor(ABC):
 
     @property
     def id(self) -> ReceptorID:
-        """Receptor identifier composed of timestamp and location."""
+        """Receptor id, the release time followed by the location id."""
         return ReceptorID(f"{self.time:%Y%m%d%H%M}_{self.location_id}")
 
     @property
     def geometry(self):
-        """Lazily derived shapely geometry."""
+        """Shapely geometry of the release points."""
         if self._geometry is None:
             self._geometry = self._build_geometry()
         return self._geometry
 
     @property
     def points(self) -> list[Point]:
-        """All constituent shapely Points."""
+        """Release points as shapely ``Point(lon, lat, alt)`` objects."""
         return [Point(lon, lat, alt) for lat, lon, alt in self]
 
     @property
     def plot(self) -> ReceptorPlotAccessor:
-        """Plotting namespace (e.g. ``receptor.plot.map()``)."""
+        """Plotting methods, such as ``receptor.plot.map()``."""
         if self._plot is None:
             from stilt.visualization import ReceptorPlotAccessor
 
@@ -253,7 +289,14 @@ class Receptor(ABC):
 
     @classmethod
     def from_dict(cls, d: dict[str, object]) -> Receptor:
-        """Reconstruct a receptor from a dict produced by ``to_dict``."""
+        """
+        Build a receptor from a dict made by :meth:`to_dict`.
+
+        Raises
+        ------
+        ValueError
+            If the dict has no ``"type"`` key or names an unknown type.
+        """
         data = dict(d)
         type_str = cast(str | None, data.pop("type", None))
         if not type_str:
@@ -272,11 +315,23 @@ class Receptor(ABC):
         altitude_ref: VerticalReference = "agl",
     ) -> Receptor:
         """
-        Build a receptor from ``(longitude, latitude, altitude)`` tuples.
+        Build the right receptor type for a list of points.
 
-        Returns :class:`PointReceptor` for one point, :class:`ColumnReceptor`
-        when two points share the same horizontal location, and
-        :class:`MultiPointReceptor` otherwise.
+        Parameters
+        ----------
+        time : datetime-like or str
+            Release time (UTC).
+        points : list of tuple of float
+            ``(longitude, latitude, altitude)`` of each release point.
+        altitude_ref : {"agl", "msl"}, default "agl"
+            Whether altitudes are above ground level or above mean sea level.
+
+        Returns
+        -------
+        Receptor
+            A :class:`PointReceptor` for one point, a :class:`ColumnReceptor`
+            for two points at the same longitude and latitude, and a
+            :class:`MultiPointReceptor` otherwise.
         """
         if not points:
             raise ValueError("At least one point must be provided.")
@@ -298,20 +353,27 @@ class Receptor(ABC):
 
 class PointReceptor(Receptor):
     """
-    A single-point STILT receptor.
+    Receptor that releases particles from one point.
 
     Parameters
     ----------
     time : datetime-like or str
-        Timestamp associated with the receptor.
+        Release time. Time zone aware values are converted to UTC, and naive
+        values are taken as UTC. A string may also be ``"YYYYMMDDHHMM"``.
     longitude : float
-        Longitude [-180, 180].
+        Longitude in degrees, from -180 to 180.
     latitude : float
-        Latitude [-90, 90].
+        Latitude in degrees, from -90 to 90.
     altitude : float
-        Altitude interpreted according to ``altitude_ref``.
+        Release height in metres.
     altitude_ref : {"agl", "msl"}, default "agl"
-        Vertical reference for the altitude.
+        Whether *altitude* is above ground level or above mean sea level.
+
+    Examples
+    --------
+    >>> r = PointReceptor("2023-07-15 18:00", -111.848, 40.766, 10)
+    >>> r.id
+    '202307151800_-111.848_40.766_10'
     """
 
     def __init__(
@@ -333,7 +395,7 @@ class PointReceptor(Receptor):
 
     @property
     def location_id(self) -> LocationID:
-        """``"{lon}_{lat}_{alt}"`` formatted location identifier."""
+        """Location id, ``"<lon>_<lat>_<alt>"``."""
         x = _format_coord(self.longitude)
         y = _format_coord(self.latitude)
         z = _format_coord(self.altitude)
@@ -352,11 +414,11 @@ class PointReceptor(Receptor):
         )
 
     def _build_geometry(self) -> Point:
-        """Return a shapely Point at this receptor's location."""
+        """Return a shapely Point at the release point."""
         return Point(self.longitude, self.latitude, self.altitude)
 
     def to_dict(self) -> dict[str, object]:
-        """Return a dict with keys ``type``, ``time``, ``longitude``, ``latitude``, ``altitude``, ``altitude_ref``."""
+        """Return this receptor as a dict with ``type``, ``time``, ``longitude``, ``latitude``, ``altitude``, and ``altitude_ref``."""
         return {
             "type": type(self).__name__,
             "time": self.time.isoformat(),
@@ -369,22 +431,22 @@ class PointReceptor(Receptor):
 
 class ColumnReceptor(Receptor):
     """
-    A vertical-column STILT receptor (two altitudes, shared horizontal location).
+    Receptor that releases particles evenly along a vertical line.
 
     Parameters
     ----------
     time : datetime-like or str
-        Timestamp associated with the receptor.
+        Release time, as for :class:`PointReceptor`.
     longitude : float
-        Longitude [-180, 180].
+        Longitude in degrees, from -180 to 180.
     latitude : float
-        Latitude [-90, 90].
+        Latitude in degrees, from -90 to 90.
     bottom : float
-        Lower altitude bound (must be less than ``top``).
+        Bottom of the column in metres. Must be less than *top*.
     top : float
-        Upper altitude bound.
+        Top of the column in metres.
     altitude_ref : {"agl", "msl"}, default "agl"
-        Vertical reference for the altitudes.
+        Whether the heights are above ground level or above mean sea level.
     """
 
     def __init__(
@@ -410,7 +472,7 @@ class ColumnReceptor(Receptor):
 
     @property
     def location_id(self) -> LocationID:
-        """``"{lon}_{lat}_X"`` formatted location identifier (altitude replaced by ``X``)."""
+        """Location id, ``"<lon>_<lat>_X"``."""
         x = _format_coord(self.longitude)
         y = _format_coord(self.latitude)
         return LocationID(f"{x}_{y}_X")
@@ -430,7 +492,7 @@ class ColumnReceptor(Receptor):
         )
 
     def _build_geometry(self) -> LineString:
-        """Return a shapely LineString spanning bottom to top at this receptor's location."""
+        """Return a shapely LineString from the bottom to the top of the column."""
         return LineString(
             [
                 (self.longitude, self.latitude, self.bottom),
@@ -439,7 +501,7 @@ class ColumnReceptor(Receptor):
         )
 
     def to_dict(self) -> dict[str, object]:
-        """Return a dict with keys ``type``, ``time``, ``longitude``, ``latitude``, ``bottom``, ``top``, ``altitude_ref``."""
+        """Return this receptor as a dict with ``type``, ``time``, ``longitude``, ``latitude``, ``bottom``, ``top``, and ``altitude_ref``."""
         return {
             "type": type(self).__name__,
             "time": self.time.isoformat(),
@@ -453,20 +515,31 @@ class ColumnReceptor(Receptor):
 
 class MultiPointReceptor(Receptor):
     """
-    A multi-point STILT receptor with arbitrary spatial coordinates.
+    Receptor that releases particles from several points at once.
+
+    Use it for a slanted column, such as a satellite sounding sampled at
+    several heights along the line of sight. Each point must have its own
+    longitude and latitude. For several heights at one location, use a
+    :class:`ColumnReceptor` or one :class:`PointReceptor` per height.
 
     Parameters
     ----------
     time : datetime-like or str
-        Timestamp associated with the receptor.
+        Release time, as for :class:`PointReceptor`.
     longitudes : array-like of float
-        Longitudes of each constituent point.
+        Longitude of each point in degrees.
     latitudes : array-like of float
-        Latitudes of each constituent point.
+        Latitude of each point in degrees.
     altitudes : array-like of float
-        Altitudes of each constituent point.
+        Height of each point in metres.
     altitude_ref : {"agl", "msl"}, default "agl"
-        Vertical reference for the altitudes.
+        Whether the heights are above ground level or above mean sea level.
+
+    Raises
+    ------
+    ValueError
+        If the arrays differ in length, a coordinate is out of range, or two
+        points share a horizontal location.
     """
 
     def __init__(
@@ -493,7 +566,12 @@ class MultiPointReceptor(Receptor):
 
     @property
     def location_id(self) -> LocationID:
-        """``"multi_{sha256[:10]}"`` identifier derived from a sorted canonical hash of all points."""
+        """
+        Location id, ``"multi_<hash>"``.
+
+        The hash covers the sorted points, with coordinates rounded to 5
+        decimals and altitudes truncated to whole metres.
+        """
         pts_sorted = sorted(
             zip(self.longitudes, self.latitudes, self.altitudes, strict=False)
         )
@@ -517,13 +595,13 @@ class MultiPointReceptor(Receptor):
         return f"MultiPointReceptor(id={self.id!r}, n_points={len(self)}, altitude_ref={self.altitude_ref})"
 
     def _build_geometry(self) -> MultiPoint:
-        """Return a shapely MultiPoint covering all constituent locations."""
+        """Return a shapely MultiPoint of the release points."""
         return MultiPoint(
             list(zip(self.longitudes, self.latitudes, self.altitudes, strict=False))
         )
 
     def to_dict(self) -> dict[str, object]:
-        """Return a dict with keys ``type``, ``time``, ``longitudes``, ``latitudes``, ``altitudes``, ``altitude_ref``."""
+        """Return this receptor as a dict with ``type``, ``time``, ``longitudes``, ``latitudes``, ``altitudes``, and ``altitude_ref``."""
         return {
             "type": type(self).__name__,
             "time": self.time.isoformat(),
@@ -554,15 +632,50 @@ _CSV_RENAMES = {
 
 def read_receptors(path: str | Path | IO[str]) -> list[Receptor]:
     """
-    Load receptors from a CSV file (a path or an open text stream).
+    Read receptors from a CSV file.
 
-    Columns PYSTILT does not use are kept on each receptor as ``attrs``
-    (a group's first row speaks for the group).
+    The file needs columns for time, longitude, latitude, and altitude. Each
+    row is one :class:`PointReceptor`, unless an ``r_idx`` column groups
+    rows into one receptor. A group of two rows at the same location becomes
+    a :class:`ColumnReceptor` and any other group a
+    :class:`MultiPointReceptor`.
+
+    ======================  =============================================
+    Field                   Accepted column names (any case)
+    ======================  =============================================
+    time                    ``time``
+    longitude               ``longitude``, ``long``, ``lon``
+    latitude                ``latitude``, ``lati``, ``lat``
+    altitude (m)            ``altitude``, ``zagl``, ``zmsl``, ``z``
+    receptor group          ``r_idx``
+    altitude reference      ``altitude_ref``, ``height_ref``
+    ======================  =============================================
+
+    Without an ``altitude_ref`` column, altitudes are above mean sea level
+    when the column is named ``zmsl`` and above ground level otherwise.
+    Any other columns are kept in each receptor's ``attrs``. For a group,
+    they come from its first row.
+
+    Parameters
+    ----------
+    path : str, Path or file-like
+        CSV file path or open text stream.
+
+    Returns
+    -------
+    list of Receptor
+        In file order.
+
+    Raises
+    ------
+    ValueError
+        If a required column is missing, or the rows of one group differ in
+        time or altitude reference.
     """
-    # r_idx is a grouping key, so read it as text. Left to inference, pandas parses a large
-    # file in chunks and types each chunk separately: in a file mixing numeric and string
-    # ids, a receptor whose rows straddle a chunk boundary comes back part int, part str,
-    # and groupby splits it into two receptors with half the points each -- silently.
+    # Read r_idx as text. With type inference, pandas types each chunk of a
+    # large file separately, so in a file that mixes numeric and string ids,
+    # a group split across chunks would come back part int and part str and
+    # be split into two receptors.
     header = pd.read_csv(path, nrows=0).columns
     if hasattr(path, "seek"):
         path.seek(0)  # type: ignore[union-attr]
@@ -643,10 +756,11 @@ def read_receptors(path: str | Path | IO[str]) -> list[Receptor]:
 
 def receptors_to_csv(receptors: Iterable[Receptor]) -> str:
     """
-    Serialise receptors to the CSV text that :func:`read_receptors` reads.
+    Return receptors as CSV text that :func:`read_receptors` reads back.
 
-    One row per constituent point, grouped by ``r_idx`` so column and
-    multipoint receptors round-trip. Receptor ``attrs`` become extra columns.
+    Each release point is one row, and ``r_idx`` groups the rows of column
+    and multipoint receptors. Each receptor's ``attrs`` become extra
+    columns.
     """
     import csv
     from io import StringIO
@@ -685,13 +799,32 @@ def receptors_to_csv(receptors: Iterable[Receptor]) -> str:
 
 def append_receptors_csv(text: str, receptors: Iterable[Receptor]) -> str:
     """
-    Return *text* (an existing receptors CSV) with rows for *receptors* appended.
+    Return the text of a receptors CSV with rows for more receptors appended.
 
-    The file's own header decides the columns and their order, so a
-    hand-written file keeps its column names, its ``r_idx`` values, and any
-    extra columns (filled from each receptor's ``attrs``, else left empty).
-    New receptors continue the ``r_idx`` numbering after the largest one in
-    the file.
+    The existing header sets the columns and their order, so a hand-written
+    file keeps its column names and ``r_idx`` values. Extra columns are
+    filled from each receptor's ``attrs`` or left empty. New receptors are
+    numbered after the largest ``r_idx`` in the file.
+
+    Parameters
+    ----------
+    text : str
+        Contents of the existing CSV.
+    receptors : iterable of Receptor
+        Receptors to append.
+
+    Returns
+    -------
+    str
+        The CSV text with the new rows.
+
+    Raises
+    ------
+    ValueError
+        If the file lacks a time, longitude, latitude, or altitude column,
+        has no ``r_idx`` column for a column or multipoint receptor, or
+        names its altitude column ``zagl``/``zmsl`` for a different altitude
+        reference than a new receptor uses.
     """
     import csv
     from io import StringIO
@@ -763,7 +896,7 @@ def append_receptors_csv(text: str, receptors: Iterable[Receptor]) -> str:
 
 
 def write_receptors(receptors: Iterable[Receptor], path: str | Path) -> Path:
-    """Write receptors to a CSV file readable by :func:`read_receptors`."""
+    """Write receptors to a CSV file that :func:`read_receptors` reads, and return its path."""
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(receptors_to_csv(receptors))
@@ -771,7 +904,7 @@ def write_receptors(receptors: Iterable[Receptor], path: str | Path) -> Path:
 
 
 def _receptor_from_group(group: pd.DataFrame) -> Receptor:
-    """Build one receptor from a grouped receptor CSV slice."""
+    """Build one receptor from the rows of one ``r_idx`` group."""
     refs = {str(v).lower() for v in group["altitude_ref"].tolist()}
     if len(refs) != 1:
         raise ValueError(

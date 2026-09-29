@@ -1,9 +1,9 @@
 """
-Work-queue resolution.
+Finding the work queue for a model.
 
-The only persistent backend is the Postgres work queue, present when a DB URL is
-configured. Local projects have no queue: work runs inline or via push workers,
-the registry is the manifest, and completion is computed by key.
+A project has a work queue only when ``PYSTILT_DB_URL`` is set. Without one,
+receptors run in the calling process or through push workers, and whether a
+simulation is complete is decided by the outputs in the project.
 """
 
 from __future__ import annotations
@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
 
 def resolve_queue(runtime: RuntimeSettings) -> PostgresQueue | None:
-    """Return the Postgres queue when a DB URL is configured, else ``None``."""
+    """Return the PostgreSQL queue when ``runtime.db_url`` is set, else ``None``."""
     if not runtime.db_url:
         return None
     from .postgres import PostgresQueue

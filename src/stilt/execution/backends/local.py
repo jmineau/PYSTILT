@@ -1,4 +1,4 @@
-"""Local execution backend."""
+"""Backend that runs workers on this machine."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ __all__ = ["LocalExecutor", "LocalHandle"]
 
 
 class LocalHandle:
-    """Handle for local execution: joins the worker thread on ``wait()``."""
+    """Handle to a local run, which runs on a background thread."""
 
     def __init__(self, thread: threading.Thread | None = None) -> None:
         self._thread = thread
@@ -20,21 +20,21 @@ class LocalHandle:
 
     @property
     def job_id(self) -> str:
-        """Return the handle's job id; local runs have no scheduler id."""
+        """Always ``"local"``, since local runs have no scheduler id."""
         return "local"
 
     @property
     def detached(self) -> bool:
-        """Local workers belong to this process and must be awaited."""
+        """Always False, since local workers stop when this process exits."""
         return False
 
     @property
     def done(self) -> bool:
-        """Return whether the worker thread has finished."""
+        """Whether the run has finished."""
         return self._thread is None or not self._thread.is_alive()
 
     def wait(self) -> None:
-        """Block until the local workers finish; re-raise any worker error."""
+        """Block until the run finishes, raising any error it raised."""
         if self._thread is not None:
             self._thread.join()
             self._thread = None
@@ -45,10 +45,15 @@ class LocalHandle:
 
 class LocalExecutor:
     """
-    Run simulations in this process (``n_workers=1``) or a local process pool.
+    Run receptors on this machine, in one process or a process pool.
 
-    Work runs on a background thread so callers (the CLI) can report progress
-    while waiting; ``LocalHandle.wait()`` joins it.
+    The run happens on a background thread, so :meth:`start` returns at
+    once. Call ``wait()`` on the handle to block until it finishes.
+
+    Parameters
+    ----------
+    n_workers : int, default 1
+        Number of worker processes. 1 runs in this process.
     """
 
     dispatch: DispatchMode = "push"
@@ -58,7 +63,7 @@ class LocalExecutor:
 
     @property
     def n_workers(self) -> int:
-        """Return the number of worker processes."""
+        """Number of worker processes."""
         return self._n_workers
 
     def start(
@@ -70,7 +75,7 @@ class LocalExecutor:
         compute_root: str | None = None,
         skip_existing: bool | None = None,
     ) -> LocalHandle:
-        """Start the pending receptors on a local worker pool."""
+        """Start running ``pending`` receptors and return a handle."""
         if not pending:
             return LocalHandle()
 
@@ -78,7 +83,7 @@ class LocalExecutor:
         handle = LocalHandle()
 
         def _work() -> None:
-            """Run the pending receptors, recording the result."""
+            """Run the receptors, keeping any error for ``wait()``."""
             from stilt.model import Model
 
             from ..worker import run_receptors

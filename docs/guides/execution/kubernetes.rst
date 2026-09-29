@@ -3,73 +3,86 @@ In The Cloud (Kubernetes)
 
 .. warning::
 
-   The Kubernetes backend is **experimental and not yet fully tested**. The
-   pieces described here exist in the code but haven't been validated end to
-   end. Use :doc:`local` or :doc:`slurm` for real work. Contributions are
-   welcome.
+   The Kubernetes backend is experimental. The pieces described here exist
+   in the code but haven't been tested end to end. Use :doc:`local` or
+   :doc:`slurm` for real work. Contributions are welcome.
 
-This page is for people running PYSTILT on cloud infrastructure. Unlike the
-local and Slurm backends, cloud workers don't get a fixed list of
-simulations. Each one repeatedly takes the next unfinished simulation from a
-shared queue in a PostgreSQL database until the queue is empty.
+This page is for people running PYSTILT on cloud infrastructure. Cloud
+workers don't get a fixed list of receptors the way local and Slurm workers
+do. Each worker takes the next receptor from a shared queue in a PostgreSQL
+database, runs all of its variants, and repeats until the queue is empty.
 
-PYSTILT supports two Kubernetes-oriented patterns:
+There are two ways to run workers:
 
-- **Batch Jobs** via :class:`stilt.execution.KubernetesExecutor` — creates a
-  bounded Kubernetes Job to drain currently pending work.
-- **Long-lived worker Deployments** via ``stilt serve`` and
-  ``stilt.service.kubernetes`` manifest helpers — for always-on queue
-  consumers that poll for new work indefinitely.
+- A batch Kubernetes Job, started by ``stilt run``. Its pods work through the
+  receptors in the queue and exit.
+- Long-running Deployments that keep waiting for new receptors. You build
+  these from the manifest helpers in ``stilt.service.kubernetes`` and apply
+  them yourself.
 
-Both patterns depend on a shared PostgreSQL-backed work queue.
+What you need
+-------------
+
+- A PostgreSQL database for the queue, with its URL in ``PYSTILT_DB_URL``.
+  Set it on the machine where you run ``stilt run`` too, so the receptors
+  get added to the queue.
+- A Kubernetes Secret holding that URL under the key ``PYSTILT_DB_URL``.
+  Workers read it from there.
+- A project that every pod can reach. In practice this is a cloud URI such
+  as ``s3://`` or ``gs://``.
+- A container image with PYSTILT installed.
+- A writable folder in each pod for meteorology and HYSPLIT files. Pass one
+  with ``stilt run --compute-root /tmp/pystilt`` (or set
+  ``PYSTILT_COMPUTE_ROOT``). The same path is given to every pod.
 
 Run a batch of workers
 ----------------------
-
-The executor path creates a Kubernetes Job whose pods run:
-
-.. code-block:: text
-
-   stilt pull-worker <project>
-
-Minimal config:
 
 .. code-block:: yaml
 
    execution:
      backend: kubernetes
      image: ghcr.io/example/pystilt-worker:latest
-     namespace: stilt
-     n_workers: 8
-     db_secret: pystilt-db
+     namespace: stilt            # default: default
+     n_workers: 8                # pods in the Job, all started together
+     db_secret: pystilt-db       # the Secret with PYSTILT_DB_URL (default)
 
-Use this when you want a single bounded drain of currently pending
-simulations: all pods start together, process until the queue is empty, and
-exit.
+Any other key is copied into the pod spec as written, for example
+``serviceAccountName`` or ``nodeSelector``.
+
+``stilt run`` then adds the project's receptors to the queue and creates a
+Job named ``stilt-<project name>``. Each pod runs:
+
+.. code-block:: text
+
+   stilt pull-worker <project>
+
+The pods finish when the queue is empty. ``stilt run --wait`` waits for the
+Job to finish.
 
 Always-on workers
 -----------------
 
-For always-on execution, ``stilt.service.kubernetes`` exposes helper functions
-for rendering:
+For workers that keep running and pick up new receptors as you register
+them, ``stilt.service.kubernetes`` has functions that return manifests as
+Python dicts:
 
-- worker Job manifests
-- follow-mode worker Deployments
-- ``stilt serve`` Deployments
-- KEDA ``ScaledObject`` manifests for autoscaling
+- ``worker_deployment_manifest``: a Deployment running
+  ``stilt pull-worker --follow``
+- ``service_deployment_manifest``: a Deployment running ``stilt serve``
+- ``scaled_object_manifest``: a KEDA ``ScaledObject`` that scales a
+  Deployment with the number of receptors waiting in the queue
+- ``secret_manifest``: a Secret holding ``PYSTILT_DB_URL``
+- ``worker_job_manifest``: the batch Job that ``stilt run`` creates
 
-This path is separate from ``KubernetesExecutor``: it targets deployments
-where pods keep polling for new work as it arrives, rather than draining a
-fixed batch.
+Write them to YAML and apply them with ``kubectl``. Add work with
+``stilt register``.
 
-What you need
--------------
+Limitations
+-----------
 
-Both patterns currently assume:
-
-- ``PYSTILT_DB_URL`` is available to workers (typically via a Kubernetes
-  Secret).
-- The project is reachable from every pod.  In practice the project root
-  is a cloud URI such as ``s3://`` or ``gs://``.
-- Workers have a writable ``compute_root`` for staging meteorology and HYSPLIT
-  files.  A pod-local path such as ``/tmp/pystilt`` works well here.
+- The Job name comes from the project name. A finished Job has to be
+  deleted (``kubectl delete job stilt-<project name>``) before ``stilt run``
+  can start a new one for the same project.
+- ``--no-skip`` has no effect. Pods always skip simulations that are already
+  finished.

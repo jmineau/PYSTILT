@@ -1,4 +1,4 @@
-"""Execution: worker functions plus local, Slurm, and Kubernetes backends."""
+"""Running simulations: worker functions and the local, Slurm, and Kubernetes backends."""
 
 from .backends import (
     DispatchMode,

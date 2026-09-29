@@ -1,11 +1,11 @@
 """
-GGG2020 output: ``.oof`` text files and the private / public netCDF files.
+Readers for GGG2020 output: ``.oof`` text files and private and public netCDF files.
 
 GGG is the retrieval behind TCCON and, through EGI, behind many EM27/SUN
-operators. It writes a spectrum-per-row ``.oof`` "official output file" and,
-from the same run, a ``*.private.nc`` with the priors and the averaging
-kernel tables; the ``*.public.nc`` files TCCON distributes are the private
-files with the kernels already expanded per spectrum.
+instruments. A run writes a ``.oof`` "official output file" with one row per
+spectrum, and a ``*.private.nc`` with the priors and the averaging-kernel
+tables. The ``*.public.nc`` files TCCON distributes are private files with
+the kernels already expanded per spectrum.
 """
 
 from __future__ import annotations
@@ -28,7 +28,7 @@ _COLUMN = re.compile(r"^(?P<name>\w+?)(?:\((?P<units>[^)]*)\))?(?P<error>_error)
 
 
 def _check_species(species: str, who: str) -> str:
-    """Validate a column-variable name like ``xch4``; return it lower-cased."""
+    """Return a column variable name such as ``xch4`` in lower case, raising unless it starts with x."""
     species = species.lower()
     if not species.startswith("x"):
         raise ValueError(
@@ -38,7 +38,7 @@ def _check_species(species: str, who: str) -> str:
 
 
 def _scale(from_units: str, to_units: str) -> float:
-    """Factor that converts mole fractions in ``from_units`` to ``to_units``."""
+    """Return the factor that converts mole fractions in ``from_units`` to ``to_units``."""
     try:
         return _UNIT_SCALE[from_units.strip().lower()] / _UNIT_SCALE[to_units.lower()]
     except KeyError as e:
@@ -50,11 +50,11 @@ def _scale(from_units: str, to_units: str) -> float:
 
 def _oof_header(lines: list[str], path: Path) -> tuple[int, float | None, list[str]]:
     """
-    Header length, the missing value, and the raw column names of a .oof.
+    Return the header length, missing value, and raw column names of a ``.oof``.
 
-    The first line gives the header length and a variable count; the count
-    includes variables the flag table marks as not output, so the column
-    line itself says how many columns there are.
+    The first line gives the header length and a variable count. The count
+    includes variables that are not written, so the columns are taken from
+    the column line instead.
     """
     try:
         nhead = int(re.split(r"[\s,]+", lines[0].strip())[0])
@@ -76,7 +76,7 @@ def _oof_header(lines: list[str], path: Path) -> tuple[int, float | None, list[s
 
 
 def _clean_column(raw: str) -> tuple[str, str]:
-    """``xch4(ppm)_error`` -> ``('xch4_error', 'ppm')``; ``lat(deg)`` -> ``('lat', 'deg')``."""
+    """Split a column name into name and units: ``xch4(ppm)_error`` gives ``('xch4_error', 'ppm')``."""
     m = _COLUMN.match(raw)
     if m is None:
         return raw, ""
@@ -87,24 +87,34 @@ def read_ggg_oof(path: str | Path, species: str = "xch4") -> pd.DataFrame:
     """
     Read a GGG2020 ``.oof`` file into a table of soundings.
 
-    A ``.oof`` is one day of retrievals from one instrument (``*.vav.ada.aia.oof``),
-    which is how EGI delivers EM27/SUN results. ``species`` is the column
-    variable to read: ``xch4``, ``xco2``, ``xco``, ``xh2o``, ``xn2o``, ...
+    A ``.oof`` (``*.vav.ada.aia.oof``) holds one day of retrievals from one
+    instrument. EGI delivers EM27/SUN results this way.
 
-    ``value`` and ``uncertainty`` are the species and its one-sigma error in
-    the units the column header gives (``xch4(ppm)`` -> ``ppm``); ``good`` is
-    ``flag == 0``. ``sounding_id`` is the spectrum name. ``surface_altitude``
-    is the instrument's geometric altitude and ``surface_pressure`` the
-    pressure it measured; ``zenith`` and ``azimuth`` are the solar angles.
-    ``time`` is built from the ``year``, ``day`` and fractional UT ``hour``
-    columns.
-
-    A ``.oof`` carries no averaging kernel and no prior profile, so the
-    ``ak``, ``ak_pressure`` and ``pressure_levels`` columns are absent. The
+    A ``.oof`` has no averaging kernel or prior profile, so the ``ak``,
+    ``ak_pressure``, and ``pressure_levels`` columns are missing. The
     kernels are in the run's ``*.private.nc`` (:func:`read_ggg_netcdf`), or
-    come from a site kernel table keyed by solar zenith angle. The other
-    ``x<gas>`` columns, their errors, ``flag``, ``zmin`` (km) and ``xluft`` are
-    kept under their own names.
+    in a site kernel table by solar zenith angle.
+
+    Parameters
+    ----------
+    path : str or Path
+        The ``.oof`` file.
+    species : str, default "xch4"
+        Column variable to read, such as ``xch4``, ``xco2``, ``xco``,
+        ``xh2o``, or ``xn2o``.
+
+    Returns
+    -------
+    pandas.DataFrame
+        One row per spectrum. ``value`` and ``uncertainty`` are the species
+        and its one-sigma error, in the units the column header gives
+        (``xch4(ppm)`` gives ``ppm``). ``good`` is ``flag == 0``.
+        ``sounding_id`` is the spectrum name. ``surface_altitude`` is the
+        instrument's altitude and ``surface_pressure`` the pressure it
+        measured. ``zenith`` and ``azimuth`` are the solar angles. ``time``
+        comes from the ``year``, ``day``, and UT ``hour`` columns. The other
+        ``x<gas>`` columns and their errors, ``flag``, ``zmin`` (km), and
+        ``xluft`` keep their own names.
     """
     path = Path(path)
     species = _check_species(species, "read_ggg_oof")
@@ -177,13 +187,14 @@ def _expand_ak_table(
     ds: Any, species: str, xgas: np.ndarray, airmass: np.ndarray
 ) -> tuple[np.ndarray, np.ndarray]:
     """
-    Per-spectrum kernels from a private file's ``(ak_altitude, slant bin)`` table.
+    Return each spectrum's kernel from a private file's slant-xgas table.
 
-    GGG tabulates the column averaging kernel against slant xgas, the
-    retrieved xgas times the O2-window airmass, and its public-file writer
-    interpolates each altitude row linearly along that axis. The second
-    array flags spectra whose slant xgas fell outside the table, where the
-    end column is used (the public files call these extrapolation flags).
+    GGG tabulates the column averaging kernel against slant xgas (the
+    retrieved xgas times the O2-window airmass) on an
+    ``(ak_altitude, slant bin)`` grid. As in GGG's public-file writer, each
+    altitude row is interpolated linearly along slant xgas. The second array
+    marks spectra whose slant xgas was outside the table, which take the end
+    column.
     """
     bins = _float(ds[f"ak_slant_{species}_bin"])
     table = _float(ds[f"ak_{species}"])  # (ak_altitude, bin)
@@ -205,32 +216,42 @@ def read_ggg_netcdf(
     """
     Read a GGG2020 netCDF file, private or public, into a table of soundings.
 
-    A ``*.private.nc`` is what GGG writes for a run; a ``*.public.nc`` (or
-    ``*.public.qc.nc``) is the TCCON release of the same layout. ``species``
-    is the column variable to read: ``xco2``, ``xch4``, ``xco``, ``xn2o`` or
-    ``xh2o``. ``time_range`` keeps only the spectra between two times, which a
-    multi-year site file needs.
+    GGG writes a ``*.private.nc`` for each run. A ``*.public.nc`` or
+    ``*.public.qc.nc`` is the TCCON release of the same layout. A public
+    file stores the averaging kernel per spectrum. A private file stores a
+    table against slant xgas, which is interpolated for each spectrum as
+    GGG's public writer does, using the O2-window airmass
+    (``o2_7885_am_o2``).
 
-    ``value`` and ``uncertainty`` are the species and its one-sigma error in
-    the file's units; ``good`` is ``flag == 0`` where the file has a flag and
-    true everywhere in a ``qc`` file, which holds only flagged-good data.
-    The kernel ``ak`` sits on the site's fixed ``ak_pressure`` grid (hPa,
-    median pressures). A public file stores it per spectrum; a private file
-    stores a table against slant xgas, which is interpolated per spectrum the
-    way GGG's public writer does (needs the O2-window airmass,
-    ``o2_7885_am_o2``), with ``ak_extrapolated`` marking spectra beyond the
-    table. ``apriori`` is the prior profile of the gas in the species' units
-    on the prior altitude grid; ``pressure_levels`` are the prior's pressures
-    in hPa per spectrum and ``altitude_levels`` that grid in metres above sea
-    level, both from the surface up, so
-    :func:`~stilt.observations.pressure_altitudes` and
-    :func:`~stilt.observations.slant_points` take them directly. A private
-    file shares each prior between the spectra ``prior_index`` points at it.
-    ``surface_altitude`` is the instrument's geometric altitude and
-    ``surface_pressure`` the pressure it measured. ``zenith`` and ``azimuth``
-    are the solar angles, which is the direction the instrument looks.
-    ``sounding_id`` is the spectrum name when the file keeps it (private),
-    else the site and time.
+    Parameters
+    ----------
+    path : str or Path
+        The netCDF file.
+    species : str, default "xco2"
+        Column variable to read: ``xco2``, ``xch4``, ``xco``, ``xn2o``, or
+        ``xh2o``.
+    time_range : tuple, optional
+        ``(start, stop)`` times. Only spectra between them are read, which
+        helps with a multi-year site file.
+
+    Returns
+    -------
+    pandas.DataFrame
+        One row per spectrum. ``value`` and ``uncertainty`` are the species
+        and its one-sigma error, in the file's units. ``good`` is
+        ``flag == 0``, or True everywhere in a ``qc`` file without a flag,
+        which holds only good data. ``ak`` is the kernel on the site's fixed
+        ``ak_pressure`` grid (median pressures, hPa), and ``ak_extrapolated``
+        marks spectra beyond a private file's kernel table. ``apriori`` is
+        the prior profile in the species' units. ``pressure_levels`` (hPa)
+        and ``altitude_levels`` (m above sea level) are the prior's grid,
+        from the surface up, ready for
+        :func:`~stilt.observations.pressure_altitudes` and
+        :func:`~stilt.observations.slant_points`. ``surface_altitude`` is the
+        instrument's altitude and ``surface_pressure`` the pressure it
+        measured. ``zenith`` and ``azimuth`` are the solar angles, the
+        direction the instrument looks. ``sounding_id`` is the spectrum name
+        when the file has it, else the site and time.
     """
     path = Path(path)
     species = _check_species(species, "read_ggg_netcdf")
@@ -251,7 +272,7 @@ def read_ggg_netcdf(
         ri = ii - i0
 
         def pick(var: Any) -> np.ndarray:
-            """Read one time-indexed variable over the selected spectra."""
+            """Return one time-indexed variable for the selected spectra."""
             return _float(var, slice(i0, i1))[ri]
 
         site = str(getattr(ds, "long_name", "") or "").strip() or path.stem[:2]
@@ -281,13 +302,13 @@ def read_ggg_netcdf(
             prior_rows = ri
 
             def prior(var: Any) -> np.ndarray:
-                """One prior row per selected spectrum."""
+                """Return one prior row per selected spectrum."""
                 return _float(var, slice(i0, i1))[prior_rows]
         else:
             prior_rows = np.asarray(ds["prior_index"][i0:i1], dtype=int)[ri]
 
             def prior(var: Any) -> np.ndarray:
-                """The prior each selected spectrum points at."""
+                """Return the prior each selected spectrum points to."""
                 return _float(var)[prior_rows]
 
         prior_alt_m = _float(ds["prior_altitude"]) * 1000.0

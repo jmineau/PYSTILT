@@ -1,4 +1,4 @@
-"""HYSPLIT CONTROL file model."""
+"""The HYSPLIT ``CONTROL`` file."""
 
 import datetime as dt
 from pathlib import Path
@@ -10,7 +10,13 @@ from stilt.receptors import Receptor
 
 
 class ControlFile(BaseModel):
-    """HYSPLIT control parameters."""
+    """
+    Contents of a HYSPLIT ``CONTROL`` file for one STILT run.
+
+    Holds the receptor, run length, vertical motion option, model top, and
+    met files. The pollutant, concentration grid, and deposition sections
+    HYSPLIT requires are written with fixed values that STILT does not use.
+    """
 
     receptor: Receptor
     emisshrs: float
@@ -23,15 +29,12 @@ class ControlFile(BaseModel):
 
     def write(self, path: str | Path) -> None:
         """
-        Write the HYSPLIT CONTROL file.
-
-        Format is positional text: receptor time, receptor coordinates,
-        run parameters, met files, emission hours.
+        Write the ``CONTROL`` file.
 
         Parameters
         ----------
         path : str or Path
-            Destination path. Parent directories are created if absent.
+            File to write. Missing parent directories are created.
         """
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -103,12 +106,19 @@ class ControlFile(BaseModel):
     @classmethod
     def read(cls, path, *, altitude_ref: VerticalReference = "agl"):
         """
-        Build ControlFile object from HYSPLIT control file.
+        Read a ``CONTROL`` file written by :meth:`write`.
+
+        Parameters
+        ----------
+        path : str or Path
+            File to read.
+        altitude_ref : {"agl", "msl"}, default "agl"
+            Vertical reference of the release heights, which the file does not
+            record.
 
         Returns
         -------
         ControlFile
-            ControlFile object with parsed parameters.
         """
         path = Path(path).resolve()
 

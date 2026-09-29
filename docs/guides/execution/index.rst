@@ -1,9 +1,9 @@
 Where To Run
 ============
 
-The same project can run on your computer, on an HPC cluster, or (experimentally)
-in the cloud. Only the ``execution`` section of ``config.yaml`` changes; your
-receptors, meteorology, footprints, and outputs stay the same.
+The same project can run on your computer, on an HPC cluster, or in the
+cloud (experimental). Only the ``execution`` section of ``config.yaml``
+changes. Your receptors, meteorology, footprints, and outputs stay the same.
 
 .. list-table::
    :header-rows: 1
@@ -21,7 +21,7 @@ receptors, meteorology, footprints, and outputs stay the same.
        uses Slurm.
      - An ``execution`` section with your account and partition
    * - :doc:`kubernetes`
-     - You're running in the cloud. **Experimental.**
+     - You're running in the cloud. Experimental.
      - A container image, a PostgreSQL database, and a cloud bucket
 
 .. toctree::
@@ -40,48 +40,58 @@ Commands you'll use
    ``receptors.csv``.
 
 ``stilt run <project>``
-   Run every simulation that isn't finished yet. On your computer it waits
-   until they are done; on Slurm it submits the jobs and returns (add
-   ``--wait`` to wait). ``model.run()`` does the same from Python.
+   Run every simulation that isn't finished yet. On your computer it returns
+   when they are all done. On Slurm it submits a job array and returns right
+   away. Add ``--wait`` to wait for the job. ``model.run()`` does the same
+   from Python.
 
 ``stilt status <project>``
    Count finished and remaining simulations.
 
-``stilt run`` also accepts ``--backend`` and ``--n-workers`` to override
-``config.yaml`` for one run, and ``--no-skip`` to rerun everything.
+Options for ``stilt run``:
+
+- ``--backend`` and ``--n-workers`` override ``config.yaml`` for this run.
+- ``--no-skip`` reruns every simulation, finished or not.
+- ``--compute-root DIR`` runs HYSPLIT in ``DIR`` and copies the outputs into
+  the project afterward.
 
 Commands PYSTILT runs for you
 -----------------------------
 
-You won't usually type these; they are what ``stilt run`` launches on each
-Slurm task or cloud worker. They're listed so you recognize them in job
+You won't usually type these. ``stilt run`` launches them on each Slurm task
+or cloud worker, and they are listed here so you recognize them in job
 scripts and logs.
 
 ``stilt push-worker``
-   Runs every variant of each receptor in one fixed list. Each Slurm array
-   task runs one list.
+   Runs every variant of each receptor in one list. Each Slurm array task
+   runs one list.
 
-``stilt pull-worker`` / ``stilt serve``
-   Take receptors one at a time from a shared queue (PostgreSQL) until it is
-   empty, or, for ``serve``, indefinitely. Used by cloud workers.
+``stilt pull-worker``
+   Takes receptors one at a time from a shared PostgreSQL queue until the
+   queue is empty. With ``--follow`` it keeps waiting for new work.
+
+``stilt serve``
+   The same as ``stilt pull-worker --follow``.
 
 ``stilt register``
-   Saves the project's settings and receptors without running anything, and
-   enqueues the receptors when a queue is configured.
+   Saves the project's settings and receptors without running anything. If
+   a queue is set up, it also adds the receptors to the queue.
 
 ``stilt rm --variant NAME``
-   Deletes a variant's outputs so it runs again as new; repeat ``--variant``
-   for several (:doc:`../configuration`).
+   Deletes a variant's outputs so it runs again from scratch. Repeat
+   ``--variant`` to delete several (:doc:`../configuration`).
 
 When a simulation fails
 -----------------------
 
-A failed simulation doesn't stop the others. Its error is in the
-simulation's ``stilt.log``, and it stays unfinished, so the next
+A failed simulation doesn't stop the others. The error goes to the end of
+that simulation's ``stilt.log``. The simulation stays unfinished, so the next
 ``stilt run`` tries it again. Fix the cause (often missing meteorology) and
-run again; finished simulations are skipped. In Python,
-``sim.outcome`` gives a short failure reason and ``sim.log`` the full log.
+run again. Finished simulations are skipped.
 
-A footprint that is empty because no particle reached the grid is not a
-failure. It is recorded with a ``.empty`` file and counts as finished (see
-:doc:`../outputs`).
+In Python, ``sim.outcome`` gives a short failure reason and ``sim.log`` the
+full log.
+
+A footprint can be empty because no particle reached the grid. That is not a
+failure. PYSTILT writes a ``.empty`` file in its place, and the simulation
+counts as finished (see :doc:`../outputs`).

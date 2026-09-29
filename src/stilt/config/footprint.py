@@ -1,4 +1,4 @@
-"""Footprint settings: the fields a variant carries and the resolved product."""
+"""Footprint settings for a config and for one footprint product."""
 
 from __future__ import annotations
 
@@ -24,56 +24,60 @@ _GEOMETRY_ADAPTER: TypeAdapter[Any] = TypeAdapter(GeometrySpec)
 
 class FootprintParams(BaseModel):
     """
-    Footprint settings as they appear in a config: defaults and per-variant.
+    Footprint settings, as the config defaults or one variant's overrides.
 
-    ``grid`` is the native raster. Leave it ``None`` (and give no
-    ``geometry``) for a variant that produces only a trajectory. Give
-    ``geometry`` instead to name the state geometry the footprint serves and
-    let the raster be derived from it (:meth:`stilt.Grid.from_geometry`); when
-    both are given the explicit ``grid`` wins and ``geometry`` is kept as a
-    record.
+    ``grid`` is the raster the footprint is computed on. Leave both ``grid``
+    and ``geometry`` unset for a variant that only produces trajectories.
+    Give ``geometry`` to name the polygons the footprint will be aggregated
+    to, and the grid is derived from them with
+    :meth:`stilt.Grid.from_geometry`. When both are given, ``grid`` is used
+    as is and ``geometry`` is kept with the footprint.
     """
 
     grid: Grid | None = Field(
         None,
         description=(
-            "Spatial domain and resolution of the footprint. ``None`` with no "
-            "``geometry`` means no footprint: a trajectory-only run."
+            "Domain and resolution of the footprint. Leaving it unset with no "
+            "``geometry`` gives a run that produces trajectories only."
         ),
     )
     geometry: GeometrySpec | None = Field(
         None,
         description=(
-            "State geometry this footprint serves (file, h3, windows). Used to "
-            "derive ``grid`` when that is omitted, and recorded for aggregation."
+            "Polygons the footprint will be aggregated to (``kind`` of "
+            "``file``, ``h3``, or ``windows``). Used to derive ``grid`` when it "
+            "is unset, and stored with the footprint."
         ),
     )
     cells_per_target: float = Field(
         default=4.0,
-        description="Native cells across the smallest geometry cell when deriving ``grid``.",
+        description="Grid cells across the smallest ``geometry`` cell when ``grid`` is derived.",
         gt=0,
     )
     geometry_hash: str | None = Field(
         None,
         description=(
-            "Content hash of the built ``geometry`` (``Mesh.hash``), recorded so "
-            "a stored footprint can detect that the geometry file changed later. "
-            "Filled automatically; not needed when ``geometry`` is unset."
+            "Hash of the built ``geometry`` (``Mesh.hash``), used to tell whether "
+            "the geometry changed after a footprint was made. Filled in "
+            "automatically when ``geometry`` is set."
         ),
     )
     smooth_factor: float = Field(
         1.0,
-        description="Factor by which to linearly scale footprint smoothing. Defaults to 1",
+        description=(
+            "Factor on the width of the Gaussian smoothing kernel. 0 turns smoothing off."
+        ),
     )
     time_integrate: bool = Field(
         False,
-        description="If True, sum the footprint over all time steps to produce a single 2-D layer.",
+        description="Sum the footprint over time into a single layer instead of hourly layers.",
     )
     transforms: list[Any] = Field(
         description=(
-            "Particle transforms applied in order before rasterizing the footprint. "
-            "Each entry is a built-in kind (averaging_kernel, pressure_weighting, "
-            "first_order_lifetime) or a dotted import path to a user transform class."
+            "Particle transforms applied in order before the footprint is "
+            "computed. Each entry's ``kind`` is a built-in name "
+            "(``averaging_kernel``, ``pressure_weighting``, "
+            "``first_order_lifetime``) or the import path of your own class."
         ),
         default_factory=list,
     )
@@ -95,11 +99,10 @@ class FootprintParams(BaseModel):
     @classmethod
     def _derive_from_geometry(cls, data: Any) -> Any:
         """
-        Build the geometry once to fill ``grid`` (when omitted) and ``geometry_hash``.
+        Fill ``grid`` and ``geometry_hash`` from ``geometry`` when they are missing.
 
-        Nothing is built when there is no ``geometry``, or when both ``grid``
-        and ``geometry_hash`` are already present (e.g. reloading a stored
-        config), so reading a footprint never touches the geometry source.
+        The geometry is built only when one of them is missing, so reloading a
+        stored config never reads the geometry source.
         """
         if not isinstance(data, dict):
             return data
@@ -134,12 +137,12 @@ class FootprintParams(BaseModel):
 
     @field_serializer("transforms")
     def _dump_transforms(self, value: list[Any]) -> list[dict[str, Any]]:
-        """Serialise the transforms back to plain mappings."""
+        """Serialize the transforms to plain mappings."""
         return [dump_transform(item) for item in value]
 
     @property
     def footprint(self) -> FootprintConfig | None:
-        """The footprint product these settings describe, or ``None`` without a grid."""
+        """Footprint settings with a grid, or ``None`` for a trajectory-only variant."""
         if self.grid is None:
             return None
         return FootprintConfig(
@@ -155,20 +158,18 @@ class FootprintParams(BaseModel):
 
 class FootprintConfig(FootprintParams):
     """
-    One footprint product: :class:`FootprintParams` with the grid resolved.
+    Settings for one footprint, with the grid required.
 
-    This is what :meth:`stilt.Footprint.calculate` takes and what a stored
-    footprint's attributes round-trip to.
+    :meth:`stilt.Footprint.calculate` takes one of these, and a stored
+    footprint's attributes load back into one.
     """
 
     model_config = ConfigDict(frozen=True)
 
-    grid: Grid = Field(
-        ..., description="Spatial domain and resolution of the footprint."
-    )
+    grid: Grid = Field(..., description="Domain and resolution of the footprint.")
 
     def replace(self, **updates: object) -> FootprintConfig:
-        """Return a copy with updated fields for interactive iteration."""
+        """Return a copy with some fields changed."""
         return self.model_copy(update=updates)
 
 

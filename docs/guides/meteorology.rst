@@ -1,25 +1,28 @@
 Meteorology
 ===========
 
-STILT moves particles with gridded weather-model fields: winds, temperature,
-turbulence, and boundary-layer height. These must be in NOAA's :term:`ARL`
-format, which NOAA publishes for HRRR, NAM, GDAS, GFS, and other models.
+STILT moves particles with gridded fields from a weather model: winds,
+temperature, turbulence, and boundary-layer height. The files must be in
+NOAA's :term:`ARL` format. NOAA publishes ARL files for HRRR, NAM, GDAS,
+GFS, and other models.
 
 You can give PYSTILT meteorology in two ways:
 
-- **Use files you already have**, such as a research group's archive.
-- **Download them from NOAA.** PYSTILT fetches the files it needs and keeps
-  them for later runs.
+- Point it at files you already have, such as your group's archive.
+- Let it download the files from NOAA. PYSTILT fetches the files each
+  simulation needs and keeps them for later runs.
 
-Each meteorology source gets a name in ``config.yaml`` (``hrrr`` below). The
-name goes into every simulation ID, so you can run the same receptors with
-several sources and compare.
+Each meteorology source has a name in ``config.yaml`` (``hrrr`` in the
+examples below). Variants refer to a source by this name. With no
+``variants`` section, each source runs as a variant of the same name (see
+:doc:`configuration`), so you can run the same receptors with several
+sources and compare them.
 
 Use files you already have
 --------------------------
 
-Tell PYSTILT the folder, the pattern of the filenames, and how many hours
-each file covers:
+Give the folder, the pattern of the file names, and how many hours each
+file covers:
 
 .. code-block:: yaml
 
@@ -30,25 +33,31 @@ each file covers:
        file_tres: 6h
 
 ``directory``
-   The folder holding the files. Subfolders are searched too.
+   The folder that holds the files. Subfolders are searched too.
 
 ``file_format``
-   The filenames with the date replaced by `strftime codes
-   <https://docs.python.org/3/library/datetime.html#format-codes>`_: ``%Y``
-   year, ``%m`` month, ``%d`` day, ``%H`` hour. Files named
-   ``20230715_18`` match ``"%Y%m%d_%H"``; files named
-   ``hysplit.20230715.18z.hrrra`` match ``"hysplit.%Y%m%d.%Hz.hrrra"``.
+   The file names, with the date written as `strftime codes
+   <https://docs.python.org/3/library/datetime.html#format-codes>`_:
+   ``%Y`` for the year, ``%m`` month, ``%d`` day, and ``%H`` hour. Files
+   named ``20230715_18`` match ``"%Y%m%d_%H"``. Files named
+   ``hysplit.20230715.18z.hrrra`` match ``"hysplit.%Y%m%d.%Hz.hrrra"``. A
+   file matches when its name starts with the pattern.
 
 ``file_tres``
    How much time each file covers, such as ``1h``, ``3h``, or ``6h``.
 
-For each simulation, PYSTILT works out which files cover the receptor time
-and the ``n_hours`` before it, and looks for exactly those. If the files
-aren't there, the simulation fails with a clear error instead of running
-with incomplete meteorology. ``n_min`` sets the minimum
-number of files a run needs (default 1).
+``n_min``
+   The fewest files a simulation needs (default 1).
 
-In Python the same settings are a dictionary or a :class:`~stilt.MetConfig`:
+For each simulation, PYSTILT works out which files cover the hours the run
+spans (``n_hours`` from the receptor time) and looks for those. If it finds fewer than
+``n_min``, the simulation fails with an error. If some are missing but at
+least ``n_min`` are found, PYSTILT logs a warning and runs with the files it
+has. Raise ``n_min`` to turn gaps into errors. A 24-hour backward run with
+6-hour HRRR files needs 5 or 6 files, depending on the receptor hour, so
+``n_min: 5`` is a good choice there.
+
+In Python, the same settings are a dictionary or a :class:`~stilt.MetConfig`:
 
 .. code-block:: python
 
@@ -58,7 +67,7 @@ In Python the same settings are a dictionary or a :class:`~stilt.MetConfig`:
        file_tres="6h",
    )
 
-Several sources at once:
+You can list several sources:
 
 .. code-block:: yaml
 
@@ -77,7 +86,7 @@ Download from NOAA
 ------------------
 
 Set ``source`` to one of NOAA's products and ``directory`` to where the
-downloads should go. You don't need ``file_format`` or ``file_tres``:
+downloads should go. You don't need ``file_format`` or ``file_tres``.
 
 .. code-block:: yaml
 
@@ -86,17 +95,19 @@ downloads should go. You don't need ``file_format`` or ``file_tres``:
        source: hrrr
        directory: /data/met/hrrr     # downloads are kept here
 
-Downloading needs the ``cloud`` extra: ``pip install "pystilt[cloud]"``.
-The downloads are handled by the `arl-met <https://github.com/jmineau/arl-met>`_ package.
+Downloading needs the ``cloud`` extra (``pip install "pystilt[cloud]"``).
+The `arl-met <https://github.com/jmineau/arl-met>`_ package does the
+downloading.
 
 .. warning::
 
-   NOAA's files cover a whole continent or the globe, so each one is large
-   (often gigabytes), and the full file is downloaded before any cropping.
-   Crop to your region (below) so what is kept is small, and download on a
-   machine with a fast connection and plenty of disk space.
+   NOAA's files cover a continent or the whole globe, so each one is large,
+   often several gigabytes. The whole file is downloaded before it is
+   cropped. Crop to your region (see below) so that what is kept is small,
+   and download on a machine with a fast connection and plenty of disk
+   space.
 
-Available sources:
+These sources are available:
 
 .. list-table::
    :header-rows: 1
@@ -143,23 +154,23 @@ Available sources:
      - North America
      - 1979–2019
 
-Source-specific options are passed as inline fields. For example, ``nams``
-supports a ``domain`` parameter:
+Some sources take extra options, which you write next to the other fields.
+For example, ``nams`` takes a ``domain``:
 
 .. code-block:: python
 
    nams_ak = stilt.MetConfig(
        source="nams",
-       domain="ak",            # passed to NAMSSource(domain="ak")
+       domain="ak",            # "conus" (default), "ak", or "hi"
        directory="/data/met/nams_ak",
    )
 
-The ``backend`` field picks where to download from (default ``"s3"``,
-NOAA's archive on AWS):
+``backend`` picks where to download from. The default, ``"s3"``, is NOAA's
+archive on AWS. The others are ``"ftp"`` and ``"http"``.
 
 .. code-block:: python
 
-   MetConfig(source="gdas1", directory="/data/met/gdas1", backend="ftp")
+   stilt.MetConfig(source="gdas1", directory="/data/met/gdas1", backend="ftp")
 
 Files already in ``directory`` are not downloaded again.
 
@@ -167,10 +178,10 @@ Files already in ``directory`` are not downloaded again.
 Cropping to your region
 -----------------------
 
-Setting ``subgrid_enable=True`` crops the meteorology to a box around your
-region before HYSPLIT reads it. Smaller files mean faster runs and less
-memory. This is strongly recommended for global products (GFS, GDAS,
-Reanalysis) and helps on clusters where nodes have limited memory.
+Set ``subgrid_enable`` and ``subgrid_bounds`` to crop the meteorology to a
+box around your region before HYSPLIT reads it. Smaller files make runs
+faster and use less memory. Cropping matters most for global products
+(GFS, GDAS, Reanalysis) and on cluster nodes with limited memory.
 
 .. code-block:: python
 
@@ -184,14 +195,14 @@ Reanalysis) and helps on clusters where nodes have limited memory.
        subgrid_buffer=0.5,   # degrees added on each side (default 0.2)
    )
 
-When **downloading**, each file is cropped right after download and only the
+When downloading, each file is cropped right after it arrives and only the
 cropped copy is kept.
 
-With **your own files**, each file is cropped the first time it is needed.
-Cropped copies are cached in ``subgrid_dir`` (defaults to
-``<directory>/subgrid``) and reused by all simulations that share the same
-meteorology source. Set ``subgrid_dir`` explicitly to use a shared cache across
-multiple projects:
+With your own files, each file is cropped the first time a simulation needs
+it. The cropped copies are saved in ``subgrid_dir``, which defaults to
+``<directory>/subgrid``, and every later simulation reuses them. If your
+archive is read-only, or you want several projects to share one set of
+crops, set ``subgrid_dir`` yourself:
 
 .. code-block:: python
 
@@ -204,7 +215,12 @@ multiple projects:
        subgrid_dir="/scratch/met_subgrid/hrrr_slv",
    )
 
-Use ``subgrid_levels`` to also reduce the number of vertical levels:
+Saved crops are found by file name only. If you change ``subgrid_bounds``,
+``subgrid_buffer``, or ``subgrid_levels``, use a new ``subgrid_dir``.
+Otherwise PYSTILT reuses the old crops.
+
+With your own files, ``subgrid_levels`` also drops the upper vertical
+levels. It has no effect on downloaded files.
 
 .. code-block:: python
 
@@ -217,8 +233,8 @@ Use ``subgrid_levels`` to also reduce the number of vertical levels:
 Where HYSPLIT reads the files
 -----------------------------
 
-Before each simulation, PYSTILT links (or, if linking isn't possible,
-copies) the meteorology files it needs into that simulation's working
-folder, and HYSPLIT reads them from there. Your archive is never modified, so
-it can be read-only, and on a cluster HYSPLIT can read from fast local
-scratch space (see ``compute_root`` in :doc:`project_layout`).
+Before each simulation, PYSTILT links the meteorology files it needs into
+that simulation's working folder, or copies them if it cannot link. HYSPLIT
+reads them from there. PYSTILT does not change your files. On a cluster,
+this lets HYSPLIT read from fast local scratch space (see ``compute_root``
+in :doc:`project_layout`).

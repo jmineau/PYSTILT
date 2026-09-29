@@ -1,21 +1,35 @@
 API Reference
 =============
 
-Every public class and function, grouped by what it's for. If you're
-looking for how to do something rather than what a function takes, the
-:doc:`../guides/index` is a better starting point.
+Every public class and function, grouped by what it is for. To find out how
+to do something, start with the :doc:`../guides/index` instead.
 
-- :doc:`core`: ``Model``, receptors, simulations, trajectories, footprints,
-  and spatial geometries
-- :doc:`configuration`: every ``config.yaml`` option
-- :doc:`meteorology`: finding and staging meteorology files
-- :doc:`execution`: running simulations locally, on Slurm, or on Kubernetes
-- :doc:`transforms`: particle weighting (averaging kernel, pressure
-  weighting, lifetime)
-- :doc:`observations`: overpass grouping, sounding selection, jitter, and
-  slant geometry for column and satellite work
-- :doc:`project`: project folders and storage backends
-- :doc:`hysplit`: the low-level HYSPLIT driver
+:doc:`core`
+   ``Model``, receptors, simulations, trajectories, footprints, spatial
+   geometries, and flux sampling.
+
+:doc:`configuration`
+   Every ``config.yaml`` option.
+
+:doc:`meteorology`
+   Finding and staging meteorology files.
+
+:doc:`execution`
+   Running simulations locally, on Slurm, or on Kubernetes.
+
+:doc:`transforms`
+   Particle weighting: averaging kernels, pressure weighting, and lifetime
+   decay.
+
+:doc:`observations`
+   Column and satellite work: product readers, sounding selection, slant
+   geometry, transport error, and backgrounds.
+
+:doc:`project`
+   Project folders and storage backends.
+
+:doc:`hysplit`
+   The low-level HYSPLIT driver.
 
 .. toctree::
    :maxdepth: 2

@@ -1,17 +1,16 @@
 Getting Started
 ===============
 
-If you are new to PYSTILT, read these pages in order:
+If you are new to PYSTILT, read these pages in order.
 
-1. :doc:`what_is_stilt`: what a footprint is and how STILT makes one.
-2. :doc:`installation`: install the package.
-3. :doc:`quickstart`: run one simulation and plot its footprint.
+1. :doc:`what_is_stilt` explains what a footprint is and how STILT makes one.
+2. :doc:`installation` installs the package.
+3. :doc:`quickstart` runs one simulation and plots its footprint.
 
-Keep the :doc:`glossary` open in another tab. STILT has a small vocabulary of
-its own (receptor, footprint, ``numpar``, ARL), and every term is defined
-there.
+The :doc:`glossary` defines STILT's terms, such as receptor, footprint,
+``numpar``, and ARL. Keep it open in another tab.
 
-Already know STILT-R? Start with :doc:`../migration/r_stilt`, then come back
+Already know STILT-R? Start with :doc:`../migration/stilt_r`, then come back
 to the quickstart.
 
 .. toctree::

@@ -3,8 +3,7 @@ Core Objects
 
 .. currentmodule:: stilt
 
-The core reference centers on the project model, receptors, and the simulation
-objects returned by transport runs.
+The model, its receptors, the simulations it runs, and their outputs.
 
 Project interface
 -----------------
@@ -46,9 +45,10 @@ Collections
 -----------
 
 ``model.simulations`` is a :class:`~stilt.collections.SimulationCollection`
-over receptors × variants; :meth:`~stilt.collections.SimulationCollection.sel`
-narrows it and ``.trajectories`` / ``.footprint`` give an
-:class:`~stilt.collections.OutputCollection` of one output.
+of every receptor under every variant.
+:meth:`~stilt.collections.SimulationCollection.sel` narrows it.
+``.trajectories`` and ``.footprint`` give an
+:class:`~stilt.collections.OutputCollection` for loading one kind of output.
 
 .. currentmodule:: stilt.collections
 
@@ -65,9 +65,9 @@ narrows it and ``.trajectories`` / ``.footprint`` give an
 Spatial geometries
 ------------------
 
-The state geometry a footprint is aggregated onto (see
-:meth:`Footprint.aggregate`).  :class:`Grid` doubles as a rectilinear
-geometry and is documented under :doc:`configuration`.
+The cells :meth:`Footprint.aggregate` sums a footprint into, such as
+polygons, hexagons, windows around point sources, or groups of grid cells.
+A :class:`Grid` works as well. It is documented under :doc:`configuration`.
 
 .. autosummary::
    :toctree: _api
@@ -78,8 +78,9 @@ geometry and is documented under :doc:`configuration`.
    Geometry
    SpatialTarget
 
-Overlap weights between a footprint raster and a geometry are built once and
-cached; these helpers are in :mod:`stilt.geometry`.
+:mod:`stilt.geometry` also has the helpers that compute how much of each
+footprint cell falls in each target cell. These overlap weights are cached,
+so each geometry's weights are computed once per footprint grid.
 
 .. autosummary::
    :toctree: _api
@@ -93,8 +94,8 @@ cached; these helpers are in :mod:`stilt.geometry`.
 Flux fields
 -----------
 
-Sampling a surface flux field under a footprint (:meth:`Footprint.enhancement`)
-or along particles, in :mod:`stilt.flux`.
+:mod:`stilt.flux` looks up a surface flux field under a footprint (used by
+:meth:`Footprint.enhancement`) or along particle paths.
 
 .. autosummary::
    :toctree: _api

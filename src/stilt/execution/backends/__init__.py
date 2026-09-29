@@ -1,4 +1,4 @@
-"""Execution backends for dispatching STILT workers."""
+"""Backends that start PYSTILT workers locally, on Slurm, or on Kubernetes."""
 
 from .factory import get_executor
 from .kubernetes import KubernetesExecutor, KubernetesHandle

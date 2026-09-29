@@ -6,13 +6,13 @@ What Is STILT?
 Suppose a tower in Salt Lake City measures a methane spike at 2 pm. Where did
 that methane come from? A landfill to the south, a refinery to the north, or
 the valley's gas pipes? STILT answers that by working backward from the
-measurement: it follows the air that arrived at the tower back in time, and
+measurement. It follows the air that arrived at the tower back in time, and
 records where that air was close enough to the ground to pick up emissions.
 
-STILT (Stochastic Time-Inverted Lagrangian Transport) is widely used in
-atmospheric science for exactly this: linking trace-gas measurements from
-towers, aircraft, vehicles, and satellites to the surface areas that
-influenced them. PYSTILT is a Python version of STILT.
+Atmospheric scientists use STILT (Stochastic Time-Inverted Lagrangian
+Transport) to link trace-gas measurements from towers, aircraft, vehicles,
+and satellites to the surface areas that influenced them. PYSTILT is a Python
+version of STILT.
 
 How STILT works, in three steps
 -------------------------------
@@ -46,19 +46,20 @@ What you can do with a footprint
 Multiply a footprint by an emissions map (a flux inventory) and add it up,
 and you get the concentration increase your receptor should have seen. Do
 that for many measurements and compare with what was actually observed, and
-you can test an inventory or estimate emissions in an inversion.
-:doc:`../tutorials/flux_inversion` shows the first half of that.
+you can test an inventory or estimate emissions in an inversion. The
+:doc:`../tutorials/flux_inversion` tutorial covers the first step, turning
+footprints into modeled concentrations.
 
 What you need
 -------------
 
-- **Python 3.10 or newer** and PYSTILT (:doc:`installation`).
-- **Meteorology in ARL format.** STILT needs gridded winds, temperature, and
+- Python 3.10 or newer, and PYSTILT (:doc:`installation`).
+- Meteorology in ARL format. STILT needs gridded winds, temperature, and
   turbulence fields from a weather model such as HRRR, NAM, or GDAS, in the
   format used by NOAA's Air Resources Laboratory (:term:`ARL`). Many research
   groups keep an archive of these files. If you don't have one, PYSTILT can
   download them from NOAA for you (see :doc:`../guides/meteorology`).
-- **Your measurement times and locations.**
+- The times and locations of your measurements.
 
 You do not need to install HYSPLIT, the Fortran program STILT uses to move
 particles. PYSTILT includes it for Linux and macOS (Intel).
@@ -66,21 +67,20 @@ particles. PYSTILT includes it for Linux and macOS (Intel).
 Why PYSTILT?
 ------------
 
-PYSTILT reproduces STILT-R's footprints (checked cell by cell against STILT-R)
-and adds:
+PYSTILT gives the same footprints as STILT-R, checked cell by cell. It also
+makes a few things easier.
 
-* **Python all the way through.** No R installation needed; results load
+* You work in Python only. There is no R to install, and results load
   straight into pandas and xarray.
-* **Settings checked before you run.** A typo in ``config.yaml`` is reported
-  right away, not an hour into a cluster job.
-* **Reruns that pick up where they left off.** PYSTILT checks which
-  simulations already have their outputs and runs only the rest.
-* **Laptop to cluster with the same project.** Switching from your computer to
-  a Slurm cluster is a few lines of configuration.
-* **Column and satellite support.** Column and slanted receptors, averaging
-  kernels, and pressure weighting are built in.
-* **Standard file formats.** Trajectories are written as Parquet and
-  footprints as NetCDF.
+* Settings are checked before anything runs, so most typos in
+  ``config.yaml`` are reported at once instead of an hour into a cluster job.
+* Reruns pick up where they left off. PYSTILT runs only the simulations whose
+  outputs are missing.
+* The same project runs on your computer or on a Slurm cluster. Switching
+  takes a few lines of configuration.
+* Column and slanted receptors, averaging kernels, and pressure weighting are
+  built in for column and satellite measurements.
+* Trajectories are saved as Parquet files and footprints as NetCDF.
 
 Where PYSTILT comes from
 ------------------------

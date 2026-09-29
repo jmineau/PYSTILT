@@ -1,25 +1,33 @@
 """
-Column and satellite observation helpers: the X-STILT port.
+Tools for column and satellite observations, ported from X-STILT.
 
-Everything here happens before a simulation. A product file is read into a
-table of soundings (:func:`read_tropomi_ch4`, :func:`read_oco2`,
-:func:`read_tccon`, :func:`read_ggg_oof`, :func:`read_ggg_netcdf`, or your
-own reader of the same shape), soundings are
-grouped into overpasses, a subset is chosen to run, extra receptors are spread across a
-pixel, and a slant line of sight is laid out as points, at altitudes
-taken from the retrieval's pressure levels if you like. The functions take
-and return plain arrays and tuples so they work on whatever table your
-product reader produces; the results become :class:`~stilt.Receptor`
-objects. Particle weighting (averaging kernel, pressure weighting, lifetime
-decay) happens after the run and lives in :mod:`stilt.transforms`. After
-the run, :func:`transport_error` turns a simulation's main and
-wind-perturbed particles plus a flux field into the transport error on the
-modelled enhancement, :func:`background` samples a mole-fraction field at
-the trajectory endpoints for the background that enhancement adds to,
-:func:`plume_polygon` and :func:`plume_background` outline a forward-run
-plume at overpass time and take the background from the soundings beside
-it, and :func:`variogram` and :func:`fit_variogram` turn analysis-minus-observation
-winds into the wind-error settings that run needs.
+The functions take and return plain arrays and tables, so they work with
+any product reader.
+
+Before a run:
+
+- Read a product into a table of soundings with :func:`read_tropomi_ch4`,
+  :func:`read_oco2`, :func:`read_tccon`, :func:`read_ggg_oof`, or
+  :func:`read_ggg_netcdf`.
+- Group soundings into overpasses (:func:`group_by_overpass`) and choose
+  which to run (:func:`select_observations_spatial`).
+- Spread several receptors over a pixel (:func:`jitter_points`), or lay out
+  a slant line of sight (:func:`slant_points`) at the retrieval's pressure
+  levels (:func:`pressure_altitudes`). The points become
+  :class:`~stilt.Receptor` objects.
+- Derive wind-error settings from analysis-minus-observation winds
+  (:func:`variogram`, :func:`fit_variogram`).
+
+After a run:
+
+- :func:`transport_error` gives the transport error of the modeled
+  enhancement from the unperturbed and wind-perturbed particles.
+- :func:`background` samples a mole-fraction field where the particles end.
+- :func:`plume_polygon` and :func:`plume_background` outline a plume from a
+  forward run and take the background from soundings outside it.
+
+Particle weighting (averaging kernel, pressure weighting, lifetime decay)
+is in :mod:`stilt.transforms`.
 """
 
 from .backgrounds import Background, background, particle_background

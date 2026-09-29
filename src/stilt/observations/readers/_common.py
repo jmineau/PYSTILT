@@ -19,7 +19,7 @@ def _float(var: Any, idx: Any = Ellipsis) -> np.ndarray:
 
 
 def _wrap_azimuth(a: np.ndarray) -> np.ndarray:
-    """Azimuth in [0, 360) clockwise from north."""
+    """Return azimuths wrapped to [0, 360) degrees."""
     return np.mod(a, 360.0)
 
 
@@ -39,18 +39,18 @@ def _in_ranges(
 
 
 def _seconds_since(var: Any, idx: Any = Ellipsis) -> pd.DatetimeIndex:
-    """Times from a ``seconds since <origin>`` variable, naive UTC."""
+    """Return the times of a ``seconds since <origin>`` variable, as naive UTC."""
     units = str(getattr(var, "units", "seconds since 1970-01-01 00:00:00"))
     origin = units.split("since", 1)[1].strip() if "since" in units else "1970-01-01"
     return pd.to_datetime(_float(var, idx), unit="s", origin=pd.Timestamp(origin))
 
 
 def _rows(arr: np.ndarray) -> list[np.ndarray]:
-    """One array per row, for an object column."""
+    """Return one array per row, for a column of arrays."""
     return [np.asarray(r) for r in arr]
 
 
 def _orbit_from_name(path: Path) -> str:
-    """The orbit number in an S5P file name, or the file stem."""
+    """Return the orbit number in an S5P file name, or the file stem."""
     m = re.search(r"_(\d{5})_\d{2}_\d{6}_", path.name)
     return m.group(1) if m else path.stem

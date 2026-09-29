@@ -1,168 +1,145 @@
 # Contributing to PYSTILT
 
-Thank you for considering contributing to PYSTILT! We welcome contributions from the community.
+Bug reports, documentation fixes, and code are all welcome. This page covers
+how to set up a checkout, the checks a change has to pass, and how to add the
+most common kinds of extension. [AGENTS.md](AGENTS.md) describes the
+architecture and the rules the code relies on.
 
-## Getting Started
+## Getting started
 
-1. Fork the repository on GitHub
-2. Clone your fork locally:
+1. Fork the repository on GitHub and clone your fork:
    ```bash
    git clone https://github.com/YOUR_USERNAME/PYSTILT.git
    cd PYSTILT
    ```
-3. Install development dependencies with uv:
+2. Install the development dependencies with uv:
    ```bash
    uv sync --group dev
    ```
-4. Install pre-commit hooks:
+3. Install the pre-commit hooks:
    ```bash
    pre-commit install
    ```
 
-## Development Workflow
+## Making a change
 
-1. Create a new branch for your feature or bugfix:
+1. Create a branch:
    ```bash
    git checkout -b feature/your-feature-name
    ```
-
-2. Make your changes and ensure they follow our coding standards:
-   - Code is formatted with ruff
-   - All tests pass
-   - New features include tests
-   - Documentation is updated if needed
-
-3. Run quality checks:
+2. Make your change. New behavior needs a test, and a bug fix needs a test
+   that fails without the fix. User-facing changes need a docs update.
+3. Run the checks:
    ```bash
-   just quality-check
+   just quality-check   # ruff, pyright, and the unit tests
+   just pre-commit      # all pre-commit hooks
    ```
+4. Commit with a [Conventional Commits](https://www.conventionalcommits.org/)
+   message (`fix(slurm): ...`, `docs: ...`), push to your fork, and open a
+   pull request.
 
-4. Run test suite:
-   ```bash
-   just test
-   ```
+## Writing documentation
 
-5. Run pre-commit checks:
-   ```bash
-   just pre-commit
-   ```
-
-6. Commit your changes:
-   ```bash
-   git add .
-   git commit -m "Description of your changes"
-   ```
-
-7. Push to your fork:
-   ```bash
-   git push origin feature/your-feature-name
-   ```
-
-8. Open a Pull Request on GitHub
+Docs and docstrings follow the voice described under "Voice" in
+[AGENTS.md](AGENTS.md). Build the docs with
+`just build-docs` and check that your change adds no new warnings.
 
 ## Adding configuration fields
 
-PYSTILT keeps the public config flat for alpha users: fields such as `seed`,
-`numpar`, and `ziscale` should remain directly constructible through
-`ModelConfig(...)` and `Model(...)`. Do not introduce nested user-facing
-parameter objects unless the public API is deliberately redesigned.
+The public config is flat. Fields such as `seed`, `numpar`, and `ziscale` are
+passed straight to `ModelConfig(...)` and `Model(...)`. Don't add nested
+parameter objects to the public API.
 
-Config fields are plain pydantic `Field(default, description=...)`. Every
-`TransportParams` field is written to HYSPLIT's `SETUP.CFG` by
-`STILTParams.setup_entries()` unless it is listed in
-`STILTParams.CONTROL_FIELDS` (read from `CONTROL`) or `ZICONTROL_FIELDS`;
-`ErrorParams` fields go to `WINDERR` / `ZIERR`. When you add a field that
-HYSPLIT reads from somewhere other than `SETUP.CFG`, add it to the matching
-set and to the routing test in `tests/test_config.py`.
+Each config field is a plain pydantic `Field(default, description=...)`.
+`STILTParams.setup_entries()` writes every `TransportParams` field to
+HYSPLIT's `SETUP.CFG`, except the fields listed in `STILTParams.CONTROL_FIELDS`
+(written to `CONTROL`) and `ZICONTROL_FIELDS` (written to `ZICONTROL`).
+`ErrorParams` fields go to `WINDERR` and `ZIERR`. If HYSPLIT reads your new
+field from a file other than `SETUP.CFG`, add it to the matching set and to
+the routing test in `tests/test_config.py`.
 
 ## Project store and completion
 
-A project is one root (`stilt.project.Project`) over a `Store`
-(`stilt.store`: `LocalStore`, `FsspecStore`). Every output is addressed by a
-store key; `Simulation` owns the filenames, keys, presence checks, and the one
-definition of completion (`Simulation.is_complete()`). Do not add a second
-"does this output exist" check anywhere else — call the `Simulation` method.
-Adding a store backend means implementing the five-method `Store` protocol.
+A project is one root directory or URI (`stilt.project.Project`) with a
+`Store` (`stilt.store`: `LocalStore` or `FsspecStore`) that reads and writes
+its files by key. `Simulation` owns the file names, the keys, and the single
+definition of a finished simulation, `Simulation.is_complete()`. Don't add
+another "does this output exist" check. Call that method instead. A new store
+backend implements the six methods of the `Store` protocol.
 
 ## Adding execution backends
 
 Execution backends implement the `Executor` and `JobHandle` protocols in
-`src/stilt/execution/backends/protocol.py`. The coordinator relies on the
-executor's `dispatch` mode:
-- `push` executors receive an explicit list of pending simulation IDs and run
-  them through `stilt.execution.run_receptors` (directly or via the
-  `stilt push-worker` CLI); outputs are published by `Simulation.publish()`
-- `pull` executors launch workers that claim from the Postgres queue and should
-  preserve claim transactions until a simulation result is recorded or released
+`src/stilt/execution/backends/protocol.py`. Each executor has a `dispatch`
+mode:
 
-Register a new backend in `execution/backends/factory.py::resolve_backend`,
-re-export it from `execution/__init__.py`, and handle SIGTERM with
-`sigterm_as_interrupt` as the local, Slurm, and Kubernetes backends do.
+- A `push` executor is given the list of pending receptors. It runs them
+  through `stilt.execution.run_receptors`, directly or with the
+  `stilt push-worker` command, and `Simulation.publish()` copies the outputs
+  into the project.
+- A `pull` executor starts workers that claim receptors from the Postgres
+  queue. A worker keeps its claim until it records a result or releases the
+  claim.
 
-Backend `start()` methods should return quickly with a handle. `wait()` should
-raise on backend-level failure states rather than treating “not queued anymore”
-as success. Add tests for submission failure, terminal failure states,
-interruption/preemption, and repeated `wait()` calls.
+Register the backend in `resolve_backend` in `execution/backends/factory.py`,
+export it from `execution/__init__.py`, and handle SIGTERM with
+`sigterm_as_interrupt` the way the local, Slurm, and Kubernetes backends do.
 
-For scheduler-backed executors, avoid unbounded subprocess calls, write
-temporary task/chunk files under a predictable directory, and clean them up when
-the backend can prove the launched job is finished.
+`start()` should return a handle quickly. `wait()` should raise when the
+backend reports a failure. A job that is no longer queued has not
+necessarily succeeded. Add tests for a failed submission, failed jobs,
+interruption or preemption, and calling `wait()` more than once.
+
+Scheduler-backed executors should put a timeout on every subprocess call,
+write their task and chunk files under a predictable directory, and delete
+those files once the job is known to be finished.
 
 ## Adding particle transforms
 
-Pre-footprint particle transforms implement the `ParticleTransform` protocol in
-`src/stilt/transforms.py`. A transform receives a particle `DataFrame` and a
-`TransformContext`, then returns a new `DataFrame` without mutating the
-caller's data.
+Particle transforms run on the particles before the footprint is made. They
+implement the `ParticleTransform` protocol in `src/stilt/transforms.py`: a
+transform takes a particle `DataFrame` and a `TransformContext` and returns a
+new `DataFrame`, leaving the input unchanged.
 
-A built-in transform is one pydantic class in `transforms.py`: its fields are
-the YAML keys, `kind` is a `Literal` discriminator, and `apply()` does the
-work. Add it to the `BuiltinTransform` union; nothing else needs wiring. Users
-can reference their own class by import path (`kind: my.module.Class`), so
-only generally useful transforms belong in PYSTILT.
+A built-in transform is one pydantic class in `transforms.py`. Its fields
+are the YAML keys, `kind` is a `Literal` that names it, and `apply()` does
+the work. Add the class to the `BuiltinTransform` union and it is ready to
+use. Users can also point `kind` at their own class by import path
+(`kind: my.module.Class`), so only transforms that many users need belong in
+PYSTILT.
 
-Add tests for:
-- config parsing and YAML round trip
-- the transform's numerical behavior on a small particle table
-- interaction with `Footprint.calculate()` when the transform is configured on a footprint
+Test:
 
-## Pull Request Guidelines
+- parsing the config and writing it back to YAML
+- the numbers the transform produces on a small particle table
+- a footprint made with the transform configured
 
-- Keep pull requests focused on a single feature or bugfix
-- Write clear, descriptive commit messages
-- Update the changelog if applicable
-- Ensure all tests pass
-- Maintain or improve test coverage
-- Update documentation as needed
+## Pull requests
 
-## Reporting Bugs
+- Fix or add one thing per pull request, and link the issue it closes
+  (`Fixes #N`).
+- Add user-visible changes to `CHANGELOG.md` under `## [Unreleased]`.
+- Make sure the tests pass and coverage does not drop.
 
-When reporting bugs, please include:
-- Your operating system and Python version
-- Steps to reproduce the issue
-- Expected behavior
-- Actual behavior
-- Any error messages or logs
+## Reporting bugs
 
-## Feature Requests
+Please include:
 
-We welcome feature requests! Please:
-- Check if the feature has already been requested
-- Provide a clear description of the feature
-- Explain why it would be useful
-- Consider submitting a pull request to implement it
+- your operating system and Python version
+- steps to reproduce the problem
+- what you expected and what happened
+- any error messages or logs
 
-## Questions?
+## Feature requests and questions
 
-If you have questions, please:
-- Check existing issues and discussions
-- Open a new issue with the "question" label
-- Reach out to the maintainers
+Check the [existing issues](https://github.com/jmineau/PYSTILT/issues) first.
+If nothing matches, open a new one describing the feature and why you need
+it, or use the "question" label for questions.
 
-## Code of Conduct
+## Code of conduct
 
-Please be respectful and constructive in all interactions. We aim to maintain a welcoming and inclusive community.
+Be respectful and constructive.
 
 ## License
 
-By contributing, you agree that your contributions will be licensed under the same license as the project (MIT License).
+Contributions are released under the project's MIT License.

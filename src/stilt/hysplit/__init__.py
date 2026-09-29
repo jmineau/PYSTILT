@@ -1,4 +1,4 @@
-"""Public HYSPLIT driver surface."""
+"""Writing HYSPLIT input files and running ``hycs_std``."""
 
 from .driver import HYSPLITDriver
 

@@ -1,4 +1,4 @@
-"""Spatial config models."""
+"""Bounding boxes and footprint grids."""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ VerticalReference = Literal["agl", "msl"]
 
 
 def validate_vertical_reference(reference: str) -> VerticalReference:
-    """Return a normalized vertical reference or raise for invalid input."""
+    """Return ``reference`` in lower case, raising unless it is ``agl`` or ``msl``."""
     normalized = reference.lower()
     if normalized not in {"agl", "msl"}:
         raise ValueError(
@@ -25,24 +25,23 @@ def validate_vertical_reference(reference: str) -> VerticalReference:
 
 
 def kmsl_from_vertical_reference(reference: VerticalReference) -> int:
-    """Map a vertical reference onto the HYSPLIT ``KMSL`` control value."""
+    """Return HYSPLIT's ``KMSL`` value for a vertical reference: 0 for AGL, 1 for MSL."""
     return 0 if reference == "agl" else 1
 
 
 def _grid_cell_starts(minimum: float, maximum: float, resolution: float) -> np.ndarray:
     """
-    Return lower-left cell starts for a half-open grid extent.
+    Return the lower edges of the whole cells between two grid bounds.
 
-    Cells start at ``minimum`` and repeat by ``resolution`` while the complete
-    cell remains inside ``[minimum, maximum]``.  Equivalently, ``maximum`` is an
-    outer grid boundary, not a cell start.
+    Cells start at ``minimum`` and step by ``resolution`` while the whole cell
+    fits inside ``[minimum, maximum]``, so ``maximum`` is the outer edge of
+    the last cell.
 
     Decimal bounds are not exact in binary, so ``maximum - minimum`` carries a
-    rounding error proportional to the bounds' magnitude (``40.93 - 40.45`` is
-    ``0.4799999999999969``).  The tolerance is sized to that error, divided by
-    the resolution, so the final intended cell is kept (48 cells here at 0.01,
-    as STILT-R's ``seq()`` gives) while a genuinely partial cell is still
-    dropped.
+    rounding error that grows with the bounds (``40.93 - 40.45`` is
+    ``0.4799999999999969``). The tolerance is sized to that error so the last
+    intended cell is kept (48 cells here at 0.01, as STILT-R's ``seq()``
+    gives) and a partial cell is still dropped.
     """
     if resolution <= 0:
         raise ValueError("Grid resolution must be positive.")
@@ -79,10 +78,10 @@ def _cf_grid_mapping_attrs(projection: str) -> dict[str, object]:
 
 def cf_axis_attrs(dim: str) -> dict[str, str]:
     """
-    CF attributes for one coordinate axis: ``lon``, ``lat``, ``x`` or ``y``.
+    Return the CF attributes for one coordinate axis: ``lon``, ``lat``, ``x`` or ``y``.
 
-    Shared so a grid written straight to xarray and a footprint written to
-    netCDF describe their axes identically.
+    Grids and footprints both use this, so their axes carry the same
+    attributes.
     """
     return {
         "lon": {
@@ -113,50 +112,56 @@ def cf_axis_attrs(dim: str) -> dict[str, str]:
 
 
 class Bounds(BaseModel):
-    """Immutable geographic bounding box (always lon/lat degrees)."""
+    """Longitude/latitude bounding box, in degrees."""
 
     model_config = ConfigDict(frozen=True)
 
-    xmin: float = Field(..., description="Western longitude (degrees).")
-    xmax: float = Field(..., description="Eastern longitude (degrees).")
-    ymin: float = Field(..., description="Southern latitude (degrees).")
-    ymax: float = Field(..., description="Northern latitude (degrees).")
+    xmin: float = Field(..., description="Western edge, in degrees longitude.")
+    xmax: float = Field(..., description="Eastern edge, in degrees longitude.")
+    ymin: float = Field(..., description="Southern edge, in degrees latitude.")
+    ymax: float = Field(..., description="Northern edge, in degrees latitude.")
 
 
 class Grid(Bounds):
-    """Footprint grid: lon/lat bounds, optional output projection, cell resolution."""
+    """
+    Footprint grid: longitude/latitude bounds, cell size, and projection.
+
+    The bounds are always longitude/latitude. With a projected ``projection``,
+    the grid covers the bounds' extent in that projection and ``xres`` and
+    ``yres`` are in its units.
+    """
 
     model_config = ConfigDict(frozen=True)
 
     xres: float = Field(
         ...,
-        description="Cell width in projection units (degrees for longlat, metres for UTM, etc.).",
+        description="Cell width in projection units (degrees for longlat, meters for UTM).",
     )
     yres: float = Field(
         ...,
-        description="Cell height in projection units (degrees for longlat, metres for UTM, etc.).",
+        description="Cell height in projection units (degrees for longlat, meters for UTM).",
     )
     projection: str = Field(
         "+proj=longlat",
         description=(
-            "Output CRS as a PROJ string.  Bounds are always lon/lat; "
-            "particles and bounds are projected to this CRS before gridding."
+            "Projection of the footprint grid, as a PROJ string. Particles and "
+            "bounds are projected to it before gridding."
         ),
     )
 
     @property
     def resolution(self) -> str:
-        """Human-readable cell resolution string, e.g. ``'0.01x0.01'``."""
+        """Cell size as text, such as ``'0.01x0.01'``."""
         return f"{self.xres}x{self.yres}"
 
     @property
     def is_longlat(self) -> bool:
-        """``True`` when the output grid is geographic (lon/lat degrees)."""
+        """Whether the grid is in longitude/latitude degrees."""
         return "+proj=longlat" in self.projection
 
     @property
     def min_cell_width(self) -> float:
-        """Smaller of ``xres`` and ``yres`` (parity with other geometries)."""
+        """Smaller of ``xres`` and ``yres``, as other geometries report it."""
         return float(min(self.xres, self.yres))
 
     @classmethod
@@ -169,24 +174,29 @@ class Grid(Bounds):
         max_cells: int = 50_000_000,
     ) -> Grid:
         """
-        Derive the native raster that resolves a non-rectilinear geometry.
+        Return a grid fine enough to resolve the cells of a geometry.
 
-        Bounds are the geometry's envelope snapped outward to whole cells.
-        Resolution is the smallest target cell width divided by
-        ``cells_per_target``, rounded *down* to one significant figure so
-        file names and hashes stay readable.  ``projection`` defaults to the
-        geometry's CRS.  Warns when the raster would exceed ``max_cells``.
+        The bounds are the geometry's extent, rounded outward to whole cells.
+        The cell size is the smallest geometry cell width divided by
+        ``cells_per_target``, rounded down to one significant figure.
 
         Parameters
         ----------
-        geometry : Mesh | Zones | Grid
-            Target geometry (any object with ``bounds``, ``min_cell_width``,
-            ``crs``/``projection`` and ``is_longlat``).
+        geometry : Mesh, Zones, or Grid
+            Geometry to resolve. Any object with ``bounds``,
+            ``min_cell_width``, ``crs`` or ``projection``, and ``is_longlat``.
         cells_per_target : float, default 4
-            Native cells across the smallest target cell.
+            Grid cells across the smallest geometry cell.
         projection : str, optional
-            Output CRS; the geometry is reprojected when it differs.  Bounds
-            are always stored in lon/lat.
+            Projection of the grid. Defaults to the geometry's CRS; the
+            geometry is reprojected when they differ.
+        max_cells : int, default 50_000_000
+            Warn when the grid would have more cells than this.
+
+        Returns
+        -------
+        Grid
+            The derived grid, with longitude/latitude bounds.
         """
         import math
         import warnings
@@ -252,7 +262,12 @@ class Grid(Bounds):
 
     @classmethod
     def from_geometries(cls, geometries, **kwargs) -> Grid:
-        """One raster that resolves several geometries: union envelope, finest cell."""
+        """
+        Return one grid that resolves several geometries.
+
+        The grid covers all their extents at the finest cell size any of them
+        needs. Keyword arguments are passed to :meth:`from_geometry`.
+        """
         grids = [cls.from_geometry(g, **kwargs) for g in geometries]
         res = min(min(g.xres, g.yres) for g in grids)
         projection = grids[0].projection
@@ -269,14 +284,12 @@ class Grid(Bounds):
     @property
     def axes(self) -> tuple[np.ndarray, np.ndarray]:
         """
-        1-D cell-centre coordinates ``(x, y)`` in projection units, ascending.
+        Cell-center coordinates ``(x, y)`` in projection units, ascending.
 
-        These are the coordinates of the footprint's native raster for this
-        grid, rounded to 10 decimals to strip floating-point noise
-        (``40.35`` rather than ``40.349999999999994``) so that ``index``
-        matches coordinate labels built elsewhere from the same bounds and
-        resolution exactly.  ``pyproj`` is required only for non-longlat
-        projections.
+        These are the footprint's coordinates on this grid. They are rounded
+        to 10 decimals (``40.35`` rather than ``40.349999999999994``) so they
+        match labels built elsewhere from the same bounds and resolution.
+        Projected grids need ``pyproj``.
         """
         xmin, xmax, ymin, ymax = self.xmin, self.xmax, self.ymin, self.ymax
         if not self.is_longlat:
@@ -293,7 +306,7 @@ class Grid(Bounds):
 
     @property
     def cells(self) -> tuple[np.ndarray, np.ndarray]:
-        """Every cell centre as flat ``(x, y)`` arrays, x outer / y inner."""
+        """Every cell center as flat ``(x, y)`` arrays, with ``x`` varying slowest."""
         x, y = self.axes
         xx, yy = np.meshgrid(x, y, indexing="ij")
         return xx.ravel(), yy.ravel()
@@ -301,10 +314,10 @@ class Grid(Bounds):
     @property
     def index(self) -> pd.MultiIndex:
         """
-        State index over all cells, in the same order as ``cells``.
+        Index of every cell, in the same order as ``cells``.
 
-        Named ``("lon", "lat")`` for geographic grids and ``("x", "y")`` for
-        projected ones, matching the coordinate names of the footprint raster.
+        The levels are named ``lon`` and ``lat`` for a longitude/latitude grid
+        and ``x`` and ``y`` for a projected one, as in the footprint.
         """
         import pandas as pd
 
@@ -314,15 +327,12 @@ class Grid(Bounds):
 
     def to_xarray(self) -> xr.Dataset:
         """
-        Return this grid as a CF-style xarray Dataset of cell centers.
+        Return the grid as a CF-1.8 dataset of cell centers.
 
-        The result carries 1-D ``lon``/``lat`` (or projected ``x``/``y``)
-        coordinates matching the footprint's native output grid, plus a ``crs``
-        grid-mapping variable.  This is the interchange form of the grid: pass it
-        as the target of :meth:`stilt.Footprint.aggregate`, or hand it to other
-        tools via the shared xarray/CF grid convention.
-
-        ``pyproj`` is required only for non-longlat projections.
+        The dataset has ``lon`` and ``lat`` coordinates (``x`` and ``y`` when
+        projected) matching the footprint, and a ``crs`` grid-mapping
+        variable. Pass it to :meth:`stilt.Footprint.aggregate` as a target, or
+        to other tools that read CF grids. Projected grids need ``pyproj``.
         """
         import xarray as xr
 

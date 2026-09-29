@@ -1,28 +1,27 @@
 """
-Variograms of wind errors, for transport-error runs (Lin and Gerbig, 2005, section 2.1).
+Variograms of wind errors, for setting up transport-error runs.
 
-HYSPLIT's wind-error perturbation needs four numbers: the standard deviation
-of the analysis wind error and its correlation scales in time, height and
-horizontal distance (``siguverr``, ``tluverr``, ``zcoruverr`` and
-``horcoruverr`` in the configuration). Lin and Gerbig derive them from the
-differences between analysed and observed winds: the standard deviation
-directly, and each scale by fitting the exponential variogram
+HYSPLIT's wind-error perturbation needs the standard deviation of the
+analysis wind error (``siguverr``) and its correlation scales in time
+(``tluverr``), height (``zcoruverr``), and horizontal distance
+(``horcoruverr``). Lin and Gerbig (2005, section 2.1) derive them from the
+differences between analyzed and observed winds. The standard deviation
+comes directly from the differences. Each scale comes from fitting the
+exponential variogram ::
 
     γ(h) = σ² (1 − exp(−h / l))
 
-to the mean squared difference of the error between pairs of points
-separated by ``h`` in that coordinate. :func:`variogram` builds the
-empirical variogram from an error array, its separation coordinate and a
-grouping key that says which points may pair; :func:`fit_variogram` fits
-the model. The errors themselves are the analysed wind minus the observed
-wind at each observation; arlmet samples the analysis at the observation
-points::
+to half the mean squared difference of the error between pairs of points
+``h`` apart in that coordinate. :func:`variogram` computes the empirical
+variogram and :func:`fit_variogram` fits the model to it.
+
+The errors are the analyzed wind minus the observed wind at each
+observation. arlmet samples the analysis at the observation points::
 
     met = arlmet.sample_points(files, points, ["UWND", "VWND"], earth_relative=True)
     u_err = met["UWND"] - observed_u
 
-The Wind Error Statistics guide has the recipe from there to the four
-parameters.
+The Wind Error Statistics guide goes from there to the four settings.
 """
 
 from __future__ import annotations
@@ -43,7 +42,7 @@ def _bin(
     lag: np.ndarray,
     sq: np.ndarray,
 ) -> None:
-    """Add pairs to the running per-bin sums of squared difference, lag and count."""
+    """Add pairs to the per-bin sums of squared difference, lag, and count."""
     keep = (lag > 0) & (lag < edges[-1])
     lag, sq = lag[keep], sq[keep]
     sums[0][:] += np.histogram(lag, edges, weights=sq)[0]
@@ -52,7 +51,7 @@ def _bin(
 
 
 def _pairs_1d(sums, edges: np.ndarray, errors: np.ndarray, coord: np.ndarray) -> None:
-    """All pairs within one group along a 1-D coordinate, closer than the last edge."""
+    """Bin all pairs of one group closer than the last edge along a 1-D coordinate."""
     order = np.argsort(coord, kind="stable")
     e, c = errors[order], coord[order]
     n = len(c)
@@ -67,7 +66,7 @@ def _pairs_1d(sums, edges: np.ndarray, errors: np.ndarray, coord: np.ndarray) ->
 def _pairs_geo(
     sums, edges: np.ndarray, errors: np.ndarray, lon: np.ndarray, lat: np.ndarray
 ) -> None:
-    """All pairs within one group, separated by great-circle distance in km."""
+    """Bin all pairs of one group by great-circle distance in km."""
     if len(errors) < 2:
         return
     i, j = np.triu_indices(len(errors), 1)
@@ -83,39 +82,38 @@ def variogram(
     bins: ArrayLike,
 ) -> pd.DataFrame:
     """
-    Empirical semivariogram of ``errors`` over a separation coordinate.
+    Return the empirical semivariogram of ``errors`` over a separation coordinate.
 
     For every pair of points in the same group, the squared difference of
-    their errors is binned by their separation; the variogram in a bin is
-    half the mean squared difference. Bins are half-open, ``[a, b)``. Pairs
-    at zero separation are skipped, as are pairs at or beyond the last edge.
+    their errors is binned by their separation. The semivariogram of a bin
+    is half the mean squared difference. Bins are half-open, ``[a, b)``.
+    Pairs at zero separation or at or beyond the last edge are skipped.
 
     Parameters
     ----------
-    errors
-        One error value per point (a wind component's analysis minus
-        observation, say).
-    lag
-        The coordinate the separation is measured in, one value per point:
-        minutes, metres, or an ``(n, 2)`` array of longitude and latitude in
-        degrees, in which case the separation is the great-circle distance
-        in kilometres.
-    group
-        A label per point; only points sharing a label are paired. For the
-        vertical variogram of radiosonde errors that is the launch, for the
-        time variogram of a station's errors the station, for the horizontal
-        variogram of a network the observation time. ``None`` pairs
-        everything with everything, which is fine for a few thousand points
-        and not for a few hundred thousand.
-    bins
+    errors : array-like
+        One error per point, such as the analysis minus observed value of
+        one wind component.
+    lag : array-like
+        Coordinate the separation is measured in, one value per point, such
+        as minutes or meters. An ``(n, 2)`` array of longitude and latitude
+        in degrees measures great-circle distance in km.
+    group : array-like, optional
+        Label per point. Only points with the same label are paired: the
+        launch for a vertical variogram of radiosonde errors, the station
+        for a time variogram, the observation time for a horizontal
+        variogram of a network. ``None`` pairs every point with every
+        other, which is fine for a few thousand points but not for a few
+        hundred thousand.
+    bins : array-like
         Separation bin edges, in the units of ``lag``.
 
     Returns
     -------
     pandas.DataFrame
-        One row per non-empty bin: ``lag`` (the mean separation of the pairs
-        in the bin), ``gamma`` (the semivariogram, in the units of ``errors``
-        squared) and ``n`` (the number of pairs).
+        One row per non-empty bin, with columns ``lag`` (mean separation of
+        the pairs), ``gamma`` (semivariogram, in the units of ``errors``
+        squared), and ``n`` (number of pairs).
     """
     e = np.asarray(errors, dtype=float)
     coord = np.asarray(lag, dtype=float)
@@ -166,19 +164,24 @@ def variogram(
 @dataclass(frozen=True)
 class VariogramFit:
     """
-    Exponential variogram ``σ² (1 − exp(−h / l))``.
+    Exponential variogram ``σ² (1 − exp(−h / l))``, returned by :func:`fit_variogram`.
 
-    ``sigma`` is the error standard deviation (the square root of the sill)
-    and ``length`` the e-folding correlation scale, in the units of the
-    separation it was fitted over. Call it with separations to evaluate the
-    model.
+    Call it with separations to evaluate the model.
+
+    Attributes
+    ----------
+    sigma : float
+        Error standard deviation, the square root of the sill.
+    length : float
+        E-folding correlation scale, in the units of the separation it was
+        fitted over.
     """
 
     sigma: float
     length: float
 
     def __call__(self, lag: ArrayLike) -> np.ndarray:
-        """Evaluate the model at ``lag``."""
+        """Return the model at ``lag``."""
         h = np.asarray(lag, dtype=float)
         return self.sigma**2 * (1.0 - np.exp(-h / self.length))
 
@@ -187,17 +190,17 @@ def fit_variogram(
     lag: ArrayLike, gamma: ArrayLike, *, sigma: float | None = None
 ) -> VariogramFit:
     """
-    Fit the exponential variogram to an empirical one.
+    Fit an exponential variogram to an empirical one.
 
     Parameters
     ----------
-    lag, gamma
-        The empirical variogram, as :func:`variogram` returns it.
-    sigma
-        The error standard deviation. Given, the sill is fixed at ``sigma²``
-        and only the correlation scale is fitted, which is what Lin and
-        Gerbig's definition of the variogram implies and what you want when
-        the sample standard deviation is known. ``None`` fits both.
+    lag, gamma : array-like
+        The empirical variogram, as returned by :func:`variogram`.
+    sigma : float, optional
+        Error standard deviation. When given, the sill is fixed at
+        ``sigma²`` and only the correlation scale is fitted, as Lin and
+        Gerbig's definition implies. Use it when the sample standard
+        deviation is known. ``None`` fits both.
 
     Returns
     -------

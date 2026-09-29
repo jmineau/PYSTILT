@@ -1,4 +1,4 @@
-"""Trajectories data model and parquet serialization helpers for STILT."""
+"""Particle trajectories from a HYSPLIT run, and the near-field plume dilution correction."""
 
 import json
 import logging
@@ -30,7 +30,7 @@ def _write_parquet_table(
     *,
     use_dictionary: list[str] | bool,
 ) -> None:
-    """Write parquet with compact defaults and conservative codec fallback."""
+    """Write a Parquet file with zstd compression, falling back to snappy or none."""
     last_error: Exception | None = None
     for compression in ("zstd", "snappy", None):
         try:
@@ -50,21 +50,31 @@ def _write_parquet_table(
         raise last_error
 
 
-# Below this horizontal spacing, release points cannot be told apart from the
-# first in-flight row. Measured with HRRR at WBB: bulk advection moves
-# particles 200-600 m in the first minute, by an amount that varies with
-# height; at 1000 m spacing the release height is still recovered to ~15 m,
-# at 300 m it is off by ~190 m.
+# Below this horizontal spacing, release points cannot be told apart from a
+# particle's first output row. In a test with HRRR at WBB, particles moved
+# 200-600 m in the first minute, by an amount that varied with height. At
+# 1000 m spacing the release height was recovered to about 15 m, and at 300 m
+# it was off by about 190 m.
 _MIN_RELIABLE_SPACING_M = 1000.0
 
 
 def endpoint_rows(particles: pd.DataFrame) -> pd.DataFrame:
     """
-    The row at the far end of each particle's trajectory: its largest ``|time|``.
+    Return the last row of each particle's trajectory, the one with the largest ``|time|``.
 
-    One row per ``indx`` with every column of *particles*. The far end is
-    where the air came from for a backward run and where it went for a
-    forward run; a particle that left the domain early ends where it left.
+    For a backward run this is where the air came from, and for a forward
+    run where it went. A particle that left the meteorology domain early
+    ends where it left.
+
+    Parameters
+    ----------
+    particles : pandas.DataFrame
+        Particle table with ``indx`` and ``time`` columns.
+
+    Returns
+    -------
+    pandas.DataFrame
+        One row per particle, with every column of *particles*.
     """
     p = particles.reset_index(drop=True)
     if p.empty:
@@ -78,19 +88,20 @@ def _multipoint_release_heights(
     p: pd.DataFrame, receptor: MultiPointReceptor
 ) -> pd.Series:
     """
-    Return each row's release altitude for a multipoint (or slant) receptor.
+    Return each row's release altitude for a multipoint receptor.
 
-    HYSPLIT does not record which starting location a particle came from, so
-    it is recovered from the row nearest the release time:
+    HYSPLIT does not record which starting location a particle came from.
+    It is recovered from each particle's row nearest the release time:
 
-    1. If the HYSPLIT build writes release-time (``t=0``) rows, nothing has
-       moved yet and the nearest release point horizontally is exact.
-    2. Otherwise the first row is already a timestep of transport later.
-       Height drifts ~30x less than horizontal position over that step, so
-       when the release altitudes are all distinct (always true of a slant
-       column) match on height instead.
-    3. Otherwise fall back to horizontal position, and warn when the release
-       points are too close together for that to be trusted.
+    1. If the HYSPLIT build writes release-time (``t = 0``) rows, match the
+       nearest release point horizontally. Nothing has moved yet, so this
+       is exact.
+    2. Otherwise the first row is one time step after release. Height
+       drifts about 30 times less than horizontal position over that step,
+       so when all release heights differ (as in a slanted column), match
+       on height.
+    3. Otherwise match on horizontal position, and warn when the release
+       points are too close together for that to be reliable.
     """
     first = (
         p.assign(_age=p["time"].abs())
@@ -140,7 +151,7 @@ def _multipoint_release_heights(
 
 
 def _stored_params(stored: dict[str, Any], path: str | Path) -> STILTParams:
-    """Validate a trajectory's stored params, skipping settings that no longer exist."""
+    """Return the params stored in a trajectory file, dropping settings this version does not have."""
     unknown = sorted(set(stored) - set(STILTParams.model_fields))
     if unknown:
         logger.debug(
@@ -152,7 +163,29 @@ def _stored_params(stored: dict[str, Any], path: str | Path) -> STILTParams:
 
 
 class Trajectories:
-    """STILT particle trajectory ensemble."""
+    """
+    Particle trajectories from one HYSPLIT run.
+
+    ``data`` has one row per particle per output step. The columns are the
+    variables in ``varsiwant`` (``indx``, ``time`` in minutes since release,
+    ``long``, ``lati``, ``zagl``, ``foot``, ...), plus ``datetime`` (UTC),
+    ``xhgt`` (release height, for column and multipoint receptors), and
+    ``foot_no_hnf_dilution`` when ``hnf_plume`` is set.
+
+    Trajectories normally come from a simulation (``sim.trajectories``) or
+    a file (:meth:`from_parquet`).
+
+    Parameters
+    ----------
+    receptor : Receptor
+        Receptor the particles were released from.
+    params : STILTParams
+        Transport settings of the run.
+    met_files : list of Path
+        Meteorology files the run used.
+    data : pandas.DataFrame
+        Particle table.
+    """
 
     def __init__(
         self,
@@ -161,20 +194,6 @@ class Trajectories:
         met_files: list[Path],
         data: pd.DataFrame,
     ):
-        """
-        Particle trajectory ensemble with associated metadata.
-
-        Parameters
-        ----------
-        receptor : Receptor
-            Receptor metadata associated with this trajectory ensemble.
-        data : pd.DataFrame
-            Particle trajectory table.
-        met_files : list[Path]
-            Meteorology files used for this run.
-        params : STILTParams
-            Transport/model parameters used for this run.
-        """
         self.receptor = receptor
         self.params = params
         self.met_files = met_files
@@ -182,34 +201,24 @@ class Trajectories:
         self._plot: TrajectoriesPlotAccessor | None = None
 
     def __repr__(self) -> str:
-        """Compact developer-facing trajectory representation."""
         return f"Trajectories(rows={len(self.data)!r}, receptor={self.receptor.id!r})"
 
     def endpoints(self) -> pd.DataFrame:
         """
-        Per-particle trajectory endpoints (the far end of each particle's path).
+        Return where each particle's trajectory ends.
 
-        For each particle the row at the largest ``|time|`` from release is kept:
-        where the air **came from** for a backward run (``is_backward``, the usual
-        receptor case) or **went** for a forward run. This is the point to sample a
-        boundary/background field at (e.g. ``lair.noaa.CarbonTracker.background``)
-        for a backward run. Direction is handled implicitly -- ``max |time|`` is the
-        most-negative offset for a backward run and the most-positive for a forward
-        run.
-
-        Every particle contributes one endpoint, whether it ran the full duration or
-        left the domain early. An early exit is a real endpoint: the point where that
-        air entered (backward) or left (forward) the domain, which is exactly where
-        the background should be sampled.
+        For a backward run this is where the air came from, which is where
+        to sample a background concentration field. Each particle has one
+        endpoint, including particles that left the meteorology domain
+        early. Such a particle ends where it left the domain.
 
         Returns
         -------
         pandas.DataFrame
-            One row per particle with columns ``indx``, ``time`` (endpoint absolute
-            time, UTC, ready for field sampling), ``lati``, ``long``, ``zagl``,
-            ``endpoint_age_min`` (signed minutes from release), and ``run_time``
-            (receptor release time). Ready to pass to
-            ``CarbonTracker.sample()/.background()``.
+            One row per particle, with columns ``indx``, ``time`` (UTC time
+            at the endpoint), ``lati``, ``long``, ``zagl``,
+            ``endpoint_age_min`` (minutes since release, negative for a
+            backward run), and ``run_time`` (receptor time).
         """
         cols = ["indx", "time", "lati", "long", "zagl", "endpoint_age_min", "run_time"]
         if self.data.empty:
@@ -239,7 +248,7 @@ class Trajectories:
 
     @property
     def plot(self) -> "TrajectoriesPlotAccessor":
-        """Plotting namespace (e.g. ``traj.plot.map()``)."""
+        """Plotting methods, such as ``traj.plot.map()``."""
         if self._plot is None:
             from stilt.visualization import TrajectoriesPlotAccessor
 
@@ -254,18 +263,18 @@ class Trajectories:
         columns: list[str] | None = None,
     ) -> Self:
         """
-        Load a Trajectories instance from a self-contained parquet file.
+        Read trajectories from a Parquet file written by :meth:`to_parquet`.
 
-        Metadata (receptor, params, met_files) is read from Arrow schema
-        metadata embedded by ``to_parquet``. The stored params are a record
-        of the run, so settings this version no longer has (a file written
-        before a setting was removed) are skipped rather than rejected; the
-        file itself keeps them.
+        The receptor, params, and met files are read from the file's
+        metadata. Stored settings that this version of PYSTILT does not
+        have are ignored.
 
         Parameters
         ----------
         path : str or Path
-            Parquet file path.
+            Trajectory file.
+        columns : list of str, optional
+            Columns to read. All columns by default.
 
         Returns
         -------
@@ -302,22 +311,27 @@ class Trajectories:
         met_files: list[Path],
     ) -> "Trajectories":
         """
-        Build a Trajectories instance from raw HYSPLIT particle output.
+        Build trajectories from HYSPLIT's particle output.
 
-        Assigns ``xhgt`` for column/multipoint receptors, applies
-        ``hnf_plume`` dilution correction if configured, and converts
-        the ``time`` column (minutes) to absolute ``datetime``.
+        Adds the release height ``xhgt`` for column and multipoint receptors,
+        applies the near-field plume dilution correction when
+        ``params.hnf_plume`` is set (:func:`calc_plume_dilution`), and adds a
+        ``datetime`` column from ``time``.
 
         Parameters
         ----------
-        particles : pd.DataFrame
-            Raw particle table from ``read_particle_dat``.
+        particles : pandas.DataFrame
+            Particle table read from ``PARTICLE_STILT.DAT``.
         receptor : Receptor
-            Receptor used for the run.
-        params : TransportParams
-            Transport/model parameters used for the run.
-        met_files : list[Path]
-            Meteorology files used for the run.
+            Receptor the particles were released from.
+        params : STILTParams
+            Transport settings of the run.
+        met_files : list of Path
+            Meteorology files the run used.
+
+        Returns
+        -------
+        Trajectories
         """
         p = particles.copy()
         numpar = int(p["indx"].max())  # type: ignore[arg-type]
@@ -345,19 +359,23 @@ class Trajectories:
 
     def footprint(self, config: "FootprintConfig", name: str = "") -> "Footprint":
         """
-        Calculate a footprint from these trajectories on a new grid.
+        Calculate a footprint from these particles.
 
-        This is the regeneration path for a target grid that differs from any
-        stored footprint: rather than regridding a stored raster, rebuild the
-        footprint from the particles with full kernel fidelity.  Equivalent to
-        :meth:`stilt.Footprint.calculate` with this run's receptor.
+        Use it for a footprint on another grid or with other smoothing,
+        instead of regridding a saved footprint. Particle transforms are not
+        applied. Same as :meth:`stilt.Footprint.calculate` with this run's
+        receptor.
 
         Parameters
         ----------
         config : FootprintConfig
-            Grid and smoothing parameters for the new footprint.
+            Grid and smoothing settings.
         name : str, optional
-            Name for the footprint.
+            Name of the footprint.
+
+        Returns
+        -------
+        Footprint
         """
         from stilt.footprint import Footprint
 
@@ -365,15 +383,15 @@ class Trajectories:
 
     def to_parquet(self, path: str | Path) -> Path:
         """
-        Persist trajectory data and metadata to a self-contained parquet file.
+        Write the trajectories to a Parquet file.
 
-        Receptor, params, and met_files are stored in Arrow schema metadata
-        so ``from_parquet`` needs no sibling files.
+        The receptor, params, and met files are stored in the file's
+        metadata, so :meth:`from_parquet` needs nothing else.
 
         Parameters
         ----------
         path : str or Path
-            Destination file path.
+            File to write.
 
         Returns
         -------
@@ -413,26 +431,40 @@ def calc_plume_dilution(
     particles: pd.DataFrame, r_zagl: float | None, veght: float
 ) -> pd.DataFrame:
     """
-    Rescale footprint for near-field plume dilution.
+    Correct ``foot`` for plume dilution in the hyper-near field.
 
-    Requires ``varsiwant`` to include: ``dens``, ``samt``, ``sigw``,
-    ``tlgr``, ``foot``, ``mlht``.
+    ``foot`` assumes surface fluxes are mixed through the lowest ``veght``
+    fraction of the mixed layer. Close to the receptor, the plume from the
+    release point is thinner than that. Following STILT-R, the plume depth
+    grows from the release height with the turbulence each particle meets.
+    While it is below ``veght`` times the mixed-layer height, ``foot`` is
+    recalculated with the plume depth in its place.
+
+    Needs the columns ``dens``, ``samt``, ``sigw``, ``tlgr``, ``foot``,
+    and ``mlht``, so ``varsiwant`` must include them.
 
     Parameters
     ----------
-    particles : DataFrame
-        HYSPLIT particle output with columns for each required variable.
+    particles : pandas.DataFrame
+        HYSPLIT particle table.
     r_zagl : float or None
-        Receptor height above ground level in metres. ``None`` disables the
-        near-field correction.
+        Release height above ground in metres. Used only when *particles*
+        has no ``xhgt`` column.
     veght : float
-        STILT ``veght`` parameter (vegetation height / mixing-layer threshold).
+        Fraction of the mixed-layer height that surface fluxes are mixed
+        through (STILT's ``veght``).
 
     Returns
     -------
-    DataFrame
-        Particles DataFrame with the ``foot`` column rescaled by the
-        plume-dilution factor.
+    pandas.DataFrame
+        A copy of *particles* with ``foot`` corrected and the original
+        values in ``foot_no_hnf_dilution``.
+
+    Raises
+    ------
+    ValueError
+        If a required column is missing, or neither *r_zagl* nor ``xhgt``
+        gives the release height.
     """
     required = {"dens", "samt", "sigw", "tlgr", "foot", "mlht"}
     missing = required - set(particles.columns)

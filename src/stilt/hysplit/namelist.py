@@ -1,22 +1,27 @@
 """
-Old-style DEC/VMS Fortran namelist writer for HYSPLIT SETUP.CFG.
+Writer for HYSPLIT's ``SETUP.CFG`` namelist.
 
-HYSPLIT v5 expects the ``$NAME ... $END`` namelist format (DEC/VMS extension),
-not the standard Fortran-90 ``&name ... /`` format that f90nml produces.
+HYSPLIT v5 reads the old DEC/VMS ``$NAME ... $END`` namelist format. The
+Fortran 90 ``&name ... /`` format that f90nml writes does not work.
 
-Additional constraint: HYSPLIT declares some parameters as INTEGER in its
-Fortran source (e.g. RHB, RHT, FRHMAX, FRMR).  Writing a Python float like
-``80.0`` for those fields causes a runtime error because the Fortran namelist
-reader stops at the decimal point when scanning for an integer and then tries
-to interpret the leftover ``.0rht`` as a new variable name.  To avoid this,
-whole-number floats are written without a decimal point (``80`` not ``80.0``).
+HYSPLIT declares some parameters as INTEGER, such as ``RHB`` and ``RHT``.
+Written as ``80.0``, such a value fails: the reader stops at the decimal
+point and reads the rest as the next variable name. Whole-number floats are
+therefore written without a decimal point (``80``).
 """
 
 from pathlib import Path
 
 
 class NameList:
-    """Accumulate key-value pairs and write a DEC/VMS-style Fortran namelist."""
+    """
+    Fortran namelist in the DEC/VMS format HYSPLIT reads.
+
+    Parameters
+    ----------
+    group : str
+        Namelist group name, such as ``SETUP``.
+    """
 
     def __init__(self, group: str):
         self.group = group.upper()
@@ -31,13 +36,14 @@ class NameList:
         key : str
             Parameter name (converted to uppercase).
         value : object
-            Parameter value; formatted by :meth:`_format`.
+            Parameter value. Booleans, strings, lists of strings, and
+            numbers are formatted for the Fortran reader.
         """
         self._entries.append((key.upper(), self._format(value)))
 
     def update(self, mapping: dict) -> None:
         """
-        Append multiple key-value pairs from *mapping*.
+        Append several key-value pairs.
 
         Parameters
         ----------
@@ -49,12 +55,12 @@ class NameList:
 
     def write(self, path: str | Path) -> None:
         """
-        Write the namelist to *path*, replacing any existing file.
+        Write the namelist, replacing any existing file.
 
         Parameters
         ----------
         path : str or Path
-            Destination file path.
+            File to write.
         """
         path = Path(path)
         path.unlink(missing_ok=True)

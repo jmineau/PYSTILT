@@ -1,4 +1,4 @@
-"""One simulation: a receptor run under one variant, its outputs and completion."""
+"""A simulation, one receptor run under one variant, and its outputs."""
 
 from __future__ import annotations
 
@@ -40,10 +40,18 @@ logger = logging.getLogger(__name__)
 
 class SimID(NamedTuple):
     """
-    Identity of one simulation: a receptor under a variant.
+    Id of one simulation, a ``(receptor, variant)`` pair.
 
-    Its string form is ``"{receptor_id}/{variant}"``, which is also the
-    simulation's path below ``simulations/by-id/``.
+    Its string form is ``"<receptor_id>/<variant>"``, which is also the
+    simulation's directory below ``simulations/by-id/``.
+
+    Examples
+    --------
+    >>> sid = SimID.parse("202307151800_-111.848_40.766_10/hrrr")
+    >>> sid.variant
+    'hrrr'
+    >>> str(sid)
+    '202307151800_-111.848_40.766_10/hrrr'
     """
 
     receptor: ReceptorID
@@ -53,12 +61,20 @@ class SimID(NamedTuple):
         return f"{self.receptor}/{self.variant}"
 
     def __fspath__(self) -> str:
-        """Allow ``root / sim_id`` to build the simulation directory."""
+        """Return the string form, so ``root / sim_id`` gives the simulation directory."""
         return str(self)
 
     @classmethod
     def parse(cls, value: str | SimID | tuple[str, str]) -> SimID:
-        """Build a :class:`SimID` from its string form or a ``(receptor, variant)`` pair."""
+        """
+        Build a :class:`SimID` from its string form or a ``(receptor, variant)`` pair.
+
+        Raises
+        ------
+        ValueError
+            If a string is not of the form ``"<receptor_id>/<variant>"``, or
+            the receptor id is malformed.
+        """
         if isinstance(value, SimID):
             return value
         if isinstance(value, tuple):
@@ -74,33 +90,44 @@ class SimID(NamedTuple):
 
 class Simulation:
     """
-    One receptor under one variant: a HYSPLIT run, or a footprint derived
-    from another simulation's particles.
+    One receptor run under one variant.
 
-    A simulation owns its output filenames, their store keys, and the single
-    definition of which outputs exist and whether it is complete.
+    A simulation runs HYSPLIT for its receptor and calculates a footprint
+    from the particles. A derived simulation (a ``from:`` variant) runs no
+    HYSPLIT and calculates its footprint from its parent's particles. The
+    simulation knows where its output files are and whether they all exist
+    (:meth:`is_complete`).
+
+    You rarely build one yourself. Get it from a model instead, as in
+    ``model.simulations[receptor_id, "hrrr"]``.
 
     Parameters
     ----------
-    receptor
+    receptor : Receptor
         Where and when particles are released.
-    config
-        The resolved variant this receptor runs under: transport settings,
-        footprint settings, and the variant name (``config.name`` is the
-        simulation's variant, so ``id == receptor.id / config.name``).
-    met
-        The met stream to run HYSPLIT with. ``None`` only for a derived
-        simulation, which uses its parent's particles.
-    parent
-        The simulation whose trajectory this one rasterizes (a ``from:``
-        variant). Such a simulation never runs HYSPLIT.
-    directory
-        Compute-local working directory. A temporary one is created when
-        omitted. Nothing is created on disk until an output is written.
-    store
-        Output store the outputs are published to and read back from when
-        they are not on local disk. When the store's location for this
-        simulation *is* ``directory``, publishing is a no-op.
+    config : VariantConfig
+        Settings of the variant. ``config.name`` is the variant name.
+    met : MetStream, optional
+        Meteorology for the HYSPLIT run. Required unless *parent* is given.
+    parent : Simulation, optional
+        Simulation whose particles this one uses. Such a simulation never
+        runs HYSPLIT.
+    directory : str or Path, optional
+        Working directory where HYSPLIT runs and outputs are written. A
+        temporary directory is used when omitted. Nothing is created until
+        an output is written.
+    store : Store, optional
+        Project store. Outputs are copied there by :meth:`publish` and read
+        from there when they are not in *directory*.
+
+    Attributes
+    ----------
+    id : SimID
+        ``(receptor.id, config.name)``.
+    params : STILTParams
+        Transport settings of the variant.
+    footprint_config : FootprintConfig or None
+        Footprint settings, or ``None`` for a variant without a grid.
     """
 
     def __init__(
@@ -136,7 +163,6 @@ class Simulation:
         self._plot: SimulationPlotAccessor | None = None
 
     def __repr__(self) -> str:
-        """Compact developer-facing simulation representation."""
         return f"Simulation(id={str(self.id)!r}, directory={str(self.directory)!r})"
 
     @property
@@ -146,44 +172,44 @@ class Simulation:
 
     @property
     def is_derived(self) -> bool:
-        """Whether this simulation rasterizes another simulation's trajectory."""
+        """Whether this simulation uses another simulation's particles."""
         return self.parent is not None
 
     # -- Paths and keys --------------------------------------------------------
 
     @property
     def met_dir(self) -> Path:
-        """Compute-local meteorology staging directory."""
+        """Directory where meteorology files are staged for HYSPLIT."""
         return self.directory / SIMULATION_MET_DIRNAME
 
     @property
     def log_path(self) -> Path:
-        """Compute-local HYSPLIT log path."""
+        """Path of the HYSPLIT log in the working directory."""
         return self.directory / SIMULATION_LOG_FILENAME
 
     @property
     def trajectories_path(self) -> Path:
-        """Compute-local trajectory parquet path (the parent's when derived)."""
+        """Path of the trajectory Parquet file (the parent's for a derived simulation)."""
         if self.parent is not None:
             return self.parent.trajectories_path
         return self.directory / f"{self.id.receptor}_traj.parquet"
 
     @property
     def footprint_path(self) -> Path:
-        """Compute-local footprint netCDF path."""
+        """Path of the footprint NetCDF file in the working directory."""
         return self.directory / f"{self.id.receptor}_foot.nc"
 
     @property
     def empty_footprint_path(self) -> Path:
-        """Compute-local marker recording that the footprint is legitimately empty."""
+        """Path of the marker file written when the footprint is empty."""
         return self.footprint_path.with_suffix(".empty")
 
     def key(self, path: str | Path) -> str:
-        """Return the store key for one file under this simulation's directory."""
+        """Return the store key of one of this simulation's files."""
         return f"{self.key_prefix}/{Path(path).name}"
 
     def resolve(self, path: Path) -> Path | None:
-        """Return a local path to one output from disk or the store, else ``None``."""
+        """Return a local path to an output file, from the working directory or the store, or ``None``."""
         if path.exists():
             return path
         if self._store is not None:
@@ -196,7 +222,7 @@ class Simulation:
 
     @property
     def has_trajectory(self) -> bool:
-        """Whether the trajectory parquet exists on disk or in the store."""
+        """Whether the trajectory file exists (the parent's for a derived simulation)."""
         if self.parent is not None:
             return self.parent.has_trajectory
         return self.resolve(self.trajectories_path) is not None
@@ -204,10 +230,9 @@ class Simulation:
     @property
     def has_footprint(self) -> bool:
         """
-        Whether the footprint is complete.
+        Whether the footprint file or the empty-footprint marker exists.
 
-        The empty marker counts: a run that legitimately produced no footprint
-        is a terminal outcome, not missing work.
+        An empty footprint (no particles over the grid) is a finished result.
         """
         return (
             self.resolve(self.footprint_path) is not None
@@ -216,18 +241,23 @@ class Simulation:
 
     @property
     def makes_footprint(self) -> bool:
-        """Whether this simulation produces a footprint (its variant has a grid)."""
+        """Whether this simulation makes a footprint, which it does when its variant has a grid."""
         return self.footprint_config is not None
 
     def is_complete(self) -> bool:
-        """Whether every expected output exists: the trajectory unless derived, the footprint if a grid is set."""
+        """
+        Return whether every expected output exists.
+
+        That is the trajectory (unless derived) and the footprint (when the
+        variant has a grid).
+        """
         return (self.is_derived or self.has_trajectory) and (
             not self.makes_footprint or self.has_footprint
         )
 
     @property
     def outputs(self) -> list[Path]:
-        """The files this simulation owns: log, footprint or marker, and its own trajectory."""
+        """Paths of the log, footprint, and empty-marker files, and the trajectory file unless derived."""
         paths = [self.log_path, self.footprint_path, self.empty_footprint_path]
         if not self.is_derived:
             paths.append(self.trajectories_path)
@@ -235,10 +265,10 @@ class Simulation:
 
     def publish(self) -> None:
         """
-        Copy this simulation's local outputs into the store.
+        Copy this simulation's outputs from the working directory to the store.
 
-        A no-op when there is no store or when the store's location for this
-        simulation is already ``directory``.
+        Does nothing without a store or when the working directory is
+        already the store's copy.
         """
         if self._store is None:
             return
@@ -247,11 +277,11 @@ class Simulation:
 
     def delete(self) -> None:
         """
-        Remove this simulation's outputs from the store and its working directory.
+        Delete this simulation's outputs from the store and its working directory.
 
-        Afterwards the simulation is incomplete and reruns on the next run. A
-        derived simulation loses only its footprint; its parent's trajectory is
-        the parent's to delete.
+        The simulation then runs again on the next :meth:`stilt.Model.run`.
+        A derived simulation deletes only its own files, and its parent's
+        trajectory stays.
         """
         if self._store is not None:
             for path in self.outputs:
@@ -261,7 +291,7 @@ class Simulation:
         self._footprint = None
 
     def write_empty_footprint_marker(self) -> Path:
-        """Create the empty-footprint marker."""
+        """Create the empty-footprint marker and return its path."""
         marker = self.empty_footprint_path
         marker.parent.mkdir(parents=True, exist_ok=True)
         marker.touch(exist_ok=True)
@@ -273,7 +303,7 @@ class Simulation:
 
     @property
     def plot(self) -> SimulationPlotAccessor:
-        """Plotting namespace (e.g. ``sim.plot.map()``)."""
+        """Plotting methods, such as ``sim.plot.map()``."""
         if self._plot is None:
             from stilt.visualization import SimulationPlotAccessor
 
@@ -284,18 +314,19 @@ class Simulation:
 
     @property
     def is_backward(self) -> bool:
-        """Return True when ``n_hours < 0`` (backward Lagrangian run)."""
+        """Whether particles run backward in time (``n_hours < 0``)."""
         return self.params.n_hours < 0
 
     @property
     def time_range(self) -> tuple[dt.datetime, dt.datetime]:
         """
-        Start and stop datetimes spanned by this simulation.
+        Start and end of the period the particles cover.
 
         Returns
         -------
-        tuple[datetime, datetime]
-            ``(start, stop)`` where *start* < *stop* regardless of run direction.
+        tuple of datetime
+            ``(start, stop)`` with ``start < stop`` for backward and forward
+            runs alike.
         """
         r_time = self.receptor.time
         if self.is_backward:
@@ -314,8 +345,9 @@ class Simulation:
         Returns
         -------
         str or None
-            ``'complete'`` if every expected output exists, a
-            ``'failed:<reason>'`` string if HYSPLIT failed, or ``None`` if the
+            ``"complete"`` if every expected output exists,
+            ``"failed:<reason>"`` if a log exists but outputs are missing
+            (see :class:`~stilt.errors.FailureReason`), or ``None`` if the
             simulation has not run.
         """
         if self.is_complete():
@@ -328,7 +360,7 @@ class Simulation:
     # -- Lazy accessors --------------------------------------------------------
 
     def _met_stream(self) -> MetStream:
-        """The met stream, from the parent when derived."""
+        """Return the met stream, the parent's for a derived simulation."""
         if self.met is not None:
             return self.met
         if self.parent is not None:
@@ -337,7 +369,7 @@ class Simulation:
 
     @property
     def source_met_files(self) -> list[Path]:
-        """Archive/source met files required for this simulation's time window."""
+        """Meteorology files in the archive that cover this simulation's period."""
         if not self._source_met_files:
             self._source_met_files = self._met_stream().required_files(
                 r_time=self.receptor.time,
@@ -348,9 +380,9 @@ class Simulation:
     @property
     def met_files(self) -> list[Path]:
         """
-        Compute-local meteorology files staged for HYSPLIT execution.
+        Meteorology files staged in :attr:`met_dir` for HYSPLIT.
 
-        The output/source archive paths remain available via
+        Accessing this stages the files. The archive paths are
         :attr:`source_met_files`.
         """
         if not self._met_files:
@@ -364,7 +396,7 @@ class Simulation:
     @property
     def log(self) -> str:
         """
-        Contents of the HYSPLIT stdout log file.
+        Text of the HYSPLIT log.
 
         Raises
         ------
@@ -379,10 +411,10 @@ class Simulation:
     @property
     def trajectories(self) -> Trajectories | None:
         """
-        Particle trajectories, loaded from parquet on first access.
+        Particle trajectories, or ``None`` if they do not exist yet.
 
-        A derived simulation returns its parent's. ``None`` if no trajectory
-        parquet exists and the simulation has not been run in this process.
+        Loaded from the Parquet file on first access. A derived simulation
+        returns its parent's.
         """
         if self.parent is not None:
             return self.parent.trajectories
@@ -394,7 +426,12 @@ class Simulation:
 
     @property
     def footprint(self) -> Footprint | None:
-        """The footprint, loaded from disk on first access; ``None`` if absent."""
+        """
+        The footprint, or ``None`` if it does not exist yet.
+
+        Loaded from the NetCDF file on first access, or the one from the last
+        :meth:`generate_footprint` call.
+        """
         if self._footprint is None:
             path = self.resolve(self.footprint_path)
             if path is not None:
@@ -410,22 +447,33 @@ class Simulation:
         write: bool = False,
     ) -> None:
         """
-        Run HYSPLIT once, populating ``self.trajectories``.
+        Run HYSPLIT and keep the particles as :attr:`trajectories`.
 
         Parameters
         ----------
         timeout : int, optional
-            Wall-clock cap in seconds for the hycs_std run. Defaults to
+            Time limit for the HYSPLIT run, in seconds. Defaults to
             ``params.timeout``.
         rm_dat : bool, optional
+            Delete HYSPLIT's particle output files after reading them.
             Defaults to ``params.rm_dat``.
-        write : bool
-            If True, persist the trajectories to ``self.trajectories_path``.
+        write : bool, default False
+            Also write the trajectories to :attr:`trajectories_path`.
 
         Raises
         ------
-        HYSPLITTimeoutError, HYSPLITFailureError, NoParticleOutputError,
+        ValueError
+            If the simulation is derived and so has no HYSPLIT run.
+        MeteorologyError
+            If the meteorology files cannot be found or staged.
+        HYSPLITTimeoutError
+            If HYSPLIT runs past *timeout*.
+        HYSPLITFailureError
+            If HYSPLIT writes a known failure message to its log.
+        NoParticleOutputError
+            If HYSPLIT writes no particle file.
         EmptyTrajectoryError
+            If the particle file holds no particles.
         """
         if self.is_derived:
             raise ValueError(
@@ -466,24 +514,37 @@ class Simulation:
         context: TransformContext | None = None,
     ) -> Footprint:
         """
-        Rasterize the footprint from the trajectories.
+        Calculate the footprint from the particles.
 
-        Runs HYSPLIT first when no trajectory exists yet. The result is kept on
-        ``self.footprint``.
+        Runs HYSPLIT first when there are no trajectories yet. The result is
+        also kept as :attr:`footprint`.
 
         Parameters
         ----------
         config : FootprintConfig, optional
-            Footprint settings. Defaults to the variant's own; pass one to try
-            other settings in memory (``sim.footprint_config.replace(...)``).
-        write : bool
-            If True, write the footprint netCDF to the simulation directory.
-        transforms : sequence, optional
-            Extra particle transforms applied after ``config.transforms`` and
-            before rasterization (any object with ``apply(particles, context)``).
+            Footprint settings. Defaults to the variant's own. Pass other
+            settings to try them without a new variant, for example
+            ``sim.footprint_config.replace(smooth_factor=0.5)``.
+        write : bool, default False
+            Also write the footprint to :attr:`footprint_path`, and the
+            trajectories when HYSPLIT had to run.
+        transforms : sequence of ParticleTransform, optional
+            Extra particle transforms, applied after ``config.transforms``.
+            Any object with an ``apply(particles, context)`` method works.
         context : TransformContext, optional
-            Context handed to every transform. Defaults to one built from the
-            receptor, variant, and project store.
+            Passed to every transform. Defaults to
+            :meth:`transform_context`.
+
+        Returns
+        -------
+        Footprint
+            The footprint. It is zero everywhere, with ``is_empty`` set, when
+            no particles reach the grid.
+
+        Raises
+        ------
+        TypeError
+            If the variant has no grid and no *config* is given.
         """
         if config is None:
             config = self.footprint_config
@@ -514,12 +575,12 @@ class Simulation:
 
     def transform_context(self) -> TransformContext:
         """
-        The :class:`~stilt.TransformContext` this simulation hands its transforms.
+        Return the :class:`~stilt.TransformContext` passed to this simulation's transforms.
 
-        Carries the receptor, the variant name, and the project store (so a
-        transform can read per-receptor inputs such as an averaging-kernel
-        table). Use it to apply the footprint's transforms outside
-        :meth:`generate_footprint`.
+        It holds the receptor, the variant name, and the project store, from
+        which a transform can read per-receptor inputs such as an
+        averaging-kernel table. Use it to apply the footprint's transforms
+        outside :meth:`generate_footprint`.
         """
         return TransformContext(
             receptor=self.receptor, variant=self.variant, store=self._store

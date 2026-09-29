@@ -2,31 +2,31 @@ Plume Background
 ================
 
 :doc:`background` takes the background from a model field at the
-trajectory endpoints. When the observation is a satellite swath, the swath
-itself holds the background: soundings the city's plume did not reach saw
-clean air at the same time, from the same instrument, with the same biases.
-The question is which soundings those are. Forward runs answer it: release
-particles from the city over the hours before the overpass, look at where
-they are when the satellite passes, and draw the plume around them. X-STILT
-does this in ``fit.kde.plume`` and ``calc.bg.upwind`` (Wu et al. 2018,
-method M3); PYSTILT does it with
-:func:`~stilt.observations.plume_polygon` and
-:func:`~stilt.observations.plume_background`.
+trajectory endpoints. For a satellite swath, the swath itself holds a
+background. Soundings that the city's plume did not reach saw clean air at
+the same time, with the same instrument and the same biases. To find those
+soundings, run particles forward from the city over the hours before the
+overpass, see where they are when the satellite passes, and draw the plume
+around them. :func:`~stilt.observations.plume_polygon` draws the plume and
+:func:`~stilt.observations.plume_background` picks the background
+soundings. This follows X-STILT's ``fit.kde.plume`` and ``calc.bg.upwind``
+(method M3 in `Wu et al., 2018 <https://doi.org/10.5194/gmd-11-4843-2018>`_).
 
 Forward runs
 ------------
 
-A forward run is a run with positive ``n_hours``. Everything else is the
-same: the receptor is where and when the particles are released, and the
-particle table records where they go. Since a plume is what a whole city
-puts out, the release is spread over a box around it, at a height just
-above the surface, and repeated every half hour over the hours before the
-overpass, so that air of every age is represented. X-STILT's defaults are a
-0.3° box, 10 m above ground, releases from ten hours before the overpass
-to the overpass itself, each followed twelve hours forward with a thousand
-particles. In PYSTILT each release is a
-:class:`~stilt.receptors.MultiPointReceptor` and the box is spread with
-:func:`~stilt.observations.jitter_points`:
+A forward run is a run with a positive ``n_hours``. Everything else stays
+the same. The receptor is where and when the particles are released, and
+the particle table records where they go.
+
+A plume is what the whole city puts out, so spread the release over a box
+around the city, just above the surface. Repeat it every half hour over
+the hours before the overpass, so that air of every age is included.
+X-STILT's defaults are a 0.3° box, 10 m above ground, and releases from ten
+hours before the overpass up to the overpass, each followed twelve hours
+forward with 1000 particles. In PYSTILT each release is a
+:class:`~stilt.receptors.MultiPointReceptor`, and
+:func:`~stilt.observations.jitter_points` spreads its points over the box:
 
 .. code-block:: python
 
@@ -49,22 +49,23 @@ particles. In PYSTILT each release is a
    ]
 
    forward = stilt.Model(
-       project="./forward_12h",     # a project is a transport setup; keep forward runs in their own
+       project="./forward_12h",     # keep forward runs in a project of their own
        receptors=receptors,
-       mets={"hrrr": met},
+       mets={"hrrr": met},          # as in the quickstart
        n_hours=12,                  # positive: forward in time
        numpar=1000,
    )
    forward.run()
 
-No footprint is needed. Only the particle tables matter, and they hold each
-particle's position at every output step with its absolute ``datetime``.
+No footprint is needed. The plume only needs the particle tables, which
+hold each particle's position at every output step along with its
+``datetime``.
 
 The plume
 ---------
 
-Pool the particle rows that fall in the overpass window across all the
-forward runs, and outline them:
+Pool the particle rows that fall within a few minutes of the overpass,
+across all the forward runs, and outline them:
 
 .. code-block:: python
 
@@ -81,23 +82,24 @@ forward runs, and outline them:
    plume.polygon      # shapely Polygon in longitude and latitude
    plume.density      # the kernel density it was cut from, (lat, lon), max 1
 
-The plume is where the 2-D kernel density of those positions is at least a
-tenth of its maximum. ``threshold`` moves that cut: higher is a tighter
-plume, lower a wider one. ``bandwidth`` smooths the density (0.1° in
-longitude and 0.15° in latitude by default; the kernel's standard deviation
-is a quarter of that, as in R's ``kde2d``). When the density above the
-threshold breaks into separate pieces, the largest is the plume. The
-outline follows the density grid's cells, 100 by 100 over the particles by
-default, so it is a little blocky; ``n`` refines it.
+The plume is where the 2-D kernel density of these positions is at least a
+tenth of its maximum. ``threshold`` sets that fraction. A higher value
+gives a tighter plume, and a lower value a wider one. ``bandwidth`` sets
+the smoothing, 0.1° in longitude and 0.15° in latitude by default. As in
+R's ``kde2d``, the kernel's standard deviation is a quarter of the
+bandwidth. If the area above the threshold falls into separate pieces, the
+largest piece is the plume. The outline follows the cells of the density
+grid, 100 by 100 over the particles by default, so it looks a little
+blocky. Raise ``n`` for a finer outline.
 
-Plot ``plume.density`` with the soundings and the outline before trusting
-it. A plume that misses the swath, or one that covers it entirely, has no
-background to offer.
+Plot ``plume.density`` with the soundings and the outline before you trust
+it. A plume that misses the swath, or one that covers all of it, leaves no
+background to take.
 
 The background
 --------------
 
-Give the soundings of the overpass, and the plume, to
+Pass the soundings of the overpass and the plume to
 :func:`~stilt.observations.plume_background`:
 
 .. code-block:: python
@@ -113,41 +115,45 @@ Give the soundings of the overpass, and the plume, to
    )
    bg.value          # the background, ppb here
    bg.uncertainty    # spread of the background soundings and their retrieval error, in quadrature
-   bg.sides          # the same per side of the plume
+   bg.sides          # the same for each side of the plume
    obs["in_plume"] = bg.in_plume
    obs["enhancement"] = obs["value"] - bg.value
 
-The soundings inside the plume are the enhanced ones. Around their
-bounding box, padded by ``pad`` (a tenth of its size), the out-of-plume
-soundings within ``width`` (half a degree) on each side are the background
-candidates, and the background is their median. ``bg.sides`` has the
-count, mean, median, spread and retrieval error for the north, south, east
-and west strips separately. If they disagree, one side is probably
-downwind of something; pass ``side="west"`` (or whichever is upwind, which
-the particles' drift tells you) to use that side alone.
+The soundings inside the plume are the enhanced ones. PYSTILT draws the
+bounding box of those soundings and pads it on each side by ``pad`` times
+its size (0.1 by default). The background candidates are the soundings
+outside the plume within ``width`` degrees (0.5 by default) of that box, to
+the north, south, east, or west. The background is their median.
+
+``bg.sides`` has the count, mean, median, spread, and retrieval error of
+the soundings on each side. If the sides disagree, one of them is probably
+downwind of another source. Pass the upwind side, for example
+``side="west"``, to use that side alone. The drift of the forward particles
+tells you which side is upwind.
 
 Before any of that, ``trim`` drops the out-of-plume soundings above the
-90th percentile of their values. That guards against enhanced air the
-outline missed, at the cost of a slightly low background when the field
-is clean; ``trim=None`` keeps everything.
+90th percentile of their values. This guards against enhanced air that the
+outline missed, at the cost of a slightly low background when the air is
+clean. ``trim=None`` keeps every sounding.
 
-:func:`~stilt.observations.plume_background` raises when no sounding lies
-inside the plume, since then the overpass did not see the city. Pass only
-good-quality soundings; missing values are ignored.
+:func:`~stilt.observations.plume_background` raises an error when no
+sounding lies inside the plume, because then the overpass did not see the
+city. Pass only good-quality soundings. Missing values are ignored.
 
 Choices made here
 -----------------
 
-- The background is a statistic of the swath, not of a model. It carries
-  the instrument's bias, which cancels when the enhancement is
+- The background comes from the swath, not from a model. It carries the
+  instrument's bias, which cancels when the enhancement is
   ``value - background`` from the same swath.
-- The plume outline is cut from the density on its grid, not traced as a
-  contour, so it is exact on that grid and never self-intersects. X-STILT
-  traces the contour and repairs broken pieces; the largest-area rule here
-  does the same job.
-- The plume's threshold is yours. X-STILT raises it when no low density
-  falls in the release box; here you see the density and decide.
-- Side strips are clipped to the plume box's extent along the strip, so
-  a northern strip does not run across the whole swath.
-- Soundings are points at their centres. A pixel that straddles the
-  outline counts by where its centre falls.
+- The outline is built from the density grid cells above the threshold
+  rather than traced as a contour. It matches the grid exactly and never
+  crosses itself. X-STILT traces the contour and repairs broken pieces.
+  Keeping the largest piece does the same job here.
+- You choose the threshold. X-STILT raises it automatically when no low
+  density falls in the release box. Here you look at the density and
+  decide.
+- The side strips cover only the length of the padded box, so a northern
+  strip does not run across the whole swath.
+- Each sounding is a point at its centre. A pixel that straddles the
+  outline counts as inside or outside by where its centre falls.

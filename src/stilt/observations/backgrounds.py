@@ -1,19 +1,18 @@
 """
-Background mole fraction at a receptor, from a field sampled at trajectory endpoints.
+Background mole fraction at a receptor, from a field sampled where the particles end.
 
 A back-trajectory ends where the receptor's air came from. Sampling a
-mole-fraction field (a global model such as CarbonTracker or CAMS, or an
-observed curtain) at every particle's endpoint and averaging over the
-particles gives the background: what the receptor would see with no fluxes
-inside the domain. Adding the modelled enhancement gives the modelled mole
-fraction. X-STILT does the same per particle in ``endpts.trajfoot``, and
-CT-STILT is the same idea with CarbonTracker.
+mole-fraction field, such as CarbonTracker or CAMS, at every particle's
+endpoint and averaging over the particles gives the background: what the
+receptor would see with no fluxes inside the domain. Adding the modeled
+enhancement gives the modeled mole fraction. X-STILT does the same in
+``endpts.trajfoot``, and CT-STILT does it with CarbonTracker.
 
-The average is weighted the way the footprint is. The particle transforms
-that weight the enhancement (averaging kernel, pressure weighting, lifetime
-decay) weight the background too, so the two add. Readers stay outside
-PYSTILT: the field comes in as an :class:`xarray.DataArray`, or already
-sampled as one value per particle.
+The average is weighted the way the footprint is, so the particle
+transforms (averaging kernel, pressure weighting, lifetime decay) apply to
+the background too, and the background and enhancement add. The field is
+passed in as an :class:`xarray.DataArray`, or already sampled as one value
+per particle.
 """
 
 from __future__ import annotations
@@ -35,16 +34,21 @@ from stilt.transforms import TransformContext, apply_transforms
 @dataclass(frozen=True)
 class Background:
     """
-    Result of :func:`background`.
+    Background at a receptor, returned by :func:`background`.
 
-    ``value`` is the background at the receptor, weighted like the footprint:
-    ``Σ weights × per_particle``. ``per_particle`` is the field at each
-    particle's endpoint, indexed by ``indx``; ``NaN`` where the endpoint
-    lies outside the field. ``weights`` is each particle's share, indexed
-    the same way: ``1 / N`` each without transforms, so they sum to one; with
-    pressure weighting they sum to the fraction of the column's air mass the
-    particles cover. Particles without a value are left out of ``value`` and
-    the others carry their weight, as if they had the same mean.
+    Attributes
+    ----------
+    value : float
+        Background at the receptor, weighted like the footprint:
+        ``Σ weights × per_particle``. Particles with no value count as the
+        weighted mean of the others.
+    per_particle : pandas.Series
+        Field value at each particle's endpoint, indexed by ``indx``. ``NaN``
+        where the endpoint is outside the field.
+    weights : pandas.Series
+        Each particle's weight, indexed by ``indx``. Without transforms each
+        is ``1 / N`` and they sum to one. With pressure weighting they sum to
+        the fraction of the atmosphere's mass inside the column.
     """
 
     value: float
@@ -54,10 +58,11 @@ class Background:
 
 def vertical_dim(field: xr.DataArray) -> str | None:
     """
-    The field's vertical dimension: the one that is not horizontal or ``time``.
+    Return the name of a field's vertical dimension.
 
-    ``None`` for a field with no vertical dimension (a column mean or a surface
-    field). More than one candidate is an error.
+    That is the one dimension that is neither horizontal nor ``time``.
+    Returns ``None`` for a field without one, such as a column mean or a
+    surface field, and raises if there is more than one candidate.
     """
     y_dim, x_dim = horizontal_dims(field)
     extra = [str(d) for d in field.dims if d not in (y_dim, x_dim, "time")]
@@ -77,17 +82,33 @@ def sample_field(
     times: ArrayLike | None = None,
 ) -> np.ndarray:
     """
-    Field value at the cell nearest each ``(x, y[, z][, time])`` point.
+    Return the field's value in the cell nearest each point.
 
-    ``x`` / ``y`` are longitudes / latitudes for a ``lat`` / ``lon`` field.
-    ``z`` is required when the field has a vertical dimension (see
-    :func:`vertical_dim`) and is in that coordinate's units; it is matched to
-    the nearest level and held at the ends, so a point above the top level
-    takes the top level. ``times`` is required when the field has a ``time``
-    dimension and is matched the same way. Horizontally, a point outside the
-    field's cells is ``NaN``: a missing mole fraction is not zero, unlike a
-    missing flux in :func:`stilt.flux.sample_flux`. Longitudes are wrapped
-    into the field's convention (``-180..180`` or ``0..360``).
+    A point outside the field horizontally gives ``NaN``, since a missing
+    mole fraction is unknown rather than zero (unlike a missing flux in
+    :func:`stilt.flux.sample_flux`). Longitudes are wrapped to the field's
+    convention (-180 to 180 or 0 to 360).
+
+    Parameters
+    ----------
+    field : xarray.DataArray
+        Field with horizontal dimensions (``lat`` and ``lon``, or ``y`` and
+        ``x``), and optionally a vertical dimension and ``time``.
+    x, y : array-like
+        Point coordinates: longitude and latitude for a ``lat``/``lon``
+        field.
+    z : array-like, optional
+        Vertical coordinate of each point, in the units of the field's
+        vertical dimension. Required when the field has one. Matched to the
+        nearest level, so a point above the top level takes the top level.
+    times : array-like, optional
+        Time of each point. Required when the field has a ``time``
+        dimension. Matched to the nearest time.
+
+    Returns
+    -------
+    numpy.ndarray
+        One value per point.
     """
     y_dim, x_dim = horizontal_dims(field)
     xs = np.asarray(x, dtype=float).ravel()
@@ -126,7 +147,7 @@ def sample_field(
 
 
 def _nearest_level(levels: xr.DataArray, z: np.ndarray) -> np.ndarray:
-    """Index of the level nearest each ``z``, in either ordering, clamped to the ends."""
+    """Return the index of the level nearest each ``z``."""
     coords = levels.to_numpy().astype(float)
     if coords.ndim != 1 or coords.size == 0:
         raise ValueError("The vertical coordinate must be a non-empty 1-D array.")
@@ -135,15 +156,15 @@ def _nearest_level(levels: xr.DataArray, z: np.ndarray) -> np.ndarray:
 
 def particle_background(particles: pd.DataFrame, field: xr.DataArray) -> pd.Series:
     """
-    The field at each particle's endpoint, indexed by ``indx``.
+    Return the field at each particle's endpoint, indexed by ``indx``.
 
     The endpoint is the row farthest in time from release
-    (:func:`stilt.trajectory.endpoint_rows`). The field's vertical dimension,
-    if any, must be named after the particle column it is matched against:
-    ``pres`` for pressure in hPa or ``zagl`` for height above ground in
-    metres (rename it with ``field.rename(level="pres")``), or a column you
-    add, such as height above sea level from ``zagl + zsfc``. A time-varying
-    field is sampled at the endpoint's ``datetime``.
+    (:func:`stilt.trajectory.endpoint_rows`). A vertical dimension must be
+    named after the particle column it is matched against: ``pres`` for
+    pressure in hPa, ``zagl`` for height above ground in meters, or a column
+    you add, such as height above sea level from ``zagl + zsfc``. Rename it
+    with, for example, ``field.rename(level="pres")``. A field with a
+    ``time`` dimension is sampled at the endpoint's ``datetime``.
     """
     ends = endpoint_rows(particles)
     zdim = vertical_dim(field)
@@ -177,14 +198,13 @@ def endpoint_weights(
     context: TransformContext | None = None,
 ) -> pd.Series:
     """
-    Each particle's weight at its endpoint after the transforms, indexed by ``indx``.
+    Return each particle's transform weight at its endpoint, indexed by ``indx``.
 
-    A transform is a multiplicative factor on ``foot``, so applying the
-    transforms to a table whose ``foot`` is one everywhere leaves that factor
-    behind: the averaging kernel and pressure weight of the particle, and the
-    lifetime decay at its endpoint age. Without transforms every weight is
-    one. Divided by the particle count, these are the weights
-    :meth:`stilt.Footprint.calculate` gives the particles.
+    Transforms multiply ``foot``, so applying them to particles whose
+    ``foot`` is 1 leaves each particle's weight: its averaging kernel and
+    pressure weight, and the lifetime decay at its endpoint age. Without
+    transforms every weight is 1. Divided by the particle count, these are
+    the weights :meth:`stilt.Footprint.calculate` gives the particles.
     """
     transforms = list(transforms)
     if transforms:
@@ -203,11 +223,11 @@ def endpoint_weights(
 
 def fill_missing(per_particle: pd.Series, weights: pd.Series) -> pd.Series:
     """
-    Replace ``NaN`` per-particle values with the weighted mean of the others.
+    Replace missing per-particle values with the weighted mean of the others.
 
-    A particle whose endpoint lies outside the field then neither adds to nor
-    dilutes the background; the result is ``NaN`` everywhere when no particle
-    has a value.
+    A particle whose endpoint is outside the field then does not change the
+    background. The result is ``NaN`` everywhere when no particle has a
+    value.
     """
     values = per_particle.reindex(weights.index).to_numpy(dtype=float)
     w = weights.to_numpy(dtype=float)
@@ -229,30 +249,40 @@ def background(
     context: TransformContext | None = None,
 ) -> Background:
     """
-    Background mole fraction at the receptor, from the field at the trajectory endpoints.
+    Return the background mole fraction at a receptor.
+
+    The background is the field at each particle's endpoint, averaged over
+    the particles with the footprint's weights.
 
     Parameters
     ----------
-    particles
+    particles : pandas.DataFrame
         The simulation's particle table (``sim.trajectories.data``).
-    field
+    field : xarray.DataArray or pandas.Series
         The background field (see :func:`particle_background` for its
         layout), or one value per particle that you sampled yourself, as a
-        Series indexed by ``indx``: for example lair's
+        Series indexed by ``indx``. For example, lair's
         ``CarbonTracker.sample`` on ``sim.trajectories.endpoints()``.
-    transforms, context
-        The footprint's particle transforms and the context to apply them
-        with (``sim.config.transforms`` and ``sim.transform_context()``), so
-        the background is weighted the way the footprint is and adds to its
-        enhancement. For a tower receptor there is nothing to pass.
+    transforms : sequence, optional
+        The footprint's particle transforms (``sim.config.transforms``), so
+        the background is weighted like the footprint and adds to its
+        enhancement. A tower receptor has none.
+    context : TransformContext, optional
+        Context to apply the transforms with
+        (``sim.transform_context()``). Required by an averaging kernel read
+        from a table.
+
+    Returns
+    -------
+    Background
 
     Notes
     -----
-    Without transforms the value is the plain mean over particles. With
-    pressure weighting the weights sum to the fraction of the column's air
-    mass the particles cover, ``(p_sfc - p_top) / p_sfc``, the same fraction
-    the enhancement covers; the part of the column above the receptor top is
-    still yours to add from the same field.
+    Without transforms the value is the mean over particles. With pressure
+    weighting the weights sum to the fraction of the atmosphere's mass inside
+    the column, ``(p_sfc - p_top) / p_sfc``, the same fraction the
+    enhancement covers. Add the part of the column above its top from the
+    same field.
     """
     if isinstance(field, pd.Series):
         per_particle = field.rename("background")
@@ -269,9 +299,9 @@ def background(
 
 def default_context() -> TransformContext:
     """
-    A placeholder context for transforms that do not read it.
+    Return a placeholder context for transforms that do not read it.
 
-    Transforms that do (an averaging-kernel ``table``) need the real one from
+    An averaging kernel read from a ``table`` needs the real context from
     ``sim.transform_context()``.
     """
     from stilt.receptors import PointReceptor

@@ -1,72 +1,70 @@
 Transport Error
 ===============
 
-A footprint says where a measurement's air came from according to one
-meteorological analysis. The analysis has errors, so the modelled
-enhancement does too. PYSTILT estimates that error with the method of Lin
-and Gerbig (2005): run the particles a second time with an extra random
-wind component that has the statistics of the meteorology's errors, and
-take the extra spread of the modelled enhancement across the ensemble as
-the transport-error variance. An inversion uses the result as the transport
-part of its model-data mismatch for each observation.
+A footprint says where a measurement's air came from, according to one
+meteorological analysis. The analysis has wind errors, so the modelled
+enhancement has an error too. PYSTILT estimates it with the method of
+`Lin and Gerbig (2005) <https://doi.org/10.1029/2004GL021127>`_. You run
+the particles a second time with a random wind error added, one that has
+the statistics of the meteorology's errors. The perturbed particles spread
+further. The extra spread of the modelled enhancement across the particles
+is the transport-error variance. An inversion uses it as the transport part
+of each observation's model-data mismatch.
 
 Run with wind errors
 --------------------
 
-The perturbed run is a :doc:`variant <configuration>` of its own: the same
-receptors under the same meteorology, with the error statistics of that
-meteorology added (the same names as STILT-R):
+The perturbed run is a :doc:`variant <configuration>` of its own. It uses
+the same receptors and meteorology, with four wind-error settings added.
+The names are the same as in STILT-R.
 
 .. code-block:: yaml
 
    variants:
      hrrr: {}                 # the unperturbed run
      hrrr-err:                # the same run with perturbed winds
-       siguverr: 2.6          # wind speed error, m/s
+       siguverr: 2.6          # wind error standard deviation, m/s
        tluverr: 260           # its correlation time, min
        zcoruverr: 450         # its vertical correlation length, m
        horcoruverr: 14        # its horizontal correlation length, km
-       grid: null             # particles only; transport_error needs no footprint
+       grid: null             # particles only
 
-Every receptor then has a second simulation whose particles saw the
-perturbed winds, ``model.simulations[rid, "hrrr-err"].trajectories``. It is
-an ordinary HYSPLIT run with its own directory, log, and ``WINDERR`` file,
-so it can be added to a finished project later: only the new variant runs.
-Leave ``grid`` set on the error variant if you want a perturbed footprint
-for plotting; nothing below needs one. The error run doubles the transport
-cost.
+Every receptor then has a second simulation,
+``model.simulations[rid, "hrrr-err"]``, whose particles saw the perturbed
+winds. You can add the error variant to a finished project, and only the
+new simulations run. The error run costs as much as the original.
+``grid: null`` skips the footprint, which the error calculation does not
+need. Keep a grid if you want to plot a perturbed footprint.
 
-Mixed layer height errors (``sigzierr``, ``tlzierr``, ``horcorzierr``) are
-set the same way, but HYSPLIT applies them differently: each particle's
-footprint increment is multiplied by an independent random factor with that
-standard deviation, and its path is unchanged. Because the factors are
-independent between particles, their effect on the receptor enhancement
-averages away, and their effect on the ensemble variance is small compared
-with the sampling noise of a few thousand particles. PYSTILT's validation
-could not resolve a 50 % mixed-layer error with 3 000 particles. For an
-error shared by every particle, scale the mixed layer instead
+Choosing the settings
+~~~~~~~~~~~~~~~~~~~~~
+
+The correlation scales matter as much as the standard deviation. HYSPLIT
+decorrelates the wind error over time (``tluverr``) and over the distance
+a particle travels (``horcoruverr``). If the scales are too short, the
+error turns into noise that averages out along each trajectory. The
+perturbed particles then spread no further than the unperturbed ones, and
+there is nothing to measure. At 10 m/s, for example, a particle crosses a
+5 km correlation length in eight minutes.
+
+Derive the four values from wind observations for your meteorology and
+region, as Lin and Gerbig did (:doc:`wind_errors`). Do not copy them from
+another analysis, and do not pick small scales to be safe. The values above
+are for HRRR over the Salt Lake Valley.
+
+HYSPLIT also has mixed-layer height errors (``sigzierr``, ``tlzierr``,
+``horcorzierr``), set the same way. They have little effect. HYSPLIT
+multiplies each particle's footprint by its own random factor and leaves
+the path alone. Because the factors are independent between particles,
+they average out over a few thousand particles. For a mixed-layer error
+that every particle shares, use ``ziscale`` instead
 (`Mixed-layer height`_).
-
-**The correlation scales decide whether there is anything to measure.**
-HYSPLIT decorrelates the wind error both over time (``tluverr``) and over
-the distance a particle travels (``horcoruverr``). At 10 m/s a particle
-covers 5 km in eight minutes, so a 5 km horizontal scale makes the error
-white noise that averages out along the trajectory, and the perturbed
-particles spread only a percent or two more than the unperturbed ones. Lin
-and Gerbig derived their scales from variograms of analysis minus radiosonde
-winds and got about 120 km, 4 hours and 900 m for an 80 km analysis.
-Derive yours the same way for the meteorology and region you use
-(:doc:`wind_errors`); the values above were derived for HRRR over the
-Salt Lake Valley. Values taken from another analysis, or guessed small to
-be safe, are worse than they look: PYSTILT's validation found that scales
-of a few kilometres and an hour produce no detectable perturbation at all.
 
 Several realizations
 ~~~~~~~~~~~~~~~~~~~~
 
-One error run is one draw of the perturbation field, and its variance
-estimate carries the sampling noise of that draw. Ask for several on the
-error variant:
+One error run is one random draw of the wind error. To average over
+several draws, set ``realizations`` on the error variant:
 
 .. code-block:: yaml
 
@@ -75,31 +73,24 @@ error variant:
      # ...
      realizations: 4          # hrrr-err-0 .. hrrr-err-3
 
-The variant then runs four times per receptor, as four simulations named
-``hrrr-err-0`` to ``hrrr-err-3``. Only the perturbed runs repeat; the
-unperturbed ``hrrr`` run is shared. Each realization needs its own draw
-of the perturbation field, and there are two ways to get one:
+The variant then runs four times per receptor, as the simulations
+``hrrr-err-0`` to ``hrrr-err-3``. The unperturbed ``hrrr`` run is not
+repeated. A variant with ``realizations`` always gets numbered names, even
+with ``realizations: 1``. Each realization needs a different random draw,
+and there are two ways to get one:
 
-- ``krand: 4`` (the default). HYSPLIT seeds every run from the clock, so
-  the realizations are independent but not reproducible. The clock seed
-  has only about 5000 distinct values, so at ``N = 100`` there is a 60 %
-  chance that two realizations are bit-identical copies; at the ``N`` of
-  a few used here that chance is negligible.
-- ``krand: 2`` with a ``seed``. PYSTILT runs realization ``k`` with the
-  seed ``seed + k``: realization 0 shares the unperturbed run's seed, as
-  STILT-R's error run does, and the others differ from it and from each
-  other. A rerun reproduces every one of them bit for bit.
+- ``krand: 4``, the default. HYSPLIT seeds each run from the clock. The
+  realizations differ, but a rerun gives different ones.
+- ``krand: 2`` with a ``seed``. Realization ``k`` runs with ``seed + k``,
+  and a rerun reproduces every realization exactly.
 
-Any other combination would repeat the same field ``N`` times, and
-PYSTILT refuses it when it reads the config. Each realization is its own
-simulation, so a rerun does only the ones that are missing and
-a preempted job picks up where it stopped. Raising ``realizations`` later
-adds simulations and touches nothing that exists: a variant that declares
-``realizations`` is always a numbered group, even at ``1`` (``hrrr-err-0``).
+PYSTILT rejects any other setting when it reads the config, because every
+realization would get the same draw. Each realization is its own
+simulation, so a rerun only does the missing ones. You can raise
+``realizations`` later and only the new realizations run.
 
-Pass the whole set to :func:`~stilt.observations.transport_error` as a
-list. It averages each level's perturbed mean and variance over the
-realizations before taking the difference:
+Pass all the realizations to :func:`~stilt.observations.transport_error`
+as a list. It averages them before taking the difference:
 
 .. code-block:: python
 
@@ -111,24 +102,22 @@ realizations before taking the difference:
    )
    err.realizations  # 4
 
-What this buys is bounded. The perturbed side's sampling noise falls as
-``1/sqrt(N)``, but the unperturbed particles are the same in every
-realization, so their noise stays. The null spread of ``variance`` with
-``N`` realizations is ``sqrt((1 + 1/N) / 2)`` times the single-run
-``noise``, which tends to ``1/sqrt(2)``: at most a ``sqrt(2)`` tighter
-estimate, never a resolved one from an unresolved one. ``noise`` already
-carries the factor. Realizations earn their transport cost when a single
-run's ``variance`` sits within a factor of two of its ``noise``; when it
-is far below, the wind-error scales are the problem, not the sampling.
+More realizations help less than you might expect. They reduce the noise
+of the perturbed runs, but every realization is compared with the same
+unperturbed run, so the noise of the estimate falls by at most a factor of
+√2 (see `Notes`_). Realizations are worth their cost when a single run's
+``variance`` is within a factor of two of its ``noise``. When ``variance``
+is far below ``noise``, check the wind-error scales instead.
 
 The modelled enhancement
 ------------------------
 
 The enhancement a footprint predicts for a surface flux field is the
 footprint times the flux, summed over the grid. ``flux`` is an
-:class:`xarray.DataArray` on ``lat`` / ``lon`` (with an optional ``time``
-dimension); it is sampled at the footprint's cell centres, and a footprint
-cell outside the flux field contributes nothing.
+:class:`xarray.DataArray` on ``lat`` and ``lon``, with an optional ``time``
+dimension. It is sampled at the footprint's cell centres, and footprint
+cells outside the flux field add nothing. If the flux cells are much
+smaller than the footprint cells, regrid the flux first.
 
 .. code-block:: python
 
@@ -137,40 +126,43 @@ cell outside the flux field contributes nothing.
    enhancement = foot.enhancement(flux)             # ppm per footprint time step
    total = float(enhancement.sum())
 
-Units are yours: a flux in µmol m⁻² s⁻¹ times a footprint in
-ppm per (µmol m⁻² s⁻¹) gives ppm.
+A flux in µmol m⁻² s⁻¹ times a footprint in ppm per (µmol m⁻² s⁻¹) gives
+ppm.
 
 The emission error
 ------------------
 
-The same product gives the enhancement's uncertainty from the flux field's
-own uncertainty. With ``sigma`` a field of one standard deviation per cell,
-in the flux's units, put it on the footprint's grid and take two limits:
+The flux field's own uncertainty gives another error on the enhancement.
+Take ``sigma``, a field of one standard deviation per cell in the flux's
+units. Put it on the footprint grid and compute two limits:
 
 .. code-block:: python
 
-   s = sigma.reindex(lat=foot.data["lat"], lon=foot.data["lon"], method="nearest")
-   err_correlated = float((foot.data * s).sum())            # every cell errs the same way
-   err_independent = float(np.sqrt(((foot.data * s) ** 2).sum()))   # each cell on its own
+   import numpy as np
 
-The first is the footprint times sigma summed over the grid, what X-STILT
-reports as the emission error on the column (``cal.emiss.err``, with sigma
-from the spread of several inventories). It assumes one shared error
-across all cells, so it is an upper bound. The second treats the cells as
-independent and is a lower bound. Real inventories sit between: their
-errors correlate over some distance, and the number in between needs that
-covariance, which is the prior error covariance of an inversion. fips
-computes it for every observation at once as
-``InverseProblem.prior_obs_error``, the footprint matrix times the prior
-covariance times its transpose, so an inversion setup gives the emission
-error for free. Add it to the transport error and the retrieval error in
-quadrature for the error budget of a modelled value.
+   f = foot.integrate_over_time()
+   s = sigma.reindex(lat=f["lat"], lon=f["lon"], method="nearest")
+   err_correlated = float((f * s).sum())                   # every cell errs the same way
+   err_independent = float(np.sqrt(((f * s) ** 2).sum()))  # each cell on its own
+
+The first assumes the errors in all cells move together, so it is an upper
+bound. X-STILT reports this one as the emission error (``cal.emiss.err``),
+with ``sigma`` from the spread of several inventories. The second assumes
+the cells are independent, which gives a lower bound. Real inventory errors
+are correlated over some distance, so the true value lies in between.
+Computing it needs the covariance of the flux errors, which is the prior
+error covariance of an inversion. If you set up the inversion with fips,
+``InverseProblem.prior_obs_error`` is that covariance carried to every
+observation (the footprint matrix times the prior covariance times its
+transpose). The square root of its diagonal is each observation's emission
+error. Add it in quadrature to the transport and retrieval errors to get
+the total error of a modelled value.
 
 The transport error
 -------------------
 
-:func:`~stilt.observations.transport_error` takes the unperturbed and
-perturbed particle tables of one receptor and the flux field:
+:func:`~stilt.observations.transport_error` takes a receptor's unperturbed
+and perturbed particle tables and the flux field:
 
 .. code-block:: python
 
@@ -192,89 +184,95 @@ perturbed particle tables of one receptor and the flux field:
    errors = pd.DataFrame(rows).set_index("receptor")
 
 ``result.variance`` is the transport-error variance of the modelled
-enhancement, in the enhancement's units squared, and ``result.sd`` its
+enhancement, in the enhancement's units squared. ``result.sd`` is its
 square root. Pass the footprint's transforms and the simulation's context
-so the error is weighted the way the footprint is: the averaging kernel
-(including one from a per-receptor table), pressure weighting, and any
-lifetime decay are applied to both particle tables first. For a tower
-receptor there is nothing to pass.
+so the particles are weighted the way the footprint weights them. That
+covers the averaging kernel (including one from a per-receptor table),
+pressure weighting, and lifetime decay. For a tower receptor there is
+nothing to pass.
 
 Is the estimate meaningful?
 ---------------------------
 
 ``variance`` is the difference of two sample variances, each from a few
-thousand particles, so it is noisy and comes out negative some of the
-time. That is not a bug. Two things tell you whether a value means
-anything:
+thousand particles. It is noisy and is sometimes negative. Two checks tell
+you whether a value means anything:
 
-- ``result.noise`` is the standard deviation of ``variance`` you would get
-  with no wind error at all, estimated by splitting the unperturbed
-  particles into random halves and treating one half as the perturbed run.
-  A ``variance`` within two or three times ``noise`` is unresolved. With
-  several realizations, ``noise`` already includes their (bounded) gain.
-- Over many receptors, aggregate the signed ``variance`` with a median (by
-  hour, season, or site) rather than clipping each value at zero; clipping
-  turns noise into a positive error. ``result.sd`` clips for convenience
-  and is the number to use only once the variance is resolved.
+- ``result.noise`` is the standard deviation ``variance`` would have with no
+  wind error at all. A ``variance`` within two or three times ``noise`` is
+  not resolved.
+- Over many receptors, take the median of the signed ``variance``, by hour,
+  season, or site. Do not clip each value at zero first, because that turns
+  noise into a positive error. ``result.sd`` treats a negative variance as
+  zero, so use it only once the variance is resolved.
 
-The signal is strongest when turbulence spreads the particles least: stable
-nights and winter. On a convective afternoon the unperturbed particles are
-already spread over the whole boundary layer, the wind perturbation adds
-little, and the estimate sits at its noise floor. PYSTILT's own validation
-on a Salt Lake Valley column found exactly that with 3 000 particles; a
-year of tower receptors gave 12 to 15 ppb in stable conditions and 2 to
-3 ppb, barely resolved, in the afternoon.
+The signal is largest when turbulence spreads the particles least, at night
+and in winter. On a convective afternoon the unperturbed particles already
+fill the boundary layer. The wind error adds little, and the estimate is
+usually within its noise.
 
 What the numbers mean
 ---------------------
 
-``result.levels`` shows the calculation per release level (one row for a
-point receptor):
+``result.levels`` shows the calculation for each release level. A point
+receptor has one level.
 
-- ``mean_orig`` / ``mean_err``: the mean per-particle enhancement without
-  and with the perturbation. Their weighted sums over levels are
-  ``result.enhancement`` (the same number the footprint gives) and
-  ``result.enhancement_perturbed``.
-- ``var_orig`` / ``var_err``: the ensemble variance of the per-particle
-  enhancement, and ``dvar`` their difference: Lin and Gerbig's equation 4
-  for that level.
-- ``sd_trans``: the signed square root of ``dvar``.
-- ``weight``: the level's share of the particles, which is its share of
-  the column once the transforms are applied.
+- ``height`` is the level's mean release height in metres, and ``n`` its
+  number of particles.
+- ``weight`` is the level's share of the particles.
+- ``mean_orig`` and ``mean_err`` are the mean enhancement per particle
+  without and with the perturbation. Their weighted sums are
+  ``result.enhancement`` and ``result.enhancement_perturbed``.
+- ``var_orig`` and ``var_err`` are the variances of the per-particle
+  enhancement, and ``dvar`` is their difference. This is Lin and Gerbig's
+  equation 4 for the level.
+- ``sd_trans`` is the square root of ``dvar``, keeping its sign.
 
-The column value combines the levels with an exponential vertical error
-correlation, ``Σ w_i w_j s_i s_j exp(-|h_i - h_j| / L)`` with the signed
-``dvar`` on the diagonal. ``length_scale`` is X-STILT's empirical 356 m;
-``None`` treats the levels as uncorrelated, and a very large value adds
-them linearly. Column particles are grouped into ``levels`` equal-width
-release-height bins (20 by default); a multipoint or slant receptor uses
-its own release heights.
+``result.enhancement`` is close to what the footprint gives. The two differ
+a little because the footprint smooths the particles onto its grid.
 
-Two options reproduce X-STILT (Wu et al., 2018) rather than Lin and Gerbig.
-``percentile=0.99`` drops the top 1% of particles per level before the
-variance, which tames a few particles that cross a point source at the
-cost of a small bias. ``regression=True`` replaces each level's difference
-with a line fitted through the levels whose difference was positive; that
-selection biases the slope above one, so under pure sampling noise it
-reports a positive error at every level. Both are off by default.
+A column receptor's particles are grouped into ``levels`` release-height
+bins of equal width, 20 by default. A multipoint or slant receptor with no
+more than ``levels`` release heights gets one level per height. The levels
+are then combined with an exponential error correlation in the vertical:
 
-Two limits remain. The method measures how much the perturbed winds move
-particles between flux cells, so it says little when the flux field is
-uniform, and it depends on the wind statistics you gave the run. And it is
-the error in transport only: emission and retrieval errors are separate
-terms. The background's share of the transport error, from the wind errors
-moving the trajectory endpoints, is included when you pass a background
-field (:doc:`background`).
+.. math::
+
+   \sigma^2 = \sum_i w_i^2\, \mathrm{dvar}_i
+            + \sum_{i \ne j} w_i w_j s_i s_j\, e^{-|h_i - h_j| / L}
+
+Here ``w`` is ``weight``, ``s`` is ``sd_trans``, ``h`` is ``height``, and
+``L`` is ``length_scale``, 356 m by default (X-STILT's value). With
+``length_scale=None`` the levels are independent.
+
+Two options reproduce X-STILT
+(`Wu et al., 2018 <https://doi.org/10.5194/gmd-11-4843-2018>`_). Both are
+off by default.
+
+- ``percentile=0.99`` drops the top 1 % of particles in each level before
+  taking the variance. This damps the few particles that pass over a point
+  source, at the cost of a small bias.
+- ``regression=True`` replaces each level's ``dvar`` with a line fitted
+  through the levels where ``dvar`` is positive. Fitting only those levels
+  biases the result upward. Under pure sampling noise it reports a positive
+  error at every level.
+
+The method measures how much the wind error moves particles between flux
+cells. It says little when the flux field is uniform, and it is only as
+good as the wind statistics you gave the run. It covers transport only.
+Emission and retrieval errors are separate terms. Wind errors also move
+the trajectory endpoints, and with them the background. Pass a background
+field to include that part (:doc:`background`).
 
 Mixed-layer height
 ------------------
 
-A real error in the mixed-layer height is shared: every particle in the
-valley sees the same layer that is too shallow or too deep. ``ziscale``
-represents that. It multiplies HYSPLIT's mixed-layer height by one factor
-for every particle, and runs with factors above and below 1.0 show how
-sensitive the enhancement is to the mixed layer. Declare the bracket as
-variants of the same project:
+A real error in the mixed-layer height is shared. Every particle in the
+valley sees the same layer, too shallow or too deep. ``ziscale`` models
+this. It multiplies HYSPLIT's mixed-layer height by one factor for every
+particle. Runs with factors above and below 1.0 show how sensitive the
+enhancement is to the mixed layer. Declare them as variants of the same
+project:
 
 .. code-block:: yaml
 
@@ -283,27 +281,43 @@ variants of the same project:
      hrrr-zi06: {ziscale: 0.6}   # every hour of the run; a list gives one factor per hour
      hrrr-zi14: {ziscale: 1.4}
 
-Two things to know before running a bracket:
+Before you run them:
 
-- Under ``krand: 2`` with a ``seed``, every variant draws the same
-  turbulence, so the difference between variants is the mixed layer alone.
-  Without a seed each run adds its own sampling noise to the difference.
-- HYSPLIT applies ``kmix0`` (150 m by default) after the factor, so a mixed
-  layer already at that floor is not lowered further. The hours above it
-  still are.
-- HYSPLIT holds at most 150 hourly factors. A scalar ``ziscale`` is
-  repeated for every hour, so it needs ``abs(n_hours) <= 150``; a longer
-  run takes a list, and hours past its end are unscaled.
+- Set ``krand: 2`` and a ``seed`` in the defaults. Every variant then draws
+  the same turbulence, and the difference between variants is the mixed
+  layer alone. Without a seed each run adds its own sampling noise.
+- HYSPLIT applies the minimum mixing depth ``kmix0`` (150 m by default)
+  after the factor. A mixed layer already at that floor is not lowered
+  further.
+- HYSPLIT holds at most 150 hourly factors. A single ``ziscale`` value is
+  repeated for every hour, so it needs ``abs(n_hours) <= 150``. For a
+  longer run, give a list. Hours past the end of the list are unscaled.
 
-How much it matters depends on the receptor. A column spans the mixed layer,
-and a change in its depth mostly moves footprint around inside the column:
-in PYSTILT's validation a 20 % shallower layer left a 0 to 3 km column's
-enhancement within its sampling noise. A surface receptor has no such
-averaging, and in a small test at a Salt Lake Valley tower a 40 % change
-moved the enhancement by a few tens of percent in most cases and hardly at
-all in others. Measure it for your own receptors.
+How much it matters depends on the receptor. A column spans the mixed
+layer, so a change in its depth mostly moves influence around inside the
+column, and the column enhancement changes little. A surface receptor has
+no such averaging and can change by tens of percent. Test it for your own
+receptors.
 
-The bracket is a sensitivity, not an error. Turning it into one needs how
-far the meteorology's mixed-layer height is from the real one, for example
-against radiosonde profiles analysed with the same bulk Richardson
-definition HYSPLIT uses by default (``kmixd: 3``).
+The spread between these runs is a sensitivity. To turn it into an error
+you need to know how far the meteorology's mixed-layer height is from the
+real one. One way is to compare it with radiosonde profiles, analysed with
+the bulk Richardson method HYSPLIT uses by default (``kmixd: 3``).
+
+Notes
+-----
+
+- Lin and Gerbig derived their scales from variograms of analysed minus
+  radiosonde winds, and got about 120 km, 4 hours, and 900 m for an 80 km
+  analysis. For a 3 km model such as HRRR the horizontal scale is much
+  shorter (:doc:`wind_errors`).
+- With ``krand: 4`` the clock gives only about 5000 distinct seeds, so two
+  realizations can be identical. With a few realizations this is very
+  unlikely. With a hundred it is more likely than not.
+- With ``krand: 2``, realization 0 uses ``seed`` itself, as STILT-R's error
+  run does.
+- ``noise`` comes from splitting the unperturbed particles into random
+  halves and treating one half as the perturbed run
+  (``noise_splits`` times, 16 by default). With ``N`` realizations the
+  noise is ``sqrt((1 + 1/N) / 2)`` times that of a single run, which never
+  falls below ``1/sqrt(2)``. ``result.noise`` already includes this factor.

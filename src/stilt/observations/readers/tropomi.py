@@ -1,4 +1,4 @@
-"""TROPOMI (Sentinel-5P) methane: operational L2 orbit files and the TROPOMI+GOSAT blended files."""
+"""Reader for TROPOMI (Sentinel-5P) methane, operational L2 orbits and TROPOMI+GOSAT blended files."""
 
 from __future__ import annotations
 
@@ -21,21 +21,31 @@ def read_tropomi_ch4(
     """
     Read a TROPOMI (Sentinel-5P) L2 methane file into a table of soundings.
 
-    Handles the operational ``S5P_*_L2__CH4___`` orbit files (``PRODUCT``
-    group, ``scanline`` × ``ground_pixel``) and the flat TROPOMI+GOSAT
-    blended files (``S5P_BLND_L2__CH4___``). ``lon_range`` and ``lat_range``
-    keep only the pixels inside a box, which is worth doing on a whole orbit.
+    Reads the operational ``S5P_*_L2__CH4___`` orbit files and the
+    TROPOMI+GOSAT blended files (``S5P_BLND_L2__CH4___``).
 
-    ``value`` is the bias-corrected XCH4 (or the blended XCH4 in a blended
-    file) in ppb; ``good`` is ``qa_value >= 0.5``, the product's own
-    recommendation. The pressure grid is rebuilt from ``surface_pressure``
-    and ``pressure_interval``: ``pressure_levels`` are the thirteen layer
-    boundaries from the surface up (the top one is 0 hPa) and ``ak_pressure``
-    the twelve layer midpoints that go with ``ak``. ``altitude_levels`` are
-    the product's own heights of those boundaries, which is the argument to
-    use for a slant path. ``apriori`` is the prior profile as a mole fraction
-    per layer, ppb. ``zenith`` and ``azimuth`` are the viewing angles toward
-    the satellite; the blended files carry none.
+    Parameters
+    ----------
+    path : str or Path
+        The product file.
+    lon_range, lat_range : tuple of float, optional
+        ``(min, max)`` longitude and latitude, in degrees. Only pixels inside
+        the box are read, which saves time on a whole orbit.
+
+    Returns
+    -------
+    pandas.DataFrame
+        One row per pixel. ``value`` is the bias-corrected XCH4, or the
+        blended XCH4 in a blended file, in ppb. ``good`` is
+        ``qa_value >= 0.5``, as the product recommends. The pressure grid is
+        rebuilt from ``surface_pressure`` and ``pressure_interval``.
+        ``pressure_levels`` are the 13 layer boundaries from the surface up,
+        the top one at 0 hPa, and ``ak_pressure`` the 12 layer midpoints
+        that go with ``ak``. ``altitude_levels`` are the product's heights of
+        those boundaries, to use for a slant path. ``apriori`` is the prior
+        profile as a mole fraction per layer, in ppb. ``zenith`` and
+        ``azimuth`` are the viewing angles toward the satellite. Blended
+        files have no viewing angles and no ``altitude_levels``.
     """
     path = Path(path)
     with Dataset(path) as ds:
@@ -47,7 +57,7 @@ def read_tropomi_ch4(
 def _tropomi_layers(
     psfc: np.ndarray, dp: np.ndarray, nlayer: int
 ) -> tuple[np.ndarray, np.ndarray]:
-    """Layer boundaries and midpoints in hPa, surface first, from psfc and dp."""
+    """Return layer boundaries and midpoints in hPa, surface first, from ``psfc`` and ``dp``."""
     k = np.arange(nlayer + 1)
     levels = psfc[:, None] - k[None, :] * dp[:, None]
     mids = psfc[:, None] - (np.arange(nlayer) + 0.5)[None, :] * dp[:, None]
@@ -60,7 +70,7 @@ def _tropomi_operational(
     lon_range: tuple[float, float] | None,
     lat_range: tuple[float, float] | None,
 ) -> pd.DataFrame:
-    """Read an operational S5P L2 CH4 orbit into the shared sounding columns."""
+    """Read an operational S5P L2 CH4 orbit file."""
     p = ds["PRODUCT"]
     geo = p["SUPPORT_DATA/GEOLOCATIONS"]
     det = p["SUPPORT_DATA/DETAILED_RESULTS"]
@@ -71,13 +81,13 @@ def _tropomi_operational(
     keep = _in_ranges(lon, lat, lon_range, lat_range)
     sl, gp = np.nonzero(keep)
 
-    # read the bounding slab of each variable once, then pick the kept pixels
+    # read the box around the kept pixels once, then pick them out
     s0, s1 = (int(sl.min()), int(sl.max()) + 1) if sl.size else (0, 0)
     g0, g1 = (int(gp.min()), int(gp.max()) + 1) if gp.size else (0, 0)
     si, gi = sl - s0, gp - g0
 
     def pick(var: Any) -> np.ndarray:
-        """Read one variable over the selected scanline/ground-pixel box."""
+        """Return one variable for the selected pixels."""
         return _float(var, (0, slice(s0, s1), slice(g0, g1)))[si, gi]
 
     time_utc = np.asarray(p["time_utc"][0, s0:s1]).astype(str)
@@ -136,7 +146,7 @@ def _tropomi_blended(
     lon_range: tuple[float, float] | None,
     lat_range: tuple[float, float] | None,
 ) -> pd.DataFrame:
-    """Read a TROPOMI+GOSAT blended file into the shared sounding columns."""
+    """Read a TROPOMI+GOSAT blended file."""
     lat = _float(ds["latitude"])
     lon = _float(ds["longitude"])
     keep = _in_ranges(lon, lat, lon_range, lat_range)
@@ -145,7 +155,7 @@ def _tropomi_blended(
     ri = ii - i0
 
     def pick(var: Any) -> np.ndarray:
-        """Read one variable over the selected soundings."""
+        """Return one variable for the selected soundings."""
         return _float(var, slice(i0, i1))[ri]
 
     times = pd.to_datetime(np.asarray(ds["time_utc"][i0:i1]).astype(str)[ri])
@@ -189,7 +199,7 @@ def _tropomi_blended(
 
 
 def _tropomi_frame(ids: list[str], columns: dict[str, Any]) -> pd.DataFrame:
-    """Assemble the read columns into the shared sounding table."""
+    """Return the sounding table for the columns read."""
     df = pd.DataFrame(columns, index=pd.RangeIndex(len(ids)))
     df["species"] = "xch4"
     df["units"] = "ppb"

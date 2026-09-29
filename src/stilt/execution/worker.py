@@ -1,13 +1,11 @@
 """
-Worker-side execution: run one simulation, one receptor, or many receptors.
+Worker functions that run one simulation, one receptor, or many receptors.
 
-:func:`run_simulation` runs one :class:`~stilt.simulation.Simulation` end to
-end (HYSPLIT where a trajectory is missing, then the footprint) and publishes
-its outputs. The unit of work handed to workers is a **receptor**:
-:func:`run_receptor` runs every variant of one receptor, transport variants
-before the derived ones that rasterize their particles.
-:func:`run_receptors` runs a list of receptor ids for a model, inline or in
-one process pool. :func:`pull_receptors` drains a Postgres work queue.
+Workers are handed receptors. :func:`run_receptor` runs every variant of
+one receptor, and :func:`run_simulation` runs each one: HYSPLIT where the
+trajectories are missing, then the footprint. :func:`run_receptors` runs a
+list of receptors in this process or a process pool, and
+:func:`pull_receptors` takes receptors from the PostgreSQL work queue.
 """
 
 from __future__ import annotations
@@ -32,18 +30,26 @@ logger = logging.getLogger(__name__)
 
 Status = Literal["complete", "failed", "error", "interrupted"]
 
-#: Worst outcome first, for summarising a receptor's simulations.
+#: Statuses from worst to best, for summarizing a receptor's simulations.
 _SEVERITY: tuple[Status, ...] = ("interrupted", "error", "failed", "complete")
 
 
 @dataclass(frozen=True, slots=True)
 class SimulationResult:
     """
-    Outcome of one worker-run simulation.
+    Outcome of one simulation run by a worker.
 
-    ``failed`` is a STILT/HYSPLIT failure (a :class:`SimulationError`);
-    ``error`` is any other exception; ``interrupted`` means the worker was
-    preempted. Everything else about the run is readable from its outputs.
+    Attributes
+    ----------
+    sim_id : str
+        Simulation id.
+    status : {"complete", "failed", "error", "interrupted"}
+        ``failed`` is a HYSPLIT or STILT failure (a :class:`SimulationError`),
+        ``error`` any other exception, and ``interrupted`` a stopped worker.
+    error : str or None
+        Error message, when the simulation did not complete.
+    ran_hysplit : bool
+        Whether HYSPLIT ran in this call.
     """
 
     sim_id: str
@@ -57,8 +63,16 @@ class ReceptorResult:
     """
     Outcome of running every simulation of one receptor.
 
-    ``status`` is the worst of the simulations' statuses; ``simulations``
-    holds each one.
+    Attributes
+    ----------
+    receptor_id : str
+        Receptor id.
+    status : {"complete", "failed", "error", "interrupted"}
+        Worst status among the receptor's simulations.
+    error : str or None
+        Error message of the simulation with the worst status.
+    simulations : tuple of SimulationResult
+        Result of each simulation.
     """
 
     receptor_id: str
@@ -70,7 +84,7 @@ class ReceptorResult:
     def summarise(
         cls, receptor_id: str, results: list[SimulationResult]
     ) -> ReceptorResult:
-        """Fold simulation results into one receptor result."""
+        """Return the receptor result for a list of simulation results."""
         if not results:
             return cls(receptor_id, "complete")
         worst = min(results, key=lambda r: _SEVERITY.index(r.status))
@@ -78,7 +92,7 @@ class ReceptorResult:
 
 
 def _append_error_log(sim: Simulation, *, phase: str, error: BaseException) -> None:
-    """Append a PYSTILT error section to the simulation log."""
+    """Append the error and its traceback to the simulation log."""
     sim.log_path.parent.mkdir(parents=True, exist_ok=True)
     trace = traceback.format_exc()
     lines = [
@@ -96,22 +110,26 @@ def _append_error_log(sim: Simulation, *, phase: str, error: BaseException) -> N
 
 def run_simulation(sim: Simulation, *, skip_existing: bool = True) -> SimulationResult:
     """
-    Run one simulation and publish its outputs.
+    Run one simulation and copy its outputs into the project.
 
-    HYSPLIT runs when the trajectory is missing (or always, without
-    ``skip_existing``); a derived simulation reads its parent's trajectory
-    instead. The footprint is rasterized when one is configured, and always
-    when HYSPLIT ran in this call, so a footprint never outlives the
-    particles it was made from. An empty footprint writes a marker so the
-    outcome is durable and skip-existing treats it as done.
+    HYSPLIT runs when the trajectories are missing, or always when
+    ``skip_existing`` is false. A ``from:`` variant reads its parent's
+    trajectories instead. When the variant has a grid, the footprint is
+    computed if it is missing, and again whenever HYSPLIT ran, so a
+    footprint always matches its trajectories. An empty footprint writes a
+    ``.empty`` marker, which counts as complete. Errors are caught, written
+    to the simulation log, and returned in the result.
 
     Parameters
     ----------
-    sim
-        The simulation handle to run.
-    skip_existing
-        Skip outputs that already exist (trajectory parquet, footprint
-        netCDF or empty marker).
+    sim : Simulation
+        Simulation to run.
+    skip_existing : bool, default True
+        Keep trajectories and footprints that already exist.
+
+    Returns
+    -------
+    SimulationResult
     """
     phase = "trajectory"
     ran_hysplit = False
@@ -151,12 +169,26 @@ def run_receptor(
     model: Model, receptor_id: str, *, skip_existing: bool = True
 ) -> ReceptorResult:
     """
-    Run every simulation of one receptor, transport variants first.
+    Run every simulation of one receptor.
 
-    Derived variants come last so the trajectory they rasterize exists, and
-    one whose parent ran HYSPLIT in this call is regenerated even under
-    ``skip_existing``. A preemption (``KeyboardInterrupt``) is normalised
-    into an ``interrupted`` result.
+    Variants that run HYSPLIT go first, then the ``from:`` variants that
+    reuse their trajectories. A ``from:`` variant whose parent ran HYSPLIT in
+    this call is recomputed even with ``skip_existing``. A
+    ``KeyboardInterrupt``, such as a preempted job, gives an ``interrupted``
+    result.
+
+    Parameters
+    ----------
+    model : Model
+        Model the receptor belongs to.
+    receptor_id : str
+        Receptor to run.
+    skip_existing : bool, default True
+        Keep trajectories and footprints that already exist.
+
+    Returns
+    -------
+    ReceptorResult
     """
     sims = list(model.simulations.sel(receptor=receptor_id))
     ordered = [s for s in sims if not s.is_derived] + [s for s in sims if s.is_derived]
@@ -176,7 +208,7 @@ def run_receptor(
 
 
 def _log_result(result: ReceptorResult, done: int, total: int) -> None:
-    """One line per finished receptor: the run's progress log."""
+    """Log one progress line for a finished receptor."""
     detail = f": {result.error}" if result.error else ""
     logger.info(
         "[%d/%d] %s %s%s", done, total, result.receptor_id, result.status, detail
@@ -195,7 +227,7 @@ def _raise_interrupt(signum: int, frame: object) -> None:
 
 
 def _init_pool_worker(project: str, compute_root: str, skip_existing: bool) -> None:
-    """Build one Model per worker process and translate SIGTERM to interrupt."""
+    """Build the worker process's Model and make SIGTERM raise KeyboardInterrupt."""
     from stilt.model import Model
 
     global _POOL_MODEL, _POOL_SKIP
@@ -219,28 +251,30 @@ def run_receptors(
     skip_existing: bool = True,
 ) -> list[ReceptorResult]:
     """
-    Run a list of receptor ids for *model*, inline or in a process pool.
+    Run a list of receptors, in this process or in a process pool.
 
-    Pool workers rebuild the model from ``model.project.root``, so the
-    project's inputs must already be persisted (``Model.register()`` does
-    this; ``Model.run()`` calls it). A SIGTERM (Slurm preemption or
-    wall-time) is turned into an ``interrupted`` result and stops the batch.
+    Pool workers load the model again from ``model.project.root``, so the
+    config and receptors must already be saved in the project, as
+    :meth:`Model.register` does. A SIGTERM, such as Slurm preemption or the
+    end of the job's time limit, stops the batch with an ``interrupted``
+    result.
 
     Parameters
     ----------
-    model
-        The model the receptors belong to.
-    receptor_ids
-        Receptor ids to run.
-    n_cores
-        Worker processes. ``1`` runs inline in this process.
-    skip_existing
-        Skip outputs that already exist.
+    model : Model
+        Model the receptors belong to.
+    receptor_ids : list of str
+        Receptors to run.
+    n_cores : int, default 1
+        Number of worker processes. 1 runs in this process.
+    skip_existing : bool, default True
+        Keep trajectories and footprints that already exist.
 
     Returns
     -------
-    list[ReceptorResult]
-        One result per id, in input order (truncated after an interruption).
+    list of ReceptorResult
+        One result per receptor, in input order. After an interruption, only
+        the receptors that finished.
     """
     if not receptor_ids:
         return []
@@ -295,18 +329,22 @@ def pull_receptors(
     skip_existing: bool = True,
 ) -> None:
     """
-    Drain the model's Postgres work queue through atomic claims.
+    Run receptors from the model's work queue until it is empty.
+
+    Each receptor is claimed so that no other worker runs it at the same
+    time, and its result is recorded in the queue.
 
     Parameters
     ----------
-    model
-        A model with a configured queue (``PYSTILT_DB_URL``).
-    follow
-        Keep polling when the queue is empty (long-lived worker).
-    poll_interval
-        Base sleep between empty polls; backs off up to 60 s.
-    skip_existing
-        Skip outputs that already exist.
+    model : Model
+        Model with a work queue (set ``PYSTILT_DB_URL``).
+    follow : bool, default False
+        Keep waiting for new work when the queue is empty.
+    poll_interval : float, default 10.0
+        Seconds to wait after finding the queue empty. The wait doubles on
+        each empty check, up to 60 s.
+    skip_existing : bool, default True
+        Keep trajectories and footprints that already exist.
     """
     queue = model.queue
     if queue is None:

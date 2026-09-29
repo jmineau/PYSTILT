@@ -1,4 +1,4 @@
-"""Core STILT and HYSPLIT parameter models."""
+"""STILT and HYSPLIT run parameters."""
 
 from __future__ import annotations
 
@@ -11,46 +11,53 @@ from typing_extensions import Self
 
 
 class ModelParams(BaseModel):
-    """Core STILT run controls."""
+    """Simulation length, particle count, and particle output settings."""
 
     n_hours: int = Field(
         -24,
-        description="Number of hours to run each simulation; negative indicates backward in time.",
+        description="Length of each simulation, in hours. Negative runs backward in time.",
     )
     numpar: int = Field(
         200,
         description=(
-            "Number of particles released per simulation. Higher values reduce "
-            "stochastic noise in footprints at the cost of runtime and memory."
+            "Number of particles released per simulation. More particles give a "
+            "less noisy footprint and take longer to run."
         ),
     )
     hnf_plume: bool = Field(
         True,
         description=(
-            "If true, apply a vertical gaussian plume model to rescale the effective dilution depth for particles in the hyper near-field. This acts to scale up the influence of hyper-local fluxes on the receptor. If enabled, requires varsiwant to include a minimum of dens, tlgr, sigw, foot, mlht, samt. Default is enabled."
+            "Apply a vertical Gaussian plume model to particles in the hyper "
+            "near-field. This shrinks their effective dilution depth and raises "
+            "the influence of fluxes close to the receptor. Requires "
+            "``varsiwant`` to include ``dens``, ``tlgr``, ``sigw``, ``foot``, "
+            "``mlht``, and ``samt``."
         ),
     )
     rm_dat: bool = Field(
         True,
-        description="Remove HYSPLIT binary output files (*.dat) after parsing to save disk space.",
+        description=(
+            "Delete HYSPLIT's particle files (``PARTICLE_STILT.DAT`` and "
+            "``PARTICLE.DAT``) once they have been read, to save disk space."
+        ),
     )
     timeout: int | None = Field(
         None,
         description=(
-            "Wall-clock cap in seconds on a single hycs_std run. A wedged HYSPLIT process "
-            "otherwise blocks its worker forever (proc.wait has no deadline), so one bad "
-            "receptor can hold a batch worker until the Slurm wall time kills it. With a "
-            "timeout the run raises HYSPLITTimeoutError, which the execution loop already "
-            "records as a failure and moves past. Leave unset to wait indefinitely."
+            "Time limit for one ``hycs_std`` run, in seconds. A run that "
+            "exceeds it is stopped and recorded as a failed simulation, and the "
+            "worker moves on to the next one. Unset waits indefinitely, so a "
+            "hung HYSPLIT process can hold a batch worker until its job ends."
         ),
     )
     exe_dir: Path | None = Field(
         None,
         description=(
-            "Directory containing a custom ``hycs_std`` build to run instead of the "
-            "binary bundled with PYSTILT. Recorded with the trajectory parameters, so "
-            "outputs say which build produced them. A build that writes release-time "
-            "(t=0) rows to PARTICLE_STILT.DAT makes multipoint and slant receptors exact."
+            "Directory holding a custom ``hycs_std`` build to run in place of "
+            "the one bundled with PYSTILT. It is saved with each trajectory's "
+            "parameters. A build that writes release-time (t = 0) rows to "
+            "``PARTICLE_STILT.DAT`` gives exact release heights for multipoint "
+            "and slant receptors."
         ),
     )
     varsiwant: list[
@@ -101,195 +108,233 @@ class ModelParams(BaseModel):
             "tlgr",
         ],
         description=(
-            "`hycs_std` particle variables kept in trajectory output. Defaults "
-            "to the minimum required variables including 'time', 'indx', "
-            "'long', 'lati', 'zagl', 'foot', 'mlht', 'dens', 'samt', "
-            "'sigw', 'tlgr'."
+            "Particle variables ``hycs_std`` writes to the trajectory output. "
+            "The default is the set footprints need, plus ``pres`` for "
+            "pressure weighting."
         ),
     )
 
 
 class TransportParams(BaseModel):
-    """HYSPLIT transport and turbulence parameterization."""
+    """
+    HYSPLIT transport and turbulence settings.
+
+    Most of these are ``SETUP.CFG`` namelist entries with HYSPLIT's own
+    names. See the HYSPLIT user guide for the full meaning of each.
+    """
 
     capemin: float = Field(
         -1.0,
-        description="Minimum CAPE (J/kg) for convective mixing; -1 disables CAPE-triggered enhanced mixing.",
+        description=(
+            "Convection option. -1 turns convection off, -2 uses the Grell "
+            "scheme, and a positive value mixes vertically when CAPE exceeds "
+            "it, in J/kg."
+        ),
     )
     cmass: int = Field(
         0,
-        description="Compute grid output in concentration units (0) or mass units (1).",
+        description="Compute grid concentrations (0) or grid mass (1).",
     )
     conage: int = Field(
-        48, description="Particle age in hours for puff/particle conversion handling."
+        48, description="Particle age at which particles and puffs convert, in hours."
     )
-    cpack: int = Field(1, description="Binary concentration-grid packing mode.")
+    cpack: int = Field(1, description="Packing of the binary concentration grid.")
     delt: int = Field(
         1,
-        description="Integration timestep in minutes; 0 lets HYSPLIT choose automatically.",
+        description=(
+            "Integration time step, in minutes. 0 lets HYSPLIT choose; a "
+            "negative value sets the minimum step."
+        ),
     )
     dxf: int = Field(
-        1, description="Horizontal X-grid adjustment factor for ensemble runs."
+        1, description="Horizontal x-grid offset factor for ensemble runs."
     )
     dyf: int = Field(
-        1, description="Horizontal Y-grid adjustment factor for ensemble runs."
+        1, description="Horizontal y-grid offset factor for ensemble runs."
     )
     dzf: float = Field(
-        0.01, description="Vertical grid adjustment factor for ensemble runs."
+        0.01,
+        description="Vertical offset factor for ensemble runs (0.01 is about 250 m).",
     )
     efile: str = Field(
         "",
-        description="Temporal emissions file name; blank disables file-driven emissions.",
+        description="Name of a time-varying emissions file. Blank uses none.",
     )
     emisshrs: float = Field(
         0.01,
-        description="Duration of emissions in fractional hours.",
+        description="Duration of the particle release, in hours.",
     )
-    frhmax: float = Field(3.0, description="Maximum horizontal puff-rounding value.")
+    frhmax: float = Field(
+        3.0, description="Maximum horizontal puff-rounding parameter."
+    )
     frhs: float = Field(
-        1.0, description="Standard horizontal puff-rounding fraction for merging."
+        1.0, description="Horizontal puff-rounding fraction for merging."
     )
-    frme: float = Field(
-        0.1, description="Mass-rounding fraction used by enhanced merging."
-    )
-    frmr: float = Field(
-        0.0, description="Mass-removal fraction used by enhanced merging."
-    )
+    frme: float = Field(0.1, description="Mass-rounding fraction for enhanced merging.")
+    frmr: float = Field(0.0, description="Mass-removal fraction for enhanced merging.")
     frts: float = Field(0.1, description="Temporal puff-rounding fraction.")
     frvs: float = Field(0.01, description="Vertical puff-rounding fraction.")
     hscale: int = Field(
-        10800, description="Horizontal Lagrangian timescale in seconds."
+        10800, description="Horizontal Lagrangian timescale, in seconds."
     )
     ichem: int = Field(
         8,
-        description="Chemistry mode; 8 selects STILT particle-in-cell output.",
+        description="HYSPLIT chemistry and output mode. 8 is the STILT emulation mode.",
     )
     idsp: int = Field(
         2,
-        description="Dispersion scheme; 1 uses HYSPLIT and 2 uses STILT.",
+        description="Particle dispersion scheme: 1 for HYSPLIT, 2 for STILT.",
     )
     initd: int = Field(
         0,
-        description="Initial particle distribution mode.",
+        description="Initial distribution as particles, puffs, or a mix. 0 is 3D particles.",
     )
     k10m: int = Field(
         1,
-        description="Use 10 m winds and 2 m temperatures as the lowest meteorology level when available.",
+        description=(
+            "Use the 10 m winds and 2 m temperature as the lowest meteorology "
+            "level (1) or skip them (0)."
+        ),
     )
     kagl: int = Field(
         1,
-        description="For trajectories, write heights as AGL (1) or MSL (0).",
+        description="Write trajectory heights above ground (1) or above sea level (0).",
     )
     kbls: int = Field(
         1,
-        description="PBL stability method: fluxes (1) or wind/temperature profiles (2).",
+        description=(
+            "Derive boundary-layer stability from surface fluxes (1) or from "
+            "wind and temperature profiles (2)."
+        ),
     )
     kblt: int = Field(
         5,
-        description="PBL turbulence scheme; PYSTILT defaults to Hanna (5).",
+        description=(
+            "Boundary-layer turbulence scheme: 1 Beljaars, 2 Kantha-Clayson, "
+            "3 TKE, 4 measured variances, 5 Hanna."
+        ),
     )
     kdef: int = Field(
         0,
-        description="Horizontal turbulence from vertical mixing (0) or deformation (1).",
+        description="Horizontal turbulence from vertical mixing (0) or wind deformation (1).",
     )
     khinp: int = Field(
         0,
-        description="Maximum particle age read from PARINIT during continuous restart runs.",
+        description="Age, in hours, given to particles read from ``pinpf``. 0 keeps their own age.",
     )
     khmax: int = Field(
         9999,
-        description="Maximum particle or trajectory age in hours.",
+        description="Maximum particle or trajectory age, in hours.",
     )
-    kmix0: int = Field(150, description="Minimum mixing depth in meters.")
+    kmix0: int = Field(150, description="Minimum mixed-layer depth, in meters.")
     kmixd: int = Field(
         3,
-        description="Mixing-depth method: input, temperature, TKE, or modified Richardson.",
+        description=(
+            "Mixed-layer depth source: 0 from the meteorology, 1 from the "
+            "temperature profile, 2 from the TKE profile, 3 from a modified "
+            "Richardson number."
+        ),
     )
     kmsl: Literal[0, 1] | None = Field(
         None,
         description=(
-            "Interpret start altitudes as AGL (0) or MSL (1). "
-            "When unset, PYSTILT derives this from each receptor's altitude_ref."
+            "Read release heights as above ground (0) or above sea level (1). "
+            "Unset takes it from each receptor's ``altitude_ref``, and a value "
+            "that disagrees with a receptor is an error."
         ),
     )
     kpuff: int = Field(
-        0, description="Horizontal puff-growth mode: linear (0) or empirical (1)."
+        0, description="Horizontal puff growth: linear (0) or empirical (1)."
     )
     krand: int = Field(
         4,
         description=(
-            "HYSPLIT random-number mode. 0 lets HYSPLIT pick 2 (numpar <= 5000) "
-            "or 1; 1 draws turbulence from a precomputed table; 2 draws it on "
-            "the fly (deterministic, seedable); 3 turns mixing off (diagnostic); "
-            "4 seeds the generator from the clock, so every run differs (about "
-            "5000 distinct seeds); 10-13 are 0-3 with the intrinsic generator "
-            "randomized too. Any other value makes HYSPLIT's turbulence draws "
-            "degenerate silently, so it is rejected here."
+            "How HYSPLIT draws the random numbers for turbulence. 0 picks 2 "
+            "when ``numpar`` is 5000 or less and 1 otherwise. 1 uses a "
+            "precomputed table. 2 draws them during the run and is the only "
+            "mode that uses ``seed``. 3 uses no random numbers (a diagnostic "
+            "mode). 4 draws them during the run from a clock-based seed, so "
+            "every run differs; there are about 5000 possible seeds. 10 to 13 "
+            "are modes 0 to 3 with a random initial seed. HYSPLIT does not "
+            "check this value and other values silently break the turbulence, "
+            "so PYSTILT rejects them."
         ),
     )
     seed: int | None = Field(
         None,
         description=(
-            "Seed for a reproducible run; different values give different "
-            "runs. Requires krand=2: the bundled hycs_std discards the "
-            "namelist seed under krand=4 and 10-13 and barely uses it under "
-            "1. Written to SETUP.CFG as -(abs(seed) + 1) because HYSPLIT's "
-            "generator re-initializes only from a negative value and collapses "
-            "every value >= -1 onto one stream. Error realization k runs with "
-            "seed + k (realization 0 shares the configured seed, as STILT-R's "
-            "error run does), so realizations differ and reproduce."
+            "Random seed for a reproducible run. Different seeds give "
+            "different runs. Requires ``krand: 2``. The bundled ``hycs_std`` "
+            "ignores the seed under ``krand`` 4 and 10 to 13, and under 1 uses "
+            "it only for the initial turbulent velocity. PYSTILT writes it to "
+            "``SETUP.CFG`` as ``-(abs(seed) + 1)``, because HYSPLIT reseeds its "
+            "generator only from a negative value and gives every ``SEED`` of "
+            "0 or more the same stream. Realization ``k`` of a variant runs "
+            "with ``seed + k``, so realization 0 shares the unperturbed run's "
+            "seed, as STILT-R's error run does."
         ),
     )
-    krnd: int = Field(6, description="Enhanced-merging interval in hours.")
-    kspl: int = Field(1, description="Standard particle-splitting interval in hours.")
+    krnd: int = Field(6, description="Enhanced-merging interval, in hours.")
+    kspl: int = Field(1, description="Standard puff-splitting interval, in hours.")
     kwet: int = Field(
         1,
-        description="Use meteorological precipitation, or an external ARL rain file when set to 2.",
+        description="Precipitation from the meteorology (1) or from an external ARL file (2).",
     )
     kzmix: int = Field(
         0,
-        description="Vertical mixing adjustment mode; 0 none, 1 PBL-average, 2 TVMIX scaling.",
+        description=(
+            "Vertical mixing adjustment: 0 none, 1 a single PBL-average value, "
+            "2 scale by ``tvmix``."
+        ),
     )
     maxdim: int = Field(
         1,
-        description="Maximum pollutant species carried on one particle, mainly for chemistry runs.",
+        description="Maximum number of pollutant species carried on one particle.",
     )
     maxpar: int | None = Field(
         None,
-        description="Maximum number of particles allowed in a simulation; ``numpar`` when unset.",
+        description="Maximum number of particles in a simulation. Unset uses ``numpar``.",
     )
-    mgmin: int = Field(10, description="Minimum meteorological subgrid size.")
-    mhrs: int = Field(9999, description="Trajectory restart duration limit in hours.")
+    mgmin: int = Field(
+        10, description="Minimum meteorological subgrid size, in grid points."
+    )
+    mhrs: int = Field(9999, description="Trajectory restart duration limit, in hours.")
     nbptyp: int = Field(
         1,
-        description="Number of particle-size bins created around each pollutant size entry.",
+        description="Number of particle-size bins per pollutant type.",
     )
     ncycl: int = Field(
         0,
-        description="PARDUMP output cycle time.",
+        description="Cycle time of the particle dump file, in hours.",
     )
     ndump: int = Field(
         0,
-        description="Write particle dumps every n hours; 0 disables dumps.",
+        description="Interval between particle dumps, in hours. 0 writes none.",
     )
     ninit: int = Field(
         1,
-        description="Particle initialization mode for restart, add, or replace workflows.",
+        description=(
+            "Particle initialization from ``pinpf``: 0 none, 1 once at the "
+            "start, 2 add every hour, 3 replace every hour."
+        ),
     )
-    nstr: int = Field(0, description="Trajectory restart interval in hours.")
+    nstr: int = Field(0, description="Trajectory restart interval, in hours.")
     nturb: int = Field(
         0,
-        description="Turbulence mode selector; 0 is on/default, 1 disables turbulence.",
+        description="Turbulence on (0) or off (1).",
     )
     nver: int = Field(0, description="Trajectory vertical split number.")
     outdt: int = Field(
         0,
-        description="Minutes between STILT endpoint writes to PARTICLE.DAT; negative disables output.",
+        description=(
+            "Interval between particle outputs in ``PARTICLE_STILT.DAT``, in "
+            "minutes. 0 writes every time step and a negative value writes none."
+        ),
     )
-    p10f: int = Field(1, description="Dust threshold-velocity sensitivity factor.")
+    p10f: int = Field(1, description="Dust threshold velocity sensitivity factor.")
     pinbc: str = Field(
         "",
-        description="Particle input file used for boundary-condition particles.",
+        description="Particle input file for time-varying boundary conditions.",
     )
     pinpf: str = Field(
         "",
@@ -300,116 +345,152 @@ class TransportParams(BaseModel):
         description="Particle output file name.",
     )
     qcycle: int = Field(
-        0, description="Emission cycling period in hours; 0 disables cycling."
+        0, description="Emission cycling period, in hours. 0 turns cycling off."
     )
     rhb: float = Field(
         80.0,
-        description="Relative-humidity threshold used to define cloud base.",
+        description="Relative humidity that defines a cloud base, in percent.",
     )
     rht: float = Field(
         60.0,
-        description="Relative-humidity threshold below which cloud top is considered to end.",
+        description="Relative humidity that defines a cloud top, in percent.",
     )
     splitf: int = Field(
         1,
-        description="Automatic horizontal split-size factor; negative disables auto sizing.",
+        description=(
+            "Factor for the automatic horizontal splitting size. A negative "
+            "value turns the automatic sizing off."
+        ),
     )
-    tkerd: float = Field(0.18, description="Unstable TKE ratio w'²/(u'²+v'²).")
-    tkern: float = Field(0.18, description="Stable TKE ratio w'²/(u'²+v'²).")
+    tkerd: float = Field(
+        0.18, description="Ratio w'²/(u'²+v'²) of TKE components when unstable."
+    )
+    tkern: float = Field(
+        0.18, description="Ratio w'²/(u'²+v'²) of TKE components when stable."
+    )
     tlfrac: float = Field(
         0.1,
-        description="Fraction of the vertical Lagrangian timescale used to set the STILT timestep.",
+        description=(
+            "Fraction of the vertical Lagrangian timescale used as the time "
+            "step of the STILT dispersion scheme."
+        ),
     )
     tout: float = Field(
         0.0,
-        description="Trajectory output interval in minutes.",
+        description="Trajectory output interval, in minutes.",
     )
-    tratio: float = Field(0.75, description="Advection stability ratio.")
+    tratio: float = Field(
+        0.75,
+        description="Advection stability ratio (fraction of a grid cell per time step).",
+    )
     tvmix: float = Field(
         1.0,
-        description="Scale factor applied to vertical mixing coefficients for selected KZMIX modes.",
+        description="Vertical mixing scale factor, used by the ``kzmix`` scaling modes.",
     )
     veght: float = Field(
         0.5,
-        description="Height threshold used to accumulate STILT footprint residence time.",
+        description=(
+            "Height below which a particle's time counts toward the footprint. "
+            "A value of 1 or less is a fraction of the mixed-layer height; a "
+            "larger value is meters above ground."
+        ),
     )
     vscale: int = Field(
         200,
-        description="Vertical Lagrangian timescale in seconds for neutral PBL conditions.",
+        description="Vertical Lagrangian timescale, in seconds.",
     )
     vscaleu: int = Field(
         200,
-        description="Vertical Lagrangian timescale in seconds for unstable PBL conditions.",
+        description="Vertical Lagrangian timescale in an unstable boundary layer, in seconds.",
     )
     vscales: int = Field(
         -1,
-        description="Vertical Lagrangian timescale in seconds for stable PBL conditions.",
+        description=(
+            "Vertical Lagrangian timescale in a stable boundary layer, in "
+            "seconds. -1 uses the Hanna timescale, which varies with the "
+            "turbulence, and then ``vscaleu`` is not used."
+        ),
     )
     w_option: int = Field(
         0,
-        description="Vertical motion method; 0 met vertical velocity, 1 isob, 2 isen, 3 dens, 4 sigma.",
+        description=(
+            "Vertical motion method: 0 the meteorology's vertical velocity, "
+            "1 isobaric, 2 isentropic, 3 constant density, 4 constant sigma."
+        ),
     )
     wbbh: int = Field(
-        0, description="Height where fixed vertical motion switches from rise to fall."
+        0,
+        description=(
+            "Height at which the fixed vertical velocity switches from rise to "
+            "fall, in meters. Used by vertical motion option 9."
+        ),
     )
     wbwf: int = Field(
-        0, description="Fixed fall velocity used by vertical-motion options 9 or 10."
+        0,
+        description="Fixed fall velocity, in m/s. Used by vertical motion options 9 and 10.",
     )
     wbwr: int = Field(
-        0, description="Fixed rise velocity used by vertical-motion option 9."
+        0, description="Fixed rise velocity, in m/s. Used by vertical motion option 9."
     )
     wvert: bool = Field(
         False,
-        description="Use the WRF vertical interpolation scheme for vertical velocity when true.",
+        description="Interpolate WRF fields vertically with the WRF scheme instead of HYSPLIT's.",
     )
     z_top: float = Field(
         25000.0,
-        description="Top of model domain, in meters above ground level; defaults to 25000.0",
+        description="Top of the model domain, in meters above ground.",
     )
     ziscale: float | list[float] | list[list[float]] = Field(
         1.0,
         description=(
-            "Factor on the mixed-layer height, written to HYSPLIT's ZICONTROL "
-            "file. 1.0 (the default) leaves it unscaled; any other value turns "
-            "scaling on. A scalar applies to every hour of the run; a list gives "
-            "one factor per hour from the release, and later hours are unscaled. "
-            "HYSPLIT applies kmix0 after the factor, so the mixed layer never "
-            "drops below kmix0. At most 150 hourly factors. A negative value "
-            "uses the meteorology's own PBL height where the met files carry one."
+            "Factor applied to the mixed-layer height, written to HYSPLIT's "
+            "``ZICONTROL`` file. 1.0 leaves it unscaled. A single value applies "
+            "to every hour of the run. A list gives one factor per hour from "
+            "the release (at most 150), and later hours are unscaled. HYSPLIT "
+            "applies ``kmix0`` after the factor, so the mixed layer never drops "
+            "below ``kmix0``. A negative value uses the meteorology's own PBL "
+            "height where the met files carry one."
         ),
     )
 
 
 class ErrorParams(BaseModel):
-    """Transport error trajectory parameters for XY and ZI perturbations."""
+    """
+    Transport-error settings for perturbed runs.
+
+    Setting the four wind-error fields perturbs the particles' winds (HYSPLIT's
+    ``WINDERR`` file). Setting the three mixed-layer fields perturbs each
+    particle's footprint by a random mixed-layer height error (``ZIERR``).
+    Each group must be set in full or not at all.
+    """
 
     siguverr: float | None = Field(
         None,
-        description="Standard deviation of horizontal wind error [m/s]",
+        description="Standard deviation of the horizontal wind error, in m/s.",
     )
     tluverr: float | None = Field(
         None,
-        description="Standard deviation of horiztontal wind error timescale [min]",
+        description="Correlation timescale of the horizontal wind error, in minutes.",
     )
     zcoruverr: float | None = Field(
         None,
-        description="Vertical correlation length scale of horizontal wind error [m]",
+        description="Vertical correlation length of the horizontal wind error, in meters.",
     )
     horcoruverr: float | None = Field(
         None,
-        description="Horizontal correlation length scale of horizontal wind error [km]",
+        description="Horizontal correlation length of the horizontal wind error, in km.",
     )
     sigzierr: float | None = Field(
         None,
-        description="Standard deviation of mixed-layer height errors [%]",
+        description="Standard deviation of the mixed-layer height error, in percent.",
     )
     tlzierr: float | None = Field(
         None,
-        description="Standard deviation of mixed layer height timescale [min]",
+        description="Correlation timescale of the mixed-layer height error, in minutes.",
     )
     horcorzierr: float | None = Field(
         None,
-        description="Horizontal correlation length scale of mixed-layer height errors [km]",
+        description="Horizontal correlation length of the mixed-layer height error, in km.",
     )
 
     XYERR_PARAMS: ClassVar[tuple[str, ...]] = (
@@ -426,7 +507,7 @@ class ErrorParams(BaseModel):
 
     @model_validator(mode="after")
     def _validate_error_params(self) -> Self:
-        """Validate grouped wind and mixed-layer perturbation parameters."""
+        """Require each error group to be set in full or not at all."""
         for name, params in [
             ("XY", self._xyerr_params()),
             ("ZI", self._zierr_params()),
@@ -439,39 +520,34 @@ class ErrorParams(BaseModel):
         return self
 
     def _xyerr_params(self) -> dict[str, float | None]:
-        """Return the horizontal wind-perturbation parameter set."""
+        """Return the wind-error fields by name."""
         return {p: getattr(self, p) for p in self.XYERR_PARAMS}
 
     def _zierr_params(self) -> dict[str, float | None]:
-        """Return the mixed-layer perturbation parameter set."""
+        """Return the mixed-layer error fields by name."""
         return {p: getattr(self, p) for p in self.ZIERR_PARAMS}
 
     @property
     def winderrtf(self) -> int:
-        """HYSPLIT WINDERRTF flag encoding active error modes."""
+        """HYSPLIT ``WINDERRTF`` flag: 1 for wind errors, 2 for mixed-layer errors, 3 for both."""
         xyerr = all(v is not None for v in self._xyerr_params().values())
         zierr = all(v is not None for v in self._zierr_params().values())
         return xyerr + 2 * zierr
 
     @property
     def error_enabled(self) -> bool:
-        """
-        Whether an error-trajectory mode is configured (XY and/or ZI).
-
-        A variant with these fields set runs HYSPLIT with WINDERR / ZIERR
-        perturbations; one without them is the unperturbed reference.
-        """
+        """Whether wind or mixed-layer errors are set, making this a perturbed run."""
         return self.winderrtf > 0
 
 
 class STILTParams(ModelParams, TransportParams, ErrorParams):
     """
-    All STILT/HYSPLIT parameters in one flat model.
+    All STILT and HYSPLIT run parameters in one flat model.
 
-    Every :class:`TransportParams` field is a ``SETUP.CFG`` namelist entry
-    except the few HYSPLIT reads from ``CONTROL`` or ``ZICONTROL``;
-    :meth:`setup_entries` applies that rule. :class:`ErrorParams` fields go to
-    ``WINDERR`` / ``ZIERR`` (see ``ErrorParams.XYERR_PARAMS`` / ``ZIERR_PARAMS``).
+    Each :class:`TransportParams` field is written to ``SETUP.CFG``, except
+    those in ``CONTROL_FIELDS`` (written to ``CONTROL``) and ``ziscale``
+    (written to ``ZICONTROL``). The :class:`ErrorParams` fields are written to
+    ``WINDERR`` and ``ZIERR``.
     """
 
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
@@ -491,7 +567,7 @@ class STILTParams(ModelParams, TransportParams, ErrorParams):
     _MODEL_SETUP_FIELDS: ClassVar[frozenset[str]] = frozenset({"numpar", "varsiwant"})
 
     def setup_entries(self) -> dict[str, Any]:
-        """Return the ``SETUP.CFG`` namelist entries (``None`` values omitted)."""
+        """Return the ``SETUP.CFG`` namelist entries, leaving out unset fields."""
         names = [
             *(n for n in ModelParams.model_fields if n in self._MODEL_SETUP_FIELDS),
             *(
@@ -510,24 +586,25 @@ class STILTParams(ModelParams, TransportParams, ErrorParams):
     @staticmethod
     def setup_seed(seed: int) -> int:
         """
-        Map a user seed to the ``SEED`` value written to ``SETUP.CFG``.
+        Return the ``SEED`` value written to ``SETUP.CFG`` for a user seed.
 
-        HYSPLIT sets its generator state to ``-1 + SEED`` and, under
-        ``krand=2``, re-initializes only from a negative value, collapsing
-        every value ``>= -1`` onto the same stream. ``-(|seed| + 1)`` keeps the
-        state at ``-(|seed| + 2)``: negative, distinct per ``|seed|``, and never
-        the unseeded default. A patched HYSPLIT that honours ``SEED`` directly
-        maps a negative ``SEED`` to the same state, so the value is portable.
+        HYSPLIT sets its generator state to ``-1 + SEED``. Under ``krand=2``
+        it reinitializes only from a negative state, and every state of -1 or
+        more gives the same stream. Writing ``-(|seed| + 1)`` puts the state at
+        ``-(|seed| + 2)``. That is negative, different for each ``|seed|``, and
+        never the unseeded default (``SEED = 0``). A patched HYSPLIT that uses
+        ``SEED`` directly maps a negative ``SEED`` to the same state, so the
+        value works with both builds.
         """
         return -(abs(seed) + 1)
 
     def realization_seed(self, realization: int) -> int | None:
         """
-        Return the user seed for realization ``realization`` of a variant.
+        Return the seed for one realization of a variant.
 
-        Realization 0 runs with the configured seed, exactly as STILT-R's single
-        error run does, and realization ``k`` with ``seed + k``. ``None`` when
-        unseeded.
+        Realization ``k`` runs with ``seed + k``, so realization 0 uses the
+        configured seed, as STILT-R's single error run does. Returns ``None``
+        when no seed is set.
         """
         if self.seed is None:
             return None
@@ -536,10 +613,10 @@ class STILTParams(ModelParams, TransportParams, ErrorParams):
     @property
     def ziscale_factors(self) -> list[float] | None:
         """
-        Hourly mixed-layer factors for ZICONTROL, or ``None`` when unscaled.
+        Hourly mixed-layer factors for ``ZICONTROL``, or ``None`` when unscaled.
 
-        A scalar ``ziscale`` is repeated for every hour of the run; a list is
-        used as given. All factors equal to 1.0 means no scaling.
+        A single ``ziscale`` value is repeated for every hour of the run and a
+        list is used as given. Factors that are all 1.0 give ``None``.
         """
         if isinstance(self.ziscale, int | float):
             values = [float(self.ziscale)] * max(abs(self.n_hours), 1)
@@ -551,12 +628,12 @@ class STILTParams(ModelParams, TransportParams, ErrorParams):
 
     @property
     def zicontroltf(self) -> int:
-        """HYSPLIT ZICONTROLTF flag: 1 when ``ziscale`` scales the mixed layer."""
+        """HYSPLIT ``ZICONTROLTF`` flag, 1 when ``ziscale`` scales the mixed layer."""
         return int(self.ziscale_factors is not None)
 
     @model_validator(mode="after")
     def _validate_ziscale(self) -> Self:
-        """Reject factors HYSPLIT would misread: empty, zero, or too many hours."""
+        """Reject ``ziscale`` values that are empty, zero, or longer than 150 hours."""
         if isinstance(self.ziscale, int | float):
             values = [float(self.ziscale)]
         else:
@@ -583,7 +660,7 @@ class STILTParams(ModelParams, TransportParams, ErrorParams):
     @field_validator("krand")
     @classmethod
     def _validate_krand(cls, value: int) -> int:
-        """Reject values HYSPLIT does not document; they degenerate silently."""
+        """Reject ``krand`` values HYSPLIT does not document."""
         if value not in cls.KRAND_VALUES:
             raise ValueError(
                 f"krand={value} is not a HYSPLIT mode (0-4 or 10-13): HYSPLIT does "
@@ -594,7 +671,7 @@ class STILTParams(ModelParams, TransportParams, ErrorParams):
 
     @model_validator(mode="after")
     def _validate_seed(self) -> Self:
-        """A seed only reaches the turbulence draw under ``krand=2``."""
+        """Require ``krand=2`` when a seed is set."""
         if self.seed is not None and self.krand != 2:
             raise ValueError(
                 f"seed={self.seed} requires krand=2 (got krand={self.krand}): the "
@@ -606,7 +683,7 @@ class STILTParams(ModelParams, TransportParams, ErrorParams):
 
     @model_validator(mode="after")
     def _validate_hnf_plume(self) -> Self:
-        """Raise at construction time if hnf_plume=True but varsiwant is missing required columns."""
+        """Require the variables the near-field plume model reads when ``hnf_plume`` is on."""
         if self.hnf_plume:
             required = {"dens", "samt", "sigw", "tlgr", "foot", "mlht"}
             missing = required - set(self.varsiwant)

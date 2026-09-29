@@ -1,12 +1,13 @@
 Observations
 ============
 
-Helpers for column and satellite workflows: overpass grouping, sounding
-selection, pixel jitter, and slant line-of-sight geometry with altitudes
-from a retrieval's pressure levels (:doc:`/advanced/observations`,
-:doc:`/guides/slant_columns`). They work on plain arrays and tables and
-produce the inputs to :class:`~stilt.Receptor` objects. Particle weighting,
-including per-receptor averaging-kernel tables, lives in :doc:`transforms`.
+Functions for column and satellite workflows. They group soundings into
+overpasses, choose which soundings to run, spread receptors across a pixel,
+lay out slant lines of sight, and turn a retrieval's pressure levels into
+altitudes (:doc:`/advanced/observations`,
+:doc:`/guides/slant_columns`). They take plain arrays and tables and return
+the inputs for :class:`~stilt.Receptor` objects. Particle weighting,
+including per-receptor averaging-kernel tables, is in :doc:`transforms`.
 
 .. autosummary::
    :toctree: _api
@@ -21,8 +22,8 @@ including per-receptor averaging-kernel tables, lives in :doc:`transforms`.
 Product readers
 ---------------
 
-One module per instrument, each returning a table of soundings with the
-columns in :doc:`/guides/readers`.
+Each reader returns a table of soundings with the columns listed in
+:doc:`/guides/readers`.
 
 .. autosummary::
    :toctree: _api
@@ -31,11 +32,13 @@ columns in :doc:`/guides/readers`.
    stilt.observations.read_tropomi_ch4
    stilt.observations.read_oco2
    stilt.observations.read_tccon
+   stilt.observations.read_ggg_oof
+   stilt.observations.read_ggg_netcdf
 
 Transport error
 ---------------
 
-The transport error on the modelled enhancement from wind-perturbed
+The transport error of the modelled enhancement, from wind-perturbed
 trajectories (:doc:`/guides/transport_error`).
 
 .. autosummary::
@@ -48,8 +51,9 @@ trajectories (:doc:`/guides/transport_error`).
 Background
 ----------
 
-The background mole fraction at a receptor, from a field sampled at the
-trajectory endpoints and weighted like the footprint (:doc:`/guides/background`).
+The background mole fraction at a receptor. A field is sampled at the
+trajectory endpoints and weighted like the footprint
+(:doc:`/guides/background`).
 
 .. autosummary::
    :toctree: _api
@@ -65,8 +69,8 @@ trajectory endpoints and weighted like the footprint (:doc:`/guides/background`)
 Plume background
 ----------------
 
-The plume a forward run puts over a satellite swath, and the background
-from the soundings beside it (:doc:`/guides/plume_background`).
+The outline of a forward-run plume over a satellite swath, and the
+background from the soundings beside it (:doc:`/guides/plume_background`).
 
 .. autosummary::
    :toctree: _api
@@ -82,8 +86,8 @@ from the soundings beside it (:doc:`/guides/plume_background`).
 Wind-error statistics
 ---------------------
 
-Variograms of analysis-minus-observation winds, from which the wind-error
-settings of a transport-error run are derived (:doc:`/guides/wind_errors`).
+Variograms of analysis-minus-observation winds. Fit them to get the
+wind-error settings for a transport-error run (:doc:`/guides/wind_errors`).
 
 .. autosummary::
    :toctree: _api

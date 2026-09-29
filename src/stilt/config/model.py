@@ -1,4 +1,4 @@
-"""Project-level config: flat defaults, met streams, and variants."""
+"""The project config: defaults, meteorology, and variants."""
 
 from __future__ import annotations
 
@@ -20,37 +20,38 @@ _PROJECT_FIELDS = frozenset({"mets", "variants", "execution"})
 
 class ModelConfig(STILTParams, FootprintParams):
     """
-    Project-level config.
+    A project's configuration, as read from ``config.yaml``.
 
-    The flat transport and footprint fields are the **defaults**; a variant is
-    ``{met: ..., <overrides>}`` merged onto them. With no ``variants`` given,
-    one variant per met is generated, named after the met.
+    The transport and footprint fields are the defaults for every variant.
+    Each variant names a met and overrides some of the defaults. Without
+    ``variants``, each met runs as one variant with the met's name.
     """
 
     model_config = ConfigDict(extra="forbid")
 
     mets: dict[str, MetConfig] = Field(
         default_factory=dict,
-        description="Named meteorology streams available to the model.",
+        description="Meteorology streams by name. At least one is required.",
     )
     variants: dict[str, dict[str, Any]] = Field(
         default_factory=dict,
         description=(
-            "Named variants as overrides of the defaults. Each may set ``met`` "
-            "(required with several mets unless the variant is named after "
-            "one), ``realizations`` (run N times with "
-            "seed + k), or ``from`` (rasterize another variant's trajectory; "
-            "footprint fields only). Absent: one variant per met."
+            "Variants by name, each a set of overrides of the defaults. A "
+            "variant may also set ``met`` (needed with several mets unless the "
+            "variant has a met's name), ``realizations`` (run N times, "
+            "realization k with ``seed + k``), or ``from`` (compute a footprint "
+            "from another variant's trajectories, changing only footprint "
+            "fields). Unset runs one variant per met."
         ),
     )
     execution: dict[str, Any] = Field(
         default_factory=dict,
-        description="Execution backend settings such as local, Slurm, or Kubernetes options.",
+        description="Execution backend settings, such as ``backend: slurm`` and its options.",
     )
 
     @model_validator(mode="after")
     def _validate_mets(self) -> Self:
-        """At least one met, each named so it can also name a variant."""
+        """Require at least one met, each with a valid variant name."""
         if not self.mets:
             raise ValueError(
                 "ModelConfig.mets must contain at least one meteorology configuration"
@@ -64,7 +65,7 @@ class ModelConfig(STILTParams, FootprintParams):
 
     @model_validator(mode="after")
     def _validate_variants(self) -> Self:
-        """Resolve the variants once so a bad declaration fails at load time."""
+        """Resolve the variants so a bad declaration fails when the config loads."""
         from stilt.transforms import UnresolvedTransform
 
         for name, variant in self.resolve_variants().items():
@@ -77,32 +78,29 @@ class ModelConfig(STILTParams, FootprintParams):
         return self
 
     def defaults(self) -> dict[str, Any]:
-        """The flat default parameters every variant starts from."""
+        """Return the default parameters every variant starts from."""
         return self.model_dump(exclude=set(_PROJECT_FIELDS))
 
     def resolve_variants(self) -> dict[str, VariantConfig]:
         """
-        One :class:`VariantConfig` per simulation name, in declaration order.
+        Return one :class:`VariantConfig` per simulation name, in declared order.
 
-        Realization groups are expanded (``hrrr-err`` with ``realizations: 3``
-        gives ``hrrr-err-0`` .. ``hrrr-err-2``).
+        A variant with ``realizations`` becomes several, so ``hrrr-err`` with
+        ``realizations: 3`` gives ``hrrr-err-0`` to ``hrrr-err-2``.
         """
         declared = self.variants or {met: {"met": met} for met in self.mets}
         return expand_variants(declared, self.defaults(), list(self.mets))
 
     def to_yaml(self, path: str | Path | None = None) -> str:
         """
-        Return the config as YAML, and write it to *path* when given.
+        Return the config as YAML, and write it to ``path`` when given.
 
-        The file is meant to be read and edited by hand, so it holds only the
-        top-level settings that were given, and for each met only the fields
-        that were given; what was given is written in full (a transform or
-        geometry keeps its ``kind``). ``mets`` and
-        ``variants`` come first, and ``variants`` is always written, as one
-        entry per met when none was declared, so the file shows that the
-        declared variants are the ones that run. The resolved settings of each
-        variant are kept in the project's record
-        (:meth:`stilt.Project.load_record`), not here.
+        The file is meant to be edited by hand, so it holds only the settings
+        that were given, top-level and for each met. ``mets`` and ``variants``
+        come first. ``variants`` is always written, with one entry per met when
+        none were declared, so the file lists the variants that run. The full
+        settings of each variant are kept in the project's record
+        (:meth:`stilt.Project.load_record`).
         """
         data = self.model_dump(mode="json", include=self.model_fields_set)
         data["mets"] = {

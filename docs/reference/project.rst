@@ -1,11 +1,12 @@
 Project And Store
 =================
 
-A project is one folder (or cloud bucket path) holding ``config.yaml``,
+A project is one folder or cloud bucket path. It holds ``config.yaml``,
 ``receptors.csv``, and ``simulations/by-id/``. Every output's location is
-given relative to that folder, and a simulation is finished when its outputs
-exist there (see :doc:`../advanced/output_state`). Most users never use
-these classes directly; :class:`stilt.Model` does.
+given relative to the project root, and a simulation is finished when its
+outputs exist there (see :doc:`../advanced/output_state`). The store reads
+and writes those files, on a local disk or in a bucket. Most users never use
+these classes directly. :class:`stilt.Model` uses them for you.
 
 Project
 -------

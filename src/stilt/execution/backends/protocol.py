@@ -1,4 +1,4 @@
-"""Shared executor protocols and utilities."""
+"""Interfaces shared by the execution backends."""
 
 from __future__ import annotations
 
@@ -13,10 +13,10 @@ DispatchMode = Literal["push", "pull"]
 @contextlib.contextmanager
 def sigterm_as_interrupt():
     """
-    Temporarily convert SIGTERM into ``KeyboardInterrupt``.
+    Context manager that makes SIGTERM raise ``KeyboardInterrupt``.
 
-    Signal handlers can only be installed from the main thread; elsewhere
-    this is a no-op so worker code can run in a background thread.
+    Signal handlers can only be set from the main thread, so in any other
+    thread this does nothing.
     """
     if threading.current_thread() is not threading.main_thread():
         yield
@@ -36,46 +36,41 @@ def sigterm_as_interrupt():
 
 
 class JobHandle(Protocol):
-    """
-    Handle returned by :meth:`Executor.start`.
-
-    ``wait()`` blocks until the launched work is no longer running.
-    """
+    """Handle to the workers started by :meth:`Executor.start`."""
 
     @property
     def job_id(self) -> str:
-        """Backend-specific job identifier."""
+        """Job id from the backend, such as a Slurm job id."""
         ...
 
     @property
     def detached(self) -> bool:
         """
-        Whether the launched work runs independently of this process.
+        Whether the workers keep running after this process exits.
 
-        ``True`` for backends whose workers survive the submitting process
-        (Slurm, Kubernetes). ``False`` for the local backend, whose workers
-        must be awaited before this process exits.
+        True for Slurm and Kubernetes. False for the local backend, whose
+        workers must be waited for.
         """
         ...
 
     def wait(self) -> None:
-        """Block until the launched work is no longer running."""
+        """Block until the workers have stopped."""
         ...
 
 
 class Executor(Protocol):
     """
-    Worker-launch protocol: start workers, get a :class:`JobHandle` back.
+    Interface for a backend that starts workers.
 
-    ``dispatch`` says whether the executor is handed the pending ids
-    (``"push"``) or whether its workers claim from the queue (``"pull"``).
+    ``dispatch`` is ``"push"`` when the executor is given the receptor ids
+    to run, and ``"pull"`` when its workers take them from the work queue.
     """
 
     dispatch: DispatchMode
 
     @property
     def n_workers(self) -> int:
-        """Default worker count."""
+        """Number of workers started when :meth:`start` is not given one."""
         ...
 
     def start(
@@ -87,7 +82,26 @@ class Executor(Protocol):
         compute_root: str | None = None,
         skip_existing: bool | None = None,
     ) -> JobHandle:
-        """Launch workers for one project root and return a handle."""
+        """
+        Start workers for a project and return a handle to them.
+
+        Parameters
+        ----------
+        pending : list of str
+            Receptor ids to run. Pull executors ignore it.
+        project : str
+            Project root, a local path or a URI.
+        n_workers : int, optional
+            Number of workers. Defaults to :attr:`n_workers`.
+        compute_root : str, optional
+            Directory where workers run HYSPLIT.
+        skip_existing : bool, optional
+            Keep outputs that already exist. Defaults to True.
+
+        Returns
+        -------
+        JobHandle
+        """
         ...
 
 

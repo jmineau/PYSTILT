@@ -3,20 +3,25 @@ Configuration
 
 .. currentmodule:: stilt.config
 
-Everything that can go in ``config.yaml`` is a field of
-:class:`stilt.config.ModelConfig`: named meteorology sources
+Everything you can write in ``config.yaml`` is a field of
+:class:`ModelConfig`. That covers the meteorology sources
 (:class:`MetConfig`), the footprint settings (:class:`FootprintParams`),
-named ``variants`` resolved into :class:`VariantConfig`, the ``execution``
-section, and the STILT and HYSPLIT settings. The tables below
-are generated from the code, so they are always current.
+the ``variants``, the ``execution`` section, and the STILT and HYSPLIT
+settings. Each page below lists its fields with their defaults and is
+generated from the code.
 
 .. tip::
   New to PYSTILT? The :doc:`configuration guide <../guides/configuration>`
-  covers the handful of settings most projects need. This page lists all of
-  them.
+  covers the few settings most projects need. This page lists all of them.
 
 Config objects
 --------------
+
+:class:`VariantConfig` is one variant with all of its settings filled in,
+as PYSTILT runs it. :class:`FootprintConfig` is the footprint settings of
+one variant with its grid. :class:`RuntimeSettings` reads the
+``PYSTILT_*`` environment variables, which set where work runs and never
+change a result.
 
 .. autosummary::
    :toctree: _api
@@ -34,6 +39,9 @@ Config objects
 Parameters
 ----------
 
+The STILT and HYSPLIT settings, in three groups. :class:`STILTParams`
+combines them.
+
 .. autosummary::
    :toctree: _api
    :nosignatures:
@@ -41,13 +49,14 @@ Parameters
    ModelParams
    TransportParams
    ErrorParams
+   STILTParams
 
 
 Geometry specifications
 -----------------------
 
-Declarative state geometries for the ``geometry`` footprint setting; each has a
-``build()`` returning a :class:`stilt.Mesh`.
+The kinds of area you can name in the ``geometry`` footprint setting. Each
+has a ``build()`` method that returns a :class:`stilt.Mesh`.
 
 .. autosummary::
    :toctree: _api

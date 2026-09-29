@@ -1,15 +1,15 @@
 """
-Plume background: the soundings a forward-run plume did not reach.
+Background from the soundings outside a plume traced by forward runs.
 
 Forward runs released from a city over the hours before a satellite overpass
-show where the city's air is at overpass time. A 2-D kernel density of the
+show where the city's air is at overpass time. A kernel density of the
 particle positions during the overpass, contoured at a fraction of its
-maximum, outlines the plume; soundings outside that outline saw background
+maximum, outlines the plume. Soundings outside the outline saw background
 air. X-STILT does this in ``fit.kde.plume`` and ``calc.bg.upwind``
-(Wu et al. 2018, method M3). :func:`plume_polygon` builds the outline and
-:func:`plume_background` picks the background soundings and their
-statistics. Both take plain arrays, so they work on any particle table and
-any sounding table.
+(Wu et al. 2018, method M3).
+
+:func:`plume_polygon` draws the outline and :func:`plume_background` picks
+the background soundings and summarizes them. Both take plain arrays.
 """
 
 from __future__ import annotations
@@ -34,12 +34,17 @@ _KDE_CHUNK = 50_000
 @dataclass(frozen=True)
 class Plume:
     """
-    Result of :func:`plume_polygon`.
+    Plume outline returned by :func:`plume_polygon`.
 
-    ``polygon`` is the plume outline, in longitude and latitude. ``density``
-    is the kernel density of the particle positions on the grid it was
-    evaluated on, normalised to a maximum of one, with ``lat`` and ``lon``
-    coordinates. ``threshold`` is the normalised density the outline follows.
+    Attributes
+    ----------
+    polygon : shapely.Polygon
+        Plume outline, in longitude and latitude.
+    density : xarray.DataArray
+        Kernel density of the particle positions on ``lat`` and ``lon``,
+        scaled to a maximum of 1.
+    threshold : float
+        Scaled density that the outline follows.
     """
 
     polygon: Polygon
@@ -47,7 +52,7 @@ class Plume:
     threshold: float
 
     def contains(self, longitudes: ArrayLike, latitudes: ArrayLike) -> np.ndarray:
-        """``True`` for each point inside the plume outline."""
+        """Return True for each point inside the plume outline."""
         lon = np.asarray(longitudes, dtype=float)
         lat = np.asarray(latitudes, dtype=float)
         return shapely.contains_xy(self.polygon, lon, lat)
@@ -61,13 +66,26 @@ def kernel_density(
     n: int = 100,
 ) -> xr.DataArray:
     """
-    Gaussian kernel density of points on a regular ``n × n`` lon/lat grid.
+    Return the Gaussian kernel density of points on an ``n`` by ``n`` grid.
 
-    The bandwidths follow R's ``MASS::kde2d``: the kernel's standard
-    deviation is a quarter of ``bandwidth`` in each direction (so the
-    defaults are 0.025° in longitude and 0.0375° in latitude). The grid
-    spans the points plus one bandwidth on every side. The result is
-    normalised to a maximum of one, since only the shape matters.
+    As in R's ``MASS::kde2d``, the kernel's standard deviation is a quarter
+    of ``bandwidth`` in each direction, so the defaults give 0.025° in
+    longitude and 0.0375° in latitude. The grid spans the points plus one
+    bandwidth on every side. The density is scaled to a maximum of 1.
+
+    Parameters
+    ----------
+    longitudes, latitudes : array-like
+        Point positions, in degrees. Non-finite positions are dropped.
+    bandwidth : tuple of float, default (0.1, 0.15)
+        Bandwidth in longitude and latitude, in degrees.
+    n : int, default 100
+        Number of grid points in each direction.
+
+    Returns
+    -------
+    xarray.DataArray
+        Density on ``lat`` and ``lon``.
     """
     lon = np.asarray(longitudes, dtype=float).ravel()
     lat = np.asarray(latitudes, dtype=float).ravel()
@@ -104,12 +122,12 @@ def kernel_density(
 
 def density_polygon(density: xr.DataArray, threshold: float) -> Polygon:
     """
-    The largest connected region where ``density >= threshold``, as a polygon.
+    Return the largest connected region where ``density >= threshold``.
 
-    Grid cells at or above the threshold are merged; when that gives several
-    separate pieces, the one with the largest area is the plume (X-STILT
-    keeps the longest contour piece for the same reason). The outline
-    follows cell edges, so it is as fine as the density grid.
+    Grid cells at or above the threshold are merged. When they form several
+    separate pieces, the largest is the plume, as X-STILT keeps the longest
+    contour piece. The outline follows cell edges, so it is as fine as the
+    density grid.
     """
     if not 0 < threshold <= 1:
         raise ValueError("threshold must be in (0, 1]")
@@ -121,7 +139,7 @@ def density_polygon(density: xr.DataArray, threshold: float) -> Polygon:
     iy, ix = np.nonzero(z >= threshold)
     if ix.size == 0:
         raise ValueError(f"no density at or above threshold {threshold}")
-    # Cell edges from one origin, so neighbouring cells share exact coordinates
+    # Cell edges from one origin, so neighboring cells share exact coordinates
     # and merge cleanly.
     x_edges = gx[0] - dx / 2 + np.arange(gx.size + 1) * dx
     y_edges = gy[0] - dy / 2 + np.arange(gy.size + 1) * dy
@@ -143,15 +161,30 @@ def plume_polygon(
     n: int = 100,
 ) -> Plume:
     """
-    Outline the plume from forward-run particle positions at overpass time.
+    Return the plume outline from forward-run particle positions at overpass time.
 
-    ``longitudes`` and ``latitudes`` are the positions of every particle row
-    that falls in the overpass window, pooled over all the forward runs for
-    that overpass. The plume is the region where the kernel density of those
-    positions (:func:`kernel_density`) is at least ``threshold`` times its
-    maximum; the defaults are X-STILT's (``td = 0.1``, ``h = c(0.1, 0.15)``,
-    ``n = 100``). A larger ``threshold`` gives a tighter plume; a larger
-    ``bandwidth`` a smoother one.
+    The plume is the region where the kernel density of the positions
+    (:func:`kernel_density`) is at least ``threshold`` times its maximum.
+    The defaults are X-STILT's (``td = 0.1``, ``h = c(0.1, 0.15)``,
+    ``n = 100``).
+
+    Parameters
+    ----------
+    longitudes, latitudes : array-like
+        Positions of every particle row in the overpass window, pooled over
+        all the forward runs for that overpass, in degrees.
+    threshold : float, default 0.1
+        Fraction of the maximum density that the outline follows. A larger
+        value gives a tighter plume.
+    bandwidth : tuple of float, default (0.1, 0.15)
+        Kernel bandwidth in longitude and latitude, in degrees. A larger
+        value gives a smoother plume.
+    n : int, default 100
+        Number of density grid points in each direction.
+
+    Returns
+    -------
+    Plume
     """
     density = kernel_density(longitudes, latitudes, bandwidth=bandwidth, n=n)
     polygon = density_polygon(density, threshold)
@@ -161,18 +194,28 @@ def plume_polygon(
 @dataclass(frozen=True)
 class PlumeBackground:
     """
-    Result of :func:`plume_background`.
+    Background from soundings beside a plume, returned by :func:`plume_background`.
 
-    ``value`` is the background: the median of the soundings ``used``.
-    ``uncertainty`` combines their spread with their retrieval uncertainty in
-    quadrature (``NaN`` for the retrieval part when none was given).
-    ``in_plume`` marks the soundings inside the plume, ``used`` those the
-    value came from; both are boolean arrays aligned with the input.
-    ``sides`` is the same statistic for each side of the plume separately,
-    one row per side (``north``, ``south``, ``east``, ``west``) with
-    ``n``, ``mean``, ``median``, ``std``, ``retrieval_std`` and
-    ``uncertainty`` columns, so you can see whether the sides agree and pick
-    one with ``side=``.
+    Attributes
+    ----------
+    value : float
+        Background, the median of the soundings in ``used``.
+    uncertainty : float
+        Standard deviation of those soundings and their RMS retrieval
+        uncertainty, added in quadrature. A part that is unknown (one
+        sounding, or no retrieval uncertainties given) counts as zero.
+    n : int
+        Number of soundings in ``used``.
+    in_plume : numpy.ndarray
+        True for each sounding inside the plume.
+    used : numpy.ndarray
+        True for each sounding the background came from.
+    sides : pandas.DataFrame
+        The same summary for each side of the plume, one row per side
+        (``north``, ``south``, ``east``, ``west``), with columns ``n``,
+        ``mean``, ``median``, ``std``, ``retrieval_std``, and
+        ``uncertainty``. Use it to check whether the sides agree before
+        picking one with ``side=``.
     """
 
     value: float
@@ -184,7 +227,7 @@ class PlumeBackground:
 
 
 def _stats(values: np.ndarray, uncertainties: np.ndarray) -> dict[str, float]:
-    """Summarise a set of soundings: count, mean, median, spread and error."""
+    """Return the count, mean, median, spread, and uncertainty of some soundings."""
     n = int(values.size)
     if n == 0:
         return {
@@ -222,20 +265,40 @@ def plume_background(
     trim: float | None = 0.9,
 ) -> PlumeBackground:
     """
-    Background from the soundings next to, but outside, the plume.
+    Return the background from the soundings beside a plume.
 
-    The soundings inside ``plume`` are the enhanced ones. Around them a box
-    is drawn, the bounding box of the in-plume soundings padded by ``pad``
-    times its size, and the out-of-plume soundings within ``width`` degrees
-    of that box on each side are the background candidates. ``side`` picks
-    one side (choose the upwind one; the forward particles' drift tells you
-    which); ``None`` pools all four. ``trim`` first drops the out-of-plume
-    soundings above that quantile of their values, X-STILT's guard against
-    enhanced air the plume outline missed; ``None`` keeps them all. The
-    background is the median of what remains.
+    The soundings inside ``plume`` are enhanced. A box is drawn around them,
+    and the soundings outside the plume within ``width`` degrees of the box
+    on each side are the background candidates. The background is their
+    median. Pass only good-quality soundings. Raises when no sounding is
+    inside the plume, since then the overpass did not see it.
 
-    Pass only good-quality soundings. Raises when no sounding falls inside
-    the plume, because then the overpass did not see it.
+    Parameters
+    ----------
+    longitudes, latitudes : array-like
+        Sounding positions, in degrees.
+    values : array-like
+        Sounding values, such as XCH4.
+    plume : Plume or shapely.Polygon
+        Plume outline, usually from :func:`plume_polygon`.
+    uncertainties : array-like, optional
+        Retrieval uncertainty of each sounding, in the units of ``values``.
+    side : {"north", "south", "east", "west"}, optional
+        Use only one side. Choose the upwind side, which the forward
+        particles' drift shows. ``None`` pools all four.
+    width : float, default 0.5
+        Width of the band on each side of the box, in degrees.
+    pad : float, default 0.1
+        Padding of the box around the in-plume soundings, as a fraction of
+        its size.
+    trim : float or None, default 0.9
+        Drop soundings outside the plume above this quantile of their
+        values, to guard against enhanced air the outline missed, as
+        X-STILT does. ``None`` keeps them all.
+
+    Returns
+    -------
+    PlumeBackground
     """
     lon = np.asarray(longitudes, dtype=float).ravel()
     lat = np.asarray(latitudes, dtype=float).ravel()

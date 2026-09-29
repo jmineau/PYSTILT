@@ -31,6 +31,15 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **Documentation rewritten in a plainer voice**
+  ([#45](https://github.com/jmineau/PYSTILT/issues/45)). The user guide,
+  getting-started pages, tutorials, migration pages, README, and public
+  docstrings and config field descriptions were rewritten to read like the
+  STILT-R docs, and checked against the code as they were rewritten. Many
+  examples that no longer ran are fixed (both tutorials, the README
+  quickstart, the slant-column guide). AGENTS.md has a new "Voice" section
+  describing the style. The STILT-R migration page moved from
+  `migration/r_stilt` to `migration/stilt_r`.
 - **A project is receptors × variants**
   ([#37](https://github.com/jmineau/PYSTILT/issues/37),
   [#32](https://github.com/jmineau/PYSTILT/issues/32),

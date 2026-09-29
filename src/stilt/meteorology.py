@@ -1,4 +1,4 @@
-"""Meteorology source configuration, file lookup, and staging."""
+"""Finding, downloading, cropping, and staging meteorology files."""
 
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 class MetID(str):
-    """Identifier for one meteorology stream, used to key receptor footprints."""
+    """Name of one meteorology stream. Underscores are not allowed."""
 
     def __new__(cls, name: str):
         if "_" in name:
@@ -31,11 +31,10 @@ class MetID(str):
 
 def _build_arlmet_source(name: str, kwargs: dict[str, Any]) -> ArlmetSource:
     """
-    Construct an arlmet MeteorologySource by name, with optional kwargs.
+    Return the arlmet source with this name, built with ``kwargs``.
 
-    Raises ImportError (pointing to stilt[cloud]) if fsspec/s3fs are absent
-    when the caller actually tries to download. The import here is lazy so that
-    arlmet's core (subsetting) works without the cloud extra.
+    Downloading needs the ``cloud`` extra, which raises an ImportError on
+    the first download when it is missing.
     """
     try:
         import arlmet.sources as _src
@@ -66,17 +65,16 @@ def _build_arlmet_source(name: str, kwargs: dict[str, Any]) -> ArlmetSource:
 
 class MetStream:
     """
-    Runtime handler that resolves and stages met files for one named met stream.
+    Meteorology files for one met stream, found locally or downloaded.
 
-    In *archive mode* (``source_type=None``) it globs an existing local
-    directory using ``file_format`` / ``file_tres`` to discover required files.
-
-    In *source mode* (``source_type`` set to an arlmet source name) it delegates
-    file resolution and optional on-download cropping to an
-    ``arlmet.MeteorologySource`` instance, then stages the result.
-
-    Subgridding of local archive files is handled inside ``_stage_files`` via
-    ``arlmet.extract_subset``, caching cropped copies in ``subgrid_dir``.
+    Without ``source_type``, files are found under ``directory`` from
+    ``file_format`` and ``file_tres``. With ``source_type`` set to an arlmet
+    source name, arlmet downloads the files, cropping them as it goes when
+    subgridding is on. Local files are cropped with
+    ``arlmet.extract_subset`` into ``subgrid_dir``, which all simulations
+    share. The parameters are the fields of
+    :class:`~stilt.config.MetConfig`; build one from a config with
+    :meth:`from_config`.
     """
 
     def __init__(
@@ -116,7 +114,7 @@ class MetStream:
 
     @classmethod
     def from_config(cls, name: str, config: MetConfig) -> MetStream:
-        """Build a stream from its config entry, so callers do not restate the fields."""
+        """Return the stream for a met entry of the config."""
         return cls(
             name,
             directory=config.directory,
@@ -139,14 +137,14 @@ class MetStream:
 
     @staticmethod
     def _dedupe_matched_files(paths: list[Path]) -> list[Path]:
-        """Resolve symlinks and collapse duplicate archive entries."""
+        """Resolve symlinks and drop duplicate files, sorted by name."""
         return sorted(
             dict.fromkeys(path.resolve() for path in paths),
             key=lambda path: path.name,
         )
 
     def _get_arlmet_source(self) -> ArlmetSource:
-        """Return (and cache) the arlmet source instance."""
+        """Return the arlmet source, building it on first use."""
         if self._arlmet_source is None:
             assert self.source_type is not None
             self._arlmet_source = _build_arlmet_source(
@@ -155,7 +153,7 @@ class MetStream:
         return self._arlmet_source
 
     def _effective_bbox(self) -> tuple[float, float, float, float]:
-        """Return (west, south, east, north) bbox with buffer applied."""
+        """Return ``(west, south, east, north)`` of the subgrid bounds plus the buffer."""
         b = self.subgrid_bounds
         buf = self.subgrid_buffer
         if b is None:
@@ -165,7 +163,7 @@ class MetStream:
         return (b.xmin - buf, b.ymin - buf, b.xmax + buf, b.ymax + buf)
 
     def _resolved_subgrid_dir(self) -> Path:
-        """Return the subgrid cache directory, auto-picking directory/subgrid."""
+        """Return the directory for cropped files, ``<directory>/subgrid`` by default."""
         return (
             self.subgrid_dir
             if self.subgrid_dir is not None
@@ -173,7 +171,7 @@ class MetStream:
         )
 
     def _level_indices(self) -> list[int] | None:
-        """Return level indices to keep, or None to keep all."""
+        """Return the indices of the lowest ``subgrid_levels`` levels, or None to keep all."""
         if self.subgrid_levels is None:
             return None
         return list(range(self.subgrid_levels))
@@ -183,7 +181,7 @@ class MetStream:
     # ------------------------------------------------------------------
 
     def _fetch_from_source(self, r_time: pd.Timestamp, n_hours: int) -> list[Path]:
-        """Resolve required files via an arlmet source (download / cached download)."""
+        """Return the files for a run from the arlmet source, downloading any not yet in ``directory``."""
         sim_end = r_time + pd.Timedelta(hours=n_hours)
         t_start: pd.Timestamp = min(r_time, sim_end)  # type: ignore[assignment]
         t_end: pd.Timestamp = max(r_time, sim_end)  # type: ignore[assignment]
@@ -215,7 +213,25 @@ class MetStream:
         return files
 
     def required_files(self, r_time, n_hours: int) -> list[Path]:
-        """Return source met files required to cover one simulation time window."""
+        """
+        Return the met files that cover one simulation.
+
+        Parameters
+        ----------
+        r_time : datetime-like
+            Receptor time.
+        n_hours : int
+            Simulation length in hours, negative for backward runs.
+
+        Returns
+        -------
+        list of Path
+
+        Raises
+        ------
+        MeteorologyError
+            Fewer than ``n_min`` files were found.
+        """
         _r_time = cast(pd.Timestamp, pd.Timestamp(r_time))
 
         if self.source_type is not None:
@@ -283,7 +299,7 @@ class MetStream:
         n_hours: int,
         target_dir: Path | str,
     ) -> list[Path]:
-        """Resolve and stage met files into a simulation-local compute directory."""
+        """Find the met files for one simulation and link them into ``target_dir``."""
         return self._stage_files(
             self.required_files(r_time=r_time, n_hours=n_hours),
             target_dir=target_dir,
@@ -291,12 +307,11 @@ class MetStream:
 
     def _stage_files(self, files: list[Path], target_dir: Path | str) -> list[Path]:
         """
-        Materialize met files into a compute-local directory via link-or-copy.
+        Link met files into ``target_dir``, copying when a link fails.
 
-        When subgrid_enable is True and we are in archive mode (source_type is
-        None), each source file is first subsetted via arlmet.extract_subset into
-        subgrid_dir (shared cache), then the cached copy is linked/copied into the
-        per-simulation target. In source mode, files are already cropped on fetch.
+        With subgridding on and no ``source_type``, each file is cropped into
+        ``subgrid_dir`` first and the cropped copy is linked. Downloaded files
+        were already cropped.
         """
         # Resolve subgridded paths for archive-mode subsetting
         if self.subgrid_enable and self.source_type is None:
@@ -343,7 +358,7 @@ class MetStream:
         return staged
 
     def _subset_archive_files(self, files: list[Path]) -> list[Path]:
-        """Subset archive files via arlmet.extract_subset, caching in subgrid_dir."""
+        """Crop local files into ``subgrid_dir``, reusing crops that already exist."""
         try:
             from arlmet import extract_subset
         except ImportError as exc:  # pragma: no cover

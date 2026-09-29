@@ -256,7 +256,7 @@ redistribute. Synthetic samples should keep the real format's quirks.
   and run `pyright --venvpath <dir> src/stilt`.
   Fix types at the source rather than reaching for `typing.cast`.
 - Keep the `from __future__ import annotations` headers.
-- Runtime dependencies live in `[project]`; optional extras are `projection`,
+- Runtime dependencies live in `[project]`; optional extras are `projection`, `geometry`,
   `visualization`, `cloud`, and `complete`. The `dev` dependency group pulls
   in `pystilt[complete]` plus the test, lint, type, and docs tooling.
 
@@ -267,6 +267,46 @@ concepts), `guides/` (task-oriented how-tos), `tutorials/` (end-to-end
 worked examples), `advanced/` (design and internals), and `reference/` (API
 pages built from docstrings). A user-facing change needs a guide or reference
 update, and `just build-docs` should build without new warnings.
+
+#### Voice
+
+Docs, docstrings, config field descriptions, and CLI help all follow this
+voice. Most readers are scientists who want to run the model and trust the
+result; write for them. Good examples are the
+[STILT-R docs](https://uataq.github.io/stilt/) and the xarray, pandas, and
+MetPy user guides.
+
+- **Start with what it is for.** Open a page or docstring with what the
+  thing does, in plain words. Then show an example. Internals and edge cases
+  go last, or in `docs/advanced/`.
+- **Keep sentences short.** One idea per sentence. If a sentence needs a
+  colon, a semicolon, and a parenthesis, split it.
+- **Use the reader's words.** Receptor, particles, footprint, meteorology.
+  Internal names (store key, publish, resolve) belong only on pages about
+  internals.
+- **Show it.** A short code block, with its output when that helps, is
+  clearer than a paragraph describing it.
+- **Say it plainly.** No metaphors ("a dial worth turning"), no selling
+  ("powerful", "seamless"), no filler ("note that", "it's worth noting").
+
+Some habits make text read as machine-written. Avoid them:
+
+- Colon reveals: "PYSTILT does one thing: it follows the air." Write
+  "PYSTILT follows the air."
+- "X, not Y" contrasts when nobody suggested Y.
+- A bold sentence at the start of a paragraph that states its point.
+- Dashes (`—` or `--`) joining clauses. Use a period or parentheses.
+- Lists of three out of habit, and closing sentences that restate the
+  paragraph.
+- Asides about what the code does "deliberately" or used to do.
+- Validation statistics in a user guide. Give the reader the setting to use
+  and cite the study.
+- Labels invented on one line and referred to later ("the first case").
+
+Docstrings follow the NumPy style. The summary line says what the object is
+or what the function returns. Parameter descriptions give the meaning and
+units, not the type again. Check every example and claim against the code
+when you write it.
 
 ### Commits, changelog, releases
 
@@ -285,6 +325,9 @@ Open work is tracked in
 Feature status lives in the roadmap tables in [README.md](README.md) and
 [docs/roadmap.rst](docs/roadmap.rst); when a feature lands, update both.
 
+- Code that looks over-engineered goes on the running list in
+  [#48](https://github.com/jmineau/PYSTILT/issues/48) (label `simplify`),
+  not into an unrelated change.
 - **Do not act on GitHub for the user unless asked.** No new issues, pull
   requests, comments, or review replies on their behalf. Summarize findings
   for the user and let them post in their own words.
@@ -308,7 +351,7 @@ Feature status lives in the roadmap tables in [README.md](README.md) and
 
 - **`Model.simulations` is a lazy, mapping-like `SimulationCollection`**, not
   a list.
-- **Empty footprints are successes.** `model.footprint.load()` treats
+- **Empty footprints are successes.** `model.simulations.footprint.load()` treats
   `.empty` simulations as complete with no file; code that iterates results
   must accept a missing payload.
 - **Declaring `realizations` makes a numbered group, even at 1.** `hrrr-err`

@@ -1,4 +1,4 @@
-"""Executor factory."""
+"""Building an executor from the ``execution`` settings."""
 
 from __future__ import annotations
 
@@ -11,13 +11,26 @@ from .slurm import SlurmExecutor
 
 
 def resolve_backend(execution: dict[str, Any] | None = None) -> str:
-    """Return the configured execution backend."""
+    """Return the backend named in the ``execution`` settings, ``"local"`` by default."""
     resolved: dict[str, Any] = dict(execution or {})
     return resolved.get("backend", "local")
 
 
 def get_executor(execution: dict[str, Any] | None = None) -> Executor:
-    """Create an executor from an execution config dict."""
+    """
+    Return the executor for the ``execution`` settings of a config.
+
+    Parameters
+    ----------
+    execution : dict, optional
+        The config's ``execution`` mapping. ``backend`` is ``local`` (the
+        default), ``slurm``, or ``kubernetes``, and the other keys are that
+        backend's options.
+
+    Returns
+    -------
+    Executor
+    """
     resolved: dict[str, Any] = dict(execution or {})
     backend = resolve_backend(resolved)
 

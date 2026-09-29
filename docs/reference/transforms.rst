@@ -1,10 +1,10 @@
 Transforms
 ==========
 
-Particle transforms rescale each particle's ``foot`` before a footprint is
-rasterized (see :doc:`/advanced/transforms`). A transform is any object with
-``apply(particles, context)``; the built-ins are pydantic models whose fields
-are their ``config.yaml`` keys.
+Particle transforms scale each particle's ``foot`` before the footprint is
+made (see :doc:`/advanced/transforms`). A transform is any object with an
+``apply(particles, context)`` method. The built-ins are pydantic models,
+and their fields are their ``config.yaml`` keys.
 
 Interface
 ---------
@@ -27,6 +27,15 @@ Built-in transforms
    stilt.transforms.PressureWeighting
    stilt.transforms.FirstOrderLifetime
    stilt.transforms.UnresolvedTransform
+
+Averaging-kernel tables
+-----------------------
+
+.. autosummary::
+   :toctree: _api
+   :nosignatures:
+
+   stilt.transforms.averaging_kernel_table
 
 Science helpers
 ---------------

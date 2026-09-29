@@ -1,11 +1,11 @@
 """
-Sampling a flux field along particles and under footprints.
+Sampling a surface flux field along particles and under footprints.
 
-A flux field is an :class:`xarray.DataArray` on a regular ``lat`` / ``lon``
-grid (or ``y`` / ``x`` for a projected footprint grid), optionally with a
-``time`` dimension. Values are looked up at the nearest cell centre; a point
-outside the field's cells contributes nothing. Units are the user's: a flux in
-µmol m⁻² s⁻¹ times a footprint in ppm per (µmol m⁻² s⁻¹) gives ppm.
+A flux field is an :class:`xarray.DataArray` on a regular ``lat``/``lon``
+grid (``y``/``x`` for a projected footprint grid), with an optional ``time``
+dimension. Each point takes the value of the flux cell it falls in, and a
+point outside the field gets zero. PYSTILT does not convert units. A flux
+in µmol m⁻² s⁻¹ times a footprint in ppm per (µmol m⁻² s⁻¹) gives ppm.
 """
 
 from __future__ import annotations
@@ -19,7 +19,14 @@ _HORIZONTAL_DIMS = (("lat", "lon"), ("y", "x"))
 
 
 def horizontal_dims(data: xr.DataArray) -> tuple[str, str]:
-    """Return ``(y_dim, x_dim)`` of a footprint or flux array."""
+    """
+    Return the names of the horizontal dimensions, ``(y_dim, x_dim)``.
+
+    Raises
+    ------
+    ValueError
+        If *data* has neither ``lat``/``lon`` nor ``y``/``x`` dimensions.
+    """
     for y_dim, x_dim in _HORIZONTAL_DIMS:
         if y_dim in data.dims and x_dim in data.dims:
             return y_dim, x_dim
@@ -30,10 +37,23 @@ def horizontal_dims(data: xr.DataArray) -> tuple[str, str]:
 
 def nearest_cell(coords: np.ndarray, values: np.ndarray) -> np.ndarray:
     """
-    Index of the cell whose centre is nearest each value, or ``-1`` outside.
+    Return the index of the cell nearest each value, or ``-1`` outside the cells.
 
-    Cells extend halfway to their neighbours; the outer cells extend by the
-    same half spacing beyond the end centres.
+    Each cell reaches halfway to its neighbours. The end cells reach the
+    same distance beyond their centres. With a single cell, every finite
+    value is inside it.
+
+    Parameters
+    ----------
+    coords : numpy.ndarray
+        Cell centres along one axis, ascending or descending.
+    values : numpy.ndarray
+        Positions to look up.
+
+    Returns
+    -------
+    numpy.ndarray
+        Index into *coords* for each value.
     """
     coords = np.asarray(coords, dtype=float)
     if coords.ndim != 1 or coords.size == 0:
@@ -61,11 +81,31 @@ def sample_flux(
     times: ArrayLike | None = None,
 ) -> np.ndarray:
     """
-    Flux at the cell nearest each ``(x, y[, time])`` point; ``0`` outside the field.
+    Return the flux at each point, or zero outside the field.
 
-    ``x`` / ``y`` are longitudes / latitudes for a ``lat`` / ``lon`` field.
-    When ``flux`` has a ``time`` dimension, ``times`` is required and the
-    nearest time slice is used (held at the ends outside the field's span).
+    Parameters
+    ----------
+    flux : xarray.DataArray
+        Flux on a ``lat``/``lon`` or ``y``/``x`` grid, with an optional
+        ``time`` dimension. NaN values count as zero.
+    x, y : array-like
+        Point coordinates, longitude and latitude for a ``lat``/``lon``
+        field.
+    times : array-like, optional
+        Time of each point. Required when *flux* has a ``time`` dimension.
+        Each point takes the nearest time step, so times outside the
+        field's span take the first or last one.
+
+    Returns
+    -------
+    numpy.ndarray
+        Flux at each point, in the flux's units.
+
+    Raises
+    ------
+    ValueError
+        If the lengths of *x*, *y*, and *times* differ, or *flux* has a
+        ``time`` dimension and *times* is not given.
     """
     y_dim, x_dim = horizontal_dims(flux)
     xs = np.asarray(x, dtype=float).ravel()
@@ -96,12 +136,32 @@ def sample_flux(
 
 def particle_enhancement(particles: pd.DataFrame, flux: xr.DataArray) -> pd.Series:
     """
-    Each particle's enhancement: the sum over its trajectory of ``foot × flux``.
+    Return each particle's enhancement, ``foot`` times flux summed along its trajectory.
 
-    Indexed by ``indx``; a particle that never crosses the flux field gets
-    ``0``. The mean over particles (after any weighting) is the modelled
-    enhancement at the receptor, in the flux's units times the footprint's.
-    A time-varying flux is sampled at each row's ``datetime``.
+    The mean over particles, after any weighting, is the modelled
+    enhancement at the receptor. Unlike :meth:`stilt.Footprint.enhancement`,
+    the flux is taken at each particle position, with no gridding or
+    smoothing.
+
+    Parameters
+    ----------
+    particles : pandas.DataFrame
+        Particle table with ``indx``, ``long``, ``lati``, and ``foot``
+        columns, and ``datetime`` when the flux varies in time.
+    flux : xarray.DataArray
+        Surface flux field. See :func:`sample_flux`.
+
+    Returns
+    -------
+    pandas.Series
+        Enhancement indexed by ``indx``, in the flux's units times the
+        footprint's. A particle that never crosses the flux field gets 0.
+
+    Raises
+    ------
+    ValueError
+        If the flux varies in time and the particles have no ``datetime``
+        column.
     """
     times = (
         particles["datetime"].to_numpy() if "datetime" in particles.columns else None

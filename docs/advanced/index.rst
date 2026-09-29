@@ -3,7 +3,8 @@
 Advanced Topics
 ===============
 
-These pages are part of the :doc:`../guides/index`.
+These pages cover how PYSTILT works inside. They are listed in the
+:doc:`../guides/index`.
 
 - :doc:`observations`
 - :doc:`transforms`
