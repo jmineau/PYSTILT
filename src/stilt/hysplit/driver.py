@@ -286,7 +286,7 @@ class HYSPLITDriver:
             for line in handle:
                 for phrase, reason in FAILURE_PHRASES.items():
                     if phrase in line:
-                        raise HYSPLITFailureError(reason, str(self.directory))
+                        raise HYSPLITFailureError(reason, self.log_path)
 
     def _read_particles(self, rm_dat: bool) -> pd.DataFrame:
         """Read ``PARTICLE_STILT.DAT``, deleting the particle files if ``rm_dat``."""

@@ -126,8 +126,8 @@ class HYSPLITFailureError(SimulationError):
     ----------
     reason : FailureReason
         The failure the message identifies.
-    sim_id : str, optional
-        Label for the failed run, put in front of the message.
+    log_path : str or Path
+        The HYSPLIT log holding the message.
 
     Attributes
     ----------
@@ -135,7 +135,6 @@ class HYSPLITFailureError(SimulationError):
         The failure the message identifies.
     """
 
-    def __init__(self, reason: FailureReason, sim_id: str = ""):
+    def __init__(self, reason: FailureReason, log_path: str | Path):
         self.reason = reason
-        msg = f"{sim_id}: {reason}" if sim_id else str(reason)
-        super().__init__(msg)
+        super().__init__(f"HYSPLIT failed with {reason}; see {log_path}")

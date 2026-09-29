@@ -92,17 +92,13 @@ def test_all_subclasses_inherit_simulation_error():
         assert issubclass(cls, SimulationError)
 
 
-def test_hysplit_failure_error_stores_reason():
-    err = HYSPLITFailureError(FailureReason.MISSING_MET_FILES)
+def test_hysplit_failure_error_names_the_reason_and_the_log():
+    err = HYSPLITFailureError(FailureReason.MISSING_MET_FILES, "/runs/a/stilt.log")
     assert err.reason is FailureReason.MISSING_MET_FILES
     assert "MISSING_MET_FILES" in str(err)
-
-
-def test_hysplit_failure_error_includes_sim_id():
-    err = HYSPLITFailureError(FailureReason.FORTRAN_RUNTIME_ERROR, "202301011200_abc")
-    assert "202301011200_abc" in str(err)
+    assert "/runs/a/stilt.log" in str(err)
 
 
 def test_hysplit_failure_error_catchable_as_simulation_error():
     with pytest.raises(SimulationError):
-        raise HYSPLITFailureError(FailureReason.UNKNOWN)
+        raise HYSPLITFailureError(FailureReason.UNKNOWN, "stilt.log")
