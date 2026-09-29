@@ -7,6 +7,7 @@ from types import SimpleNamespace
 import pandas as pd
 import pytest
 import xarray as xr
+from pydantic import BaseModel
 
 from stilt.config import (
     FootprintConfig,
@@ -555,6 +556,15 @@ def test_generate_footprint_accepts_ad_hoc_settings(point_receptor, tmp_path):
     assert not sim.footprint_path.exists()  # nothing written without write=True
 
 
+class HalvingModel(BaseModel):
+    """Pydantic transform that halves ``foot``, loadable from a config by import path."""
+
+    def apply(self, particles, context=None):
+        out = particles.copy()
+        out["foot"] = out["foot"] * 0.5
+        return out
+
+
 class HalvingTransform:
     """Python-side transform that halves ``foot`` and records its context."""
 
@@ -590,11 +600,11 @@ def test_generate_footprint_records_the_transforms_it_applied(point_receptor, tm
     foot = sim.generate_footprint(transforms=[halve], write=True)
 
     assert foot.config.transforms == [*sim.footprint_config.transforms, halve]
-    stored = Footprint.from_netcdf(sim.footprint_path)
-    assert [transform_kind(t) for t in stored.config.transforms] == [
-        transform_kind(t) for t in foot.config.transforms
-    ]
-    assert transform_kind(stored.config.transforms[-1]).endswith("HalvingTransform")
+    # HalvingTransform is a plain class, so it reads back as its mapping.
+    with pytest.warns(UserWarning, match="HalvingTransform"):
+        stored = Footprint.from_netcdf(sim.footprint_path)
+    assert stored.config.transforms[-1] == {"kind": transform_kind(halve)}
+    assert len(stored.config.transforms) == len(foot.config.transforms)
 
 
 def test_generate_footprint_applies_dotted_path_config_transforms(
@@ -605,15 +615,14 @@ def test_generate_footprint_applies_dotted_path_config_transforms(
         grid=GRID,
         time_integrate=True,
         smooth_factor=0.0,
-        transforms=[{"kind": f"{__name__}.{HalvingTransform.__name__}"}],
+        transforms=[{"kind": f"{__name__}.{HalvingModel.__name__}"}],
     )
-    assert isinstance(dotted.transforms[0], HalvingTransform)
+    assert isinstance(dotted.transforms[0], HalvingModel)
 
     base = sim.generate_footprint()
     halved = sim.generate_footprint(dotted)
 
     assert float(halved.data.sum()) == pytest.approx(0.5 * float(base.data.sum()))
-    assert dotted.transforms[0].context.variant == "hrrr"
 
 
 def test_generate_footprint_autoruns_trajectories_when_missing(

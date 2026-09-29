@@ -714,11 +714,10 @@ def test_load_transform_dotted_kind_pydantic_class():
     assert result["foot"].tolist() == pytest.approx([2.5] * 3)
 
 
-def test_load_transform_dotted_kind_plain_class():
-    t = load_transform({"kind": PLAIN_SCALE_KIND, "factor": 4.0})
-    assert isinstance(t, PlainScale)
-    assert t.factor == pytest.approx(4.0)
-    assert load_transform({"kind": PLAIN_SCALE_KIND}).factor == pytest.approx(1.0)
+def test_load_transform_dotted_kind_must_be_a_pydantic_model():
+    """A plain class could be loaded but never written back to config.yaml."""
+    with pytest.raises(TypeError, match="pydantic"):
+        load_transform({"kind": PLAIN_SCALE_KIND, "factor": 4.0})
 
 
 def test_load_transform_nonexistent_module_raises():

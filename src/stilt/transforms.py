@@ -587,8 +587,8 @@ def load_transform(spec: Any) -> Any:
 
     ``spec`` is either a transform already (any object with ``apply``) or a
     mapping with a ``kind``. The ``kind`` is a built-in name or the import
-    path of a class, which is built from the remaining keys
-    (``cls.model_validate`` for a pydantic model, ``cls(**keys)`` otherwise).
+    path of a pydantic model class, which is validated from the remaining
+    keys. Only a pydantic model can be written back to ``config.yaml``.
 
     Raises
     ------
@@ -618,9 +618,12 @@ def load_transform(spec: Any) -> Any:
         ) from exc
     if not callable(getattr(cls, "apply", None)):
         raise TypeError(f"{kind} does not define an apply() method.")
-    if hasattr(cls, "model_validate"):
-        return cls.model_validate(fields)
-    return cls(**fields)
+    if not hasattr(cls, "model_validate"):
+        raise TypeError(
+            f"{kind} is not a pydantic model. A transform named in a config "
+            "must be one so its settings can be written back."
+        )
+    return cls.model_validate(fields)
 
 
 def dump_transform(transform: Any) -> dict[str, Any]:

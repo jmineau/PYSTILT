@@ -587,12 +587,13 @@ def _record_transform(transform: Any) -> dict[str, Any]:
 
 
 def _read_transform(spec: dict[str, Any], path: Path) -> Any:
-    """Return a recorded transform, or its mapping when its class cannot be imported."""
+    """Return a recorded transform, or its mapping when it cannot be rebuilt here."""
     try:
         return load_transform(spec)
-    except ImportError as exc:
+    except (ImportError, TypeError, ValueError) as exc:
         warnings.warn(
-            f"{path.name}: {exc} It is kept as its settings and cannot be applied.",
+            f"{path.name}: transform {spec.get('kind')!r} could not be rebuilt "
+            f"({exc}). It is kept as its settings and cannot be applied.",
             stacklevel=3,
         )
         return spec
@@ -709,8 +710,9 @@ class Footprint:
         -------
         Footprint
             The footprint, with its receptor and settings read from the
-            file's attributes. A recorded transform whose class cannot be
-            imported here is kept as its settings mapping, with a warning.
+            file's attributes. A recorded transform that cannot be rebuilt
+            here (its class cannot be imported, or is not a pydantic model)
+            is kept as its settings mapping, with a warning.
         """
         path = Path(path).resolve()
 
@@ -811,7 +813,7 @@ class Footprint:
             unresolved = [t["kind"] for t in config.transforms if isinstance(t, dict)]
             if unresolved:
                 raise ImportError(
-                    f"Transforms {unresolved} could not be imported, so they "
+                    f"Transforms {unresolved} could not be rebuilt, so they "
                     "cannot be applied."
                 )
             if context is None:
