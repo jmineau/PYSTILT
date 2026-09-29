@@ -5,21 +5,11 @@ from pathlib import Path
 
 import pytest
 
-from stilt.store import FsspecStore, LocalStore, Store, is_uri, make_store
+from stilt.store import FsspecStore, LocalStore, is_uri, make_store
 
 # ---------------------------------------------------------------------------
 # Protocol / factory
 # ---------------------------------------------------------------------------
-
-
-def test_local_store_is_runtime_checkable(tmp_path):
-    store = LocalStore(tmp_path / "output")
-    assert isinstance(store, Store)
-
-
-def test_remote_store_is_runtime_checkable(tmp_path):
-    store = FsspecStore(f"memory://proto-check-{tmp_path.name}")
-    assert isinstance(store, Store)
 
 
 def test_make_store_returns_local_store_for_local_path(tmp_path):

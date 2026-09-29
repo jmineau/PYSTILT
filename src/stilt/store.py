@@ -14,7 +14,7 @@ import posixpath
 import shutil
 import tempfile
 from pathlib import Path
-from typing import Protocol, runtime_checkable
+from typing import Protocol
 
 import fsspec
 
@@ -24,7 +24,6 @@ def is_uri(root: str | Path) -> bool:
     return "://" in str(root)
 
 
-@runtime_checkable
 class Store(Protocol):
     """Interface for reading and writing project files by key."""
 
