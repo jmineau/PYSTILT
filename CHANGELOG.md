@@ -56,6 +56,8 @@ public.
   `SIMULATION_LOG_FILENAME` and `SIMULATION_MET_DIRNAME` constants of
   `stilt.project`.
 - `Store` is no longer `runtime_checkable`.
+- `VariantConfig.differences()`, `MetConfig.differences()`, and
+  `MetConfig.record()`. `Model.check_config` compares the record itself.
 
 ## [0.1.0a21] - 2026-09-29
 
