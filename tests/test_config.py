@@ -412,7 +412,7 @@ def test_model_config_yaml_roundtrip_with_footprint_transforms(tmp_path, grid):
     given = [
         AveragingKernel(levels=[0.0, 1000.0], values=[0.2, 0.8], coordinate="xhgt"),
         PressureWeighting(),
-        FirstOrderLifetime(lifetime_hours=4.0, time_column="time", time_unit="min"),
+        FirstOrderLifetime(lifetime_hours=4.0),
     ]
     cfg = ModelConfig(mets=_met_config(tmp_path), grid=grid, transforms=given)
     path = tmp_path / "config.yaml"
@@ -562,8 +562,6 @@ def test_model_config_loads_footprint_transforms_from_yaml(tmp_path):
           - kind: pressure_weighting
           - kind: first_order_lifetime
             lifetime_hours: 3.0
-            time_column: time
-            time_unit: min
           - kind: {SCALE_FOOT_KIND}
             factor: 0.5
     """)

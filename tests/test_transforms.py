@@ -625,26 +625,10 @@ def test_first_order_lifetime_decays_by_transport_age():
     )
 
 
-def test_first_order_lifetime_honours_time_unit():
-    p = _aged_particles()
-    p["age_h"] = [0.0, -1.0, -2.0]
-    result = FirstOrderLifetime(
-        lifetime_hours=1.0, time_column="age_h", time_unit="h"
-    ).apply(p)
-    assert result["foot"].tolist() == pytest.approx(
-        [1.0, math.exp(-1.0), math.exp(-2.0)]
-    )
-
-
 def test_first_order_lifetime_requires_transport_time_column():
     p = _aged_particles().drop(columns=["time"])
     with pytest.raises(ValueError, match="time"):
         FirstOrderLifetime(lifetime_hours=1.0).apply(p)
-
-
-def test_first_order_lifetime_rejects_unknown_time_unit_at_construction():
-    with pytest.raises(ValidationError):
-        FirstOrderLifetime(lifetime_hours=1.0, time_unit="fortnight")  # type: ignore[arg-type]
 
 
 def test_first_order_lifetime_rejects_nonpositive_lifetime():
@@ -715,8 +699,6 @@ def test_load_transform_first_order_lifetime():
     t = load_transform({"kind": "first_order_lifetime", "lifetime_hours": 4.0})
     assert isinstance(t, FirstOrderLifetime)
     assert t.lifetime_hours == pytest.approx(4.0)
-    assert t.time_column == "time"
-    assert t.time_unit == "min"
 
 
 def test_load_transform_passes_through_object_with_apply():
@@ -794,7 +776,7 @@ def test_load_transform_builtin_validates_fields():
         ),
         (PressureWeighting(surface_pressure=900.0), "pressure_weighting"),
         (
-            FirstOrderLifetime(lifetime_hours=2.0, time_column="age", time_unit="h"),
+            FirstOrderLifetime(lifetime_hours=2.0),
             "first_order_lifetime",
         ),
         (ScaleFoot(factor=1.5), SCALE_FOOT_KIND),

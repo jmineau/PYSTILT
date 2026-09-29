@@ -80,8 +80,7 @@ Built-in transforms
 ``first_order_lifetime`` (:class:`stilt.transforms.FirstOrderLifetime`)
    Scales ``foot`` by :math:`\exp(-\text{age} / \tau)`, where
    :math:`\tau` is ``lifetime_hours``. The age is the particle's transport
-   time, read from ``time_column`` (default ``time``) in ``time_unit``
-   (default minutes).
+   time, from its ``time`` column.
 
 For satellite and TCCON columns, list ``averaging_kernel`` and then
 ``pressure_weighting``. With no transforms every particle counts equally,

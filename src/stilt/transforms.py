@@ -83,20 +83,6 @@ class ParticleTransform(Protocol):
 
 # -- science ----------------------------------------------------------------------
 
-HOURS_PER: dict[str, float] = {
-    "s": 1.0 / 3600.0,
-    "sec": 1.0 / 3600.0,
-    "seconds": 1.0 / 3600.0,
-    "m": 1.0 / 60.0,
-    "min": 1.0 / 60.0,
-    "minutes": 1.0 / 60.0,
-    "h": 1.0,
-    "hr": 1.0,
-    "hours": 1.0,
-    "d": 24.0,
-    "days": 24.0,
-}
-
 
 def release_coordinate(particles: pd.DataFrame, coordinate: str) -> pd.Series:
     """
@@ -542,35 +528,27 @@ class FirstOrderLifetime(BaseModel):
     """
     Transform that decays each particle's ``foot`` by ``exp(-age / lifetime)``.
 
-    ``age`` is the particle's travel time, read from ``time_column``, and the
-    lifetime is the species' e-folding lifetime.
+    ``age`` is the particle's travel time since release, from the ``time``
+    column (minutes), and the lifetime is the species' e-folding lifetime.
     """
 
     model_config = ConfigDict(frozen=True)
 
     kind: Literal["first_order_lifetime"] = "first_order_lifetime"
     lifetime_hours: float = Field(gt=0, description="E-folding lifetime, in hours.")
-    time_column: str = Field(
-        default="time",
-        description="Particle column holding the travel time since release.",
-    )
-    time_unit: Literal[
-        "s", "sec", "seconds", "m", "min", "minutes", "h", "hr", "hours", "d", "days"
-    ] = Field(default="min", description="Unit of ``time_column``.")
 
     def apply(
         self, particles: pd.DataFrame, context: TransformContext | None = None
     ) -> pd.DataFrame:
         """Return the particles with ``foot`` decayed by age."""
-        if self.time_column not in particles.columns:
+        if "time" not in particles.columns:
             raise ValueError(
-                f"Particle DataFrame has no column {self.time_column!r} required "
-                "for first_order_lifetime."
+                "Particle DataFrame has no 'time' column, required for "
+                "first_order_lifetime."
             )
-        ages = np.abs(particles[self.time_column].to_numpy(dtype=float))
-        tau = self.lifetime_hours / HOURS_PER[self.time_unit]
+        age_hours = np.abs(particles["time"].to_numpy(dtype=float)) / 60.0
         out = particles.copy()
-        out["foot"] = out["foot"] * np.exp(-ages / tau)
+        out["foot"] = out["foot"] * np.exp(-age_hours / self.lifetime_hours)
         return out
 
 
@@ -677,7 +655,6 @@ def apply_transforms(
 
 
 __all__ = [
-    "HOURS_PER",
     "KERNEL_TABLE_COLUMNS",
     "AveragingKernel",
     "BuiltinTransform",
