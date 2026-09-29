@@ -245,17 +245,14 @@ Here ``w`` is ``weight``, ``s`` is ``sd_trans``, ``h`` is ``height``, and
 ``L`` is ``length_scale``, 356 m by default (X-STILT's value). With
 ``length_scale=None`` the levels are independent.
 
-Two options reproduce X-STILT
-(`Wu et al., 2018 <https://doi.org/10.5194/gmd-11-4843-2018>`_). Both are
-off by default.
-
-- ``percentile=0.99`` drops the top 1 % of particles in each level before
-  taking the variance. This damps the few particles that pass over a point
-  source, at the cost of a small bias.
-- ``regression=True`` replaces each level's ``dvar`` with a line fitted
-  through the levels where ``dvar`` is positive. Fitting only those levels
-  biases the result upward. Under pure sampling noise it reports a positive
-  error at every level.
+``percentile=0.99`` reproduces X-STILT's trimming
+(`Wu et al., 2018 <https://doi.org/10.5194/gmd-11-4843-2018>`_). It drops
+the top 1 % of particles in each level before taking the variance, which
+damps the few particles that pass over a point source at the cost of a
+small bias. X-STILT also fits a line through the levels where ``dvar`` is
+positive. PYSTILT does not, because fitting only those levels biases the
+result upward: under pure sampling noise it reports a positive error at
+every level.
 
 The method measures how much the wind error moves particles between flux
 cells. It says little when the flux field is uniform, and it is only as

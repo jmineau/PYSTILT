@@ -75,8 +75,7 @@ class TransportError:
         ``mean_orig``, ``var_orig``, ``mean_err``, and ``var_err`` (mean and
         variance of the per-particle enhancement without and with the
         perturbation), ``dvar`` (``var_err - var_orig``), and ``sd_trans``
-        (signed square root of ``dvar``, or X-STILT's regression-scaled value
-        with ``regression=True``).
+        (signed square root of ``dvar``).
     length_scale : float or None
         Vertical correlation length used to combine the levels, in m.
     background : float
@@ -102,28 +101,32 @@ class TransportError:
         return float(np.sqrt(max(self.variance, 0.0)))
 
 
-def _level_bins(
-    heights: pd.Series, levels: int | Sequence[float]
-) -> tuple[pd.Series, pd.Series]:
-    """Return each particle's level label and each level's mean height."""
+def _level_edges(heights: pd.Series, levels: int | Sequence[float]) -> np.ndarray:
+    """
+    Return the release-height bin edges of the levels.
+
+    Given edges are used as they are. With a number of levels, the edges
+    split the height range evenly, or fall halfway between the distinct
+    heights when there are no more of them than ``levels``. The outer edges
+    are then open, so the perturbed particles fall in the same levels.
+    """
     if not isinstance(levels, int):
-        edges = np.asarray(levels, dtype=float)
-        label = pd.cut(heights, edges, labels=False, include_lowest=True)
+        return np.asarray(levels, dtype=float)
+    if levels < 1:
+        raise ValueError("levels must be >= 1.")
+    unique = np.unique(heights.to_numpy(dtype=float))
+    if unique.size <= levels:
+        edges = np.concatenate(([-np.inf], (unique[:-1] + unique[1:]) / 2.0, [np.inf]))
     else:
-        if levels < 1:
-            raise ValueError("levels must be >= 1.")
-        unique = np.unique(heights.to_numpy())
-        if unique.size <= levels:
-            label = pd.Series(
-                np.searchsorted(unique, heights.to_numpy()), index=heights.index
-            )
-        else:
-            label = pd.cut(heights, levels, labels=False, include_lowest=True)
-    lab = np.asarray(label, dtype=float)
-    hgt = heights.to_numpy(dtype=float)
-    uniq = np.unique(lab[np.isfinite(lab)])
-    level_height = pd.Series([float(hgt[lab == u].mean()) for u in uniq], index=uniq)
-    return pd.Series(lab, index=heights.index), level_height
+        edges = np.linspace(unique[0], unique[-1], levels + 1)
+        edges[0], edges[-1] = -np.inf, np.inf
+    return edges
+
+
+def _level_labels(heights: pd.Series, edges: np.ndarray) -> pd.Series:
+    """Return each particle's level number, NaN outside the edges."""
+    label = pd.cut(heights, edges, labels=False, include_lowest=True)
+    return pd.Series(np.asarray(label, dtype=float), index=heights.index)
 
 
 def _level_stats(values: np.ndarray, percentile: float) -> tuple[float, float]:
@@ -139,59 +142,25 @@ def _level_stats(values: np.ndarray, percentile: float) -> tuple[float, float]:
     return mean, float(v.var(ddof=0))
 
 
-def _scale_dvar(levels: pd.DataFrame) -> np.ndarray:
-    """
-    Return X-STILT's regression-scaled transport-error sd per level (Wu et al., 2018).
-
-    Over the levels where ``var_err − var_orig`` is positive, ``var_err`` is
-    regressed on ``var_orig`` with weights ``1 / sqrt(var_err)``. The fitted
-    line's excess over ``var_orig`` at each level is the scaled
-    transport-error variance. With fewer than two positive levels the raw
-    difference is used, clipped at zero.
-
-    Keeping only the positive levels biases the slope above one, so under
-    sampling noise alone this reports a positive error at every level. It is
-    for reproducing X-STILT results.
-    """
-    var_orig = levels["var_orig"].to_numpy(dtype=float)
-    var_err = levels["var_err"].to_numpy(dtype=float)
-    dvar = var_err - var_orig
-    positive = np.isfinite(dvar) & (dvar > 0) & (var_err > 0)
-    if positive.sum() >= 2 and np.ptp(var_orig[positive]) > 0:
-        slope, intercept = np.polyfit(
-            var_orig[positive], var_err[positive], 1, w=1.0 / np.sqrt(var_err[positive])
-        )
-        scaled = slope * var_orig + intercept - var_orig
-    else:
-        scaled = dvar
-    return np.sqrt(np.clip(np.nan_to_num(scaled, nan=0.0), 0.0, None))
-
-
 def _signed_sqrt(values: np.ndarray) -> np.ndarray:
     """Return ``sign(v) * sqrt(|v|)``, with NaN as 0."""
     v = np.nan_to_num(np.asarray(values, dtype=float), nan=0.0)
     return np.sign(v) * np.sqrt(np.abs(v))
 
 
-def _combine(
-    levels: pd.DataFrame, length_scale: float | None, *, regression: bool
-) -> float:
+def _combine(levels: pd.DataFrame, length_scale: float | None) -> float:
     """
     Return the column variance ``Σ_i w_i² v_i + Σ_{i≠j} w_i w_j s_i s_j corr_ij``.
 
     ``s`` is the per-level ``sd_trans``. On the diagonal, ``v`` is the
     signed variance difference, so a level whose spread fell counts
-    negatively. With ``regression`` it is ``s²``, which is never negative.
-    The cross terms use the signed square roots, so correlated levels of the
+    negatively. The cross terms use the signed square roots, so correlated levels of the
     same sign add and levels of opposite sign cancel.
     """
     w = levels["weight"].to_numpy(dtype=float)
     s = levels["sd_trans"].to_numpy(dtype=float)
     h = levels["height"].to_numpy(dtype=float)
-    if regression:
-        diag = s**2
-    else:
-        diag = np.nan_to_num(levels["dvar"].to_numpy(dtype=float), nan=0.0)
+    diag = np.nan_to_num(levels["dvar"].to_numpy(dtype=float), nan=0.0)
     if length_scale is None:
         corr = np.eye(len(h))
     else:
@@ -209,7 +178,6 @@ def _level_table(
     level_height: pd.Series,
     *,
     percentile: float,
-    regression: bool,
 ) -> pd.DataFrame:
     """
     Return the table of means, variances, and weights per release level.
@@ -243,9 +211,7 @@ def _level_table(
         )
     table = pd.DataFrame(rows)
     table["dvar"] = table["var_err"] - table["var_orig"]
-    table["sd_trans"] = (
-        _scale_dvar(table) if regression else _signed_sqrt(table["dvar"].to_numpy())
-    )
+    table["sd_trans"] = _signed_sqrt(table["dvar"].to_numpy())
     return table
 
 
@@ -263,7 +229,6 @@ def _noise(
     *,
     splits: int,
     percentile: float,
-    regression: bool,
     length_scale: float | None,
 ) -> float:
     """
@@ -295,10 +260,9 @@ def _noise(
             [label_orig.reindex(b.index)],
             level_height,
             percentile=percentile,
-            regression=regression,
         )
         table["weight"] = table["n"] / table["n"].sum()
-        estimates.append(_combine(table, length_scale, regression=regression))
+        estimates.append(_combine(table, length_scale))
     return float(np.std(estimates, ddof=1) / np.sqrt(2.0))
 
 
@@ -312,7 +276,6 @@ def transport_error(
     levels: int | Sequence[float] = 20,
     length_scale: float | None = DEFAULT_LENGTH_SCALE,
     percentile: float = 1.0,
-    regression: bool = False,
     noise_splits: int = 16,
     background: xr.DataArray | None = None,
 ) -> TransportError:
@@ -349,10 +312,6 @@ def transport_error(
         before taking the variance. 1.0 keeps every particle, as Lin and
         Gerbig do. X-STILT uses 0.99 to limit the few particles that cross a
         point source. Means always use every particle.
-    regression : bool, default False
-        Use X-STILT's regression scaling of the per-level variance
-        differences instead of the signed differences. It is biased upward
-        by sampling noise and is for reproducing X-STILT results.
     noise_splits : int, default 16
         Number of random half-splits of the unperturbed particles used to
         estimate ``noise``. Fewer than 2 skips it and gives NaN.
@@ -434,19 +393,17 @@ def transport_error(
     # the unperturbed particles' weighted background, reported separately
     background_value = 0.0 if b_orig is None else float(b_orig.mean())
 
-    label_orig, level_height = _level_bins(h_orig, levels)
-    edges = _edges_from_levels(h_orig, level_height, levels)
+    edges = _level_edges(h_orig, levels)
+    label_orig = _level_labels(h_orig, edges)
+    lab, hgt = label_orig.to_numpy(), h_orig.to_numpy(dtype=float)
+    present = np.unique(lab[np.isfinite(lab)])
+    level_height = pd.Series([hgt[lab == u].mean() for u in present], index=present)
 
     x_errs, label_errs = [], []
     for err in error_tables:
         x_err, h_err, _ = _prepare(err)
         x_errs.append(x_err)
-        label_errs.append(
-            pd.Series(
-                pd.cut(h_err, edges, labels=False, include_lowest=True),
-                index=h_err.index,
-            ).astype(float)
-        )
+        label_errs.append(_level_labels(h_err, edges))
 
     table = _level_table(
         x_orig,
@@ -455,7 +412,6 @@ def transport_error(
         label_errs,
         level_height,
         percentile=percentile,
-        regression=regression,
     )
     n_real = len(error_tables)
     # The main particles are shared by every realization, so only the
@@ -463,7 +419,7 @@ def transport_error(
     noise_factor = float(np.sqrt((1.0 + 1.0 / n_real) / 2.0))
     w = table["weight"].to_numpy()
     return TransportError(
-        variance=_combine(table, length_scale, regression=regression),
+        variance=_combine(table, length_scale),
         noise=noise_factor
         * _noise(
             x_orig,
@@ -471,7 +427,6 @@ def transport_error(
             level_height,
             splits=noise_splits,
             percentile=percentile,
-            regression=regression,
             length_scale=length_scale,
         ),
         enhancement=float(np.nansum(w * table["mean_orig"].to_numpy())),
@@ -489,25 +444,6 @@ def _release_heights(particles: pd.DataFrame) -> pd.Series:
         return release_coordinate(particles, "xhgt")
     indx = np.unique(particles["indx"].to_numpy())
     return pd.Series(0.0, index=indx)
-
-
-def _edges_from_levels(
-    heights: pd.Series, level_height: pd.Series, levels: int | Sequence[float]
-) -> np.ndarray:
-    """Return bin edges that put the error particles in the same levels as the unperturbed ones."""
-    if not isinstance(levels, int):
-        return np.asarray(levels, dtype=float)
-    centres = level_height.to_numpy(dtype=float)
-    if centres.size == 1:
-        return np.array([-np.inf, np.inf])
-    unique = np.unique(heights.to_numpy())
-    if unique.size <= levels:
-        mids = (unique[:-1] + unique[1:]) / 2.0
-        return np.concatenate(([-np.inf], mids, [np.inf]))
-    lo, hi = float(heights.min()), float(heights.max())
-    edges = np.linspace(lo, hi, levels + 1)
-    edges[0], edges[-1] = -np.inf, np.inf
-    return edges
 
 
 __all__ = ["DEFAULT_LENGTH_SCALE", "TransportError", "transport_error"]

@@ -6,7 +6,6 @@ import pytest
 import xarray as xr
 
 from stilt.observations import TransportError, transport_error
-from stilt.observations.uncertainty import _scale_dvar
 from stilt.transforms import AveragingKernel, TransformContext
 
 FLUX = xr.DataArray(
@@ -32,27 +31,6 @@ def _column(n_levels=4, per_level=200, spread=1.0, seed=0, level_spacing=500.0):
             "datetime": pd.to_datetime(["2023-01-01"] * n),
         }
     )
-
-
-# -- _scale_dvar -------------------------------------------------------------------
-
-
-def test_scale_dvar_regression_smooths_positive_levels_and_zeroes_negative():
-    levels = pd.DataFrame(
-        {
-            "var_orig": [1.0, 2.0, 3.0, 4.0],
-            "var_err": [2.0, 4.0, 6.0, 3.0],  # last level: negative difference
-        }
-    )
-    sd = _scale_dvar(levels)
-    # fit through the three positive levels: var_err = 2 * var_orig; excess = var_orig
-    assert sd[:3] == pytest.approx(np.sqrt([1.0, 2.0, 3.0]))
-    assert sd[3] == pytest.approx(np.sqrt(4.0))  # the line, not the raw negative value
-
-
-def test_scale_dvar_falls_back_to_clipped_difference_with_one_positive_level():
-    levels = pd.DataFrame({"var_orig": [1.0, 2.0], "var_err": [5.0, 1.0]})
-    assert _scale_dvar(levels).tolist() == [2.0, 0.0]
 
 
 # -- transport_error ---------------------------------------------------------------
@@ -185,7 +163,7 @@ def test_rejects_bad_arguments():
         transport_error(p, p, FLUX, noise_splits=-1)
 
 
-# -- signed estimator, noise floor, regression flag ------------------------------
+# -- signed estimator and noise floor ------------------------------
 
 
 def test_less_spread_gives_a_negative_variance_and_zero_sd():
@@ -225,22 +203,6 @@ def test_noise_is_reproducible_and_optional():
     assert a.noise == b.noise
     assert np.isnan(off.noise)
     assert off.variance == a.variance
-
-
-def test_regression_flag_reproduces_xstilt_scaling():
-    main = _column(spread=1.0, seed=14)
-    err = _column(spread=1.0, seed=15)  # no real signal
-
-    signed = transport_error(main, err, FLUX, length_scale=None)
-    xstilt = transport_error(main, err, FLUX, length_scale=None, regression=True)
-
-    assert (signed.levels["sd_trans"] < 0).any()  # some levels went down
-    assert (xstilt.levels["sd_trans"] >= 0).all()  # regression never does
-    assert xstilt.levels["sd_trans"].tolist() == pytest.approx(
-        _scale_dvar(xstilt.levels).tolist()
-    )
-    assert xstilt.variance >= 0
-    assert xstilt.variance > 0 > signed.levels["dvar"].min()
 
 
 def test_background_field_adds_the_endpoint_spread_to_the_error():
