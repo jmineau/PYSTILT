@@ -99,13 +99,15 @@ class ModelConfig(STILTParams, FootprintParams):
         """
         Write the config to a YAML file, leaving out settings at their defaults.
 
-        The file is meant to be read and edited by hand, so it holds only what
-        was set. The full resolved settings of each variant are kept in the
-        project's record (:meth:`stilt.Project.load_record`), not here.
+        The file is meant to be read and edited by hand, so it holds only the
+        top-level settings that were given; what was given is written in full
+        (a transform or geometry keeps its ``kind``). The resolved settings of
+        each variant are kept in the project's record
+        (:meth:`stilt.Project.load_record`), not here.
         """
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
-        data = self.model_dump(mode="json", exclude_unset=True)
+        data = self.model_dump(mode="json", include=self.model_fields_set)
         with path.open("w") as f:
             yaml.safe_dump(data, f, default_flow_style=False, sort_keys=False)
 

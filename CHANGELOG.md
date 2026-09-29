@@ -98,8 +98,7 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `Model.run()`, `stilt run --no-skip`, and `stilt push-worker --no-skip`).
   A variant's `grid` override now updates the default grid field by field.
   Met settings that change results (`subgrid_*`, `n_min`, `file_tres`) are
-  part of the record; `directory` is not. Geometry specs (`kind: file`,
-  `h3`, `windows`) now require `kind` when built in Python too.
+  part of the record; `directory` is not.
 - **Names and surface cleanup after variants**
   ([#40](https://github.com/jmineau/PYSTILT/issues/40)).
   - A variant that declares `realizations` is always a numbered group, even

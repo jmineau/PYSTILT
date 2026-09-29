@@ -128,9 +128,9 @@ def test_failure_missing_met(tmp_path, wbb_receptor, traj_only_config):
 
     sim = model.simulations[_sim_id(wbb_receptor)]
     # The by-key store has no "failed" state, so the trajectory is simply absent
-    # (incomplete). Failure is surfaced through the log-derived Simulation.status.
+    # (incomplete). Failure is surfaced through the log-derived Simulation.outcome.
     assert not sim.has_trajectory
-    assert sim.status == "failed:MISSING_MET_FILES"
+    assert sim.outcome == "failed:MISSING_MET_FILES"
 
 
 # ---------------------------------------------------------------------------

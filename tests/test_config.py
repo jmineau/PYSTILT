@@ -735,14 +735,10 @@ def test_file_geometry_spec_layer_and_where(tmp_path):
     gdf.to_file(gpkg, layer="cells", driver="GPKG")
     gdf.iloc[:1].to_file(gpkg, layer="other", driver="GPKG")
 
-    spec = FileGeometrySpec(
-        kind="file", path=str(gpkg), ids="NAME", layer="cells", where="KEEP=1"
-    )
+    spec = FileGeometrySpec(path=str(gpkg), ids="NAME", layer="cells", where="KEEP=1")
     mesh = spec.build()
     assert mesh.ids == ("a", "b")
-    assert FileGeometrySpec(kind="file", path=str(gpkg), layer="other").build().ids == (
-        "0",
-    )
+    assert FileGeometrySpec(path=str(gpkg), layer="other").build().ids == ("0",)
 
 
 # -- variants --------------------------------------------------------------------
@@ -803,15 +799,29 @@ def test_variant_grid_override_merges_field_by_field(tmp_path):
 
 
 def test_to_yaml_writes_only_what_was_set(tmp_path):
+    from stilt.transforms import FirstOrderLifetime
+
     cfg = _variant_config(
-        tmp_path, numpar=50, variants={"hrrr": {}, "zi08": {"ziscale": 0.8}}
+        tmp_path,
+        numpar=50,
+        variants={
+            "hrrr": {},
+            "zi08": {"ziscale": 0.8},
+            "decay": {
+                "from": "hrrr",
+                "transforms": [FirstOrderLifetime(lifetime_hours=1.0)],
+            },
+        },
     )
     path = tmp_path / "config.yaml"
     cfg.to_yaml(path)
     text = path.read_text()
     assert "numpar: 50" in text and "zi08" in text
     assert "capemin" not in text and "seed" not in text  # defaults stay out
-    assert ModelConfig.from_yaml(path).resolve_variants()["zi08"].ziscale == 0.8
+    assert "kind: first_order_lifetime" in text  # nested objects are written in full
+    loaded = ModelConfig.from_yaml(path).resolve_variants()
+    assert loaded["zi08"].ziscale == 0.8
+    assert loaded["decay"].transforms[0].lifetime_hours == 1.0
 
 
 def test_variant_must_name_its_met_when_there_are_several(tmp_path):
