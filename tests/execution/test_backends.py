@@ -359,6 +359,19 @@ def test_slurm_executor_start_zero_workers_returns_none_job_id(monkeypatch):
     assert handle.job_id == "none"
 
 
+def test_write_chunks_splits_round_robin_with_no_empty_chunk(tmp_path):
+    from stilt.execution.backends.slurm import _write_chunks
+
+    ids = ["a", "b", "c", "d", "e"]
+    assert _write_chunks(tmp_path, ids, n_workers=2) == 2
+    assert (tmp_path / "task_0.txt").read_text() == "a\nc\ne\n"
+    assert (tmp_path / "task_1.txt").read_text() == "b\nd\n"
+
+    more = tmp_path / "more"
+    assert _write_chunks(more, ["a", "b"], n_workers=5) == 2
+    assert sorted(p.name for p in more.iterdir()) == ["task_0.txt", "task_1.txt"]
+
+
 def test_slurm_handle_job_id():
     assert SlurmHandle("12345").job_id == "12345"
 

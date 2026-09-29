@@ -54,18 +54,12 @@ def _write_chunks(
         return 0
     chunk_dir.mkdir(parents=True, exist_ok=True)
     n_chunks = max(1, min(n_workers, len(sim_ids)))
-    buckets: list[list[str]] = [[] for _ in range(n_chunks)]
-    for idx, sim_id in enumerate(sim_ids):
-        buckets[idx % n_chunks].append(sim_id)
-    count = 0
-    for idx, chunk in enumerate(buckets):
-        if not chunk:
-            continue
+    for idx in range(n_chunks):
+        chunk = sim_ids[idx::n_chunks]
         (chunk_dir / f"task_{idx}.txt").write_text(
             "\n".join(chunk) + "\n", encoding="utf-8"
         )
-        count += 1
-    return count
+    return n_chunks
 
 
 class SlurmHandle:
