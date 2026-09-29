@@ -70,8 +70,8 @@ scripts and logs.
    enqueues the receptors when a queue is configured.
 
 ``stilt rm --variant NAME``
-   Deletes a variant's outputs so it runs again as new
-   (:doc:`../configuration`).
+   Deletes a variant's outputs so it runs again as new; repeat ``--variant``
+   for several (:doc:`../configuration`).
 
 When a simulation fails
 -----------------------

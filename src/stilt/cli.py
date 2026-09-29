@@ -17,6 +17,7 @@ Usage examples::
     stilt serve ./my_project          # long-lived queue worker
     stilt status                      # show completion counts from cwd
     stilt rm --variant hrrr-zi08      # delete a variant's outputs to rerun it
+    stilt rm --variant hrrr --variant hrrr-zi08   # several at once
 """
 
 from __future__ import annotations
@@ -110,6 +111,11 @@ _NEW_PROJECT_ARG = typer.Argument(
 _REQUIRED_PROJECT_ARG = typer.Argument(..., help="Path or URI of the STILT project.")
 _NO_SKIP = typer.Option(
     False, "--no-skip", help="Re-run simulations that already have output."
+)
+_VARIANTS = typer.Option(
+    ...,
+    "--variant",
+    help="Variant (or realization group) whose outputs to delete; repeatable.",
 )
 _COMPUTE_ROOT = typer.Option(
     None,
@@ -254,25 +260,25 @@ def register(
 @app.command("rm")
 def rm(
     project: str | None = _PROJECT_ARG,
-    variant: str = typer.Option(
-        ..., "--variant", help="Variant (or realization group) whose outputs to delete."
-    ),
+    variant: list[str] = _VARIANTS,
     yes: bool = typer.Option(False, "--yes", "-y", help="Do not ask for confirmation."),
 ) -> None:
     """
-    Delete a variant's outputs so it runs again as new.
+    Delete the outputs of one or more variants so they run again as new.
 
-    Use it after changing a variant's settings under the same name, or to
-    drop a variant that config.yaml no longer declares. Variants derived from
-    it with ``from:`` are deleted with it.
+    Use it after changing a variant's settings under the same name (or a
+    default that several variants inherit), or to drop a variant that
+    config.yaml no longer declares. Variants derived from one with ``from:``
+    are deleted with it.
     """
     model = Model(project=_resolve_project(project))
+    names = ", ".join(repr(v) for v in variant)
     if not yes and not typer.confirm(
-        f"Delete every simulation of variant {variant!r} in {model.project.root}?"
+        f"Delete every simulation of {names} in {model.project.root}?"
     ):
         raise typer.Exit(code=1)
-    deleted = model.remove(variant)
-    typer.echo(f"Deleted {len(deleted)} simulation(s) of {variant!r}.")
+    deleted = [sid for v in variant for sid in model.remove(v)]
+    typer.echo(f"Deleted {len(deleted)} simulation(s) of {names}.")
 
 
 @app.command("pull-worker")

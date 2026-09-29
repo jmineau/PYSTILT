@@ -827,3 +827,30 @@ def test_init_aborts_when_config_exists(tmp_path):
     (project / "config.yaml").write_text("n_hours: -24\n")
     result = runner.invoke(app, ["init", str(project)])
     assert result.exit_code == 1
+
+
+def test_rm_deletes_several_variants(tmp_path):
+    from stilt.model import Model
+
+    _write_minimal_config(tmp_path)
+    cfg = (
+        (tmp_path / "config.yaml")
+        .read_text()
+        .replace(
+            "variants:\n  hrrr: {}\n", "variants:\n  hrrr: {}\n  zi08: {ziscale: 0.8}\n"
+        )
+    )
+    (tmp_path / "config.yaml").write_text(cfg)
+    model = Model(project=tmp_path)
+    model.register()
+    for sim in model.simulations:
+        sim.directory.mkdir(parents=True, exist_ok=True)
+        sim.trajectories_path.write_bytes(b"stub")
+
+    result = runner.invoke(
+        app, ["rm", str(tmp_path), "--variant", "hrrr", "--variant", "zi08", "--yes"]
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "Deleted 2 simulation(s) of 'hrrr', 'zi08'." in result.output
+    assert model.project.load_record()["variants"] == {}

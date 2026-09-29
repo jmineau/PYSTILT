@@ -171,6 +171,7 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   only the fields that were given, and `mets` / `variants` come first.
   `register()` warns when the record holds variants `config.yaml` no longer
   declares. A variant named after a met stream uses it without `met:`.
+  `stilt rm --variant` can be repeated.
 
 ### Fixed
 

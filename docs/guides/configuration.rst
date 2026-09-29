@@ -189,7 +189,13 @@ You have two ways forward:
   ``model.remove("hrrr")``) deletes every simulation of that variant and
   forgets its settings, so it runs again as new on the next run. Variants
   declared with ``from: hrrr`` are removed with it, since their footprints
-  came from its particles.
+  came from its particles. ``--variant`` can be repeated, for a changed
+  default that several variants inherit.
+
+A changed default is refused for every variant that inherits it, so a
+campaign that raises ``numpar`` halfway through ends up with two names for
+its base run; select both, ``sel(variant=["hrrr", "hrrr-np1k"])``, when
+loading. What each name ran with is in ``simulations/variants.yaml``.
 
 Settings that do not change a result can change freely: ``execution``, the
 HYSPLIT ``timeout``, ``rm_dat``, and where the meteorology files are
