@@ -73,22 +73,16 @@ def _utc_index(values: Any) -> pd.DatetimeIndex:
     return pd.DatetimeIndex(pd.to_datetime(values, utc=True))
 
 
-def _time_bin_columns(time_bins: pd.IntervalIndex) -> pd.DatetimeIndex:
-    """Return the left edges of time bins as UTC-naive datetimes."""
-    left = _utc_index(time_bins.left)
-    return left.tz_localize(None)
-
-
 def _naive_utc_timestamp(
     value: dt.datetime | pd.Timestamp | None,
 ) -> pd.Timestamp | None:
-    """Normalize one optional timestamp to UTC-naive form."""
+    """Return one optional timestamp in UTC without a timezone, or ``None`` for none or NaT."""
     if value is None:
         return None
     ts = pd.Timestamp(value)
-    if str(ts) == "NaT":
+    if not isinstance(ts, pd.Timestamp):  # NaT
         return None
-    return cast(pd.Timestamp, ts.tz_convert(None) if ts.tzinfo is not None else ts)
+    return ts.tz_convert(None) if ts.tzinfo is not None else ts
 
 
 def _build_footprint_array(
@@ -152,12 +146,28 @@ class _BufferedGrid:
 
     glong_buf: np.ndarray
     glati_buf: np.ndarray
-    n_lon_buf: int
-    n_lat_buf: int
     xbuf: int
     ybuf: int
-    xbufh: int
-    ybufh: int
+
+    @property
+    def n_lon_buf(self) -> int:
+        """Number of longitude (x) cells, padding included."""
+        return len(self.glong_buf)
+
+    @property
+    def n_lat_buf(self) -> int:
+        """Number of latitude (y) cells, padding included."""
+        return len(self.glati_buf)
+
+    @property
+    def xbufh(self) -> int:
+        """Half-width of the widest kernel along x, in cells."""
+        return (self.xbuf - 1) // 2
+
+    @property
+    def ybufh(self) -> int:
+        """Half-width of the widest kernel along y, in cells."""
+        return (self.ybuf - 1) // 2
 
 
 def _wrap_antimeridian_longitudes(
@@ -377,17 +387,11 @@ def _build_buffered_grid(
     """
     xbuf = max_kernel.shape[0]
     ybuf = max_kernel.shape[1]
-    n_lon_buf = n_lon + 2 * xbuf
-    n_lat_buf = n_lat + 2 * ybuf
     return _BufferedGrid(
-        glong_buf=xmin - xbuf * xres + np.arange(n_lon_buf) * xres,
-        glati_buf=ymin - ybuf * yres + np.arange(n_lat_buf) * yres,
-        n_lon_buf=n_lon_buf,
-        n_lat_buf=n_lat_buf,
+        glong_buf=xmin - xbuf * xres + np.arange(n_lon + 2 * xbuf) * xres,
+        glati_buf=ymin - ybuf * yres + np.arange(n_lat + 2 * ybuf) * yres,
         xbuf=xbuf,
         ybuf=ybuf,
-        xbufh=(xbuf - 1) // 2,
-        ybufh=(ybuf - 1) // 2,
     )
 
 
@@ -1112,7 +1116,7 @@ class Footprint:
         footprint cell inside each target cell, so each time bin is
         ``W @ F.ravel()``.
         """
-        columns = _time_bin_columns(time_bins)
+        columns = _utc_index(time_bins.left).tz_localize(None)
         result = pd.DataFrame(0.0, index=target.index, columns=columns)
 
         ntime = int(self.data.sizes.get("time", 0))
