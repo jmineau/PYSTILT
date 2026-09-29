@@ -6,6 +6,15 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **Unknown keys in a met entry are an error**
+  ([#52](https://github.com/jmineau/PYSTILT/issues/52)). A misspelled key
+  such as `subgrid_enabel` was accepted and ignored. A met without a
+  `source` now rejects any unknown key. With a `source`, the extra keys
+  must be options that arlmet source takes, such as `domain` for `nams`.
+  A `config.yaml` with such a typo no longer loads until it is fixed.
+
 ### Changed
 
 - **One footprint settings class**

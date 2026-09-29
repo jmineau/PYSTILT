@@ -1,25 +1,30 @@
 """Settings for one meteorology stream."""
 
+from __future__ import annotations
+
+import inspect
 from pathlib import Path
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .spatial import Bounds
 
-
-def _arlmet_source_names() -> frozenset[str]:
-    """Return the source names the installed arlmet provides."""
-    import arlmet.sources as _src
+if TYPE_CHECKING:
     from arlmet.sources import MeteorologySource
 
-    return frozenset(
-        getattr(_src, name).name
-        for name in _src.__all__
-        if isinstance(getattr(_src, name, None), type)
-        and issubclass(getattr(_src, name), MeteorologySource)
-        and getattr(_src, name) is not MeteorologySource
-    )
+
+def arlmet_sources() -> dict[str, type[MeteorologySource]]:
+    """Return the download sources of the installed arlmet, by name."""
+    import arlmet.sources as src
+
+    return {
+        cls.name: cls
+        for attr in src.__all__
+        if isinstance(cls := getattr(src, attr, None), type)
+        and issubclass(cls, src.MeteorologySource)
+        and cls is not src.MeteorologySource
+    }
 
 
 #: Met fields that change no output: where the files are, not what they hold.
@@ -31,8 +36,9 @@ class MetConfig(BaseModel):
     Settings for one meteorology stream.
 
     Give either ``source`` to download ARL files with arlmet, or
-    ``file_format`` and ``file_tres`` to find them in ``directory``. Extra
-    fields are passed to the arlmet source.
+    ``file_format`` and ``file_tres`` to find them in ``directory``. With
+    ``source``, other keys are options for that arlmet source (such as
+    ``domain`` for ``nams``). Any other unknown key is an error.
     """
 
     model_config = ConfigDict(extra="allow")
@@ -99,15 +105,28 @@ class MetConfig(BaseModel):
     )
 
     @model_validator(mode="after")
-    def _validate_mode(self) -> "MetConfig":
-        """Check the source name and the fields each mode needs."""
+    def _validate_mode(self) -> MetConfig:
+        """Check the source and its options, and the fields each mode needs."""
+        extra = self.source_kwargs
         if self.source is not None:
-            available = _arlmet_source_names()
-            if self.source not in available:
+            sources = arlmet_sources()
+            if self.source not in sources:
                 raise ValueError(
                     f"Unknown arlmet source {self.source!r}. "
-                    f"Available: {sorted(available)}."
+                    f"Available: {sorted(sources)}."
                 )
+            try:
+                inspect.signature(sources[self.source]).bind(**extra)
+            except TypeError as exc:
+                raise ValueError(
+                    f"Met source {self.source!r} does not take the options "
+                    f"{sorted(extra)} ({exc})."
+                ) from None
+        elif extra:
+            raise ValueError(
+                f"Unknown met settings {sorted(extra)}. Only a met with a "
+                "source takes extra options."
+            )
         if self.source is None and (self.file_format is None or self.file_tres is None):
             raise ValueError(
                 "file_format and file_tres are required when source is not set "

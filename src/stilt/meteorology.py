@@ -10,7 +10,8 @@ from typing import TYPE_CHECKING, Any, cast
 import pandas as pd
 
 from stilt.config import MetConfig
-from stilt.errors import ConfigValidationError, MeteorologyError
+from stilt.config.meteorology import arlmet_sources
+from stilt.errors import MeteorologyError
 
 if TYPE_CHECKING:
     from arlmet.sources import MeteorologySource as ArlmetSource
@@ -27,34 +28,6 @@ class MetID(str):
                 "MetID cannot contain underscores, which are reserved for delimiting receptor id components."
             )
         return super().__new__(cls, name)
-
-
-def _build_arlmet_source(name: str, kwargs: dict[str, Any]) -> ArlmetSource:
-    """
-    Return the arlmet source with this name, built with ``kwargs``.
-
-    Downloading needs the ``cloud`` extra, which raises an ImportError on
-    the first download when it is missing.
-    """
-    import arlmet.sources as _src
-
-    # Build registry dynamically from arlmet's public surface so new sources
-    # are automatically available without changes here.
-    registry: dict[str, type] = {
-        cls.name: cls  # type: ignore[attr-defined]
-        for attr in _src.__all__
-        if (cls := getattr(_src, attr, None)) is not None
-        and isinstance(cls, type)
-        and issubclass(cls, _src.MeteorologySource)
-        and cls is not _src.MeteorologySource
-    }
-
-    if name not in registry:
-        raise ConfigValidationError(
-            f"Unknown arlmet source {name!r}. Available: {sorted(registry)}."
-        )
-
-    return registry[name](**kwargs)
 
 
 class MetStream:
@@ -141,9 +114,8 @@ class MetStream:
         """Return the arlmet source, building it on first use."""
         if self._arlmet_source is None:
             assert self.source_type is not None
-            self._arlmet_source = _build_arlmet_source(
-                self.source_type, self.source_kwargs
-            )
+            cls = arlmet_sources()[self.source_type]
+            self._arlmet_source = cls(**self.source_kwargs)
         return self._arlmet_source
 
     def _effective_bbox(self) -> tuple[float, float, float, float]:

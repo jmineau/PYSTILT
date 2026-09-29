@@ -81,6 +81,24 @@ def test_metconfig_extra_fields_as_source_kwargs(tmp_path):
     assert cfg.source_kwargs == {"domain": "ak"}
 
 
+def test_metconfig_rejects_an_unknown_key_without_a_source(tmp_path):
+    """A typo in a plain met entry is an error, as elsewhere in config.yaml (#52)."""
+    with pytest.raises(ValueError, match="subgrid_enabel"):
+        MetConfig(
+            directory=tmp_path,
+            file_format="%Y%m%d_%H",
+            file_tres="6h",
+            subgrid_enabel=True,
+        )
+
+
+def test_metconfig_rejects_an_option_the_source_does_not_take(tmp_path):
+    with pytest.raises(ValueError, match="does not take"):
+        MetConfig(directory=tmp_path, source="hrrr", domain="ak")
+    with pytest.raises(ValueError, match="does not take"):
+        MetConfig(directory=tmp_path, source="nams", domian="ak")
+
+
 # ---------------------------------------------------------------------------
 # MetStream source mode (download via arlmet)
 # ---------------------------------------------------------------------------
