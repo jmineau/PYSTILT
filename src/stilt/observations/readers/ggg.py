@@ -83,7 +83,7 @@ def _clean_column(raw: str) -> tuple[str, str]:
     return m["name"] + (m["error"] or ""), m["units"] or ""
 
 
-def read_ggg_oof(path: str | Path, species: str = "xch4") -> pd.DataFrame:
+def read_ggg_oof(path: str | Path, species: str) -> pd.DataFrame:
     """
     Read a GGG2020 ``.oof`` file into a table of soundings.
 
@@ -99,7 +99,7 @@ def read_ggg_oof(path: str | Path, species: str = "xch4") -> pd.DataFrame:
     ----------
     path : str or Path
         The ``.oof`` file.
-    species : str, default "xch4"
+    species : str
         Column variable to read, such as ``xch4``, ``xco2``, ``xco``,
         ``xh2o``, or ``xn2o``.
 
@@ -209,7 +209,7 @@ def _expand_ak_table(
 
 def read_ggg_netcdf(
     path: str | Path,
-    species: str = "xco2",
+    species: str,
     *,
     time_range: tuple[Any, Any] | None = None,
 ) -> pd.DataFrame:
@@ -227,7 +227,7 @@ def read_ggg_netcdf(
     ----------
     path : str or Path
         The netCDF file.
-    species : str, default "xco2"
+    species : str
         Column variable to read: ``xco2``, ``xch4``, ``xco``, ``xn2o``, or
         ``xh2o``.
     time_range : tuple, optional
@@ -363,4 +363,8 @@ def read_ggg_netcdf(
     return df
 
 
-__all__ = ["read_ggg_netcdf", "read_ggg_oof"]
+#: TCCON's public ``*.public.nc`` and ``*.public.qc.nc`` site files from
+#: CaltechDATA are GGG2020 netCDF files, so they are read the same way.
+read_tccon = read_ggg_netcdf
+
+__all__ = ["read_ggg_netcdf", "read_ggg_oof", "read_tccon"]

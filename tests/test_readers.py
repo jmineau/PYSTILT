@@ -156,7 +156,7 @@ def test_tropomi_blended_flat_layout():
 
 
 def test_tccon_xco2_and_xch4():
-    df = read_tccon(TCCON)
+    df = read_tccon(TCCON, "xco2")
     _check_common(df)
     assert len(df) == 24
     assert (df.species == "xco2").all() and (df.units == "ppm").all()
@@ -176,9 +176,9 @@ def test_tccon_xco2_and_xch4():
 
 
 def test_tccon_time_range_and_errors():
-    df = read_tccon(TCCON)
+    df = read_tccon(TCCON, "xco2")
     t0, t1 = df.time.iloc[5], df.time.iloc[10]
-    sub = read_tccon(TCCON, time_range=(t0, t1))
+    sub = read_tccon(TCCON, "xco2", time_range=(t0, t1))
     assert len(sub) == 6
     with pytest.raises(ValueError, match="column variable"):
         read_tccon(TCCON, "co2")
@@ -187,7 +187,7 @@ def test_tccon_time_range_and_errors():
 
 
 def test_tccon_slant_recipe():
-    df = read_tccon(TCCON).head(2)
+    df = read_tccon(TCCON, "xco2").head(2)
     for r in df.itertuples():
         alts = pressure_altitudes(
             r.pressure_levels,
@@ -250,7 +250,7 @@ def test_oco2_recipe_with_pressure_altitudes():
 
 
 def test_ggg_oof_columns_units_and_time():
-    df = read_ggg_oof(OOF)
+    df = read_ggg_oof(OOF, "xch4")
     assert len(df) == 12
     assert (
         df.sounding_id.is_unique and df.sounding_id.iloc[0] == "zz20230715s0e00a.0001"
@@ -293,7 +293,7 @@ def test_ggg_oof_errors():
 
 def test_ggg_oof_slant_recipe_windows():
     """The EM27 recipe: one receptor per averaging window from the solar angles."""
-    df = read_ggg_oof(OOF)
+    df = read_ggg_oof(OOF, "xch4")
     windows = (
         df[df.good]
         .set_index("time")[
