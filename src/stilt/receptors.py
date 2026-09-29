@@ -727,31 +727,23 @@ def read_receptors(path: str | Path | IO[str]) -> list[Receptor]:
         receptor.attrs = row.attrs
         return receptor
 
-    def _point_receptors_from_rows(frame: pd.DataFrame) -> list[Receptor]:
-        """Build one PointReceptor per row from a normalised receptor DataFrame."""
-        return [_point_receptor(row) for row in frame.itertuples(index=False)]
-
+    multi_keys = []
     if "r_idx" in df.columns:
-        group_sizes = df.groupby("r_idx").size()
-        multi_keys = [k for k, v in group_sizes.items() if v > 1]
+        multi_keys = [k for k, v in df.groupby("r_idx").size().items() if v > 1]
+    if not multi_keys:
+        return [_point_receptor(row) for row in df.itertuples(index=False)]
 
-        if not multi_keys:
-            return _point_receptors_from_rows(df)
-
-        single_mask = ~df["r_idx"].isin(multi_keys)
-        result: dict[object, Receptor] = {}
-        for row in df[single_mask].itertuples(index=False):
-            result[cast(Any, row).r_idx] = _point_receptor(row)
-        for key, g in df[~single_mask].groupby("r_idx"):
-            try:
-                result[key] = _receptor_from_group(cast(pd.DataFrame, g))
-            except ValueError as exc:
-                raise ValueError(f"r_idx={key}: {exc}") from exc
-            result[key].attrs = g["attrs"].tolist()[0]
-
-        return [result[k] for k in df["r_idx"].unique()]
-
-    return _point_receptors_from_rows(df)
+    single_mask = ~df["r_idx"].isin(multi_keys)
+    result: dict[object, Receptor] = {}
+    for row in df[single_mask].itertuples(index=False):
+        result[cast(Any, row).r_idx] = _point_receptor(row)
+    for key, g in df[~single_mask].groupby("r_idx"):
+        try:
+            result[key] = _receptor_from_group(cast(pd.DataFrame, g))
+        except ValueError as exc:
+            raise ValueError(f"r_idx={key}: {exc}") from exc
+        result[key].attrs = g["attrs"].tolist()[0]
+    return [result[k] for k in df["r_idx"].unique()]
 
 
 def receptors_to_csv(receptors: Iterable[Receptor]) -> str:
