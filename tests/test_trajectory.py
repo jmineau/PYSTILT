@@ -1,10 +1,12 @@
 """Tests for trajectory model and plume-dilution helpers."""
 
+import json
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import pyarrow as pa
+import pyarrow.parquet as pq
 import pytest
 
 from stilt.config import STILTParams
@@ -670,3 +672,26 @@ def test_trajectories_footprint_regenerates_on_new_grid(tmp_path):
     assert fp.receptor == receptor
     assert fp.config.grid == config.grid
     assert float(fp.data.sum()) > 0
+
+
+def test_from_parquet_skips_stored_params_this_version_does_not_have(
+    point_receptor, tmp_path
+):
+    """Files written before a setting was removed still load (#44)."""
+    traj = Trajectories.from_particles(
+        particles=_particles_basic(),
+        receptor=point_receptor,
+        params=_params(tmp_path),
+        met_files=[],
+    )
+    path = tmp_path / "traj.parquet"
+    traj.to_parquet(path)
+    table = pq.read_table(path)
+    meta = dict(table.schema.metadata)
+    stored = json.loads(meta[b"stilt:params"])
+    meta[b"stilt:params"] = json.dumps({**stored, "zicontroltf": 0, "gone": 1}).encode()
+    meta[b"stilt:is_error"] = b"true"  # written by earlier versions; ignored
+    pq.write_table(table.replace_schema_metadata(meta), path)
+
+    loaded = Trajectories.from_parquet(path)
+    assert loaded.params == traj.params

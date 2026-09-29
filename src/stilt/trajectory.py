@@ -1,6 +1,7 @@
 """Trajectories data model and parquet serialization helpers for STILT."""
 
 import json
+import logging
 import os
 import warnings
 from pathlib import Path
@@ -14,6 +15,8 @@ from typing_extensions import Self
 
 from stilt.config import STILTParams
 from stilt.receptors import ColumnReceptor, MultiPointReceptor, PointReceptor, Receptor
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from stilt.config import FootprintConfig
@@ -136,6 +139,18 @@ def _multipoint_release_heights(
     return cast(pd.Series, p["indx"]).map(mapping.get)
 
 
+def _stored_params(stored: dict[str, Any], path: str | Path) -> STILTParams:
+    """Validate a trajectory's stored params, skipping settings that no longer exist."""
+    unknown = sorted(set(stored) - set(STILTParams.model_fields))
+    if unknown:
+        logger.debug(
+            "%s: skipping stored params this version does not have: %s", path, unknown
+        )
+    return STILTParams.model_validate(
+        {k: v for k, v in stored.items() if k not in unknown}
+    )
+
+
 class Trajectories:
     """STILT particle trajectory ensemble."""
 
@@ -242,7 +257,10 @@ class Trajectories:
         Load a Trajectories instance from a self-contained parquet file.
 
         Metadata (receptor, params, met_files) is read from Arrow schema
-        metadata embedded by ``to_parquet``.
+        metadata embedded by ``to_parquet``. The stored params are a record
+        of the run, so settings this version no longer has (a file written
+        before a setting was removed) are skipped rather than rejected; the
+        file itself keeps them.
 
         Parameters
         ----------
@@ -259,7 +277,7 @@ class Trajectories:
 
         # Parse metadata
         receptor = Receptor.from_dict(json.loads(meta[b"stilt:receptor"]))
-        params = STILTParams.model_validate(json.loads(meta[b"stilt:params"]))
+        params = _stored_params(json.loads(meta[b"stilt:params"]), path)
         met_files = [Path(p) for p in json.loads(meta[b"stilt:met_files"])]
 
         # Read data. `datetime` is written naive UTC by ``from_particles``; keep

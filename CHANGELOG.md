@@ -175,6 +175,12 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **Trajectories written by earlier versions did not load**
+  ([#44](https://github.com/jmineau/PYSTILT/issues/44)). The params stored
+  in a trajectory's Parquet metadata were validated strictly, so every file
+  written while `zicontroltf` was still a setting failed with
+  `extra_forbidden`. Stored params are a record of the run: settings this
+  version no longer has are now skipped on read (the file keeps them).
 - **A variant that raised `numpar` kept the default's `maxpar`.** `maxpar`
   was filled in from `numpar` when the defaults were built, and variants
   inherited the filled value, so `hrrr-np3k: {numpar: 3000}` over a default
