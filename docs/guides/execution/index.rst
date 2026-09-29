@@ -58,10 +58,11 @@ Slurm task or cloud worker. They're listed so you recognize them in job
 scripts and logs.
 
 ``stilt push-worker``
-   Runs one fixed list of simulations. Each Slurm array task runs one.
+   Runs every variant of each receptor in one fixed list. Each Slurm array
+   task runs one list.
 
 ``stilt pull-worker`` / ``stilt serve``
-   Take simulations one at a time from a shared queue (PostgreSQL) until it is
+   Take receptors one at a time from a shared queue (PostgreSQL) until it is
    empty, or, for ``serve``, indefinitely. Used by cloud workers.
 
 ``stilt register``

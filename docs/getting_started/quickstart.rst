@@ -121,12 +121,12 @@ Step 4: Look at the footprint
 
 Each receptor is run once per :term:`variant`; with the settings above
 there is one variant, named after the met source, ``hrrr``. One receptor
-under one variant is one :term:`simulation`. Grab the one you just ran and
-plot its footprint:
+under one variant is one :term:`simulation`, addressed by the receptor's id
+and the variant's name. Grab the one you just ran and plot its footprint:
 
 .. code-block:: python
 
-   sim = next(iter(model.simulations))
+   sim = model.simulations[receptor.id, "hrrr"]
    foot = sim.footprint
 
    foot.plot.map()

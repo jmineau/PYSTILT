@@ -147,7 +147,9 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   straight from the store. Before, a rewritten `receptors.csv` could be
   served stale from the cache for the life of the directory.
   Projects made with earlier versions need their outputs moved into the new
-  layout.
+  layout (`by-id/<met>_<receptor>/` to `by-id/<receptor>/<met>/`, one
+  footprint per simulation, the error parquet to a `<met>-err` variant); the
+  maintainer can provide a conversion script on request.
 - **`zicontroltf` is derived from `ziscale`** and is no longer a setting.
   The mixed-layer height is scaled whenever `ziscale` is not 1.0, the way
   `winderrtf` follows the wind-error parameters. A saved `config.yaml`

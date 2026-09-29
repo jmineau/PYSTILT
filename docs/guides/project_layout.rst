@@ -67,7 +67,7 @@ register) a model. After that, the folder is all you need:
    import stilt
 
    model = stilt.Model(project="./my_project")
-   model.status()           # how many simulations are finished
+   model.status()           # one row per simulation, with a "complete" column
 
 From the command line:
 

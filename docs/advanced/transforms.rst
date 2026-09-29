@@ -114,12 +114,12 @@ The same classes work directly on a simulation:
    from stilt.transforms import AveragingKernel, PressureWeighting
 
    foot = sim.generate_footprint(
-       "column",
-       config,
        transforms=[AveragingKernel(levels=ak.z, values=ak.values), PressureWeighting()],
    )
 
-``transforms=`` runs after ``config.transforms``. To inspect what a transform
+``transforms=`` runs after the variant's own ``transforms``; pass
+``config=sim.footprint_config.replace(...)`` to try other footprint settings
+in memory without changing the project. To inspect what a transform
 did, apply it to the particle table yourself:
 
 .. code-block:: python

@@ -231,12 +231,13 @@ different geometries for the same particles are variants with ``from:``:
          size: 0.01
          ids: [landfill, wwtp]
 
-The derived ``grid`` is written back into the config, so the geometry object
-is never needed to read a stored footprint.  Give both ``grid`` and
+The derived ``grid`` is kept in the project's record
+(``simulations/variants.yaml``) and in each footprint file, so the geometry
+object is never needed to read a stored footprint. Give both ``grid`` and
 ``geometry`` to pin the raster explicitly; ``geometry`` is then kept as a
-record and ``sim.config.geometry.build()`` returns the
-:class:`stilt.Mesh` to aggregate onto.  A content hash of the built geometry (``geometry_hash``) is
-stored with the config and in each footprint file; ``Footprint.aggregate``
+record and ``sim.config.geometry.build()`` returns the :class:`stilt.Mesh`
+to aggregate onto. A content hash of the built geometry (``geometry_hash``)
+is stored with the record and in each footprint file; ``Footprint.aggregate``
 warns if the mesh it is handed no longer matches, which catches a shapefile
 edited after the footprints were computed.
 

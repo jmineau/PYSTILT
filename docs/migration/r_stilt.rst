@@ -75,6 +75,17 @@ The workflow side by side
      - ``execution: n_workers``
    * - ``before_footprint`` / ``before_trajec`` functions
      - ``transforms`` (:doc:`../advanced/transforms`)
+   * - ``run_trajec``, ``run_foot``
+     - no flags: a missing output is what gets run. Another footprint from
+       the same particles is a ``from:`` variant; to redo a variant, delete
+       its outputs with ``stilt rm --variant NAME``
+       (:doc:`../guides/project_layout`)
+   * - ``simulation_id`` (run a subset)
+     - a smaller ``receptors.csv``, or :func:`stilt.execution.run_receptors`
+       with the receptor ids you want
+   * - ``ziscale`` as one list per receptor
+     - ``ziscale`` per variant (a scalar, or one factor per hour), the same
+       for every receptor; per-receptor factors are not supported yet
    * - ``stilt_wd``, ``output_wd``
      - the project folder
    * - ``lib.loc``
@@ -95,6 +106,11 @@ A few differences worth knowing:
 - **Reruns are automatic.** ``stilt run`` skips simulations whose outputs
   already exist, so rerunning after a failure only runs what's missing.
   Adding a variant runs only the new variant.
+- **Settings are frozen once they have run.** STILT-R overwrites ``by-id``
+  on every ``run_trajec = T``. PYSTILT records the settings each variant ran
+  with and refuses to change them under the same name; give changed settings
+  a new variant name, or ``stilt rm --variant NAME`` to start that variant
+  over (:doc:`../guides/configuration`).
 
 Receptors
 ---------
