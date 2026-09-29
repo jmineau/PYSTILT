@@ -33,7 +33,7 @@ from __future__ import annotations
 import hashlib
 import warnings
 from collections.abc import Sequence
-from typing import Any, Literal
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -430,7 +430,7 @@ def _raster_key(
     return h.hexdigest()[:16]
 
 
-_weight_cache: dict[tuple[str, str, str], sparse.csr_matrix] = {}
+_weight_cache: dict[tuple[str, str], sparse.csr_matrix] = {}
 
 
 def _overlap_1d(src_edges: np.ndarray, dst_edges: np.ndarray) -> sparse.csr_matrix:
@@ -549,20 +549,13 @@ def _mesh_weights(
     )
 
 
-Backend = Literal["auto", "shapely", "exactextract"]
-
-
 def _polygon_weights(
-    mesh: Mesh, x: np.ndarray, y: np.ndarray, xres: float, yres: float, backend: str
+    mesh: Mesh, x: np.ndarray, y: np.ndarray, xres: float, yres: float
 ) -> sparse.csr_matrix:
-    """Return a mesh's weights with the chosen backend."""
-    if backend == "auto":
-        backend = "exactextract" if _exactextract_available() else "shapely"
-    if backend == "exactextract":
+    """Return a mesh's weights, with exactextract when it is installed."""
+    if _exactextract_available():
         return _mesh_weights_exactextract(mesh, x, y, xres, yres)
-    if backend == "shapely":
-        return _mesh_weights(mesh, x, y, xres, yres)
-    raise ValueError(f"Unknown overlap backend {backend!r}.")
+    return _mesh_weights(mesh, x, y, xres, yres)
 
 
 def overlap_weights(
@@ -572,8 +565,6 @@ def overlap_weights(
     xres: float,
     yres: float,
     crs: str,
-    *,
-    backend: Backend = "auto",
 ) -> sparse.csr_matrix:
     """
     Return the fraction of each raster cell inside each geometry cell.
@@ -594,9 +585,6 @@ def overlap_weights(
         Cell size of the raster, in ``crs`` units.
     crs : str
         CRS of the raster.
-    backend : {"auto", "shapely", "exactextract"}, default "auto"
-        How polygon overlaps are computed. ``"auto"`` uses exactextract when
-        it is installed.
 
     Returns
     -------
@@ -607,23 +595,21 @@ def overlap_weights(
     """
     x = np.asarray(x_centers, dtype=float)
     y = np.asarray(y_centers, dtype=float)
-    key = (_raster_key(x, y, xres, yres, crs), _geometry_key(geometry), backend)
+    key = (_raster_key(x, y, xres, yres, crs), _geometry_key(geometry))
     cached = _weight_cache.get(key)
     if cached is not None:
         return cached
 
     if isinstance(geometry, Zones):
-        base_w = overlap_weights(geometry.base, x, y, xres, yres, crs, backend=backend)
+        base_w = overlap_weights(geometry.base, x, y, xres, yres, crs)
         w = sparse.csr_matrix(geometry.membership @ base_w)
     elif isinstance(geometry, Grid):
         if same_crs(geometry.projection, crs):
             w = _grid_weights(geometry, x, y, xres, yres)
         else:
-            w = _polygon_weights(
-                Mesh.from_grid(geometry).to_crs(crs), x, y, xres, yres, backend
-            )
+            w = _polygon_weights(Mesh.from_grid(geometry).to_crs(crs), x, y, xres, yres)
     else:
-        w = _polygon_weights(geometry.to_crs(crs), x, y, xres, yres, backend)
+        w = _polygon_weights(geometry.to_crs(crs), x, y, xres, yres)
 
     _weight_cache[key] = w
     return w
@@ -655,7 +641,6 @@ def check_resolution(geometry: Geometry, xres: float, yres: float, crs: str) -> 
 
 
 __all__ = [
-    "Backend",
     "Geometry",
     "Mesh",
     "Zones",

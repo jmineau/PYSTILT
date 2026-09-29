@@ -5,7 +5,12 @@ import pytest
 import shapely
 
 from stilt import Grid, Mesh, Zones
-from stilt.geometry import overlap_weights, same_crs
+from stilt.geometry import (
+    _mesh_weights,
+    _mesh_weights_exactextract,
+    overlap_weights,
+    same_crs,
+)
 
 # ---------------------------------------------------------------------------
 # Grid as a geometry
@@ -334,18 +339,11 @@ def test_grid_axes_rounding_keeps_coarse_centres():
 # ---------------------------------------------------------------------------
 
 
-def test_backend_names_are_validated():
-    x, y, xres, yres = _raster(2, 1.0)
-    mesh = Mesh.from_windows([(1.0, 1.0)], 1.0)
-    with pytest.raises(ValueError, match="backend"):
-        overlap_weights(mesh, x, y, xres, yres, "+proj=longlat", backend="nope")  # type: ignore[arg-type]
-
-
 def test_exactextract_backend_matches_shapely_on_triangle():
     pytest.importorskip("exactextract")
     x, y, xres, yres = _raster(2, 1.0)
     tri = Mesh(ids=("t",), geometries=(shapely.Polygon([(0, 0), (2, 0), (0, 2)]),))
-    w = overlap_weights(tri, x, y, xres, yres, "+proj=longlat", backend="exactextract")
+    w = _mesh_weights_exactextract(tri, x, y, xres, yres)
     np.testing.assert_allclose(w.toarray()[0], [1.0, 0.5, 0.5, 0.0])
 
 
@@ -361,8 +359,7 @@ def test_exactextract_backend_matches_shapely_on_random_polygons():
         for _ in range(12)
     ]
     mesh = Mesh(ids=tuple(str(i) for i in range(12)), geometries=tuple(polys))
-    a = overlap_weights(mesh, x, y, 0.1, 0.1, "+proj=longlat", backend="shapely")
-    b = overlap_weights(mesh, x, y, 0.1, 0.1, "+proj=longlat", backend="exactextract")
+    a = _mesh_weights(mesh, x, y, 0.1, 0.1)
+    b = _mesh_weights_exactextract(mesh, x, y, 0.1, 0.1)
     assert a.shape == b.shape
     np.testing.assert_allclose(a.toarray(), b.toarray(), atol=1e-9)
-    assert a is not b  # cached separately per backend
