@@ -237,20 +237,6 @@ def test_project_add_receptors_appends_only_new_ones(
     assert any_project.load_receptors() == [point_receptor, column_receptor]
 
 
-def test_project_add_receptors_copies_a_source_csv_byte_for_byte(
-    any_project, tmp_path, point_receptor
-):
-    # A hand-written CSV using the short column names that read_receptors accepts.
-    source = tmp_path / "input_receptors.csv"
-    source.write_text("time,lati,long,zagl\n2023-01-01 12:00:00,40.77,-111.85,5.0\n")
-
-    any_project.add_receptors([point_receptor], source=source)
-
-    assert any_project.has_receptors
-    assert any_project.store.read_bytes(RECEPTORS_KEY) == source.read_bytes()
-    assert any_project.load_receptors() == [point_receptor]
-
-
 def test_project_add_receptors_appends_in_the_files_own_columns(
     any_project, tmp_path, point_receptor, column_receptor
 ):

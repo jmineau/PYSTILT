@@ -180,9 +180,7 @@ class Project:
             return None
         return read_receptors(StringIO(self.store.read_bytes(RECEPTORS_KEY).decode()))
 
-    def add_receptors(
-        self, receptors: list[Receptor], *, source: str | Path | None = None
-    ) -> list[Receptor]:
+    def add_receptors(self, receptors: list[Receptor]) -> list[Receptor]:
         """
         Add receptors to ``receptors.csv`` and return the new ones.
 
@@ -194,10 +192,6 @@ class Project:
         ----------
         receptors : list of Receptor
             Receptors to add.
-        source : str or Path, optional
-            CSV file the receptors were read from. When the project has no
-            ``receptors.csv`` yet, this file is copied unchanged instead of
-            writing the receptors out.
 
         Returns
         -------
@@ -207,12 +201,7 @@ class Project:
         from stilt.receptors import append_receptors_csv, receptors_to_csv
 
         if not self.has_receptors:
-            if source is not None:
-                self.store.publish_file(source, RECEPTORS_KEY)
-            else:
-                self.store.write_bytes(
-                    RECEPTORS_KEY, receptors_to_csv(receptors).encode()
-                )
+            self.store.write_bytes(RECEPTORS_KEY, receptors_to_csv(receptors).encode())
             return list(receptors)
         known = {r.id for r in self.load_receptors() or []}
         new = [r for r in receptors if r.id not in known]

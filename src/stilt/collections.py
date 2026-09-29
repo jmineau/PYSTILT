@@ -53,51 +53,41 @@ class ReceptorCollection:
         *,
         project: Project,
     ):
-        self._items, self._source_path = self._normalize(receptors)
         self._project = project
+        self._items = self._normalize(receptors)
         self._by_id: dict[str, Receptor] | None = None
 
-    @staticmethod
     def _normalize(
-        receptors: Receptor | Iterable | str | Path | None,
-    ) -> tuple[list[Receptor] | None, Path | None]:
-        """Split the constructor input into a receptor list or a CSV path."""
+        self, receptors: Receptor | Iterable | str | Path | None
+    ) -> list[Receptor] | None:
+        """Return the constructor input as a receptor list, reading a CSV path."""
         if receptors is None:
-            return None, None
+            return None
         if isinstance(receptors, (str, Path)):
-            return None, Path(receptors)
+            path = Path(receptors)
+            if not path.is_absolute() and not self._project.is_cloud:
+                path = self._project.directory / path
+            return read_receptors(path)
         if isinstance(receptors, Receptor):
-            return [receptors], None
+            return [receptors]
         if isinstance(receptors, Iterable):
             items = list(receptors)
             if all(isinstance(item, Receptor) for item in items):
-                return items, None
+                return items
         raise TypeError(
             "Receptors must be a Receptor, an iterable of Receptors, or a path to "
             "a receptors CSV."
         )
 
-    @property
-    def source_path(self) -> Path | None:
-        """Absolute path of the receptors CSV given to the constructor, or ``None``."""
-        if self._source_path is None:
-            return None
-        if self._source_path.is_absolute() or self._project.is_cloud:
-            return self._source_path.resolve()
-        return self._project.directory / self._source_path
-
     def _load(self) -> list[Receptor]:
-        """Return the receptors, reading them on first use."""
+        """Return the receptors, reading the project's ``receptors.csv`` on first use."""
         if self._items is not None:
-            return self._items
-        if self.source_path is not None:
-            self._items = read_receptors(self.source_path)
             return self._items
         loaded = self._project.load_receptors()
         if loaded is None:
             raise FileNotFoundError(
-                "No receptors available: no explicit receptors, no source path, "
-                f"and no receptors.csv in {self._project.root}."
+                "No receptors available: none were given and there is no "
+                f"receptors.csv in {self._project.root}."
             )
         self._items = loaded
         return self._items

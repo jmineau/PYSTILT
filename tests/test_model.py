@@ -186,7 +186,16 @@ def test_receptors_from_csv(tmp_path):
 
     assert len(model.receptors) == 1
     assert model.receptors[0].latitude == pytest.approx(40.77)
-    assert model.receptors.source_path == csv
+
+
+def test_receptors_csv_path_is_relative_to_the_project(tmp_path):
+    (tmp_path / "in.csv").write_text(
+        "time,latitude,longitude,altitude\n2023-01-01 12:00:00,40.77,-111.85,5.0\n"
+    )
+
+    model = Model(project=tmp_path, receptors="in.csv")
+
+    assert len(model.receptors) == 1
 
 
 def test_model_accepts_empty_receptor_list(tmp_path):
@@ -439,21 +448,23 @@ def test_register_writes_config_and_receptors_to_project(tmp_path, point_recepto
     assert clone.config.mets["hrrr"].directory == tmp_path / "met"
 
 
-def test_register_copies_source_csv_byte_for_byte(tmp_path):
-    original = (
-        "time,lati,long,zagl\n"
-        "2023-01-01 12:00:00,40.77,-111.85,5.0\n"
-        "2023-01-01 13:00:00,40.78,-111.86,5.0\n"
-    )
+def test_register_writes_the_receptors_of_a_csv(tmp_path):
+    """A receptors CSV is read, then written out with its extra columns kept."""
     csv = tmp_path / "inputs" / "my_receptors.csv"
     csv.parent.mkdir()
-    csv.write_text(original)
+    csv.write_text(
+        "time,lati,long,zagl,site\n"
+        "2023-01-01 12:00:00,40.77,-111.85,5.0,wbb\n"
+        "2023-01-01 13:00:00,40.78,-111.86,5.0,wbb\n"
+    )
     project_dir = tmp_path / "project"
 
     model = Model(project=project_dir, config=_config(tmp_path), receptors=csv)
 
     assert len(model.register()) == 2
-    assert (project_dir / RECEPTORS_KEY).read_text() == original
+    clone = Model(project=project_dir)
+    assert [r.id for r in clone.receptors] == [r.id for r in model.receptors]
+    assert [r.attrs["site"] for r in clone.receptors] == ["wbb", "wbb"]
 
 
 def test_register_preserves_project_receptors_csv(tmp_path):

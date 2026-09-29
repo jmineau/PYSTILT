@@ -282,8 +282,7 @@ class Model:
         ----------
         receptors : iterable of Receptor, optional
             Receptors to add to the project. Defaults to the model's own
-            receptors. When those came from a CSV and the project has no
-            ``receptors.csv`` yet, the CSV is copied unchanged.
+            receptors.
 
         Returns
         -------
@@ -313,8 +312,7 @@ class Model:
             batch = list(self.receptors)  # the project's own file; nothing to add
         else:
             batch = list(self.receptors) if receptors is None else list(receptors)
-            source = self.receptors.source_path if receptors is None else None
-            if self.project.add_receptors(batch, source=source):
+            if self.project.add_receptors(batch):
                 # The registered set changed: rebuild receptors from the project.
                 self._receptors_input = None
                 self._receptors = None
