@@ -89,10 +89,6 @@ class ModelConfig(STILTParams, FootprintParams):
         declared = self.variants or {met: {"met": met} for met in self.mets}
         return expand_variants(declared, self.defaults(), list(self.mets))
 
-    def to_stilt_params(self) -> STILTParams:
-        """The default transport parameters alone."""
-        return STILTParams(**self.model_dump(include=set(STILTParams.model_fields)))
-
     def to_yaml(self, path: str | Path | None = None) -> str:
         """
         Return the config as YAML, and write it to *path* when given.

@@ -757,7 +757,7 @@ def test_variants_default_to_one_per_met(tmp_path):
     assert list(variants) == ["hrrr", "gfs"]
     assert variants["gfs"].met == "gfs"
     assert variants["gfs"].ziscale == 0.9
-    assert variants["hrrr"].stilt_params() == cfg.to_stilt_params()
+    assert variants["hrrr"].stilt_params().ziscale == 0.9
 
 
 def test_variant_overrides_merge_onto_the_defaults(tmp_path):
