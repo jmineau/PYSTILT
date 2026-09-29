@@ -25,32 +25,6 @@ if TYPE_CHECKING:
     from stilt.visualization import TrajectoriesPlotAccessor
 
 
-def _write_parquet_table(
-    table: pa.Table,
-    path: Path,
-    *,
-    use_dictionary: list[str] | bool,
-) -> None:
-    """Write a Parquet file with zstd compression, falling back to snappy or none."""
-    last_error: Exception | None = None
-    for compression in ("zstd", "snappy", None):
-        try:
-            pq.write_table(
-                table,
-                path,
-                compression=cast(Any, compression),
-                use_dictionary=cast(Any, use_dictionary),
-            )
-            return
-        except (pa.ArrowNotImplementedError, ValueError) as exc:
-            message = str(exc).lower()
-            if "codec" not in message and "compression" not in message:
-                raise
-            last_error = exc
-    if last_error is not None:
-        raise last_error
-
-
 # Below this horizontal spacing, release points cannot be told apart from a
 # particle's first output row. In a test with HRRR at WBB, particles moved
 # 200-600 m in the first minute, by an amount that varied with height. At
@@ -423,22 +397,14 @@ class Trajectories:
         table = pa.Table.from_pandas(self.data, preserve_index=False)
         meta = {
             b"stilt:receptor": json.dumps(self.receptor.to_dict()).encode(),
-            b"stilt:params": (
-                self.params.model_dump_json()
-                if hasattr(self.params, "model_dump_json")
-                else json.dumps(self.params)
-            ).encode(),
+            b"stilt:params": self.params.model_dump_json().encode(),
             b"stilt:met_files": json.dumps([str(p) for p in self.met_files]).encode(),
         }
         existing = table.schema.metadata or {}
         table = table.replace_schema_metadata({**existing, **meta})
         tmp_path = path.with_suffix(path.suffix + ".tmp")
         try:
-            _write_parquet_table(
-                table,
-                tmp_path,
-                use_dictionary=["indx"] if "indx" in self.data.columns else True,
-            )
+            pq.write_table(table, tmp_path, compression="zstd")
             os.replace(tmp_path, path)
         finally:
             if tmp_path.exists():
