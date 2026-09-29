@@ -101,11 +101,6 @@ class PostgresQueue:
             conn.execute(_SCHEMA)
             conn.commit()
 
-    @property
-    def db_url(self) -> str:
-        """PostgreSQL connection URL of the queue."""
-        return self._db_url
-
     def register(self, receptor_ids: Iterable[str]) -> None:
         """Add receptors to the queue as pending, resetting any that are already there."""
         rows = [(str(rid),) for rid in receptor_ids]
