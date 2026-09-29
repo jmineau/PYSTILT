@@ -248,6 +248,12 @@ redistribute. Synthetic samples should keep the real format's quirks.
 - **NumPy-style docstrings** (Sphinx napoleon is configured for NumPy only),
   with the summary on the line after the opening quotes (`D213`).
 - Pyright in `basic` mode against the project `.venv`. `py.typed` ships.
+  CI type-checks under Python 3.10, where the lock resolves older libraries
+  (pandas 2.3 rather than 3.x), so a pandas call can pass locally and fail
+  in CI. `pyproject.toml` pins pyright to `.venv`, so `--pythonpath` does
+  not switch environments; build a 3.10 environment elsewhere
+  (`UV_PROJECT_ENVIRONMENT=<dir>/.venv uv sync --python 3.10 --group dev`)
+  and run `pyright --venvpath <dir> src/stilt`.
   Fix types at the source rather than reaching for `typing.cast`.
 - Keep the `from __future__ import annotations` headers.
 - Runtime dependencies live in `[project]`; optional extras are `projection`,

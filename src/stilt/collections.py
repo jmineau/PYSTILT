@@ -340,7 +340,7 @@ class SimulationCollection:
             for sim in self
         ]
         columns = ["receptor", "variant", TRAJECTORY, FOOTPRINT, "complete"]
-        return pd.DataFrame(rows, columns=columns).astype(
+        return pd.DataFrame(rows, columns=pd.Index(columns)).astype(
             {TRAJECTORY: "boolean", FOOTPRINT: "boolean", "complete": "bool"}
         )
 
