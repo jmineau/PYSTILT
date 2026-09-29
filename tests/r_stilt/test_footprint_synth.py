@@ -38,6 +38,7 @@ import xarray as xr
 
 from stilt.config import FootprintConfig, Grid
 from stilt.config.spatial import _grid_cell_starts
+from stilt.errors import EmptyFootprintError
 from stilt.footprint import (
     Footprint,
     _build_buffered_grid,
@@ -550,9 +551,10 @@ def test_single_particle_gaussian(rscript, r_stilt_dir, tmp_path):
 
 def test_all_outside_domain(rscript, r_stilt_dir, tmp_path):
     """
-    All particles well outside the grid → footprint must be all zeros.
+    All particles well outside the grid: neither tool makes a footprint.
 
-    Checks that neither tool crashes and both produce an all-zero array.
+    STILT-R returns NULL (read here as an all-zero array). PYSTILT raises
+    EmptyFootprintError, which a simulation records as its ``.empty`` marker.
     """
     p = _particles(
         n=5,
@@ -561,14 +563,12 @@ def test_all_outside_domain(rscript, r_stilt_dir, tmp_path):
         foot=[1e-4] * 5,
     )
 
-    py_ds = _py_footprint(tmp_path / "py", p)
+    with pytest.raises(EmptyFootprintError, match="outside_domain"):
+        _py_footprint(tmp_path / "py", p)
     r_ds = _r_footprint(tmp_path / "r", rscript, r_stilt_dir, p)
 
-    assert np.all(py_ds.foot.values == 0), (
-        "PYSTILT: expected zero footprint for out-of-domain particles"
-    )
     assert np.all(r_ds.foot.values == 0), (
-        "STILT-R: expected zero footprint for out-of-domain particles"
+        "STILT-R: expected no footprint for out-of-domain particles"
     )
 
 
