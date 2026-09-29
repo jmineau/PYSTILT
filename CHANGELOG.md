@@ -164,6 +164,11 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **A variant that set `geometry` was rastered on the inherited grid**
+  ([#42](https://github.com/jmineau/PYSTILT/issues/42)). Overrides merged
+  onto the resolved defaults, which already carried `grid` and
+  `geometry_hash`, so the geometry was never built. A variant's own
+  `geometry` now drops both and derives its raster and hash.
 - **A rerun of a missing trajectory kept the old footprint**
   ([#39](https://github.com/jmineau/PYSTILT/issues/39)). When HYSPLIT runs
   for a simulation, its footprint is now remade from the new particles even

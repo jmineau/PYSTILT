@@ -170,10 +170,17 @@ def _override(base: dict[str, Any], spec: dict[str, Any]) -> dict[str, Any]:
 
     A ``grid`` mapping updates the base grid field by field, so a variant can
     change only the resolution; ``grid: null`` still removes the footprint.
+    A variant that gives its own ``geometry`` drops the inherited ``grid`` and
+    ``geometry_hash``, so its raster and hash are derived from that geometry
+    rather than kept from the defaults'.
     """
     merged = {**base, **spec}
     if isinstance(spec.get("grid"), dict) and isinstance(base.get("grid"), dict):
         merged["grid"] = {**base["grid"], **spec["grid"]}
+    if "geometry" in spec:
+        merged.pop("geometry_hash", None)
+        if spec["geometry"] is not None and "grid" not in spec:
+            merged.pop("grid", None)
     return merged
 
 

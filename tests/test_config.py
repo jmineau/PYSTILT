@@ -935,3 +935,34 @@ def test_variants_survive_a_yaml_roundtrip_as_written(tmp_path, grid):
     loaded = ModelConfig.from_yaml(path)
     assert loaded.variants == declared
     assert list(loaded.resolve_variants()) == ["hrrr", "zi08", "s2"]
+
+
+_WINDOWS = {
+    "kind": "windows",
+    "coords": [[-111.97, 40.515], [-112.015, 40.779]],
+    "size": 0.01,
+    "ids": ["landfill", "wwtp"],
+}
+
+
+@pytest.mark.parametrize("defaults", ["grid", "geometry"])
+def test_variant_geometry_derives_its_own_grid_and_hash(tmp_path, grid, defaults):
+    """A variant's geometry is not rastered on the inherited grid (#42)."""
+    other = {"kind": "windows", "coords": [[-111.5, 40.2]], "size": 0.05, "ids": ["c"]}
+    base = {"grid": grid} if defaults == "grid" else {"geometry": other}
+    cfg = _variant_config(
+        tmp_path,
+        **base,
+        variants={
+            "hrrr": {},
+            "src": {"from": "hrrr", "geometry": _WINDOWS},
+            "src-run": {"geometry": _WINDOWS},
+        },
+    )
+    variants = cfg.resolve_variants()
+    mesh = variants["src"].geometry.build()
+    expected = Grid.from_geometry(mesh)
+    for name in ("src", "src-run"):
+        assert variants[name].grid == expected
+        assert variants[name].geometry_hash == mesh.hash
+    assert variants["hrrr"].grid != expected
