@@ -5,7 +5,6 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, ClassVar, Literal
 
-import pandas as pd
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from typing_extensions import Self
 
@@ -508,31 +507,30 @@ class ErrorParams(BaseModel):
     @model_validator(mode="after")
     def _validate_error_params(self) -> Self:
         """Require each error group to be set in full or not at all."""
-        for name, params in [
-            ("XY", self._xyerr_params()),
-            ("ZI", self._zierr_params()),
-        ]:
-            is_na = [pd.isna(v) for v in params.values()]
-            if any(is_na) and not all(is_na):
+        for name, fields in (("XY", self.XYERR_PARAMS), ("ZI", self.ZIERR_PARAMS)):
+            unset = [getattr(self, f) is None for f in fields]
+            if any(unset) and not all(unset):
                 raise ValueError(
                     f"Inconsistent {name} error parameters: all must be set or all None"
                 )
         return self
 
-    def _xyerr_params(self) -> dict[str, float | None]:
-        """Return the wind-error fields by name."""
-        return {p: getattr(self, p) for p in self.XYERR_PARAMS}
+    @property
+    def winderr(self) -> list[float] | None:
+        """The wind-error values in ``WINDERR`` order, or ``None`` when unset."""
+        values = [getattr(self, f) for f in self.XYERR_PARAMS]
+        return None if values[0] is None else values
 
-    def _zierr_params(self) -> dict[str, float | None]:
-        """Return the mixed-layer error fields by name."""
-        return {p: getattr(self, p) for p in self.ZIERR_PARAMS}
+    @property
+    def zierr(self) -> list[float] | None:
+        """The mixed-layer error values in ``ZIERR`` order, or ``None`` when unset."""
+        values = [getattr(self, f) for f in self.ZIERR_PARAMS]
+        return None if values[0] is None else values
 
     @property
     def winderrtf(self) -> int:
         """HYSPLIT ``WINDERRTF`` flag: 1 for wind errors, 2 for mixed-layer errors, 3 for both."""
-        xyerr = all(v is not None for v in self._xyerr_params().values())
-        zierr = all(v is not None for v in self._zierr_params().values())
-        return xyerr + 2 * zierr
+        return (self.winderr is not None) + 2 * (self.zierr is not None)
 
     @property
     def error_enabled(self) -> bool:

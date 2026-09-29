@@ -102,6 +102,14 @@ class HYSPLITResult:
     log_path: Path
 
 
+def _write_values(path: Path, values: list[float] | None) -> None:
+    """Write one value per line to ``path``, or remove it when ``values`` is ``None``."""
+    if values is None:
+        path.unlink(missing_ok=True)
+    else:
+        path.write_text("\n".join(str(v) for v in values) + "\n", encoding="utf-8")
+
+
 class HYSPLITDriver:
     """
     Set up and run one HYSPLIT simulation in a directory.
@@ -328,25 +336,11 @@ class HYSPLITDriver:
 
     def _write_winderr(self) -> None:
         """Write ``WINDERR`` when wind perturbations are enabled, else remove it."""
-        params = self.params._xyerr_params()
-        if all(v is not None for v in params.values()):
-            self.winderr_path.write_text(
-                "\n".join(str(v) for v in params.values()) + "\n",
-                encoding="utf-8",
-            )
-        else:
-            self.winderr_path.unlink(missing_ok=True)
+        _write_values(self.winderr_path, self.params.winderr)
 
     def _write_zierr(self) -> None:
         """Write ``ZIERR`` when mixed-layer perturbations are enabled, else remove it."""
-        params = self.params._zierr_params()
-        if all(v is not None for v in params.values()):
-            self.zierr_path.write_text(
-                "\n".join(str(v) for v in params.values()) + "\n",
-                encoding="utf-8",
-            )
-        else:
-            self.zierr_path.unlink(missing_ok=True)
+        _write_values(self.zierr_path, self.params.zierr)
 
     def _write_zicontrol(self) -> None:
         """Write ``ZICONTROL`` when ``ziscale`` scales the mixed layer, else remove it."""
