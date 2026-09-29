@@ -127,8 +127,10 @@ To see what is left to do:
    model.simulations.status()                            # a DataFrame, one row per simulation
 
 ``status()`` has a ``trajectory`` and a ``footprint`` column that say
-whether each output exists. They are empty where the variant does not make
-that output. The ``complete`` column says whether the simulation is done.
+whether each output exists. They are blank where the variant does not make
+that output. The ``empty`` column marks footprints that are empty (`Empty
+footprints`_), and the ``complete`` column says whether the simulation is
+done.
 ``model.status()`` returns the same table. It checks every simulation, so
 it is slow on a large project stored in the cloud. From the command line,
 ``stilt status`` prints the totals, per variant when there are several.
@@ -179,10 +181,17 @@ Empty footprints
 
 Sometimes a simulation runs fine but no particle ever reaches the footprint
 grid. Usually the grid is too small or is not upwind. PYSTILT then writes a
-small ``<receptor id>_foot.empty`` file next to a NetCDF of zeros. The
-simulation counts as finished, so reruns skip it. ``sim.footprint`` loads
-the zeros, with ``is_empty`` set and ``empty_reason`` saying why. If you see
-many of these, make your footprint grid bigger.
+small ``<receptor id>_foot.empty`` file instead of a NetCDF. The simulation
+counts as finished, so reruns skip it. ``sim.footprint`` is ``None``,
+``sim.empty_reason`` says why, and ``load()`` and ``paths()`` leave the
+simulation out because there is nothing to load. The ``empty`` column of
+``model.simulations.status()`` lists them. If you see many, make your
+footprint grid bigger.
+
+An empty footprint is not a footprint of zeros. It means the transport never
+connected the receptor to your grid, so treating it as "the model says zero"
+in a comparison or an inversion would be wrong. Drop those observations, or
+find out why the particles never arrived.
 
 Adding footprints up over areas
 -------------------------------

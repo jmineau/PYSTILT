@@ -376,6 +376,11 @@ class Trajectories:
         Returns
         -------
         Footprint
+
+        Raises
+        ------
+        EmptyFootprintError
+            If no particle is over the grid.
         """
         from stilt.footprint import Footprint
 

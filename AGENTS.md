@@ -182,7 +182,8 @@ is a store key relative to it (see `project.py`):
 `compute_root` is the only other location: workers run HYSPLIT there and
 `Simulation.publish()` copies outputs into the store. For a local project the
 default compute root *is* `simulations/by-id`, so publishing is a no-op. An
-empty footprint writes a `.empty` marker, which counts as complete.
+empty footprint writes a `.empty` marker holding the reason, and no NetCDF;
+the marker counts as complete.
 
 ## Invariants
 
@@ -351,9 +352,13 @@ Feature status lives in the roadmap tables in [README.md](README.md) and
 
 - **`Model.simulations` is a lazy, mapping-like `SimulationCollection`**, not
   a list.
-- **Empty footprints are successes.** `model.simulations.footprint.load()` treats
-  `.empty` simulations as complete with no file; code that iterates results
-  must accept a missing payload.
+- **Empty footprints are successes, and not footprints.** When no particle
+  reaches the grid, `Footprint.calculate` raises `EmptyFootprintError` and
+  `Simulation.generate_footprint(write=True)` writes a `.empty` marker holding
+  the reason and no NetCDF. `sim.is_complete()` is true, `sim.footprint` is
+  `None`, `sim.empty_reason` says why, and `footprint.load()` leaves the
+  simulation out. Never synthesize a zero-valued footprint for it: a zero
+  enhancement would flow into a comparison or an inversion unnoticed.
 - **Declaring `realizations` makes a numbered group, even at 1.** `hrrr-err`
   with `realizations: 1` is `hrrr-err-0`, so raising the count later only
   adds simulations. Realization 0 is never aliased to the unsuffixed name.

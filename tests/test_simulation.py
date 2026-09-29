@@ -2,6 +2,7 @@
 
 import datetime as dt
 from pathlib import Path
+from types import SimpleNamespace
 
 import pandas as pd
 import pytest
@@ -14,7 +15,7 @@ from stilt.config import (
     STILTParams,
     VariantConfig,
 )
-from stilt.errors import HYSPLITTimeoutError
+from stilt.errors import EmptyFootprintError, HYSPLITTimeoutError
 from stilt.footprint import Footprint
 from stilt.hysplit.driver import HYSPLITResult
 from stilt.meteorology import MetStream
@@ -746,8 +747,10 @@ def test_completion_requires_the_trajectory_even_when_the_footprint_exists(
 def test_empty_footprint_marker_counts_complete(point_receptor, tmp_path):
     sim = _sim(tmp_path, point_receptor, footprint=FOOT)
     _touch(sim.trajectories_path)
-    sim.write_empty_footprint_marker()
+    sim.write_empty_footprint_marker("outside_domain")
     assert sim.is_complete()
+    assert sim.empty_reason == "outside_domain"
+    assert sim.footprint is None
 
 
 def test_has_footprint_falls_back_to_store(point_receptor, tmp_path):
@@ -773,18 +776,83 @@ def test_derived_simulation_needs_only_its_footprint(point_receptor, tmp_path):
 
 def test_write_and_clear_empty_footprint_marker(point_receptor, tmp_path):
     sim = _sim(tmp_path, point_receptor)
-    marker = sim.write_empty_footprint_marker()
+    assert sim.empty_reason is None
+    marker = sim.write_empty_footprint_marker("no_particles")
 
     assert marker == sim.empty_footprint_path
     assert marker.name.endswith("_foot.empty")
-    assert marker.exists()
+    assert marker.read_text() == "no_particles\n"
     assert sim.has_footprint
+    assert sim.empty_reason == "no_particles"
 
     sim.clear_empty_footprint_marker()
     assert not marker.exists()
     assert not sim.has_footprint
+    assert sim.empty_reason is None
     # Clearing twice is harmless.
     sim.clear_empty_footprint_marker()
+
+
+def test_empty_marker_without_reason_reads_unknown(point_receptor, tmp_path):
+    sim = _sim(tmp_path, point_receptor)
+    sim.empty_footprint_path.parent.mkdir(parents=True, exist_ok=True)
+    sim.empty_footprint_path.touch()
+    assert sim.empty_reason == "unknown"
+
+
+def _stub_trajectories(sim, receptor):
+    sim._trajectories = SimpleNamespace(
+        data=pd.DataFrame({"indx": [1], "foot": [1.0]}), receptor=receptor
+    )
+
+
+def test_generate_footprint_writes_marker_and_removes_stale_netcdf(
+    point_receptor, tmp_path, monkeypatch
+):
+    sim = _sim(tmp_path, point_receptor, footprint=FOOT)
+    _stub_trajectories(sim, point_receptor)
+    _touch(sim.footprint_path)
+
+    def raise_empty(*args, **kwargs):
+        raise EmptyFootprintError("outside_domain")
+
+    monkeypatch.setattr(Footprint, "calculate", raise_empty)
+
+    assert sim.generate_footprint(write=True) is None
+    assert sim.empty_reason == "outside_domain"
+    assert not sim.footprint_path.exists()
+    assert sim.footprint is None
+    assert sim.is_complete() or not sim.has_trajectory
+
+
+def test_generate_footprint_clears_stale_marker(point_receptor, tmp_path, monkeypatch):
+    sim = _sim(tmp_path, point_receptor, footprint=FOOT)
+    _stub_trajectories(sim, point_receptor)
+    sim.write_empty_footprint_marker("outside_domain")
+    written: list[Path] = []
+    foot = SimpleNamespace(to_netcdf=lambda path: written.append(path))
+    monkeypatch.setattr(Footprint, "calculate", lambda *a, **k: foot)
+
+    assert sim.generate_footprint(write=True) is foot
+    assert written == [sim.footprint_path]
+    assert sim.empty_reason is None
+
+
+def test_generate_footprint_without_write_leaves_files_alone(
+    point_receptor, tmp_path, monkeypatch
+):
+    sim = _sim(tmp_path, point_receptor, footprint=FOOT)
+    _stub_trajectories(sim, point_receptor)
+    _touch(sim.footprint_path)
+
+    def raise_empty(*args, **kwargs):
+        raise EmptyFootprintError("no_particles")
+
+    monkeypatch.setattr(Footprint, "calculate", raise_empty)
+
+    assert sim.generate_footprint() is None
+    assert sim.footprint_path.exists()
+    assert sim.empty_reason is None
 
 
 # ---------------------------------------------------------------------------

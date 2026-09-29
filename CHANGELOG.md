@@ -31,6 +31,17 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **Empty footprints are recorded once**
+  ([#59](https://github.com/jmineau/PYSTILT/issues/59)). Breaking. When no
+  particle reaches the grid, the simulation writes only the
+  `<rid>_foot.empty` marker, which now holds the reason. The zero-valued
+  NetCDF that was written next to it is gone, and with it the `is_empty` and
+  `empty_reason` attributes and the `Footprint.is_empty` property.
+  `Footprint.calculate` raises `EmptyFootprintError` instead of returning
+  zeros, `Simulation.generate_footprint` returns `None` and writes the
+  marker, `sim.footprint` is `None`, and `sim.empty_reason` reads the
+  marker. `status()` gained an `empty` column. Existing projects: delete the
+  zero-valued `.nc` files that sit next to `.empty` markers.
 - **Documentation rewritten in a plainer voice**
   ([#45](https://github.com/jmineau/PYSTILT/issues/45)). The user guide,
   getting-started pages, tutorials, migration pages, README, and public

@@ -147,11 +147,7 @@ def run_simulation(sim: Simulation, *, skip_existing: bool = True) -> Simulation
             skip_existing and not ran_hysplit and sim.has_footprint
         ):
             phase = "footprint"
-            foot = sim.generate_footprint(write=True)
-            if foot.is_empty:
-                sim.write_empty_footprint_marker()
-            else:
-                sim.clear_empty_footprint_marker()
+            sim.generate_footprint(write=True)
         sim.publish()
         return SimulationResult(str(sim.id), "complete", ran_hysplit=ran_hysplit)
     except Exception as error:

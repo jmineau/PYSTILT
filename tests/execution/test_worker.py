@@ -111,13 +111,6 @@ def fsim(tmp_path, receptor, met, params, store) -> Simulation:
     return s
 
 
-class _StubFootprint:
-    """The only thing run_simulation reads from a footprint is ``is_empty``."""
-
-    def __init__(self, is_empty: bool) -> None:
-        self.is_empty = is_empty
-
-
 def _write_stub_trajectory(sim: Simulation) -> None:
     sim.directory.mkdir(parents=True, exist_ok=True)
     sim.trajectories_path.write_bytes(b"traj")
@@ -289,31 +282,19 @@ def test_run_simulation_generic_exception_is_error(sim, monkeypatch):
 # ---------------------------------------------------------------------------
 
 
-def test_run_simulation_empty_footprint_writes_marker(fsim, store, monkeypatch):
-    monkeypatch.setattr(
-        fsim, "generate_footprint", lambda **k: _StubFootprint(is_empty=True)
-    )
+def test_run_simulation_publishes_empty_marker(fsim, store, monkeypatch):
+    def fake_generate(**kwargs):
+        fsim.write_empty_footprint_marker("outside_domain")
+        return None
+
+    monkeypatch.setattr(fsim, "generate_footprint", fake_generate)
 
     result = run_simulation(fsim)
 
     assert result.status == "complete"
-    assert fsim.empty_footprint_path.exists()
     assert not fsim.footprint_path.exists()
     # publish() covers the ``.empty`` marker too.
     assert store.exists(fsim.key(fsim.empty_footprint_path))
-
-
-def test_run_simulation_nonempty_footprint_clears_stale_marker(fsim, monkeypatch):
-    fsim.write_empty_footprint_marker()
-    monkeypatch.setattr(fsim, "run_trajectories", lambda **k: None)
-    monkeypatch.setattr(
-        fsim, "generate_footprint", lambda **k: _StubFootprint(is_empty=False)
-    )
-
-    result = run_simulation(fsim, skip_existing=False)
-
-    assert result.status == "complete"
-    assert not fsim.empty_footprint_path.exists()
 
 
 def test_run_simulation_footprint_simulation_error_is_failed(fsim, monkeypatch):
@@ -341,7 +322,7 @@ def test_run_simulation_skips_existing_footprint(fsim, monkeypatch):
 
 
 def test_run_simulation_skips_existing_empty_marker(fsim, monkeypatch):
-    fsim.write_empty_footprint_marker()
+    fsim.write_empty_footprint_marker("outside_domain")
     monkeypatch.setattr(
         fsim,
         "generate_footprint",
@@ -357,7 +338,7 @@ def test_run_simulation_skip_existing_false_regenerates(fsim, monkeypatch):
 
     def fake_generate(*, write):
         calls.append(write)
-        return _StubFootprint(is_empty=False)
+        return None
 
     monkeypatch.setattr(fsim, "run_trajectories", lambda **k: None)
     monkeypatch.setattr(fsim, "generate_footprint", fake_generate)
@@ -385,7 +366,7 @@ def test_run_simulation_backfills_a_missing_trajectory_and_remakes_the_footprint
     monkeypatch.setattr(
         s,
         "generate_footprint",
-        lambda **k: calls.append("footprint") or _StubFootprint(is_empty=False),
+        lambda **k: calls.append("footprint") or None,
     )
 
     result = run_simulation(s)
@@ -421,7 +402,7 @@ def test_run_receptor_remakes_derived_footprints_when_the_parent_reran(
 
         def fake_generate(name=sim.variant, **kwargs):
             calls.append(name)
-            return _StubFootprint(is_empty=False)
+            return None
 
         monkeypatch.setattr(sim, "generate_footprint", fake_generate)
 
@@ -456,9 +437,7 @@ def test_run_simulation_derived_never_runs_hysplit(
     assert "has no trajectory" in (result.error or "")
 
     monkeypatch.setattr(Simulation, "trajectories", property(lambda self: object()))
-    monkeypatch.setattr(
-        derived, "generate_footprint", lambda **k: _StubFootprint(is_empty=False)
-    )
+    monkeypatch.setattr(derived, "generate_footprint", lambda **k: None)
     assert run_simulation(derived).status == "complete"
 
 

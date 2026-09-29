@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, NamedTuple
 
 from stilt.config import FootprintConfig, STILTParams, VariantConfig
 from stilt.errors import (
+    EmptyFootprintError,
     EmptyTrajectoryError,
     identify_failure_reason,
 )
@@ -201,7 +202,11 @@ class Simulation:
 
     @property
     def empty_footprint_path(self) -> Path:
-        """Path of the marker file written when the footprint is empty."""
+        """
+        Path of the marker written instead of the NetCDF when the footprint is empty.
+
+        The file holds the reason (see :attr:`empty_reason`).
+        """
         return self.footprint_path.with_suffix(".empty")
 
     def key(self, path: str | Path) -> str:
@@ -290,11 +295,11 @@ class Simulation:
         self._trajectories = None
         self._footprint = None
 
-    def write_empty_footprint_marker(self) -> Path:
-        """Create the empty-footprint marker and return its path."""
+    def write_empty_footprint_marker(self, reason: str) -> Path:
+        """Write the empty-footprint marker holding *reason* and return its path."""
         marker = self.empty_footprint_path
         marker.parent.mkdir(parents=True, exist_ok=True)
-        marker.touch(exist_ok=True)
+        marker.write_text(reason + "\n", encoding="utf-8")
         return marker
 
     def clear_empty_footprint_marker(self) -> None:
@@ -336,6 +341,21 @@ class Simulation:
             start = r_time
             stop = r_time + dt.timedelta(hours=self.params.n_hours)
         return start, stop
+
+    @property
+    def empty_reason(self) -> str | None:
+        """
+        Why the footprint is empty, or ``None`` when it is not.
+
+        Read from the ``.empty`` marker. ``"outside_domain"`` means no
+        particle reached the grid, ``"no_particles"`` that there were none,
+        and ``"unknown"`` that the marker was written before reasons were
+        recorded.
+        """
+        marker = self.resolve(self.empty_footprint_path)
+        if marker is None:
+            return None
+        return marker.read_text(encoding="utf-8").strip() or "unknown"
 
     @property
     def outcome(self) -> str | None:
@@ -512,12 +532,14 @@ class Simulation:
         write: bool = False,
         transforms: Sequence[ParticleTransform] | None = None,
         context: TransformContext | None = None,
-    ) -> Footprint:
+    ) -> Footprint | None:
         """
         Calculate the footprint from the particles.
 
         Runs HYSPLIT first when there are no trajectories yet. The result is
-        also kept as :attr:`footprint`.
+        also kept as :attr:`footprint`. When no particle reaches the grid
+        there is no footprint: the method returns ``None`` and, with
+        ``write=True``, writes the ``.empty`` marker instead of the NetCDF.
 
         Parameters
         ----------
@@ -537,9 +559,9 @@ class Simulation:
 
         Returns
         -------
-        Footprint
-            The footprint. It is zero everywhere, with ``is_empty`` set, when
-            no particles reach the grid.
+        Footprint or None
+            The footprint, or ``None`` when no particle reaches the grid
+            (see :attr:`empty_reason`).
 
         Raises
         ------
@@ -565,12 +587,20 @@ class Simulation:
             particles = apply_transforms(
                 particles, all_transforms, context or self.transform_context()
             )
-        foot = Footprint.calculate(
-            particles, receptor=traj.receptor, config=config, name=self.variant
-        )
+        try:
+            foot = Footprint.calculate(
+                particles, receptor=traj.receptor, config=config, name=self.variant
+            )
+        except EmptyFootprintError as error:
+            self._footprint = None
+            if write:
+                self.write_empty_footprint_marker(error.reason)
+                self.footprint_path.unlink(missing_ok=True)
+            return None
         self._footprint = foot
         if write:
             foot.to_netcdf(self.footprint_path)
+            self.clear_empty_footprint_marker()
         return foot
 
     def transform_context(self) -> TransformContext:

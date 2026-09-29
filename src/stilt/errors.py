@@ -99,6 +99,25 @@ class EmptyTrajectoryError(SimulationError):
     """HYSPLIT ran, but its particle output holds no particles."""
 
 
+class EmptyFootprintError(RuntimeError):
+    """
+    No particle is over the footprint grid, so there is no footprint.
+
+    This is an outcome, not a failure. :meth:`stilt.Simulation.generate_footprint`
+    catches it and writes the ``.empty`` marker.
+
+    Parameters
+    ----------
+    reason : str
+        ``"no_particles"`` when the particle table is empty, or
+        ``"outside_domain"`` when no particle reached the grid.
+    """
+
+    def __init__(self, reason: str):
+        super().__init__(f"No particle over the footprint grid ({reason}).")
+        self.reason = reason
+
+
 class HYSPLITFailureError(SimulationError):
     """
     HYSPLIT wrote a known failure message to its log.

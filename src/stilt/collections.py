@@ -345,10 +345,11 @@ class SimulationCollection:
         -------
         pandas.DataFrame
             Columns ``receptor``, ``variant``, ``trajectory``, ``footprint``,
-            and ``complete``. ``trajectory`` and ``footprint`` are ``True``
-            when the output exists, ``False`` when it is missing, and ``NA``
-            when the simulation does not make it. ``complete`` is
-            :meth:`~stilt.Simulation.is_complete`.
+            ``empty``, and ``complete``. ``trajectory`` and ``footprint`` are
+            ``True`` when the output exists, ``False`` when it is missing, and
+            ``NA`` when the simulation does not make it. ``empty`` is ``True``
+            when the footprint is empty (no particle reached the grid).
+            ``complete`` is :meth:`~stilt.Simulation.is_complete`.
         """
         rows = [
             {
@@ -356,13 +357,21 @@ class SimulationCollection:
                 "variant": sim.variant,
                 TRAJECTORY: sim.has_trajectory if not sim.is_derived else pd.NA,
                 FOOTPRINT: sim.has_footprint if sim.makes_footprint else pd.NA,
+                "empty": (sim.empty_reason is not None)
+                if sim.makes_footprint
+                else pd.NA,
                 "complete": sim.is_complete(),
             }
             for sim in self
         ]
-        columns = ["receptor", "variant", TRAJECTORY, FOOTPRINT, "complete"]
+        columns = ["receptor", "variant", TRAJECTORY, FOOTPRINT, "empty", "complete"]
         return pd.DataFrame(rows, columns=pd.Index(columns)).astype(
-            {TRAJECTORY: "boolean", FOOTPRINT: "boolean", "complete": "bool"}
+            {
+                TRAJECTORY: "boolean",
+                FOOTPRINT: "boolean",
+                "empty": "boolean",
+                "complete": "bool",
+            }
         )
 
     # -- outputs ---------------------------------------------------------------

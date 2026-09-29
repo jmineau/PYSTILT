@@ -85,7 +85,7 @@ def _write_footprint(model: Model, sid, *, empty=False) -> Path:
     sim = model.simulation(sid)
     sim.directory.mkdir(parents=True, exist_ok=True)
     if empty:
-        return sim.write_empty_footprint_marker()
+        return sim.write_empty_footprint_marker("outside_domain")
     sim.footprint_path.write_bytes(b"stub")
     return sim.footprint_path
 
@@ -865,10 +865,18 @@ def test_status_frame_marks_outputs_a_variant_does_not_produce(
 
     status = model.simulations.status().set_index("variant")
 
-    assert list(status.columns) == ["receptor", TRAJECTORY, FOOTPRINT, "complete"]
+    assert list(status.columns) == [
+        "receptor",
+        TRAJECTORY,
+        FOOTPRINT,
+        "empty",
+        "complete",
+    ]
     assert status.loc["hrrr", TRAJECTORY] == True  # noqa: E712
     assert status.loc["hrrr", FOOTPRINT] == False  # noqa: E712
+    assert status.loc["hrrr", "empty"] == False  # noqa: E712
     assert pd.isna(status.loc["traj", FOOTPRINT])
+    assert pd.isna(status.loc["traj", "empty"])
     assert pd.isna(status.loc["s2", TRAJECTORY])
     assert not status["complete"].any()
 
@@ -953,7 +961,6 @@ def test_footprint_load_by_variant(tmp_path, point_receptor):
     [foot] = loaded.values()
     assert isinstance(foot, Footprint)
     assert foot.name == "zi08"
-    assert not foot.is_empty
 
 
 def test_outputs_fall_back_to_project_store(tmp_path, point_receptor):
@@ -991,6 +998,7 @@ def test_status_is_the_simulation_table(tmp_path):
         "variant",
         "trajectory",
         "footprint",
+        "empty",
         "complete",
     ]
     assert model.status().empty

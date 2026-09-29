@@ -12,6 +12,7 @@ import xarray as xr
 
 from stilt.config import FootprintConfig, Grid
 from stilt.config.spatial import _cf_grid_mapping_attrs, _grid_cell_starts
+from stilt.errors import EmptyFootprintError
 from stilt.footprint import (
     Footprint,
     _compute_kernel_bandwidths,
@@ -291,23 +292,6 @@ def test_netcdf_with_unimportable_transform_still_loads(tmp_path):
     again = Footprint.from_netcdf(rewritten)
     assert isinstance(again.config.transforms[0], UnresolvedTransform)
     assert again.config.transforms[0].kind == missing_kind
-
-
-def test_netcdf_roundtrip_preserves_empty_metadata(tmp_path, point_receptor):
-    particles = _particles_in_domain()
-    particles["long"] = 0.0
-    particles["lati"] = 0.0
-    foot = Footprint.calculate(
-        particles, receptor=point_receptor, config=_foot_config()
-    )
-    path = tmp_path / "empty_foot.nc"
-
-    foot.to_netcdf(path)
-    loaded = Footprint.from_netcdf(path)
-
-    assert loaded.is_empty is True
-    assert loaded.empty_reason == "outside_domain"
-    assert float(loaded.data.sum()) == pytest.approx(0.0)
 
 
 def test_netcdf_roundtrip_no_name(tmp_path):
@@ -798,19 +782,24 @@ def test_calculate_dims_are_time_lat_lon(point_receptor):
     assert tuple(foot.data.dims) == ("time", "lat", "lon")
 
 
-def test_calculate_returns_explicit_empty_footprint_when_particles_outside_domain(
+def test_calculate_raises_when_particles_outside_domain(
     point_receptor,
 ):
-    """All particles outside the domain should return an explicit empty footprint."""
+    """All particles outside the domain is an EmptyFootprintError, not zeros."""
     particles = _particles_in_domain()
     particles["long"] = 0.0  # far outside [-114, -113]
     particles["lati"] = 0.0
     config = _foot_config()
-    result = Footprint.calculate(particles, receptor=point_receptor, config=config)
-    assert isinstance(result, Footprint)
-    assert result.is_empty is True
-    assert result.empty_reason == "outside_domain"
-    assert float(result.data.sum()) == pytest.approx(0.0)
+    with pytest.raises(EmptyFootprintError) as info:
+        Footprint.calculate(particles, receptor=point_receptor, config=config)
+    assert info.value.reason == "outside_domain"
+
+
+def test_calculate_raises_when_there_are_no_particles(point_receptor):
+    particles = _particles_in_domain().iloc[0:0]
+    with pytest.raises(EmptyFootprintError) as info:
+        Footprint.calculate(particles, receptor=point_receptor, config=_foot_config())
+    assert info.value.reason == "no_particles"
 
 
 def test_calculate_assigns_name(point_receptor):
@@ -870,30 +859,6 @@ def test_calculate_irregular_grid_uses_complete_cells(point_receptor):
 
     foot = Footprint.calculate(particles, receptor=point_receptor, config=config)
 
-    np.testing.assert_allclose(foot.data.lon.values, [-113.85, -113.55, -113.25])
-    np.testing.assert_allclose(foot.data.lat.values, [39.2, 39.6])
-    assert foot.data.shape == (2, 2, 3)
-
-
-def test_calculate_empty_irregular_grid_uses_complete_cells(point_receptor):
-    config = FootprintConfig(
-        grid=Grid(
-            xmin=-114.0,
-            xmax=-113.0,
-            ymin=39.0,
-            ymax=40.0,
-            xres=0.3,
-            yres=0.4,
-        ),
-        smooth_factor=0.0,
-    )
-    particles = _particles_in_domain()
-    particles["long"] = 0.0
-    particles["lati"] = 0.0
-
-    foot = Footprint.calculate(particles, receptor=point_receptor, config=config)
-
-    assert foot.is_empty is True
     np.testing.assert_allclose(foot.data.lon.values, [-113.85, -113.55, -113.25])
     np.testing.assert_allclose(foot.data.lat.values, [39.2, 39.6])
     assert foot.data.shape == (2, 2, 3)

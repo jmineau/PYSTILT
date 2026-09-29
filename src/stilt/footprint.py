@@ -20,6 +20,7 @@ from stilt.config.spatial import (
     _grid_cell_starts,
     cf_axis_attrs,
 )
+from stilt.errors import EmptyFootprintError
 from stilt.geometry import (
     Mesh,
     SpatialTarget,
@@ -32,8 +33,6 @@ from stilt.transforms import dump_transform
 
 if TYPE_CHECKING:
     from stilt.visualization import FootprintPlotAccessor
-
-EMPTY_REASON_ATTR = "empty_reason"
 
 
 def _make_gauss_kernel(rs: tuple[float, float], sigma: float) -> np.ndarray:
@@ -169,13 +168,6 @@ def _build_footprint_array(
             "units": "ppm m2 s umol-1"
         },  # surface influence function: ppm per (µmol m⁻² s⁻¹)
     )
-
-
-def _empty_footprint_data(data: xr.DataArray, reason: str) -> xr.DataArray:
-    """Return a copy of *data* marked as an empty footprint, with the reason."""
-    data = data.copy()
-    data.attrs[EMPTY_REASON_ATTR] = reason
-    return data
 
 
 def _with_cf_metadata(ds: xr.Dataset, *, grid: Grid) -> xr.Dataset:
@@ -580,52 +572,6 @@ def _accumulate_smoothed_footprint(
     return foot_arr
 
 
-def _empty_footprint_result(
-    *,
-    receptor: Receptor,
-    config: FootprintConfig,
-    name: str,
-    xmin: float,
-    xmax: float,
-    ymin: float,
-    ymax: float,
-    xres: float,
-    yres: float,
-    is_longlat: bool,
-    wrapped_longitude: bool,
-    layers: np.ndarray | None = None,
-    reason: str,
-) -> "Footprint":
-    """Return a footprint of zeros on the grid, marked empty with *reason*."""
-    glong = _grid_cell_starts(xmin, xmax, xres)
-    glati = _grid_cell_starts(ymin, ymax, yres)
-    n_lon = len(glong)
-    n_lat = len(glati)
-    resolved_layers = (
-        layers if layers is not None and len(layers) > 0 else np.array([0], dtype=int)
-    )
-    foot_arr = np.zeros((len(resolved_layers), n_lat, n_lon), dtype=float)
-    return Footprint(
-        receptor=receptor,
-        config=config,
-        data=_empty_footprint_data(
-            _build_footprint_array(
-                foot_arr=foot_arr,
-                layers=resolved_layers,
-                receptor=receptor,
-                is_longlat=is_longlat,
-                glong=glong,
-                glati=glati,
-                xres=xres,
-                yres=yres,
-                wrapped_longitude=wrapped_longitude,
-            ),
-            reason,
-        ),
-        name=name,
-    )
-
-
 class Footprint:
     """
     Gridded footprint of one receptor.
@@ -713,27 +659,8 @@ class Footprint:
             cast(dt.datetime, stop.to_pydatetime()),
         )
 
-    @property
-    def empty_reason(self) -> str | None:
-        """
-        Why the footprint is empty, or ``None`` when it is not.
-
-        ``"no_particles"`` when there were no particles and
-        ``"outside_domain"`` when none reached the grid.
-        """
-        reason = self.data.attrs.get(EMPTY_REASON_ATTR)
-        return str(reason) if reason else None
-
-    @property
-    def is_empty(self) -> bool:
-        """Whether the footprint is empty (zero everywhere because no particles reached the grid)."""
-        return self.empty_reason is not None
-
     def __repr__(self) -> str:
-        return (
-            f"Footprint(name={self.name!r}, dims={dict(self.data.sizes)!r}, "
-            f"is_empty={self.is_empty!r})"
-        )
+        return f"Footprint(name={self.name!r}, dims={dict(self.data.sizes)!r})"
 
     @classmethod
     def from_netcdf(
@@ -786,17 +713,10 @@ class Footprint:
 
         name = attrs.get("name", "")
 
-        data = ds.foot
-        empty_reason = attrs.get(EMPTY_REASON_ATTR)
-        if empty_reason is None and bool(attrs.get("is_empty", False)):
-            empty_reason = "legacy"
-        if empty_reason is not None:
-            data = _empty_footprint_data(data, str(empty_reason))
-
         return cls(
             receptor=receptor,
             config=foot_config,
-            data=data,
+            data=ds.foot,
             name=name,
         )
 
@@ -835,8 +755,13 @@ class Footprint:
         Returns
         -------
         Footprint
-            The footprint. When there are no particles or none reach the
-            grid, it is zero everywhere and :attr:`is_empty` is ``True``.
+            The footprint.
+
+        Raises
+        ------
+        EmptyFootprintError
+            If no particle is over the grid. ``reason`` is ``"no_particles"``
+            when the table is empty and ``"outside_domain"`` otherwise.
         """
         grid = config.grid
         projection = grid.projection
@@ -847,23 +772,7 @@ class Footprint:
         time_integrate = config.time_integrate
 
         if particles.empty:
-            return cast(
-                Self,
-                _empty_footprint_result(
-                    receptor=receptor,
-                    config=config,
-                    name=name,
-                    xmin=xmin,
-                    xmax=xmax,
-                    ymin=ymin,
-                    ymax=ymax,
-                    xres=xres,
-                    yres=yres,
-                    is_longlat=is_longlat,
-                    wrapped_longitude=False,
-                    reason="no_particles",
-                ),
-            )
+            raise EmptyFootprintError("no_particles")
 
         p = particles.copy(deep=False)
         n_particles = p["indx"].nunique()
@@ -931,24 +840,7 @@ class Footprint:
         )
 
         if p.empty:
-            return cast(
-                Self,
-                _empty_footprint_result(
-                    receptor=receptor,
-                    config=config,
-                    name=name,
-                    xmin=xmin,
-                    xmax=xmax,
-                    ymin=ymin,
-                    ymax=ymax,
-                    xres=xres,
-                    yres=yres,
-                    is_longlat=is_longlat,
-                    wrapped_longitude=wrapped_longitude,
-                    layers=layers,
-                    reason="outside_domain",
-                ),
-            )
+            raise EmptyFootprintError("outside_domain")
 
         foot_arr = _accumulate_smoothed_footprint(
             p,
@@ -1035,8 +927,6 @@ class Footprint:
                 "yres": grid.yres,
                 "smooth_factor": self.config.smooth_factor,
                 "time_integrate": int(self.config.time_integrate),
-                "is_empty": int(self.is_empty),
-                EMPTY_REASON_ATTR: self.empty_reason or "",
                 "transforms": json.dumps(
                     [dump_transform(t) for t in self.config.transforms]
                 ),
