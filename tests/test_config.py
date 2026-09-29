@@ -771,11 +771,8 @@ def test_variant_overrides_merge_onto_the_defaults(tmp_path):
     assert variants["zi08"].numpar == 50
     assert variants["zi08"].ziscale == 0.8
     assert variants["hrrr"].ziscale == 1.0
-    assert variants["zi08"].differences(variants["hrrr"].record()) == [
-        "group",
-        "name",
-        "ziscale",
-    ]
+    zi08, hrrr = variants["zi08"].record(), variants["hrrr"].record()
+    assert sorted(k for k in zi08 if zi08[k] != hrrr[k]) == ["group", "name", "ziscale"]
 
 
 def test_variant_grid_override_merges_field_by_field(tmp_path):
@@ -1005,11 +1002,5 @@ def test_maxpar_follows_each_variants_numpar(tmp_path):
     # The record holds the value HYSPLIT got, so records written when maxpar was
     # filled in from numpar still match, and a run capped at the default's
     # numpar shows up as changed.
+    assert variants["hrrr"].record()["maxpar"] == 1000
     assert variants["np3k"].record()["maxpar"] == 3000
-    assert (
-        variants["hrrr"].differences({**variants["hrrr"].record(), "maxpar": 1000})
-        == []
-    )
-    assert variants["np3k"].differences(
-        {**variants["np3k"].record(), "maxpar": 1000}
-    ) == ["maxpar"]

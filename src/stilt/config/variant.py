@@ -87,19 +87,6 @@ class VariantConfig(STILTParams, FootprintConfig):
             data["maxpar"] = self.numpar
         return data
 
-    def differences(self, recorded: dict[str, Any]) -> list[str]:
-        """
-        Return the names of the fields that differ from ``recorded``.
-
-        ``recorded`` is this variant's entry in the project's record (see
-        :meth:`record`). Fields that change no output
-        (:data:`UNRECORDED_FIELDS`) are skipped.
-        """
-        mine = self.record()
-        return sorted(
-            k for k in mine if k not in UNRECORDED_FIELDS and mine[k] != recorded.get(k)
-        )
-
 
 def expand_variants(
     declared: dict[str, dict[str, Any]],

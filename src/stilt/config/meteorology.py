@@ -141,16 +141,3 @@ class MetConfig(BaseModel):
     def source_kwargs(self) -> dict[str, Any]:
         """Extra fields, passed as keyword arguments to the arlmet source."""
         return dict(self.model_extra) if self.model_extra else {}
-
-    def record(self) -> dict[str, Any]:
-        """Return this met as stored in the project's record."""
-        return self.model_dump(mode="json")
-
-    def differences(self, recorded: dict[str, Any]) -> list[str]:
-        """Return the fields that affect results and differ from ``recorded``."""
-        mine = self.record()
-        return sorted(
-            k
-            for k in mine
-            if k not in UNRECORDED_MET_FIELDS and mine[k] != recorded.get(k)
-        )

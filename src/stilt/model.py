@@ -7,7 +7,7 @@ import os
 import tempfile
 from collections.abc import Iterable
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pandas as pd
 
@@ -18,6 +18,8 @@ from stilt.config import (
     RuntimeSettings,
     VariantConfig,
 )
+from stilt.config.meteorology import UNRECORDED_MET_FIELDS
+from stilt.config.variant import UNRECORDED_FIELDS
 from stilt.errors import ConfigChangedError, ConfigValidationError
 from stilt.execution import (
     Executor,
@@ -37,6 +39,15 @@ logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from stilt.visualization import ModelPlotAccessor
+
+
+def _changed_fields(
+    current: dict[str, Any], recorded: dict[str, Any], ignore: frozenset[str]
+) -> list[str]:
+    """Return the fields of ``current`` that differ from ``recorded``, skipping ``ignore``."""
+    return sorted(
+        k for k in current if k not in ignore and current[k] != recorded.get(k)
+    )
 
 
 class Model:
@@ -226,12 +237,18 @@ class Model:
         changed = {}
         for name, variant in self.variants.items():
             if name in record["variants"]:
-                diff = variant.differences(record["variants"][name])
+                diff = _changed_fields(
+                    variant.record(), record["variants"][name], UNRECORDED_FIELDS
+                )
                 if diff:
                     changed[name] = diff
         for name, met in self.config.mets.items():
             if name in record["mets"]:
-                diff = met.differences(record["mets"][name])
+                diff = _changed_fields(
+                    met.model_dump(mode="json"),
+                    record["mets"][name],
+                    UNRECORDED_MET_FIELDS,
+                )
                 if diff:
                     changed[f"met {name}"] = diff
         if changed:
@@ -307,7 +324,10 @@ class Model:
 
         record = self.project.load_record()
         record["mets"].update(
-            {name: met.record() for name, met in self.config.mets.items()}
+            {
+                name: met.model_dump(mode="json")
+                for name, met in self.config.mets.items()
+            }
         )
         record["variants"].update(
             {name: v.record() for name, v in self.variants.items()}
