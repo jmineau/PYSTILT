@@ -37,7 +37,8 @@ class ModelConfig(STILTParams, FootprintParams):
         default_factory=dict,
         description=(
             "Named variants as overrides of the defaults. Each may set ``met`` "
-            "(required with several mets), ``realizations`` (run N times with "
+            "(required with several mets unless the variant is named after "
+            "one), ``realizations`` (run N times with "
             "seed + k), or ``from`` (rasterize another variant's trajectory; "
             "footprint fields only). Absent: one variant per met."
         ),
@@ -94,13 +95,26 @@ class ModelConfig(STILTParams, FootprintParams):
         Return the config as YAML, and write it to *path* when given.
 
         The file is meant to be read and edited by hand, so it holds only the
-        top-level settings that were given; what was given is written in full
-        (a transform or geometry keeps its ``kind``). The resolved settings of
-        each variant are kept in the project's record
+        top-level settings that were given, and for each met only the fields
+        that were given; what was given is written in full (a transform or
+        geometry keeps its ``kind``). ``mets`` and
+        ``variants`` come first, and ``variants`` is always written, as one
+        entry per met when none was declared, so the file shows that the
+        declared variants are the ones that run. The resolved settings of each
+        variant are kept in the project's record
         (:meth:`stilt.Project.load_record`), not here.
         """
         data = self.model_dump(mode="json", include=self.model_fields_set)
-        text = yaml.safe_dump(data, default_flow_style=False, sort_keys=False)
+        data["mets"] = {
+            name: met.model_dump(mode="json", exclude_unset=True)
+            for name, met in self.mets.items()
+        }
+        if not data.get("variants"):
+            data["variants"] = {met: {} for met in self.mets}
+        head = {k: data.pop(k) for k in ("mets", "variants")}
+        text = yaml.safe_dump(
+            {**head, **data}, default_flow_style=False, sort_keys=False
+        )
         if path is not None:
             path = Path(path)
             path.parent.mkdir(parents=True, exist_ok=True)

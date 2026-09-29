@@ -1326,3 +1326,17 @@ def test_remove_resolves_orphans_from_the_record(tmp_path, point_receptor):
     ).exists()
     assert [s.variant for s in later.remove("hrrr")] == ["hrrr"]
     assert later.orphans() == []
+
+
+def test_register_warns_about_orphans(tmp_path, point_receptor, caplog):
+    Model(
+        project=tmp_path,
+        config=_config(tmp_path, variants={"hrrr": {}, "zi08": {"ziscale": 0.8}}),
+        receptors=[point_receptor],
+    ).register()
+
+    with caplog.at_level("WARNING", logger="stilt.model"):
+        Model(
+            project=tmp_path, config=_config(tmp_path, variants={"hrrr": {}})
+        ).register()
+    assert "zi08" in caplog.text and "stilt rm" in caplog.text

@@ -30,8 +30,10 @@ A typical config.yaml
    numpar: 500
 
 ``stilt init`` writes a commented starter file. When you build a
-:class:`~stilt.Model` in Python, the same settings are written to
-``config.yaml`` the first time you run it.
+:class:`~stilt.Model` in Python, the settings you gave are written to
+``config.yaml`` the first time you run it, with a ``variants`` section
+listing the variants that run (`Variants`_), so the file reads the same
+either way.
 
 The settings most people change
 -------------------------------
@@ -117,7 +119,8 @@ Each variant of each receptor is one simulation, stored in
 every variant uses the same list of receptors. A variant may set:
 
 ``met``
-   Which met stream to use. Needed only when ``mets`` has more than one entry.
+   Which met stream to use. A variant named after a met stream uses it;
+   otherwise ``met`` is needed when ``mets`` has more than one entry.
 
 ``realizations``
    Make the variant a numbered group: it runs ``N`` times as ``<name>-0``
@@ -191,7 +194,8 @@ You have two ways forward:
 Settings that do not change a result can change freely: ``execution``, the
 HYSPLIT ``timeout``, ``rm_dat``, and where the meteorology files are
 (``directory``). Taking a variant out of ``config.yaml`` does not delete
-anything; ``stilt status`` lists such variants until you remove them.
+anything; ``stilt run`` warns and ``stilt status`` lists such variants until
+you remove them.
 
 Footprints for shapefiles, hexagons, or point sources
 -----------------------------------------------------

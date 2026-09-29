@@ -113,7 +113,8 @@ def expand_variants(
     defaults
         The flat top-level parameters (transport and footprint fields).
     mets
-        Configured met names; a variant's ``met`` defaults to the only one.
+        Configured met names; a variant's ``met`` defaults to the met of its
+        own name, else to the only one.
     """
     for group in declared:
         if not VARIANT_NAME_RE.fullmatch(group):
@@ -157,11 +158,15 @@ def _merge_transport(
     """
     met = spec.pop("met", None)
     if met is None:
-        if len(mets) != 1:
+        if group in mets:
+            met = group
+        elif len(mets) == 1:
+            met = mets[0]
+        else:
             raise ValueError(
-                f"Variant {group!r} must name its met (one of {sorted(mets)})"
+                f"Variant {group!r} must name its met (one of {sorted(mets)}) "
+                "or be named after one"
             )
-        met = mets[0]
     if met not in mets:
         raise ValueError(f"Variant {group!r} names unknown met {met!r}")
     realizations = spec.pop("realizations", None)

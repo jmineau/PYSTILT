@@ -180,7 +180,11 @@ def test_project_config_round_trip(any_project, model_config):
     assert any_project.has_config
     assert any_project.store.exists(CONFIG_KEY)
     loaded = any_project.load_config()
-    assert loaded == model_config
+    # The saved file always declares its variants; everything else is as given.
+    assert loaded.model_dump(exclude={"variants"}) == model_config.model_dump(
+        exclude={"variants"}
+    )
+    assert loaded.resolve_variants() == model_config.resolve_variants()
     assert set(loaded.mets) == {"hrrr"}
     assert loaded.n_hours == -24
 

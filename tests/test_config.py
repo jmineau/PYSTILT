@@ -820,6 +820,8 @@ def test_to_yaml_writes_only_what_was_set(tmp_path):
     text = path.read_text()
     assert "numpar: 50" in text and "zi08" in text
     assert "capemin" not in text and "seed" not in text  # defaults stay out
+    assert "maxpar" not in text and "n_min" not in text  # at every level
+    assert text.startswith("mets:")  # inputs first, then the settings
     assert "kind: first_order_lifetime" in text  # nested objects are written in full
     loaded = ModelConfig.from_yaml(path).resolve_variants()
     assert loaded["zi08"].ziscale == 0.8
@@ -937,6 +939,25 @@ def test_variants_survive_a_yaml_roundtrip_as_written(tmp_path, grid):
     loaded = ModelConfig.from_yaml(path)
     assert loaded.variants == declared
     assert list(loaded.resolve_variants()) == ["hrrr", "zi08", "s2"]
+
+
+def test_to_yaml_always_writes_the_variants_that_run(tmp_path):
+    mc = _met_config(tmp_path)["hrrr"]
+    cfg = ModelConfig(mets={"hrrr": mc, "gfs": mc}, numpar=50)
+    text = cfg.to_yaml()
+    assert "variants:\n  hrrr: {}\n  gfs: {}\n" in text
+    loaded = ModelConfig.model_validate(__import__("yaml").safe_load(text))
+    assert list(loaded.resolve_variants()) == ["hrrr", "gfs"]
+    assert loaded.resolve_variants()["gfs"].met == "gfs"
+
+
+def test_variant_named_after_a_met_uses_it(tmp_path):
+    mc = _met_config(tmp_path)["hrrr"]
+    cfg = ModelConfig(mets={"hrrr": mc, "gfs": mc}, variants={"gfs": {}, "hrrr": {}})
+    assert {n: v.met for n, v in cfg.resolve_variants().items()} == {
+        "gfs": "gfs",
+        "hrrr": "hrrr",
+    }
 
 
 _WINDOWS = {

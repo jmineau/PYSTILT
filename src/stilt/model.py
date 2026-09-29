@@ -245,6 +245,14 @@ class Model:
             (:meth:`check_config`).
         """
         self.check_config()
+        orphans = self.orphans()
+        if orphans:
+            logger.warning(
+                "config.yaml in %s no longer declares %s, which have outputs; "
+                "they stay until removed (stilt rm --variant)",
+                self.project.root,
+                ", ".join(orphans),
+            )
         if self._config_given or not self.project.has_config:
             self.project.save_config(self.config)
 
