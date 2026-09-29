@@ -106,23 +106,14 @@ def test_local_executor_defaults_skip_existing_to_true(tmp_path, local_calls):
     assert local_calls[0]["model"].compute_root is None
 
 
-def test_local_executor_n_workers_override(tmp_path, local_calls):
-    """Explicit n_workers kwarg overrides the instance default."""
-    LocalExecutor(n_workers=5).start(
-        ["sim-a", "sim-b", "sim-c"], project=str(tmp_path), n_workers=2
-    ).wait()
-
-    assert local_calls[0]["n_cores"] == 2
-
-
-def test_local_executor_uses_instance_n_workers_when_omitted(tmp_path, local_calls):
+def test_local_executor_passes_n_workers_as_pool_size(tmp_path, local_calls):
     LocalExecutor(n_workers=3).start(["sim-a", "sim-b"], project=str(tmp_path)).wait()
 
     assert local_calls[0]["n_cores"] == 3
 
 
 def test_local_executor_start_noops_when_pending_is_empty(tmp_path, local_calls):
-    handle = LocalExecutor(n_workers=5).start([], project=str(tmp_path), n_workers=2)
+    handle = LocalExecutor(n_workers=5).start([], project=str(tmp_path))
 
     assert isinstance(handle, LocalHandle)
     assert handle.done
@@ -269,7 +260,6 @@ def test_slurm_executor_start_renders_chunk_worker_script(tmp_path, monkeypatch)
     handle = ex.start(
         [f"sim-{i}" for i in range(4)],
         project=str(tmp_path),
-        n_workers=4,
     )
 
     assert isinstance(handle, SlurmHandle)
@@ -318,7 +308,6 @@ def test_slurm_executor_start_with_compute_root_and_cpus(tmp_path, monkeypatch):
     ex.start(
         ["sim-a"],
         project=str(tmp_path),
-        n_workers=1,
         compute_root="/scratch/pystilt",
     )
 
@@ -343,7 +332,6 @@ def test_slurm_executor_start_renders_skip_existing_override(tmp_path, monkeypat
     ex.start(
         ["sim-a"],
         project=str(tmp_path),
-        n_workers=1,
         skip_existing=False,
     )
 
@@ -362,13 +350,12 @@ def test_slurm_executor_rejects_uri_project(monkeypatch):
         ex.start(
             ["sim-a"],
             project="s3://bucket/my_proj",
-            n_workers=1,
         )
 
 
 def test_slurm_executor_start_zero_workers_returns_none_job_id(monkeypatch):
     ex = SlurmExecutor(n_workers=1)
-    handle = ex.start([], project=".", n_workers=0)
+    handle = ex.start([], project=".")
     assert handle.job_id == "none"
 
 
@@ -619,13 +606,12 @@ def test_kubernetes_executor_from_config_defaults():
 
 def test_kubernetes_executor_start_batch_applies_job(monkeypatch):
     """start() applies a Job manifest."""
-    ex = KubernetesExecutor(image="img")
+    ex = KubernetesExecutor(image="img", n_workers=2)
     applied: list[dict] = []
     monkeypatch.setattr(ex, "_apply", lambda m: applied.append(m))
     handle = ex.start(
         ["sim-a", "sim-b"],
         project="/data/myproj",
-        n_workers=2,
         skip_existing=False,
     )
     assert len(applied) == 1
@@ -649,7 +635,7 @@ def test_kubernetes_executor_start_accepts_skip_existing_override(monkeypatch):
     assert len(applied) == 1
 
 
-def test_kubernetes_executor_start_uses_instance_n_workers_when_omitted(
+def test_kubernetes_executor_start_uses_instance_n_workers(
     monkeypatch,
 ):
     ex = KubernetesExecutor(image="img", n_workers=4)
@@ -671,7 +657,6 @@ def test_kubernetes_executor_start_includes_compute_root(monkeypatch):
     ex.start(
         ["sim-a"],
         project="gs://bucket/myproj",
-        n_workers=1,
         compute_root="/tmp/pystilt",
     )
     container = applied[0]["spec"]["template"]["spec"]["containers"][0]

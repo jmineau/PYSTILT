@@ -195,7 +195,7 @@ class SlurmExecutor:
 
     @property
     def n_workers(self) -> int:
-        """Number of array tasks when :meth:`start` is not given one."""
+        """Number of array tasks."""
         return self._n_workers
 
     @classmethod
@@ -250,7 +250,6 @@ class SlurmExecutor:
         pending: list[str],
         *,
         project: str,
-        n_workers: int | None = None,
         compute_root: str | None = None,
         skip_existing: bool | None = None,
     ) -> SlurmHandle:
@@ -261,8 +260,7 @@ class SlurmExecutor:
         project_dir = Path(project)
         batch_id = datetime.now().strftime("%Y%m%d_%H%M%S")
         chunk_dir = project_dir / "chunks" / batch_id
-        n = n_workers if n_workers is not None else self._n_workers
-        n_written = _write_chunks(chunk_dir, pending, n_workers=n)
+        n_written = _write_chunks(chunk_dir, pending, n_workers=self._n_workers)
         if not n_written:
             return SlurmHandle("none")
 

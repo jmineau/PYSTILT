@@ -70,7 +70,7 @@ class Executor(Protocol):
 
     @property
     def n_workers(self) -> int:
-        """Number of workers started when :meth:`start` is not given one."""
+        """Number of workers :meth:`start` starts."""
         ...
 
     def start(
@@ -78,7 +78,6 @@ class Executor(Protocol):
         pending: list[str],
         *,
         project: str,
-        n_workers: int | None = None,
         compute_root: str | None = None,
         skip_existing: bool | None = None,
     ) -> JobHandle:
@@ -91,8 +90,6 @@ class Executor(Protocol):
             Receptor ids to run. Pull executors ignore it.
         project : str
             Project root, a local path or a URI.
-        n_workers : int, optional
-            Number of workers. Defaults to :attr:`n_workers`.
         compute_root : str, optional
             Directory where workers run HYSPLIT.
         skip_existing : bool, optional

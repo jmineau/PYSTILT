@@ -71,7 +71,6 @@ class LocalExecutor:
         pending: list[str],
         *,
         project: str,
-        n_workers: int | None = None,
         compute_root: str | None = None,
         skip_existing: bool | None = None,
     ) -> LocalHandle:
@@ -79,7 +78,6 @@ class LocalExecutor:
         if not pending:
             return LocalHandle()
 
-        n = n_workers if n_workers is not None else self._n_workers
         handle = LocalHandle()
 
         def _work() -> None:
@@ -92,7 +90,7 @@ class LocalExecutor:
                 run_receptors(
                     Model(project=project, compute_root=compute_root),
                     pending,
-                    n_cores=n,
+                    n_cores=self._n_workers,
                     skip_existing=True if skip_existing is None else skip_existing,
                 )
             except BaseException as exc:  # surfaced by wait()

@@ -102,7 +102,7 @@ class KubernetesExecutor:
 
     @property
     def n_workers(self) -> int:
-        """Number of worker pods when :meth:`start` is not given one."""
+        """Number of worker pods."""
         return self._n_workers
 
     @classmethod
@@ -148,17 +148,15 @@ class KubernetesExecutor:
         pending: list[str],
         *,
         project: str,
-        n_workers: int | None = None,
         compute_root: str | None = None,
         skip_existing: bool | None = None,
     ) -> KubernetesHandle:
         """Create the worker Job and return its handle. ``pending`` is not used."""
         name = service_name(project)
-        n = n_workers if n_workers is not None else self._n_workers
         manifest = worker_job_manifest(
             project,
             image=self._image,
-            n_workers=n,
+            n_workers=self._n_workers,
             namespace=self._namespace,
             compute_root=compute_root,
             db_secret=self._db_secret,
