@@ -1299,3 +1299,30 @@ def test_run_no_wait_returns_handle_without_waiting(tmp_path, point_receptor):
 
     assert returned is handle
     assert handle.wait_calls == 0
+
+
+def test_remove_resolves_orphans_from_the_record(tmp_path, point_receptor):
+    """rm works when config.yaml declares neither the variant nor its parent (#43)."""
+    model = Model(
+        project=tmp_path,
+        config=_config(
+            tmp_path,
+            variants={"hrrr": {}, "s2": {"from": "hrrr", "smooth_factor": 2.0}},
+        ),
+        receptors=[point_receptor],
+    )
+    model.register()
+    _write_trajectory(model, _sid(point_receptor, "hrrr"))
+    _write_footprint(model, _sid(point_receptor, "s2"))
+
+    later = Model(
+        project=tmp_path, config=_config(tmp_path, variants={"zi08": {"ziscale": 0.8}})
+    )
+    assert later.orphans() == ["hrrr", "s2"]
+
+    assert [s.variant for s in later.remove("s2")] == ["s2"]
+    assert not (
+        tmp_path / "simulations" / "by-id" / _rid(point_receptor) / "s2"
+    ).exists()
+    assert [s.variant for s in later.remove("hrrr")] == ["hrrr"]
+    assert later.orphans() == []

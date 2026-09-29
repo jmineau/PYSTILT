@@ -17,6 +17,7 @@ import pandas as pd
 
 from stilt.collections import ReceptorCollection, SimulationCollection
 from stilt.config import (
+    MetConfig,
     ModelConfig,
     RuntimeSettings,
     VariantConfig,
@@ -289,28 +290,41 @@ class Model:
             The simulations that were deleted.
         """
         record = self.project.load_record()
-        recorded = record["variants"]
-        names = [
-            n for n, v in recorded.items() if n == variant or v.get("group") == variant
-        ]
+        recorded = {
+            n: VariantConfig.model_validate(v) for n, v in record["variants"].items()
+        }
+        names = [n for n, v in recorded.items() if variant in (n, v.group)]
         if not names:
             raise KeyError(
                 f"No variant {variant!r} in the record of {self.project.root}"
             )
         names += [
-            n
-            for n, v in recorded.items()
-            if v.get("derived_from") in names and n not in names
+            n for n, v in recorded.items() if v.derived_from in names and n not in names
         ]
+        # Everything comes from the record, since config.yaml may declare
+        # neither the variant nor its parent or met any more.
+        mets = {
+            n: MetStream.from_config(n, MetConfig.model_validate(m))
+            for n, m in record["mets"].items()
+        }
+
+        def handle(receptor: Receptor, name: str) -> Simulation:
+            config = recorded[name]
+            parent = (
+                handle(receptor, config.derived_from)
+                if config.derived_from is not None
+                else None
+            )
+            return self._handle(SimID(receptor.id, name), config, parent, mets)
+
         deleted = []
         for receptor in self.receptors:
             for name in names:
-                sid = SimID(receptor.id, name)
-                self._handle(sid, VariantConfig.model_validate(recorded[name])).delete()
-                self._handles.pop(sid, None)
-                deleted.append(sid)
+                handle(receptor, name).delete()
+                self._handles.pop(SimID(receptor.id, name), None)
+                deleted.append(SimID(receptor.id, name))
         for name in names:
-            del recorded[name]
+            del record["variants"][name]
         self.project.save_record(record)
         self._simulations = None
         return deleted
@@ -321,20 +335,27 @@ class Model:
         """Build (and cache) the handle for one simulation id; no side effects on disk."""
         sid = SimID.parse(key)
         if sid not in self._handles:
-            self._handles[sid] = self._handle(sid, self.variants[sid.variant])
+            variant = self.variants[sid.variant]
+            parent = (
+                self.simulation((sid.receptor, variant.derived_from))
+                if variant.derived_from is not None
+                else None
+            )
+            self._handles[sid] = self._handle(sid, variant, parent, self.mets)
         return self._handles[sid]
 
-    def _handle(self, sid: SimID, variant: VariantConfig) -> Simulation:
+    def _handle(
+        self,
+        sid: SimID,
+        variant: VariantConfig,
+        parent: Simulation | None,
+        mets: dict[str, MetStream],
+    ) -> Simulation:
         """Build the handle for *sid* under *variant* (declared or recorded)."""
-        parent = (
-            self.simulation((sid.receptor, variant.derived_from))
-            if variant.derived_from is not None
-            else None
-        )
         return Simulation(
             self.receptors[sid.receptor],
             variant,
-            met=None if parent is not None else self.mets[variant.met],
+            met=None if parent is not None else mets[variant.met],
             parent=parent,
             directory=self.compute_root / sid,
             store=self.project.store,
