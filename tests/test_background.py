@@ -5,12 +5,11 @@ import pandas as pd
 import pytest
 import xarray as xr
 
+from stilt.flux import sample_field, vertical_dim
 from stilt.observations import Background, background, particle_background
 from stilt.observations.backgrounds import (
     endpoint_weights,
     fill_missing,
-    sample_field,
-    vertical_dim,
 )
 from stilt.trajectory import endpoint_rows
 from stilt.transforms import FirstOrderLifetime, PressureWeighting

@@ -102,6 +102,8 @@ Flux fields
    :nosignatures:
 
    flux.sample_flux
+   flux.sample_field
+   flux.vertical_dim
    flux.particle_enhancement
    flux.horizontal_dims
    flux.nearest_cell

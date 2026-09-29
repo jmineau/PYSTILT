@@ -62,9 +62,7 @@ trajectory endpoints and weighted like the footprint
    stilt.observations.background
    stilt.observations.Background
    stilt.observations.particle_background
-   stilt.observations.backgrounds.sample_field
    stilt.observations.backgrounds.endpoint_weights
-   stilt.observations.backgrounds.vertical_dim
 
 Plume background
 ----------------

@@ -1,5 +1,5 @@
 """
-Sampling a surface flux field along particles and under footprints.
+Sampling gridded fields, such as a surface flux, at points.
 
 A flux field is an :class:`xarray.DataArray` on a regular ``lat``/``lon``
 grid (``y``/``x`` for a projected footprint grid), with an optional ``time``
@@ -74,6 +74,104 @@ def nearest_cell(coords: np.ndarray, values: np.ndarray) -> np.ndarray:
     return idx
 
 
+def vertical_dim(field: xr.DataArray) -> str | None:
+    """
+    Return the name of a field's vertical dimension.
+
+    That is the one dimension that is neither horizontal nor ``time``.
+    Returns ``None`` for a field without one, such as a column mean or a
+    surface field, and raises if there is more than one candidate.
+    """
+    y_dim, x_dim = horizontal_dims(field)
+    extra = [str(d) for d in field.dims if d not in (y_dim, x_dim, "time")]
+    if len(extra) > 1:
+        raise ValueError(
+            f"Expected at most one vertical dimension besides {y_dim!r}/{x_dim!r} "
+            f"and 'time'; got {extra}."
+        )
+    return extra[0] if extra else None
+
+
+def sample_field(
+    field: xr.DataArray,
+    x: ArrayLike,
+    y: ArrayLike,
+    z: ArrayLike | None = None,
+    times: ArrayLike | None = None,
+) -> np.ndarray:
+    """
+    Return the field's value in the cell nearest each point.
+
+    A point outside the field horizontally gives ``NaN``, since a missing
+    mole fraction is unknown rather than zero (:func:`sample_flux` fills
+    with zero instead). Longitudes are wrapped to the field's
+    convention (-180 to 180 or 0 to 360).
+
+    Parameters
+    ----------
+    field : xarray.DataArray
+        Field with horizontal dimensions (``lat`` and ``lon``, or ``y`` and
+        ``x``), and optionally a vertical dimension and ``time``.
+    x, y : array-like
+        Point coordinates: longitude and latitude for a ``lat``/``lon``
+        field.
+    z : array-like, optional
+        Vertical coordinate of each point, in the units of the field's
+        vertical dimension. Required when the field has one. Matched to the
+        nearest level, so a point above the top level takes the top level.
+    times : array-like, optional
+        Time of each point. Required when the field has a ``time``
+        dimension. Matched to the nearest time.
+
+    Returns
+    -------
+    numpy.ndarray
+        One value per point.
+    """
+    y_dim, x_dim = horizontal_dims(field)
+    xs = np.asarray(x, dtype=float).ravel()
+    ys = np.asarray(y, dtype=float).ravel()
+    if xs.shape != ys.shape:
+        raise ValueError("x and y must have the same length.")
+    lons = field[x_dim].to_numpy()
+    if x_dim == "lon":
+        xs = xs % 360.0 if lons.max() > 180.0 else ((xs + 180.0) % 360.0) - 180.0
+    ix = nearest_cell(lons, xs)
+    iy = nearest_cell(field[y_dim].to_numpy(), ys)
+    inside = (ix >= 0) & (iy >= 0)
+
+    indexers: dict[str, xr.DataArray] = {
+        x_dim: xr.DataArray(np.where(inside, ix, 0), dims="points"),
+        y_dim: xr.DataArray(np.where(inside, iy, 0), dims="points"),
+    }
+    zdim = vertical_dim(field)
+    if zdim is not None:
+        if z is None:
+            raise ValueError(f"field has a {zdim!r} dimension; pass z.")
+        zs = np.asarray(z, dtype=float).ravel()
+        if zs.shape != xs.shape:
+            raise ValueError("z must have the same length as x and y.")
+        indexers[zdim] = xr.DataArray(_nearest_level(field[zdim], zs), dims="points")
+    if "time" in field.dims:
+        if times is None:
+            raise ValueError("field has a time dimension; pass times.")
+        stamps = pd.DatetimeIndex(pd.to_datetime(np.asarray(times).ravel()))
+        if len(stamps) != len(xs):
+            raise ValueError("times must have the same length as x and y.")
+        it = field.indexes["time"].get_indexer(stamps, method="nearest")
+        indexers["time"] = xr.DataArray(it, dims="points")
+    sampled = field.isel(indexers).to_numpy().astype(float)
+    return np.where(inside, sampled, np.nan)
+
+
+def _nearest_level(levels: xr.DataArray, z: np.ndarray) -> np.ndarray:
+    """Return the index of the level nearest each ``z``."""
+    coords = levels.to_numpy().astype(float)
+    if coords.ndim != 1 or coords.size == 0:
+        raise ValueError("The vertical coordinate must be a non-empty 1-D array.")
+    return np.abs(coords[None, :] - z[:, None]).argmin(axis=1)
+
+
 def sample_flux(
     flux: xr.DataArray,
     x: ArrayLike,
@@ -83,11 +181,14 @@ def sample_flux(
     """
     Return the flux at each point, or zero outside the field.
 
+    :func:`sample_field` with missing values, and points outside the field,
+    counted as zero flux.
+
     Parameters
     ----------
     flux : xarray.DataArray
         Flux on a ``lat``/``lon`` or ``y``/``x`` grid, with an optional
-        ``time`` dimension. NaN values count as zero.
+        ``time`` dimension.
     x, y : array-like
         Point coordinates, longitude and latitude for a ``lat``/``lon``
         field.
@@ -100,38 +201,8 @@ def sample_flux(
     -------
     numpy.ndarray
         Flux at each point, in the flux's units.
-
-    Raises
-    ------
-    ValueError
-        If the lengths of *x*, *y*, and *times* differ, or *flux* has a
-        ``time`` dimension and *times* is not given.
     """
-    y_dim, x_dim = horizontal_dims(flux)
-    xs = np.asarray(x, dtype=float).ravel()
-    ys = np.asarray(y, dtype=float).ravel()
-    if xs.shape != ys.shape:
-        raise ValueError("x and y must have the same length.")
-    ix = nearest_cell(flux[x_dim].to_numpy(), xs)
-    iy = nearest_cell(flux[y_dim].to_numpy(), ys)
-    inside = (ix >= 0) & (iy >= 0)
-
-    indexers: dict[str, xr.DataArray] = {
-        x_dim: xr.DataArray(np.where(inside, ix, 0), dims="points"),
-        y_dim: xr.DataArray(np.where(inside, iy, 0), dims="points"),
-    }
-    if "time" in flux.dims:
-        if times is None:
-            raise ValueError("flux has a time dimension; pass times.")
-        stamps = pd.DatetimeIndex(pd.to_datetime(np.asarray(times).ravel()))
-        if len(stamps) != len(xs):
-            raise ValueError("times must have the same length as x and y.")
-        it = flux.indexes["time"].get_indexer(stamps, method="nearest")
-        indexers["time"] = xr.DataArray(it, dims="points")
-    elif times is not None and np.size(times) != len(xs):
-        raise ValueError("times must have the same length as x and y.")
-    sampled = flux.isel(indexers).to_numpy().astype(float)
-    return np.where(inside, np.nan_to_num(sampled), 0.0)
+    return np.nan_to_num(sample_field(flux, x, y, times=times), nan=0.0)
 
 
 def particle_enhancement(particles: pd.DataFrame, flux: xr.DataArray) -> pd.Series:
@@ -180,4 +251,11 @@ def particle_enhancement(particles: pd.DataFrame, flux: xr.DataArray) -> pd.Seri
     return pd.Series(sums, index=pd.Index(unique, name="indx"), name="enhancement")
 
 
-__all__ = ["horizontal_dims", "nearest_cell", "particle_enhancement", "sample_flux"]
+__all__ = [
+    "horizontal_dims",
+    "nearest_cell",
+    "particle_enhancement",
+    "sample_field",
+    "sample_flux",
+    "vertical_dim",
+]
