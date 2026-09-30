@@ -11,6 +11,7 @@ from typer.testing import CliRunner
 import stilt.__main__
 from stilt.cli import _resolve_project, app
 from stilt.config import Grid, ModelConfig
+from stilt.execution import register
 
 runner = CliRunner()
 
@@ -53,13 +54,13 @@ def _fake_model_factory(captured: list[dict]):
     """
 
     class _FakeModel:
-        def __init__(self, project, compute_root=None):
-            captured.append({"project": project, "compute_root": compute_root})
-            self.project = SimpleNamespace(root=project, directory=Path(project))
-            self.output = SimpleNamespace(path=Path(project) / "output")
-            self.compute_root = (
-                Path(compute_root) if compute_root is not None else Path("/tmp/scratch")
+        def __init__(self, project):
+            self.record = {"project": project}
+            captured.append(self.record)
+            self.project = SimpleNamespace(
+                root=project, directory=Path(project), name=Path(project).name
             )
+            self.output = SimpleNamespace(path=Path(project) / "output")
             self.receptors = []
             self.variants = {"hrrr": None}
             self.config = SimpleNamespace(execution={})
@@ -72,7 +73,8 @@ def _fake_model_factory(captured: list[dict]):
         def unreferenced(self):
             return {"particles": [], "footprints": []}
 
-        def run(self, executor=None, skip_existing=True, wait=True):
+        def run(self, executor=None, skip_existing=True, wait=True, compute_root=None):
+            self.record["compute_root"] = compute_root
             return _FakeHandle()
 
     return _FakeModel
@@ -162,7 +164,7 @@ def test_status_counts_full_simulation_completion(tmp_path):
         altitude=5.0,
     )
     model = Model(project=tmp_path, config=cfg, receptors=[receptor])
-    assert model.register() == [str(receptor.id)]
+    assert register(model) == [str(receptor.id)]
 
     # Particles exist but the required footprint does not: not complete.
     sim = model.simulation((receptor.id, "hrrr"))
@@ -243,7 +245,7 @@ def test_run_invokes_model_run(tmp_path, monkeypatch):
     fake_handle.detached = False  # local execution has finished
     calls: list = []
 
-    def fake_run(self, executor=None, skip_existing=None, wait=True):
+    def fake_run(self, executor=None, skip_existing=None, wait=True, compute_root=None):
         calls.append(
             {"executor": executor, "skip_existing": skip_existing, "wait": wait}
         )
@@ -272,7 +274,9 @@ def test_run_prints_startup_and_wait_messages(tmp_path, monkeypatch):
 
     monkeypatch.setattr(
         "stilt.cli.Model.run",
-        lambda self, executor=None, skip_existing=None, wait=True: fake_handle,
+        lambda self, executor=None, skip_existing=None, wait=True, compute_root=None: (
+            fake_handle
+        ),
     )
 
     result = runner.invoke(app, ["run", str(tmp_path)])
@@ -302,7 +306,7 @@ def test_run_startup_summary_uses_project_root_and_compute_root(tmp_path, monkey
 
     assert result.exit_code == 0
     assert f"project={tmp_path.resolve()}" in result.output
-    assert f"Compute root: {compute_root}" in result.output
+    assert f"Compute root: {compute_root.resolve()}" in result.output
 
 
 def test_run_no_skip_passes_false(tmp_path, monkeypatch):
@@ -313,7 +317,7 @@ def test_run_no_skip_passes_false(tmp_path, monkeypatch):
     fake_handle.detached = False  # local execution -> inline wait
     calls: list = []
 
-    def fake_run(self, executor=None, skip_existing=None, wait=True):
+    def fake_run(self, executor=None, skip_existing=None, wait=True, compute_root=None):
         calls.append(skip_existing)
         return fake_handle
 
@@ -326,7 +330,7 @@ def test_run_no_skip_passes_false(tmp_path, monkeypatch):
 
 
 def test_run_forwards_compute_root(tmp_path, monkeypatch):
-    """run forwards --compute-root into Model construction."""
+    """run forwards --compute-root to model.run()."""
     _write_minimal_config(tmp_path)
     captured: list[dict] = []
     monkeypatch.setattr("stilt.cli.Model", _fake_model_factory(captured))
@@ -355,7 +359,7 @@ def test_run_backend_override_builds_executor(tmp_path, monkeypatch):
     fake_handle.detached = False
     captured_executor = []
 
-    def fake_run(self, executor=None, skip_existing=None, wait=True):
+    def fake_run(self, executor=None, skip_existing=None, wait=True, compute_root=None):
         captured_executor.append(executor)
         return fake_handle
 
@@ -382,7 +386,9 @@ def test_run_slurm_fire_and_forget(tmp_path, monkeypatch):
 
     monkeypatch.setattr(
         "stilt.cli.Model.run",
-        lambda self, executor=None, skip_existing=None, wait=True: fake_handle,
+        lambda self, executor=None, skip_existing=None, wait=True, compute_root=None: (
+            fake_handle
+        ),
     )
 
     result = runner.invoke(
@@ -406,7 +412,9 @@ def test_run_slurm_with_wait_flag_blocks(tmp_path, monkeypatch):
 
     monkeypatch.setattr(
         "stilt.cli.Model.run",
-        lambda self, executor=None, skip_existing=None, wait=True: fake_handle,
+        lambda self, executor=None, skip_existing=None, wait=True, compute_root=None: (
+            fake_handle
+        ),
     )
 
     result = runner.invoke(
@@ -429,7 +437,9 @@ def test_run_detached_handle_prints_job_id(tmp_path, monkeypatch):
     fake_handle.wait = MagicMock()
     monkeypatch.setattr(
         "stilt.cli.Model.run",
-        lambda self, executor=None, skip_existing=None, wait=True: fake_handle,
+        lambda self, executor=None, skip_existing=None, wait=True, compute_root=None: (
+            fake_handle
+        ),
     )
 
     result = runner.invoke(app, ["run", str(tmp_path)])
@@ -453,7 +463,14 @@ def test_pull_worker_calls_pull_receptors(tmp_path, monkeypatch):
 
     loop_calls: list[dict] = []
 
-    def fake_loop(model, follow=False, poll_interval=10.0, *, skip_existing=None):
+    def fake_loop(
+        model,
+        follow=False,
+        poll_interval=10.0,
+        *,
+        skip_existing=None,
+        compute_root=None,
+    ):
         loop_calls.append({"follow": follow})
 
     monkeypatch.setattr("stilt.cli.pull_receptors", fake_loop)
@@ -469,7 +486,14 @@ def test_pull_worker_follow_flag_forwarded(tmp_path, monkeypatch):
 
     loop_calls: list[dict] = []
 
-    def fake_loop(model, follow=False, poll_interval=10.0, *, skip_existing=None):
+    def fake_loop(
+        model,
+        follow=False,
+        poll_interval=10.0,
+        *,
+        skip_existing=None,
+        compute_root=None,
+    ):
         loop_calls.append({"follow": follow})
 
     monkeypatch.setattr("stilt.cli.pull_receptors", fake_loop)
@@ -480,14 +504,15 @@ def test_pull_worker_follow_flag_forwarded(tmp_path, monkeypatch):
 
 
 def test_pull_worker_forwards_compute_root(tmp_path, monkeypatch):
-    """pull-worker forwards --compute-root into Model construction."""
+    """pull-worker forwards --compute-root to the worker."""
     _write_minimal_config(tmp_path)
     captured: list[dict] = []
     monkeypatch.setattr("stilt.cli.Model", _fake_model_factory(captured))
-    monkeypatch.setattr(
-        "stilt.cli.pull_receptors",
-        lambda model, follow=False, poll_interval=10.0, skip_existing=None: None,
-    )
+
+    def fake_loop(model, follow=False, compute_root=None):
+        model.record["compute_root"] = compute_root
+
+    monkeypatch.setattr("stilt.cli.pull_receptors", fake_loop)
 
     result = runner.invoke(
         app,
@@ -515,7 +540,9 @@ def test_push_worker_calls_run_receptors(tmp_path, monkeypatch):
 
     sim_list_calls: list[dict] = []
 
-    def fake_run(model, receptor_ids, *, n_cores=1, skip_existing=None):
+    def fake_run(
+        model, receptor_ids, *, n_cores=1, skip_existing=None, compute_root=None
+    ):
         sim_list_calls.append(
             {
                 "receptor_ids": receptor_ids,
@@ -549,7 +576,9 @@ def test_push_worker_forwards_skip_existing_flags(tmp_path, monkeypatch):
 
     seen: list[bool | None] = []
 
-    def fake_run(model, receptor_ids, *, n_cores=1, skip_existing=None):
+    def fake_run(
+        model, receptor_ids, *, n_cores=1, skip_existing=None, compute_root=None
+    ):
         seen.append(skip_existing)
         return []
 
@@ -568,10 +597,14 @@ def test_push_worker_forwards_compute_root(tmp_path, monkeypatch):
     captured: list[dict] = []
 
     monkeypatch.setattr("stilt.cli.Model", _fake_model_factory(captured))
-    monkeypatch.setattr(
-        "stilt.cli.run_receptors",
-        lambda model, receptor_ids, n_cores=1, skip_existing=None: [],
-    )
+
+    def fake_run(
+        model, receptor_ids, *, n_cores=1, skip_existing=None, compute_root=None
+    ):
+        model.record["compute_root"] = compute_root
+        return []
+
+    monkeypatch.setattr("stilt.cli.run_receptors", fake_run)
 
     result = runner.invoke(
         app,
@@ -618,7 +651,14 @@ def test_serve_calls_pull_receptors_in_follow_mode(tmp_path, monkeypatch):
 
     loop_calls: list[dict] = []
 
-    def fake_loop(model, follow=False, poll_interval=10.0, *, skip_existing=None):
+    def fake_loop(
+        model,
+        follow=False,
+        poll_interval=10.0,
+        *,
+        skip_existing=None,
+        compute_root=None,
+    ):
         loop_calls.append({"follow": follow})
 
     monkeypatch.setattr("stilt.cli.pull_receptors", fake_loop)
@@ -633,7 +673,15 @@ def test_serve_forwards_compute_root(tmp_path, monkeypatch):
     captured: list[dict] = []
     loop_calls: list[dict] = []
 
-    def fake_loop(model, follow=False, poll_interval=10.0, *, skip_existing=None):
+    def fake_loop(
+        model,
+        follow=False,
+        poll_interval=10.0,
+        *,
+        skip_existing=None,
+        compute_root=None,
+    ):
+        model.record["compute_root"] = compute_root
         loop_calls.append({"follow": follow})
 
     monkeypatch.setattr("stilt.cli.Model", _fake_model_factory(captured))
@@ -665,7 +713,7 @@ def test_register_exits_when_no_config(tmp_path):
 
 
 def test_register_registers_project_receptors(tmp_path, monkeypatch):
-    """register calls Model.register() with no receptors and prints the count."""
+    """register saves the project's own receptors and prints the count."""
     _write_minimal_config(tmp_path)
 
     register_calls: list = []
@@ -675,7 +723,7 @@ def test_register_registers_project_receptors(tmp_path, monkeypatch):
         register_calls.append(receptors)
         return ["rid_1", "rid_2"]
 
-    monkeypatch.setattr("stilt.cli.Model.register", fake_register)
+    monkeypatch.setattr("stilt.cli.register_inputs", fake_register)
 
     result = runner.invoke(app, ["register", str(tmp_path)])
     assert result.exit_code == 0
@@ -699,7 +747,7 @@ def test_register_with_receptors_file(tmp_path, monkeypatch):
         register_calls.append(receptors)
         return ["rid_1"]
 
-    monkeypatch.setattr("stilt.cli.Model.register", fake_register)
+    monkeypatch.setattr("stilt.cli.register_inputs", fake_register)
 
     result = runner.invoke(
         app, ["register", str(tmp_path), "--receptors", str(receptors_csv)]
@@ -822,7 +870,7 @@ def test_status_lists_output_folders_no_variant_uses(tmp_path):
 
     _write_minimal_config(tmp_path)
     model = Model(project=tmp_path)
-    model.register()
+    register(model)
     # A run made under settings the config no longer has.
     stale = model.variants["hrrr"].transport.model_copy(update={"numpar": 7})
     model.output.run("old", stale)

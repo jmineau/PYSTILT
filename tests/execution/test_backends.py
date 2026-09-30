@@ -26,9 +26,8 @@ from stilt.execution import (
 class _FakeModel:
     """Records the constructor arguments LocalExecutor passes to Model."""
 
-    def __init__(self, project, compute_root=None):
+    def __init__(self, project):
         self.project = project
-        self.compute_root = compute_root
 
 
 @pytest.fixture
@@ -42,10 +41,13 @@ def local_calls(monkeypatch):
     """
     calls: list[dict] = []
 
-    def fake_run_receptors(model, receptor_ids, *, n_cores=1, skip_existing=None):
+    def fake_run_receptors(
+        model, receptor_ids, *, compute_root=None, n_cores=1, skip_existing=None
+    ):
         calls.append(
             {
                 "model": model,
+                "compute_root": compute_root,
                 "receptor_ids": receptor_ids,
                 "n_cores": n_cores,
                 "skip_existing": skip_existing,
@@ -73,7 +75,7 @@ def test_local_executor_start_runs_the_receptors_before_returning(
     [call] = local_calls
     assert isinstance(call["model"], _FakeModel)
     assert call["model"].project == str(tmp_path)
-    assert call["model"].compute_root == "/scratch/pystilt"
+    assert call["compute_root"] == "/scratch/pystilt"
     assert call["receptor_ids"] == ["sim-a", "sim-b"]
     assert call["n_cores"] == 1
     assert call["skip_existing"] is False
@@ -83,7 +85,9 @@ def test_local_executor_runs_in_the_calling_thread(tmp_path, monkeypatch):
     """Signals reach only the main thread, so the run must happen there."""
     seen = []
 
-    def record_thread(model, receptor_ids, *, n_cores=1, skip_existing=None):
+    def record_thread(
+        model, receptor_ids, *, compute_root=None, n_cores=1, skip_existing=None
+    ):
         seen.append(threading.current_thread())
 
     monkeypatch.setattr("stilt.model.Model", _FakeModel)
@@ -98,7 +102,7 @@ def test_local_executor_defaults_skip_existing_to_true(tmp_path, local_calls):
     LocalExecutor(n_workers=1).start(["sim-a"], project=str(tmp_path))
 
     assert local_calls[0]["skip_existing"] is True
-    assert local_calls[0]["model"].compute_root is None
+    assert local_calls[0]["compute_root"] is None
 
 
 def test_local_executor_passes_n_workers_as_pool_size(tmp_path, local_calls):
@@ -116,7 +120,7 @@ def test_local_executor_start_noops_when_pending_is_empty(tmp_path, local_calls)
 
 
 def test_local_executor_raises_worker_errors_from_start(tmp_path, monkeypatch):
-    def failing_run_receptors(model, receptor_ids, *, n_cores=1, skip_existing=None):
+    def failing_run_receptors(model, receptor_ids, **kwargs):
         raise RuntimeError("worker boom")
 
     monkeypatch.setattr("stilt.model.Model", _FakeModel)

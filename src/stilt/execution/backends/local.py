@@ -65,8 +65,9 @@ class LocalExecutor:
             from ..worker import run_receptors
 
             run_receptors(
-                Model(project=project, compute_root=compute_root),
+                Model(project=project),
                 pending,
+                compute_root=compute_root,
                 n_cores=self._n_workers,
                 skip_existing=True if skip_existing is None else skip_existing,
             )

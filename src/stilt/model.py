@@ -2,9 +2,6 @@
 
 from __future__ import annotations
 
-import logging
-import os
-import tempfile
 from collections.abc import Iterable
 from functools import cached_property
 from pathlib import Path
@@ -13,26 +10,14 @@ from typing import TYPE_CHECKING
 import pandas as pd
 
 from stilt.collections import ReceptorCollection, SimulationCollection
-from stilt.config import (
-    ModelConfig,
-    RuntimeSettings,
-    VariantConfig,
-)
-from stilt.execution import (
-    Executor,
-    JobHandle,
-    LocalHandle,
-    get_executor,
-)
+from stilt.config import ModelConfig, VariantConfig
+from stilt.execution import Executor, JobHandle
 from stilt.meteorology import Met
 from stilt.output import Footprints, Output
 from stilt.project import Project
 from stilt.receptors import Receptor
-from stilt.service import PostgresQueue, resolve_queue
 from stilt.simulation import SimID, Simulation
 from stilt.transforms import TransformContext
-
-logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from stilt.visualization import ModelPlotAccessor
@@ -42,12 +27,14 @@ class Model:
     """
     A STILT project: receptors, settings, and the simulations they define.
 
-    A model runs every receptor once per variant and loads the resulting
-    trajectories and footprints. Its inputs live in the project directory;
-    its results in the output directory ``config.yaml`` names (``./output``
-    by default), which several projects can share. Settings and receptors
-    given here are saved to the project when the model runs, so
-    ``Model(project)`` opens it again later.
+    A model is every receptor under every variant, and a view of their
+    results: select simulations, load trajectories and footprints, see what
+    has finished. Its inputs live in the project directory; its results in
+    the output directory ``config.yaml`` names (``./output`` by default),
+    which several projects can share. The model itself writes nothing.
+    :meth:`run` hands it to :func:`stilt.execution.run`, which saves the
+    settings and receptors given here to the project, so ``Model(project)``
+    opens it again later, and starts the workers.
 
     Parameters
     ----------
@@ -58,12 +45,6 @@ class Model:
         project directory). Defaults to the project's ``receptors.csv``.
     config : ModelConfig, optional
         Model settings. Defaults to the project's ``config.yaml``.
-    compute_root : str or Path, optional
-        Scratch directory under which HYSPLIT runs. Defaults to
-        ``PYSTILT_COMPUTE_ROOT``, then to ``$TMPDIR/pystilt/<project name>``.
-    runtime : RuntimeSettings, optional
-        Settings for this machine (work-queue URL and compute root). Read
-        from ``PYSTILT_*`` environment variables when omitted.
     **kwargs
         Settings for :class:`~stilt.ModelConfig`, such as ``n_hours``,
         ``numpar``, ``mets``, and ``grid``. Cannot be combined with *config*.
@@ -86,9 +67,6 @@ class Model:
         Every receptor under every variant.
     plot : ModelPlotAccessor
         Plotting methods.
-    queue : PostgresQueue or None
-        Work queue for ``stilt pull-worker``. ``None`` unless
-        ``PYSTILT_DB_URL`` is set.
 
     Examples
     --------
@@ -122,36 +100,16 @@ class Model:
         project: str | Path | None = None,
         receptors: Receptor | Iterable | str | Path | None = None,
         config: ModelConfig | None = None,
-        compute_root: str | Path | None = None,
-        runtime: RuntimeSettings | None = None,
         **kwargs,
     ):
-        self.runtime = runtime if runtime is not None else RuntimeSettings()
         self.project = Project(project)
-        self.compute_root = self._resolve_compute_root(compute_root)
         if config is not None and kwargs:
             raise TypeError("Cannot pass both a ModelConfig and keyword settings.")
         self._config = ModelConfig(**kwargs) if kwargs else config
-        # A config given here is the user's latest word and is written to the
-        # project; one loaded from the project is never rewritten.
-        self._config_given = self._config is not None
-
         self._receptors_input = receptors
 
     def __repr__(self) -> str:
         return f"Model(project={self.project.root!r})"
-
-    def _resolve_compute_root(self, compute_root: str | Path | None) -> Path:
-        """Return the scratch directory under which HYSPLIT runs."""
-        if compute_root is not None:
-            raw = os.path.expandvars(os.path.expanduser(str(compute_root)))
-            return Path(raw).resolve()
-        if self.runtime.compute_root is not None:
-            return self.runtime.compute_root.expanduser().resolve()
-        tmp_root = os.environ.get("TMPDIR") or tempfile.gettempdir()
-        # Resolved like the explicit forms, so a worker handed this path gets
-        # the same one (macOS keeps TMPDIR under the /var -> /private/var link).
-        return (Path(tmp_root) / "pystilt" / self.project.name).resolve()
 
     # -- Inputs ----------------------------------------------------------------
 
@@ -187,16 +145,6 @@ class Model:
         """The mets declared in the config, by name."""
         return {name: Met(name, cfg) for name, cfg in self.config.mets.items()}
 
-    @cached_property
-    def queue(self) -> PostgresQueue | None:
-        """Postgres work queue, or ``None`` when ``PYSTILT_DB_URL`` is not set."""
-        return resolve_queue(self.runtime)
-
-    def _forget_simulations(self) -> None:
-        """Drop the cached receptors and simulations, so they are rebuilt from the project."""
-        self.__dict__.pop("receptors", None)
-        self.__dict__.pop("simulations", None)
-
     def unreferenced(self) -> dict[str, list[str]]:
         """
         Return the output folders no variant of this config points at.
@@ -227,18 +175,15 @@ class Model:
         """
         Save the model's settings and receptors to the project.
 
-        Workers rebuild the model from the project alone, so :meth:`run`
-        calls this first. A config given in Python is written to
-        ``config.yaml`` with only the settings that were set. A
-        ``config.yaml`` loaded from the project is left as it is. Receptors
-        not yet in ``receptors.csv`` are appended to it. When a work queue is
-        configured, the receptors are added to it.
+        Shorthand for :func:`stilt.execution.register`. A model that reads
+        the project's ``receptors.csv`` reads it again afterwards, so
+        receptors added here show up in ``model.receptors``. A model built
+        with its own receptors keeps those.
 
         Parameters
         ----------
         receptors : iterable of Receptor, optional
-            Receptors to add to the project. Defaults to the model's own
-            receptors.
+            Receptors to add to the project. Defaults to the model's own.
 
         Returns
         -------
@@ -246,22 +191,14 @@ class Model:
             Ids of the receptors registered, including any the project
             already had.
         """
-        if self._config_given or not self.project.has_config:
-            self.project.save_config(self.config)
+        from stilt.execution import register
 
-        if receptors is None and self._receptors_input is None:
-            batch = list(self.receptors)  # the project's own file; nothing to add
-        else:
-            batch = list(self.receptors) if receptors is None else list(receptors)
-            if self.project.add_receptors(batch):
-                # The registered set changed: rebuild receptors from the project.
-                self._receptors_input = None
-                self._forget_simulations()
-
-        receptor_ids = [str(r.id) for r in batch]
-        if self.queue is not None:
-            self.queue.register(receptor_ids)
-        return receptor_ids
+        ids = register(self, receptors)
+        if self._receptors_input is None:
+            # The views below were read from the file that just changed.
+            vars(self).pop("receptors", None)
+            vars(self).pop("simulations", None)
+        return ids
 
     # -- Simulations -----------------------------------------------------------
 
@@ -318,15 +255,13 @@ class Model:
         executor: Executor | None = None,
         skip_existing: bool = True,
         wait: bool = True,
+        compute_root: str | Path | None = None,
     ) -> JobHandle:
         """
         Run every simulation that has not finished.
 
-        Saves the settings and receptors to the project (:meth:`register`),
-        then starts workers for each receptor with missing results. A worker
-        runs HYSPLIT once for each distinct set of transport settings whose
-        particles are missing, then calculates the footprint of every
-        variant that has a grid.
+        Shorthand for :func:`stilt.execution.run`, which saves the settings
+        and receptors to the project and starts the workers.
 
         Parameters
         ----------
@@ -340,44 +275,25 @@ class Model:
             Block until the workers finish. With ``False`` a Slurm or
             Kubernetes run returns once it is submitted. A local run always
             finishes before this returns.
+        compute_root : str or Path, optional
+            Scratch directory under which HYSPLIT runs. Defaults to
+            ``PYSTILT_COMPUTE_ROOT``, then to
+            ``$TMPDIR/pystilt/<project name>``.
 
         Returns
         -------
         JobHandle
             Handle to the started workers.
         """
-        self._forget_simulations()
-        resolved_executor = executor or get_executor(self.config.execution or {})
+        from stilt.execution import run
 
-        receptor_ids = self.register()
-        if not receptor_ids:
-            logger.info("run: no receptors configured — nothing to do")
-            return LocalHandle()
-
-        pending = (
-            self.simulations.incomplete().receptors if skip_existing else receptor_ids
-        )
-        if not pending:
-            logger.info("run: all simulations already complete — nothing to do")
-            return LocalHandle()
-
-        logger.info(
-            "run(%s): starting %s workers for %d receptors",
-            ", ".join(self.variants),
-            resolved_executor.dispatch,
-            len(pending),
-        )
-
-        handle = resolved_executor.start(
-            pending,
-            project=self.project.root,
-            compute_root=str(self.compute_root),
+        return run(
+            self,
+            executor,
             skip_existing=skip_existing,
+            wait=wait,
+            compute_root=compute_root,
         )
-        if wait:
-            handle.wait()
-
-        return handle
 
 
 __all__ = ["Model"]
