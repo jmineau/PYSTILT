@@ -6,6 +6,17 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **Machines without a bundled HYSPLIT build get a clear error**
+  ([#61](https://github.com/jmineau/PYSTILT/issues/61)). The bundled
+  binary was chosen by operating system only, so an aarch64 Linux machine
+  was handed the x86-64 build and failed with an operating-system error on
+  the first run. The architecture is now checked too, and the error says to
+  set `exe_dir` to your own `hycs_std` build (it used to say `PATH`, which
+  PYSTILT never reads). Apple Silicon Macs keep using the macOS build
+  through Rosetta.
+
 ## [0.1.0a22] - 2026-09-29
 
 This release simplifies the code before a larger redesign
