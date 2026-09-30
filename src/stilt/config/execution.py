@@ -101,5 +101,60 @@ class ExecutionConfig(BaseModel):
     def _one_command(cls, value: Any) -> Any:
         return [value] if isinstance(value, str) else value
 
+    @field_validator("time")
+    @classmethod
+    def _slurm_time(cls, value: str | int | None) -> str | int | None:
+        if value is not None:
+            slurm_minutes(value)  # raises on a form sbatch would not take
+        return value
 
-__all__ = ["ExecutionConfig"]
+    @property
+    def time_minutes(self) -> int | None:
+        """The time limit in whole minutes, rounded up, or ``None`` when unset."""
+        return None if self.time is None else slurm_minutes(self.time)
+
+
+def slurm_minutes(time: str | int) -> int:
+    """
+    Return a Slurm time limit in whole minutes, rounded up.
+
+    Accepts what ``sbatch --time`` does: minutes, ``MM:SS``, ``HH:MM:SS``,
+    ``D-HH``, ``D-HH:MM``, and ``D-HH:MM:SS``.
+
+    Raises
+    ------
+    ValueError
+        If *time* has none of these forms or is not positive.
+    """
+    text = str(time).strip()
+    days, _, clock = text.rpartition("-")
+    parts = clock.split(":")
+    try:
+        if "-" in text and not days:
+            raise ValueError
+        numbers = [int(p) for p in parts]
+        d = int(days) if days else 0
+        if any(n < 0 for n in numbers) or d < 0:
+            raise ValueError
+        if days:  # D-HH[:MM[:SS]]
+            hours, minutes, seconds = (numbers + [0, 0])[:3]
+        elif len(numbers) == 1:  # minutes
+            hours, minutes, seconds = 0, numbers[0], 0
+        elif len(numbers) == 2:  # MM:SS
+            hours, (minutes, seconds) = 0, numbers
+        else:  # HH:MM:SS
+            hours, minutes, seconds = numbers
+        if len(numbers) > 3:
+            raise ValueError
+    except ValueError:
+        raise ValueError(
+            f"Not a Slurm time limit: {time!r}. Use minutes, 'HH:MM:SS', or "
+            "'D-HH:MM:SS'."
+        ) from None
+    total = ((d * 24 + hours) * 60 + minutes) * 60 + seconds
+    if total <= 0:
+        raise ValueError(f"The time limit must be positive, not {time!r}.")
+    return -(-total // 60)
+
+
+__all__ = ["ExecutionConfig", "slurm_minutes"]
