@@ -124,6 +124,7 @@ def test_metsource_download_calls_fetch(tmp_path):
     assert call_kwargs.kwargs["local_dir"] == tmp_path
     assert call_kwargs.kwargs["backend"] == "s3"
     assert call_kwargs.kwargs["bbox"] is None
+    assert call_kwargs.kwargs["levels"] is None
     assert len(files) == 2
 
 
@@ -150,6 +151,26 @@ def test_metsource_download_with_subgrid_passes_bbox(tmp_path):
 
     bbox = mock_source.fetch.call_args.kwargs["bbox"]
     assert bbox == (-114.5, 38.5, -109.5, 42.5)
+    assert mock_source.fetch.call_args.kwargs["levels"] is None
+
+
+def test_metsource_download_passes_subgrid_levels(tmp_path):
+    """source mode + subgrid_levels=N asks arlmet to keep the lowest N levels."""
+    mock_source = MagicMock()
+    mock_source.fetch.return_value = [tmp_path / "file1"]
+    (tmp_path / "file1").touch()
+
+    met = _make_source_met(
+        tmp_path,
+        subgrid_enable=True,
+        subgrid_bounds=Bounds(xmin=-114.0, xmax=-110.0, ymin=39.0, ymax=42.0),
+        subgrid_levels=3,
+    )
+    met._arlmet_source = mock_source
+
+    met.required_files(r_time="2024-07-18 12:00", n_hours=-24)
+
+    assert mock_source.fetch.call_args.kwargs["levels"] == [0, 1, 2]
 
 
 def test_metsource_download_n_min_raises(tmp_path):
@@ -354,18 +375,6 @@ def test_metconfig_source_crop_needs_no_subgrid_dir(tmp_path):
         directory=tmp_path, source="hrrr", subgrid_enable=True, subgrid_bounds=BOUNDS
     )
     assert cfg.subgrid_dir is None
-
-
-def test_metconfig_rejects_subgrid_levels_with_a_source(tmp_path):
-    """Downloads keep every level, so subgrid_levels would be silently ignored."""
-    with pytest.raises(ValueError, match="subgrid_levels works only"):
-        MetConfig(
-            directory=tmp_path,
-            source="hrrr",
-            subgrid_enable=True,
-            subgrid_bounds=BOUNDS,
-            subgrid_levels=20,
-        )
 
 
 def _touch_files(tmp_path: Path, names: list[str]) -> list[Path]:

@@ -50,9 +50,9 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   half-written file, and its file handle is now closed. Breaking:
   `subgrid_dir` is required when cropping your own files (it used to
   default to a folder inside the met archive), crops saved by earlier
-  versions are not found (move them into `crop_dir` to keep them), and
-  `subgrid_levels` with `source` is an error, since downloads keep every
-  level.
+  versions are not found (move them into `crop_dir` to keep them).
+  `subgrid_levels` now applies to downloaded files too (it was silently
+  ignored), which needs arlmet 0.1.0a9.
 
 ## [0.1.0a22] - 2026-09-29
 

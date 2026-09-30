@@ -89,11 +89,7 @@ class MetContent(BaseModel):
     )
     subgrid_levels: int | None = Field(
         None,
-        description=(
-            "Number of vertical levels to keep, counted from the surface. "
-            "Unset keeps all. Only for your own files; downloads from "
-            "``source`` keep every level."
-        ),
+        description="Number of vertical levels to keep, counted from the surface. Unset keeps all.",
     )
 
     @model_validator(mode="after")
@@ -127,12 +123,6 @@ class MetContent(BaseModel):
             )
         if self.subgrid_enable and self.subgrid_bounds is None:
             raise ValueError("subgrid_bounds is required when subgrid_enable=True.")
-        if self.source is not None and self.subgrid_levels is not None:
-            raise ValueError(
-                "subgrid_levels works only with your own files, not with "
-                "source: downloaded files keep every level. Remove "
-                "subgrid_levels."
-            )
         return self
 
     @property

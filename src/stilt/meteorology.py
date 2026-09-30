@@ -112,6 +112,7 @@ class MetStream:
         t_end: pd.Timestamp = max(r_time, sim_end)  # type: ignore[assignment]
 
         bbox = self._effective_bbox() if self.config.subgrid_enable else None
+        levels = self._level_indices() if self.config.subgrid_enable else None
 
         source = self._get_arlmet_source()
         try:
@@ -121,6 +122,7 @@ class MetStream:
                 local_dir=self.directory,
                 backend=self.config.backend,
                 bbox=bbox,
+                levels=levels,
             )
         except ImportError as exc:
             raise ImportError(

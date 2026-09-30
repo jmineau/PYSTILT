@@ -212,7 +212,7 @@ wheels = [
 
 [[package]]
 name = "arlmet"
-version = "0.1.0a8"
+version = "0.1.0a9"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "numpy" },
@@ -221,16 +221,16 @@ dependencies = [
     { name = "typing-extensions" },
     { name = "xarray" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/45/03/4eb186ecf494ee203b21abfa3802f6f86e38c509f6c98c4be306e62ce2b0/arlmet-0.1.0a8.tar.gz", hash = "sha256:e916c47289def7e09b6bc27ab47b21970da88840a99a5d656eb9ce1ad00eed4c", size = 104876, upload-time = "2026-09-22T16:19:28.182Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/b3/85/3554776ab13ab4beafd2cb1b6a7793d06a41331c7a3527c0d49145cda37f/arlmet-0.1.0a9.tar.gz", hash = "sha256:20c35e3c4cb6776d44d4bb6d47b9f8d6d4d416d28f9be585d483a81f3781bab8", size = 105761, upload-time = "2026-09-30T04:27:37.989Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d3/0c/af1575e56e5e3451e957ab24b9ceb2df53bd769e64caea37be312c9574ba/arlmet-0.1.0a8-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:974237bdb544c28e22a34a48ce31a9ee7874d89fc1230b73ca7a5b0c0e321b40", size = 80720, upload-time = "2026-09-22T16:19:17.639Z" },
-    { url = "https://files.pythonhosted.org/packages/87/e6/d8ce947ad77903fd379b29c01af95a5255dd208ee0d32c4e9644a97c7443/arlmet-0.1.0a8-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:c544272f6e49b507e122c5473fc8d52d8f99904573601dd5fa3336be6dbf1269", size = 81157, upload-time = "2026-09-22T16:19:18.896Z" },
-    { url = "https://files.pythonhosted.org/packages/cd/f2/8d06d096addaec34a18687a9b08cd6d266169397213768356d417a28ea3e/arlmet-0.1.0a8-cp311-cp311-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:f23f360f177cd55a16320df19e4ff36d62d54736c494535534a1a0525d6478b5", size = 89971, upload-time = "2026-09-22T16:19:20.143Z" },
-    { url = "https://files.pythonhosted.org/packages/11/a4/8af5e34ffa5936f436f215e2f60081beec205432e2593f6f005fe5604987/arlmet-0.1.0a8-cp311-cp311-win_amd64.whl", hash = "sha256:1e57c31521780b9f61609dad6bc89f8f4c49295c158ac4a36e1d15c52d4f4469", size = 83640, upload-time = "2026-09-22T16:19:21.622Z" },
-    { url = "https://files.pythonhosted.org/packages/47/5a/677e2b918ada43d5c486066a3aa50537d1a55778a12d88a264cf0e62d6f7/arlmet-0.1.0a8-cp312-cp312-macosx_10_13_x86_64.whl", hash = "sha256:1724e15f327b646fa0522e11b98b033754e29d4a3715b9bdb8608d782a9ac922", size = 80751, upload-time = "2026-09-22T16:19:22.881Z" },
-    { url = "https://files.pythonhosted.org/packages/56/25/6b61f1cec728fdc5a031f168adb40100799f89ae96fda32729dd613b58a4/arlmet-0.1.0a8-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:c36100a4af50458d4d8344fe8b0885597504e5f0eae7116466b477d16b25e8fc", size = 81178, upload-time = "2026-09-22T16:19:24.09Z" },
-    { url = "https://files.pythonhosted.org/packages/68/56/8c0b97250a7966c94fe993d26752a5fa2a5475bfa40fdc38cde9a24fb065/arlmet-0.1.0a8-cp312-cp312-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:91e68c5a71c01ce3b3aba3529637a57599dcc132703e3390dd14a8ca5bc5c073", size = 90446, upload-time = "2026-09-22T16:19:25.479Z" },
-    { url = "https://files.pythonhosted.org/packages/4c/a4/6e89749b6785c254fab1cb169277dc447efc2dae656b1908ef02a0c016f7/arlmet-0.1.0a8-cp312-cp312-win_amd64.whl", hash = "sha256:d9e7649442c9c169c390998ad25017e4d5a46c6e3c24a2a71c3b519b73c34f4d", size = 83660, upload-time = "2026-09-22T16:19:26.954Z" },
+    { url = "https://files.pythonhosted.org/packages/39/e5/8863ce8b1218d9bf82ecddf1f2a34a3c145a4fca8c844e163f3cef639b0b/arlmet-0.1.0a9-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:860f4353946933952fd60683a2a16e8ff73fb3669f5b6a055c3afecb415b44af", size = 81272, upload-time = "2026-09-30T04:27:28.528Z" },
+    { url = "https://files.pythonhosted.org/packages/ea/62/664f86512db6b5347581662cafcee4b676cfad8e204f949e69189c7ee856/arlmet-0.1.0a9-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:1e6d7cc5c39e340df02fe40ddffd9a909f347f36a4ffb9985cfaedd12241520a", size = 81706, upload-time = "2026-09-30T04:27:29.662Z" },
+    { url = "https://files.pythonhosted.org/packages/10/95/ca6acd32ba8532c933021c644eece70c646710009de87196936ea4b79f86/arlmet-0.1.0a9-cp311-cp311-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:a5f3a1a952dac392644249cf78171e332cf1c8ff885a0a9aa767f5324ee4402d", size = 90521, upload-time = "2026-09-30T04:27:30.738Z" },
+    { url = "https://files.pythonhosted.org/packages/52/d3/400a5b9eef63b7a752ea2c8525aed03d067b2e98fbac37e2ba56f27e6fae/arlmet-0.1.0a9-cp311-cp311-win_amd64.whl", hash = "sha256:c209903549b954ddfb892cb64a284ad27b331ce664059a06746354c13d49fe30", size = 84186, upload-time = "2026-09-30T04:27:31.903Z" },
+    { url = "https://files.pythonhosted.org/packages/ac/42/705ce17aa1d8592f8eff9c0ce18d9b05bf149de5fafd96cb014bce1aba17/arlmet-0.1.0a9-cp312-cp312-macosx_10_13_x86_64.whl", hash = "sha256:f39b2420462a342960596b8f0fcc886a8eef07ac2ec68807e2735a8ab7516265", size = 81301, upload-time = "2026-09-30T04:27:33.054Z" },
+    { url = "https://files.pythonhosted.org/packages/2f/32/38cb1aaa100c6e3e24cb06883e94a6a4dd4e747da34b49529a8a9b9b7e49/arlmet-0.1.0a9-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:5e1bd2d8c5702091127c85ad7112163a950e136f2b9e7bb7d5ed9949ff492fcf", size = 81735, upload-time = "2026-09-30T04:27:34.486Z" },
+    { url = "https://files.pythonhosted.org/packages/a0/9c/24756561dcaafde3d70d4e1350c54c2d58ca4fc91fcc3dc9d655de08c1b2/arlmet-0.1.0a9-cp312-cp312-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:3a9a70fadf48bb26c702c0b6a5da1b13f624e78dd9c94188c7206fab50e030d1", size = 91000, upload-time = "2026-09-30T04:27:35.657Z" },
+    { url = "https://files.pythonhosted.org/packages/fc/47/a70144f3f3e0c9d12a04b1ff0898821fbc8b989e3015d3ae37d11f76beae/arlmet-0.1.0a9-cp312-cp312-win_amd64.whl", hash = "sha256:05b8f181e3f9aa2a6595ce02f1844a98831d0ad213e5aa5c209eccf164c0866e", size = 84208, upload-time = "2026-09-30T04:27:36.812Z" },
 ]
 
 [[package]]
@@ -2868,7 +2868,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "arlmet", specifier = ">=0.1.0a8" },
+    { name = "arlmet", specifier = ">=0.1.0a9" },
     { name = "fsspec", specifier = ">=2024.2" },
     { name = "gcsfs", marker = "extra == 'cloud'", specifier = ">=2024.2" },
     { name = "geopandas", marker = "extra == 'geometry'", specifier = ">=1.0" },
