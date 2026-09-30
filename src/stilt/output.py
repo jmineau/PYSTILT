@@ -731,7 +731,9 @@ class Footprints:
         target : Grid, Mesh, or Zones
             Cells to sum onto.
         time_bins : pandas.IntervalIndex
-            Left-closed time intervals, such as a flux inventory's steps.
+            Time intervals, such as a flux inventory's steps. They must be
+            closed on the left (``closed="left"``): each bin holds the
+            footprint hours that start in it.
         receptors : iterable of str, optional
             Receptor ids to include. All by default.
 
@@ -740,7 +742,20 @@ class Footprints:
         Jacobian
             Rows are receptors with a non-empty footprint; columns are
             ``(time bin, target cell)``.
+
+        Raises
+        ------
+        ValueError
+            If ``time_bins`` is not closed on the left.
         """
+        if time_bins.closed != "left":
+            raise ValueError(
+                f"time_bins must be closed on the left, not {time_bins.closed!r}. "
+                "A footprint time is the start of its hour, so each bin takes "
+                "the hours that start in it. Build the bins with "
+                "closed='left', for example "
+                "pd.interval_range(start, end, freq='1h', closed='left')."
+            )
         files = _list_receptor_files(self.path, ".parquet")
         if receptors is None:
             requested = list(files)

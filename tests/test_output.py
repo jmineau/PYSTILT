@@ -370,6 +370,16 @@ def test_jacobian_selection_and_missing(written_footprints):
     assert H.missing == ["202407151300_-111.85_40.77_5"]
 
 
+@pytest.mark.parametrize("closed", ["right", "both", "neither"])
+def test_jacobian_rejects_bins_not_closed_on_the_left(written_footprints, closed):
+    """A right-closed bin would put footprint hours in the wrong bin without a word."""
+    feet, _, _ = written_footprints
+    left = _bins()
+    bins = pd.IntervalIndex.from_arrays(left.left, left.right, closed=closed)
+    with pytest.raises(ValueError, match="closed on the left"):
+        feet.jacobian(GRID, bins)
+
+
 def test_jacobian_with_no_footprints_is_empty(tmp_path):
     run = Output(tmp_path / "output").run("hrrr", SETTINGS)
     feet = run.footprints(FootprintConfig(grid=GRID))

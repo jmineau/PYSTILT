@@ -902,6 +902,11 @@ def test_jacobian_over_a_selection(tmp_path):
         expected.to_numpy(),
         rtol=1e-6,
     )
+    right_closed = pd.IntervalIndex.from_breaks(
+        bins.left.append(bins.right[-1:]), closed="right"
+    )
+    with pytest.raises(ValueError, match="closed on the left"):
+        model.simulations.sel(variant="hrrr").jacobian(target, right_closed)
     with pytest.raises(ValueError, match="one variant"):
         model.simulations.jacobian(target, bins)
     with pytest.raises(ValueError, match="no footprints yet"):

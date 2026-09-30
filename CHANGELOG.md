@@ -39,7 +39,9 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   going.
 - `model.simulations.sel(...).jacobian(target, time_bins)` sums the
   selected footprints onto a target in one pass, as a sparse matrix with
-  labelled rows and columns (`stilt.output.Jacobian`).
+  labelled rows and columns (`stilt.output.Jacobian`). The time bins must
+  be closed on the left, since a footprint time is the start of its hour;
+  other bins raise a `ValueError`.
 - **`VariantConfig` is composed, not flattened.** A resolved variant holds
   `transport` (a `TransportSettings`, whose hash names the run) and
   `footprint` (a `FootprintConfig`, or `None`) instead of sixty flat

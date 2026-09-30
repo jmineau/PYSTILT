@@ -377,8 +377,9 @@ class SimulationCollection:
         Raises
         ------
         ValueError
-            If the selection spans several variants, or its variant has no
-            grid or no footprints yet.
+            If the selection spans several variants, its variant has no
+            grid or no footprints yet, or ``time_bins`` is not closed on the
+            left.
         """
         variants = self.variants
         if len(variants) != 1:
