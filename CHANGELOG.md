@@ -95,6 +95,24 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   archives. The `cloud` extra installs `arlmet[archives]` in place of `s3fs`,
   and `fsspec` is no longer a core dependency. PYSTILT 0.1.0a22 does not work
   with arlmet 0.1.0b1: pin `arlmet<0.1.0b1` if you stay on it.
+- **Slurm runs go through submitit; the queue and Kubernetes are removed**
+  ([#87](https://github.com/jmineau/PYSTILT/issues/87), decision 7 of
+  [#67](https://github.com/jmineau/PYSTILT/issues/67); breaking). A Slurm
+  run is one job array of batches of receptors, submitted with
+  [submitit](https://github.com/facebookincubator/submitit) (a new
+  dependency). Each task runs with the Python that submitted it, so `setup:`
+  no longer has to activate an environment, and a task that is preempted or
+  runs out of time is submitted again and skips what it finished. Logs and
+  submission files are in `slurm/<date_time>_<id>/` in the project;
+  `chunks/` is gone. `model.run()` takes `execution=` in place of
+  `executor=`, and its handle's `jobs` are the submitit jobs.
+- **`execution:` settings are checked**
+  ([#63](https://github.com/jmineau/PYSTILT/issues/63); breaking). The
+  section is now `backend`, `n_workers`, `cpus`, `time`, `mem`, `partition`,
+  `account`, `qos`, `array_parallelism`, `setup`, and `slurm`. A setting it
+  does not have is an error instead of being ignored or passed to `sbatch`.
+  Move any other `sbatch` option, such as `exclude` or `requeue`, under
+  `slurm:`. `cpus_per_task` is still accepted for `cpus`.
 - **`Model` reads; `stilt.execution` runs**
   ([#86](https://github.com/jmineau/PYSTILT/issues/86); breaking). A
   `Model` is its settings, its receptors, and a view of their results. It no
@@ -130,6 +148,17 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Removed
 
+- The PostgreSQL work queue (`stilt.service`, `PYSTILT_DB_URL`,
+  `stilt register`, `stilt pull-worker`, `stilt serve`), the Kubernetes
+  backend and manifests, `stilt push-worker` and chunk files, and the
+  `Executor` classes (`LocalExecutor`, `SlurmExecutor`, `KubernetesExecutor`,
+  `get_executor`). The `cloud` extra no longer installs `gcsfs`, `psycopg`,
+  or `kubernetes`. Closes the scope of
+  [#4](https://github.com/jmineau/PYSTILT/issues/4),
+  [#6](https://github.com/jmineau/PYSTILT/issues/6),
+  [#7](https://github.com/jmineau/PYSTILT/issues/7),
+  [#55](https://github.com/jmineau/PYSTILT/issues/55), and
+  [#56](https://github.com/jmineau/PYSTILT/issues/56).
 - `simulations/variants.yaml`, `ConfigChangedError`, `Model.check_config`,
   `Model.remove`, `Model.orphans`, `stilt rm`, the `.empty` marker,
   `Simulation.publish`, `Simulation.parent`, `stilt.store` and object-store

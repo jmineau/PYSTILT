@@ -50,8 +50,8 @@ messages. Existing identifiers such as the `r_stilt` test fixtures and
   in [docs/development.rst](docs/development.rst); read it before touching
   trajectory or footprint math.
 - **[stiltctl](https://github.com/jmineau/air-tracker-stiltctl)**: source of the
-  execution patterns: queue-backed workers over a Postgres work queue and a
-  thin CLI → `Model` → worker call path.
+  thin CLI → `Model` → worker call path. Its queue-backed and Kubernetes
+  execution was implemented here and then removed (#67, #87).
 - **[X-STILT](https://github.com/uataq/X-STILT)**: source of the observation
   layer and column science. PYSTILT ports the concepts, not the scripts, and
   does not aim for X-STILT feature parity.
@@ -73,14 +73,13 @@ definition of "done". `config.yaml` and `receptors.csv` are the user's
 inputs: PYSTILT never rewrites a `config.yaml` loaded from the project (one
 given in Python is written out without defaults) and only appends to
 `receptors.csv`. Changing a setting never overwrites a result: it hashes to
-a new folder. The optional Postgres work queue in `stilt.service` tracks
-work status only, per receptor.
+a new folder.
 
 **`Model` reads; the runner writes.** `Model` is config and receptors
 crossed into simulations, and a view of their results. It writes nothing
-and knows no executor, scratch directory, or queue. `stilt.execution.run`
+and knows no scheduler or scratch directory. `stilt.execution.run`
 and `register` (which `Model.run()` and `Model.register()` call) save the
-inputs to the project, resolve the compute root and the queue, and start
+inputs to the project, resolve the compute root, and start
 the workers, which are the only code that writes results.
 
 `stilt.__all__` (plus the `__all__` of each subpackage) is the public surface;
@@ -90,7 +89,7 @@ everything else is internal and can change.
 
 ```
 src/stilt/
-  cli.py             Typer CLI; a thin adapter over Model / service / execution
+  cli.py             Typer CLI; a thin adapter over Model and execution
   model.py           Model, the top-level orchestrator
   project.py         Project: the project directory and its two input files
   output.py          Output: the output directory (runs by settings hash, sparse
@@ -115,15 +114,14 @@ src/stilt/
 
   config/            pydantic configuration: ModelConfig and its parts
   execution/         the runner (saves a model's inputs, plans what is missing,
-                     starts workers), the worker (runs HYSPLIT on scratch and
-                     writes results for one or many simulations, or pulls from
-                     the queue), and backends/ (local, slurm, kubernetes)
+                     runs it here or submits batches to Slurm through submitit)
+                     and the worker (runs HYSPLIT on scratch and writes results
+                     for one or many simulations)
   observations/      the X-STILT port, all before or after the transport run:
                      product readers, overpass grouping and sounding
                      selection, slant geometry, transport error, wind-error
                      statistics, backgrounds, plume backgrounds. Arrays in,
                      plain values out; there is no observation object.
-  service/           optional Postgres work queue and Kubernetes manifests
   hysplit/           HYSPLIT driver (CONTROL / SETUP.CFG writers) plus the
                      bundled binaries (bin/) and data tables (data/)
 
@@ -131,27 +129,24 @@ tests/               pytest; markers `integration` and `fidelity`
 docs/                Sphinx (pydata-sphinx-theme)
 ```
 
-### Three execution paths: do not conflate them
+### Two ways work starts: do not conflate them
 
-1. **One-off** (notebook or script): `Model.run()` or `stilt run`. Blocks.
-2. **Queue / service** (batch): `Model.register()` or `stilt register`
-   enqueues; `stilt pull-worker` drains the queue, `stilt serve` runs
-   long-lived. Requires `PYSTILT_DB_URL` pointing at PostgreSQL. The queue
-   (resolved by the runner and the pull worker) records status; completion
-   is still by key. The Slurm
-   backend instead pushes fixed chunks of receptor IDs to
-   `stilt push-worker`, with no queue. On every path the unit of work is a
-   receptor: `run_receptor` runs HYSPLIT once per distinct transport hash,
-   then writes the footprint of every variant that shares those particles.
-3. **Observation-driven**: a reader yields a DataFrame of soundings;
+1. **A run** (`Model.run()` or `stilt run`): `stilt.execution.run` saves the
+   inputs to the project, finds the receptors with missing results, and
+   either runs them in this process (`backend: local`) or submits them as
+   one Slurm job array through submitit (`backend: slurm`), one `Batch` of
+   receptors per task. The unit of work is a receptor: `run_receptor` runs
+   HYSPLIT once per distinct transport hash, then writes the footprint of
+   every variant that shares those particles.
+2. **Observation-driven**: a reader yields a DataFrame of soundings;
    `stilt.observations` helpers thin and group it; each row becomes a
    `Receptor`; `averaging_kernel_table` writes the kernels into the project;
-   then register as usual. This layer sits *above* the transport core. Keep
-   observation logic out of `model.py`.
+   then register and run as usual. This layer sits *above* the transport
+   core. Keep observation logic out of `model.py`.
 
-Before changing behavior, ask which paths it touches. The worker paths
-serialize state across processes, so optimizations that only work in-process
-tend to break them.
+Slurm tasks rebuild the model from the project in another process on
+another node, so anything a worker needs must be in the project or the
+output directory, never only in memory.
 
 ### Configuration
 
@@ -170,8 +165,11 @@ tend to break them.
   explains how a field is routed to `SETUP.CFG`, `CONTROL`, `WINDERR`, or
   `ZIERR`.
 - `RuntimeSettings` is one `pydantic-settings` class reading `PYSTILT_*`
-  environment variables (`db_url`, `compute_root`). The runner and the
-  workers read it; `Model` does not.
+  environment variables (`compute_root`). The runner and the workers read
+  it; `Model` does not.
+- `ExecutionConfig` (`execution:` in `config.yaml`) says where receptors run
+  and with what Slurm resources. It forbids unknown keys; other `sbatch`
+  options go under its `slurm:` mapping.
 - Particle transforms are declared as a default or per variant in YAML
   (`transforms: [{kind: ...}]`); `kind` may also be the import path of a user
   class.
@@ -186,7 +184,8 @@ folder below a kind is hive-style, so each tree reads as one dataset:
 <project>/
   config.yaml                 ModelConfig (user-authored; never rewritten once loaded)
   receptors.csv               receptor list; register() appends new receptors
-  chunks/, slurm/             Slurm push-dispatch artefacts
+  slurm/<stamp>/              one folder per Slurm submission: script, task logs,
+                              and submitit's pickles
 
 <output>/
   particles/settings=<variant>-<hash>/_settings.yaml
@@ -211,16 +210,16 @@ as complete.
 - **STILT-R numerical parity** at `rtol=1e-7` per footprint cell. Run the
   `fidelity` suite before merging any change to trajectory or footprint math.
   NetCDF output is CF-1.8 and deliberately not byte-compatible with STILT-R.
-- **Completion is by file; the queue is status-only.** A simulation is
-  complete iff its files exist in the output directory. Never add a second
+- **Completion is by file.** A simulation is complete iff its files exist
+  in the output directory. Never add a second
   "does this output exist" check, a completion registry, or a manifest; call
   the `Simulation` method.
 - **Identity is content.** A run is its settings hash; a changed setting is
   a new folder, never an overwrite, and PYSTILT never deletes a folder.
-- **State lives in the project directory and the output directory** and,
-  on the queue path, in Postgres. Anything kept in a process-local variable
-  silently diverges between `run`, `pull-worker`, and `serve`.
-- **The CLI stays thin.** `cli.py` adapts arguments to `Model` / service /
+- **State lives in the project directory and the output directory.**
+  Anything kept in a process-local variable is lost to a Slurm task, which
+  rebuilds the model from the project.
+- **The CLI stays thin.** `cli.py` adapts arguments to `Model` and
   execution calls; orchestration logic does not belong there.
 - **Meteorology I/O goes through [arlmet](https://github.com/jmineau/arl-met).**
   Do not reimplement ARL reading here.

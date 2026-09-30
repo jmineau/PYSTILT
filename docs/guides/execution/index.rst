@@ -1,9 +1,9 @@
 Where To Run
 ============
 
-The same project can run on your computer, on an HPC cluster, or in the
-cloud (experimental). Only the ``execution`` section of ``config.yaml``
-changes. Your receptors, meteorology, footprints, and outputs stay the same.
+The same project can run on your computer or on an HPC cluster. Only the
+``execution`` section of ``config.yaml`` changes. Your receptors,
+meteorology, footprints, and outputs stay the same.
 
 .. list-table::
    :header-rows: 1
@@ -20,9 +20,6 @@ changes. Your receptors, meteorology, footprints, and outputs stay the same.
      - You have thousands of simulations and access to an HPC cluster that
        uses Slurm.
      - An ``execution`` section with your account and partition
-   * - :doc:`kubernetes`
-     - You're running in the cloud. Experimental.
-     - A container image, a PostgreSQL database, and a cloud bucket
 
 .. toctree::
    :maxdepth: 1
@@ -30,7 +27,6 @@ changes. Your receptors, meteorology, footprints, and outputs stay the same.
 
    local
    slurm
-   kubernetes
 
 Commands you'll use
 -------------------
@@ -52,30 +48,8 @@ Options for ``stilt run``:
 
 - ``--backend`` and ``--n-workers`` override ``config.yaml`` for this run.
 - ``--no-skip`` reruns every simulation, finished or not.
-- ``--compute-root DIR`` runs HYSPLIT in ``DIR`` and copies the outputs into
-  the project afterward.
-
-Commands PYSTILT runs for you
------------------------------
-
-You won't usually type these. ``stilt run`` launches them on each Slurm task
-or cloud worker, and they are listed here so you recognize them in job
-scripts and logs.
-
-``stilt push-worker``
-   Runs every variant of each receptor in one list. Each Slurm array task
-   runs one list.
-
-``stilt pull-worker``
-   Takes receptors one at a time from a shared PostgreSQL queue until the
-   queue is empty. With ``--follow`` it keeps waiting for new work.
-
-``stilt serve``
-   The same as ``stilt pull-worker --follow``.
-
-``stilt register``
-   Saves the project's settings and receptors without running anything. If
-   a queue is set up, it also adds the receptors to the queue.
+- ``--compute-root DIR`` runs HYSPLIT in ``DIR``, a scratch folder that is
+  emptied after each successful run.
 
 When a simulation fails
 -----------------------

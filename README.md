@@ -29,8 +29,8 @@ agreement with STILT-R, and runs on a local machine and on Slurm.
 pip install pystilt
 ```
 
-For plotting, projected grids, aggregation over shapefiles, and cloud features (NOAA downloads,
-`s3://` and `gs://` projects, the Postgres work queue, Kubernetes), install everything:
+For plotting, projected grids, aggregation over shapefiles, and downloading meteorology from
+NOAA, install everything:
 
 ```bash
 pip install "pystilt[complete]"
@@ -118,42 +118,38 @@ variants:
     realizations: 4                         # hrrr-err-0 .. hrrr-err-3
     grid: null                              # particles only, no footprint
   hrrr-ak:                                  # another footprint from the hrrr particles
-    from: hrrr
     transforms: [{kind: averaging_kernel, table: kernels.parquet}]
 ```
 
-Each receptor under each variant is one simulation, stored in
-`simulations/by-id/<receptor>/<variant>/`. Adding a variant runs only the new simulations.
-PYSTILT refuses to change the settings of a variant that has already run. Give the new settings a
-new name, or delete the old outputs with `stilt rm --variant NAME` and run again.
+Each receptor under each variant is one simulation. Results go to the output directory
+(`./output` by default), in a folder named for the settings they were made with. Variants whose
+transport settings match share one HYSPLIT run and differ only in the footprint, as `hrrr-ak`
+does here. Adding a variant runs only what is new, and changing a setting writes to a new folder
+beside the old one.
 
-## Queue workers
+## On a cluster
 
-For large batches in the cloud, PYSTILT can hand out receptors from a PostgreSQL work queue.
-Point `PYSTILT_DB_URL` at the database, add the receptors to the queue, and start workers:
+Add an `execution` section to `config.yaml` and run the same command. PYSTILT splits the
+unfinished receptors among the tasks of one Slurm job array and submits it:
+
+```yaml
+execution:
+  backend: slurm
+  n_workers: 200          # array tasks
+  account: my-account
+  partition: my-partition
+  time: "02:00:00"
+  mem: 4G
+```
 
 ```bash
-export PYSTILT_DB_URL=postgresql://user:pass@host:5432/pystilt
-
-stilt register ./my_project      # save the inputs and queue every receptor
-stilt pull-worker ./my_project   # run queued receptors until the queue is empty
-stilt serve ./my_project         # or keep waiting for new work
+stilt run ./my_project          # submits and returns; add --wait to wait
+stilt status ./my_project
 ```
 
-The same from Python:
-
-```python
-import stilt
-from stilt.execution import pull_receptors
-
-model = stilt.Model(project="./my_project")
-model.register()
-pull_receptors(model)
-print(model.status())
-```
-
-The queue only tracks which receptors are pending, done, or failed. Whether a simulation is
-finished is always decided by its output files in the project.
+A task that is preempted or runs out of time is submitted again and skips the receptors it
+finished. Whether a simulation is finished is always decided by its files in the output
+directory.
 
 ## Column and satellite soundings
 
@@ -256,20 +252,21 @@ of the development docs has the details.
 ## Roadmap
 
 PYSTILT borrows from two sister projects. [X-STILT](https://github.com/uataq/X-STILT) is the
-source of its column and satellite science, and [stiltctl](https://github.com/uataq/stiltctl)
-of its queue-based execution. The tables below show what PYSTILT has taken over so far. The full
+source of its column and satellite science. [stiltctl](https://github.com/uataq/stiltctl)
+showed the thin call path from the CLI through `Model` to workers handed receptors. Its
+queue-backed and Kubernetes execution was tried and removed in favour of batches of receptors
+submitted to Slurm through [submitit](https://github.com/facebookincubator/submitit). The full
 [roadmap](https://jmineau.github.io/PYSTILT/roadmap.html) has more detail.
 
-### Execution and orchestration (from stiltctl)
+### Execution
 
 | Feature | Status |
 |---|---|
-| Pull-mode queue workers (`stilt pull-worker`) | Implemented |
-| Long-lived streaming mode (`stilt serve`) | Implemented |
-| PostgreSQL-backed work queue for distributed coordination | Implemented |
 | Thin CLI → Model → worker call path | Implemented |
-| Kubernetes worker deployment | Partial |
-| Cloud object store outputs (GCS, S3) | In scope |
+| Local runs, in one process or a process pool | Implemented |
+| Slurm job arrays, with preempted tasks resubmitted | Implemented |
+| Queue-backed workers (PostgreSQL), Kubernetes deployment | Removed |
+| Cloud object store outputs (GCS, S3) | Not planned |
 
 ### Column and satellite science (from X-STILT)
 

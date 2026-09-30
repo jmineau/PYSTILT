@@ -52,14 +52,21 @@ def sigterm_as_interrupt():
 
     Slurm sends SIGTERM on preemption or when a job reaches its time limit.
     Python's default action ends the process without running ``finally``
-    blocks, so pool workers would be left running. Signal handlers can only
-    be set from the main thread, so in any other thread this does nothing.
+    blocks, so pool workers would be left running.
+
+    It does nothing when SIGTERM is already handled, as it is inside a task
+    submitit started: there the scheduler's signals belong to submitit, which
+    requeues a preempted task. Signal handlers can only be set from the main
+    thread, so in any other thread this does nothing either.
     """
     if threading.current_thread() is not threading.main_thread():
         yield
         return
 
     previous = signal.getsignal(signal.SIGTERM)
+    if previous is not signal.SIG_DFL:
+        yield
+        return
 
     def _handle(signum: int, frame: object) -> None:
         raise KeyboardInterrupt
@@ -544,6 +551,10 @@ def run_receptors(
         except KeyboardInterrupt:
             # Preempted or Ctrl-C: stop the workers and hand back what finished.
             pool.terminate()
+        except SystemExit:
+            # A requeued Slurm task exits here; its workers must not outlive it.
+            pool.terminate()
+            raise
         finally:
             pool.join()
     return [ordered[i] for i in sorted(ordered)]

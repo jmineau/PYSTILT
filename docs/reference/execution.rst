@@ -18,10 +18,11 @@ underneath.
   Workers are always handed receptors.
 - :func:`~stilt.execution.run_receptors` runs a list of receptors, in this
   process or in a process pool.
-- :func:`~stilt.execution.pull_receptors` takes receptors from the
-  PostgreSQL work queue until it is empty.
 
-The executors start that work on this machine, on Slurm, or on Kubernetes.
+On Slurm the receptors are split into batches
+(:class:`~stilt.execution.Batch`), one per task of a job array submitted
+with `submitit <https://github.com/facebookincubator/submitit>`_. A local
+run happens in this process.
 
 Worker functions
 ----------------
@@ -38,17 +39,16 @@ Worker functions
    stilt.execution.run_simulation
    stilt.execution.run_receptor
    stilt.execution.run_receptors
-   stilt.execution.pull_receptors
    stilt.execution.SimulationResult
    stilt.execution.ReceptorResult
 
-Executors
----------
+Batches and handles
+-------------------
 
 .. autosummary::
    :toctree: _api
    :nosignatures:
 
-   stilt.execution.LocalExecutor
-   stilt.execution.SlurmExecutor
-   stilt.execution.KubernetesExecutor
+   stilt.execution.Batch
+   stilt.execution.LocalHandle
+   stilt.execution.SlurmHandle
