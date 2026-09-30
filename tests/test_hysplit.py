@@ -730,3 +730,42 @@ def test_unperturbed_run_removes_a_stale_winderr(tmp_path, point_receptor):
 
     assert not (tmp_path / "WINDERR").exists()
     assert not (tmp_path / "ZIERR").exists()
+
+
+# ---------------------------------------------------------------------------
+# Bundled binary selection
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("system", "machine", "subdir"),
+    [
+        ("Linux", "x86_64", "linux_x64"),
+        ("Darwin", "x86_64", "macos_x64"),
+        ("Darwin", "arm64", "macos_x64"),  # runs through Rosetta
+    ],
+)
+def test_bundled_exe_dir_picks_the_build_for_the_platform(
+    monkeypatch, system, machine, subdir
+):
+    from stilt.hysplit import driver
+
+    monkeypatch.setattr(driver.platform, "system", lambda: system)
+    monkeypatch.setattr(driver.platform, "machine", lambda: machine)
+    assert driver._bundled_exe_dir().name == subdir
+
+
+@pytest.mark.parametrize(
+    ("system", "machine"),
+    [("Linux", "aarch64"), ("Windows", "AMD64"), ("Linux", "ppc64le")],
+)
+def test_bundled_exe_dir_rejects_platforms_without_a_build(
+    monkeypatch, system, machine
+):
+    """An aarch64 Linux machine must not be handed the x86-64 binary (#61)."""
+    from stilt.hysplit import driver
+
+    monkeypatch.setattr(driver.platform, "system", lambda: system)
+    monkeypatch.setattr(driver.platform, "machine", lambda: machine)
+    with pytest.raises(RuntimeError, match="exe_dir"):
+        driver._bundled_exe_dir()
