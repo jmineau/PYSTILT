@@ -28,8 +28,10 @@ from stilt.execution import (
     Executor,
     get_executor,
     pull_receptors,
+    resolve_compute_root,
     run_receptors,
 )
+from stilt.execution import register as register_inputs
 from stilt.model import Model
 from stilt.project import CONFIG_KEY, RECEPTORS_KEY
 from stilt.receptors import read_receptors
@@ -202,7 +204,7 @@ def run(
     A Slurm run submits a job array and returns. Add --wait to wait for it.
     """
     resolved = _resolve_project(project)
-    model = Model(project=resolved, compute_root=compute_root)
+    model = Model(project=resolved)
     # Progress is the worker's one line per finished receptor.
     logging.basicConfig(level=logging.WARNING, format="%(message)s")
     logging.getLogger("stilt.execution.worker").setLevel(logging.INFO)
@@ -218,11 +220,17 @@ def run(
         model,
         executor,
         backend=execution.get("backend", "local"),
+        compute_root=compute_root,
         skip_existing=not no_skip,
         wait=wait,
     )
     # A local run has finished when this returns; a Slurm job has been submitted.
-    handle = model.run(executor=executor, skip_existing=not no_skip, wait=False)
+    handle = model.run(
+        executor=executor,
+        skip_existing=not no_skip,
+        wait=False,
+        compute_root=compute_root,
+    )
     if handle.detached:
         typer.echo(f"Submitted job: {handle.job_id}")
         if not wait:
@@ -248,7 +256,7 @@ def register(
     """
     model = Model(project=_resolve_project(project))
     receptors = read_receptors(receptors_path) if receptors_path is not None else None
-    receptor_ids = model.register(receptors=receptors)
+    receptor_ids = register_inputs(model, receptors=receptors)
     typer.echo(
         f"Registered {len(receptor_ids)} receptor(s) x {len(model.variants)} variant(s)."
     )
@@ -271,11 +279,8 @@ def pull_worker(
     queue is empty, or keeps waiting for more work with --follow. Needs
     PYSTILT_DB_URL.
     """
-    model = Model(
-        project=_resolve_project(project),
-        compute_root=compute_root,
-    )
-    pull_receptors(model, follow=follow)
+    model = Model(project=_resolve_project(project))
+    pull_receptors(model, follow=follow, compute_root=compute_root)
 
 
 @app.command("push-worker")
@@ -295,14 +300,17 @@ def push_worker(
 
     Slurm array tasks call this, one chunk file per task.
     """
-    model = Model(
-        project=_resolve_project(project),
-        compute_root=compute_root,
-    )
+    model = Model(project=_resolve_project(project))
     receptor_ids = [
         s for line in Path(chunk).read_text().splitlines() if (s := line.strip())
     ]
-    run_receptors(model, receptor_ids, n_cores=cpus, skip_existing=not no_skip)
+    run_receptors(
+        model,
+        receptor_ids,
+        compute_root=compute_root,
+        n_cores=cpus,
+        skip_existing=not no_skip,
+    )
 
 
 @app.command()
@@ -311,11 +319,8 @@ def serve(
     compute_root: str | None = _COMPUTE_ROOT,
 ) -> None:
     """Keep running receptors from the work queue. Same as pull-worker --follow."""
-    model = Model(
-        project=_resolve_project(project),
-        compute_root=compute_root,
-    )
-    pull_receptors(model, follow=True)
+    model = Model(project=_resolve_project(project))
+    pull_receptors(model, follow=True, compute_root=compute_root)
 
 
 @app.command()
@@ -358,6 +363,7 @@ def _print_run_start(
     executor: Executor,
     *,
     backend: str,
+    compute_root: str | None,
     skip_existing: bool,
     wait: bool,
 ) -> None:
@@ -369,7 +375,7 @@ def _print_run_start(
         f"dispatch={executor.dispatch}  workers={executor.n_workers}  skip={mode}"
     )
     typer.echo(f"Output: {model.output.path}")
-    typer.echo(f"Compute root: {model.compute_root}")
+    typer.echo(f"Compute root: {resolve_compute_root(model.project, compute_root)}")
     typer.echo(f"Receptors loaded: {len(model.receptors)}")
     typer.echo(f"Variants: {', '.join(model.variants)}")
     typer.echo(

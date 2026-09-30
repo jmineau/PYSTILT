@@ -76,6 +76,13 @@ given in Python is written out without defaults) and only appends to
 a new folder. The optional Postgres work queue in `stilt.service` tracks
 work status only, per receptor.
 
+**`Model` reads; the runner writes.** `Model` is config and receptors
+crossed into simulations, and a view of their results. It writes nothing
+and knows no executor, scratch directory, or queue. `stilt.execution.run`
+and `register` (which `Model.run()` and `Model.register()` call) save the
+inputs to the project, resolve the compute root and the queue, and start
+the workers, which are the only code that writes results.
+
 `stilt.__all__` (plus the `__all__` of each subpackage) is the public surface;
 everything else is internal and can change.
 
@@ -107,9 +114,10 @@ src/stilt/
   visualization.py   matplotlib helpers (optional dependency)
 
   config/            pydantic configuration: ModelConfig and its parts
-  execution/         the worker (runs HYSPLIT on scratch and writes results for one
-                     or many simulations, or pulls from the queue) and backends/
-                     (local, slurm, kubernetes)
+  execution/         the runner (saves a model's inputs, plans what is missing,
+                     starts workers), the worker (runs HYSPLIT on scratch and
+                     writes results for one or many simulations, or pulls from
+                     the queue), and backends/ (local, slurm, kubernetes)
   observations/      the X-STILT port, all before or after the transport run:
                      product readers, overpass grouping and sounding
                      selection, slant geometry, transport error, wind-error
@@ -129,7 +137,8 @@ docs/                Sphinx (pydata-sphinx-theme)
 2. **Queue / service** (batch): `Model.register()` or `stilt register`
    enqueues; `stilt pull-worker` drains the queue, `stilt serve` runs
    long-lived. Requires `PYSTILT_DB_URL` pointing at PostgreSQL. The queue
-   (`model.queue`) records status; completion is still by key. The Slurm
+   (resolved by the runner and the pull worker) records status; completion
+   is still by key. The Slurm
    backend instead pushes fixed chunks of receptor IDs to
    `stilt push-worker`, with no queue. On every path the unit of work is a
    receptor: `run_receptor` runs HYSPLIT once per distinct transport hash,
@@ -161,8 +170,8 @@ tend to break them.
   explains how a field is routed to `SETUP.CFG`, `CONTROL`, `WINDERR`, or
   `ZIERR`.
 - `RuntimeSettings` is one `pydantic-settings` class reading `PYSTILT_*`
-  environment variables (`db_url`, `compute_root`);
-  `Model(runtime=...)` overrides it.
+  environment variables (`db_url`, `compute_root`). The runner and the
+  workers read it; `Model` does not.
 - Particle transforms are declared as a default or per variant in YAML
   (`transforms: [{kind: ...}]`); `kind` may also be the import path of a user
   class.

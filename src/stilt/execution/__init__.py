@@ -14,6 +14,7 @@ from .backends import (
 )
 from .backends.factory import resolve_backend
 from .backends.protocol import sigterm_as_interrupt
+from .runner import register, resolve_compute_root, run
 from .worker import (
     ReceptorResult,
     SimulationResult,
@@ -39,7 +40,10 @@ __all__ = [
     "SlurmHandle",
     "get_executor",
     "pull_receptors",
+    "register",
     "resolve_backend",
+    "resolve_compute_root",
+    "run",
     "run_receptor",
     "run_receptors",
     "run_simulation",

@@ -17,7 +17,7 @@ from stilt.config import (
     VariantConfig,
 )
 from stilt.errors import ConfigValidationError, SimulationError
-from stilt.execution import worker
+from stilt.execution import register, resolve_compute_root, worker
 from stilt.execution.worker import (
     ReceptorResult,
     SimulationResult,
@@ -701,6 +701,7 @@ def fake_pool(monkeypatch):
     # The initializer installs a SIGTERM handler; keep it out of the test process.
     monkeypatch.setattr(worker.signal, "signal", lambda *a, **k: None)
     monkeypatch.setattr(worker, "_POOL_MODEL", None)
+    monkeypatch.setattr(worker, "_POOL_COMPUTE_ROOT", None)
     monkeypatch.setattr(worker, "_POOL_SKIP", True)
     return _FakePool
 
@@ -710,7 +711,7 @@ def test_run_receptors_pool_rebuilds_model_and_orders_results(
 ):
     model = _model(tmp_path, [receptor, other_receptor])
     # Pool workers rebuild the Model from the project root: persist inputs.
-    ids = model.register()
+    ids = register(model)
     calls: list[dict] = []
     monkeypatch.setattr(worker, "run_simulation", _fake_run_simulation(calls))
 
@@ -724,7 +725,7 @@ def test_run_receptors_pool_rebuilds_model_and_orders_results(
     assert worker._POOL_MODEL is not None
     assert worker._POOL_MODEL is not model
     assert worker._POOL_MODEL.project.root == model.project.root
-    assert worker._POOL_MODEL.compute_root == model.compute_root
+    assert str(resolve_compute_root(model.project)) == worker._POOL_COMPUTE_ROOT
     assert worker._POOL_SKIP is False
     # Results come back in input order even though the pool yielded reversed.
     assert [r.receptor_id for r in results] == ids
@@ -735,7 +736,7 @@ def test_run_receptors_pool_terminates_on_interrupted_result(
     tmp_path, receptor, other_receptor, monkeypatch, fake_pool
 ):
     model = _model(tmp_path, [receptor, other_receptor])
-    ids = model.register()
+    ids = register(model)
 
     def fake(sim, *, skip_existing=True, footprint_stale=False, **kwargs):
         # The fake pool yields the *last* id first, so interrupt on the first id.
@@ -760,7 +761,7 @@ def test_run_receptors_pool_keyboard_interrupt_terminates_and_returns(
 ):
     """A KeyboardInterrupt in the parent loop terminates the pool, keeping results."""
     model = _model(tmp_path, [receptor, other_receptor])
-    ids = model.register()
+    ids = register(model)
 
     def imap_then_interrupt(self, func, iterable):
         items = list(iterable)
@@ -812,15 +813,11 @@ class _FakeQueue:
         yield self._pending.pop(0) if self._pending else None
 
 
-def _pull_model(queue) -> SimpleNamespace:
-    return SimpleNamespace(queue=queue)
-
-
-def test_pull_receptors_requires_a_queue():
-    model = SimpleNamespace(queue=None)
+def test_pull_receptors_requires_a_queue(monkeypatch):
+    monkeypatch.delenv("PYSTILT_DB_URL", raising=False)
 
     with pytest.raises(ConfigValidationError, match="Postgres work queue"):
-        pull_receptors(model, follow=False)
+        pull_receptors(SimpleNamespace(), follow=False)
 
 
 def test_pull_receptors_records_result_on_claim(monkeypatch):
@@ -828,13 +825,13 @@ def test_pull_receptors_records_result_on_claim(monkeypatch):
     queue = _FakeQueue([claim])
     calls: list[tuple[str, bool]] = []
 
-    def fake(model, receptor_id, *, skip_existing=True):
+    def fake(model, receptor_id, *, compute_root=None, skip_existing=True):
         calls.append((receptor_id, skip_existing))
         return ReceptorResult(receptor_id, "complete")
 
     monkeypatch.setattr(worker, "run_receptor", fake)
 
-    pull_receptors(_pull_model(queue), follow=False, skip_existing=False)
+    pull_receptors(SimpleNamespace(), queue=queue, follow=False, skip_existing=False)
 
     assert calls == [(RID, False)]
     assert claim.recorded == [ReceptorResult(RID, "complete")]
@@ -848,10 +845,12 @@ def test_pull_receptors_records_interrupted_result(monkeypatch):
     monkeypatch.setattr(
         worker,
         "run_receptor",
-        lambda model, rid, *, skip_existing=True: ReceptorResult(rid, "interrupted"),
+        lambda model, rid, *, compute_root=None, skip_existing=True: ReceptorResult(
+            rid, "interrupted"
+        ),
     )
 
-    pull_receptors(_pull_model(queue), follow=False)
+    pull_receptors(SimpleNamespace(), queue=queue, follow=False)
 
     assert [r.status for r in claim.recorded] == ["interrupted"]
 
@@ -879,11 +878,13 @@ def test_pull_receptors_follow_sleeps_on_empty_then_keeps_polling(monkeypatch):
     monkeypatch.setattr(
         worker,
         "run_receptor",
-        lambda model, rid, *, skip_existing=True: ReceptorResult(rid, "complete"),
+        lambda model, rid, *, compute_root=None, skip_existing=True: ReceptorResult(
+            rid, "complete"
+        ),
     )
 
     with pytest.raises(_Stop):
-        pull_receptors(_pull_model(queue), follow=True, poll_interval=0.5)
+        pull_receptors(SimpleNamespace(), queue=queue, follow=True, poll_interval=0.5)
 
     assert sleeps == [0.5]
     assert len(claim.recorded) == 1

@@ -16,6 +16,7 @@ import numpy as np
 import pandas as pd
 
 from stilt.config import MetConfig, ModelConfig
+from stilt.execution import resolve_compute_root
 from stilt.model import Model
 from stilt.simulation import SimID
 
@@ -61,7 +62,7 @@ def test_trajectory(tmp_path, wbb_receptor, traj_only_config):
     assert sim.trajectories_path.parent.parent.name.startswith("settings=hrrr-")
     assert len(pd.read_parquet(sim.trajectories_path)) > 0, "Particle file is empty"
     assert sim.trajectories is not None and len(sim.trajectories.data) > 0
-    assert not (model.compute_root / sim.id).exists(), (
+    assert not (resolve_compute_root(model.project) / sim.id).exists(), (
         "the scratch working directory is removed"
     )
 

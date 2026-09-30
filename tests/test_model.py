@@ -15,8 +15,8 @@ from stilt.collections import (
     OutputCollection,
     SimulationCollection,
 )
-from stilt.config import Grid, MetConfig, ModelConfig, RuntimeSettings
-from stilt.execution import LocalHandle
+from stilt.config import Grid, MetConfig, ModelConfig
+from stilt.execution import LocalHandle, register, resolve_compute_root
 from stilt.footprint import Footprint
 from stilt.model import Model
 from stilt.output import Output
@@ -186,7 +186,7 @@ def test_model_accepts_empty_receptor_list(tmp_path):
 
     assert len(model.receptors) == 0
     assert list(model.receptors) == []
-    assert model.register() == []
+    assert register(model) == []
 
 
 def test_receptors_support_lookup_by_receptor_id(tmp_path, point_receptor):
@@ -223,9 +223,9 @@ def test_receptors_raise_when_nothing_available(tmp_path):
 
 
 def test_receptors_default_to_project_receptors_csv(tmp_path, point_receptor):
-    Model(
-        project=tmp_path, config=_config(tmp_path), receptors=[point_receptor]
-    ).register()
+    register(
+        Model(project=tmp_path, config=_config(tmp_path), receptors=[point_receptor])
+    )
 
     model = Model(project=tmp_path)
 
@@ -300,10 +300,14 @@ def test_output_can_be_shared_between_projects(tmp_path, point_receptor):
 
 def test_compute_root_defaults_under_tmpdir(tmp_path, monkeypatch):
     monkeypatch.setenv("TMPDIR", str(tmp_path / "tmp"))
+    monkeypatch.delenv("PYSTILT_COMPUTE_ROOT", raising=False)
 
     model = Model(project=tmp_path / "proj", config=_config(tmp_path))
 
-    assert model.compute_root == (tmp_path / "tmp" / "pystilt" / "proj").resolve()
+    assert (
+        resolve_compute_root(model.project)
+        == (tmp_path / "tmp" / "pystilt" / "proj").resolve()
+    )
 
 
 def test_default_compute_root_is_resolved_like_an_explicit_one(tmp_path, monkeypatch):
@@ -312,60 +316,32 @@ def test_default_compute_root_is_resolved_like_an_explicit_one(tmp_path, monkeyp
     real.mkdir()
     (tmp_path / "link").symlink_to(real)
     monkeypatch.setenv("TMPDIR", str(tmp_path / "link"))
+    monkeypatch.delenv("PYSTILT_COMPUTE_ROOT", raising=False)
 
-    model = Model(project=tmp_path / "proj", config=_config(tmp_path))
+    project = Model(project=tmp_path / "proj", config=_config(tmp_path)).project
 
-    assert model.compute_root == real.resolve() / "pystilt" / "proj"
-    again = Model(project=tmp_path / "proj", compute_root=str(model.compute_root))
-    assert again.compute_root == model.compute_root
+    default = resolve_compute_root(project)
+    assert default == real.resolve() / "pystilt" / "proj"
+    assert resolve_compute_root(project, str(default)) == default
 
 
-def test_compute_root_from_runtime_settings(tmp_path):
-    runtime = RuntimeSettings(compute_root=tmp_path / "scratch")
+def test_compute_root_from_the_environment(tmp_path, monkeypatch):
+    monkeypatch.setenv("PYSTILT_COMPUTE_ROOT", str(tmp_path / "scratch"))
 
-    model = Model(
-        project=tmp_path / "project", config=_config(tmp_path), runtime=runtime
+    project = Model(project=tmp_path / "project", config=_config(tmp_path)).project
+
+    assert resolve_compute_root(project) == (tmp_path / "scratch").resolve()
+
+
+def test_compute_root_explicit_override_wins(tmp_path, monkeypatch):
+    monkeypatch.setenv("PYSTILT_COMPUTE_ROOT", str(tmp_path / "env-scratch"))
+
+    project = Model(project=tmp_path / "project", config=_config(tmp_path)).project
+
+    assert (
+        resolve_compute_root(project, tmp_path / "explicit")
+        == (tmp_path / "explicit").resolve()
     )
-
-    assert model.compute_root == (tmp_path / "scratch").resolve()
-
-
-def test_compute_root_explicit_override_wins(tmp_path, point_receptor):
-    runtime = RuntimeSettings(compute_root=tmp_path / "runtime-scratch")
-
-    model = Model(
-        project=tmp_path / "project",
-        config=_config(tmp_path),
-        receptors=[point_receptor],
-        compute_root=tmp_path / "explicit",
-        runtime=runtime,
-    )
-
-    assert model.compute_root == (tmp_path / "explicit").resolve()
-
-
-def test_queue_is_none_without_db_url(tmp_path):
-    model = Model(project=tmp_path, config=_config(tmp_path))
-    assert model.queue is None
-
-
-def test_queue_resolves_from_runtime_db_url(tmp_path, monkeypatch):
-    sentinel = object()
-    seen: list = []
-
-    def fake_resolve(runtime):
-        seen.append(runtime.db_url)
-        return sentinel
-
-    monkeypatch.setattr("stilt.model.resolve_queue", fake_resolve)
-    model = Model(
-        project=tmp_path,
-        config=_config(tmp_path),
-        runtime=RuntimeSettings(db_url="postgresql://db/pystilt"),
-    )
-
-    assert model.queue is sentinel
-    assert seen == ["postgresql://db/pystilt"]
 
 
 # ---------------------------------------------------------------------------
@@ -461,7 +437,7 @@ def test_register_writes_config_and_receptors_to_project(tmp_path, point_recepto
         project=project_dir, config=_config(tmp_path), receptors=[point_receptor]
     )
 
-    ids = model.register()
+    ids = register(model)
 
     assert ids == [_rid(point_receptor)]
     assert (project_dir / CONFIG_KEY).exists()
@@ -487,7 +463,7 @@ def test_register_writes_the_receptors_of_a_csv(tmp_path):
 
     model = Model(project=project_dir, config=_config(tmp_path), receptors=csv)
 
-    assert len(model.register()) == 2
+    assert len(register(model)) == 2
     clone = Model(project=project_dir)
     assert [r.id for r in clone.receptors] == [r.id for r in model.receptors]
     assert [r.attrs["site"] for r in clone.receptors] == ["wbb", "wbb"]
@@ -504,17 +480,15 @@ def test_register_preserves_project_receptors_csv(tmp_path):
     csv = tmp_path / RECEPTORS_KEY
     csv.write_text(original)
 
-    assert len(Model(project=tmp_path).register()) == 2
+    assert len(register(Model(project=tmp_path))) == 2
     assert csv.read_text() == original
 
 
 def test_register_appends_in_memory_receptors_to_existing_csv(tmp_path):
     rec_a, rec_b = _receptor(12), _receptor(13)
-    Model(project=tmp_path, config=_config(tmp_path), receptors=[rec_a]).register()
+    register(Model(project=tmp_path, config=_config(tmp_path), receptors=[rec_a]))
 
-    ids = Model(
-        project=tmp_path, config=_config(tmp_path), receptors=[rec_b]
-    ).register()
+    ids = register(Model(project=tmp_path, config=_config(tmp_path), receptors=[rec_b]))
 
     assert ids == [_rid(rec_b)]
     assert [r.id for r in Model(project=tmp_path).receptors] == [rec_a.id, rec_b.id]
@@ -524,35 +498,50 @@ def test_register_explicit_batch_merges_with_existing_receptors(tmp_path):
     rec_a, rec_b = _receptor(12), _receptor(13)
     model = Model(project=tmp_path, config=_config(tmp_path), receptors=[rec_a])
 
-    assert model.register() == [_rid(rec_a)]
-    assert model.register(receptors=[rec_b]) == [_rid(rec_b)]
+    assert register(model) == [_rid(rec_a)]
+    assert register(model, receptors=[rec_b]) == [_rid(rec_b)]
 
-    expected = [_sid(rec_a), _sid(rec_b)]
-    assert model.simulations.keys() == expected
-    assert model.simulations[_sid(rec_b)].id == _sid(rec_b)
-    assert model.receptors[_rid(rec_b)] == rec_b
-    assert Model(project=tmp_path).simulations.keys() == expected
+    # The model is a view of what it was given; the project holds both.
+    assert model.simulations.keys() == [_sid(rec_a)]
+    project = Model(project=tmp_path)
+    assert project.simulations.keys() == [_sid(rec_a), _sid(rec_b)]
+    assert project.receptors[_rid(rec_b)] == rec_b
 
 
 def test_register_explicit_batch_dedupes_by_receptor_id(tmp_path, point_receptor):
     model = Model(
         project=tmp_path, config=_config(tmp_path), receptors=[point_receptor]
     )
-    model.register()
+    register(model)
 
-    assert model.register(receptors=[point_receptor]) == [_rid(point_receptor)]
+    assert register(model, receptors=[point_receptor]) == [_rid(point_receptor)]
     assert len(model.receptors) == 1
     assert len(Model(project=tmp_path).receptors) == 1
 
 
-def test_register_refreshes_receptors_after_explicit_batch(tmp_path, point_receptor):
+def test_model_register_rereads_the_project_file_it_views(tmp_path):
+    """A model that reads receptors.csv sees receptors registered through it."""
+    rec_a, rec_b = _receptor(12), _receptor(13)
+    register(Model(project=tmp_path, config=_config(tmp_path), receptors=[rec_a]))
+    model = Model(project=tmp_path)
+    assert model.simulations.keys() == [_sid(rec_a)]  # read and cached
+
+    assert model.register(receptors=[rec_b]) == [_rid(rec_b)]
+
+    assert [r.id for r in model.receptors] == [rec_a.id, rec_b.id]
+    assert model.simulations.keys() == [_sid(rec_a), _sid(rec_b)]
+
+
+def test_register_leaves_the_model_as_it_was(tmp_path, point_receptor):
+    """Registering writes to the project; the model it was called on does not change."""
     model = Model(project=tmp_path, config=_config(tmp_path), receptors=[])
-    assert len(model.receptors) == 0  # materialize the empty cache first
 
-    [rid] = model.register(receptors=[point_receptor])
+    [rid] = register(model, receptors=[point_receptor])
 
-    assert model.receptors[rid] == point_receptor
-    assert model.simulations[(rid, "hrrr")].receptor == point_receptor
+    assert len(model.receptors) == 0
+    reopened = Model(project=tmp_path)
+    assert reopened.receptors[rid] == point_receptor
+    assert reopened.simulations[(rid, "hrrr")].receptor == point_receptor
 
 
 def test_register_seeds_queue_with_receptor_ids(tmp_path, point_receptor, monkeypatch):
@@ -564,15 +553,12 @@ def test_register_seeds_queue_with_receptor_ids(tmp_path, point_receptor, monkey
             self.registered.append(list(ids))
 
     queue = _FakeQueue()
-    monkeypatch.setattr("stilt.model.resolve_queue", lambda runtime: queue)
+    monkeypatch.setattr("stilt.execution.runner.resolve_queue", lambda runtime: queue)
     model = Model(
-        project=tmp_path,
-        config=_config(tmp_path),
-        receptors=[point_receptor],
-        runtime=RuntimeSettings(db_url="postgresql://runtime-db/pystilt"),
+        project=tmp_path, config=_config(tmp_path), receptors=[point_receptor]
     )
 
-    ids = model.register()
+    ids = register(model)
 
     assert queue.registered == [ids] == [[_rid(point_receptor)]]
 
@@ -583,7 +569,7 @@ def test_register_never_rewrites_an_existing_config_yaml(tmp_path, point_recepto
     text = path.read_text() + "# a comment the user added\n"
     path.write_text(text)
 
-    Model(project=tmp_path, receptors=[point_receptor]).register()
+    register(Model(project=tmp_path, receptors=[point_receptor]))
 
     assert path.read_text() == text
 
@@ -767,10 +753,10 @@ def test_receptors_that_would_share_result_files_are_refused(tmp_path):
         ).receptors
 
     model = Model(project=tmp_path, config=_config(tmp_path), receptors=[a])
-    model.register()
+    register(model)
     with pytest.raises(ValueError, match="share the id"):
-        model.register([b])
-    assert model.register([slant(10.001)]) == [a.id]  # the same receptor again is fine
+        register(model, [b])
+    assert register(model, [slant(10.001)]) == [a.id]  # the same receptor again is fine
 
 
 def test_sel_raises_for_unknown_receptor_or_variant(tmp_path, point_receptor):
@@ -1011,7 +997,7 @@ def test_run_dispatches_receptors_with_project_and_compute_root(
     call = exc.start_calls[0]
     assert call["pending"] == [_rid(point_receptor)]
     assert call["project"] == str(tmp_path) == model.project.root
-    assert call["compute_root"] == str(model.compute_root)
+    assert call["compute_root"] == str(resolve_compute_root(model.project))
     assert call["skip_existing"] is True
     assert call.get("n_workers") is None
 
@@ -1020,14 +1006,11 @@ def test_run_forwards_explicit_compute_root(tmp_path, point_receptor):
     project_dir = tmp_path / "project"
     compute_root = tmp_path / "scratch"
     model = Model(
-        project=project_dir,
-        compute_root=compute_root,
-        config=_config(tmp_path),
-        receptors=[point_receptor],
+        project=project_dir, config=_config(tmp_path), receptors=[point_receptor]
     )
     exc = _CapturingExecutor()
 
-    model.run(executor=exc, skip_existing=False)
+    model.run(executor=exc, skip_existing=False, compute_root=compute_root)
 
     assert exc.start_calls[0]["project"] == str(project_dir)
     assert exc.start_calls[0]["compute_root"] == str(compute_root.resolve())
@@ -1047,7 +1030,8 @@ def test_run_resolves_executor_from_config(tmp_path, point_receptor, monkeypatch
     exc = _CapturingExecutor()
     captured: list[dict] = []
     monkeypatch.setattr(
-        "stilt.model.get_executor", lambda execution: captured.append(execution) or exc
+        "stilt.execution.runner.get_executor",
+        lambda execution: captured.append(execution) or exc,
     )
 
     handle = model.run(skip_existing=False, wait=False)
@@ -1102,7 +1086,7 @@ def test_run_after_adding_a_variant_redispatches_the_receptor(tmp_path, point_re
     first = Model(
         project=tmp_path, config=_config(tmp_path), receptors=[point_receptor]
     )
-    first.register()
+    register(first)
     _write_trajectory(first, _sid(point_receptor))
     _write_footprint(first, _sid(point_receptor))
 
