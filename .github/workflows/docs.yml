@@ -48,6 +48,9 @@ jobs:
           path: docs/_build/html
 
   deploy:
+    # Pages accepts deploys from main only; on a pull request the build job
+    # alone checks that the docs build.
+    if: github.event_name != 'pull_request'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
