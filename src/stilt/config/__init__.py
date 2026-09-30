@@ -7,7 +7,7 @@ from .geometry import (
     H3GeometrySpec,
     WindowsGeometrySpec,
 )
-from .meteorology import MetConfig, MetContent
+from .meteorology import MetConfig, MetSettings
 from .model import ModelConfig
 from .params import ErrorParams, ModelParams, STILTParams, TransportParams
 from .runtime import RuntimeSettings
@@ -31,7 +31,7 @@ __all__ = [
     "H3GeometrySpec",
     "Grid",
     "MetConfig",
-    "MetContent",
+    "MetSettings",
     "ModelConfig",
     "ModelParams",
     "RuntimeSettings",

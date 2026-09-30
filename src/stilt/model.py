@@ -24,7 +24,7 @@ from stilt.execution import (
     LocalHandle,
     get_executor,
 )
-from stilt.meteorology import MetStream
+from stilt.meteorology import Met
 from stilt.output import Footprints, Output
 from stilt.project import Project
 from stilt.receptors import Receptor
@@ -80,8 +80,8 @@ class Model:
         Receptors, by position or by id.
     variants : dict of str to VariantConfig
         Settings of each variant, by name.
-    mets : dict of str to MetStream
-        Meteorology sources, by name.
+    mets : dict of str to Met
+        The mets, by name.
     simulations : SimulationCollection
         Every receptor under every variant.
     plot : ModelPlotAccessor
@@ -183,9 +183,9 @@ class Model:
         return self.config.resolve_variants()
 
     @cached_property
-    def mets(self) -> dict[str, MetStream]:
-        """Meteorology sources declared in the config, by name."""
-        return {name: MetStream(name, cfg) for name, cfg in self.config.mets.items()}
+    def mets(self) -> dict[str, Met]:
+        """The mets declared in the config, by name."""
+        return {name: Met(name, cfg) for name, cfg in self.config.mets.items()}
 
     @cached_property
     def queue(self) -> PostgresQueue | None:

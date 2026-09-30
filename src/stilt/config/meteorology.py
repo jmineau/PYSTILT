@@ -1,4 +1,4 @@
-"""Settings for one meteorology stream."""
+"""Settings for one met, a named set of meteorology files."""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 
 def arlmet_sources() -> dict[str, type[MeteorologySource]]:
-    """Return the download sources of the installed arlmet, by name."""
+    """Return the ARL archives the installed arlmet can download, by name."""
     import arlmet.sources as src
 
     return {
@@ -31,44 +31,45 @@ def arlmet_sources() -> dict[str, type[MeteorologySource]]:
 UNRECORDED_MET_FIELDS = frozenset({"directory", "subgrid_dir"})
 
 
-class MetContent(BaseModel):
+class MetSettings(BaseModel):
     """
-    What a meteorology stream holds, apart from where its files are.
+    The settings of a met that are recorded with each run.
 
-    The source or file layout and the subgrid settings decide the particles
-    a run produces, so they are part of a run's identity
-    (:class:`~stilt.config.TransportSettings`). :class:`MetConfig` adds the
-    directories, which do not.
+    These are the fields of :class:`MetConfig` without its two directories.
+    They decide the particles a run produces, so they are saved in the run's
+    ``_settings.yaml`` and are part of its hash
+    (:class:`~stilt.config.TransportSettings`). The directories are left out,
+    so moving the met files does not change which runs are complete.
     """
 
     model_config = ConfigDict(extra="allow")
 
-    source: str | None = Field(
+    download: str | None = Field(
         None,
         description=(
-            "Name of an arlmet source to download files from NOAA archives, "
+            "Name of a NOAA ARL archive to download files from with arlmet, "
             "such as ``hrrr``, ``nam12``, ``gdas1``, or ``gfs0p25``. When set, "
             "``file_format`` and ``file_tres`` are not needed. Options for the "
-            "source (such as ``domain: ak``) go in the same entry."
+            "archive (such as ``domain: ak``) go in the same entry."
         ),
     )
-    backend: Literal["s3", "ftp", "http"] = Field(
+    download_from: Literal["s3", "ftp", "http"] = Field(
         "s3",
-        description="Where ``source`` downloads from: ``s3``, ``ftp``, or ``http``.",
+        description="Server to download from: ``s3``, ``ftp``, or ``http``.",
     )
     file_format: str | None = Field(
         None,
         description=(
             "``strftime`` pattern for the start of each file name, such as "
             "``%Y%m%d_%H``. Files whose names start with it are found anywhere "
-            "under ``directory``. Required when ``source`` is not set."
+            "under ``directory``. Required when ``download`` is not set."
         ),
     )
     file_tres: str | None = Field(
         None,
         description=(
             "Time covered by each file, as a pandas time string such as "
-            "``6h``. Required when ``source`` is not set."
+            "``6h``. Required when ``download`` is not set."
         ),
     )
     n_min: int = Field(
@@ -94,56 +95,58 @@ class MetContent(BaseModel):
 
     @model_validator(mode="after")
     def _validate_mode(self) -> Self:
-        """Check the source and its options, and the fields each mode needs."""
-        extra = self.source_kwargs
-        if self.source is not None:
-            sources = arlmet_sources()
-            if self.source not in sources:
+        """Check the archive and its options, and the fields each mode needs."""
+        extra = self.download_options
+        if self.download is not None:
+            archives = arlmet_sources()
+            if self.download not in archives:
                 raise ValueError(
-                    f"Unknown arlmet source {self.source!r}. "
-                    f"Available: {sorted(sources)}."
+                    f"Unknown ARL archive {self.download!r} to download. "
+                    f"Available: {sorted(archives)}."
                 )
             try:
-                inspect.signature(sources[self.source]).bind(**extra)
+                inspect.signature(archives[self.download]).bind(**extra)
             except TypeError as exc:
                 raise ValueError(
-                    f"Met source {self.source!r} does not take the options "
+                    f"ARL archive {self.download!r} does not take the options "
                     f"{sorted(extra)} ({exc})."
                 ) from None
         elif extra:
             raise ValueError(
-                f"Unknown met settings {sorted(extra)}. Only a met with a "
-                "source takes extra options."
+                f"Unknown met settings {sorted(extra)}. Only a met with "
+                "download takes extra options."
             )
-        if self.source is None and (self.file_format is None or self.file_tres is None):
+        if self.download is None and (
+            self.file_format is None or self.file_tres is None
+        ):
             raise ValueError(
-                "file_format and file_tres are required when source is not set "
-                "(archive mode). Set source to an arlmet source name to use "
-                "automatic downloading instead."
+                "file_format and file_tres are required to find local files. "
+                "Set download to an ARL archive name, such as hrrr, to "
+                "download the files instead."
             )
         if self.subgrid_enable and self.subgrid_bounds is None:
             raise ValueError("subgrid_bounds is required when subgrid_enable=True.")
         return self
 
     @property
-    def source_kwargs(self) -> dict[str, Any]:
-        """Extra fields, passed as keyword arguments to the arlmet source."""
+    def download_options(self) -> dict[str, Any]:
+        """Extra fields, passed as keyword arguments to the arlmet archive."""
         return dict(self.model_extra) if self.model_extra else {}
 
-    def content(self) -> MetContent:
-        """Return the content alone, without the directories a :class:`MetConfig` adds."""
-        return MetContent.model_validate(
+    def settings(self) -> MetSettings:
+        """Return the recorded settings alone, without the directories a :class:`MetConfig` adds."""
+        return MetSettings.model_validate(
             self.model_dump(exclude=set(UNRECORDED_MET_FIELDS))
         )
 
 
-class MetConfig(MetContent):
+class MetConfig(MetSettings):
     """
-    Settings for one meteorology stream.
+    Settings for one met, as written under ``mets:`` in ``config.yaml``.
 
-    Give either ``source`` to download ARL files with arlmet, or
+    Give either ``download`` to download ARL files with arlmet, or
     ``file_format`` and ``file_tres`` to find them in ``directory``. With
-    ``source``, other keys are options for that arlmet source (such as
+    ``download``, other keys are options for that archive (such as
     ``domain`` for ``nams``). Any other unknown key is an error.
     """
 
@@ -157,17 +160,17 @@ class MetConfig(MetContent):
             "Directory for the cropped files, shared by every simulation that "
             "uses this meteorology. Each crop box gets its own folder inside "
             "it. Required when cropping your own files; not used with "
-            "``source``, which crops files as it downloads them."
+            "``download``, which crops files as it downloads them."
         ),
     )
 
     @model_validator(mode="after")
     def _require_subgrid_dir(self) -> Self:
         """Require ``subgrid_dir`` when local files are cropped."""
-        if self.subgrid_enable and self.source is None and self.subgrid_dir is None:
+        if self.subgrid_enable and self.download is None and self.subgrid_dir is None:
             raise ValueError(
-                "subgrid_dir is required when subgrid_enable=True without a "
-                "source. Set it to a directory for the cropped files, outside "
+                "subgrid_dir is required when subgrid_enable=True without "
+                "download. Set it to a directory for the cropped files, outside "
                 "the met archive."
             )
         return self

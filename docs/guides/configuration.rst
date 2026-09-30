@@ -90,10 +90,10 @@ Variants
 --------
 
 Every receptor is run once per variant. A variant has a name, a
-meteorology source, and any settings that differ from the top level of
+met, and any settings that differ from the top level of
 ``config.yaml``. The top-level settings are the defaults.
 
-With no ``variants`` section there is one variant per meteorology source,
+With no ``variants`` section there is one variant per met,
 named after it. The typical config above runs each receptor once, as
 ``hrrr``.
 
@@ -121,9 +121,8 @@ output directory, in folders named after the variant (see
 variant may set:
 
 ``met``
-   Which meteorology source to use. A variant named after a source uses
-   that source. Otherwise you need ``met`` when ``mets`` has more than one
-   entry.
+   Which met to use. A variant named after a met uses that met.
+   Otherwise you need ``met`` when ``mets`` has more than one entry.
 
 ``realizations``
    Run the variant ``N`` times, as ``<name>-0`` to ``<name>-(N-1)``. This is
@@ -175,7 +174,7 @@ Changing a variant that has run
 
 A variant's results live in folders named by a hash of its settings (see
 :doc:`project_layout`). Change a setting, including a default the variant
-inherits or a setting of its meteorology source, and the variant now points
+inherits or a setting of its met, and the variant now points
 at a folder that does not exist yet. The next run fills it, for every
 receptor. The old folder stays as it was, and ``stilt status`` lists it as a
 folder no variant uses any more.

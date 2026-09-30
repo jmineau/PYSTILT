@@ -20,7 +20,7 @@ def test_documented_top_level_symbols_are_importable():
         "Grid",
         "LocationID",
         "MetConfig",
-        "MetStream",
+        "Met",
         "Model",
         "ModelConfig",
         "MultiPointReceptor",

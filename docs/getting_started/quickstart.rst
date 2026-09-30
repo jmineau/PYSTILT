@@ -36,7 +36,7 @@ into a folder you choose. This needs ``pip install "pystilt[cloud]"``.
 .. code-block:: python
 
    met = {
-       "source": "hrrr",                     # which NOAA product
+       "download": "hrrr",                   # which NOAA ARL archive
        "directory": "/path/to/download/folder",
        "subgrid_enable": True,               # keep only your region
        "subgrid_bounds": {"xmin": -114, "xmax": -110, "ymin": 39, "ymax": 42},
@@ -119,7 +119,7 @@ Step 4: Look at the footprint
 -----------------------------
 
 PYSTILT runs each receptor once per :term:`variant`. With the settings above
-there is one variant, named ``hrrr`` after the met source. One receptor under
+there is one variant, named ``hrrr`` after the met. One receptor under
 one variant is a :term:`simulation`. Look yours up by the receptor's id and
 the variant name, and plot its footprint:
 

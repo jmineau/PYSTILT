@@ -23,13 +23,13 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class MetStream:
+class Met:
     """
-    Meteorology files for one met stream, found locally or downloaded.
+    The meteorology files of one met, found locally or downloaded.
 
-    Without ``source``, files are found under ``directory`` from
-    ``file_format`` and ``file_tres``. With ``source`` set to an arlmet
-    source name, arlmet downloads the files, cropping them as it goes when
+    Without ``download``, files are found under ``directory`` from
+    ``file_format`` and ``file_tres``. With ``download`` set to an ARL
+    archive name, arlmet downloads the files, cropping them as it goes when
     subgridding is on. Local files are cropped with
     ``arlmet.extract_subset`` into :attr:`crop_dir`, which all simulations
     share.
@@ -62,11 +62,11 @@ class MetStream:
         )
 
     def _get_arlmet_source(self) -> ArlmetSource:
-        """Return the arlmet source, building it on first use."""
+        """Return the arlmet archive to download from, building it on first use."""
         if self._arlmet_source is None:
-            assert self.config.source is not None
-            cls = arlmet_sources()[self.config.source]
-            self._arlmet_source = cls(**self.config.source_kwargs)
+            assert self.config.download is not None
+            cls = arlmet_sources()[self.config.download]
+            self._arlmet_source = cls(**self.config.download_options)
         return self._arlmet_source
 
     def _effective_bbox(self) -> tuple[float, float, float, float]:
@@ -82,7 +82,7 @@ class MetStream:
     @property
     def crop_dir(self) -> Path:
         """
-        Directory holding this stream's cropped files.
+        Directory holding this met's cropped files.
 
         It is a folder inside ``subgrid_dir`` named by a short hash of the
         crop box (``subgrid_bounds`` plus ``subgrid_buffer``) and
@@ -105,8 +105,8 @@ class MetStream:
     # File resolution
     # ------------------------------------------------------------------
 
-    def _fetch_from_source(self, r_time: pd.Timestamp, n_hours: int) -> list[Path]:
-        """Return the files for a run from the arlmet source, downloading any not yet in ``directory``."""
+    def _download(self, r_time: pd.Timestamp, n_hours: int) -> list[Path]:
+        """Return the files for a run from the ARL archive, downloading any not yet in ``directory``."""
         sim_end = r_time + pd.Timedelta(hours=n_hours)
         t_start: pd.Timestamp = min(r_time, sim_end)  # type: ignore[assignment]
         t_end: pd.Timestamp = max(r_time, sim_end)  # type: ignore[assignment]
@@ -114,13 +114,13 @@ class MetStream:
         bbox = self._effective_bbox() if self.config.subgrid_enable else None
         levels = self._level_indices() if self.config.subgrid_enable else None
 
-        source = self._get_arlmet_source()
+        archive = self._get_arlmet_source()
         try:
-            files = source.fetch(
+            files = archive.fetch(
                 t_start,
                 t_end,
                 local_dir=self.directory,
-                backend=self.config.backend,
+                backend=self.config.download_from,
                 bbox=bbox,
                 levels=levels,
             )
@@ -161,10 +161,10 @@ class MetStream:
         """
         _r_time = cast(pd.Timestamp, pd.Timestamp(r_time))
 
-        if self.config.source is not None:
-            return self._fetch_from_source(_r_time, n_hours)
+        if self.config.download is not None:
+            return self._download(_r_time, n_hours)
 
-        # Archive-glob mode
+        # Local files
         sim_end = _r_time + pd.Timedelta(hours=n_hours)
         assert isinstance(sim_end, pd.Timestamp)  # not NaT: _r_time is a time
 
@@ -172,7 +172,7 @@ class MetStream:
         later = max(_r_time, sim_end)
 
         file_format, file_tres = self.config.file_format, self.config.file_tres
-        # MetConfig requires both when there is no source.
+        # MetConfig requires both when there is no download.
         assert file_format is not None and file_tres is not None
         tres = to_offset(pd.to_timedelta(file_tres)).freqstr
         met_start = earlier.floor(tres)
@@ -241,13 +241,13 @@ class MetStream:
         """
         Link met files into ``target_dir``, copying when a link fails.
 
-        With subgridding on and no ``source``, each file is cropped into
+        With subgridding on and no ``download``, each file is cropped into
         :attr:`crop_dir` first and the cropped copy is linked. Downloaded files
         were already cropped.
         """
-        # Resolve subgridded paths for archive-mode subsetting
-        if self.config.subgrid_enable and self.config.source is None:
-            files = self._subset_archive_files(files)
+        # Crop local files; downloaded ones were cropped by arlmet
+        if self.config.subgrid_enable and self.config.download is None:
+            files = self._crop_local_files(files)
 
         target = Path(target_dir)
         target.mkdir(parents=True, exist_ok=True)
@@ -268,7 +268,8 @@ class MetStream:
             if existing is not None:
                 if existing != resolved_src:
                     logger.warning(
-                        "met source has duplicate basename %s at %s and %s; staging %s",
+                        "met %s has duplicate basename %s at %s and %s; staging %s",
+                        self.name,
                         src.name,
                         existing,
                         resolved_src,
@@ -289,7 +290,7 @@ class MetStream:
 
         return staged
 
-    def _subset_archive_files(self, files: list[Path]) -> list[Path]:
+    def _crop_local_files(self, files: list[Path]) -> list[Path]:
         """
         Crop local files into :attr:`crop_dir`, reusing crops that already exist.
 

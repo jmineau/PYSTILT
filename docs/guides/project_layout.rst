@@ -81,7 +81,7 @@ ID is the file name, under the day of the receptor time.
 
 A project runs every receptor under every variant, so 100 receptors and
 three variants make 300 simulations. With no ``variants`` in
-``config.yaml``, there is one variant per meteorology source (see
+``config.yaml``, there is one variant per met (see
 :doc:`configuration`).
 
 Opening a project again

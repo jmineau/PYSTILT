@@ -33,7 +33,7 @@ from stilt.errors import (
 )
 from stilt.footprint import Footprint
 from stilt.hysplit import HYSPLITDriver
-from stilt.meteorology import MetStream
+from stilt.meteorology import Met
 from stilt.simulation import Simulation
 from stilt.trajectory import Trajectories
 from stilt.transforms import ParticleTransform, TransformContext
@@ -130,7 +130,7 @@ def _append_error_log(sim: Simulation, *, phase: str, error: BaseException) -> N
 def run_trajectories(
     sim: Simulation,
     *,
-    met: MetStream,
+    met: Met,
     workdir: Path,
     keep_scratch: bool = False,
     timeout: int | None = None,
@@ -149,7 +149,7 @@ def run_trajectories(
     ----------
     sim : Simulation
         What to run.
-    met : MetStream
+    met : Met
         Meteorology for the run.
     workdir : Path
         Scratch directory to run in. Created here.
@@ -264,7 +264,7 @@ def write_footprint(
 def run_simulation(
     sim: Simulation,
     *,
-    met: MetStream,
+    met: Met,
     compute_root: Path,
     project_dir: Path | None = None,
     keep_scratch: bool = False,
@@ -286,7 +286,7 @@ def run_simulation(
     ----------
     sim : Simulation
         Simulation to run.
-    met : MetStream
+    met : Met
         Meteorology for the run.
     compute_root : Path
         Scratch root; HYSPLIT runs in ``compute_root / sim.id``.

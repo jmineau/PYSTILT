@@ -49,7 +49,7 @@ def _met(tmp_path) -> MetConfig:
 
 
 def _config(tmp_path, include_footprint=True, **overrides) -> ModelConfig:
-    """Minimal ModelConfig with one met stream and (optionally) a footprint grid."""
+    """Minimal ModelConfig with one met and (optionally) a footprint grid."""
     overrides.setdefault("grid", _GRID if include_footprint else None)
     return ModelConfig(mets={"hrrr": _met(tmp_path)}, **overrides)
 

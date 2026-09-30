@@ -40,11 +40,11 @@ Glossary
       NOAA's Air Resources Laboratory. NOAA publishes HRRR, NAM, GDAS, and
       other models in this format.
 
-   met name
-      The name you give a meteorology source in your settings, such as
-      ``hrrr``. With no :term:`variants <variant>` declared, each met source
-      is a variant of the same name, so the same receptor can be run with
-      several meteorology products side by side.
+   met
+      One named set of meteorology files in your settings, such as
+      ``hrrr``, written under ``mets`` in ``config.yaml``. With no
+      :term:`variants <variant>` declared, each met is a variant of the same
+      name, so the same receptor can be run with several mets side by side.
 
    defaults
       The settings written at the top level of ``config.yaml``. Every
@@ -52,8 +52,8 @@ Glossary
       variant with no overrides runs them as they are.
 
    variant
-      A named set of settings that every receptor is run under. It is a met
-      source plus any settings that differ from the :term:`defaults` in
+      A named set of settings that every receptor is run under. It is a
+      :term:`met` plus any settings that differ from the :term:`defaults` in
       ``config.yaml``, such as a different ``ziscale``, a wind-error run, or
       another footprint grid. See :doc:`../guides/configuration`.
 

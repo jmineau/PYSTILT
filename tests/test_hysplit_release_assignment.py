@@ -9,7 +9,7 @@ import numpy as np
 
 from stilt.config import MetConfig, STILTParams
 from stilt.hysplit.driver import HYSPLITDriver
-from stilt.meteorology import MetStream
+from stilt.meteorology import Met
 from stilt.receptors import ColumnReceptor, MultiPointReceptor
 
 from .conftest import integration
@@ -56,7 +56,7 @@ def test_hysplit_multipoint_release_points_follow_control_order(tmp_path, met_di
         rm_dat=True,
         varsiwant=["time", "indx", "long", "lati", "zagl", "foot"],
     )
-    met_files = MetStream(
+    met_files = Met(
         "hrrr", MetConfig(directory=met_dir, file_format="%Y%m%d_%H", file_tres="6h")
     ).required_files(r_time=receptor.time, n_hours=params.n_hours)
 
@@ -117,7 +117,7 @@ def test_hysplit_multipoint_release_points_follow_control_order_nondivisible(
         rm_dat=True,
         varsiwant=["time", "indx", "long", "lati", "zagl", "foot"],
     )
-    met_files = MetStream(
+    met_files = Met(
         "hrrr", MetConfig(directory=met_dir, file_format="%Y%m%d_%H", file_tres="6h")
     ).required_files(r_time=receptor.time, n_hours=params.n_hours)
 
@@ -170,7 +170,7 @@ def test_hysplit_column_release_spans_vertical_line_without_endpoint_chunking(
         rm_dat=True,
         varsiwant=["time", "indx", "long", "lati", "zagl", "foot"],
     )
-    met_files = MetStream(
+    met_files = Met(
         "hrrr", MetConfig(directory=met_dir, file_format="%Y%m%d_%H", file_tres="6h")
     ).required_files(r_time=receptor.time, n_hours=params.n_hours)
 
@@ -232,7 +232,7 @@ def test_close_spaced_slant_release_heights_are_recovered(tmp_path, met_dir):
         altitudes=altitudes,
     )
     params = STILTParams(n_hours=-1, numpar=200, hnf_plume=False, rm_dat=True)
-    met_files = MetStream(
+    met_files = Met(
         "hrrr", MetConfig(directory=met_dir, file_format="%Y%m%d_%H", file_tres="6h")
     ).required_files(r_time=receptor.time, n_hours=params.n_hours)
 

@@ -2,7 +2,7 @@
 The settings that identify a run, and their hash.
 
 A run is one receptor under one :class:`TransportSettings`: the transport
-fields that change its particles, the content of its meteorology, and the
+fields that change its particles, the settings of its meteorology, and the
 engine that produced them. Two variants with equal settings are one run.
 The hash of the settings names the run's folder in the output directory.
 """
@@ -18,7 +18,7 @@ from typing import Any, Self
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from .meteorology import MetConfig, MetContent
+from .meteorology import MetConfig, MetSettings
 from .params import STILTParams
 
 #: Transport fields that change no particle, so they are not part of a run's identity.
@@ -96,7 +96,7 @@ class TransportSettings(STILTParams):
 
     The transport fields of :class:`~stilt.config.STILTParams` (which also
     carry HYSPLIT's namelist writers and validators, so this is the object
-    the driver runs with), the :class:`~stilt.config.MetContent` of its
+    the driver runs with), the :class:`~stilt.config.MetSettings` of its
     meteorology, and the :class:`EngineInfo`. Fields that change no particle
     (``timeout``, ``rm_dat``, ``exe_dir``) are carried for running but left
     out of :meth:`identity` and :attr:`hash`.
@@ -107,7 +107,7 @@ class TransportSettings(STILTParams):
     changed default does not.
     """
 
-    met: MetContent = Field(description="Content of the meteorology the run used.")
+    met: MetSettings = Field(description="Settings of the meteorology the run used.")
     engine: EngineInfo = Field(
         description="Engine and version that produced the particles."
     )
@@ -124,7 +124,7 @@ class TransportSettings(STILTParams):
     def build(
         cls,
         params: STILTParams,
-        met: MetContent | MetConfig,
+        met: MetSettings | MetConfig,
         engine: EngineInfo | None = None,
         realization: int | None = None,
     ) -> Self:
@@ -136,9 +136,12 @@ class TransportSettings(STILTParams):
         """
         if engine is None:
             engine = EngineInfo(version=hysplit_version(params.exe_dir))
-        content = met.content() if isinstance(met, MetConfig) else met
+        met_settings = met.settings() if isinstance(met, MetConfig) else met
         return cls(
-            **params.model_dump(), met=content, engine=engine, realization=realization
+            **params.model_dump(),
+            met=met_settings,
+            engine=engine,
+            realization=realization,
         )
 
     def identity(self) -> dict[str, Any]:

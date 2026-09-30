@@ -80,6 +80,11 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   no HYSPLIT binary. PYSTILT imports, and a run raises the "no bundled
   HYSPLIT binary" error until `exe_dir` names your own build. Maintainers
   build all three with `just dist`.
+- **Met naming** (breaking). In a `mets` entry, `source:` is now
+  `download:` and `backend:` is now `download_from:`, so the name says what
+  it does and `backend` means only the execution backend. `MetStream` is now
+  `Met`, and `MetConfig.source_kwargs` is `download_options`. A named entry
+  under `mets` is called a *met* throughout the docs.
 
 ### Removed
 
@@ -93,8 +98,8 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - **`TransportSettings`, what identifies a run**
   ([#74](https://github.com/jmineau/PYSTILT/issues/74)). The transport
-  fields that change a run's particles, the content of its meteorology
-  (`MetContent`, which `MetConfig` now builds on), and the engine and
+  fields that change a run's particles, the settings of its meteorology
+  (`MetSettings`, which `MetConfig` now builds on), and the engine and
   version that produced them (`EngineInfo`). Its hash names the run's folder
   in the output directory, and a stored `settings.yaml` loads back through
   it, so a field added later with a default still matches. A custom
@@ -134,7 +139,7 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   ([#53](https://github.com/jmineau/PYSTILT/issues/53)). Crops of your own
   met files were found by file name only, so changing `subgrid_bounds`,
   `subgrid_buffer`, or `subgrid_levels` silently reused the old crop. Each
-  crop now goes in its own folder inside `subgrid_dir` (`MetStream.crop_dir`),
+  crop now goes in its own folder inside `subgrid_dir` (`Met.crop_dir`),
   named by a hash of the crop box and levels. A crop is written to a
   temporary name and renamed into place, so parallel workers never read a
   half-written file, and its file handle is now closed. Breaking:

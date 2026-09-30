@@ -107,9 +107,9 @@ Other differences
 -----------------
 
 A project runs its receptors under named *variants*. A variant is a
-meteorology source plus any settings that differ from the defaults (see
+met plus any settings that differ from the defaults (see
 :doc:`../guides/configuration`). One project can run the same receptors with
-several meteorology products, a range of ``ziscale`` values, or a second
+several mets, a range of ``ziscale`` values, or a second
 footprint grid. Each variant gets its own folder.
 
 The transport error run is a variant too. STILT-R runs HYSPLIT a second time
@@ -160,7 +160,7 @@ Moving a project over
 ---------------------
 
 1. Copy your ``run_stilt.r`` settings into ``config.yaml`` using the table
-   above. Start with one meteorology source and no ``variants``.
+   above. Start with one met and no ``variants``.
 2. Write your receptors to ``receptors.csv``.
 3. Run a few receptors that you already have STILT-R results for, and
    compare the footprints.
