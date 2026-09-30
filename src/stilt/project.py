@@ -153,13 +153,22 @@ class Project:
         skipped, and new rows use the file's own columns
         (:func:`stilt.receptors.append_receptors_csv`).
         """
-        from stilt.receptors import append_receptors_csv, receptors_to_csv
+        from stilt.receptors import (
+            append_receptors_csv,
+            check_distinct_ids,
+            receptors_to_csv,
+        )
 
         self.directory.mkdir(parents=True, exist_ok=True)
         if not self.has_receptors:
+            check_distinct_ids(receptors)
             self.receptors_path.write_text(receptors_to_csv(receptors))
             return list(receptors)
-        known = {r.id for r in self.load_receptors() or []}
+        existing = self.load_receptors() or []
+        # An id names a receptor's result files, so a new receptor may share
+        # one only with the same receptor already in the file.
+        check_distinct_ids([*existing, *receptors])
+        known = {r.id for r in existing}
         new = [r for r in receptors if r.id not in known]
         if new:
             text = self.receptors_path.read_text()

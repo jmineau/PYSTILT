@@ -11,14 +11,19 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterable, Iterator
 from pathlib import Path
-from typing import TYPE_CHECKING, overload
+from typing import TYPE_CHECKING, Any, overload
 
 import pandas as pd
 
 from stilt.footprint import Footprint
 from stilt.geometry import Geometry
 from stilt.output import Jacobian
-from stilt.receptors import Receptor, read_receptors
+from stilt.receptors import (
+    Receptor,
+    check_distinct_ids,
+    read_receptors,
+    receptors_to_frame,
+)
 from stilt.simulation import SimID, Simulation
 from stilt.trajectory import Trajectories
 
@@ -75,6 +80,7 @@ class ReceptorCollection:
         if isinstance(receptors, Iterable):
             items = list(receptors)
             if all(isinstance(item, Receptor) for item in items):
+                check_distinct_ids(items)
                 return items
         raise TypeError(
             "Receptors must be a Receptor, an iterable of Receptors, or a path to "
@@ -107,6 +113,7 @@ class ReceptorCollection:
         time: slice | tuple | str | pd.Timestamp | None = None,
         location: str | Iterable[str] | None = None,
         where: Callable[[Receptor], bool] | None = None,
+        **labels: Any,
     ) -> ReceptorCollection:
         """
         Return the receptors that match every given filter.
@@ -121,10 +128,17 @@ class ReceptorCollection:
         where : callable, optional
             Function that takes a :class:`~stilt.Receptor` and returns
             ``True`` to keep it.
+        **labels
+            Values of the receptors' ``attrs`` to match, such as
+            ``site="WBB"``. A list keeps any of its values.
 
         Returns
         -------
         ReceptorCollection
+
+        Examples
+        --------
+        >>> model.receptors.sel(time=("2024-07-01", "2024-07-02"), site="WBB")
         """
         items = list(self._load())
         if time is not None:
@@ -135,7 +149,18 @@ class ReceptorCollection:
             items = [r for r in items if r.location_id in wanted]
         if where is not None:
             items = [r for r in items if where(r)]
+        for label, value in labels.items():
+            wanted = set(value) if isinstance(value, (list, tuple, set)) else {value}
+            items = [r for r in items if r.attrs.get(label) in wanted]
         return ReceptorCollection(items, project=self._project)
+
+    def to_frame(self) -> pd.DataFrame:
+        """
+        Return the receptors as one table with a row per release point.
+
+        See :func:`stilt.receptors.receptors_to_frame` for the columns.
+        """
+        return receptors_to_frame(self._load())
 
     @overload
     def __getitem__(self, item: int | str) -> Receptor: ...
@@ -268,6 +293,7 @@ class SimulationCollection:
         time: slice | tuple | str | pd.Timestamp | None = None,
         location: str | Iterable[str] | None = None,
         where: Callable[[Receptor], bool] | None = None,
+        **labels: Any,
     ) -> SimulationCollection:
         """
         Return the simulations that match every given filter.
@@ -279,8 +305,9 @@ class SimulationCollection:
         variant : str or iterable of str, optional
             One or more variant names. A realization group's name
             (``hrrr-err``) selects all its realizations.
-        time, location, where
-            Receptor filters, as in :meth:`ReceptorCollection.sel`.
+        time, location, where, **labels
+            Receptor filters, as in :meth:`ReceptorCollection.sel`. A
+            label such as ``site="WBB"`` matches the receptors' ``attrs``.
 
         Returns
         -------
@@ -310,11 +337,11 @@ class SimulationCollection:
                 for k in keys
                 if k.variant in wanted or groups.get(k.variant) in wanted
             ]
-        if time is not None or location is not None or where is not None:
+        if time is not None or location is not None or where is not None or labels:
             ids = {
                 r.id
                 for r in self._model.receptors.sel(
-                    time=time, location=location, where=where
+                    time=time, location=location, where=where, **labels
                 )
             }
             keys = [k for k in keys if k.receptor in ids]

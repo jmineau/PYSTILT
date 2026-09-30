@@ -726,6 +726,50 @@ def test_sel_where_uses_receptor_attrs(tmp_path):
     ]
 
 
+def test_sel_by_label_and_the_receptor_table(tmp_path):
+    (tmp_path / RECEPTORS_KEY).write_text(
+        "time,longitude,latitude,altitude,scene\n"
+        "2023-01-01 12:00:00,-111.85,40.77,5.0,A\n"
+        "2023-01-01 13:00:00,-111.85,40.77,5.0,B\n"
+        "2023-01-01 14:00:00,-111.85,40.77,5.0,C\n"
+    )
+    model = Model(project=tmp_path, config=_config(tmp_path))
+
+    assert [r.attrs["scene"] for r in model.receptors.sel(scene="B")] == ["B"]
+    assert len(model.receptors.sel(scene=["A", "C"])) == 2
+    assert len(model.receptors.sel(scene="Z")) == 0
+    assert len(model.simulations.sel(scene="A")) == 1
+    assert len(model.simulations.sel(scene=["A", "C"], time="2023-01-01 14:00")) == 1
+
+    frame = model.receptors.to_frame()
+    assert list(frame.columns)[-1] == "scene"
+    assert frame["scene"].tolist() == ["A", "B", "C"]
+    assert len(frame) == 3
+
+
+def test_receptors_that_would_share_result_files_are_refused(tmp_path):
+    """Two receptors with one id would overwrite each other's results."""
+    from stilt.receptors import MultiPointReceptor
+
+    def slant(alt):
+        return MultiPointReceptor(
+            "2023-01-01 12:00", [-111.85, -111.86], [40.77, 40.78], [alt, 500.0]
+        )
+
+    a, b = slant(10.001), slant(10.004)
+    assert a.id == b.id and a != b
+    with pytest.raises(ValueError, match="share the id"):
+        _ = Model(
+            project=tmp_path, config=_config(tmp_path), receptors=[a, b]
+        ).receptors
+
+    model = Model(project=tmp_path, config=_config(tmp_path), receptors=[a])
+    model.register()
+    with pytest.raises(ValueError, match="share the id"):
+        model.register([b])
+    assert model.register([slant(10.001)]) == [a.id]  # the same receptor again is fine
+
+
 def test_sel_raises_for_unknown_receptor_or_variant(tmp_path, point_receptor):
     model = Model(
         project=tmp_path,

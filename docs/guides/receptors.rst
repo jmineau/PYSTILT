@@ -150,9 +150,13 @@ results (see :doc:`outputs`):
 
 .. code-block:: python
 
-   model.simulations.sel(where=lambda r: r.attrs["scene"] == "A")
+   model.simulations.sel(scene="A")
+   model.receptors.sel(site=["WBB", "UOU"])
 
 For a receptor built from several rows, the first row's labels are used.
+
+``model.receptors.to_frame()`` gives the receptors back as one table with a
+row per release point, in the same columns as the file.
 
 A project's ``receptors.csv`` is read automatically. To load another CSV,
 use :func:`read_receptors`, or pass the path to the model:
@@ -163,7 +167,9 @@ use :func:`read_receptors`, or pass the path to the model:
    model = stilt.Model(project="./my_project", receptors="my_receptors.csv")
 
 Receptors you add to a project later are appended to its ``receptors.csv``
-using the file's own columns (see :doc:`project_layout`).
+using the file's own columns (see :doc:`project_layout`). If a new receptor's
+heights are above sea level and the file has no ``altitude_ref`` column, the
+column is added.
 
 
 How particles are released
@@ -223,9 +229,9 @@ Shared interface
 All three classes have these members:
 
 ``receptor.id``
-   A :class:`ReceptorID` string of the form ``YYYYMMDDHHMM_{location}``.
-   Together with a variant name it identifies a simulation and names its
-   output folder (see :doc:`project_layout`).
+   A string of the form ``YYYYMMDDHHMM_{location}``. It names the receptor's
+   result files (see :doc:`project_layout`), so two different receptors may
+   not share one. ``receptor.location_id`` is the location part.
 
 ``receptor.time``
    The release time, as a :class:`datetime.datetime` in UTC with no
@@ -252,9 +258,11 @@ All three classes have these members:
 
 ``receptor.to_dict()`` and ``Receptor.from_dict(d)``
    Convert to and from a JSON-friendly dictionary. The dictionary has a
-   ``"type"`` key (``"PointReceptor"``, ``"ColumnReceptor"``, or
-   ``"MultiPointReceptor"``), which ``Receptor.from_dict`` uses to rebuild
-   the right class.
+   ``"kind"`` key (``"point"``, ``"column"``, or ``"multipoint"``), which
+   ``Receptor.from_dict`` uses to rebuild the right class.
+
+Receptors are frozen. To change one, make a copy with
+``receptor.model_copy(update={"altitude": 20})``.
 
 
 Checking the type

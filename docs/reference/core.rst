@@ -25,9 +25,11 @@ Receptor objects
    PointReceptor
    ColumnReceptor
    MultiPointReceptor
-   ReceptorID
-   LocationID
    read_receptors
+   receptors.write_receptors
+   receptors.receptors_to_frame
+   receptors.receptors_from_frame
+   receptors.parse_receptor_id
 
 Simulation objects
 ------------------

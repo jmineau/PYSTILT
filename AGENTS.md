@@ -90,7 +90,9 @@ src/stilt/
                      footprint files, Jacobian assembly)
   simulation.py      Simulation, SimID: a frozen value (receptor, variant, output)
                      that knows where its results are and whether they exist
-  receptors.py       receptor types (point, multipoint, column) and IDs
+  receptors.py       receptor types (frozen pydantic models: point, column,
+                     multipoint), their ids, and the receptor table behind
+                     the CSV reader, writer, and appender
   trajectory.py      Trajectories: particle output container + Parquet I/O
   footprint.py       Footprint: gridded CF-1.8 NetCDF output, enhancement from
                      a flux field, aggregation onto other spatial targets
