@@ -152,9 +152,9 @@ def test_output_finds_a_run_whose_stored_settings_predate_a_field(tmp_path):
     settings = TransportSettings.build(STILTParams(numpar=100), _met(tmp_path))
     run = out.run("hrrr", settings)
 
-    record = yaml.safe_load((run.path / "settings.yaml").read_text())
+    record = yaml.safe_load((run.path / "_settings.yaml").read_text())
     del record["settings"]["capemin"]  # as if written before the field existed
-    (run.path / "settings.yaml").write_text(yaml.safe_dump(record))
+    (run.path / "_settings.yaml").write_text(yaml.safe_dump(record))
 
     found = out.find_run(settings)
     assert found is not None and found.path == run.path
