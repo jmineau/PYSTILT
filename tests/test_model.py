@@ -1232,3 +1232,73 @@ def test_run_no_wait_returns_handle_without_waiting(tmp_path, point_receptor):
 
     assert returned is handle
     assert handle.wait_calls == 0
+
+
+# ---------------------------------------------------------------------------
+# Completion by listing agrees with completion by file
+# ---------------------------------------------------------------------------
+
+
+def _mixed_state_model(tmp_path):
+    """Six receptors under three variants, in every state a simulation can be in."""
+    receptors = [_receptor(h) for h in range(10, 16)]
+    config = _config(
+        tmp_path,
+        variants={
+            "hrrr": {},
+            "smooth": {"smooth_factor": 2},  # shares hrrr's particles
+            "zi08": {"ziscale": 0.8, "grid": None},  # particles only
+        },
+    )
+    model = Model(project=tmp_path, config=config, receptors=receptors)
+    a, b, c, d, e, _ = receptors
+    _write_trajectory(model, _sid(a))  # particles, no footprint
+    _write_trajectory(model, _sid(b))
+    _write_footprint(model, _sid(b))  # complete for hrrr, not for smooth
+    _write_trajectory(model, _sid(c))
+    _write_footprint(model, _sid(c), empty=True)  # an empty footprint counts
+    _write_footprint(model, _sid(c, "smooth"))
+    _write_trajectory(model, _sid(d, "zi08"))  # complete: zi08 makes no footprint
+    _write_trajectory(model, _sid(e))
+    _write_footprint(model, _sid(e))
+    _write_footprint(model, _sid(e, "smooth"))
+    _write_trajectory(model, _sid(e, "zi08"))  # complete under every variant
+    return model
+
+
+@pytest.mark.parametrize("list_from", [0, 10_000], ids=["listing", "file-by-file"])
+def test_incomplete_and_status_agree_with_is_complete(tmp_path, monkeypatch, list_from):
+    """Both ways of checking must give `Simulation.is_complete()`'s answer."""
+    import stilt.collections as collections
+
+    monkeypatch.setattr(collections, "_LIST_FROM", list_from)
+    model = _mixed_state_model(tmp_path)
+    sims = model.simulations
+
+    expected = [sim.id for sim in sims if not sim.is_complete()]
+    assert 0 < len(expected) < len(sims)
+    assert sims.incomplete().keys() == expected
+
+    status = sims.status()
+    assert status["complete"].tolist() == [sim.is_complete() for sim in sims]
+    assert status["trajectory"].tolist() == [sim.has_trajectory for sim in sims]
+    for row, sim in zip(status.itertuples(), sims, strict=True):
+        if sim.makes_footprint:
+            assert row.footprint == sim.has_footprint
+            assert row.empty == (sim.empty_reason is not None)
+        else:
+            assert pd.isna(row.footprint) and pd.isna(row.empty)
+
+    one_variant = sims.sel(variant="smooth")
+    assert one_variant.incomplete().keys() == [
+        sim.id for sim in one_variant if not sim.is_complete()
+    ]
+
+
+def test_incomplete_of_a_project_with_no_results_is_everything(tmp_path, monkeypatch):
+    import stilt.collections as collections
+
+    monkeypatch.setattr(collections, "_LIST_FROM", 0)
+    model = Model(project=tmp_path, config=_config(tmp_path), receptors=[_receptor(12)])
+    assert model.simulations.incomplete().keys() == model.simulations.keys()
+    assert not model.output.path.exists()  # looking creates nothing

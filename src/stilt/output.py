@@ -46,6 +46,7 @@ import logging
 import os
 import re
 from collections.abc import Iterable
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any, NamedTuple
 
@@ -97,17 +98,31 @@ def _receptor_time(receptor_id: str) -> dt.datetime:
 
 
 def _list_receptor_files(root: Path, suffix: str) -> dict[str, Path]:
-    """Return ``{receptor_id: path}`` for every ``date=*/<id><suffix>`` under *root*, in date order."""
+    """
+    Return ``{receptor_id: path}`` for every ``date=*/<id><suffix>`` under *root*, in date order.
+
+    The date folders are listed in a few threads. On a network filesystem
+    the listing waits on the server, and a project can have thousands of
+    date folders.
+    """
     if not root.exists():
         return {}
-    found: dict[str, Path] = {}
-    for day in sorted(os.scandir(root), key=lambda e: e.name):
-        if not (day.is_dir() and day.name.startswith("date=")):
-            continue
-        for entry in sorted(os.scandir(day.path), key=lambda e: e.name):
-            if entry.name.endswith(suffix):
-                found[entry.name[: -len(suffix)]] = Path(entry.path)
-    return found
+    days = sorted(
+        entry.path
+        for entry in os.scandir(root)
+        if entry.name.startswith("date=") and entry.is_dir()
+    )
+
+    def names(day: str) -> list[str]:
+        return sorted(e.name for e in os.scandir(day) if e.name.endswith(suffix))
+
+    with ThreadPoolExecutor(max_workers=16) as pool:
+        listed = list(pool.map(names, days))
+    return {
+        name[: -len(suffix)]: Path(day, name)
+        for day, per_day in zip(days, listed, strict=True)
+        for name in per_day
+    }
 
 
 def _write_atomic_table(table: pa.Table, path: Path) -> Path:

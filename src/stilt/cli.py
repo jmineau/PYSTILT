@@ -16,6 +16,7 @@ prints a short summary. Examples::
 from __future__ import annotations
 
 import logging
+from collections import Counter
 from pathlib import Path
 from typing import Any
 
@@ -254,19 +255,22 @@ def status(project: str | None = _PROJECT_ARG) -> None:
 # ---------------------------------------------------------------------------
 
 
-def _counts(table: Any) -> str:
-    """Return a ``total / completed / pending`` line for a status table."""
-    done = int(table["complete"].sum())
-    return f"total={len(table)}  completed={done}  pending={len(table) - done}"
+def _counts(total: int, pending: int) -> str:
+    """Return a ``total / completed / pending`` line."""
+    return f"total={total}  completed={total - pending}  pending={pending}"
 
 
 def _print_status(model: Model) -> None:
     """Print a project status summary, per variant when there are several."""
-    table = model.status()
-    typer.echo(f"Project: {model.project.root}  {_counts(table)}")
+    sims = model.simulations
+    pending = sims.incomplete()
+    typer.echo(f"Project: {model.project.root}  {_counts(len(sims), len(pending))}")
     if len(model.variants) > 1:
-        for variant, rows in table.groupby("variant", sort=False):
-            typer.echo(f"  {variant}: {_counts(rows)}")
+        per_variant = len(sims) // len(model.variants)
+        pending_ids = pending.keys()
+        waiting = Counter(key.variant for key in pending_ids)
+        for variant in model.variants:
+            typer.echo(f"  {variant}: {_counts(per_variant, waiting[variant])}")
     unreferenced = model.unreferenced()
     for kind, keys in unreferenced.items():
         if keys:
