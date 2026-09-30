@@ -3,15 +3,14 @@
 from __future__ import annotations
 
 import logging
-import os
 import shutil
-import uuid
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
 import pandas as pd
 from pandas.tseries.frequencies import to_offset
 
+from stilt._atomic import atomic_path
 from stilt.config import MetConfig
 from stilt.config.transport import settings_hash
 from stilt.errors import MeteorologyError
@@ -312,11 +311,7 @@ class Met:
             cache_path = crop_dir / src.name
             if not cache_path.exists():
                 logger.info("Subsetting %s → %s", src.name, cache_path)
-                tmp = crop_dir / f".{src.name}.{uuid.uuid4().hex}.tmp"
-                try:
+                with atomic_path(cache_path) as tmp:
                     extract_subset(src, tmp, bbox=bbox, levels=levels)
-                    os.replace(tmp, cache_path)
-                finally:
-                    tmp.unlink(missing_ok=True)
             subsetted.append(cache_path)
         return subsetted

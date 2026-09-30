@@ -48,7 +48,6 @@ import re
 from collections.abc import Iterable
 from pathlib import Path
 from typing import Any, NamedTuple
-from uuid import uuid4
 
 import numpy as np
 import pandas as pd
@@ -59,6 +58,7 @@ import xarray as xr
 import yaml
 from scipy import sparse
 
+from stilt._atomic import atomic_path
 from stilt.config import (
     FootprintConfig,
     Grid,
@@ -110,28 +110,11 @@ def _list_receptor_files(root: Path, suffix: str) -> dict[str, Path]:
     return found
 
 
-def _temporary(path: Path) -> Path:
-    """
-    Return a temporary name beside *path* that no other writer uses.
-
-    Two workers can write the same file at once (the settings of a run they
-    both start, or a receptor run twice by accident). Each writes under its
-    own name and renames it into place, so neither can move or remove the
-    other's half-written file. The leading dot keeps dataset readers from
-    listing it.
-    """
-    return path.with_name(f".{path.name}.{uuid4().hex}.tmp")
-
-
 def _write_atomic_table(table: pa.Table, path: Path) -> Path:
     """Write *table* as zstd Parquet through a temporary file, so a reader never sees a partial file."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = _temporary(path)
-    try:
+    with atomic_path(path) as tmp:
         pq.write_table(table, tmp, compression="zstd")
-        os.replace(tmp, path)
-    finally:
-        tmp.unlink(missing_ok=True)
     return path
 
 
@@ -146,16 +129,12 @@ def _write_settings(path: Path, record: dict[str, Any]) -> None:
             )
         return
     path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = _temporary(path)
-    try:
+    # Another worker may write the same settings meanwhile; both files say
+    # the same thing, so whichever rename lands last is fine.
+    with atomic_path(path) as tmp:
         tmp.write_text(
             yaml.safe_dump(record, default_flow_style=False, sort_keys=False)
         )
-        # Another worker may have written the same settings meanwhile; both
-        # files say the same thing, so whichever rename lands last is fine.
-        os.replace(tmp, path)
-    finally:
-        tmp.unlink(missing_ok=True)
 
 
 def _pystilt_version() -> str:

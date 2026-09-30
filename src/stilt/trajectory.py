@@ -2,17 +2,16 @@
 
 import json
 import logging
-import os
 import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Self, cast
-from uuid import uuid4
 
 import numpy as np
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 
+from stilt._atomic import atomic_path
 from stilt.config import STILTParams
 from stilt.receptors import ColumnReceptor, MultiPointReceptor, PointReceptor, Receptor
 
@@ -402,13 +401,8 @@ class Trajectories:
         }
         existing = table.schema.metadata or {}
         table = table.replace_schema_metadata({**existing, **meta})
-        tmp_path = path.with_name(f".{path.name}.{uuid4().hex}.tmp")
-        try:
-            pq.write_table(table, tmp_path, compression="zstd")
-            os.replace(tmp_path, path)
-        finally:
-            if tmp_path.exists():
-                tmp_path.unlink()
+        with atomic_path(path) as tmp:
+            pq.write_table(table, tmp, compression="zstd")
         return path
 
 
