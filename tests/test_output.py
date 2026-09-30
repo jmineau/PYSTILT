@@ -40,7 +40,12 @@ SETTINGS = _settings()
 
 
 def _receptor(hour: int = 12, day: int = 15) -> PointReceptor:
-    return PointReceptor(dt.datetime(2024, 7, day, hour), -111.85, 40.77, 5.0)
+    return PointReceptor(
+        time=dt.datetime(2024, 7, day, hour),
+        longitude=-111.85,
+        latitude=40.77,
+        altitude=5.0,
+    )
 
 
 def _trajectories(receptor: PointReceptor, n: int = 50) -> Trajectories:

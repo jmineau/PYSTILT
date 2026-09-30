@@ -626,7 +626,9 @@ def test_trajectories_footprint_regenerates_on_new_grid(tmp_path):
             "foot": rng.uniform(0.0, 1e-3, n * 2),
         }
     )
-    receptor = PointReceptor("2023-01-01 12:00:00", -113.5, 39.5, 5.0)
+    receptor = PointReceptor(
+        time="2023-01-01 12:00:00", longitude=-113.5, latitude=39.5, altitude=5.0
+    )
     traj = Trajectories.from_particles(
         particles=particles,
         receptor=receptor,

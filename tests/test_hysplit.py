@@ -124,7 +124,7 @@ def test_control_file_roundtrip_multipoint_receptor(multipoint_receptor, tmp_pat
     cf.write(path)
     loaded = ControlFile.read(path)
     assert isinstance(loaded.receptor, MultiPointReceptor)
-    assert len(loaded.receptor) == len(multipoint_receptor)
+    assert loaded.receptor.coords() == multipoint_receptor.coords()
 
 
 def test_control_file_read_missing_raises(tmp_path):

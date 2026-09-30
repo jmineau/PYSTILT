@@ -47,7 +47,9 @@ def _column_trajectory(
     time: dt.datetime = REFERENCE_TIME,
 ):
     """Run a short WBB column simulation and return (receptor, particles)."""
-    receptor = ColumnReceptor(time, WBB_LON, WBB_LAT, 0.0, top)
+    receptor = ColumnReceptor(
+        time=time, longitude=WBB_LON, latitude=WBB_LAT, bottom=0.0, top=top
+    )
     params = STILTParams(n_hours=-2, numpar=numpar, hnf_plume=False, rm_dat=True)
     met_files = Met(
         "hrrr",

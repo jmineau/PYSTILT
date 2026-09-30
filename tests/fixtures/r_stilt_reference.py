@@ -168,24 +168,24 @@ class ReferenceScenario:
 
         if self.receptor_type == "point":
             return PointReceptor(
-                self.time,
-                float(self.longitude),  # type: ignore[arg-type]
-                float(self.latitude),  # type: ignore[arg-type]
-                float(self.altitude),  # type: ignore[arg-type]
+                time=self.time,
+                longitude=float(self.longitude),  # type: ignore[arg-type]
+                latitude=float(self.latitude),  # type: ignore[arg-type]
+                altitude=float(self.altitude),  # type: ignore[arg-type]
                 altitude_ref=self.altitude_ref,  # type: ignore[arg-type]
             )
         if self.receptor_type == "column":
             bottom, top = self.altitude  # type: ignore[misc]
             return ColumnReceptor(
-                self.time,
-                float(self.longitude),  # type: ignore[arg-type]
-                float(self.latitude),  # type: ignore[arg-type]
+                time=self.time,
+                longitude=float(self.longitude),  # type: ignore[arg-type]
+                latitude=float(self.latitude),  # type: ignore[arg-type]
                 bottom=float(bottom),
                 top=float(top),
                 altitude_ref=self.altitude_ref,  # type: ignore[arg-type]
             )
         return MultiPointReceptor(
-            self.time,
+            time=self.time,
             longitudes=list(self.longitude),  # type: ignore[arg-type]
             latitudes=list(self.latitude),  # type: ignore[arg-type]
             altitudes=list(self.altitude),  # type: ignore[arg-type]

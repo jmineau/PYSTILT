@@ -310,7 +310,7 @@ def test_ggg_oof_slant_recipe_windows():
         w.longitude, w.latitude, alts, zenith=w.zenith, azimuth=w.azimuth
     )
     receptor = stilt.Receptor.from_points(windows.index[0], points, altitude_ref="msl")
-    assert len(receptor) == 20
+    assert len(receptor.coords()) == 20
     # morning at ~15 UT in Salt Lake City: the sun is east, so the path leans east
     assert receptor.longitudes[-1] > receptor.longitudes[0]
 

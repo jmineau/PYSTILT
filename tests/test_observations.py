@@ -93,7 +93,7 @@ def test_slant_points_make_a_multipoint_receptor():
     receptor = Receptor.from_points("2023-07-15 18:00", points, altitude_ref="msl")
 
     assert isinstance(receptor, MultiPointReceptor)
-    assert len(receptor) == 5
+    assert len(receptor.coords()) == 5
     assert receptor.altitude_ref == "msl"
     assert receptor.longitudes[-1] > receptor.longitudes[0]  # azimuth 90: leans east
 

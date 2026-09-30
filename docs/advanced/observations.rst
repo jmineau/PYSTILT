@@ -73,7 +73,10 @@ A worked example
    df = pd.concat(chosen)
 
    # 3. build: one receptor per row
-   receptors = [ColumnReceptor(r.time, r.longitude, r.latitude, 0, 3000) for r in df.itertuples()]
+   receptors = [
+       ColumnReceptor(time=r.time, longitude=r.longitude, latitude=r.latitude, bottom=0, top=3000)
+       for r in df.itertuples()
+   ]
    model.register(receptors=receptors)
 
    # 4. weight: each sounding's kernel, keyed by its receptor, in the project

@@ -170,7 +170,10 @@ df = read_tropomi_ch4(path)                      # or read_oco2, read_tccon, or 
 df["overpass"] = group_by_overpass(df["time"])   # label rows by overpass
 
 model = stilt.Model(project="./my_project")      # a project with a config.yaml
-receptors = [stilt.ColumnReceptor(r.time, r.longitude, r.latitude, 0, 3000) for r in df.itertuples()]
+receptors = [
+    stilt.ColumnReceptor(time=r.time, longitude=r.longitude, latitude=r.latitude, bottom=0, top=3000)
+    for r in df.itertuples()
+]
 model.register(receptors=receptors)
 
 averaging_kernel_table(receptors, levels=df.ak_pressure, values=df.ak).to_parquet(

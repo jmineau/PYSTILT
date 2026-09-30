@@ -61,7 +61,9 @@ pytestmark = [pytest.mark.fidelity]
 _R_HELPERS = Path(__file__).parents[1] / "fixtures" / "r_helpers"
 
 _RECEPTOR_TIME = dt.datetime(2015, 12, 10, 0, 0)
-_RECEPTOR = PointReceptor(_RECEPTOR_TIME, -112.0, 40.5, 5.0)
+_RECEPTOR = PointReceptor(
+    time=_RECEPTOR_TIME, longitude=-112.0, latitude=40.5, altitude=5.0
+)
 
 _GRID = Grid(
     xmin=-113.0,

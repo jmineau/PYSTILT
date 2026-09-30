@@ -14,7 +14,7 @@ import datetime as dt
 import hashlib
 import json
 import re
-from collections.abc import Iterable, Iterator, Mapping
+from collections.abc import Iterable, Mapping
 from functools import cached_property
 from io import StringIO
 from pathlib import Path
@@ -107,35 +107,19 @@ def parse_receptor_id(receptor_id: str) -> tuple[dt.datetime, str]:
     Raises
     ------
     ValueError
-        If *receptor_id* does not have this form.
+        If *receptor_id* does not start with a ``YYYYMMDDHHMM`` time and an
+        underscore.
     """
-    match = re.fullmatch(r"(?P<time>\d{12})_(?P<location>.+)", str(receptor_id))
-    if match is None:
+    stamp, _, location = str(receptor_id).partition("_")
+    try:
+        if len(stamp) != 12 or not stamp.isdigit() or not location:
+            raise ValueError
+        time = dt.datetime.strptime(stamp, "%Y%m%d%H%M")
+    except ValueError:
         raise ValueError(
             f"Receptor id {receptor_id!r} is not of the form "
             "'{YYYYMMDDHHMM}_{location_id}'."
-        )
-    try:
-        time = dt.datetime.strptime(match.group("time"), "%Y%m%d%H%M")
-    except ValueError as exc:
-        raise ValueError(
-            f"Receptor id {receptor_id!r} does not start with a YYYYMMDDHHMM time."
-        ) from exc
-    location = match.group("location")
-    if not re.fullmatch(r"multi_[0-9a-f]{10}", location):
-        parts = location.split("_")
-        try:
-            if len(parts) != 3:
-                raise ValueError
-            float(parts[0])
-            float(parts[1])
-            if parts[2] != "X":
-                float(parts[2])
-        except ValueError:
-            raise ValueError(
-                f"Receptor id {receptor_id!r} has no location of the form "
-                "'lon_lat_alt', 'lon_lat_X', or 'multi_<hash>'."
-            ) from None
+        ) from None
     return time, location
 
 
@@ -178,7 +162,8 @@ class Receptor(BaseModel):
 
     time: dt.datetime = Field(description="Release time, UTC.")
     altitude_ref: VerticalReference = Field(
-        "agl", description="Whether heights are above ground (agl) or sea level (msl)."
+        default="agl",
+        description="Whether heights are above ground (agl) or sea level (msl).",
     )
     attrs: dict[str, Any] = Field(
         default_factory=dict,
@@ -212,13 +197,6 @@ class Receptor(BaseModel):
     def coords(self) -> list[tuple[float, float, float]]:
         """Return ``(lat, lon, alt)`` of each release point."""
         raise NotImplementedError
-
-    def __iter__(self) -> Iterator[tuple[float, float, float]]:  # type: ignore[override]
-        """Yield ``(lat, lon, alt)`` for each release point."""
-        return iter(self.coords())
-
-    def __len__(self) -> int:
-        return len(self.coords())
 
     def __eq__(self, other: object) -> bool:
         if type(self) is not type(other):
@@ -328,25 +306,36 @@ class Receptor(BaseModel):
         if not pts:
             raise ValueError("At least one point must be provided.")
         labels = dict(attrs or {})
+        time = parse_time(time)
         if len(pts) == 1:
             lon, lat, alt = pts[0]
             return PointReceptor(
-                time, lon, lat, alt, altitude_ref=altitude_ref, attrs=labels
+                time=time,
+                longitude=lon,
+                latitude=lat,
+                altitude=alt,
+                altitude_ref=altitude_ref,
+                attrs=labels,
             )
         if len(pts) == 2 and pts[0][:2] == pts[1][:2]:
             bottom, top = sorted((pts[0][2], pts[1][2]))
             return ColumnReceptor(
-                time,
-                pts[0][0],
-                pts[0][1],
-                bottom,
-                top,
+                time=time,
+                longitude=pts[0][0],
+                latitude=pts[0][1],
+                bottom=bottom,
+                top=top,
                 altitude_ref=altitude_ref,
                 attrs=labels,
             )
         lons, lats, alts = zip(*pts, strict=True)
         return MultiPointReceptor(
-            time, lons, lats, alts, altitude_ref=altitude_ref, attrs=labels
+            time=time,
+            longitudes=lons,
+            latitudes=lats,
+            altitudes=alts,
+            altitude_ref=altitude_ref,
+            attrs=labels,
         )
 
 
@@ -396,28 +385,6 @@ class PointReceptor(Receptor):
     longitude: float = Field(description="Longitude of the release point, degrees.")
     latitude: float = Field(description="Latitude of the release point, degrees.")
     altitude: float = Field(description="Release height, metres.")
-
-    def __init__(
-        self,
-        time: TimeLike,
-        longitude: float,
-        latitude: float,
-        altitude: float,
-        *,
-        altitude_ref: VerticalReference = "agl",
-        attrs: Mapping[str, Any] | None = None,
-        kind: Literal["point"] = "point",
-    ) -> None:
-        BaseModel.__init__(
-            self,
-            time=time,
-            longitude=longitude,
-            latitude=latitude,
-            altitude=altitude,
-            altitude_ref=altitude_ref,
-            attrs=dict(attrs or {}),
-            kind=kind,
-        )
 
     @model_validator(mode="after")
     def _check(self) -> PointReceptor:
@@ -474,30 +441,6 @@ class ColumnReceptor(Receptor):
     latitude: float = Field(description="Latitude of the column, degrees.")
     bottom: float = Field(description="Bottom of the column, metres.")
     top: float = Field(description="Top of the column, metres.")
-
-    def __init__(
-        self,
-        time: TimeLike,
-        longitude: float,
-        latitude: float,
-        bottom: float,
-        top: float,
-        *,
-        altitude_ref: VerticalReference = "agl",
-        attrs: Mapping[str, Any] | None = None,
-        kind: Literal["column"] = "column",
-    ) -> None:
-        BaseModel.__init__(
-            self,
-            time=time,
-            longitude=longitude,
-            latitude=latitude,
-            bottom=bottom,
-            top=top,
-            altitude_ref=altitude_ref,
-            attrs=dict(attrs or {}),
-            kind=kind,
-        )
 
     @model_validator(mode="after")
     def _check(self) -> ColumnReceptor:
@@ -574,28 +517,6 @@ class MultiPointReceptor(Receptor):
     latitudes: tuple[float, ...] = Field(description="Latitude of each point, degrees.")
     altitudes: tuple[float, ...] = Field(description="Height of each point, metres.")
 
-    def __init__(
-        self,
-        time: TimeLike,
-        longitudes: Iterable[float],
-        latitudes: Iterable[float],
-        altitudes: Iterable[float],
-        *,
-        altitude_ref: VerticalReference = "agl",
-        attrs: Mapping[str, Any] | None = None,
-        kind: Literal["multipoint"] = "multipoint",
-    ) -> None:
-        BaseModel.__init__(
-            self,
-            time=time,
-            longitudes=longitudes,
-            latitudes=latitudes,
-            altitudes=altitudes,
-            altitude_ref=altitude_ref,
-            attrs=dict(attrs or {}),
-            kind=kind,
-        )
-
     @field_validator("longitudes", "latitudes", "altitudes", mode="before")
     @classmethod
     def _as_floats(cls, value: Any) -> tuple[float, ...]:
@@ -656,7 +577,7 @@ class MultiPointReceptor(Receptor):
 
     def __repr__(self) -> str:
         return (
-            f"MultiPointReceptor(id={self.id!r}, n_points={len(self)}, "
+            f"MultiPointReceptor(id={self.id!r}, n_points={len(self.coords())}, "
             f"altitude_ref={self.altitude_ref})"
         )
 
@@ -791,7 +712,12 @@ def receptors_from_frame(frame: pd.DataFrame) -> list[Receptor]:
 
     def point(i: int) -> Receptor:
         return PointReceptor(
-            time.iloc[i], lon[i], lat[i], alt[i], altitude_ref=ref[i], attrs=attrs[i]
+            time=time.iloc[i],
+            longitude=lon[i],
+            latitude=lat[i],
+            altitude=alt[i],
+            altitude_ref=ref[i],
+            attrs=attrs[i],
         )
 
     if "r_idx" not in frame.columns:
@@ -938,14 +864,14 @@ def append_receptors_csv(text: str, receptors: Iterable[Receptor]) -> str:
     receptors = list(receptors)
     if not text.strip():
         return receptors_to_csv(receptors)
-    existing = pd.read_csv(StringIO(text), dtype=str, keep_default_na=False)
-    _, spelling = _normalize_columns(existing.iloc[:0])
+    columns = list(pd.read_csv(StringIO(text), nrows=0).columns)
+    _, spelling = _normalize_columns(pd.DataFrame(columns=columns))
     missing = [
         f for f in ("time", "longitude", "latitude", "altitude") if f not in spelling
     ]
     if missing:
         raise ValueError(f"receptors.csv lacks a column for {missing}; cannot append.")
-    if "r_idx" not in spelling and any(len(r) > 1 for r in receptors):
+    if "r_idx" not in spelling and any(len(r.coords()) > 1 for r in receptors):
         raise ValueError(
             "receptors.csv has no r_idx column, so a column or multipoint receptor "
             "cannot be appended; add an r_idx column to the file."
@@ -959,36 +885,37 @@ def append_receptors_csv(text: str, receptors: Iterable[Receptor]) -> str:
                     f"{r.altitude_ref}. Add an altitude_ref column to mix them."
                 )
         if file_ref is None and any(r.altitude_ref != "agl" for r in receptors):
-            existing = existing.assign(altitude_ref="agl")
+            # The one case that rewrites the existing rows: they gain the column.
+            existing = pd.read_csv(StringIO(text), dtype=str, keep_default_na=False)
+            text = existing.assign(altitude_ref="agl").to_csv(
+                index=False, lineterminator="\n"
+            )
+            columns.append("altitude_ref")
             spelling["altitude_ref"] = "altitude_ref"
 
     new = _csv_frame(receptors)
     if "r_idx" in spelling:
-        numbers = [
-            int(v)
-            for v in existing[spelling["r_idx"]]
-            if v.strip().lstrip("-").isdigit()
-        ]
+        ids = pd.read_csv(
+            StringIO(text),
+            usecols=[spelling["r_idx"]],
+            dtype=str,
+            keep_default_na=False,
+        ).iloc[:, 0]
+        numbers = [int(v) for v in ids if v.strip().lstrip("-").isdigit()]
         new["r_idx"] += max(numbers, default=-1) + 1
-    new = new.rename(columns=spelling)
-    new = new.reindex(columns=existing.columns)
-    new = new.astype(object).where(new.notna(), "")
-    combined = pd.concat([existing, new.astype(str)], ignore_index=True)
-    return combined.to_csv(index=False, lineterminator="\n")
+    new = new.rename(columns=spelling).reindex(columns=columns)
+    rows = new.astype(object).where(new.notna(), "")
+    body = text if text.endswith("\n") else text + "\n"
+    return body + rows.to_csv(index=False, header=False, lineterminator="\n")
 
 
 __all__ = [
-    "ALIASES",
-    "COLUMNS",
-    "AnyReceptor",
     "ColumnReceptor",
     "MultiPointReceptor",
     "PointReceptor",
     "Receptor",
     "append_receptors_csv",
-    "check_distinct_ids",
     "parse_receptor_id",
-    "parse_time",
     "read_receptors",
     "receptors_from_frame",
     "receptors_to_csv",

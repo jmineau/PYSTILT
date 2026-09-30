@@ -43,8 +43,12 @@ forward with 1000 particles. In PYSTILT each release is a
    points = jitter_points(box, 100)
 
    receptors = [
-       MultiPointReceptor(t, [p[0] for p in points], [p[1] for p in points],
-                          [10.0] * len(points))
+       MultiPointReceptor(
+           time=t,
+           longitudes=[p[0] for p in points],
+           latitudes=[p[1] for p in points],
+           altitudes=[10.0] * len(points),
+       )
        for t in pd.date_range(overpass - pd.Timedelta(hours=10), overpass, freq="30min")
    ]
 

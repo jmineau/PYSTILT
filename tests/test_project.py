@@ -144,7 +144,7 @@ def test_project_receptors_round_trip_preserves_groups(
     loaded = project.load_receptors()
     assert loaded == receptors
     assert [type(r) for r in loaded] == [type(r) for r in receptors]
-    assert [len(r) for r in loaded] == [1, 2, 3]
+    assert [len(r.coords()) for r in loaded] == [1, 2, 3]
 
 
 def test_project_add_receptors_appends_only_new_ones(
