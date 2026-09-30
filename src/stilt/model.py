@@ -10,8 +10,8 @@ from typing import TYPE_CHECKING
 import pandas as pd
 
 from stilt.collections import ReceptorCollection, SimulationCollection
-from stilt.config import ModelConfig, VariantConfig
-from stilt.execution import Executor, JobHandle
+from stilt.config import ExecutionConfig, ModelConfig, VariantConfig
+from stilt.execution import JobHandle
 from stilt.meteorology import Met
 from stilt.output import Footprints, Output
 from stilt.project import Project
@@ -252,44 +252,45 @@ class Model:
 
     def run(
         self,
-        executor: Executor | None = None,
         skip_existing: bool = True,
         wait: bool = True,
         compute_root: str | Path | None = None,
+        execution: ExecutionConfig | None = None,
     ) -> JobHandle:
         """
         Run every simulation that has not finished.
 
         Shorthand for :func:`stilt.execution.run`, which saves the settings
-        and receptors to the project and starts the workers.
+        and receptors to the project and runs the receptors with missing
+        results, here or on Slurm.
 
         Parameters
         ----------
-        executor : Executor, optional
-            Where to run the workers. Defaults to the one set by
-            ``config.execution`` (local processes unless configured).
         skip_existing : bool, default True
             Skip simulations whose outputs all exist. ``False`` runs every
             simulation again.
         wait : bool, default True
-            Block until the workers finish. With ``False`` a Slurm or
-            Kubernetes run returns once it is submitted. A local run always
-            finishes before this returns.
+            Block until the work finishes. With ``False`` a Slurm run
+            returns once it is submitted. A local run always finishes before
+            this returns.
         compute_root : str or Path, optional
             Scratch directory under which HYSPLIT runs. Defaults to
             ``PYSTILT_COMPUTE_ROOT``, then to
             ``$TMPDIR/pystilt/<project name>``.
+        execution : ExecutionConfig, optional
+            Where to run and with what resources, in place of the config's
+            ``execution`` settings.
 
         Returns
         -------
         JobHandle
-            Handle to the started workers.
+            Handle to the work.
         """
         from stilt.execution import run
 
         return run(
             self,
-            executor,
+            execution=execution,
             skip_existing=skip_existing,
             wait=wait,
             compute_root=compute_root,

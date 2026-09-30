@@ -6,27 +6,26 @@ one receptor, and :func:`run_simulation` runs each one: HYSPLIT where the
 particles are missing (:func:`run_trajectories`), then the footprint
 (:func:`write_footprint`). Variants with the same transport settings share
 one HYSPLIT run. :func:`run_receptors` runs a list of receptors in this
-process or a process pool, and :func:`pull_receptors` takes receptors from
-the PostgreSQL work queue. A :class:`~stilt.Simulation` itself runs
+process or a process pool. A :class:`~stilt.Simulation` itself runs
 nothing; these functions write through its output directory.
 """
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import multiprocessing
 import shutil
 import signal
-import time
+import threading
 import traceback
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
-from stilt.config import FootprintConfig, RuntimeSettings
+from stilt.config import FootprintConfig
 from stilt.errors import (
-    ConfigValidationError,
     EmptyFootprintError,
     EmptyTrajectoryError,
     SimulationError,
@@ -34,18 +33,43 @@ from stilt.errors import (
 from stilt.footprint import Footprint
 from stilt.hysplit import HYSPLITDriver
 from stilt.meteorology import Met
-from stilt.service import PostgresQueue, resolve_queue
 from stilt.simulation import Simulation
 from stilt.trajectory import Trajectories
 from stilt.transforms import ParticleTransform, TransformContext
 
-from .backends.protocol import sigterm_as_interrupt
 from .runner import resolve_compute_root
 
 if TYPE_CHECKING:
     from stilt.model import Model
 
 logger = logging.getLogger(__name__)
+
+
+@contextlib.contextmanager
+def sigterm_as_interrupt():
+    """
+    Make SIGTERM raise ``KeyboardInterrupt`` inside the ``with`` block.
+
+    Slurm sends SIGTERM on preemption or when a job reaches its time limit.
+    Python's default action ends the process without running ``finally``
+    blocks, so pool workers would be left running. Signal handlers can only
+    be set from the main thread, so in any other thread this does nothing.
+    """
+    if threading.current_thread() is not threading.main_thread():
+        yield
+        return
+
+    previous = signal.getsignal(signal.SIGTERM)
+
+    def _handle(signum: int, frame: object) -> None:
+        raise KeyboardInterrupt
+
+    signal.signal(signal.SIGTERM, _handle)
+    try:
+        yield
+    finally:
+        signal.signal(signal.SIGTERM, previous)
+
 
 Status = Literal["complete", "failed", "error", "interrupted"]
 
@@ -525,74 +549,9 @@ def run_receptors(
     return [ordered[i] for i in sorted(ordered)]
 
 
-# -- pull mode ----------------------------------------------------------------
-
-
-def pull_receptors(
-    model: Model,
-    follow: bool = False,
-    poll_interval: float = 10.0,
-    *,
-    queue: PostgresQueue | None = None,
-    compute_root: str | Path | None = None,
-    skip_existing: bool = True,
-) -> None:
-    """
-    Run receptors from the work queue until it is empty.
-
-    Each receptor is claimed so that no other worker runs it at the same
-    time, and its result is recorded in the queue.
-
-    Parameters
-    ----------
-    model : Model
-        Model the queued receptors belong to.
-    follow : bool, default False
-        Keep waiting for new work when the queue is empty.
-    poll_interval : float, default 10.0
-        Seconds to wait after finding the queue empty. The wait doubles on
-        each empty check, up to 60 s.
-    queue : PostgresQueue, optional
-        Work queue to take receptors from. Defaults to the one
-        ``PYSTILT_DB_URL`` names.
-    compute_root : str or Path, optional
-        Scratch directory under which HYSPLIT runs
-        (:func:`~stilt.execution.resolve_compute_root`).
-    skip_existing : bool, default True
-        Keep trajectories and footprints that already exist.
-    """
-    if queue is None:
-        queue = resolve_queue(RuntimeSettings())
-    if queue is None:
-        raise ConfigValidationError(
-            "Pull-mode workers require a Postgres work queue. "
-            "Configure it via PYSTILT_DB_URL."
-        )
-    idle_sleep = max(poll_interval, 0.1)
-    max_idle_sleep = min(60.0, max(idle_sleep, poll_interval * 8))
-    while True:
-        with queue.claim_one() as claim:
-            if claim is None:
-                if not follow:
-                    return
-                time.sleep(idle_sleep)
-                idle_sleep = min(idle_sleep * 2.0, max_idle_sleep)
-                continue
-            idle_sleep = max(poll_interval, 0.1)
-            claim.record(
-                run_receptor(
-                    model,
-                    claim.receptor_id,
-                    compute_root=compute_root,
-                    skip_existing=skip_existing,
-                )
-            )
-
-
 __all__ = [
     "ReceptorResult",
     "SimulationResult",
-    "pull_receptors",
     "run_receptor",
     "run_receptors",
     "run_simulation",
