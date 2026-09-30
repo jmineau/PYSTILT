@@ -35,6 +35,11 @@ jobs:
       run: |
         uv run pyright src/stilt
 
+    - name: Check import contracts
+      if: ${{ !cancelled() }}
+      run: |
+        uv run lint-imports
+
     - name: Check docstring coverage
       if: ${{ !cancelled() }}
       run: |
