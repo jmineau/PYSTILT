@@ -43,6 +43,8 @@ quality-check:
 	uv run ruff check src/stilt
 	@echo "Type checking with pyright..."
 	uv run pyright src/stilt
+	@echo "Checking import contracts..."
+	uv run lint-imports
 	just test
 
 # Run ruff fixes and formatting

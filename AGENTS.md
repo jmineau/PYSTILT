@@ -144,7 +144,10 @@ docs/                Sphinx (pydata-sphinx-theme)
    `stilt.observations` helpers thin and group it; each row becomes a
    `Receptor`; `averaging_kernel_table` writes the kernels into the project;
    then register and run as usual. This layer sits *above* the transport
-   core. Keep observation logic out of `model.py`.
+   core. Keep observation logic out of `model.py`. An import-linter
+   contract in `pyproject.toml` (run by `lint-imports` in CI) fails when a
+   core module imports `stilt.observations`; a new top-level module goes on
+   that contract's list.
 
 Slurm tasks rebuild the model from the project in another process on
 another node, so anything a worker needs must be in the project or the
@@ -247,7 +250,7 @@ Driven by [`just`](https://github.com/casey/just) and [`uv`](https://docs.astral
 |---|---|
 | `just install` | `uv sync --group dev` |
 | `just test` | `uv run pytest -v` (unit tests only) |
-| `just quality-check` | ruff + pyright on `src/stilt`, then the tests |
+| `just quality-check` | ruff, pyright, and the import contracts (`lint-imports`), then the tests |
 | `just ruff` | `ruff check --fix` and `ruff format` on `src/stilt` |
 | `just build-docs` | clean Sphinx HTML build into `docs/_build` |
 | `just dist` | the sdist and one wheel per bundled HYSPLIT build, into `dist/` |
