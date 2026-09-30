@@ -105,9 +105,9 @@ public.
   is no longer `runtime_checkable`.
 - `VariantConfig.differences()`, `MetConfig.differences()`, and
   `MetConfig.record()`. `Model.check_config` compares the record itself.
-- `FootprintParams.FIELDS`, `PostgresQueue.db_url`, and the
+- `FootprintParams.FIELDS`, `PostgresQueue.db_url`, the
   `SIMULATION_LOG_FILENAME` and `SIMULATION_MET_DIRNAME` constants of
-  `stilt.project`.
+  `stilt.project`, and `stilt.__author__` and `stilt.__email__`.
 
 ## [0.1.0a21] - 2026-09-29
 
