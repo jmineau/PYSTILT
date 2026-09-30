@@ -62,6 +62,7 @@ class ReceptorCollection:
     ):
         self._project = project
         self._items = self._normalize(receptors)
+        self._from_project = receptors is None
         self._by_id: dict[str, Receptor] | None = None
 
     def _normalize(
@@ -86,6 +87,11 @@ class ReceptorCollection:
             "Receptors must be a Receptor, an iterable of Receptors, or a path to "
             "a receptors CSV."
         )
+
+    @property
+    def from_project(self) -> bool:
+        """Whether these are the project's own ``receptors.csv``, rather than given."""
+        return self._from_project
 
     def _load(self) -> list[Receptor]:
         """Return the receptors, reading the project's ``receptors.csv`` on first use."""

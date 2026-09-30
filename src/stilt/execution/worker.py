@@ -24,7 +24,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
-from stilt.config import FootprintConfig
+from stilt.config import FootprintConfig, RuntimeSettings
 from stilt.errors import (
     ConfigValidationError,
     EmptyFootprintError,
@@ -34,11 +34,13 @@ from stilt.errors import (
 from stilt.footprint import Footprint
 from stilt.hysplit import HYSPLITDriver
 from stilt.meteorology import Met
+from stilt.service import PostgresQueue, resolve_queue
 from stilt.simulation import Simulation
 from stilt.trajectory import Trajectories
 from stilt.transforms import ParticleTransform, TransformContext
 
 from .backends.protocol import sigterm_as_interrupt
+from .runner import resolve_compute_root
 
 if TYPE_CHECKING:
     from stilt.model import Model
@@ -338,7 +340,11 @@ def run_simulation(
 
 
 def run_receptor(
-    model: Model, receptor_id: str, *, skip_existing: bool = True
+    model: Model,
+    receptor_id: str,
+    *,
+    compute_root: str | Path | None = None,
+    skip_existing: bool = True,
 ) -> ReceptorResult:
     """
     Run every simulation of one receptor.
@@ -355,6 +361,9 @@ def run_receptor(
         Model the receptor belongs to.
     receptor_id : str
         Receptor to run.
+    compute_root : str or Path, optional
+        Scratch directory under which HYSPLIT runs
+        (:func:`~stilt.execution.resolve_compute_root`).
     skip_existing : bool, default True
         Keep particles and footprints that already exist.
 
@@ -362,6 +371,7 @@ def run_receptor(
     -------
     ReceptorResult
     """
+    scratch = resolve_compute_root(model.project, compute_root)
     sims = list(model.simulations.sel(receptor=receptor_id))
     results: list[SimulationResult] = []
     reran: set[str] = set()  # transport settings whose HYSPLIT ran in this call
@@ -372,7 +382,7 @@ def run_receptor(
             result = run_simulation(
                 sim,
                 met=model.mets[sim.variant.met],
-                compute_root=model.compute_root,
+                compute_root=scratch,
                 project_dir=model.project.directory,
                 keep_scratch=model.config.keep_scratch,
                 skip_existing=skip_existing or key in reran,
@@ -398,6 +408,7 @@ def _log_result(result: ReceptorResult, done: int, total: int) -> None:
 # -- process pool -------------------------------------------------------------
 
 _POOL_MODEL: Model | None = None
+_POOL_COMPUTE_ROOT: str | None = None
 _POOL_SKIP: bool = True
 
 
@@ -410,9 +421,10 @@ def _init_pool_worker(project: str, compute_root: str, skip_existing: bool) -> N
     """Build the worker process's Model and make SIGTERM raise KeyboardInterrupt."""
     from stilt.model import Model
 
-    global _POOL_MODEL, _POOL_SKIP
+    global _POOL_MODEL, _POOL_COMPUTE_ROOT, _POOL_SKIP
     signal.signal(signal.SIGTERM, _raise_interrupt)
-    _POOL_MODEL = Model(project=project, compute_root=compute_root)
+    _POOL_MODEL = Model(project=project)
+    _POOL_COMPUTE_ROOT = compute_root
     _POOL_SKIP = skip_existing
 
 
@@ -420,13 +432,19 @@ def _pool_run(item: tuple[int, str]) -> tuple[int, ReceptorResult]:
     """Run one receptor in a pool worker, returning its index and result."""
     idx, receptor_id = item
     assert _POOL_MODEL is not None
-    return idx, run_receptor(_POOL_MODEL, receptor_id, skip_existing=_POOL_SKIP)
+    return idx, run_receptor(
+        _POOL_MODEL,
+        receptor_id,
+        compute_root=_POOL_COMPUTE_ROOT,
+        skip_existing=_POOL_SKIP,
+    )
 
 
 def run_receptors(
     model: Model,
     receptor_ids: list[str],
     *,
+    compute_root: str | Path | None = None,
     n_cores: int = 1,
     skip_existing: bool = True,
 ) -> list[ReceptorResult]:
@@ -435,7 +453,7 @@ def run_receptors(
 
     Pool workers load the model again from ``model.project.root``, so the
     config and receptors must already be saved in the project, as
-    :meth:`Model.register` does. A SIGTERM, such as Slurm preemption or the
+    :func:`~stilt.execution.register` does. A SIGTERM, such as Slurm preemption or the
     end of the job's time limit, stops the batch with an ``interrupted``
     result.
 
@@ -445,6 +463,9 @@ def run_receptors(
         Model the receptors belong to.
     receptor_ids : list of str
         Receptors to run.
+    compute_root : str or Path, optional
+        Scratch directory under which HYSPLIT runs
+        (:func:`~stilt.execution.resolve_compute_root`).
     n_cores : int, default 1
         Number of worker processes. 1 runs in this process.
     skip_existing : bool, default True
@@ -458,12 +479,18 @@ def run_receptors(
     """
     if not receptor_ids:
         return []
+    scratch = resolve_compute_root(model.project, compute_root)
 
     if n_cores <= 1:
         results: list[ReceptorResult] = []
         with sigterm_as_interrupt():
             for i, receptor_id in enumerate(receptor_ids, 1):
-                result = run_receptor(model, receptor_id, skip_existing=skip_existing)
+                result = run_receptor(
+                    model,
+                    receptor_id,
+                    compute_root=scratch,
+                    skip_existing=skip_existing,
+                )
                 results.append(result)
                 _log_result(result, i, len(receptor_ids))
                 if result.status == "interrupted":
@@ -474,7 +501,7 @@ def run_receptors(
     pool = multiprocessing.Pool(
         n_cores,
         initializer=_init_pool_worker,
-        initargs=(model.project.root, str(model.compute_root), skip_existing),
+        initargs=(model.project.root, str(scratch), skip_existing),
     )
     with sigterm_as_interrupt():
         try:
@@ -506,10 +533,12 @@ def pull_receptors(
     follow: bool = False,
     poll_interval: float = 10.0,
     *,
+    queue: PostgresQueue | None = None,
+    compute_root: str | Path | None = None,
     skip_existing: bool = True,
 ) -> None:
     """
-    Run receptors from the model's work queue until it is empty.
+    Run receptors from the work queue until it is empty.
 
     Each receptor is claimed so that no other worker runs it at the same
     time, and its result is recorded in the queue.
@@ -517,16 +546,23 @@ def pull_receptors(
     Parameters
     ----------
     model : Model
-        Model with a work queue (set ``PYSTILT_DB_URL``).
+        Model the queued receptors belong to.
     follow : bool, default False
         Keep waiting for new work when the queue is empty.
     poll_interval : float, default 10.0
         Seconds to wait after finding the queue empty. The wait doubles on
         each empty check, up to 60 s.
+    queue : PostgresQueue, optional
+        Work queue to take receptors from. Defaults to the one
+        ``PYSTILT_DB_URL`` names.
+    compute_root : str or Path, optional
+        Scratch directory under which HYSPLIT runs
+        (:func:`~stilt.execution.resolve_compute_root`).
     skip_existing : bool, default True
         Keep trajectories and footprints that already exist.
     """
-    queue = model.queue
+    if queue is None:
+        queue = resolve_queue(RuntimeSettings())
     if queue is None:
         raise ConfigValidationError(
             "Pull-mode workers require a Postgres work queue. "
@@ -544,7 +580,12 @@ def pull_receptors(
                 continue
             idle_sleep = max(poll_interval, 0.1)
             claim.record(
-                run_receptor(model, claim.receptor_id, skip_existing=skip_existing)
+                run_receptor(
+                    model,
+                    claim.receptor_id,
+                    compute_root=compute_root,
+                    skip_existing=skip_existing,
+                )
             )
 
 

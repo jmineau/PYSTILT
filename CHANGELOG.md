@@ -95,6 +95,19 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   archives. The `cloud` extra installs `arlmet[archives]` in place of `s3fs`,
   and `fsspec` is no longer a core dependency. PYSTILT 0.1.0a22 does not work
   with arlmet 0.1.0b1: pin `arlmet<0.1.0b1` if you stay on it.
+- **`Model` reads; `stilt.execution` runs**
+  ([#86](https://github.com/jmineau/PYSTILT/issues/86); breaking). A
+  `Model` is its settings, its receptors, and a view of their results. It no
+  longer takes `compute_root` or `runtime`, and `model.compute_root` and
+  `model.queue` are gone. `model.run()` and `model.register()` remain as
+  shorthands for `stilt.execution.run(model)` and
+  `stilt.execution.register(model)`, which save the inputs to the project
+  and start the workers. Pass the scratch directory to the run
+  (`model.run(compute_root=...)`, `stilt run --compute-root`, or
+  `PYSTILT_COMPUTE_ROOT`); `stilt.execution.resolve_compute_root` says where
+  that is. A model built with its own receptors keeps exactly those:
+  `run()` runs them and no longer picks up every other receptor already in
+  the project's `receptors.csv`. `Model(project)` still reads the file.
 - **Receptors are frozen pydantic models**
   ([#86](https://github.com/jmineau/PYSTILT/issues/86),
   [#66](https://github.com/jmineau/PYSTILT/issues/66); breaking).
