@@ -196,6 +196,62 @@ def test_setup_entries_route_transport_params_to_setup_cfg():
     assert "maxpar" in entries  # defaulted from numpar
 
 
+# Fortran type of every SETUP.CFG entry PYSTILT writes, from the SETUP
+# namelist declarations in HYSPLIT's hysetup.f. The bundled v5.1.0 build
+# reads the same types.
+HYSPLIT_SETUP_TYPES = {
+    **dict.fromkeys(
+        [
+            "capemin", "delt", "dxf", "dyf", "dzf", "frhmax", "frhs", "frme",
+            "frmr", "frts", "frvs", "hscale", "p10f", "qcycle", "splitf",
+            "tkerd", "tkern", "tlfrac", "tratio", "tvmix", "veght", "vscale",
+            "vscales", "vscaleu", "wbbh", "wbwf", "wbwr",
+        ],
+        "REAL",
+    ),
+    **dict.fromkeys(
+        [
+            "cmass", "conage", "cpack", "ichem", "idsp", "initd", "k10m",
+            "kagl", "kbls", "kblt", "kdef", "khinp", "khmax", "kmix0", "kmixd",
+            "kmsl", "kpuff", "krand", "krnd", "kspl", "kwet", "kzmix", "maxdim",
+            "maxpar", "mgmin", "mhrs", "nbptyp", "ncycl", "ndump", "ninit",
+            "nstr", "numpar", "nturb", "nver", "outdt", "rhb", "rht", "seed",
+            "tout", "zicontroltf",
+        ],
+        "INTEGER",
+    ),
+    **dict.fromkeys(["efile", "pinbc", "pinpf", "poutf", "varsiwant"], "CHARACTER"),
+    "wvert": "LOGICAL",
+}  # fmt: skip
+
+
+def test_hysplit_setup_types_cover_every_setup_entry():
+    entries = STILTParams(seed=1, krand=2, kmsl=0).setup_entries()
+    assert set(entries) == set(HYSPLIT_SETUP_TYPES)
+
+
+@pytest.mark.parametrize(
+    "name", [n for n, t in HYSPLIT_SETUP_TYPES.items() if t == "REAL"]
+)
+def test_real_setup_fields_accept_fractions(name):
+    # HYSPLIT reads these as REAL, so a fractional value is valid.
+    assert STILTParams(**{name: 0.5}).setup_entries()[name] == 0.5
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        n
+        for n, t in HYSPLIT_SETUP_TYPES.items()
+        if t == "INTEGER" and n in STILTParams.model_fields
+    ],
+)
+def test_integer_setup_fields_reject_fractions(name):
+    # HYSPLIT stops with a namelist read error on a fractional INTEGER.
+    with pytest.raises(ValidationError):
+        STILTParams(**{name: 0.5})
+
+
 def test_setup_entries_map_seed_to_negative_namelist_value():
     # HYSPLIT's ran1 re-initializes only from a negative value; -(|seed|+1)
     # keeps every seed distinct and off the unseeded default (state 1).
