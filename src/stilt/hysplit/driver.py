@@ -45,21 +45,25 @@ def _bundled_exe_dir() -> Path:
 
     The bundled builds are x86-64 Linux and x86-64 macOS. The macOS build
     also runs on Apple Silicon through Rosetta. Any other platform raises,
-    rather than running a binary the operating system cannot execute.
+    rather than running a binary the operating system cannot execute. So
+    does an install from the source archive, which carries no binary.
     """
     system = platform.system()
     machine = platform.machine().lower()
+    subdir = None
     if system == "Linux" and machine in ("x86_64", "amd64"):
         subdir = "linux_x64"
     elif system == "Darwin" and machine in ("x86_64", "arm64"):
         subdir = "macos_x64"
-    else:
-        raise RuntimeError(
-            f"No bundled HYSPLIT binary for {system} {platform.machine()}. "
-            "Build hycs_std for this machine and set exe_dir in config.yaml "
-            "to the directory that holds it."
-        )
-    return Path(str(pkg_files("stilt.hysplit") / "bin" / subdir))
+    if subdir is not None:
+        exe_dir = Path(str(pkg_files("stilt.hysplit") / "bin" / subdir))
+        if (exe_dir / HYCS_STD_FILE).is_file():
+            return exe_dir
+    raise RuntimeError(
+        f"No bundled HYSPLIT binary for {system} {platform.machine()}. "
+        "Build hycs_std for this machine and set exe_dir in config.yaml "
+        "to the directory that holds it."
+    )
 
 
 def _bundled_data_dir() -> Path:
