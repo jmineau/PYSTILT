@@ -8,6 +8,11 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **`stilt init` writes a receptors file that loads**
+  ([#49](https://github.com/jmineau/PYSTILT/issues/49)). The starter
+  `receptors.csv` held a `# Example: ...` line, which the reader parsed as
+  a receptor, so the first `stilt run` after adding a row failed. The file
+  now holds only the header, and `stilt init` prints the example instead.
 - **Machines without a bundled HYSPLIT build get a clear error**
   ([#61](https://github.com/jmineau/PYSTILT/issues/61)). The bundled
   binary was chosen by operating system only, so an aarch64 Linux machine

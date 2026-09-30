@@ -777,6 +777,23 @@ def test_init_creates_receptors_csv(tmp_path):
     assert (project / "receptors.csv").exists()
 
 
+def test_init_receptors_csv_reads_after_appending_a_row(tmp_path):
+    """The starter receptors.csv has no line that parses as a bad receptor (#49)."""
+    from stilt.receptors import read_receptors
+
+    project = tmp_path / "new_project"
+    result = runner.invoke(app, ["init", str(project)])
+    assert result.exit_code == 0
+
+    csv = project / "receptors.csv"
+    assert read_receptors(csv) == []
+    with csv.open("a") as f:
+        f.write("2023-01-01 12:00:00,-111.85,40.77,5\n")
+    receptors = read_receptors(csv)
+    assert len(receptors) == 1
+    assert receptors[0].altitude == 5
+
+
 def test_init_prints_confirmation(tmp_path):
     project = tmp_path / "new_project"
     result = runner.invoke(app, ["init", str(project)])
