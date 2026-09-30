@@ -87,6 +87,10 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   it does and `backend` means only the execution backend. `MetStream` is now
   `Met`, and `MetConfig.source_kwargs` is `download_options`. A named entry
   under `mets` is called a *met* throughout the docs.
+- **Requires arlmet 0.1.0b1**, which renamed its download sources to
+  archives. The `cloud` extra installs `arlmet[archives]` in place of `s3fs`,
+  and `fsspec` is no longer a core dependency. PYSTILT 0.1.0a22 does not work
+  with arlmet 0.1.0b1: pin `arlmet<0.1.0b1` if you stay on it.
 
 ### Removed
 

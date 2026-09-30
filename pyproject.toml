@@ -24,8 +24,7 @@ classifiers = [
     "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
-    "arlmet>=0.1.0a9",
-    "fsspec>=2024.2",
+    "arlmet>=0.1.0b1",
     "netcdf4>=1.6.5",
     "numpy>=1.24",
     "pandas>=2.0",
@@ -52,7 +51,7 @@ cloud = [
     "gcsfs>=2024.2",
     "psycopg[binary]>=3.1",
     "kubernetes>=28.0",
-    "s3fs>=2024.2",
+    "arlmet[archives]>=0.1.0b1",
 ]
 complete = [
     "pystilt[geometry]",

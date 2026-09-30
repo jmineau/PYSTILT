@@ -36,7 +36,7 @@ integration = pytest.mark.integration
 _TESTS_DIR = Path(__file__).parent
 _MET_CACHE = _TESTS_DIR / "met_cache"
 
-# SLV bounding box for bbox-cropped HRRRSource downloads (~16 MB per 6h block)
+# SLV bounding box for bbox-cropped HRRRArchive downloads (~16 MB per 6h block)
 _SLV_BBOX = (-114.0, 39.0, -110.0, 42.0)  # (west, south, east, north)
 
 # Individual 6h HRRR blocks needed by all 12 fidelity scenarios.
@@ -64,7 +64,7 @@ def met_dir() -> Path:
     Resolution order:
     1. STILT_TEST_MET_DIR env var — point at a pre-downloaded cache directory.
     2. STILT_TEST_FETCH_MET=1 — download all 7 bbox-cropped 6h blocks in parallel
-       via HRRRSource into tests/met_cache/ (gitignored; ~112 MB total; cached in CI).
+       via HRRRArchive into tests/met_cache/ (gitignored; ~112 MB total; cached in CI).
        Already-present files are skipped automatically.
     3. Otherwise skip.
     """
@@ -77,14 +77,14 @@ def met_dir() -> Path:
     if os.environ.get("STILT_TEST_FETCH_MET") == "1":
         from concurrent.futures import ThreadPoolExecutor, as_completed
 
-        from arlmet.sources import HRRRSource
+        from arlmet.archives import HRRRArchive
 
         _MET_CACHE.mkdir(exist_ok=True)
-        src = HRRRSource()
+        archive = HRRRArchive()
 
         with ThreadPoolExecutor(max_workers=len(_MET_BLOCKS)) as pool:
             futures = {
-                pool.submit(src.fetch, s, e, local_dir=_MET_CACHE, bbox=_SLV_BBOX): (
+                pool.submit(archive.fetch, s, e, dest_dir=_MET_CACHE, bbox=_SLV_BBOX): (
                     s,
                     e,
                 )
