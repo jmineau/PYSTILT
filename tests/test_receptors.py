@@ -5,6 +5,7 @@ import hashlib
 import io
 import json
 
+import pandas as pd
 import pytest
 
 from stilt.receptors import (
@@ -50,17 +51,17 @@ def test_format_coord_small_positive():
 
 def test_location_id_point_basic():
     r = PointReceptor("202301011200", -111.85, 40.77, 5.0)
-    assert r.id.location == "-111.85_40.77_5"
+    assert r.location_id == "-111.85_40.77_5"
 
 
 def test_location_id_point_integer_coords():
     r = PointReceptor("202301011200", -112.0, 40.0, 10.0)
-    assert r.id.location == "-112_40_10"
+    assert r.location_id == "-112_40_10"
 
 
 def test_location_id_point_fractional_height():
     r = PointReceptor("202301011200", -111.85, 40.77, 2.5)
-    assert r.id.location == "-111.85_40.77_2.5"
+    assert r.location_id == "-111.85_40.77_2.5"
 
 
 # ---------------------------------------------------------------------------
@@ -70,12 +71,12 @@ def test_location_id_point_fractional_height():
 
 def test_location_id_column_ends_with_X():
     r = ColumnReceptor("202301011200", -111.85, 40.77, 5.0, 50.0)
-    assert r.id.location == "-111.85_40.77_X"
+    assert r.location_id == "-111.85_40.77_X"
 
 
 def test_location_id_column_integer_coords():
     r = ColumnReceptor("202301011200", -112.0, 40.0, 5.0, 50.0)
-    assert r.id.location == "-112_40_X"
+    assert r.location_id == "-112_40_X"
 
 
 # ---------------------------------------------------------------------------
@@ -89,23 +90,23 @@ def test_location_id_multipoint_stable():
     alts = [5, 5, 5]
     r1 = MultiPointReceptor("202301011200", lons, lats, alts)
     r2 = MultiPointReceptor("202301011200", lons, lats, alts)
-    assert r1.id.location == r2.id.location
+    assert r1.location_id == r2.location_id
 
 
 def test_location_id_multipoint_order_independent():
     r_a = MultiPointReceptor("202301011200", [-111.85, -111.86], [40.77, 40.78], [5, 5])
     r_b = MultiPointReceptor("202301011200", [-111.86, -111.85], [40.78, 40.77], [5, 5])
-    assert r_a.id.location == r_b.id.location
+    assert r_a.location_id == r_b.location_id
 
 
 def test_location_id_multipoint_starts_with_multi():
     r = MultiPointReceptor("202301011200", [-111.85, -111.86], [40.77, 40.78], [5, 5])
-    assert r.id.location.startswith("multi_")
+    assert r.location_id.startswith("multi_")
 
 
 def test_location_id_multipoint_hash_length():
     r = MultiPointReceptor("202301011200", [-111.85, -111.86], [40.77, 40.78], [5, 5])
-    hash_part = r.id.location.replace("multi_", "")
+    hash_part = r.location_id.replace("multi_", "")
     assert len(hash_part) == 10
     assert all(c in "0123456789abcdef" for c in hash_part)
 
@@ -119,13 +120,13 @@ def test_location_id_multipoint_matches_spec():
     )
     expected_hash = hashlib.sha256(canonical.encode()).hexdigest()[:10]
     r = MultiPointReceptor("202301011200", [-111.85, -111.86], [40.77, 40.78], [5, 5])
-    assert r.id.location == f"multi_{expected_hash}"
+    assert r.location_id == f"multi_{expected_hash}"
 
 
 def test_location_id_multipoint_differs_for_different_points():
     r_a = MultiPointReceptor("202301011200", [-111.85, -111.86], [40.77, 40.78], [5, 5])
     r_b = MultiPointReceptor("202301011200", [-111.85, -111.87], [40.77, 40.79], [5, 5])
-    assert r_a.id.location != r_b.id.location
+    assert r_a.location_id != r_b.location_id
 
 
 # ---------------------------------------------------------------------------
@@ -335,7 +336,7 @@ def test_isinstance_multipoint(multipoint_receptor):
 def test_receptor_from_points_single_makes_point():
     r = Receptor.from_points("202301011200", [(-111.85, 40.77, 5)])
     assert isinstance(r, PointReceptor)
-    assert r.id.location == "-111.85_40.77_5"
+    assert r.location_id == "-111.85_40.77_5"
 
 
 def test_receptor_from_points_two_same_xy_makes_column():
@@ -343,7 +344,7 @@ def test_receptor_from_points_two_same_xy_makes_column():
         "202301011200", [(-111.85, 40.77, 5), (-111.85, 40.77, 50)]
     )
     assert isinstance(r, ColumnReceptor)
-    assert r.id.location.endswith("_X")
+    assert r.location_id.endswith("_X")
 
 
 def test_receptor_from_points_two_different_xy_makes_multipoint():
@@ -602,16 +603,236 @@ def test_receptor_attrs_round_trip_through_csv(
 ):
     from stilt.receptors import append_receptors_csv, receptors_to_csv
 
-    point_receptor.attrs = {"scene": "A"}
-    text = receptors_to_csv([point_receptor, column_receptor])
+    labelled = point_receptor.model_copy(update={"attrs": {"scene": "A"}})
+    text = receptors_to_csv([labelled, column_receptor])
     assert text.splitlines()[0].endswith(",altitude_ref,scene")
     back = read_receptors(io.StringIO(text))
     assert back[0].attrs == {"scene": "A"}
     assert back[1].attrs == {"scene": None}
 
     extra = PointReceptor(
-        time="2023-02-01 00:00", longitude=-111.0, latitude=40.0, altitude=1.0
+        time="2023-02-01 00:00",
+        longitude=-111.0,
+        latitude=40.0,
+        altitude=1.0,
+        attrs={"scene": "C", "ignored": 1},
     )
-    extra.attrs = {"scene": "C", "ignored": 1}
     grown = read_receptors(io.StringIO(append_receptors_csv(text, [extra])))
     assert grown[-1].attrs == {"scene": "C"}
+
+
+# ---------------------------------------------------------------------------
+# Receptors as frozen models
+# ---------------------------------------------------------------------------
+
+
+def test_receptors_are_frozen_values(point_receptor):
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError, match="frozen"):
+        point_receptor.altitude = 20.0
+    twin = PointReceptor(
+        time=point_receptor.time,
+        longitude=point_receptor.longitude,
+        latitude=point_receptor.latitude,
+        altitude=point_receptor.altitude,
+    )
+    assert twin == point_receptor and hash(twin) == hash(point_receptor)
+    assert len({twin, point_receptor}) == 1
+
+
+def test_attrs_do_not_count_for_equality_or_the_dict(point_receptor):
+    labelled = point_receptor.model_copy(update={"attrs": {"site": "WBB"}})
+    assert labelled == point_receptor
+    assert hash(labelled) == hash(point_receptor)
+    assert "attrs" not in labelled.to_dict()
+    assert labelled.id == point_receptor.id
+
+
+def test_unknown_field_is_rejected():
+    with pytest.raises(TypeError, match="height"):
+        Receptor.from_dict(
+            {
+                "kind": "point",
+                "time": "2023-01-01T12:00:00",
+                "longitude": -111.85,
+                "latitude": 40.77,
+                "altitude": 5,
+                "height": 5,
+            }
+        )
+
+
+def test_from_dict_reads_the_dict_earlier_versions_stored():
+    """Particle and footprint files written before the `kind` field still load."""
+    old = {
+        "type": "ColumnReceptor",
+        "time": "2023-01-01T12:00:00",
+        "longitude": -111.85,
+        "latitude": 40.77,
+        "bottom": 0.0,
+        "top": 3000.0,
+        "altitude_ref": "agl",
+    }
+    r = Receptor.from_dict(old)
+    assert isinstance(r, ColumnReceptor) and r.top == 3000.0
+    assert Receptor.from_dict(r.to_dict()) == r
+    with pytest.raises(ValueError, match="Unknown receptor type"):
+        Receptor.from_dict({**old, "type": "BoxReceptor"})
+    with pytest.raises(ValueError, match="'kind'"):
+        Receptor.from_dict({k: v for k, v in old.items() if k != "type"})
+
+
+def test_parse_receptor_id_splits_time_and_location(
+    point_receptor, column_receptor, multipoint_receptor
+):
+    from stilt.receptors import parse_receptor_id
+
+    for r in (point_receptor, column_receptor, multipoint_receptor):
+        assert parse_receptor_id(r.id) == (r.time, r.location_id)
+    for bad in ("nope", "202301011200", "202313011200_-111_40_5", "202301011200_a_b"):
+        with pytest.raises(ValueError):
+            parse_receptor_id(bad)
+
+
+# ---------------------------------------------------------------------------
+# Multipoint ids and altitude (#50)
+# ---------------------------------------------------------------------------
+
+
+def _multi(alts, **kwargs):
+    return MultiPointReceptor(
+        "2023-01-01 12:00", [-111.85, -111.86], [40.77, 40.78], alts, **kwargs
+    )
+
+
+def test_multipoint_ids_tell_sub_metre_heights_apart():
+    """Heights under a metre apart used to hash the same and share result files."""
+    low, high = _multi([10.2, 500.0]), _multi([10.9, 500.0])
+    assert low != high
+    assert low.id != high.id
+    assert _multi([10.2, 500.0]).id == low.id
+
+
+def test_multipoint_id_of_whole_metre_heights_is_unchanged():
+    """Whole-metre heights keep the id earlier versions gave them."""
+    import hashlib
+    import json
+
+    r = _multi([4.0, 4.0])
+    legacy = json.dumps(
+        sorted([[-111.85, 40.77, 4], [-111.86, 40.78, 4]]), separators=(",", ":")
+    )
+    assert r.location_id == "multi_" + hashlib.sha256(legacy.encode()).hexdigest()[:10]
+
+
+def test_receptors_that_share_an_id_are_refused():
+    """Two receptors closer than the id resolves would overwrite each other."""
+    from stilt.receptors import check_distinct_ids
+
+    a, b = _multi([10.001, 500.0]), _multi([10.004, 500.0])
+    assert a != b and a.id == b.id
+    with pytest.raises(ValueError, match="share the id"):
+        check_distinct_ids([a, b])
+    check_distinct_ids([a, _multi([10.001, 500.0])])  # the same receptor twice is fine
+
+    text = receptors_to_csv([a, b])
+    with pytest.raises(ValueError, match="share the id"):
+        read_receptors(io.StringIO(text))
+
+
+# ---------------------------------------------------------------------------
+# The receptor table
+# ---------------------------------------------------------------------------
+
+
+def test_frame_has_a_row_per_release_point(
+    point_receptor, column_receptor, multipoint_receptor
+):
+    from stilt.receptors import receptors_from_frame, receptors_to_frame
+
+    receptors = [
+        point_receptor.model_copy(update={"attrs": {"site": "WBB"}}),
+        column_receptor,
+        multipoint_receptor,
+    ]
+    frame = receptors_to_frame(receptors)
+    assert list(frame.columns) == [
+        "r_idx",
+        "time",
+        "longitude",
+        "latitude",
+        "altitude",
+        "altitude_ref",
+        "site",
+    ]
+    assert len(frame) == 1 + 2 + len(multipoint_receptor)
+    assert frame["r_idx"].tolist()[:3] == [0, 1, 1]
+    assert str(frame["time"].dtype).startswith("datetime64")
+
+    back = receptors_from_frame(frame)
+    assert back == receptors
+    assert back[0].attrs == {"site": "WBB"}
+    assert receptors_to_frame([]).empty
+
+
+def test_frame_accepts_the_alternate_column_names():
+    from stilt.receptors import receptors_from_frame
+
+    frame = pd.DataFrame(
+        {
+            "Time": ["2023-01-01 12:00"],
+            "LON": [-111.85],
+            "lati": [40.77],
+            "zmsl": [1500.0],
+            "Scene": ["A"],
+        }
+    )
+    [r] = receptors_from_frame(frame)
+    assert isinstance(r, PointReceptor)
+    assert (r.longitude, r.latitude, r.altitude) == (-111.85, 40.77, 1500.0)
+    assert r.altitude_ref == "msl"
+    assert r.attrs == {"Scene": "A"}
+
+
+# ---------------------------------------------------------------------------
+# Appending keeps the altitude reference (#51)
+# ---------------------------------------------------------------------------
+
+
+def test_append_msl_receptor_to_plain_altitude_file_keeps_its_reference():
+    """An MSL receptor appended to a file with no reference column read back as AGL."""
+    from stilt.receptors import append_receptors_csv
+
+    text = "time,longitude,latitude,altitude\n2023-01-01 12:00:00,-111.85,40.77,5\n"
+    msl = PointReceptor("2023-01-02 12:00", -111.9, 40.7, 1500.0, altitude_ref="msl")
+
+    grown = append_receptors_csv(text, [msl])
+
+    assert grown.splitlines()[0] == "time,longitude,latitude,altitude,altitude_ref"
+    assert grown.splitlines()[1] == "2023-01-01 12:00:00,-111.85,40.77,5,agl"
+    first, second = read_receptors(io.StringIO(grown))
+    assert first.altitude_ref == "agl"
+    assert second == msl and second.altitude_ref == "msl"
+
+
+def test_append_agl_receptor_leaves_a_plain_file_without_the_column():
+    from stilt.receptors import append_receptors_csv
+
+    text = "time,lon,lat,z,site\n2023-01-01 12:00:00,-111.85,40.77,5,WBB\n"
+    agl = PointReceptor("2023-01-02 12:00", -111.9, 40.7, 10.0, attrs={"site": "UOU"})
+
+    grown = append_receptors_csv(text, [agl])
+
+    assert grown.splitlines()[0] == "time,lon,lat,z,site"
+    assert grown.splitlines()[1] == "2023-01-01 12:00:00,-111.85,40.77,5,WBB"
+    assert grown.splitlines()[2] == "2023-01-02 12:00:00,-111.9,40.7,10.0,UOU"
+
+
+def test_append_to_a_zagl_file_still_refuses_an_msl_receptor():
+    from stilt.receptors import append_receptors_csv
+
+    text = "time,long,lati,zagl\n2023-01-01 12:00:00,-111.85,40.77,5\n"
+    msl = PointReceptor("2023-01-02 12:00", -111.9, 40.7, 1500.0, altitude_ref="msl")
+    with pytest.raises(ValueError, match="altitudes are agl"):
+        append_receptors_csv(text, [msl])

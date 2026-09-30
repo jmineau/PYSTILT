@@ -4,7 +4,8 @@ Receptors, the places and times particles are released from.
 A :class:`PointReceptor` releases from one point, a :class:`ColumnReceptor`
 from a vertical line, and a :class:`MultiPointReceptor` from several points
 at once (for example a slanted satellite sounding). :func:`read_receptors`
-reads them from a CSV file.
+reads them from a CSV file, and :func:`receptors_to_frame` gives them as one
+table with a row per release point.
 """
 
 from __future__ import annotations
@@ -13,73 +14,66 @@ import datetime as dt
 import hashlib
 import json
 import re
-from abc import ABC, abstractmethod
-from collections.abc import Hashable, Iterable, Iterator
+from collections.abc import Iterable, Iterator, Mapping
+from functools import cached_property
+from io import StringIO
 from pathlib import Path
-from typing import IO, TYPE_CHECKING, Any, TypeAlias, cast
+from typing import (
+    IO,
+    TYPE_CHECKING,
+    Annotated,
+    Any,
+    Literal,
+    TypeAlias,
+    cast,
+)
 
 import numpy as np
 import pandas as pd
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    TypeAdapter,
+    ValidationError,
+    field_validator,
+    model_validator,
+)
 from shapely import Geometry, LineString, MultiPoint, Point
 
-from stilt.config import VerticalReference, validate_vertical_reference
+from stilt.config import VerticalReference
 
 if TYPE_CHECKING:
     from stilt.visualization import ReceptorPlotAccessor
 
 TimeLike: TypeAlias = dt.datetime | pd.Timestamp | np.datetime64 | str
 
+#: The columns of a receptor table, one row per release point.
+COLUMNS = ("r_idx", "time", "longitude", "latitude", "altitude", "altitude_ref")
 
-def _validate_lon(lon) -> None:
-    """Raise if any longitude value falls outside [-180, 180]."""
-    arr = np.asarray(lon)
-    if np.any((arr < -180) | (arr > 180)):
-        raise ValueError("longitude must be within [-180, 180].")
-
-
-def _validate_lat(lat) -> None:
-    """Raise if any latitude value falls outside [-90, 90]."""
-    arr = np.asarray(lat)
-    if np.any((arr < -90) | (arr > 90)):
-        raise ValueError("latitude must be within [-90, 90].")
-
-
-def _validate_agl(alt, altitude_ref: str) -> None:
-    """Raise if any altitude is negative when altitude_ref is 'agl'."""
-    if altitude_ref == "agl" and np.any(np.asarray(alt) < 0):
-        raise ValueError("AGL altitudes must be >= 0.")
+#: Column names :func:`read_receptors` accepts for each field, in any case.
+ALIASES: dict[str, tuple[str, ...]] = {
+    "r_idx": ("r_idx",),
+    "time": ("time",),
+    "longitude": ("longitude", "long", "lon"),
+    "latitude": ("latitude", "lati", "lat"),
+    "altitude": ("altitude", "zagl", "zmsl", "z"),
+    "altitude_ref": ("altitude_ref", "height_ref"),
+}
 
 
-def _validate_distinct_horizontal(lons, lats) -> None:
+# ---------------------------------------------------------------------------
+# Times and ids
+# ---------------------------------------------------------------------------
+
+
+def parse_time(time: TimeLike) -> dt.datetime:
     """
-    Raise if two points share a horizontal location.
+    Return *time* as a naive UTC datetime.
 
-    HYSPLIT joins consecutive starting locations at the same latitude and
-    longitude into one vertical line source and releases only from the last
-    pair. Several heights at one location in a multipoint receptor would
-    lose all but the top segment. PYSTILT can also match particles to their
-    release point by horizontal position, which cannot tell such points
-    apart even when they are not consecutive.
+    Accepts datetimes (aware ones are converted to UTC), pandas and numpy
+    times, ISO strings, and the compact ``"YYYYMMDDHHMM"`` form.
     """
-    pts = np.column_stack((np.round(lons, 5), np.round(lats, 5)))
-    if len(np.unique(pts, axis=0)) != len(pts):
-        raise ValueError(
-            "MultiPointReceptor points must have distinct horizontal locations "
-            "(HYSPLIT collapses starting locations that share a lat/lon into a "
-            "single vertical line source and releases only between the last two "
-            "heights). Use ColumnReceptor for a vertical column, or one "
-            "PointReceptor per height (distinct r_idx) for discrete release "
-            "heights at one location."
-        )
-
-
-def _format_coord(val: float) -> str:
-    """Format a coordinate without a decimal point when it is a whole number."""
-    return str(int(val)) if val == int(val) else str(val)
-
-
-def _parse_time(time: TimeLike) -> dt.datetime:
-    """Parse any supported time-like value to a naive UTC datetime."""
     if time is None:
         raise ValueError("'time' must be provided for all receptor types.")
     if isinstance(time, (int, float, np.integer, np.floating)):
@@ -102,177 +96,129 @@ def _parse_time(time: TimeLike) -> dt.datetime:
     return cast(dt.datetime, parsed.to_pydatetime()).replace(tzinfo=None)
 
 
-class LocationID(str):
+def parse_receptor_id(receptor_id: str) -> tuple[dt.datetime, str]:
     """
-    Identifier of a receptor's location.
+    Split a receptor id into its release time and location id.
 
+    An id is ``"<YYYYMMDDHHMM>_<location>"``, where the location is
     ``"<lon>_<lat>_<alt>"`` for a point, ``"<lon>_<lat>_X"`` for a column,
-    and ``"multi_<hash>"`` for a multipoint receptor, where ``<hash>`` is 10
-    hex characters of a SHA-256 of its points.
+    and ``"multi_<hash>"`` for a multipoint receptor.
 
     Raises
     ------
     ValueError
-        If the string has none of these forms.
+        If *receptor_id* does not have this form.
     """
-
-    _MULTI_PATTERN = re.compile(r"^multi_[0-9a-f]{10}$")
-
-    def __new__(cls, value: str) -> LocationID:
-        if cls._MULTI_PATTERN.fullmatch(value):
-            return super().__new__(cls, value)
-        parts = value.split("_")
-        if len(parts) != 3:
-            raise ValueError(
-                "LocationID must be 'lon_lat_alt', 'lon_lat_X', or 'multi_<hash>'."
-            )
-        lon, lat, alt = parts
+    match = re.fullmatch(r"(?P<time>\d{12})_(?P<location>.+)", str(receptor_id))
+    if match is None:
+        raise ValueError(
+            f"Receptor id {receptor_id!r} is not of the form "
+            "'{YYYYMMDDHHMM}_{location_id}'."
+        )
+    try:
+        time = dt.datetime.strptime(match.group("time"), "%Y%m%d%H%M")
+    except ValueError as exc:
+        raise ValueError(
+            f"Receptor id {receptor_id!r} does not start with a YYYYMMDDHHMM time."
+        ) from exc
+    location = match.group("location")
+    if not re.fullmatch(r"multi_[0-9a-f]{10}", location):
+        parts = location.split("_")
         try:
-            float(lon)
-            float(lat)
-            if alt != "X":
-                float(alt)
-        except ValueError as exc:
+            if len(parts) != 3:
+                raise ValueError
+            float(parts[0])
+            float(parts[1])
+            if parts[2] != "X":
+                float(parts[2])
+        except ValueError:
             raise ValueError(
-                "LocationID must be 'lon_lat_alt', 'lon_lat_X', or 'multi_<hash>'."
-            ) from exc
-        return super().__new__(cls, value)
+                f"Receptor id {receptor_id!r} has no location of the form "
+                "'lon_lat_alt', 'lon_lat_X', or 'multi_<hash>'."
+            ) from None
+    return time, location
 
 
-class ReceptorID(str):
+def _format_coord(val: float) -> str:
+    """Format a coordinate without a decimal point when it is a whole number."""
+    return str(int(val)) if val == int(val) else str(val)
+
+
+# ---------------------------------------------------------------------------
+# Receptors
+# ---------------------------------------------------------------------------
+
+
+class Receptor(BaseModel):
     """
-    Identifier of a receptor, ``"<YYYYMMDDHHMM>_<location_id>"``.
+    Base class of the receptor types.
 
-    The time is the release time in UTC. The parsed parts are available as
-    ``time`` and ``location``.
-
-    Parameters
-    ----------
-    id_str : str
-        The identifier, for example ``"202307151800_-111.848_40.766_10"``.
+    A receptor is a frozen value: its release time, its release points, and
+    the vertical reference of their heights. Iterating one yields
+    ``(lat, lon, alt)`` for each release point. Two receptors are equal when
+    their type, time, points, and ``altitude_ref`` match; ``attrs`` do not
+    count.
 
     Attributes
     ----------
     time : datetime
-        Release time (UTC, naive).
-    location : LocationID
-        Location part of the id.
-
-    Raises
-    ------
-    ValueError
-        If *id_str* does not have this form.
-    """
-
-    time: dt.datetime
-    location: LocationID
-
-    def __new__(cls, id_str: str) -> ReceptorID:
-        match = re.fullmatch(r"(?P<time>\d{12})_(?P<location>.+)", id_str)
-        if match is None:
-            raise ValueError(
-                "ReceptorID must be in format '{YYYYMMDDHHMM}_{location_id}'."
-            )
-        instance = super().__new__(cls, id_str)
-        time_str = match.group("time")
-        location_id = match.group("location")
-        try:
-            instance.time = dt.datetime.strptime(time_str, "%Y%m%d%H%M")
-        except ValueError as exc:
-            raise ValueError(
-                "ReceptorID timestamp must use the '{YYYYMMDDHHMM}' format."
-            ) from exc
-        instance.location = LocationID(location_id)
-        return instance
-
-    @classmethod
-    def from_parts(
-        cls,
-        time: dt.datetime | pd.Timestamp,
-        location_id: LocationID,
-    ) -> ReceptorID:
-        """Build a ReceptorID from a release time and a location id."""
-        return cls(f"{pd.Timestamp(time):%Y%m%d%H%M}_{location_id}")
-
-
-class Receptor(ABC):
-    """
-    Base class for receptors.
-
-    Iterating a receptor yields ``(lat, lon, alt)`` for each release point.
-    Two receptors are equal when their type, time, points, and
-    ``altitude_ref`` match.
-
-    Attributes
-    ----------
-    time : datetime
-        Release time (UTC, naive).
+        Release time (UTC, naive). Aware values are converted to UTC, and a
+        string may be ISO or ``"YYYYMMDDHHMM"``.
     altitude_ref : {"agl", "msl"}
-        Whether altitudes are above ground level or above mean sea level.
+        Whether heights are above ground level or above mean sea level.
     attrs : dict
         Extra labels, such as a site or scene name. These are the columns of
         ``receptors.csv`` that PYSTILT does not use. They are kept when the
         receptors are written back to CSV and can be used to filter, as in
-        ``model.simulations.sel(where=lambda r: r.attrs["site"] == "WBB")``.
-        They are not part of the receptor's id.
+        ``model.receptors.sel(site="WBB")``. They are not part of the
+        receptor's id or of equality.
     """
 
-    def __init__(self, time: TimeLike, altitude_ref: VerticalReference) -> None:
-        self.time = _parse_time(time)
-        self.altitude_ref: VerticalReference = validate_vertical_reference(altitude_ref)
-        self.attrs: dict[str, Any] = {}
-        self._geometry = None
-        self._plot: ReceptorPlotAccessor | None = None
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    time: dt.datetime = Field(description="Release time, UTC.")
+    altitude_ref: VerticalReference = Field(
+        "agl", description="Whether heights are above ground (agl) or sea level (msl)."
+    )
+    attrs: dict[str, Any] = Field(
+        default_factory=dict,
+        exclude=True,
+        repr=False,
+        description="Extra labels from the receptor file; not part of the id.",
+    )
+
+    @field_validator("time", mode="before")
+    @classmethod
+    def _parse_time(cls, value: Any) -> dt.datetime:
+        return parse_time(value)
+
+    @field_validator("altitude_ref", mode="before")
+    @classmethod
+    def _lower_ref(cls, value: Any) -> Any:
+        return value.lower() if isinstance(value, str) else value
+
+    # -- identity ----------------------------------------------------------
 
     @property
-    @abstractmethod
-    def location_id(self) -> LocationID:
+    def location_id(self) -> str:
         """Identifier of this receptor's location."""
-        ...
-
-    @abstractmethod
-    def __len__(self) -> int: ...
-
-    @abstractmethod
-    def __iter__(self) -> Iterator[tuple[float, float, float]]:
-        """Yield ``(lat, lon, alt)`` for each constituent point."""
-        ...
-
-    @abstractmethod
-    def to_dict(self) -> dict[str, object]:
-        """Return this receptor as a dict that :meth:`from_dict` reads back."""
-        ...
-
-    @abstractmethod
-    def _build_geometry(self) -> Geometry:
-        """Construct the shapely geometry for this receptor."""
-        ...
+        raise NotImplementedError
 
     @property
-    def id(self) -> ReceptorID:
+    def id(self) -> str:
         """Receptor id, the release time followed by the location id."""
-        return ReceptorID(f"{self.time:%Y%m%d%H%M}_{self.location_id}")
+        return f"{self.time:%Y%m%d%H%M}_{self.location_id}"
 
-    @property
-    def geometry(self):
-        """Shapely geometry of the release points."""
-        if self._geometry is None:
-            self._geometry = self._build_geometry()
-        return self._geometry
+    def coords(self) -> list[tuple[float, float, float]]:
+        """Return ``(lat, lon, alt)`` of each release point."""
+        raise NotImplementedError
 
-    @property
-    def points(self) -> list[Point]:
-        """Release points as shapely ``Point(lon, lat, alt)`` objects."""
-        return [Point(lon, lat, alt) for lat, lon, alt in self]
+    def __iter__(self) -> Iterator[tuple[float, float, float]]:  # type: ignore[override]
+        """Yield ``(lat, lon, alt)`` for each release point."""
+        return iter(self.coords())
 
-    @property
-    def plot(self) -> ReceptorPlotAccessor:
-        """Plotting methods, such as ``receptor.plot.map()``."""
-        if self._plot is None:
-            from stilt.visualization import ReceptorPlotAccessor
-
-            self._plot = ReceptorPlotAccessor(self)
-        return self._plot
+    def __len__(self) -> int:
+        return len(self.coords())
 
     def __eq__(self, other: object) -> bool:
         if type(self) is not type(other):
@@ -281,38 +227,81 @@ class Receptor(ABC):
         return (
             self.time == other.time
             and self.altitude_ref == other.altitude_ref
-            and tuple(self) == tuple(other)
+            and self.coords() == other.coords()
         )
 
     def __hash__(self) -> int:
-        return hash((self.time.isoformat(), tuple(self), self.altitude_ref))
+        return hash(
+            (type(self).__name__, self.time, self.altitude_ref, tuple(self.coords()))
+        )
+
+    def __str__(self) -> str:
+        return repr(self)
+
+    # -- geometry ----------------------------------------------------------
+
+    def _build_geometry(self) -> Geometry:
+        raise NotImplementedError
+
+    @cached_property
+    def geometry(self) -> Geometry:
+        """Shapely geometry of the release points."""
+        return self._build_geometry()
+
+    @property
+    def points(self) -> list[Point]:
+        """Release points as shapely ``Point(lon, lat, alt)`` objects."""
+        return [Point(lon, lat, alt) for lat, lon, alt in self.coords()]
+
+    @cached_property
+    def plot(self) -> ReceptorPlotAccessor:
+        """Plotting methods, such as ``receptor.plot.map()``."""
+        from stilt.visualization import ReceptorPlotAccessor
+
+        return ReceptorPlotAccessor(self)
+
+    # -- dicts -------------------------------------------------------------
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return this receptor as a plain dict that :meth:`from_dict` reads back."""
+        return self.model_dump(mode="json")
 
     @classmethod
-    def from_dict(cls, d: dict[str, object]) -> Receptor:
+    def from_dict(cls, d: Mapping[str, Any]) -> Receptor:
         """
-        Build a receptor from a dict made by :meth:`to_dict`.
+        Build a receptor of the right type from a dict made by :meth:`to_dict`.
+
+        Dicts written by earlier versions name the type under ``"type"``
+        (``"PointReceptor"``). Those load too.
 
         Raises
         ------
         ValueError
-            If the dict has no ``"type"`` key or names an unknown type.
+            If the dict names no known receptor kind.
         """
         data = dict(d)
-        type_str = cast(str | None, data.pop("type", None))
-        if not type_str:
-            raise ValueError("Dictionary must contain a 'type' key.")
-        registry = {sub.__name__: sub for sub in Receptor.__subclasses__()}
-        if type_str not in registry:
-            raise ValueError(f"Unknown receptor type: '{type_str}'.")
-        return registry[type_str](**data)  # type: ignore[arg-type]
+        if "kind" not in data:
+            legacy = {
+                "PointReceptor": "point",
+                "ColumnReceptor": "column",
+                "MultiPointReceptor": "multipoint",
+            }
+            type_name = data.pop("type", None)
+            if not type_name:
+                raise ValueError("Receptor dict must contain a 'kind' key.")
+            if type_name not in legacy:
+                raise ValueError(f"Unknown receptor type: {type_name!r}.")
+            data["kind"] = legacy[type_name]
+        return _ANY_RECEPTOR.validate_python(data)
 
     @classmethod
     def from_points(
         cls,
         time: TimeLike,
-        points: list[tuple[float, float, float]],
+        points: Iterable[tuple[float, float, float]],
         *,
         altitude_ref: VerticalReference = "agl",
+        attrs: Mapping[str, Any] | None = None,
     ) -> Receptor:
         """
         Build the right receptor type for a list of points.
@@ -321,10 +310,12 @@ class Receptor(ABC):
         ----------
         time : datetime-like or str
             Release time (UTC).
-        points : list of tuple of float
+        points : iterable of tuple of float
             ``(longitude, latitude, altitude)`` of each release point.
         altitude_ref : {"agl", "msl"}, default "agl"
             Whether altitudes are above ground level or above mean sea level.
+        attrs : mapping, optional
+            Extra labels.
 
         Returns
         -------
@@ -333,22 +324,45 @@ class Receptor(ABC):
             for two points at the same longitude and latitude, and a
             :class:`MultiPointReceptor` otherwise.
         """
-        if not points:
+        pts = [(float(lon), float(lat), float(alt)) for lon, lat, alt in points]
+        if not pts:
             raise ValueError("At least one point must be provided.")
-        lons, lats, alts = zip(*points, strict=False)
-        lons, lats, alts = list(lons), list(lats), list(alts)
-        if len(lons) == 1:
+        labels = dict(attrs or {})
+        if len(pts) == 1:
+            lon, lat, alt = pts[0]
             return PointReceptor(
-                time, lons[0], lats[0], alts[0], altitude_ref=altitude_ref
+                time, lon, lat, alt, altitude_ref=altitude_ref, attrs=labels
             )
-        if len(lons) == 2 and lons[0] == lons[1] and lats[0] == lats[1]:
-            bottom, top = (
-                (alts[0], alts[1]) if alts[0] < alts[1] else (alts[1], alts[0])
-            )
+        if len(pts) == 2 and pts[0][:2] == pts[1][:2]:
+            bottom, top = sorted((pts[0][2], pts[1][2]))
             return ColumnReceptor(
-                time, lons[0], lats[0], bottom, top, altitude_ref=altitude_ref
+                time,
+                pts[0][0],
+                pts[0][1],
+                bottom,
+                top,
+                altitude_ref=altitude_ref,
+                attrs=labels,
             )
-        return MultiPointReceptor(time, lons, lats, alts, altitude_ref=altitude_ref)
+        lons, lats, alts = zip(*pts, strict=True)
+        return MultiPointReceptor(
+            time, lons, lats, alts, altitude_ref=altitude_ref, attrs=labels
+        )
+
+
+def _check_lon(values: Iterable[float]) -> None:
+    if any(not -180 <= v <= 180 for v in values):
+        raise ValueError("longitude must be within [-180, 180].")
+
+
+def _check_lat(values: Iterable[float]) -> None:
+    if any(not -90 <= v <= 90 for v in values):
+        raise ValueError("latitude must be within [-90, 90].")
+
+
+def _check_agl(values: Iterable[float], altitude_ref: str) -> None:
+    if altitude_ref == "agl" and any(v < 0 for v in values):
+        raise ValueError("AGL altitudes must be >= 0.")
 
 
 class PointReceptor(Receptor):
@@ -368,6 +382,8 @@ class PointReceptor(Receptor):
         Release height in metres.
     altitude_ref : {"agl", "msl"}, default "agl"
         Whether *altitude* is above ground level or above mean sea level.
+    attrs : dict, optional
+        Extra labels.
 
     Examples
     --------
@@ -375,6 +391,11 @@ class PointReceptor(Receptor):
     >>> r.id
     '202307151800_-111.848_40.766_10'
     """
+
+    kind: Literal["point"] = "point"
+    longitude: float = Field(description="Longitude of the release point, degrees.")
+    latitude: float = Field(description="Latitude of the release point, degrees.")
+    altitude: float = Field(description="Release height, metres.")
 
     def __init__(
         self,
@@ -384,49 +405,46 @@ class PointReceptor(Receptor):
         altitude: float,
         *,
         altitude_ref: VerticalReference = "agl",
+        attrs: Mapping[str, Any] | None = None,
+        kind: Literal["point"] = "point",
     ) -> None:
-        super().__init__(time, altitude_ref)
-        self.longitude = float(longitude)
-        self.latitude = float(latitude)
-        self.altitude = float(altitude)
-        _validate_lon(self.longitude)
-        _validate_lat(self.latitude)
-        _validate_agl(self.altitude, self.altitude_ref)
+        BaseModel.__init__(
+            self,
+            time=time,
+            longitude=longitude,
+            latitude=latitude,
+            altitude=altitude,
+            altitude_ref=altitude_ref,
+            attrs=dict(attrs or {}),
+            kind=kind,
+        )
+
+    @model_validator(mode="after")
+    def _check(self) -> PointReceptor:
+        _check_lon([self.longitude])
+        _check_lat([self.latitude])
+        _check_agl([self.altitude], self.altitude_ref)
+        return self
 
     @property
-    def location_id(self) -> LocationID:
+    def location_id(self) -> str:
         """Location id, ``"<lon>_<lat>_<alt>"``."""
-        x = _format_coord(self.longitude)
-        y = _format_coord(self.latitude)
-        z = _format_coord(self.altitude)
-        return LocationID(f"{x}_{y}_{z}")
+        return "_".join(
+            _format_coord(v) for v in (self.longitude, self.latitude, self.altitude)
+        )
 
-    def __len__(self) -> int:
-        return 1
-
-    def __iter__(self) -> Iterator[tuple[float, float, float]]:
-        yield (self.latitude, self.longitude, self.altitude)
+    def coords(self) -> list[tuple[float, float, float]]:
+        """Return ``(lat, lon, alt)`` of the release point."""
+        return [(self.latitude, self.longitude, self.altitude)]
 
     def __repr__(self) -> str:
         return (
-            f"PointReceptor(id={self.id!r}, "
-            f"lon={self.longitude:.5f}, lat={self.latitude:.5f}, alt={self.altitude:g} {self.altitude_ref})"
+            f"PointReceptor(id={self.id!r}, lon={self.longitude:.5f}, "
+            f"lat={self.latitude:.5f}, alt={self.altitude:g} {self.altitude_ref})"
         )
 
     def _build_geometry(self) -> Point:
-        """Return a shapely Point at the release point."""
         return Point(self.longitude, self.latitude, self.altitude)
-
-    def to_dict(self) -> dict[str, object]:
-        """Return this receptor as a dict with ``type``, ``time``, ``longitude``, ``latitude``, ``altitude``, and ``altitude_ref``."""
-        return {
-            "type": type(self).__name__,
-            "time": self.time.isoformat(),
-            "longitude": self.longitude,
-            "latitude": self.latitude,
-            "altitude": self.altitude,
-            "altitude_ref": self.altitude_ref,
-        }
 
 
 class ColumnReceptor(Receptor):
@@ -447,7 +465,15 @@ class ColumnReceptor(Receptor):
         Top of the column in metres.
     altitude_ref : {"agl", "msl"}, default "agl"
         Whether the heights are above ground level or above mean sea level.
+    attrs : dict, optional
+        Extra labels.
     """
+
+    kind: Literal["column"] = "column"
+    longitude: float = Field(description="Longitude of the column, degrees.")
+    latitude: float = Field(description="Latitude of the column, degrees.")
+    bottom: float = Field(description="Bottom of the column, metres.")
+    top: float = Field(description="Top of the column, metres.")
 
     def __init__(
         self,
@@ -458,59 +484,56 @@ class ColumnReceptor(Receptor):
         top: float,
         *,
         altitude_ref: VerticalReference = "agl",
+        attrs: Mapping[str, Any] | None = None,
+        kind: Literal["column"] = "column",
     ) -> None:
-        super().__init__(time, altitude_ref)
-        self.longitude = float(longitude)
-        self.latitude = float(latitude)
-        self.bottom = float(bottom)
-        self.top = float(top)
-        _validate_lon(self.longitude)
-        _validate_lat(self.latitude)
+        BaseModel.__init__(
+            self,
+            time=time,
+            longitude=longitude,
+            latitude=latitude,
+            bottom=bottom,
+            top=top,
+            altitude_ref=altitude_ref,
+            attrs=dict(attrs or {}),
+            kind=kind,
+        )
+
+    @model_validator(mode="after")
+    def _check(self) -> ColumnReceptor:
+        _check_lon([self.longitude])
+        _check_lat([self.latitude])
         if self.bottom >= self.top:
             raise ValueError("'bottom' must be less than 'top'.")
-        _validate_agl(self.bottom, self.altitude_ref)
+        _check_agl([self.bottom], self.altitude_ref)
+        return self
 
     @property
-    def location_id(self) -> LocationID:
+    def location_id(self) -> str:
         """Location id, ``"<lon>_<lat>_X"``."""
-        x = _format_coord(self.longitude)
-        y = _format_coord(self.latitude)
-        return LocationID(f"{x}_{y}_X")
+        return f"{_format_coord(self.longitude)}_{_format_coord(self.latitude)}_X"
 
-    def __len__(self) -> int:
-        return 2
-
-    def __iter__(self) -> Iterator[tuple[float, float, float]]:
-        yield (self.latitude, self.longitude, self.bottom)
-        yield (self.latitude, self.longitude, self.top)
+    def coords(self) -> list[tuple[float, float, float]]:
+        """Return ``(lat, lon, alt)`` of the bottom and the top of the column."""
+        return [
+            (self.latitude, self.longitude, self.bottom),
+            (self.latitude, self.longitude, self.top),
+        ]
 
     def __repr__(self) -> str:
         return (
-            f"ColumnReceptor(id={self.id!r}, "
-            f"lon={self.longitude:.5f}, lat={self.latitude:.5f}, "
-            f"bottom={self.bottom:g} {self.altitude_ref}, top={self.top:g} {self.altitude_ref})"
+            f"ColumnReceptor(id={self.id!r}, lon={self.longitude:.5f}, "
+            f"lat={self.latitude:.5f}, bottom={self.bottom:g} {self.altitude_ref}, "
+            f"top={self.top:g} {self.altitude_ref})"
         )
 
     def _build_geometry(self) -> LineString:
-        """Return a shapely LineString from the bottom to the top of the column."""
         return LineString(
             [
                 (self.longitude, self.latitude, self.bottom),
                 (self.longitude, self.latitude, self.top),
             ]
         )
-
-    def to_dict(self) -> dict[str, object]:
-        """Return this receptor as a dict with ``type``, ``time``, ``longitude``, ``latitude``, ``bottom``, ``top``, and ``altitude_ref``."""
-        return {
-            "type": type(self).__name__,
-            "time": self.time.isoformat(),
-            "longitude": self.longitude,
-            "latitude": self.latitude,
-            "bottom": self.bottom,
-            "top": self.top,
-            "altitude_ref": self.altitude_ref,
-        }
 
 
 class MultiPointReceptor(Receptor):
@@ -534,6 +557,8 @@ class MultiPointReceptor(Receptor):
         Height of each point in metres.
     altitude_ref : {"agl", "msl"}, default "agl"
         Whether the heights are above ground level or above mean sea level.
+    attrs : dict, optional
+        Extra labels.
 
     Raises
     ------
@@ -542,102 +567,179 @@ class MultiPointReceptor(Receptor):
         points share a horizontal location.
     """
 
+    kind: Literal["multipoint"] = "multipoint"
+    longitudes: tuple[float, ...] = Field(
+        description="Longitude of each point, degrees."
+    )
+    latitudes: tuple[float, ...] = Field(description="Latitude of each point, degrees.")
+    altitudes: tuple[float, ...] = Field(description="Height of each point, metres.")
+
     def __init__(
         self,
         time: TimeLike,
-        longitudes,
-        latitudes,
-        altitudes,
+        longitudes: Iterable[float],
+        latitudes: Iterable[float],
+        altitudes: Iterable[float],
         *,
         altitude_ref: VerticalReference = "agl",
+        attrs: Mapping[str, Any] | None = None,
+        kind: Literal["multipoint"] = "multipoint",
     ) -> None:
-        super().__init__(time, altitude_ref)
-        self.longitudes = np.asarray(longitudes, dtype=float)
-        self.latitudes = np.asarray(latitudes, dtype=float)
-        self.altitudes = np.asarray(altitudes, dtype=float)
+        BaseModel.__init__(
+            self,
+            time=time,
+            longitudes=longitudes,
+            latitudes=latitudes,
+            altitudes=altitudes,
+            altitude_ref=altitude_ref,
+            attrs=dict(attrs or {}),
+            kind=kind,
+        )
+
+    @field_validator("longitudes", "latitudes", "altitudes", mode="before")
+    @classmethod
+    def _as_floats(cls, value: Any) -> tuple[float, ...]:
+        return tuple(float(v) for v in np.asarray(value, dtype=float).ravel())
+
+    @model_validator(mode="after")
+    def _check(self) -> MultiPointReceptor:
         if not (len(self.longitudes) == len(self.latitudes) == len(self.altitudes)):
             raise ValueError(
                 "longitudes, latitudes, and altitudes must have the same length."
             )
-        _validate_lon(self.longitudes)
-        _validate_lat(self.latitudes)
-        _validate_agl(self.altitudes, self.altitude_ref)
-        _validate_distinct_horizontal(self.longitudes, self.latitudes)
+        _check_lon(self.longitudes)
+        _check_lat(self.latitudes)
+        _check_agl(self.altitudes, self.altitude_ref)
+        # HYSPLIT joins consecutive starting locations at one latitude and
+        # longitude into a vertical line source and releases only from the
+        # last pair, and PYSTILT matches particles to their release point by
+        # horizontal position.
+        horizontal = {
+            (round(lon, 5), round(lat, 5))
+            for lon, lat in zip(self.longitudes, self.latitudes, strict=True)
+        }
+        if len(horizontal) != len(self.longitudes):
+            raise ValueError(
+                "MultiPointReceptor points must have distinct horizontal locations "
+                "(HYSPLIT collapses starting locations that share a lat/lon into a "
+                "single vertical line source and releases only between the last two "
+                "heights). Use ColumnReceptor for a vertical column, or one "
+                "PointReceptor per height (distinct r_idx) for discrete release "
+                "heights at one location."
+            )
+        return self
 
     @property
-    def location_id(self) -> LocationID:
+    def location_id(self) -> str:
         """
         Location id, ``"multi_<hash>"``.
 
-        The hash covers the sorted points, with coordinates rounded to 5
-        decimals and altitudes truncated to whole metres.
+        The hash covers the sorted points, with longitudes and latitudes
+        rounded to 5 decimals and altitudes to 0.01 m. A whole-metre
+        altitude hashes as its integer.
         """
-        pts_sorted = sorted(
-            zip(self.longitudes, self.latitudes, self.altitudes, strict=False)
+        points = sorted(
+            zip(self.longitudes, self.latitudes, self.altitudes, strict=True)
         )
         canonical = json.dumps(
             [
-                [round(float(lon), 5), round(float(lat), 5), int(alt)]
-                for lon, lat, alt in pts_sorted
+                [round(lon, 5), round(lat, 5), _hash_altitude(alt)]
+                for lon, lat, alt in points
             ],
             separators=(",", ":"),
         )
-        hash_str = hashlib.sha256(canonical.encode()).hexdigest()[:10]
-        return LocationID(f"multi_{hash_str}")
+        return "multi_" + hashlib.sha256(canonical.encode()).hexdigest()[:10]
 
-    def __len__(self) -> int:
-        return len(self.longitudes)
-
-    def __iter__(self) -> Iterator[tuple[float, float, float]]:
-        yield from zip(self.latitudes, self.longitudes, self.altitudes, strict=False)
+    def coords(self) -> list[tuple[float, float, float]]:
+        """Return ``(lat, lon, alt)`` of each release point."""
+        return list(zip(self.latitudes, self.longitudes, self.altitudes, strict=True))
 
     def __repr__(self) -> str:
-        return f"MultiPointReceptor(id={self.id!r}, n_points={len(self)}, altitude_ref={self.altitude_ref})"
-
-    def _build_geometry(self) -> MultiPoint:
-        """Return a shapely MultiPoint of the release points."""
-        return MultiPoint(
-            list(zip(self.longitudes, self.latitudes, self.altitudes, strict=False))
+        return (
+            f"MultiPointReceptor(id={self.id!r}, n_points={len(self)}, "
+            f"altitude_ref={self.altitude_ref})"
         )
 
-    def to_dict(self) -> dict[str, object]:
-        """Return this receptor as a dict with ``type``, ``time``, ``longitudes``, ``latitudes``, ``altitudes``, and ``altitude_ref``."""
-        return {
-            "type": type(self).__name__,
-            "time": self.time.isoformat(),
-            "longitudes": self.longitudes.tolist(),
-            "latitudes": self.latitudes.tolist(),
-            "altitudes": self.altitudes.tolist(),
-            "altitude_ref": self.altitude_ref,
-        }
+    def _build_geometry(self) -> MultiPoint:
+        return MultiPoint(
+            list(zip(self.longitudes, self.latitudes, self.altitudes, strict=True))
+        )
 
 
-#: Column names :func:`read_receptors` accepts for each receptor field.
-_CSV_ALIASES = {
-    "time": ("time",),
-    "longitude": ("longitude", "long", "lon"),
-    "latitude": ("latitude", "lati", "lat"),
-    "altitude": ("altitude", "zagl", "zmsl", "z"),
-    "r_idx": ("r_idx",),
-    "altitude_ref": ("altitude_ref", "height_ref"),
-}
-
-#: Header spellings mapped onto the short names the reader works with.
-_CSV_RENAMES = {
-    alias: {"longitude": "long", "latitude": "lati", "altitude": "z"}.get(field, field)
-    for field, aliases in _CSV_ALIASES.items()
-    for alias in aliases
-}
+def _hash_altitude(alt: float) -> int | float:
+    """Altitude as hashed in a multipoint id: an int when whole, else to 0.01 m."""
+    rounded = round(alt, 2)
+    return int(rounded) if rounded == int(rounded) else rounded
 
 
-def read_receptors(path: str | Path | IO[str]) -> list[Receptor]:
+#: Any receptor, for validating a dict of unknown kind.
+AnyReceptor = Annotated[
+    PointReceptor | ColumnReceptor | MultiPointReceptor, Field(discriminator="kind")
+]
+_ANY_RECEPTOR: TypeAdapter[Receptor] = TypeAdapter(AnyReceptor)
+
+
+# ---------------------------------------------------------------------------
+# The receptor table
+# ---------------------------------------------------------------------------
+
+
+def receptors_to_frame(receptors: Iterable[Receptor]) -> pd.DataFrame:
     """
-    Read receptors from a CSV file.
+    Return receptors as one table with a row per release point.
 
-    The file needs columns for time, longitude, latitude, and altitude. Each
-    row is one :class:`PointReceptor`, unless an ``r_idx`` column groups
-    rows into one receptor. A group of two rows at the same location becomes
-    a :class:`ColumnReceptor` and any other group a
+    The columns are ``r_idx`` (the receptor's position, shared by the rows
+    of a column or multipoint receptor), ``time``, ``longitude``,
+    ``latitude``, ``altitude``, ``altitude_ref``, and one column per label
+    in any receptor's ``attrs``.
+    """
+    receptors = list(receptors)
+    labels = list(dict.fromkeys(k for r in receptors for k in r.attrs))
+    rows = [
+        {
+            "r_idx": idx,
+            "time": r.time,
+            "longitude": lon,
+            "latitude": lat,
+            "altitude": alt,
+            "altitude_ref": r.altitude_ref,
+            **{k: r.attrs.get(k) for k in labels},
+        }
+        for idx, r in enumerate(receptors)
+        for lat, lon, alt in r.coords()
+    ]
+    frame = pd.DataFrame(rows, columns=[*COLUMNS, *labels])
+    return frame.astype({"time": "datetime64[ns]"})
+
+
+def _normalize_columns(frame: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, str]]:
+    """
+    Return *frame* with the receptor columns under their standard names.
+
+    Also returns the file's own spelling of each standard column. Any other
+    column is kept as it is. A ``zmsl`` altitude column implies ``msl``.
+    """
+    spelling: dict[str, str] = {}
+    for field, aliases in ALIASES.items():
+        for col in frame.columns:
+            if str(col).lower() in aliases:
+                spelling[field] = str(col)
+                break
+    frame = frame.rename(columns={name: field for field, name in spelling.items()})
+    if "altitude_ref" not in frame.columns:
+        implied = "msl" if spelling.get("altitude", "").lower() == "zmsl" else "agl"
+        frame = frame.assign(altitude_ref=implied)
+    return frame, spelling
+
+
+def receptors_from_frame(frame: pd.DataFrame) -> list[Receptor]:
+    """
+    Build receptors from a table with a row per release point.
+
+    The table needs ``time``, ``longitude``, ``latitude``, and ``altitude``
+    columns. Each row is one :class:`PointReceptor`, unless an ``r_idx``
+    column groups rows into one receptor: a group of two rows at one
+    location is a :class:`ColumnReceptor`, any other group a
     :class:`MultiPointReceptor`.
 
     ======================  =============================================
@@ -652,9 +754,134 @@ def read_receptors(path: str | Path | IO[str]) -> list[Receptor]:
     ======================  =============================================
 
     Without an ``altitude_ref`` column, altitudes are above mean sea level
-    when the column is named ``zmsl`` and above ground level otherwise.
-    Any other columns are kept in each receptor's ``attrs``. For a group,
-    they come from its first row.
+    when the column is named ``zmsl`` and above ground level otherwise. Any
+    other column becomes a label in each receptor's ``attrs``. For a group,
+    labels come from its first row.
+
+    Returns
+    -------
+    list of Receptor
+        In table order.
+
+    Raises
+    ------
+    ValueError
+        If a required column is missing, the rows of one group differ in
+        time or altitude reference, or two different receptors get the same
+        id.
+    """
+    frame, spelling = _normalize_columns(frame)
+    required = ("time", "longitude", "latitude", "altitude")
+    if any(c not in frame.columns for c in required):
+        raise ValueError(f"Receptor table must contain columns: {list(required)}")
+    labels = [c for c in frame.columns if c not in COLUMNS]
+    names = [str(c) for c in labels]
+    values = frame[labels].astype(object).where(frame[labels].notna(), None)
+    attrs = [
+        dict(zip(names, row, strict=True))
+        for row in values.itertuples(index=False, name=None)
+    ]
+    if not labels:  # a frame with no columns iterates as no rows
+        attrs = [{} for _ in frame.index]
+    time = pd.to_datetime(frame["time"])
+    lon = frame["longitude"].to_numpy(dtype=float)
+    lat = frame["latitude"].to_numpy(dtype=float)
+    alt = frame["altitude"].to_numpy(dtype=float)
+    ref = frame["altitude_ref"].astype(str).str.lower().to_numpy()
+
+    def point(i: int) -> Receptor:
+        return PointReceptor(
+            time.iloc[i], lon[i], lat[i], alt[i], altitude_ref=ref[i], attrs=attrs[i]
+        )
+
+    if "r_idx" not in frame.columns:
+        receptors = [point(i) for i in range(len(frame))]
+    else:
+        # Group keys as text: a file that mixes numeric and string ids must
+        # not split one receptor into two.
+        keys = frame["r_idx"].astype(str).to_numpy()
+        rows: dict[str, list[int]] = {}
+        for i, key in enumerate(keys):
+            rows.setdefault(key, []).append(i)
+        receptors = []
+        for key, idx in rows.items():
+            if len(idx) == 1:
+                receptors.append(point(idx[0]))
+                continue
+            try:
+                if len(set(ref[idx])) != 1:
+                    raise ValueError(
+                        "All rows in one receptor group must share the same altitude_ref."
+                    )
+                if time.iloc[idx].nunique() != 1:
+                    raise ValueError(
+                        "All rows in one receptor group must share the same release time."
+                    )
+                receptors.append(
+                    Receptor.from_points(
+                        time.iloc[idx[0]],
+                        [(lon[i], lat[i], alt[i]) for i in idx],
+                        altitude_ref=ref[idx[0]],
+                        attrs=attrs[idx[0]],
+                    )
+                )
+            except ValueError as exc:
+                raise ValueError(f"r_idx={key}: {_message(exc)}") from exc
+    check_distinct_ids(receptors)
+    return receptors
+
+
+def _message(exc: ValueError) -> str:
+    """Return the message of *exc* on one line, without pydantic's framing."""
+    if isinstance(exc, ValidationError):
+        return "; ".join(
+            str(e["msg"]).removeprefix("Value error, ") for e in exc.errors()
+        )
+    return str(exc)
+
+
+def check_distinct_ids(receptors: Iterable[Receptor]) -> None:
+    """
+    Raise if two different receptors share an id.
+
+    An id names a receptor's result files, so two receptors with one id
+    would overwrite each other. Equal receptors listed twice are fine.
+    """
+    seen: dict[str, Receptor] = {}
+    for r in receptors:
+        other = seen.setdefault(r.id, r)
+        if other is not r and other != r:
+            raise ValueError(
+                f"Two different receptors share the id {r.id!r}: {other!r} and {r!r}."
+            )
+
+
+# ---------------------------------------------------------------------------
+# CSV files
+# ---------------------------------------------------------------------------
+
+
+def _read_frame(path: str | Path | IO[str]) -> pd.DataFrame:
+    """Read a receptors CSV with ``r_idx`` as text and ``time`` parsed."""
+    header = pd.read_csv(path, nrows=0).columns
+    if hasattr(path, "seek"):
+        path.seek(0)  # type: ignore[union-attr]
+    # With type inference, pandas types each chunk of a large file on its
+    # own, so an r_idx column that mixes numbers and text would come back
+    # part int and part str.
+    dtype: dict[Any, Any] = {c: str for c in header if str(c).lower() == "r_idx"}
+    times = [c for c in header if str(c).lower() == "time"]
+    return pd.read_csv(path, dtype=dtype, parse_dates=times)
+
+
+def read_receptors(path: str | Path | IO[str]) -> list[Receptor]:
+    """
+    Read receptors from a CSV file.
+
+    The file needs columns for time, longitude, latitude, and altitude, and
+    may group rows into one receptor with ``r_idx``. See
+    :func:`receptors_from_frame` for the rules and the accepted column
+    names.
 
     Parameters
     ----------
@@ -665,226 +892,19 @@ def read_receptors(path: str | Path | IO[str]) -> list[Receptor]:
     -------
     list of Receptor
         In file order.
-
-    Raises
-    ------
-    ValueError
-        If a required column is missing, or the rows of one group differ in
-        time or altitude reference.
     """
-    # Read r_idx as text. With type inference, pandas types each chunk of a
-    # large file separately, so in a file that mixes numeric and string ids,
-    # a group split across chunks would come back part int and part str and
-    # be split into two receptors.
-    header = pd.read_csv(path, nrows=0).columns
-    if hasattr(path, "seek"):
-        path.seek(0)  # type: ignore[union-attr]
-    # Annotated loosely because the reader's own signature spells this mapping
-    # with invariant value types, which no precise annotation here satisfies.
-    dtype: dict[Hashable, Any] = {c: str for c in header if str(c).lower() == "r_idx"}
-    df = pd.read_csv(path, parse_dates=["time"], dtype=dtype)
+    return receptors_from_frame(_read_frame(path))
 
-    spelling = {str(col).lower(): str(col) for col in df.columns}
-    original_columns = list(spelling)
-    inferred_altitude_ref = None
-    if "zmsl" in original_columns:
-        inferred_altitude_ref = "msl"
-    elif "zagl" in original_columns:
-        inferred_altitude_ref = "agl"
 
-    df.columns = df.columns.str.lower()
-    df = df.rename(columns=_CSV_RENAMES)
-    if "altitude_ref" not in df.columns:
-        df["altitude_ref"] = inferred_altitude_ref or "agl"
-
-    required_cols = ["time", "lati", "long", "z"]
-    if not all(col in df.columns for col in required_cols):
-        raise ValueError(f"Receptor file must contain columns: {required_cols}")
-
-    # The columns PYSTILT does not use become one ``attrs`` dict per row, in
-    # the file's own spelling, with empty cells as None.
-    extra = [
-        c for c in df.columns if c not in (*required_cols, "r_idx", "altitude_ref")
-    ]
-    labels = df[extra].astype(object).where(df[extra].notna(), None)
-    names = [spelling.get(c, c) for c in extra]
-    records = [
-        dict(zip(names, values, strict=True))
-        for values in labels.itertuples(index=False, name=None)
-    ]
-    if not extra:  # a frame with no columns iterates as no rows
-        records = [{} for _ in df.index]
-    df = df.drop(columns=extra).assign(attrs=records)
-
-    def _point_receptor(row: Any) -> PointReceptor:
-        receptor = PointReceptor(
-            time=row.time,
-            longitude=row.long,
-            latitude=row.lati,
-            altitude=row.z,
-            altitude_ref=row.altitude_ref,
-        )
-        receptor.attrs = row.attrs
-        return receptor
-
-    multi_keys = []
-    if "r_idx" in df.columns:
-        multi_keys = [k for k, v in df.groupby("r_idx").size().items() if v > 1]
-    if not multi_keys:
-        return [_point_receptor(row) for row in df.itertuples(index=False)]
-
-    single_mask = ~df["r_idx"].isin(multi_keys)
-    result: dict[object, Receptor] = {}
-    for row in df[single_mask].itertuples(index=False):
-        result[cast(Any, row).r_idx] = _point_receptor(row)
-    for key, g in df[~single_mask].groupby("r_idx"):
-        try:
-            result[key] = _receptor_from_group(cast(pd.DataFrame, g))
-        except ValueError as exc:
-            raise ValueError(f"r_idx={key}: {exc}") from exc
-        result[key].attrs = g["attrs"].tolist()[0]
-    return [result[k] for k in df["r_idx"].unique()]
+def _csv_frame(receptors: Iterable[Receptor]) -> pd.DataFrame:
+    """Return the receptor table with times as the text written to CSV."""
+    frame = receptors_to_frame(receptors)
+    return frame.assign(time=frame["time"].dt.strftime("%Y-%m-%d %H:%M:%S"))
 
 
 def receptors_to_csv(receptors: Iterable[Receptor]) -> str:
-    """
-    Return receptors as CSV text that :func:`read_receptors` reads back.
-
-    Each release point is one row, and ``r_idx`` groups the rows of column
-    and multipoint receptors. Each receptor's ``attrs`` become extra
-    columns.
-    """
-    import csv
-    from io import StringIO
-
-    receptors = list(receptors)
-    extra = list(dict.fromkeys(k for r in receptors for k in r.attrs))
-    buffer = StringIO()
-    writer = csv.DictWriter(
-        buffer,
-        fieldnames=[
-            "r_idx",
-            "time",
-            "longitude",
-            "latitude",
-            "altitude",
-            "altitude_ref",
-            *extra,
-        ],
-    )
-    writer.writeheader()
-    for idx, receptor in enumerate(receptors):
-        for lat, lon, altitude in receptor:
-            writer.writerow(
-                {
-                    "r_idx": idx,
-                    "time": receptor.time.isoformat(sep=" "),
-                    "longitude": float(lon),
-                    "latitude": float(lat),
-                    "altitude": float(altitude),
-                    "altitude_ref": receptor.altitude_ref,
-                    **{k: receptor.attrs.get(k, "") for k in extra},
-                }
-            )
-    return buffer.getvalue()
-
-
-def append_receptors_csv(text: str, receptors: Iterable[Receptor]) -> str:
-    """
-    Return the text of a receptors CSV with rows for more receptors appended.
-
-    The existing header sets the columns and their order, so a hand-written
-    file keeps its column names and ``r_idx`` values. Extra columns are
-    filled from each receptor's ``attrs`` or left empty. New receptors are
-    numbered after the largest ``r_idx`` in the file.
-
-    Parameters
-    ----------
-    text : str
-        Contents of the existing CSV.
-    receptors : iterable of Receptor
-        Receptors to append.
-
-    Returns
-    -------
-    str
-        The CSV text with the new rows.
-
-    Raises
-    ------
-    ValueError
-        If the file lacks a time, longitude, latitude, or altitude column,
-        has no ``r_idx`` column for a column or multipoint receptor, or
-        names its altitude column ``zagl``/``zmsl`` for a different altitude
-        reference than a new receptor uses.
-    """
-    import csv
-    from io import StringIO
-
-    rows = list(csv.reader(StringIO(text)))
-    if not rows:
-        return receptors_to_csv(receptors)
-    header = rows[0]
-    lower = [h.strip().lower() for h in header]
-
-    def column(field: str) -> str | None:
-        return next(
-            (header[i] for i, h in enumerate(lower) if h in _CSV_ALIASES[field]), None
-        )
-
-    columns = {field: column(field) for field in _CSV_ALIASES}
-    missing = [
-        f for f in ("time", "longitude", "latitude", "altitude") if columns[f] is None
-    ]
-    if missing:
-        raise ValueError(f"receptors.csv lacks a column for {missing}; cannot append.")
-    c_time, c_lon, c_lat, c_alt = (
-        str(columns[f]) for f in ("time", "longitude", "latitude", "altitude")
-    )
-    file_ref = {"zagl": "agl", "zmsl": "msl"}.get(c_alt.lower())
-
-    receptors = list(receptors)
-    idx_column = columns["r_idx"]
-    if idx_column is None and any(len(list(r)) > 1 for r in receptors):
-        raise ValueError(
-            "receptors.csv has no r_idx column, so a column or multipoint receptor "
-            "cannot be appended; add an r_idx column to the file."
-        )
-    next_idx = 0
-    if idx_column is not None:
-        position = header.index(idx_column)
-        numeric = [
-            int(r[position])
-            for r in rows[1:]
-            if r[position].strip().lstrip("-").isdigit()
-        ]
-        next_idx = max(numeric, default=-1) + 1
-
-    ref_column = columns["altitude_ref"]
-    extra = [h for h in header if h not in columns.values()]
-    buffer = StringIO()
-    writer = csv.DictWriter(buffer, fieldnames=header, restval="")
-    for k, receptor in enumerate(receptors):
-        if ref_column is None and file_ref not in (None, receptor.altitude_ref):
-            raise ValueError(
-                f"receptors.csv altitudes are {file_ref}; receptor {receptor.id} is "
-                f"{receptor.altitude_ref}. Add an altitude_ref column to mix them."
-            )
-        for lat, lon, altitude in receptor:
-            row: dict[str, Any] = {
-                c_time: receptor.time.isoformat(sep=" "),
-                c_lon: float(lon),
-                c_lat: float(lat),
-                c_alt: float(altitude),
-            }
-            if idx_column is not None:
-                row[idx_column] = next_idx + k
-            if ref_column is not None:
-                row[ref_column] = receptor.altitude_ref
-            row.update({h: receptor.attrs.get(h, "") for h in extra})
-            writer.writerow(row)
-    body = text if text.endswith("\n") else text + "\n"
-    return body + buffer.getvalue()
+    """Return receptors as CSV text that :func:`read_receptors` reads back."""
+    return _csv_frame(receptors).to_csv(index=False, lineterminator="\n")
 
 
 def write_receptors(receptors: Iterable[Receptor], path: str | Path) -> Path:
@@ -895,39 +915,83 @@ def write_receptors(receptors: Iterable[Receptor], path: str | Path) -> Path:
     return path
 
 
-def _receptor_from_group(group: pd.DataFrame) -> Receptor:
-    """Build one receptor from the rows of one ``r_idx`` group."""
-    refs = {str(v).lower() for v in group["altitude_ref"].tolist()}
-    if len(refs) != 1:
+def append_receptors_csv(text: str, receptors: Iterable[Receptor]) -> str:
+    """
+    Return the text of a receptors CSV with rows for more receptors appended.
+
+    The existing header sets the columns and their order, so a hand-written
+    file keeps its column names and ``r_idx`` values, and its rows are kept
+    as written. Label columns are filled from each receptor's ``attrs`` or
+    left empty. New receptors are numbered after the largest ``r_idx`` in
+    the file. When a new receptor's heights are above sea level and the file
+    has no ``altitude_ref`` column, the column is added, with ``agl`` on the
+    existing rows.
+
+    Raises
+    ------
+    ValueError
+        If the file lacks a time, longitude, latitude, or altitude column,
+        has no ``r_idx`` column for a column or multipoint receptor, or
+        names its altitude column ``zagl``/``zmsl`` for a different altitude
+        reference than a new receptor uses.
+    """
+    receptors = list(receptors)
+    if not text.strip():
+        return receptors_to_csv(receptors)
+    existing = pd.read_csv(StringIO(text), dtype=str, keep_default_na=False)
+    _, spelling = _normalize_columns(existing.iloc[:0])
+    missing = [
+        f for f in ("time", "longitude", "latitude", "altitude") if f not in spelling
+    ]
+    if missing:
+        raise ValueError(f"receptors.csv lacks a column for {missing}; cannot append.")
+    if "r_idx" not in spelling and any(len(r) > 1 for r in receptors):
         raise ValueError(
-            "All rows in one receptor group must share the same altitude_ref."
+            "receptors.csv has no r_idx column, so a column or multipoint receptor "
+            "cannot be appended; add an r_idx column to the file."
         )
-    altitude_ref = validate_vertical_reference(refs.pop())
-    lons = group["long"].tolist()
-    lats = group["lati"].tolist()
-    alts = group["z"].tolist()
-    times = pd.to_datetime(group["time"]).unique()
-    if len(times) != 1:
-        raise ValueError(
-            "All rows in one receptor group must share the same release time."
-        )
-    time = pd.to_datetime(times[0])
-    return Receptor.from_points(
-        time=time,
-        points=list(zip(lons, lats, alts, strict=False)),
-        altitude_ref=altitude_ref,
-    )
+    if "altitude_ref" not in spelling:
+        file_ref = {"zagl": "agl", "zmsl": "msl"}.get(spelling["altitude"].lower())
+        for r in receptors:
+            if file_ref is not None and r.altitude_ref != file_ref:
+                raise ValueError(
+                    f"receptors.csv altitudes are {file_ref}; receptor {r.id} is "
+                    f"{r.altitude_ref}. Add an altitude_ref column to mix them."
+                )
+        if file_ref is None and any(r.altitude_ref != "agl" for r in receptors):
+            existing = existing.assign(altitude_ref="agl")
+            spelling["altitude_ref"] = "altitude_ref"
+
+    new = _csv_frame(receptors)
+    if "r_idx" in spelling:
+        numbers = [
+            int(v)
+            for v in existing[spelling["r_idx"]]
+            if v.strip().lstrip("-").isdigit()
+        ]
+        new["r_idx"] += max(numbers, default=-1) + 1
+    new = new.rename(columns=spelling)
+    new = new.reindex(columns=existing.columns)
+    new = new.astype(object).where(new.notna(), "")
+    combined = pd.concat([existing, new.astype(str)], ignore_index=True)
+    return combined.to_csv(index=False, lineterminator="\n")
 
 
 __all__ = [
+    "ALIASES",
+    "COLUMNS",
+    "AnyReceptor",
     "ColumnReceptor",
-    "LocationID",
     "MultiPointReceptor",
     "PointReceptor",
     "Receptor",
-    "ReceptorID",
-    "read_receptors",
     "append_receptors_csv",
+    "check_distinct_ids",
+    "parse_receptor_id",
+    "parse_time",
+    "read_receptors",
+    "receptors_from_frame",
     "receptors_to_csv",
+    "receptors_to_frame",
     "write_receptors",
 ]

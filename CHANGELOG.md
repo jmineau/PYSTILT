@@ -37,6 +37,10 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   that the variant makes no footprint or that the footprint is empty. Check
   `sim.has_trajectory` / `sim.has_footprint` first while a run may still be
   going.
+- **Receptors as a table.** `model.receptors.to_frame()` returns the
+  receptors with a row per release point, and
+  `stilt.receptors.receptors_from_frame` builds them from one. Labels from
+  extra columns select directly: `model.simulations.sel(site="WBB")`.
 - `model.simulations.sel(...).jacobian(target, time_bins)` sums the
   selected footprints onto a target in one pass, as a sparse matrix with
   labelled rows and columns (`stilt.output.Jacobian`). The time bins must
@@ -91,6 +95,25 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   archives. The `cloud` extra installs `arlmet[archives]` in place of `s3fs`,
   and `fsspec` is no longer a core dependency. PYSTILT 0.1.0a22 does not work
   with arlmet 0.1.0b1: pin `arlmet<0.1.0b1` if you stay on it.
+- **Receptors are frozen pydantic models**
+  ([#86](https://github.com/jmineau/PYSTILT/issues/86),
+  [#66](https://github.com/jmineau/PYSTILT/issues/66); breaking).
+  `PointReceptor`, `ColumnReceptor`, and `MultiPointReceptor` take the same
+  arguments as before but can no longer be changed in place: use
+  `receptor.model_copy(update={...})`, and pass labels as `attrs=` instead
+  of assigning `receptor.attrs`. `receptor.id` and `receptor.location_id`
+  are plain strings; `ReceptorID` and `LocationID` are removed
+  (`stilt.receptors.parse_receptor_id` splits an id into its time and
+  location). `to_dict()` names the type under `kind` (`"point"`); dicts
+  stored by earlier versions still load. `MultiPointReceptor.longitudes`,
+  `latitudes`, and `altitudes` are tuples.
+- **The id of a multipoint receptor covers its heights to 0.01 m**
+  ([#50](https://github.com/jmineau/PYSTILT/issues/50)). Heights used to be
+  cut to whole metres in the id, so two receptors that differed by less
+  than a metre shared one and the second was dropped without a warning.
+  Ids of receptors with whole-metre heights are unchanged. Two different
+  receptors that still share an id are now refused when receptors are read
+  or added.
 
 ### Removed
 
@@ -161,6 +184,12 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `FileNotFoundError` on `_settings.tmp`. Every writer now uses its own
   temporary name, for settings, particles, footprints, and the
   `to_parquet` / `to_netcdf` exports.
+- **Appending an MSL receptor keeps its altitude reference**
+  ([#51](https://github.com/jmineau/PYSTILT/issues/51)). Adding a receptor
+  with heights above sea level to a `receptors.csv` that had a plain
+  `altitude` column and no `altitude_ref` column wrote it without its
+  reference, so it read back as above ground. The column is now added, with
+  `agl` on the existing rows.
 - `model.plot.availability(ax=...)` formats the dates on the figure of the
   axes you pass. It used to format whichever figure was current
   ([#58](https://github.com/jmineau/PYSTILT/issues/58)).

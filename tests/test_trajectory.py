@@ -411,8 +411,9 @@ def test_multipoint_close_points_are_matched_on_height_not_position():
 def test_multipoint_horizontal_matching_would_have_failed_that_case():
     """Guards the premise: nearest-horizontal really does get this wrong."""
     receptor = _slant()
-    drifted = np.array([receptor.longitudes[k] + 0.007 for k in [0, 1, 2, 3]])
-    nearest = np.argmin(np.abs(drifted[:, None] - receptor.longitudes[None, :]), axis=1)
+    lons = np.asarray(receptor.longitudes)
+    drifted = lons[:4] + 0.007
+    nearest = np.argmin(np.abs(drifted[:, None] - lons[None, :]), axis=1)
     assert nearest.tolist() != [0, 1, 2, 3]
 
 

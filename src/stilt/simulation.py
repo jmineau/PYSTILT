@@ -14,7 +14,7 @@ from stilt.config import FootprintConfig, TransportSettings, VariantConfig
 from stilt.errors import EmptyFootprintError, identify_failure_reason
 from stilt.footprint import Footprint
 from stilt.output import Footprints, Output, Run
-from stilt.receptors import Receptor, ReceptorID
+from stilt.receptors import Receptor, parse_receptor_id
 from stilt.trajectory import Trajectories
 from stilt.transforms import ParticleTransform, TransformContext
 
@@ -39,7 +39,7 @@ class SimID(NamedTuple):
     '202307151800_-111.848_40.766_10/hrrr'
     """
 
-    receptor: ReceptorID
+    receptor: str
     variant: str
 
     def __str__(self) -> str:
@@ -70,7 +70,8 @@ class SimID(NamedTuple):
                 raise ValueError(
                     f"Invalid sim id {value!r}; expected '{{receptor_id}}/{{variant}}'."
                 )
-        return cls(ReceptorID(receptor), variant)
+        parse_receptor_id(receptor)  # raises on a malformed id
+        return cls(str(receptor), variant)
 
 
 @dataclass(frozen=True)
