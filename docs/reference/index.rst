@@ -12,7 +12,7 @@ to do something, start with the :doc:`../guides/index` instead.
    Every ``config.yaml`` option.
 
 :doc:`meteorology`
-   Finding and staging meteorology files.
+   Finding, downloading, and cropping meteorology files.
 
 :doc:`execution`
    Running simulations locally or on Slurm.

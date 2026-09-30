@@ -52,3 +52,18 @@ Batches and handles
    stilt.execution.Batch
    stilt.execution.LocalHandle
    stilt.execution.SlurmHandle
+
+Transport engine
+----------------
+
+The worker runs a simulation through the engine its settings name. HYSPLIT
+is the one engine.
+
+.. autosummary::
+   :toctree: _api
+   :nosignatures:
+
+   stilt.engine.TransportEngine
+   stilt.engine.EngineRun
+   stilt.engine.get_engine
+   stilt.hysplit.HysplitEngine

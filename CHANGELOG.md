@@ -95,6 +95,16 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   archives. The `cloud` extra installs `arlmet[archives]` in place of `s3fs`,
   and `fsspec` is no longer a core dependency. PYSTILT 0.1.0a22 does not work
   with arlmet 0.1.0b1: pin `arlmet<0.1.0b1` if you stay on it.
+- **HYSPLIT sits behind an engine boundary**
+  ([#87](https://github.com/jmineau/PYSTILT/issues/87), decision 8 of
+  [#67](https://github.com/jmineau/PYSTILT/issues/67)). The worker runs a
+  simulation through `stilt.engine.get_engine(name)`, where the name is the
+  one the run's settings record. `stilt.hysplit.HysplitEngine` is the one
+  engine. HYSPLIT now reads the meteorology files where they are (the
+  cropped copies when a met is cropped) instead of through links made in
+  each run's working directory, so a kept `scratch/` folder no longer has a
+  `met/` folder. `Met.stage_files_for_simulation` is replaced by
+  `Met.files`.
 - **Slurm runs go through submitit; the queue and Kubernetes are removed**
   ([#87](https://github.com/jmineau/PYSTILT/issues/87), decision 7 of
   [#67](https://github.com/jmineau/PYSTILT/issues/67); breaking). A Slurm

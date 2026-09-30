@@ -25,13 +25,13 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
 from stilt.config import FootprintConfig
+from stilt.engine import get_engine
 from stilt.errors import (
     EmptyFootprintError,
     EmptyTrajectoryError,
     SimulationError,
 )
 from stilt.footprint import Footprint
-from stilt.hysplit import HYSPLITDriver
 from stilt.meteorology import Met
 from stilt.simulation import Simulation
 from stilt.trajectory import Trajectories
@@ -170,13 +170,13 @@ def run_trajectories(
     rm_dat: bool | None = None,
 ) -> Trajectories:
     """
-    Run HYSPLIT for a simulation and write its particles to the output directory.
+    Run the transport engine for a simulation and write its particles to the output directory.
 
-    HYSPLIT runs in *workdir*, on scratch, with the meteorology staged
-    beside it. The log is copied into the output directory whether the run
-    succeeds or fails. The working directory is then removed, unless the run
-    failed or *keep_scratch* is set, in which case it is copied under the
-    output directory's ``scratch/`` first.
+    The engine the settings name (HYSPLIT) runs in *workdir*, on scratch.
+    The log is copied into the output directory whether the run succeeds or
+    fails. The working directory is then removed, unless the run failed or
+    *keep_scratch* is set, in which case it is copied under the output
+    directory's ``scratch/`` first.
 
     Parameters
     ----------
@@ -203,34 +203,27 @@ def run_trajectories(
         As the HYSPLIT driver and the particle reader raise them.
     """
     params = sim.params
-    if rm_dat is None:
-        rm_dat = params.rm_dat
-    if timeout is None:
-        timeout = params.timeout
+    overrides = {
+        name: value
+        for name, value in (("timeout", timeout), ("rm_dat", rm_dat))
+        if value is not None
+    }
+    run_params = params.model_copy(update=overrides) if overrides else params
+    engine = get_engine(params.engine.name)
     run = sim.output.run(sim.variant.name, sim.variant.transport)
     rid = sim.receptor_id
     workdir.mkdir(parents=True, exist_ok=True)
     scratch_log = workdir / "stilt.log"
     succeeded = False
     try:
-        met_files = met.stage_files_for_simulation(
-            r_time=sim.receptor.time, n_hours=params.n_hours, target_dir=workdir / "met"
-        )
-        source_files = met.required_files(
-            r_time=sim.receptor.time, n_hours=params.n_hours
-        )
-        runner = HYSPLITDriver(
-            directory=workdir, receptor=sim.receptor, params=params, met_files=met_files
-        )
-        runner.prepare()
-        result = runner.execute(timeout=timeout, rm_dat=rm_dat)
+        result = engine.run(sim.receptor, run_params, met, workdir)
         if result.particles.empty:
             raise EmptyTrajectoryError(f"No trajectory data for {sim.id}")
         traj = Trajectories.from_particles(
             result.particles,
             receptor=sim.receptor,
             params=params,
-            met_files=source_files,
+            met_files=result.met_files,
         )
         run.write_particles(traj)
         succeeded = True

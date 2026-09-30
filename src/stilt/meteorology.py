@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
@@ -225,71 +224,34 @@ class Met:
 
         return files
 
-    def stage_files_for_simulation(
-        self,
-        *,
-        r_time,
-        n_hours: int,
-        target_dir: Path | str,
-    ) -> list[Path]:
-        """Find the met files for one simulation and link them into ``target_dir``."""
-        return self._stage_files(
-            self.required_files(r_time=r_time, n_hours=n_hours),
-            target_dir=target_dir,
-        )
+    def files(self, r_time, n_hours: int) -> list[Path]:
+        """Return the met files one simulation reads: :meth:`readable` of :meth:`required_files`."""
+        return self.readable(self.required_files(r_time=r_time, n_hours=n_hours))
 
-    def _stage_files(self, files: list[Path], target_dir: Path | str) -> list[Path]:
+    def readable(self, files: list[Path]) -> list[Path]:
         """
-        Link met files into ``target_dir``, copying when a link fails.
+        Return the files a transport model should read in place of *files*.
 
-        With subgridding on and no ``download``, each file is cropped into
-        :attr:`crop_dir` first and the cropped copy is linked. Downloaded files
-        were already cropped.
+        When local files are cropped, these are the cropped copies in
+        :attr:`crop_dir`, made on first use. Downloaded files were cropped
+        as they were downloaded. When two files share a name, the first is
+        kept, since a model would otherwise read the same hours twice.
         """
-        # Crop local files; downloaded ones were cropped by arlmet
         if self.config.subgrid_enable and self.config.download is None:
             files = self._crop_local_files(files)
-
-        target = Path(target_dir)
-        target.mkdir(parents=True, exist_ok=True)
-
-        staged: list[Path] = []
-        staged_sources: dict[Path, Path] = {}
-        for src in files:
-            src = Path(src)
-            resolved_src = src.resolve()
-            if src.parent == target:
-                if src not in staged_sources:
-                    staged_sources[src] = resolved_src
-                    staged.append(src)
-                continue
-
-            dst = target / src.name
-            existing = staged_sources.get(dst)
-            if existing is not None:
-                if existing != resolved_src:
-                    logger.warning(
-                        "met %s has duplicate basename %s at %s and %s; staging %s",
-                        self.name,
-                        src.name,
-                        existing,
-                        resolved_src,
-                        existing,
-                    )
-                continue
-
-            staged_sources[dst] = resolved_src
-            if dst.exists() or dst.is_symlink():
-                staged.append(dst)
-                continue
-
-            try:
-                dst.symlink_to(resolved_src)
-            except OSError:
-                shutil.copy2(src, dst)
-            staged.append(dst)
-
-        return staged
+        kept: dict[str, Path] = {}
+        for path in files:
+            first = kept.setdefault(path.name, path)
+            if first is not path and first.resolve() != path.resolve():
+                logger.warning(
+                    "met %s has duplicate basename %s at %s and %s; using %s",
+                    self.name,
+                    path.name,
+                    first,
+                    path,
+                    first,
+                )
+        return list(kept.values())
 
     def _crop_local_files(self, files: list[Path]) -> list[Path]:
         """

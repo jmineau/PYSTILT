@@ -31,19 +31,19 @@ class _FakeMet:
     def required_files(self, **kwargs):
         return []
 
-    def stage_files_for_simulation(self, **kwargs):
-        return []
+    def readable(self, files):
+        return files
 
 
 @pytest.fixture
 def sim(monkeypatch, tmp_path, point_receptor):
     """A Simulation with the HYSPLIT driver stubbed out, and a runner for it."""
     from stilt.config import MetConfig, TransportSettings, VariantConfig
-    from stilt.execution import worker
+    from stilt.hysplit import engine
     from stilt.output import Output
     from stilt.simulation import Simulation
 
-    monkeypatch.setattr(worker, "HYSPLITDriver", _StopDriver)
+    monkeypatch.setattr(engine, "HYSPLITDriver", _StopDriver)
     _StopDriver.seen.clear()
     met_config = MetConfig(
         directory=tmp_path / "met", file_format="%Y%m%d_%H", file_tres="1h"
