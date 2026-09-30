@@ -186,13 +186,16 @@ def test_local_dispatch_runs_in_this_process(monkeypatch, tmp_path):
 
 
 class _FakeJob:
-    def __init__(self, job_id: str, state: str = "COMPLETED") -> None:
+    def __init__(self, job_id: str, error: Exception | None = None) -> None:
         self.job_id = job_id
-        self.state = state
+        self.error = error
         self.waited = False
 
     def wait(self) -> None:
         self.waited = True
+
+    def exception(self) -> Exception | None:
+        return self.error
 
 
 class _FakeExecutor:
@@ -282,14 +285,14 @@ def test_slurm_dispatch_passes_an_explicit_compute_root(fake_submitit, tmp_path)
 
 
 def test_slurm_handle_wait_raises_when_a_task_did_not_complete(tmp_path):
-    good, bad = _FakeJob("9_0"), _FakeJob("9_1", state="FAILED")
+    good, bad = _FakeJob("9_0"), _FakeJob("9_1", error=RuntimeError("timed out"))
 
     SlurmHandle([good], tmp_path).wait()  # type: ignore[list-item]
     assert good.waited
 
     handle = SlurmHandle([good, bad], tmp_path)  # type: ignore[list-item]
     with pytest.raises(
-        RuntimeError, match=r"1 of 2 tasks did not complete.*9_1.*FAILED"
+        RuntimeError, match=r"1 of 2 tasks did not complete. Task 9_1: timed out"
     ):
         handle.wait()
     assert bad.waited
