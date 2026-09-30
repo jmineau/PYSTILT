@@ -742,7 +742,9 @@ class Footprint:
         receptor : Receptor
             Receptor the particles were released from.
         config : FootprintConfig
-            Grid, smoothing, and particle transforms.
+            Grid, smoothing, and particle transforms. A grid given by
+            ``geometry`` is derived first
+            (:meth:`~stilt.config.FootprintConfig.resolve`).
         name : str, optional
             Name of the footprint, usually the variant name.
         context : TransformContext, optional
@@ -763,6 +765,7 @@ class Footprint:
             If no particle is over the grid. ``reason`` is ``"no_particles"``
             when the table is empty and ``"outside_domain"`` otherwise.
         """
+        config = config.resolve()
         grid = config.grid
         if grid is None:
             raise ValueError("A footprint needs settings with a grid.")

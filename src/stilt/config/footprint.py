@@ -2,23 +2,19 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Self
 
 from pydantic import (
     BaseModel,
     Field,
-    TypeAdapter,
     field_serializer,
     field_validator,
-    model_validator,
 )
 
 from stilt.transforms import dump_transform, load_transform
 
 from .geometry import GeometrySpec
 from .spatial import Grid
-
-_GEOMETRY_ADAPTER: TypeAdapter[Any] = TypeAdapter(GeometrySpec)
 
 
 class FootprintConfig(BaseModel):
@@ -32,15 +28,17 @@ class FootprintConfig(BaseModel):
     and ``geometry`` unset for a variant that only produces trajectories.
     Give ``geometry`` to name the polygons the footprint will be aggregated
     to, and the grid is derived from them with
-    :meth:`stilt.Grid.from_geometry`. When both are given, ``grid`` is used
-    as is and ``geometry`` is kept with the footprint.
+    :meth:`stilt.Grid.from_geometry` when the settings are resolved
+    (:meth:`resolve`), not when they are loaded. When both are given,
+    ``grid`` is used as is and ``geometry`` is kept with the footprint.
     """
 
     grid: Grid | None = Field(
         None,
         description=(
-            "Domain and resolution of the footprint. Leaving it unset with no "
-            "``geometry`` gives a run that produces trajectories only."
+            "Domain and resolution of the footprint. Unset with ``geometry`` "
+            "derives it from the geometry; unset without it gives a run that "
+            "produces trajectories only."
         ),
     )
     geometry: GeometrySpec | None = Field(
@@ -61,7 +59,7 @@ class FootprintConfig(BaseModel):
         description=(
             "Hash of the built ``geometry`` (``Mesh.hash``), used to tell whether "
             "the geometry changed after a footprint was made. Filled in "
-            "automatically when ``geometry`` is set."
+            "when the settings are resolved."
         ),
     )
     smooth_factor: float = Field(
@@ -84,37 +82,41 @@ class FootprintConfig(BaseModel):
         default_factory=list,
     )
 
-    @model_validator(mode="before")
-    @classmethod
-    def _derive_from_geometry(cls, data: Any) -> Any:
+    def resolve(self) -> Self:
         """
-        Fill ``grid`` and ``geometry_hash`` from ``geometry`` when they are missing.
+        Return these settings with ``grid`` and ``geometry_hash`` filled in from ``geometry``.
 
-        The geometry is built only when one of them is missing, so reloading a
-        stored config never reads the geometry source.
+        Loading settings does not read the geometry. This method builds the
+        mesh, derives the grid when none was given, and records the mesh
+        hash. Each geometry spec builds its mesh once and keeps it (its
+        ``mesh`` attribute). Settings with nothing to fill in are returned
+        unchanged, so settings read back from a footprint folder never read
+        the geometry source.
+
+        Returns
+        -------
+        FootprintConfig
+            The settings with ``grid`` and ``geometry_hash`` set whenever
+            ``geometry`` is.
+
+        Examples
+        --------
+        >>> spec = {"kind": "windows", "coords": [(-111.97, 40.515)], "size": 0.01}
+        >>> FootprintConfig(geometry=spec).grid is None
+        True
+        >>> FootprintConfig(geometry=spec).resolve().grid.xres
+        0.002
         """
-        if not isinstance(data, dict):
-            return data
-        spec_raw = data.get("geometry")
-        if spec_raw is None:
-            return data
-        need_grid = data.get("grid") is None
-        need_hash = data.get("geometry_hash") is None
-        if not (need_grid or need_hash):
-            return data
-        spec = (
-            spec_raw
-            if hasattr(spec_raw, "build")
-            else _GEOMETRY_ADAPTER.validate_python(spec_raw)
-        )
-        mesh = spec.build()
-        out = dict(data)
-        if need_grid:
-            cells = float(data.get("cells_per_target", 4.0))
-            out["grid"] = Grid.from_geometry(mesh, cells_per_target=cells)
-        if need_hash:
-            out["geometry_hash"] = mesh.hash
-        return out
+        if self.geometry is None:
+            return self
+        update: dict[str, Any] = {}
+        if self.grid is None:
+            update["grid"] = Grid.from_geometry(
+                self.geometry.mesh, cells_per_target=self.cells_per_target
+            )
+        if self.geometry_hash is None:
+            update["geometry_hash"] = self.geometry.mesh.hash
+        return self.model_copy(update=update) if update else self
 
     @field_validator("transforms", mode="before")
     @classmethod

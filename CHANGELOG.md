@@ -51,6 +51,18 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   footprint writing live in `stilt.execution` (`run_trajectories`,
   `write_footprint`, `run_simulation`); `Simulation.generate_footprint`
   calculates without writing. `Model` keeps no simulation cache.
+- **Loading a config no longer reads its `geometry`**
+  ([#64](https://github.com/jmineau/PYSTILT/issues/64)). The mesh is built
+  when the variants are resolved (`ModelConfig.resolve_variants`), once per
+  geometry however many variants inherit it, instead of in validation on
+  every load. A worker can load a config whose geometry file it cannot
+  read. `FootprintConfig(geometry=...)` no longer fills in `grid` and
+  `geometry_hash` itself; call `FootprintConfig.resolve()`, which
+  `Footprint.calculate` also does. Geometry specs keep their built mesh as
+  `spec.mesh`. The derived grid is no longer written to `config.yaml` by
+  `to_yaml`. A variant can no longer change part of a grid derived from the
+  default geometry (`grid: {xres: 0.1}`); set `cells_per_target` or give a
+  full grid. Footprint folder hashes are unchanged.
 - `TransformContext.store` is now `TransformContext.directory`, the project
   directory that relative file names in transform settings are taken from.
 - `Simulation.trajectories_path`, `footprint_path`, and `log_path` point

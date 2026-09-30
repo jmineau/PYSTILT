@@ -76,22 +76,33 @@ class ModelConfig(STILTParams, FootprintConfig):
 
     @model_validator(mode="after")
     def _validate_variants(self) -> Self:
-        """Resolve the variants so a bad declaration fails when the config loads."""
-        self.resolve_variants()
+        """
+        Expand the variants so a bad declaration fails when the config loads.
+
+        The footprint settings are not resolved, so loading a config never
+        reads a geometry file.
+        """
+        self._expand_variants()
         return self
 
     def defaults(self) -> dict[str, Any]:
         """Return the default transport and footprint parameters every variant starts from."""
         parameters = set(STILTParams.model_fields) | set(FootprintConfig.model_fields)
-        return self.model_dump(include=parameters)
+        values = self.model_dump(include=parameters)
+        # Keep the geometry spec itself, so the variants that inherit it share
+        # one spec and build its mesh once.
+        values["geometry"] = self.geometry
+        return values
 
     @property
     def footprint(self) -> FootprintConfig | None:
-        """The default footprint settings, or ``None`` without a grid."""
+        """The default footprint settings, resolved, or ``None`` without a grid or geometry."""
         settings = FootprintConfig(
             **{name: getattr(self, name) for name in FootprintConfig.model_fields}
         )
-        return settings if settings.grid is not None else None
+        if settings.grid is None and settings.geometry is None:
+            return None
+        return settings.resolve()
 
     def resolve_variants(self) -> dict[str, VariantConfig]:
         """
@@ -99,7 +110,21 @@ class ModelConfig(STILTParams, FootprintConfig):
 
         A variant with ``realizations`` becomes several, so ``hrrr-err`` with
         ``realizations: 3`` gives ``hrrr-err-0`` to ``hrrr-err-2``.
+
+        The footprint settings are resolved
+        (:meth:`~stilt.config.FootprintConfig.resolve`). A footprint given by
+        ``geometry`` gets its grid and geometry hash here, and each geometry
+        is built once however many variants inherit it.
         """
+        return {
+            name: variant
+            if variant.footprint is None
+            else variant.model_copy(update={"footprint": variant.footprint.resolve()})
+            for name, variant in self._expand_variants().items()
+        }
+
+    def _expand_variants(self) -> dict[str, VariantConfig]:
+        """Return the variants with their footprint settings not yet resolved."""
         declared = self.variants or {met: {"met": met} for met in self.mets}
         return expand_variants(declared, self.defaults(), self.mets)
 

@@ -1518,7 +1518,7 @@ def _windows_spec(shift: float = 0.0):
 
 
 def test_footprint_config_records_geometry_hash():
-    fc = FootprintConfig(geometry=_windows_spec())
+    fc = FootprintConfig(geometry=_windows_spec()).resolve()
     assert fc.geometry_hash == fc.geometry.build().hash
     # explicit grid still records the hash; reload with both present builds nothing
     reloaded = FootprintConfig(
@@ -1528,7 +1528,10 @@ def test_footprint_config_records_geometry_hash():
 
 
 def test_netcdf_roundtrip_keeps_geometry_and_hash(tmp_path):
-    fc = FootprintConfig(grid=_make_footprint().config.grid, geometry=_windows_spec())
+    fc = FootprintConfig(
+        grid=_make_footprint().config.grid, geometry=_windows_spec()
+    ).resolve()
+    assert fc.geometry_hash
     foot = _make_footprint()
     foot = Footprint(receptor=foot.receptor, config=fc, data=foot.data, name="geo")
     path = foot.to_netcdf(tmp_path / "geo_foot.nc")
@@ -1546,7 +1549,7 @@ def test_netcdf_roundtrip_keeps_geometry_and_hash(tmp_path):
 
 def test_aggregate_warns_when_geometry_hash_differs():
     base = _make_footprint()
-    fc = FootprintConfig(grid=base.config.grid, geometry=_windows_spec())
+    fc = FootprintConfig(grid=base.config.grid, geometry=_windows_spec()).resolve()
     foot = Footprint(receptor=base.receptor, config=fc, data=base.data, name="geo")
     t0 = pd.Timestamp("2023-01-01 12:00")
     bins = pd.interval_range(start=t0, periods=1, freq="1h", closed="left")

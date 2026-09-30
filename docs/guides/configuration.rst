@@ -235,13 +235,20 @@ one variant per geometry; they share the particles:
          size: 0.01
          ids: [landfill, wwtp]
 
+Loading ``config.yaml`` does not read the shapefile. PYSTILT reads it
+once, when it resolves the variants' settings, and picks the grid then. To
+make that grid finer or coarser, change ``cells_per_target``. A variant
+cannot change only part of it (``grid: {xres: 0.1}``), because the grid is
+not known until the shapefile is read.
+
 The grid PYSTILT picks is saved in the footprint folder's ``_settings.yaml``
 and with each footprint. You do not need the shapefile again to read a
 footprint.
 
 If you give both ``grid`` and ``geometry``, the ``grid`` is used as given.
-The geometry is kept with the settings, and ``sim.config.geometry.build()``
-returns the :class:`stilt.Mesh` to aggregate onto.
+The geometry is kept with the settings, and
+``sim.footprint_config.geometry.build()`` returns the :class:`stilt.Mesh` to
+aggregate onto.
 
 Each footprint file also stores a hash of the geometry it was made for.
 :meth:`stilt.Footprint.aggregate` warns if the mesh you pass no longer

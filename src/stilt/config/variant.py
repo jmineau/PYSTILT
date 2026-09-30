@@ -95,7 +95,10 @@ def expand_variants(
     Returns
     -------
     dict
-        Variants by simulation name, in declared order.
+        Variants by simulation name, in declared order. Their footprint
+        settings are not resolved, so a footprint given by ``geometry`` has
+        no grid yet. :meth:`~stilt.config.ModelConfig.resolve_variants`
+        resolves them.
     """
     for group in declared:
         if not VARIANT_NAME_RE.fullmatch(group):
@@ -119,7 +122,7 @@ def expand_variants(
             realizations = int(realizations)
             if realizations < 1:
                 raise ValueError(f"Variant {group!r}: realizations must be >= 1")
-        merged = _override(defaults, spec)
+        merged = _override(group, defaults, spec)
         runs[group] = _expand_realizations(
             group, merged, met_name, mets[met_name], realizations, declared
         )
@@ -145,7 +148,7 @@ def _met_name(group: str, spec: dict[str, Any], mets: Mapping[str, MetConfig]) -
     return met
 
 
-def _override(base: dict[str, Any], spec: dict[str, Any]) -> dict[str, Any]:
+def _override(group: str, base: dict[str, Any], spec: dict[str, Any]) -> dict[str, Any]:
     """
     Apply a variant's overrides to ``base``.
 
@@ -154,10 +157,24 @@ def _override(base: dict[str, Any], spec: dict[str, Any]) -> dict[str, Any]:
     variant that sets its own ``geometry`` drops the inherited
     ``geometry_hash``, and the inherited ``grid`` unless it sets ``grid`` too,
     so both are derived from its geometry.
+
+    Raises
+    ------
+    ValueError
+        If a variant changes part of a grid that is derived from the
+        default ``geometry``. That grid is not known until the geometry is
+        built.
     """
     merged = {**base, **spec}
-    if isinstance(spec.get("grid"), dict) and isinstance(base.get("grid"), dict):
-        merged["grid"] = {**base["grid"], **spec["grid"]}
+    if isinstance(spec.get("grid"), dict):
+        if isinstance(base.get("grid"), dict):
+            merged["grid"] = {**base["grid"], **spec["grid"]}
+        elif base.get("geometry") is not None and "geometry" not in spec:
+            raise ValueError(
+                f"Variant {group!r} changes part of a grid that is derived from "
+                "the default geometry. Give a full grid, or set cells_per_target "
+                "to change its resolution."
+            )
     if "geometry" in spec:
         merged.pop("geometry_hash", None)
         if spec["geometry"] is not None and "grid" not in spec:
@@ -177,7 +194,9 @@ def _split(group: str, merged: dict[str, Any]) -> tuple[dict[str, Any], dict[str
 
 def _footprint(name: str, fields: dict[str, Any]) -> FootprintConfig | None:
     """
-    Return the footprint settings, or ``None`` when they give no grid.
+    Return the footprint settings, or ``None`` when they give no grid or geometry.
+
+    The settings are not resolved here, so the geometry is not read.
 
     Raises
     ------
@@ -186,7 +205,7 @@ def _footprint(name: str, fields: dict[str, Any]) -> FootprintConfig | None:
         since they would otherwise be dropped without a word.
     """
     config = FootprintConfig(**fields)
-    if config.grid is not None:
+    if config.grid is not None or config.geometry is not None:
         return config
     given = config.model_dump()
     default = FootprintConfig.model_validate({}).model_dump()
@@ -194,7 +213,7 @@ def _footprint(name: str, fields: dict[str, Any]) -> FootprintConfig | None:
     if stray:
         raise ValueError(
             f"Variant {name!r} sets footprint settings ({', '.join(stray)}) "
-            "but no grid. Add a grid or remove them."
+            "but no grid. Add a grid or geometry, or remove them."
         )
     return None
 

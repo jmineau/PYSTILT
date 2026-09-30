@@ -700,6 +700,8 @@ def test_footprint_config_derives_grid_from_windows_geometry():
             "ids": ["landfill", "wwtp"],
         }
     )
+    assert fc.grid is None  # derived when resolved, not when loaded
+    fc = fc.resolve()
     assert fc.geometry is not None and fc.geometry.kind == "windows"
     assert fc.grid.xres == fc.grid.yres == pytest.approx(0.002)  # 0.01 / 4 -> 0.002
     assert fc.grid.xmin <= -112.02 and fc.grid.ymax >= 40.784
@@ -709,10 +711,10 @@ def test_footprint_config_derives_grid_from_windows_geometry():
 
 def test_footprint_config_cells_per_target_and_explicit_grid_wins():
     spec = {"kind": "windows", "coords": [(0.5, 0.5)], "size": 0.1}
-    fc = FootprintConfig(geometry=spec, cells_per_target=10)
+    fc = FootprintConfig(geometry=spec, cells_per_target=10).resolve()
     assert fc.grid.xres == pytest.approx(0.01)
     explicit = Grid(xmin=0.0, xmax=1.0, ymin=0.0, ymax=1.0, xres=0.05, yres=0.05)
-    fc2 = FootprintConfig(grid=explicit, geometry=spec)
+    fc2 = FootprintConfig(grid=explicit, geometry=spec).resolve()
     assert fc2.grid == explicit and fc2.geometry is not None
 
 
@@ -732,7 +734,7 @@ def test_footprint_config_h3_geometry():
             "resolution": 8,
             "bounds": {"xmin": -112.0, "xmax": -111.8, "ymin": 40.6, "ymax": 40.8},
         }
-    )
+    ).resolve()
     assert fc.grid.xres <= 0.0025  # res-8 hexagons are ~0.5 km across
     assert len(fc.geometry.build()) > 50
 
@@ -1054,6 +1056,88 @@ def test_variant_geometry_derives_its_own_grid_and_hash(tmp_path, grid, defaults
         assert variants[name].footprint.grid == expected
         assert variants[name].footprint.geometry_hash == mesh.hash
     assert variants["hrrr"].footprint.grid != expected
+
+
+def _count_builds(monkeypatch):
+    """Count calls to ``WindowsGeometrySpec.build``."""
+    from stilt.config import WindowsGeometrySpec
+
+    calls = []
+    build = WindowsGeometrySpec.build
+
+    def counting(self):
+        calls.append(self)
+        return build(self)
+
+    monkeypatch.setattr(WindowsGeometrySpec, "build", counting)
+    return calls
+
+
+def test_each_geometry_is_built_once_and_not_on_load(tmp_path, monkeypatch):
+    """Loading a config reads no geometry; resolving builds each one once (#64)."""
+    calls = _count_builds(monkeypatch)
+    (tmp_path / "config.yaml").write_text(
+        textwrap.dedent(f"""
+        mets:
+          hrrr: {{directory: {tmp_path}/met, file_format: '%Y%m%d_%H', file_tres: 1h}}
+        geometry: {{kind: windows, coords: [[-111.5, 40.2]], size: 0.05}}
+        variants:
+          hrrr: {{}}
+          np50: {{numpar: 50}}
+          err: {{realizations: 2, seed: 1, krand: 2}}
+          src:
+            geometry: {{kind: windows, coords: [[-111.97, 40.515]], size: 0.01}}
+        """)
+    )
+    cfg = ModelConfig.from_yaml(tmp_path / "config.yaml")
+    assert calls == []
+
+    variants = cfg.resolve_variants()
+    assert len(calls) == 2  # the default geometry and the one of "src"
+    inherited = [variants[n].footprint for n in ("hrrr", "np50", "err-0", "err-1")]
+    assert all(f is not None and f.grid == inherited[0].grid for f in inherited)
+    assert cfg.footprint == inherited[0]
+    assert len(calls) == 2
+
+
+def test_config_loads_without_its_geometry_file(tmp_path):
+    """A worker can load the config even where the geometry file is not readable."""
+    cfg = _variant_config(
+        tmp_path, geometry={"kind": "file", "path": str(tmp_path / "missing.shp")}
+    )
+    assert cfg.geometry is not None and cfg.grid is None
+    with pytest.raises(Exception, match="missing.shp"):
+        cfg.resolve_variants()
+
+
+def test_resolved_settings_do_not_build_again(monkeypatch):
+    """Settings read back with a grid and geometry hash never read the geometry."""
+    calls = _count_builds(monkeypatch)
+    explicit = Grid(xmin=0.0, xmax=1.0, ymin=0.0, ymax=1.0, xres=0.05, yres=0.05)
+    stored = FootprintConfig(
+        grid=explicit,
+        geometry={"kind": "windows", "coords": [(0.5, 0.5)], "size": 0.1},
+        geometry_hash="deadbeef00",
+    )
+    assert stored.resolve() is stored
+    assert calls == []
+
+
+def test_to_yaml_does_not_write_the_derived_grid(tmp_path):
+    cfg = _variant_config(tmp_path, geometry=_WINDOWS)
+    assert cfg.footprint is not None and cfg.footprint.grid is not None
+    text = cfg.to_yaml()
+    assert "geometry:" in text
+    assert "grid:" not in text and "geometry_hash" not in text
+
+
+def test_partial_grid_over_a_derived_grid_is_an_error(tmp_path):
+    with pytest.raises(ValueError, match="'coarse' changes part of a grid"):
+        _variant_config(
+            tmp_path,
+            geometry=_WINDOWS,
+            variants={"hrrr": {}, "coarse": {"grid": {"xres": 0.1, "yres": 0.1}}},
+        )
 
 
 def test_maxpar_follows_each_variants_numpar(tmp_path):

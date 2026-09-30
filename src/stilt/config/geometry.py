@@ -6,6 +6,11 @@ vector file, H3 hexagons, or windows around points. Each spec's ``build``
 method returns a :class:`stilt.Mesh`. When ``grid`` is not given, the grid
 is derived from the geometry with :meth:`stilt.Grid.from_geometry`.
 
+Loading a config does not read the geometry. The mesh is built the first
+time a variant's settings are resolved
+(:meth:`~stilt.config.FootprintConfig.resolve`), and the grid and hash
+derived from it are stored with the footprints.
+
 .. code-block:: yaml
 
    geometry:                     # the default footprint's geometry
@@ -16,13 +21,13 @@ is derived from the geometry with :meth:`stilt.Grid.from_geometry`.
    variants:
      hrrr: {}
      hrrr-hexes:                   # a second footprint from the same particles
-       from: hrrr
        geometry: {kind: h3, resolution: 8, bounds: {xmin: -112.3, xmax: -111.6, ymin: 40.4, ymax: 41.0}}
        cells_per_target: 4
 """
 
 from __future__ import annotations
 
+from functools import cached_property
 from typing import TYPE_CHECKING, Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -33,10 +38,28 @@ if TYPE_CHECKING:
     from stilt.geometry import Mesh
 
 
-class FileGeometrySpec(BaseModel):
-    """Polygons read from a vector file such as a shapefile or GeoPackage."""
+class _GeometrySpec(BaseModel):
+    """Base of the geometry specs: a frozen description that builds a mesh."""
 
     model_config = ConfigDict(frozen=True)
+
+    def build(self) -> Mesh:
+        """Build the polygons as a :class:`stilt.Mesh`, reading the source now."""
+        raise NotImplementedError
+
+    @cached_property
+    def mesh(self) -> Mesh:
+        """
+        The polygons, built by :meth:`build` on first use and kept.
+
+        Variants that inherit the same geometry share one spec, so they
+        share one build.
+        """
+        return self.build()
+
+
+class FileGeometrySpec(_GeometrySpec):
+    """Polygons read from a vector file such as a shapefile or GeoPackage."""
 
     kind: Literal["file"] = "file"
     path: str = Field(..., description="Path to the vector file.")
@@ -63,10 +86,8 @@ class FileGeometrySpec(BaseModel):
         return Mesh.from_file(self.path, ids=self.ids, **kwargs)
 
 
-class H3GeometrySpec(BaseModel):
+class H3GeometrySpec(_GeometrySpec):
     """H3 hexagons of one resolution covering a longitude/latitude box."""
-
-    model_config = ConfigDict(frozen=True)
 
     kind: Literal["h3"] = "h3"
     resolution: int = Field(..., description="H3 resolution (0-15).", ge=0, le=15)
@@ -79,10 +100,8 @@ class H3GeometrySpec(BaseModel):
         return Mesh.from_h3(self.resolution, self.bounds)
 
 
-class WindowsGeometrySpec(BaseModel):
+class WindowsGeometrySpec(_GeometrySpec):
     """Rectangular windows centered on points, such as known point sources."""
-
-    model_config = ConfigDict(frozen=True)
 
     kind: Literal["windows"] = "windows"
     coords: list[tuple[float, float]] = Field(
