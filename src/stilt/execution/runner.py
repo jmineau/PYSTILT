@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Protocol
 from uuid import uuid4
 
+import submitit
 import yaml
 
 from stilt.config import ExecutionConfig, ModelConfig, RuntimeSettings
@@ -18,8 +19,6 @@ from stilt.errors import ConfigValidationError
 from stilt.project import project_slug
 
 if TYPE_CHECKING:
-    import submitit
-
     from stilt.model import Model
     from stilt.project import Project
     from stilt.receptors import Receptor
@@ -130,14 +129,15 @@ class SlurmHandle:
 # ---------------------------------------------------------------------------
 
 
-class Batch:
+class Batch(submitit.helpers.Checkpointable):
     """
     A batch of receptors of one project, run by one worker.
 
     Calling it rebuilds the model from the project and runs the receptors,
     ``cpus`` at a time. On Slurm it is one array task. When the task is
-    preempted or runs out of time, :meth:`checkpoint` has it submitted again,
-    and the second run skips the receptors the first one finished.
+    preempted or runs out of time, submitit submits it again
+    (:meth:`checkpoint`), and the second run skips the receptors the first
+    one finished.
 
     Parameters
     ----------
@@ -185,18 +185,12 @@ class Batch:
             skip_existing=self.skip_existing,
         )
 
-    def checkpoint(self) -> submitit.helpers.DelayedSubmission:
-        """Return the batch to submit again after a preemption or timeout."""
-        import submitit
-
-        again = Batch(
-            self.project,
-            self.receptor_ids,
-            compute_root=self.compute_root,
-            cpus=self.cpus,
-            skip_existing=True,  # whatever finished before the interruption stays
-        )
-        return submitit.helpers.DelayedSubmission(again)
+    def checkpoint(
+        self, *args: Any, **kwargs: Any
+    ) -> submitit.helpers.DelayedSubmission:
+        """Return this batch to submit again, keeping what finished before the interruption."""
+        self.skip_existing = True
+        return super().checkpoint(*args, **kwargs)
 
 
 def split(receptor_ids: list[str], n: int) -> list[list[str]]:
@@ -376,13 +370,12 @@ def run(
         len(pending),
         execution.backend,
     )
-    scratch = (
-        None
-        if compute_root is None
-        else resolve_compute_root(model.project, compute_root)
-    )
     handle = _dispatch(
-        model, pending, execution, compute_root=scratch, skip_existing=skip_existing
+        model,
+        pending,
+        execution,
+        compute_root=compute_root,
+        skip_existing=skip_existing,
     )
     if wait:
         handle.wait()
@@ -394,7 +387,7 @@ def _dispatch(
     pending: list[str],
     execution: ExecutionConfig,
     *,
-    compute_root: Path | None,
+    compute_root: str | Path | None,
     skip_existing: bool,
 ) -> JobHandle:
     """Run *pending* here, or submit it to Slurm, and return a handle."""
@@ -407,7 +400,7 @@ def _dispatch(
             model,
             pending,
             compute_root=compute_root,
-            n_cores=execution.n_workers,
+            n_cores=execution.cpus,
             skip_existing=skip_existing,
         )
         return LocalHandle()
@@ -416,8 +409,11 @@ def _dispatch(
         pending,
         execution,
         # A compute root that was not asked for is left to each compute node,
-        # whose TMPDIR is its own.
-        compute_root=None if compute_root is None else str(compute_root),
+        # whose TMPDIR is its own. One that was is made absolute here, since
+        # the task may start in another directory.
+        compute_root=None
+        if compute_root is None
+        else str(resolve_compute_root(model.project, compute_root)),
         skip_existing=skip_existing,
     )
 

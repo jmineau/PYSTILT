@@ -65,7 +65,7 @@ Step 2: Set up the model
            "ymin": 39.0,   "ymax": 42.5,
            "xres": 0.01,   "yres": 0.01,
        },
-       execution={"backend": "local", "n_workers": 4},   # 4 simulations at a time
+       execution={"backend": "local", "cpus": 4},   # 4 receptors at a time
    )
 
 ``numpar=100`` keeps this tutorial quick. Use more particles for research

@@ -47,7 +47,7 @@ Options
 
 ``cpus``
    CPUs per array task (default 1). With more than one, each task runs that
-   many receptors at the same time. ``cpus_per_task`` is accepted too.
+   many receptors at the same time. A local run uses ``cpus`` the same way.
 
 ``time``, ``mem``, ``partition``, ``account``, ``qos``
    The ``sbatch`` options of the same names.

@@ -112,7 +112,10 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `account`, `qos`, `array_parallelism`, `setup`, and `slurm`. A setting it
   does not have is an error instead of being ignored or passed to `sbatch`.
   Move any other `sbatch` option, such as `exclude` or `requeue`, under
-  `slurm:`. `cpus_per_task` is still accepted for `cpus`.
+  `slurm:`, and rename `cpus_per_task` to `cpus`. `n_workers` is the number
+  of Slurm array tasks, and `cpus` the receptors each task runs at once. A
+  local run is one task, so its processes are now set by `cpus` (and
+  `stilt run --cpus`), not `n_workers`.
 - **`Model` reads; `stilt.execution` runs**
   ([#86](https://github.com/jmineau/PYSTILT/issues/86); breaking). A
   `Model` is its settings, its receptors, and a view of their results. It no

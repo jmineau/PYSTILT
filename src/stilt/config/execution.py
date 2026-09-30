@@ -5,12 +5,10 @@ from __future__ import annotations
 from typing import Any, Literal
 
 from pydantic import (
-    AliasChoices,
     BaseModel,
     ConfigDict,
     Field,
     field_validator,
-    model_validator,
 )
 
 
@@ -18,17 +16,18 @@ class ExecutionConfig(BaseModel):
     """
     Where a project's receptors run, and with what resources.
 
-    With ``backend: local`` the receptors run on this machine. With
-    ``backend: slurm`` they are split among ``n_workers`` tasks of one Slurm
-    job array. The Slurm settings are ignored by a local run, so a config can
-    hold them and be run either way. None of these settings change a result.
+    With ``backend: local`` the receptors run on this machine as one task.
+    With ``backend: slurm`` they are split among ``n_workers`` tasks of one
+    Slurm job array. Either way a task runs ``cpus`` receptors at once. The
+    Slurm settings are ignored by a local run, so a config can hold them and
+    be run either way. None of these settings change a result.
 
     Examples
     --------
     >>> ExecutionConfig(backend="slurm", n_workers=100, time="02:00:00", mem="8G")
     """
 
-    model_config = ConfigDict(extra="forbid", frozen=True, populate_by_name=True)
+    model_config = ConfigDict(extra="forbid", frozen=True)
 
     backend: Literal["local", "slurm"] = Field(
         "local",
@@ -38,17 +37,16 @@ class ExecutionConfig(BaseModel):
         1,
         ge=1,
         description=(
-            "Local: number of worker processes. Slurm: number of array tasks, "
-            "which the receptors are split evenly among."
+            "Number of Slurm array tasks, which the receptors are split evenly "
+            "among. A local run is one task."
         ),
     )
     cpus: int = Field(
         1,
         ge=1,
-        validation_alias=AliasChoices("cpus", "cpus_per_task", "cpus-per-task"),
         description=(
-            "CPUs per Slurm task. With more than one, a task runs that many "
-            "receptors at once."
+            "Receptors each task runs at once: processes on this machine for a "
+            "local run, CPUs per array task on Slurm."
         ),
     )
     time: str | int | None = Field(
@@ -79,22 +77,6 @@ class ExecutionConfig(BaseModel):
             "or ``constraint: skl``. ``true`` writes the bare flag."
         ),
     )
-
-    @model_validator(mode="before")
-    @classmethod
-    def _known_settings(cls, data: Any) -> Any:
-        """Reject a setting this model does not have, saying where it goes."""
-        if not isinstance(data, dict):
-            return data
-        known = set(cls.model_fields) | {"cpus_per_task", "cpus-per-task"}
-        unknown = sorted(str(k) for k in data if k not in known)
-        if unknown:
-            raise ValueError(
-                f"Unknown execution setting(s) {unknown}. The settings are "
-                f"{sorted(cls.model_fields)}. Put any other sbatch option "
-                "under 'slurm:', for example 'slurm: {exclude: node1}'."
-            )
-        return data
 
     @field_validator("setup", mode="before")
     @classmethod

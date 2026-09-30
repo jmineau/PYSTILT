@@ -174,11 +174,12 @@ def test_local_dispatch_runs_in_this_process(monkeypatch, tmp_path):
     handle = runner._dispatch(
         model,  # type: ignore[arg-type]
         ["a", "b"],
-        ExecutionConfig(n_workers=3),
+        ExecutionConfig(n_workers=5, cpus=3),
         compute_root=None,
         skip_existing=True,
     )
 
+    # A local run is one task: cpus sets the processes, n_workers is for Slurm.
     assert isinstance(handle, LocalHandle) and not handle.detached
     assert calls == [
         {"ids": ["a", "b"], "compute_root": None, "n_cores": 3, "skip_existing": True}
@@ -281,7 +282,7 @@ def test_slurm_dispatch_passes_an_explicit_compute_root(fake_submitit, tmp_path)
         skip_existing=True,
     )
     [batch] = fake_submitit.instances[0].submitted
-    assert batch.compute_root == str(tmp_path / "scratch")
+    assert batch.compute_root == str((tmp_path / "scratch").resolve())
 
 
 def test_slurm_handle_wait_raises_when_a_task_did_not_complete(tmp_path):

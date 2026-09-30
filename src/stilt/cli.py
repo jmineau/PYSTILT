@@ -85,7 +85,8 @@ output: ./output
 # Execution is optional. Local execution is the default.
 # execution:
 #   backend: local  # or "slurm"
-#   n_workers: 1
+#   cpus: 1         # receptors at once (per array task on Slurm)
+#   n_workers: 1    # Slurm array tasks
 """
 
 
@@ -173,7 +174,15 @@ def run(
     n_workers: int | None = typer.Option(
         None,
         "--n-workers",
-        help="Number of workers. Overrides execution.n_workers in config.yaml.",
+        help="Number of Slurm array tasks. Overrides execution.n_workers in config.yaml.",
+    ),
+    cpus: int | None = typer.Option(
+        None,
+        "--cpus",
+        help=(
+            "Receptors each task runs at once (local processes, or CPUs per "
+            "Slurm task). Overrides execution.cpus in config.yaml."
+        ),
     ),
     wait: bool = typer.Option(
         False,
@@ -204,6 +213,8 @@ def run(
         overrides["backend"] = backend
     if n_workers is not None:
         overrides["n_workers"] = n_workers
+    if cpus is not None:
+        overrides["cpus"] = cpus
     execution = ExecutionConfig.model_validate(
         {**model.config.execution.model_dump(exclude_unset=True), **overrides}
     )
@@ -280,7 +291,8 @@ def _print_run_start(
     typer.echo(
         "Starting run: "
         f"project={model.project.root}  backend={backend}  "
-        f"workers={execution.n_workers}  skip={mode}"
+        f"tasks={1 if backend == 'local' else execution.n_workers}  "
+        f"cpus={execution.cpus}  skip={mode}"
     )
     typer.echo(f"Output: {model.output.path}")
     if backend == "local" or compute_root is not None:

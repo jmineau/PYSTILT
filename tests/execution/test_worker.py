@@ -471,7 +471,9 @@ def test_run_receptor_runs_every_variant_in_config_order(
     calls: list[dict] = []
     monkeypatch.setattr(worker, "run_simulation", _fake_run_simulation(calls))
 
-    result = run_receptor(model, str(receptor.id), skip_existing=False)
+    result = run_receptor(
+        model, str(receptor.id), compute_root=tmp_path / "scratch", skip_existing=False
+    )
 
     assert [c["sim_id"].split("/")[1] for c in calls] == ["s2", "hrrr", "zi08"]
     assert result.status == "complete"
@@ -510,7 +512,9 @@ def test_run_receptor_remakes_sibling_footprints_when_the_particles_reran(
 
     monkeypatch.setattr(worker, "run_simulation", fake)
 
-    run_receptor(model, str(receptor.id), skip_existing=True)
+    run_receptor(
+        model, str(receptor.id), compute_root=tmp_path / "scratch", skip_existing=True
+    )
 
     assert calls == [
         {"variant": "hrrr", "skip": True, "stale": False},
@@ -540,7 +544,9 @@ def test_run_receptor_no_skip_reruns_each_run_once(tmp_path, receptor, monkeypat
 
     monkeypatch.setattr(worker, "run_simulation", fake)
 
-    run_receptor(model, str(receptor.id), skip_existing=False)
+    run_receptor(
+        model, str(receptor.id), compute_root=tmp_path / "scratch", skip_existing=False
+    )
 
     # The second variant must not rerun the shared particles again.
     assert calls == [
@@ -557,7 +563,7 @@ def test_run_receptor_normalises_preemption(tmp_path, receptor, monkeypatch):
 
     monkeypatch.setattr(worker, "run_simulation", fake)
 
-    result = run_receptor(model, str(receptor.id))
+    result = run_receptor(model, str(receptor.id), compute_root=tmp_path / "scratch")
 
     assert result.status == "interrupted"
     assert result.error == "Worker preempted"
@@ -722,7 +728,7 @@ def test_run_receptors_pool_rebuilds_model_and_orders_results(
     assert worker._POOL_MODEL is not None
     assert worker._POOL_MODEL is not model
     assert worker._POOL_MODEL.project.root == model.project.root
-    assert str(resolve_compute_root(model.project)) == worker._POOL_COMPUTE_ROOT
+    assert resolve_compute_root(model.project) == worker._POOL_COMPUTE_ROOT
     assert worker._POOL_SKIP is False
     # Results come back in input order even though the pool yielded reversed.
     assert [r.receptor_id for r in results] == ids
