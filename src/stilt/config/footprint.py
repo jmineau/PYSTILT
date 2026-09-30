@@ -129,19 +129,5 @@ class FootprintConfig(BaseModel):
         """Serialize the transforms to plain mappings."""
         return [dump_transform(item) for item in value]
 
-    @property
-    def footprint(self) -> FootprintConfig | None:
-        """
-        The footprint settings alone, or ``None`` without a grid.
-
-        On a :class:`~stilt.config.VariantConfig` this drops the transport
-        settings, leaving what a footprint is calculated and stored with.
-        """
-        if self.grid is None:
-            return None
-        return FootprintConfig(
-            **{name: getattr(self, name) for name in FootprintConfig.model_fields}
-        )
-
 
 __all__ = ["FootprintConfig"]

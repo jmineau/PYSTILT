@@ -14,7 +14,6 @@ prints a short summary. Examples::
     stilt pull-worker ./my_project    # run receptors from the Postgres queue
     stilt serve ./my_project          # keep taking work from the queue
     stilt status                      # count finished simulations
-    stilt convert ./old_project       # copy a pre-output-directory project's results
 """
 
 from __future__ import annotations
@@ -32,7 +31,6 @@ from stilt.execution import (
     run_receptors,
 )
 from stilt.model import Model
-from stilt.output import Output, convert_project
 from stilt.project import CONFIG_KEY, RECEPTORS_KEY
 from stilt.receptors import read_receptors
 
@@ -324,35 +322,6 @@ def status(project: str | None = _PROJECT_ARG) -> None:
     """Count finished and pending simulations, per variant when there are several."""
     model = Model(project=_resolve_project(project))
     _print_status(model)
-
-
-@app.command()
-def convert(
-    project: str | None = _PROJECT_ARG,
-    output: str | None = typer.Option(
-        None,
-        "--output",
-        help="Output directory to write to. Defaults to the one config.yaml names.",
-    ),
-    no_verify: bool = typer.Option(
-        False, "--no-verify", help="Do not read each written file back to check it."
-    ),
-) -> None:
-    """
-    Copy a project's old simulations/by-id results into its output directory.
-
-    For projects run before results moved to the output directory. Files
-    already there are skipped, so it can be rerun. The old tree is left in
-    place; delete it yourself once the output directory is checked.
-    """
-    model = Model(project=_resolve_project(project))
-    target = Output(output) if output is not None else model.output
-    report = convert_project(model, target, verify=not no_verify)
-    typer.echo(
-        f"Converted into {target.path}: {report.particles} particle files "
-        f"({report.particles_skipped} already there), {report.footprints} footprints "
-        f"({report.footprints_skipped} already there), {report.logs} logs."
-    )
 
 
 # ---------------------------------------------------------------------------

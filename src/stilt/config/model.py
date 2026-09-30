@@ -13,9 +13,6 @@ from .meteorology import MetConfig
 from .params import STILTParams
 from .variant import VARIANT_NAME_RE, VariantConfig, expand_variants
 
-#: ModelConfig fields that are not parameters a variant inherits.
-_PROJECT_FIELDS = frozenset({"mets", "variants", "execution", "output", "keep_scratch"})
-
 
 class ModelConfig(STILTParams, FootprintConfig):
     """
@@ -84,8 +81,17 @@ class ModelConfig(STILTParams, FootprintConfig):
         return self
 
     def defaults(self) -> dict[str, Any]:
-        """Return the default parameters every variant starts from."""
-        return self.model_dump(exclude=set(_PROJECT_FIELDS))
+        """Return the default transport and footprint parameters every variant starts from."""
+        parameters = set(STILTParams.model_fields) | set(FootprintConfig.model_fields)
+        return self.model_dump(include=parameters)
+
+    @property
+    def footprint(self) -> FootprintConfig | None:
+        """The default footprint settings, or ``None`` without a grid."""
+        settings = FootprintConfig(
+            **{name: getattr(self, name) for name in FootprintConfig.model_fields}
+        )
+        return settings if settings.grid is not None else None
 
     def resolve_variants(self) -> dict[str, VariantConfig]:
         """
@@ -95,7 +101,7 @@ class ModelConfig(STILTParams, FootprintConfig):
         ``realizations: 3`` gives ``hrrr-err-0`` to ``hrrr-err-2``.
         """
         declared = self.variants or {met: {"met": met} for met in self.mets}
-        return expand_variants(declared, self.defaults(), list(self.mets))
+        return expand_variants(declared, self.defaults(), self.mets)
 
     def to_yaml(self, path: str | Path | None = None) -> str:
         """

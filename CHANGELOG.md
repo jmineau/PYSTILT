@@ -18,8 +18,8 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   folder per set of settings, and `date=YYYY-MM-DD` folders below, so each
   tree reads as one dataset. Particles are one Parquet file per receptor;
   footprints are stored sparse in float32, with an empty footprint as a file
-  with no rows and its reason. `stilt convert` copies an existing project's
-  `simulations/by-id` tree into its output directory.
+  with no rows and its reason. Results of earlier versions under
+  `simulations/by-id` are not read; there is no migration in the alpha.
 - **A run is identified by its settings, not its variant name.** Two
   variants with the same transport settings share one HYSPLIT run per
   receptor and differ only in the footprint made from it, so `from:` is no
@@ -31,9 +31,26 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `PYSTILT_COMPUTE_ROOT`, or `$TMPDIR/pystilt/<project>`) is removed after
   a successful run and copied under the output directory's `scratch/`
   after a failed one; `keep_scratch: true` keeps every run's.
+- Reading `sim.trajectories` or `sim.footprint` before the result is
+  written raises `FileNotFoundError` instead of returning `None`, so the
+  same object reads the result once the run lands. `None` now means only
+  that the variant makes no footprint or that the footprint is empty. Check
+  `sim.has_trajectory` / `sim.has_footprint` first while a run may still be
+  going.
 - `model.simulations.sel(...).jacobian(target, time_bins)` sums the
   selected footprints onto a target in one pass, as a sparse matrix with
   labelled rows and columns (`stilt.output.Jacobian`).
+- **`VariantConfig` is composed, not flattened.** A resolved variant holds
+  `transport` (a `TransportSettings`, whose hash names the run) and
+  `footprint` (a `FootprintConfig`, or `None`) instead of sixty flat
+  fields; `stilt_params()` and the `footprint` property on
+  `FootprintConfig` are gone. The flat surface of `config.yaml` is
+  unchanged.
+- **`Simulation` is a value: receptor, variant, and output directory.** It
+  reads results and reports completion, and runs nothing. HYSPLIT runs and
+  footprint writing live in `stilt.execution` (`run_trajectories`,
+  `write_footprint`, `run_simulation`); `Simulation.generate_footprint`
+  calculates without writing. `Model` keeps no simulation cache.
 - `TransformContext.store` is now `TransformContext.directory`, the project
   directory that relative file names in transform settings are taken from.
 - `Simulation.trajectories_path`, `footprint_path`, and `log_path` point

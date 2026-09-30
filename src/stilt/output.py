@@ -40,6 +40,7 @@ Start from :class:`Output`::
 from __future__ import annotations
 
 import datetime as dt
+import functools
 import json
 import logging
 import os
@@ -170,9 +171,19 @@ class Output:
 
     def __init__(self, path: str | Path) -> None:
         self.path = Path(path)
+        # Folders found so far, by settings hash. A miss rescans the directory,
+        # so a folder another worker created is picked up on the next lookup.
+        self._runs: dict[str, Run] = {}
+        self._footprints: dict[str, Footprints] = {}
 
     def __repr__(self) -> str:
         return f"Output({str(self.path)!r})"
+
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, Output) and other.path == self.path
+
+    def __hash__(self) -> int:
+        return hash(str(self.path))
 
     @property
     def particles_dir(self) -> Path:
@@ -192,11 +203,26 @@ class Output:
 
     def runs(self) -> list[Run]:
         """Return every run (particles folder) in the directory, in folder-name order."""
-        return [Run(self, key) for key in _settings_folders(self.particles_dir)]
+        found = [Run(self, key) for key in _settings_folders(self.particles_dir)]
+        self._runs = {run.hash: run for run in found}
+        return found
 
     def footprint_sets(self) -> list[Footprints]:
         """Return every footprint folder in the directory, in folder-name order."""
-        return [Footprints(self, key) for key in _settings_folders(self.footprints_dir)]
+        found = [
+            Footprints(self, key) for key in _settings_folders(self.footprints_dir)
+        ]
+        self._footprints = {feet.hash: feet for feet in found}
+        return found
+
+    def find_footprints(
+        self, run_hash: str, config: FootprintConfig
+    ) -> Footprints | None:
+        """Return the footprint folder for *config* on the particles of the run hashed *run_hash*, or ``None``."""
+        digest = Footprints.hash_for(run_hash, config)
+        if digest not in self._footprints:
+            self.footprint_sets()
+        return self._footprints.get(digest)
 
     def find_run(self, settings: TransportSettings) -> Run | None:
         """
@@ -208,10 +234,9 @@ class Output:
         matches.
         """
         digest = settings.hash
-        for run in self.runs():
-            if run.hash == digest:
-                return run
-        return None
+        if digest not in self._runs:
+            self.runs()
+        return self._runs.get(digest)
 
     def run(self, name: str, settings: TransportSettings) -> Run:
         """
@@ -235,7 +260,9 @@ class Output:
                 "settings": settings.identity(),
             },
         )
-        return Run(self, key)
+        run = Run(self, key)
+        self._runs[run.hash] = run
+        return run
 
 
 class Run:
@@ -375,11 +402,7 @@ class Run:
 
     def find_footprints(self, config: FootprintConfig) -> Footprints | None:
         """Return the footprint folder for *config* on this run's particles, or ``None``."""
-        digest = Footprints.hash_for(self.hash, config)
-        for existing in self.footprint_sets():
-            if existing.hash == digest:
-                return existing
-        return None
+        return self.output.find_footprints(self.hash, config)
 
     def footprints(
         self, config: FootprintConfig, name: str | None = None
@@ -412,7 +435,9 @@ class Run:
                 "settings": canonical(config.model_dump(mode="json")),
             },
         )
-        return Footprints(self.output, key)
+        feet = Footprints(self.output, key)
+        self.output._footprints[feet.hash] = feet
+        return feet
 
 
 _FOOTPRINT_SCHEMA = pa.schema(
@@ -489,7 +514,6 @@ class Footprints:
         #: Grid the stored ``x`` and ``y`` index (``config.grid``).
         self.grid: Grid = self.config.grid
         self._axes: tuple[np.ndarray, np.ndarray] | None = None
-        self._run: Run | None = None
 
     def __repr__(self) -> str:
         return f"Footprints({self.key!r})"
@@ -504,14 +528,12 @@ class Footprints:
     def __hash__(self) -> int:
         return hash((str(self.output.path), self.key))
 
-    @property
+    @functools.cached_property
     def run(self) -> Run:
         """The run whose particles these footprints were made from."""
-        if self._run is None:
-            self._run = Run(self.output, self.run_key)
-        return self._run
+        return Run(self.output, self.run_key)
 
-    @property
+    @functools.cached_property
     def hash(self) -> str:
         """Hash of the run's settings and the footprint settings together, re-validated."""
         return self.hash_for(self.run.hash, self.config)
@@ -806,133 +828,9 @@ class Footprints:
         return Jacobian(data, pd.Index(rows, name="receptor"), columns, empty, missing)
 
 
-# -- converting an existing project ------------------------------------------
-
-
-class ConvertReport(NamedTuple):
-    """Counts from :func:`convert_project`."""
-
-    particles: int
-    particles_skipped: int
-    footprints: int
-    footprints_skipped: int
-    logs: int
-
-
-def convert_project(
-    model: Any,
-    output: Output | None = None,
-    *,
-    receptors: Iterable[str] | None = None,
-    variants: Iterable[str] | None = None,
-    verify: bool = True,
-) -> ConvertReport:
-    """
-    Copy a project's old ``simulations/by-id`` tree into an output directory.
-
-    Before the output directory existed, each simulation had its own folder,
-    ``simulations/by-id/<receptor>/<variant>/``, holding
-    ``<receptor>_traj.parquet``, ``<receptor>_foot.nc`` or
-    ``<receptor>_foot.empty``, and ``stilt.log``. This copies every such
-    file into *output* (the model's own output directory by default):
-    particles into the run for the variant's transport settings, the
-    footprint into that run's folder for the variant's footprint settings,
-    the log beside them. Variants with the same transport settings share a
-    run. Files that already exist are skipped, so an interrupted conversion
-    can be resumed. The old tree is left in place.
-
-    A ``config.yaml`` that still uses ``from:`` must be edited first (give
-    the variant its parent's transport overrides, if any); its footprints
-    then land in the shared run.
-
-    Parameters
-    ----------
-    model : Model
-        The project to convert.
-    output : Output, optional
-        Where to write. Defaults to ``model.output``.
-    receptors, variants : iterable of str, optional
-        Receptor ids and variant names to convert. All by default.
-    verify : bool, default True
-        Read each written file back and compare it with its source.
-
-    Returns
-    -------
-    ConvertReport
-    """
-    target: Output = model.output if output is None else output
-    by_id = model.project.directory / "simulations" / "by-id"
-    sims = model.simulations
-    if receptors is not None or variants is not None:
-        sims = sims.sel(receptor=receptors, variant=variants)
-    counts = dict.fromkeys(ConvertReport._fields, 0)
-    runs: dict[str, Run] = {}
-    for sim in sims:
-        rid = str(sim.receptor.id)
-        old = by_id / rid / sim.variant
-        traj_path = old / f"{rid}_traj.parquet"
-        foot_path = old / f"{rid}_foot.nc"
-        empty_path = old / f"{rid}_foot.empty"
-        log_path = old / "stilt.log"
-
-        settings = sim.outputs.settings
-        if settings.hash not in runs:
-            runs[settings.hash] = target.run(sim.variant, settings)
-        run: Run = runs[settings.hash]
-
-        if traj_path.exists():
-            if run.has_particles(rid):
-                counts["particles_skipped"] += 1
-            else:
-                traj = Trajectories.from_parquet(traj_path)
-                run.write_particles(traj)
-                if verify:
-                    back = run.read_particles(rid)
-                    if len(back.data) != len(traj.data) or not np.allclose(
-                        back.data["foot"].to_numpy(), traj.data["foot"].to_numpy()
-                    ):
-                        run.particles_path(rid).unlink()
-                        raise ValueError(
-                            f"{rid}/{sim.variant}: converted particles do not match."
-                        )
-                counts["particles"] += 1
-
-        config = sim.outputs.footprint_config
-        if config is not None and (foot_path.exists() or empty_path.exists()):
-            feet = run.footprints(config, name=sim.variant)
-            if feet.has(rid):
-                counts["footprints_skipped"] += 1
-            elif foot_path.exists():
-                foot = Footprint.from_netcdf(foot_path)
-                feet.write(foot)
-                if verify:
-                    back = feet.read(rid)
-                    assert back is not None
-                    expected = np.nan_to_num(
-                        foot.data.values.astype(np.float32).astype(np.float64)
-                    )
-                    if not np.allclose(back.data.values, expected):
-                        feet.footprint_path(rid).unlink()
-                        raise ValueError(
-                            f"{rid}/{sim.variant}: converted footprint does not match."
-                        )
-                counts["footprints"] += 1
-            else:
-                reason = empty_path.read_text().strip() or "unknown"
-                feet.write_empty(sim.receptor, reason, name=sim.variant)
-                counts["footprints"] += 1
-
-        if log_path.exists() and not run.log_path(rid).exists():
-            run.write_log(rid, log_path.read_text())
-            counts["logs"] += 1
-    return ConvertReport(**counts)
-
-
 __all__ = [
-    "ConvertReport",
     "Footprints",
     "Jacobian",
     "Output",
     "Run",
-    "convert_project",
 ]

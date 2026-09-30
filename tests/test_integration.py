@@ -61,7 +61,9 @@ def test_trajectory(tmp_path, wbb_receptor, traj_only_config):
     assert sim.trajectories_path.parent.parent.name.startswith("settings=hrrr-")
     assert len(pd.read_parquet(sim.trajectories_path)) > 0, "Particle file is empty"
     assert sim.trajectories is not None and len(sim.trajectories.data) > 0
-    assert not sim.directory.exists(), "the scratch working directory is removed"
+    assert not (model.compute_root / sim.id).exists(), (
+        "the scratch working directory is removed"
+    )
 
     log_text = sim.log
     for phrase in ("FATAL ERROR", "Segmentation fault", "hycs_std: not found"):

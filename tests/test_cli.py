@@ -178,7 +178,8 @@ def test_status_counts_full_simulation_completion(tmp_path):
             "foot": [1e-5],
         }
     )
-    sim.outputs.ensure_run().write_particles(
+    run = sim.output.run(sim.variant.name, sim.variant.transport)
+    run.write_particles(
         Trajectories(receptor=receptor, params=sim.params, met_files=[], data=particles)
     )
 
@@ -188,7 +189,12 @@ def test_status_counts_full_simulation_completion(tmp_path):
     assert "total=1  completed=0  pending=1" in result.output
 
     # Once the footprint is present too, the simulation counts as complete.
-    sim.generate_footprint(write=True)
+    from stilt.execution import write_footprint
+
+    sim = model.simulation(
+        (receptor.id, "hrrr")
+    )  # a fresh value; the old one cached no particles
+    write_footprint(sim, sim.trajectories, context=model.transform_context(sim))
 
     result = runner.invoke(app, ["status", str(tmp_path)])
 
@@ -208,7 +214,6 @@ def test_cli_help_lists_current_commands():
         "push-worker",
         "serve",
         "status",
-        "convert",
     }
     for command in expected:
         assert command in result.output
@@ -819,7 +824,7 @@ def test_status_lists_output_folders_no_variant_uses(tmp_path):
     model = Model(project=tmp_path)
     model.register()
     # A run made under settings the config no longer has.
-    stale = model.variant_output("hrrr").settings.model_copy(update={"numpar": 7})
+    stale = model.variants["hrrr"].transport.model_copy(update={"numpar": 7})
     model.output.run("old", stale)
 
     result = runner.invoke(app, ["status", str(tmp_path)])

@@ -29,5 +29,3 @@ Output directory
    stilt.output.Run
    stilt.output.Footprints
    stilt.output.Jacobian
-   stilt.output.convert_project
-   stilt.simulation.VariantOutput

@@ -94,11 +94,12 @@ class TransportSettings(STILTParams):
     """
     Everything that decides a run's particles.
 
-    The transport fields of :class:`~stilt.config.STILTParams`, the
-    :class:`~stilt.config.MetContent` of its meteorology, and the
-    :class:`EngineInfo`. Fields that change no particle (``timeout``,
-    ``rm_dat``, ``exe_dir``) are carried for running but left out of
-    :meth:`identity` and :attr:`hash`.
+    The transport fields of :class:`~stilt.config.STILTParams` (which also
+    carry HYSPLIT's namelist writers and validators, so this is the object
+    the driver runs with), the :class:`~stilt.config.MetContent` of its
+    meteorology, and the :class:`EngineInfo`. Fields that change no particle
+    (``timeout``, ``rm_dat``, ``exe_dir``) are carried for running but left
+    out of :meth:`identity` and :attr:`hash`.
 
     A stored ``settings.yaml`` loads back through this class, so a run is
     found by re-validating and re-hashing what was stored rather than by

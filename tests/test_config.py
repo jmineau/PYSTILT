@@ -533,9 +533,9 @@ def test_model_config_variant_grid_in_yaml(tmp_path):
     path = tmp_path / "config.yaml"
     path.write_text(yaml_text)
     variants = ModelConfig.from_yaml(path).resolve_variants()
-    assert variants["hrrr"].grid.xres == 0.01
-    assert variants["coarse"].grid.xres == 0.05
-    assert variants["coarse"].grid.xmin == -114.0
+    assert variants["hrrr"].footprint.grid.xres == 0.01
+    assert variants["coarse"].footprint.grid.xres == 0.05
+    assert variants["coarse"].footprint.grid.xmin == -114.0
 
 
 def test_model_config_inline_grid_in_yaml(tmp_path):
@@ -719,7 +719,7 @@ def test_footprint_config_cells_per_target_and_explicit_grid_wins():
 def test_footprint_needs_a_grid():
     from stilt.footprint import Footprint
 
-    assert FootprintConfig().footprint is None
+    assert FootprintConfig().grid is None
     with pytest.raises(ValueError, match="grid"):
         Footprint(receptor=None, config=FootprintConfig(), data=None)  # type: ignore[arg-type]
 
@@ -807,14 +807,31 @@ def _variant_config(tmp_path, **kwargs):
     return ModelConfig(mets=_met_config(tmp_path), **kwargs)
 
 
+def test_footprint_settings_without_a_grid_are_an_error(tmp_path):
+    """Settings that would be dropped are refused instead."""
+    from stilt.transforms import FirstOrderLifetime
+
+    with pytest.raises(
+        ValueError, match="'decay' sets footprint settings .transforms. but no grid"
+    ):
+        _variant_config(
+            tmp_path,
+            variants={
+                "decay": {"transforms": [FirstOrderLifetime(lifetime_hours=1.0)]}
+            },
+        )
+    with pytest.raises(ValueError, match="smooth_factor"):
+        _variant_config(tmp_path, smooth_factor=2)
+
+
 def test_variants_default_to_one_per_met(tmp_path):
     mc = _met_config(tmp_path)["hrrr"]
     cfg = ModelConfig(mets={"hrrr": mc, "gfs": mc}, ziscale=0.9)
     variants = cfg.resolve_variants()
     assert list(variants) == ["hrrr", "gfs"]
     assert variants["gfs"].met == "gfs"
-    assert variants["gfs"].ziscale == 0.9
-    assert variants["hrrr"].stilt_params().ziscale == 0.9
+    assert variants["gfs"].transport.ziscale == 0.9
+    assert variants["hrrr"].transport.ziscale == 0.9
 
 
 def test_variant_overrides_merge_onto_the_defaults(tmp_path):
@@ -822,11 +839,13 @@ def test_variant_overrides_merge_onto_the_defaults(tmp_path):
         tmp_path, numpar=50, variants={"hrrr": {}, "zi08": {"ziscale": 0.8}}
     )
     variants = cfg.resolve_variants()
-    assert variants["zi08"].numpar == 50
-    assert variants["zi08"].ziscale == 0.8
-    assert variants["hrrr"].ziscale == 1.0
-    zi08, hrrr = variants["zi08"].model_dump(), variants["hrrr"].model_dump()
-    assert sorted(k for k in zi08 if zi08[k] != hrrr[k]) == ["group", "name", "ziscale"]
+    assert variants["zi08"].transport.numpar == 50
+    assert variants["zi08"].transport.ziscale == 0.8
+    assert variants["hrrr"].transport.ziscale == 1.0
+    zi08 = variants["zi08"].transport.model_dump()
+    hrrr = variants["hrrr"].transport.model_dump()
+    assert sorted(k for k in zi08 if zi08[k] != hrrr[k]) == ["ziscale"]
+    assert variants["zi08"].footprint == variants["hrrr"].footprint
 
 
 def test_variant_grid_override_merges_field_by_field(tmp_path):
@@ -848,18 +867,19 @@ def test_variant_grid_override_merges_field_by_field(tmp_path):
         },
     )
     variants = cfg.resolve_variants()
-    assert variants["coarse"].grid is not None
-    assert variants["coarse"].grid.xres == 0.1
-    assert variants["coarse"].grid.xmin == -114
-    assert variants["none"].grid is None
+    assert variants["coarse"].footprint is not None
+    assert variants["coarse"].footprint.grid.xres == 0.1
+    assert variants["coarse"].footprint.grid.xmin == -114
+    assert variants["none"].footprint is None
 
 
-def test_to_yaml_writes_only_what_was_set(tmp_path):
+def test_to_yaml_writes_only_what_was_set(tmp_path, grid):
     from stilt.transforms import FirstOrderLifetime
 
     cfg = _variant_config(
         tmp_path,
         numpar=50,
+        grid=grid,
         variants={
             "hrrr": {},
             "zi08": {"ziscale": 0.8},
@@ -877,8 +897,8 @@ def test_to_yaml_writes_only_what_was_set(tmp_path):
     assert text.startswith("mets:")  # inputs first, then the settings
     assert "kind: first_order_lifetime" in text  # nested objects are written in full
     loaded = ModelConfig.from_yaml(path).resolve_variants()
-    assert loaded["zi08"].ziscale == 0.8
-    assert loaded["decay"].transforms[0].lifetime_hours == 1.0
+    assert loaded["zi08"].transport.ziscale == 0.8
+    assert loaded["decay"].footprint.transforms[0].lifetime_hours == 1.0
 
 
 def test_variant_must_name_its_met_when_there_are_several(tmp_path):
@@ -913,11 +933,11 @@ def test_realizations_expand_into_numbered_variants_with_their_own_seed(tmp_path
     )
     variants = cfg.resolve_variants()
     assert list(variants) == ["hrrr", "err-0", "err-1", "err-2"]
-    assert [variants[f"err-{k}"].seed for k in range(3)] == [42, 43, 44]
+    assert [variants[f"err-{k}"].transport.seed for k in range(3)] == [42, 43, 44]
     assert all(variants[f"err-{k}"].group == "err" for k in range(3))
     assert [variants[f"err-{k}"].realization for k in range(3)] == [0, 1, 2]
-    assert variants["err-1"].winderrtf == 1
-    assert variants["hrrr"].winderrtf == 0
+    assert variants["err-1"].transport.winderrtf == 1
+    assert variants["hrrr"].transport.winderrtf == 0
 
 
 @pytest.mark.parametrize("krand", [0, 1, 2, 3, 12])
@@ -961,9 +981,10 @@ def test_variants_that_differ_only_in_footprint_fields_keep_the_transport(
     variants = cfg.resolve_variants()
     s2 = variants["s2"]
     assert s2.met == "hrrr"
-    assert s2.ziscale == 0.8
-    assert s2.smooth_factor == 2
-    assert s2.stilt_params() == variants["hrrr"].stilt_params()
+    assert s2.transport.ziscale == 0.8
+    assert s2.footprint is not None and s2.footprint.smooth_factor == 2
+    assert s2.transport == variants["hrrr"].transport
+    assert s2.transport.hash == variants["hrrr"].transport.hash
 
 
 def test_from_is_rejected_with_advice(tmp_path):
@@ -1027,12 +1048,12 @@ def test_variant_geometry_derives_its_own_grid_and_hash(tmp_path, grid, defaults
         },
     )
     variants = cfg.resolve_variants()
-    mesh = variants["src"].geometry.build()
+    mesh = variants["src"].footprint.geometry.build()
     expected = Grid.from_geometry(mesh)
     for name in ("src", "src-run"):
-        assert variants[name].grid == expected
-        assert variants[name].geometry_hash == mesh.hash
-    assert variants["hrrr"].grid != expected
+        assert variants[name].footprint.grid == expected
+        assert variants[name].footprint.geometry_hash == mesh.hash
+    assert variants["hrrr"].footprint.grid != expected
 
 
 def test_maxpar_follows_each_variants_numpar(tmp_path):
@@ -1041,10 +1062,9 @@ def test_maxpar_follows_each_variants_numpar(tmp_path):
         tmp_path, numpar=1000, variants={"hrrr": {}, "np3k": {"numpar": 3000}}
     )
     variants = cfg.resolve_variants()
-    assert variants["hrrr"].stilt_params().setup_entries()["maxpar"] == 1000
-    assert variants["np3k"].stilt_params().setup_entries()["maxpar"] == 3000
+    assert variants["hrrr"].transport.setup_entries()["maxpar"] == 1000
+    assert variants["np3k"].transport.setup_entries()["maxpar"] == 3000
     # A run's identity holds the value HYSPLIT got, so an unset maxpar equals
     # numpar and a variant that raises numpar is a different run.
-    met = cfg.mets["hrrr"]
-    assert variants["hrrr"].transport_settings(met).identity()["maxpar"] == 1000
-    assert variants["np3k"].transport_settings(met).identity()["maxpar"] == 3000
+    assert variants["hrrr"].transport.identity()["maxpar"] == 1000
+    assert variants["np3k"].transport.identity()["maxpar"] == 3000
