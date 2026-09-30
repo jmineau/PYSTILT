@@ -216,7 +216,9 @@ def slurm_parameters(execution: ExecutionConfig, *, job_name: str) -> dict[str, 
         "slurm_additional_parameters": additional,
     }
     optional = {
-        "slurm_time": execution.time,
+        # Minutes, which is the form submitit needs to tell a timeout from a
+        # preemption when it decides whether to requeue.
+        "slurm_time": execution.time_minutes,
         "slurm_mem": execution.mem,
         "slurm_partition": execution.partition,
         "slurm_account": execution.account,

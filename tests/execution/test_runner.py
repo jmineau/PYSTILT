@@ -56,7 +56,7 @@ def test_slurm_parameters_map_every_setting():
     assert slurm_parameters(execution, job_name="pystilt-x") == {
         "slurm_job_name": "pystilt-x",
         "slurm_cpus_per_task": 4,
-        "slurm_time": "02:00:00",
+        "slurm_time": 120,
         "slurm_mem": "8G",
         "slurm_partition": "compute",
         "slurm_account": "lab",
@@ -93,7 +93,7 @@ def test_slurm_parameters_render_as_a_submission_script(tmp_path):
     for line in (
         "#SBATCH --job-name=pystilt-x",
         "#SBATCH --cpus-per-task=2",
-        "#SBATCH --time=00:10:00",
+        "#SBATCH --time=10",
         "#SBATCH --mem=4G",
         "#SBATCH --partition=compute",
         "#SBATCH --exclude=node1",
@@ -296,3 +296,36 @@ def test_slurm_handle_wait_raises_when_a_task_did_not_complete(tmp_path):
     ):
         handle.wait()
     assert bad.waited
+
+
+# ---------------------------------------------------------------------------
+# Time limits
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("time", "minutes"),
+    [
+        (90, 90),
+        ("90", 90),
+        ("30:00", 30),
+        ("02:00:00", 120),
+        ("00:10:30", 11),  # rounded up
+        ("1-00", 1440),
+        ("1-12:30", 2190),
+        ("2-00:00:00", 2880),
+    ],
+)
+def test_time_limits_are_read_the_way_sbatch_reads_them(time, minutes):
+    assert ExecutionConfig(time=time).time_minutes == minutes
+
+
+@pytest.mark.parametrize("time", ["soon", "1:2:3:4", "-5", "0", "00:00:00", "1-"])
+def test_a_time_limit_sbatch_would_not_take_is_an_error(time):
+    with pytest.raises(ValueError, match="time limit"):
+        ExecutionConfig(time=time)
+
+
+def test_no_time_limit_is_left_to_the_partition():
+    assert ExecutionConfig().time_minutes is None
+    assert "slurm_time" not in slurm_parameters(ExecutionConfig(), job_name="x")
