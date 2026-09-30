@@ -6,6 +6,13 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Removed
+
+- **Python 3.10 is no longer supported** (breaking). PYSTILT now requires
+  Python 3.11 or newer; 3.10 reaches end of life in October 2026. The
+  `typing-extensions` dependency is gone, and CI tests 3.11 through 3.14
+  ([#62](https://github.com/jmineau/PYSTILT/issues/62)).
+
 ### Fixed
 
 - **`stilt init` writes a receptors file that loads**

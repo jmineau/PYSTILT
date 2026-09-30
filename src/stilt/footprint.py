@@ -6,13 +6,12 @@ import os
 import warnings
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Self, cast
 
 import numpy as np
 import pandas as pd
 import xarray as xr
 from scipy.ndimage import convolve as _convolve
-from typing_extensions import Self
 
 from stilt.config import FootprintConfig, Grid
 from stilt.config.spatial import (
@@ -943,7 +942,7 @@ class Footprint:
                 "transforms": json.dumps(
                     [_record_transform(t) for t in self.config.transforms]
                 ),
-                "time_created": dt.datetime.now(dt.timezone.utc)
+                "time_created": dt.datetime.now(dt.UTC)
                 .replace(tzinfo=None)
                 .isoformat(),
             }

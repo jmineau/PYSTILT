@@ -34,13 +34,20 @@ import os
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Annotated, Any, Literal, Protocol, runtime_checkable
+from typing import (
+    TYPE_CHECKING,
+    Annotated,
+    Any,
+    Literal,
+    Protocol,
+    Self,
+    runtime_checkable,
+)
 
 import numpy as np
 import pandas as pd
 from numpy.typing import ArrayLike
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, model_validator
-from typing_extensions import Self
 
 if TYPE_CHECKING:
     from stilt.receptors import Receptor

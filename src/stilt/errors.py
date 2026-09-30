@@ -1,10 +1,10 @@
 """Errors raised while running simulations, and the HYSPLIT failures they report."""
 
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 
 
-class FailureReason(str, Enum):
+class FailureReason(StrEnum):
     """Why a HYSPLIT run failed, as read from its ``stilt.log``."""
 
     MISSING_MET_FILES = "MISSING_MET_FILES"
@@ -14,10 +14,6 @@ class FailureReason(str, Enum):
     FORTRAN_RUNTIME_ERROR = "FORTRAN_RUNTIME_ERROR"
     EMPTY_LOG = "EMPTY_LOG"
     UNKNOWN = "UNKNOWN"
-
-    def __str__(self) -> str:
-        """Return the underlying reason code."""
-        return self.value
 
 
 #: Phrases written to stilt.log by HYSPLIT, mapped to their FailureReason.

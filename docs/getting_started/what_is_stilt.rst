@@ -53,7 +53,7 @@ footprints into modeled concentrations.
 What you need
 -------------
 
-- Python 3.10 or newer, and PYSTILT (:doc:`installation`).
+- Python 3.11 or newer, and PYSTILT (:doc:`installation`).
 - Meteorology in ARL format. STILT needs gridded winds, temperature, and
   turbulence fields from a weather model such as HRRR, NAM, or GDAS, in the
   format used by NOAA's Air Resources Laboratory (:term:`ARL`). Many research

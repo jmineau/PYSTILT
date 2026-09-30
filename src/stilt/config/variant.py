@@ -11,10 +11,9 @@ its defaults, and :meth:`ModelConfig.resolve_variants` turns them into one
 from __future__ import annotations
 
 import re
-from typing import Any
+from typing import Any, Self
 
 from pydantic import ConfigDict, Field, model_validator
-from typing_extensions import Self
 
 from .footprint import FootprintConfig
 from .params import STILTParams
