@@ -130,8 +130,8 @@ Glossary
       with height, so a particle high in the column stands for less air.
 
    backend
-      Where the simulations run. The choices are ``local`` (your computer),
-      ``slurm`` (an HPC cluster), and ``kubernetes`` (cloud, experimental).
+      Where the simulations run. The choices are ``local`` (your computer)
+      and ``slurm`` (an HPC cluster).
       Set it in the ``execution`` section of ``config.yaml``. See
       :doc:`../guides/execution/index`.
 

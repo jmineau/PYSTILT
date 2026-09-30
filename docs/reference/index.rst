@@ -15,7 +15,7 @@ to do something, start with the :doc:`../guides/index` instead.
    Finding and staging meteorology files.
 
 :doc:`execution`
-   Running simulations locally, on Slurm, or on Kubernetes.
+   Running simulations locally or on Slurm.
 
 :doc:`transforms`
    Particle weighting: averaging kernels, pressure weighting, and lifetime

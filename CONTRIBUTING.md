@@ -67,32 +67,22 @@ definition of a finished simulation, `Simulation.is_complete()`. Don't add
 another "does this output exist" check. Call that method instead. A new store
 backend implements the six methods of the `Store` protocol.
 
-## Adding execution backends
+## Changing how work is run
 
-Execution backends implement the `Executor` and `JobHandle` protocols in
-`src/stilt/execution/backends/protocol.py`. Each executor has a `dispatch`
-mode:
+`stilt.execution.run` plans the receptors with missing results and hands
+them to `_dispatch` in `execution/runner.py`. A local run calls
+`run_receptors` in this process. A Slurm run splits the receptors into
+`Batch` objects and submits them as one job array with submitit.
 
-- A `push` executor is given the list of pending receptors. It runs them
-  through `stilt.execution.run_receptors`, directly or with the
-  `stilt push-worker` command, and `Simulation.publish()` copies the outputs
-  into the project.
-- A `pull` executor starts workers that claim receptors from the Postgres
-  queue. A worker keeps its claim until it records a result or releases the
-  claim.
+A `Batch` is the unit to build on: a project path and a list of receptor
+ids, picklable, that any worker with the project's filesystem can call. Its
+`checkpoint()` is what lets a preempted or timed-out task be submitted again.
+Another scheduler means another branch in `_dispatch` that calls the same
+batches, and a handle with `job_id`, `detached`, and `wait()`.
 
-Register the backend in `resolve_backend` in `execution/backends/factory.py`,
-export it from `execution/__init__.py`, and handle SIGTERM with
-`sigterm_as_interrupt` the way the local, Slurm, and Kubernetes backends do.
-
-`start()` should return a handle quickly. `wait()` should raise when the
-backend reports a failure. A job that is no longer queued has not
-necessarily succeeded. Add tests for a failed submission, failed jobs,
-interruption or preemption, and calling `wait()` more than once.
-
-Scheduler-backed executors should put a timeout on every subprocess call,
-write their task and chunk files under a predictable directory, and delete
-those files once the job is known to be finished.
+New `execution:` settings go on `ExecutionConfig` (`config/execution.py`)
+with a description. Settings that only `sbatch` understands do not need a
+field: users put them under `slurm:`.
 
 ## Adding particle transforms
 

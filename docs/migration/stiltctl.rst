@@ -1,10 +1,11 @@
 Coming From stiltctl
 ====================
 
-This page is for stiltctl users who run STILT on cloud infrastructure. In
-PYSTILT the work queue and the workers are part of the package. There is no
-separate service to deploy. This part of PYSTILT is still experimental (see
-:doc:`../guides/execution/kubernetes`).
+This page is for stiltctl users who run STILT on cloud infrastructure.
+PYSTILT does not run a service: there is no work queue, no long-lived
+worker, and no Kubernetes deployment. It runs a project's unfinished
+receptors on one machine or as a Slurm job array, and decides what is
+finished from the output files.
 
 .. list-table::
    :header-rows: 1
@@ -15,32 +16,21 @@ separate service to deploy. This part of PYSTILT is still experimental (see
      - PYSTILT equivalent
    * - Work submission
      - service-oriented submit API
-     - ``Model.register()`` or ``stilt register``
+     - ``stilt run`` or ``model.run()`` (:doc:`../guides/execution/index`)
    * - Batch worker
      - queue worker job
-     - ``stilt pull-worker`` drains the queue. ``stilt push-worker`` runs a
-       fixed list of receptors, which is how the Slurm backend works.
+     - one task of a Slurm job array, handed a batch of receptors
+       (:doc:`../guides/execution/slurm`)
    * - Long-lived worker
      - service deployment
-     - ``stilt serve``
-   * - Kubernetes manifests
-     - Helm / KEDA / helper tooling
-     - helper functions in ``stilt.service.kubernetes``
+     - none. Run ``stilt run`` again when receptors are added; finished
+       ones are skipped.
    * - Tracking what has run
      - PostgreSQL queue tables
-     - the output files (:doc:`../advanced/output_state`). Cloud workers
-       also use a PostgreSQL work queue, set with ``PYSTILT_DB_URL``, to
-       share out the work.
+     - the output files (:doc:`../advanced/output_state`)
 
-Local, HPC, and cloud runs all use the same project folder layout and the
-same package, so the model and the workers cannot drift out of step.
-
-When you move a deployment over, check:
-
-- the database connection and its secrets
-- where the project and output directories are on the shared filesystem,
-  and where workers get scratch space (``compute_root``)
-- any Kubernetes YAML that uses old CLI flags or resource names
-
-The worker and service code is one of the least settled parts of PYSTILT.
-Expect deployment details to change between releases.
+An earlier PYSTILT had a PostgreSQL work queue, pull workers, and
+Kubernetes manifests. They were removed. If you need a queue-backed
+deployment, the unit of work to build it on is
+:class:`stilt.execution.Batch`: a project and a list of receptor ids that
+any worker with the project's filesystem can run.

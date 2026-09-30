@@ -50,7 +50,6 @@ you are new to PYSTILT, start with :doc:`../getting_started/quickstart`.
 **Under the hood**
 
 - :doc:`../advanced/output_state`: how PYSTILT tracks finished work
-- :doc:`execution/kubernetes`: cloud workers (experimental)
 
 .. toctree::
    :hidden:

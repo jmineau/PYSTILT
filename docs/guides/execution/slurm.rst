@@ -2,11 +2,12 @@ On An HPC Cluster (Slurm)
 =========================
 
 For thousands of simulations, run them as a Slurm job array. PYSTILT splits
-the unfinished receptors into lists, writes the job script, and submits it.
-You don't write any Slurm scripts yourself.
+the unfinished receptors among the array tasks and submits the job. You
+don't write any Slurm scripts yourself.
 
-Your project folder must be on a filesystem that the compute nodes can see,
-such as a shared home, group, or scratch space.
+Your project folder, its output directory, and the Python environment must
+be on a filesystem the compute nodes can see, such as a shared home, group,
+or scratch space.
 
 Set it up
 ---------
@@ -22,50 +23,67 @@ Add an ``execution`` section to ``config.yaml``:
      partition: my-partition
      time: "02:00:00"            # time limit per array task
      mem: 4G
-     setup:                      # shell commands run at the start of each task
-       - module load miniforge3
-       - conda activate my-env
 
-Each task runs the ``stilt`` command, so ``setup`` must activate the Python
-environment where PYSTILT is installed.
-
-Then submit:
+Then submit from the environment PYSTILT is installed in:
 
 .. code-block:: bash
 
    stilt run ./my_project
 
 ``stilt run`` prints the Slurm job ID and returns once the job is submitted.
-Add ``--wait`` to keep watching until it finishes.
+Add ``--wait`` to keep watching until it finishes. Each task runs with the
+same Python that submitted it, so there is nothing to activate inside the
+job.
 
 Options
 -------
 
-``n_workers`` (required)
+``n_workers``
    How many array tasks to split the receptors into. With 10,000 receptors
    and ``n_workers: 200``, each task runs 50 receptors one after another.
    Each receptor runs once per variant, so set ``time`` long enough for one
    task's share. If fewer receptors are left than ``n_workers``, PYSTILT
    submits one task per receptor.
 
-``cpus_per_task``
+``cpus``
    CPUs per array task (default 1). With more than one, each task runs that
-   many receptors at the same time.
+   many receptors at the same time. ``cpus_per_task`` is accepted too.
+
+``time``, ``mem``, ``partition``, ``account``, ``qos``
+   The ``sbatch`` options of the same names.
 
 ``array_parallelism``
-   The most tasks allowed to run at once, to stay within your group's limits.
-   ``array_parallelism: 50`` becomes ``--array=0-199%50``.
+   The most tasks allowed to run at once, to stay within your group's
+   limits. ``array_parallelism: 50`` becomes ``--array=0-199%50``. It is 256
+   when unset.
 
 ``setup``
-   Shell commands to run at the start of each task, before PYSTILT. Use it to
-   load modules, activate an environment, or set environment variables.
+   Shell commands to run at the start of each task, before PYSTILT. Use it
+   to load modules or set environment variables.
 
-Any other key
-   Passed to ``sbatch`` as a flag, with underscores turned into dashes.
-   ``mem_per_cpu: 2G`` becomes ``--mem-per-cpu=2G``, and ``qos: normal``
-   becomes ``--qos=normal``. A key set to ``true``, such as
-   ``exclusive: true``, becomes a bare flag (``--exclusive``). If you don't
-   set ``job_name``, it is ``pystilt-`` followed by the project folder name.
+``slurm``
+   Any other ``sbatch`` option, by name:
+
+   .. code-block:: yaml
+
+      execution:
+        backend: slurm
+        n_workers: 200
+        slurm:
+          exclude: node17,node42
+          constraint: skl
+          exclusive: true      # a bare flag, --exclusive
+
+A setting PYSTILT does not know is an error, so a misspelled ``partition``
+is caught before anything is submitted.
+
+Preempted and timed-out tasks
+-----------------------------
+
+A task that is preempted, or reaches its time limit, is put back in the
+queue and picks up where it stopped: receptors it already finished are
+skipped. A task that keeps running out of time is given up on after a few
+tries, so give ``time`` some room.
 
 Watch progress and rerun
 ------------------------
@@ -75,8 +93,8 @@ Watch progress and rerun
    squeue -u "$USER"            # Slurm's view
    stilt status ./my_project    # finished vs remaining simulations
 
-If tasks time out, are preempted, or fail, run the same command again once
-the job has left the queue:
+If receptors fail, fix the cause and run the same command again once the
+job has left the queue:
 
 .. code-block:: bash
 
@@ -86,29 +104,28 @@ Only unfinished receptors are submitted. Don't resubmit while the first job
 is still running. The receptors it hasn't finished yet would be submitted a
 second time. Use ``--no-skip`` to force everything to run again.
 
+From Python, ``model.run(wait=False)`` returns a handle. ``handle.wait()``
+blocks until the job is done and raises if a task did not complete, and
+``handle.jobs`` are the `submitit <https://github.com/facebookincubator/submitit>`_
+jobs, one per task.
+
 What PYSTILT writes
 -------------------
 
-Each submission gets its own ``<date_time>`` stamp, so a later submission
-never overwrites an earlier one's lists or logs:
+Each submission gets its own folder, so a later one never overwrites an
+earlier one's logs:
 
 .. code-block:: text
 
    my_project/
-     chunks/<date_time>/task_0.txt, task_1.txt, ...   # receptor ids for each task
-     slurm/submit_<date_time>.sh                      # the script given to sbatch
-     slurm/logs/<date_time>/0.out, 0.err, ...         # output from each task
+     slurm/<date_time>_<id>/
+       <job>_submission.sh          # the script given to sbatch
+       <job>_<task>_0_log.out       # output from each task
+       <job>_<task>_0_log.err       # progress lines and errors
+       <job>_<task>_submitted.pkl   # the task's receptors, read by the task
+       <job>_<task>_0_result.pkl    # what it returned
 
-Each array task runs ``stilt push-worker`` on its ``task_N.txt`` list. With
-``--wait``, PYSTILT deletes ``chunks/<date_time>/`` once the job leaves the
-queue.
-
-If a task fails, look in ``slurm/logs/<date_time>/`` for problems with the
-task itself, such as the environment not activating. Look in each
-simulation's ``stilt.log`` for HYSPLIT problems.
-
-Limitations
------------
-
-The project directory and the output directory must be on a filesystem
-every array task can reach, such as the cluster's shared storage.
+If a task fails, look in its ``_log.err`` for problems with the task
+itself. Look in each simulation's log in the output directory for HYSPLIT
+problems (see :doc:`index`). The folders are safe to delete once a job has
+left the queue.

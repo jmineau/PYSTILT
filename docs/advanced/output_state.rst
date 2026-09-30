@@ -69,8 +69,8 @@ The unit of work
 Workers are handed receptors. A worker runs every variant of its receptor,
 in config order. When a variant's particles are missing it runs HYSPLIT; the
 variants that share those particles reuse them and make their own
-footprints, remade if the particles were replaced in the same call. The
-Slurm chunk files and the work queue both hold receptor IDs.
+footprints, remade if the particles were replaced in the same call. A
+Slurm task is handed a batch of receptor IDs.
 
 Where HYSPLIT runs
 ------------------
@@ -88,27 +88,10 @@ reader never sees a partial file, and two workers that run the same receptor
 by accident produce equivalent files with the last rename winning. No lock
 is needed.
 
-The work queue
---------------
-
-Local and Slurm runs don't need a database, because each worker gets a
-fixed list of receptors. Pull workers take receptors one at a time from a
-shared queue, which needs a database that hands each receptor to exactly
-one worker. PYSTILT uses a small PostgreSQL queue
-(:class:`stilt.service.PostgresQueue`), turned on only when
-``PYSTILT_DB_URL`` is set.
-
-``register()`` adds receptors to the queue as pending. A worker claims one,
-marks it running, and marks it done or failed when it finishes. A worker
-that is interrupted puts its receptor back as pending. The queue only tracks
-this status. Whether a simulation is finished is still decided by its
-files.
-
 Environment variables
 ---------------------
 
-These control where and how PYSTILT runs. They never change what it
-calculates, so they live outside ``config.yaml``.
+This controls where PYSTILT runs. It never changes what it calculates, so it
+lives outside ``config.yaml``.
 
 - ``PYSTILT_COMPUTE_ROOT``: the scratch folder where workers run HYSPLIT
-- ``PYSTILT_DB_URL``: the PostgreSQL URL of the work queue

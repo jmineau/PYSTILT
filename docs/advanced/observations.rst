@@ -98,7 +98,7 @@ The footprint transforms go in ``config.yaml``:
 The kernel table is an input file, like ``receptors.csv``. It has a
 ``receptor`` column with the receptor id, and one row per kernel point with
 its ``level`` and ``value``. It can be Parquet or CSV. The ``table`` path is
-relative to the project root, so a Slurm or Kubernetes worker finds it too.
+relative to the project root, so a Slurm worker finds it too.
 A receptor with no rows in the table raises an error.
 
 Kernels on pressure levels

@@ -21,7 +21,7 @@ loaded from the folder, and it only appends new receptors to
 they are written to ``config.yaml`` when the model runs. Receptors you pass
 are appended to ``receptors.csv``, or start it if there is none.
 
-A Slurm run also creates ``chunks/`` and ``slurm/`` folders with the job
+A Slurm run also creates a ``slurm/`` folder with the job
 scripts and logs (see :doc:`execution/slurm`).
 
 What's in the output directory
