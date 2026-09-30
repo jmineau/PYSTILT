@@ -96,7 +96,7 @@ src/stilt/
                      a flux field, aggregation onto other spatial targets
   flux.py            sampling a flux field at points or along particles
   geometry.py        aggregation targets (meshes, zones) and overlap weights
-  meteorology.py     MetStream: ARL file discovery and staging (via arlmet)
+  meteorology.py     Met: ARL file discovery and staging (via arlmet)
   transforms.py      pre-footprint particle transforms (averaging kernel,
                      pressure weighting, lifetime decay) and their YAML I/O
   collections.py     SimulationCollection (receptors × variants, .sel()) and

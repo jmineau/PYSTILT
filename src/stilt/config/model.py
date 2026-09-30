@@ -27,7 +27,7 @@ class ModelConfig(STILTParams, FootprintConfig):
 
     mets: dict[str, MetConfig] = Field(
         default_factory=dict,
-        description="Meteorology streams by name. At least one is required.",
+        description="Meteorology by name, such as ``hrrr``. At least one is required.",
     )
     variants: dict[str, dict[str, Any]] = Field(
         default_factory=dict,

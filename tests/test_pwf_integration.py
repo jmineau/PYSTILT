@@ -20,7 +20,7 @@ import pytest
 
 from stilt.config import MetConfig, STILTParams
 from stilt.hysplit.driver import HYSPLITDriver
-from stilt.meteorology import MetStream
+from stilt.meteorology import Met
 from stilt.receptors import ColumnReceptor
 from stilt.trajectory import Trajectories
 from stilt.transforms import PressureWeighting, particle_pwf, release_coordinate
@@ -49,7 +49,7 @@ def _column_trajectory(
     """Run a short WBB column simulation and return (receptor, particles)."""
     receptor = ColumnReceptor(time, WBB_LON, WBB_LAT, 0.0, top)
     params = STILTParams(n_hours=-2, numpar=numpar, hnf_plume=False, rm_dat=True)
-    met_files = MetStream(
+    met_files = Met(
         "hrrr",
         MetConfig(
             directory=met_dir, file_format=REFERENCE_MET_FILE_FORMAT, file_tres="6h"

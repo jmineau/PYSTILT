@@ -27,7 +27,7 @@ from stilt.execution.worker import (
     run_simulation,
     write_footprint,
 )
-from stilt.meteorology import MetStream
+from stilt.meteorology import Met
 from stilt.model import Model
 from stilt.output import Output
 from stilt.receptors import PointReceptor, Receptor
@@ -70,8 +70,8 @@ def met_config(tmp_path) -> MetConfig:
 
 
 @pytest.fixture
-def met(met_config) -> MetStream:
-    return MetStream("hrrr", met_config)
+def met(met_config) -> Met:
+    return Met("hrrr", met_config)
 
 
 @pytest.fixture

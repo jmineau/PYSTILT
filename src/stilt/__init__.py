@@ -19,7 +19,7 @@ from .config import (
 )
 from .footprint import Footprint
 from .geometry import Geometry, Mesh, SpatialTarget, Zones
-from .meteorology import MetStream
+from .meteorology import Met
 from .model import Model
 from .output import Output
 from .receptors import (
@@ -71,7 +71,7 @@ __all__ = [
     "Zones",
     "SpatialTarget",
     # Meteorology
-    "MetStream",
+    "Met",
     # Transforms (the interface; built-ins live in stilt.transforms)
     "ParticleTransform",
     "TransformContext",

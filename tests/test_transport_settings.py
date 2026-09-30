@@ -6,7 +6,7 @@ import yaml
 from stilt.config import (
     EngineInfo,
     MetConfig,
-    MetContent,
+    MetSettings,
     ModelConfig,
     STILTParams,
     TransportSettings,
@@ -54,22 +54,22 @@ def test_custom_build_needs_a_version_file(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# MetContent
+# MetSettings
 # ---------------------------------------------------------------------------
 
 
-def test_met_content_is_the_config_without_its_directories(tmp_path):
+def test_met_settings_are_the_config_without_its_directories(tmp_path):
     met = _met(tmp_path, subgrid_dir=tmp_path / "sub", n_min=2)
-    content = met.content()
-    assert isinstance(met, MetContent)
-    assert type(content) is MetContent
-    assert content.n_min == 2
+    settings = met.settings()
+    assert isinstance(met, MetSettings)
+    assert type(settings) is MetSettings
+    assert settings.n_min == 2
     assert (
-        "directory" not in content.model_dump()
-        and "subgrid_dir" not in content.model_dump()
+        "directory" not in settings.model_dump()
+        and "subgrid_dir" not in settings.model_dump()
     )
     moved = met.model_copy(update={"directory": tmp_path / "elsewhere"})
-    assert moved.content() == content
+    assert moved.settings() == settings
 
 
 # ---------------------------------------------------------------------------
@@ -83,7 +83,7 @@ def test_identity_leaves_out_what_changes_no_particle(tmp_path):
     identity = base.identity()
     for name in ("timeout", "rm_dat", "exe_dir"):
         assert name not in identity
-    assert identity["met"] == met.content().model_dump(mode="json")
+    assert identity["met"] == met.settings().model_dump(mode="json")
     assert identity["engine"] == {"name": "hysplit", "version": "v5.1.0"}
     assert identity["maxpar"] == 100  # unset maxpar is numpar, as HYSPLIT receives it
 

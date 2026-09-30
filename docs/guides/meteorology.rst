@@ -12,11 +12,11 @@ You can give PYSTILT meteorology in two ways:
 - Let it download the files from NOAA. PYSTILT fetches the files each
   simulation needs and keeps them for later runs.
 
-Each meteorology source has a name in ``config.yaml`` (``hrrr`` in the
-examples below). Variants refer to a source by this name. With no
-``variants`` section, each source runs as a variant of the same name (see
-:doc:`configuration`), so you can run the same receptors with several
-sources and compare them.
+Each set of meteorology files is a *met* with a name in ``config.yaml``
+(``hrrr`` in the examples below). Variants refer to a met by this name.
+With no ``variants`` section, each met runs as a variant of the same name
+(see :doc:`configuration`), so you can run the same receptors with several
+mets and compare them.
 
 Use files you already have
 --------------------------
@@ -67,7 +67,7 @@ In Python, the same settings are a dictionary or a :class:`~stilt.MetConfig`:
        file_tres="6h",
    )
 
-You can list several sources:
+You can list several mets:
 
 .. code-block:: yaml
 
@@ -85,14 +85,15 @@ You can list several sources:
 Download from NOAA
 ------------------
 
-Set ``source`` to one of NOAA's products and ``directory`` to where the
-downloads should go. You don't need ``file_format`` or ``file_tres``.
+Set ``download`` to the name of one of NOAA's ARL archives and
+``directory`` to where the downloads should go. You don't need
+``file_format`` or ``file_tres``.
 
 .. code-block:: yaml
 
    mets:
      hrrr:
-       source: hrrr
+       download: hrrr
        directory: /data/met/hrrr     # downloads are kept here
 
 Downloading needs the ``cloud`` extra (``pip install "pystilt[cloud]"``).
@@ -107,7 +108,7 @@ downloading.
    and download on a machine with a fast connection and plenty of disk
    space.
 
-These sources are available:
+These archives are available:
 
 .. list-table::
    :header-rows: 1
@@ -154,23 +155,23 @@ These sources are available:
      - North America
      - 1979–2019
 
-Some sources take extra options, which you write next to the other fields.
+Some archives take extra options, which you write next to the other fields.
 For example, ``nams`` takes a ``domain``:
 
 .. code-block:: python
 
    nams_ak = stilt.MetConfig(
-       source="nams",
+       download="nams",
        domain="ak",            # "conus" (default), "ak", or "hi"
        directory="/data/met/nams_ak",
    )
 
-``backend`` picks where to download from. The default, ``"s3"``, is NOAA's
+``download_from`` picks the server. The default, ``"s3"``, is NOAA's
 archive on AWS. The others are ``"ftp"`` and ``"http"``.
 
 .. code-block:: python
 
-   stilt.MetConfig(source="gdas1", directory="/data/met/gdas1", backend="ftp")
+   stilt.MetConfig(download="gdas1", directory="/data/met/gdas1", download_from="ftp")
 
 Files already in ``directory`` are not downloaded again.
 
@@ -188,7 +189,7 @@ faster and use less memory. Cropping matters most for global products
    from stilt import Bounds, MetConfig
 
    hrrr = MetConfig(
-       source="hrrr",
+       download="hrrr",
        directory="/data/met/hrrr",
        subgrid_enable=True,
        subgrid_bounds=Bounds(xmin=-114, xmax=-110, ymin=39, ymax=42),
@@ -218,7 +219,7 @@ projects can share one:
 Inside ``subgrid_dir``, each crop gets its own folder, named by a short
 hash of the crop box and ``subgrid_levels``. Changing ``subgrid_bounds``,
 ``subgrid_buffer``, or ``subgrid_levels`` starts a new folder, and projects
-with the same crop share one. ``MetStream(name, config).crop_dir`` gives
+with the same crop share one. ``Met(name, config).crop_dir`` gives
 the folder. Old folders are not deleted.
 
 ``subgrid_levels`` also drops the upper vertical levels, for downloaded

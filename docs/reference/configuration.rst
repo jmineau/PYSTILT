@@ -4,7 +4,7 @@ Configuration
 .. currentmodule:: stilt.config
 
 Everything you can write in ``config.yaml`` is a field of
-:class:`ModelConfig`. That covers the meteorology sources
+:class:`ModelConfig`. That covers the mets
 (:class:`MetConfig`), the footprint settings (:class:`FootprintConfig`),
 the ``variants``, the ``execution`` section, and the STILT and HYSPLIT
 settings. Each page below lists its fields with their defaults and is
@@ -19,8 +19,8 @@ Config objects
 
 :class:`VariantConfig` is one variant with all of its settings filled in,
 as PYSTILT runs it. :class:`TransportSettings` is the part of a variant
-that decides its particles (its transport fields, the meteorology's
-:class:`MetContent`, and the :class:`EngineInfo`), whose hash names the
+that decides its particles (its transport fields, the met's
+:class:`MetSettings`, and the :class:`EngineInfo`), whose hash names the
 run in the output directory. :class:`FootprintConfig` holds the footprint
 settings, and each footprint keeps the ones it was calculated with.
 :class:`RuntimeSettings` reads the
@@ -36,7 +36,7 @@ change a result.
    TransportSettings
    EngineInfo
    MetConfig
-   MetContent
+   MetSettings
    FootprintConfig
    Bounds
    Grid
