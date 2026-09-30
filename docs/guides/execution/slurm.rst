@@ -82,8 +82,9 @@ Preempted and timed-out tasks
 
 A task that is preempted, or reaches its time limit, is put back in the
 queue and picks up where it stopped: receptors it already finished are
-skipped. A task that keeps running out of time is given up on after a few
-tries, so give ``time`` some room.
+skipped. The cluster may hold a requeued task in the queue for some minutes
+before it starts again. A task that keeps running out of time is given up
+on after a few tries, so give ``time`` some room.
 
 Watch progress and rerun
 ------------------------
