@@ -9,18 +9,6 @@ def test_version():
     assert isinstance(stilt.__version__, str)
 
 
-def test_author():
-    """Test that author is defined."""
-    assert hasattr(stilt, "__author__")
-    assert isinstance(stilt.__author__, str)
-
-
-def test_email():
-    """Test that email is defined."""
-    assert hasattr(stilt, "__email__")
-    assert isinstance(stilt.__email__, str)
-
-
 def test_documented_top_level_symbols_are_importable():
     """The curated top-level API matches the core reference surface."""
     expected = [

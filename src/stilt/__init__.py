@@ -38,8 +38,6 @@ try:
     __version__ = _version("pystilt")
 except PackageNotFoundError:
     __version__ = "0+unknown"
-__author__ = "James Mineau"
-__email__ = "jameskmineau@gmail.com"
 
 __all__ = [
     # Core
