@@ -275,6 +275,7 @@ def test_meteorology_subgrid_enable_accepts_bool(point_receptor, tmp_path):
         met_kwargs={
             "subgrid_enable": True,
             "subgrid_bounds": Bounds(xmin=-114, xmax=-110, ymin=39, ymax=42),
+            "subgrid_dir": tmp_path / "crops",
         },
     )
     assert sim.met is not None

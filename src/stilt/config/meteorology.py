@@ -89,7 +89,11 @@ class MetContent(BaseModel):
     )
     subgrid_levels: int | None = Field(
         None,
-        description="Number of vertical levels to keep, counted from the surface. Unset keeps all.",
+        description=(
+            "Number of vertical levels to keep, counted from the surface. "
+            "Unset keeps all. Only for your own files; downloads from "
+            "``source`` keep every level."
+        ),
     )
 
     @model_validator(mode="after")
@@ -123,6 +127,12 @@ class MetContent(BaseModel):
             )
         if self.subgrid_enable and self.subgrid_bounds is None:
             raise ValueError("subgrid_bounds is required when subgrid_enable=True.")
+        if self.source is not None and self.subgrid_levels is not None:
+            raise ValueError(
+                "subgrid_levels works only with your own files, not with "
+                "source: downloaded files keep every level. Remove "
+                "subgrid_levels."
+            )
         return self
 
     @property
@@ -155,7 +165,19 @@ class MetConfig(MetContent):
         None,
         description=(
             "Directory for the cropped files, shared by every simulation that "
-            "uses this meteorology. Unset uses ``<directory>/subgrid``. Used "
-            "only without ``source``, which crops files as it downloads them."
+            "uses this meteorology. Each crop box gets its own folder inside "
+            "it. Required when cropping your own files; not used with "
+            "``source``, which crops files as it downloads them."
         ),
     )
+
+    @model_validator(mode="after")
+    def _require_subgrid_dir(self) -> Self:
+        """Require ``subgrid_dir`` when local files are cropped."""
+        if self.subgrid_enable and self.source is None and self.subgrid_dir is None:
+            raise ValueError(
+                "subgrid_dir is required when subgrid_enable=True without a "
+                "source. Set it to a directory for the cropped files, outside "
+                "the met archive."
+            )
+        return self

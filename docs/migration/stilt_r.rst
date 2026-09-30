@@ -55,7 +55,8 @@ The workflow side by side
    * - ``met_subgrid_enable``, ``met_subgrid_buffer``,
        ``met_subgrid_levels``
      - ``mets: <name>: subgrid_enable``, ``subgrid_buffer``,
-       ``subgrid_levels``. PYSTILT also needs ``subgrid_bounds``.
+       ``subgrid_levels``. PYSTILT also needs ``subgrid_bounds``, and
+       ``subgrid_dir`` for your own files.
    * - ``xmn``, ``xmx``, ``ymn``, ``ymx``
      - ``grid: xmin``, ``xmax``, ``ymin``, ``ymax``
    * - ``xres``, ``yres``, ``projection``

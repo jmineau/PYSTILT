@@ -199,10 +199,10 @@ When downloading, each file is cropped right after it arrives and only the
 cropped copy is kept.
 
 With your own files, each file is cropped the first time a simulation needs
-it. The cropped copies are saved in ``subgrid_dir``, which defaults to
-``<directory>/subgrid``, and every later simulation reuses them. If your
-archive is read-only, or you want several projects to share one set of
-crops, set ``subgrid_dir`` yourself:
+it, and every later simulation reuses the crop. Set ``subgrid_dir`` to the
+directory for the cropped copies. It is required, so that PYSTILT never
+writes into your met archive. Scratch space suits it well, and several
+projects can share one:
 
 .. code-block:: python
 
@@ -215,12 +215,15 @@ crops, set ``subgrid_dir`` yourself:
        subgrid_dir="/scratch/met_subgrid/hrrr_slv",
    )
 
-Saved crops are found by file name only. If you change ``subgrid_bounds``,
-``subgrid_buffer``, or ``subgrid_levels``, use a new ``subgrid_dir``.
-Otherwise PYSTILT reuses the old crops.
+Inside ``subgrid_dir``, each crop gets its own folder, named by a short
+hash of the crop box and ``subgrid_levels``. Changing ``subgrid_bounds``,
+``subgrid_buffer``, or ``subgrid_levels`` starts a new folder, and projects
+with the same crop share one. ``MetStream(name, config).crop_dir`` gives
+the folder. Old folders are not deleted.
 
 With your own files, ``subgrid_levels`` also drops the upper vertical
-levels. It has no effect on downloaded files.
+levels. Downloaded files keep every level, so ``subgrid_levels`` together
+with ``source`` is an error.
 
 .. code-block:: python
 
