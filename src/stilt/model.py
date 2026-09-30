@@ -6,6 +6,7 @@ import logging
 import os
 import tempfile
 from collections.abc import Iterable
+from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -147,14 +148,8 @@ class Model:
         # project; one loaded from the project is never rewritten.
         self._config_given = self._config is not None
 
-        self._mets: dict[str, MetStream] | None = None
-        self._variants: dict[str, VariantConfig] | None = None
-        self._receptors: ReceptorCollection | None = None
         self._receptors_input = receptors
-        self._queue: PostgresQueue | None = None
-        self._simulations: SimulationCollection | None = None
         self._handles: dict[SimID, Simulation] = {}
-        self._plot: ModelPlotAccessor | None = None
 
     def __repr__(self) -> str:
         return f"Model(project={self.project.root!r})"
@@ -180,16 +175,12 @@ class Model:
             self._config = self.project.load_config()
         return self._config
 
-    @property
+    @cached_property
     def receptors(self) -> ReceptorCollection:
         """Receptors, by position (``receptors[0]``) or by id (``receptors[receptor_id]``)."""
-        if self._receptors is None:
-            self._receptors = ReceptorCollection(
-                self._receptors_input, project=self.project
-            )
-        return self._receptors
+        return ReceptorCollection(self._receptors_input, project=self.project)
 
-    @property
+    @cached_property
     def variants(self) -> dict[str, VariantConfig]:
         """
         Settings of each variant, by name, in config order.
@@ -197,25 +188,23 @@ class Model:
         A realization group appears once per realization (``hrrr-err-0``,
         ``hrrr-err-1``, ...).
         """
-        if self._variants is None:
-            self._variants = self.config.resolve_variants()
-        return self._variants
+        return self.config.resolve_variants()
 
-    @property
+    @cached_property
     def mets(self) -> dict[str, MetStream]:
         """Meteorology sources declared in the config, by name."""
-        if self._mets is None:
-            self._mets = {
-                name: MetStream(name, cfg) for name, cfg in self.config.mets.items()
-            }
-        return self._mets
+        return {name: MetStream(name, cfg) for name, cfg in self.config.mets.items()}
 
-    @property
+    @cached_property
     def queue(self) -> PostgresQueue | None:
         """Postgres work queue, or ``None`` when ``PYSTILT_DB_URL`` is not set."""
-        if self._queue is None and self.runtime.db_url:
-            self._queue = resolve_queue(self.runtime)
-        return self._queue
+        return resolve_queue(self.runtime)
+
+    def _forget_simulations(self) -> None:
+        """Drop the cached receptors and simulations, so they are rebuilt from the project."""
+        self.__dict__.pop("receptors", None)
+        self.__dict__.pop("simulations", None)
+        self._handles = {}
 
     def check_config(self) -> None:
         """
@@ -315,9 +304,7 @@ class Model:
             if self.project.add_receptors(batch):
                 # The registered set changed: rebuild receptors from the project.
                 self._receptors_input = None
-                self._receptors = None
-                self._simulations = None
-                self._handles = {}
+                self._forget_simulations()
 
         record = self.project.load_record()
         record["mets"].update(
@@ -390,7 +377,7 @@ class Model:
         for name in names:
             del record["variants"][name]
         self.project.save_record(record)
-        self._simulations = None
+        self._forget_simulations()
         return deleted
 
     # -- Simulations -----------------------------------------------------------
@@ -438,21 +425,17 @@ class Model:
             )
         return built[sid]
 
-    @property
+    @cached_property
     def simulations(self) -> SimulationCollection:
         """Every receptor under every variant, indexed by ``(receptor_id, variant)``."""
-        if self._simulations is None:
-            self._simulations = SimulationCollection(self)
-        return self._simulations
+        return SimulationCollection(self)
 
-    @property
+    @cached_property
     def plot(self) -> ModelPlotAccessor:
         """Plotting methods, such as ``model.plot.availability()``."""
-        if self._plot is None:
-            from stilt.visualization import ModelPlotAccessor
+        from stilt.visualization import ModelPlotAccessor
 
-            self._plot = ModelPlotAccessor(self)
-        return self._plot
+        return ModelPlotAccessor(self)
 
     def status(self) -> pd.DataFrame:
         """
@@ -504,7 +487,7 @@ class Model:
         ConfigValidationError
             If Slurm execution is requested for a cloud project.
         """
-        self._simulations = None
+        self._forget_simulations()
         resolved_executor = executor or get_executor(self.config.execution or {})
         if isinstance(resolved_executor, SlurmExecutor) and self.project.is_cloud:
             raise ConfigValidationError(
