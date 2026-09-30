@@ -107,7 +107,9 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `PYSTILT_COMPUTE_ROOT`); `stilt.execution.resolve_compute_root` says where
   that is. A model built with its own receptors keeps exactly those:
   `run()` runs them and no longer picks up every other receptor already in
-  the project's `receptors.csv`. `Model(project)` still reads the file.
+  the project's `receptors.csv`. `Model(project)` still reads the file. An existing `config.yaml` is never rewritten: a model given
+  settings that differ from the file raises `ConfigValidationError`, and an
+  unreadable file raises instead of being replaced.
 - **Receptors are frozen pydantic models**
   ([#86](https://github.com/jmineau/PYSTILT/issues/86),
   [#66](https://github.com/jmineau/PYSTILT/issues/66); breaking).

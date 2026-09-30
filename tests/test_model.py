@@ -16,6 +16,7 @@ from stilt.collections import (
     SimulationCollection,
 )
 from stilt.config import Grid, MetConfig, ModelConfig
+from stilt.errors import ConfigValidationError
 from stilt.execution import LocalHandle, register, resolve_compute_root
 from stilt.footprint import Footprint
 from stilt.model import Model
@@ -574,6 +575,52 @@ def test_register_never_rewrites_an_existing_config_yaml(tmp_path, point_recepto
     assert path.read_text() == text
 
 
+def test_registering_a_python_config_again_leaves_config_yaml(tmp_path, point_receptor):
+    """Writing fills in the variants, so the file never equals the config it came from."""
+    path = tmp_path / CONFIG_KEY
+    register(
+        Model(project=tmp_path, config=_config(tmp_path), receptors=[point_receptor])
+    )
+    text = path.read_text()
+
+    register(
+        Model(project=tmp_path, config=_config(tmp_path), receptors=[point_receptor])
+    )
+
+    assert path.read_text() == text
+
+
+def test_a_config_that_differs_from_config_yaml_is_refused(tmp_path, point_receptor):
+    path = tmp_path / CONFIG_KEY
+    register(
+        Model(project=tmp_path, config=_config(tmp_path), receptors=[point_receptor])
+    )
+    text = path.read_text()
+    changed = Model(
+        project=tmp_path,
+        config=_config(tmp_path, ziscale=0.8),
+        receptors=[point_receptor],
+    )
+
+    with pytest.raises(ConfigValidationError, match="other settings"):
+        register(changed)
+    assert path.read_text() == text
+
+
+def test_an_unreadable_config_yaml_is_not_replaced(tmp_path, point_receptor):
+    import yaml
+
+    path = tmp_path / CONFIG_KEY
+    path.write_text("mets: [unclosed\n")
+    model = Model(
+        project=tmp_path, config=_config(tmp_path), receptors=[point_receptor]
+    )
+
+    with pytest.raises(yaml.YAMLError):
+        register(model)
+    assert path.read_text() == "mets: [unclosed\n"
+
+
 def test_changed_settings_make_a_new_run_instead_of_an_error(tmp_path, point_receptor):
     """Editing a setting is not refused; the next run goes to a new folder (#67)."""
     first = Model(
@@ -1090,10 +1137,11 @@ def test_run_after_adding_a_variant_redispatches_the_receptor(tmp_path, point_re
     _write_trajectory(first, _sid(point_receptor))
     _write_footprint(first, _sid(point_receptor))
 
-    grown = Model(
-        project=tmp_path,
-        config=_config(tmp_path, variants={"hrrr": {}, "zi08": {"ziscale": 0.8}}),
+    # The user adds a variant to config.yaml.
+    _config(tmp_path, variants={"hrrr": {}, "zi08": {"ziscale": 0.8}}).to_yaml(
+        tmp_path / CONFIG_KEY
     )
+    grown = Model(project=tmp_path)
     assert grown.simulations.incomplete().keys() == [_sid(point_receptor, "zi08")]
     exc = _CapturingExecutor()
 

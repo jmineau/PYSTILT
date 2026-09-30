@@ -9,7 +9,10 @@ from collections.abc import Iterable
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from stilt.config import RuntimeSettings
+import yaml
+
+from stilt.config import ModelConfig, RuntimeSettings
+from stilt.errors import ConfigValidationError
 from stilt.service import resolve_queue
 
 from .backends import Executor, JobHandle, LocalHandle, get_executor
@@ -43,15 +46,35 @@ def resolve_compute_root(
 
 
 def _save_config(model: Model) -> None:
-    """Write the model's config to the project when the project lacks it or differs."""
+    """
+    Write the model's config to a project that has none.
+
+    An existing ``config.yaml`` is never rewritten. When the model was given
+    settings that differ from the file, one of the two is out of date and
+    only the user knows which, so this raises. A file that cannot be read
+    raises too, rather than being replaced.
+
+    Raises
+    ------
+    ConfigValidationError
+        If the project's ``config.yaml`` holds other settings than the model.
+    """
     project = model.project
-    if project.has_config:
-        try:
-            if project.load_config() == model.config:
-                return
-        except Exception:  # an unreadable config.yaml is replaced
-            logger.warning("replacing unreadable %s", project.config_path)
-    project.save_config(model.config)
+    if not project.has_config:
+        project.save_config(model.config)
+        return
+    on_disk = project.load_config()
+    if on_disk == model.config:
+        return
+    # Writing fills in what the settings imply (one variant per met), so a
+    # config never equals its own round trip through config.yaml. Compare
+    # the settings as they would be written.
+    as_written = ModelConfig.model_validate(yaml.safe_load(model.config.to_yaml()))
+    if as_written != on_disk:
+        raise ConfigValidationError(
+            f"{project.config_path} holds other settings than this model. Open "
+            "the project with Model(project) to use the file, or edit the file."
+        )
 
 
 def register(model: Model, receptors: Iterable[Receptor] | None = None) -> list[str]:
