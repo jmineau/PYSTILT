@@ -97,32 +97,46 @@ def _receptor_time(receptor_id: str) -> dt.datetime:
     return dt.datetime.strptime(receptor_id[:12], "%Y%m%d%H%M")
 
 
-def _list_receptor_files(root: Path, suffix: str) -> dict[str, Path]:
+def _list_receptor_files(
+    root: Path, suffix: str, among: Iterable[str] | None = None
+) -> dict[str, Path]:
     """
     Return ``{receptor_id: path}`` for every ``date=*/<id><suffix>`` under *root*, in date order.
 
-    The date folders are listed in a few threads. On a network filesystem
-    the listing waits on the server, and a project can have thousands of
-    date folders.
+    With *among*, only those receptors are returned, and only their date
+    folders are listed. The date folders are listed in a few threads: on a
+    network filesystem the listing waits on the server, and a project can
+    have thousands of date folders.
     """
     if not root.exists():
         return {}
-    days = sorted(
-        entry.path
-        for entry in os.scandir(root)
-        if entry.name.startswith("date=") and entry.is_dir()
-    )
+    if among is None:
+        wanted = None
+        days = sorted(
+            entry.path
+            for entry in os.scandir(root)
+            if entry.name.startswith("date=") and entry.is_dir()
+        )
+    else:
+        wanted = set(among)
+        days = [str(root / day) for day in sorted({_date_dir(r) for r in wanted})]
 
     def names(day: str) -> list[str]:
-        return sorted(e.name for e in os.scandir(day) if e.name.endswith(suffix))
+        try:
+            return sorted(e.name for e in os.scandir(day) if e.name.endswith(suffix))
+        except FileNotFoundError:  # no receptor of that day has finished
+            return []
 
     with ThreadPoolExecutor(max_workers=16) as pool:
         listed = list(pool.map(names, days))
-    return {
+    found = {
         name[: -len(suffix)]: Path(day, name)
         for day, per_day in zip(days, listed, strict=True)
         for name in per_day
     }
+    if wanted is not None:
+        found = {rid: path for rid, path in found.items() if rid in wanted}
+    return found
 
 
 def _write_atomic_table(table: pa.Table, path: Path) -> Path:
@@ -338,9 +352,14 @@ class Run:
         """Return whether the receptor's particle file exists."""
         return self.particles_path(receptor_id).exists()
 
-    def receptors(self) -> list[str]:
-        """Return the ids of the receptors that have particles, in date order."""
-        return list(_list_receptor_files(self.particles_dir, ".parquet"))
+    def receptors(self, among: Iterable[str] | None = None) -> list[str]:
+        """
+        Return the ids of the receptors that have particles, in date order.
+
+        With *among*, only those receptors are checked, by listing their
+        date folders alone.
+        """
+        return list(_list_receptor_files(self.particles_dir, ".parquet", among))
 
     def write_particles(self, trajectories: Trajectories) -> Path:
         """
@@ -574,9 +593,14 @@ class Footprints:
         """Return whether the receptor has a footprint file, empty or not."""
         return self.footprint_path(receptor_id).exists()
 
-    def receptors(self) -> list[str]:
-        """Return the ids of the receptors that have a footprint file, in date order."""
-        return list(_list_receptor_files(self.path, ".parquet"))
+    def receptors(self, among: Iterable[str] | None = None) -> list[str]:
+        """
+        Return the ids of the receptors that have a footprint file, in date order.
+
+        With *among*, only those receptors are checked, by listing their
+        date folders alone.
+        """
+        return list(_list_receptor_files(self.path, ".parquet", among))
 
     def _indices(self, coords: np.ndarray, axis: np.ndarray, name: str) -> np.ndarray:
         """Return the index of each coordinate's cell in the regular grid axis, or raise."""

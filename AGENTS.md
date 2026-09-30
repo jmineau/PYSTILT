@@ -215,8 +215,8 @@ as complete.
 - **Completion is by file.** A simulation is complete iff its files exist
   in the output directory. `Simulation.is_complete()` says so for one
   simulation, and `SimulationCollection._outputs()` reads the same rule for
-  many from one listing of each result folder (a test holds the two
-  together). Never add a second
+  many from a listing of the date folders the selection falls in (a test
+  holds the two together). Never add a second
   "does this output exist" check, a completion registry, or a manifest; call
   the `Simulation` method.
 - **Identity is content.** A run is its settings hash; a changed setting is

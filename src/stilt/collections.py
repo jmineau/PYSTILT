@@ -35,9 +35,6 @@ if TYPE_CHECKING:
 TRAJECTORY = "trajectory"
 FOOTPRINT = "footprint"
 
-#: Selections this large are checked by listing the result folders once.
-_LIST_FROM = 32
-
 
 class ReceptorCollection:
     """
@@ -362,17 +359,21 @@ class SimulationCollection:
         """
         Return, per selected variant, the receptors with particles and with a footprint.
 
-        This is :meth:`stilt.Simulation.is_complete`'s rule read from one
-        listing of each result folder, in place of a file check per
-        simulation: on a large project the checks are the slow part. The
-        footprint set is ``None`` for a variant that makes no footprint.
+        This is :meth:`stilt.Simulation.is_complete`'s rule read from a
+        listing of the date folders the selection falls in, in place of a
+        file check per simulation: on a large project the checks are the
+        slow part. The footprint set is ``None`` for a variant that makes no
+        footprint.
         """
         output = self._model.output
+        selected: dict[str, set[str]] = {}
+        for key in self._all():
+            selected.setdefault(key.variant, set()).add(key.receptor)
         present: dict[str, tuple[frozenset[str], frozenset[str] | None]] = {}
-        for name in self.variants:
+        for name, among in selected.items():
             variant = self._model.variants[name]
             run = output.find_run(variant.transport)
-            particles = frozenset(run.receptors()) if run is not None else frozenset()
+            particles = frozenset(run.receptors(among) if run is not None else ())
             footprints: frozenset[str] | None = None
             if variant.footprint is not None:
                 feet = (
@@ -380,8 +381,8 @@ class SimulationCollection:
                     if run is None
                     else output.find_footprints(run.hash, variant.footprint)
                 )
-                footprints = (
-                    frozenset(feet.receptors()) if feet is not None else frozenset()
+                footprints = frozenset(
+                    feet.receptors(among) if feet is not None else ()
                 )
             present[name] = (particles, footprints)
         return present
@@ -390,17 +391,9 @@ class SimulationCollection:
         """
         Return ``(id, has particles, has footprint)`` for each selected simulation.
 
-        The footprint entry is ``None`` when the variant makes none. A small
-        selection is checked file by file, which is cheaper than listing
-        whole folders for a handful of simulations.
+        The footprint entry is ``None`` when the variant makes none.
         """
         keys = self._all()
-        if len(keys) < _LIST_FROM:
-            rows = []
-            for sim in self:
-                foot = sim.has_footprint if sim.makes_footprint else None
-                rows.append((sim.id, sim.has_trajectory, foot))
-            return rows
         present = self._present()
         return [
             (

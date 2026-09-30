@@ -1266,12 +1266,8 @@ def _mixed_state_model(tmp_path):
     return model
 
 
-@pytest.mark.parametrize("list_from", [0, 10_000], ids=["listing", "file-by-file"])
-def test_incomplete_and_status_agree_with_is_complete(tmp_path, monkeypatch, list_from):
-    """Both ways of checking must give `Simulation.is_complete()`'s answer."""
-    import stilt.collections as collections
-
-    monkeypatch.setattr(collections, "_LIST_FROM", list_from)
+def test_incomplete_and_status_agree_with_is_complete(tmp_path):
+    """The folder listing must give `Simulation.is_complete()`'s answer."""
     model = _mixed_state_model(tmp_path)
     sims = model.simulations
 
@@ -1295,10 +1291,7 @@ def test_incomplete_and_status_agree_with_is_complete(tmp_path, monkeypatch, lis
     ]
 
 
-def test_incomplete_of_a_project_with_no_results_is_everything(tmp_path, monkeypatch):
-    import stilt.collections as collections
-
-    monkeypatch.setattr(collections, "_LIST_FROM", 0)
+def test_incomplete_of_a_project_with_no_results_is_everything(tmp_path):
     model = Model(project=tmp_path, config=_config(tmp_path), receptors=[_receptor(12)])
     assert model.simulations.incomplete().keys() == model.simulations.keys()
     assert not model.output.path.exists()  # looking creates nothing
