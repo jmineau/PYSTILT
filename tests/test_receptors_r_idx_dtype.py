@@ -52,5 +52,5 @@ def test_mixed_int_and_str_r_idx_does_not_split_a_receptor(tmp_path):
     recs = read_receptors(f)
     multis = [r for r in recs if isinstance(r, MultiPointReceptor)]
     assert len(multis) == 1
-    assert len(multis[0]) == 38
+    assert len(multis[0].coords()) == 38
     assert len(recs) == df.r_idx.astype(str).nunique()

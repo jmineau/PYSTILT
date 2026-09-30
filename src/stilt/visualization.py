@@ -403,7 +403,7 @@ class ReceptorPlotAccessor:
         standalone = ax is None
 
         r = self._receptor
-        coords = [(lat, lon, alt) for lat, lon, alt in r]
+        coords = r.coords()
         lats = np.array([c[0] for c in coords])
         lons = np.array([c[1] for c in coords])
         alts = np.array([c[2] for c in coords])
@@ -577,8 +577,8 @@ class SimulationPlotAccessor:
         else:
             r = sim.receptor
             pad = 2.0
-            _lats = np.array([lat for lat, lon, alt in r])
-            _lons = np.array([lon for lat, lon, alt in r])
+            _lats = np.array([lat for lat, lon, alt in r.coords()])
+            _lons = np.array([lon for lat, lon, alt in r.coords()])
             extent = (
                 _lons.min() - pad,
                 _lons.max() + pad,

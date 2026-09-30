@@ -98,10 +98,14 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Receptors are frozen pydantic models**
   ([#86](https://github.com/jmineau/PYSTILT/issues/86),
   [#66](https://github.com/jmineau/PYSTILT/issues/66); breaking).
-  `PointReceptor`, `ColumnReceptor`, and `MultiPointReceptor` take the same
-  arguments as before but can no longer be changed in place: use
+  `PointReceptor`, `ColumnReceptor`, and `MultiPointReceptor` take their
+  arguments by name only (`PointReceptor(time=..., longitude=...,
+  latitude=..., altitude=...)`); `Receptor.from_points` still takes a list
+  of points. They can no longer be changed in place: use
   `receptor.model_copy(update={...})`, and pass labels as `attrs=` instead
-  of assigning `receptor.attrs`. `receptor.id` and `receptor.location_id`
+  of assigning `receptor.attrs`. An unknown argument is a `ValidationError`.
+  A receptor is no longer iterable and has no `len()`: `receptor.coords()`
+  lists its `(lat, lon, alt)` points. `receptor.id` and `receptor.location_id`
   are plain strings; `ReceptorID` and `LocationID` are removed
   (`stilt.receptors.parse_receptor_id` splits an id into its time and
   location). `to_dict()` names the type under `kind` (`"point"`); dicts

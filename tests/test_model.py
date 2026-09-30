@@ -753,7 +753,10 @@ def test_receptors_that_would_share_result_files_are_refused(tmp_path):
 
     def slant(alt):
         return MultiPointReceptor(
-            "2023-01-01 12:00", [-111.85, -111.86], [40.77, 40.78], [alt, 500.0]
+            time="2023-01-01 12:00",
+            longitudes=[-111.85, -111.86],
+            latitudes=[40.77, 40.78],
+            altitudes=[alt, 500.0],
         )
 
     a, b = slant(10.001), slant(10.004)

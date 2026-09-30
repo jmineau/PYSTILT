@@ -497,7 +497,12 @@ def test_pwf_reads_altitude_ref_from_the_context():
 
     _, msl = _msl_column_particles(10, station=1300.0)
     receptor = ColumnReceptor(
-        "2023-07-15 18:00", -111.85, 40.77, 1300.0, 4300.0, altitude_ref="msl"
+        time="2023-07-15 18:00",
+        longitude=-111.85,
+        latitude=40.77,
+        bottom=1300.0,
+        top=4300.0,
+        altitude_ref="msl",
     )
     context = TransformContext(receptor=receptor)
     _, expected = particle_pwf(msl, altitude_ref="msl")
@@ -842,8 +847,20 @@ def test_transform_kind():
 def _two_receptors():
     from stilt.receptors import ColumnReceptor
 
-    a = ColumnReceptor("2023-01-01 12:00", -111.85, 40.77, 0.0, 3000.0)
-    b = ColumnReceptor("2023-01-01 12:00", -111.80, 40.70, 0.0, 3000.0)
+    a = ColumnReceptor(
+        time="2023-01-01 12:00",
+        longitude=-111.85,
+        latitude=40.77,
+        bottom=0.0,
+        top=3000.0,
+    )
+    b = ColumnReceptor(
+        time="2023-01-01 12:00",
+        longitude=-111.80,
+        latitude=40.70,
+        bottom=0.0,
+        top=3000.0,
+    )
     return a, b
 
 
@@ -949,7 +966,9 @@ def test_ak_table_missing_receptor_raises(tmp_path):
     a, b = _two_receptors()
     path = tmp_path / "kernels.parquet"
     _write_table(path, a, b)
-    other = PointReceptor("2023-01-01 12:00", -111.0, 40.0, 10.0)
+    other = PointReceptor(
+        time="2023-01-01 12:00", longitude=-111.0, latitude=40.0, altitude=10.0
+    )
 
     with pytest.raises(KeyError, match="no kernel for receptor"):
         AveragingKernel(table=str(path)).apply(

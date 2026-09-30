@@ -205,9 +205,15 @@ def default_context() -> TransformContext:
     An averaging kernel read from a ``table`` needs the real context from
     ``sim.transform_context()``.
     """
+    import datetime as dt
+
     from stilt.receptors import PointReceptor
 
-    return TransformContext(receptor=PointReceptor("2000-01-01", 0.0, 0.0, 0.0))
+    return TransformContext(
+        receptor=PointReceptor(
+            time=dt.datetime(2000, 1, 1), longitude=0.0, latitude=0.0, altitude=0.0
+        )
+    )
 
 
 __all__ = [

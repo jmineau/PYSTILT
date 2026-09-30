@@ -523,10 +523,10 @@ def test_forward_run(tmp_path, met_dir, wbb_grid):
 
     # The 2021-07-15 06:00-11:59 block holds the whole +3 h window.
     receptor = PointReceptor(
-        REFERENCE_SUMMER_TIME,
-        REFERENCE_LONGITUDE,
-        REFERENCE_LATITUDE,
-        REFERENCE_ALTITUDE,
+        time=REFERENCE_SUMMER_TIME,
+        longitude=REFERENCE_LONGITUDE,
+        latitude=REFERENCE_LATITUDE,
+        altitude=REFERENCE_ALTITUDE,
     )
     config = ModelConfig(
         mets={

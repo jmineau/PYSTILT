@@ -244,8 +244,8 @@ All three classes have these members:
    A dictionary of extra labels, such as the extra columns of
    ``receptors.csv``. They are not part of the receptor's ID.
 
-``for lat, lon, alt in receptor:``
-   Loops over the receptor's points as ``(latitude, longitude, altitude)``.
+``receptor.coords()``
+   The receptor's points as a list of ``(latitude, longitude, altitude)``.
    A :class:`PointReceptor` has one point, a :class:`ColumnReceptor` two
    (bottom and top), and a :class:`MultiPointReceptor` one per location.
    This lets code read coordinates without checking the type.
@@ -262,7 +262,8 @@ All three classes have these members:
    ``Receptor.from_dict`` uses to rebuild the right class.
 
 Receptors are frozen. To change one, make a copy with
-``receptor.model_copy(update={"altitude": 20})``.
+``receptor.model_copy(update={"altitude": 20})``. Every argument is given by
+name, so a longitude cannot be passed as a latitude by mistake.
 
 
 Checking the type
@@ -279,7 +280,7 @@ Use :func:`isinstance` to branch on the receptor type:
    elif isinstance(receptor, ColumnReceptor):
        print(f"Column from {receptor.bottom} to {receptor.top} m")
    elif isinstance(receptor, MultiPointReceptor):
-       print(f"Multi-point with {len(receptor)} locations")
+       print(f"Multi-point with {len(receptor.coords())} locations")
 
 All three are subclasses of :class:`Receptor`.
 

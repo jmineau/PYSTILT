@@ -50,17 +50,23 @@ def test_format_coord_small_positive():
 
 
 def test_location_id_point_basic():
-    r = PointReceptor("202301011200", -111.85, 40.77, 5.0)
+    r = PointReceptor(
+        time="202301011200", longitude=-111.85, latitude=40.77, altitude=5.0
+    )
     assert r.location_id == "-111.85_40.77_5"
 
 
 def test_location_id_point_integer_coords():
-    r = PointReceptor("202301011200", -112.0, 40.0, 10.0)
+    r = PointReceptor(
+        time="202301011200", longitude=-112.0, latitude=40.0, altitude=10.0
+    )
     assert r.location_id == "-112_40_10"
 
 
 def test_location_id_point_fractional_height():
-    r = PointReceptor("202301011200", -111.85, 40.77, 2.5)
+    r = PointReceptor(
+        time="202301011200", longitude=-111.85, latitude=40.77, altitude=2.5
+    )
     assert r.location_id == "-111.85_40.77_2.5"
 
 
@@ -70,12 +76,16 @@ def test_location_id_point_fractional_height():
 
 
 def test_location_id_column_ends_with_X():
-    r = ColumnReceptor("202301011200", -111.85, 40.77, 5.0, 50.0)
+    r = ColumnReceptor(
+        time="202301011200", longitude=-111.85, latitude=40.77, bottom=5.0, top=50.0
+    )
     assert r.location_id == "-111.85_40.77_X"
 
 
 def test_location_id_column_integer_coords():
-    r = ColumnReceptor("202301011200", -112.0, 40.0, 5.0, 50.0)
+    r = ColumnReceptor(
+        time="202301011200", longitude=-112.0, latitude=40.0, bottom=5.0, top=50.0
+    )
     assert r.location_id == "-112_40_X"
 
 
@@ -88,24 +98,48 @@ def test_location_id_multipoint_stable():
     lons = [-111.85, -111.86, -111.84]
     lats = [40.77, 40.78, 40.76]
     alts = [5, 5, 5]
-    r1 = MultiPointReceptor("202301011200", lons, lats, alts)
-    r2 = MultiPointReceptor("202301011200", lons, lats, alts)
+    r1 = MultiPointReceptor(
+        time="202301011200", longitudes=lons, latitudes=lats, altitudes=alts
+    )
+    r2 = MultiPointReceptor(
+        time="202301011200", longitudes=lons, latitudes=lats, altitudes=alts
+    )
     assert r1.location_id == r2.location_id
 
 
 def test_location_id_multipoint_order_independent():
-    r_a = MultiPointReceptor("202301011200", [-111.85, -111.86], [40.77, 40.78], [5, 5])
-    r_b = MultiPointReceptor("202301011200", [-111.86, -111.85], [40.78, 40.77], [5, 5])
+    r_a = MultiPointReceptor(
+        time="202301011200",
+        longitudes=[-111.85, -111.86],
+        latitudes=[40.77, 40.78],
+        altitudes=[5, 5],
+    )
+    r_b = MultiPointReceptor(
+        time="202301011200",
+        longitudes=[-111.86, -111.85],
+        latitudes=[40.78, 40.77],
+        altitudes=[5, 5],
+    )
     assert r_a.location_id == r_b.location_id
 
 
 def test_location_id_multipoint_starts_with_multi():
-    r = MultiPointReceptor("202301011200", [-111.85, -111.86], [40.77, 40.78], [5, 5])
+    r = MultiPointReceptor(
+        time="202301011200",
+        longitudes=[-111.85, -111.86],
+        latitudes=[40.77, 40.78],
+        altitudes=[5, 5],
+    )
     assert r.location_id.startswith("multi_")
 
 
 def test_location_id_multipoint_hash_length():
-    r = MultiPointReceptor("202301011200", [-111.85, -111.86], [40.77, 40.78], [5, 5])
+    r = MultiPointReceptor(
+        time="202301011200",
+        longitudes=[-111.85, -111.86],
+        latitudes=[40.77, 40.78],
+        altitudes=[5, 5],
+    )
     hash_part = r.location_id.replace("multi_", "")
     assert len(hash_part) == 10
     assert all(c in "0123456789abcdef" for c in hash_part)
@@ -119,13 +153,28 @@ def test_location_id_multipoint_matches_spec():
         separators=(",", ":"),
     )
     expected_hash = hashlib.sha256(canonical.encode()).hexdigest()[:10]
-    r = MultiPointReceptor("202301011200", [-111.85, -111.86], [40.77, 40.78], [5, 5])
+    r = MultiPointReceptor(
+        time="202301011200",
+        longitudes=[-111.85, -111.86],
+        latitudes=[40.77, 40.78],
+        altitudes=[5, 5],
+    )
     assert r.location_id == f"multi_{expected_hash}"
 
 
 def test_location_id_multipoint_differs_for_different_points():
-    r_a = MultiPointReceptor("202301011200", [-111.85, -111.86], [40.77, 40.78], [5, 5])
-    r_b = MultiPointReceptor("202301011200", [-111.85, -111.87], [40.77, 40.79], [5, 5])
+    r_a = MultiPointReceptor(
+        time="202301011200",
+        longitudes=[-111.85, -111.86],
+        latitudes=[40.77, 40.78],
+        altitudes=[5, 5],
+    )
+    r_b = MultiPointReceptor(
+        time="202301011200",
+        longitudes=[-111.85, -111.87],
+        latitudes=[40.77, 40.79],
+        altitudes=[5, 5],
+    )
     assert r_a.location_id != r_b.location_id
 
 
@@ -138,16 +187,16 @@ def test_receptor_id_format(point_receptor):
     assert point_receptor.id == "202301011200_-111.85_40.77_5"
 
 
-def test_receptor_len_point(point_receptor):
-    assert len(point_receptor) == 1
+def test_receptor_points_point(point_receptor):
+    assert len(point_receptor.coords()) == 1
 
 
-def test_receptor_len_column(column_receptor):
-    assert len(column_receptor) == 2
+def test_receptor_points_column(column_receptor):
+    assert len(column_receptor.coords()) == 2
 
 
-def test_receptor_len_multipoint(multipoint_receptor):
-    assert len(multipoint_receptor) == 3
+def test_receptor_points_multipoint(multipoint_receptor):
+    assert len(multipoint_receptor.coords()) == 3
 
 
 def test_receptor_coordinates(point_receptor):
@@ -163,7 +212,9 @@ def test_receptor_column_top_bottom(column_receptor):
 
 
 def test_point_has_no_bottom():
-    r = PointReceptor("202301011200", -111.85, 40.77, 5.0)
+    r = PointReceptor(
+        time="202301011200", longitude=-111.85, latitude=40.77, altitude=5.0
+    )
     with pytest.raises(AttributeError):
         _ = r.bottom
     with pytest.raises(AttributeError):
@@ -171,7 +222,9 @@ def test_point_has_no_bottom():
 
 
 def test_column_has_no_altitude():
-    r = ColumnReceptor("202301011200", -111.85, 40.77, 5.0, 50.0)
+    r = ColumnReceptor(
+        time="202301011200", longitude=-111.85, latitude=40.77, bottom=5.0, top=50.0
+    )
     with pytest.raises(AttributeError):
         _ = r.altitude
 
@@ -208,20 +261,32 @@ def test_receptor_time_aware_input_normalizes_to_naive_utc():
 
 
 def test_receptor_equality():
-    r1 = PointReceptor("202301011200", -111.85, 40.77, 5.0)
-    r2 = PointReceptor("202301011200", -111.85, 40.77, 5.0)
+    r1 = PointReceptor(
+        time="202301011200", longitude=-111.85, latitude=40.77, altitude=5.0
+    )
+    r2 = PointReceptor(
+        time="202301011200", longitude=-111.85, latitude=40.77, altitude=5.0
+    )
     assert r1 == r2
 
 
 def test_receptor_inequality_time():
-    r1 = PointReceptor("202301011200", -111.85, 40.77, 5.0)
-    r2 = PointReceptor("202301011300", -111.85, 40.77, 5.0)
+    r1 = PointReceptor(
+        time="202301011200", longitude=-111.85, latitude=40.77, altitude=5.0
+    )
+    r2 = PointReceptor(
+        time="202301011300", longitude=-111.85, latitude=40.77, altitude=5.0
+    )
     assert r1 != r2
 
 
 def test_receptor_inequality_across_types():
-    r1 = PointReceptor("202301011200", -111.85, 40.77, 5.0)
-    r2 = ColumnReceptor("202301011200", -111.85, 40.77, 5.0, 50.0)
+    r1 = PointReceptor(
+        time="202301011200", longitude=-111.85, latitude=40.77, altitude=5.0
+    )
+    r2 = ColumnReceptor(
+        time="202301011200", longitude=-111.85, latitude=40.77, bottom=5.0, top=50.0
+    )
     assert r1 != r2
 
 
@@ -231,8 +296,12 @@ def test_receptor_init_rejects_missing_time():
 
 
 def test_receptor_init_parses_iso_and_compact_strings():
-    r_iso = PointReceptor("2023-01-01T12:00:00", -111.85, 40.77, 5.0)
-    r_compact = PointReceptor("202301011200", -111.85, 40.77, 5.0)
+    r_iso = PointReceptor(
+        time="2023-01-01T12:00:00", longitude=-111.85, latitude=40.77, altitude=5.0
+    )
+    r_compact = PointReceptor(
+        time="202301011200", longitude=-111.85, latitude=40.77, altitude=5.0
+    )
     expected = dt.datetime(2023, 1, 1, 12, 0)
     assert r_iso.time == expected
     assert r_compact.time == expected
@@ -275,22 +344,32 @@ def test_receptor_lazy_geometry_multipoint(multipoint_receptor):
 
 def test_longitude_out_of_range_raises():
     with pytest.raises(ValueError, match="longitude"):
-        PointReceptor("202301011200", 200.0, 40.77, 5.0)
+        PointReceptor(
+            time="202301011200", longitude=200.0, latitude=40.77, altitude=5.0
+        )
 
 
 def test_latitude_out_of_range_raises():
     with pytest.raises(ValueError, match="latitude"):
-        PointReceptor("202301011200", -111.85, -95.0, 5.0)
+        PointReceptor(
+            time="202301011200", longitude=-111.85, latitude=-95.0, altitude=5.0
+        )
 
 
 def test_negative_agl_altitude_raises():
     with pytest.raises(ValueError, match="AGL altitudes"):
-        PointReceptor("202301011200", -111.85, 40.77, -1.0)
+        PointReceptor(
+            time="202301011200", longitude=-111.85, latitude=40.77, altitude=-1.0
+        )
 
 
 def test_negative_msl_altitude_is_allowed():
     r = PointReceptor(
-        "202301011200", -111.85, 40.77, altitude=-50.0, altitude_ref="msl"
+        time="202301011200",
+        longitude=-111.85,
+        latitude=40.77,
+        altitude=-50.0,
+        altitude_ref="msl",
     )
     assert r.altitude == -50.0
     assert r.altitude_ref == "msl"
@@ -298,17 +377,26 @@ def test_negative_msl_altitude_is_allowed():
 
 def test_column_bottom_ge_top_raises():
     with pytest.raises(ValueError, match="bottom"):
-        ColumnReceptor("202301011200", -111.85, 40.77, bottom=50.0, top=5.0)
+        ColumnReceptor(
+            time="202301011200", longitude=-111.85, latitude=40.77, bottom=50.0, top=5.0
+        )
 
 
 def test_column_bottom_eq_top_raises():
     with pytest.raises(ValueError, match="bottom"):
-        ColumnReceptor("202301011200", -111.85, 40.77, bottom=5.0, top=5.0)
+        ColumnReceptor(
+            time="202301011200", longitude=-111.85, latitude=40.77, bottom=5.0, top=5.0
+        )
 
 
 def test_multipoint_length_mismatch_raises():
     with pytest.raises(ValueError, match="same length"):
-        MultiPointReceptor("202301011200", [-111.85, -111.86], [40.77], [5.0, 5.0])
+        MultiPointReceptor(
+            time="202301011200",
+            longitudes=[-111.85, -111.86],
+            latitudes=[40.77],
+            altitudes=[5.0, 5.0],
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -372,14 +460,18 @@ def test_receptor_from_points_column_sorts_bottom_top():
 
 
 def test_receptor_from_dict_point_round_trip():
-    r = PointReceptor("202301011200", -111.85, 40.77, 5.0)
+    r = PointReceptor(
+        time="202301011200", longitude=-111.85, latitude=40.77, altitude=5.0
+    )
     r2 = Receptor.from_dict(r.to_dict())
     assert isinstance(r2, PointReceptor)
     assert r2 == r
 
 
 def test_receptor_from_dict_column_round_trip():
-    r = ColumnReceptor("202301011200", -111.85, 40.77, 5.0, 50.0)
+    r = ColumnReceptor(
+        time="202301011200", longitude=-111.85, latitude=40.77, bottom=5.0, top=50.0
+    )
     r2 = Receptor.from_dict(r.to_dict())
     assert isinstance(r2, ColumnReceptor)
     assert r2 == r
@@ -387,7 +479,10 @@ def test_receptor_from_dict_column_round_trip():
 
 def test_receptor_from_dict_multipoint_round_trip():
     r = MultiPointReceptor(
-        "202301011200", [-111.85, -111.86], [40.77, 40.78], [5.0, 5.0]
+        time="202301011200",
+        longitudes=[-111.85, -111.86],
+        latitudes=[40.77, 40.78],
+        altitudes=[5.0, 5.0],
     )
     r2 = Receptor.from_dict(r.to_dict())
     assert isinstance(r2, MultiPointReceptor)
@@ -440,7 +535,7 @@ def test_read_receptors_multipoint_via_r_idx(tmp_path):
     receptors = read_receptors(csv)
     assert len(receptors) == 2
     assert isinstance(receptors[0], MultiPointReceptor)
-    assert len(receptors[0]) == 2
+    assert len(receptors[0].coords()) == 2
 
 
 def test_read_receptors_r_idx_group_mixed_times_raises(tmp_path):
@@ -482,20 +577,20 @@ def test_multipoint_rejects_stacked_heights_at_one_location():
     # source and releases only between the last two heights.
     with pytest.raises(ValueError, match="distinct horizontal"):
         MultiPointReceptor(
-            "202508110440",
-            [-76.68869] * 5,
-            [37.76396] * 5,
-            [100.0, 200.0, 300.0, 400.0, 500.0],
+            time="202508110440",
+            longitudes=[-76.68869] * 5,
+            latitudes=[37.76396] * 5,
+            altitudes=[100.0, 200.0, 300.0, 400.0, 500.0],
         )
 
 
 def test_multipoint_rejects_nonconsecutive_duplicate_location():
     with pytest.raises(ValueError, match="distinct horizontal"):
         MultiPointReceptor(
-            "202301011200",
-            [-111.85, -111.86, -111.85],
-            [40.77, 40.78, 40.77],
-            [100.0, 200.0, 300.0],
+            time="202301011200",
+            longitudes=[-111.85, -111.86, -111.85],
+            latitudes=[40.77, 40.78, 40.77],
+            altitudes=[100.0, 200.0, 300.0],
         )
 
 
@@ -568,9 +663,20 @@ def test_write_receptors_round_trip_mixed_preserves_order_and_types(
 
 def test_write_receptors_round_trip_preserves_msl_reference(tmp_path):
     original = [
-        PointReceptor("202301011200", -111.85, 40.77, 1500.0, altitude_ref="msl"),
+        PointReceptor(
+            time="202301011200",
+            longitude=-111.85,
+            latitude=40.77,
+            altitude=1500.0,
+            altitude_ref="msl",
+        ),
         ColumnReceptor(
-            "202301011200", -111.85, 40.77, 1300.0, 1800.0, altitude_ref="msl"
+            time="202301011200",
+            longitude=-111.85,
+            latitude=40.77,
+            bottom=1300.0,
+            top=1800.0,
+            altitude_ref="msl",
         ),
     ]
     loaded = read_receptors(write_receptors(original, tmp_path / "r.csv"))
@@ -650,7 +756,9 @@ def test_attrs_do_not_count_for_equality_or_the_dict(point_receptor):
 
 
 def test_unknown_field_is_rejected():
-    with pytest.raises(TypeError, match="height"):
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError, match="height"):
         Receptor.from_dict(
             {
                 "kind": "point",
@@ -690,7 +798,7 @@ def test_parse_receptor_id_splits_time_and_location(
 
     for r in (point_receptor, column_receptor, multipoint_receptor):
         assert parse_receptor_id(r.id) == (r.time, r.location_id)
-    for bad in ("nope", "202301011200", "202313011200_-111_40_5", "202301011200_a_b"):
+    for bad in ("nope", "202301011200", "202301011200_", "202313011200_-111_40_5"):
         with pytest.raises(ValueError):
             parse_receptor_id(bad)
 
@@ -702,7 +810,11 @@ def test_parse_receptor_id_splits_time_and_location(
 
 def _multi(alts, **kwargs):
     return MultiPointReceptor(
-        "2023-01-01 12:00", [-111.85, -111.86], [40.77, 40.78], alts, **kwargs
+        time="2023-01-01 12:00",
+        longitudes=[-111.85, -111.86],
+        latitudes=[40.77, 40.78],
+        altitudes=alts,
+        **kwargs,
     )
 
 
@@ -766,7 +878,7 @@ def test_frame_has_a_row_per_release_point(
         "altitude_ref",
         "site",
     ]
-    assert len(frame) == 1 + 2 + len(multipoint_receptor)
+    assert len(frame) == 1 + 2 + len(multipoint_receptor.coords())
     assert frame["r_idx"].tolist()[:3] == [0, 1, 1]
     assert str(frame["time"].dtype).startswith("datetime64")
 
@@ -805,7 +917,13 @@ def test_append_msl_receptor_to_plain_altitude_file_keeps_its_reference():
     from stilt.receptors import append_receptors_csv
 
     text = "time,longitude,latitude,altitude\n2023-01-01 12:00:00,-111.85,40.77,5\n"
-    msl = PointReceptor("2023-01-02 12:00", -111.9, 40.7, 1500.0, altitude_ref="msl")
+    msl = PointReceptor(
+        time="2023-01-02 12:00",
+        longitude=-111.9,
+        latitude=40.7,
+        altitude=1500.0,
+        altitude_ref="msl",
+    )
 
     grown = append_receptors_csv(text, [msl])
 
@@ -820,7 +938,13 @@ def test_append_agl_receptor_leaves_a_plain_file_without_the_column():
     from stilt.receptors import append_receptors_csv
 
     text = "time,lon,lat,z,site\n2023-01-01 12:00:00,-111.85,40.77,5,WBB\n"
-    agl = PointReceptor("2023-01-02 12:00", -111.9, 40.7, 10.0, attrs={"site": "UOU"})
+    agl = PointReceptor(
+        time="2023-01-02 12:00",
+        longitude=-111.9,
+        latitude=40.7,
+        altitude=10.0,
+        attrs={"site": "UOU"},
+    )
 
     grown = append_receptors_csv(text, [agl])
 
@@ -833,6 +957,12 @@ def test_append_to_a_zagl_file_still_refuses_an_msl_receptor():
     from stilt.receptors import append_receptors_csv
 
     text = "time,long,lati,zagl\n2023-01-01 12:00:00,-111.85,40.77,5\n"
-    msl = PointReceptor("2023-01-02 12:00", -111.9, 40.7, 1500.0, altitude_ref="msl")
+    msl = PointReceptor(
+        time="2023-01-02 12:00",
+        longitude=-111.9,
+        latitude=40.7,
+        altitude=1500.0,
+        altitude_ref="msl",
+    )
     with pytest.raises(ValueError, match="altitudes are agl"):
         append_receptors_csv(text, [msl])

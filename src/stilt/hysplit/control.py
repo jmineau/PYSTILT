@@ -45,9 +45,9 @@ class ControlFile(BaseModel):
         lines.append(self.receptor.time.strftime("%y %m %d %H %M"))
 
         # Receptor coordinates (one line per point)
-        n_points = len(self.receptor)
+        n_points = len(self.receptor.coords())
         lines.append(str(n_points))
-        for lat, lon, altitude in self.receptor:
+        for lat, lon, altitude in self.receptor.coords():
             lines.append(f"{lat} {lon} {altitude}")
 
         # Run parameters
