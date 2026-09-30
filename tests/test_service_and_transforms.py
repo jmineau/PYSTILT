@@ -65,7 +65,6 @@ def test_declarative_transform_config_changes_real_footprint(
         variants={
             "hrrr": {},
             "lifetime": {
-                "from": "hrrr",
                 "transforms": [FirstOrderLifetime(lifetime_hours=1.0)],
             },
         },

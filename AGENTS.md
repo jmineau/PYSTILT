@@ -58,22 +58,23 @@ messages. Existing identifiers such as the `r_stilt` test fixtures and
 
 ## Architecture
 
-**There is no index, manifest, or registry.** A project is one root
-(`stilt.project.Project`) over a store (`stilt.store`). The simulations it
-defines are **receptors × variants**: `receptors.csv` crossed with the named
-variants in `config.yaml` (one per met when none are declared). A simulation
-is one receptor under one variant, one HYSPLIT call, `SimID(receptor,
-variant)`, stored at `simulations/by-id/<receptor>/<variant>/`. Whether a
-simulation is complete is decided **by key**, by `Simulation.is_complete()`:
-that method is the single definition of "done". `simulations/variants.yaml`
-is the record of the resolved settings every variant ran with;
-`Model.register()` compares against it and refuses to change a recorded
-variant (`ConfigChangedError`), and `Model.remove()` deletes a variant's
-outputs and record entry together. `config.yaml` and `receptors.csv` are the
-user's inputs: PYSTILT never rewrites a `config.yaml` loaded from the
-project (one given in Python is written out without defaults) and only
-appends to `receptors.csv`. The optional Postgres work queue in
-`stilt.service` tracks work status only, per receptor.
+**There is no index, manifest, or registry.** A project is a directory of
+inputs (`stilt.project.Project`: `config.yaml` and `receptors.csv`) and an
+output directory (`stilt.output.Output`) that `config.yaml` names and that
+several projects can share. The simulations a project defines are
+**receptors × variants**: `receptors.csv` crossed with the named variants in
+`config.yaml` (one per met when none are declared). A variant resolves into
+transport settings (`TransportSettings`, whose hash identifies a *run*) and
+optional footprint settings. Variants with equal transport settings share
+one run per receptor and differ only in the footprint made from it. Whether
+a simulation is complete is decided **by the files in the output
+directory**, by `Simulation.is_complete()`: that method is the single
+definition of "done". `config.yaml` and `receptors.csv` are the user's
+inputs: PYSTILT never rewrites a `config.yaml` loaded from the project (one
+given in Python is written out without defaults) and only appends to
+`receptors.csv`. Changing a setting never overwrites a result: it hashes to
+a new folder. The optional Postgres work queue in `stilt.service` tracks
+work status only, per receptor.
 
 `stilt.__all__` (plus the `__all__` of each subpackage) is the public surface;
 everything else is internal and can change.
@@ -84,11 +85,11 @@ everything else is internal and can change.
 src/stilt/
   cli.py             Typer CLI; a thin adapter over Model / service / execution
   model.py           Model, the top-level orchestrator
-  project.py         Project: one root (local dir or URI), its store and key
-                     layout; loads/saves config.yaml and receptors.csv
-  store.py           Store protocol and the local / fsspec implementations
-  simulation.py      Simulation, SimID: one receptor × variant, its outputs, store keys,
-                     completion, and publishing from the compute root
+  project.py         Project: the project directory and its two input files
+  output.py          Output: the output directory (runs by settings hash, sparse
+                     footprint files, Jacobian assembly, converter from by-id)
+  simulation.py      Simulation, SimID, VariantOutput: one receptor × variant, where its
+                     results live, completion, running HYSPLIT on scratch
   receptors.py       receptor types (point, multipoint, column) and IDs
   trajectory.py      Trajectories: particle output container + Parquet I/O
   footprint.py       Footprint: gridded CF-1.8 NetCDF output, enhancement from
@@ -96,9 +97,6 @@ src/stilt/
   flux.py            sampling a flux field at points or along particles
   geometry.py        aggregation targets (meshes, zones) and overlap weights
   meteorology.py     MetStream: ARL file discovery and staging (via arlmet)
-  output.py          the output directory of the #67 redesign: runs keyed by
-                     settings hash, sparse footprint files, Jacobian assembly,
-                     and a converter from the by-id layout (not yet used by Model)
   transforms.py      pre-footprint particle transforms (averaging kernel,
                      pressure weighting, lifetime decay) and their YAML I/O
   collections.py     SimulationCollection (receptors × variants, .sel()) and
@@ -165,42 +163,48 @@ tend to break them.
 
 ### Project layout on disk
 
-A project root is a local directory or an `s3://` / `gs://` URI. Every output
-is a store key relative to it (see `project.py`):
+A project is a local directory; results go to the output directory its
+`config.yaml` names (`./output` by default, relative to the project). Every
+folder below a kind is hive-style, so each tree reads as one dataset:
 
 ```
 <project>/
   config.yaml                 ModelConfig (user-authored; never rewritten once loaded)
   receptors.csv               receptor list; register() appends new receptors
-  simulations/variants.yaml   the record: resolved settings of every variant that ran
-  simulations/
-    by-id/<receptor_id>/<variant>/
-      stilt.log               HYSPLIT log (one run per directory)
-      met/                    staged meteorology (compute-local only)
-      <receptor_id>_traj.parquet   trajectories (absent for a from: variant)
-      <receptor_id>_foot.nc        the footprint, or <receptor_id>_foot.empty
-  chunks/, slurm/             Slurm push-dispatch artefacts (local projects)
+  chunks/, slurm/             Slurm push-dispatch artefacts
+
+<output>/
+  particles/settings=<variant>-<hash>/_settings.yaml
+  particles/settings=<variant>-<hash>/date=YYYY-MM-DD/<receptor_id>.parquet
+  footprints/settings=<variant>-<hash>/_settings.yaml      names the particles folder
+  footprints/settings=<variant>-<hash>/date=YYYY-MM-DD/<receptor_id>.parquet
+  logs/settings=<variant>-<hash>/date=YYYY-MM-DD/<receptor_id>.log
+  scratch/settings=<variant>-<hash>/date=YYYY-MM-DD/<receptor_id>/   failed runs' working dirs
 ```
 
-`compute_root` is the only other location: workers run HYSPLIT there and
-`Simulation.publish()` copies outputs into the store. For a local project the
-default compute root *is* `simulations/by-id`, so publishing is a no-op. An
-empty footprint writes a `.empty` marker holding the reason, and no NetCDF;
-the marker counts as complete.
+A run folder's hash is `TransportSettings.hash`; a footprint folder's is
+the hash of the run's settings and the footprint settings together. Lookup
+re-validates the stored `_settings.yaml` through the current models and
+re-hashes, so a field added later with a default still matches. `compute_root`
+is scratch: HYSPLIT runs there and the directory is discarded after success.
+Footprints are sparse tables (`hour, y, x, foot`, float32); an empty
+footprint is a file with no rows and the reason in its metadata, and counts
+as complete.
 
 ## Invariants
 
 - **STILT-R numerical parity** at `rtol=1e-7` per footprint cell. Run the
   `fidelity` suite before merging any change to trajectory or footprint math.
   NetCDF output is CF-1.8 and deliberately not byte-compatible with STILT-R.
-- **Completion is by key; the queue is status-only.** A simulation is complete
-  iff its expected outputs exist in the store. Never add a second "does this
-  output exist" check, a completion registry, or a manifest; call the
-  `Simulation` method.
-- **State lives in the project store** (config.yaml, receptors.csv, the
-  variants record, outputs)
-  and, on the queue path, in Postgres. Anything kept in a process-local
-  variable silently diverges between `run`, `pull-worker`, and `serve`.
+- **Completion is by file; the queue is status-only.** A simulation is
+  complete iff its files exist in the output directory. Never add a second
+  "does this output exist" check, a completion registry, or a manifest; call
+  the `Simulation` method.
+- **Identity is content.** A run is its settings hash; a changed setting is
+  a new folder, never an overwrite, and PYSTILT never deletes a folder.
+- **State lives in the project directory and the output directory** and,
+  on the queue path, in Postgres. Anything kept in a process-local variable
+  silently diverges between `run`, `pull-worker`, and `serve`.
 - **The CLI stays thin.** `cli.py` adapts arguments to `Model` / service /
   execution calls; orchestration logic does not belong there.
 - **Meteorology I/O goes through [arlmet](https://github.com/jmineau/arl-met).**

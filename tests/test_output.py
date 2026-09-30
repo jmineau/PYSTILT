@@ -202,7 +202,7 @@ def test_footprint_folder_is_variant_name_and_combined_hash(tmp_path):
     run = out.run("hrrr", SETTINGS)
     config = FootprintConfig(grid=GRID, smooth_factor=1.0)
     feet = run.footprints(config)
-    digest = Footprints.hash_for(run, config)
+    digest = Footprints.hash_for(run.hash, config)
     assert digest == settings_hash(
         {"particles": SETTINGS.hash, "footprint": config.model_dump(mode="json")}
     )
@@ -384,19 +384,18 @@ def test_jacobian_with_no_footprints_is_empty(tmp_path):
 
 
 def _project_model(tmp_path):
-    """A model with three variants: hrrr, a footprint-only derivative, and an error run without a grid."""
+    """A model with three variants: hrrr, a footprint-only sibling, and an error run without a grid."""
     from stilt.config import MetConfig, ModelConfig
     from stilt.model import Model
 
     met = MetConfig(directory=tmp_path / "met", file_format="%Y%m%d_%H", file_tres="6h")
-    coarse = {"grid": {"xres": 0.25, "yres": 0.25}}
     config = ModelConfig(
         mets={"hrrr": met},
         grid=GRID,
         numpar=100,
         variants={
             "hrrr": {},
-            "hrrr-coarse": {"from": "hrrr", **coarse},
+            "hrrr-coarse": {"grid": {"xres": 0.25, "yres": 0.25}},
             "hrrr-err": {
                 "siguverr": 2.0,
                 "tluverr": 100.0,
@@ -410,6 +409,13 @@ def _project_model(tmp_path):
     return Model(project=tmp_path / "project", receptors=receptors, config=config)
 
 
+def _old_sim_dir(model, receptor, variant: str):
+    """The pre-output-directory folder of one simulation, created."""
+    d = model.project.directory / "simulations" / "by-id" / str(receptor.id) / variant
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
 def test_convert_project_shares_runs_and_keeps_empty_footprints(tmp_path):
     from stilt.output import convert_project
 
@@ -417,30 +423,33 @@ def test_convert_project_shares_runs_and_keeps_empty_footprints(tmp_path):
     r6, r12 = model.receptors[0], model.receptors[1]
     for receptor in (r6, r12):
         for variant in ("hrrr", "hrrr-err"):
-            sim = model.simulation((receptor.id, variant))
-            sim.directory.mkdir(parents=True, exist_ok=True)
-            _trajectories(receptor).to_parquet(sim.trajectories_path)
+            d = _old_sim_dir(model, receptor, variant)
+            _trajectories(receptor).to_parquet(d / f"{receptor.id}_traj.parquet")
+            (d / "stilt.log").write_text("ok\n")
     # hrrr: one real footprint and one empty marker; hrrr-coarse: one footprint.
-    _footprint(r6, seed=3).to_netcdf(model.simulation((r6.id, "hrrr")).footprint_path)
-    model.simulation((r12.id, "hrrr")).write_empty_footprint_marker("outside_domain")
-    coarse = model.simulation((r6.id, "hrrr-coarse"))
-    coarse_grid = coarse.footprint_config.grid
-    x_axis, y_axis = coarse_grid.axes
+    _footprint(r6, seed=3).to_netcdf(
+        _old_sim_dir(model, r6, "hrrr") / f"{r6.id}_foot.nc"
+    )
+    (_old_sim_dir(model, r12, "hrrr") / f"{r12.id}_foot.empty").write_text(
+        "outside_domain\n"
+    )
+    coarse_config = model.variants["hrrr-coarse"].footprint
+    assert coarse_config is not None and coarse_config.grid is not None
+    x_axis, y_axis = coarse_config.grid.axes
     data = xr.DataArray(
         np.ones((1, len(y_axis), len(x_axis))),
         dims=["time", "lat", "lon"],
         coords={"time": [pd.Timestamp(r6.time)], "lat": y_axis, "lon": x_axis},
     )
     Footprint(
-        receptor=r6, config=coarse.footprint_config, data=data, name="hrrr-coarse"
-    ).to_netcdf(coarse.footprint_path)
+        receptor=r6, config=coarse_config, data=data, name="hrrr-coarse"
+    ).to_netcdf(_old_sim_dir(model, r6, "hrrr-coarse") / f"{r6.id}_foot.nc")
 
-    out = Output(tmp_path / "output")
-    report = convert_project(model, out)
-    # 6 simulations: hrrr ×2 and hrrr-err ×2 complete, hrrr-coarse: r6 complete, r12 incomplete.
-    assert report.particles == 4
+    out = model.output  # the project's own output directory, tmp_path/project/output
+    report = convert_project(model)
+    assert report.particles == 4  # hrrr x2, hrrr-err x2; hrrr-coarse shares hrrr's run
     assert report.footprints == 3  # r6 hrrr, r12 hrrr (empty), r6 hrrr-coarse
-    assert report.incomplete == 1
+    assert report.logs == 4
 
     runs = {run.name: run for run in out.runs()}
     assert set(runs) == {"hrrr", "hrrr-err"}
@@ -456,6 +465,11 @@ def test_convert_project_shares_runs_and_keeps_empty_footprints(tmp_path):
     assert fine.empty_reason(str(r12.id)) == "outside_domain"
     assert coarse_set.receptors() == [str(r6.id)]
     np.testing.assert_array_equal(coarse_set.read(str(r6.id)).data.values, 1.0)
+
+    # The model now sees the converted results as its own.
+    assert model.simulations[r6.id, "hrrr"].is_complete()
+    assert model.simulations[r6.id, "hrrr-coarse"].is_complete()
+    assert model.simulations[r12.id, "hrrr"].empty_reason == "outside_domain"
 
     again = convert_project(model, out)
     assert again.particles == 0 and again.particles_skipped == 4

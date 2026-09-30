@@ -110,5 +110,5 @@ simulation's ``stilt.log`` for HYSPLIT problems.
 Limitations
 -----------
 
-The project must be a folder on a local or shared filesystem. Projects
-stored in cloud buckets (``s3://``, ``gs://``) can't use the Slurm backend.
+The project directory and the output directory must be on a filesystem
+every array task can reach, such as the cluster's shared storage.

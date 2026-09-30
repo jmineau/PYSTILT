@@ -32,12 +32,12 @@ FAILURE_PHRASES: dict[str, FailureReason] = {
 
 def identify_failure_reason(path: str | Path) -> FailureReason:
     """
-    Return why a simulation failed, from the messages in its ``stilt.log``.
+    Return why a simulation failed, from the messages in its log.
 
     Parameters
     ----------
     path : str or Path
-        Simulation directory holding ``stilt.log``.
+        The log file, or a directory holding ``stilt.log``.
 
     Returns
     -------
@@ -45,7 +45,9 @@ def identify_failure_reason(path: str | Path) -> FailureReason:
         The reason for the first known message in the log. ``EMPTY_LOG``
         when there is no log, and ``UNKNOWN`` when no known message matches.
     """
-    log = Path(path) / "stilt.log"
+    log = Path(path)
+    if log.is_dir():
+        log = log / "stilt.log"
     if not log.exists():
         return FailureReason.EMPTY_LOG
     text = log.read_text()

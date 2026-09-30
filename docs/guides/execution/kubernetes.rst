@@ -28,8 +28,8 @@ What you need
   get added to the queue.
 - A Kubernetes Secret holding that URL under the key ``PYSTILT_DB_URL``.
   Workers read it from there.
-- A project that every pod can reach. In practice this is a cloud URI such
-  as ``s3://`` or ``gs://``.
+- A project directory and output directory that every pod can reach, on a
+  shared filesystem.
 - A container image with PYSTILT installed.
 - A writable folder in each pod for meteorology and HYSPLIT files. Pass one
   with ``stilt run --compute-root /tmp/pystilt`` (or set

@@ -15,7 +15,6 @@ if TYPE_CHECKING:
     from .protocol import DispatchMode
 
 from stilt.project import project_slug
-from stilt.store import is_uri
 
 logger = logging.getLogger(__name__)
 
@@ -248,9 +247,6 @@ class SlurmExecutor:
         skip_existing: bool | None = None,
     ) -> SlurmHandle:
         """Write the chunk files and submission script, submit it, and return a handle."""
-        if is_uri(project):
-            raise ValueError("Slurm push dispatch requires a local project root.")
-
         project_dir = Path(project)
         batch_id = datetime.now().strftime("%Y%m%d_%H%M%S")
         chunk_dir = project_dir / "chunks" / batch_id

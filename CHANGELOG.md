@@ -6,6 +6,50 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- **Results live in an output directory, not inside the project**
+  ([#74](https://github.com/jmineau/PYSTILT/issues/74), design in
+  [#67](https://github.com/jmineau/PYSTILT/issues/67); breaking). A
+  project directory holds `config.yaml` and `receptors.csv`; its results go
+  to the directory `output:` names (`./output` by default), which several
+  projects can share. The directory has one tree per kind of result
+  (`particles/`, `footprints/`, `logs/`), a `settings=<variant>-<hash>`
+  folder per set of settings, and `date=YYYY-MM-DD` folders below, so each
+  tree reads as one dataset. Particles are one Parquet file per receptor;
+  footprints are stored sparse in float32, with an empty footprint as a file
+  with no rows and its reason. `stilt convert` copies an existing project's
+  `simulations/by-id` tree into its output directory.
+- **A run is identified by its settings, not its variant name.** Two
+  variants with the same transport settings share one HYSPLIT run per
+  receptor and differ only in the footprint made from it, so `from:` is no
+  longer needed and is rejected with advice. Editing a setting no longer
+  raises `ConfigChangedError`: the next `stilt run` writes into a new
+  folder beside the old one, and `stilt status` lists folders the config no
+  longer uses. PYSTILT never deletes them.
+- **HYSPLIT runs on scratch.** The working directory (`compute_root`,
+  `PYSTILT_COMPUTE_ROOT`, or `$TMPDIR/pystilt/<project>`) is removed after
+  a successful run and copied under the output directory's `scratch/`
+  after a failed one; `keep_scratch: true` keeps every run's.
+- `model.simulations.sel(...).jacobian(target, time_bins)` sums the
+  selected footprints onto a target in one pass, as a sparse matrix with
+  labelled rows and columns (`stilt.output.Jacobian`).
+- `TransformContext.store` is now `TransformContext.directory`, the project
+  directory that relative file names in transform settings are taken from.
+- `Simulation.trajectories_path`, `footprint_path`, and `log_path` point
+  into the output directory and are `None` before the run's folder exists.
+  `generate_footprint` with other settings writes to its own folder and no
+  longer replaces `sim.footprint`
+  ([#65](https://github.com/jmineau/PYSTILT/issues/65)).
+
+### Removed
+
+- `simulations/variants.yaml`, `ConfigChangedError`, `Model.check_config`,
+  `Model.remove`, `Model.orphans`, `stilt rm`, the `.empty` marker,
+  `Simulation.publish`, `Simulation.parent`, `stilt.store` and object-store
+  project roots (`s3://`, `gs://`), `RuntimeSettings.cache_dir`, and
+  `VariantConfig.derived_from` / `record`.
+
 ### Added
 
 - **`TransportSettings`, what identifies a run**

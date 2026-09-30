@@ -2,10 +2,12 @@
 Variants: the complete settings a receptor is run under.
 
 A project runs every receptor under every variant. A variant names its met
-and holds a full set of transport and footprint settings, and it is one
-HYSPLIT run per receptor. ``config.yaml`` declares variants as overrides of
-its defaults, and :meth:`ModelConfig.resolve_variants` turns them into one
-:class:`VariantConfig` per simulation name.
+and holds a full set of transport and footprint settings. ``config.yaml``
+declares variants as overrides of its defaults, and
+:meth:`ModelConfig.resolve_variants` turns them into one
+:class:`VariantConfig` per simulation name. Variants whose transport
+settings are equal share one run of HYSPLIT per receptor and differ only in
+the footprint made from its particles.
 """
 
 from __future__ import annotations
@@ -45,14 +47,6 @@ class VariantConfig(STILTParams, FootprintConfig):
         None,
         description="Realization number within ``group``. ``None`` for a single run.",
     )
-    derived_from: str | None = Field(
-        None,
-        description=(
-            "Variant whose trajectories this one computes its footprint from, "
-            "instead of running HYSPLIT (``from:`` in ``config.yaml``). Only "
-            "footprint fields may differ from it."
-        ),
-    )
 
     @model_validator(mode="after")
     def _validate_name(self) -> Self:
@@ -63,11 +57,6 @@ class VariantConfig(STILTParams, FootprintConfig):
                     f"Variant name {value!r} must match {VARIANT_NAME_RE.pattern}"
                 )
         return self
-
-    @property
-    def is_derived(self) -> bool:
-        """Whether this variant reuses another variant's trajectories."""
-        return self.derived_from is not None
 
     def stilt_params(self) -> STILTParams:
         """Return the transport parameters alone, as stored with a trajectory."""
@@ -81,19 +70,9 @@ class VariantConfig(STILTParams, FootprintConfig):
         config), and the engine. Variants that differ only in footprint
         fields give equal settings, and so share one run.
         """
-        return TransportSettings.build(self.stilt_params(), met)
-
-    def record(self) -> dict[str, Any]:
-        """
-        Return this variant as stored in the project's record.
-
-        ``maxpar`` is stored as HYSPLIT receives it, so an unset ``maxpar`` is
-        stored as ``numpar``.
-        """
-        data = self.model_dump(mode="json")
-        if data["maxpar"] is None:
-            data["maxpar"] = self.numpar
-        return data
+        return TransportSettings.build(
+            self.stilt_params(), met, realization=self.realization
+        )
 
 
 def expand_variants(
@@ -108,8 +87,7 @@ def expand_variants(
     ----------
     declared : dict
         ``{name: overrides}`` as written in ``config.yaml``. Besides
-        parameter overrides, each may set ``met``, ``realizations``, and
-        ``from``.
+        parameter overrides, each may set ``met`` and ``realizations``.
     defaults : dict
         The top-level transport and footprint parameters.
     mets : list of str
@@ -127,27 +105,18 @@ def expand_variants(
                 f"Variant name {group!r} must match {VARIANT_NAME_RE.pattern}"
             )
 
-    # Transport variants first, so a derived one can sit anywhere in the file.
     runs: dict[str, list[VariantConfig]] = {}
-    merged_by_group: dict[str, dict[str, Any]] = {}
     for group, spec in declared.items():
         spec = dict(spec or {})
         if "from" in spec:
-            continue
+            raise ValueError(
+                f"Variant {group!r} uses 'from:', which is no longer needed: a "
+                "variant with the same transport settings as another shares its "
+                "particles. Give the variant the transport overrides of "
+                f"{spec['from']!r} (if any) and its own footprint settings."
+            )
         merged, realizations = _merge_transport(group, spec, defaults, mets)
-        merged_by_group[group] = merged
         runs[group] = _expand_realizations(group, merged, realizations, declared)
-
-    for group, spec in declared.items():
-        spec = dict(spec or {})
-        parent = spec.pop("from", None)
-        if parent is None:
-            continue
-        _check_derived(group, parent, spec, declared)
-        merged = _override(merged_by_group[parent], spec)
-        runs[group] = [
-            VariantConfig(name=group, group=group, derived_from=parent, **merged)
-        ]
 
     return {v.name: v for group in declared for v in runs[group]}
 
@@ -244,31 +213,6 @@ def _expand_realizations(
             )
         )
     return out
-
-
-def _check_derived(
-    name: str, parent: str, spec: dict[str, Any], declared: dict[str, dict[str, Any]]
-) -> None:
-    """Reject a ``from:`` variant that would change more than the footprint."""
-    if parent not in declared:
-        raise ValueError(f"Variant {name!r} derives from unknown variant {parent!r}")
-    parent_spec = declared[parent] or {}
-    if "from" in parent_spec:
-        raise ValueError(
-            f"Variant {name!r} derives from {parent!r}, which is itself derived"
-        )
-    if "realizations" in parent_spec:
-        raise ValueError(
-            f"Variant {name!r} derives from realization group {parent!r}; "
-            "derive from a single run"
-        )
-    footprint_fields = set(FootprintConfig.model_fields)
-    extra = set(spec) - footprint_fields
-    if extra:
-        raise ValueError(
-            f"Variant {name!r} derives from {parent!r} and may only override "
-            f"footprint settings {sorted(footprint_fields)}; got {sorted(extra)}"
-        )
 
 
 __all__ = [

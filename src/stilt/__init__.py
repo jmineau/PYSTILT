@@ -21,6 +21,7 @@ from .footprint import Footprint
 from .geometry import Geometry, Mesh, SpatialTarget, Zones
 from .meteorology import MetStream
 from .model import Model
+from .output import Output
 from .receptors import (
     ColumnReceptor,
     LocationID,
@@ -42,6 +43,7 @@ except PackageNotFoundError:
 __all__ = [
     # Core
     "Model",
+    "Output",
     # Configuration
     "ModelConfig",
     "FootprintConfig",

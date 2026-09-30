@@ -64,10 +64,11 @@ Glossary
       Realizations are used for transport-error ensembles
       (:doc:`../guides/transport_error`).
 
-   derived variant
-      A variant declared with ``from: <other>``. It makes another footprint
-      (a different grid, smoothing, or particle weighting) from that
-      variant's stored particles without running HYSPLIT again.
+   output directory
+      Where a project's results go, named by ``output:`` in ``config.yaml``
+      (``./output`` by default). It holds one folder per set of settings
+      under ``particles/``, ``footprints/``, and ``logs/``, and several
+      projects can share it. See :doc:`../guides/project_layout`.
 
    HYSPLIT
       NOAA's particle transport program, written in Fortran. PYSTILT runs it
@@ -137,5 +138,5 @@ Glossary
    empty footprint
       A simulation that ran fine but whose particles never touched the
       footprint grid, for example because the grid is too small or is not
-      upwind. PYSTILT records it with a small ``.empty`` file instead of a
-      NetCDF, and counts the simulation as finished.
+      upwind. PYSTILT records it as a footprint file with no cells and the
+      reason inside, and counts the simulation as finished.

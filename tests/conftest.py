@@ -285,7 +285,7 @@ def traj_only_config(met_dir) -> ModelConfig:
 
 @pytest.fixture(scope="session")
 def multifoot_config(met_dir, wbb_grid) -> ModelConfig:
-    """Config with a second, coarser footprint derived from the same particles."""
+    """Config with a second, coarser footprint on the same particles."""
     coarse_grid = Grid(
         xmin=-113.0, xmax=-111.0, ymin=39.5, ymax=41.5, xres=0.05, yres=0.05
     )
@@ -302,7 +302,7 @@ def multifoot_config(met_dir, wbb_grid) -> ModelConfig:
         grid=wbb_grid,
         variants={
             "hrrr": {},
-            "coarse": {"from": "hrrr", "grid": coarse_grid.model_dump()},
+            "coarse": {"grid": coarse_grid.model_dump()},
         },
     )
 

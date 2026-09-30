@@ -2,25 +2,26 @@ How PYSTILT Tracks Finished Work
 ================================
 
 This page explains what happens behind ``stilt status`` and reruns. You
-don't need it to use PYSTILT, but it helps when running at scale or across
-machines.
+don't need it to use PYSTILT, but it helps when running at scale, across
+machines, or with several projects sharing one output directory.
 
-The output files are the record
+The result files are the record
 -------------------------------
 
 PYSTILT keeps no separate list of which simulations have run. A simulation
-is finished when its output files exist
+is finished when its result files exist in the output directory
 (:meth:`stilt.Simulation.is_complete`). It needs:
 
-- the trajectory,
-  ``simulations/by-id/<receptor>/<variant>/<receptor>_traj.parquet``,
-  unless the variant is declared with ``from:``
-- the footprint NetCDF or its ``.empty`` marker, when the variant has a grid
+- the particle file,
+  ``particles/settings=<variant>-<hash>/date=<day>/<receptor>.parquet``
+- the footprint file in the variant's ``footprints/`` folder, when the
+  variant has a grid. A footprint that no particle reached is a file with
+  no rows and the reason in its metadata, and it counts.
 
-Each output has one expected path, so each check is a single file lookup
-with no directory scanning. A notebook, a Slurm task, and a cloud worker all
-see the same files, so they agree on what's finished without talking to
-each other. Deleting an output file makes that simulation unfinished again.
+Each result has one expected path, so each check is a single file lookup.
+A notebook, a Slurm task, and another project sharing the directory all see
+the same files, so they agree on what's finished without talking to each
+other. Deleting a result file makes that simulation unfinished again.
 
 What defines the simulations
 ----------------------------
@@ -35,52 +36,63 @@ any machine can rebuild the model from the project folder alone.
 ``receptors.csv``. A ``config.yaml`` that was loaded from the project is
 never rewritten. One given in Python is written out.
 
-The settings record
--------------------
+Settings name the folders
+-------------------------
 
-If a setting changed, existing outputs would no longer match their variant
-name. So PYSTILT also records the settings that made them, in
-``simulations/variants.yaml``. It holds the fully resolved settings of every
-registered variant, plus the meteorology.
+Each variant resolves into two parts. Its transport settings (everything
+that changes the particles: the HYSPLIT parameters, the content of the
+meteorology, and the engine version; :class:`stilt.config.TransportSettings`)
+are hashed, and the hash names the ``particles/`` folder. Its footprint
+settings, hashed together with the transport hash, name the ``footprints/``
+folder. Each folder holds a ``_settings.yaml`` with the settings written out
+in full.
 
-This record is kept apart from ``config.yaml``, which is the user's file.
-PYSTILT compares against the record. That way the check works whether a
-setting was changed in a notebook or in an editor.
+That is how PYSTILT knows a setting changed: the variant now hashes to a
+folder that does not exist yet, so its receptors run again into it. The old
+folder is untouched. It is also how two variants come to share particles:
+if only their footprint fields differ, their transport settings hash the
+same and they resolve to one ``particles/`` folder.
 
-``register()`` resolves every variant. If a variant that is already
-recorded would now resolve differently, it stops with
-:class:`stilt.errors.ConfigChangedError`. A new variant is always accepted,
-because none of its simulations exist yet. ``Model.remove()`` (``stilt rm``)
-deletes a variant's outputs and its record entry together.
+A folder is found by loading its ``_settings.yaml`` back through the current
+settings model and hashing that, rather than by comparing stored digests.
+So a setting added in a later version, with a default, still matches folders
+written before it existed; a default whose meaning changed does not, which
+is right, because the particles would differ.
 
-The record lists settings only. Which simulations are finished is still read
-from their files.
+``stilt status`` lists the folders no variant of the current config uses.
+PYSTILT never deletes a folder, because another project may share the
+directory; deletion is by hand.
 
 The unit of work
 ----------------
 
-Workers are handed receptors. A worker runs every variant of its receptor.
-Variants that run HYSPLIT go first, then the ``from:`` variants that reuse
-their particles. The Slurm chunk files and the cloud queue both hold
-receptor IDs.
+Workers are handed receptors. A worker runs every variant of its receptor,
+in config order. When a variant's particles are missing it runs HYSPLIT; the
+variants that share those particles reuse them and make their own
+footprints, remade if the particles were replaced in the same call. The
+Slurm chunk files and the work queue both hold receptor IDs.
 
-Where HYSPLIT runs and where outputs are stored
------------------------------------------------
+Where HYSPLIT runs
+------------------
 
-HYSPLIT has to run in a local folder. Workers run each simulation under
-``compute_root`` and then copy the outputs into the project
-(:meth:`stilt.Simulation.publish`).
+HYSPLIT has to run in a local folder with its inputs staged beside it. That
+folder is scratch: ``compute_root`` if given, else ``PYSTILT_COMPUTE_ROOT``,
+else ``$TMPDIR/pystilt/<project name>``. After a successful run the particle
+file and the log are written to the output directory and the folder is
+removed. After a failure the folder is copied to ``scratch/`` in the output
+directory first, so CONTROL, SETUP.CFG, and MESSAGE survive the job.
+``keep_scratch: true`` in ``config.yaml`` keeps every run's folder.
 
-For a project on a local or shared disk, ``compute_root`` defaults to the
-project's own ``simulations/by-id``, so nothing is copied. For a project in
-a cloud bucket, it defaults to ``$TMPDIR/pystilt/<project name>``, and the
-outputs are uploaded.
+Files are written through a temporary name and renamed into place, so a
+reader never sees a partial file, and two workers that run the same receptor
+by accident produce equivalent files with the last rename winning. No lock
+is needed.
 
-The work queue (cloud only)
----------------------------
+The work queue
+--------------
 
 Local and Slurm runs don't need a database, because each worker gets a
-fixed list of receptors. Cloud workers take receptors one at a time from a
+fixed list of receptors. Pull workers take receptors one at a time from a
 shared queue, which needs a database that hands each receptor to exactly
 one worker. PYSTILT uses a small PostgreSQL queue
 (:class:`stilt.service.PostgresQueue`), turned on only when
@@ -98,7 +110,5 @@ Environment variables
 These control where and how PYSTILT runs. They never change what it
 calculates, so they live outside ``config.yaml``.
 
-- ``PYSTILT_COMPUTE_ROOT``: the folder where workers run HYSPLIT
-- ``PYSTILT_CACHE_DIR``: a local cache for files downloaded from a cloud
-  project
+- ``PYSTILT_COMPUTE_ROOT``: the scratch folder where workers run HYSPLIT
 - ``PYSTILT_DB_URL``: the PostgreSQL URL of the work queue

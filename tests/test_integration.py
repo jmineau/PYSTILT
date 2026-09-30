@@ -14,7 +14,6 @@ Skip them:
 
 import numpy as np
 import pandas as pd
-import xarray as xr
 
 from stilt.config import MetConfig, ModelConfig
 from stilt.model import Model
@@ -54,18 +53,17 @@ def test_trajectory(tmp_path, wbb_receptor, traj_only_config):
     model.run()
 
     sid = _sim_id(wbb_receptor)
-    sim_dir = model.project.directory / "simulations" / "by-id" / sid
-
-    parquet_files = list(sim_dir.glob("*_traj.parquet"))
-    assert parquet_files, f"No parquet found in {sim_dir}"
-    assert len(pd.read_parquet(parquet_files[0])) > 0, "Trajectory parquet is empty"
     assert sid in model.simulations
-    assert model.simulations[sid].has_trajectory
-    assert (sim_dir / "met").is_dir(), "met is staged inside the variant directory"
+    sim = model.simulations[sid]
+    assert sim.has_trajectory
+    assert sim.trajectories_path is not None
+    assert sim.trajectories_path.parent.name == "date=2021-01-15"
+    assert sim.trajectories_path.parent.parent.name.startswith("settings=hrrr-")
+    assert len(pd.read_parquet(sim.trajectories_path)) > 0, "Particle file is empty"
+    assert sim.trajectories is not None and len(sim.trajectories.data) > 0
+    assert not sim.directory.exists(), "the scratch working directory is removed"
 
-    log_file = sim_dir / "stilt.log"
-    assert log_file.exists(), "stilt.log missing"
-    log_text = log_file.read_text()
+    log_text = sim.log
     for phrase in ("FATAL ERROR", "Segmentation fault", "hycs_std: not found"):
         assert phrase not in log_text, f"Fatal phrase in log: {phrase!r}"
 
@@ -86,14 +84,11 @@ def test_footprint(tmp_path, wbb_receptor, wbb_config):
     model.run()
 
     sim = model.simulations[_sim_id(wbb_receptor)]
-    assert sim.footprint_path.exists(), f"No footprint NetCDF in {sim.directory}"
-
-    ds = xr.open_dataset(sim.footprint_path)
-    assert {"time", "lat", "lon"} <= set(ds.dims), f"Missing dims in {set(ds.dims)}"
-    ds.close()
-
+    assert sim.footprint_path is not None and sim.footprint_path.exists()
     assert sim.has_footprint
     assert sim.footprint is not None
+    assert {"time", "lat", "lon"} <= set(sim.footprint.data.dims)
+    assert float(sim.footprint.data.sum()) > 0
 
 
 @integration
@@ -117,18 +112,16 @@ def test_empty_footprint(tmp_path, wbb_receptor, wbb_config):
     sim = model.simulations[_sim_id(wbb_receptor)]
     assert sim.is_complete()
     assert sim.has_trajectory
-    assert not sim.footprint_path.exists()
-    assert sim.empty_footprint_path.read_text().strip() == "outside_domain"
     assert sim.empty_reason == "outside_domain"
     assert sim.footprint is None
     assert model.simulations.footprint.load() == {}
     status = model.simulations.status()
     assert bool(status["empty"].iloc[0]) and bool(status["complete"].iloc[0])
 
-    # A rerun has nothing to do and does not touch the marker.
-    before = sim.empty_footprint_path.stat().st_mtime_ns
+    # A rerun has nothing to do and does not touch the empty record.
+    before = sim.footprint_path.stat().st_mtime_ns
     model.run()
-    assert sim.empty_footprint_path.stat().st_mtime_ns == before
+    assert sim.footprint_path.stat().st_mtime_ns == before
 
 
 # ---------------------------------------------------------------------------
@@ -213,7 +206,7 @@ def test_column(tmp_path, wbb_column_receptor, wbb_config):
 
     sim = model.simulations[sid]
     assert sim.has_trajectory
-    assert sim.footprint_path.exists(), "No footprint NetCDF"
+    assert sim.has_footprint
 
 
 @integration
@@ -231,19 +224,19 @@ def test_multipoint(tmp_path, wbb_multipoint_receptor, multipoint_config):
 
     sim = model.simulations[sid]
     assert sim.has_trajectory
-    assert sim.footprint_path.exists(), "No footprint NetCDF"
+    assert sim.has_footprint
 
 
 # ---------------------------------------------------------------------------
-# A derived variant: a second footprint from the same particles
+# A second footprint from the same particles
 # ---------------------------------------------------------------------------
 
 
 @integration
-def test_derived_variant_rasterizes_the_same_particles(
+def test_footprint_only_variant_rasterizes_the_same_particles(
     tmp_path, wbb_receptor, multifoot_config
 ):
-    """``coarse: {from: hrrr}`` writes a coarser footprint and runs no HYSPLIT."""
+    """A variant that changes only the grid shares hrrr's particles and runs no HYSPLIT."""
     model = Model(
         project=tmp_path / "multifoot",
         config=multifoot_config,
@@ -255,8 +248,9 @@ def test_derived_variant_rasterizes_the_same_particles(
     coarse = model.simulations[_sim_id(wbb_receptor, "coarse")]
 
     assert fine.has_footprint and coarse.has_footprint
-    assert not (coarse.directory / "stilt.log").exists()
-    assert not list(coarse.directory.glob("*_traj.parquet"))
+    assert coarse.run == fine.run  # one set of particles
+    assert len(model.output.runs()) == 1
+    assert {f.name for f in fine.run.footprint_sets()} == {"hrrr", "coarse"}
     assert coarse.footprint is not None and fine.footprint is not None
     assert coarse.footprint.grid.xres == 0.05
     assert fine.footprint.grid.xres == 0.01
@@ -265,10 +259,10 @@ def test_derived_variant_rasterizes_the_same_particles(
 
 
 @integration
-def test_adding_a_derived_variant_runs_no_hysplit(
+def test_adding_a_footprint_only_variant_runs_no_hysplit(
     tmp_path, wbb_receptor, wbb_config, wbb_grid
 ):
-    """A finished project grows a footprint-only variant; the trajectory is reused."""
+    """A finished project grows a footprint-only variant; the particles are reused."""
     project = tmp_path / "grow"
     first = Model(project=project, config=wbb_config, receptors=[wbb_receptor])
     first.run()
@@ -280,7 +274,7 @@ def test_adding_a_derived_variant_runs_no_hysplit(
         project=project,
         config=_with(
             wbb_config,
-            variants={"hrrr": {}, "s2": {"from": "hrrr", "smooth_factor": 2}},
+            variants={"hrrr": {}, "s2": {"smooth_factor": 2}},
         ),
     )
     assert grown.simulations.incomplete().keys() == [_sim_id(wbb_receptor, "s2")]
@@ -319,9 +313,10 @@ def test_cli_run(tmp_path, wbb_config, wbb_receptor):
     )
     assert "completed=1" in result.output
 
-    sim_dir = project_dir / "simulations" / "by-id" / _sim_id(wbb_receptor)
-    assert list(sim_dir.glob("*_traj.parquet")), "CLI run: no trajectory parquet"
-    assert list(sim_dir.glob("*_foot.nc")), "CLI run: no footprint NetCDF"
+    sim = Model(project=project_dir).simulations[_sim_id(wbb_receptor)]
+    assert sim.has_trajectory, "CLI run: no particles"
+    assert sim.has_footprint, "CLI run: no footprint"
+    assert (project_dir / "output" / "particles").is_dir()
 
 
 # ---------------------------------------------------------------------------
@@ -332,16 +327,21 @@ def test_cli_run(tmp_path, wbb_config, wbb_receptor):
 @integration
 def test_error_variant(tmp_path, wbb_receptor, traj_only_config):
     """A variant with WINDERR fields is its own HYSPLIT run with perturbed winds."""
-    config = _with(traj_only_config, variants={"hrrr": {}, "hrrr-err": _XYERR})
+    config = _with(
+        traj_only_config, keep_scratch=True, variants={"hrrr": {}, "hrrr-err": _XYERR}
+    )
     model = Model(project=tmp_path / "error", config=config, receptors=[wbb_receptor])
     model.run()
 
     main = model.simulations[_sim_id(wbb_receptor)]
     err = model.simulations[_sim_id(wbb_receptor, "hrrr-err")]
+    rid = str(wbb_receptor.id)
+    err_scratch = err.run.scratch_path(rid)
+    main_scratch = main.run.scratch_path(rid)
 
-    assert (err.directory / "WINDERR").exists()
-    assert not (main.directory / "WINDERR").exists()
-    assert "winderrtf=1" in (err.directory / "SETUP.CFG").read_text().lower()
+    assert (err_scratch / "WINDERR").exists()
+    assert not (main_scratch / "WINDERR").exists()
+    assert "winderrtf=1" in (err_scratch / "SETUP.CFG").read_text().lower()
 
     main_traj = main.trajectories.data
     error_traj = err.trajectories.data
@@ -438,7 +438,6 @@ def test_seeded_error_realizations_differ_and_reproduce(
 @integration
 def test_geometry_footprint(tmp_path, wbb_receptor, met_dir):
     """A footprint named by geometry derives its raster, runs, and aggregates."""
-    from stilt.footprint import Footprint
 
     from .fixtures.r_stilt_reference import (
         REFERENCE_KRAND,
@@ -478,7 +477,8 @@ def test_geometry_footprint(tmp_path, wbb_receptor, met_dir):
 
     sim = model.simulations[_sim_id(wbb_receptor)]
     assert sim.has_footprint
-    foot = Footprint.from_netcdf(sim.footprint_path)
+    foot = sim.footprint
+    assert foot is not None
     assert foot.config.grid == fc.grid
     assert foot.config.geometry == fc.geometry
     assert foot.config.geometry_hash == fc.geometry_hash
@@ -507,7 +507,6 @@ def test_geometry_footprint(tmp_path, wbb_receptor, met_dir):
 @integration
 def test_forward_run(tmp_path, met_dir, wbb_grid):
     """A forward simulation runs end to end and carries a forward time axis."""
-    from stilt.footprint import Footprint
     from stilt.receptors import PointReceptor
 
     from .fixtures.r_stilt_reference import (
@@ -561,8 +560,9 @@ def test_forward_run(tmp_path, met_dir, wbb_grid):
     assert start == receptor.time
     assert stop == receptor.time + pd.Timedelta(hours=3)
 
-    assert sim.footprint_path.exists(), f"no footprint NetCDF in {sim.directory}"
-    foot = Footprint.from_netcdf(sim.footprint_path)
+    assert sim.has_footprint, f"no footprint for {sim.id}"
+    foot = sim.footprint
+    assert foot is not None
     times = pd.DatetimeIndex(foot.data["time"].values)
     # hourly layers running forward, inside the window time_range reports
     assert times.is_monotonic_increasing

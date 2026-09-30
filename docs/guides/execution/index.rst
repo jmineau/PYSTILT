@@ -77,15 +77,16 @@ scripts and logs.
    Saves the project's settings and receptors without running anything. If
    a queue is set up, it also adds the receptors to the queue.
 
-``stilt rm --variant NAME``
-   Deletes a variant's outputs so it runs again from scratch. Repeat
-   ``--variant`` to delete several (:doc:`../configuration`).
+``stilt convert``
+   Copies the results of a project run before the output directory existed
+   into it (:doc:`../project_layout`).
 
 When a simulation fails
 -----------------------
 
 A failed simulation doesn't stop the others. The error goes to the end of
-that simulation's ``stilt.log``. The simulation stays unfinished, so the next
+that simulation's log in the output directory, and its HYSPLIT working
+folder is kept under ``scratch/`` there. The simulation stays unfinished, so the next
 ``stilt run`` tries it again. Fix the cause (often missing meteorology) and
 run again. Finished simulations are skipped.
 
@@ -93,5 +94,5 @@ In Python, ``sim.outcome`` gives a short failure reason and ``sim.log`` the
 full log.
 
 A footprint can be empty because no particle reached the grid. That is not a
-failure. PYSTILT writes a ``.empty`` file in its place, and the simulation
-counts as finished (see :doc:`../outputs`).
+failure. PYSTILT records it with the reason, and the simulation counts as
+finished (see :doc:`../outputs`).

@@ -14,8 +14,7 @@ prints a short summary. Examples::
     stilt pull-worker ./my_project    # run receptors from the Postgres queue
     stilt serve ./my_project          # keep taking work from the queue
     stilt status                      # count finished simulations
-    stilt rm --variant hrrr-zi08      # delete a variant's outputs to run it again
-    stilt rm --variant hrrr --variant hrrr-zi08   # several at once
+    stilt convert ./old_project       # copy a pre-output-directory project's results
 """
 
 from __future__ import annotations
@@ -33,9 +32,9 @@ from stilt.execution import (
     run_receptors,
 )
 from stilt.model import Model
+from stilt.output import Output, convert_project
 from stilt.project import CONFIG_KEY, RECEPTORS_KEY
 from stilt.receptors import read_receptors
-from stilt.store import is_uri
 
 app = typer.Typer(
     name="stilt",
@@ -87,6 +86,11 @@ varsiwant: [time, indx, long, lati, zagl, foot, mlht, pres, dens, samt, sigw, tl
 hnf_plume: true  # rescale footprints via a gaussian plume model in the hyper-near field
 
 
+# Results go to this directory, relative to the project unless absolute.
+# Several projects can name the same directory and share runs.
+output: ./output
+
+
 # Execution is optional. Local execution is the default.
 # execution:
 #   backend: local  # or "slurm"
@@ -110,24 +114,16 @@ _REQUIRED_PROJECT_ARG = typer.Argument(..., help="Path or URI of the STILT proje
 _NO_SKIP = typer.Option(
     False, "--no-skip", help="Run simulations again even if their outputs exist."
 )
-_VARIANTS = typer.Option(
-    ...,
-    "--variant",
-    help="Variant or realization group whose outputs to delete. Repeat for several.",
-)
 _COMPUTE_ROOT = typer.Option(
     None,
     "--compute-root",
-    help="Directory under which simulations run. Defaults to PYSTILT_COMPUTE_ROOT, then the project's simulations/by-id.",
+    help="Scratch directory HYSPLIT runs under. Defaults to PYSTILT_COMPUTE_ROOT, then $TMPDIR/pystilt/<project>.",
 )
 
 
 def _resolve_project(path: str | Path | None) -> str:
-    """Return the absolute project path, exiting if it has no config.yaml. A URI is returned unchanged."""
+    """Return the absolute project path, exiting if it has no config.yaml."""
     raw = str(path or Path.cwd())
-    if is_uri(raw):
-        return raw
-
     resolved = Path(raw).resolve()
     if not (resolved / CONFIG_KEY).exists():
         typer.echo(
@@ -259,30 +255,6 @@ def register(
     )
 
 
-@app.command("rm")
-def rm(
-    project: str | None = _PROJECT_ARG,
-    variant: list[str] = _VARIANTS,
-    yes: bool = typer.Option(False, "--yes", "-y", help="Do not ask for confirmation."),
-) -> None:
-    """
-    Delete the outputs of one or more variants so they run again.
-
-    Use it after changing the settings of a variant that has already run,
-    including a default that the variant inherits, or to remove a variant
-    that config.yaml no longer lists. Variants that use its particles
-    through from: are deleted too.
-    """
-    model = Model(project=_resolve_project(project))
-    names = ", ".join(repr(v) for v in variant)
-    if not yes and not typer.confirm(
-        f"Delete every simulation of {names} in {model.project.root}?"
-    ):
-        raise typer.Exit(code=1)
-    deleted = [sid for v in variant for sid in model.remove(v)]
-    typer.echo(f"Deleted {len(deleted)} simulation(s) of {names}.")
-
-
 @app.command("pull-worker")
 def pull_worker(
     project: str = _REQUIRED_PROJECT_ARG,
@@ -354,6 +326,35 @@ def status(project: str | None = _PROJECT_ARG) -> None:
     _print_status(model)
 
 
+@app.command()
+def convert(
+    project: str | None = _PROJECT_ARG,
+    output: str | None = typer.Option(
+        None,
+        "--output",
+        help="Output directory to write to. Defaults to the one config.yaml names.",
+    ),
+    no_verify: bool = typer.Option(
+        False, "--no-verify", help="Do not read each written file back to check it."
+    ),
+) -> None:
+    """
+    Copy a project's old simulations/by-id results into its output directory.
+
+    For projects run before results moved to the output directory. Files
+    already there are skipped, so it can be rerun. The old tree is left in
+    place; delete it yourself once the output directory is checked.
+    """
+    model = Model(project=_resolve_project(project))
+    target = Output(output) if output is not None else model.output
+    report = convert_project(model, target, verify=not no_verify)
+    typer.echo(
+        f"Converted into {target.path}: {report.particles} particle files "
+        f"({report.particles_skipped} already there), {report.footprints} footprints "
+        f"({report.footprints_skipped} already there), {report.logs} logs."
+    )
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -372,12 +373,14 @@ def _print_status(model: Model) -> None:
     if len(model.variants) > 1:
         for variant, rows in table.groupby("variant", sort=False):
             typer.echo(f"  {variant}: {_counts(rows)}")
-    orphans = model.orphans()
-    if orphans:
-        typer.echo(
-            "Variants with outputs that config.yaml no longer declares: "
-            f"{', '.join(orphans)}  (delete with: stilt rm --variant NAME)"
-        )
+    unreferenced = model.unreferenced()
+    for kind, keys in unreferenced.items():
+        if keys:
+            typer.echo(
+                f"{kind} folders in {model.output.path} that no variant here uses: "
+                f"{', '.join('settings=' + k for k in keys)}  (from changed settings, "
+                "dropped variants, or another project; PYSTILT never deletes them)"
+            )
 
 
 def _print_run_start(
@@ -395,11 +398,8 @@ def _print_run_start(
         f"project={model.project.root}  backend={backend}  "
         f"dispatch={executor.dispatch}  workers={executor.n_workers}  skip={mode}"
     )
-    default_compute_root = (
-        None if model.project.is_cloud else model.project.simulations_dir
-    )
-    if model.compute_root != default_compute_root:
-        typer.echo(f"Compute root: {model.compute_root}")
+    typer.echo(f"Output: {model.output.path}")
+    typer.echo(f"Compute root: {model.compute_root}")
     typer.echo(f"Receptors loaded: {len(model.receptors)}")
     typer.echo(f"Variants: {', '.join(model.variants)}")
     typer.echo(

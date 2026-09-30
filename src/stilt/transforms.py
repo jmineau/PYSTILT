@@ -51,7 +51,6 @@ from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, model_validator
 
 if TYPE_CHECKING:
     from stilt.receptors import Receptor
-    from stilt.store import Store
 
 
 # -- interface ------------------------------------------------------------------
@@ -69,14 +68,14 @@ class TransformContext:
         per-receptor inputs such as a row of an averaging-kernel table.
     variant : str
         Variant the footprint is computed for.
-    store : Store or None
-        The project's store, used to find files named relative to the project
-        root.
+    directory : Path or None
+        Directory that file names in transform settings are relative to,
+        normally the project directory.
     """
 
     receptor: Receptor
     variant: str = ""
-    store: Store | None = None
+    directory: Path | None = None
 
 
 @runtime_checkable
@@ -452,8 +451,8 @@ class AveragingKernel(BaseModel):
                 "which receptor to look up."
             )
         path = self.table
-        if context.store is not None and not Path(path).is_absolute():
-            path = str(context.store.local_path(path))
+        if context.directory is not None and not Path(path).is_absolute():
+            path = str(Path(context.directory) / path)
         kernels = _read_kernel_table(path, os.stat(path).st_mtime)
         rid = str(context.receptor.id)
         try:

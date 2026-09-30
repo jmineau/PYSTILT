@@ -132,7 +132,7 @@ def test_variants_that_differ_only_in_footprint_fields_share_settings(tmp_path):
         variants={
             "hrrr": {},
             "hrrr-smooth": {"smooth_factor": 0.5},
-            "hrrr-coarse": {"from": "hrrr", "grid": {"xres": 0.5, "yres": 0.5}},
+            "hrrr-coarse": {"grid": {"xres": 0.5, "yres": 0.5}},
             "hrrr-err": {
                 "siguverr": 2.0,
                 "tluverr": 100.0,

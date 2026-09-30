@@ -16,6 +16,8 @@ from typing import TYPE_CHECKING, overload
 import pandas as pd
 
 from stilt.footprint import Footprint
+from stilt.geometry import Geometry
+from stilt.output import Jacobian
 from stilt.receptors import Receptor, read_receptors
 from stilt.simulation import SimID, Simulation
 from stilt.trajectory import Trajectories
@@ -65,7 +67,7 @@ class ReceptorCollection:
             return None
         if isinstance(receptors, (str, Path)):
             path = Path(receptors)
-            if not path.is_absolute() and not self._project.is_cloud:
+            if not path.is_absolute():
                 path = self._project.directory / path
             return read_receptors(path)
         if isinstance(receptors, Receptor):
@@ -87,7 +89,7 @@ class ReceptorCollection:
         if loaded is None:
             raise FileNotFoundError(
                 "No receptors available: none were given and there is no "
-                f"receptors.csv in {self._project.root}."
+                f"receptors.csv in {self._project.directory}."
             )
         self._items = loaded
         return self._items
@@ -344,7 +346,7 @@ class SimulationCollection:
             {
                 "receptor": str(sim.id.receptor),
                 "variant": sim.variant,
-                TRAJECTORY: sim.has_trajectory if not sim.is_derived else pd.NA,
+                TRAJECTORY: sim.has_trajectory,
                 FOOTPRINT: sim.has_footprint if sim.makes_footprint else pd.NA,
                 "empty": (sim.empty_reason is not None)
                 if sim.makes_footprint
@@ -365,6 +367,29 @@ class SimulationCollection:
 
     # -- outputs ---------------------------------------------------------------
 
+    def jacobian(self, target: Geometry, time_bins: pd.IntervalIndex) -> Jacobian:
+        """
+        Sum the selected footprints onto a target, per time bin, as one sparse matrix.
+
+        The selection must hold one variant, so every footprint is on one
+        grid. See :meth:`stilt.output.Footprints.jacobian`.
+
+        Raises
+        ------
+        ValueError
+            If the selection spans several variants, or its variant has no
+            grid or no footprints yet.
+        """
+        variants = self.variants
+        if len(variants) != 1:
+            raise ValueError(
+                f"jacobian needs one variant; select one of {variants} first."
+            )
+        feet = self._model.variant_output(variants[0]).footprints
+        if feet is None:
+            raise ValueError(f"Variant {variants[0]!r} has no footprints yet.")
+        return feet.jacobian(target, time_bins, receptors=self.receptors)
+
     @property
     def trajectories(self) -> OutputCollection:
         """Trajectories of the selected simulations that run HYSPLIT."""
@@ -380,10 +405,9 @@ class OutputCollection:
     """
     One output, ``trajectory`` or ``footprint``, across a selection of simulations.
 
-    Only simulations that make the output are included. A derived variant
-    has no trajectory of its own, and a variant without a grid has no
-    footprint. Get one from ``model.simulations.trajectories`` or
-    ``model.simulations.footprint``.
+    Only simulations that make the output are included: a variant without
+    a grid has no footprint. Get one from ``model.simulations.trajectories``
+    or ``model.simulations.footprint``.
     """
 
     def __init__(self, simulations: SimulationCollection, output: str):
@@ -395,26 +419,28 @@ class OutputCollection:
     def _producers(self) -> list[Simulation]:
         """Return the simulations that make this output."""
         if self.output == TRAJECTORY:
-            return [sim for sim in self._sims if not sim.is_derived]
+            return list(self._sims)
         return [sim for sim in self._sims if sim.makes_footprint]
 
-    def _path(self, sim: Simulation) -> Path:
-        return (
-            sim.trajectories_path if self.output == TRAJECTORY else sim.footprint_path
-        )
-
     def paths(self) -> dict[SimID, Path]:
-        """
-        Return local paths of the output files that exist, by simulation id.
-
-        Files in a remote store are downloaded first.
-        """
-        found = ((sim.id, sim.resolve(self._path(sim))) for sim in self._producers())
-        return {sid: path for sid, path in found if path is not None}
+        """Return the paths of the output files that exist in the output directory, by simulation id."""
+        found = {}
+        for sim in self._producers():
+            path = (
+                sim.trajectories_path
+                if self.output == TRAJECTORY
+                else sim.footprint_path
+            )
+            if path is not None and path.exists():
+                found[sim.id] = path
+        return found
 
     def load(self) -> dict[SimID, Trajectories] | dict[SimID, Footprint]:
         """
         Load every output that exists, by simulation id.
+
+        An empty footprint is left out, as :attr:`stilt.Simulation.footprint`
+        is ``None`` for it.
 
         Returns
         -------
@@ -424,9 +450,15 @@ class OutputCollection:
         """
         if self.output == TRAJECTORY:
             return {
-                sid: Trajectories.from_parquet(p) for sid, p in self.paths().items()
+                sim.id: traj
+                for sim in self._producers()
+                if (traj := sim.trajectories) is not None
             }
-        return {sid: Footprint.from_netcdf(p) for sid, p in self.paths().items()}
+        return {
+            sim.id: foot
+            for sim in self._producers()
+            if (foot := sim.footprint) is not None
+        }
 
     def __len__(self) -> int:
         return len(self._producers())

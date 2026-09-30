@@ -52,15 +52,21 @@ def scenario_outputs(request, met_dir, rscript, r_stilt_dir, tmp_path_factory) -
     model.run()
     print(f"\n[PROFILE] {scenario.name} PYSTILT sim: {time.perf_counter() - t0:.1f}s")
 
-    sim_dir = model.simulations[scenario.py_sim_id()].directory
-
-    traj_files = list(sim_dir.glob("*_traj.parquet"))
-    foot_files = list(sim_dir.glob("*_foot.nc"))
-
-    if not traj_files:
-        pytest.fail(f"[{scenario.name}] No trajectory parquet found in {sim_dir}")
-    if not foot_files:
-        pytest.fail(f"[{scenario.name}] No footprint NetCDF found in {sim_dir}")
+    sim = model.simulations[scenario.py_sim_id()]
+    if not sim.has_trajectory:
+        pytest.fail(f"[{scenario.name}] No particles written for {sim.id}")
+    if not sim.has_footprint:
+        pytest.fail(f"[{scenario.name}] No footprint written for {sim.id}")
+    traj_file = sim.trajectories_path
+    assert traj_file is not None
+    # The footprint is stored sparse in float32; compare the footprint as
+    # computed, in float64, by remaking it from the stored particles.
+    foot = sim.generate_footprint()
+    assert foot is not None, f"[{scenario.name}] footprint is empty"
+    foot_file = project_dir / "py_foot.nc"
+    foot.to_netcdf(foot_file)
+    assert sim.run is not None
+    setup_file = sim.run.scratch_path(str(receptor.id)) / "SETUP.CFG"
 
     error_traj_path = None
     if scenario.error_variant is not None:
@@ -76,9 +82,9 @@ def scenario_outputs(request, met_dir, rscript, r_stilt_dir, tmp_path_factory) -
         )
         return {
             "scenario": scenario,
-            "traj": traj_files[0],
-            "foot": foot_files[0],
-            "setup": sim_dir / "SETUP.CFG",
+            "traj": traj_file,
+            "foot": foot_file,
+            "setup": setup_file,
             "r_traj": None,
             "r_error_traj": None,
             "error_traj": None,
@@ -147,9 +153,9 @@ def scenario_outputs(request, met_dir, rscript, r_stilt_dir, tmp_path_factory) -
 
     return {
         "scenario": scenario,
-        "traj": traj_files[0],
-        "foot": foot_files[0],
-        "setup": sim_dir / "SETUP.CFG",
+        "traj": traj_file,
+        "foot": foot_file,
+        "setup": setup_file,
         "r_traj": r_traj,
         "r_error_traj": r_error_traj,
         "error_traj": error_traj_path,
