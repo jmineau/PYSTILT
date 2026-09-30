@@ -6,6 +6,7 @@ import os
 import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Self, cast
+from uuid import uuid4
 
 import numpy as np
 import pandas as pd
@@ -401,7 +402,7 @@ class Trajectories:
         }
         existing = table.schema.metadata or {}
         table = table.replace_schema_metadata({**existing, **meta})
-        tmp_path = path.with_suffix(path.suffix + ".tmp")
+        tmp_path = path.with_name(f".{path.name}.{uuid4().hex}.tmp")
         try:
             pq.write_table(table, tmp_path, compression="zstd")
             os.replace(tmp_path, path)

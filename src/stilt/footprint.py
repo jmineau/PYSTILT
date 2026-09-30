@@ -7,6 +7,7 @@ import warnings
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Self, cast
+from uuid import uuid4
 
 import numpy as np
 import pandas as pd
@@ -956,7 +957,7 @@ class Footprint:
             )
             ds.attrs["geometry_hash"] = self.config.geometry_hash or ""
 
-        tmp_path = path.with_suffix(path.suffix + ".tmp")
+        tmp_path = path.with_name(f".{path.name}.{uuid4().hex}.tmp")
         try:
             ds.to_netcdf(
                 tmp_path,
