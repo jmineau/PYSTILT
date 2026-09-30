@@ -154,7 +154,7 @@ def test_particles_round_trip_in_date_folders(tmp_path):
     receptor = _receptor()
     traj = _trajectories(receptor)
     path = run.write_particles(traj)
-    assert path == run.particles_dir / "2024" / "07" / "15" / f"{receptor.id}.parquet"
+    assert path == run.particles_dir / "date=2024-07-15" / f"{receptor.id}.parquet"
     assert run.has_particles(str(receptor.id))
     assert run.receptors() == [str(receptor.id)]
 
@@ -223,7 +223,7 @@ def test_footprint_round_trip_is_exact_in_float32(tmp_path):
     receptor = _receptor()
     foot = _footprint(receptor, hours=(-3, -2, -1, 0), seed=1)
     path = feet.write(foot)
-    assert path == feet.path / "2024" / "07" / "15" / f"{receptor.id}.parquet"
+    assert path == feet.path / "date=2024-07-15" / f"{receptor.id}.parquet"
 
     back = feet.read(str(receptor.id))
     assert back is not None
@@ -331,6 +331,18 @@ def test_jacobian_matches_footprint_aggregate(written_footprints, target):
         expected = foot.aggregate(target, bins)  # (cells × bins)
         got = frame.loc[rid].to_numpy().reshape(len(bins), len(target.index)).T
         np.testing.assert_allclose(got, expected.to_numpy(), rtol=1e-6, atol=1e-12)
+
+
+def test_table_reads_the_date_folder_as_a_date32_column(written_footprints):
+    import pyarrow as pa
+
+    feet, feet_by_id, empty_id = written_footprints
+    table = feet.table()
+    assert table.schema.field("date").type == pa.date32()
+    assert set(table.column("date").to_pylist()) == {dt.date(2024, 7, 15)}
+    assert set(table.column("receptor").to_pylist()) == set(feet_by_id)
+    assert feet.table([]).num_rows == 0
+    assert feet.table([]).schema.field("date").type == pa.date32()
 
 
 def test_jacobian_selection_and_missing(written_footprints):
