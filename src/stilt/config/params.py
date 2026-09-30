@@ -137,18 +137,18 @@ class TransportParams(BaseModel):
         48, description="Particle age at which particles and puffs convert, in hours."
     )
     cpack: int = Field(1, description="Packing of the binary concentration grid.")
-    delt: int = Field(
-        1,
+    delt: float = Field(
+        1.0,
         description=(
             "Integration time step, in minutes. 0 lets HYSPLIT choose; a "
             "negative value sets the minimum step."
         ),
     )
-    dxf: int = Field(
-        1, description="Horizontal x-grid offset factor for ensemble runs."
+    dxf: float = Field(
+        1.0, description="Horizontal x-grid offset factor for ensemble runs."
     )
-    dyf: int = Field(
-        1, description="Horizontal y-grid offset factor for ensemble runs."
+    dyf: float = Field(
+        1.0, description="Horizontal y-grid offset factor for ensemble runs."
     )
     dzf: float = Field(
         0.01,
@@ -172,8 +172,8 @@ class TransportParams(BaseModel):
     frmr: float = Field(0.0, description="Mass-removal fraction for enhanced merging.")
     frts: float = Field(0.1, description="Temporal puff-rounding fraction.")
     frvs: float = Field(0.01, description="Vertical puff-rounding fraction.")
-    hscale: int = Field(
-        10800, description="Horizontal Lagrangian timescale, in seconds."
+    hscale: float = Field(
+        10800.0, description="Horizontal Lagrangian timescale, in seconds."
     )
     ichem: int = Field(
         8,
@@ -329,7 +329,7 @@ class TransportParams(BaseModel):
             "minutes. 0 writes every time step and a negative value writes none."
         ),
     )
-    p10f: int = Field(1, description="Dust threshold velocity sensitivity factor.")
+    p10f: float = Field(1.0, description="Dust threshold velocity sensitivity factor.")
     pinbc: str = Field(
         "",
         description="Particle input file for time-varying boundary conditions.",
@@ -342,19 +342,19 @@ class TransportParams(BaseModel):
         "",
         description="Particle output file name.",
     )
-    qcycle: int = Field(
-        0, description="Emission cycling period, in hours. 0 turns cycling off."
+    qcycle: float = Field(
+        0.0, description="Emission cycling period, in hours. 0 turns cycling off."
     )
-    rhb: float = Field(
-        80.0,
+    rhb: int = Field(
+        80,
         description="Relative humidity that defines a cloud base, in percent.",
     )
-    rht: float = Field(
-        60.0,
+    rht: int = Field(
+        60,
         description="Relative humidity that defines a cloud top, in percent.",
     )
-    splitf: int = Field(
-        1,
+    splitf: float = Field(
+        1.0,
         description=(
             "Factor for the automatic horizontal splitting size. A negative "
             "value turns the automatic sizing off."
@@ -373,8 +373,8 @@ class TransportParams(BaseModel):
             "step of the STILT dispersion scheme."
         ),
     )
-    tout: float = Field(
-        0.0,
+    tout: int = Field(
+        0,
         description="Trajectory output interval, in minutes.",
     )
     tratio: float = Field(
@@ -393,16 +393,16 @@ class TransportParams(BaseModel):
             "larger value is meters above ground."
         ),
     )
-    vscale: int = Field(
-        200,
+    vscale: float = Field(
+        200.0,
         description="Vertical Lagrangian timescale, in seconds.",
     )
-    vscaleu: int = Field(
-        200,
+    vscaleu: float = Field(
+        200.0,
         description="Vertical Lagrangian timescale in an unstable boundary layer, in seconds.",
     )
-    vscales: int = Field(
-        -1,
+    vscales: float = Field(
+        -1.0,
         description=(
             "Vertical Lagrangian timescale in a stable boundary layer, in "
             "seconds. -1 uses the Hanna timescale, which varies with the "
@@ -416,19 +416,20 @@ class TransportParams(BaseModel):
             "1 isobaric, 2 isentropic, 3 constant density, 4 constant sigma."
         ),
     )
-    wbbh: int = Field(
-        0,
+    wbbh: float = Field(
+        0.0,
         description=(
             "Height at which the fixed vertical velocity switches from rise to "
             "fall, in meters. Used by vertical motion option 9."
         ),
     )
-    wbwf: int = Field(
-        0,
+    wbwf: float = Field(
+        0.0,
         description="Fixed fall velocity, in m/s. Used by vertical motion options 9 and 10.",
     )
-    wbwr: int = Field(
-        0, description="Fixed rise velocity, in m/s. Used by vertical motion option 9."
+    wbwr: float = Field(
+        0.0,
+        description="Fixed rise velocity, in m/s. Used by vertical motion option 9.",
     )
     wvert: bool = Field(
         False,

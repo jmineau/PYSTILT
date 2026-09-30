@@ -40,6 +40,13 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   set `exe_dir` to your own `hycs_std` build (it used to say `PATH`, which
   PYSTILT never reads). Apple Silicon Macs keep using the macOS build
   through Rosetta.
+- **HYSPLIT settings take the types HYSPLIT reads**
+  ([#57](https://github.com/jmineau/PYSTILT/issues/57)). `rhb`, `rht`, and
+  `tout` are whole numbers, so a value such as `rhb: 80.5` is rejected here
+  instead of stopping HYSPLIT with a namelist error. `delt`, `dxf`, `dyf`,
+  `hscale`, `p10f`, `qcycle`, `splitf`, `vscale`, `vscales`, `vscaleu`,
+  `wbbh`, `wbwf`, and `wbwr` now accept fractions such as `delt: 0.5`. The
+  default `SETUP.CFG` is unchanged.
 
 ## [0.1.0a22] - 2026-09-29
 
