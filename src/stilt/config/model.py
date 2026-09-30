@@ -14,7 +14,7 @@ from .params import STILTParams
 from .variant import VARIANT_NAME_RE, VariantConfig, expand_variants
 
 #: ModelConfig fields that are not parameters a variant inherits.
-_PROJECT_FIELDS = frozenset({"mets", "variants", "execution"})
+_PROJECT_FIELDS = frozenset({"mets", "variants", "execution", "output", "keep_scratch"})
 
 
 class ModelConfig(STILTParams, FootprintConfig):
@@ -37,15 +37,30 @@ class ModelConfig(STILTParams, FootprintConfig):
         description=(
             "Variants by name, each a set of overrides of the defaults. A "
             "variant may also set ``met`` (needed with several mets unless the "
-            "variant has a met's name), ``realizations`` (run N times, "
-            "realization k with ``seed + k``), or ``from`` (compute a footprint "
-            "from another variant's trajectories, changing only footprint "
-            "fields). Unset runs one variant per met."
+            "variant has a met's name) and ``realizations`` (run N times, "
+            "realization k with ``seed + k``). Variants with the same transport "
+            "settings share one run of HYSPLIT and differ in the footprint made "
+            "from it. Unset runs one variant per met."
         ),
     )
     execution: dict[str, Any] = Field(
         default_factory=dict,
         description="Execution backend settings, such as ``backend: slurm`` and its options.",
+    )
+    output: str = Field(
+        "output",
+        description=(
+            "Directory the results go to, relative to the project directory "
+            "unless absolute. Several projects can name the same directory and "
+            "share runs."
+        ),
+    )
+    keep_scratch: bool = Field(
+        False,
+        description=(
+            "Keep every run's HYSPLIT working directory under ``scratch/`` in "
+            "the output directory. A failed run's is always kept."
+        ),
     )
 
     @model_validator(mode="after")
@@ -90,8 +105,8 @@ class ModelConfig(STILTParams, FootprintConfig):
         that were given, top-level and for each met. ``mets`` and ``variants``
         come first. ``variants`` is always written, with one entry per met when
         none were declared, so the file lists the variants that run. The full
-        settings of each variant are kept in the project's record
-        (:meth:`stilt.Project.load_record`).
+        settings of each variant are in the output directory, in the
+        ``_settings.yaml`` of each ``settings=`` folder.
         """
         data = self.model_dump(mode="json", include=self.model_fields_set)
         data["mets"] = {

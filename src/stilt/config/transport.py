@@ -110,6 +110,14 @@ class TransportSettings(STILTParams):
     engine: EngineInfo = Field(
         description="Engine and version that produced the particles."
     )
+    realization: int | None = Field(
+        None,
+        description=(
+            "Realization number within an ensemble, or ``None`` for a single "
+            "run. Part of the identity, so realizations that HYSPLIT seeds from "
+            "the clock (``krand=4``) stay separate runs."
+        ),
+    )
 
     @classmethod
     def build(
@@ -117,6 +125,7 @@ class TransportSettings(STILTParams):
         params: STILTParams,
         met: MetContent | MetConfig,
         engine: EngineInfo | None = None,
+        realization: int | None = None,
     ) -> Self:
         """
         Return the settings for *params* run with *met*.
@@ -127,7 +136,9 @@ class TransportSettings(STILTParams):
         if engine is None:
             engine = EngineInfo(version=hysplit_version(params.exe_dir))
         content = met.content() if isinstance(met, MetConfig) else met
-        return cls(**params.model_dump(), met=content, engine=engine)
+        return cls(
+            **params.model_dump(), met=content, engine=engine, realization=realization
+        )
 
     def identity(self) -> dict[str, Any]:
         """

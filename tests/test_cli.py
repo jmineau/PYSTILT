@@ -11,7 +11,6 @@ from typer.testing import CliRunner
 import stilt.__main__
 from stilt.cli import _resolve_project, app
 from stilt.config import Grid, ModelConfig
-from stilt.project import SIMULATIONS_PREFIX
 
 runner = CliRunner()
 
@@ -56,18 +55,10 @@ def _fake_model_factory(captured: list[dict]):
     class _FakeModel:
         def __init__(self, project, compute_root=None):
             captured.append({"project": project, "compute_root": compute_root})
-            is_cloud = "://" in str(project)
-            self.project = SimpleNamespace(
-                root=project,
-                is_cloud=is_cloud,
-                simulations_dir=(
-                    None if is_cloud else Path(project) / SIMULATIONS_PREFIX
-                ),
-            )
+            self.project = SimpleNamespace(root=project, directory=Path(project))
+            self.output = SimpleNamespace(path=Path(project) / "output")
             self.compute_root = (
-                Path(compute_root)
-                if compute_root is not None
-                else self.project.simulations_dir
+                Path(compute_root) if compute_root is not None else Path("/tmp/scratch")
             )
             self.receptors = []
             self.variants = {"hrrr": None}
@@ -78,8 +69,8 @@ def _fake_model_factory(captured: list[dict]):
                 columns=["receptor", "variant", "trajectory", "footprint", "complete"]
             )
 
-        def orphans(self):
-            return []
+        def unreferenced(self):
+            return {"particles": [], "footprints": []}
 
         def run(self, executor=None, skip_existing=True, wait=True):
             return _FakeHandle()
@@ -117,10 +108,6 @@ def test_resolve_project_returns_path_when_config_exists(tmp_path):
     (tmp_path / "config.yaml").write_text("n_hours: -24\n")
     resolved = _resolve_project(tmp_path)
     assert resolved == str(tmp_path.resolve())
-
-
-def test_resolve_project_returns_cloud_uri_unchanged():
-    assert _resolve_project("s3://bucket/project") == "s3://bucket/project"
 
 
 # ---------------------------------------------------------------------------
@@ -177,10 +164,23 @@ def test_status_counts_full_simulation_completion(tmp_path):
     model = Model(project=tmp_path, config=cfg, receptors=[receptor])
     assert model.register() == [str(receptor.id)]
 
-    # Trajectory exists but the required footprint does not → not complete.
+    # Particles exist but the required footprint does not: not complete.
     sim = model.simulation((receptor.id, "hrrr"))
-    sim.directory.mkdir(parents=True, exist_ok=True)
-    sim.trajectories_path.write_bytes(b"x")
+    from stilt.trajectory import Trajectories
+
+    particles = pd.DataFrame(
+        {
+            "time": [-60.0],
+            "indx": [1.0],
+            "long": [-113.5],
+            "lati": [39.5],
+            "zagl": [10.0],
+            "foot": [1e-5],
+        }
+    )
+    sim.outputs.ensure_run().write_particles(
+        Trajectories(receptor=receptor, params=sim.params, met_files=[], data=particles)
+    )
 
     result = runner.invoke(app, ["status", str(tmp_path)])
 
@@ -188,7 +188,7 @@ def test_status_counts_full_simulation_completion(tmp_path):
     assert "total=1  completed=0  pending=1" in result.output
 
     # Once the footprint is present too, the simulation counts as complete.
-    sim.footprint_path.write_bytes(b"x")
+    sim.generate_footprint(write=True)
 
     result = runner.invoke(app, ["status", str(tmp_path)])
 
@@ -208,7 +208,7 @@ def test_cli_help_lists_current_commands():
         "push-worker",
         "serve",
         "status",
-        "rm",
+        "convert",
     }
     for command in expected:
         assert command in result.output
@@ -277,7 +277,8 @@ def test_run_prints_startup_and_wait_messages(tmp_path, monkeypatch):
         f"Starting run: project={tmp_path.resolve()}  backend=local  "
         "dispatch=push  workers=1  skip=existing"
     ) in result.output
-    assert "Compute root:" not in result.output  # default compute root
+    assert "Compute root:" in result.output
+    assert f"Output: {tmp_path.resolve() / 'output'}" in result.output
     assert "Receptors loaded: 1" in result.output
     assert "Execution mode: local, one line per receptor" in result.output
     assert f"Project: {tmp_path.resolve()}  total=" in result.output
@@ -317,18 +318,6 @@ def test_run_no_skip_passes_false(tmp_path, monkeypatch):
     assert result.exit_code == 0
     assert calls == [False]
     assert "skip=no-skip" in result.output
-
-
-def test_run_accepts_cloud_project_uri(monkeypatch):
-    """Cloud project URIs are forwarded unchanged into Model construction."""
-    captured: list[dict] = []
-    monkeypatch.setattr("stilt.cli.Model", _fake_model_factory(captured))
-
-    result = runner.invoke(app, ["run", "s3://bucket/project"])
-
-    assert result.exit_code == 0
-    assert captured == [{"project": "s3://bucket/project", "compute_root": None}]
-    assert "project=s3://bucket/project" in result.output
 
 
 def test_run_forwards_compute_root(tmp_path, monkeypatch):
@@ -485,21 +474,6 @@ def test_pull_worker_follow_flag_forwarded(tmp_path, monkeypatch):
     assert loop_calls == [{"follow": True}]
 
 
-def test_pull_worker_accepts_cloud_project_uri(monkeypatch):
-    """pull-worker can bootstrap from a cloud project ref."""
-    captured: list[dict] = []
-    monkeypatch.setattr("stilt.cli.Model", _fake_model_factory(captured))
-    monkeypatch.setattr(
-        "stilt.cli.pull_receptors",
-        lambda model, follow=False, poll_interval=10.0, skip_existing=None: None,
-    )
-
-    result = runner.invoke(app, ["pull-worker", "gs://bucket/project"])
-
-    assert result.exit_code == 0
-    assert captured == [{"project": "gs://bucket/project", "compute_root": None}]
-
-
 def test_pull_worker_forwards_compute_root(tmp_path, monkeypatch):
     """pull-worker forwards --compute-root into Model construction."""
     _write_minimal_config(tmp_path)
@@ -647,20 +621,6 @@ def test_serve_calls_pull_receptors_in_follow_mode(tmp_path, monkeypatch):
     result = runner.invoke(app, ["serve", str(tmp_path)])
     assert result.exit_code == 0
     assert loop_calls == [{"follow": True}]
-
-
-def test_serve_accepts_cloud_project_uri(monkeypatch):
-    captured: list[dict] = []
-    monkeypatch.setattr("stilt.cli.Model", _fake_model_factory(captured))
-    monkeypatch.setattr(
-        "stilt.cli.pull_receptors",
-        lambda model, follow=False, poll_interval=10.0, skip_existing=None: None,
-    )
-
-    result = runner.invoke(app, ["serve", "gs://bucket/project"])
-
-    assert result.exit_code == 0
-    assert captured == [{"project": "gs://bucket/project", "compute_root": None}]
 
 
 def test_serve_forwards_compute_root(tmp_path, monkeypatch):
@@ -819,7 +779,9 @@ def test_init_writes_science_first_commented_config(tmp_path):
         "numpar",
         "varsiwant",
         "hnf_plume",
+        "output",
     ]
+    assert parsed["output"] == "./output"
     assert parsed["grid"]["xmin"] == -113.0
     loaded = ModelConfig.from_yaml(project / "config.yaml")
     assert loaded.grid is not None and loaded.grid.xmin == -113.0
@@ -850,28 +812,19 @@ def test_init_aborts_when_config_exists(tmp_path):
     assert result.exit_code == 1
 
 
-def test_rm_deletes_several_variants(tmp_path):
+def test_status_lists_output_folders_no_variant_uses(tmp_path):
     from stilt.model import Model
 
     _write_minimal_config(tmp_path)
-    cfg = (
-        (tmp_path / "config.yaml")
-        .read_text()
-        .replace(
-            "variants:\n  hrrr: {}\n", "variants:\n  hrrr: {}\n  zi08: {ziscale: 0.8}\n"
-        )
-    )
-    (tmp_path / "config.yaml").write_text(cfg)
     model = Model(project=tmp_path)
     model.register()
-    for sim in model.simulations:
-        sim.directory.mkdir(parents=True, exist_ok=True)
-        sim.trajectories_path.write_bytes(b"stub")
+    # A run made under settings the config no longer has.
+    stale = model.variant_output("hrrr").settings.model_copy(update={"numpar": 7})
+    model.output.run("old", stale)
 
-    result = runner.invoke(
-        app, ["rm", str(tmp_path), "--variant", "hrrr", "--variant", "zi08", "--yes"]
-    )
+    result = runner.invoke(app, ["status", str(tmp_path)])
 
     assert result.exit_code == 0, result.output
-    assert "Deleted 2 simulation(s) of 'hrrr', 'zi08'." in result.output
-    assert model.project.load_record()["variants"] == {}
+    assert "particles folders" in result.output
+    assert "settings=old-" in result.output
+    assert "never deletes" in result.output

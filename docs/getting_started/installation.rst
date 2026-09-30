@@ -32,8 +32,8 @@ Extras add optional features. List them in the brackets, for example
    * - ``geometry``
      - Adding footprints up over shapefiles, counties, or H3 hexagons.
    * - ``cloud``
-     - Downloading meteorology from NOAA, projects stored in ``s3://`` or
-       ``gs://`` buckets, the PostgreSQL work queue, and Kubernetes workers.
+     - Downloading meteorology from NOAA, the PostgreSQL work queue, and
+       Kubernetes workers.
    * - ``complete``
      - Everything above.
 

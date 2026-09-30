@@ -1,34 +1,24 @@
 """
-The files of a STILT project.
+The files of a STILT project: its inputs.
 
-A project is a local directory or an object-store URI holding::
+A project is a directory holding what the user wrote::
 
-    config.yaml                    the user's settings (never rewritten)
-    receptors.csv                  the user's receptors (only appended to)
-    simulations/variants.yaml      the settings every variant ran with
-    simulations/by-id/<receptor_id>/<variant>/<receptor_id>_traj.parquet
-    simulations/by-id/<receptor_id>/<variant>/<receptor_id>_foot.nc
-    simulations/by-id/<receptor_id>/<variant>/<receptor_id>_foot.empty
-    simulations/by-id/<receptor_id>/<variant>/stilt.log
+    config.yaml       the settings (never rewritten once loaded from here)
+    receptors.csv     the receptors (only appended to)
 
-Every file is addressed by its path relative to the root. The simulations a
+Results go to the output directory ``config.yaml`` names
+(:class:`stilt.output.Output`), ``./output`` by default. The simulations a
 project defines are the receptors in ``receptors.csv`` crossed with the
-variants in ``config.yaml``. ``simulations/variants.yaml`` records the
-settings of every variant that has been registered, so those settings cannot
-change under the same name once the variant has outputs.
+variants in ``config.yaml``.
 """
 
 from __future__ import annotations
 
+import os
 import re
 import tempfile
-from io import StringIO
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
-
-import yaml
-
-from stilt.store import Store, is_uri, make_store
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from stilt.config import ModelConfig
@@ -36,8 +26,6 @@ if TYPE_CHECKING:
 
 CONFIG_KEY = "config.yaml"
 RECEPTORS_KEY = "receptors.csv"
-RECORD_KEY = "simulations/variants.yaml"
-SIMULATIONS_PREFIX = "simulations/by-id"
 
 
 def resolve_directory(
@@ -51,15 +39,12 @@ def resolve_directory(
     """
     if directory is None:
         return Path(tempfile.mkdtemp(prefix=prefix))
-    return Path(directory).resolve()
+    return Path(os.path.expandvars(os.path.expanduser(str(directory)))).resolve()
 
 
 def project_slug(root: str) -> str:
-    """Return a lowercase, hyphenated name for a project path or URI, safe for filenames and DNS."""
-    raw = root.rstrip("/")
-    if is_uri(raw):
-        raw = raw.split("://", 1)[1]
-    parts = [part for part in raw.split("/") if part]
+    """Return a lowercase, hyphenated name for a project path, safe for file and job names."""
+    parts = [part for part in str(root).rstrip("/").split("/") if part]
     candidate = parts[-1] if parts else "project"
     slug = candidate.lower().replace("_", "-")
     slug = re.sub(r"[^a-z0-9-]+", "-", slug)
@@ -67,14 +52,9 @@ def project_slug(root: str) -> str:
     return slug or "project"
 
 
-def simulation_prefix(sim_id: object) -> str:
-    """Return the key prefix of one simulation's outputs, ``simulations/by-id/<receptor_id>/<variant>``."""
-    return f"{SIMULATIONS_PREFIX}/{sim_id}"
-
-
 class Project:
     """
-    The files of one STILT project and the store that holds them.
+    The input files of one STILT project.
 
     Most code uses a project through :class:`stilt.Model`, which creates one
     from its ``project`` argument.
@@ -82,69 +62,57 @@ class Project:
     Parameters
     ----------
     root : str or Path, optional
-        Local directory or object-store URI. A temporary directory is created
-        when omitted.
-    cache_dir : str or Path, optional
-        Local cache for files downloaded from an object store.
+        Project directory. A temporary directory is created when omitted.
 
     Attributes
     ----------
-    root : str
-        The project root as a string.
-    is_cloud : bool
-        Whether the root is an object-store URI.
-    store : Store
-        Reads and writes the project's files.
+    directory : Path
+        The project directory, absolute.
     """
 
-    def __init__(
-        self,
-        root: str | Path | None = None,
-        *,
-        cache_dir: str | Path | None = None,
-    ) -> None:
-        if root is None or not is_uri(root):
-            self.root = str(resolve_directory(root))
-            self.is_cloud = False
-        else:
-            self.root = str(root).rstrip("/")
-            self.is_cloud = True
-        self.store: Store = make_store(self.root, cache_dir=cache_dir)
+    def __init__(self, root: str | Path | None = None) -> None:
+        self.directory = resolve_directory(root)
 
     def __repr__(self) -> str:
-        return f"Project({self.root!r})"
+        return f"Project({str(self.directory)!r})"
 
     def __str__(self) -> str:
-        return self.root
+        return str(self.directory)
+
+    @property
+    def root(self) -> str:
+        """The project directory as a string."""
+        return str(self.directory)
 
     @property
     def name(self) -> str:
-        """Project name, from the directory name or a slug of the URI."""
-        return project_slug(self.root) if self.is_cloud else Path(self.root).name
+        """Project name: the directory name."""
+        return self.directory.name
 
     @property
-    def directory(self) -> Path:
-        """Local project directory. Raises ``TypeError`` for a cloud project."""
-        if self.is_cloud:
-            raise TypeError(f"Cloud project {self.root!r} has no local directory.")
-        return Path(self.root)
+    def config_path(self) -> Path:
+        return self.directory / CONFIG_KEY
 
     @property
-    def simulations_dir(self) -> Path:
-        """Local ``simulations/by-id`` directory. Raises ``TypeError`` for a cloud project."""
-        return self.directory / SIMULATIONS_PREFIX
+    def receptors_path(self) -> Path:
+        return self.directory / RECEPTORS_KEY
+
+    def output_path(self, config: ModelConfig) -> Path:
+        """Return the output directory *config* names, relative to the project unless absolute."""
+        raw = Path(os.path.expandvars(os.path.expanduser(config.output)))
+        return raw if raw.is_absolute() else (self.directory / raw).resolve()
 
     # -- inputs ----------------------------------------------------------------
 
     @property
     def has_config(self) -> bool:
         """Whether the project has a ``config.yaml``."""
-        return self.store.exists(CONFIG_KEY)
+        return self.config_path.exists()
 
     @property
     def has_receptors(self) -> bool:
         """Whether the project has a ``receptors.csv``."""
-        return self.store.exists(RECEPTORS_KEY)
+        return self.receptors_path.exists()
 
     def load_config(self) -> ModelConfig:
         """
@@ -159,15 +127,15 @@ class Project:
 
         if not self.has_config:
             raise FileNotFoundError(
-                f"No config.yaml found in {self.root}. "
+                f"No config.yaml found in {self.directory}. "
                 "Create one with ModelConfig.to_yaml()."
             )
-        raw = yaml.safe_load(self.store.read_bytes(CONFIG_KEY).decode()) or {}
-        return ModelConfig.model_validate(raw)
+        return ModelConfig.from_yaml(self.config_path)
 
     def save_config(self, config: ModelConfig) -> None:
         """Write *config* to ``config.yaml``, with only the settings that were given."""
-        self.store.write_bytes(CONFIG_KEY, config.to_yaml().encode())
+        self.directory.mkdir(parents=True, exist_ok=True)
+        config.to_yaml(self.config_path)
 
     def load_receptors(self) -> list[Receptor] | None:
         """Load the project's ``receptors.csv``, or return ``None`` when there is none."""
@@ -175,7 +143,7 @@ class Project:
 
         if not self.has_receptors:
             return None
-        return read_receptors(StringIO(self.store.read_bytes(RECEPTORS_KEY).decode()))
+        return read_receptors(self.receptors_path)
 
     def add_receptors(self, receptors: list[Receptor]) -> list[Receptor]:
         """
@@ -184,63 +152,25 @@ class Project:
         An existing file is only appended to. Receptors it already holds are
         skipped, and new rows use the file's own columns
         (:func:`stilt.receptors.append_receptors_csv`).
-
-        Parameters
-        ----------
-        receptors : list of Receptor
-            Receptors to add.
-
-        Returns
-        -------
-        list of Receptor
-            The receptors that were not in the file before.
         """
         from stilt.receptors import append_receptors_csv, receptors_to_csv
 
+        self.directory.mkdir(parents=True, exist_ok=True)
         if not self.has_receptors:
-            self.store.write_bytes(RECEPTORS_KEY, receptors_to_csv(receptors).encode())
+            self.receptors_path.write_text(receptors_to_csv(receptors))
             return list(receptors)
         known = {r.id for r in self.load_receptors() or []}
         new = [r for r in receptors if r.id not in known]
         if new:
-            text = self.store.read_bytes(RECEPTORS_KEY).decode()
-            self.store.write_bytes(
-                RECEPTORS_KEY, append_receptors_csv(text, new).encode()
-            )
+            text = self.receptors_path.read_text()
+            self.receptors_path.write_text(append_receptors_csv(text, new))
         return new
-
-    # -- record ----------------------------------------------------------------
-
-    def load_record(self) -> dict[str, dict[str, Any]]:
-        """
-        Return the settings every registered met and variant ran with.
-
-        Returns
-        -------
-        dict
-            ``{"mets": {name: settings}, "variants": {name: settings}}``.
-            Each entry holds every field of a :class:`~stilt.config.MetConfig`
-            or :class:`~stilt.config.VariantConfig` as it was when
-            registered. Both are empty before anything is registered.
-        """
-        if not self.store.exists(RECORD_KEY):
-            return {"mets": {}, "variants": {}}
-        raw = yaml.safe_load(self.store.read_bytes(RECORD_KEY).decode()) or {}
-        return {"mets": raw.get("mets") or {}, "variants": raw.get("variants") or {}}
-
-    def save_record(self, record: dict[str, dict[str, Any]]) -> None:
-        """Write the record of registered settings (see :meth:`load_record`)."""
-        text = yaml.safe_dump(record, default_flow_style=False, sort_keys=False)
-        self.store.write_bytes(RECORD_KEY, text.encode())
 
 
 __all__ = [
     "CONFIG_KEY",
     "RECEPTORS_KEY",
-    "RECORD_KEY",
-    "SIMULATIONS_PREFIX",
     "Project",
     "project_slug",
     "resolve_directory",
-    "simulation_prefix",
 ]

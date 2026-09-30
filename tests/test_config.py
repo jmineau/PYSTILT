@@ -825,7 +825,7 @@ def test_variant_overrides_merge_onto_the_defaults(tmp_path):
     assert variants["zi08"].numpar == 50
     assert variants["zi08"].ziscale == 0.8
     assert variants["hrrr"].ziscale == 1.0
-    zi08, hrrr = variants["zi08"].record(), variants["hrrr"].record()
+    zi08, hrrr = variants["zi08"].model_dump(), variants["hrrr"].model_dump()
     assert sorted(k for k in zi08 if zi08[k] != hrrr[k]) == ["group", "name", "ziscale"]
 
 
@@ -843,7 +843,7 @@ def test_variant_grid_override_merges_field_by_field(tmp_path):
         grid=grid,
         variants={
             "hrrr": {},
-            "coarse": {"from": "hrrr", "grid": {"xres": 0.1, "yres": 0.1}},
+            "coarse": {"grid": {"xres": 0.1, "yres": 0.1}},
             "none": {"grid": None},
         },
     )
@@ -864,7 +864,6 @@ def test_to_yaml_writes_only_what_was_set(tmp_path):
             "hrrr": {},
             "zi08": {"ziscale": 0.8},
             "decay": {
-                "from": "hrrr",
                 "transforms": [FirstOrderLifetime(lifetime_hours=1.0)],
             },
         },
@@ -951,41 +950,32 @@ def test_realization_names_may_not_collide_with_declared_variants(tmp_path):
         )
 
 
-def test_derived_variant_reuses_the_parent_trajectory_settings(tmp_path, grid):
+def test_variants_that_differ_only_in_footprint_fields_keep_the_transport(
+    tmp_path, grid
+):
     cfg = _variant_config(
         tmp_path,
         grid=grid,
-        variants={"hrrr": {"ziscale": 0.8}, "s2": {"from": "hrrr", "smooth_factor": 2}},
+        variants={"hrrr": {"ziscale": 0.8}, "s2": {"ziscale": 0.8, "smooth_factor": 2}},
     )
     variants = cfg.resolve_variants()
     s2 = variants["s2"]
-    assert s2.is_derived and s2.derived_from == "hrrr"
     assert s2.met == "hrrr"
     assert s2.ziscale == 0.8
     assert s2.smooth_factor == 2
     assert s2.stilt_params() == variants["hrrr"].stilt_params()
 
 
-@pytest.mark.parametrize(
-    ("variants", "match"),
-    [
-        ({"s2": {"from": "nope"}}, "unknown variant"),
-        ({"a": {}, "b": {"from": "a"}, "c": {"from": "b"}}, "itself derived"),
-        ({"a": {}, "b": {"from": "a", "ziscale": 0.8}}, "only override footprint"),
-        ({"a": {}, "b": {"from": "a", "met": "hrrr"}}, "only override footprint"),
-        ({"e": {"realizations": 2}, "b": {"from": "e"}}, "realization group"),
-    ],
-)
-def test_derived_variant_rules(tmp_path, variants, match):
-    with pytest.raises(ValueError, match=match):
-        _variant_config(tmp_path, krand=4, variants=variants)
+def test_from_is_rejected_with_advice(tmp_path):
+    with pytest.raises(ValueError, match="no longer needed"):
+        _variant_config(tmp_path, variants={"a": {}, "b": {"from": "a"}})
 
 
 def test_variants_survive_a_yaml_roundtrip_as_written(tmp_path, grid):
     declared = {
         "hrrr": {},
         "zi08": {"ziscale": 0.8},
-        "s2": {"from": "hrrr", "smooth_factor": 2},
+        "s2": {"smooth_factor": 2},
     }
     cfg = _variant_config(tmp_path, grid=grid, variants=declared)
     path = tmp_path / "config.yaml"
@@ -1032,7 +1022,7 @@ def test_variant_geometry_derives_its_own_grid_and_hash(tmp_path, grid, defaults
         **base,
         variants={
             "hrrr": {},
-            "src": {"from": "hrrr", "geometry": _WINDOWS},
+            "src": {"geometry": _WINDOWS},
             "src-run": {"geometry": _WINDOWS},
         },
     )
@@ -1053,8 +1043,8 @@ def test_maxpar_follows_each_variants_numpar(tmp_path):
     variants = cfg.resolve_variants()
     assert variants["hrrr"].stilt_params().setup_entries()["maxpar"] == 1000
     assert variants["np3k"].stilt_params().setup_entries()["maxpar"] == 3000
-    # The record holds the value HYSPLIT got, so records written when maxpar was
-    # filled in from numpar still match, and a run capped at the default's
-    # numpar shows up as changed.
-    assert variants["hrrr"].record()["maxpar"] == 1000
-    assert variants["np3k"].record()["maxpar"] == 3000
+    # A run's identity holds the value HYSPLIT got, so an unset maxpar equals
+    # numpar and a variant that raises numpar is a different run.
+    met = cfg.mets["hrrr"]
+    assert variants["hrrr"].transport_settings(met).identity()["maxpar"] == 1000
+    assert variants["np3k"].transport_settings(met).identity()["maxpar"] == 3000

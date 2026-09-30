@@ -4,6 +4,7 @@ import contextlib
 import datetime as dt
 from types import SimpleNamespace
 
+import pandas as pd
 import pytest
 
 from stilt.config import (
@@ -26,9 +27,10 @@ from stilt.execution.worker import (
 )
 from stilt.meteorology import MetStream
 from stilt.model import Model
+from stilt.output import Output
 from stilt.receptors import PointReceptor, Receptor
-from stilt.simulation import SimID, Simulation
-from stilt.store import LocalStore
+from stilt.simulation import SimID, Simulation, VariantOutput
+from stilt.trajectory import Trajectories
 
 # ---------------------------------------------------------------------------
 # Fixtures and helpers
@@ -58,11 +60,15 @@ def other_receptor() -> Receptor:
 
 
 @pytest.fixture
-def met(tmp_path) -> MetStream:
-    return MetStream(
-        "hrrr",
-        MetConfig(directory=tmp_path / "met", file_format="%Y%m%d_%H", file_tres="1h"),
+def met_config(tmp_path) -> MetConfig:
+    return MetConfig(
+        directory=tmp_path / "met", file_format="%Y%m%d_%H", file_tres="1h"
     )
+
+
+@pytest.fixture
+def met(met_config) -> MetStream:
+    return MetStream("hrrr", met_config)
 
 
 @pytest.fixture
@@ -71,47 +77,83 @@ def params() -> STILTParams:
 
 
 @pytest.fixture
-def store(tmp_path) -> LocalStore:
-    """A store rooted away from the simulation directory, so publish() copies."""
-    return LocalStore(tmp_path / "store")
+def output(tmp_path) -> Output:
+    return Output(tmp_path / "output")
 
 
-def _variant(params, *, name="hrrr", footprint=None, derived_from=None):
+def _variant(params, *, name="hrrr", footprint=None):
     data = {**params.model_dump(), **(footprint.model_dump() if footprint else {})}
-    return VariantConfig(
-        name=name, group=name, met="hrrr", derived_from=derived_from, **data
+    return VariantConfig(name=name, group=name, met="hrrr", **data)
+
+
+def _make_sim(
+    tmp_path, receptor, met, met_config, params, output, *, footprint=None, name="hrrr"
+):
+    config = _variant(params, name=name, footprint=footprint)
+    outputs = VariantOutput(
+        output, name, config.transport_settings(met_config), config.footprint
     )
-
-
-def _make_sim(tmp_path, receptor, met, params, store, *, footprint=None):
     return Simulation(
         receptor,
-        _variant(params, footprint=footprint),
+        config,
         met=met,
-        directory=tmp_path / "compute" / SimID(receptor.id, "hrrr"),
-        store=store,
+        outputs=outputs,
+        directory=tmp_path / "compute" / SimID(receptor.id, name),
     )
 
 
 @pytest.fixture
-def sim(tmp_path, receptor, met, params, store) -> Simulation:
+def sim(tmp_path, receptor, met, met_config, params, output) -> Simulation:
     """A trajectory-only simulation."""
-    return _make_sim(tmp_path, receptor, met, params, store)
+    return _make_sim(tmp_path, receptor, met, met_config, params, output)
 
 
 @pytest.fixture
-def fsim(tmp_path, receptor, met, params, store) -> Simulation:
-    """A simulation with a footprint whose trajectory already exists."""
+def fsim(tmp_path, receptor, met, met_config, params, output) -> Simulation:
+    """A simulation with a footprint whose particles already exist."""
     s = _make_sim(
-        tmp_path, receptor, met, params, store, footprint=FootprintConfig(grid=GRID)
+        tmp_path,
+        receptor,
+        met,
+        met_config,
+        params,
+        output,
+        footprint=FootprintConfig(grid=GRID),
     )
-    _write_stub_trajectory(s)
+    _write_particles(s)
     return s
 
 
-def _write_stub_trajectory(sim: Simulation) -> None:
-    sim.directory.mkdir(parents=True, exist_ok=True)
-    sim.trajectories_path.write_bytes(b"traj")
+def _particles(receptor, params) -> Trajectories:
+    data = pd.DataFrame(
+        {
+            "time": [-60.0],
+            "indx": [1.0],
+            "long": [-111.9],
+            "lati": [40.7],
+            "zagl": [10.0],
+            "foot": [1e-5],
+        }
+    )
+    data["datetime"] = pd.Timestamp(receptor.time) + pd.to_timedelta(
+        data["time"], unit="min"
+    )
+    return Trajectories(receptor=receptor, params=params, met_files=[], data=data)
+
+
+def _write_particles(sim: Simulation) -> None:
+    """Put a small particle file for *sim* in the output directory."""
+    sim.outputs.ensure_run().write_particles(_particles(sim.receptor, sim.params))
+
+
+def _write_footprint(sim: Simulation, *, empty: bool = False) -> None:
+    """Record a footprint (or an empty one) for *sim* in the output directory."""
+    feet = sim.outputs.ensure_footprints()
+    assert feet is not None
+    if empty:
+        feet.write_empty(sim.receptor, "outside_domain", name=sim.variant)
+    else:
+        sim.generate_footprint(write=True)
 
 
 def _model_config(tmp_path, **kwargs) -> ModelConfig:
@@ -138,8 +180,14 @@ def _model(tmp_path, receptors, **config_kwargs) -> Model:
 def _fake_run_simulation(calls: list[dict]):
     """Build a stand-in for run_simulation that records its arguments."""
 
-    def fake(sim, *, skip_existing=True):
-        calls.append({"sim_id": str(sim.id), "skip_existing": skip_existing})
+    def fake(sim, *, skip_existing=True, footprint_stale=False):
+        calls.append(
+            {
+                "sim_id": str(sim.id),
+                "skip_existing": skip_existing,
+                "footprint_stale": footprint_stale,
+            }
+        )
         return SimulationResult(str(sim.id), "complete")
 
     return fake
@@ -151,8 +199,8 @@ def _fake_run_simulation(calls: list[dict]):
 
 
 def test_simulation_result_is_frozen_with_optional_error():
-    result = SimulationResult("202301011200_-111.85_40.77_5/hrrr", "complete")
-    assert result.error is None
+    result = SimulationResult("sim/hrrr", "complete")
+    assert result.error is None and not result.ran_hysplit
     with pytest.raises(AttributeError):
         result.status = "failed"  # type: ignore[misc]
 
@@ -161,26 +209,24 @@ def test_receptor_result_reports_the_worst_simulation():
     results = [
         SimulationResult("r/a", "complete"),
         SimulationResult("r/b", "failed", error="boom"),
-        SimulationResult("r/c", "complete"),
+        SimulationResult("r/c", "error", error="worse"),
     ]
     summary = ReceptorResult.summarise("r", results)
-    assert summary.status == "failed"
-    assert summary.error == "boom"
+    assert summary.status == "error"
+    assert summary.error == "worse"
     assert summary.simulations == tuple(results)
     assert ReceptorResult.summarise("r", []).status == "complete"
 
 
 # ---------------------------------------------------------------------------
-# run_simulation: trajectory
+# run_simulation
 # ---------------------------------------------------------------------------
 
 
-def test_run_simulation_trajectory_only_publishes_and_completes(
-    sim, store, monkeypatch
-):
+def test_run_simulation_trajectory_only_completes(sim, monkeypatch):
     def fake_run_trajectories(*, write: bool = False, **kwargs):
         assert write is True
-        _write_stub_trajectory(sim)
+        _write_particles(sim)
 
     monkeypatch.setattr(sim, "run_trajectories", fake_run_trajectories)
     monkeypatch.setattr(
@@ -190,43 +236,32 @@ def test_run_simulation_trajectory_only_publishes_and_completes(
     result = run_simulation(sim)
 
     assert result == SimulationResult(str(sim.id), "complete", ran_hysplit=True)
-    # publish() copied the trajectory into the store under its key.
-    assert store.exists(sim.key(sim.trajectories_path))
-    assert store.read_bytes(sim.key(sim.trajectories_path)) == b"traj"
+    assert sim.has_trajectory
 
 
-def test_run_simulation_skips_an_existing_trajectory(sim, monkeypatch):
-    _write_stub_trajectory(sim)
+def test_run_simulation_skips_existing_particles(sim, monkeypatch):
+    _write_particles(sim)
     monkeypatch.setattr(
-        sim, "run_trajectories", lambda **k: pytest.fail("must not rerun HYSPLIT")
+        sim, "run_trajectories", lambda **k: pytest.fail("must not run HYSPLIT")
     )
 
-    assert run_simulation(sim, skip_existing=True).status == "complete"
+    result = run_simulation(sim)
+
+    assert result == SimulationResult(str(sim.id), "complete", ran_hysplit=False)
 
 
-def test_run_simulation_reruns_the_trajectory_without_skip_existing(sim, monkeypatch):
-    _write_stub_trajectory(sim)
-    calls: list[bool] = []
-    monkeypatch.setattr(sim, "run_trajectories", lambda **k: calls.append(True))
+def test_run_simulation_reruns_without_skip_existing(sim, monkeypatch):
+    _write_particles(sim)
+    calls: list[str] = []
+    monkeypatch.setattr(sim, "run_trajectories", lambda **k: calls.append("run"))
 
-    run_simulation(sim, skip_existing=False)
+    result = run_simulation(sim, skip_existing=False)
 
-    assert calls == [True]
-
-
-def test_run_simulation_does_not_create_directory_before_running(sim, monkeypatch):
-    """Construction is side-effect free; only running creates the sim directory."""
-    assert not sim.directory.exists()
-    monkeypatch.setattr(
-        sim, "run_trajectories", lambda **kwargs: _write_stub_trajectory(sim)
-    )
-
-    run_simulation(sim)
-
-    assert sim.directory.exists()
+    assert calls == ["run"]
+    assert result.ran_hysplit
 
 
-def test_run_simulation_simulation_error_is_failed_and_logged(sim, store, monkeypatch):
+def test_run_simulation_error_is_failed_and_logged(sim, monkeypatch):
     def fake_run_trajectories(**kwargs):
         raise SimulationError("HYSPLIT failed")
 
@@ -236,30 +271,27 @@ def test_run_simulation_simulation_error_is_failed_and_logged(sim, store, monkey
 
     assert result.status == "failed"
     assert result.error == "HYSPLIT failed"
-    log_text = sim.log_path.read_text()
+    log_text = sim.log
     assert "=== PYSTILT ERROR ===" in log_text
     assert "Phase: trajectory" in log_text
     assert "Type: SimulationError" in log_text
     assert "Message: HYSPLIT failed" in log_text
-    # The failure log is published so remote readers can see why.
-    assert store.exists(sim.key(sim.log_path))
-    assert "HYSPLIT failed" in store.read_bytes(sim.key(sim.log_path)).decode()
+    assert sim.outcome == "failed:UNKNOWN"
 
 
 def test_run_simulation_error_log_appends_to_existing_hysplit_log(sim, monkeypatch):
-    sim.directory.mkdir(parents=True)
-    sim.log_path.write_text("hysplit stdout\n")
+    run = sim.outputs.ensure_run()
+    run.write_log(sim.receptor_id, "hysplit said hello\n")
 
     def fake_run_trajectories(**kwargs):
         raise SimulationError("boom")
 
     monkeypatch.setattr(sim, "run_trajectories", fake_run_trajectories)
-
     run_simulation(sim)
 
-    log_text = sim.log_path.read_text()
-    assert log_text.startswith("hysplit stdout\n")
-    assert "=== PYSTILT ERROR ===" in log_text
+    text = sim.log
+    assert text.startswith("hysplit said hello\n")
+    assert "Message: boom" in text
 
 
 def test_run_simulation_generic_exception_is_error(sim, monkeypatch):
@@ -272,17 +304,12 @@ def test_run_simulation_generic_exception_is_error(sim, monkeypatch):
 
     assert result.status == "error"
     assert result.error == "unexpected"
-    assert "Type: RuntimeError" in sim.log_path.read_text()
+    assert "Type: RuntimeError" in sim.log
 
 
-# ---------------------------------------------------------------------------
-# run_simulation: footprint
-# ---------------------------------------------------------------------------
-
-
-def test_run_simulation_publishes_empty_marker(fsim, store, monkeypatch):
+def test_run_simulation_empty_footprint_is_complete(fsim, monkeypatch):
     def fake_generate(**kwargs):
-        fsim.write_empty_footprint_marker("outside_domain")
+        _write_footprint(fsim, empty=True)
         return None
 
     monkeypatch.setattr(fsim, "generate_footprint", fake_generate)
@@ -290,12 +317,11 @@ def test_run_simulation_publishes_empty_marker(fsim, store, monkeypatch):
     result = run_simulation(fsim)
 
     assert result.status == "complete"
-    assert not fsim.footprint_path.exists()
-    # publish() covers the ``.empty`` marker too.
-    assert store.exists(fsim.key(fsim.empty_footprint_path))
+    assert fsim.is_complete() and fsim.footprint is None
+    assert fsim.empty_reason == "outside_domain"
 
 
-def test_run_simulation_footprint_simulation_error_is_failed(fsim, monkeypatch):
+def test_run_simulation_footprint_error_is_failed(fsim, monkeypatch):
     def fake_generate(**kwargs):
         raise SimulationError("Footprint failed")
 
@@ -304,67 +330,82 @@ def test_run_simulation_footprint_simulation_error_is_failed(fsim, monkeypatch):
     result = run_simulation(fsim)
 
     assert result.status == "failed"
-    assert result.error == "Footprint failed"
-    assert "Phase: footprint" in fsim.log_path.read_text()
+    assert "Phase: footprint" in fsim.log
 
 
 def test_run_simulation_skips_existing_footprint(fsim, monkeypatch):
-    fsim.footprint_path.write_bytes(b"nc")
+    _write_footprint(fsim)
     monkeypatch.setattr(
-        fsim,
-        "generate_footprint",
-        lambda **k: pytest.fail("existing footprint must not be regenerated"),
+        fsim, "generate_footprint", lambda **k: pytest.fail("must not regenerate")
     )
 
-    assert run_simulation(fsim, skip_existing=True).status == "complete"
+    result = run_simulation(fsim)
+
+    assert result.status == "complete" and not result.ran_hysplit
 
 
-def test_run_simulation_skips_existing_empty_marker(fsim, monkeypatch):
-    fsim.write_empty_footprint_marker("outside_domain")
+def test_run_simulation_skips_existing_empty_footprint(fsim, monkeypatch):
+    _write_footprint(fsim, empty=True)
     monkeypatch.setattr(
-        fsim,
-        "generate_footprint",
-        lambda **k: pytest.fail("empty footprint must not be regenerated"),
+        fsim, "generate_footprint", lambda **k: pytest.fail("must not regenerate")
     )
 
-    assert run_simulation(fsim, skip_existing=True).status == "complete"
+    assert run_simulation(fsim).status == "complete"
 
 
 def test_run_simulation_skip_existing_false_regenerates(fsim, monkeypatch):
-    fsim.footprint_path.write_bytes(b"nc")
-    calls: list[bool] = []
-
-    def fake_generate(*, write):
-        calls.append(write)
-        return None
-
-    monkeypatch.setattr(fsim, "run_trajectories", lambda **k: None)
-    monkeypatch.setattr(fsim, "generate_footprint", fake_generate)
+    _write_footprint(fsim)
+    calls: list[str] = []
+    monkeypatch.setattr(fsim, "run_trajectories", lambda **k: calls.append("hysplit"))
+    monkeypatch.setattr(
+        fsim, "generate_footprint", lambda **k: calls.append("footprint")
+    )
 
     run_simulation(fsim, skip_existing=False)
 
-    assert calls == [True]
+    assert calls == ["hysplit", "footprint"]
 
 
-def test_run_simulation_backfills_a_missing_trajectory_and_remakes_the_footprint(
-    tmp_path, receptor, met, params, store, monkeypatch
+def test_run_simulation_footprint_stale_regenerates_only_the_footprint(
+    fsim, monkeypatch
 ):
-    """A lost trajectory is rerun, and the old footprint is remade from the new particles."""
-    s = _make_sim(
-        tmp_path, receptor, met, params, store, footprint=FootprintConfig(grid=GRID)
+    _write_footprint(fsim)
+    calls: list[str] = []
+    monkeypatch.setattr(fsim, "run_trajectories", lambda **k: calls.append("hysplit"))
+    monkeypatch.setattr(
+        fsim, "generate_footprint", lambda **k: calls.append("footprint")
     )
-    s.directory.mkdir(parents=True)
-    s.footprint_path.write_bytes(b"nc")
+
+    result = run_simulation(fsim, footprint_stale=True)
+
+    assert calls == ["footprint"]
+    assert result.status == "complete" and not result.ran_hysplit
+
+
+def test_run_simulation_backfills_missing_particles_and_remakes_the_footprint(
+    tmp_path, receptor, met, met_config, params, output, monkeypatch
+):
+    """Lost particles are rerun, and the old footprint is remade from the new ones."""
+    s = _make_sim(
+        tmp_path,
+        receptor,
+        met,
+        met_config,
+        params,
+        output,
+        footprint=FootprintConfig(grid=GRID),
+    )
+    _write_particles(s)
+    _write_footprint(s)
+    s.outputs.ensure_run().particles_path(s.receptor_id).unlink()
     calls: list[str] = []
     monkeypatch.setattr(
         s,
         "run_trajectories",
-        lambda **k: calls.append("hysplit") or _write_stub_trajectory(s),
+        lambda **k: calls.append("hysplit") or _write_particles(s),
     )
     monkeypatch.setattr(
-        s,
-        "generate_footprint",
-        lambda **k: calls.append("footprint") or None,
+        s, "generate_footprint", lambda **k: calls.append("footprint") or None
     )
 
     result = run_simulation(s)
@@ -373,106 +414,97 @@ def test_run_simulation_backfills_a_missing_trajectory_and_remakes_the_footprint
     assert calls == ["hysplit", "footprint"]
 
 
-def test_run_receptor_remakes_derived_footprints_when_the_parent_reran(
-    tmp_path, receptor, monkeypatch
-):
-    model = _model(
-        tmp_path,
-        [receptor],
-        grid=GRID,
-        variants={"hrrr": {}, "hrrr-s2": {"from": "hrrr", "smooth_factor": 2.0}},
-    )
-    model.register()
-    parent = model.simulation((receptor.id, "hrrr"))
-    derived = model.simulation((receptor.id, "hrrr-s2"))
-    for sim in (parent, derived):
-        sim.directory.mkdir(parents=True, exist_ok=True)
-        sim.footprint_path.write_bytes(b"nc")
-    calls: list[str] = []
-
-    def fake_hysplit(**kwargs):
-        calls.append("hysplit")
-        _write_stub_trajectory(parent)
-        parent._trajectories = "stub"  # the derived run reads this, not the stub file
-
-    monkeypatch.setattr(parent, "run_trajectories", fake_hysplit)
-    for sim in (parent, derived):
-
-        def fake_generate(name=sim.variant, **kwargs):
-            calls.append(name)
-            return None
-
-        monkeypatch.setattr(sim, "generate_footprint", fake_generate)
-
-    result = run_receptor(model, str(receptor.id))
-
-    assert result.status == "complete"
-    assert calls == ["hysplit", "hrrr", "hrrr-s2"]
-
-
-def test_run_simulation_derived_never_runs_hysplit(
-    tmp_path, receptor, met, params, store, monkeypatch
-):
-    parent = _make_sim(tmp_path, receptor, met, params, store)
-    derived = Simulation(
-        receptor,
-        _variant(
-            params,
-            name="hrrr-s2",
-            footprint=FootprintConfig(grid=GRID, smooth_factor=2.0),
-            derived_from="hrrr",
-        ),
-        parent=parent,
-        directory=tmp_path / "compute" / SimID(receptor.id, "hrrr-s2"),
-        store=store,
-    )
-    monkeypatch.setattr(derived, "run_trajectories", lambda **k: pytest.fail("no"))
-    monkeypatch.setattr(parent, "run_trajectories", lambda **k: pytest.fail("no"))
-
-    # Parent trajectory missing: a failure, not a HYSPLIT run.
-    result = run_simulation(derived)
-    assert result.status == "failed"
-    assert "has no trajectory" in (result.error or "")
-
-    monkeypatch.setattr(Simulation, "trajectories", property(lambda self: object()))
-    monkeypatch.setattr(derived, "generate_footprint", lambda **k: None)
-    assert run_simulation(derived).status == "complete"
-
-
 # ---------------------------------------------------------------------------
 # run_receptor
 # ---------------------------------------------------------------------------
 
 
-def test_run_receptor_runs_transport_variants_before_derived_ones(
+def test_run_receptor_runs_every_variant_in_config_order(
     tmp_path, receptor, monkeypatch
 ):
     model = _model(
         tmp_path,
         [receptor],
         grid=GRID,
-        variants={
-            "s2": {"from": "hrrr", "smooth_factor": 2},
-            "hrrr": {},
-            "zi08": {"ziscale": 0.8},
-        },
+        variants={"s2": {"smooth_factor": 2}, "hrrr": {}, "zi08": {"ziscale": 0.8}},
     )
     calls: list[dict] = []
     monkeypatch.setattr(worker, "run_simulation", _fake_run_simulation(calls))
 
     result = run_receptor(model, str(receptor.id), skip_existing=False)
 
-    assert [c["sim_id"].split("/")[1] for c in calls] == ["hrrr", "zi08", "s2"]
-    assert all(c["skip_existing"] is False for c in calls)
+    assert [c["sim_id"].split("/")[1] for c in calls] == ["s2", "hrrr", "zi08"]
     assert result.status == "complete"
     assert result.receptor_id == str(receptor.id)
     assert len(result.simulations) == 3
 
 
+def test_run_receptor_remakes_sibling_footprints_when_the_particles_reran(
+    tmp_path, receptor, monkeypatch
+):
+    """Variants with equal transport settings share one run: reuse, but remake footprints."""
+    model = _model(
+        tmp_path,
+        [receptor],
+        grid=GRID,
+        variants={
+            "hrrr": {},
+            "hrrr-s2": {"smooth_factor": 2.0},
+            "zi08": {"ziscale": 0.8},
+        },
+    )
+    calls: list[dict] = []
+
+    def fake(sim, *, skip_existing=True, footprint_stale=False):
+        calls.append(
+            {"variant": sim.variant, "skip": skip_existing, "stale": footprint_stale}
+        )
+        # hrrr's particles were missing and HYSPLIT ran for it.
+        return SimulationResult(
+            str(sim.id), "complete", ran_hysplit=sim.variant == "hrrr"
+        )
+
+    monkeypatch.setattr(worker, "run_simulation", fake)
+
+    run_receptor(model, str(receptor.id), skip_existing=True)
+
+    assert calls == [
+        {"variant": "hrrr", "skip": True, "stale": False},
+        {"variant": "hrrr-s2", "skip": True, "stale": True},  # same run: reuse, remake
+        {"variant": "zi08", "skip": True, "stale": False},  # its own run
+    ]
+
+
+def test_run_receptor_no_skip_reruns_each_run_once(tmp_path, receptor, monkeypatch):
+    model = _model(
+        tmp_path,
+        [receptor],
+        grid=GRID,
+        variants={"hrrr": {}, "hrrr-s2": {"smooth_factor": 2.0}},
+    )
+    calls: list[dict] = []
+
+    def fake(sim, *, skip_existing=True, footprint_stale=False):
+        calls.append(
+            {"variant": sim.variant, "skip": skip_existing, "stale": footprint_stale}
+        )
+        return SimulationResult(str(sim.id), "complete", ran_hysplit=not skip_existing)
+
+    monkeypatch.setattr(worker, "run_simulation", fake)
+
+    run_receptor(model, str(receptor.id), skip_existing=False)
+
+    # The second variant must not rerun the shared particles again.
+    assert calls == [
+        {"variant": "hrrr", "skip": False, "stale": False},
+        {"variant": "hrrr-s2", "skip": True, "stale": True},
+    ]
+
+
 def test_run_receptor_normalises_preemption(tmp_path, receptor, monkeypatch):
     model = _model(tmp_path, [receptor])
 
-    def fake(sim, *, skip_existing=True):
+    def fake(sim, *, skip_existing=True, footprint_stale=False):
         raise KeyboardInterrupt
 
     monkeypatch.setattr(worker, "run_simulation", fake)
@@ -532,7 +564,7 @@ def test_run_receptors_inline_stops_after_interrupt(
     ids = [str(r.id) for r in (receptor, other_receptor)]
     seen: list[str] = []
 
-    def fake(sim, *, skip_existing=True):
+    def fake(sim, *, skip_existing=True, footprint_stale=False):
         seen.append(str(sim.id))
         raise KeyboardInterrupt
 
@@ -552,7 +584,7 @@ def test_run_receptors_inline_continues_after_failed_result(
     model = _model(tmp_path, [receptor, other_receptor])
     ids = [str(r.id) for r in (receptor, other_receptor)]
 
-    def fake(sim, *, skip_existing=True):
+    def fake(sim, *, skip_existing=True, footprint_stale=False):
         if sim.id.receptor == ids[0]:
             return SimulationResult(str(sim.id), "failed", error="boom")
         return SimulationResult(str(sim.id), "complete")
@@ -654,7 +686,7 @@ def test_run_receptors_pool_terminates_on_interrupted_result(
     model = _model(tmp_path, [receptor, other_receptor])
     ids = model.register()
 
-    def fake(sim, *, skip_existing=True):
+    def fake(sim, *, skip_existing=True, footprint_stale=False):
         # The fake pool yields the *last* id first, so interrupt on the first id.
         if sim.id.receptor == ids[0]:
             raise KeyboardInterrupt
@@ -688,7 +720,9 @@ def test_run_receptors_pool_keyboard_interrupt_terminates_and_returns(
     monkeypatch.setattr(
         worker,
         "run_simulation",
-        lambda sim, *, skip_existing=True: SimulationResult(str(sim.id), "complete"),
+        lambda sim, *, skip_existing=True, footprint_stale=False: SimulationResult(
+            str(sim.id), "complete"
+        ),
     )
 
     results = run_receptors(model, ids, n_cores=2)

@@ -115,9 +115,10 @@ other settings:
        horcoruverr: 14
        grid: null                 # particles only
 
-Each variant of each receptor is one simulation, stored in
-``simulations/by-id/<receptor>/<variant>/`` (see :doc:`project_layout`).
-Every variant runs the same list of receptors. A variant may set:
+Each variant of each receptor is one simulation. Its results go to the
+output directory, in folders named after the variant (see
+:doc:`project_layout`). Every variant runs the same list of receptors. A
+variant may set:
 
 ``met``
    Which meteorology source to use. A variant named after a source uses
@@ -144,23 +145,24 @@ A second footprint from the same particles
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Running HYSPLIT is the slow part of a simulation. Making a footprint from
-stored particles is quick. A variant with ``from:`` reuses another
-variant's particles and changes only the footprint:
+stored particles is quick. A variant that changes only footprint settings
+shares the particles of the variant it matches and makes its own footprint
+from them:
 
 .. code-block:: yaml
 
    variants:
      hrrr: {}
      hrrr-regional:
-       from: hrrr
        grid: {xmin: -125.0, xmax: -100.0, ymin: 30.0, ymax: 50.0, xres: 0.1, yres: 0.1}
      hrrr-ak:
-       from: hrrr
        transforms: [{kind: averaging_kernel, table: kernels.parquet}]
 
-A ``from:`` variant does not run HYSPLIT, and it may set only footprint
-settings. If you add one to a finished project and run again, PYSTILT makes
-just the new footprints from the stored particles.
+``hrrr-regional`` and ``hrrr-ak`` have the same transport settings as
+``hrrr``, so HYSPLIT runs once per receptor for the three of them. There is
+nothing to declare: PYSTILT sees that the settings that decide the particles
+are equal. If you add such a variant to a finished project and run again,
+PYSTILT makes just the new footprints from the stored particles.
 
 A ``grid`` in a variant changes only the fields it names. A coarser version
 of the default domain is just ``grid: {xres: 0.1, yres: 0.1}``.
@@ -171,46 +173,29 @@ fine footprint onto coarser cells or irregular areas after the run.
 Changing a variant that has run
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The first time a project runs, PYSTILT saves the full settings of every
-variant in ``simulations/variants.yaml``. That file records what produced
-the outputs. On later runs, PYSTILT compares each variant against it. If a
-variant's settings have changed, the run stops with an error that names
-them. This includes a changed default that the variant inherits, or a
-changed setting of its meteorology source. The error looks like this:
+A variant's results live in folders named by a hash of its settings (see
+:doc:`project_layout`). Change a setting, including a default the variant
+inherits or a setting of its meteorology source, and the variant now points
+at a folder that does not exist yet. The next run fills it, for every
+receptor. The old folder stays as it was, and ``stilt status`` lists it as a
+folder no variant uses any more.
 
-.. code-block:: text
+If you want to keep both, give the new settings a new name instead:
+add ``hrrr-zi08: {ziscale: 0.8}`` and leave ``hrrr`` as it was. Then only
+the new variant runs, and you can select both when you load results, for
+example ``sel(variant=["hrrr", "hrrr-zi08"])``. Each folder's
+``_settings.yaml`` shows what it ran with.
 
-   ConfigChangedError: These settings already ran under their name in ./my_project
-   (hrrr: ziscale). Declare a new variant for the new settings, or remove the
-   old outputs first (Model.remove / stilt rm --variant).
+Some settings do not change a result, so changing them changes no folder:
 
-The run stops because the finished outputs would no longer match their
-name. You can go on in one of two ways:
-
-- Give the new settings a new name. Add ``hrrr-zi08: {ziscale: 0.8}`` and
-  put ``hrrr`` back as it was. Only the new variant runs.
-- Remove the old outputs. ``stilt rm --variant hrrr`` (or
-  ``model.remove("hrrr")``) deletes every simulation of that variant and
-  its saved settings. The variant then runs again as new. Variants declared
-  with ``from: hrrr`` are removed too, since their footprints came from its
-  particles. You can repeat ``--variant`` to remove several variants at
-  once, for example after changing a default they all inherit.
-
-Suppose a campaign raises the default ``numpar`` halfway through and keeps
-the old runs. The base run then has two names, one for each ``numpar``.
-Select both when you load the results, for example
-``sel(variant=["hrrr", "hrrr-np1k"])``. ``simulations/variants.yaml`` shows
-what each name ran with.
-
-Some settings do not change a result, so you can change them at any time:
-
-- ``execution``
+- ``execution``, ``output``, and ``keep_scratch``
 - ``timeout``, ``rm_dat``, and ``exe_dir``
 - where the meteorology files are (``directory`` and ``subgrid_dir``)
 
-Taking a variant out of ``config.yaml`` does not delete its outputs.
-``stilt run`` warns about such variants, and ``stilt status`` lists them,
-until you remove them with ``stilt rm``.
+Taking a variant out of ``config.yaml`` does not delete its results.
+``stilt status`` lists its folders until you delete them by hand. PYSTILT
+never deletes a folder itself, because another project may share the
+output directory.
 
 Footprints for shapefiles, hexagons, or point sources
 -----------------------------------------------------
@@ -230,30 +215,29 @@ picks a grid fine enough to resolve them (see
      ids: NAME           # attribute column used as cell ids
 
 The other kinds are ``h3`` hexagons and ``windows`` around point sources.
-To make footprints for several geometries from the same particles, use
-``from:`` variants:
+To make footprints for several geometries from the same particles, declare
+one variant per geometry; they share the particles:
 
 .. code-block:: yaml
 
    variants:
      hrrr: {}
      hrrr-hexes:
-       from: hrrr
        geometry:
          kind: h3
          resolution: 8
          bounds: {xmin: -112.3, xmax: -111.6, ymin: 40.4, ymax: 41.0}
        cells_per_target: 4   # grid cells across the smallest hexagon (default)
      hrrr-sources:
-       from: hrrr
        geometry:
          kind: windows
          coords: [[-111.97, 40.515], [-112.015, 40.779]]
          size: 0.01
          ids: [landfill, wwtp]
 
-The grid PYSTILT picks is saved in ``simulations/variants.yaml`` and in each
-footprint file. You do not need the shapefile again to read a footprint.
+The grid PYSTILT picks is saved in the footprint folder's ``_settings.yaml``
+and with each footprint. You do not need the shapefile again to read a
+footprint.
 
 If you give both ``grid`` and ``geometry``, the ``grid`` is used as given.
 The geometry is kept with the settings, and ``sim.config.geometry.build()``

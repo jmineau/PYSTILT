@@ -29,18 +29,41 @@ class _StopDriver:
 
 
 @pytest.fixture
-def sim(monkeypatch, tmp_path):
+def sim(monkeypatch, tmp_path, point_receptor):
     """A Simulation with the HYSPLIT driver stubbed out."""
+    from stilt.config import MetConfig, VariantConfig
+    from stilt.meteorology import MetStream
+    from stilt.output import Output
+    from stilt.simulation import VariantOutput
+
     monkeypatch.setattr(simmod, "HYSPLITDriver", _StopDriver)
     _StopDriver.seen.clear()
+    met_config = MetConfig(
+        directory=tmp_path / "met", file_format="%Y%m%d_%H", file_tres="1h"
+    )
 
     def _make(timeout):
-        s = object.__new__(simmod.Simulation)
-        s.directory = tmp_path
-        s.receptor = None
-        s.parent = None
-        s.params = STILTParams(timeout=timeout)
-        s._exe_dir = None
+        config = VariantConfig(
+            name="hrrr",
+            group="hrrr",
+            met="hrrr",
+            n_hours=-24,
+            numpar=10,
+            timeout=timeout,
+        )
+        outputs = VariantOutput(
+            Output(tmp_path / "output"),
+            "hrrr",
+            config.transport_settings(met_config),
+            None,
+        )
+        s = simmod.Simulation(
+            point_receptor,
+            config,
+            met=MetStream("hrrr", met_config),
+            outputs=outputs,
+            directory=tmp_path / "scratch",
+        )
         monkeypatch.setattr(
             type(s), "met_files", property(lambda self: []), raising=False
         )

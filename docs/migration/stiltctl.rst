@@ -38,8 +38,8 @@ same package, so the model and the workers cannot drift out of step.
 When you move a deployment over, check:
 
 - the database connection and its secrets
-- whether the project root is a cloud URI, and where workers get scratch
-  space (``compute_root``)
+- where the project and output directories are on the shared filesystem,
+  and where workers get scratch space (``compute_root``)
 - any Kubernetes YAML that uses old CLI flags or resource names
 
 The worker and service code is one of the least settled parts of PYSTILT.

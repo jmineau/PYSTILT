@@ -236,7 +236,8 @@ Where HYSPLIT reads the files
 -----------------------------
 
 Before each simulation, PYSTILT links the meteorology files it needs into
-that simulation's working folder, or copies them if it cannot link. HYSPLIT
-reads them from there. PYSTILT does not change your files. On a cluster,
-this lets HYSPLIT read from fast local scratch space (see ``compute_root``
-in :doc:`project_layout`).
+that simulation's scratch working folder, or copies them if it cannot link.
+HYSPLIT reads them from there, and the folder is removed when the run
+succeeds. PYSTILT does not change your files. On a cluster, this lets
+HYSPLIT read from fast local scratch space (see ``compute_root`` in
+:doc:`project_layout`).

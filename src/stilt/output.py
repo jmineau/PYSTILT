@@ -60,9 +60,7 @@ from scipy import sparse
 from stilt.config import (
     FootprintConfig,
     Grid,
-    MetConfig,
     TransportSettings,
-    VariantConfig,
 )
 from stilt.config.transport import canonical, settings_hash
 from stilt.footprint import Footprint
@@ -354,7 +352,11 @@ class Run:
             )
         return traj
 
-    # -- logs --------------------------------------------------------------
+    # -- logs and scratch --------------------------------------------------
+
+    def scratch_path(self, receptor_id: str) -> Path:
+        """Return where a receptor's HYSPLIT working directory is kept when a run fails."""
+        return self.scratch_dir / _date_dir(receptor_id) / receptor_id
 
     def log_path(self, receptor_id: str) -> Path:
         return self.logs_dir / _date_dir(receptor_id) / f"{receptor_id}.log"
@@ -371,6 +373,14 @@ class Run:
         """Return the footprint folders made from this run's particles."""
         return [f for f in self.output.footprint_sets() if f.run_key == self.key]
 
+    def find_footprints(self, config: FootprintConfig) -> Footprints | None:
+        """Return the footprint folder for *config* on this run's particles, or ``None``."""
+        digest = Footprints.hash_for(self.hash, config)
+        for existing in self.footprint_sets():
+            if existing.hash == digest:
+                return existing
+        return None
+
     def footprints(
         self, config: FootprintConfig, name: str | None = None
     ) -> Footprints:
@@ -385,10 +395,10 @@ class Run:
         """
         if config.grid is None:
             raise ValueError("Footprint settings need a grid.")
-        digest = Footprints.hash_for(self, config)
-        for existing in self.footprint_sets():
-            if existing.hash == digest:
-                return existing
+        existing = self.find_footprints(config)
+        if existing is not None:
+            return existing
+        digest = Footprints.hash_for(self.hash, config)
         name = name or self.name
         key = f"{name}-{digest[:HASH_CHARS]}"
         _write_settings(
@@ -504,13 +514,13 @@ class Footprints:
     @property
     def hash(self) -> str:
         """Hash of the run's settings and the footprint settings together, re-validated."""
-        return self.hash_for(self.run, self.config)
+        return self.hash_for(self.run.hash, self.config)
 
     @staticmethod
-    def hash_for(run: Run, config: FootprintConfig) -> str:
-        """Return the hash that identifies footprints with *config* on *run*'s particles."""
+    def hash_for(run_hash: str, config: FootprintConfig) -> str:
+        """Return the hash identifying footprints with *config* on the particles of the run hashed *run_hash*."""
         return settings_hash(
-            {"particles": run.hash, "footprint": config.model_dump(mode="json")}
+            {"particles": run_hash, "footprint": config.model_dump(mode="json")}
         )
 
     @property
@@ -807,94 +817,40 @@ class ConvertReport(NamedTuple):
     footprints: int
     footprints_skipped: int
     logs: int
-    incomplete: int
-
-
-def convert_simulation(
-    sim: Any, output: Output, met_config: MetConfig, *, verify: bool = True
-) -> tuple[bool, bool, bool]:
-    """
-    Copy one simulation of the current layout into *output*.
-
-    Returns ``(wrote_particles, wrote_footprint, wrote_log)``. Existing files
-    are left alone, so the conversion can be resumed. With *verify*, each
-    file written is read back and compared with its source.
-    """
-    variant: VariantConfig = sim.config
-    run = output.run(variant.group, variant.transport_settings(met_config))
-    rid = str(sim.receptor.id)
-
-    wrote_particles = wrote_footprint = wrote_log = False
-    traj_path = None if sim.is_derived else sim.resolve(sim.trajectories_path)
-    if traj_path is not None and not run.has_particles(rid):
-        traj = Trajectories.from_parquet(traj_path)
-        run.write_particles(traj)
-        if verify:
-            back = run.read_particles(rid)
-            if len(back.data) != len(traj.data) or not np.allclose(
-                back.data["foot"].to_numpy(), traj.data["foot"].to_numpy()
-            ):
-                run.particles_path(rid).unlink()
-                raise ValueError(f"{rid}: converted particles do not match the source.")
-        wrote_particles = True
-
-    if sim.makes_footprint:
-        feet = run.footprints(sim.footprint_config, name=sim.variant)
-        if not feet.has(rid):
-            foot_path = sim.resolve(sim.footprint_path)
-            if foot_path is not None:
-                foot = Footprint.from_netcdf(foot_path)
-                feet.write(foot)
-                if verify:
-                    back = feet.read(rid)
-                    assert back is not None
-                    if not np.allclose(
-                        back.data.values,
-                        np.nan_to_num(
-                            foot.data.values.astype(np.float32).astype(np.float64)
-                        ),
-                    ):
-                        feet.footprint_path(rid).unlink()
-                        raise ValueError(
-                            f"{rid}: converted footprint does not match the source."
-                        )
-                wrote_footprint = True
-            elif sim.empty_reason is not None:
-                feet.write_empty(sim.receptor, sim.empty_reason, name=sim.variant)
-                wrote_footprint = True
-
-    log_path = sim.resolve(sim.log_path)
-    if log_path is not None and not run.log_path(rid).exists():
-        run.write_log(rid, log_path.read_text())
-        wrote_log = True
-    return wrote_particles, wrote_footprint, wrote_log
 
 
 def convert_project(
     model: Any,
-    output: Output,
+    output: Output | None = None,
     *,
     receptors: Iterable[str] | None = None,
     variants: Iterable[str] | None = None,
     verify: bool = True,
 ) -> ConvertReport:
     """
-    Copy a project's ``simulations/by-id`` tree into an output directory.
+    Copy a project's old ``simulations/by-id`` tree into an output directory.
 
-    Every complete simulation of the model (or of the selected receptors and
-    variants) is written to *output*: particles into the run for its
-    transport settings, the footprint into that run's folder for its
-    footprint settings, and the log beside them. Variants that only differ
-    in footprint settings land in the same run. Files that already exist are
-    skipped, so an interrupted conversion can be resumed. Incomplete
-    simulations are counted and left out.
+    Before the output directory existed, each simulation had its own folder,
+    ``simulations/by-id/<receptor>/<variant>/``, holding
+    ``<receptor>_traj.parquet``, ``<receptor>_foot.nc`` or
+    ``<receptor>_foot.empty``, and ``stilt.log``. This copies every such
+    file into *output* (the model's own output directory by default):
+    particles into the run for the variant's transport settings, the
+    footprint into that run's folder for the variant's footprint settings,
+    the log beside them. Variants with the same transport settings share a
+    run. Files that already exist are skipped, so an interrupted conversion
+    can be resumed. The old tree is left in place.
+
+    A ``config.yaml`` that still uses ``from:`` must be edited first (give
+    the variant its parent's transport overrides, if any); its footprints
+    then land in the shared run.
 
     Parameters
     ----------
     model : Model
         The project to convert.
-    output : Output
-        Where to write.
+    output : Output, optional
+        Where to write. Defaults to ``model.output``.
     receptors, variants : iterable of str, optional
         Receptor ids and variant names to convert. All by default.
     verify : bool, default True
@@ -904,22 +860,71 @@ def convert_project(
     -------
     ConvertReport
     """
+    target: Output = model.output if output is None else output
+    by_id = model.project.directory / "simulations" / "by-id"
     sims = model.simulations
     if receptors is not None or variants is not None:
         sims = sims.sel(receptor=receptors, variant=variants)
     counts = dict.fromkeys(ConvertReport._fields, 0)
+    runs: dict[str, Run] = {}
     for sim in sims:
-        if not sim.is_complete():
-            counts["incomplete"] += 1
-            continue
-        wrote_particles, wrote_footprint, wrote_log = convert_simulation(
-            sim, output, model.config.mets[sim.config.met], verify=verify
-        )
-        if not sim.is_derived:
-            counts["particles" if wrote_particles else "particles_skipped"] += 1
-        if sim.makes_footprint:
-            counts["footprints" if wrote_footprint else "footprints_skipped"] += 1
-        counts["logs"] += int(wrote_log)
+        rid = str(sim.receptor.id)
+        old = by_id / rid / sim.variant
+        traj_path = old / f"{rid}_traj.parquet"
+        foot_path = old / f"{rid}_foot.nc"
+        empty_path = old / f"{rid}_foot.empty"
+        log_path = old / "stilt.log"
+
+        settings = sim.outputs.settings
+        if settings.hash not in runs:
+            runs[settings.hash] = target.run(sim.variant, settings)
+        run: Run = runs[settings.hash]
+
+        if traj_path.exists():
+            if run.has_particles(rid):
+                counts["particles_skipped"] += 1
+            else:
+                traj = Trajectories.from_parquet(traj_path)
+                run.write_particles(traj)
+                if verify:
+                    back = run.read_particles(rid)
+                    if len(back.data) != len(traj.data) or not np.allclose(
+                        back.data["foot"].to_numpy(), traj.data["foot"].to_numpy()
+                    ):
+                        run.particles_path(rid).unlink()
+                        raise ValueError(
+                            f"{rid}/{sim.variant}: converted particles do not match."
+                        )
+                counts["particles"] += 1
+
+        config = sim.outputs.footprint_config
+        if config is not None and (foot_path.exists() or empty_path.exists()):
+            feet = run.footprints(config, name=sim.variant)
+            if feet.has(rid):
+                counts["footprints_skipped"] += 1
+            elif foot_path.exists():
+                foot = Footprint.from_netcdf(foot_path)
+                feet.write(foot)
+                if verify:
+                    back = feet.read(rid)
+                    assert back is not None
+                    expected = np.nan_to_num(
+                        foot.data.values.astype(np.float32).astype(np.float64)
+                    )
+                    if not np.allclose(back.data.values, expected):
+                        feet.footprint_path(rid).unlink()
+                        raise ValueError(
+                            f"{rid}/{sim.variant}: converted footprint does not match."
+                        )
+                counts["footprints"] += 1
+            else:
+                reason = empty_path.read_text().strip() or "unknown"
+                feet.write_empty(sim.receptor, reason, name=sim.variant)
+                counts["footprints"] += 1
+
+        if log_path.exists() and not run.log_path(rid).exists():
+            run.write_log(rid, log_path.read_text())
+            counts["logs"] += 1
     return ConvertReport(**counts)
 
 
@@ -930,5 +935,4 @@ __all__ = [
     "Output",
     "Run",
     "convert_project",
-    "convert_simulation",
 ]

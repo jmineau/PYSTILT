@@ -153,26 +153,24 @@ time step:
 What PYSTILT wrote
 ------------------
 
-Everything is in the project folder.
+Your inputs are in the project folder, and the results in its ``output``
+folder.
 
 .. code-block:: text
 
    my_first_project/
      config.yaml                 # your settings
      receptors.csv               # your receptors
-     simulations/
-       variants.yaml             # PYSTILT's record of the settings that ran
-       by-id/
-         202307151800_-111.848_40.766_10/                # the receptor
-           hrrr/                                         # the variant
-             stilt.log                                   # HYSPLIT log
-             202307151800_-111.848_40.766_10_traj.parquet  # particle paths
-             202307151800_-111.848_40.766_10_foot.nc       # footprint
+     output/
+       particles/settings=hrrr-a3f9c2/date=2023-07-15/202307151800_-111.848_40.766_10.parquet
+       footprints/settings=hrrr-93278c/date=2023-07-15/202307151800_-111.848_40.766_10.parquet
+       logs/settings=hrrr-a3f9c2/date=2023-07-15/202307151800_-111.848_40.766_10.log
 
-HYSPLIT's own input files, such as ``CONTROL`` and ``SETUP.CFG``, are left
-in the simulation folder too. The two folder names together are the
-:term:`simulation ID`. The first is the receptor (time, longitude, latitude,
-and altitude) and the second is the variant.
+The folders are named after the variant, ``hrrr``, plus a short hash of the
+settings it ran with. The file name is the receptor (time, longitude,
+latitude, and altitude); receptor and variant together are the
+:term:`simulation ID`. HYSPLIT's own input files, such as ``CONTROL`` and
+``SETUP.CFG``, are written to scratch and removed when a run succeeds.
 
 Your settings and receptors are saved in the folder, so you can open the
 project again later without repeating them:

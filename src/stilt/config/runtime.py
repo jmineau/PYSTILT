@@ -10,7 +10,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class RuntimeSettings(BaseSettings):
     """
-    Queue, cache, and scratch locations for a deployment.
+    Queue and scratch locations for a deployment.
 
     Each field is read from the matching ``PYSTILT_*`` environment variable
     (``PYSTILT_DB_URL`` and so on) unless passed directly. None of them change
@@ -21,13 +21,6 @@ class RuntimeSettings(BaseSettings):
 
     db_url: str | None = Field(
         default=None, description="PostgreSQL URL of the shared work queue."
-    )
-    cache_dir: Path | None = Field(
-        default=None,
-        description=(
-            "Local directory for files downloaded from a cloud project. Unset "
-            "uses a new temporary directory."
-        ),
     )
     compute_root: Path | None = Field(
         default=None,

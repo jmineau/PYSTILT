@@ -102,7 +102,7 @@ def test_transform_context_defaults(point_receptor):
     ctx = TransformContext(receptor=point_receptor)
     assert ctx.receptor is point_receptor
     assert ctx.variant == ""
-    assert ctx.store is None
+    assert ctx.directory is None
 
 
 def test_builtins_satisfy_particle_transform_protocol():
@@ -899,28 +899,27 @@ def _write_table(path, a, b):
 
 
 @pytest.mark.parametrize("filename", ["kernels.parquet", "kernels.csv"])
-def test_ak_table_picks_the_receptor_kernel_via_the_store(tmp_path, filename):
-    from stilt.store import LocalStore
-
+def test_ak_table_picks_the_receptor_kernel_relative_to_the_directory(
+    tmp_path, filename
+):
     a, b = _two_receptors()
     _write_table(tmp_path / filename, a, b)
     kernel = AveragingKernel(table=filename)
     p = _make_particles(4)
 
-    store = LocalStore(tmp_path)
-    out_a = kernel.apply(p, TransformContext(receptor=a, store=store))
-    out_b = kernel.apply(p, TransformContext(receptor=b, store=store))
+    out_a = kernel.apply(p, TransformContext(receptor=a, directory=tmp_path))
+    out_b = kernel.apply(p, TransformContext(receptor=b, directory=tmp_path))
 
     assert out_a["foot"].tolist() == [1.0] * 4
     assert out_b["foot"].tolist() == [0.5] * 4
     assert out_b["ak_weight"].tolist() == [0.5] * 4
-    assert kernel.kernel(TransformContext(receptor=b, store=store)) == (
+    assert kernel.kernel(TransformContext(receptor=b, directory=tmp_path)) == (
         [0.0, 3000.0],
         [0.5, 0.5],
     )
 
 
-def test_ak_table_absolute_path_needs_no_store(tmp_path):
+def test_ak_table_absolute_path_needs_no_directory(tmp_path):
     a, b = _two_receptors()
     path = tmp_path / "kernels.parquet"
     _write_table(path, a, b)

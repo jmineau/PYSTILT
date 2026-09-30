@@ -312,20 +312,6 @@ def test_slurm_executor_start_renders_skip_existing_override(tmp_path, monkeypat
     assert "--no-skip" in script_text
 
 
-def test_slurm_executor_rejects_uri_project(monkeypatch):
-    """Cloud (URI) projects are rejected for Slurm push dispatch before sbatch."""
-    monkeypatch.setattr(
-        "stilt.execution.backends.slurm.subprocess.run",
-        lambda *a, **k: pytest.fail("sbatch must not run"),
-    )
-    ex = SlurmExecutor.from_config({"backend": "slurm", "n_workers": 1})
-    with pytest.raises(ValueError, match="requires a local project root"):
-        ex.start(
-            ["sim-a"],
-            project="s3://bucket/my_proj",
-        )
-
-
 def test_slurm_executor_start_zero_workers_returns_none_job_id(monkeypatch):
     ex = SlurmExecutor(n_workers=1)
     handle = ex.start([], project=".")

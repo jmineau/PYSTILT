@@ -1,4 +1,4 @@
-"""A simulation, one receptor run under one variant, and its outputs."""
+"""A simulation, one receptor run under one variant, and its results."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, NamedTuple
 
-from stilt.config import FootprintConfig, STILTParams, VariantConfig
+from stilt.config import FootprintConfig, STILTParams, TransportSettings, VariantConfig
 from stilt.errors import (
     EmptyFootprintError,
     EmptyTrajectoryError,
@@ -18,9 +18,9 @@ from stilt.errors import (
 from stilt.footprint import Footprint
 from stilt.hysplit import HYSPLITDriver
 from stilt.meteorology import MetStream
-from stilt.project import resolve_directory, simulation_prefix
+from stilt.output import Footprints, Output, Run
+from stilt.project import resolve_directory
 from stilt.receptors import Receptor, ReceptorID
-from stilt.store import Store
 from stilt.trajectory import Trajectories
 from stilt.transforms import (
     ParticleTransform,
@@ -37,8 +37,7 @@ class SimID(NamedTuple):
     """
     Id of one simulation, a ``(receptor, variant)`` pair.
 
-    Its string form is ``"<receptor_id>/<variant>"``, which is also the
-    simulation's directory below ``simulations/by-id/``.
+    Its string form is ``"<receptor_id>/<variant>"``.
 
     Examples
     --------
@@ -56,7 +55,7 @@ class SimID(NamedTuple):
         return f"{self.receptor}/{self.variant}"
 
     def __fspath__(self) -> str:
-        """Return the string form, so ``root / sim_id`` gives the simulation directory."""
+        """Return the string form, so ``root / sim_id`` gives a working directory."""
         return str(self)
 
     @classmethod
@@ -83,14 +82,86 @@ class SimID(NamedTuple):
         return cls(ReceptorID(receptor), variant)
 
 
+class VariantOutput:
+    """
+    Where one variant's results live in an output directory.
+
+    Found once and shared by every simulation of the variant, so a run
+    created by one receptor's worker is seen by the others. Nothing is
+    created until :meth:`ensure_run` or :meth:`ensure_footprints` is called.
+
+    Parameters
+    ----------
+    output : Output
+        The output directory.
+    name : str
+        Variant name, which labels the folders.
+    settings : TransportSettings
+        What identifies the variant's run.
+    footprint_config : FootprintConfig or None
+        The variant's footprint settings, or ``None`` for particles only.
+    """
+
+    def __init__(
+        self,
+        output: Output,
+        name: str,
+        settings: TransportSettings,
+        footprint_config: FootprintConfig | None,
+    ) -> None:
+        self.output = output
+        self.name = name
+        self.settings = settings
+        self.footprint_config = footprint_config
+        self._run: Run | None = None
+        self._footprints: Footprints | None = None
+
+    def __repr__(self) -> str:
+        return f"VariantOutput({self.name!r}, {self.output.path.name!r})"
+
+    @property
+    def run(self) -> Run | None:
+        """The run holding the variant's particles, or ``None`` until one exists."""
+        if self._run is None:
+            self._run = self.output.find_run(self.settings)
+        return self._run
+
+    @property
+    def footprints(self) -> Footprints | None:
+        """The folder holding the variant's footprints, or ``None`` until one exists or without a grid."""
+        if self.footprint_config is None:
+            return None
+        if self._footprints is None:
+            run = self.run
+            if run is not None:
+                self._footprints = run.find_footprints(self.footprint_config)
+        return self._footprints
+
+    def ensure_run(self) -> Run:
+        """Return the run, creating its folder on first use."""
+        if self._run is None:
+            self._run = self.output.run(self.name, self.settings)
+        return self._run
+
+    def ensure_footprints(self) -> Footprints | None:
+        """Return the footprint folder, creating it on first use, or ``None`` without a grid."""
+        if self.footprint_config is None:
+            return None
+        if self._footprints is None:
+            self._footprints = self.ensure_run().footprints(
+                self.footprint_config, name=self.name
+            )
+        return self._footprints
+
+
 class Simulation:
     """
     One receptor run under one variant.
 
     A simulation runs HYSPLIT for its receptor and calculates a footprint
-    from the particles. A derived simulation (a ``from:`` variant) runs no
-    HYSPLIT and calculates its footprint from its parent's particles. The
-    simulation knows where its output files are and whether they all exist
+    from the particles, and reads both back from the output directory. Its
+    particles are shared with every variant that has the same transport
+    settings. The simulation knows whether its results exist
     (:meth:`is_complete`).
 
     You rarely build one yourself. Get it from a model instead, as in
@@ -102,18 +173,21 @@ class Simulation:
         Where and when particles are released.
     config : VariantConfig
         Settings of the variant. ``config.name`` is the variant name.
-    met : MetStream, optional
-        Meteorology for the HYSPLIT run. Required unless *parent* is given.
-    parent : Simulation, optional
-        Simulation whose particles this one uses. Such a simulation never
-        runs HYSPLIT.
+    met : MetStream
+        Meteorology for the HYSPLIT run.
+    outputs : VariantOutput
+        Where the variant's results live.
     directory : str or Path, optional
-        Working directory where HYSPLIT runs and outputs are written. A
-        temporary directory is used when omitted. Nothing is created until
-        an output is written.
-    store : Store, optional
-        Project store. Outputs are copied there by :meth:`publish` and read
-        from there when they are not in *directory*.
+        Working directory where HYSPLIT runs, on scratch. A temporary
+        directory is used when omitted. Nothing is created until HYSPLIT
+        runs, and it is removed afterwards unless *keep_scratch* is set or
+        the run fails, in which case it is copied into the output directory.
+    project_dir : Path, optional
+        Directory that relative file names in transform settings are taken
+        from (the project directory).
+    keep_scratch : bool, default False
+        Keep the working directory of a successful run too, under the output
+        directory's ``scratch/``.
 
     Attributes
     ----------
@@ -130,25 +204,24 @@ class Simulation:
         receptor: Receptor,
         config: VariantConfig,
         *,
-        met: MetStream | None = None,
-        parent: Simulation | None = None,
+        met: MetStream,
+        outputs: VariantOutput,
         directory: str | Path | None = None,
-        store: Store | None = None,
+        project_dir: Path | None = None,
+        keep_scratch: bool = False,
     ):
-        if parent is None and met is None:
-            raise ValueError("A simulation that runs HYSPLIT needs a met stream.")
         self.id = SimID(receptor.id, config.name)
         self.receptor = receptor
         self.config = config
         self.met = met
+        self.outputs = outputs
         self.params: STILTParams = config.stilt_params()
-        self.footprint_config: FootprintConfig | None = config.footprint
-        self.parent = parent
+        self.footprint_config: FootprintConfig | None = outputs.footprint_config
         if directory is None:
             directory = resolve_directory(prefix="pystilt_") / self.id
         self.directory = resolve_directory(directory)
-        self.key_prefix = simulation_prefix(self.id)
-        self._store = store
+        self.project_dir = project_dir
+        self.keep_scratch = keep_scratch
 
         # Lazy state
         self._source_met_files: list[Path] | None = None
@@ -158,7 +231,7 @@ class Simulation:
         self._plot: SimulationPlotAccessor | None = None
 
     def __repr__(self) -> str:
-        return f"Simulation(id={str(self.id)!r}, directory={str(self.directory)!r})"
+        return f"Simulation(id={str(self.id)!r})"
 
     @property
     def variant(self) -> str:
@@ -166,77 +239,61 @@ class Simulation:
         return self.id.variant
 
     @property
-    def is_derived(self) -> bool:
-        """Whether this simulation uses another simulation's particles."""
-        return self.parent is not None
+    def receptor_id(self) -> str:
+        return str(self.id.receptor)
 
-    # -- Paths and keys --------------------------------------------------------
+    # -- Where the results are -------------------------------------------------
+
+    @property
+    def run(self) -> Run | None:
+        """The run holding this simulation's particles, or ``None`` until one exists."""
+        return self.outputs.run
+
+    @property
+    def footprints(self) -> Footprints | None:
+        """The folder holding this variant's footprints, or ``None`` until one exists."""
+        return self.outputs.footprints
+
+    @property
+    def trajectories_path(self) -> Path | None:
+        """Path of the particle file in the output directory, or ``None`` before the run exists."""
+        run = self.run
+        return None if run is None else run.particles_path(self.receptor_id)
+
+    @property
+    def footprint_path(self) -> Path | None:
+        """Path of the footprint file in the output directory, or ``None`` before its folder exists."""
+        feet = self.footprints
+        return None if feet is None else feet.footprint_path(self.receptor_id)
+
+    @property
+    def log_path(self) -> Path | None:
+        """Path of the run log in the output directory, or ``None`` before the run exists."""
+        run = self.run
+        return None if run is None else run.log_path(self.receptor_id)
 
     @property
     def met_dir(self) -> Path:
-        """Directory where meteorology files are staged for HYSPLIT."""
+        """Directory where meteorology files are staged for HYSPLIT, inside the working directory."""
         return self.directory / "met"
-
-    @property
-    def log_path(self) -> Path:
-        """Path of the HYSPLIT log in the working directory."""
-        return self.directory / "stilt.log"
-
-    @property
-    def trajectories_path(self) -> Path:
-        """Path of the trajectory Parquet file (the parent's for a derived simulation)."""
-        if self.parent is not None:
-            return self.parent.trajectories_path
-        return self.directory / f"{self.id.receptor}_traj.parquet"
-
-    @property
-    def footprint_path(self) -> Path:
-        """Path of the footprint NetCDF file in the working directory."""
-        return self.directory / f"{self.id.receptor}_foot.nc"
-
-    @property
-    def empty_footprint_path(self) -> Path:
-        """
-        Path of the marker written instead of the NetCDF when the footprint is empty.
-
-        The file holds the reason (see :attr:`empty_reason`).
-        """
-        return self.footprint_path.with_suffix(".empty")
-
-    def key(self, path: str | Path) -> str:
-        """Return the store key of one of this simulation's files."""
-        return f"{self.key_prefix}/{Path(path).name}"
-
-    def resolve(self, path: Path) -> Path | None:
-        """Return a local path to an output file, from the working directory or the store, or ``None``."""
-        if path.exists():
-            return path
-        if self._store is not None:
-            key = self.key(path)
-            if self._store.exists(key):
-                return self._store.local_path(key)
-        return None
 
     # -- Presence and completion -----------------------------------------------
 
     @property
     def has_trajectory(self) -> bool:
-        """Whether the trajectory file exists (the parent's for a derived simulation)."""
-        if self.parent is not None:
-            return self.parent.has_trajectory
-        return self.resolve(self.trajectories_path) is not None
+        """Whether the particle file exists."""
+        run = self.run
+        return run is not None and run.has_particles(self.receptor_id)
 
     @property
     def has_footprint(self) -> bool:
         """
-        Whether the footprint file or the empty-footprint marker exists.
+        Whether the footprint file exists.
 
         An empty footprint (no particles over the grid) is a finished result.
         """
-        return (
-            self.resolve(self.footprint_path) is not None
-            or self.resolve(self.empty_footprint_path) is not None
-        )
+        feet = self.footprints
+        return feet is not None and feet.has(self.receptor_id)
 
     @property
     def makes_footprint(self) -> bool:
@@ -245,60 +302,11 @@ class Simulation:
 
     def is_complete(self) -> bool:
         """
-        Return whether every expected output exists.
+        Return whether every expected result exists.
 
-        That is the trajectory (unless derived) and the footprint (when the
-        variant has a grid).
+        That is the particles, and the footprint when the variant has a grid.
         """
-        return (self.is_derived or self.has_trajectory) and (
-            not self.makes_footprint or self.has_footprint
-        )
-
-    @property
-    def outputs(self) -> list[Path]:
-        """Paths of the log, footprint, and empty-marker files, and the trajectory file unless derived."""
-        paths = [self.log_path, self.footprint_path, self.empty_footprint_path]
-        if not self.is_derived:
-            paths.append(self.trajectories_path)
-        return paths
-
-    def publish(self) -> None:
-        """
-        Copy this simulation's outputs from the working directory to the store.
-
-        Does nothing without a store or when the working directory is
-        already the store's copy.
-        """
-        if self._store is None:
-            return
-        for path in self.outputs:
-            self._store.publish_file(path, self.key(path))
-
-    def delete(self) -> None:
-        """
-        Delete this simulation's outputs from the store and its working directory.
-
-        The simulation then runs again on the next :meth:`stilt.Model.run`.
-        A derived simulation deletes only its own files, and its parent's
-        trajectory stays.
-        """
-        if self._store is not None:
-            for path in self.outputs:
-                self._store.delete(self.key(path))
-        shutil.rmtree(self.directory, ignore_errors=True)
-        self._trajectories = None
-        self._footprint = None
-
-    def write_empty_footprint_marker(self, reason: str) -> Path:
-        """Write the empty-footprint marker holding *reason* and return its path."""
-        marker = self.empty_footprint_path
-        marker.parent.mkdir(parents=True, exist_ok=True)
-        marker.write_text(reason + "\n", encoding="utf-8")
-        return marker
-
-    def clear_empty_footprint_marker(self) -> None:
-        """Remove the empty-footprint marker."""
-        self.empty_footprint_path.unlink(missing_ok=True)
+        return self.has_trajectory and (not self.makes_footprint or self.has_footprint)
 
     @property
     def plot(self) -> SimulationPlotAccessor:
@@ -339,53 +347,43 @@ class Simulation:
     @property
     def empty_reason(self) -> str | None:
         """
-        Why the footprint is empty, or ``None`` when it is not.
+        Why the footprint is empty, or ``None`` when it is not, or does not exist.
 
-        Read from the ``.empty`` marker. ``"outside_domain"`` means no
-        particle reached the grid, ``"no_particles"`` that there were none,
-        and ``"unknown"`` that the marker was written before reasons were
-        recorded.
+        ``"outside_domain"`` means no particle reached the grid and
+        ``"no_particles"`` that there were none.
         """
-        marker = self.resolve(self.empty_footprint_path)
-        if marker is None:
+        feet = self.footprints
+        if feet is None or not feet.has(self.receptor_id):
             return None
-        return marker.read_text(encoding="utf-8").strip() or "unknown"
+        return feet.empty_reason(self.receptor_id)
 
     @property
     def outcome(self) -> str | None:
         """
-        How this simulation ended, read from its outputs and log.
+        How this simulation ended, read from its results and log.
 
         Returns
         -------
         str or None
-            ``"complete"`` if every expected output exists,
-            ``"failed:<reason>"`` if a log exists but outputs are missing
+            ``"complete"`` if every expected result exists,
+            ``"failed:<reason>"`` if a log exists but results are missing
             (see :class:`~stilt.errors.FailureReason`), or ``None`` if the
             simulation has not run.
         """
         if self.is_complete():
             return "complete"
-        log_path = self.resolve(self.log_path)
-        if log_path is None:
+        log_path = self.log_path
+        if log_path is None or not log_path.exists():
             return None
-        return f"failed:{identify_failure_reason(log_path.parent)}"
+        return f"failed:{identify_failure_reason(log_path)}"
 
     # -- Lazy accessors --------------------------------------------------------
-
-    def _met_stream(self) -> MetStream:
-        """Return the met stream, the parent's for a derived simulation."""
-        if self.met is not None:
-            return self.met
-        if self.parent is not None:
-            return self.parent._met_stream()
-        raise ValueError(f"{self.id} has no met stream.")
 
     @property
     def source_met_files(self) -> list[Path]:
         """Meteorology files in the archive that cover this simulation's period."""
         if not self._source_met_files:
-            self._source_met_files = self._met_stream().required_files(
+            self._source_met_files = self.met.required_files(
                 r_time=self.receptor.time,
                 n_hours=self.params.n_hours,
             )
@@ -400,7 +398,7 @@ class Simulation:
         :attr:`source_met_files`.
         """
         if not self._met_files:
-            self._met_files = self._met_stream().stage_files_for_simulation(
+            self._met_files = self.met.stage_files_for_simulation(
                 r_time=self.receptor.time,
                 n_hours=self.params.n_hours,
                 target_dir=self.met_dir,
@@ -410,16 +408,16 @@ class Simulation:
     @property
     def log(self) -> str:
         """
-        Text of the HYSPLIT log.
+        Text of the run log.
 
         Raises
         ------
         FileNotFoundError
             If the log has not been written yet.
         """
-        log_path = self.resolve(self.log_path)
-        if log_path is None:
-            raise FileNotFoundError(f"Log file not found: {self.log_path}")
+        log_path = self.log_path
+        if log_path is None or not log_path.exists():
+            raise FileNotFoundError(f"No log for {self.id} yet.")
         return log_path.read_text()
 
     @property
@@ -427,29 +425,25 @@ class Simulation:
         """
         Particle trajectories, or ``None`` if they do not exist yet.
 
-        Loaded from the Parquet file on first access. A derived simulation
-        returns its parent's.
+        Read from the output directory on first access, or kept from the last
+        :meth:`run_trajectories` call.
         """
-        if self.parent is not None:
-            return self.parent.trajectories
-        if self._trajectories is None:
-            traj_path = self.resolve(self.trajectories_path)
-            if traj_path is not None:
-                self._trajectories = Trajectories.from_parquet(traj_path)
+        if self._trajectories is None and self.has_trajectory:
+            assert self.run is not None
+            self._trajectories = self.run.read_particles(self.receptor_id)
         return self._trajectories
 
     @property
     def footprint(self) -> Footprint | None:
         """
-        The footprint, or ``None`` if it does not exist yet.
+        The footprint, or ``None`` if it does not exist yet or is empty.
 
-        Loaded from the NetCDF file on first access, or the one from the last
-        :meth:`generate_footprint` call.
+        Read from the output directory on first access, or kept from the last
+        :meth:`generate_footprint` call with the variant's own settings.
         """
-        if self._footprint is None:
-            path = self.resolve(self.footprint_path)
-            if path is not None:
-                self._footprint = Footprint.from_netcdf(path)
+        if self._footprint is None and self.has_footprint:
+            assert self.footprints is not None
+            self._footprint = self.footprints.read(self.receptor_id)
         return self._footprint
 
     # -- Execution -------------------------------------------------------------
@@ -463,6 +457,12 @@ class Simulation:
         """
         Run HYSPLIT and keep the particles as :attr:`trajectories`.
 
+        HYSPLIT runs in :attr:`directory`. The log is copied into the output
+        directory whether the run succeeds or fails. The working directory is
+        then removed, unless the run failed or ``keep_scratch`` is set, in
+        which case it is copied under the output directory's ``scratch/``
+        first.
+
         Parameters
         ----------
         timeout : int, optional
@@ -472,12 +472,10 @@ class Simulation:
             Delete HYSPLIT's particle output files after reading them.
             Defaults to ``params.rm_dat``.
         write : bool, default False
-            Also write the trajectories to :attr:`trajectories_path`.
+            Also write the particles to the output directory.
 
         Raises
         ------
-        ValueError
-            If the simulation is derived and so has no HYSPLIT run.
         MeteorologyError
             If the meteorology files cannot be found or staged.
         HYSPLITTimeoutError
@@ -489,36 +487,52 @@ class Simulation:
         EmptyTrajectoryError
             If the particle file holds no particles.
         """
-        if self.is_derived:
-            raise ValueError(
-                f"{self.id} is derived from {self.parent.id}; it has no HYSPLIT run."  # type: ignore[union-attr]
-            )
         if rm_dat is None:
             rm_dat = self.params.rm_dat
         if timeout is None:
             timeout = self.params.timeout
 
+        run = self.outputs.ensure_run()
         self.directory.mkdir(parents=True, exist_ok=True)
-        runner = HYSPLITDriver(
-            directory=self.directory,
-            receptor=self.receptor,
-            params=self.params,
-            met_files=self.met_files,
-        )
-        runner.prepare()
-        result = runner.execute(timeout=timeout, rm_dat=rm_dat)
-        if result.log_path != self.log_path and result.log_path.exists():
-            self.log_path.write_text(result.log_path.read_text())
-        if result.particles.empty:
-            raise EmptyTrajectoryError(f"No trajectory data for {self.id}")
-        self._trajectories = Trajectories.from_particles(
-            result.particles,
-            receptor=self.receptor,
-            params=self.params,
-            met_files=self.source_met_files,
-        )
-        if write:
-            self._trajectories.to_parquet(self.trajectories_path)
+        scratch_log = self.directory / "stilt.log"
+        succeeded = False
+        try:
+            runner = HYSPLITDriver(
+                directory=self.directory,
+                receptor=self.receptor,
+                params=self.params,
+                met_files=self.met_files,
+            )
+            runner.prepare()
+            result = runner.execute(timeout=timeout, rm_dat=rm_dat)
+            if result.particles.empty:
+                raise EmptyTrajectoryError(f"No trajectory data for {self.id}")
+            self._trajectories = Trajectories.from_particles(
+                result.particles,
+                receptor=self.receptor,
+                params=self.params,
+                met_files=self.source_met_files,
+            )
+            self._footprint = None
+            if write:
+                run.write_particles(self._trajectories)
+            succeeded = True
+        finally:
+            if scratch_log.exists():
+                run.write_log(self.receptor_id, scratch_log.read_text())
+            self._finish_scratch(run, keep=self.keep_scratch or not succeeded)
+
+    def _finish_scratch(self, run: Run, *, keep: bool) -> None:
+        """Copy the working directory into the output directory when *keep*, then remove it."""
+        if not self.directory.exists():
+            return
+        if keep:
+            target = run.scratch_path(self.receptor_id)
+            shutil.rmtree(target, ignore_errors=True)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copytree(self.directory, target, symlinks=True)
+        shutil.rmtree(self.directory, ignore_errors=True)
+        self._met_files = None
 
     def generate_footprint(
         self,
@@ -530,10 +544,13 @@ class Simulation:
         """
         Calculate the footprint from the particles.
 
-        Runs HYSPLIT first when there are no trajectories yet. The result is
-        also kept as :attr:`footprint`. When no particle reaches the grid
+        Runs HYSPLIT first when there are no particles yet. With the
+        variant's own settings the result is kept as :attr:`footprint`.
+        Other settings are a footprint of their own: with ``write=True`` it
+        goes to its own folder in the output directory, beside the variant's,
+        and :attr:`footprint` is left alone. When no particle reaches the grid
         there is no footprint: the method returns ``None`` and, with
-        ``write=True``, writes the ``.empty`` marker instead of the NetCDF.
+        ``write=True``, records that with the reason.
 
         Parameters
         ----------
@@ -542,8 +559,8 @@ class Simulation:
             settings to try them without a new variant, for example
             ``sim.footprint_config.model_copy(update={"smooth_factor": 0.5})``.
         write : bool, default False
-            Also write the footprint to :attr:`footprint_path`, and the
-            trajectories when HYSPLIT had to run.
+            Also write the footprint to the output directory, and the
+            particles when HYSPLIT had to run.
         transforms : sequence of ParticleTransform, optional
             Extra particle transforms, applied after ``config.transforms``
             and recorded with them. Any object with an
@@ -563,6 +580,7 @@ class Simulation:
         TypeError
             If the variant has no grid and no *config* is given.
         """
+        own = config is None and not transforms
         if config is None:
             config = self.footprint_config
         if config is None:
@@ -580,34 +598,42 @@ class Simulation:
             config = config.model_copy(
                 update={"transforms": [*config.transforms, *transforms]}
             )
+        feet: Footprints | None = None
+        if write:
+            feet = (
+                self.outputs.ensure_footprints()
+                if own
+                else self.outputs.ensure_run().footprints(config, name=self.variant)
+            )
+            assert feet is not None
         try:
             foot = traj.footprint(
                 config, name=self.variant, context=context or self.transform_context()
             )
         except EmptyFootprintError as error:
-            self._footprint = None
-            if write:
-                self.write_empty_footprint_marker(error.reason)
-                self.footprint_path.unlink(missing_ok=True)
+            if own:
+                self._footprint = None
+            if feet is not None:
+                feet.write_empty(self.receptor, error.reason, name=self.variant)
             return None
-        self._footprint = foot
-        if write:
-            foot.to_netcdf(self.footprint_path)
-            self.clear_empty_footprint_marker()
+        if own:
+            self._footprint = foot
+        if feet is not None:
+            feet.write(foot)
         return foot
 
     def transform_context(self) -> TransformContext:
         """
         Return the :class:`~stilt.TransformContext` passed to this simulation's transforms.
 
-        It holds the receptor, the variant name, and the project store, from
-        which a transform can read per-receptor inputs such as an
+        It holds the receptor, the variant name, and the project directory,
+        from which a transform can read per-receptor inputs such as an
         averaging-kernel table. Use it to apply the footprint's transforms
         outside :meth:`generate_footprint`.
         """
         return TransformContext(
-            receptor=self.receptor, variant=self.variant, store=self._store
+            receptor=self.receptor, variant=self.variant, directory=self.project_dir
         )
 
 
-__all__ = ["SimID", "Simulation"]
+__all__ = ["SimID", "Simulation", "VariantOutput"]

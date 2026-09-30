@@ -3,9 +3,10 @@ Worker functions that run one simulation, one receptor, or many receptors.
 
 Workers are handed receptors. :func:`run_receptor` runs every variant of
 one receptor, and :func:`run_simulation` runs each one: HYSPLIT where the
-trajectories are missing, then the footprint. :func:`run_receptors` runs a
-list of receptors in this process or a process pool, and
-:func:`pull_receptors` takes receptors from the PostgreSQL work queue.
+particles are missing, then the footprint. Variants with the same transport
+settings share one HYSPLIT run. :func:`run_receptors` runs a list of
+receptors in this process or a process pool, and :func:`pull_receptors`
+takes receptors from the PostgreSQL work queue.
 """
 
 from __future__ import annotations
@@ -92,8 +93,9 @@ class ReceptorResult:
 
 
 def _append_error_log(sim: Simulation, *, phase: str, error: BaseException) -> None:
-    """Append the error and its traceback to the simulation log."""
-    sim.log_path.parent.mkdir(parents=True, exist_ok=True)
+    """Append the error and its traceback to the simulation's log in the output directory."""
+    log_path = sim.outputs.ensure_run().log_path(sim.receptor_id)
+    log_path.parent.mkdir(parents=True, exist_ok=True)
     trace = traceback.format_exc()
     lines = [
         "",
@@ -104,28 +106,34 @@ def _append_error_log(sim: Simulation, *, phase: str, error: BaseException) -> N
     ]
     if trace and trace.strip() and trace.strip() != "NoneType: None":
         lines.extend(["", "Traceback:", trace.rstrip()])
-    with sim.log_path.open("a", encoding="utf-8") as f:
+    with log_path.open("a", encoding="utf-8") as f:
         f.write("\n".join(lines) + "\n")
 
 
-def run_simulation(sim: Simulation, *, skip_existing: bool = True) -> SimulationResult:
+def run_simulation(
+    sim: Simulation, *, skip_existing: bool = True, footprint_stale: bool = False
+) -> SimulationResult:
     """
-    Run one simulation and copy its outputs into the project.
+    Run one simulation and write its results to the output directory.
 
-    HYSPLIT runs when the trajectories are missing, or always when
-    ``skip_existing`` is false. A ``from:`` variant reads its parent's
-    trajectories instead. When the variant has a grid, the footprint is
-    computed if it is missing, and again whenever HYSPLIT ran, so a
-    footprint always matches its trajectories. An empty footprint writes a
-    ``.empty`` marker, which counts as complete. Errors are caught, written
-    to the simulation log, and returned in the result.
+    HYSPLIT runs when the particles are missing, or always when
+    ``skip_existing`` is false. When the variant has a grid, the footprint
+    is computed if it is missing, and again whenever HYSPLIT ran or
+    ``footprint_stale`` says the particles changed, so a footprint always
+    matches its particles. An empty footprint is recorded with its reason
+    and counts as complete. Errors are caught, written to the log, and
+    returned in the result.
 
     Parameters
     ----------
     sim : Simulation
         Simulation to run.
     skip_existing : bool, default True
-        Keep trajectories and footprints that already exist.
+        Keep particles and footprints that already exist.
+    footprint_stale : bool, default False
+        Recompute the footprint even if it exists, because the particles it
+        was made from were replaced in this call (by a variant that shares
+        them).
 
     Returns
     -------
@@ -134,29 +142,22 @@ def run_simulation(sim: Simulation, *, skip_existing: bool = True) -> Simulation
     phase = "trajectory"
     ran_hysplit = False
     try:
-        if sim.is_derived:
-            if sim.trajectories is None:
-                raise SimulationError(
-                    f"{sim.id} derives from {sim.parent.id}, which has no trajectory"  # type: ignore[union-attr]
-                )
-        elif not (skip_existing and sim.has_trajectory):
+        if not (skip_existing and sim.has_trajectory):
             sim.run_trajectories(write=True)
             ran_hysplit = True
 
-        if sim.makes_footprint and not (
-            skip_existing and not ran_hysplit and sim.has_footprint
+        if sim.makes_footprint and (
+            ran_hysplit or footprint_stale or not (skip_existing and sim.has_footprint)
         ):
             phase = "footprint"
             sim.generate_footprint(write=True)
-        sim.publish()
         return SimulationResult(str(sim.id), "complete", ran_hysplit=ran_hysplit)
     except Exception as error:
         logger.exception("simulation %s failed during %s: %s", sim.id, phase, error)
         try:
             _append_error_log(sim, phase=phase, error=error)
-            sim.publish()
         except Exception:
-            logger.exception("simulation %s: could not publish failure log", sim.id)
+            logger.exception("simulation %s: could not write the failure log", sim.id)
         status = "failed" if isinstance(error, SimulationError) else "error"
         return SimulationResult(str(sim.id), status, error=str(error))
 
@@ -167,11 +168,11 @@ def run_receptor(
     """
     Run every simulation of one receptor.
 
-    Variants that run HYSPLIT go first, then the ``from:`` variants that
-    reuse their trajectories. A ``from:`` variant whose parent ran HYSPLIT in
-    this call is recomputed even with ``skip_existing``. A
-    ``KeyboardInterrupt``, such as a preempted job, gives an ``interrupted``
-    result.
+    Variants with the same transport settings share one HYSPLIT run: the
+    first of them runs it, the others reuse the particles and make their own
+    footprints. A footprint whose particles were replaced in this call is
+    recomputed even with ``skip_existing``. A ``KeyboardInterrupt``, such as
+    a preempted job, gives an ``interrupted`` result.
 
     Parameters
     ----------
@@ -180,26 +181,30 @@ def run_receptor(
     receptor_id : str
         Receptor to run.
     skip_existing : bool, default True
-        Keep trajectories and footprints that already exist.
+        Keep particles and footprints that already exist.
 
     Returns
     -------
     ReceptorResult
     """
     sims = list(model.simulations.sel(receptor=receptor_id))
-    ordered = [s for s in sims if not s.is_derived] + [s for s in sims if s.is_derived]
     results: list[SimulationResult] = []
+    reran: set[str] = set()  # transport settings whose HYSPLIT ran in this call
+    sim = None
     try:
-        for sim in ordered:
-            skip = skip_existing
-            if sim.is_derived:
-                reran = {r.sim_id for r in results if r.ran_hysplit}
-                skip = skip_existing and str(sim.parent.id) not in reran  # type: ignore[union-attr]
-            results.append(run_simulation(sim, skip_existing=skip))
+        for sim in sims:
+            key = sim.outputs.settings.hash
+            result = run_simulation(
+                sim,
+                skip_existing=skip_existing or key in reran,
+                footprint_stale=key in reran,
+            )
+            if result.ran_hysplit:
+                reran.add(key)
+            results.append(result)
     except KeyboardInterrupt:
-        results.append(
-            SimulationResult(str(sim.id), "interrupted", error="Worker preempted")
-        )
+        label = str(sim.id) if sim is not None else receptor_id
+        results.append(SimulationResult(label, "interrupted", error="Worker preempted"))
     return ReceptorResult.summarise(receptor_id, results)
 
 

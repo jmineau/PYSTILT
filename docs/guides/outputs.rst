@@ -2,14 +2,14 @@ Load And Plot Results
 =====================
 
 Each simulation is one receptor run under one variant
-(:doc:`configuration`). It writes up to two files:
+(:doc:`configuration`). It has up to two results in the output directory:
 
 - the **trajectories**, every particle's path, as a Parquet file
-- the **footprint**, as a NetCDF file, when the variant has a grid
+- the **footprint**, when the variant has a grid, as a Parquet file of the
+  cells the particles touched
 
-A variant declared with ``from:`` makes its footprint from another
-variant's particles. It has no trajectory file of its own, and
-``sim.trajectories`` returns the other variant's.
+Variants that differ only in footprint settings share one set of
+trajectories; ``sim.trajectories`` returns the shared particles.
 
 This page shows how to plot these outputs, load them for analysis, and add
 footprints up over the areas you care about.
@@ -65,13 +65,15 @@ footprint settings there is a single time step. To sum over time:
 
    total = foot.integrate_over_time()
 
-To open a footprint file without a model:
+To write a footprint as a CF NetCDF file for other tools, and read one
+back:
 
 .. code-block:: python
 
-   foot = stilt.Footprint.from_netcdf("path/to/..._foot.nc")
+   foot.to_netcdf("wbb_2023-07-15_18.nc")
+   foot = stilt.Footprint.from_netcdf("wbb_2023-07-15_18.nc")
 
-The file also records the receptor and the settings used to make it.
+The file records the receptor and the settings used to make it.
 
 Many simulations at once
 ------------------------
@@ -180,10 +182,10 @@ Empty footprints
 
 Sometimes a simulation runs fine but no particle ever reaches the footprint
 grid. Usually the grid is too small or is not upwind. PYSTILT then writes a
-small ``<receptor id>_foot.empty`` file instead of a NetCDF. The simulation
-counts as finished, so reruns skip it. ``sim.footprint`` is ``None``,
-``sim.empty_reason`` says why, and ``load()`` and ``paths()`` leave the
-simulation out because there is nothing to load. The ``empty`` column of
+footprint file with no cells and the reason inside. The simulation counts
+as finished, so reruns skip it. ``sim.footprint`` is ``None``,
+``sim.empty_reason`` says why, and ``load()`` leaves the simulation out
+because there is nothing to load. The ``empty`` column of
 ``model.simulations.status()`` lists them. If you see many, make your
 footprint grid bigger.
 

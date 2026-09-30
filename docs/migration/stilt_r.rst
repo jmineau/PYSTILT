@@ -33,7 +33,8 @@ The workflow side by side
      - ``stilt run my_project``
    * - Outputs
      - ``out/by-id/<id>/``, ``_traj.rds`` and ``_foot.nc``
-     - ``simulations/by-id/<id>/<variant>/``, ``_traj.parquet`` and ``_foot.nc``
+     - the output directory: ``particles/`` and ``footprints/`` Parquet files
+       by variant settings and day (:doc:`../guides/project_layout`)
 
 ``run_stilt.r`` settings in PYSTILT
 -----------------------------------
@@ -87,9 +88,9 @@ The workflow side by side
    * - ``run_trajec``, ``run_foot``
      - not needed. ``stilt run`` runs whatever outputs are missing, and
        ``stilt run --no-skip`` reruns everything. To make a second
-       footprint from the same particles, add a ``from:`` variant. To redo
-       one variant, delete its outputs with ``stilt rm --variant NAME``
-       (:doc:`../guides/project_layout`).
+       footprint from the same particles, add a variant that changes only
+       footprint settings; it shares the particles
+       (:doc:`../guides/configuration`).
    * - ``simulation_id`` (run a subset)
      - a smaller ``receptors.csv``, or :func:`stilt.execution.run_receptors`
        with the receptor IDs you want
@@ -121,11 +122,10 @@ folder and log, and it can repeat several times
 run it again and only the missing simulations run. Adding a variant runs
 only the new variant.
 
-PYSTILT will not change the settings of a variant that has already run.
-STILT-R deletes ``out/by-id`` and starts over whenever ``run_trajec = TRUE``.
-PYSTILT records the settings each variant ran with and stops with an error if
-they change under the same name. Give the changed settings a new variant
-name, or run ``stilt rm --variant NAME`` to start that variant over (see
+PYSTILT never overwrites a result. STILT-R deletes ``out/by-id`` and starts
+over whenever ``run_trajec = TRUE``. In PYSTILT a variant's results live in
+folders named by a hash of its settings, so changed settings run into a new
+folder and the old one stays until you delete it (see
 :doc:`../guides/configuration`).
 
 Receptors
