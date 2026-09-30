@@ -6,6 +6,8 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.0a22] - 2026-09-29
+
 This release simplifies the code before a larger redesign
 ([#48](https://github.com/jmineau/PYSTILT/issues/48)). Most entries remove
 a second way of doing something. Items marked breaking change a public
