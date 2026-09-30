@@ -169,26 +169,44 @@ jobs:
       with:
         python-version: '3.12'
 
-    - name: Install dependencies
-      run: uv sync --group dev
-
-    - name: Install build tools
-      run: python -m pip install --upgrade pip build twine
-
-    - name: Build distributions
-      run: python -m build
+    - name: Build the sdist and platform wheels
+      run: uvx --from rust-just just dist
 
     - name: Check distributions
-      run: twine check dist/*
+      run: uvx twine check dist/*
 
-    - name: Install wheel in clean environment
+    - name: Check each wheel holds only its own HYSPLIT binary
+      run: uvx --from rust-just just check-dist
+
+    - name: Install the Linux wheel in a clean environment
       run: |
         python -m venv .pkgtest
         .pkgtest/bin/pip install --upgrade pip
-        .pkgtest/bin/pip install dist/*.whl
+        .pkgtest/bin/pip install dist/*manylinux*.whl
 
     - name: Smoke test installed package
       run: |
         .pkgtest/bin/python -c "import stilt; print(stilt.__version__)"
         .pkgtest/bin/python -m stilt --help
         .pkgtest/bin/stilt --help
+        .pkgtest/bin/python -c "from stilt.hysplit.driver import _bundled_exe_dir; print(_bundled_exe_dir())"
+
+    - name: Install the sdist in a clean environment
+      run: |
+        python -m venv .sdisttest
+        .sdisttest/bin/pip install --upgrade pip
+        .sdisttest/bin/pip install dist/*.tar.gz
+
+    - name: Smoke test the sdist install (no bundled HYSPLIT)
+      run: |
+        .sdisttest/bin/python -c "import stilt; print(stilt.__version__)"
+        .sdisttest/bin/python - <<'EOF'
+        from stilt.hysplit.driver import _bundled_exe_dir
+
+        try:
+            _bundled_exe_dir()
+        except RuntimeError as err:
+            print(err)
+        else:
+            raise SystemExit("the sdist install found a bundled hycs_std")
+        EOF

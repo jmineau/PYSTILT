@@ -1,0 +1,3 @@
+# The sdist is pure Python: each wheel carries its own platform's hycs_std
+# (see setup.py), and a source install uses a build named by exe_dir.
+recursive-exclude src/stilt/hysplit/bin hycs_std

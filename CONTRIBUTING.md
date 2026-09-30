@@ -114,6 +114,20 @@ Test:
 - the numbers the transform produces on a small particle table
 - a footprint made with the transform configured
 
+## Building distributions
+
+PYSTILT ships a compiled HYSPLIT, so each wheel is built for one platform and
+holds only that platform's `hycs_std`. The source archive holds none. Build
+and check all of them with:
+
+```bash
+just dist         # sdist plus one wheel per bundled HYSPLIT build, in dist/
+just check-dist   # each wheel's platform tag and binary, and no binary in the sdist
+```
+
+Don't publish from `python -m build` or a bare `uv build`: they make the wheel
+from the source archive, so it has no binary.
+
 ## Pull requests
 
 - Fix or add one thing per pull request, and link the issue it closes
