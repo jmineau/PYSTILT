@@ -386,3 +386,50 @@ def test_jacobian_with_no_footprints_is_empty(tmp_path):
     H = feet.jacobian(GRID, _bins())
     assert H.data.shape == (0, len(_bins()) * len(GRID.index))
     assert list(H.receptors) == []
+
+
+# ---------------------------------------------------------------------------
+# Two workers writing the same file at once
+# ---------------------------------------------------------------------------
+
+
+def _interleave(monkeypatch, competitor):
+    """Make *competitor* run just before the first rename of the code under test."""
+    import stilt.output as output_module
+
+    real_replace = output_module.os.replace
+    state = {"raced": False}
+
+    def replace(src, dst):
+        if not state["raced"]:
+            state["raced"] = True
+            competitor()
+        real_replace(src, dst)
+
+    monkeypatch.setattr(output_module.os, "replace", replace)
+
+
+def test_two_workers_starting_a_run_at_once_both_succeed(tmp_path, monkeypatch):
+    """Both wrote `_settings.tmp`; the second rename found it already moved."""
+    path = tmp_path / "output"
+    _interleave(monkeypatch, lambda: Output(path).run("hrrr", SETTINGS))
+
+    run = Output(path).run("hrrr", SETTINGS)
+
+    record = yaml.safe_load((run.particles_dir / "_settings.yaml").read_text())
+    assert record["hash"] == SETTINGS.hash
+    assert [p.name for p in run.particles_dir.iterdir()] == ["_settings.yaml"]
+
+
+def test_two_workers_writing_one_receptor_at_once_both_succeed(tmp_path, monkeypatch):
+    """The other worker's cleanup removed the shared temporary file."""
+    receptor = _receptor()
+    traj = _trajectories(receptor)
+    run = Output(tmp_path / "output").run("hrrr", SETTINGS)
+    other = Output(tmp_path / "output").run("hrrr", SETTINGS)
+    _interleave(monkeypatch, lambda: other.write_particles(traj))
+
+    path = run.write_particles(traj)
+
+    assert len(run.read_particles(str(receptor.id)).data) == len(traj.data)
+    assert [p.name for p in path.parent.iterdir()] == [path.name]  # no stray files

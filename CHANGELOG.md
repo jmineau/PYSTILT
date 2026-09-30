@@ -154,6 +154,13 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   versions are not found (move them into `crop_dir` to keep them).
   `subgrid_levels` now applies to downloaded files too (it was silently
   ignored), which needs arlmet 0.1.0a9.
+- **Two workers can start the same run at once**
+  ([#90](https://github.com/jmineau/PYSTILT/issues/90)). Workers that created
+  a run folder at the same moment shared one temporary file name for its
+  settings, so one of them failed its first receptor with a
+  `FileNotFoundError` on `_settings.tmp`. Every writer now uses its own
+  temporary name, for settings, particles, footprints, and the
+  `to_parquet` / `to_netcdf` exports.
 - `model.plot.availability(ax=...)` formats the dates on the figure of the
   axes you pass. It used to format whichever figure was current
   ([#58](https://github.com/jmineau/PYSTILT/issues/58)).
