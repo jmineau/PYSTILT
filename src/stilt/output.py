@@ -384,6 +384,8 @@ class Run:
             b"stilt:met_files": json.dumps(
                 [str(p) for p in trajectories.met_files]
             ).encode(),
+            b"stilt:hash": self.hash.encode(),
+            b"stilt:pystilt": _pystilt_version().encode(),
         }
         table = table.replace_schema_metadata(metadata)
         return _write_atomic_table(
@@ -669,15 +671,16 @@ class Footprints:
         )
         return _write_atomic_table(table, self.footprint_path(str(receptor.id)))
 
-    @staticmethod
     def _metadata(
-        receptor: Receptor, name: str, hours: list[int], empty_reason: str
+        self, receptor: Receptor, name: str, hours: list[int], empty_reason: str
     ) -> dict[bytes, bytes]:
         return {
             b"stilt:receptor": json.dumps(receptor.to_dict()).encode(),
             b"stilt:name": name.encode(),
             b"stilt:hours": json.dumps(hours).encode(),
             b"stilt:empty_reason": empty_reason.encode(),
+            b"stilt:hash": self.hash.encode(),
+            b"stilt:pystilt": _pystilt_version().encode(),
         }
 
     def empty_reason(self, receptor_id: str) -> str | None:

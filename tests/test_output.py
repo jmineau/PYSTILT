@@ -469,3 +469,30 @@ def test_receptors_among_lists_only_the_date_folders_asked_for(tmp_path, monkeyp
     assert found == [day15.id]
     assert sorted(listed) == ["date=2024-07-15", "date=2024-07-20"]
     assert run.receptors() == [day15.id, day16.id]
+
+
+# ---------------------------------------------------------------------------
+# Provenance in each file
+# ---------------------------------------------------------------------------
+
+
+def test_each_result_file_names_its_settings_and_the_version_that_wrote_it(tmp_path):
+    """A file copied out of the output directory still says where it came from."""
+    import pyarrow.parquet as pq
+
+    import stilt
+
+    receptor = _receptor()
+    run = Output(tmp_path / "output").run("hrrr", SETTINGS)
+    particles = run.write_particles(_trajectories(receptor))
+    feet = run.footprints(FootprintConfig(grid=GRID))
+    footprint = feet.write(_footprint(receptor))
+    empty = feet.write_empty(_receptor(13), "outside_domain")
+
+    meta = pq.read_schema(particles).metadata
+    assert meta[b"stilt:hash"].decode() == run.hash == SETTINGS.hash
+    assert meta[b"stilt:pystilt"].decode() == stilt.__version__
+    for path in (footprint, empty):
+        meta = pq.read_schema(path).metadata
+        assert meta[b"stilt:hash"].decode() == feet.hash
+        assert meta[b"stilt:pystilt"].decode() == stilt.__version__

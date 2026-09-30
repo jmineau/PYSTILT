@@ -41,6 +41,10 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   receptors with a row per release point, and
   `stilt.receptors.receptors_from_frame` builds them from one. Labels from
   extra columns select directly: `model.simulations.sel(site="WBB")`.
+- Every particle and footprint file records the hash of the settings it was
+  made with and the PYSTILT version that wrote it (`stilt:hash` and
+  `stilt:pystilt` in the Parquet metadata), so a file copied out of the
+  output directory still says where it came from.
 - `model.simulations.sel(...).jacobian(target, time_bins)` sums the
   selected footprints onto a target in one pass, as a sparse matrix with
   labelled rows and columns (`stilt.output.Jacobian`). The time bins must
