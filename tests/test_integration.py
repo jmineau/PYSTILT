@@ -273,13 +273,11 @@ def test_adding_a_footprint_only_variant_runs_no_hysplit(
     traj_mtime = base.trajectories_path.stat().st_mtime
     log_before = base.log_path.read_text()
 
-    grown = Model(
-        project=project,
-        config=_with(
-            wbb_config,
-            variants={"hrrr": {}, "s2": {"smooth_factor": 2}},
-        ),
+    # The user adds a variant to config.yaml.
+    _with(wbb_config, variants={"hrrr": {}, "s2": {"smooth_factor": 2}}).to_yaml(
+        project / "config.yaml"
     )
+    grown = Model(project=project)
     assert grown.simulations.incomplete().keys() == [_sim_id(wbb_receptor, "s2")]
     grown.run()
 
