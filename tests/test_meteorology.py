@@ -228,10 +228,9 @@ def _archive_met(tmp_path: Path, **kwargs) -> Met:
     )
 
 
-def _stage(met: Met, target_dir: Path) -> list[Path]:
-    return met.stage_files_for_simulation(
-        r_time=dt.datetime(2023, 1, 1, 12), n_hours=-1, target_dir=target_dir
-    )
+def _files(met: Met) -> list[Path]:
+    """Return the files one simulation at the test time reads."""
+    return met.files(r_time=dt.datetime(2023, 1, 1, 12), n_hours=-1)
 
 
 def _fake_extract(text: str = "cropped"):
@@ -245,19 +244,17 @@ def _fake_extract(text: str = "cropped"):
 
 
 def test_met_local_subgrid_calls_extract_subset(tmp_path):
-    """Archive-mode subsetting crops into crop_dir and stages the crop."""
+    """Cropping local files crops into crop_dir and hands back the crop."""
     met = _archive_met(tmp_path)
-    target_dir = tmp_path / "sim" / "met"
     with patch("arlmet.extract_subset", side_effect=_fake_extract()) as mock_extract:
-        staged = _stage(met, target_dir)
+        files = _files(met)
 
     mock_extract.assert_called_once()
     call_args = mock_extract.call_args
     assert call_args.args[0] == (tmp_path / "archive" / "20230101_12").resolve()
     assert call_args.kwargs["bbox"] == (-114.0, 39.0, -110.0, 42.0)
-    assert staged == [target_dir / "20230101_12"]
-    assert staged[0].resolve() == met.crop_dir / "20230101_12"
-    assert staged[0].read_text() == "cropped"
+    assert files == [met.crop_dir / "20230101_12"]
+    assert files[0].read_text() == "cropped"
 
 
 def test_met_local_subgrid_reuses_cache(tmp_path):
@@ -267,17 +264,17 @@ def test_met_local_subgrid_reuses_cache(tmp_path):
     (met.crop_dir / "20230101_12").write_text("cached")
 
     with patch("arlmet.extract_subset") as mock_extract:
-        staged = _stage(met, tmp_path / "sim")
+        files = _files(met)
 
     mock_extract.assert_not_called()
-    assert staged[0].read_text() == "cached"
+    assert files[0].read_text() == "cached"
 
 
 def test_met_local_subgrid_levels(tmp_path):
     """subgrid_levels=N passes levels=list(range(N)) to extract_subset."""
     met = _archive_met(tmp_path, subgrid_levels=5)
     with patch("arlmet.extract_subset", side_effect=_fake_extract()) as mock_extract:
-        _stage(met, tmp_path / "sim")
+        _files(met)
 
     assert mock_extract.call_args.kwargs["levels"] == [0, 1, 2, 3, 4]
 
@@ -298,14 +295,14 @@ def test_changing_the_crop_changes_crop_dir(tmp_path, change):
     assert new.crop_dir.parent == old.crop_dir.parent == tmp_path / "crops"
 
     with patch("arlmet.extract_subset", side_effect=_fake_extract("old")):
-        _stage(old, tmp_path / "sim-old")
+        _files(old)
     with patch(
         "arlmet.extract_subset", side_effect=_fake_extract("new")
     ) as mock_extract:
-        staged = _stage(new, tmp_path / "sim-new")
+        files = _files(new)
 
     mock_extract.assert_called_once()
-    assert staged[0].read_text() == "new"
+    assert files[0].read_text() == "new"
 
 
 def test_the_same_crop_shares_crop_dir(tmp_path):
@@ -332,7 +329,7 @@ def test_a_crop_appears_only_when_complete(tmp_path):
         return Path(dst)
 
     with patch("arlmet.extract_subset", side_effect=extract):
-        _stage(met, tmp_path / "sim")
+        _files(met)
 
     assert final.read_text() == "cropped"
     assert sorted(p.name for p in met.crop_dir.iterdir()) == ["20230101_12"]
@@ -350,7 +347,7 @@ def test_a_failed_crop_leaves_nothing_behind(tmp_path):
         patch("arlmet.extract_subset", side_effect=extract),
         pytest.raises(OSError, match="disk full"),
     ):
-        _stage(met, tmp_path / "sim")
+        _files(met)
 
     assert list(met.crop_dir.iterdir()) == []
 
@@ -384,28 +381,26 @@ def _touch_files(tmp_path: Path, names: list[str]) -> list[Path]:
 
 
 # ---------------------------------------------------------------------------
-# Staging
+# The files a run reads
 # ---------------------------------------------------------------------------
 
 
-def test_stage_files_symlinks_or_copies(tmp_path):
+def test_readable_returns_local_files_where_they_are(tmp_path):
+    """Without cropping, HYSPLIT reads the met files in place: nothing is files."""
     source_dir = tmp_path / "met"
-    staged_dir = tmp_path / "compute" / "met"
     source_dir.mkdir(parents=True)
     src = source_dir / "20230101_12"
     src.write_text("met")
 
     met = _make_met(source_dir, "%Y%m%d_%H", "1h")
-    staged = met._stage_files([src], staged_dir)
 
-    assert staged == [staged_dir / src.name]
-    assert staged[0].exists()
-    assert staged[0].read_text() == "met"
+    assert met.readable([src]) == [src]
+    assert met.files(r_time=dt.datetime(2023, 1, 1, 12), n_hours=-1) == [src]
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["met"]
 
 
-def test_stage_files_deduplicates_duplicate_basenames(tmp_path, caplog):
+def test_readable_keeps_the_first_of_two_files_with_one_name(tmp_path, caplog):
     source_dir = tmp_path / "met"
-    staged_dir = tmp_path / "compute" / "met"
     first_dir = source_dir / "a"
     second_dir = source_dir / "b"
     first_dir.mkdir(parents=True)
@@ -417,13 +412,12 @@ def test_stage_files_deduplicates_duplicate_basenames(tmp_path, caplog):
 
     met = _make_met(source_dir, "%Y%m%d_%H", "1h")
     with caplog.at_level(logging.WARNING):
-        staged = met._stage_files([first, second], staged_dir)
+        files = met.readable([first, second])
 
-    assert staged == [staged_dir / first.name]
-    assert staged[0].read_text() == "first"
+    assert files == [first]
     assert "duplicate basename" in caplog.text
-    assert str(first.resolve()) in caplog.text
-    assert str(second.resolve()) in caplog.text
+    assert str(first) in caplog.text
+    assert str(second) in caplog.text
 
 
 # ---------------------------------------------------------------------------

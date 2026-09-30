@@ -75,7 +75,7 @@ Slurm task is handed a batch of receptor IDs.
 Where HYSPLIT runs
 ------------------
 
-HYSPLIT has to run in a local folder with its inputs staged beside it. That
+HYSPLIT has to run in a local folder that holds its input files. That
 folder is scratch: ``compute_root`` if given, else ``PYSTILT_COMPUTE_ROOT``,
 else ``$TMPDIR/pystilt/<project name>``. After a successful run the particle
 file and the log are written to the output directory and the folder is
