@@ -374,7 +374,7 @@ def run_receptor(
     model: Model,
     receptor_id: str,
     *,
-    compute_root: str | Path | None = None,
+    compute_root: Path,
     skip_existing: bool = True,
 ) -> ReceptorResult:
     """
@@ -392,9 +392,9 @@ def run_receptor(
         Model the receptor belongs to.
     receptor_id : str
         Receptor to run.
-    compute_root : str or Path, optional
-        Scratch directory under which HYSPLIT runs
-        (:func:`~stilt.execution.resolve_compute_root`).
+    compute_root : Path
+        Scratch directory under which HYSPLIT runs, as
+        :func:`~stilt.execution.resolve_compute_root` returns it.
     skip_existing : bool, default True
         Keep particles and footprints that already exist.
 
@@ -402,7 +402,6 @@ def run_receptor(
     -------
     ReceptorResult
     """
-    scratch = resolve_compute_root(model.project, compute_root)
     sims = list(model.simulations.sel(receptor=receptor_id))
     results: list[SimulationResult] = []
     reran: set[str] = set()  # transport settings whose HYSPLIT ran in this call
@@ -413,7 +412,7 @@ def run_receptor(
             result = run_simulation(
                 sim,
                 met=model.mets[sim.variant.met],
-                compute_root=scratch,
+                compute_root=compute_root,
                 project_dir=model.project.directory,
                 keep_scratch=model.config.keep_scratch,
                 skip_existing=skip_existing or key in reran,
@@ -439,7 +438,7 @@ def _log_result(result: ReceptorResult, done: int, total: int) -> None:
 # -- process pool -------------------------------------------------------------
 
 _POOL_MODEL: Model | None = None
-_POOL_COMPUTE_ROOT: str | None = None
+_POOL_COMPUTE_ROOT: Path | None = None
 _POOL_SKIP: bool = True
 
 
@@ -455,14 +454,14 @@ def _init_pool_worker(project: str, compute_root: str, skip_existing: bool) -> N
     global _POOL_MODEL, _POOL_COMPUTE_ROOT, _POOL_SKIP
     signal.signal(signal.SIGTERM, _raise_interrupt)
     _POOL_MODEL = Model(project=project)
-    _POOL_COMPUTE_ROOT = compute_root
+    _POOL_COMPUTE_ROOT = Path(compute_root)
     _POOL_SKIP = skip_existing
 
 
 def _pool_run(item: tuple[int, str]) -> tuple[int, ReceptorResult]:
     """Run one receptor in a pool worker, returning its index and result."""
     idx, receptor_id = item
-    assert _POOL_MODEL is not None
+    assert _POOL_MODEL is not None and _POOL_COMPUTE_ROOT is not None
     return idx, run_receptor(
         _POOL_MODEL,
         receptor_id,

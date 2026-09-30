@@ -280,7 +280,7 @@ def test_run_prints_startup_and_wait_messages(tmp_path, monkeypatch):
     assert result.exit_code == 0
     assert (
         f"Starting run: project={tmp_path.resolve()}  backend=local  "
-        "workers=1  skip=existing"
+        "tasks=1  cpus=1  skip=existing"
     ) in result.output
     assert "Compute root:" in result.output
     assert f"Output: {tmp_path.resolve() / 'output'}" in result.output
@@ -364,13 +364,13 @@ def test_run_backend_and_workers_override_the_config(tmp_path, monkeypatch):
     monkeypatch.setattr("stilt.cli.Model.run", fake_run)
 
     result = runner.invoke(
-        app, ["run", str(tmp_path), "--backend", "local", "--n-workers", "4"]
+        app, ["run", str(tmp_path), "--backend", "local", "--cpus", "4"]
     )
     assert result.exit_code == 0
     assert len(captured_executor) == 1
     assert captured_executor[0].backend == "local"
-    assert captured_executor[0].n_workers == 4
-    assert "workers=4" in result.output
+    assert captured_executor[0].cpus == 4
+    assert "tasks=1  cpus=4" in result.output
 
 
 def test_run_slurm_fire_and_forget(tmp_path, monkeypatch):

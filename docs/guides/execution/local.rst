@@ -9,23 +9,23 @@ one computer.
 Use several CPU cores
 ---------------------
 
-To run several receptors at once, set ``n_workers``:
+To run several receptors at once, set ``cpus``:
 
 .. code-block:: yaml
 
    execution:
      backend: local
-     n_workers: 4
+     cpus: 4
 
 Or set it for a single run from the command line:
 
 .. code-block:: bash
 
-   stilt run ./my_project --n-workers 4
+   stilt run ./my_project --cpus 4
 
-Each worker is a separate process. It runs one receptor at a time, with all
-of that receptor's variants. Set ``n_workers`` no higher than the number of
-CPU cores you have.
+Each of the ``cpus`` processes runs one receptor at a time, with all of
+that receptor's variants. Set ``cpus`` no higher than the number of CPU
+cores you have. ``cpus`` means the same on Slurm, per array task.
 
 From Python or a notebook
 -------------------------
@@ -39,7 +39,7 @@ From Python or a notebook
        receptors=receptors,
        mets={"hrrr": {"directory": "/data/hrrr", "file_format": "%Y%m%d_%H", "file_tres": "6h"}},
        grid={"xmin": -114, "xmax": -111, "ymin": 39, "ymax": 42, "xres": 0.01, "yres": 0.01},
-       execution={"backend": "local", "n_workers": 4},
+       execution={"backend": "local", "cpus": 4},
    )
 
    model.run()

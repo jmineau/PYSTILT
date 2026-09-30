@@ -415,27 +415,23 @@ def test_execution_defaults_to_one_local_process(tmp_path):
 
 def test_unknown_execution_setting_is_an_error(tmp_path):
     """A typo, or an sbatch option outside `slurm:`, used to be ignored or passed on (#63)."""
-    with pytest.raises(
-        ValueError, match=r"Unknown execution setting\(s\) \['partion'\]"
-    ):
+    with pytest.raises(ValueError, match=r"execution\.partion\s+Extra inputs"):
         ModelConfig(mets=_met_config(tmp_path), execution={"partion": "compute"})
-    with pytest.raises(ValueError, match="under 'slurm:'"):
+    with pytest.raises(ValueError, match=r"execution\.requeue\s+Extra inputs"):
         ModelConfig(mets=_met_config(tmp_path), execution={"requeue": True})
+    with pytest.raises(ValueError, match=r"execution\.cpus_per_task\s+Extra inputs"):
+        ModelConfig(mets=_met_config(tmp_path), execution={"cpus_per_task": 4})
     with pytest.raises(ValueError, match="backend"):
         ModelConfig(mets=_met_config(tmp_path), execution={"backend": "kubernetes"})
     with pytest.raises(ValueError, match="n_workers"):
         ModelConfig(mets=_met_config(tmp_path), execution={"n_workers": 0})
 
 
-def test_execution_accepts_the_sbatch_spelling_of_cpus_and_one_setup_line():
+def test_execution_accepts_one_setup_line():
     from stilt.config import ExecutionConfig
 
-    execution = ExecutionConfig.model_validate(
-        {"cpus-per-task": 4, "setup": "module load hysplit"}
-    )
-    assert execution.cpus == 4
+    execution = ExecutionConfig.model_validate({"setup": "module load hysplit"})
     assert execution.setup == ["module load hysplit"]
-    assert ExecutionConfig.model_validate({"cpus_per_task": 2}).cpus == 2
 
 
 def test_model_config_yaml_roundtrip_with_footprint(tmp_path, grid):
