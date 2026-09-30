@@ -96,6 +96,9 @@ src/stilt/
   flux.py            sampling a flux field at points or along particles
   geometry.py        aggregation targets (meshes, zones) and overlap weights
   meteorology.py     MetStream: ARL file discovery and staging (via arlmet)
+  output.py          the output directory of the #67 redesign: runs keyed by
+                     settings hash, sparse footprint files, Jacobian assembly,
+                     and a converter from the by-id layout (not yet used by Model)
   transforms.py      pre-footprint particle transforms (averaging kernel,
                      pressure weighting, lifetime decay) and their YAML I/O
   collections.py     SimulationCollection (receptors × variants, .sel()) and
