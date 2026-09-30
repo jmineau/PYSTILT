@@ -130,8 +130,8 @@ docs/                Sphinx (pydata-sphinx-theme)
    (`model.queue`) records status; completion is still by key. The Slurm
    backend instead pushes fixed chunks of receptor IDs to
    `stilt push-worker`, with no queue. On every path the unit of work is a
-   receptor: `run_receptor` runs its HYSPLIT variants, then the `from:`
-   variants that rasterize their particles.
+   receptor: `run_receptor` runs HYSPLIT once per distinct transport hash,
+   then writes the footprint of every variant that shares those particles.
 3. **Observation-driven**: a reader yields a DataFrame of soundings;
    `stilt.observations` helpers thin and group it; each row becomes a
    `Receptor`; `averaging_kernel_table` writes the kernels into the project;
@@ -148,15 +148,18 @@ tend to break them.
   (`FootprintConfig`) defaults, `mets`, and `variants` (overrides of the
   defaults). `ModelConfig.resolve_variants()` turns them into one
   `VariantConfig` per simulation name, expanding `realizations: N` into
-  `<name>-0..N-1` with `seed + k`. A `from:` variant may override only
-  footprint fields and reuses its parent's trajectory. `grid: null` means
-  trajectory only. There is no named-footprints dict.
+  `<name>-0..N-1` with `seed + k`. A `VariantConfig` is composed:
+  `transport: TransportSettings` (hashed, names the run) and
+  `footprint: FootprintConfig | None`. Variants whose transport settings
+  match share the run; `from:` is rejected. `grid: null` means trajectory
+  only, and footprint settings without a grid are an error. There is no
+  named-footprints dict.
 - Every field is a plain pydantic `Field(default, description=...)` and the
   public config stays flat (`ModelConfig(numpar=..., seed=...)`). CONTRIBUTING
   explains how a field is routed to `SETUP.CFG`, `CONTROL`, `WINDERR`, or
   `ZIERR`.
 - `RuntimeSettings` is one `pydantic-settings` class reading `PYSTILT_*`
-  environment variables (`db_url`, `cache_dir`, `compute_root`);
+  environment variables (`db_url`, `compute_root`);
   `Model(runtime=...)` overrides it.
 - Particle transforms are declared as a default or per variant in YAML
   (`transforms: [{kind: ...}]`); `kind` may also be the import path of a user
@@ -367,11 +370,18 @@ Feature status lives in the roadmap tables in [README.md](README.md) and
   a list.
 - **Empty footprints are successes, and not footprints.** When no particle
   reaches the grid, `Footprint.calculate` raises `EmptyFootprintError` and
-  `Simulation.generate_footprint(write=True)` writes a `.empty` marker holding
-  the reason and no NetCDF. `sim.is_complete()` is true, `sim.footprint` is
+  the worker's `write_footprint` writes a footprint file with no rows and
+  the reason in its metadata. `sim.is_complete()` is true, `sim.footprint` is
   `None`, `sim.empty_reason` says why, and `footprint.load()` leaves the
   simulation out. Never synthesize a zero-valued footprint for it: a zero
   enhancement would flow into a comparison or an inversion unnoticed.
+- **A result that is not written yet raises.** `sim.trajectories` and
+  `sim.footprint` are `cached_property` on a frozen value; a missing file
+  raises `FileNotFoundError` (never cached, so the next read tries again)
+  rather than caching a `None` that would hide the run when it lands. `None`
+  is only for final states (no grid, empty footprint). Do not write to a
+  simulation's `__dict__` by hand; use `has_trajectory` / `has_footprint` to
+  test presence.
 - **Declaring `realizations` makes a numbered group, even at 1.** `hrrr-err`
   with `realizations: 1` is `hrrr-err-0`, so raising the count later only
   adds simulations. Realization 0 is never aliased to the unsuffixed name.
