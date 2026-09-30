@@ -410,3 +410,19 @@ def test_model_availability_reuses_ax():
 
     ax = ModelPlotAccessor(model).availability(ax=existing)
     assert ax is existing
+
+
+def test_model_availability_formats_the_figure_of_the_given_ax(receptor):
+    """The dates are formatted on the ax's figure, not the current figure."""
+    from unittest.mock import MagicMock
+
+    fig, existing = plt.subplots()
+    other = plt.figure()  # now the current figure
+    default_bottom = other.subplotpars.bottom
+    model = MagicMock()
+    model.receptors = [receptor]
+
+    ModelPlotAccessor(model).availability(ax=existing)
+
+    assert fig.subplotpars.bottom == pytest.approx(0.2)  # set by autofmt_xdate
+    assert other.subplotpars.bottom == default_bottom

@@ -648,9 +648,7 @@ class ModelPlotAccessor:
         Axes
         """
         if ax is None:
-            fig, ax = plt.subplots()
-        else:
-            fig = plt.gcf()
+            _, ax = plt.subplots()
         assert ax is not None
 
         receptors = list(self._model.receptors)
@@ -669,6 +667,6 @@ class ModelPlotAccessor:
                 **kwargs,
             )
 
-        fig.autofmt_xdate()
+        ax.figure.autofmt_xdate()
         ax.set(title="Simulation Availability", xlabel="Time", ylabel="Location ID")
         return ax
