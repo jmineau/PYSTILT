@@ -151,6 +151,7 @@ class MetStream:
 
         # Archive-glob mode
         sim_end = _r_time + pd.Timedelta(hours=n_hours)
+        assert isinstance(sim_end, pd.Timestamp)  # not NaT: _r_time is a time
 
         earlier = min(_r_time, sim_end)
         later = max(_r_time, sim_end)
