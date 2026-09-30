@@ -1,5 +1,6 @@
 """Configuration models for PYSTILT projects."""
 
+from .execution import ExecutionConfig
 from .footprint import FootprintConfig
 from .geometry import (
     FileGeometrySpec,
@@ -25,6 +26,7 @@ __all__ = [
     "Bounds",
     "EngineInfo",
     "ErrorParams",
+    "ExecutionConfig",
     "FileGeometrySpec",
     "FootprintConfig",
     "GeometrySpec",

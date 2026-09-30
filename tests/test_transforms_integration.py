@@ -1,13 +1,10 @@
-"""Release-critical integration coverage for queue runtime and transforms."""
+"""Integration coverage for particle transforms declared in the config."""
 
 from __future__ import annotations
 
 import numpy as np
-import pytest
 
 from stilt.config import ModelConfig
-from stilt.errors import ConfigValidationError
-from stilt.execution import pull_receptors
 from stilt.model import Model
 from stilt.transforms import FirstOrderLifetime
 
@@ -17,30 +14,6 @@ from .conftest import integration
 def _footprint_total(footprint) -> float:
     """Return the total scalar sensitivity in one footprint field."""
     return float(np.asarray(footprint.data.sum()))
-
-
-@integration
-def test_pull_receptors_requires_runtime_queue_backend(
-    tmp_path,
-    wbb_receptor,
-    wbb_config,
-):
-    """pull_receptors should fail clearly when no Postgres work queue is configured."""
-    model = Model(
-        project=tmp_path / "service_queue",
-        config=wbb_config,
-        receptors=[wbb_receptor],
-    )
-
-    sim_ids = model.register()
-    assert len(sim_ids) == 1
-
-    status = model.status()
-    assert len(status) == 1
-    assert not status["complete"].any()
-
-    with pytest.raises(ConfigValidationError, match="Postgres work queue"):
-        pull_receptors(model, poll_interval=0.1)
 
 
 @integration

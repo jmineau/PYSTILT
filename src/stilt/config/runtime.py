@@ -10,24 +10,20 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class RuntimeSettings(BaseSettings):
     """
-    Queue and scratch locations for a deployment.
+    Where work runs on this machine.
 
     Each field is read from the matching ``PYSTILT_*`` environment variable
-    (``PYSTILT_DB_URL`` and so on) unless passed directly. None of them change
-    a simulation's result.
+    (``PYSTILT_COMPUTE_ROOT``) unless passed directly. None of them change a
+    simulation's result.
     """
 
     model_config = SettingsConfigDict(env_prefix="PYSTILT_", extra="ignore")
 
-    db_url: str | None = Field(
-        default=None, description="PostgreSQL URL of the shared work queue."
-    )
     compute_root: Path | None = Field(
         default=None,
         description=(
-            "Directory where workers run HYSPLIT before copying outputs into "
-            "the project. Unset runs inside a local project, and under "
-            "``$TMPDIR/pystilt/`` for a cloud project."
+            "Scratch directory under which workers run HYSPLIT. Unset uses "
+            "``$TMPDIR/pystilt/<project name>``."
         ),
     )
 

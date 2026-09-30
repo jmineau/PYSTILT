@@ -1,40 +1,27 @@
-"""Tests for runtime-only deployment settings."""
+"""Tests for the settings read from the environment."""
 
 from stilt.config import RuntimeSettings
 
 
 def test_runtime_settings_read_environment(monkeypatch, tmp_path):
-    monkeypatch.setenv("PYSTILT_DB_URL", "postgresql://user:pass@db/pystilt")
     monkeypatch.setenv("PYSTILT_COMPUTE_ROOT", str(tmp_path / "scratch"))
 
-    runtime = RuntimeSettings()
-
-    assert runtime.db_url == "postgresql://user:pass@db/pystilt"
-    assert runtime.compute_root == tmp_path / "scratch"
+    assert RuntimeSettings().compute_root == tmp_path / "scratch"
 
 
 def test_runtime_settings_default_to_none(monkeypatch):
-    for name in ("PYSTILT_DB_URL", "PYSTILT_COMPUTE_ROOT"):
-        monkeypatch.delenv(name, raising=False)
+    monkeypatch.delenv("PYSTILT_COMPUTE_ROOT", raising=False)
 
-    runtime = RuntimeSettings()
-
-    assert runtime.db_url is None
-    assert runtime.compute_root is None
+    assert RuntimeSettings().compute_root is None
 
 
 def test_explicit_values_override_environment(monkeypatch, tmp_path):
-    monkeypatch.setenv("PYSTILT_DB_URL", "postgresql://from-env")
+    monkeypatch.setenv("PYSTILT_COMPUTE_ROOT", str(tmp_path / "from-env"))
 
-    runtime = RuntimeSettings(db_url="postgresql://explicit", compute_root=tmp_path)
-
-    assert runtime.db_url == "postgresql://explicit"
-    assert runtime.compute_root == tmp_path
+    assert RuntimeSettings(compute_root=tmp_path).compute_root == tmp_path
 
 
 def test_unknown_environment_variables_are_ignored(monkeypatch):
     monkeypatch.setenv("PYSTILT_MAX_ROWS", "25")
 
-    runtime = RuntimeSettings()
-
-    assert not hasattr(runtime, "max_rows")
+    assert not hasattr(RuntimeSettings(), "max_rows")

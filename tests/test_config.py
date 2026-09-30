@@ -387,51 +387,55 @@ def test_model_config_yaml_roundtrip_basic(tmp_path):
 
 def test_model_config_yaml_roundtrip_with_execution(tmp_path):
     cfg = ModelConfig(
-        mets={
-            "hrrr": MetConfig(
-                directory=tmp_path / "met",
-                file_format="%Y%m%d_%H",
-                file_tres="1h",
-            )
-        },
+        mets=_met_config(tmp_path),
         execution={
             "backend": "slurm",
             "n_workers": 8,
-            "timeout": 120,
+            "time": "02:00:00",
             "partition": "compute",
             "account": "lin-group",
+            "slurm": {"exclude": "node1"},
         },
     )
     path = tmp_path / "config.yaml"
-    cfg.to_yaml(path)
+    text = cfg.to_yaml(path)
+    assert "cpus" not in text and "array_parallelism" not in text  # unset stays out
     loaded = ModelConfig.from_yaml(path)
-    assert loaded.execution is not None
-    assert loaded.execution["backend"] == "slurm"
-    assert loaded.execution["n_workers"] == 8
-    assert loaded.execution["timeout"] == 120
-    assert loaded.execution["partition"] == "compute"
-    assert loaded.execution["account"] == "lin-group"
+    assert loaded.execution == cfg.execution
+    assert loaded.execution.backend == "slurm"
+    assert loaded.execution.n_workers == 8
+    assert loaded.execution.slurm == {"exclude": "node1"}
 
 
-def test_model_config_accepts_execution_dict_with_extra_fields(tmp_path):
-    cfg = ModelConfig(
-        mets={
-            "hrrr": MetConfig(
-                directory=tmp_path / "met",
-                file_format="%Y%m%d_%H",
-                file_tres="1h",
-            )
-        },
-        execution={
-            "backend": "kubernetes",
-            "n_workers": 32,
-            "namespace": "atmos",
-            "image": "my/stilt:latest",
-        },
+def test_execution_defaults_to_one_local_process(tmp_path):
+    execution = ModelConfig(mets=_met_config(tmp_path)).execution
+    assert (execution.backend, execution.n_workers, execution.cpus) == ("local", 1, 1)
+    assert "execution:" not in ModelConfig(mets=_met_config(tmp_path)).to_yaml()
+
+
+def test_unknown_execution_setting_is_an_error(tmp_path):
+    """A typo, or an sbatch option outside `slurm:`, used to be ignored or passed on (#63)."""
+    with pytest.raises(
+        ValueError, match=r"Unknown execution setting\(s\) \['partion'\]"
+    ):
+        ModelConfig(mets=_met_config(tmp_path), execution={"partion": "compute"})
+    with pytest.raises(ValueError, match="under 'slurm:'"):
+        ModelConfig(mets=_met_config(tmp_path), execution={"requeue": True})
+    with pytest.raises(ValueError, match="backend"):
+        ModelConfig(mets=_met_config(tmp_path), execution={"backend": "kubernetes"})
+    with pytest.raises(ValueError, match="n_workers"):
+        ModelConfig(mets=_met_config(tmp_path), execution={"n_workers": 0})
+
+
+def test_execution_accepts_the_sbatch_spelling_of_cpus_and_one_setup_line():
+    from stilt.config import ExecutionConfig
+
+    execution = ExecutionConfig.model_validate(
+        {"cpus-per-task": 4, "setup": "module load hysplit"}
     )
-    assert cfg.execution["backend"] == "kubernetes"
-    assert cfg.execution["namespace"] == "atmos"
-    assert cfg.execution["image"] == "my/stilt:latest"
+    assert execution.cpus == 4
+    assert execution.setup == ["module load hysplit"]
+    assert ExecutionConfig.model_validate({"cpus_per_task": 2}).cpus == 2
 
 
 def test_model_config_yaml_roundtrip_with_footprint(tmp_path, grid):

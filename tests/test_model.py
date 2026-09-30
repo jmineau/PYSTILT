@@ -125,17 +125,29 @@ def _write_footprint(model: Model, sid, *, empty=False) -> Path:
 
 
 class _CapturingExecutor:
-    """Fake executor that records start() calls without running workers."""
-
-    dispatch = "push"
+    """Stand-in for the runner's dispatch: records each call and runs nothing."""
 
     def __init__(self, handle=None):
         self.handle = handle if handle is not None else LocalHandle()
         self.start_calls: list[dict] = []
 
-    def start(self, pending: list[str], **kwargs):
-        self.start_calls.append({"pending": list(pending), **kwargs})
+    def dispatch(self, model, pending, execution, *, compute_root, skip_existing):
+        self.start_calls.append(
+            {
+                "pending": list(pending),
+                "project": model.project.root,
+                "execution": execution,
+                "compute_root": compute_root,
+                "skip_existing": skip_existing,
+            }
+        )
         return self.handle
+
+    def run(self, model, **kwargs):
+        """Run *model* with its receptors handed to this recorder."""
+        with pytest.MonkeyPatch.context() as patch:
+            patch.setattr("stilt.execution.runner._dispatch", self.dispatch)
+            return model.run(**kwargs)
 
     @property
     def was_started(self) -> bool:
@@ -544,25 +556,6 @@ def test_register_leaves_the_model_as_it_was(tmp_path, point_receptor):
     assert reopened.simulations[(rid, "hrrr")].receptor == point_receptor
 
 
-def test_register_seeds_queue_with_receptor_ids(tmp_path, point_receptor, monkeypatch):
-    class _FakeQueue:
-        def __init__(self):
-            self.registered: list[list[str]] = []
-
-        def register(self, ids):
-            self.registered.append(list(ids))
-
-    queue = _FakeQueue()
-    monkeypatch.setattr("stilt.execution.runner.resolve_queue", lambda runtime: queue)
-    model = Model(
-        project=tmp_path, config=_config(tmp_path), receptors=[point_receptor]
-    )
-
-    ids = register(model)
-
-    assert queue.registered == [ids] == [[_rid(point_receptor)]]
-
-
 def test_register_never_rewrites_an_existing_config_yaml(tmp_path, point_receptor):
     path = tmp_path / CONFIG_KEY
     _config(tmp_path).to_yaml(path)
@@ -587,7 +580,7 @@ def test_changed_settings_make_a_new_run_instead_of_an_error(tmp_path, point_rec
         receptors=[point_receptor],
     )
     exc = _CapturingExecutor()
-    changed.run(executor=exc)
+    exc.run(changed)
 
     assert exc.start_calls[0]["pending"] == [_rid(point_receptor)]
     assert not changed.simulations[_sid(point_receptor)].has_trajectory
@@ -980,7 +973,7 @@ def _run_model(tmp_path, point_receptor, executor, skip_existing=True, wait=True
     model = Model(
         project=tmp_path, config=_config(tmp_path), receptors=[point_receptor]
     )
-    return model, model.run(executor=executor, skip_existing=skip_existing, wait=wait)
+    return model, executor.run(model, skip_existing=skip_existing, wait=wait)
 
 
 def test_run_dispatches_receptors_with_project_and_compute_root(
@@ -994,9 +987,9 @@ def test_run_dispatches_receptors_with_project_and_compute_root(
     call = exc.start_calls[0]
     assert call["pending"] == [_rid(point_receptor)]
     assert call["project"] == str(tmp_path) == model.project.root
-    assert call["compute_root"] == str(resolve_compute_root(model.project))
+    assert call["compute_root"] is None  # left to the worker unless given
     assert call["skip_existing"] is True
-    assert call.get("n_workers") is None
+    assert call["execution"] == model.config.execution
 
 
 def test_run_forwards_explicit_compute_root(tmp_path, point_receptor):
@@ -1007,10 +1000,10 @@ def test_run_forwards_explicit_compute_root(tmp_path, point_receptor):
     )
     exc = _CapturingExecutor()
 
-    model.run(executor=exc, skip_existing=False, compute_root=compute_root)
+    exc.run(model, skip_existing=False, compute_root=compute_root)
 
     assert exc.start_calls[0]["project"] == str(project_dir)
-    assert exc.start_calls[0]["compute_root"] == str(compute_root.resolve())
+    assert exc.start_calls[0]["compute_root"] == compute_root.resolve()
 
 
 def test_run_propagates_skip_existing_false(tmp_path, point_receptor):
@@ -1021,28 +1014,35 @@ def test_run_propagates_skip_existing_false(tmp_path, point_receptor):
     assert exc.start_calls[0]["skip_existing"] is False
 
 
-def test_run_resolves_executor_from_config(tmp_path, point_receptor, monkeypatch):
+def test_run_uses_the_execution_settings_of_the_config(tmp_path, point_receptor):
     config = _config(tmp_path, execution={"backend": "local", "n_workers": 3})
     model = Model(project=tmp_path, config=config, receptors=[point_receptor])
     exc = _CapturingExecutor()
-    captured: list[dict] = []
-    monkeypatch.setattr(
-        "stilt.execution.runner.get_executor",
-        lambda execution: captured.append(execution) or exc,
-    )
 
-    handle = model.run(skip_existing=False, wait=False)
+    handle = exc.run(model, skip_existing=False, wait=False)
 
     assert handle is exc.handle
-    assert captured == [{"backend": "local", "n_workers": 3}]
+    assert exc.start_calls[0]["execution"].n_workers == 3
+
+
+def test_run_takes_execution_settings_in_place_of_the_configs(tmp_path, point_receptor):
+    from stilt.config import ExecutionConfig
+
+    config = _config(tmp_path, execution={"n_workers": 3})
+    model = Model(project=tmp_path, config=config, receptors=[point_receptor])
+    exc = _CapturingExecutor()
+
+    exc.run(model, execution=ExecutionConfig(n_workers=8))
+
+    assert exc.start_calls[0]["execution"].n_workers == 8
 
 
 def test_run_registers_inputs_before_start(tmp_path, point_receptor):
     class _CheckingExecutor(_CapturingExecutor):
-        def start(self, pending, **kwargs):
-            root = Path(kwargs["project"])
+        def dispatch(self, model, pending, execution, **kwargs):
+            root = model.project.directory
             self.seen = ((root / CONFIG_KEY).exists(), (root / RECEPTORS_KEY).exists())
-            return super().start(pending, **kwargs)
+            return super().dispatch(model, pending, execution, **kwargs)
 
     exc = _CheckingExecutor()
 
@@ -1060,7 +1060,7 @@ def test_run_skip_existing_omits_complete_receptors(tmp_path, point_receptor):
     _write_footprint(model, _sid(point_receptor), empty=True)
     exc = _CapturingExecutor()
 
-    handle = model.run(executor=exc, skip_existing=True)
+    handle = exc.run(model, skip_existing=True)
 
     assert not exc.was_started
     assert isinstance(handle, LocalHandle)
@@ -1073,7 +1073,7 @@ def test_run_skip_existing_redispatches_missing_footprint(tmp_path, point_recept
     _write_trajectory(model, _sid(point_receptor))
     exc = _CapturingExecutor()
 
-    model.run(executor=exc, skip_existing=True)
+    exc.run(model, skip_existing=True)
 
     assert exc.start_calls[0]["pending"] == [_rid(point_receptor)]
 
@@ -1094,7 +1094,7 @@ def test_run_after_adding_a_variant_redispatches_the_receptor(tmp_path, point_re
     assert grown.simulations.incomplete().keys() == [_sid(point_receptor, "zi08")]
     exc = _CapturingExecutor()
 
-    grown.run(executor=exc, skip_existing=True)
+    exc.run(grown, skip_existing=True)
 
     assert exc.start_calls[0]["pending"] == [_rid(point_receptor)]
 
@@ -1111,14 +1111,14 @@ def test_run_skip_existing_redispatches_a_missing_realization(tmp_path, point_re
     _write_trajectory(model, _sid(point_receptor, "err-0"))
     exc = _CapturingExecutor()
 
-    model.run(executor=exc, skip_existing=True)
+    exc.run(model, skip_existing=True)
 
     assert exc.start_calls[0]["pending"] == [_rid(point_receptor)]
     assert model.simulations.incomplete().keys() == [_sid(point_receptor, "err-1")]
 
     _write_trajectory(model, _sid(point_receptor, "err-1"))
     again = _CapturingExecutor()
-    model.run(executor=again, skip_existing=True)
+    again.run(model, skip_existing=True)
     assert not again.was_started
 
 
@@ -1132,7 +1132,7 @@ def test_run_skip_existing_dispatches_only_incomplete_receptors(tmp_path):
     _write_trajectory(model, _sid(rec_done))
     exc = _CapturingExecutor()
 
-    model.run(executor=exc, skip_existing=True)
+    exc.run(model, skip_existing=True)
 
     assert exc.start_calls[0]["pending"] == [_rid(rec_todo)]
 
@@ -1147,7 +1147,7 @@ def test_run_no_skip_dispatches_everything(tmp_path):
     _write_trajectory(model, _sid(rec_done))
     exc = _CapturingExecutor()
 
-    model.run(executor=exc, skip_existing=False)
+    exc.run(model, skip_existing=False)
 
     assert exc.start_calls[0]["pending"] == [_rid(rec_done), _rid(rec_todo)]
     assert exc.start_calls[0]["skip_existing"] is False
@@ -1157,7 +1157,7 @@ def test_run_returns_completed_handle_without_receptors(tmp_path):
     model = Model(project=tmp_path, config=_config(tmp_path), receptors=[])
     exc = _CapturingExecutor()
 
-    handle = model.run(executor=exc, skip_existing=False)
+    handle = exc.run(model, skip_existing=False)
 
     assert not exc.was_started
     assert isinstance(handle, LocalHandle)
