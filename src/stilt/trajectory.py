@@ -5,13 +5,12 @@ import logging
 import os
 import warnings
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Self, cast
 
 import numpy as np
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
-from typing_extensions import Self
 
 from stilt.config import STILTParams
 from stilt.receptors import ColumnReceptor, MultiPointReceptor, PointReceptor, Receptor

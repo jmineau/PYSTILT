@@ -3,12 +3,8 @@
 from __future__ import annotations
 
 import sys
+import tomllib
 from pathlib import Path
-
-try:
-    import tomllib
-except ModuleNotFoundError:  # pragma: no cover - Python 3.10 docs builds
-    import tomli as tomllib
 
 DOCS = Path(__file__).resolve().parent
 ROOT = DOCS.parent

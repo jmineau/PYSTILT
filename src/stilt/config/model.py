@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, Self
 
 import yaml
 from pydantic import ConfigDict, Field, model_validator
-from typing_extensions import Self
 
 from .footprint import FootprintConfig
 from .meteorology import MetConfig
