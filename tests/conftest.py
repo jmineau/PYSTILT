@@ -70,7 +70,9 @@ def met_dir() -> Path:
     """
     env = os.environ.get("STILT_TEST_MET_DIR")
     if env and Path(env).exists():
-        return Path(env)
+        # Absolute, so STILT-R (which runs in its own working directory)
+        # finds the files too when the variable is a relative path.
+        return Path(env).resolve()
 
     if os.environ.get("STILT_TEST_FETCH_MET") == "1":
         from concurrent.futures import ThreadPoolExecutor, as_completed
