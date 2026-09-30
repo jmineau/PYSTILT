@@ -4,28 +4,11 @@ from __future__ import annotations
 
 import inspect
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal, Self
+from typing import Any, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .spatial import Bounds
-
-if TYPE_CHECKING:
-    from arlmet.sources import MeteorologySource
-
-
-def arlmet_sources() -> dict[str, type[MeteorologySource]]:
-    """Return the ARL archives the installed arlmet can download, by name."""
-    import arlmet.sources as src
-
-    return {
-        cls.name: cls
-        for attr in src.__all__
-        if isinstance(cls := getattr(src, attr, None), type)
-        and issubclass(cls, src.MeteorologySource)
-        and cls is not src.MeteorologySource
-    }
-
 
 #: Met fields that change no output: where the files are, not what they hold.
 UNRECORDED_MET_FIELDS = frozenset({"directory", "subgrid_dir"})
@@ -98,14 +81,15 @@ class MetSettings(BaseModel):
         """Check the archive and its options, and the fields each mode needs."""
         extra = self.download_options
         if self.download is not None:
-            archives = arlmet_sources()
-            if self.download not in archives:
+            from arlmet.archives import ARCHIVES
+
+            if self.download not in ARCHIVES:
                 raise ValueError(
                     f"Unknown ARL archive {self.download!r} to download. "
-                    f"Available: {sorted(archives)}."
+                    f"Available: {sorted(ARCHIVES)}."
                 )
             try:
-                inspect.signature(archives[self.download]).bind(**extra)
+                inspect.signature(ARCHIVES[self.download]).bind(**extra)
             except TypeError as exc:
                 raise ValueError(
                     f"ARL archive {self.download!r} does not take the options "

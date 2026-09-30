@@ -115,14 +115,14 @@ def test_met_download_calls_fetch(tmp_path):
         f.touch()
 
     met = _make_download_met(tmp_path)
-    met._arlmet_source = mock_archive  # inject mock
+    met._archive = mock_archive  # inject mock
 
     files = met.required_files(r_time="2024-07-18 12:00", n_hours=-24)
 
     mock_archive.fetch.assert_called_once()
     call_kwargs = mock_archive.fetch.call_args
-    assert call_kwargs.kwargs["local_dir"] == tmp_path
-    assert call_kwargs.kwargs["backend"] == "s3"
+    assert call_kwargs.kwargs["dest_dir"] == tmp_path
+    assert call_kwargs.kwargs["mirror"] == "s3"
     assert call_kwargs.kwargs["bbox"] is None
     assert call_kwargs.kwargs["levels"] is None
     assert len(files) == 2
@@ -134,10 +134,10 @@ def test_met_download_from_is_passed_to_fetch(tmp_path):
     (tmp_path / "file1").touch()
 
     met = _make_download_met(tmp_path, download_from="ftp")
-    met._arlmet_source = mock_archive
+    met._archive = mock_archive
     met.required_files(r_time="2024-07-18 12:00", n_hours=-24)
 
-    assert mock_archive.fetch.call_args.kwargs["backend"] == "ftp"
+    assert mock_archive.fetch.call_args.kwargs["mirror"] == "ftp"
 
 
 def test_met_download_with_subgrid_passes_bbox(tmp_path):
@@ -157,7 +157,7 @@ def test_met_download_with_subgrid_passes_bbox(tmp_path):
             subgrid_buffer=0.5,
         ),
     )
-    met._arlmet_source = mock_archive
+    met._archive = mock_archive
 
     met.required_files(r_time="2024-07-18 12:00", n_hours=-24)
 
@@ -178,7 +178,7 @@ def test_met_download_passes_subgrid_levels(tmp_path):
         subgrid_bounds=Bounds(xmin=-114.0, xmax=-110.0, ymin=39.0, ymax=42.0),
         subgrid_levels=3,
     )
-    met._arlmet_source = mock_archive
+    met._archive = mock_archive
 
     met.required_files(r_time="2024-07-18 12:00", n_hours=-24)
 
@@ -191,7 +191,7 @@ def test_met_download_n_min_raises(tmp_path):
     mock_archive.fetch.return_value = []
 
     met = _make_download_met(tmp_path, n_min=2)
-    met._arlmet_source = mock_archive
+    met._archive = mock_archive
 
     with pytest.raises(MeteorologyError, match="Insufficient"):
         met.required_files(r_time="2024-07-18 12:00", n_hours=-24)
@@ -239,7 +239,7 @@ def _fake_extract(text: str = "cropped"):
 
     def extract(src, dst, **kwargs):
         Path(dst).write_text(text)
-        return MagicMock()
+        return Path(dst)
 
     return extract
 
@@ -258,21 +258,6 @@ def test_met_local_subgrid_calls_extract_subset(tmp_path):
     assert staged == [target_dir / "20230101_12"]
     assert staged[0].resolve() == met.crop_dir / "20230101_12"
     assert staged[0].read_text() == "cropped"
-
-
-def test_met_local_subgrid_closes_the_crop(tmp_path):
-    """extract_subset returns an open File; it is closed once written."""
-    met = _archive_met(tmp_path)
-    opened = MagicMock()
-
-    def extract(src, dst, **kwargs):
-        Path(dst).write_text("cropped")
-        return opened
-
-    with patch("arlmet.extract_subset", side_effect=extract):
-        _stage(met, tmp_path / "sim")
-
-    opened.close.assert_called_once()
 
 
 def test_met_local_subgrid_reuses_cache(tmp_path):
@@ -344,7 +329,7 @@ def test_a_crop_appears_only_when_complete(tmp_path):
         Path(dst).write_text("half")
         assert not final.exists()
         Path(dst).write_text("cropped")
-        return MagicMock()
+        return Path(dst)
 
     with patch("arlmet.extract_subset", side_effect=extract):
         _stage(met, tmp_path / "sim")

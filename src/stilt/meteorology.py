@@ -13,12 +13,11 @@ import pandas as pd
 from pandas.tseries.frequencies import to_offset
 
 from stilt.config import MetConfig
-from stilt.config.meteorology import arlmet_sources
 from stilt.config.transport import settings_hash
 from stilt.errors import MeteorologyError
 
 if TYPE_CHECKING:
-    from arlmet.sources import MeteorologySource as ArlmetSource
+    from arlmet.archives import Archive
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +46,7 @@ class Met:
         self.config = config
         #: ``config.directory``, made absolute.
         self.directory = config.directory.expanduser().resolve()
-        self._arlmet_source: ArlmetSource | None = None
+        self._archive: Archive | None = None
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -61,13 +60,16 @@ class Met:
             key=lambda path: path.name,
         )
 
-    def _get_arlmet_source(self) -> ArlmetSource:
+    def _get_archive(self) -> Archive:
         """Return the arlmet archive to download from, building it on first use."""
-        if self._arlmet_source is None:
+        if self._archive is None:
+            from arlmet.archives import get_archive
+
             assert self.config.download is not None
-            cls = arlmet_sources()[self.config.download]
-            self._arlmet_source = cls(**self.config.download_options)
-        return self._arlmet_source
+            self._archive = get_archive(
+                self.config.download, **self.config.download_options
+            )
+        return self._archive
 
     def _effective_bbox(self) -> tuple[float, float, float, float]:
         """Return ``(west, south, east, north)`` of the subgrid bounds plus the buffer."""
@@ -114,13 +116,13 @@ class Met:
         bbox = self._effective_bbox() if self.config.subgrid_enable else None
         levels = self._level_indices() if self.config.subgrid_enable else None
 
-        archive = self._get_arlmet_source()
+        archive = self._get_archive()
         try:
             files = archive.fetch(
                 t_start,
                 t_end,
-                local_dir=self.directory,
-                backend=self.config.download_from,
+                dest_dir=self.directory,
+                mirror=self.config.download_from,
                 bbox=bbox,
                 levels=levels,
             )
@@ -312,7 +314,7 @@ class Met:
                 logger.info("Subsetting %s → %s", src.name, cache_path)
                 tmp = crop_dir / f".{src.name}.{uuid.uuid4().hex}.tmp"
                 try:
-                    extract_subset(src, tmp, bbox=bbox, levels=levels).close()
+                    extract_subset(src, tmp, bbox=bbox, levels=levels)
                     os.replace(tmp, cache_path)
                 finally:
                     tmp.unlink(missing_ok=True)
