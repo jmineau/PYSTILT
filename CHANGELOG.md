@@ -6,6 +6,18 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **`TransportSettings`, what identifies a run**
+  ([#74](https://github.com/jmineau/PYSTILT/issues/74)). The transport
+  fields that change a run's particles, the content of its meteorology
+  (`MetContent`, which `MetConfig` now builds on), and the engine and
+  version that produced them (`EngineInfo`). Its hash names the run's folder
+  in the output directory, and a stored `settings.yaml` loads back through
+  it, so a field added later with a default still matches. A custom
+  `exe_dir` needs a `version` file beside `hycs_std`. Nothing uses this yet
+  beyond `stilt.output`.
+
 ### Removed
 
 - **Python 3.10 is no longer supported** (breaking). PYSTILT now requires

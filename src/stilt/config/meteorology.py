@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import inspect
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -31,22 +31,18 @@ def arlmet_sources() -> dict[str, type[MeteorologySource]]:
 UNRECORDED_MET_FIELDS = frozenset({"directory", "subgrid_dir"})
 
 
-class MetConfig(BaseModel):
+class MetContent(BaseModel):
     """
-    Settings for one meteorology stream.
+    What a meteorology stream holds, apart from where its files are.
 
-    Give either ``source`` to download ARL files with arlmet, or
-    ``file_format`` and ``file_tres`` to find them in ``directory``. With
-    ``source``, other keys are options for that arlmet source (such as
-    ``domain`` for ``nams``). Any other unknown key is an error.
+    The source or file layout and the subgrid settings decide the particles
+    a run produces, so they are part of a run's identity
+    (:class:`~stilt.config.TransportSettings`). :class:`MetConfig` adds the
+    directories, which do not.
     """
 
     model_config = ConfigDict(extra="allow")
 
-    directory: Path = Field(
-        ...,
-        description="Directory holding the ARL meteorology files. Downloads are saved here.",
-    )
     source: str | None = Field(
         None,
         description=(
@@ -95,17 +91,9 @@ class MetConfig(BaseModel):
         None,
         description="Number of vertical levels to keep, counted from the surface. Unset keeps all.",
     )
-    subgrid_dir: Path | None = Field(
-        None,
-        description=(
-            "Directory for the cropped files, shared by every simulation that "
-            "uses this meteorology. Unset uses ``<directory>/subgrid``. Used "
-            "only without ``source``, which crops files as it downloads them."
-        ),
-    )
 
     @model_validator(mode="after")
-    def _validate_mode(self) -> MetConfig:
+    def _validate_mode(self) -> Self:
         """Check the source and its options, and the fields each mode needs."""
         extra = self.source_kwargs
         if self.source is not None:
@@ -141,3 +129,33 @@ class MetConfig(BaseModel):
     def source_kwargs(self) -> dict[str, Any]:
         """Extra fields, passed as keyword arguments to the arlmet source."""
         return dict(self.model_extra) if self.model_extra else {}
+
+    def content(self) -> MetContent:
+        """Return the content alone, without the directories a :class:`MetConfig` adds."""
+        return MetContent.model_validate(
+            self.model_dump(exclude=set(UNRECORDED_MET_FIELDS))
+        )
+
+
+class MetConfig(MetContent):
+    """
+    Settings for one meteorology stream.
+
+    Give either ``source`` to download ARL files with arlmet, or
+    ``file_format`` and ``file_tres`` to find them in ``directory``. With
+    ``source``, other keys are options for that arlmet source (such as
+    ``domain`` for ``nams``). Any other unknown key is an error.
+    """
+
+    directory: Path = Field(
+        ...,
+        description="Directory holding the ARL meteorology files. Downloads are saved here.",
+    )
+    subgrid_dir: Path | None = Field(
+        None,
+        description=(
+            "Directory for the cropped files, shared by every simulation that "
+            "uses this meteorology. Unset uses ``<directory>/subgrid``. Used "
+            "only without ``source``, which crops files as it downloads them."
+        ),
+    )

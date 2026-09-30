@@ -8,10 +8,17 @@ import pytest
 import xarray as xr
 import yaml
 
-from stilt.config import FootprintConfig, Grid, STILTParams
+from stilt.config import (
+    FootprintConfig,
+    Grid,
+    MetConfig,
+    STILTParams,
+    TransportSettings,
+)
+from stilt.config.transport import settings_hash
 from stilt.footprint import Footprint
 from stilt.geometry import Mesh
-from stilt.output import Output, footprint_label, settings_hash
+from stilt.output import Output, footprint_label
 from stilt.receptors import PointReceptor
 from stilt.trajectory import Trajectories
 
@@ -20,7 +27,16 @@ from stilt.trajectory import Trajectories
 # ---------------------------------------------------------------------------
 
 GRID = Grid(xmin=-112.0, xmax=-111.5, ymin=40.5, ymax=41.0, xres=0.1, yres=0.1)
-SETTINGS = {"n_hours": -24, "numpar": 100, "met": {"source": "hrrr", "file_tres": "6h"}}
+MET = MetConfig(directory="/data/hrrr", file_format="%Y%m%d_%H", file_tres="6h")
+
+
+def _settings(**overrides) -> TransportSettings:
+    """Transport settings for the tests; *overrides* change the transport fields."""
+    params = STILTParams(**{"n_hours": -24, "numpar": 100, **overrides})
+    return TransportSettings.build(params, MET)
+
+
+SETTINGS = _settings()
 
 
 def _receptor(hour: int = 12, day: int = 15) -> PointReceptor:
@@ -81,18 +97,6 @@ def _footprint(
 # ---------------------------------------------------------------------------
 
 
-def test_settings_hash_ignores_key_order_and_number_spelling():
-    a = {"numpar": 1000, "ziscale": 1.0, "grid": {"xres": 0.01, "yres": 0.01}}
-    b = {"grid": {"yres": 0.01, "xres": 0.01}, "ziscale": 1, "numpar": 1000.0}
-    assert settings_hash(a) == settings_hash(b)
-
-
-def test_settings_hash_changes_with_any_value():
-    base = {"numpar": 1000, "ziscale": 1.0}
-    assert settings_hash(base) != settings_hash({**base, "ziscale": 0.8})
-    assert settings_hash(base) != settings_hash({**base, "extra": None})
-
-
 def test_footprint_label_from_grid():
     assert footprint_label(GRID) == "0.1deg"
     assert footprint_label(GRID.model_copy(update={"yres": 0.05})) == "0.1x0.05deg"
@@ -116,19 +120,24 @@ def test_footprint_label_from_grid():
 def test_run_folder_is_name_and_hash_with_settings_file(tmp_path):
     out = Output(tmp_path / "output")
     run = out.run("hrrr", SETTINGS)
-    digest = settings_hash(SETTINGS)
+    digest = SETTINGS.hash
     assert run.path == tmp_path / "output" / f"hrrr-{digest[:6]}"
     record = yaml.safe_load((run.path / "settings.yaml").read_text())
     assert record["name"] == "hrrr"
     assert record["hash"] == digest
     assert record["settings"]["numpar"] == 100
-    assert out.runs() == [run] or [r.path for r in out.runs()] == [run.path]
+    assert (
+        "exe_dir" not in record["settings"]
+        and "directory" not in record["settings"]["met"]
+    )
+    assert run.settings.identity() == SETTINGS.identity()  # maxpar is stored as numpar
+    assert [r.path for r in out.runs()] == [run.path]
 
 
 def test_same_settings_under_another_name_share_the_folder(tmp_path):
     out = Output(tmp_path / "output")
     first = out.run("hrrr", SETTINGS)
-    second = out.run("hrrr-main", dict(SETTINGS))
+    second = out.run("hrrr-main", _settings())
     assert second.path == first.path
     assert second.name == "hrrr"
 
@@ -136,12 +145,12 @@ def test_same_settings_under_another_name_share_the_folder(tmp_path):
 def test_changed_settings_make_a_new_folder_beside_the_old(tmp_path):
     out = Output(tmp_path / "output")
     first = out.run("hrrr", SETTINGS)
-    second = out.run("hrrr", {**SETTINGS, "ziscale": 0.8})
+    second = out.run("hrrr", _settings(ziscale=0.8))
     assert second.path != first.path
     assert second.path.name.startswith("hrrr-")
     assert {r.path for r in out.runs()} == {first.path, second.path}
     assert out.find_run(SETTINGS).path == first.path
-    assert out.find_run({"other": 1}) is None
+    assert out.find_run(_settings(numpar=7)) is None
 
 
 # ---------------------------------------------------------------------------
@@ -395,27 +404,6 @@ def _project_model(tmp_path):
     )
     receptors = [_receptor(hour=6), _receptor(hour=12)]
     return Model(project=tmp_path / "project", receptors=receptors, config=config)
-
-
-def test_transport_settings_ignore_footprint_and_unrecorded_fields(tmp_path):
-    from stilt.output import transport_settings
-
-    model = _project_model(tmp_path)
-    met = model.config.mets["hrrr"]
-    base = transport_settings(model.variants["hrrr"], met)
-    derived = transport_settings(model.variants["hrrr-coarse"], met)
-    error = transport_settings(model.variants["hrrr-err"], met)
-    assert base == derived
-    assert base != error
-    assert "grid" not in base and "smooth_factor" not in base
-    assert "timeout" not in base and "exe_dir" not in base
-    assert "directory" not in base["met"]
-    assert base["met"]["file_tres"] == "6h"
-
-    moved = met.model_copy(update={"directory": tmp_path / "elsewhere"})
-    assert settings_hash(
-        transport_settings(model.variants["hrrr"], moved)
-    ) == settings_hash(base)
 
 
 def test_convert_project_shares_runs_and_keeps_empty_footprints(tmp_path):
