@@ -433,3 +433,30 @@ def test_two_workers_writing_one_receptor_at_once_both_succeed(tmp_path, monkeyp
 
     assert len(run.read_particles(str(receptor.id)).data) == len(traj.data)
     assert [p.name for p in path.parent.iterdir()] == [path.name]  # no stray files
+
+
+# ---------------------------------------------------------------------------
+# Provenance in each file
+# ---------------------------------------------------------------------------
+
+
+def test_each_result_file_names_its_settings_and_the_version_that_wrote_it(tmp_path):
+    """A file copied out of the output directory still says where it came from."""
+    import pyarrow.parquet as pq
+
+    import stilt
+
+    receptor = _receptor()
+    run = Output(tmp_path / "output").run("hrrr", SETTINGS)
+    particles = run.write_particles(_trajectories(receptor))
+    feet = run.footprints(FootprintConfig(grid=GRID))
+    footprint = feet.write(_footprint(receptor))
+    empty = feet.write_empty(_receptor(13), "outside_domain")
+
+    meta = pq.read_schema(particles).metadata
+    assert meta[b"stilt:hash"].decode() == run.hash == SETTINGS.hash
+    assert meta[b"stilt:pystilt"].decode() == stilt.__version__
+    for path in (footprint, empty):
+        meta = pq.read_schema(path).metadata
+        assert meta[b"stilt:hash"].decode() == feet.hash
+        assert meta[b"stilt:pystilt"].decode() == stilt.__version__
