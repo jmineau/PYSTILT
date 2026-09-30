@@ -121,6 +121,9 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   versions are not found (move them into `crop_dir` to keep them).
   `subgrid_levels` now applies to downloaded files too (it was silently
   ignored), which needs arlmet 0.1.0a9.
+- `model.plot.availability(ax=...)` formats the dates on the figure of the
+  axes you pass. It used to format whichever figure was current
+  ([#58](https://github.com/jmineau/PYSTILT/issues/58)).
 
 ## [0.1.0a22] - 2026-09-29
 
