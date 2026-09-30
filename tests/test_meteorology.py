@@ -169,149 +169,203 @@ def test_metsource_download_n_min_raises(tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_metsource_archive_subgrid_calls_extract_subset(tmp_path):
-    """Archive-mode subsetting calls extract_subset and stages the cached copy."""
-    source_dir = tmp_path / "archive"
-    source_dir.mkdir()
-    src_file = source_dir / "20230101_12"
-    src_file.write_text("met")
+BOUNDS = Bounds(xmin=-114.0, xmax=-110.0, ymin=39.0, ymax=42.0)
 
-    bounds = Bounds(xmin=-114.0, xmax=-110.0, ymin=39.0, ymax=42.0)
-    met = MetStream(
+
+def _archive_met(tmp_path: Path, **kwargs) -> MetStream:
+    """A local archive holding one 1 h file, cropped into tmp_path/crops."""
+    archive = tmp_path / "archive"
+    archive.mkdir(parents=True, exist_ok=True)
+    (archive / "20230101_12").write_text("met")
+    settings = {
+        "subgrid_bounds": BOUNDS,
+        "subgrid_buffer": 0.0,
+        "subgrid_dir": tmp_path / "crops",
+        **kwargs,
+    }
+    return MetStream(
         "hrrr",
         MetConfig(
-            directory=source_dir,
+            directory=archive,
             file_format="%Y%m%d_%H",
             file_tres="1h",
             subgrid_enable=True,
-            subgrid_bounds=bounds,
-            subgrid_buffer=0.0,
+            **settings,
         ),
     )
 
-    target_dir = tmp_path / "sim" / "met"
-    with patch("arlmet.extract_subset") as mock_extract:
-        # Make extract_subset create the cache file so staging can proceed
-        def _fake_extract(src, dst, **kw):
-            dst.write_text("subsetted")
 
-        mock_extract.side_effect = _fake_extract
-        staged = met.stage_files_for_simulation(
-            r_time=dt.datetime(2023, 1, 1, 12), n_hours=-1, target_dir=target_dir
-        )
+def _stage(met: MetStream, target_dir: Path) -> list[Path]:
+    return met.stage_files_for_simulation(
+        r_time=dt.datetime(2023, 1, 1, 12), n_hours=-1, target_dir=target_dir
+    )
+
+
+def _fake_extract(text: str = "cropped"):
+    """Stand-in for arlmet.extract_subset that writes *text* to the destination."""
+
+    def extract(src, dst, **kwargs):
+        Path(dst).write_text(text)
+        return MagicMock()
+
+    return extract
+
+
+def test_metsource_archive_subgrid_calls_extract_subset(tmp_path):
+    """Archive-mode subsetting crops into crop_dir and stages the crop."""
+    met = _archive_met(tmp_path)
+    target_dir = tmp_path / "sim" / "met"
+    with patch("arlmet.extract_subset", side_effect=_fake_extract()) as mock_extract:
+        staged = _stage(met, target_dir)
 
     mock_extract.assert_called_once()
     call_args = mock_extract.call_args
-    assert call_args.args[0] == src_file.resolve()
+    assert call_args.args[0] == (tmp_path / "archive" / "20230101_12").resolve()
     assert call_args.kwargs["bbox"] == (-114.0, 39.0, -110.0, 42.0)
-    # staged file should be in target_dir
-    assert len(staged) == 1
-    assert staged[0].parent == target_dir
+    assert staged == [target_dir / "20230101_12"]
+    assert staged[0].resolve() == met.crop_dir / "20230101_12"
+    assert staged[0].read_text() == "cropped"
+
+
+def test_metsource_archive_subgrid_closes_the_crop(tmp_path):
+    """extract_subset returns an open File; it is closed once written."""
+    met = _archive_met(tmp_path)
+    opened = MagicMock()
+
+    def extract(src, dst, **kwargs):
+        Path(dst).write_text("cropped")
+        return opened
+
+    with patch("arlmet.extract_subset", side_effect=extract):
+        _stage(met, tmp_path / "sim")
+
+    opened.close.assert_called_once()
 
 
 def test_metsource_archive_subgrid_reuses_cache(tmp_path):
-    """extract_subset is not called again when the cached file already exists."""
-    source_dir = tmp_path / "archive"
-    source_dir.mkdir()
-    src_file = source_dir / "20230101_12"
-    src_file.write_text("met")
+    """extract_subset is not called again when the crop already exists."""
+    met = _archive_met(tmp_path)
+    met.crop_dir.mkdir(parents=True)
+    (met.crop_dir / "20230101_12").write_text("cached")
 
-    bounds = Bounds(xmin=-114.0, xmax=-110.0, ymin=39.0, ymax=42.0)
-    met = MetStream(
-        "hrrr",
-        MetConfig(
-            directory=source_dir,
-            file_format="%Y%m%d_%H",
-            file_tres="1h",
-            subgrid_enable=True,
-            subgrid_bounds=bounds,
-        ),
-    )
-
-    # Pre-populate the cache
-    subgrid_dir = met._resolved_subgrid_dir()
-    subgrid_dir.mkdir(parents=True)
-    (subgrid_dir / src_file.name).write_text("cached")
-
-    target_dir = tmp_path / "sim" / "met"
     with patch("arlmet.extract_subset") as mock_extract:
-        met.stage_files_for_simulation(
-            r_time=dt.datetime(2023, 1, 1, 12), n_hours=-1, target_dir=target_dir
-        )
+        staged = _stage(met, tmp_path / "sim")
 
     mock_extract.assert_not_called()
+    assert staged[0].read_text() == "cached"
 
 
 def test_metsource_archive_subgrid_levels(tmp_path):
     """subgrid_levels=N passes levels=list(range(N)) to extract_subset."""
-    source_dir = tmp_path / "archive"
-    source_dir.mkdir()
-    src_file = source_dir / "20230101_12"
-    src_file.write_text("met")
-
-    bounds = Bounds(xmin=-114.0, xmax=-110.0, ymin=39.0, ymax=42.0)
-    met = MetStream(
-        "hrrr",
-        MetConfig(
-            directory=source_dir,
-            file_format="%Y%m%d_%H",
-            file_tres="1h",
-            subgrid_enable=True,
-            subgrid_bounds=bounds,
-            subgrid_levels=5,
-        ),
-    )
-
-    target_dir = tmp_path / "sim" / "met"
-    with patch("arlmet.extract_subset") as mock_extract:
-
-        def _fake_extract(src, dst, **kw):
-            dst.write_text("subsetted")
-
-        mock_extract.side_effect = _fake_extract
-        met.stage_files_for_simulation(
-            r_time=dt.datetime(2023, 1, 1, 12), n_hours=-1, target_dir=target_dir
-        )
+    met = _archive_met(tmp_path, subgrid_levels=5)
+    with patch("arlmet.extract_subset", side_effect=_fake_extract()) as mock_extract:
+        _stage(met, tmp_path / "sim")
 
     assert mock_extract.call_args.kwargs["levels"] == [0, 1, 2, 3, 4]
 
 
-def test_metsource_archive_subgrid_auto_dir(tmp_path):
-    """subgrid_dir defaults to directory/subgrid when not set."""
-    source_dir = tmp_path / "archive"
-    source_dir.mkdir()
-    bounds = Bounds(xmin=-114.0, xmax=-110.0, ymin=39.0, ymax=42.0)
-    met = MetStream(
-        "hrrr",
+@pytest.mark.parametrize(
+    "change",
+    [
+        {"subgrid_bounds": Bounds(xmin=-113.0, xmax=-110.0, ymin=39.0, ymax=42.0)},
+        {"subgrid_buffer": 0.5},
+        {"subgrid_levels": 20},
+    ],
+)
+def test_changing_the_crop_changes_crop_dir(tmp_path, change):
+    """A new crop box or level count never reuses crops made for another (#53)."""
+    old = _archive_met(tmp_path)
+    new = _archive_met(tmp_path, **change)
+    assert new.crop_dir != old.crop_dir
+    assert new.crop_dir.parent == old.crop_dir.parent == tmp_path / "crops"
+
+    with patch("arlmet.extract_subset", side_effect=_fake_extract("old")):
+        _stage(old, tmp_path / "sim-old")
+    with patch(
+        "arlmet.extract_subset", side_effect=_fake_extract("new")
+    ) as mock_extract:
+        staged = _stage(new, tmp_path / "sim-new")
+
+    mock_extract.assert_called_once()
+    assert staged[0].read_text() == "new"
+
+
+def test_the_same_crop_shares_crop_dir(tmp_path):
+    """Crop settings that give the same box share one folder, whatever the archive."""
+    wide = Bounds(xmin=-114.5, xmax=-109.5, ymin=38.5, ymax=42.5)
+    a = _archive_met(tmp_path, subgrid_buffer=0.5)
+    b = _archive_met(
+        tmp_path / "other", subgrid_bounds=wide, subgrid_dir=tmp_path / "crops"
+    )
+    assert a.crop_dir == b.crop_dir
+
+
+def test_a_crop_appears_only_when_complete(tmp_path):
+    """The crop is written to a temporary name and renamed into place (#53)."""
+    met = _archive_met(tmp_path)
+    final = met.crop_dir / "20230101_12"
+
+    def extract(src, dst, **kwargs):
+        assert Path(dst).parent == met.crop_dir
+        assert Path(dst) != final
+        Path(dst).write_text("half")
+        assert not final.exists()
+        Path(dst).write_text("cropped")
+        return MagicMock()
+
+    with patch("arlmet.extract_subset", side_effect=extract):
+        _stage(met, tmp_path / "sim")
+
+    assert final.read_text() == "cropped"
+    assert sorted(p.name for p in met.crop_dir.iterdir()) == ["20230101_12"]
+
+
+def test_a_failed_crop_leaves_nothing_behind(tmp_path):
+    """A crop that fails partway leaves no file, so the next run crops again."""
+    met = _archive_met(tmp_path)
+
+    def extract(src, dst, **kwargs):
+        Path(dst).write_text("half")
+        raise OSError("disk full")
+
+    with (
+        patch("arlmet.extract_subset", side_effect=extract),
+        pytest.raises(OSError, match="disk full"),
+    ):
+        _stage(met, tmp_path / "sim")
+
+    assert list(met.crop_dir.iterdir()) == []
+
+
+def test_metconfig_local_crop_requires_subgrid_dir(tmp_path):
+    """Crops are never written into the met archive by default (#53)."""
+    with pytest.raises(ValueError, match="subgrid_dir is required"):
         MetConfig(
-            directory=source_dir,
+            directory=tmp_path,
             file_format="%Y%m%d_%H",
             file_tres="1h",
             subgrid_enable=True,
-            subgrid_bounds=bounds,
-        ),
+            subgrid_bounds=BOUNDS,
+        )
+
+
+def test_metconfig_source_crop_needs_no_subgrid_dir(tmp_path):
+    cfg = MetConfig(
+        directory=tmp_path, source="hrrr", subgrid_enable=True, subgrid_bounds=BOUNDS
     )
-    assert met._resolved_subgrid_dir() == source_dir / "subgrid"
+    assert cfg.subgrid_dir is None
 
 
-def test_metsource_archive_subgrid_custom_dir(tmp_path):
-    """subgrid_dir is used when explicitly set."""
-    source_dir = tmp_path / "archive"
-    custom_dir = tmp_path / "custom_subgrid"
-    source_dir.mkdir()
-    bounds = Bounds(xmin=-114.0, xmax=-110.0, ymin=39.0, ymax=42.0)
-    met = MetStream(
-        "hrrr",
+def test_metconfig_rejects_subgrid_levels_with_a_source(tmp_path):
+    """Downloads keep every level, so subgrid_levels would be silently ignored."""
+    with pytest.raises(ValueError, match="subgrid_levels works only"):
         MetConfig(
-            directory=source_dir,
-            file_format="%Y%m%d_%H",
-            file_tres="1h",
+            directory=tmp_path,
+            source="hrrr",
             subgrid_enable=True,
-            subgrid_bounds=bounds,
-            subgrid_dir=custom_dir,
-        ),
-    )
-    assert met._resolved_subgrid_dir() == custom_dir
+            subgrid_bounds=BOUNDS,
+            subgrid_levels=20,
+        )
 
 
 def _touch_files(tmp_path: Path, names: list[str]) -> list[Path]:

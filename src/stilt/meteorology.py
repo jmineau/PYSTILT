@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import logging
+import os
 import shutil
+import uuid
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
@@ -12,6 +14,7 @@ from pandas.tseries.frequencies import to_offset
 
 from stilt.config import MetConfig
 from stilt.config.meteorology import arlmet_sources
+from stilt.config.transport import settings_hash
 from stilt.errors import MeteorologyError
 
 if TYPE_CHECKING:
@@ -28,7 +31,7 @@ class MetStream:
     ``file_format`` and ``file_tres``. With ``source`` set to an arlmet
     source name, arlmet downloads the files, cropping them as it goes when
     subgridding is on. Local files are cropped with
-    ``arlmet.extract_subset`` into ``subgrid_dir``, which all simulations
+    ``arlmet.extract_subset`` into :attr:`crop_dir`, which all simulations
     share.
 
     Parameters
@@ -76,11 +79,21 @@ class MetStream:
             raise ValueError("subgrid_buffer must be a non-negative number.")
         return (b.xmin - buf, b.ymin - buf, b.xmax + buf, b.ymax + buf)
 
-    def _resolved_subgrid_dir(self) -> Path:
-        """Return the directory for cropped files, ``<directory>/subgrid`` by default."""
+    @property
+    def crop_dir(self) -> Path:
+        """
+        Directory holding this stream's cropped files.
+
+        It is a folder inside ``subgrid_dir`` named by a short hash of the
+        crop box (``subgrid_bounds`` plus ``subgrid_buffer``) and
+        ``subgrid_levels``. Changing any of them gives a new folder, so
+        old crops are never reused for a different crop.
+        """
         if self.config.subgrid_dir is None:
-            return self.directory / "subgrid"
-        return self.config.subgrid_dir.expanduser().resolve()
+            raise ValueError("subgrid_dir is required to crop local files.")
+        crop = {"bbox": self._effective_bbox(), "levels": self.config.subgrid_levels}
+        key = settings_hash(crop)[:12]
+        return self.config.subgrid_dir.expanduser().resolve() / key
 
     def _level_indices(self) -> list[int] | None:
         """Return the indices of the lowest ``subgrid_levels`` levels, or None to keep all."""
@@ -227,7 +240,7 @@ class MetStream:
         Link met files into ``target_dir``, copying when a link fails.
 
         With subgridding on and no ``source``, each file is cropped into
-        ``subgrid_dir`` first and the cropped copy is linked. Downloaded files
+        :attr:`crop_dir` first and the cropped copy is linked. Downloaded files
         were already cropped.
         """
         # Resolve subgridded paths for archive-mode subsetting
@@ -275,19 +288,30 @@ class MetStream:
         return staged
 
     def _subset_archive_files(self, files: list[Path]) -> list[Path]:
-        """Crop local files into ``subgrid_dir``, reusing crops that already exist."""
+        """
+        Crop local files into :attr:`crop_dir`, reusing crops that already exist.
+
+        Each crop is written to a temporary name and then renamed, so a
+        worker never reads a half-written file. Two workers cropping the
+        same file at once both finish, and the second rename wins.
+        """
         from arlmet import extract_subset
 
-        subgrid_dir = self._resolved_subgrid_dir()
-        subgrid_dir.mkdir(parents=True, exist_ok=True)
+        crop_dir = self.crop_dir
+        crop_dir.mkdir(parents=True, exist_ok=True)
         bbox = self._effective_bbox()
         levels = self._level_indices()
 
         subsetted: list[Path] = []
         for src in files:
-            cache_path = subgrid_dir / src.name
+            cache_path = crop_dir / src.name
             if not cache_path.exists():
                 logger.info("Subsetting %s → %s", src.name, cache_path)
-                extract_subset(src, cache_path, bbox=bbox, levels=levels)
+                tmp = crop_dir / f".{src.name}.{uuid.uuid4().hex}.tmp"
+                try:
+                    extract_subset(src, tmp, bbox=bbox, levels=levels).close()
+                    os.replace(tmp, cache_path)
+                finally:
+                    tmp.unlink(missing_ok=True)
             subsetted.append(cache_path)
         return subsetted

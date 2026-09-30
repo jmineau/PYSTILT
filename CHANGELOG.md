@@ -47,6 +47,19 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `hscale`, `p10f`, `qcycle`, `splitf`, `vscale`, `vscales`, `vscaleu`,
   `wbbh`, `wbwf`, and `wbwr` now accept fractions such as `delt: 0.5`. The
   default `SETUP.CFG` is unchanged.
+- **Cropped meteorology is cached per crop and written safely**
+  ([#53](https://github.com/jmineau/PYSTILT/issues/53)). Crops of your own
+  met files were found by file name only, so changing `subgrid_bounds`,
+  `subgrid_buffer`, or `subgrid_levels` silently reused the old crop. Each
+  crop now goes in its own folder inside `subgrid_dir` (`MetStream.crop_dir`),
+  named by a hash of the crop box and levels. A crop is written to a
+  temporary name and renamed into place, so parallel workers never read a
+  half-written file, and its file handle is now closed. Breaking:
+  `subgrid_dir` is required when cropping your own files (it used to
+  default to a folder inside the met archive), crops saved by earlier
+  versions are not found (move them into `crop_dir` to keep them), and
+  `subgrid_levels` with `source` is an error, since downloads keep every
+  level.
 
 ## [0.1.0a22] - 2026-09-29
 
