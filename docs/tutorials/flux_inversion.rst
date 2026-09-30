@@ -54,7 +54,7 @@ add them up.
 
    rows = []
    for foot in footprints.values():
-       whole_run = pd.IntervalIndex.from_tuples([foot.time_range])
+       whole_run = pd.IntervalIndex.from_tuples([foot.time_range], closed="left")
        in_window = foot.aggregate(windows, whole_run).iloc[:, 0]  # one value per source
        rows.append(
            {"time": foot.receptor.time, "enhancement_ppm": (in_window * flux).sum()}

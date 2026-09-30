@@ -235,6 +235,7 @@ time_bins = pd.interval_range(
     start=pd.Timestamp("2023-01-01 00:00"),
     end=pd.Timestamp("2023-01-02 00:00"),
     freq="1h",
+    closed="left",
 )
 
 for sim_id, footprint in footprints.items():       # keyed by (receptor, variant)

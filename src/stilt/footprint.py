@@ -1064,7 +1064,9 @@ class Footprint:
             footprint grid.
         time_bins : pandas.IntervalIndex
             Time intervals to sum over, such as the time steps of a flux
-            inventory. Each includes its left edge and excludes its right.
+            inventory. They must be closed on the left
+            (``closed="left"``): each bin holds the footprint hours that
+            start in it.
 
         Returns
         -------
@@ -1073,7 +1075,20 @@ class Footprint:
             by the bin's left edge. Rows are indexed by ``(x, y)`` for grid
             targets and by cell id for meshes and zones. Cells and bins the
             footprint does not reach are 0.
+
+        Raises
+        ------
+        ValueError
+            If ``time_bins`` is not closed on the left.
         """
+        if time_bins.closed != "left":
+            raise ValueError(
+                f"time_bins must be closed on the left, not {time_bins.closed!r}. "
+                "A footprint time is the start of its hour, so each bin takes "
+                "the hours that start in it. Build the bins with "
+                "closed='left', for example "
+                "pd.interval_range(start, end, freq='1h', closed='left')."
+            )
         is_latlon = "lon" in self.data.dims and "lat" in self.data.dims
         x_dim = "lon" if is_latlon else "x"
         y_dim = "lat" if is_latlon else "y"
