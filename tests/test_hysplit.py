@@ -769,3 +769,15 @@ def test_bundled_exe_dir_rejects_platforms_without_a_build(
     monkeypatch.setattr(driver.platform, "machine", lambda: machine)
     with pytest.raises(RuntimeError, match="exe_dir"):
         driver._bundled_exe_dir()
+
+
+def test_bundled_exe_dir_rejects_an_install_without_the_binary(monkeypatch, tmp_path):
+    """The source archive carries no hycs_std; say so rather than fail later."""
+    from stilt.hysplit import driver
+
+    (tmp_path / "bin" / "linux_x64").mkdir(parents=True)
+    monkeypatch.setattr(driver.platform, "system", lambda: "Linux")
+    monkeypatch.setattr(driver.platform, "machine", lambda: "x86_64")
+    monkeypatch.setattr(driver, "pkg_files", lambda _package: tmp_path)
+    with pytest.raises(RuntimeError, match="exe_dir"):
+        driver._bundled_exe_dir()
