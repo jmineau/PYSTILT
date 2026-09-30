@@ -18,7 +18,7 @@ from stilt.config import (
 from stilt.config.transport import settings_hash
 from stilt.footprint import Footprint
 from stilt.geometry import Mesh
-from stilt.output import Output, footprint_label
+from stilt.output import Footprints, Output
 from stilt.receptors import PointReceptor
 from stilt.trajectory import Trajectories
 
@@ -97,21 +97,6 @@ def _footprint(
 # ---------------------------------------------------------------------------
 
 
-def test_footprint_label_from_grid():
-    assert footprint_label(GRID) == "0.1deg"
-    assert footprint_label(GRID.model_copy(update={"yres": 0.05})) == "0.1x0.05deg"
-    utm = Grid(
-        xmin=-112,
-        xmax=-111.5,
-        ymin=40.5,
-        ymax=41,
-        xres=1000,
-        yres=1000,
-        projection="EPSG:32612",
-    )
-    assert footprint_label(utm) == "1000m"
-
-
 # ---------------------------------------------------------------------------
 # Runs
 # ---------------------------------------------------------------------------
@@ -121,8 +106,10 @@ def test_run_folder_is_name_and_hash_with_settings_file(tmp_path):
     out = Output(tmp_path / "output")
     run = out.run("hrrr", SETTINGS)
     digest = SETTINGS.hash
-    assert run.path == tmp_path / "output" / f"hrrr-{digest[:6]}"
-    record = yaml.safe_load((run.path / "settings.yaml").read_text())
+    assert run.key == f"hrrr-{digest[:6]}"
+    assert run.path == tmp_path / "output" / "particles" / f"settings=hrrr-{digest[:6]}"
+    assert run.logs_dir == tmp_path / "output" / "logs" / f"settings=hrrr-{digest[:6]}"
+    record = yaml.safe_load((run.path / "_settings.yaml").read_text())
     assert record["name"] == "hrrr"
     assert record["hash"] == digest
     assert record["settings"]["numpar"] == 100
@@ -147,7 +134,7 @@ def test_changed_settings_make_a_new_folder_beside_the_old(tmp_path):
     first = out.run("hrrr", SETTINGS)
     second = out.run("hrrr", _settings(ziscale=0.8))
     assert second.path != first.path
-    assert second.path.name.startswith("hrrr-")
+    assert second.key.startswith("hrrr-")
     assert {r.path for r in out.runs()} == {first.path, second.path}
     assert out.find_run(SETTINGS).path == first.path
     assert out.find_run(_settings(numpar=7)) is None
@@ -210,20 +197,36 @@ def test_receptors_listed_in_date_order(tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_footprint_folder_is_label_and_hash(tmp_path):
-    run = Output(tmp_path / "output").run("hrrr", SETTINGS)
+def test_footprint_folder_is_variant_name_and_combined_hash(tmp_path):
+    out = Output(tmp_path / "output")
+    run = out.run("hrrr", SETTINGS)
     config = FootprintConfig(grid=GRID, smooth_factor=1.0)
     feet = run.footprints(config)
-    digest = settings_hash(config.model_dump(mode="json"))
-    assert feet.path == run.footprints_dir / f"0.1deg-{digest[:6]}"
+    digest = Footprints.hash_for(run, config)
+    assert digest == settings_hash(
+        {"particles": SETTINGS.hash, "footprint": config.model_dump(mode="json")}
+    )
+    assert feet.key == f"hrrr-{digest[:6]}"
+    assert feet.path == out.footprints_dir / f"settings=hrrr-{digest[:6]}"
     assert feet.config == config
     assert feet.grid == GRID
+    assert feet.run == run
+    record = yaml.safe_load((feet.path / "_settings.yaml").read_text())
+    assert record["particles"] == run.key
 
-    other = run.footprints(config.model_copy(update={"smooth_factor": 0.5}))
+    other = run.footprints(
+        config.model_copy(update={"smooth_factor": 0.5}), name="hrrr-smooth"
+    )
     assert other.path != feet.path
-    assert other.path.name.startswith("0.1deg-")
-    assert {f.path for f in run.footprint_sets()} == {feet.path, other.path}
-    assert run.footprints(config).path == feet.path
+    assert other.key.startswith("hrrr-smooth-")
+    assert set(run.footprint_sets()) == {feet, other}
+    assert set(out.footprint_sets()) == {feet, other}
+    assert run.footprints(config) == feet
+
+    # The same footprint settings on other particles are another folder.
+    other_run = out.run("hrrr", _settings(numpar=200))
+    assert other_run.footprints(config).path != feet.path
+    assert other_run.footprint_sets() != run.footprint_sets()
 
 
 def test_footprint_round_trip_is_exact_in_float32(tmp_path):
@@ -233,6 +236,7 @@ def test_footprint_round_trip_is_exact_in_float32(tmp_path):
     foot = _footprint(receptor, hours=(-3, -2, -1, 0), seed=1)
     path = feet.write(foot)
     assert path == feet.path / "date=2024-07-15" / f"{receptor.id}.parquet"
+    assert feet.path.parent == Output(tmp_path / "output").footprints_dir
 
     back = feet.read(str(receptor.id))
     assert back is not None
@@ -444,9 +448,9 @@ def test_convert_project_shares_runs_and_keeps_empty_footprints(tmp_path):
     assert runs["hrrr-err"].receptors() == [str(r6.id), str(r12.id)]
     assert runs["hrrr-err"].footprint_sets() == []
 
-    sets = {f.path.name.split("-")[0]: f for f in runs["hrrr"].footprint_sets()}
-    assert set(sets) == {"0.1deg", "0.25deg"}
-    fine, coarse_set = sets["0.1deg"], sets["0.25deg"]
+    sets = {f.name: f for f in runs["hrrr"].footprint_sets()}
+    assert set(sets) == {"hrrr", "hrrr-coarse"}
+    fine, coarse_set = sets["hrrr"], sets["hrrr-coarse"]
     assert fine.read(str(r6.id)) is not None
     assert fine.read(str(r12.id)) is None
     assert fine.empty_reason(str(r12.id)) == "outside_domain"

@@ -1,28 +1,31 @@
 """
-The output directory, where runs and their footprints are kept.
+The output directory, where particles and footprints are kept.
 
 A project's results live in an output directory that several projects can
-share. It holds one folder per set of transport settings (a *run*), and
-inside each run one folder per set of footprint settings::
+share. It has one tree per kind of result, and inside each a folder per set
+of settings, in hive form so every tree reads as one dataset::
 
     <output>/
-      hrrr-a3f9c2/                     variant name + short hash of its settings
-        settings.yaml
-        particles/date=2024-07-01/<receptor>.parquet
-        logs/date=2024-07-01/<receptor>.log
-        footprints/
-          0.01deg-a41b7f/              label from the grid + short hash of the settings
-            settings.yaml
-            date=2024-07-01/<receptor>.parquet
+      particles/
+        settings=hrrr-a3f9c2/            variant name + short hash of the transport settings
+          _settings.yaml
+          date=2024-07-01/<receptor>.parquet
+        settings=hrrr-err-0-7be104/
+      footprints/
+        settings=hrrr-93278c/            variant name + short hash of transport + footprint settings
+          _settings.yaml                 names the particles folder it was made from
+          date=2024-07-01/<receptor>.parquet
+        settings=hrrr-hexes-1b2c3d/      same particles, other footprint settings
+      logs/
+        settings=hrrr-a3f9c2/date=2024-07-01/<receptor>.log
 
 A folder is found by the hash of its settings, so two projects that run the
 same settings share one folder, and a changed setting lands in a new folder
-beside the old one instead of overwriting it. Particles are one Parquet file
-per receptor, in a hive-style ``date=YYYY-MM-DD`` folder of the receptor
-date that pyarrow, DuckDB, polars, and R's arrow all read as a ``date``
-column. Footprints are sparse tables of the non-zero cells, in float32 as
-STILT-R writes them; an empty footprint is a file with no rows and its
-reason in the metadata.
+beside the old one instead of overwriting it. ``pyarrow.dataset``, DuckDB,
+polars, and R's arrow read ``settings`` and ``date`` as columns of the whole
+tree. Particles are one Parquet file per receptor. Footprints are sparse
+tables of the non-zero cells, in float32 as STILT-R writes them; an empty
+footprint is a file with no rows and its reason in the metadata.
 
 Start from :class:`Output`::
 
@@ -69,7 +72,8 @@ from stilt.trajectory import Trajectories
 
 logger = logging.getLogger(__name__)
 
-SETTINGS_FILE = "settings.yaml"
+#: Underscore-prefixed, so dataset readers skip it.
+SETTINGS_FILE = "_settings.yaml"
 HASH_CHARS = 6
 _RECEPTOR_ID_RE = re.compile(r"^\d{12}_")
 
@@ -78,14 +82,6 @@ _INT_COLUMNS = ("time", "indx")
 
 
 # -- identity -----------------------------------------------------------------
-
-
-def footprint_label(grid: Grid) -> str:
-    """Return the readable prefix of a footprint folder, from the grid's cell size (``0.01deg``, ``1000m``)."""
-    unit = "deg" if grid.is_longlat else "m"
-    if grid.xres == grid.yres:
-        return f"{grid.xres:g}{unit}"
-    return f"{grid.xres:g}x{grid.yres:g}{unit}"
 
 
 def _date_dir(receptor_id: str) -> str:
@@ -151,9 +147,22 @@ def _pystilt_version() -> str:
 # -- the output directory -----------------------------------------------------
 
 
+def _settings_folders(tree: Path) -> list[str]:
+    """Return the ``settings=`` values under *tree* that hold a settings file, in name order."""
+    if not tree.exists():
+        return []
+    return [
+        e.name[len("settings=") :]
+        for e in sorted(os.scandir(tree), key=lambda e: e.name)
+        if e.is_dir()
+        and e.name.startswith("settings=")
+        and (Path(e.path) / SETTINGS_FILE).exists()
+    ]
+
+
 class Output:
     """
-    An output directory: runs by their settings, and their footprints.
+    An output directory: particles and footprints, by their settings.
 
     Parameters
     ----------
@@ -167,15 +176,29 @@ class Output:
     def __repr__(self) -> str:
         return f"Output({str(self.path)!r})"
 
+    @property
+    def particles_dir(self) -> Path:
+        return self.path / "particles"
+
+    @property
+    def footprints_dir(self) -> Path:
+        return self.path / "footprints"
+
+    @property
+    def logs_dir(self) -> Path:
+        return self.path / "logs"
+
+    @property
+    def scratch_dir(self) -> Path:
+        return self.path / "scratch"
+
     def runs(self) -> list[Run]:
-        """Return every run in the directory, in folder-name order."""
-        if not self.path.exists():
-            return []
-        runs = []
-        for entry in sorted(os.scandir(self.path), key=lambda e: e.name):
-            if entry.is_dir() and (Path(entry.path) / SETTINGS_FILE).exists():
-                runs.append(Run(Path(entry.path)))
-        return runs
+        """Return every run (particles folder) in the directory, in folder-name order."""
+        return [Run(self, key) for key in _settings_folders(self.particles_dir)]
+
+    def footprint_sets(self) -> list[Footprints]:
+        """Return every footprint folder in the directory, in folder-name order."""
+        return [Footprints(self, key) for key in _settings_folders(self.footprints_dir)]
 
     def find_run(self, settings: TransportSettings) -> Run | None:
         """
@@ -196,16 +219,17 @@ class Output:
         """
         Return the run for *settings*, creating its folder on first use.
 
-        The folder is ``<name>-<hash>``. An existing folder with the same
-        settings is reused even if it was created under another name.
+        The folder is ``particles/settings=<name>-<hash>``. An existing
+        folder with the same settings is reused even if it was created under
+        another name.
         """
         existing = self.find_run(settings)
         if existing is not None:
             return existing
         digest = settings.hash
-        path = self.path / f"{name}-{digest[:HASH_CHARS]}"
+        key = f"{name}-{digest[:HASH_CHARS]}"
         _write_settings(
-            path / SETTINGS_FILE,
+            self.particles_dir / f"settings={key}" / SETTINGS_FILE,
             {
                 "name": name,
                 "hash": digest,
@@ -213,19 +237,21 @@ class Output:
                 "settings": settings.identity(),
             },
         )
-        return Run(path)
+        return Run(self, key)
 
 
 class Run:
     """
-    One folder of the output directory: the particles run under one set of settings.
+    The particles run under one set of settings, and their logs.
 
-    Get one from :meth:`Output.run`.
+    Get one from :meth:`Output.run`. ``key`` is the ``settings=`` value the
+    run's folders share across the ``particles/`` and ``logs/`` trees.
     """
 
-    def __init__(self, path: Path) -> None:
-        self.path = Path(path)
-        record = yaml.safe_load((self.path / SETTINGS_FILE).read_text()) or {}
+    def __init__(self, output: Output, key: str) -> None:
+        self.output = output
+        self.key = key
+        record = yaml.safe_load((self.particles_dir / SETTINGS_FILE).read_text()) or {}
         self.name: str = record["name"]
         #: The settings the run was made with, re-validated by the current model.
         self.settings = TransportSettings.model_validate(record["settings"])
@@ -233,23 +259,34 @@ class Run:
         self.hash: str = self.settings.hash
 
     def __repr__(self) -> str:
-        return f"Run({self.path.name!r})"
+        return f"Run({self.key!r})"
+
+    def __eq__(self, other: object) -> bool:
+        return (
+            isinstance(other, Run)
+            and other.output.path == self.output.path
+            and other.key == self.key
+        )
+
+    def __hash__(self) -> int:
+        return hash((str(self.output.path), self.key))
+
+    @property
+    def path(self) -> Path:
+        """The particles folder, ``particles/settings=<key>``."""
+        return self.particles_dir
 
     @property
     def particles_dir(self) -> Path:
-        return self.path / "particles"
+        return self.output.particles_dir / f"settings={self.key}"
 
     @property
     def logs_dir(self) -> Path:
-        return self.path / "logs"
+        return self.output.logs_dir / f"settings={self.key}"
 
     @property
     def scratch_dir(self) -> Path:
-        return self.path / "scratch"
-
-    @property
-    def footprints_dir(self) -> Path:
-        return self.path / "footprints"
+        return self.output.scratch_dir / f"settings={self.key}"
 
     # -- particles ---------------------------------------------------------
 
@@ -331,41 +368,41 @@ class Run:
     # -- footprints --------------------------------------------------------
 
     def footprint_sets(self) -> list[Footprints]:
-        """Return every footprint folder of this run."""
-        if not self.footprints_dir.exists():
-            return []
-        return [
-            Footprints(Path(e.path))
-            for e in sorted(os.scandir(self.footprints_dir), key=lambda e: e.name)
-            if e.is_dir() and (Path(e.path) / SETTINGS_FILE).exists()
-        ]
+        """Return the footprint folders made from this run's particles."""
+        return [f for f in self.output.footprint_sets() if f.run_key == self.key]
 
-    def footprints(self, config: FootprintConfig) -> Footprints:
+    def footprints(
+        self, config: FootprintConfig, name: str | None = None
+    ) -> Footprints:
         """
-        Return the footprint folder for *config*, creating it on first use.
+        Return the footprint folder for *config* on this run's particles, creating it on first use.
 
-        The folder is ``<label>-<hash>``, labelled from the grid's cell
-        size. Two configs that differ in any setting get different folders.
+        The folder is ``footprints/settings=<name>-<hash>``, hashed over the
+        run's settings and *config* together, so two footprint settings on
+        the same particles get different folders and the same footprint
+        settings on different particles do too. *name* is the variant the
+        footprints belong to; it defaults to the run's name.
         """
         if config.grid is None:
             raise ValueError("Footprint settings need a grid.")
-        settings = config.model_dump(mode="json")
-        digest = settings_hash(settings)
+        digest = Footprints.hash_for(self, config)
         for existing in self.footprint_sets():
             if existing.hash == digest:
                 return existing
-        label = footprint_label(config.grid)
-        path = self.footprints_dir / f"{label}-{digest[:HASH_CHARS]}"
+        name = name or self.name
+        key = f"{name}-{digest[:HASH_CHARS]}"
         _write_settings(
-            path / SETTINGS_FILE,
+            self.output.footprints_dir / f"settings={key}" / SETTINGS_FILE,
             {
-                "label": label,
+                "name": name,
                 "hash": digest,
+                "particles": self.key,
+                "particles_hash": self.hash,
                 "pystilt": _pystilt_version(),
-                "settings": canonical(settings),
+                "settings": canonical(config.model_dump(mode="json")),
             },
         )
-        return Footprints(path)
+        return Footprints(self.output, key)
 
 
 _FOOTPRINT_SCHEMA = pa.schema(
@@ -421,26 +458,60 @@ class Jacobian(NamedTuple):
 
 class Footprints:
     """
-    One footprint folder of a run: footprints of many receptors, one setting.
+    One footprint folder: footprints of many receptors, one setting, one run.
 
-    Get one from :meth:`Run.footprints`.
+    Get one from :meth:`Run.footprints`. ``key`` is the ``settings=`` value
+    of its folder under ``footprints/``.
     """
 
-    def __init__(self, path: Path) -> None:
-        self.path = Path(path)
+    def __init__(self, output: Output, key: str) -> None:
+        self.output = output
+        self.key = key
+        self.path = output.footprints_dir / f"settings={key}"
         record = yaml.safe_load((self.path / SETTINGS_FILE).read_text()) or {}
+        self.name: str = record["name"]
+        #: ``settings=`` value of the particles folder these were made from.
+        self.run_key: str = record["particles"]
         #: The settings the footprints were made with, re-validated by the current model.
         self.config = FootprintConfig.model_validate(record["settings"])
-        #: Hash of the re-validated settings.
-        self.hash: str = settings_hash(self.config.model_dump(mode="json"))
         if self.config.grid is None:
             raise ValueError(f"{self.path / SETTINGS_FILE} has no grid.")
         #: Grid the stored ``x`` and ``y`` index (``config.grid``).
         self.grid: Grid = self.config.grid
         self._axes: tuple[np.ndarray, np.ndarray] | None = None
+        self._run: Run | None = None
 
     def __repr__(self) -> str:
-        return f"Footprints({self.path.parent.parent.name + '/' + self.path.name!r})"
+        return f"Footprints({self.key!r})"
+
+    def __eq__(self, other: object) -> bool:
+        return (
+            isinstance(other, Footprints)
+            and other.output.path == self.output.path
+            and other.key == self.key
+        )
+
+    def __hash__(self) -> int:
+        return hash((str(self.output.path), self.key))
+
+    @property
+    def run(self) -> Run:
+        """The run whose particles these footprints were made from."""
+        if self._run is None:
+            self._run = Run(self.output, self.run_key)
+        return self._run
+
+    @property
+    def hash(self) -> str:
+        """Hash of the run's settings and the footprint settings together, re-validated."""
+        return self.hash_for(self.run, self.config)
+
+    @staticmethod
+    def hash_for(run: Run, config: FootprintConfig) -> str:
+        """Return the hash that identifies footprints with *config* on *run*'s particles."""
+        return settings_hash(
+            {"particles": run.hash, "footprint": config.model_dump(mode="json")}
+        )
 
     @property
     def axes(self) -> tuple[np.ndarray, np.ndarray]:
@@ -768,7 +839,7 @@ def convert_simulation(
         wrote_particles = True
 
     if sim.makes_footprint:
-        feet = run.footprints(sim.footprint_config)
+        feet = run.footprints(sim.footprint_config, name=sim.variant)
         if not feet.has(rid):
             foot_path = sim.resolve(sim.footprint_path)
             if foot_path is not None:
@@ -860,5 +931,4 @@ __all__ = [
     "Run",
     "convert_project",
     "convert_simulation",
-    "footprint_label",
 ]
