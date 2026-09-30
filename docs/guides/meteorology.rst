@@ -221,9 +221,8 @@ hash of the crop box and ``subgrid_levels``. Changing ``subgrid_bounds``,
 with the same crop share one. ``MetStream(name, config).crop_dir`` gives
 the folder. Old folders are not deleted.
 
-With your own files, ``subgrid_levels`` also drops the upper vertical
-levels. Downloaded files keep every level, so ``subgrid_levels`` together
-with ``source`` is an error.
+``subgrid_levels`` also drops the upper vertical levels, for downloaded
+files and your own.
 
 .. code-block:: python
 
