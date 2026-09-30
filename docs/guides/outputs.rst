@@ -211,14 +211,15 @@ bin:
    import stilt
 
    bins = pd.interval_range(
-       start=foot.time_range[0], end=foot.time_range[1], freq="1h"
+       start=foot.time_range[0], end=foot.time_range[1], freq="1h", closed="left"
    )
    state = stilt.Grid(xmin=-112.3, xmax=-111.6, ymin=40.4, ymax=41.0,
                       xres=0.02, yres=0.02)
    by_cell = foot.aggregate(state, time_bins=bins)        # index == state.index
 
 The result is a DataFrame with one row per area and one column per time
-bin, labelled by the start of the bin. A footprint cell that straddles two
+bin, labelled by the start of the bin. Footprint times are the start of
+each hour, so the bins must be closed on the left (``closed="left"``). A footprint cell that straddles two
 areas is split between them by area, so the total influence is kept. This
 is what you want before multiplying by emissions. Influence that falls
 outside every area is dropped.

@@ -124,6 +124,12 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `model.plot.availability(ax=...)` formats the dates on the figure of the
   axes you pass. It used to format whichever figure was current
   ([#58](https://github.com/jmineau/PYSTILT/issues/58)).
+- **`Footprint.aggregate` rejects time bins not closed on the left**
+  ([#58](https://github.com/jmineau/PYSTILT/issues/58)). Every bin was
+  summed as if closed on the left, whatever its `closed` said. A bin from
+  `pd.interval_range`, which is closed on the right by default, took the
+  hour at its start and left out the hour at its end. Such bins now raise
+  a `ValueError`. Build them with `closed="left"`, as the docs now do.
 
 ## [0.1.0a22] - 2026-09-29
 

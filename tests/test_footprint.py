@@ -139,6 +139,17 @@ def test_aggregate_multiple_bins():
     assert result.iloc[0, 2] == pytest.approx(3e-4)
 
 
+@pytest.mark.parametrize("closed", ["right", "both", "neither"])
+def test_aggregate_rejects_bins_not_closed_on_the_left(closed):
+    """A right-closed bin would silently be summed as if left-closed (#58)."""
+    foot = _make_footprint(n_times=2)
+    t0 = pd.Timestamp("2023-01-01 12:00")
+    bins = pd.interval_range(start=t0, periods=2, freq="1h", closed=closed)
+
+    with pytest.raises(ValueError, match="closed on the left"):
+        foot.aggregate(target=_one_cell(-113.95, 39.05, 0.1), time_bins=bins)
+
+
 def test_netcdf_roundtrip_preserves_name(tmp_path):
     foot = _make_footprint(n_times=1)
     sim_dir = tmp_path / "202301011200_-111.85_40.77_5"
