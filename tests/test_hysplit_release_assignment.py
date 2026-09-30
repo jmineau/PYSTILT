@@ -93,7 +93,7 @@ def test_hysplit_multipoint_release_points_follow_control_order(tmp_path, met_di
         release_rows.iloc[start : start + 4]["zagl"].to_numpy(dtype=float)
         for start in (0, 4, 8)
     ]
-    expected_heights = receptor.altitudes.tolist()
+    expected_heights = list(receptor.altitudes)
     for block, expected in zip(grouped_heights, expected_heights, strict=False):
         assert abs(float(block.mean()) - expected) < 100.0
 
