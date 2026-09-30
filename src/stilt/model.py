@@ -149,7 +149,9 @@ class Model:
         if self.runtime.compute_root is not None:
             return self.runtime.compute_root.expanduser().resolve()
         tmp_root = os.environ.get("TMPDIR") or tempfile.gettempdir()
-        return Path(tmp_root) / "pystilt" / self.project.name
+        # Resolved like the explicit forms, so a worker handed this path gets
+        # the same one (macOS keeps TMPDIR under the /var -> /private/var link).
+        return (Path(tmp_root) / "pystilt" / self.project.name).resolve()
 
     # -- Inputs ----------------------------------------------------------------
 
