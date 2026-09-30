@@ -6,6 +6,14 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **`stilt init` writes a receptors file that loads**
+  ([#49](https://github.com/jmineau/PYSTILT/issues/49)). The starter
+  `receptors.csv` held a `# Example: ...` line, which the reader parsed as
+  a receptor, so the first `stilt run` after adding a row failed. The file
+  now holds only the header, and `stilt init` prints the example instead.
+
 ## [0.1.0a22] - 2026-09-29
 
 This release simplifies the code before a larger redesign

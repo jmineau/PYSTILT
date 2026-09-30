@@ -165,14 +165,13 @@ def init(project: Path = _NEW_PROJECT_ARG) -> None:
 
     project.mkdir(parents=True, exist_ok=True)
     config_path.write_text(_starter_config_yaml())
-    receptors_path.write_text(
-        "time,longitude,latitude,altitude\n"
-        "# Example: 2023-01-01 12:00:00,-111.85,40.77,5\n"
-    )
+    # Header only: every other line of a receptors file is read as a receptor.
+    receptors_path.write_text("time,longitude,latitude,altitude\n")
 
     typer.echo(f"Initialized STILT project at '{project}'")
     typer.echo("  config.yaml   — edit met directory and footprint settings")
-    typer.echo("  receptors.csv — add receptor times/locations here")
+    typer.echo("  receptors.csv — add receptor times/locations here, one per line:")
+    typer.echo("                  2023-01-01 12:00:00,-111.85,40.77,5")
 
 
 @app.command()
