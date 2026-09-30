@@ -196,6 +196,13 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `altitude` column and no `altitude_ref` column wrote it without its
   reference, so it read back as above ground. The column is now added, with
   `agl` on the existing rows.
+- **Two workers can start the same run at once**
+  ([#90](https://github.com/jmineau/PYSTILT/issues/90)). Workers that created
+  a run folder at the same moment shared one temporary file name for its
+  settings, so one of them failed its first receptor with a
+  `FileNotFoundError` on `_settings.tmp`. Every writer now uses its own
+  temporary name, for settings, particles, footprints, and the
+  `to_parquet` / `to_netcdf` exports.
 - `model.plot.availability(ax=...)` formats the dates on the figure of the
   axes you pass. It used to format whichever figure was current
   ([#58](https://github.com/jmineau/PYSTILT/issues/58)).
