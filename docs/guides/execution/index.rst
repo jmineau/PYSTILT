@@ -77,10 +77,6 @@ scripts and logs.
    Saves the project's settings and receptors without running anything. If
    a queue is set up, it also adds the receptors to the queue.
 
-``stilt convert``
-   Copies the results of a project run before the output directory existed
-   into it (:doc:`../project_layout`).
-
 When a simulation fails
 -----------------------
 

@@ -95,16 +95,18 @@ def _write_trajectory(model: Model, sid) -> Path:
     traj = Trajectories.from_particles(
         _particles(), receptor=sim.receptor, params=sim.params, met_files=[]
     )
-    return sim.outputs.ensure_run().write_particles(traj)
+    run = sim.output.run(sim.variant.name, sim.variant.transport)
+    return run.write_particles(traj)
 
 
 def _write_footprint(model: Model, sid, *, empty=False) -> Path:
     """Write a footprint (or an empty one) for *sid* into the output directory."""
     sim = model.simulation(sid)
-    feet = sim.outputs.ensure_footprints()
-    assert feet is not None and sim.footprint_config is not None
+    assert sim.footprint_config is not None
+    run = sim.output.run(sim.variant.name, sim.variant.transport)
+    feet = run.footprints(sim.footprint_config, name=sim.variant.name)
     if empty:
-        return feet.write_empty(sim.receptor, "outside_domain", name=sim.variant)
+        return feet.write_empty(sim.receptor, "outside_domain", name=sim.variant.name)
     grid = sim.footprint_config.grid
     assert grid is not None
     x_axis, y_axis = grid.axes
@@ -114,7 +116,10 @@ def _write_footprint(model: Model, sid, *, empty=False) -> Path:
         coords={"time": [sim.receptor.time], "lat": y_axis, "lon": x_axis},
     )
     foot = Footprint(
-        receptor=sim.receptor, config=sim.footprint_config, data=data, name=sim.variant
+        receptor=sim.receptor,
+        config=sim.footprint_config,
+        data=data,
+        name=sim.variant.name,
     )
     return feet.write(foot)
 
@@ -323,10 +328,6 @@ def test_compute_root_explicit_override_wins(tmp_path, point_receptor):
     )
 
     assert model.compute_root == (tmp_path / "explicit").resolve()
-    sim_id = _sid(point_receptor)
-    assert (
-        model.simulation(sim_id).directory == (tmp_path / "explicit").resolve() / sim_id
-    )
 
 
 def test_queue_is_none_without_db_url(tmp_path):
@@ -389,8 +390,8 @@ def test_simulation_handles_carry_the_variant_settings(tmp_path, point_receptor)
     assert zi.params.ziscale == 0.8
     assert zi.footprint_config == base.footprint_config
     assert s2.footprint_config is not None and s2.footprint_config.smooth_factor == 2
-    assert s2.directory == model.compute_root / _sid(point_receptor, "s2")
-    assert model.simulation(str(_sid(point_receptor))) is base  # cached
+    assert s2.variant.transport == base.variant.transport  # shares hrrr's particles
+    assert model.simulation(str(_sid(point_receptor))) == base  # a value, not a handle
 
 
 def test_variants_with_equal_transport_settings_share_a_run(tmp_path, point_receptor):
@@ -400,13 +401,8 @@ def test_variants_with_equal_transport_settings_share_a_run(tmp_path, point_rece
     )
     model = Model(project=tmp_path, config=config, receptors=[point_receptor])
 
-    hrrr = model.variant_output("hrrr")
-    s2 = model.variant_output("s2")
-    zi = model.variant_output("zi08")
-    assert hrrr.settings.hash == s2.settings.hash != zi.settings.hash
-    assert (
-        model.variant_output("s2") is s2
-    )  # one per variant, shared by its simulations
+    hrrr, s2, zi = (model.variants[v].transport for v in ("hrrr", "s2", "zi08"))
+    assert hrrr.hash == s2.hash != zi.hash
 
     _write_trajectory(model, _sid(point_receptor))
     assert model.simulations[_sid(point_receptor, "s2")].has_trajectory
@@ -623,10 +619,8 @@ def test_simulations_mapping_protocol(tmp_path):
 
     sim = sims[sid_a]
     assert isinstance(sim, Simulation)
-    assert sims[str(sid_a)] is sim  # cached on the model
-    assert sim.directory == model.compute_root / sid_a
-    assert not sim.directory.exists()  # building a handle has no side effects
-    assert not model.output.path.exists()
+    assert sims[str(sid_a)] == sim  # equal inputs, equal simulation
+    assert not model.output.path.exists()  # building one has no side effects
     assert [s.id for s in sims] == sims.keys()
     with pytest.raises(KeyError):
         sims[_sid(rec_a, "nam")]

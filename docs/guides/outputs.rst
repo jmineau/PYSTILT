@@ -51,7 +51,8 @@ Footprints
 
 .. code-block:: python
 
-   foot = sim.footprint                 # None if there is no footprint file
+   sim.has_footprint                    # True once the footprint file exists
+   foot = sim.footprint                 # raises FileNotFoundError before that
    foot.data                            # an xarray.DataArray
    foot.time_range                      # (start, end) of the footprint's hours
    foot.receptor                        # the receptor it belongs to
@@ -141,7 +142,8 @@ Trajectories
 
 .. code-block:: python
 
-   traj = sim.trajectories        # None if there is no trajectory file
+   sim.has_trajectory             # True once the particle file exists
+   traj = sim.trajectories        # raises FileNotFoundError before that
    df = traj.data                 # pandas DataFrame, one row per particle per time step
 
 The columns you are most likely to use:

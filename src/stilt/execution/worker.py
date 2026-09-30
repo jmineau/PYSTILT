@@ -3,24 +3,40 @@ Worker functions that run one simulation, one receptor, or many receptors.
 
 Workers are handed receptors. :func:`run_receptor` runs every variant of
 one receptor, and :func:`run_simulation` runs each one: HYSPLIT where the
-particles are missing, then the footprint. Variants with the same transport
-settings share one HYSPLIT run. :func:`run_receptors` runs a list of
-receptors in this process or a process pool, and :func:`pull_receptors`
-takes receptors from the PostgreSQL work queue.
+particles are missing (:func:`run_trajectories`), then the footprint
+(:func:`write_footprint`). Variants with the same transport settings share
+one HYSPLIT run. :func:`run_receptors` runs a list of receptors in this
+process or a process pool, and :func:`pull_receptors` takes receptors from
+the PostgreSQL work queue. A :class:`~stilt.Simulation` itself runs
+nothing; these functions write through its output directory.
 """
 
 from __future__ import annotations
 
 import logging
 import multiprocessing
+import shutil
 import signal
 import time
 import traceback
+from collections.abc import Sequence
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
-from stilt.errors import ConfigValidationError, SimulationError
+from stilt.config import FootprintConfig
+from stilt.errors import (
+    ConfigValidationError,
+    EmptyFootprintError,
+    EmptyTrajectoryError,
+    SimulationError,
+)
+from stilt.footprint import Footprint
+from stilt.hysplit import HYSPLITDriver
+from stilt.meteorology import MetStream
 from stilt.simulation import Simulation
+from stilt.trajectory import Trajectories
+from stilt.transforms import ParticleTransform, TransformContext
 
 from .backends.protocol import sigterm_as_interrupt
 
@@ -94,7 +110,8 @@ class ReceptorResult:
 
 def _append_error_log(sim: Simulation, *, phase: str, error: BaseException) -> None:
     """Append the error and its traceback to the simulation's log in the output directory."""
-    log_path = sim.outputs.ensure_run().log_path(sim.receptor_id)
+    run = sim.output.run(sim.variant.name, sim.variant.transport)
+    log_path = run.log_path(sim.receptor_id)
     log_path.parent.mkdir(parents=True, exist_ok=True)
     trace = traceback.format_exc()
     lines = [
@@ -110,8 +127,149 @@ def _append_error_log(sim: Simulation, *, phase: str, error: BaseException) -> N
         f.write("\n".join(lines) + "\n")
 
 
+def run_trajectories(
+    sim: Simulation,
+    *,
+    met: MetStream,
+    workdir: Path,
+    keep_scratch: bool = False,
+    timeout: int | None = None,
+    rm_dat: bool | None = None,
+) -> Trajectories:
+    """
+    Run HYSPLIT for a simulation and write its particles to the output directory.
+
+    HYSPLIT runs in *workdir*, on scratch, with the meteorology staged
+    beside it. The log is copied into the output directory whether the run
+    succeeds or fails. The working directory is then removed, unless the run
+    failed or *keep_scratch* is set, in which case it is copied under the
+    output directory's ``scratch/`` first.
+
+    Parameters
+    ----------
+    sim : Simulation
+        What to run.
+    met : MetStream
+        Meteorology for the run.
+    workdir : Path
+        Scratch directory to run in. Created here.
+    keep_scratch : bool, default False
+        Keep the working directory of a successful run too.
+    timeout, rm_dat : optional
+        Override ``params.timeout`` and ``params.rm_dat``.
+
+    Returns
+    -------
+    Trajectories
+        The particles, also written to the output directory.
+
+    Raises
+    ------
+    MeteorologyError, HYSPLITTimeoutError, HYSPLITFailureError,
+    NoParticleOutputError, EmptyTrajectoryError
+        As the HYSPLIT driver and the particle reader raise them.
+    """
+    params = sim.params
+    if rm_dat is None:
+        rm_dat = params.rm_dat
+    if timeout is None:
+        timeout = params.timeout
+    run = sim.output.run(sim.variant.name, sim.variant.transport)
+    rid = sim.receptor_id
+    workdir.mkdir(parents=True, exist_ok=True)
+    scratch_log = workdir / "stilt.log"
+    succeeded = False
+    try:
+        met_files = met.stage_files_for_simulation(
+            r_time=sim.receptor.time, n_hours=params.n_hours, target_dir=workdir / "met"
+        )
+        source_files = met.required_files(
+            r_time=sim.receptor.time, n_hours=params.n_hours
+        )
+        runner = HYSPLITDriver(
+            directory=workdir, receptor=sim.receptor, params=params, met_files=met_files
+        )
+        runner.prepare()
+        result = runner.execute(timeout=timeout, rm_dat=rm_dat)
+        if result.particles.empty:
+            raise EmptyTrajectoryError(f"No trajectory data for {sim.id}")
+        traj = Trajectories.from_particles(
+            result.particles,
+            receptor=sim.receptor,
+            params=params,
+            met_files=source_files,
+        )
+        run.write_particles(traj)
+        succeeded = True
+        return traj
+    finally:
+        if scratch_log.exists():
+            run.write_log(rid, scratch_log.read_text())
+        _finish_scratch(
+            workdir, run.scratch_path(rid), keep=keep_scratch or not succeeded
+        )
+
+
+def _finish_scratch(workdir: Path, kept: Path, *, keep: bool) -> None:
+    """Copy *workdir* to *kept* when *keep*, then remove it."""
+    if not workdir.exists():
+        return
+    if keep:
+        shutil.rmtree(kept, ignore_errors=True)
+        kept.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copytree(workdir, kept, symlinks=True)
+    shutil.rmtree(workdir, ignore_errors=True)
+
+
+def write_footprint(
+    sim: Simulation,
+    trajectories: Trajectories,
+    *,
+    context: TransformContext,
+    config: FootprintConfig | None = None,
+    transforms: Sequence[ParticleTransform] | None = None,
+) -> Footprint | None:
+    """
+    Calculate a footprint from *trajectories* and write it to the output directory.
+
+    With the variant's own settings (the default) it goes to the variant's
+    footprint folder. Other settings go to their own folder beside it. When
+    no particle reaches the grid, an empty footprint is recorded with the
+    reason and ``None`` is returned.
+
+    Raises
+    ------
+    TypeError
+        If the variant has no grid and no *config* is given.
+    """
+    if config is None:
+        config = sim.variant.footprint
+    if config is None:
+        raise TypeError(f"{sim.id} has no footprint settings; pass a FootprintConfig.")
+    if transforms:
+        config = config.model_copy(
+            update={"transforms": [*config.transforms, *transforms]}
+        )
+    run = sim.output.run(sim.variant.name, sim.variant.transport)
+    feet = run.footprints(config, name=sim.variant.name)
+    try:
+        foot = trajectories.footprint(config, name=sim.variant.name, context=context)
+    except EmptyFootprintError as error:
+        feet.write_empty(sim.receptor, error.reason, name=sim.variant.name)
+        return None
+    feet.write(foot)
+    return foot
+
+
 def run_simulation(
-    sim: Simulation, *, skip_existing: bool = True, footprint_stale: bool = False
+    sim: Simulation,
+    *,
+    met: MetStream,
+    compute_root: Path,
+    project_dir: Path | None = None,
+    keep_scratch: bool = False,
+    skip_existing: bool = True,
+    footprint_stale: bool = False,
 ) -> SimulationResult:
     """
     Run one simulation and write its results to the output directory.
@@ -128,6 +286,15 @@ def run_simulation(
     ----------
     sim : Simulation
         Simulation to run.
+    met : MetStream
+        Meteorology for the run.
+    compute_root : Path
+        Scratch root; HYSPLIT runs in ``compute_root / sim.id``.
+    project_dir : Path, optional
+        Directory that relative file names in transform settings are taken
+        from.
+    keep_scratch : bool, default False
+        Keep every run's working directory under the output directory.
     skip_existing : bool, default True
         Keep particles and footprints that already exist.
     footprint_stale : bool, default False
@@ -142,15 +309,23 @@ def run_simulation(
     phase = "trajectory"
     ran_hysplit = False
     try:
+        traj: Trajectories | None = None
         if not (skip_existing and sim.has_trajectory):
-            sim.run_trajectories(write=True)
+            traj = run_trajectories(
+                sim, met=met, workdir=compute_root / sim.id, keep_scratch=keep_scratch
+            )
             ran_hysplit = True
 
         if sim.makes_footprint and (
             ran_hysplit or footprint_stale or not (skip_existing and sim.has_footprint)
         ):
             phase = "footprint"
-            sim.generate_footprint(write=True)
+            if traj is None:
+                traj = sim.trajectories
+            context = TransformContext(
+                receptor=sim.receptor, variant=sim.variant.name, directory=project_dir
+            )
+            write_footprint(sim, traj, context=context)
         return SimulationResult(str(sim.id), "complete", ran_hysplit=ran_hysplit)
     except Exception as error:
         logger.exception("simulation %s failed during %s: %s", sim.id, phase, error)
@@ -193,9 +368,13 @@ def run_receptor(
     sim = None
     try:
         for sim in sims:
-            key = sim.outputs.settings.hash
+            key = sim.variant.transport.hash
             result = run_simulation(
                 sim,
+                met=model.mets[sim.variant.met],
+                compute_root=model.compute_root,
+                project_dir=model.project.directory,
+                keep_scratch=model.config.keep_scratch,
                 skip_existing=skip_existing or key in reran,
                 footprint_stale=key in reran,
             )
@@ -376,4 +555,6 @@ __all__ = [
     "run_receptor",
     "run_receptors",
     "run_simulation",
+    "run_trajectories",
+    "write_footprint",
 ]

@@ -8,7 +8,6 @@ makes that a HYSPLITTimeoutError the execution loop already handles.
 
 import pytest
 
-from stilt import simulation as simmod
 from stilt.config.params import STILTParams
 
 
@@ -28,48 +27,45 @@ class _StopDriver:
         raise RuntimeError("stop before running HYSPLIT")
 
 
+class _FakeMet:
+    def required_files(self, **kwargs):
+        return []
+
+    def stage_files_for_simulation(self, **kwargs):
+        return []
+
+
 @pytest.fixture
 def sim(monkeypatch, tmp_path, point_receptor):
-    """A Simulation with the HYSPLIT driver stubbed out."""
-    from stilt.config import MetConfig, VariantConfig
-    from stilt.meteorology import MetStream
+    """A Simulation with the HYSPLIT driver stubbed out, and a runner for it."""
+    from stilt.config import MetConfig, TransportSettings, VariantConfig
+    from stilt.execution import worker
     from stilt.output import Output
-    from stilt.simulation import VariantOutput
+    from stilt.simulation import Simulation
 
-    monkeypatch.setattr(simmod, "HYSPLITDriver", _StopDriver)
+    monkeypatch.setattr(worker, "HYSPLITDriver", _StopDriver)
     _StopDriver.seen.clear()
     met_config = MetConfig(
         directory=tmp_path / "met", file_format="%Y%m%d_%H", file_tres="1h"
     )
 
     def _make(timeout):
+        params = STILTParams(n_hours=-24, numpar=10, timeout=timeout)
         config = VariantConfig(
             name="hrrr",
             group="hrrr",
             met="hrrr",
-            n_hours=-24,
-            numpar=10,
-            timeout=timeout,
+            transport=TransportSettings.build(params, met_config),
         )
-        outputs = VariantOutput(
-            Output(tmp_path / "output"),
-            "hrrr",
-            config.transport_settings(met_config),
-            None,
-        )
-        s = simmod.Simulation(
-            point_receptor,
-            config,
-            met=MetStream("hrrr", met_config),
-            outputs=outputs,
-            directory=tmp_path / "scratch",
-        )
-        monkeypatch.setattr(
-            type(s), "met_files", property(lambda self: []), raising=False
-        )
-        return s
+        return Simulation(point_receptor, config, Output(tmp_path / "output"))
 
     return _make
+
+
+def _run(sim, tmp_path, **kwargs):
+    from stilt.execution import run_trajectories
+
+    return run_trajectories(sim, met=_FakeMet(), workdir=tmp_path / "scratch", **kwargs)
 
 
 def test_timeout_defaults_to_none():
@@ -80,19 +76,19 @@ def test_timeout_is_configurable():
     assert STILTParams(timeout=900).timeout == 900
 
 
-def test_run_trajectories_falls_back_to_params_timeout(sim):
+def test_run_trajectories_falls_back_to_params_timeout(sim, tmp_path):
     with pytest.raises(RuntimeError):
-        simmod.Simulation.run_trajectories(sim(600))
+        _run(sim(600), tmp_path)
     assert _StopDriver.seen["timeout"] == 600
 
 
-def test_explicit_timeout_wins_over_params(sim):
+def test_explicit_timeout_wins_over_params(sim, tmp_path):
     with pytest.raises(RuntimeError):
-        simmod.Simulation.run_trajectories(sim(600), timeout=30)
+        _run(sim(600), tmp_path, timeout=30)
     assert _StopDriver.seen["timeout"] == 30
 
 
-def test_no_timeout_configured_still_waits_indefinitely(sim):
+def test_no_timeout_configured_still_waits_indefinitely(sim, tmp_path):
     with pytest.raises(RuntimeError):
-        simmod.Simulation.run_trajectories(sim(None))
+        _run(sim(None), tmp_path)
     assert _StopDriver.seen["timeout"] is None

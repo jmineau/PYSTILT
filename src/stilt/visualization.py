@@ -552,8 +552,8 @@ class SimulationPlotAccessor:
         Axes
         """
         sim = self._sim
-        foot = sim.footprint
-        traj = sim.trajectories
+        foot = sim.footprint if sim.has_footprint else None
+        traj = sim.trajectories if sim.has_trajectory else None
 
         # Determine map extent: prefer footprint grid, fall back to traj bounds
         if foot is not None:

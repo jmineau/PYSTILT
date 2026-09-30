@@ -29,7 +29,8 @@ from stilt.output import Footprints, Output
 from stilt.project import Project
 from stilt.receptors import Receptor
 from stilt.service import PostgresQueue, resolve_queue
-from stilt.simulation import SimID, Simulation, VariantOutput
+from stilt.simulation import SimID, Simulation
+from stilt.transforms import TransformContext
 
 logger = logging.getLogger(__name__)
 
@@ -136,8 +137,6 @@ class Model:
         self._config_given = self._config is not None
 
         self._receptors_input = receptors
-        self._handles: dict[SimID, Simulation] = {}
-        self._variant_outputs: dict[str, VariantOutput] = {}
 
     def __repr__(self) -> str:
         return f"Model(project={self.project.root!r})"
@@ -195,20 +194,6 @@ class Model:
         """Drop the cached receptors and simulations, so they are rebuilt from the project."""
         self.__dict__.pop("receptors", None)
         self.__dict__.pop("simulations", None)
-        self._handles = {}
-        self._variant_outputs = {}
-
-    def variant_output(self, variant: str) -> VariantOutput:
-        """Return where a variant's results live, shared by all of its simulations."""
-        if variant not in self._variant_outputs:
-            config = self.variants[variant]
-            self._variant_outputs[variant] = VariantOutput(
-                self.output,
-                variant,
-                config.transport_settings(self.config.mets[config.met]),
-                config.footprint,
-            )
-        return self._variant_outputs[variant]
 
     def unreferenced(self) -> dict[str, list[str]]:
         """
@@ -223,11 +208,11 @@ class Model:
             that were changed or variants that were dropped, or from another
             project sharing the directory. PYSTILT never deletes them.
         """
-        runs = {self.variant_output(v).settings.hash for v in self.variants}
+        runs = {v.transport.hash for v in self.variants.values()}
         feet = {
-            Footprints.hash_for(vo.settings.hash, vo.footprint_config)
-            for v in self.variants
-            if (vo := self.variant_output(v)).footprint_config is not None
+            Footprints.hash_for(v.transport.hash, v.footprint)
+            for v in self.variants.values()
+            if v.footprint is not None
         }
         return {
             "particles": [r.key for r in self.output.runs() if r.hash not in runs],
@@ -282,8 +267,9 @@ class Model:
         """
         Return one simulation by id.
 
-        Nothing is written to disk. The same object is returned on later
-        calls.
+        A simulation is a value built from its receptor, its variant, and the
+        output directory, so equal keys give equal simulations. Nothing is
+        written to disk.
 
         Parameters
         ----------
@@ -291,18 +277,17 @@ class Model:
             ``"<receptor_id>/<variant>"`` or a ``(receptor_id, variant)`` pair.
         """
         sid = SimID.parse(key)
-        if sid not in self._handles:
-            variant = self.variants[sid.variant]
-            self._handles[sid] = Simulation(
-                self.receptors[sid.receptor],
-                variant,
-                met=self.mets[variant.met],
-                outputs=self.variant_output(sid.variant),
-                directory=self.compute_root / sid,
-                project_dir=self.project.directory,
-                keep_scratch=self.config.keep_scratch,
-            )
-        return self._handles[sid]
+        return Simulation(
+            self.receptors[sid.receptor], self.variants[sid.variant], self.output
+        )
+
+    def transform_context(self, sim: Simulation) -> TransformContext:
+        """Return the context a simulation's transforms run with: its receptor, variant, and this project's directory."""
+        return TransformContext(
+            receptor=sim.receptor,
+            variant=sim.variant.name,
+            directory=self.project.directory,
+        )
 
     @cached_property
     def simulations(self) -> SimulationCollection:

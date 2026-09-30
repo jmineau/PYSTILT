@@ -87,9 +87,9 @@ src/stilt/
   model.py           Model, the top-level orchestrator
   project.py         Project: the project directory and its two input files
   output.py          Output: the output directory (runs by settings hash, sparse
-                     footprint files, Jacobian assembly, converter from by-id)
-  simulation.py      Simulation, SimID, VariantOutput: one receptor × variant, where its
-                     results live, completion, running HYSPLIT on scratch
+                     footprint files, Jacobian assembly)
+  simulation.py      Simulation, SimID: a frozen value (receptor, variant, output)
+                     that knows where its results are and whether they exist
   receptors.py       receptor types (point, multipoint, column) and IDs
   trajectory.py      Trajectories: particle output container + Parquet I/O
   footprint.py       Footprint: gridded CF-1.8 NetCDF output, enhancement from
@@ -105,8 +105,9 @@ src/stilt/
   visualization.py   matplotlib helpers (optional dependency)
 
   config/            pydantic configuration: ModelConfig and its parts
-  execution/         the worker (run one or many simulations, or pull from the
-                     queue) and backends/ (local, slurm, kubernetes)
+  execution/         the worker (runs HYSPLIT on scratch and writes results for one
+                     or many simulations, or pulls from the queue) and backends/
+                     (local, slurm, kubernetes)
   observations/      the X-STILT port, all before or after the transport run:
                      product readers, overpass grouping and sounding
                      selection, slant geometry, transport error, wind-error

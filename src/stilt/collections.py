@@ -345,7 +345,7 @@ class SimulationCollection:
         rows = [
             {
                 "receptor": str(sim.id.receptor),
-                "variant": sim.variant,
+                "variant": sim.id.variant,
                 TRAJECTORY: sim.has_trajectory,
                 FOOTPRINT: sim.has_footprint if sim.makes_footprint else pd.NA,
                 "empty": (sim.empty_reason is not None)
@@ -385,7 +385,8 @@ class SimulationCollection:
             raise ValueError(
                 f"jacobian needs one variant; select one of {variants} first."
             )
-        feet = self._model.variant_output(variants[0]).footprints
+        first = self._model.simulation(self._all()[0])
+        feet = first.footprints
         if feet is None:
             raise ValueError(f"Variant {variants[0]!r} has no footprints yet.")
         return feet.jacobian(target, time_bins, receptors=self.receptors)
@@ -450,14 +451,14 @@ class OutputCollection:
         """
         if self.output == TRAJECTORY:
             return {
-                sim.id: traj
+                sim.id: sim.trajectories
                 for sim in self._producers()
-                if (traj := sim.trajectories) is not None
+                if sim.has_trajectory
             }
         return {
             sim.id: foot
             for sim in self._producers()
-            if (foot := sim.footprint) is not None
+            if sim.has_footprint and (foot := sim.footprint) is not None
         }
 
     def __len__(self) -> int:

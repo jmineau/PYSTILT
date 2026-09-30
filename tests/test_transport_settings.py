@@ -142,7 +142,7 @@ def test_variants_that_differ_only_in_footprint_fields_share_settings(tmp_path):
         },
     )
     variants = config.resolve_variants()
-    hashes = {name: v.transport_settings(met).hash for name, v in variants.items()}
+    hashes = {name: v.transport.hash for name, v in variants.items()}
     assert hashes["hrrr"] == hashes["hrrr-smooth"] == hashes["hrrr-coarse"]
     assert hashes["hrrr-err"] != hashes["hrrr"]
 

@@ -5,8 +5,11 @@ Most users only need ``model.run()`` or ``stilt run``
 (:doc:`../guides/execution/index`). The functions below do the work
 underneath.
 
-- :func:`~stilt.execution.run_simulation` runs one :class:`~stilt.Simulation`
-  and saves its outputs.
+- :func:`~stilt.execution.run_trajectories` runs HYSPLIT for one
+  :class:`~stilt.Simulation` and writes its particles and log.
+- :func:`~stilt.execution.write_footprint` makes the footprint from those
+  particles and writes it.
+- :func:`~stilt.execution.run_simulation` does both, skipping what exists.
 - :func:`~stilt.execution.run_receptor` runs every variant of one receptor.
   Workers are always handed receptors.
 - :func:`~stilt.execution.run_receptors` runs a list of receptors, in this
@@ -23,6 +26,8 @@ Worker functions
    :toctree: _api
    :nosignatures:
 
+   stilt.execution.run_trajectories
+   stilt.execution.write_footprint
    stilt.execution.run_simulation
    stilt.execution.run_receptor
    stilt.execution.run_receptors

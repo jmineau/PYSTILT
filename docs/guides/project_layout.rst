@@ -167,14 +167,3 @@ copied to ``scratch/`` in the output directory, with CONTROL, SETUP.CFG,
 and MESSAGE, and its log has the error appended. ``sim.log`` and
 ``sim.outcome`` show what happened. Set ``keep_scratch: true`` to keep every
 run's working directory.
-
-Projects from before the output directory
------------------------------------------
-
-Projects run with earlier versions kept their results under
-``simulations/by-id`` inside the project. ``stilt convert ./my_project``
-copies those into the output directory, skipping files already there, and
-leaves the old tree in place for you to delete once checked. A
-``config.yaml`` that still uses ``from:`` must be edited first: give the
-variant its parent's transport overrides, if any, and its own footprint
-settings.
