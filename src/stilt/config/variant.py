@@ -16,13 +16,12 @@ from typing import Any, Self
 from pydantic import ConfigDict, Field, model_validator
 
 from .footprint import FootprintConfig
+from .meteorology import MetConfig
 from .params import STILTParams
+from .transport import UNRECORDED_FIELDS, TransportSettings
 
 #: Pattern for variant and met names, which become directory names.
 VARIANT_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
-
-#: Fields that change no output, so the record does not compare them.
-UNRECORDED_FIELDS = frozenset({"timeout", "rm_dat", "exe_dir"})
 
 
 class VariantConfig(STILTParams, FootprintConfig):
@@ -73,6 +72,16 @@ class VariantConfig(STILTParams, FootprintConfig):
     def stilt_params(self) -> STILTParams:
         """Return the transport parameters alone, as stored with a trajectory."""
         return STILTParams(**self.model_dump(include=set(STILTParams.model_fields)))
+
+    def transport_settings(self, met: MetConfig) -> TransportSettings:
+        """
+        Return the settings that identify this variant's run.
+
+        Its transport fields, the content of *met* (its met entry in the
+        config), and the engine. Variants that differ only in footprint
+        fields give equal settings, and so share one run.
+        """
+        return TransportSettings.build(self.stilt_params(), met)
 
     def record(self) -> dict[str, Any]:
         """

@@ -37,12 +37,11 @@ Start from :class:`Output`::
 from __future__ import annotations
 
 import datetime as dt
-import hashlib
 import json
 import logging
 import os
 import re
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable
 from pathlib import Path
 from typing import Any, NamedTuple
 
@@ -55,9 +54,14 @@ import xarray as xr
 import yaml
 from scipy import sparse
 
-from stilt.config import FootprintConfig, Grid, MetConfig, VariantConfig
-from stilt.config.meteorology import UNRECORDED_MET_FIELDS
-from stilt.config.variant import UNRECORDED_FIELDS
+from stilt.config import (
+    FootprintConfig,
+    Grid,
+    MetConfig,
+    TransportSettings,
+    VariantConfig,
+)
+from stilt.config.transport import canonical, settings_hash
 from stilt.footprint import Footprint
 from stilt.geometry import Geometry, check_resolution, overlap_weights
 from stilt.receptors import Receptor
@@ -74,33 +78,6 @@ _INT_COLUMNS = ("time", "indx")
 
 
 # -- identity -----------------------------------------------------------------
-
-
-def _canonical(value: Any) -> Any:
-    """Return *value* with the spellings that mean the same thing made equal."""
-    if isinstance(value, Mapping):
-        return {str(k): _canonical(v) for k, v in sorted(value.items())}
-    if isinstance(value, (list, tuple)):
-        return [_canonical(v) for v in value]
-    if isinstance(value, bool):
-        return value
-    if isinstance(value, float) and value.is_integer():
-        return int(value)
-    if isinstance(value, Path):
-        return str(value)
-    return value
-
-
-def settings_hash(settings: Mapping[str, Any]) -> str:
-    """
-    Return the SHA-256 hex digest of *settings*.
-
-    Keys are sorted, whole-number floats equal their integers, and paths are
-    strings, so the hash depends on what the settings mean rather than how
-    they were written.
-    """
-    text = json.dumps(_canonical(settings), separators=(",", ":"), default=str)
-    return hashlib.sha256(text.encode()).hexdigest()
 
 
 def footprint_label(grid: Grid) -> str:
@@ -171,29 +148,6 @@ def _pystilt_version() -> str:
     return __version__
 
 
-# -- settings of a run --------------------------------------------------------
-
-
-def transport_settings(variant: VariantConfig, met: MetConfig) -> dict[str, Any]:
-    """
-    Return the settings that identify a run: what changes its particles.
-
-    That is the variant's transport fields and the met's content, without
-    the fields that change no output (``timeout``, ``rm_dat``, ``exe_dir``,
-    and where the met files are). Footprint fields are left out; they
-    identify a footprint folder inside the run instead. Two variants that
-    return the same mapping share one run.
-    """
-    params = variant.stilt_params().model_dump(mode="json")
-    settings = {k: v for k, v in params.items() if k not in UNRECORDED_FIELDS}
-    settings["met"] = {
-        k: v
-        for k, v in met.model_dump(mode="json").items()
-        if k not in UNRECORDED_MET_FIELDS
-    }
-    return settings
-
-
 # -- the output directory -----------------------------------------------------
 
 
@@ -223,15 +177,22 @@ class Output:
                 runs.append(Run(Path(entry.path)))
         return runs
 
-    def find_run(self, settings: Mapping[str, Any]) -> Run | None:
-        """Return the run with these settings, whatever name its folder carries, or ``None``."""
-        digest = settings_hash(settings)
+    def find_run(self, settings: TransportSettings) -> Run | None:
+        """
+        Return the run with these settings, whatever name its folder carries, or ``None``.
+
+        Each folder's stored settings are loaded back through
+        :class:`~stilt.config.TransportSettings` and hashed again, so a
+        field added since the folder was written, with a default, still
+        matches.
+        """
+        digest = settings.hash
         for run in self.runs():
             if run.hash == digest:
                 return run
         return None
 
-    def run(self, name: str, settings: Mapping[str, Any]) -> Run:
+    def run(self, name: str, settings: TransportSettings) -> Run:
         """
         Return the run for *settings*, creating its folder on first use.
 
@@ -241,7 +202,7 @@ class Output:
         existing = self.find_run(settings)
         if existing is not None:
             return existing
-        digest = settings_hash(settings)
+        digest = settings.hash
         path = self.path / f"{name}-{digest[:HASH_CHARS]}"
         _write_settings(
             path / SETTINGS_FILE,
@@ -249,7 +210,7 @@ class Output:
                 "name": name,
                 "hash": digest,
                 "pystilt": _pystilt_version(),
-                "settings": _canonical(settings),
+                "settings": settings.identity(),
             },
         )
         return Run(path)
@@ -266,8 +227,10 @@ class Run:
         self.path = Path(path)
         record = yaml.safe_load((self.path / SETTINGS_FILE).read_text()) or {}
         self.name: str = record["name"]
-        self.hash: str = record["hash"]
-        self.settings: dict[str, Any] = record.get("settings") or {}
+        #: The settings the run was made with, re-validated by the current model.
+        self.settings = TransportSettings.model_validate(record["settings"])
+        #: Hash of the re-validated settings (see :meth:`Output.find_run`).
+        self.hash: str = self.settings.hash
 
     def __repr__(self) -> str:
         return f"Run({self.path.name!r})"
@@ -399,7 +362,7 @@ class Run:
                 "label": label,
                 "hash": digest,
                 "pystilt": _pystilt_version(),
-                "settings": _canonical(settings),
+                "settings": canonical(settings),
             },
         )
         return Footprints(path)
@@ -466,8 +429,10 @@ class Footprints:
     def __init__(self, path: Path) -> None:
         self.path = Path(path)
         record = yaml.safe_load((self.path / SETTINGS_FILE).read_text()) or {}
-        self.hash: str = record["hash"]
+        #: The settings the footprints were made with, re-validated by the current model.
         self.config = FootprintConfig.model_validate(record["settings"])
+        #: Hash of the re-validated settings.
+        self.hash: str = settings_hash(self.config.model_dump(mode="json"))
         if self.config.grid is None:
             raise ValueError(f"{self.path / SETTINGS_FILE} has no grid.")
         #: Grid the stored ``x`` and ``y`` index (``config.grid``).
@@ -785,7 +750,7 @@ def convert_simulation(
     file written is read back and compared with its source.
     """
     variant: VariantConfig = sim.config
-    run = output.run(variant.group, transport_settings(variant, met_config))
+    run = output.run(variant.group, variant.transport_settings(met_config))
     rid = str(sim.receptor.id)
 
     wrote_particles = wrote_footprint = wrote_log = False
@@ -896,6 +861,4 @@ __all__ = [
     "convert_project",
     "convert_simulation",
     "footprint_label",
-    "settings_hash",
-    "transport_settings",
 ]
