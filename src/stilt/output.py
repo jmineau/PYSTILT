@@ -8,19 +8,21 @@ inside each run one folder per set of footprint settings::
     <output>/
       hrrr-a3f9c2/                     variant name + short hash of its settings
         settings.yaml
-        particles/2024/07/01/<receptor>.parquet
-        logs/2024/07/01/<receptor>.log
+        particles/date=2024-07-01/<receptor>.parquet
+        logs/date=2024-07-01/<receptor>.log
         footprints/
           0.01deg-a41b7f/              label from the grid + short hash of the settings
             settings.yaml
-            2024/07/01/<receptor>.parquet
+            date=2024-07-01/<receptor>.parquet
 
 A folder is found by the hash of its settings, so two projects that run the
 same settings share one folder, and a changed setting lands in a new folder
 beside the old one instead of overwriting it. Particles are one Parquet file
-per receptor. Footprints are sparse tables of the non-zero cells, in
-float32 as STILT-R writes them; an empty footprint is a file with no rows
-and its reason in the metadata.
+per receptor, in a hive-style ``date=YYYY-MM-DD`` folder of the receptor
+date that pyarrow, DuckDB, polars, and R's arrow all read as a ``date``
+column. Footprints are sparse tables of the non-zero cells, in float32 as
+STILT-R writes them; an empty footprint is a file with no rows and its
+reason in the metadata.
 
 Start from :class:`Output`::
 
@@ -110,10 +112,10 @@ def footprint_label(grid: Grid) -> str:
 
 
 def _date_dir(receptor_id: str) -> str:
-    """Return ``YYYY/MM/DD`` from a receptor id, which starts with the receptor time."""
+    """Return the ``date=YYYY-MM-DD`` folder of a receptor id, which starts with the receptor time."""
     if not _RECEPTOR_ID_RE.match(receptor_id):
         raise ValueError(f"Receptor id {receptor_id!r} does not start with a time.")
-    return f"{receptor_id[:4]}/{receptor_id[4:6]}/{receptor_id[6:8]}"
+    return f"date={receptor_id[:4]}-{receptor_id[4:6]}-{receptor_id[6:8]}"
 
 
 def _receptor_time(receptor_id: str) -> dt.datetime:
@@ -122,18 +124,16 @@ def _receptor_time(receptor_id: str) -> dt.datetime:
 
 
 def _list_receptor_files(root: Path, suffix: str) -> dict[str, Path]:
-    """Return ``{receptor_id: path}`` for every ``YYYY/MM/DD/<id><suffix>`` under *root*."""
+    """Return ``{receptor_id: path}`` for every ``date=*/<id><suffix>`` under *root*, in date order."""
     if not root.exists():
         return {}
     found: dict[str, Path] = {}
-    for year in sorted(os.scandir(root), key=lambda e: e.name):
-        if not year.is_dir():
+    for day in sorted(os.scandir(root), key=lambda e: e.name):
+        if not (day.is_dir() and day.name.startswith("date=")):
             continue
-        for month in sorted(os.scandir(year.path), key=lambda e: e.name):
-            for day in sorted(os.scandir(month.path), key=lambda e: e.name):
-                for entry in sorted(os.scandir(day.path), key=lambda e: e.name):
-                    if entry.name.endswith(suffix):
-                        found[entry.name[: -len(suffix)]] = Path(entry.path)
+        for entry in sorted(os.scandir(day.path), key=lambda e: e.name):
+            if entry.name.endswith(suffix):
+                found[entry.name[: -len(suffix)]] = Path(entry.path)
     return found
 
 
@@ -414,6 +414,12 @@ _FOOTPRINT_SCHEMA = pa.schema(
         ("foot", pa.float32()),
     ]
 )
+#: The ``date=YYYY-MM-DD`` folders, read as a ``date32`` column.
+_DATE_PARTITIONING = pads.partitioning(
+    pa.schema([("date", pa.date32())]), flavor="hive"
+)
+#: What :meth:`Footprints.table` returns: the file columns plus ``date``.
+_FOOTPRINT_TABLE_SCHEMA = _FOOTPRINT_SCHEMA.append(pa.field("date", pa.date32()))
 
 
 class Jacobian(NamedTuple):
@@ -619,7 +625,8 @@ class Footprints:
         """
         Return the non-zero cells of many footprints as one table.
 
-        Columns are ``receptor``, ``hour``, ``y``, ``x``, and ``foot``. With
+        Columns are ``receptor``, ``hour``, ``y``, ``x``, ``foot``, and
+        ``date`` (the receptor date, from the folder, as ``date32``). With
         *receptors*, only those files are read.
         """
         files = _list_receptor_files(self.path, ".parquet")
@@ -627,9 +634,12 @@ class Footprints:
             wanted = set(receptors)
             files = {rid: p for rid, p in files.items() if rid in wanted}
         if not files:
-            return _FOOTPRINT_SCHEMA.empty_table()
+            return _FOOTPRINT_TABLE_SCHEMA.empty_table()
         dataset = pads.dataset(
-            [str(p) for p in files.values()], schema=_FOOTPRINT_SCHEMA
+            [str(p) for p in files.values()],
+            format="parquet",
+            partitioning=_DATE_PARTITIONING,
+            partition_base_dir=str(self.path),
         )
         return dataset.to_table()
 
@@ -690,7 +700,9 @@ class Footprints:
         ).tz_localize(None)
         n_bins = len(time_bins)
 
-        table = self.table(present) if present else _FOOTPRINT_SCHEMA.empty_table()
+        table = (
+            self.table(present) if present else _FOOTPRINT_TABLE_SCHEMA.empty_table()
+        )
         if table.num_rows:
             # Work with the dictionary indices of the receptor column: one
             # small array of ids, and an int32 per row.
