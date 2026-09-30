@@ -1,6 +1,7 @@
 """Tests for stilt.output: the output directory of runs and footprints."""
 
 import datetime as dt
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -438,3 +439,33 @@ def test_two_workers_writing_one_receptor_at_once_both_succeed(tmp_path, monkeyp
 
     assert len(run.read_particles(str(receptor.id)).data) == len(traj.data)
     assert [p.name for p in path.parent.iterdir()] == [path.name]  # no stray files
+
+
+# ---------------------------------------------------------------------------
+# Which receptors have results
+# ---------------------------------------------------------------------------
+
+
+def test_receptors_among_lists_only_the_date_folders_asked_for(tmp_path, monkeypatch):
+    """A few simulations of a large project must not list every date folder."""
+    import stilt.output as output_module
+
+    run = Output(tmp_path / "output").run("hrrr", SETTINGS)
+    day15, day16 = _receptor(12, day=15), _receptor(12, day=16)
+    for receptor in (day15, day16):
+        run.write_particles(_trajectories(receptor))
+    never_run = _receptor(12, day=20)
+
+    listed: list[str] = []
+    real_scandir = output_module.os.scandir
+
+    def scandir(path):
+        listed.append(Path(path).name)
+        return real_scandir(path)
+
+    monkeypatch.setattr(output_module.os, "scandir", scandir)
+    found = run.receptors(among=[day15.id, never_run.id])
+
+    assert found == [day15.id]
+    assert sorted(listed) == ["date=2024-07-15", "date=2024-07-20"]
+    assert run.receptors() == [day15.id, day16.id]

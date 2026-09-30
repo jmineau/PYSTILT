@@ -20,9 +20,9 @@ is finished when its result files exist in the output directory
 
 Each result has one expected path, so checking one simulation is a file
 lookup. For many simulations (``stilt status``, or planning a run) PYSTILT
-lists each result folder once and reads the answer for every receptor from
-that, which is what keeps a project of a hundred thousand receptors quick
-to check.
+lists the date folders the selection falls in, once each, and reads the
+answer for every receptor from that. That keeps a project of a hundred
+thousand receptors quick to check, and a few simulations of it cheap.
 A notebook, a Slurm task, and another project sharing the directory all see
 the same files, so they agree on what's finished without talking to each
 other. Deleting a result file makes that simulation unfinished again.
