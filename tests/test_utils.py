@@ -47,3 +47,17 @@ def test_sigterm_as_interrupt_is_noop_outside_main_thread():
     assert seen["inside"] == original
     assert seen["after"] == original
     assert signal.getsignal(signal.SIGTERM) == original
+
+
+def test_sigterm_as_interrupt_leaves_an_existing_handler_alone():
+    """Inside a submitit task the scheduler's signals are submitit's to handle."""
+    seen: list[int] = []
+    previous = signal.signal(signal.SIGTERM, lambda signum, frame: seen.append(signum))
+    try:
+        handler = signal.getsignal(signal.SIGTERM)
+        with sigterm_as_interrupt():
+            assert signal.getsignal(signal.SIGTERM) is handler
+            signal.raise_signal(signal.SIGTERM)  # no KeyboardInterrupt
+        assert seen == [signal.SIGTERM]
+    finally:
+        signal.signal(signal.SIGTERM, previous)

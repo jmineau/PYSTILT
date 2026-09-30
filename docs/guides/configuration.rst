@@ -273,9 +273,8 @@ To run on Slurm instead of your own computer, add an ``execution`` section:
      time: "02:00:00"
      mem: 8G
 
-PYSTILT uses ``backend``, ``n_workers``, ``cpus_per_task``,
-``array_parallelism``, and ``setup`` itself. Every other key is passed to
-``sbatch``. See :doc:`execution/slurm`.
+Any other ``sbatch`` option goes under ``slurm:``. A setting PYSTILT does
+not know is an error. See :doc:`execution/slurm`.
 
 The same settings in Python
 ---------------------------

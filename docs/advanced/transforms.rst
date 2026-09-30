@@ -118,7 +118,7 @@ Pass ``levels`` as one array per receptor, or as a single array when all
 kernels share one grid. When the footprint is made, the transform looks up
 the receptor's id in the table. The ``table`` path is relative to the
 project root, so this works the same in a notebook, with ``stilt run``, and
-on Slurm and Kubernetes workers. A receptor with no rows in the table
+on Slurm workers. A receptor with no rows in the table
 raises an error.
 
 In Python
