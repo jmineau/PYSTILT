@@ -216,6 +216,10 @@ as complete.
 - **Bundled HYSPLIT is package data.** Reach the binaries and tables through
   `importlib.resources` via the existing helpers, never a repo path. They ship
   through `[tool.setuptools.package-data]`; moving them means updating that.
+  Each wheel is tagged for one platform and carries only that platform's
+  `hycs_std` (`setup.py`); the sdist carries none (`MANIFEST.in`). A new
+  platform build needs a case in `bundled_build` in `setup.py`, the driver's
+  `_bundled_exe_dir`, and the `just dist` / `just check-dist` recipes.
 - **Pydantic for all configuration**, with a description on every field.
 
 ## Development
@@ -231,6 +235,8 @@ Driven by [`just`](https://github.com/casey/just) and [`uv`](https://docs.astral
 | `just quality-check` | ruff + pyright on `src/stilt`, then the tests |
 | `just ruff` | `ruff check --fix` and `ruff format` on `src/stilt` |
 | `just build-docs` | clean Sphinx HTML build into `docs/_build` |
+| `just dist` | the sdist and one wheel per bundled HYSPLIT build, into `dist/` |
+| `just check-dist` | check each wheel's tag and that it holds only its own `hycs_std` |
 | `just pre-commit` | all pre-commit hooks on all files |
 | `just clean` | remove build artifacts, caches, coverage, docs build |
 

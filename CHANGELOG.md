@@ -70,6 +70,16 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `generate_footprint` with other settings writes to its own folder and no
   longer replaces `sim.footprint`
   ([#65](https://github.com/jmineau/PYSTILT/issues/65)).
+- **One wheel per platform**
+  ([#61](https://github.com/jmineau/PYSTILT/issues/61)). PYSTILT used to
+  publish one `py3-none-any` wheel that held both HYSPLIT builds, so pip
+  installed it anywhere. It now publishes a Linux x86-64 wheel
+  (`manylinux_2_17_x86_64`) and an Intel macOS wheel (`macosx_11_0_x86_64`),
+  each with only its own `hycs_std`. On any other platform, Apple Silicon
+  with an arm64 Python included, pip installs the source archive, which has
+  no HYSPLIT binary. PYSTILT imports, and a run raises the "no bundled
+  HYSPLIT binary" error until `exe_dir` names your own build. Maintainers
+  build all three with `just dist`.
 
 ### Removed
 

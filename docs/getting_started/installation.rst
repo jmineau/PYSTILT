@@ -45,14 +45,23 @@ available.
 HYSPLIT is included
 -------------------
 
-PYSTILT runs NOAA's HYSPLIT program to move particles. The package includes a
-copy for:
+PYSTILT runs NOAA's HYSPLIT program to move particles. pip installs a copy
+of HYSPLIT with PYSTILT on:
 
 - Linux (x86_64)
-- macOS (Intel, x86_64)
+- macOS 11 or newer (Intel, x86_64)
 
-On other platforms, or to use your own HYSPLIT build, compile ``hycs_std``
-yourself. Then set ``exe_dir`` in ``config.yaml`` to the folder that contains
-it.
+On any other platform pip installs PYSTILT without HYSPLIT. This includes
+Apple Silicon Macs with an arm64 Python. PYSTILT still imports and reads
+existing results, but a run stops with an error that no bundled HYSPLIT binary
+exists for the machine.
+
+To use your own HYSPLIT build there or anywhere else, compile ``hycs_std``.
+Put a file named ``version`` beside it that holds the build's version, such
+as ``v5.3.2``. Then set ``exe_dir`` in ``config.yaml`` to that folder:
+
+.. code-block:: yaml
+
+   exe_dir: /path/to/hysplit/exec
 
 Next: :doc:`quickstart`.
