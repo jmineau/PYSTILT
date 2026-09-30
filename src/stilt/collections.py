@@ -35,6 +35,9 @@ if TYPE_CHECKING:
 TRAJECTORY = "trajectory"
 FOOTPRINT = "footprint"
 
+#: Selections this large are checked by listing the result folders once.
+_LIST_FROM = 32
+
 
 class ReceptorCollection:
     """
@@ -355,10 +358,70 @@ class SimulationCollection:
 
     # -- completion ------------------------------------------------------------
 
+    def _present(self) -> dict[str, tuple[frozenset[str], frozenset[str] | None]]:
+        """
+        Return, per selected variant, the receptors with particles and with a footprint.
+
+        This is :meth:`stilt.Simulation.is_complete`'s rule read from one
+        listing of each result folder, in place of a file check per
+        simulation: on a large project the checks are the slow part. The
+        footprint set is ``None`` for a variant that makes no footprint.
+        """
+        output = self._model.output
+        present: dict[str, tuple[frozenset[str], frozenset[str] | None]] = {}
+        for name in self.variants:
+            variant = self._model.variants[name]
+            run = output.find_run(variant.transport)
+            particles = frozenset(run.receptors()) if run is not None else frozenset()
+            footprints: frozenset[str] | None = None
+            if variant.footprint is not None:
+                feet = (
+                    None
+                    if run is None
+                    else output.find_footprints(run.hash, variant.footprint)
+                )
+                footprints = (
+                    frozenset(feet.receptors()) if feet is not None else frozenset()
+                )
+            present[name] = (particles, footprints)
+        return present
+
+    def _outputs(self) -> list[tuple[SimID, bool, bool | None]]:
+        """
+        Return ``(id, has particles, has footprint)`` for each selected simulation.
+
+        The footprint entry is ``None`` when the variant makes none. A small
+        selection is checked file by file, which is cheaper than listing
+        whole folders for a handful of simulations.
+        """
+        keys = self._all()
+        if len(keys) < _LIST_FROM:
+            rows = []
+            for sim in self:
+                foot = sim.has_footprint if sim.makes_footprint else None
+                rows.append((sim.id, sim.has_trajectory, foot))
+            return rows
+        present = self._present()
+        return [
+            (
+                key,
+                key.receptor in present[key.variant][0],
+                None
+                if (feet := present[key.variant][1]) is None
+                else key.receptor in feet,
+            )
+            for key in keys
+        ]
+
     def incomplete(self) -> SimulationCollection:
         """Return the simulations that are missing an expected output."""
         return SimulationCollection(
-            self._model, [sim.id for sim in self if not sim.is_complete()]
+            self._model,
+            [
+                key
+                for key, particles, footprint in self._outputs()
+                if not (particles and footprint is not False)
+            ],
         )
 
     def status(self) -> pd.DataFrame:
@@ -377,16 +440,17 @@ class SimulationCollection:
         """
         rows = [
             {
-                "receptor": str(sim.id.receptor),
-                "variant": sim.id.variant,
-                TRAJECTORY: sim.has_trajectory,
-                FOOTPRINT: sim.has_footprint if sim.makes_footprint else pd.NA,
-                "empty": (sim.empty_reason is not None)
-                if sim.makes_footprint
-                else pd.NA,
-                "complete": sim.is_complete(),
+                "receptor": key.receptor,
+                "variant": key.variant,
+                TRAJECTORY: particles,
+                FOOTPRINT: pd.NA if footprint is None else footprint,
+                # Emptiness is inside the file, so this opens each footprint.
+                "empty": pd.NA
+                if footprint is None
+                else footprint and self._model.simulation(key).empty_reason is not None,
+                "complete": particles and footprint is not False,
             }
-            for sim in self
+            for key, particles, footprint in self._outputs()
         ]
         columns = ["receptor", "variant", TRAJECTORY, FOOTPRINT, "empty", "complete"]
         return pd.DataFrame(rows, columns=pd.Index(columns)).astype(

@@ -53,6 +53,16 @@ def _fake_model_factory(captured: list[dict]):
     progress line, and status print.
     """
 
+    class _NoSimulations:
+        def __len__(self):
+            return 0
+
+        def incomplete(self):
+            return self
+
+        def keys(self):
+            return []
+
     class _FakeModel:
         def __init__(self, project):
             self.record = {"project": project}
@@ -65,10 +75,9 @@ def _fake_model_factory(captured: list[dict]):
             self.variants = {"hrrr": None}
             self.config = SimpleNamespace(execution=ExecutionConfig.model_validate({}))
 
-        def status(self):
-            return pd.DataFrame(
-                columns=["receptor", "variant", "trajectory", "footprint", "complete"]
-            )
+        @property
+        def simulations(self):
+            return _NoSimulations()
 
         def unreferenced(self):
             return {"particles": [], "footprints": []}
