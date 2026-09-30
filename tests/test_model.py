@@ -303,7 +303,21 @@ def test_compute_root_defaults_under_tmpdir(tmp_path, monkeypatch):
 
     model = Model(project=tmp_path / "proj", config=_config(tmp_path))
 
-    assert model.compute_root == tmp_path / "tmp" / "pystilt" / "proj"
+    assert model.compute_root == (tmp_path / "tmp" / "pystilt" / "proj").resolve()
+
+
+def test_default_compute_root_is_resolved_like_an_explicit_one(tmp_path, monkeypatch):
+    """A TMPDIR behind a symlink (as on macOS) gives the path a pool worker gets."""
+    real = tmp_path / "real"
+    real.mkdir()
+    (tmp_path / "link").symlink_to(real)
+    monkeypatch.setenv("TMPDIR", str(tmp_path / "link"))
+
+    model = Model(project=tmp_path / "proj", config=_config(tmp_path))
+
+    assert model.compute_root == real.resolve() / "pystilt" / "proj"
+    again = Model(project=tmp_path / "proj", compute_root=str(model.compute_root))
+    assert again.compute_root == model.compute_root
 
 
 def test_compute_root_from_runtime_settings(tmp_path):
