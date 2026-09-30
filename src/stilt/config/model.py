@@ -8,6 +8,7 @@ from typing import Any, Self
 import yaml
 from pydantic import ConfigDict, Field, model_validator
 
+from .execution import ExecutionConfig
 from .footprint import FootprintConfig
 from .meteorology import MetConfig
 from .params import STILTParams
@@ -40,9 +41,12 @@ class ModelConfig(STILTParams, FootprintConfig):
             "from it. Unset runs one variant per met."
         ),
     )
-    execution: dict[str, Any] = Field(
-        default_factory=dict,
-        description="Execution backend settings, such as ``backend: slurm`` and its options.",
+    execution: ExecutionConfig = Field(
+        default_factory=lambda: ExecutionConfig.model_validate({}),
+        description=(
+            "Where the receptors run and with what resources, such as "
+            "``backend: slurm`` and its options."
+        ),
     )
     output: str = Field(
         "output",
@@ -144,6 +148,10 @@ class ModelConfig(STILTParams, FootprintConfig):
             name: met.model_dump(mode="json", exclude_unset=True)
             for name, met in self.mets.items()
         }
+        if "execution" in data:
+            data["execution"] = self.execution.model_dump(
+                mode="json", exclude_unset=True
+            )
         if not data.get("variants"):
             data["variants"] = {met: {} for met in self.mets}
         head = {k: data.pop(k) for k in ("mets", "variants")}

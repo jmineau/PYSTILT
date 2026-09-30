@@ -1,8 +1,6 @@
 """Tests for the worker-side execution functions in ``stilt.execution.worker``."""
 
-import contextlib
 import datetime as dt
-from types import SimpleNamespace
 
 import pandas as pd
 import pytest
@@ -16,12 +14,11 @@ from stilt.config import (
     TransportSettings,
     VariantConfig,
 )
-from stilt.errors import ConfigValidationError, SimulationError
+from stilt.errors import SimulationError
 from stilt.execution import register, resolve_compute_root, worker
 from stilt.execution.worker import (
     ReceptorResult,
     SimulationResult,
-    pull_receptors,
     run_receptor,
     run_receptors,
     run_simulation,
@@ -782,110 +779,3 @@ def test_run_receptors_pool_keyboard_interrupt_terminates_and_returns(
     [pool] = fake_pool.instances
     assert pool.terminated
     assert [r.receptor_id for r in results] == [ids[0]]
-
-
-# ---------------------------------------------------------------------------
-# pull_receptors
-# ---------------------------------------------------------------------------
-
-RID = "202301011200_-111.85_40.77_5"
-
-
-class _FakeClaim:
-    def __init__(self, receptor_id: str) -> None:
-        self.receptor_id = receptor_id
-        self.recorded: list[ReceptorResult] = []
-
-    def record(self, result: ReceptorResult) -> None:
-        self.recorded.append(result)
-
-
-class _FakeQueue:
-    """Yields each claim once, then ``None``."""
-
-    def __init__(self, claims: list[_FakeClaim]) -> None:
-        self._pending = list(claims)
-        self.polls = 0
-
-    @contextlib.contextmanager
-    def claim_one(self):
-        self.polls += 1
-        yield self._pending.pop(0) if self._pending else None
-
-
-def test_pull_receptors_requires_a_queue(monkeypatch):
-    monkeypatch.delenv("PYSTILT_DB_URL", raising=False)
-
-    with pytest.raises(ConfigValidationError, match="Postgres work queue"):
-        pull_receptors(SimpleNamespace(), follow=False)
-
-
-def test_pull_receptors_records_result_on_claim(monkeypatch):
-    claim = _FakeClaim(RID)
-    queue = _FakeQueue([claim])
-    calls: list[tuple[str, bool]] = []
-
-    def fake(model, receptor_id, *, compute_root=None, skip_existing=True):
-        calls.append((receptor_id, skip_existing))
-        return ReceptorResult(receptor_id, "complete")
-
-    monkeypatch.setattr(worker, "run_receptor", fake)
-
-    pull_receptors(SimpleNamespace(), queue=queue, follow=False, skip_existing=False)
-
-    assert calls == [(RID, False)]
-    assert claim.recorded == [ReceptorResult(RID, "complete")]
-    # One claim, then one empty poll that ends the batch.
-    assert queue.polls == 2
-
-
-def test_pull_receptors_records_interrupted_result(monkeypatch):
-    claim = _FakeClaim(RID)
-    queue = _FakeQueue([claim])
-    monkeypatch.setattr(
-        worker,
-        "run_receptor",
-        lambda model, rid, *, compute_root=None, skip_existing=True: ReceptorResult(
-            rid, "interrupted"
-        ),
-    )
-
-    pull_receptors(SimpleNamespace(), queue=queue, follow=False)
-
-    assert [r.status for r in claim.recorded] == ["interrupted"]
-
-
-def test_pull_receptors_follow_sleeps_on_empty_then_keeps_polling(monkeypatch):
-    class _Stop(Exception):
-        pass
-
-    claim = _FakeClaim(RID)
-    sleeps: list[float] = []
-
-    class _Queue(_FakeQueue):
-        @contextlib.contextmanager
-        def claim_one(self):
-            self.polls += 1
-            if self.polls == 1:
-                yield None  # empty -> sleep, keep going in follow mode
-            elif self.polls == 2:
-                yield self._pending.pop(0)
-            else:
-                raise _Stop  # end the otherwise-infinite follow loop
-
-    queue = _Queue([claim])
-    monkeypatch.setattr(worker.time, "sleep", lambda s: sleeps.append(s))
-    monkeypatch.setattr(
-        worker,
-        "run_receptor",
-        lambda model, rid, *, compute_root=None, skip_existing=True: ReceptorResult(
-            rid, "complete"
-        ),
-    )
-
-    with pytest.raises(_Stop):
-        pull_receptors(SimpleNamespace(), queue=queue, follow=True, poll_interval=0.5)
-
-    assert sleeps == [0.5]
-    assert len(claim.recorded) == 1
-    assert queue.polls == 3

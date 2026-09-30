@@ -6,23 +6,231 @@ import logging
 import os
 import tempfile
 from collections.abc import Iterable
+from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Protocol
+from uuid import uuid4
 
 import yaml
 
-from stilt.config import ModelConfig, RuntimeSettings
+from stilt.config import ExecutionConfig, ModelConfig, RuntimeSettings
 from stilt.errors import ConfigValidationError
-from stilt.service import resolve_queue
-
-from .backends import Executor, JobHandle, LocalHandle, get_executor
+from stilt.project import project_slug
 
 if TYPE_CHECKING:
+    import submitit
+
     from stilt.model import Model
     from stilt.project import Project
     from stilt.receptors import Receptor
 
+    from .worker import ReceptorResult
+
 logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Handles
+# ---------------------------------------------------------------------------
+
+
+class JobHandle(Protocol):
+    """What :func:`run` returns: a handle to the work it started."""
+
+    @property
+    def job_id(self) -> str:
+        """Identifier of the work, such as a Slurm job id."""
+        ...
+
+    @property
+    def detached(self) -> bool:
+        """Whether the work goes on after this process exits."""
+        ...
+
+    def wait(self) -> None:
+        """Block until the work has finished."""
+        ...
+
+
+class LocalHandle:
+    """Handle to a local run, which has already finished when it is returned."""
+
+    @property
+    def job_id(self) -> str:
+        """Always ``"local"``, since local runs have no scheduler id."""
+        return "local"
+
+    @property
+    def detached(self) -> bool:
+        """Always False, since local workers stop when this process exits."""
+        return False
+
+    def wait(self) -> None:
+        """Return at once: the run finished inside :func:`run`."""
+
+
+class SlurmHandle:
+    """
+    Handle to a Slurm job array.
+
+    Attributes
+    ----------
+    jobs : list of submitit.Job
+        One job per array task, for anything this handle does not cover
+        (``job.stdout()``, ``job.result()``, ``job.cancel()``).
+    folder : Path
+        Folder holding the tasks' logs and submitit's files.
+    """
+
+    def __init__(self, jobs: list[submitit.Job[Any]], folder: Path) -> None:
+        self.jobs = jobs
+        self.folder = folder
+
+    @property
+    def job_id(self) -> str:
+        """Id of the job array."""
+        return str(self.jobs[0].job_id).split("_")[0]
+
+    @property
+    def detached(self) -> bool:
+        """Always True, since Slurm jobs run on after this process exits."""
+        return True
+
+    def wait(self) -> None:
+        """
+        Block until every task has left the queue.
+
+        Raises
+        ------
+        RuntimeError
+            If any task failed, was cancelled, or timed out. A task that was
+            preempted or ran out of time is requeued and counts only by how
+            it ends.
+        """
+        for job in self.jobs:
+            job.wait()
+        # Ask each task how it ended. Its state from the scheduler can lag
+        # behind a task that has just finished.
+        failed = {
+            str(job.job_id): error
+            for job in self.jobs
+            if (error := job.exception()) is not None
+        }
+        if failed:
+            first_id, first_error = next(iter(failed.items()))
+            raise RuntimeError(
+                f"Slurm job {self.job_id}: {len(failed)} of {len(self.jobs)} "
+                f"tasks did not complete. Task {first_id}: {first_error}\n"
+                f"Logs are in {self.folder}."
+            )
+
+
+# ---------------------------------------------------------------------------
+# The unit of work
+# ---------------------------------------------------------------------------
+
+
+class Batch:
+    """
+    A batch of receptors of one project, run by one worker.
+
+    Calling it rebuilds the model from the project and runs the receptors,
+    ``cpus`` at a time. On Slurm it is one array task. When the task is
+    preempted or runs out of time, :meth:`checkpoint` has it submitted again,
+    and the second run skips the receptors the first one finished.
+
+    Parameters
+    ----------
+    project : str
+        Project directory. Its ``config.yaml`` and ``receptors.csv`` must
+        already hold the settings and receptors (:func:`register`).
+    receptor_ids : list of str
+        Receptors to run.
+    compute_root : str, optional
+        Scratch directory under which HYSPLIT runs.
+    cpus : int, default 1
+        Number of receptors to run at once.
+    skip_existing : bool, default True
+        Keep particles and footprints that already exist.
+    """
+
+    def __init__(
+        self,
+        project: str,
+        receptor_ids: list[str],
+        *,
+        compute_root: str | None = None,
+        cpus: int = 1,
+        skip_existing: bool = True,
+    ) -> None:
+        self.project = project
+        self.receptor_ids = list(receptor_ids)
+        self.compute_root = compute_root
+        self.cpus = cpus
+        self.skip_existing = skip_existing
+
+    def __call__(self) -> list[ReceptorResult]:
+        """Run the batch and return one result per receptor."""
+        from stilt.model import Model
+
+        from .worker import run_receptors
+
+        logging.basicConfig(level=logging.WARNING, format="%(message)s")
+        logging.getLogger("stilt.execution.worker").setLevel(logging.INFO)
+        return run_receptors(
+            Model(project=self.project),
+            self.receptor_ids,
+            compute_root=self.compute_root,
+            n_cores=self.cpus,
+            skip_existing=self.skip_existing,
+        )
+
+    def checkpoint(self) -> submitit.helpers.DelayedSubmission:
+        """Return the batch to submit again after a preemption or timeout."""
+        import submitit
+
+        again = Batch(
+            self.project,
+            self.receptor_ids,
+            compute_root=self.compute_root,
+            cpus=self.cpus,
+            skip_existing=True,  # whatever finished before the interruption stays
+        )
+        return submitit.helpers.DelayedSubmission(again)
+
+
+def split(receptor_ids: list[str], n: int) -> list[list[str]]:
+    """Split receptor ids round-robin into at most *n* batches, none empty."""
+    n = max(1, min(n, len(receptor_ids)))
+    return [receptor_ids[i::n] for i in range(n)]
+
+
+def slurm_parameters(execution: ExecutionConfig, *, job_name: str) -> dict[str, Any]:
+    """Return *execution* as the keyword arguments of submitit's Slurm executor."""
+    additional = {str(k).replace("_", "-"): v for k, v in execution.slurm.items()}
+    # Without this, scontrol cannot requeue a preempted or timed-out task.
+    additional.setdefault("requeue", True)
+    params: dict[str, Any] = {
+        "slurm_job_name": job_name,
+        "slurm_cpus_per_task": execution.cpus,
+        "slurm_additional_parameters": additional,
+    }
+    optional = {
+        "slurm_time": execution.time,
+        "slurm_mem": execution.mem,
+        "slurm_partition": execution.partition,
+        "slurm_account": execution.account,
+        "slurm_qos": execution.qos,
+        "slurm_array_parallelism": execution.array_parallelism,
+        "slurm_setup": execution.setup or None,
+    }
+    params.update({k: v for k, v in optional.items() if v is not None})
+    return params
+
+
+# ---------------------------------------------------------------------------
+# Running a model
+# ---------------------------------------------------------------------------
 
 
 def resolve_compute_root(
@@ -84,8 +292,7 @@ def register(model: Model, receptors: Iterable[Receptor] | None = None) -> list[
     Workers rebuild the model from the project alone, so :func:`run` calls
     this first. ``config.yaml`` is written when the project has none or its
     settings differ from the model's, with only the settings that were set.
-    Receptors not yet in ``receptors.csv`` are appended to it. When a work
-    queue is configured (``PYSTILT_DB_URL``), the receptors are added to it.
+    Receptors not yet in ``receptors.csv`` are appended to it.
 
     Parameters
     ----------
@@ -104,17 +311,13 @@ def register(model: Model, receptors: Iterable[Receptor] | None = None) -> list[
     batch = list(model.receptors) if receptors is None else list(receptors)
     if receptors is not None or not model.receptors.from_project:
         model.project.add_receptors(batch)
-    receptor_ids = [r.id for r in batch]
-    queue = resolve_queue(RuntimeSettings())
-    if queue is not None:
-        queue.register(receptor_ids)
-    return receptor_ids
+    return [r.id for r in batch]
 
 
 def run(
     model: Model,
-    executor: Executor | None = None,
     *,
+    execution: ExecutionConfig | None = None,
     skip_existing: bool = True,
     wait: bool = True,
     compute_root: str | Path | None = None,
@@ -123,41 +326,41 @@ def run(
     Run every simulation of a model that has not finished.
 
     Saves the settings and receptors to the project (:func:`register`), then
-    starts workers for each receptor with missing results. A worker runs
-    HYSPLIT once for each distinct set of transport settings whose particles
-    are missing, then calculates the footprint of every variant that has a
-    grid.
+    runs each receptor with missing results. A receptor's worker runs HYSPLIT
+    once for each distinct set of transport settings whose particles are
+    missing, then calculates the footprint of every variant that has a grid.
 
     Parameters
     ----------
     model : Model
         Model to run.
-    executor : Executor, optional
-        Where to run the workers. Defaults to the one set by
-        ``config.execution`` (local processes unless configured).
+    execution : ExecutionConfig, optional
+        Where to run and with what resources. Defaults to the ``execution``
+        settings of the model's config (this machine, one process, unless
+        configured).
     skip_existing : bool, default True
         Skip simulations whose outputs all exist. ``False`` runs every
         simulation again.
     wait : bool, default True
-        Block until the workers finish. With ``False`` a Slurm or Kubernetes
-        run returns once it is submitted. A local run always finishes before
-        this returns.
+        Block until the work finishes. With ``False`` a Slurm run returns
+        once it is submitted. A local run always finishes before this
+        returns.
     compute_root : str or Path, optional
         Scratch directory under which HYSPLIT runs
-        (:func:`resolve_compute_root`).
+        (:func:`resolve_compute_root`). On Slurm it is resolved on the
+        compute node unless given here.
 
     Returns
     -------
     JobHandle
-        Handle to the started workers.
+        Handle to the work.
     """
-    resolved_executor = executor or get_executor(model.config.execution or {})
+    execution = execution if execution is not None else model.config.execution
 
     receptor_ids = register(model)
     if not receptor_ids:
         logger.info("run: no receptors configured — nothing to do")
         return LocalHandle()
-
     pending = (
         model.simulations.incomplete().receptors if skip_existing else receptor_ids
     )
@@ -166,20 +369,100 @@ def run(
         return LocalHandle()
 
     logger.info(
-        "run(%s): starting %s workers for %d receptors",
+        "run(%s): %d receptors on %s",
         ", ".join(model.variants),
-        resolved_executor.dispatch,
         len(pending),
+        execution.backend,
     )
-    handle = resolved_executor.start(
-        pending,
-        project=model.project.root,
-        compute_root=str(resolve_compute_root(model.project, compute_root)),
-        skip_existing=skip_existing,
+    scratch = (
+        None
+        if compute_root is None
+        else resolve_compute_root(model.project, compute_root)
+    )
+    handle = _dispatch(
+        model, pending, execution, compute_root=scratch, skip_existing=skip_existing
     )
     if wait:
         handle.wait()
     return handle
 
 
-__all__ = ["register", "resolve_compute_root", "run"]
+def _dispatch(
+    model: Model,
+    pending: list[str],
+    execution: ExecutionConfig,
+    *,
+    compute_root: Path | None,
+    skip_existing: bool,
+) -> JobHandle:
+    """Run *pending* here, or submit it to Slurm, and return a handle."""
+    if execution.backend == "local":
+        # In this process, so Ctrl-C and SIGTERM stop the workers cleanly and
+        # progress prints as it happens.
+        from .worker import run_receptors
+
+        run_receptors(
+            model,
+            pending,
+            compute_root=compute_root,
+            n_cores=execution.n_workers,
+            skip_existing=skip_existing,
+        )
+        return LocalHandle()
+    return _submit_slurm(
+        model.project,
+        pending,
+        execution,
+        # A compute root that was not asked for is left to each compute node,
+        # whose TMPDIR is its own.
+        compute_root=None if compute_root is None else str(compute_root),
+        skip_existing=skip_existing,
+    )
+
+
+def _submit_slurm(
+    project: Project,
+    pending: list[str],
+    execution: ExecutionConfig,
+    *,
+    compute_root: str | None,
+    skip_existing: bool,
+) -> SlurmHandle:
+    """Submit *pending* as one Slurm job array and return its handle."""
+    import submitit
+
+    # One folder per submission, so a later array never overwrites these.
+    stamp = f"{datetime.now():%Y%m%d_%H%M%S}_{uuid4().hex[:6]}"
+    folder = project.directory / "slurm" / stamp
+    executor = submitit.AutoExecutor(folder=folder, cluster="slurm")
+    executor.update_parameters(
+        **slurm_parameters(execution, job_name=f"pystilt-{project_slug(project.root)}")
+    )
+    batches = [
+        Batch(
+            project.root,
+            ids,
+            compute_root=compute_root,
+            cpus=execution.cpus,
+            skip_existing=skip_existing,
+        )
+        for ids in split(pending, execution.n_workers)
+    ]
+    with executor.batch():
+        jobs = [executor.submit(batch) for batch in batches]
+    handle = SlurmHandle(jobs, folder)
+    logger.info("Submitted job: %s (%d tasks)", handle.job_id, len(jobs))
+    return handle
+
+
+__all__ = [
+    "Batch",
+    "JobHandle",
+    "LocalHandle",
+    "SlurmHandle",
+    "register",
+    "resolve_compute_root",
+    "run",
+    "slurm_parameters",
+    "split",
+]

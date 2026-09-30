@@ -8,11 +8,8 @@ prints a short summary. Examples::
     stilt init ./my_project           # start a project in ./my_project
     stilt run                         # run locally and wait until done
     stilt run ./my_project --no-skip  # run every simulation again
+    stilt run --backend slurm         # submit a Slurm job array and return
     stilt run --wait                  # with Slurm, wait for the jobs to finish
-    stilt register ./my_project       # save inputs and fill the work queue
-    stilt push-worker ./my_project --chunk chunks/run_01/task_0.txt
-    stilt pull-worker ./my_project    # run receptors from the Postgres queue
-    stilt serve ./my_project          # keep taking work from the queue
     stilt status                      # count finished simulations
 """
 
@@ -24,17 +21,10 @@ from typing import Any
 
 import typer
 
-from stilt.execution import (
-    Executor,
-    get_executor,
-    pull_receptors,
-    resolve_compute_root,
-    run_receptors,
-)
-from stilt.execution import register as register_inputs
+from stilt.config import ExecutionConfig
+from stilt.execution import resolve_compute_root
 from stilt.model import Model
 from stilt.project import CONFIG_KEY, RECEPTORS_KEY
-from stilt.receptors import read_receptors
 
 app = typer.Typer(
     name="stilt",
@@ -209,27 +199,28 @@ def run(
     logging.basicConfig(level=logging.WARNING, format="%(message)s")
     logging.getLogger("stilt.execution.worker").setLevel(logging.INFO)
 
-    execution = dict(model.config.execution or {})
+    overrides: dict[str, Any] = {}
     if backend is not None:
-        execution["backend"] = backend
+        overrides["backend"] = backend
     if n_workers is not None:
-        execution["n_workers"] = n_workers
-    executor = get_executor(execution)
+        overrides["n_workers"] = n_workers
+    execution = ExecutionConfig.model_validate(
+        {**model.config.execution.model_dump(exclude_unset=True), **overrides}
+    )
 
     _print_run_start(
         model,
-        executor,
-        backend=execution.get("backend", "local"),
+        execution,
         compute_root=compute_root,
         skip_existing=not no_skip,
         wait=wait,
     )
     # A local run has finished when this returns; a Slurm job has been submitted.
     handle = model.run(
-        executor=executor,
         skip_existing=not no_skip,
         wait=False,
         compute_root=compute_root,
+        execution=execution,
     )
     if handle.detached:
         typer.echo(f"Submitted job: {handle.job_id}")
@@ -238,89 +229,6 @@ def run(
         typer.echo("Waiting for job completion (squeue shows its tasks)...")
         handle.wait()
     _print_status(model)
-
-
-@app.command("register")
-def register(
-    project: str = _REQUIRED_PROJECT_ARG,
-    receptors_path: Path | None = typer.Option(  # noqa: B008
-        None,
-        "--receptors",
-        help="Receptors CSV to add to the project. Defaults to the project's receptors.csv.",
-    ),
-) -> None:
-    """
-    Save a project's settings and receptors, and queue its receptors.
-
-    Receptors go to the Postgres work queue only when PYSTILT_DB_URL is set.
-    """
-    model = Model(project=_resolve_project(project))
-    receptors = read_receptors(receptors_path) if receptors_path is not None else None
-    receptor_ids = register_inputs(model, receptors=receptors)
-    typer.echo(
-        f"Registered {len(receptor_ids)} receptor(s) x {len(model.variants)} variant(s)."
-    )
-
-
-@app.command("pull-worker")
-def pull_worker(
-    project: str = _REQUIRED_PROJECT_ARG,
-    follow: bool = typer.Option(
-        False,
-        "--follow/--no-follow",
-        help="Keep polling when the queue is empty (long-lived deployments).",
-    ),
-    compute_root: str | None = _COMPUTE_ROOT,
-) -> None:
-    """
-    Run receptors from the Postgres work queue.
-
-    Each receptor is claimed by one worker only. The worker stops when the
-    queue is empty, or keeps waiting for more work with --follow. Needs
-    PYSTILT_DB_URL.
-    """
-    model = Model(project=_resolve_project(project))
-    pull_receptors(model, follow=follow, compute_root=compute_root)
-
-
-@app.command("push-worker")
-def push_worker(
-    project: str = _REQUIRED_PROJECT_ARG,
-    chunk: str = typer.Option(
-        ..., "--chunk", help="File listing the receptor ids to run, one per line."
-    ),
-    cpus: int = typer.Option(
-        1, "--cpus", help="Number of receptors to run at once in this task."
-    ),
-    no_skip: bool = _NO_SKIP,
-    compute_root: str | None = _COMPUTE_ROOT,
-) -> None:
-    """
-    Run the receptors listed in one chunk file.
-
-    Slurm array tasks call this, one chunk file per task.
-    """
-    model = Model(project=_resolve_project(project))
-    receptor_ids = [
-        s for line in Path(chunk).read_text().splitlines() if (s := line.strip())
-    ]
-    run_receptors(
-        model,
-        receptor_ids,
-        compute_root=compute_root,
-        n_cores=cpus,
-        skip_existing=not no_skip,
-    )
-
-
-@app.command()
-def serve(
-    project: str = _REQUIRED_PROJECT_ARG,
-    compute_root: str | None = _COMPUTE_ROOT,
-) -> None:
-    """Keep running receptors from the work queue. Same as pull-worker --follow."""
-    model = Model(project=_resolve_project(project))
-    pull_receptors(model, follow=True, compute_root=compute_root)
 
 
 @app.command()
@@ -360,22 +268,26 @@ def _print_status(model: Model) -> None:
 
 def _print_run_start(
     model: Model,
-    executor: Executor,
+    execution: ExecutionConfig,
     *,
-    backend: str,
     compute_root: str | None,
     skip_existing: bool,
     wait: bool,
 ) -> None:
     """Print the settings ``stilt run`` is about to use."""
+    backend = execution.backend
     mode = "existing" if skip_existing else "no-skip"
     typer.echo(
         "Starting run: "
         f"project={model.project.root}  backend={backend}  "
-        f"dispatch={executor.dispatch}  workers={executor.n_workers}  skip={mode}"
+        f"workers={execution.n_workers}  skip={mode}"
     )
     typer.echo(f"Output: {model.output.path}")
-    typer.echo(f"Compute root: {resolve_compute_root(model.project, compute_root)}")
+    if backend == "local" or compute_root is not None:
+        scratch = resolve_compute_root(model.project, compute_root)
+        typer.echo(f"Compute root: {scratch}")
+    else:
+        typer.echo("Compute root: each task's own $TMPDIR (or PYSTILT_COMPUTE_ROOT)")
     typer.echo(f"Receptors loaded: {len(model.receptors)}")
     typer.echo(f"Variants: {', '.join(model.variants)}")
     typer.echo(

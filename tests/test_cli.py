@@ -10,7 +10,7 @@ from typer.testing import CliRunner
 
 import stilt.__main__
 from stilt.cli import _resolve_project, app
-from stilt.config import Grid, ModelConfig
+from stilt.config import ExecutionConfig, Grid, ModelConfig
 from stilt.execution import register
 
 runner = CliRunner()
@@ -63,7 +63,7 @@ def _fake_model_factory(captured: list[dict]):
             self.output = SimpleNamespace(path=Path(project) / "output")
             self.receptors = []
             self.variants = {"hrrr": None}
-            self.config = SimpleNamespace(execution={})
+            self.config = SimpleNamespace(execution=ExecutionConfig.model_validate({}))
 
         def status(self):
             return pd.DataFrame(
@@ -73,7 +73,7 @@ def _fake_model_factory(captured: list[dict]):
         def unreferenced(self):
             return {"particles": [], "footprints": []}
 
-        def run(self, executor=None, skip_existing=True, wait=True, compute_root=None):
+        def run(self, skip_existing=True, wait=True, compute_root=None, execution=None):
             self.record["compute_root"] = compute_root
             return _FakeHandle()
 
@@ -211,10 +211,6 @@ def test_cli_help_lists_current_commands():
     expected = {
         "init",
         "run",
-        "register",
-        "pull-worker",
-        "push-worker",
-        "serve",
         "status",
     }
     for command in expected:
@@ -238,16 +234,18 @@ def test_run_exits_when_no_config(tmp_path):
 
 
 def test_run_invokes_model_run(tmp_path, monkeypatch):
-    """run builds the executor once and passes it to model.run."""
+    """run passes the config's execution settings to model.run."""
     _write_minimal_config(tmp_path)
 
     fake_handle = MagicMock()
     fake_handle.detached = False  # local execution has finished
     calls: list = []
 
-    def fake_run(self, executor=None, skip_existing=None, wait=True, compute_root=None):
+    def fake_run(
+        self, skip_existing=None, wait=True, compute_root=None, execution=None
+    ):
         calls.append(
-            {"executor": executor, "skip_existing": skip_existing, "wait": wait}
+            {"execution": execution, "skip_existing": skip_existing, "wait": wait}
         )
         return fake_handle
 
@@ -255,10 +253,8 @@ def test_run_invokes_model_run(tmp_path, monkeypatch):
 
     result = runner.invoke(app, ["run", str(tmp_path)])
     assert result.exit_code == 0
-    from stilt.execution import LocalExecutor
-
     [call] = calls
-    assert isinstance(call["executor"], LocalExecutor)
+    assert call["execution"] == ExecutionConfig.model_validate({})
     assert call["skip_existing"] is True
     assert call["wait"] is False
     # A local run is over when model.run returns, so there is nothing to wait for.
@@ -274,7 +270,7 @@ def test_run_prints_startup_and_wait_messages(tmp_path, monkeypatch):
 
     monkeypatch.setattr(
         "stilt.cli.Model.run",
-        lambda self, executor=None, skip_existing=None, wait=True, compute_root=None: (
+        lambda self, skip_existing=None, wait=True, compute_root=None, execution=None: (
             fake_handle
         ),
     )
@@ -284,7 +280,7 @@ def test_run_prints_startup_and_wait_messages(tmp_path, monkeypatch):
     assert result.exit_code == 0
     assert (
         f"Starting run: project={tmp_path.resolve()}  backend=local  "
-        "dispatch=push  workers=1  skip=existing"
+        "workers=1  skip=existing"
     ) in result.output
     assert "Compute root:" in result.output
     assert f"Output: {tmp_path.resolve() / 'output'}" in result.output
@@ -317,7 +313,9 @@ def test_run_no_skip_passes_false(tmp_path, monkeypatch):
     fake_handle.detached = False  # local execution -> inline wait
     calls: list = []
 
-    def fake_run(self, executor=None, skip_existing=None, wait=True, compute_root=None):
+    def fake_run(
+        self, skip_existing=None, wait=True, compute_root=None, execution=None
+    ):
         calls.append(skip_existing)
         return fake_handle
 
@@ -349,18 +347,18 @@ def test_run_forwards_compute_root(tmp_path, monkeypatch):
     ]
 
 
-def test_run_backend_override_builds_executor(tmp_path, monkeypatch):
-    """--backend and --n-workers build an executor override passed to model.run()."""
-    from stilt.execution import LocalExecutor
-
+def test_run_backend_and_workers_override_the_config(tmp_path, monkeypatch):
+    """--backend and --n-workers replace those execution settings for this run."""
     _write_minimal_config(tmp_path)
 
     fake_handle = MagicMock()
     fake_handle.detached = False
     captured_executor = []
 
-    def fake_run(self, executor=None, skip_existing=None, wait=True, compute_root=None):
-        captured_executor.append(executor)
+    def fake_run(
+        self, skip_existing=None, wait=True, compute_root=None, execution=None
+    ):
+        captured_executor.append(execution)
         return fake_handle
 
     monkeypatch.setattr("stilt.cli.Model.run", fake_run)
@@ -370,23 +368,20 @@ def test_run_backend_override_builds_executor(tmp_path, monkeypatch):
     )
     assert result.exit_code == 0
     assert len(captured_executor) == 1
-    assert isinstance(captured_executor[0], LocalExecutor)
+    assert captured_executor[0].backend == "local"
     assert captured_executor[0].n_workers == 4
     assert "workers=4" in result.output
 
 
 def test_run_slurm_fire_and_forget(tmp_path, monkeypatch):
     """For a SlurmHandle, prints job_id and exits without blocking by default."""
-    from stilt.execution import SlurmHandle
-
     _write_minimal_config(tmp_path)
 
-    fake_handle = SlurmHandle("12345")
-    fake_handle.wait = MagicMock()
+    fake_handle = MagicMock(detached=True, job_id="12345")
 
     monkeypatch.setattr(
         "stilt.cli.Model.run",
-        lambda self, executor=None, skip_existing=None, wait=True, compute_root=None: (
+        lambda self, skip_existing=None, wait=True, compute_root=None, execution=None: (
             fake_handle
         ),
     )
@@ -403,16 +398,13 @@ def test_run_slurm_fire_and_forget(tmp_path, monkeypatch):
 
 def test_run_slurm_with_wait_flag_blocks(tmp_path, monkeypatch):
     """--wait causes the CLI to call handle.wait() for a SlurmHandle."""
-    from stilt.execution import SlurmHandle
-
     _write_minimal_config(tmp_path)
 
-    fake_handle = SlurmHandle("99")
-    fake_handle.wait = MagicMock()
+    fake_handle = MagicMock(detached=True, job_id="99")
 
     monkeypatch.setattr(
         "stilt.cli.Model.run",
-        lambda self, executor=None, skip_existing=None, wait=True, compute_root=None: (
+        lambda self, skip_existing=None, wait=True, compute_root=None, execution=None: (
             fake_handle
         ),
     )
@@ -429,15 +421,12 @@ def test_run_slurm_with_wait_flag_blocks(tmp_path, monkeypatch):
 
 def test_run_detached_handle_prints_job_id(tmp_path, monkeypatch):
     """Any detached handle (e.g. Slurm) prints the submitted job ID."""
-    from stilt.execution import SlurmHandle
-
     _write_minimal_config(tmp_path)
 
-    fake_handle = SlurmHandle("42")
-    fake_handle.wait = MagicMock()
+    fake_handle = MagicMock(detached=True, job_id="42")
     monkeypatch.setattr(
         "stilt.cli.Model.run",
-        lambda self, executor=None, skip_existing=None, wait=True, compute_root=None: (
+        lambda self, skip_existing=None, wait=True, compute_root=None, execution=None: (
             fake_handle
         ),
     )
@@ -445,330 +434,6 @@ def test_run_detached_handle_prints_job_id(tmp_path, monkeypatch):
     result = runner.invoke(app, ["run", str(tmp_path)])
     assert result.exit_code == 0
     assert "Submitted job: 42" in result.output
-
-
-# ---------------------------------------------------------------------------
-# pull-worker command
-# ---------------------------------------------------------------------------
-
-
-def test_pull_worker_exits_when_no_config(tmp_path):
-    result = runner.invoke(app, ["pull-worker", str(tmp_path)])
-    assert result.exit_code == 1
-
-
-def test_pull_worker_calls_pull_receptors(tmp_path, monkeypatch):
-    """pull-worker calls pull_receptors on the model."""
-    _write_minimal_config(tmp_path)
-
-    loop_calls: list[dict] = []
-
-    def fake_loop(
-        model,
-        follow=False,
-        poll_interval=10.0,
-        *,
-        skip_existing=None,
-        compute_root=None,
-    ):
-        loop_calls.append({"follow": follow})
-
-    monkeypatch.setattr("stilt.cli.pull_receptors", fake_loop)
-
-    result = runner.invoke(app, ["pull-worker", str(tmp_path)])
-    assert result.exit_code == 0
-    assert loop_calls == [{"follow": False}]
-
-
-def test_pull_worker_follow_flag_forwarded(tmp_path, monkeypatch):
-    """--follow is forwarded to pull_receptors."""
-    _write_minimal_config(tmp_path)
-
-    loop_calls: list[dict] = []
-
-    def fake_loop(
-        model,
-        follow=False,
-        poll_interval=10.0,
-        *,
-        skip_existing=None,
-        compute_root=None,
-    ):
-        loop_calls.append({"follow": follow})
-
-    monkeypatch.setattr("stilt.cli.pull_receptors", fake_loop)
-
-    result = runner.invoke(app, ["pull-worker", str(tmp_path), "--follow"])
-    assert result.exit_code == 0
-    assert loop_calls == [{"follow": True}]
-
-
-def test_pull_worker_forwards_compute_root(tmp_path, monkeypatch):
-    """pull-worker forwards --compute-root to the worker."""
-    _write_minimal_config(tmp_path)
-    captured: list[dict] = []
-    monkeypatch.setattr("stilt.cli.Model", _fake_model_factory(captured))
-
-    def fake_loop(model, follow=False, compute_root=None):
-        model.record["compute_root"] = compute_root
-
-    monkeypatch.setattr("stilt.cli.pull_receptors", fake_loop)
-
-    result = runner.invoke(
-        app,
-        ["pull-worker", str(tmp_path), "--compute-root", str(tmp_path / "scratch")],
-    )
-
-    assert result.exit_code == 0
-    assert captured == [
-        {
-            "project": str(tmp_path.resolve()),
-            "compute_root": str(tmp_path / "scratch"),
-        }
-    ]
-
-
-# ---------------------------------------------------------------------------
-# push-worker command
-# ---------------------------------------------------------------------------
-
-
-def test_push_worker_calls_run_receptors(tmp_path, monkeypatch):
-    _write_minimal_config(tmp_path)
-    chunk = tmp_path / "task_0.txt"
-    chunk.write_text("202301011200_abc\n\n202301011200_def\n")
-
-    sim_list_calls: list[dict] = []
-
-    def fake_run(
-        model, receptor_ids, *, n_cores=1, skip_existing=None, compute_root=None
-    ):
-        sim_list_calls.append(
-            {
-                "receptor_ids": receptor_ids,
-                "n_cores": n_cores,
-                "skip_existing": skip_existing,
-            }
-        )
-        return []
-
-    monkeypatch.setattr("stilt.cli.run_receptors", fake_run)
-
-    result = runner.invoke(
-        app,
-        ["push-worker", str(tmp_path), "--chunk", str(chunk), "--cpus", "4"],
-    )
-
-    assert result.exit_code == 0
-    assert sim_list_calls == [
-        {
-            "receptor_ids": ["202301011200_abc", "202301011200_def"],
-            "n_cores": 4,
-            "skip_existing": True,
-        }
-    ]
-
-
-def test_push_worker_forwards_skip_existing_flags(tmp_path, monkeypatch):
-    _write_minimal_config(tmp_path)
-    chunk = tmp_path / "task_0.txt"
-    chunk.write_text("202301011200_abc\n")
-
-    seen: list[bool | None] = []
-
-    def fake_run(
-        model, receptor_ids, *, n_cores=1, skip_existing=None, compute_root=None
-    ):
-        seen.append(skip_existing)
-        return []
-
-    monkeypatch.setattr("stilt.cli.run_receptors", fake_run)
-
-    base = ["push-worker", str(tmp_path), "--chunk", str(chunk)]
-    assert runner.invoke(app, base).exit_code == 0
-    assert runner.invoke(app, [*base, "--no-skip"]).exit_code == 0
-    assert seen == [True, False]
-
-
-def test_push_worker_forwards_compute_root(tmp_path, monkeypatch):
-    _write_minimal_config(tmp_path)
-    chunk = tmp_path / "task_0.txt"
-    chunk.write_text("202301011200_abc\n")
-    captured: list[dict] = []
-
-    monkeypatch.setattr("stilt.cli.Model", _fake_model_factory(captured))
-
-    def fake_run(
-        model, receptor_ids, *, n_cores=1, skip_existing=None, compute_root=None
-    ):
-        model.record["compute_root"] = compute_root
-        return []
-
-    monkeypatch.setattr("stilt.cli.run_receptors", fake_run)
-
-    result = runner.invoke(
-        app,
-        [
-            "push-worker",
-            str(tmp_path),
-            "--chunk",
-            str(chunk),
-            "--compute-root",
-            str(tmp_path / "scratch"),
-        ],
-    )
-
-    assert result.exit_code == 0
-    assert captured == [
-        {
-            "project": str(tmp_path.resolve()),
-            "compute_root": str(tmp_path / "scratch"),
-        }
-    ]
-
-
-def test_push_worker_requires_chunk_option(tmp_path):
-    _write_minimal_config(tmp_path)
-
-    result = runner.invoke(app, ["push-worker", str(tmp_path)])
-
-    assert result.exit_code != 0
-
-
-# ---------------------------------------------------------------------------
-# serve command
-# ---------------------------------------------------------------------------
-
-
-def test_serve_exits_when_no_config(tmp_path):
-    result = runner.invoke(app, ["serve", str(tmp_path)])
-    assert result.exit_code == 1
-
-
-def test_serve_calls_pull_receptors_in_follow_mode(tmp_path, monkeypatch):
-    """serve is the user-facing long-lived queue consumer command."""
-    _write_minimal_config(tmp_path)
-
-    loop_calls: list[dict] = []
-
-    def fake_loop(
-        model,
-        follow=False,
-        poll_interval=10.0,
-        *,
-        skip_existing=None,
-        compute_root=None,
-    ):
-        loop_calls.append({"follow": follow})
-
-    monkeypatch.setattr("stilt.cli.pull_receptors", fake_loop)
-
-    result = runner.invoke(app, ["serve", str(tmp_path)])
-    assert result.exit_code == 0
-    assert loop_calls == [{"follow": True}]
-
-
-def test_serve_forwards_compute_root(tmp_path, monkeypatch):
-    _write_minimal_config(tmp_path)
-    captured: list[dict] = []
-    loop_calls: list[dict] = []
-
-    def fake_loop(
-        model,
-        follow=False,
-        poll_interval=10.0,
-        *,
-        skip_existing=None,
-        compute_root=None,
-    ):
-        model.record["compute_root"] = compute_root
-        loop_calls.append({"follow": follow})
-
-    monkeypatch.setattr("stilt.cli.Model", _fake_model_factory(captured))
-    monkeypatch.setattr("stilt.cli.pull_receptors", fake_loop)
-
-    result = runner.invoke(
-        app,
-        ["serve", str(tmp_path), "--compute-root", str(tmp_path / "scratch")],
-    )
-
-    assert result.exit_code == 0
-    assert captured == [
-        {
-            "project": str(tmp_path.resolve()),
-            "compute_root": str(tmp_path / "scratch"),
-        }
-    ]
-    assert loop_calls == [{"follow": True}]
-
-
-# ---------------------------------------------------------------------------
-# register command
-# ---------------------------------------------------------------------------
-
-
-def test_register_exits_when_no_config(tmp_path):
-    result = runner.invoke(app, ["register", str(tmp_path)])
-    assert result.exit_code == 1
-
-
-def test_register_registers_project_receptors(tmp_path, monkeypatch):
-    """register saves the project's own receptors and prints the count."""
-    _write_minimal_config(tmp_path)
-
-    register_calls: list = []
-
-    def fake_register(model, receptors=None):
-        del model
-        register_calls.append(receptors)
-        return ["rid_1", "rid_2"]
-
-    monkeypatch.setattr("stilt.cli.register_inputs", fake_register)
-
-    result = runner.invoke(app, ["register", str(tmp_path)])
-    assert result.exit_code == 0
-    assert "Registered 2 receptor(s) x 1 variant(s)." in result.output
-    assert register_calls == [None]
-
-
-def test_register_with_receptors_file(tmp_path, monkeypatch):
-    """--receptors PATH loads receptors from file and passes them to register()."""
-    _write_minimal_config(tmp_path)
-
-    receptors_csv = tmp_path / "my_receptors.csv"
-    receptors_csv.write_text(
-        "time,longitude,latitude,altitude\n2023-01-01 12:00:00,-111.85,40.77,5.0\n"
-    )
-
-    register_calls: list = []
-
-    def fake_register(model, receptors=None):
-        del model
-        register_calls.append(receptors)
-        return ["rid_1"]
-
-    monkeypatch.setattr("stilt.cli.register_inputs", fake_register)
-
-    result = runner.invoke(
-        app, ["register", str(tmp_path), "--receptors", str(receptors_csv)]
-    )
-    assert result.exit_code == 0
-    assert "Registered 1 receptor(s) x 1 variant(s)." in result.output
-    assert len(register_calls) == 1
-    assert register_calls[0] is not None
-    assert len(register_calls[0]) == 1
-
-
-def test_register_writes_project_inputs(tmp_path):
-    """Without mocks, register persists config.yaml + receptors.csv and reports ids."""
-    _write_minimal_config(tmp_path)
-
-    result = runner.invoke(app, ["register", str(tmp_path)])
-
-    assert result.exit_code == 0
-    assert "Registered 1 receptor(s) x 1 variant(s)." in result.output
-    assert (tmp_path / "config.yaml").exists()
-    assert (tmp_path / "receptors.csv").exists()
 
 
 # ---------------------------------------------------------------------------
