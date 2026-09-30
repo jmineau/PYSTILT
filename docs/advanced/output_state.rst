@@ -18,7 +18,11 @@ is finished when its result files exist in the output directory
   variant has a grid. A footprint that no particle reached is a file with
   no rows and the reason in its metadata, and it counts.
 
-Each result has one expected path, so each check is a single file lookup.
+Each result has one expected path, so checking one simulation is a file
+lookup. For many simulations (``stilt status``, or planning a run) PYSTILT
+lists each result folder once and reads the answer for every receptor from
+that, which is what keeps a project of a hundred thousand receptors quick
+to check.
 A notebook, a Slurm task, and another project sharing the directory all see
 the same files, so they agree on what's finished without talking to each
 other. Deleting a result file makes that simulation unfinished again.

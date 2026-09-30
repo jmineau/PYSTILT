@@ -95,6 +95,13 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   archives. The `cloud` extra installs `arlmet[archives]` in place of `s3fs`,
   and `fsspec` is no longer a core dependency. PYSTILT 0.1.0a22 does not work
   with arlmet 0.1.0b1: pin `arlmet<0.1.0b1` if you stay on it.
+- **Status and run planning list folders instead of checking files**
+  ([#60](https://github.com/jmineau/PYSTILT/issues/60)). `stilt status`,
+  `model.simulations.incomplete()`, and the planning step of `stilt run`
+  read which receptors are done from one listing of each result folder,
+  rather than checking two files per simulation. `stilt status` no longer
+  opens every footprint file. `status()` still reports `empty`, which needs
+  the file.
 - **HYSPLIT sits behind an engine boundary**
   ([#87](https://github.com/jmineau/PYSTILT/issues/87), decision 8 of
   [#67](https://github.com/jmineau/PYSTILT/issues/67)). The worker runs a
