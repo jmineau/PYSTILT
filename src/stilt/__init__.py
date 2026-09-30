@@ -24,11 +24,9 @@ from .model import Model
 from .output import Output
 from .receptors import (
     ColumnReceptor,
-    LocationID,
     MultiPointReceptor,
     PointReceptor,
     Receptor,
-    ReceptorID,
     read_receptors,
 )
 from .simulation import SimID, Simulation
@@ -60,10 +58,8 @@ __all__ = [
     # Receptors
     "Receptor",
     "ColumnReceptor",
-    "LocationID",
     "MultiPointReceptor",
     "PointReceptor",
-    "ReceptorID",
     "read_receptors",
     # Spatial geometries (state geometry for aggregation)
     "Geometry",
