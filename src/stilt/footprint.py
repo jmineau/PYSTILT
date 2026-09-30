@@ -2,18 +2,17 @@
 
 import datetime as dt
 import json
-import os
 import warnings
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Self, cast
-from uuid import uuid4
 
 import numpy as np
 import pandas as pd
 import xarray as xr
 from scipy.ndimage import convolve as _convolve
 
+from stilt._atomic import atomic_path
 from stilt.config import FootprintConfig, Grid
 from stilt.config.spatial import (
     _cf_grid_mapping_attrs,
@@ -957,16 +956,8 @@ class Footprint:
             )
             ds.attrs["geometry_hash"] = self.config.geometry_hash or ""
 
-        tmp_path = path.with_name(f".{path.name}.{uuid4().hex}.tmp")
-        try:
-            ds.to_netcdf(
-                tmp_path,
-                encoding={"foot": {"zlib": True, "complevel": 4}},
-            )
-            os.replace(tmp_path, path)
-        finally:
-            if tmp_path.exists():
-                tmp_path.unlink()
+        with atomic_path(path) as tmp:
+            ds.to_netcdf(tmp, encoding={"foot": {"zlib": True, "complevel": 4}})
         return path
 
     def integrate_over_time(
