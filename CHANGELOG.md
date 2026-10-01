@@ -325,6 +325,8 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - A run that ends without particles reports `failed:NO_PARTICLE_DATA` in
   `sim.outcome` and `stilt status`. PYSTILT's own errors for it were not
   recognised and came out as `failed:UNKNOWN`.
+- `foot.stilt.plot.map()` and `facet()` work on a footprint on a projected
+  grid (`x` and `y`). They read `lon` and `lat` and raised.
 
 ### Added
 

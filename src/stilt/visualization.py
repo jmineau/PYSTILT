@@ -56,6 +56,25 @@ def _make_ax(
     return fig, ax
 
 
+def _cell_lonlat(foot: xr.DataArray) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Return the longitude and latitude of each footprint cell centre, as 2-D arrays.
+
+    A footprint on a projected grid (``x`` and ``y``) is converted with its
+    grid's projection, from ``foot.stilt.grid``.
+    """
+    if "lon" in foot.dims:
+        return np.meshgrid(foot["lon"].values, foot["lat"].values)
+    from pyproj import Transformer
+
+    to_lonlat = Transformer.from_crs(
+        foot.stilt.grid.projection, "EPSG:4326", always_xy=True
+    )
+    x, y = np.meshgrid(foot["x"].values, foot["y"].values)
+    lon, lat = to_lonlat.transform(x, y)
+    return np.asarray(lon), np.asarray(lat)
+
+
 def _log10_safe(vals: np.ndarray) -> np.ndarray:
     """Return log10 of ``vals``, with NaN where a value is zero or negative."""
     with np.errstate(divide="ignore", invalid="ignore"):
@@ -230,8 +249,7 @@ class FootprintPlotAccessor:
         else:
             data = foot.sum("time")
 
-        lons = data.lon.values
-        lats = data.lat.values
+        LON, LAT = _cell_lonlat(foot)
         vals = data.values.astype(float)
 
         if log:
@@ -242,14 +260,13 @@ class FootprintPlotAccessor:
 
         pad = 0.05
         extent = (
-            lons.min() - pad,
-            lons.max() + pad,
-            lats.min() - pad,
-            lats.max() + pad,
+            LON.min() - pad,
+            LON.max() + pad,
+            LAT.min() - pad,
+            LAT.max() + pad,
         )
         fig, ax = _make_ax(ax, extent=extent, tiler=tiler, tiler_zoom=tiler_zoom)
 
-        LON, LAT = np.meshgrid(lons, lats)
         mesh = ax.pcolormesh(LON, LAT, vals, cmap=cmap, shading="auto", **kwargs)
         fig.colorbar(mesh, ax=ax, label=cbar_label, shrink=0.7, pad=0.02)
 
@@ -310,9 +327,7 @@ class FootprintPlotAccessor:
         fig, axes = plt.subplots(nrows, ncols, figsize=figsize, constrained_layout=True)
         axes_flat: np.ndarray = np.array(axes).flatten()
 
-        lons = foot.lon.values
-        lats = foot.lat.values
-        LON, LAT = np.meshgrid(lons, lats)
+        LON, LAT = _cell_lonlat(foot)
 
         all_vals = foot.values.astype(float)
         if log:

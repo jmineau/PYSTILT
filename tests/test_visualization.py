@@ -275,6 +275,43 @@ def test_footprint_facet_single_time(receptor, grid):
     assert fig is not None
 
 
+@pytest.fixture
+def projected_footprint(receptor):
+    """A two-step footprint on a 10 km UTM grid (x and y, not lon and lat)."""
+    grid = Grid(
+        xmin=-112.3,
+        xmax=-111.4,
+        ymin=40.4,
+        ymax=41.1,
+        xres=10000.0,
+        yres=10000.0,
+        projection="EPSG:32612",
+    )
+    x, y = grid.axes
+    data = xr.DataArray(
+        np.random.rand(2, len(y), len(x)),
+        dims=("time", "y", "x"),
+        coords={
+            "time": [dt.datetime(2023, 1, 1, 11), dt.datetime(2023, 1, 1, 12)],
+            "y": y,
+            "x": x,
+        },
+    )
+    return _describe(data, receptor, FootprintConfig(grid=grid), "")
+
+
+def test_footprint_map_on_a_projected_grid(projected_footprint):
+    ax = projected_footprint.stilt.plot.map()
+    assert ax is not None
+    plt.close("all")
+
+
+def test_footprint_facet_on_a_projected_grid(projected_footprint):
+    fig, axes = projected_footprint.stilt.plot.facet()
+    assert fig is not None
+    plt.close("all")
+
+
 # ---------------------------------------------------------------------------
 # SimulationPlotAccessor
 # ---------------------------------------------------------------------------
