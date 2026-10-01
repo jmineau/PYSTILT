@@ -75,18 +75,81 @@ def test_location_id_point_fractional_height():
 # ---------------------------------------------------------------------------
 
 
-def test_location_id_column_ends_with_X():
+def test_location_id_column_spells_out_bottom_and_top():
     r = ColumnReceptor(
         time="202301011200", longitude=-111.85, latitude=40.77, bottom=5.0, top=50.0
     )
-    assert r.location_id == "-111.85_40.77_X"
+    assert r.location_id == "-111.85_40.77_X5-50"
 
 
 def test_location_id_column_integer_coords():
     r = ColumnReceptor(
-        time="202301011200", longitude=-112.0, latitude=40.0, bottom=5.0, top=50.0
+        time="202301011200", longitude=-112.0, latitude=40.0, bottom=0.0, top=3000.0
     )
-    assert r.location_id == "-112_40_X"
+    assert r.location_id == "-112_40_X0-3000"
+
+
+def test_columns_that_differ_only_in_top_get_different_ids():
+    """Two columns at one place and time once shared an id and result files (#105)."""
+    low, high = (
+        ColumnReceptor(
+            time="202101150600", longitude=-112, latitude=40.5, bottom=0, top=top
+        )
+        for top in (3000, 5000)
+    )
+    assert low.id == "202101150600_-112_40.5_X0-3000"
+    assert high.id != low.id
+
+
+# ---------------------------------------------------------------------------
+# location_id - altitude reference (#105)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("make", "agl_id"),
+    [
+        (
+            lambda ref: PointReceptor(
+                time="202101150600",
+                longitude=-112,
+                latitude=40.5,
+                altitude=100,
+                altitude_ref=ref,
+            ),
+            "202101150600_-112_40.5_100",
+        ),
+        (
+            lambda ref: ColumnReceptor(
+                time="202101150600",
+                longitude=-112,
+                latitude=40.5,
+                bottom=0,
+                top=3000,
+                altitude_ref=ref,
+            ),
+            "202101150600_-112_40.5_X0-3000",
+        ),
+        (
+            lambda ref: MultiPointReceptor(
+                time="202101150600",
+                longitudes=[-112, -112.1],
+                latitudes=[40.5, 40.6],
+                altitudes=[100, 200],
+                altitude_ref=ref,
+            ),
+            None,
+        ),
+    ],
+    ids=["point", "column", "multipoint"],
+)
+def test_msl_and_agl_receptors_get_different_ids(make, agl_id):
+    """Receptors that differ only in altitude reference once shared an id (#105)."""
+    agl, msl = make("agl"), make("msl")
+    assert msl.id == agl.id + "msl"
+    assert not agl.id.endswith("msl")
+    if agl_id is not None:
+        assert agl.id == agl_id
 
 
 # ---------------------------------------------------------------------------
@@ -432,7 +495,7 @@ def test_receptor_from_points_two_same_xy_makes_column():
         "202301011200", [(-111.85, 40.77, 5), (-111.85, 40.77, 50)]
     )
     assert isinstance(r, ColumnReceptor)
-    assert r.location_id.endswith("_X")
+    assert r.location_id.endswith("_X5-50")
 
 
 def test_receptor_from_points_two_different_xy_makes_multipoint():
@@ -986,16 +1049,49 @@ def test_receptor_rows_ids_match_the_receptors(
         altitudes=[10.25, 500.0],
         altitude_ref="msl",
     )
-    receptors = [point_receptor, column_receptor, multipoint_receptor, sub_metre]
+    msl_point = point_receptor.model_copy(update={"altitude_ref": "msl"})
+    msl_column = column_receptor.model_copy(update={"altitude_ref": "msl"})
+    receptors = [
+        point_receptor,
+        column_receptor,
+        multipoint_receptor,
+        sub_metre,
+        msl_point,
+        msl_column,
+    ]
 
     rows = receptor_rows(receptors_to_frame(receptors))
 
     first = rows.drop_duplicates("receptor")
     assert first["receptor"].tolist() == [r.id for r in receptors]
-    assert first["kind"].tolist() == ["point", "column", "multipoint", "multipoint"]
+    assert first["kind"].tolist() == [
+        "point",
+        "column",
+        "multipoint",
+        "multipoint",
+        "point",
+        "column",
+    ]
     assert first["location"].tolist() == [r.location_id for r in receptors]
     for r in receptors:
         assert receptor_from_rows(rows[rows.receptor == r.id]) == r
+
+
+def test_receptor_rows_column_id_does_not_depend_on_row_order():
+    """A column listed top row first gets the id its receptor has."""
+    from stilt.receptors import receptor_rows
+
+    frame = pd.DataFrame(
+        {
+            "r_idx": [1, 1],
+            "time": ["2021-01-15 06:00", "2021-01-15 06:00"],
+            "longitude": [-112.0, -112.0],
+            "latitude": [40.5, 40.5],
+            "altitude": [3000.0, 0.0],
+        }
+    )
+    rows = receptor_rows(frame)
+    assert set(rows["receptor"]) == {"202101150600_-112_40.5_X0-3000"}
 
 
 def test_receptor_rows_checks_every_row_without_building(tmp_path):

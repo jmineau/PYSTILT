@@ -76,10 +76,22 @@ ID and the variant name joined by a slash:
    202307151800_-111.848_40.766_10/hrrr
 
 For a point receptor, the location is the longitude, latitude, and
-altitude. A column receptor has ``X`` in place of the altitude. A
-multipoint receptor uses ``multi_`` and a short hash of its points, which
-does not change if you reorder them. In the output directory the receptor
-ID is the file name, under the day of the receptor time.
+altitude. A column receptor has ``X`` and its bottom and top in place of
+the altitude:
+
+.. code-block:: text
+
+   202101150600_-112_40.5_X0-3000
+
+A multipoint receptor uses ``multi_`` and a short hash of its points, which
+does not change if you reorder them. Heights above mean sea level add
+``msl`` at the end, as in ``_100msl`` or ``_X0-3000msl``. Heights above
+ground have no marker.
+
+In the output directory the receptor ID is the file name, in a folder for
+the day of the receptor time. Each particle file also has a ``receptor``
+column. That way a scan of the whole ``particles/`` tree with pyarrow,
+DuckDB, or R can tell the receptors apart.
 
 A project runs every receptor under every variant, so 100 receptors and
 three variants make 300 simulations. With no ``variants`` in

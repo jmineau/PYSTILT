@@ -101,8 +101,9 @@ def parse_receptor_id(receptor_id: str) -> tuple[dt.datetime, str]:
     Split a receptor id into its release time and location id.
 
     An id is ``"<YYYYMMDDHHMM>_<location>"``, where the location is
-    ``"<lon>_<lat>_<alt>"`` for a point, ``"<lon>_<lat>_X"`` for a column,
-    and ``"multi_<hash>"`` for a multipoint receptor.
+    ``"<lon>_<lat>_<alt>"`` for a point, ``"<lon>_<lat>_X<bottom>-<top>"``
+    for a column, and ``"multi_<hash>"`` for a multipoint receptor. Heights
+    above mean sea level end the location with ``msl``.
 
     Raises
     ------
@@ -128,21 +129,37 @@ def _format_coord(val: float) -> str:
     return str(int(val)) if val == int(val) else str(val)
 
 
-def _point_location(lon: float, lat: float, alt: float) -> str:
-    """Location id of a point receptor, ``"<lon>_<lat>_<alt>"``."""
-    return f"{_format_coord(lon)}_{_format_coord(lat)}_{_format_coord(alt)}"
+def _ref_suffix(altitude_ref: str) -> str:
+    """Return the end of a location id for a vertical reference: ``"msl"`` or nothing."""
+    return "msl" if altitude_ref == "msl" else ""
 
 
-def _column_location(lon: float, lat: float) -> str:
-    """Location id of a column receptor, ``"<lon>_<lat>_X"``."""
-    return f"{_format_coord(lon)}_{_format_coord(lat)}_X"
+def _point_location(lon: float, lat: float, alt: float, altitude_ref: str) -> str:
+    """Location id of a point receptor, ``"<lon>_<lat>_<alt>"`` (``msl`` appended above sea level)."""
+    return (
+        f"{_format_coord(lon)}_{_format_coord(lat)}_{_format_coord(alt)}"
+        f"{_ref_suffix(altitude_ref)}"
+    )
+
+
+def _column_location(
+    lon: float, lat: float, bottom: float, top: float, altitude_ref: str
+) -> str:
+    """Location id of a column receptor, ``"<lon>_<lat>_X<bottom>-<top>"`` (``msl`` appended above sea level)."""
+    return (
+        f"{_format_coord(lon)}_{_format_coord(lat)}"
+        f"_X{_format_coord(bottom)}-{_format_coord(top)}{_ref_suffix(altitude_ref)}"
+    )
 
 
 def _multipoint_location(
-    lons: Iterable[float], lats: Iterable[float], alts: Iterable[float]
+    lons: Iterable[float],
+    lats: Iterable[float],
+    alts: Iterable[float],
+    altitude_ref: str,
 ) -> str:
     """
-    Location id of a multipoint receptor, ``"multi_<hash>"``.
+    Location id of a multipoint receptor, ``"multi_<hash>"`` (``msl`` appended above sea level).
 
     The hash covers the sorted points, with longitudes and latitudes rounded
     to 5 decimals and altitudes to 0.01 m. A whole-metre altitude hashes as
@@ -156,7 +173,8 @@ def _multipoint_location(
         ],
         separators=(",", ":"),
     )
-    return "multi_" + hashlib.sha256(canonical.encode()).hexdigest()[:10]
+    digest = hashlib.sha256(canonical.encode()).hexdigest()[:10]
+    return f"multi_{digest}{_ref_suffix(altitude_ref)}"
 
 
 # ---------------------------------------------------------------------------
@@ -184,9 +202,9 @@ class Receptor(BaseModel):
     attrs : dict
         Extra labels, such as a site or scene name. These are the columns of
         ``receptors.csv`` that PYSTILT does not use. They are kept when the
-        receptors are written back to CSV and can be used to filter, as in
-        ``model.receptors.sel(site="WBB")``. They are not part of the
-        receptor's id or of equality.
+        receptors are written back to CSV, and are columns of
+        ``project.receptors`` and ``project.simulations`` to select on. They
+        are not part of the receptor's id or of equality.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -434,8 +452,10 @@ class PointReceptor(Receptor):
 
     @property
     def location_id(self) -> str:
-        """Location id, ``"<lon>_<lat>_<alt>"``."""
-        return _point_location(self.longitude, self.latitude, self.altitude)
+        """Location id, ``"<lon>_<lat>_<alt>"``, ending in ``msl`` above sea level."""
+        return _point_location(
+            self.longitude, self.latitude, self.altitude, self.altitude_ref
+        )
 
     def coords(self) -> list[tuple[float, float, float]]:
         """Return ``(lat, lon, alt)`` of the release point."""
@@ -492,8 +512,10 @@ class ColumnReceptor(Receptor):
 
     @property
     def location_id(self) -> str:
-        """Location id, ``"<lon>_<lat>_X"``."""
-        return _column_location(self.longitude, self.latitude)
+        """Location id, ``"<lon>_<lat>_X<bottom>-<top>"``, ending in ``msl`` above sea level."""
+        return _column_location(
+            self.longitude, self.latitude, self.bottom, self.top, self.altitude_ref
+        )
 
     def coords(self) -> list[tuple[float, float, float]]:
         """Return ``(lat, lon, alt)`` of the bottom and the top of the column."""
@@ -595,13 +617,15 @@ class MultiPointReceptor(Receptor):
     @property
     def location_id(self) -> str:
         """
-        Location id, ``"multi_<hash>"``.
+        Location id, ``"multi_<hash>"``, ending in ``msl`` above sea level.
 
         The hash covers the sorted points, with longitudes and latitudes
         rounded to 5 decimals and altitudes to 0.01 m. A whole-metre
         altitude hashes as its integer.
         """
-        return _multipoint_location(self.longitudes, self.latitudes, self.altitudes)
+        return _multipoint_location(
+            self.longitudes, self.latitudes, self.altitudes, self.altitude_ref
+        )
 
     def coords(self) -> list[tuple[float, float, float]]:
         """Return ``(lat, lon, alt)`` of each release point."""
@@ -789,12 +813,20 @@ def receptor_rows(frame: pd.DataFrame) -> pd.DataFrame:
     _, first_rows = np.unique(codes, return_index=True)  # groups are 0, 1, ... in order
     lon_f, lat_f, alt_f = lon.tolist(), lat.tolist(), alt.tolist()
     group_kind = kind[first_rows]
+    group_ref = ref[first_rows].tolist()
+    # A column's two rows may come in either order.
+    bottom = g["alt"].transform("min").to_numpy().tolist()
+    top = g["alt"].transform("max").to_numpy().tolist()
     group_location = np.empty(len(first_rows), dtype=object)
     for code, row in enumerate(first_rows):
         if group_kind[code] == "point":
-            group_location[code] = _point_location(lon_f[row], lat_f[row], alt_f[row])
+            group_location[code] = _point_location(
+                lon_f[row], lat_f[row], alt_f[row], group_ref[code]
+            )
         elif group_kind[code] == "column":
-            group_location[code] = _column_location(lon_f[row], lat_f[row])
+            group_location[code] = _column_location(
+                lon_f[row], lat_f[row], bottom[row], top[row], group_ref[code]
+            )
     multi = np.flatnonzero(kind == "multipoint")
     if len(multi):
         # HYSPLIT joins consecutive starting locations at one latitude and
@@ -826,6 +858,7 @@ def receptor_rows(frame: pd.DataFrame) -> pd.DataFrame:
                 [lon_f[i] for i in idx],
                 [lat_f[i] for i in idx],
                 [alt_f[i] for i in idx],
+                group_ref[code],
             )
     stamps = time.iloc[first_rows].dt.strftime("%Y%m%d%H%M").to_numpy(dtype=object)
     group_ids = stamps + "_" + group_location

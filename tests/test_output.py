@@ -181,6 +181,37 @@ def test_particles_store_time_and_index_as_int32(tmp_path):
     assert str(schema.field("long").type) == "double"
 
 
+def test_particle_files_name_their_receptor_in_a_column(tmp_path):
+    """A scan of the particles tree tells receptors apart; one file reads without it (#105)."""
+    import pyarrow.dataset as pads
+
+    run = Output(tmp_path / "output").run("hrrr", SETTINGS)
+    receptors = [_receptor(hour=6), _receptor(hour=18, day=16)]
+    for receptor in receptors:
+        run.write_particles(_trajectories(receptor, n=10))
+
+    from collections import Counter
+
+    scan = pads.dataset(run.particles_dir, format="parquet").to_table()
+    counts = Counter(scan.column("receptor").to_pylist())
+    assert counts == {str(r.id): 100 for r in receptors}
+
+    back = run.read_particles(str(receptors[0].id))
+    assert "receptor" not in back.data.columns
+
+
+def test_particle_file_without_a_receptor_column_still_reads(tmp_path):
+    """Files written before the receptor column read as before."""
+    run = Output(tmp_path / "output").run("hrrr", SETTINGS)
+    receptor = _receptor()
+    traj = _trajectories(receptor)
+    traj.to_parquet(run.particles_path(str(receptor.id)))  # no receptor column
+    back = run.read_particles(str(receptor.id))
+    pd.testing.assert_frame_equal(
+        back.data[traj.data.columns], traj.data, check_like=True
+    )
+
+
 def test_particles_reject_fractional_time(tmp_path):
     run = Output(tmp_path / "output").run("hrrr", SETTINGS)
     traj = _trajectories(_receptor())

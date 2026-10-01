@@ -19,6 +19,18 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   in all three places it is checked; a platform with no bundled build used
   to raise `RuntimeError`. `FailureReason` and `identify_failure_reason`
   move to `stilt.transport.hysplit`, beside the driver whose log they read.
+- **Receptor ids name everything that makes a receptor distinct**
+  ([#105](https://github.com/jmineau/PYSTILT/issues/105); breaking for
+  column and MSL receptors). A column id gives its bottom and top
+  (`202101150600_-112_40.5_X0-3000`), and heights above mean sea level end
+  the id with `msl` (`_100msl`, `_X0-3000msl`, `multi_<hash>msl`). Before,
+  two columns at one place and time shared an id, and so did an AGL and an
+  MSL point at one height. Two projects sharing an output directory could
+  then use each other's particles without a warning. Ids of AGL points and
+  AGL multipoint receptors do not change. Each particle file now has a
+  `receptor` column, so a scan of the `particles/` tree with pyarrow,
+  DuckDB, polars, or R can tell receptors apart. Reading one file drops the
+  column.
 - **Results live in an output directory, not inside the project**
   ([#74](https://github.com/jmineau/PYSTILT/issues/74), design in
   [#67](https://github.com/jmineau/PYSTILT/issues/67); breaking). A

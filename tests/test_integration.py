@@ -243,7 +243,7 @@ def test_idempotency(tmp_path, wbb_receptor, traj_only_config):
 
 @integration
 def test_column(tmp_path, wbb_column_receptor, wbb_config):
-    """Column receptor produces trajectory and footprint; its id ends with _X."""
+    """Column receptor produces trajectory and footprint; its id spells out the column."""
     model = Project.init(
         tmp_path / "column",
         config=wbb_config,
@@ -252,7 +252,10 @@ def test_column(tmp_path, wbb_column_receptor, wbb_config):
     model.run()
 
     sid = _sim_id(wbb_column_receptor)
-    assert sid.receptor.endswith("_X"), f"Expected a column receptor id, got {sid}"
+    r = wbb_column_receptor
+    assert sid.receptor.endswith(f"_X{r.bottom:g}-{r.top:g}"), (
+        f"Expected a column receptor id, got {sid}"
+    )
 
     sim = model.simulation(*sid)
     assert sim.has_trajectory

@@ -84,8 +84,10 @@ Glossary
       ``202307151800_-111.848_40.766_10/hrrr``. It is the receptor id, a
       slash, and the variant name. The receptor id is the receptor time as
       ``YYYYMMDDHHMM``, then the longitude, latitude, and altitude. Column
-      receptors end in ``_X`` instead of an altitude. Multipoint receptors
-      use ``multi_`` and a short hash instead of coordinates.
+      receptors end in ``X`` and the bottom and top (``_X0-3000``) instead
+      of an altitude. Multipoint receptors use ``multi_`` and a short hash
+      instead of coordinates. Heights above mean sea level add ``msl`` at
+      the end.
 
    project
       A folder holding your settings (``config.yaml``), your receptors
