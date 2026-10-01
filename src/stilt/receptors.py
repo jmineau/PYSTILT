@@ -175,11 +175,13 @@ class Receptor(BaseModel):
     @field_validator("time", mode="before")
     @classmethod
     def _parse_time(cls, value: Any) -> dt.datetime:
+        """Parse the release time to a naive UTC datetime."""
         return parse_time(value)
 
     @field_validator("altitude_ref", mode="before")
     @classmethod
     def _lower_ref(cls, value: Any) -> Any:
+        """Accept the altitude reference in any case."""
         return value.lower() if isinstance(value, str) else value
 
     # -- identity ----------------------------------------------------------
@@ -219,6 +221,7 @@ class Receptor(BaseModel):
     # -- geometry ----------------------------------------------------------
 
     def _build_geometry(self) -> Geometry:
+        """Return the shapely geometry of the release points."""
         raise NotImplementedError
 
     @cached_property
@@ -340,16 +343,19 @@ class Receptor(BaseModel):
 
 
 def _check_lon(values: Iterable[float]) -> None:
+    """Raise if a longitude is outside [-180, 180]."""
     if any(not -180 <= v <= 180 for v in values):
         raise ValueError("longitude must be within [-180, 180].")
 
 
 def _check_lat(values: Iterable[float]) -> None:
+    """Raise if a latitude is outside [-90, 90]."""
     if any(not -90 <= v <= 90 for v in values):
         raise ValueError("latitude must be within [-90, 90].")
 
 
 def _check_agl(values: Iterable[float], altitude_ref: str) -> None:
+    """Raise if a height above ground is negative."""
     if altitude_ref == "agl" and any(v < 0 for v in values):
         raise ValueError("AGL altitudes must be >= 0.")
 
@@ -388,6 +394,7 @@ class PointReceptor(Receptor):
 
     @model_validator(mode="after")
     def _check(self) -> PointReceptor:
+        """Check the coordinates and the height."""
         _check_lon([self.longitude])
         _check_lat([self.latitude])
         _check_agl([self.altitude], self.altitude_ref)
@@ -411,6 +418,7 @@ class PointReceptor(Receptor):
         )
 
     def _build_geometry(self) -> Point:
+        """Return a shapely Point at the release point."""
         return Point(self.longitude, self.latitude, self.altitude)
 
 
@@ -444,6 +452,7 @@ class ColumnReceptor(Receptor):
 
     @model_validator(mode="after")
     def _check(self) -> ColumnReceptor:
+        """Check the coordinates and that the bottom is below the top."""
         _check_lon([self.longitude])
         _check_lat([self.latitude])
         if self.bottom >= self.top:
@@ -471,6 +480,7 @@ class ColumnReceptor(Receptor):
         )
 
     def _build_geometry(self) -> LineString:
+        """Return a shapely LineString from the bottom to the top."""
         return LineString(
             [
                 (self.longitude, self.latitude, self.bottom),
@@ -520,10 +530,12 @@ class MultiPointReceptor(Receptor):
     @field_validator("longitudes", "latitudes", "altitudes", mode="before")
     @classmethod
     def _as_floats(cls, value: Any) -> tuple[float, ...]:
+        """Return the values as a tuple of floats."""
         return tuple(float(v) for v in np.asarray(value, dtype=float).ravel())
 
     @model_validator(mode="after")
     def _check(self) -> MultiPointReceptor:
+        """Check the points, and that no two share a horizontal location."""
         if not (len(self.longitudes) == len(self.latitudes) == len(self.altitudes)):
             raise ValueError(
                 "longitudes, latitudes, and altitudes must have the same length."
@@ -582,6 +594,7 @@ class MultiPointReceptor(Receptor):
         )
 
     def _build_geometry(self) -> MultiPoint:
+        """Return a shapely MultiPoint of the release points."""
         return MultiPoint(
             list(zip(self.longitudes, self.latitudes, self.altitudes, strict=True))
         )
@@ -711,6 +724,7 @@ def receptors_from_frame(frame: pd.DataFrame) -> list[Receptor]:
     ref = frame["altitude_ref"].astype(str).str.lower().to_numpy()
 
     def point(i: int) -> Receptor:
+        """Return the point receptor of row *i*."""
         return PointReceptor(
             time=time.iloc[i],
             longitude=lon[i],
