@@ -11,7 +11,6 @@ from .geometry import (
 from .meteorology import MetConfig, MetSettings
 from .params import ErrorParams, ModelParams, STILTParams, TransportParams
 from .project import ProjectConfig
-from .runtime import RuntimeSettings
 from .spatial import (
     Bounds,
     Grid,
@@ -36,7 +35,6 @@ __all__ = [
     "MetSettings",
     "ProjectConfig",
     "ModelParams",
-    "RuntimeSettings",
     "STILTParams",
     "TransportParams",
     "TransportSettings",

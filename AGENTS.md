@@ -188,9 +188,9 @@ output directory, never only in memory.
   public config stays flat (`ProjectConfig(numpar=..., seed=...)`). CONTRIBUTING
   explains how a field is routed to `SETUP.CFG`, `CONTROL`, `WINDERR`, or
   `ZIERR`.
-- `RuntimeSettings` is one `pydantic-settings` class reading `PYSTILT_*`
-  environment variables (`compute_root`). The runner and the workers read
-  it; `Project` does not.
+- The scratch directory comes from the `PYSTILT_COMPUTE_ROOT` environment
+  variable, which `resolve_compute_root` in the runner reads; `Project`
+  does not.
 - `ExecutionConfig` (`execution:` in `config.yaml`) says where receptors run
   and with what Slurm resources. It forbids unknown keys; other `sbatch`
   options go under its `slurm:` mapping.

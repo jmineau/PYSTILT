@@ -272,6 +272,15 @@ def test_compute_root_from_the_environment_and_explicit_wins(tmp_path, monkeypat
     assert explicit == (tmp_path / "explicit").resolve()
 
 
+def test_an_empty_compute_root_variable_is_unset(tmp_path, monkeypatch):
+    """PYSTILT_COMPUTE_ROOT= means the default, not the current directory."""
+    monkeypatch.setenv("TMPDIR", str(tmp_path / "tmp"))
+    monkeypatch.setenv("PYSTILT_COMPUTE_ROOT", "")
+
+    expected = (tmp_path / "tmp" / "pystilt" / "proj").resolve()
+    assert resolve_compute_root(_project(tmp_path)) == expected
+
+
 # ---------------------------------------------------------------------------
 # Receptors
 # ---------------------------------------------------------------------------

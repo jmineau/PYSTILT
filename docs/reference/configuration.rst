@@ -23,9 +23,8 @@ that decides its particles (its transport fields, the met's
 :class:`MetSettings`, and the :class:`ModelInfo`), whose hash names the
 run in the output directory. :class:`FootprintConfig` holds the footprint
 settings, and each footprint keeps the ones it was calculated with.
-:class:`RuntimeSettings` reads the
-``PYSTILT_*`` environment variables, which set where work runs and never
-change a result.
+The ``PYSTILT_COMPUTE_ROOT`` environment variable sets the scratch
+directory HYSPLIT runs in. It never changes a result.
 
 .. autosummary::
    :toctree: _api
@@ -40,7 +39,6 @@ change a result.
    FootprintConfig
    Bounds
    Grid
-   RuntimeSettings
 
 Parameters
 ----------
