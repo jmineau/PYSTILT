@@ -110,12 +110,14 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **HYSPLIT sits behind a transport model interface**
   ([#87](https://github.com/jmineau/PYSTILT/issues/87), decision 8 of
   [#67](https://github.com/jmineau/PYSTILT/issues/67)). The worker runs a
-  simulation through `stilt.model.get_model(name)`, where the name is the
-  one the run's settings record. `stilt.hysplit.HysplitModel` is the one
-  transport model. HYSPLIT now reads the meteorology files where they are (the
-  cropped copies when a met is cropped) instead of through links made in
-  each run's working directory, so a kept `scratch/` folder no longer has a
-  `met/` folder. `Met.stage_files_for_simulation` is replaced by
+  simulation through `stilt.transport.get_model(name)`, where the name is
+  the one the run's settings record. `stilt.transport.hysplit.HysplitModel`
+  is the one transport model. Each model is a subpackage of
+  `stilt.transport`, so `stilt.hysplit` is now `stilt.transport.hysplit`.
+  HYSPLIT now reads the meteorology files where they are (the cropped
+  copies when a met is cropped) instead of through links made in each run's
+  working directory, so a kept `scratch/` folder no longer has a `met/`
+  folder. `Met.stage_files_for_simulation` is replaced by
   `Met.files`.
 - **Slurm runs go through submitit; the queue and Kubernetes are removed**
   ([#87](https://github.com/jmineau/PYSTILT/issues/87), decision 7 of

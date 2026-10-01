@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from stilt.config.transport import hysplit_version
-from stilt.model import ModelRun
+from stilt.transport import ModelRun
 
 from .driver import HYSPLITDriver
 
@@ -21,7 +21,7 @@ class HysplitModel:
     HYSPLIT as a transport model, the object ``get_model("hysplit")`` returns.
 
     :meth:`run` picks the met files a receptor needs and runs HYSPLIT
-    through a :class:`~stilt.hysplit.HYSPLITDriver`, which writes the input
+    through a :class:`~stilt.transport.hysplit.HYSPLITDriver`, which writes the input
     files, runs ``hycs_std``, and reads the particles. HYSPLIT reads the met
     where it is (the cropped copies when the met is cropped), so nothing is
     staged per run.

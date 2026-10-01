@@ -32,10 +32,10 @@ from stilt.errors import (
 )
 from stilt.footprint import Footprint
 from stilt.meteorology import Met
-from stilt.model import get_model
 from stilt.simulation import Simulation
 from stilt.trajectory import Trajectories
 from stilt.transforms import ParticleTransform, TransformContext
+from stilt.transport import get_model
 
 from .runner import resolve_compute_root
 

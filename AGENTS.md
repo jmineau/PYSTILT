@@ -114,8 +114,6 @@ src/stilt/
   flux.py            sampling a flux field at points or along particles
   geometry.py        aggregation targets (meshes, zones) and overlap weights
   meteorology.py     Met: ARL file discovery, download, and cropping (via arlmet)
-  model.py           TransportModel protocol and get_model; HYSPLIT is the one
-                     transport model (hysplit/model.py)
   transforms.py      pre-footprint particle transforms (averaging kernel,
                      pressure weighting, lifetime decay) and their YAML I/O
   errors.py          failure reasons and structured error types
@@ -131,8 +129,11 @@ src/stilt/
                      selection, slant geometry, transport error, wind-error
                      statistics, backgrounds, plume backgrounds. Arrays in,
                      plain values out; there is no observation object.
-  hysplit/           HYSPLIT driver (CONTROL / SETUP.CFG writers) plus the
-                     bundled binaries (bin/) and data tables (data/)
+  transport/         the TransportModel protocol and get_model (__init__.py),
+                     one subpackage per transport model
+    hysplit/         HYSPLIT, the one model today: HysplitModel, the driver
+                     (CONTROL / SETUP.CFG writers), and the bundled binaries
+                     (bin/) and data tables (data/)
 
 tests/               pytest; markers `integration` and `fidelity`
 docs/                Sphinx (pydata-sphinx-theme)
@@ -478,6 +479,6 @@ Feature status lives in the roadmap tables in [README.md](README.md) and
   default seed, as STILT-R's error run does, which is what the `winderr`
   fidelity scenario (an `hrrr-err` variant) relies on. The R
   fidelity fixture applies the same seed mapping.
-- HYSPLIT binaries in `src/stilt/hysplit/bin/` are Linux x86-64. Real runs are
-  heavy; on a shared HPC system run them through the Slurm backend or an
-  allocation, not on a login node.
+- HYSPLIT binaries in `src/stilt/transport/hysplit/bin/` are Linux x86-64.
+  Real runs are heavy; on a shared HPC system run them through the Slurm
+  backend or an allocation, not on a login node.

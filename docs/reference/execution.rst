@@ -62,7 +62,7 @@ is the one transport model.
    :toctree: _api
    :nosignatures:
 
-   stilt.model.TransportModel
-   stilt.model.ModelRun
-   stilt.model.get_model
-   stilt.hysplit.HysplitModel
+   stilt.transport.TransportModel
+   stilt.transport.ModelRun
+   stilt.transport.get_model
+   stilt.transport.hysplit.HysplitModel

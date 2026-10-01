@@ -19,7 +19,7 @@ from setuptools.command.build_py import build_py
 
 
 def bundled_build(plat_name: str) -> str | None:
-    """Return the ``hysplit/bin`` folder a wheel for *plat_name* carries."""
+    """Return the ``transport/hysplit/bin`` folder a wheel for *plat_name* carries."""
     if "linux" in plat_name and plat_name.endswith("x86_64"):
         return "linux_x64"
     if plat_name.startswith("macosx"):
@@ -53,7 +53,7 @@ class BuildPyOneBinary(build_py):
         if wheel is None or self.editable_mode:
             return
         keep = bundled_build(wheel.get_tag()[2])
-        bin_dir = Path(self.build_lib, "stilt", "hysplit", "bin")
+        bin_dir = Path(self.build_lib, "stilt", "transport", "hysplit", "bin")
         # Also clears a build left in build/ by an earlier wheel.
         for build in bin_dir.iterdir():
             if build.is_dir() and build.name != keep:

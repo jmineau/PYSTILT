@@ -27,9 +27,9 @@ from stilt.errors import (
     HYSPLITTimeoutError,
     NoParticleOutputError,
 )
-from stilt.hysplit.control import ControlFile
-from stilt.hysplit.namelist import NameList
 from stilt.receptors import Receptor
+from stilt.transport.hysplit.control import ControlFile
+from stilt.transport.hysplit.namelist import NameList
 
 CONTROL_FILE = "CONTROL"
 SETUP_FILE = "SETUP.CFG"
@@ -58,7 +58,7 @@ def _bundled_exe_dir() -> Path:
     elif system == "Darwin" and machine in ("x86_64", "arm64"):
         subdir = "macos_x64"
     if subdir is not None:
-        exe_dir = Path(str(pkg_files("stilt.hysplit") / "bin" / subdir))
+        exe_dir = Path(str(pkg_files("stilt.transport.hysplit") / "bin" / subdir))
         if (exe_dir / HYCS_STD_FILE).is_file():
             return exe_dir
     raise RuntimeError(
@@ -70,7 +70,7 @@ def _bundled_exe_dir() -> Path:
 
 def _bundled_data_dir() -> Path:
     """Return the directory of HYSPLIT's bundled data tables."""
-    return Path(str(pkg_files("stilt.hysplit") / "data"))
+    return Path(str(pkg_files("stilt.transport.hysplit") / "data"))
 
 
 def _read_particle_dat(path: Path, names: Sequence[str]) -> pd.DataFrame:
@@ -130,7 +130,7 @@ class HYSPLITDriver:
 
     :meth:`prepare` writes the input files (``CONTROL``, ``SETUP.CFG``, and
     the error files) and :meth:`execute` runs the binary and reads the
-    particles it writes. :class:`~stilt.hysplit.HysplitModel` makes one per
+    particles it writes. :class:`~stilt.transport.hysplit.HysplitModel` makes one per
     run. Use it directly only to run HYSPLIT outside a project.
 
     Parameters
