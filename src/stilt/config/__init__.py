@@ -9,8 +9,8 @@ from .geometry import (
     WindowsGeometrySpec,
 )
 from .meteorology import MetConfig, MetSettings
-from .model import ModelConfig
 from .params import ErrorParams, ModelParams, STILTParams, TransportParams
+from .project import ProjectConfig
 from .runtime import RuntimeSettings
 from .spatial import (
     Bounds,
@@ -34,7 +34,7 @@ __all__ = [
     "Grid",
     "MetConfig",
     "MetSettings",
-    "ModelConfig",
+    "ProjectConfig",
     "ModelParams",
     "RuntimeSettings",
     "STILTParams",

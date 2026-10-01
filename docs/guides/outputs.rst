@@ -23,28 +23,27 @@ Open the project, pick a simulation, and plot it:
 
    import stilt
 
-   model = stilt.Model(project="./my_project")
-   sim = next(iter(model.simulations))          # the first simulation
+   project = stilt.Project("./my_project")
+   sim = project.simulation("202307151800_-111.848_40.766_10", "hrrr")
 
    sim.footprint.plot.map()                     # footprint, summed over time
    sim.trajectories.plot.map()                  # particle paths
    sim.plot.map()                               # receptor, particles, and footprint together
 
-To pick a particular simulation, index by receptor id and variant:
+A simulation is named by its receptor id and its variant. To see them all,
+look at ``project.simulations``, a DataFrame with one row per simulation:
 
 .. code-block:: python
 
-   model.simulations.keys()                     # all (receptor, variant) ids
-   sim = model.simulations["202307151800_-111.848_40.766_10", "hrrr"]
-   sim = model.simulations["202307151800_-111.848_40.766_10/hrrr"]   # same thing
+   project.simulations[["receptor", "variant"]]
 
 Plotting needs the ``visualization`` extra. If cartopy is installed, maps
 also show coastlines and state borders. There are a few other plots:
 
 - ``foot.plot.facet()`` draws one panel per hour.
 - ``receptor.plot.map()`` shows where the receptor is.
-- ``model.plot.availability()`` shows which receptor times and locations
-  have results.
+- ``project.plot.availability()`` shows the receptor times at each
+  location.
 
 Footprints
 ----------
@@ -79,18 +78,27 @@ The file records the receptor and the settings used to make it.
 Many simulations at once
 ------------------------
 
-``model.simulations`` holds every receptor under every variant. Narrow it
-with ``sel``, then load an output from the result:
+``project.simulations`` is a pandas DataFrame with one row per receptor
+under each variant. Its columns are:
+
+- ``receptor``, the receptor id
+- ``variant``, the variant name
+- ``group``, the variant's name in ``config.yaml``. The realizations
+  ``hrrr-err-0`` and ``hrrr-err-1`` share the group ``hrrr-err``.
+- ``time``, ``kind``, and ``location`` of the receptor
+- one column for each extra column of ``receptors.csv``
+
+Select rows with pandas, then pass them to a loader:
 
 .. code-block:: python
 
-   sims = model.simulations.sel(
-       variant="hrrr",
-       time=slice("2023-07-01", "2023-07-31 23:00"),    # receptor times, both ends included
-   )
-   footprints = sims.footprint.load()                   # {simulation id: Footprint}
-   paths = sims.footprint.paths()                       # {simulation id: Path}
-   trajectories = sims.trajectories.load()
+   sims = project.simulations
+   july = sims[
+       (sims.variant == "hrrr")
+       & sims.time.between("2023-07-01", "2023-07-31 23:00")   # both ends included
+   ]
+   footprints = project.load_footprints(july)         # {simulation id: Footprint}
+   trajectories = project.load_trajectories(july)     # {simulation id: Trajectories}
 
 The results are dictionaries keyed by simulation id, so you always know
 which receptor a result belongs to:
@@ -100,41 +108,32 @@ which receptor a result belongs to:
    for sid, foot in footprints.items():
        print(sid.receptor, float(foot.integrate_over_time().sum()))
 
-``sel`` takes these filters, each as one value or a list:
+Leave out the selection to load every simulation. A simulation whose result
+does not exist yet is left out. To find a single file, use
+``sim.footprint_path`` or ``sim.trajectories_path``.
 
-- ``receptor``, receptor ids
-- ``variant``, variant names. The name of a realization group, such as
-  ``hrrr-err``, selects all of its realizations.
-- ``time``, one receptor time or a ``slice`` of times
-- ``location``, location ids
-- ``where``, a function that takes a receptor and returns ``True`` to keep
-  it
-
-Each call narrows the one before. A receptor id or variant name that the
-project does not have raises ``KeyError``. The other filters may select
-nothing.
-
-Extra columns in ``receptors.csv`` are on each receptor as ``attrs``. Use
-them with ``where`` to gather one satellite scene or one site:
+The extra columns of ``receptors.csv`` select one satellite scene or one
+site:
 
 .. code-block:: python
 
-   scene = model.simulations.sel(variant="hrrr", where=lambda r: r.attrs["scene"] == "A")
+   scene = sims[(sims.variant == "hrrr") & (sims.scene == "A")]
+   ensemble = sims[sims.group == "hrrr-err"]          # every realization
 
 To see what is left to do:
 
 .. code-block:: python
 
-   model.simulations.incomplete()   # a selection, like sel()
-   model.simulations.status()       # a DataFrame, one row per simulation
+   project.incomplete()          # the rows that are not complete
+   project.status()              # every row, with four more columns
+   project.status(july)          # the same, for a selection
 
-``status()`` has a ``trajectory`` and a ``footprint`` column that say
+``status()`` adds a ``trajectory`` and a ``footprint`` column that say
 whether each output exists. They are blank where the variant does not make
 that output. The ``empty`` column marks footprints that are empty (`Empty
 footprints`_), and the ``complete`` column says whether the simulation is
-done.
-``model.status()`` returns the same table. It checks every simulation, so
-it is slow on a large project stored in the cloud. From the command line,
+done. Finding empty footprints opens each footprint file, so ``status()``
+is slower than ``incomplete()`` on a large project. From the command line,
 ``stilt status`` prints the totals, per variant when there are several.
 
 Trajectories
@@ -173,7 +172,7 @@ The columns you are most likely to use:
      - Mixed-layer height, vertical velocity spread, Lagrangian time scale,
        and pressure
 
-To open a trajectory file without a model:
+To open a trajectory file without a project:
 
 .. code-block:: python
 
@@ -186,9 +185,9 @@ Sometimes a simulation runs fine but no particle ever reaches the footprint
 grid. Usually the grid is too small or is not upwind. PYSTILT then writes a
 footprint file with no cells and the reason inside. The simulation counts
 as finished, so reruns skip it. ``sim.footprint`` is ``None``,
-``sim.empty_reason`` says why, and ``load()`` leaves the simulation out
-because there is nothing to load. The ``empty`` column of
-``model.simulations.status()`` lists them. If you see many, make your
+``sim.empty_reason`` says why, and ``project.load_footprints()`` leaves the
+simulation out because there is nothing to load. The ``empty`` column of
+``project.status()`` lists them. If you see many, make your
 footprint grid bigger.
 
 An empty footprint is not a footprint of zeros. It means the transport never

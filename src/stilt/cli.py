@@ -1,7 +1,7 @@
 """
 The ``stilt`` command-line interface.
 
-Each command opens a project with :class:`~stilt.Model`, calls it, and
+Each command opens a :class:`~stilt.Project`, calls it, and
 prints a short summary. Examples::
 
     stilt init                        # start a project in the current directory
@@ -24,8 +24,7 @@ import typer
 
 from stilt.config import ExecutionConfig
 from stilt.execution import resolve_compute_root
-from stilt.model import Model
-from stilt.project import CONFIG_KEY, RECEPTORS_KEY
+from stilt.project import CONFIG_KEY, RECEPTORS_KEY, Project
 
 app = typer.Typer(
     name="stilt",
@@ -203,8 +202,7 @@ def run(
     --no-skip is given. A local run returns when all simulations are done.
     A Slurm run submits a job array and returns. Add --wait to wait for it.
     """
-    resolved = _resolve_project(project)
-    model = Model(project=resolved)
+    opened = Project(_resolve_project(project))
     # Progress is the worker's one line per finished receptor.
     logging.basicConfig(level=logging.WARNING, format="%(message)s")
     logging.getLogger("stilt.execution.worker").setLevel(logging.INFO)
@@ -217,37 +215,39 @@ def run(
     if cpus is not None:
         overrides["cpus"] = cpus
     execution = ExecutionConfig.model_validate(
-        {**model.config.execution.model_dump(exclude_unset=True), **overrides}
+        {**opened.config.execution.model_dump(exclude_unset=True), **overrides}
     )
 
     _print_run_start(
-        model,
+        opened,
         execution,
         compute_root=compute_root,
         skip_existing=not no_skip,
         wait=wait,
     )
-    # A local run has finished when this returns; a Slurm job has been submitted.
-    handle = model.run(
-        skip_existing=not no_skip,
-        wait=False,
-        compute_root=compute_root,
-        execution=execution,
-    )
-    if handle.detached:
-        typer.echo(f"Submitted job: {handle.job_id}")
-        if not wait:
+    options: dict[str, Any] = {
+        "skip_existing": not no_skip,
+        "compute_root": compute_root,
+        "execution": execution,
+    }
+    if execution.backend == "slurm" and not wait:
+        jobs = opened.submit(**options)
+        if jobs:
+            typer.echo(f"Submitted job: {str(jobs[0].job_id).split('_')[0]}")
             return
-        typer.echo("Waiting for job completion (squeue shows its tasks)...")
-        handle.wait()
-    _print_status(model)
+    else:
+        if execution.backend == "slurm":
+            typer.echo(
+                "Submitted; waiting for the job to finish (squeue shows its tasks)..."
+            )
+        opened.run(**options)
+    _print_status(opened)
 
 
 @app.command()
 def status(project: str | None = _PROJECT_ARG) -> None:
     """Count finished and pending simulations, per variant when there are several."""
-    model = Model(project=_resolve_project(project))
-    _print_status(model)
+    _print_status(Project(_resolve_project(project)))
 
 
 # ---------------------------------------------------------------------------
@@ -260,29 +260,28 @@ def _counts(total: int, pending: int) -> str:
     return f"total={total}  completed={total - pending}  pending={pending}"
 
 
-def _print_status(model: Model) -> None:
+def _print_status(project: Project) -> None:
     """Print a project status summary, per variant when there are several."""
-    sims = model.simulations
-    pending = sims.incomplete()
-    typer.echo(f"Project: {model.project.root}  {_counts(len(sims), len(pending))}")
-    if len(model.variants) > 1:
-        per_variant = len(sims) // len(model.variants)
-        pending_ids = pending.keys()
-        waiting = Counter(key.variant for key in pending_ids)
-        for variant in model.variants:
-            typer.echo(f"  {variant}: {_counts(per_variant, waiting[variant])}")
-    unreferenced = model.unreferenced()
+    sims = project.simulations
+    pending = project.incomplete(sims)
+    typer.echo(f"Project: {project.directory}  {_counts(len(sims), len(pending))}")
+    if len(project.variants) > 1:
+        total = Counter(sims["variant"])
+        waiting = Counter(pending["variant"])
+        for variant in project.variants:
+            typer.echo(f"  {variant}: {_counts(total[variant], waiting[variant])}")
+    unreferenced = project.unreferenced()
     for kind, keys in unreferenced.items():
         if keys:
             typer.echo(
-                f"{kind} folders in {model.output.path} that no variant here uses: "
+                f"{kind} folders in {project.output.path} that no variant here uses: "
                 f"{', '.join('settings=' + k for k in keys)}  (from changed settings, "
                 "dropped variants, or another project; PYSTILT never deletes them)"
             )
 
 
 def _print_run_start(
-    model: Model,
+    project: Project,
     execution: ExecutionConfig,
     *,
     compute_root: str | None,
@@ -294,18 +293,18 @@ def _print_run_start(
     mode = "existing" if skip_existing else "no-skip"
     typer.echo(
         "Starting run: "
-        f"project={model.project.root}  backend={backend}  "
+        f"project={project.directory}  backend={backend}  "
         f"tasks={1 if backend == 'local' else execution.n_workers}  "
         f"cpus={execution.cpus}  skip={mode}"
     )
-    typer.echo(f"Output: {model.output.path}")
+    typer.echo(f"Output: {project.output.path}")
     if backend == "local" or compute_root is not None:
-        scratch = resolve_compute_root(model.project, compute_root)
+        scratch = resolve_compute_root(project, compute_root)
         typer.echo(f"Compute root: {scratch}")
     else:
         typer.echo("Compute root: each task's own $TMPDIR (or PYSTILT_COMPUTE_ROOT)")
-    typer.echo(f"Receptors loaded: {len(model.receptors)}")
-    typer.echo(f"Variants: {', '.join(model.variants)}")
+    typer.echo(f"Receptors loaded: {len(project.receptors)}")
+    typer.echo(f"Variants: {', '.join(project.variants)}")
     typer.echo(
         "Execution mode: " + ("submit-and-wait" if wait else "submit-and-return")
         if backend != "local"

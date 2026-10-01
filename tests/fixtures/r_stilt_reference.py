@@ -108,7 +108,7 @@ class ReferenceScenario:
         Scalar for point; ``(bottom, top)`` tuple for column;
         tuple of per-point altitudes for multipoint.
     n_hours, numpar, krand, seed
-        Transport controls passed to :class:`~stilt.config.ModelConfig`.
+        Transport controls passed to :class:`~stilt.config.ProjectConfig`.
     hnf_plume
         Whether to apply hyper-near-field plume dilution.
     smooth_factor
@@ -222,8 +222,8 @@ class ReferenceScenario:
         return f"{REFERENCE_MET}-err" if self.siguverr is not None else None
 
     def make_model_config(self, met_dir):
-        """Return a :class:`~stilt.config.ModelConfig` configured for this scenario."""
-        from stilt.config import ModelConfig
+        """Return a :class:`~stilt.config.ProjectConfig` configured for this scenario."""
+        from stilt.config import ProjectConfig
 
         config: dict = {
             "mets": {
@@ -256,7 +256,7 @@ class ReferenceScenario:
                     "grid": None,
                 },
             }
-        return ModelConfig.model_validate(config)
+        return ProjectConfig.model_validate(config)
 
     def py_sim_id(self, variant: str = REFERENCE_MET) -> str:
         """Return the PYSTILT simulation id (``{receptor_id}/{variant}``)."""

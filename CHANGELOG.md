@@ -37,16 +37,15 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   that the variant makes no footprint or that the footprint is empty. Check
   `sim.has_trajectory` / `sim.has_footprint` first while a run may still be
   going.
-- **Receptors as a table.** `model.receptors.to_frame()` returns the
+- **Receptors as a table.** `stilt.receptors.receptors_to_frame` returns
   receptors with a row per release point, and
-  `stilt.receptors.receptors_from_frame` builds them from one. Labels from
-  extra columns select directly: `model.simulations.sel(site="WBB")`.
+  `stilt.receptors.receptors_from_frame` builds them from one.
 - Every particle and footprint file records the hash of the settings it was
   made with and the PYSTILT version that wrote it (`stilt:hash` and
   `stilt:pystilt` in the Parquet metadata), so a file copied out of the
   output directory still says where it came from.
-- `model.simulations.sel(...).jacobian(target, time_bins)` sums the
-  selected footprints onto a target in one pass, as a sparse matrix with
+- `project.jacobian(target, time_bins, variant=...)` sums a variant's
+  footprints onto a target in one pass, as a sparse matrix with
   labelled rows and columns (`stilt.output.Jacobian`). The time bins must
   be closed on the left, since a footprint time is the start of its hour;
   other bins raise a `ValueError`.
@@ -60,10 +59,10 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   reads results and reports completion, and runs nothing. HYSPLIT runs and
   footprint writing live in `stilt.execution` (`run_trajectories`,
   `write_footprint`, `run_simulation`); `Simulation.generate_footprint`
-  calculates without writing. `Model` keeps no simulation cache.
+  calculates without writing.
 - **Loading a config no longer reads its `geometry`**
   ([#64](https://github.com/jmineau/PYSTILT/issues/64)). The mesh is built
-  when the variants are resolved (`ModelConfig.resolve_variants`), once per
+  when the variants are resolved (`ProjectConfig.resolve_variants`), once per
   geometry however many variants inherit it, instead of in validation on
   every load. A worker can load a config whose geometry file it cannot
   read. `FootprintConfig(geometry=...)` no longer fills in `grid` and
@@ -101,7 +100,7 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   with arlmet 0.1.0b1: pin `arlmet<0.1.0b1` if you stay on it.
 - **Status and run planning list folders instead of checking files**
   ([#60](https://github.com/jmineau/PYSTILT/issues/60)). `stilt status`,
-  `model.simulations.incomplete()`, and the planning step of `stilt run`
+  `project.incomplete()`, and the planning step of `stilt run`
   read which receptors are done from a listing of the date folders the
   selection falls in, rather than checking two files per simulation.
   `Run.receptors()` and `Footprints.receptors()` take `among=` to check
@@ -127,8 +126,8 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   no longer has to activate an environment, and a task that is preempted or
   runs out of time is submitted again and skips what it finished. Logs and
   submission files are in `slurm/<date_time>_<id>/` in the project;
-  `chunks/` is gone. `model.run()` takes `execution=` in place of
-  `executor=`, and its handle's `jobs` are the submitit jobs.
+  `chunks/` is gone. `project.run()` waits for the job and
+  `project.submit()` returns the submitit jobs at once.
 - **`execution:` settings are checked**
   ([#63](https://github.com/jmineau/PYSTILT/issues/63); breaking). The
   section is now `backend`, `n_workers`, `cpus`, `time`, `mem`, `partition`,
@@ -139,21 +138,34 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   of Slurm array tasks, and `cpus` the receptors each task runs at once. A
   local run is one task, so its processes are now set by `cpus` (and
   `stilt run --cpus`), not `n_workers`.
-- **`Model` reads; `stilt.execution` runs**
-  ([#86](https://github.com/jmineau/PYSTILT/issues/86); breaking). A
-  `Model` is its settings, its receptors, and a view of their results. It no
-  longer takes `compute_root` or `runtime`, and `model.compute_root` and
-  `model.queue` are gone. `model.run()` and `model.register()` remain as
-  shorthands for `stilt.execution.run(model)` and
-  `stilt.execution.register(model)`, which save the inputs to the project
-  and start the workers. Pass the scratch directory to the run
-  (`model.run(compute_root=...)`, `stilt run --compute-root`, or
-  `PYSTILT_COMPUTE_ROOT`); `stilt.execution.resolve_compute_root` says where
-  that is. A model built with its own receptors keeps exactly those:
-  `run()` runs them and no longer picks up every other receptor already in
-  the project's `receptors.csv`. `Model(project)` still reads the file. An existing `config.yaml` is never rewritten: a model given
-  settings that differ from the file raises `ConfigValidationError`, and an
-  unreadable file raises instead of being replaced.
+- **`Project` replaces `Model`; a project's receptors and simulations are
+  tables** ([#99](https://github.com/jmineau/PYSTILT/issues/99), step 5 of
+  [#67](https://github.com/jmineau/PYSTILT/issues/67); breaking).
+  `stilt.Project.init(path, config=..., receptors=..., **settings)` makes a
+  project: it writes `config.yaml` once and refuses a directory that has
+  one. `stilt.Project(path)` opens it and only reads. To change a setting,
+  edit `config.yaml`; PYSTILT never rewrites it. `project.add_receptors()`
+  appends to `receptors.csv` and replaces `register()`.
+  `project.receptors` and `project.simulations` are DataFrames, one row per
+  receptor and one per receptor and variant, selected with pandas
+  (`sims[sims.variant == "hrrr"]`, `sims[sims.site == "WBB"]`).
+  `project.status(sims)`, `project.incomplete(sims)`,
+  `project.load_trajectories(sims)`, and `project.load_footprints(sims)`
+  take such a selection; `project.receptor(id)` and
+  `project.simulation(id, variant)` return one object. Receptors are built
+  only when asked for: `receptors.csv` is read and checked as a table
+  (`stilt.receptors.receptor_rows`), so opening a project of 117 000 point
+  receptors takes 1.3 s instead of 6.6 s, and one of 2.5 million rows of
+  multipoint receptors 18 s instead of 53 s. Ids are unchanged. `project.run()`
+  blocks on either backend and returns the receptor results;
+  `project.submit()` sends the work to Slurm and returns the submitit jobs.
+  `ModelConfig` is now `ProjectConfig`. `Model`, `stilt.model`,
+  `stilt.collections` (`SimulationCollection`, `ReceptorCollection`,
+  `OutputCollection`), `stilt.execution.register`, and the run handles
+  (`JobHandle`, `LocalHandle`, `SlurmHandle`) are removed. Pass the scratch
+  directory to the run (`project.run(compute_root=...)`,
+  `stilt run --compute-root`, or `PYSTILT_COMPUTE_ROOT`);
+  `stilt.execution.resolve_compute_root` says where that is.
 - **Receptors are frozen pydantic models**
   ([#86](https://github.com/jmineau/PYSTILT/issues/86),
   [#66](https://github.com/jmineau/PYSTILT/issues/66); breaking).

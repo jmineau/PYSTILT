@@ -20,8 +20,9 @@ def test_documented_top_level_symbols_are_importable():
         "Grid",
         "MetConfig",
         "Met",
-        "Model",
-        "ModelConfig",
+        "Project",
+        "Output",
+        "ProjectConfig",
         "MultiPointReceptor",
         "PointReceptor",
         "RuntimeSettings",
@@ -32,3 +33,9 @@ def test_documented_top_level_symbols_are_importable():
     ]
     for name in expected:
         assert hasattr(stilt, name), name
+
+
+def test_the_old_names_are_gone():
+    """Model and its collections were replaced by Project (#99); no aliases in an alpha."""
+    for name in ("Model", "ModelConfig"):
+        assert not hasattr(stilt, name), name

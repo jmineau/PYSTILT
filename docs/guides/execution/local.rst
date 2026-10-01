@@ -34,26 +34,28 @@ From Python or a notebook
 
    import stilt
 
-   model = stilt.Model(
-       project="./my_project",
+   project = stilt.Project.init(
+       "./my_project",
        receptors=receptors,
        mets={"hrrr": {"directory": "/data/hrrr", "file_format": "%Y%m%d_%H", "file_tres": "6h"}},
        grid={"xmin": -114, "xmax": -111, "ymin": 39, "ymax": 42, "xres": 0.01, "yres": 0.01},
        execution={"backend": "local", "cpus": 4},
    )
 
-   model.run()
+   project.run()
 
-``model.run()`` does the same as ``stilt run``. It saves ``config.yaml`` and
-``receptors.csv`` to the project folder, runs every unfinished simulation,
-and returns when they are done.
+``Project.init`` writes ``config.yaml`` and ``receptors.csv`` to the project
+folder. Call it once. Later, open the project with
+``stilt.Project("./my_project")``. ``project.run()`` does the same as
+``stilt run``. It runs every unfinished simulation and returns when they
+are done.
 
 Then check on the results:
 
 .. code-block:: python
 
-   model.status()                          # one row per simulation, with a "complete" column
-   footprints = model.simulations.footprint.load()   # {simulation id: Footprint}
+   project.status()                        # one row per simulation, with a "complete" column
+   footprints = project.load_footprints()  # {simulation id: Footprint}
 
 Python or the command line?
 ---------------------------
@@ -66,17 +68,19 @@ running from a batch script.
 
 Both read and write the same project folder, so you can mix them. For
 example, run with ``stilt run`` and then analyze in a notebook with
-``stilt.Model(project=...)``.
+``stilt.Project("./my_project")``.
 
 Save now, run later
 -------------------
 
-``model.register()`` saves the settings and receptors to the project folder
-without running anything. It returns the receptor IDs:
+``Project.init`` and ``project.add_receptors()`` save settings and
+receptors to the project folder without running anything.
+``add_receptors`` returns the IDs of the receptors it added:
 
 .. code-block:: python
 
-   receptor_ids = model.register()
+   project = stilt.Project("./my_project")
+   receptor_ids = project.add_receptors(receptors)
 
 Any machine that can see the folder can then run the project with
 ``stilt run``. From Python, :func:`stilt.execution.run_receptors` runs every

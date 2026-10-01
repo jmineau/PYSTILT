@@ -11,7 +11,7 @@ from stilt.config import (
     FootprintConfig,
     Grid,
     MetConfig,
-    ModelConfig,
+    ProjectConfig,
     STILTParams,
 )
 from stilt.receptors import ColumnReceptor, MultiPointReceptor, PointReceptor
@@ -166,8 +166,8 @@ def stilt_params(tmp_path):
 
 @pytest.fixture
 def model_config(tmp_path, met_config):
-    """Minimal ModelConfig with one met entry."""
-    return ModelConfig(
+    """Minimal ProjectConfig with one met entry."""
+    return ProjectConfig(
         n_hours=-24,
         numpar=100,
         mets={"hrrr": met_config},
@@ -253,9 +253,9 @@ def wbb_grid() -> Grid:
 
 
 @pytest.fixture(scope="session")
-def wbb_config(met_dir, wbb_grid) -> ModelConfig:
-    """Minimal ModelConfig for integration tests (n_hours=-6, numpar=100)."""
-    return ModelConfig(
+def wbb_config(met_dir, wbb_grid) -> ProjectConfig:
+    """Minimal ProjectConfig for integration tests (n_hours=-6, numpar=100)."""
+    return ProjectConfig(
         mets={
             "hrrr": {
                 "directory": met_dir,
@@ -270,9 +270,9 @@ def wbb_config(met_dir, wbb_grid) -> ModelConfig:
 
 
 @pytest.fixture(scope="session")
-def traj_only_config(met_dir) -> ModelConfig:
-    """ModelConfig without footprints for trajectory-only tests."""
-    return ModelConfig(
+def traj_only_config(met_dir) -> ProjectConfig:
+    """ProjectConfig without footprints for trajectory-only tests."""
+    return ProjectConfig(
         mets={
             "hrrr": {
                 "directory": met_dir,
@@ -286,12 +286,12 @@ def traj_only_config(met_dir) -> ModelConfig:
 
 
 @pytest.fixture(scope="session")
-def multifoot_config(met_dir, wbb_grid) -> ModelConfig:
+def multifoot_config(met_dir, wbb_grid) -> ProjectConfig:
     """Config with a second, coarser footprint on the same particles."""
     coarse_grid = Grid(
         xmin=-113.0, xmax=-111.0, ymin=39.5, ymax=41.5, xres=0.05, yres=0.05
     )
-    return ModelConfig(
+    return ProjectConfig(
         mets={
             "hrrr": {
                 "directory": met_dir,
@@ -310,10 +310,10 @@ def multifoot_config(met_dir, wbb_grid) -> ModelConfig:
 
 
 @pytest.fixture(scope="session")
-def multipoint_config(met_dir) -> ModelConfig:
+def multipoint_config(met_dir) -> ProjectConfig:
     """Config with a wider domain covering all three multipoint receptor locations."""
     grid = Grid(xmin=-113.0, xmax=-110.5, ymin=39.5, ymax=42.0, xres=0.01, yres=0.01)
-    return ModelConfig(
+    return ProjectConfig(
         mets={
             "hrrr": {
                 "directory": met_dir,

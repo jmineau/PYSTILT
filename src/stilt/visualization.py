@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
     from stilt.config import Bounds
     from stilt.footprint import Footprint
-    from stilt.model import Model
+    from stilt.project import Project
     from stilt.simulation import Simulation
     from stilt.trajectory import Trajectories
 
@@ -619,19 +619,19 @@ class SimulationPlotAccessor:
 
 
 # ---------------------------------------------------------------------------
-# Model plot accessor
+# Project plot accessor
 # ---------------------------------------------------------------------------
 
 
-class ModelPlotAccessor:
-    """Plotting methods of :class:`stilt.Model`, as ``model.plot``."""
+class ProjectPlotAccessor:
+    """Plotting methods of :class:`stilt.Project`, as ``project.plot``."""
 
-    def __init__(self, model: Model):
-        self._model = model
+    def __init__(self, project: Project):
+        self._project = project
 
     def availability(self, ax: Axes | None = None, **kwargs) -> Axes:
         """
-        Plot the model's receptors by location and time.
+        Plot the project's receptors by location and time.
 
         Each receptor is a one-hour bar at its time, in the row of its
         location. Whether its simulations have run is not shown.
@@ -651,15 +651,17 @@ class ModelPlotAccessor:
             _, ax = plt.subplots()
         assert ax is not None
 
-        receptors = list(self._model.receptors)
-        if not receptors:
+        receptors = self._project.receptors
+        if receptors.empty:
             return ax
 
-        for receptor in receptors:
+        for location, time in zip(
+            receptors["location"], receptors["time"], strict=True
+        ):
             ax.barh(  # type: ignore[arg-type]
-                y=receptor.location_id,
+                y=location,
                 width=pd.Timedelta(hours=1),  # type: ignore[arg-type]
-                left=receptor.time,  # type: ignore[arg-type]
+                left=time,  # type: ignore[arg-type]
                 height=0.6,
                 align="center",
                 edgecolor="black",

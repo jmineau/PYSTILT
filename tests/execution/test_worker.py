@@ -9,13 +9,13 @@ from stilt.config import (
     FootprintConfig,
     Grid,
     MetConfig,
-    ModelConfig,
+    ProjectConfig,
     STILTParams,
     TransportSettings,
     VariantConfig,
 )
 from stilt.errors import SimulationError
-from stilt.execution import register, resolve_compute_root, worker
+from stilt.execution import resolve_compute_root, worker
 from stilt.execution.worker import (
     ReceptorResult,
     SimulationResult,
@@ -25,8 +25,8 @@ from stilt.execution.worker import (
     write_footprint,
 )
 from stilt.meteorology import Met
-from stilt.model import Model
 from stilt.output import Output
+from stilt.project import Project
 from stilt.receptors import PointReceptor, Receptor
 from stilt.simulation import Simulation
 from stilt.trajectory import Trajectories
@@ -187,8 +187,8 @@ def _fake_footprint(monkeypatch, calls: list[str] | None = None, result=None):
     monkeypatch.setattr(worker, "write_footprint", fake)
 
 
-def _model_config(tmp_path, **kwargs) -> ModelConfig:
-    return ModelConfig(
+def _model_config(tmp_path, **kwargs) -> ProjectConfig:
+    return ProjectConfig(
         mets={
             "hrrr": MetConfig(
                 directory=tmp_path / "met",
@@ -200,9 +200,9 @@ def _model_config(tmp_path, **kwargs) -> ModelConfig:
     )
 
 
-def _model(tmp_path, receptors, **config_kwargs) -> Model:
-    return Model(
-        project=tmp_path / "proj",
+def _model(tmp_path, receptors, **config_kwargs) -> Project:
+    return Project.init(
+        tmp_path / "proj",
         config=_model_config(tmp_path, **config_kwargs),
         receptors=list(receptors),
     )
@@ -703,7 +703,7 @@ def fake_pool(monkeypatch):
     monkeypatch.setattr(worker.multiprocessing, "Pool", _FakePool)
     # The initializer installs a SIGTERM handler; keep it out of the test process.
     monkeypatch.setattr(worker.signal, "signal", lambda *a, **k: None)
-    monkeypatch.setattr(worker, "_POOL_MODEL", None)
+    monkeypatch.setattr(worker, "_POOL_PROJECT", None)
     monkeypatch.setattr(worker, "_POOL_COMPUTE_ROOT", None)
     monkeypatch.setattr(worker, "_POOL_SKIP", True)
     return _FakePool
@@ -713,8 +713,7 @@ def test_run_receptors_pool_rebuilds_model_and_orders_results(
     tmp_path, receptor, other_receptor, monkeypatch, fake_pool
 ):
     model = _model(tmp_path, [receptor, other_receptor])
-    # Pool workers rebuild the Model from the project root: persist inputs.
-    ids = register(model)
+    ids = list(model.receptors["receptor"])
     calls: list[dict] = []
     monkeypatch.setattr(worker, "run_simulation", _fake_run_simulation(calls))
 
@@ -724,11 +723,11 @@ def test_run_receptors_pool_rebuilds_model_and_orders_results(
     assert pool.n_cores == 2
     assert not pool.terminated
     assert pool.closed and pool.joined
-    # The initializer rebuilt a fresh Model from the persisted project root.
-    assert worker._POOL_MODEL is not None
-    assert worker._POOL_MODEL is not model
-    assert worker._POOL_MODEL.project.root == model.project.root
-    assert resolve_compute_root(model.project) == worker._POOL_COMPUTE_ROOT
+    # The initializer opened the project again from its directory.
+    assert worker._POOL_PROJECT is not None
+    assert worker._POOL_PROJECT is not model
+    assert worker._POOL_PROJECT.directory == model.directory
+    assert resolve_compute_root(model) == worker._POOL_COMPUTE_ROOT
     assert worker._POOL_SKIP is False
     # Results come back in input order even though the pool yielded reversed.
     assert [r.receptor_id for r in results] == ids
@@ -739,7 +738,7 @@ def test_run_receptors_pool_terminates_on_interrupted_result(
     tmp_path, receptor, other_receptor, monkeypatch, fake_pool
 ):
     model = _model(tmp_path, [receptor, other_receptor])
-    ids = register(model)
+    ids = list(model.receptors["receptor"])
 
     def fake(sim, *, skip_existing=True, footprint_stale=False, **kwargs):
         # The fake pool yields the *last* id first, so interrupt on the first id.
@@ -764,7 +763,7 @@ def test_run_receptors_pool_keyboard_interrupt_terminates_and_returns(
 ):
     """A KeyboardInterrupt in the parent loop terminates the pool, keeping results."""
     model = _model(tmp_path, [receptor, other_receptor])
-    ids = register(model)
+    ids = list(model.receptors["receptor"])
 
     def imap_then_interrupt(self, func, iterable):
         items = list(iterable)

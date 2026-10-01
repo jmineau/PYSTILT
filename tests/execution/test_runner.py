@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 from pathlib import Path
-from types import SimpleNamespace
 
 import pytest
 
 from stilt.config import ExecutionConfig
-from stilt.execution import Batch, LocalHandle, SlurmHandle, runner
+from stilt.execution import Batch, runner
 from stilt.execution.runner import slurm_parameters, split
 from stilt.project import Project
 
@@ -110,14 +109,14 @@ def test_slurm_parameters_render_as_a_submission_script(tmp_path, monkeypatch):
 # ---------------------------------------------------------------------------
 
 
-def test_batch_rebuilds_the_model_and_runs_its_receptors(monkeypatch, tmp_path):
+def test_batch_opens_the_project_and_runs_its_receptors(monkeypatch, tmp_path):
     calls: list[dict] = []
 
-    def fake_run_receptors(model, receptor_ids, **kwargs):
-        calls.append({"model": model, "ids": receptor_ids, **kwargs})
+    def fake_run_receptors(project, receptor_ids, **kwargs):
+        calls.append({"project": project, "ids": receptor_ids, **kwargs})
         return ["results"]
 
-    monkeypatch.setattr("stilt.model.Model", lambda project: f"Model({project})")
+    monkeypatch.setattr("stilt.project.Project", lambda path: f"Project({path})")
     monkeypatch.setattr("stilt.execution.worker.run_receptors", fake_run_receptors)
 
     batch = Batch(
@@ -130,7 +129,7 @@ def test_batch_rebuilds_the_model_and_runs_its_receptors(monkeypatch, tmp_path):
     assert batch() == ["results"]
     assert calls == [
         {
-            "model": f"Model({tmp_path})",
+            "project": f"Project({tmp_path})",
             "ids": ["a", "b"],
             "compute_root": "/scratch/x",
             "n_cores": 2,
@@ -162,31 +161,8 @@ def test_batch_survives_pickling(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# Dispatch
+# Submitting to Slurm
 # ---------------------------------------------------------------------------
-
-
-def test_local_dispatch_runs_in_this_process(monkeypatch, tmp_path):
-    calls: list[dict] = []
-    monkeypatch.setattr(
-        "stilt.execution.worker.run_receptors",
-        lambda model, ids, **kwargs: calls.append({"ids": ids, **kwargs}),
-    )
-    model = SimpleNamespace(project=Project(tmp_path))
-
-    handle = runner._dispatch(
-        model,  # type: ignore[arg-type]
-        ["a", "b"],
-        ExecutionConfig(n_workers=5, cpus=3),
-        compute_root=None,
-        skip_existing=True,
-    )
-
-    # A local run is one task: cpus sets the processes, n_workers is for Slurm.
-    assert isinstance(handle, LocalHandle) and not handle.detached
-    assert calls == [
-        {"ids": ["a", "b"], "compute_root": None, "n_cores": 3, "skip_existing": True}
-    ]
 
 
 class _FakeJob:
@@ -194,12 +170,16 @@ class _FakeJob:
         self.job_id = job_id
         self.error = error
         self.waited = False
+        self.paths = type("Paths", (), {"folder": Path("/logs")})()
 
     def wait(self) -> None:
         self.waited = True
 
     def exception(self) -> Exception | None:
         return self.error
+
+    def result(self) -> list[str]:
+        return [f"result of {self.job_id}"]
 
 
 class _FakeExecutor:
@@ -244,20 +224,22 @@ def fake_submitit(monkeypatch):
     return _FakeExecutor
 
 
-def test_slurm_dispatch_submits_one_array_of_batches(fake_submitit, tmp_path):
+@pytest.fixture
+def pending(monkeypatch):
+    """Set which receptors the runner finds incomplete."""
+    ids: list[str] = []
+    monkeypatch.setattr(runner, "_pending", lambda project, skip_existing: list(ids))
+    return ids
+
+
+def test_submit_sends_one_array_of_batches(fake_submitit, pending, tmp_path):
+    pending.extend(["a", "b", "c"])
     project = Project(tmp_path / "my_project")
-    model = SimpleNamespace(project=project)
     execution = ExecutionConfig(
         backend="slurm", n_workers=2, cpus=4, partition="compute"
     )
 
-    handle = runner._dispatch(
-        model,  # type: ignore[arg-type]
-        ["a", "b", "c"],
-        execution,
-        compute_root=None,
-        skip_existing=False,
-    )
+    jobs = runner.submit(project, execution=execution, skip_existing=False)
 
     [executor] = fake_submitit.instances
     assert executor.cluster == "slurm"
@@ -266,39 +248,40 @@ def test_slurm_dispatch_submits_one_array_of_batches(fake_submitit, tmp_path):
     assert executor.parameters["slurm_partition"] == "compute"
     assert [b.receptor_ids for b in executor.submitted] == [["a", "c"], ["b"]]
     for batch in executor.submitted:
-        assert batch.project == project.root
+        assert batch.project == str(project.directory)
         assert batch.cpus == 4
         assert batch.skip_existing is False
         assert batch.compute_root is None  # each node resolves its own scratch
-    assert isinstance(handle, SlurmHandle)
-    assert handle.detached and handle.job_id == "777"
-    assert handle.folder == executor.folder
+    assert [job.job_id for job in jobs] == ["777_0", "777_1"]
 
 
-def test_slurm_dispatch_passes_an_explicit_compute_root(fake_submitit, tmp_path):
-    model = SimpleNamespace(project=Project(tmp_path))
-    runner._dispatch(
-        model,  # type: ignore[arg-type]
-        ["a"],
-        ExecutionConfig(backend="slurm"),
+def test_submit_passes_an_explicit_compute_root(fake_submitit, pending, tmp_path):
+    pending.append("a")
+    runner.submit(
+        Project(tmp_path),
+        execution=ExecutionConfig(backend="slurm"),
         compute_root=tmp_path / "scratch",
-        skip_existing=True,
     )
     [batch] = fake_submitit.instances[0].submitted
     assert batch.compute_root == str((tmp_path / "scratch").resolve())
 
 
-def test_slurm_handle_wait_raises_when_a_task_did_not_complete(tmp_path):
+def test_submit_with_nothing_to_do_submits_nothing(fake_submitit, pending, tmp_path):
+    jobs = runner.submit(Project(tmp_path), execution=ExecutionConfig(backend="slurm"))
+    assert jobs == []
+    assert fake_submitit.instances == []
+
+
+def test_waiting_raises_when_a_task_did_not_complete():
     good, bad = _FakeJob("9_0"), _FakeJob("9_1", error=RuntimeError("timed out"))
 
-    SlurmHandle([good], tmp_path).wait()  # type: ignore[list-item]
+    assert runner._wait([good]) == ["result of 9_0"]  # type: ignore[list-item]
     assert good.waited
 
-    handle = SlurmHandle([good, bad], tmp_path)  # type: ignore[list-item]
     with pytest.raises(
-        RuntimeError, match=r"1 of 2 tasks did not complete. Task 9_1: timed out"
+        RuntimeError, match=r"1 of 2 Slurm tasks did not complete. Task 9_1: timed out"
     ):
-        handle.wait()
+        runner._wait([good, bad])  # type: ignore[list-item]
     assert bad.waited
 
 

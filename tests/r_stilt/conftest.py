@@ -9,7 +9,8 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from stilt.model import Model
+from stilt.project import Project
+from stilt.simulation import SimID
 
 from ..fixtures.r_stilt_reference import (
     ALL_SCENARIOS,
@@ -47,12 +48,12 @@ def scenario_outputs(request, met_dir, rscript, r_stilt_dir, tmp_path_factory) -
     project_dir = tmp_path_factory.mktemp(f"fidelity_{scenario.name}")
     receptor = scenario.make_receptor()
     config = scenario.make_model_config(met_dir)
-    model = Model(project=project_dir, config=config, receptors=[receptor])
+    project = Project.init(project_dir, config=config, receptors=[receptor])
     t0 = time.perf_counter()
-    model.run()
+    project.run()
     print(f"\n[PROFILE] {scenario.name} PYSTILT sim: {time.perf_counter() - t0:.1f}s")
 
-    sim = model.simulations[scenario.py_sim_id()]
+    sim = project.simulation(*SimID.parse(scenario.py_sim_id()))
     if not sim.has_trajectory:
         pytest.fail(f"[{scenario.name}] No particles written for {sim.id}")
     if not sim.has_footprint:
@@ -70,7 +71,9 @@ def scenario_outputs(request, met_dir, rscript, r_stilt_dir, tmp_path_factory) -
 
     error_traj_path = None
     if scenario.error_variant is not None:
-        err = model.simulations[scenario.py_sim_id(scenario.error_variant)]
+        err = project.simulation(
+            *SimID.parse(scenario.py_sim_id(scenario.error_variant))
+        )
         error_traj_path = err.trajectories_path if err.has_trajectory else None
 
     # Skip R trajectory run for scenarios whose transport is identical to another.

@@ -966,3 +966,72 @@ def test_append_to_a_zagl_file_still_refuses_an_msl_receptor():
     )
     with pytest.raises(ValueError, match="altitudes are agl"):
         append_receptors_csv(text, [msl])
+
+
+# ---------------------------------------------------------------------------
+# Reading a table without building receptors
+# ---------------------------------------------------------------------------
+
+
+def test_receptor_rows_ids_match_the_receptors(
+    point_receptor, column_receptor, multipoint_receptor
+):
+    """The table's ids come from the same rules as receptor.id, for every kind."""
+    from stilt.receptors import receptor_from_rows, receptor_rows, receptors_to_frame
+
+    sub_metre = MultiPointReceptor(
+        time="2023-01-01 13:00",
+        longitudes=[-111.85, -111.86],
+        latitudes=[40.77, 40.78],
+        altitudes=[10.25, 500.0],
+        altitude_ref="msl",
+    )
+    receptors = [point_receptor, column_receptor, multipoint_receptor, sub_metre]
+
+    rows = receptor_rows(receptors_to_frame(receptors))
+
+    first = rows.drop_duplicates("receptor")
+    assert first["receptor"].tolist() == [r.id for r in receptors]
+    assert first["kind"].tolist() == ["point", "column", "multipoint", "multipoint"]
+    assert first["location"].tolist() == [r.location_id for r in receptors]
+    for r in receptors:
+        assert receptor_from_rows(rows[rows.receptor == r.id]) == r
+
+
+def test_receptor_rows_checks_every_row_without_building(tmp_path):
+    from stilt.receptors import receptor_rows
+
+    def table(**columns):
+        base = {
+            "time": ["2023-01-01 12:00"],
+            "longitude": [-111.85],
+            "latitude": [40.77],
+            "altitude": [5.0],
+        }
+        return pd.DataFrame({**base, **columns})
+
+    with pytest.raises(ValueError, match="row 0: latitude must be within"):
+        receptor_rows(table(latitude=[95.0]))
+    with pytest.raises(ValueError, match="AGL altitudes must be >= 0"):
+        receptor_rows(table(altitude=[-1.0]))
+    with pytest.raises(ValueError, match="column named \\['kind'\\]"):
+        receptor_rows(table(kind=["tower"]))
+    column = pd.DataFrame(
+        {
+            "r_idx": [7, 7],
+            "time": ["2023-01-01 12:00"] * 2,
+            "longitude": [-111.85] * 2,
+            "latitude": [40.77] * 2,
+            "altitude": [5.0, 5.0],
+        }
+    )
+    with pytest.raises(ValueError, match="r_idx=7: 'bottom' must be less than 'top'"):
+        receptor_rows(column)
+
+
+def test_a_receptor_listed_twice_is_kept_once(point_receptor):
+    from stilt.receptors import receptor_rows, receptors_to_frame
+
+    rows = receptor_rows(receptors_to_frame([point_receptor, point_receptor]))
+
+    assert rows["receptor"].tolist() == [point_receptor.id]

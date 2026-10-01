@@ -85,8 +85,8 @@ class Simulation:
     to read them. It runs nothing itself; the workers in
     :mod:`stilt.execution` run HYSPLIT and write the results.
 
-    You rarely build one yourself. Get it from a model instead, as in
-    ``model.simulations[receptor_id, "hrrr"]``.
+    You rarely build one yourself. Get it from a project instead, as in
+    ``project.simulation(receptor_id, "hrrr")``.
 
     Parameters
     ----------
@@ -345,7 +345,7 @@ class Simulation:
             and recorded with them.
         context : TransformContext, optional
             Passed to every transform. Defaults to one with the receptor and
-            variant and no directory; pass ``model.transform_context(sim)``
+            variant and no directory; pass ``project.transform_context(sim)``
             when a transform names a file relative to the project.
 
         Returns

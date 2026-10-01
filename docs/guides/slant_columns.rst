@@ -67,7 +67,7 @@ hour, so build one receptor per averaging window, not one per day:
    import stilt
    from stilt.observations import read_ggg_oof, slant_points
 
-   model = stilt.Model(project="./em27")
+   project = stilt.Project("./em27")      # made with stilt init or Project.init
 
    df = read_ggg_oof("ha20230715.vav.ada.aia.oof", "xch4")
    df = df[df.good]
@@ -88,8 +88,8 @@ hour, so build one receptor per averaging window, not one per day:
        )
        for t, w in windows.iterrows()
    ]
-   model.register(receptors=receptors)
-   model.run()
+   project.add_receptors(receptors)
+   project.run()
 
 Twenty points over 3 km is a typical spacing. HYSPLIT splits ``numpar``
 among the points, so raise ``numpar`` when you add points.
@@ -143,7 +143,7 @@ transform then looks up each receptor's kernel:
    nearest = ak.index.get_indexer(windows.index + pd.Timedelta("5min"), method="nearest")
    kernels = [ak.ak.iloc[i] for i in nearest]
    table = averaging_kernel_table(receptors, levels=ak.ak_pressure.iloc[0], values=kernels)
-   table.to_parquet(model.project.directory / "kernels.parquet")
+   table.to_parquet(project.directory / "kernels.parquet")
 
 .. code-block:: yaml
 
@@ -185,7 +185,7 @@ altitude:
        )
        for row in df.itertuples()
    ]
-   model.register(receptors=receptors)
+   project.add_receptors(receptors)
 
 Many satellite workflows ignore the slant and use a
 :class:`~stilt.ColumnReceptor` instead. At a 20° viewing angle the top of a

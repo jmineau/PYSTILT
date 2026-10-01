@@ -50,8 +50,8 @@ receptor = stilt.PointReceptor(
     altitude=10,               # metres above ground
 )
 
-model = stilt.Model(
-    project="./my_project",
+project = stilt.Project.init(
+    "./my_project",
     receptors=[receptor],
     n_hours=-24,
     numpar=100,
@@ -69,15 +69,16 @@ model = stilt.Model(
     },
 )
 
-model.run()   # returns when the run is done
+project.run()   # returns when the run is done
 
-sim = model.simulations[receptor.id, "hrrr"]
+sim = project.simulation(receptor.id, "hrrr")
 traj = sim.trajectories
 foot = sim.footprint
 ```
 
-Everything is saved in `./my_project`. Later you can open it again with
-`stilt.Model(project="./my_project")`, and a second `run()` only runs what is missing.
+Everything is saved in `./my_project`. Later, open it again with
+`stilt.Project("./my_project")`. A second `run()` only runs what is missing. To change a
+setting, edit `config.yaml`.
 
 ## Command line
 
@@ -165,17 +166,17 @@ from stilt.transforms import averaging_kernel_table
 df = read_tropomi_ch4(path)                      # or read_oco2, read_tccon, or your own reader
 df["overpass"] = group_by_overpass(df["time"])   # label rows by overpass
 
-model = stilt.Model(project="./my_project")      # a project with a config.yaml
+project = stilt.Project("./my_project")         # a project with a config.yaml
 receptors = [
     stilt.ColumnReceptor(time=r.time, longitude=r.longitude, latitude=r.latitude, bottom=0, top=3000)
     for r in df.itertuples()
 ]
-model.register(receptors=receptors)
+project.add_receptors(receptors)
 
 averaging_kernel_table(receptors, levels=df.ak_pressure, values=df.ak).to_parquet(
-    model.project.directory / "kernels.parquet"
+    project.directory / "kernels.parquet"
 )
-model.run()
+project.run()
 ```
 
 Then name the table in `config.yaml`:
@@ -220,14 +221,11 @@ covers the column-weighting science and how to write your own.
 ```python
 import pandas as pd
 
-for sim in model.simulations.sel(variant="hrrr"):
-    traj = sim.trajectories
-    foot = sim.footprint
+sims = project.simulations                       # one row per receptor and variant
+january = sims[(sims.variant == "hrrr") & sims.time.between("2023-01-01", "2023-01-31")]
 
-# Load the footprints of a selection of simulations
-footprints = model.simulations.sel(
-    variant="hrrr", time=slice("2023-01-01", "2023-01-31")
-).footprint.load()
+project.status(january)                          # which results exist
+footprints = project.load_footprints(january)    # keyed by (receptor, variant)
 
 coords = [(-111.9, 40.7), (-111.8, 40.8)]
 time_bins = pd.interval_range(
@@ -256,7 +254,7 @@ of the development docs has the details.
 
 PYSTILT borrows from two sister projects. [X-STILT](https://github.com/uataq/X-STILT) is the
 source of its column and satellite science. [stiltctl](https://github.com/uataq/stiltctl)
-showed the thin call path from the CLI through `Model` to workers handed receptors. Its
+showed the thin call path from the CLI through the project to workers handed receptors. Its
 queue-backed and Kubernetes execution was tried and removed in favour of batches of receptors
 submitted to Slurm through [submitit](https://github.com/facebookincubator/submitit). The full
 [roadmap](https://jmineau.github.io/PYSTILT/roadmap.html) has more detail.
@@ -265,7 +263,7 @@ submitted to Slurm through [submitit](https://github.com/facebookincubator/submi
 
 | Feature | Status |
 |---|---|
-| Thin CLI → Model → worker call path | Implemented |
+| Thin CLI → Project → worker call path | Implemented |
 | Local runs, in one process or a process pool | Implemented |
 | Slurm job arrays, with preempted tasks resubmitted | Implemented |
 | Queue-backed workers (PostgreSQL), Kubernetes deployment | Removed |

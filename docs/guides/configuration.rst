@@ -29,11 +29,11 @@ A typical config.yaml
    n_hours: -24
    numpar: 500
 
-``stilt init`` writes a starter file with comments. If you build a
-:class:`~stilt.Model` in Python instead, the settings you pass are written
-to ``config.yaml`` each time you run it. The written file includes a
-``variants`` section that lists the variants that run (see `Variants`_), so
-it reads the same either way.
+``stilt init`` writes a starter file with comments. If you make the project
+in Python with :meth:`Project.init <stilt.Project.init>` instead, the
+settings you pass are written to ``config.yaml`` once. The written file
+includes a ``variants`` section that lists the variants that run (see
+`Variants`_), so it reads the same either way.
 
 The settings most people change
 -------------------------------
@@ -279,15 +279,15 @@ not know is an error. See :doc:`execution/slurm`.
 The same settings in Python
 ---------------------------
 
-You can pass any ``config.yaml`` key to :class:`~stilt.Model` directly, as
-plain dictionaries:
+You can pass any ``config.yaml`` key to
+:meth:`Project.init <stilt.Project.init>` directly, as plain dictionaries:
 
 .. code-block:: python
 
    import stilt
 
-   model = stilt.Model(
-       project="./my_project",
+   project = stilt.Project.init(
+       "./my_project",
        mets={
            "hrrr": {
                "directory": "/data/arl/hrrr",
@@ -310,7 +310,7 @@ check:
 
 .. code-block:: python
 
-   config = stilt.ModelConfig(
+   config = stilt.ProjectConfig(
        mets={
            "hrrr": stilt.MetConfig(
                directory="/data/arl/hrrr",
@@ -326,12 +326,13 @@ check:
        n_hours=-24,
        numpar=500,
    )
-   model = stilt.Model(project="./my_project", config=config)
-   model.variants          # {"hrrr": VariantConfig(...)}, each with its full settings
+   project = stilt.Project.init("./my_project", config=config)
+   project.variants        # {"hrrr": VariantConfig(...)}, each with its full settings
 
-Settings given in Python replace ``config.yaml`` when the model runs. To
-keep editing the file by hand, open the project with
-``stilt.Model(project="./my_project")`` and no settings.
+``Project.init`` writes ``config.yaml`` once and raises a
+``FileExistsError`` if the folder already has one. After that the file is
+yours. Edit it to change a setting, and open the project with
+``stilt.Project("./my_project")``.
 
 Advanced HYSPLIT settings
 -------------------------

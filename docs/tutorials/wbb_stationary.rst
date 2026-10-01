@@ -43,13 +43,13 @@ Step 1: One receptor per hour
 If your measurement times are in a spreadsheet, save them as a CSV and use
 :func:`stilt.read_receptors` instead (see :doc:`../guides/receptors`).
 
-Step 2: Set up the model
+Step 2: Make the project
 ------------------------
 
 .. code-block:: python
 
-   model = stilt.Model(
-       project="./wbb_project",
+   project = stilt.Project.init(
+       "./wbb_project",
        receptors=receptors,
        n_hours=-24,
        numpar=100,
@@ -71,12 +71,20 @@ Step 2: Set up the model
 ``numpar=100`` keeps this tutorial quick. Use more particles for research
 results (see :doc:`../guides/configuration`).
 
+``Project.init`` writes ``config.yaml`` and ``receptors.csv`` to
+``./wbb_project`` and stops if the folder already has a ``config.yaml``.
+In a later session, open the project instead:
+
+.. code-block:: python
+
+   project = stilt.Project("./wbb_project")
+
 Step 3: Run
 -----------
 
 .. code-block:: python
 
-   model.run()
+   project.run()
 
 There are 168 simulations, so this takes a while with 4 workers. You can
 stop it at any time with Ctrl-C. Running it again picks up where it left
@@ -97,7 +105,7 @@ Load all 168 footprints, sum each one over time, and average them:
    import matplotlib.pyplot as plt
    import xarray as xr
 
-   footprints = model.simulations.footprint.load()   # {simulation id: Footprint}
+   footprints = project.load_footprints()   # {simulation id: Footprint}
 
    mean_foot = xr.concat(
        [foot.integrate_over_time() for foot in footprints.values()],

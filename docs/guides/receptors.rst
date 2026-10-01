@@ -145,26 +145,34 @@ Two rows at the same location make a :class:`ColumnReceptor`. Rows at
 different locations make a :class:`MultiPointReceptor`.
 
 Any other column is kept on the receptor in ``attrs``. A ``scene`` or
-``site`` label you add to the file is then available when you select
-results (see :doc:`outputs`):
+``site`` label you add to the file is also a column of
+``project.receptors`` and ``project.simulations``, so you can select
+results by it with pandas (see :doc:`outputs`):
 
 .. code-block:: python
 
-   model.simulations.sel(scene="A")
-   model.receptors.sel(site=["WBB", "UOU"])
+   sims = project.simulations
+   sims[sims.scene == "A"]
+
+   receptors = project.receptors          # one row per receptor
+   receptors[receptors.site.isin(["WBB", "UOU"])]
 
 For a receptor built from several rows, the first row's labels are used.
-
-``model.receptors.to_frame()`` gives the receptors back as one table with a
-row per release point, in the same columns as the file.
+``project.receptor(receptor_id)`` returns the receptor itself. A project
+reads ``receptors.csv`` as a table and builds a receptor only when you ask
+for it, so opening a project of a hundred thousand receptors takes a second
+or two. The file is still checked as it is read: a longitude out of range
+or a column of equal heights is an error at once.
+:func:`~stilt.receptors.receptors_to_frame` gives receptors back as one
+table with a row per release point, in the same columns as the file.
 
 A project's ``receptors.csv`` is read automatically. To load another CSV,
-use :func:`read_receptors`, or pass the path to the model:
+use :func:`read_receptors`, or pass the path to the project:
 
 .. code-block:: python
 
    receptors = stilt.read_receptors("my_receptors.csv")
-   model = stilt.Model(project="./my_project", receptors="my_receptors.csv")
+   project.add_receptors("my_receptors.csv")
 
 Receptors you add to a project later are appended to its ``receptors.csv``
 using the file's own columns (see :doc:`project_layout`). If a new receptor's

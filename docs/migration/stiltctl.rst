@@ -16,7 +16,7 @@ finished from the output files.
      - PYSTILT equivalent
    * - Work submission
      - service-oriented submit API
-     - ``stilt run`` or ``model.run()`` (:doc:`../guides/execution/index`)
+     - ``stilt run``, ``project.run()``, or ``project.submit()`` (:doc:`../guides/execution/index`)
    * - Batch worker
      - queue worker job
      - one task of a Slurm job array, handed a batch of receptors

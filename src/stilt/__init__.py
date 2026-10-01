@@ -1,8 +1,8 @@
 """
 PYSTILT, a Python implementation of the STILT transport model.
 
-Start with :class:`Model`, which runs receptors through HYSPLIT and loads
-their trajectories and footprints.
+Start with :class:`Project`, a directory of receptors and settings that
+runs them through HYSPLIT and loads their trajectories and footprints.
 """
 
 from importlib.metadata import PackageNotFoundError
@@ -13,15 +13,15 @@ from .config import (
     FootprintConfig,
     Grid,
     MetConfig,
-    ModelConfig,
+    ProjectConfig,
     RuntimeSettings,
     VariantConfig,
 )
 from .footprint import Footprint
 from .geometry import Geometry, Mesh, SpatialTarget, Zones
 from .meteorology import Met
-from .model import Model
 from .output import Output
+from .project import Project
 from .receptors import (
     ColumnReceptor,
     MultiPointReceptor,
@@ -40,17 +40,17 @@ except PackageNotFoundError:
 
 __all__ = [
     # Core
-    "Model",
+    "Project",
     "Output",
     # Configuration
-    "ModelConfig",
+    "ProjectConfig",
     "FootprintConfig",
     "Grid",
     "Bounds",
     "MetConfig",
     "RuntimeSettings",
     "VariantConfig",
-    # Data objects (returned by Model methods)
+    # Data objects (returned by Project methods)
     "Simulation",
     "SimID",
     "Footprint",

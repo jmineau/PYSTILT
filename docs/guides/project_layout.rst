@@ -17,9 +17,11 @@ What's in a project folder
 
 Both files are yours to edit. PYSTILT never rewrites a ``config.yaml`` it
 loaded from the folder, and it only appends new receptors to
-``receptors.csv``. If you pass settings to :class:`~stilt.Model` in Python,
-they are written to ``config.yaml`` when the model runs. Receptors you pass
-are appended to ``receptors.csv``, or start it if there is none.
+``receptors.csv``. :meth:`Project.init <stilt.Project.init>` writes
+``config.yaml`` once, from the settings you pass it, and stops if the folder
+already has one. ``stilt init`` writes a commented starter ``config.yaml``
+instead. Receptors you add are appended to ``receptors.csv``, or start it if
+there is none.
 
 A Slurm run also creates a ``slurm/`` folder with the job
 scripts and logs (see :doc:`execution/slurm`).
@@ -87,15 +89,17 @@ three variants make 300 simulations. With no ``variants`` in
 Opening a project again
 -----------------------
 
-``config.yaml`` and ``receptors.csv`` are in the folder once the project
-has run (or been registered). After that, the folder is all you need:
+``config.yaml`` and ``receptors.csv`` are in the folder from the moment the
+project is made. After that, the folder is all you need:
 
 .. code-block:: python
 
    import stilt
 
-   model = stilt.Model(project="./my_project")
-   model.status()           # one row per simulation, with a "complete" column
+   project = stilt.Project("./my_project")
+   project.status()         # one row per simulation, with a "complete" column
+
+Opening a project only reads it. To change a setting, edit ``config.yaml``.
 
 From the command line:
 
@@ -103,12 +107,13 @@ From the command line:
 
    stilt status ./my_project
 
-To add receptors to an existing project, pass them in and run:
+To add receptors to an existing project, add them and run:
 
 .. code-block:: python
 
-   model = stilt.Model(project="./my_project", receptors=new_receptors)
-   model.run()
+   project = stilt.Project("./my_project")
+   project.add_receptors(new_receptors)     # returns the ids of the new ones
+   project.run()
 
 New receptors are appended to ``receptors.csv`` in the file's own columns.
 Receptors already in the file are left as they are.
@@ -136,10 +141,10 @@ To see what is not finished yet:
 
 .. code-block:: python
 
-   model.simulations.incomplete().keys()   # (receptor, variant) ids
-   model.simulations.status()              # a table of every simulation
+   project.incomplete()     # the simulations that are not complete
+   project.status()         # a table of every simulation
 
-To run everything again, pass ``skip_existing=False`` to ``model.run()``,
+To run everything again, pass ``skip_existing=False`` to ``project.run()``,
 or ``--no-skip`` to ``stilt run``.
 
 Changing a setting

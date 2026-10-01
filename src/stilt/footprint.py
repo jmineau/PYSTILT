@@ -585,7 +585,7 @@ class Footprint:
 
     Examples
     --------
-    >>> foot = model.simulations[receptor.id, "hrrr"].footprint
+    >>> foot = project.simulation(receptor.id, "hrrr").footprint
     >>> foot.integrate_over_time().plot()
     >>> foot.enhancement(flux).sum()
     """

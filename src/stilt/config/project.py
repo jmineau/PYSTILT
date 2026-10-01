@@ -15,7 +15,7 @@ from .params import STILTParams
 from .variant import VARIANT_NAME_RE, VariantConfig, expand_variants
 
 
-class ModelConfig(STILTParams, FootprintConfig):
+class ProjectConfig(STILTParams, FootprintConfig):
     """
     A project's configuration, as read from ``config.yaml``.
 
@@ -69,7 +69,7 @@ class ModelConfig(STILTParams, FootprintConfig):
         """Require at least one met, each with a valid variant name."""
         if not self.mets:
             raise ValueError(
-                "ModelConfig.mets must contain at least one meteorology configuration"
+                "ProjectConfig.mets must contain at least one meteorology configuration"
             )
         bad = [k for k in self.mets if not VARIANT_NAME_RE.fullmatch(k)]
         if bad:
@@ -166,11 +166,11 @@ class ModelConfig(STILTParams, FootprintConfig):
 
     @classmethod
     def from_yaml(cls, path: str | Path) -> Self:
-        """Load a model config from a YAML file."""
+        """Load a project config from a YAML file."""
         path = Path(path)
         with path.open() as f:
             raw: dict = yaml.safe_load(f) or {}
         return cls.model_validate(raw)
 
 
-__all__ = ["ModelConfig"]
+__all__ = ["ProjectConfig"]

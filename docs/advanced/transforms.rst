@@ -104,7 +104,7 @@ table in the project in place of inline ``levels`` and ``values``:
 The table has a ``receptor`` column with the receptor id, and one row per
 kernel point with its ``level`` and ``value``. It can be Parquet or CSV.
 Build it with :func:`~stilt.transforms.averaging_kernel_table` from the
-receptors you registered and the kernels in your product, and write it next
+receptors you added and the kernels in your product, and write it next
 to ``receptors.csv``:
 
 .. code-block:: python
@@ -112,7 +112,7 @@ to ``receptors.csv``:
    from stilt.transforms import averaging_kernel_table
 
    table = averaging_kernel_table(receptors, levels=df.ak_pressure, values=df.ak)
-   table.to_parquet(model.project.directory / "kernels.parquet")
+   table.to_parquet(project.directory / "kernels.parquet")
 
 Pass ``levels`` as one array per receptor, or as a single array when all
 kernels share one grid. When the footprint is made, the transform looks up
@@ -195,7 +195,7 @@ A few rules keep custom transforms working everywhere:
 - **Return a copy.** ``Trajectories.data`` must still hold the unweighted
   particles after a footprint is made. The built-ins all call
   ``particles.copy()`` first.
-- **Make it importable wherever it runs.** Workers rebuild the model from
+- **Make it importable wherever it runs.** Workers open the project from
   ``config.yaml``, so ``mypkg`` must be installed on the Slurm nodes or in
   the container. A project config that names a transform PYSTILT cannot
   import fails to load, with the import error. A stored footprint that

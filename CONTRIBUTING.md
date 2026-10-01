@@ -47,7 +47,7 @@ Docs and docstrings follow the voice described under "Voice" in
 ## Adding configuration fields
 
 The public config is flat. Fields such as `seed`, `numpar`, and `ziscale` are
-passed straight to `ModelConfig(...)` and `Model(...)`. Don't add nested
+passed straight to `ProjectConfig(...)` and `Project.init(...)`. Don't add nested
 parameter objects to the public API.
 
 Each config field is a plain pydantic `Field(default, description=...)`.

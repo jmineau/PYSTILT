@@ -120,7 +120,7 @@ autodoc_typehints = "description"
 autodoc_mock_imports = ["cartopy"]
 
 autodoc_type_aliases = {
-    "ModelConfig": "stilt.config.ModelConfig",
+    "ProjectConfig": "stilt.config.ProjectConfig",
     "Receptor": "stilt.receptor.Receptor",
     "Trajectories": "stilt.trajectory.Trajectories",
 }
