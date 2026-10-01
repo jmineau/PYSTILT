@@ -35,7 +35,7 @@ def _sim_id(receptor, variant: str = "hrrr") -> SimID:
 
 
 def _incomplete(project: Project) -> list[SimID]:
-    rows = project.incomplete()
+    rows = project.simulations.incomplete()
     return [SimID(r, v) for r, v in zip(rows["receptor"], rows["variant"], strict=True)]
 
 
@@ -123,8 +123,8 @@ def test_empty_footprint(tmp_path, wbb_receptor, wbb_config):
     assert sim.has_particles
     assert sim.empty_reason == "outside_domain"
     assert sim.footprint is None
-    assert model.load_footprints() == {}
-    status = model.status()
+    assert model.simulations.load_footprints() == {}
+    status = model.simulations.status()
     assert bool(status["empty"].iloc[0]) and bool(status["complete"].iloc[0])
 
     # A rerun has nothing to do and does not touch the empty record.
@@ -334,7 +334,7 @@ def test_adding_a_footprint_only_variant_runs_no_hysplit(
 
     assert base.particles_path.stat().st_mtime == traj_mtime
     assert base.log_path.read_text() == log_before
-    assert grown.incomplete().empty
+    assert grown.simulations.incomplete().frame.empty
 
 
 # ---------------------------------------------------------------------------
@@ -422,9 +422,10 @@ def test_error_realizations(tmp_path, wbb_receptor, traj_only_config):
 
     sims = model.simulations[model.simulations.group == "err"]
     assert sims["variant"].tolist() == ["err-0", "err-1"]
-    assert model.incomplete(sims).empty
+    assert sims.incomplete().frame.empty
 
-    e0, e1 = model.load_particles(sims).values()
+    particles = sims.load_particles()
+    e0, e1 = (particles[particles.variant == v] for v in ("err-0", "err-1"))
     s0 = e0.groupby("indx")["foot"].sum()
     s1 = e1.groupby("indx")["foot"].sum().reindex(s0.index)
     assert not np.allclose(s0.to_numpy(), s1.to_numpy())
@@ -460,12 +461,13 @@ def test_seeded_error_realizations_differ_and_reproduce(
     def run(project):
         model = Project.init(project, config=config, receptors=[wbb_receptor])
         model.run()
-        assert model.incomplete().empty
+        assert model.simulations.incomplete().frame.empty
         return model
 
     a = run(tmp_path / "a")
     errs = a.simulations[a.simulations.group == "err"]
-    e0, e1 = a.load_particles(errs).values()
+    particles = errs.load_particles()
+    e0, e1 = (particles[particles.variant == v] for v in ("err-0", "err-1"))
     s0 = e0.groupby("indx")["foot"].sum()
     s1 = e1.groupby("indx")["foot"].sum().reindex(s0.index)
     assert not np.allclose(s0.to_numpy(), s1.to_numpy())

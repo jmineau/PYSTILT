@@ -109,7 +109,7 @@ project is made. After that, the folder is all you need:
    import stilt
 
    project = stilt.Project("./my_project")
-   project.status()         # one row per simulation, with a "complete" column
+   project.simulations.status()   # one row per simulation, with a "complete" column
 
 Opening a project only reads it. To change a setting, edit ``config.yaml``.
 
@@ -153,8 +153,8 @@ To see what is not finished yet:
 
 .. code-block:: python
 
-   project.incomplete()     # the simulations that are not complete
-   project.status()         # a table of every simulation
+   project.simulations.incomplete()   # the simulations that are not complete
+   project.simulations.status()       # a table of every simulation
 
 To run everything again, pass ``skip_existing=False`` to ``project.run()``,
 or ``--no-skip`` to ``stilt run``.

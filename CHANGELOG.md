@@ -8,6 +8,27 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **A selection of simulations loads its own results**
+  ([#107](https://github.com/jmineau/PYSTILT/issues/107); breaking).
+  `project.simulations` is a `Simulations`: the table plus the project it
+  came from. Select it as before, then ask the selection:
+
+  ```python
+  july = sims[(sims.variant == "hrrr") & sims.time.between(a, b)]
+  july.status()
+  july.load_footprints()      # {simulation id: DataArray}
+  july.load_particles()       # one table, with receptor and variant columns
+  for sim in july: ...
+  ```
+
+  `project.status()`, `incomplete()`, `load_particles()`,
+  `load_footprints()`, and `jacobian()` are gone; call them on
+  `project.simulations` or a selection. `jacobian(target, time_bins)`
+  takes a selection of one variant. A selection understands columns and
+  row masks; for any other pandas operation use `sims.frame`, and
+  `project.simulations_of(frame)` makes a selection from a table again.
+  `Particles.table()` reads many receptors' particles at once, like
+  `Footprints.table()`.
 - **Particles and footprints are plain data**
   ([#107](https://github.com/jmineau/PYSTILT/issues/107); breaking).
   `sim.particles` is a pandas DataFrame and `sim.footprint` an xarray

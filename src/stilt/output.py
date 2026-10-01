@@ -380,6 +380,29 @@ class Particles:
             },
         )
 
+    def table(self, receptors: Iterable[str] | None = None) -> pa.Table:
+        """
+        Return the particles of many receptors as one table.
+
+        Columns are ``receptor``, the particle columns as stored, and
+        ``date`` (the receptor date, from the folder, as ``date32``). With
+        *receptors*, only those files are read. Particle files written
+        before the ``receptor`` column existed cannot be read this way.
+        """
+        files = _list_receptor_files(self.path, ".parquet")
+        if receptors is not None:
+            wanted = set(receptors)
+            files = {rid: p for rid, p in files.items() if rid in wanted}
+        if not files:
+            return pa.table({"receptor": pa.array([], pa.string())})
+        dataset = pads.dataset(
+            [str(p) for p in files.values()],
+            format="parquet",
+            partitioning=_DATE_PARTITIONING,
+            partition_base_dir=str(self.path),
+        )
+        return dataset.to_table()
+
     def read(self, receptor_id: str, columns: list[str] | None = None) -> pd.DataFrame:
         """Read a receptor's particles (:func:`stilt.read_particles`)."""
         return read_particles(self.file(receptor_id), columns=columns)

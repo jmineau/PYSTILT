@@ -105,7 +105,7 @@ Load all 168 footprints, sum each one over time, and average them:
    import matplotlib.pyplot as plt
    import xarray as xr
 
-   footprints = project.load_footprints()   # {simulation id: DataArray}
+   footprints = project.simulations.load_footprints()   # {simulation id: DataArray}
 
    mean_foot = xr.concat(
        [foot.sum("time") for foot in footprints.values()],

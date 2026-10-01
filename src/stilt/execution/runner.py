@@ -152,7 +152,7 @@ def _pending(project: Project, skip_existing: bool) -> list[str]:
     """Return the ids of the receptors to run, each once, in project order."""
     sims = project.simulations
     if skip_existing:
-        sims = project.incomplete(sims)
+        sims = sims.incomplete()
     return list(dict.fromkeys(sims["receptor"]))
 
 

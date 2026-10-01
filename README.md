@@ -224,8 +224,8 @@ import pandas as pd
 sims = project.simulations                       # one row per receptor and variant
 january = sims[(sims.variant == "hrrr") & sims.time.between("2023-01-01", "2023-01-31")]
 
-project.status(january)                          # which results exist
-footprints = project.load_footprints(january)    # keyed by (receptor, variant)
+january.status()                                 # which results exist
+footprints = january.load_footprints()           # keyed by (receptor, variant)
 
 coords = [(-111.9, 40.7), (-111.8, 40.8)]
 time_bins = pd.interval_range(

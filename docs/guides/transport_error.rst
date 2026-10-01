@@ -96,9 +96,10 @@ as a list. It averages them before taking the difference:
 
    sims = project.simulations
    ensemble = sims[(sims.receptor == rid) & (sims.group == "hrrr-err")]
+   errors = ensemble.load_particles()
    err = transport_error(
        project.simulation(rid, "hrrr").particles,
-       list(project.load_particles(ensemble).values()),
+       [rows for _, rows in errors.groupby("variant")],   # one table per realization
        flux,
    )
    err.realizations  # 4
