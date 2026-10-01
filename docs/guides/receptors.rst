@@ -239,7 +239,9 @@ All three classes have these members:
 ``receptor.id``
    A string of the form ``YYYYMMDDHHMM_{location}``. It names the receptor's
    result files (see :doc:`project_layout`), so two different receptors may
-   not share one. ``receptor.location_id`` is the location part.
+   not share one. For a point or column receptor it spells out the time,
+   position, and heights, with ``msl`` at the end for heights above sea
+   level. ``receptor.location_id`` is the location part.
 
 ``receptor.time``
    The release time, as a :class:`datetime.datetime` in UTC with no

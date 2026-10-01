@@ -367,7 +367,9 @@ class Run:
 
         ``time`` and ``indx`` are stored as int32 and ``datetime`` is left
         out, since it is the receptor time plus ``time``. Other columns keep
-        their type. The receptor, transport parameters, and met files go in
+        their type. A ``receptor`` column holds the receptor id, so a scan
+        of the whole tree can tell receptors apart; :meth:`read_particles`
+        drops it. The receptor, transport parameters, and met files go in
         the file's metadata, as :meth:`stilt.Trajectories.to_parquet` does.
         """
         data = trajectories.data.drop(columns=["datetime"], errors="ignore")
@@ -378,6 +380,15 @@ class Run:
                     raise ValueError(f"Particle column {name!r} is not whole numbers.")
                 data = data.assign(**{name: values.astype(np.int32)})
         table = pa.Table.from_pandas(data, preserve_index=False)
+        receptor_id = str(trajectories.receptor.id)
+        table = table.add_column(
+            0,
+            pa.field("receptor", pa.dictionary(pa.int32(), pa.string())),
+            pa.DictionaryArray.from_arrays(
+                pa.array(np.zeros(table.num_rows, dtype=np.int32)),
+                pa.array([receptor_id]),
+            ),
+        )
         metadata = {
             b"stilt:receptor": json.dumps(trajectories.receptor.to_dict()).encode(),
             b"stilt:params": trajectories.params.model_dump_json().encode(),
@@ -388,9 +399,7 @@ class Run:
             b"stilt:pystilt": _pystilt_version().encode(),
         }
         table = table.replace_schema_metadata(metadata)
-        return _write_atomic_table(
-            table, self.particles_path(str(trajectories.receptor.id))
-        )
+        return _write_atomic_table(table, self.particles_path(receptor_id))
 
     def read_particles(
         self, receptor_id: str, columns: list[str] | None = None

@@ -265,6 +265,10 @@ class Trajectories:
 
         # Read data. `datetime` is written naive UTC by ``from_particles``; keep
         # it naive on read so the receptor/trajectory/footprint time axes align.
+        # The output directory adds a ``receptor`` column for scans of the
+        # whole tree; one file is one receptor, so it is dropped here.
+        if columns is None:
+            columns = [n for n in pf.schema_arrow.names if n != "receptor"]
         data = pf.read(columns=columns).to_pandas()
         if "datetime" in data.columns:
             data["datetime"] = pd.to_datetime(data["datetime"])
