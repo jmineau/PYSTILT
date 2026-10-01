@@ -12,7 +12,7 @@ from uuid import uuid4
 
 import submitit
 
-from stilt.config import ExecutionConfig, RuntimeSettings
+from stilt.config import ExecutionConfig
 from stilt.project import project_slug
 
 if TYPE_CHECKING:
@@ -134,16 +134,16 @@ def resolve_compute_root(
     """
     Return the scratch directory under which HYSPLIT runs for *project*.
 
-    That is *compute_root* when given, else ``PYSTILT_COMPUTE_ROOT``, else
+    That is *compute_root* when given, else the ``PYSTILT_COMPUTE_ROOT``
+    environment variable when it is set and not empty, else
     ``$TMPDIR/pystilt/<project name>``. The path is absolute and resolved, so
     a worker handed it gets the same directory.
     """
+    if compute_root is None:
+        compute_root = os.environ.get("PYSTILT_COMPUTE_ROOT") or None
     if compute_root is not None:
         raw = os.path.expandvars(os.path.expanduser(str(compute_root)))
         return Path(raw).resolve()
-    configured = RuntimeSettings().compute_root
-    if configured is not None:
-        return configured.expanduser().resolve()
     tmp_root = os.environ.get("TMPDIR") or tempfile.gettempdir()
     return (Path(tmp_root) / "pystilt" / project.name).resolve()
 

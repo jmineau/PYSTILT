@@ -24,7 +24,6 @@ def test_documented_top_level_symbols_are_importable():
         "ProjectConfig",
         "MultiPointReceptor",
         "PointReceptor",
-        "RuntimeSettings",
         "SimID",
         "Simulation",
         "read_receptors",

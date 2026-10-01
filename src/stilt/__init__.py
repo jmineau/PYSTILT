@@ -14,7 +14,6 @@ from .config import (
     Grid,
     MetConfig,
     ProjectConfig,
-    RuntimeSettings,
     VariantConfig,
 )
 from .exceptions import StiltError
@@ -50,7 +49,6 @@ __all__ = [
     "Grid",
     "Bounds",
     "MetConfig",
-    "RuntimeSettings",
     "VariantConfig",
     # Simulations and their results
     "Simulation",
