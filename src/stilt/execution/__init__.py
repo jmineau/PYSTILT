@@ -8,7 +8,6 @@ from .worker import (
     run_receptor,
     run_receptors,
     run_simulation,
-    sigterm_as_interrupt,
     write_footprint,
 )
 
@@ -22,7 +21,6 @@ __all__ = [
     "run_receptors",
     "run_simulation",
     "run_particles",
-    "sigterm_as_interrupt",
     "submit",
     "write_footprint",
 ]

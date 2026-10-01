@@ -308,6 +308,8 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `VariantConfig.derived_from` / `record`.
 - `ConfigValidationError`, which nothing raised any more
   ([#80](https://github.com/jmineau/PYSTILT/issues/80)).
+- `stilt.execution.sigterm_as_interrupt`, now private. The worker uses it to
+  clean up when Slurm stops a task.
 
 ### Fixed
 

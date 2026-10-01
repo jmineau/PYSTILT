@@ -48,8 +48,13 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+def _raise_interrupt(signum: int, frame: object) -> None:
+    """Turn a signal into KeyboardInterrupt so cleanup runs."""
+    raise KeyboardInterrupt
+
+
 @contextlib.contextmanager
-def sigterm_as_interrupt():
+def _sigterm_as_interrupt():
     """
     Make SIGTERM raise ``KeyboardInterrupt`` inside the ``with`` block.
 
@@ -71,10 +76,7 @@ def sigterm_as_interrupt():
         yield
         return
 
-    def _handle(signum: int, frame: object) -> None:
-        raise KeyboardInterrupt
-
-    signal.signal(signal.SIGTERM, _handle)
+    signal.signal(signal.SIGTERM, _raise_interrupt)
     try:
         yield
     finally:
@@ -451,11 +453,6 @@ _POOL_COMPUTE_ROOT: Path | None = None
 _POOL_SKIP: bool = True
 
 
-def _raise_interrupt(signum: int, frame: object) -> None:
-    """Turn a signal into KeyboardInterrupt so cleanup runs."""
-    raise KeyboardInterrupt
-
-
 def _init_pool_worker(project: str, compute_root: str, skip_existing: bool) -> None:
     """Open the worker process's Project and make SIGTERM raise KeyboardInterrupt."""
     from stilt.project import Project
@@ -520,7 +517,7 @@ def run_receptors(
 
     if n_cores <= 1:
         results: list[ReceptorResult] = []
-        with sigterm_as_interrupt():
+        with _sigterm_as_interrupt():
             for i, receptor_id in enumerate(receptor_ids, 1):
                 result = run_receptor(
                     project,
@@ -540,7 +537,7 @@ def run_receptors(
         initializer=_init_pool_worker,
         initargs=(str(project.directory), str(scratch), skip_existing),
     )
-    with sigterm_as_interrupt():
+    with _sigterm_as_interrupt():
         try:
             for idx, result in pool.imap_unordered(
                 _pool_run, list(enumerate(receptor_ids))
