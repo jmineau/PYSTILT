@@ -4,7 +4,7 @@ Configuration
 .. currentmodule:: stilt.config
 
 Everything you can write in ``config.yaml`` is a field of
-:class:`ModelConfig`. That covers the mets
+:class:`ProjectConfig`. That covers the mets
 (:class:`MetConfig`), the footprint settings (:class:`FootprintConfig`),
 the ``variants``, the ``execution`` section, and the STILT and HYSPLIT
 settings. Each page below lists its fields with their defaults and is
@@ -31,7 +31,7 @@ change a result.
    :toctree: _api
    :nosignatures:
 
-   ModelConfig
+   ProjectConfig
    VariantConfig
    TransportSettings
    EngineInfo

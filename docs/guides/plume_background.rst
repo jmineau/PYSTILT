@@ -52,8 +52,8 @@ forward with 1000 particles. In PYSTILT each release is a
        for t in pd.date_range(overpass - pd.Timedelta(hours=10), overpass, freq="30min")
    ]
 
-   forward = stilt.Model(
-       project="./forward_12h",     # keep forward runs in a project of their own
+   forward = stilt.Project.init(
+       "./forward_12h",             # keep forward runs in a project of their own
        receptors=receptors,
        mets={"hrrr": met},          # as in the quickstart
        n_hours=12,                  # positive: forward in time
@@ -77,8 +77,8 @@ across all the forward runs, and outline them:
 
    window = (overpass - pd.Timedelta(minutes=3), overpass + pd.Timedelta(minutes=3))
    rows = []
-   for sim in forward.simulations:
-       p = sim.trajectories.data
+   for traj in forward.load_trajectories().values():
+       p = traj.data
        rows.append(p[p["datetime"].between(*window)])
    particles = pd.concat(rows)
 

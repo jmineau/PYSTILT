@@ -66,17 +66,17 @@ the ground on the University of Utah campus, at 18:00 UTC on 15 July 2023:
        altitude=10,               # metres above ground level
    )
 
-Step 2: Set up the model
-------------------------
+Step 2: Make a project
+----------------------
 
-A :class:`~stilt.Model` combines your receptors, your meteorology, and the
-settings for the run. Everything is saved in a project folder, which PYSTILT
-creates if it doesn't exist.
+A :class:`~stilt.Project` is a folder that holds your receptors and the
+settings for the run. :meth:`Project.init <stilt.Project.init>` creates the
+folder and writes both to it.
 
 .. code-block:: python
 
-   model = stilt.Model(
-       project="./my_first_project",
+   project = stilt.Project.init(
+       "./my_first_project",
        receptors=[receptor],
        mets={"hrrr": met},          # "hrrr" is a name you choose
        n_hours=-24,                 # follow the air 24 hours back in time
@@ -109,7 +109,7 @@ Step 3: Run
 
 .. code-block:: python
 
-   model.run()
+   project.run()
 
 This runs HYSPLIT to move the particles, then calculates the footprint. A
 single simulation like this usually takes a minute or two. ``run()`` returns
@@ -125,7 +125,7 @@ the variant name, and plot its footprint:
 
 .. code-block:: python
 
-   sim = model.simulations[receptor.id, "hrrr"]
+   sim = project.simulation(receptor.id, "hrrr")
    foot = sim.footprint
 
    foot.plot.map()
@@ -177,11 +177,15 @@ project again later without repeating them:
 
 .. code-block:: python
 
-   model = stilt.Model(project="./my_first_project")
+   project = stilt.Project("./my_first_project")
 
-If you call ``model.run()`` again, nothing happens. PYSTILT sees that the
-outputs already exist and skips them. If you add receptors, only the new ones
-run.
+``Project.init`` runs once per project. It stops with a
+``FileExistsError`` if the folder already has a ``config.yaml``. To change a
+setting later, edit ``config.yaml``.
+
+If you call ``project.run()`` again, nothing happens. PYSTILT sees that the
+outputs already exist and skips them. If you add receptors with
+``project.add_receptors(...)``, only the new ones run.
 
 The same run from the command line
 ----------------------------------
@@ -215,8 +219,8 @@ above:
    n_hours: -24
    numpar: 200
 
-Replace the example line in ``my_first_project/receptors.csv`` with your
-receptor, so the file reads:
+Add your receptor to ``my_first_project/receptors.csv`` below the header
+line, so the file reads:
 
 .. code-block:: text
 

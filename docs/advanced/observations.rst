@@ -51,7 +51,7 @@ A worked example
    from stilt.observations import group_by_overpass, read_tropomi_ch4, select_observations_spatial
    from stilt.transforms import averaging_kernel_table
 
-   model = stilt.Model(project="./xch4")
+   project = stilt.Project("./xch4")     # made with stilt init or Project.init
 
    # 1. read: one row per sounding, kernels as arrays in two columns
    df = read_tropomi_ch4(path)          # or read_oco2, read_tccon, or your own
@@ -77,13 +77,13 @@ A worked example
        ColumnReceptor(time=r.time, longitude=r.longitude, latitude=r.latitude, bottom=0, top=3000)
        for r in df.itertuples()
    ]
-   model.register(receptors=receptors)
+   project.add_receptors(receptors)
 
    # 4. weight: each sounding's kernel, keyed by its receptor, in the project
    table = averaging_kernel_table(receptors, levels=df.ak_pressure, values=df.ak)
-   table.to_parquet(model.project.directory / "kernels.parquet")
+   table.to_parquet(project.directory / "kernels.parquet")
 
-   model.run()
+   project.run()
 
 The footprint transforms go in ``config.yaml``:
 

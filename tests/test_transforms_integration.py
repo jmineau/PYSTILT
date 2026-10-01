@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import numpy as np
 
-from stilt.config import ModelConfig
-from stilt.model import Model
+from stilt.config import ProjectConfig
+from stilt.project import Project
 from stilt.transforms import FirstOrderLifetime
 
 from .conftest import integration
@@ -24,7 +24,7 @@ def test_declarative_transform_config_changes_real_footprint(
     wbb_grid,
 ):
     """Per-footprint transform specs should affect real footprint output."""
-    config = ModelConfig(
+    config = ProjectConfig(
         mets={
             "hrrr": {
                 "directory": met_dir,
@@ -43,15 +43,14 @@ def test_declarative_transform_config_changes_real_footprint(
         },
     )
 
-    model = Model(
-        project=tmp_path / "configured_transforms",
-        config=config,
-        receptors=[wbb_receptor],
+    project = Project.init(
+        tmp_path / "configured_transforms", config=config, receptors=[wbb_receptor]
     )
-    model.run()
+    project.run()
 
-    [baseline] = model.simulations.sel(variant="hrrr").footprint.load().values()
-    [lifetime] = model.simulations.sel(variant="lifetime").footprint.load().values()
+    sims = project.simulations
+    [baseline] = project.load_footprints(sims[sims.variant == "hrrr"]).values()
+    [lifetime] = project.load_footprints(sims[sims.variant == "lifetime"]).values()
 
     assert len(lifetime.config.transforms) == 1
 

@@ -30,7 +30,7 @@ The names are the same as in STILT-R.
        grid: null             # particles only
 
 Every receptor then has a second simulation,
-``model.simulations[rid, "hrrr-err"]``, whose particles saw the perturbed
+``project.simulation(rid, "hrrr-err")``, whose particles saw the perturbed
 winds. You can add the error variant to a finished project, and only the
 new simulations run. The error run costs as much as the original.
 ``grid: null`` skips the footprint, which the error calculation does not
@@ -94,10 +94,11 @@ as a list. It averages them before taking the difference:
 
 .. code-block:: python
 
-   sims = model.simulations.sel(receptor=rid)
+   sims = project.simulations
+   ensemble = sims[(sims.receptor == rid) & (sims.group == "hrrr-err")]
    err = transport_error(
-       sims[rid, "hrrr"].trajectories.data,
-       [t.data for t in sims.sel(variant="hrrr-err").trajectories.load().values()],
+       project.simulation(rid, "hrrr").trajectories.data,
+       [t.data for t in project.load_trajectories(ensemble).values()],
        flux,
    )
    err.realizations  # 4
@@ -122,7 +123,7 @@ smaller than the footprint cells, regrid the flux first.
 .. code-block:: python
 
    flux = xr.open_dataarray("ch4_flux.nc")          # µmol m⁻² s⁻¹ on lat/lon
-   foot = model.simulations[rid, "hrrr"].footprint
+   foot = project.simulation(rid, "hrrr").footprint
    enhancement = foot.enhancement(flux)             # ppm per footprint time step
    total = float(enhancement.sum())
 
@@ -170,14 +171,15 @@ and perturbed particle tables and the flux field:
    from stilt.observations import transport_error
 
    rows = []
-   for sim in model.simulations.sel(variant="hrrr"):
-       err = model.simulations[sim.id.receptor, "hrrr-err"]
+   for rid in project.receptors.receptor:
+       sim = project.simulation(rid, "hrrr")
+       err = project.simulation(rid, "hrrr-err")
        result = transport_error(
            sim.trajectories.data,
            err.trajectories.data,
            flux,
-           transforms=sim.config.transforms,
-           context=sim.transform_context(),
+           transforms=sim.footprint_config.transforms,
+           context=project.transform_context(sim),
        )
        rows.append({"receptor": sim.receptor.id, "enhancement": result.enhancement,
                     "variance": result.variance, "noise": result.noise})

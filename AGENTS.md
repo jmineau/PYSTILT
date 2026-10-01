@@ -50,7 +50,7 @@ messages. Existing identifiers such as the `r_stilt` test fixtures and
   in [docs/development.rst](docs/development.rst); read it before touching
   trajectory or footprint math.
 - **[stiltctl](https://github.com/jmineau/air-tracker-stiltctl)**: source of the
-  thin CLI → `Model` → worker call path. Its queue-backed and Kubernetes
+  thin CLI → `Project` → worker call path. Its queue-backed and Kubernetes
   execution was implemented here and then removed (#67, #87).
 - **[X-STILT](https://github.com/uataq/X-STILT)**: source of the observation
   layer and column science. PYSTILT ports the concepts, not the scripts, and
@@ -70,17 +70,26 @@ one run per receptor and differ only in the footprint made from it. Whether
 a simulation is complete is decided **by the files in the output
 directory**, by `Simulation.is_complete()`: that method is the single
 definition of "done". `config.yaml` and `receptors.csv` are the user's
-inputs: PYSTILT never rewrites a `config.yaml` loaded from the project (one
-given in Python is written out without defaults) and only appends to
+inputs: `Project.init` (or `stilt init`) writes `config.yaml` once, PYSTILT
+never rewrites it, and `Project.add_receptors` only appends to
 `receptors.csv`. Changing a setting never overwrites a result: it hashes to
 a new folder.
 
-**`Model` reads; the runner writes.** `Model` is config and receptors
-crossed into simulations, and a view of their results. It writes nothing
-and knows no scheduler or scratch directory. `stilt.execution.run`
-and `register` (which `Model.run()` and `Model.register()` call) save the
-inputs to the project, resolve the compute root, and start
-the workers, which are the only code that writes results.
+**`Project` reads; the workers write results.** `Project(path)` opens a
+project directory: its config, its receptors, the simulations they define,
+and a view of their results. Its only write is `add_receptors`, which
+appends to `receptors.csv`. It knows no scheduler or scratch directory.
+`stilt.execution.run` and `submit` (which `Project.run()` and
+`Project.submit()` call) find the receptors with missing results, resolve
+the compute root, and start the workers, which are the only code that
+writes results.
+
+**Plurals are DataFrames; singular things are objects.**
+`project.receptors` and `project.simulations` are DataFrames selected with
+pandas, and `status`, `incomplete`, `load_trajectories`, and
+`load_footprints` take such a selection. `project.receptor(id)` and
+`project.simulation(id, variant)` return the objects. Do not add a custom
+collection class.
 
 `stilt.__all__` (plus the `__all__` of each subpackage) is the public surface;
 everything else is internal and can change.
@@ -89,9 +98,9 @@ everything else is internal and can change.
 
 ```
 src/stilt/
-  cli.py             Typer CLI; a thin adapter over Model and execution
-  model.py           Model, the top-level orchestrator
-  project.py         Project: the project directory and its two input files
+  cli.py             Typer CLI; a thin adapter over Project and execution
+  project.py         Project: the project directory, its receptors and
+                     simulations as DataFrames, status, loading, run/submit
   output.py          Output: the output directory (runs by settings hash, sparse
                      footprint files, Jacobian assembly)
   simulation.py      Simulation, SimID: a frozen value (receptor, variant, output)
@@ -109,12 +118,10 @@ src/stilt/
                      engine (hysplit/engine.py)
   transforms.py      pre-footprint particle transforms (averaging kernel,
                      pressure weighting, lifetime decay) and their YAML I/O
-  collections.py     SimulationCollection (receptors × variants, .sel()) and
-                     OutputCollection (one output over a selection)
   errors.py          failure reasons and structured error types
   visualization.py   matplotlib helpers (optional dependency)
 
-  config/            pydantic configuration: ModelConfig and its parts
+  config/            pydantic configuration: ProjectConfig and its parts
   execution/         the runner (saves a model's inputs, plans what is missing,
                      runs it here or submits batches to Slurm through submitit)
                      and the worker (runs HYSPLIT on scratch and writes results
@@ -133,18 +140,18 @@ docs/                Sphinx (pydata-sphinx-theme)
 
 ### Two ways work starts: do not conflate them
 
-1. **A run** (`Model.run()` or `stilt run`): `stilt.execution.run` saves the
-   inputs to the project, finds the receptors with missing results, and
+1. **A run** (`Project.run()`, `Project.submit()`, or `stilt run`):
+   `stilt.execution.run` finds the receptors with missing results and
    either runs them in this process (`backend: local`) or submits them as
    one Slurm job array through submitit (`backend: slurm`), one `Batch` of
-   receptors per task. The unit of work is a receptor: `run_receptor` runs
+   receptors per task, and waits. `submit` returns the jobs at once. The unit of work is a receptor: `run_receptor` runs
    HYSPLIT once per distinct transport hash, then writes the footprint of
    every variant that shares those particles.
 2. **Observation-driven**: a reader yields a DataFrame of soundings;
    `stilt.observations` helpers thin and group it; each row becomes a
    `Receptor`; `averaging_kernel_table` writes the kernels into the project;
-   then register and run as usual. This layer sits *above* the transport
-   core. Keep observation logic out of `model.py`. An import-linter
+   then `add_receptors` and run as usual. This layer sits *above* the
+   transport core. Keep observation logic out of `project.py`. An import-linter
    contract in `pyproject.toml` (run by `lint-imports` in CI) fails when a
    core module imports `stilt.observations`; a new top-level module goes on
    that contract's list.
@@ -155,9 +162,9 @@ output directory, never only in memory.
 
 ### Configuration
 
-- `ModelConfig` is the root: flat transport (`STILTParams`) and footprint
+- `ProjectConfig` is the root: flat transport (`STILTParams`) and footprint
   (`FootprintConfig`) defaults, `mets`, and `variants` (overrides of the
-  defaults). `ModelConfig.resolve_variants()` turns them into one
+  defaults). `ProjectConfig.resolve_variants()` turns them into one
   `VariantConfig` per simulation name, expanding `realizations: N` into
   `<name>-0..N-1` with `seed + k`. A `VariantConfig` is composed:
   `transport: TransportSettings` (hashed, names the run) and
@@ -166,12 +173,12 @@ output directory, never only in memory.
   only, and footprint settings without a grid are an error. There is no
   named-footprints dict.
 - Every field is a plain pydantic `Field(default, description=...)` and the
-  public config stays flat (`ModelConfig(numpar=..., seed=...)`). CONTRIBUTING
+  public config stays flat (`ProjectConfig(numpar=..., seed=...)`). CONTRIBUTING
   explains how a field is routed to `SETUP.CFG`, `CONTROL`, `WINDERR`, or
   `ZIERR`.
 - `RuntimeSettings` is one `pydantic-settings` class reading `PYSTILT_*`
   environment variables (`compute_root`). The runner and the workers read
-  it; `Model` does not.
+  it; `Project` does not.
 - `ExecutionConfig` (`execution:` in `config.yaml`) says where receptors run
   and with what Slurm resources. It forbids unknown keys; other `sbatch`
   options go under its `slurm:` mapping.
@@ -187,8 +194,8 @@ folder below a kind is hive-style, so each tree reads as one dataset:
 
 ```
 <project>/
-  config.yaml                 ModelConfig (user-authored; never rewritten once loaded)
-  receptors.csv               receptor list; register() appends new receptors
+  config.yaml                 ProjectConfig (written once by Project.init or stilt init; never rewritten)
+  receptors.csv               receptor list; add_receptors() appends new receptors
   slurm/<stamp>/              one folder per Slurm submission: script, task logs,
                               and submitit's pickles
 
@@ -217,7 +224,7 @@ as complete.
   NetCDF output is CF-1.8 and deliberately not byte-compatible with STILT-R.
 - **Completion is by file.** A simulation is complete iff its files exist
   in the output directory. `Simulation.is_complete()` says so for one
-  simulation, and `SimulationCollection._outputs()` reads the same rule for
+  simulation, and `Project._present()` reads the same rule for
   many from a listing of the date folders the selection falls in (a test
   holds the two together). Never add a second
   "does this output exist" check, a completion registry, or a manifest; call
@@ -226,8 +233,8 @@ as complete.
   a new folder, never an overwrite, and PYSTILT never deletes a folder.
 - **State lives in the project directory and the output directory.**
   Anything kept in a process-local variable is lost to a Slurm task, which
-  rebuilds the model from the project.
-- **The CLI stays thin.** `cli.py` adapts arguments to `Model` and
+  opens the project again from its directory.
+- **The CLI stays thin.** `cli.py` adapts arguments to `Project` and
   execution calls; orchestration logic does not belong there.
 - **Meteorology I/O goes through [arlmet](https://github.com/jmineau/arl-met).**
   Do not reimplement ARL reading here.
@@ -390,8 +397,8 @@ Feature status lives in the roadmap tables in [README.md](README.md) and
 
 ## Gotchas and science notes
 
-- **`Model.simulations` is a lazy, mapping-like `SimulationCollection`**, not
-  a list.
+- **`project.simulations` is a cached DataFrame.** `add_receptors` drops the
+  cache; a `config.yaml` edited by hand needs a new `Project(path)`.
 - **Empty footprints are successes, and not footprints.** When no particle
   reaches the grid, `Footprint.calculate` raises `EmptyFootprintError` and
   the worker's `write_footprint` writes a footprint file with no rows and

@@ -183,7 +183,7 @@ own levels, up to 3 km above the surface:
    from stilt.observations import read_tropomi_ch4, slant_points
    from stilt.transforms import averaging_kernel_table
 
-   model = stilt.Model(project="./xch4")
+   project = stilt.Project("./xch4")      # made with stilt init or Project.init
 
    df = read_tropomi_ch4(path, lon_range=(-113.5, -110.5), lat_range=(39.5, 42.0))
    df = df[df.good]
@@ -200,12 +200,12 @@ own levels, up to 3 km above the surface:
        )
        for r in df.itertuples()
    ]
-   model.register(receptors=receptors)
+   project.add_receptors(receptors)
 
    averaging_kernel_table(receptors, levels=df.ak_pressure, values=df.ak).to_parquet(
-       model.project.directory / "kernels.parquet"
+       project.directory / "kernels.parquet"
    )
-   model.run()
+   project.run()
 
 The footprint config then lists two transforms:
 

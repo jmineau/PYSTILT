@@ -3,7 +3,7 @@ Variants: the complete settings a receptor is run under.
 
 A project runs every receptor under every variant. ``config.yaml`` declares
 variants as overrides of its defaults, and
-:meth:`ModelConfig.resolve_variants` turns them into one
+:meth:`ProjectConfig.resolve_variants` turns them into one
 :class:`VariantConfig` per simulation name, each split into the transport
 settings that decide its particles and the footprint settings applied to
 them. Variants whose transport settings are equal share one run of HYSPLIT
@@ -31,7 +31,7 @@ class VariantConfig(BaseModel):
     """
     One variant: its met, its transport settings, and its footprint settings.
 
-    Built by :meth:`~stilt.config.ModelConfig.resolve_variants`. ``name`` is
+    Built by :meth:`~stilt.config.ProjectConfig.resolve_variants`. ``name`` is
     the name its simulations run under and ``group`` the name declared in
     ``config.yaml``. They differ only for realizations: ``hrrr-err`` with
     ``realizations: 3`` gives ``hrrr-err-0`` to ``hrrr-err-2``.
@@ -97,7 +97,7 @@ def expand_variants(
     dict
         Variants by simulation name, in declared order. Their footprint
         settings are not resolved, so a footprint given by ``geometry`` has
-        no grid yet. :meth:`~stilt.config.ModelConfig.resolve_variants`
+        no grid yet. :meth:`~stilt.config.ProjectConfig.resolve_variants`
         resolves them.
     """
     for group in declared:

@@ -7,7 +7,7 @@ PYSTILT fixes how the plume grows (see :ref:`stilt-r-parity`).
 
 What changes is where the settings live. Instead of editing variables in
 ``run_stilt.r``, you write them in ``config.yaml`` or pass them to
-:class:`stilt.Model`. Receptors go in ``receptors.csv``.
+:meth:`stilt.Project.init`. Receptors go in ``receptors.csv``.
 
 The workflow side by side
 -------------------------

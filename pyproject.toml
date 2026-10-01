@@ -118,7 +118,6 @@ type = "forbidden"
 source_modules = [
     "stilt._atomic",
     "stilt.cli",
-    "stilt.collections",
     "stilt.config",
     "stilt.engine",
     "stilt.errors",
@@ -128,7 +127,6 @@ source_modules = [
     "stilt.geometry",
     "stilt.hysplit",
     "stilt.meteorology",
-    "stilt.model",
     "stilt.output",
     "stilt.project",
     "stilt.receptors",

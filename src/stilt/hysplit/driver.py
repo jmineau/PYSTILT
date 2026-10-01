@@ -4,6 +4,7 @@ import os
 import platform
 import signal
 import subprocess
+import tempfile
 import warnings
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -26,7 +27,6 @@ from stilt.errors import (
 )
 from stilt.hysplit.control import ControlFile
 from stilt.hysplit.namelist import NameList
-from stilt.project import resolve_directory
 from stilt.receptors import Receptor
 
 CONTROL_FILE = "CONTROL"
@@ -152,7 +152,11 @@ class HYSPLITDriver:
         exe_dir: Path | None = None,
         data_dir: Path | None = None,
     ):
-        self.directory = resolve_directory(directory)
+        self.directory = (
+            Path(tempfile.mkdtemp(prefix="pystilt_"))
+            if directory is None
+            else Path(directory).expanduser().resolve()
+        )
         self.control_path = self.directory / CONTROL_FILE
         self.setup_path = self.directory / SETUP_FILE
         self.hycs_std_path = self.directory / HYCS_STD_FILE

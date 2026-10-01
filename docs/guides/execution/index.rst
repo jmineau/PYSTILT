@@ -38,8 +38,9 @@ Commands you'll use
 ``stilt run <project>``
    Run every simulation that isn't finished yet. On your computer it returns
    when they are all done. On Slurm it submits a job array and returns right
-   away. Add ``--wait`` to wait for the job. ``model.run()`` does the same
-   from Python.
+   away. Add ``--wait`` to wait for the job. From Python,
+   ``project.run()`` always waits, and ``project.submit()`` submits to Slurm
+   and returns.
 
 ``stilt status <project>``
    Count finished and remaining simulations.

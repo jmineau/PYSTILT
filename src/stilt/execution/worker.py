@@ -40,7 +40,7 @@ from stilt.transforms import ParticleTransform, TransformContext
 from .runner import resolve_compute_root
 
 if TYPE_CHECKING:
-    from stilt.model import Model
+    from stilt.project import Project
 
 logger = logging.getLogger(__name__)
 
@@ -364,7 +364,7 @@ def run_simulation(
 
 
 def run_receptor(
-    model: Model,
+    project: Project,
     receptor_id: str,
     *,
     compute_root: Path,
@@ -381,8 +381,8 @@ def run_receptor(
 
     Parameters
     ----------
-    model : Model
-        Model the receptor belongs to.
+    project : Project
+        Project the receptor belongs to.
     receptor_id : str
         Receptor to run.
     compute_root : Path
@@ -395,7 +395,7 @@ def run_receptor(
     -------
     ReceptorResult
     """
-    sims = list(model.simulations.sel(receptor=receptor_id))
+    sims = [project.simulation(receptor_id, variant) for variant in project.variants]
     results: list[SimulationResult] = []
     reran: set[str] = set()  # transport settings whose HYSPLIT ran in this call
     sim = None
@@ -404,10 +404,10 @@ def run_receptor(
             key = sim.variant.transport.hash
             result = run_simulation(
                 sim,
-                met=model.mets[sim.variant.met],
+                met=project.mets[sim.variant.met],
                 compute_root=compute_root,
-                project_dir=model.project.directory,
-                keep_scratch=model.config.keep_scratch,
+                project_dir=project.directory,
+                keep_scratch=project.config.keep_scratch,
                 skip_existing=skip_existing or key in reran,
                 footprint_stale=key in reran,
             )
@@ -430,7 +430,7 @@ def _log_result(result: ReceptorResult, done: int, total: int) -> None:
 
 # -- process pool -------------------------------------------------------------
 
-_POOL_MODEL: Model | None = None
+_POOL_PROJECT: Project | None = None
 _POOL_COMPUTE_ROOT: Path | None = None
 _POOL_SKIP: bool = True
 
@@ -441,12 +441,12 @@ def _raise_interrupt(signum: int, frame: object) -> None:
 
 
 def _init_pool_worker(project: str, compute_root: str, skip_existing: bool) -> None:
-    """Build the worker process's Model and make SIGTERM raise KeyboardInterrupt."""
-    from stilt.model import Model
+    """Open the worker process's Project and make SIGTERM raise KeyboardInterrupt."""
+    from stilt.project import Project
 
-    global _POOL_MODEL, _POOL_COMPUTE_ROOT, _POOL_SKIP
+    global _POOL_PROJECT, _POOL_COMPUTE_ROOT, _POOL_SKIP
     signal.signal(signal.SIGTERM, _raise_interrupt)
-    _POOL_MODEL = Model(project=project)
+    _POOL_PROJECT = Project(project)
     _POOL_COMPUTE_ROOT = Path(compute_root)
     _POOL_SKIP = skip_existing
 
@@ -454,9 +454,9 @@ def _init_pool_worker(project: str, compute_root: str, skip_existing: bool) -> N
 def _pool_run(item: tuple[int, str]) -> tuple[int, ReceptorResult]:
     """Run one receptor in a pool worker, returning its index and result."""
     idx, receptor_id = item
-    assert _POOL_MODEL is not None and _POOL_COMPUTE_ROOT is not None
+    assert _POOL_PROJECT is not None and _POOL_COMPUTE_ROOT is not None
     return idx, run_receptor(
-        _POOL_MODEL,
+        _POOL_PROJECT,
         receptor_id,
         compute_root=_POOL_COMPUTE_ROOT,
         skip_existing=_POOL_SKIP,
@@ -464,7 +464,7 @@ def _pool_run(item: tuple[int, str]) -> tuple[int, ReceptorResult]:
 
 
 def run_receptors(
-    model: Model,
+    project: Project,
     receptor_ids: list[str],
     *,
     compute_root: str | Path | None = None,
@@ -474,16 +474,14 @@ def run_receptors(
     """
     Run a list of receptors, in this process or in a process pool.
 
-    Pool workers load the model again from ``model.project.root``, so the
-    config and receptors must already be saved in the project, as
-    :func:`~stilt.execution.register` does. A SIGTERM, such as Slurm preemption or the
-    end of the job's time limit, stops the batch with an ``interrupted``
+    Pool workers open the project again from its directory. A SIGTERM,
+    such as Slurm preemption or the end of the job's time limit, stops the batch with an ``interrupted``
     result.
 
     Parameters
     ----------
-    model : Model
-        Model the receptors belong to.
+    project : Project
+        Project the receptors belong to.
     receptor_ids : list of str
         Receptors to run.
     compute_root : str or Path, optional
@@ -502,14 +500,14 @@ def run_receptors(
     """
     if not receptor_ids:
         return []
-    scratch = resolve_compute_root(model.project, compute_root)
+    scratch = resolve_compute_root(project, compute_root)
 
     if n_cores <= 1:
         results: list[ReceptorResult] = []
         with sigterm_as_interrupt():
             for i, receptor_id in enumerate(receptor_ids, 1):
                 result = run_receptor(
-                    model,
+                    project,
                     receptor_id,
                     compute_root=scratch,
                     skip_existing=skip_existing,
@@ -524,7 +522,7 @@ def run_receptors(
     pool = multiprocessing.Pool(
         n_cores,
         initializer=_init_pool_worker,
-        initargs=(model.project.root, str(scratch), skip_existing),
+        initargs=(str(project.directory), str(scratch), skip_existing),
     )
     with sigterm_as_interrupt():
         try:

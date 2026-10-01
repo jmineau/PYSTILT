@@ -24,8 +24,8 @@ installed. Then create a project on a filesystem the compute nodes can see:
 
 Edit ``config.yaml`` to set the meteorology and footprint grid, as in
 :doc:`../getting_started/quickstart`. Then fill in ``receptors.csv``. You can
-also generate receptors in Python and pass them to :class:`stilt.Model`, as
-in :doc:`wbb_stationary`.
+also generate receptors in Python, as in :doc:`wbb_stationary`, and add
+them with ``stilt.Project("/path/to/shared/slv_2023").add_receptors(receptors)``.
 
 Step 2: Add Slurm settings
 --------------------------

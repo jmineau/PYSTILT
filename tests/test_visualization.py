@@ -18,7 +18,7 @@ from stilt.footprint import Footprint
 from stilt.receptors import ColumnReceptor, MultiPointReceptor, PointReceptor
 from stilt.trajectory import Trajectories
 from stilt.visualization import (
-    ModelPlotAccessor,
+    ProjectPlotAccessor,
     SimulationPlotAccessor,
     _draw_bounds_box,
     _log10_safe,
@@ -366,25 +366,25 @@ def test_simulation_map_show_receptor_false(receptor):
 
 
 # ---------------------------------------------------------------------------
-# ModelPlotAccessor
+# ProjectPlotAccessor
 # ---------------------------------------------------------------------------
 
 
-def test_model_availability_empty():
+def test_project_availability_empty():
     from unittest.mock import MagicMock
 
-    model = MagicMock()
-    model.simulations.keys.return_value = []
+    project = MagicMock()
+    project.receptors = pd.DataFrame(columns=["location", "time"])
 
-    ax = ModelPlotAccessor(model).availability()
+    ax = ProjectPlotAccessor(project).availability()
     assert ax is not None
 
 
-def test_model_availability_with_sims(tmp_path, receptor):
-    from stilt.config import ModelConfig
-    from stilt.model import Model
+def test_project_availability_with_sims(tmp_path, receptor):
+    from stilt.config import ProjectConfig
+    from stilt.project import Project
 
-    config = ModelConfig(
+    config = ProjectConfig(
         mets={
             "hrrr": {
                 "directory": tmp_path / "met",
@@ -393,36 +393,38 @@ def test_model_availability_with_sims(tmp_path, receptor):
             }
         },
     )
-    model = Model(project=tmp_path, config=config, receptors=[receptor])
-    assert len(model.simulations.keys()) == 1
+    project = Project.init(tmp_path, config=config, receptors=[receptor])
+    assert len(project.simulations) == 1
 
-    ax = model.plot.availability()
+    ax = project.plot.availability()
     assert ax is not None
     assert len(ax.patches) == 1
 
 
-def test_model_availability_reuses_ax():
+def test_project_availability_reuses_ax():
     from unittest.mock import MagicMock
 
     _, existing = plt.subplots()
-    model = MagicMock()
-    model.simulations.keys.return_value = []
+    project = MagicMock()
+    project.receptors = pd.DataFrame(columns=["location", "time"])
 
-    ax = ModelPlotAccessor(model).availability(ax=existing)
+    ax = ProjectPlotAccessor(project).availability(ax=existing)
     assert ax is existing
 
 
-def test_model_availability_formats_the_figure_of_the_given_ax(receptor):
+def test_project_availability_formats_the_figure_of_the_given_ax(receptor):
     """The dates are formatted on the ax's figure, not the current figure."""
     from unittest.mock import MagicMock
 
     fig, existing = plt.subplots()
     other = plt.figure()  # now the current figure
     default_bottom = other.subplotpars.bottom
-    model = MagicMock()
-    model.receptors = [receptor]
+    project = MagicMock()
+    project.receptors = pd.DataFrame(
+        {"location": [receptor.location_id], "time": [receptor.time]}
+    )
 
-    ModelPlotAccessor(model).availability(ax=existing)
+    ProjectPlotAccessor(project).availability(ax=existing)
 
     assert fig.subplotpars.bottom == pytest.approx(0.2)  # set by autofmt_xdate
     assert other.subplotpars.bottom == default_bottom

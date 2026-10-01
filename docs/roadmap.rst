@@ -35,8 +35,8 @@ Execution (call path from stiltctl)
 -----------------------------------
 
 `stiltctl <https://github.com/jmineau/air-tracker-stiltctl>`_ runs STILT on
-cloud infrastructure. PYSTILT keeps its call path: the CLI calls ``Model``,
-and ``Model`` hands receptors to workers. Its queue-backed and Kubernetes
+cloud infrastructure. PYSTILT keeps its call path. The CLI opens a ``Project``,
+and the project hands receptors to workers. Its queue-backed and Kubernetes
 execution was implemented and then removed. Batches of receptors now run on
 this machine or as a Slurm job array submitted through
 `submitit <https://github.com/facebookincubator/submitit>`_.
@@ -47,7 +47,7 @@ this machine or as a Slurm job array submitted through
 
    * - Feature
      - Status
-   * - Thin CLI → ``Model`` → worker call path
+   * - Thin CLI → ``Project`` → worker call path
      - Implemented
    * - Local runs, in one process or a process pool
      - Implemented

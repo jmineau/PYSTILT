@@ -1,14 +1,6 @@
 """Running simulations: the runner that starts the work and the workers that do it."""
 
-from .runner import (
-    Batch,
-    JobHandle,
-    LocalHandle,
-    SlurmHandle,
-    register,
-    resolve_compute_root,
-    run,
-)
+from .runner import Batch, resolve_compute_root, run, submit
 from .worker import (
     ReceptorResult,
     SimulationResult,
@@ -22,12 +14,8 @@ from .worker import (
 
 __all__ = [
     "Batch",
-    "JobHandle",
-    "LocalHandle",
     "ReceptorResult",
     "SimulationResult",
-    "SlurmHandle",
-    "register",
     "resolve_compute_root",
     "run",
     "run_receptor",
@@ -35,5 +23,6 @@ __all__ = [
     "run_simulation",
     "run_trajectories",
     "sigterm_as_interrupt",
+    "submit",
     "write_footprint",
 ]

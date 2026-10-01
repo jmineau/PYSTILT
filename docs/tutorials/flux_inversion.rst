@@ -20,7 +20,7 @@ What you'll learn
 Starting point
 --------------
 
-This tutorial uses the project and ``model`` from :doc:`wbb_stationary`.
+This tutorial uses the ``project`` from :doc:`wbb_stationary`.
 Any project with footprints works.
 
 A few point sources
@@ -37,7 +37,9 @@ add them up.
 
    import stilt
 
-   footprints = model.simulations.sel(variant="hrrr").footprint.load()
+   project = stilt.Project("./wbb_project")
+   sims = project.simulations
+   footprints = project.load_footprints(sims[sims.variant == "hrrr"])
 
    # longitude, latitude, flux (µmol m⁻² s⁻¹, averaged over the window)
    sources = {

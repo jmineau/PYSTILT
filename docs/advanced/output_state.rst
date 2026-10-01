@@ -31,14 +31,14 @@ What defines the simulations
 ----------------------------
 
 A project's simulations are its receptors (``receptors.csv``) run under each
-of its variants (``config.yaml``). ``model.simulations`` is exactly that
-set.
+of its variants (``config.yaml``). ``project.simulations`` is exactly that
+set, one row per simulation.
 
-``Model.register()`` writes both files into the project, so any worker on
-any machine can rebuild the model from the project folder alone.
-``Model.run()`` calls it first. New receptors are appended to
-``receptors.csv``. A ``config.yaml`` that was loaded from the project is
-never rewritten. One given in Python is written out.
+Both files are in the project folder before anything runs, so any worker on
+any machine can open the project from the folder alone.
+``Project.init()`` writes ``config.yaml`` once, and PYSTILT never rewrites
+it. ``project.add_receptors()`` appends new receptors to
+``receptors.csv``.
 
 Settings name the folders
 -------------------------

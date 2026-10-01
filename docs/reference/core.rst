@@ -3,7 +3,7 @@ Core Objects
 
 .. currentmodule:: stilt
 
-The model, its receptors, the simulations it runs, and their outputs.
+The project, its receptors, the simulations it runs, and their outputs.
 
 Project interface
 -----------------
@@ -12,7 +12,7 @@ Project interface
    :toctree: _api
    :nosignatures:
 
-   Model
+   Project
 
 Receptor objects
 ----------------
@@ -29,6 +29,9 @@ Receptor objects
    receptors.write_receptors
    receptors.receptors_to_frame
    receptors.receptors_from_frame
+   receptors.receptor_rows
+   receptors.receptor_from_rows
+   receptors.read_receptor_frame
    receptors.parse_receptor_id
 
 Simulation objects
@@ -43,24 +46,19 @@ Simulation objects
    Trajectories
    Footprint
 
-Collections
------------
+Simulation tables
+-----------------
 
-``model.simulations`` is a :class:`~stilt.collections.SimulationCollection`
-of every receptor under every variant.
-:meth:`~stilt.collections.SimulationCollection.sel` narrows it.
-``.trajectories`` and ``.footprint`` give an
-:class:`~stilt.collections.OutputCollection` for loading one kind of output.
+``project.receptors`` and ``project.simulations`` are pandas DataFrames,
+one row per receptor or per simulation. Select rows with pandas and pass
+them to :meth:`Project.status`, :meth:`Project.incomplete`,
+:meth:`Project.load_trajectories`, or :meth:`Project.load_footprints`.
 
-.. currentmodule:: stilt.collections
+.. code-block:: python
 
-.. autosummary::
-   :toctree: _api
-   :nosignatures:
-
-   SimulationCollection
-   OutputCollection
-   ReceptorCollection
+   sims = project.simulations
+   wbb = sims[(sims.variant == "hrrr") & (sims.site == "WBB")]
+   feet = project.load_footprints(wbb)
 
 .. currentmodule:: stilt
 

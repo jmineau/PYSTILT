@@ -15,9 +15,9 @@ Skip them:
 import numpy as np
 import pandas as pd
 
-from stilt.config import MetConfig, ModelConfig
+from stilt.config import MetConfig, ProjectConfig
 from stilt.execution import resolve_compute_root
-from stilt.model import Model
+from stilt.project import Project
 from stilt.simulation import SimID
 
 from .conftest import integration
@@ -33,9 +33,14 @@ def _sim_id(receptor, variant: str = "hrrr") -> SimID:
     return SimID(receptor.id, variant)
 
 
-def _with(config: ModelConfig, **updates) -> ModelConfig:
+def _incomplete(project: Project) -> list[SimID]:
+    rows = project.incomplete()
+    return [SimID(r, v) for r, v in zip(rows["receptor"], rows["variant"], strict=True)]
+
+
+def _with(config: ProjectConfig, **updates) -> ProjectConfig:
     """A validated copy of *config* with *updates* applied."""
-    return ModelConfig.model_validate({**config.model_dump(), **updates})
+    return ProjectConfig.model_validate({**config.model_dump(), **updates})
 
 
 # ---------------------------------------------------------------------------
@@ -46,23 +51,23 @@ def _with(config: ModelConfig, **updates) -> ModelConfig:
 @integration
 def test_trajectory(tmp_path, wbb_receptor, traj_only_config):
     """HYSPLIT runs and produces a non-empty trajectory parquet."""
-    model = Model(
-        project=tmp_path / "trajectory",
+    model = Project.init(
+        tmp_path / "trajectory",
         config=traj_only_config,
         receptors=[wbb_receptor],
     )
     model.run()
 
     sid = _sim_id(wbb_receptor)
-    assert sid in model.simulations
-    sim = model.simulations[sid]
+    assert list(model.simulations["receptor"]) == [sid.receptor]
+    sim = model.simulation(*sid)
     assert sim.has_trajectory
     assert sim.trajectories_path is not None
     assert sim.trajectories_path.parent.name == "date=2021-01-15"
     assert sim.trajectories_path.parent.parent.name.startswith("settings=hrrr-")
     assert len(pd.read_parquet(sim.trajectories_path)) > 0, "Particle file is empty"
     assert sim.trajectories is not None and len(sim.trajectories.data) > 0
-    assert not (resolve_compute_root(model.project) / sim.id).exists(), (
+    assert not (resolve_compute_root(model) / sim.id).exists(), (
         "the scratch working directory is removed"
     )
 
@@ -79,14 +84,14 @@ def test_trajectory(tmp_path, wbb_receptor, traj_only_config):
 @integration
 def test_footprint(tmp_path, wbb_receptor, wbb_config):
     """Full run produces a readable footprint NetCDF with (time, lat, lon) dims."""
-    model = Model(
-        project=tmp_path / "footprint",
+    model = Project.init(
+        tmp_path / "footprint",
         config=wbb_config,
         receptors=[wbb_receptor],
     )
     model.run()
 
-    sim = model.simulations[_sim_id(wbb_receptor)]
+    sim = model.simulation(*_sim_id(wbb_receptor))
     assert sim.footprint_path is not None and sim.footprint_path.exists()
     assert sim.has_footprint
     assert sim.footprint is not None
@@ -105,20 +110,20 @@ def test_empty_footprint(tmp_path, wbb_receptor, wbb_config):
         "xres": 0.1,
         "yres": 0.1,
     }
-    model = Model(
-        project=tmp_path / "empty",
+    model = Project.init(
+        tmp_path / "empty",
         config=_with(wbb_config, grid=far_grid),
         receptors=[wbb_receptor],
     )
     model.run()
 
-    sim = model.simulations[_sim_id(wbb_receptor)]
+    sim = model.simulation(*_sim_id(wbb_receptor))
     assert sim.is_complete()
     assert sim.has_trajectory
     assert sim.empty_reason == "outside_domain"
     assert sim.footprint is None
-    assert model.simulations.footprint.load() == {}
-    status = model.simulations.status()
+    assert model.load_footprints() == {}
+    status = model.status()
     assert bool(status["empty"].iloc[0]) and bool(status["complete"].iloc[0])
 
     # A rerun has nothing to do and does not touch the empty record.
@@ -149,15 +154,15 @@ def test_failure_missing_met(tmp_path, wbb_receptor, traj_only_config):
             }
         }
     )
-    model = Model(
-        project=tmp_path / "fail_missing_met",
+    model = Project.init(
+        tmp_path / "fail_missing_met",
         config=bad_config,
         receptors=[wbb_receptor],
     )
     # run() must not raise: a per-simulation failure is captured, not fatal.
     model.run()
 
-    sim = model.simulations[_sim_id(wbb_receptor)]
+    sim = model.simulation(*_sim_id(wbb_receptor))
     # The by-key store has no "failed" state, so the trajectory is simply absent
     # (incomplete). Failure is surfaced through the log-derived Simulation.outcome.
     assert not sim.has_trajectory
@@ -172,14 +177,14 @@ def test_failure_missing_met(tmp_path, wbb_receptor, traj_only_config):
 @integration
 def test_idempotency(tmp_path, wbb_receptor, traj_only_config):
     """Second run with skip_existing=True does not overwrite existing output."""
-    model = Model(
-        project=tmp_path / "idempotency",
+    model = Project.init(
+        tmp_path / "idempotency",
         config=traj_only_config,
         receptors=[wbb_receptor],
     )
 
     model.run()
-    sim = model.simulations[_sim_id(wbb_receptor)]
+    sim = model.simulation(*_sim_id(wbb_receptor))
     assert sim.has_trajectory
     mtime_before = sim.trajectories_path.stat().st_mtime
 
@@ -197,8 +202,8 @@ def test_idempotency(tmp_path, wbb_receptor, traj_only_config):
 @integration
 def test_column(tmp_path, wbb_column_receptor, wbb_config):
     """Column receptor produces trajectory and footprint; its id ends with _X."""
-    model = Model(
-        project=tmp_path / "column",
+    model = Project.init(
+        tmp_path / "column",
         config=wbb_config,
         receptors=[wbb_column_receptor],
     )
@@ -207,7 +212,7 @@ def test_column(tmp_path, wbb_column_receptor, wbb_config):
     sid = _sim_id(wbb_column_receptor)
     assert sid.receptor.endswith("_X"), f"Expected a column receptor id, got {sid}"
 
-    sim = model.simulations[sid]
+    sim = model.simulation(*sid)
     assert sim.has_trajectory
     assert sim.has_footprint
 
@@ -215,8 +220,8 @@ def test_column(tmp_path, wbb_column_receptor, wbb_config):
 @integration
 def test_multipoint(tmp_path, wbb_multipoint_receptor, multipoint_config):
     """Multipoint receptor (3 locations) produces trajectory and footprint."""
-    model = Model(
-        project=tmp_path / "multipoint",
+    model = Project.init(
+        tmp_path / "multipoint",
         config=multipoint_config,
         receptors=[wbb_multipoint_receptor],
     )
@@ -225,7 +230,7 @@ def test_multipoint(tmp_path, wbb_multipoint_receptor, multipoint_config):
     sid = _sim_id(wbb_multipoint_receptor)
     assert "multi_" in sid.receptor, f"Expected a multipoint receptor id, got {sid}"
 
-    sim = model.simulations[sid]
+    sim = model.simulation(*sid)
     assert sim.has_trajectory
     assert sim.has_footprint
 
@@ -240,15 +245,15 @@ def test_footprint_only_variant_rasterizes_the_same_particles(
     tmp_path, wbb_receptor, multifoot_config
 ):
     """A variant that changes only the grid shares hrrr's particles and runs no HYSPLIT."""
-    model = Model(
-        project=tmp_path / "multifoot",
+    model = Project.init(
+        tmp_path / "multifoot",
         config=multifoot_config,
         receptors=[wbb_receptor],
     )
     model.run()
 
-    fine = model.simulations[_sim_id(wbb_receptor)]
-    coarse = model.simulations[_sim_id(wbb_receptor, "coarse")]
+    fine = model.simulation(*_sim_id(wbb_receptor))
+    coarse = model.simulation(*_sim_id(wbb_receptor, "coarse"))
 
     assert fine.has_footprint and coarse.has_footprint
     assert coarse.run == fine.run  # one set of particles
@@ -267,9 +272,9 @@ def test_adding_a_footprint_only_variant_runs_no_hysplit(
 ):
     """A finished project grows a footprint-only variant; the particles are reused."""
     project = tmp_path / "grow"
-    first = Model(project=project, config=wbb_config, receptors=[wbb_receptor])
+    first = Project.init(project, config=wbb_config, receptors=[wbb_receptor])
     first.run()
-    base = first.simulations[_sim_id(wbb_receptor)]
+    base = first.simulation(*_sim_id(wbb_receptor))
     traj_mtime = base.trajectories_path.stat().st_mtime
     log_before = base.log_path.read_text()
 
@@ -277,13 +282,13 @@ def test_adding_a_footprint_only_variant_runs_no_hysplit(
     _with(wbb_config, variants={"hrrr": {}, "s2": {"smooth_factor": 2}}).to_yaml(
         project / "config.yaml"
     )
-    grown = Model(project=project)
-    assert grown.simulations.incomplete().keys() == [_sim_id(wbb_receptor, "s2")]
+    grown = Project(project)
+    assert _incomplete(grown) == [_sim_id(wbb_receptor, "s2")]
     grown.run()
 
     assert base.trajectories_path.stat().st_mtime == traj_mtime
     assert base.log_path.read_text() == log_before
-    assert grown.simulations.incomplete().keys() == []
+    assert grown.incomplete().empty
 
 
 # ---------------------------------------------------------------------------
@@ -314,7 +319,7 @@ def test_cli_run(tmp_path, wbb_config, wbb_receptor):
     )
     assert "completed=1" in result.output
 
-    sim = Model(project=project_dir).simulations[_sim_id(wbb_receptor)]
+    sim = Project(project_dir).simulation(*_sim_id(wbb_receptor))
     assert sim.has_trajectory, "CLI run: no particles"
     assert sim.has_footprint, "CLI run: no footprint"
     assert (project_dir / "output" / "particles").is_dir()
@@ -331,11 +336,11 @@ def test_error_variant(tmp_path, wbb_receptor, traj_only_config):
     config = _with(
         traj_only_config, keep_scratch=True, variants={"hrrr": {}, "hrrr-err": _XYERR}
     )
-    model = Model(project=tmp_path / "error", config=config, receptors=[wbb_receptor])
+    model = Project.init(tmp_path / "error", config=config, receptors=[wbb_receptor])
     model.run()
 
-    main = model.simulations[_sim_id(wbb_receptor)]
-    err = model.simulations[_sim_id(wbb_receptor, "hrrr-err")]
+    main = model.simulation(*_sim_id(wbb_receptor))
+    err = model.simulation(*_sim_id(wbb_receptor, "hrrr-err"))
     rid = str(wbb_receptor.id)
     err_scratch = err.run.scratch_path(rid)
     main_scratch = main.run.scratch_path(rid)
@@ -364,28 +369,28 @@ def test_error_realizations(tmp_path, wbb_receptor, traj_only_config):
         krand=4,  # HYSPLIT seeds each run from the clock
         variants={"hrrr": {}, "err": {**_XYERR, "realizations": 2}},
     )
-    model = Model(
-        project=tmp_path / "realizations", config=config, receptors=[wbb_receptor]
+    model = Project.init(
+        tmp_path / "realizations", config=config, receptors=[wbb_receptor]
     )
     model.run()
 
-    sims = model.simulations.sel(variant="err")
-    assert sims.variants == ["err-0", "err-1"]
-    assert sims.incomplete().keys() == []
+    sims = model.simulations[model.simulations.group == "err"]
+    assert sims["variant"].tolist() == ["err-0", "err-1"]
+    assert model.incomplete(sims).empty
 
-    e0, e1 = (t.data for t in sims.trajectories.load().values())
+    e0, e1 = (t.data for t in model.load_trajectories(sims).values())
     s0 = e0.groupby("indx")["foot"].sum()
     s1 = e1.groupby("indx")["foot"].sum().reindex(s0.index)
     assert not np.allclose(s0.to_numpy(), s1.to_numpy())
 
     # Resume: drop one realization; only it reruns.
-    main = model.simulations[_sim_id(wbb_receptor)]
-    err0 = model.simulations[_sim_id(wbb_receptor, "err-0")]
-    err1 = model.simulations[_sim_id(wbb_receptor, "err-1")]
+    main = model.simulation(*_sim_id(wbb_receptor))
+    err0 = model.simulation(*_sim_id(wbb_receptor, "err-0"))
+    err1 = model.simulation(*_sim_id(wbb_receptor, "err-1"))
     main_bytes = main.trajectories_path.read_bytes()
     err0_bytes = err0.trajectories_path.read_bytes()
     err1.trajectories_path.unlink()
-    assert model.simulations.incomplete().keys() == [err1.id]
+    assert _incomplete(model) == [err1.id]
 
     model.run(skip_existing=True)
 
@@ -407,27 +412,26 @@ def test_seeded_error_realizations_differ_and_reproduce(
     )
 
     def run(project):
-        model = Model(project=project, config=config, receptors=[wbb_receptor])
+        model = Project.init(project, config=config, receptors=[wbb_receptor])
         model.run()
-        assert model.simulations.incomplete().keys() == []
+        assert model.incomplete().empty
         return model
 
     a = run(tmp_path / "a")
-    e0, e1 = (
-        t.data for t in a.simulations.sel(variant="err").trajectories.load().values()
-    )
+    errs = a.simulations[a.simulations.group == "err"]
+    e0, e1 = (t.data for t in a.load_trajectories(errs).values())
     s0 = e0.groupby("indx")["foot"].sum()
     s1 = e1.groupby("indx")["foot"].sum().reindex(s0.index)
     assert not np.allclose(s0.to_numpy(), s1.to_numpy())
-    main = a.simulations[_sim_id(wbb_receptor)].trajectories.data
+    main = a.simulation(*_sim_id(wbb_receptor)).trajectories.data
     s_main = main.groupby("indx")["foot"].sum().reindex(s0.index)
     assert not np.allclose(s_main.to_numpy(), s0.to_numpy())
 
     b = run(tmp_path / "b")
     for variant in ("hrrr", "err-0", "err-1"):
         pd.testing.assert_frame_equal(
-            a.simulations[_sim_id(wbb_receptor, variant)].trajectories.data,
-            b.simulations[_sim_id(wbb_receptor, variant)].trajectories.data,
+            a.simulation(*_sim_id(wbb_receptor, variant)).trajectories.data,
+            b.simulation(*_sim_id(wbb_receptor, variant)).trajectories.data,
         )
 
 
@@ -453,7 +457,7 @@ def test_geometry_footprint(tmp_path, wbb_receptor, met_dir):
         "size": 0.5,
         "ids": ["wbb", "nw"],
     }
-    config = ModelConfig(
+    config = ProjectConfig(
         mets={
             "hrrr": {
                 "directory": met_dir,
@@ -473,10 +477,10 @@ def test_geometry_footprint(tmp_path, wbb_receptor, met_dir):
     assert fc.grid.xres == fc.grid.yres == 0.05  # 0.5 / 10
     assert fc.geometry_hash
 
-    model = Model(project=tmp_path / "geom", config=config, receptors=[wbb_receptor])
+    model = Project.init(tmp_path / "geom", config=config, receptors=[wbb_receptor])
     model.run()
 
-    sim = model.simulations[_sim_id(wbb_receptor)]
+    sim = model.simulation(*_sim_id(wbb_receptor))
     assert sim.has_footprint
     foot = sim.footprint
     assert foot is not None
@@ -527,7 +531,7 @@ def test_forward_run(tmp_path, met_dir, wbb_grid):
         latitude=REFERENCE_LATITUDE,
         altitude=REFERENCE_ALTITUDE,
     )
-    config = ModelConfig(
+    config = ProjectConfig(
         mets={
             "hrrr": {
                 "directory": met_dir,
@@ -543,10 +547,10 @@ def test_forward_run(tmp_path, met_dir, wbb_grid):
         grid=wbb_grid,
     )
 
-    model = Model(project=tmp_path / "forward", config=config, receptors=[receptor])
+    model = Project.init(tmp_path / "forward", config=config, receptors=[receptor])
     model.run()
 
-    sim = model.simulations[_sim_id(receptor)]
+    sim = model.simulation(*_sim_id(receptor))
     assert sim.has_trajectory, f"no trajectory for {sim.id}"
     assert sim.trajectories is not None
 

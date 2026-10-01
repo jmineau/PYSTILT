@@ -10,8 +10,8 @@ from stilt.config import (
     FootprintConfig,
     Grid,
     MetConfig,
-    ModelConfig,
     ModelParams,
+    ProjectConfig,
     STILTParams,
     TransportParams,
 )
@@ -309,12 +309,12 @@ def test_met_config_construction(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# ModelConfig - flat construction
+# ProjectConfig - flat construction
 # ---------------------------------------------------------------------------
 
 
 def test_model_config_flat_construction(tmp_path):
-    cfg = ModelConfig(
+    cfg = ProjectConfig(
         n_hours=-24,
         numpar=100,
         seed=42,
@@ -333,35 +333,35 @@ def test_model_config_flat_construction(tmp_path):
 
 
 def test_model_config_requires_nonempty_mets():
-    """ModelConfig must have at least one met entry."""
+    """ProjectConfig must have at least one met entry."""
     with pytest.raises(Exception, match="at least one"):
-        ModelConfig(mets={})
+        ProjectConfig(mets={})
 
 
 def test_model_config_rejects_met_keys_that_cannot_name_a_variant(tmp_path):
     mc = MetConfig(directory=tmp_path / "met", file_format="%Y%m%d_%H", file_tres="1h")
     with pytest.raises(Exception, match="must match"):
-        ModelConfig(mets={"hrrr_v2": mc})
+        ProjectConfig(mets={"hrrr_v2": mc})
 
 
 def test_model_config_footprint_fields_are_flat(tmp_path, grid):
     """The footprint settings sit beside the transport ones and form the footprint."""
     mc = MetConfig(directory=tmp_path / "met", file_format="%Y%m%d_%H", file_tres="1h")
-    cfg = ModelConfig(mets={"hrrr": mc}, grid=grid, smooth_factor=0.5)
+    cfg = ProjectConfig(mets={"hrrr": mc}, grid=grid, smooth_factor=0.5)
     foot = cfg.footprint
     assert foot is not None
     assert foot.grid == grid
     assert foot.smooth_factor == 0.5
-    assert ModelConfig(mets={"hrrr": mc}).footprint is None
+    assert ProjectConfig(mets={"hrrr": mc}).footprint is None
 
 
 # ---------------------------------------------------------------------------
-# ModelConfig YAML roundtrip
+# ProjectConfig YAML roundtrip
 # ---------------------------------------------------------------------------
 
 
 def test_model_config_yaml_roundtrip_basic(tmp_path):
-    cfg = ModelConfig(
+    cfg = ProjectConfig(
         n_hours=-24,
         numpar=100,
         mets={
@@ -374,7 +374,7 @@ def test_model_config_yaml_roundtrip_basic(tmp_path):
     )
     path = tmp_path / "config.yaml"
     cfg.to_yaml(path)
-    loaded = ModelConfig.from_yaml(path)
+    loaded = ProjectConfig.from_yaml(path)
     text = path.read_text()
 
     assert "#" not in text
@@ -386,7 +386,7 @@ def test_model_config_yaml_roundtrip_basic(tmp_path):
 
 
 def test_model_config_yaml_roundtrip_with_execution(tmp_path):
-    cfg = ModelConfig(
+    cfg = ProjectConfig(
         mets=_met_config(tmp_path),
         execution={
             "backend": "slurm",
@@ -400,7 +400,7 @@ def test_model_config_yaml_roundtrip_with_execution(tmp_path):
     path = tmp_path / "config.yaml"
     text = cfg.to_yaml(path)
     assert "cpus" not in text and "array_parallelism" not in text  # unset stays out
-    loaded = ModelConfig.from_yaml(path)
+    loaded = ProjectConfig.from_yaml(path)
     assert loaded.execution == cfg.execution
     assert loaded.execution.backend == "slurm"
     assert loaded.execution.n_workers == 8
@@ -408,23 +408,23 @@ def test_model_config_yaml_roundtrip_with_execution(tmp_path):
 
 
 def test_execution_defaults_to_one_local_process(tmp_path):
-    execution = ModelConfig(mets=_met_config(tmp_path)).execution
+    execution = ProjectConfig(mets=_met_config(tmp_path)).execution
     assert (execution.backend, execution.n_workers, execution.cpus) == ("local", 1, 1)
-    assert "execution:" not in ModelConfig(mets=_met_config(tmp_path)).to_yaml()
+    assert "execution:" not in ProjectConfig(mets=_met_config(tmp_path)).to_yaml()
 
 
 def test_unknown_execution_setting_is_an_error(tmp_path):
     """A typo, or an sbatch option outside `slurm:`, used to be ignored or passed on (#63)."""
     with pytest.raises(ValueError, match=r"execution\.partion\s+Extra inputs"):
-        ModelConfig(mets=_met_config(tmp_path), execution={"partion": "compute"})
+        ProjectConfig(mets=_met_config(tmp_path), execution={"partion": "compute"})
     with pytest.raises(ValueError, match=r"execution\.requeue\s+Extra inputs"):
-        ModelConfig(mets=_met_config(tmp_path), execution={"requeue": True})
+        ProjectConfig(mets=_met_config(tmp_path), execution={"requeue": True})
     with pytest.raises(ValueError, match=r"execution\.cpus_per_task\s+Extra inputs"):
-        ModelConfig(mets=_met_config(tmp_path), execution={"cpus_per_task": 4})
+        ProjectConfig(mets=_met_config(tmp_path), execution={"cpus_per_task": 4})
     with pytest.raises(ValueError, match="backend"):
-        ModelConfig(mets=_met_config(tmp_path), execution={"backend": "kubernetes"})
+        ProjectConfig(mets=_met_config(tmp_path), execution={"backend": "kubernetes"})
     with pytest.raises(ValueError, match="n_workers"):
-        ModelConfig(mets=_met_config(tmp_path), execution={"n_workers": 0})
+        ProjectConfig(mets=_met_config(tmp_path), execution={"n_workers": 0})
 
 
 def test_execution_accepts_one_setup_line():
@@ -436,7 +436,7 @@ def test_execution_accepts_one_setup_line():
 
 def test_model_config_yaml_roundtrip_with_footprint(tmp_path, grid):
     """The footprint settings survive a to_yaml/from_yaml roundtrip."""
-    cfg = ModelConfig(
+    cfg = ProjectConfig(
         mets={
             "hrrr": MetConfig(
                 directory=tmp_path / "met",
@@ -449,7 +449,7 @@ def test_model_config_yaml_roundtrip_with_footprint(tmp_path, grid):
     )
     path = tmp_path / "config.yaml"
     cfg.to_yaml(path)
-    loaded = ModelConfig.from_yaml(path)
+    loaded = ProjectConfig.from_yaml(path)
     assert loaded.footprint is not None
     assert loaded.footprint.model_dump() == cfg.footprint.model_dump()
 
@@ -470,10 +470,10 @@ def test_model_config_yaml_roundtrip_with_footprint_transforms(tmp_path, grid):
         PressureWeighting(),
         FirstOrderLifetime(lifetime_hours=4.0),
     ]
-    cfg = ModelConfig(mets=_met_config(tmp_path), grid=grid, transforms=given)
+    cfg = ProjectConfig(mets=_met_config(tmp_path), grid=grid, transforms=given)
     path = tmp_path / "config.yaml"
     cfg.to_yaml(path)
-    loaded = ModelConfig.from_yaml(path)
+    loaded = ProjectConfig.from_yaml(path)
     transforms = loaded.transforms
     assert len(transforms) == 3
     assert transforms == given
@@ -484,7 +484,7 @@ def test_model_config_yaml_roundtrip_with_footprint_transforms(tmp_path, grid):
 
 
 def test_model_config_yaml_roundtrip_with_user_transform(tmp_path, grid):
-    cfg = ModelConfig(
+    cfg = ProjectConfig(
         mets=_met_config(tmp_path), grid=grid, transforms=[ScaleFoot(factor=2.5)]
     )
     path = tmp_path / "config.yaml"
@@ -494,7 +494,7 @@ def test_model_config_yaml_roundtrip_with_user_transform(tmp_path, grid):
     assert f"kind: {SCALE_FOOT_KIND}" in text
     assert "factor: 2.5" in text
 
-    loaded = ModelConfig.from_yaml(path)
+    loaded = ProjectConfig.from_yaml(path)
     transforms = loaded.transforms
     assert len(transforms) == 1
     assert isinstance(transforms[0], ScaleFoot)
@@ -532,7 +532,7 @@ def test_model_config_variant_grid_in_yaml(tmp_path):
     """)
     path = tmp_path / "config.yaml"
     path.write_text(yaml_text)
-    variants = ModelConfig.from_yaml(path).resolve_variants()
+    variants = ProjectConfig.from_yaml(path).resolve_variants()
     assert variants["hrrr"].footprint.grid.xres == 0.01
     assert variants["coarse"].footprint.grid.xres == 0.05
     assert variants["coarse"].footprint.grid.xmin == -114.0
@@ -559,7 +559,7 @@ def test_model_config_inline_grid_in_yaml(tmp_path):
     """)
     path = tmp_path / "config.yaml"
     path.write_text(yaml_text)
-    loaded = ModelConfig.from_yaml(path)
+    loaded = ProjectConfig.from_yaml(path)
     assert loaded.grid is not None
     assert loaded.grid.xres == 0.05
     assert loaded.grid.xmin == -114.0
@@ -589,7 +589,7 @@ def test_model_config_null_grid_means_trajectory_only(tmp_path):
     """)
     path = tmp_path / "config.yaml"
     path.write_text(yaml_text)
-    variants = ModelConfig.from_yaml(path).resolve_variants()
+    variants = ProjectConfig.from_yaml(path).resolve_variants()
     assert variants["hrrr"].footprint is not None
     assert variants["traj"].footprint is None
 
@@ -624,7 +624,7 @@ def test_model_config_loads_footprint_transforms_from_yaml(tmp_path):
     path = tmp_path / "config.yaml"
     path.write_text(yaml_text)
 
-    loaded = ModelConfig.from_yaml(path)
+    loaded = ProjectConfig.from_yaml(path)
     transforms = loaded.transforms
 
     assert len(transforms) == 4
@@ -664,7 +664,7 @@ def test_model_config_rejects_unimportable_transform_from_yaml(tmp_path):
     path.write_text(yaml_text)
 
     with pytest.raises(ImportError, match="could not be imported"):
-        ModelConfig.from_yaml(path)
+        ProjectConfig.from_yaml(path)
 
 
 def test_model_config_unknown_keys_raise(tmp_path):
@@ -683,7 +683,7 @@ def test_model_config_unknown_keys_raise(tmp_path):
     path.write_text(yaml_text)
 
     with pytest.raises(ValidationError, match="mystery_param"):
-        ModelConfig.from_yaml(path)
+        ProjectConfig.from_yaml(path)
 
 
 # ---------------------------------------------------------------------------
@@ -754,7 +754,7 @@ def test_model_config_yaml_roundtrip_with_geometry(tmp_path):
     shp = tmp_path / "cells.geojson"
     gdf.to_file(shp, driver="GeoJSON")
 
-    config = ModelConfig(
+    config = ProjectConfig(
         mets={
             "hrrr": {
                 "directory": tmp_path,
@@ -773,7 +773,7 @@ def test_model_config_yaml_roundtrip_with_geometry(tmp_path):
 
     path = tmp_path / "config.yaml"
     config.to_yaml(path)
-    loaded = ModelConfig.from_yaml(path)
+    loaded = ProjectConfig.from_yaml(path)
     lfc = loaded.footprint
     assert lfc is not None
     assert lfc.grid == fc.grid
@@ -806,7 +806,7 @@ def test_file_geometry_spec_layer_and_where(tmp_path):
 
 
 def _variant_config(tmp_path, **kwargs):
-    return ModelConfig(mets=_met_config(tmp_path), **kwargs)
+    return ProjectConfig(mets=_met_config(tmp_path), **kwargs)
 
 
 def test_footprint_settings_without_a_grid_are_an_error(tmp_path):
@@ -828,7 +828,7 @@ def test_footprint_settings_without_a_grid_are_an_error(tmp_path):
 
 def test_variants_default_to_one_per_met(tmp_path):
     mc = _met_config(tmp_path)["hrrr"]
-    cfg = ModelConfig(mets={"hrrr": mc, "gfs": mc}, ziscale=0.9)
+    cfg = ProjectConfig(mets={"hrrr": mc, "gfs": mc}, ziscale=0.9)
     variants = cfg.resolve_variants()
     assert list(variants) == ["hrrr", "gfs"]
     assert variants["gfs"].met == "gfs"
@@ -898,7 +898,7 @@ def test_to_yaml_writes_only_what_was_set(tmp_path, grid):
     assert "maxpar" not in text and "n_min" not in text  # at every level
     assert text.startswith("mets:")  # inputs first, then the settings
     assert "kind: first_order_lifetime" in text  # nested objects are written in full
-    loaded = ModelConfig.from_yaml(path).resolve_variants()
+    loaded = ProjectConfig.from_yaml(path).resolve_variants()
     assert loaded["zi08"].transport.ziscale == 0.8
     assert loaded["decay"].footprint.transforms[0].lifetime_hours == 1.0
 
@@ -906,9 +906,9 @@ def test_to_yaml_writes_only_what_was_set(tmp_path, grid):
 def test_variant_must_name_its_met_when_there_are_several(tmp_path):
     mc = _met_config(tmp_path)["hrrr"]
     with pytest.raises(ValueError, match="must name its met"):
-        ModelConfig(mets={"hrrr": mc, "gfs": mc}, variants={"a": {}})
+        ProjectConfig(mets={"hrrr": mc, "gfs": mc}, variants={"a": {}})
     with pytest.raises(ValueError, match="unknown met"):
-        ModelConfig(mets={"hrrr": mc}, variants={"a": {"met": "nam"}})
+        ProjectConfig(mets={"hrrr": mc}, variants={"a": {"met": "nam"}})
 
 
 @pytest.mark.parametrize("name", ["Hrrr", "hrrr_v2", "-x", "a b"])
@@ -1003,24 +1003,24 @@ def test_variants_survive_a_yaml_roundtrip_as_written(tmp_path, grid):
     cfg = _variant_config(tmp_path, grid=grid, variants=declared)
     path = tmp_path / "config.yaml"
     cfg.to_yaml(path)
-    loaded = ModelConfig.from_yaml(path)
+    loaded = ProjectConfig.from_yaml(path)
     assert loaded.variants == declared
     assert list(loaded.resolve_variants()) == ["hrrr", "zi08", "s2"]
 
 
 def test_to_yaml_always_writes_the_variants_that_run(tmp_path):
     mc = _met_config(tmp_path)["hrrr"]
-    cfg = ModelConfig(mets={"hrrr": mc, "gfs": mc}, numpar=50)
+    cfg = ProjectConfig(mets={"hrrr": mc, "gfs": mc}, numpar=50)
     text = cfg.to_yaml()
     assert "variants:\n  hrrr: {}\n  gfs: {}\n" in text
-    loaded = ModelConfig.model_validate(__import__("yaml").safe_load(text))
+    loaded = ProjectConfig.model_validate(__import__("yaml").safe_load(text))
     assert list(loaded.resolve_variants()) == ["hrrr", "gfs"]
     assert loaded.resolve_variants()["gfs"].met == "gfs"
 
 
 def test_variant_named_after_a_met_uses_it(tmp_path):
     mc = _met_config(tmp_path)["hrrr"]
-    cfg = ModelConfig(mets={"hrrr": mc, "gfs": mc}, variants={"gfs": {}, "hrrr": {}})
+    cfg = ProjectConfig(mets={"hrrr": mc, "gfs": mc}, variants={"gfs": {}, "hrrr": {}})
     assert {n: v.met for n, v in cfg.resolve_variants().items()} == {
         "gfs": "gfs",
         "hrrr": "hrrr",
@@ -1089,7 +1089,7 @@ def test_each_geometry_is_built_once_and_not_on_load(tmp_path, monkeypatch):
             geometry: {{kind: windows, coords: [[-111.97, 40.515]], size: 0.01}}
         """)
     )
-    cfg = ModelConfig.from_yaml(tmp_path / "config.yaml")
+    cfg = ProjectConfig.from_yaml(tmp_path / "config.yaml")
     assert calls == []
 
     variants = cfg.resolve_variants()

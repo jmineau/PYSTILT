@@ -105,10 +105,21 @@ Only unfinished receptors are submitted. Don't resubmit while the first job
 is still running. The receptors it hasn't finished yet would be submitted a
 second time. Use ``--no-skip`` to force everything to run again.
 
-From Python, ``model.run(wait=False)`` returns a handle. ``handle.wait()``
-blocks until the job is done and raises if a task did not complete, and
-``handle.jobs`` are the `submitit <https://github.com/facebookincubator/submitit>`_
-jobs, one per task.
+From Python, ``project.run()`` submits the job array and waits for it. It
+raises if a task did not complete. ``project.submit()`` submits and returns
+at once, with the `submitit <https://github.com/facebookincubator/submitit>`_
+jobs, one per task:
+
+.. code-block:: python
+
+   jobs = project.submit()
+   jobs[0].stdout()       # what the first task has printed so far
+   for job in jobs:
+       job.wait()         # block until the task leaves the queue
+   results = [r for job in jobs for r in job.result()]
+
+``job.cancel()`` cancels a task. ``submit()`` raises a ``ValueError`` when
+the backend is ``local``.
 
 What PYSTILT writes
 -------------------

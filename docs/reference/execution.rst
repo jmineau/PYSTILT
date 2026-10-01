@@ -1,14 +1,15 @@
 Execution
 =========
 
-Most users only need ``model.run()`` or ``stilt run``
-(:doc:`../guides/execution/index`). The functions below do the work
-underneath.
+Most users only need ``project.run()``, ``project.submit()``, or
+``stilt run`` (:doc:`../guides/execution/index`). The functions below do the
+work underneath.
 
-- :func:`~stilt.execution.run` is what ``model.run()`` calls. It saves the
-  model's settings and receptors to the project
-  (:func:`~stilt.execution.register`), finds the receptors with missing
-  results, and starts workers for them.
+- :func:`~stilt.execution.run` is what ``project.run()`` calls. It finds the
+  receptors with missing results, runs them, and waits until they finish.
+- :func:`~stilt.execution.submit` is what ``project.submit()`` calls. It
+  submits those receptors to Slurm as one job array and returns the
+  submitit jobs at once.
 - :func:`~stilt.execution.run_trajectories` runs HYSPLIT for one
   :class:`~stilt.Simulation` and writes its particles and log.
 - :func:`~stilt.execution.write_footprint` makes the footprint from those
@@ -32,7 +33,7 @@ Worker functions
    :nosignatures:
 
    stilt.execution.run
-   stilt.execution.register
+   stilt.execution.submit
    stilt.execution.resolve_compute_root
    stilt.execution.run_trajectories
    stilt.execution.write_footprint
@@ -42,16 +43,14 @@ Worker functions
    stilt.execution.SimulationResult
    stilt.execution.ReceptorResult
 
-Batches and handles
--------------------
+Batches
+-------
 
 .. autosummary::
    :toctree: _api
    :nosignatures:
 
    stilt.execution.Batch
-   stilt.execution.LocalHandle
-   stilt.execution.SlurmHandle
 
 Transport engine
 ----------------

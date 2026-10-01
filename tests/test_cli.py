@@ -1,17 +1,15 @@
 """Tests for stilt.cli - Typer command-line interface."""
 
-from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import MagicMock
 
 import pandas as pd
+import pytest
 import yaml
 from typer.testing import CliRunner
 
 import stilt.__main__
 from stilt.cli import _resolve_project, app
-from stilt.config import ExecutionConfig, Grid, ModelConfig
-from stilt.execution import register
+from stilt.config import ExecutionConfig, Grid, ProjectConfig
 
 runner = CliRunner()
 
@@ -23,7 +21,7 @@ runner = CliRunner()
 
 def _write_minimal_config(tmp_path):
     """Write a minimal config.yaml + receptors.csv so _resolve_project succeeds."""
-    cfg = ModelConfig(
+    cfg = ProjectConfig(
         mets={
             "hrrr": {
                 "directory": tmp_path / "met",
@@ -38,55 +36,22 @@ def _write_minimal_config(tmp_path):
     )
 
 
-class _FakeHandle:
-    detached = False
+@pytest.fixture
+def calls(monkeypatch):
+    """Record what `stilt run` asks of the project, and run nothing."""
+    recorded: list[tuple[str, dict]] = []
 
-    def wait(self):
-        return None
+    def run(self, **kwargs):
+        recorded.append(("run", kwargs))
+        return []
 
+    def submit(self, **kwargs):
+        recorded.append(("submit", kwargs))
+        return [SimpleNamespace(job_id="12345_0"), SimpleNamespace(job_id="12345_1")]
 
-def _fake_model_factory(captured: list[dict]):
-    """
-    Build a Model stand-in that records its constructor kwargs.
-
-    The stand-in exposes just enough surface for the CLI's startup summary,
-    progress line, and status print.
-    """
-
-    class _NoSimulations:
-        def __len__(self):
-            return 0
-
-        def incomplete(self):
-            return self
-
-        def keys(self):
-            return []
-
-    class _FakeModel:
-        def __init__(self, project):
-            self.record = {"project": project}
-            captured.append(self.record)
-            self.project = SimpleNamespace(
-                root=project, directory=Path(project), name=Path(project).name
-            )
-            self.output = SimpleNamespace(path=Path(project) / "output")
-            self.receptors = []
-            self.variants = {"hrrr": None}
-            self.config = SimpleNamespace(execution=ExecutionConfig.model_validate({}))
-
-        @property
-        def simulations(self):
-            return _NoSimulations()
-
-        def unreferenced(self):
-            return {"particles": [], "footprints": []}
-
-        def run(self, skip_existing=True, wait=True, compute_root=None, execution=None):
-            self.record["compute_root"] = compute_root
-            return _FakeHandle()
-
-    return _FakeModel
+    monkeypatch.setattr("stilt.cli.Project.run", run)
+    monkeypatch.setattr("stilt.cli.Project.submit", submit)
+    return recorded
 
 
 def test_python_m_entrypoint_invokes_cli(monkeypatch):
@@ -145,10 +110,10 @@ def test_status_prints_project_info(tmp_path):
 
 def test_status_counts_full_simulation_completion(tmp_path):
     """A complete trajectory without required footprints is not done yet."""
-    from stilt.model import Model
+    from stilt.project import Project
     from stilt.receptors import PointReceptor
 
-    cfg = ModelConfig(
+    cfg = ProjectConfig(
         mets={
             "hrrr": {
                 "directory": tmp_path / "met",
@@ -172,11 +137,10 @@ def test_status_counts_full_simulation_completion(tmp_path):
         latitude=40.77,
         altitude=5.0,
     )
-    model = Model(project=tmp_path, config=cfg, receptors=[receptor])
-    assert register(model) == [str(receptor.id)]
+    project = Project.init(tmp_path, config=cfg, receptors=[receptor])
 
     # Particles exist but the required footprint does not: not complete.
-    sim = model.simulation((receptor.id, "hrrr"))
+    sim = project.simulation(receptor.id, "hrrr")
     from stilt.trajectory import Trajectories
 
     particles = pd.DataFrame(
@@ -202,10 +166,8 @@ def test_status_counts_full_simulation_completion(tmp_path):
     # Once the footprint is present too, the simulation counts as complete.
     from stilt.execution import write_footprint
 
-    sim = model.simulation(
-        (receptor.id, "hrrr")
-    )  # a fresh value; the old one cached no particles
-    write_footprint(sim, sim.trajectories, context=model.transform_context(sim))
+    sim = project.simulation(receptor.id, "hrrr")  # a fresh value
+    write_footprint(sim, sim.trajectories, context=project.transform_context(sim))
 
     result = runner.invoke(app, ["status", str(tmp_path)])
 
@@ -242,47 +204,21 @@ def test_run_exits_when_no_config(tmp_path):
     assert result.exit_code == 1
 
 
-def test_run_invokes_model_run(tmp_path, monkeypatch):
-    """run passes the config's execution settings to model.run."""
+def test_run_runs_the_project_with_its_execution_settings(tmp_path, calls):
     _write_minimal_config(tmp_path)
-
-    fake_handle = MagicMock()
-    fake_handle.detached = False  # local execution has finished
-    calls: list = []
-
-    def fake_run(
-        self, skip_existing=None, wait=True, compute_root=None, execution=None
-    ):
-        calls.append(
-            {"execution": execution, "skip_existing": skip_existing, "wait": wait}
-        )
-        return fake_handle
-
-    monkeypatch.setattr("stilt.cli.Model.run", fake_run)
 
     result = runner.invoke(app, ["run", str(tmp_path)])
-    assert result.exit_code == 0
-    [call] = calls
-    assert call["execution"] == ExecutionConfig.model_validate({})
-    assert call["skip_existing"] is True
-    assert call["wait"] is False
-    # A local run is over when model.run returns, so there is nothing to wait for.
-    fake_handle.wait.assert_not_called()
+
+    assert result.exit_code == 0, result.output
+    [(verb, kwargs)] = calls
+    assert verb == "run"
+    assert kwargs["execution"] == ExecutionConfig.model_validate({})
+    assert kwargs["skip_existing"] is True
+    assert kwargs["compute_root"] is None
 
 
-def test_run_prints_startup_and_wait_messages(tmp_path, monkeypatch):
-    """run prints a startup summary before blocking locally."""
+def test_run_prints_a_startup_summary_and_the_status(tmp_path, calls):
     _write_minimal_config(tmp_path)
-
-    fake_handle = MagicMock()
-    fake_handle.detached = False  # local execution has finished
-
-    monkeypatch.setattr(
-        "stilt.cli.Model.run",
-        lambda self, skip_existing=None, wait=True, compute_root=None, execution=None: (
-            fake_handle
-        ),
-    )
 
     result = runner.invoke(app, ["run", str(tmp_path)])
 
@@ -298,151 +234,65 @@ def test_run_prints_startup_and_wait_messages(tmp_path, monkeypatch):
     assert f"Project: {tmp_path.resolve()}  total=" in result.output
 
 
-def test_run_startup_summary_uses_project_root_and_compute_root(tmp_path, monkeypatch):
-    """run startup output shows the project root and a non-default compute root."""
+def test_run_forwards_compute_root_and_shows_it(tmp_path, calls):
     _write_minimal_config(tmp_path)
-    captured: list[dict] = []
-    monkeypatch.setattr("stilt.cli.Model", _fake_model_factory(captured))
-
     compute_root = tmp_path / "scratch"
+
     result = runner.invoke(
         app, ["run", str(tmp_path), "--compute-root", str(compute_root)]
     )
 
     assert result.exit_code == 0
-    assert f"project={tmp_path.resolve()}" in result.output
     assert f"Compute root: {compute_root.resolve()}" in result.output
+    assert calls[0][1]["compute_root"] == str(compute_root)
 
 
-def test_run_no_skip_passes_false(tmp_path, monkeypatch):
-    """--no-skip passes skip_existing=False to model.run() and shows in the summary."""
+def test_run_no_skip_passes_false(tmp_path, calls):
     _write_minimal_config(tmp_path)
 
-    fake_handle = MagicMock()
-    fake_handle.detached = False  # local execution -> inline wait
-    calls: list = []
-
-    def fake_run(
-        self, skip_existing=None, wait=True, compute_root=None, execution=None
-    ):
-        calls.append(skip_existing)
-        return fake_handle
-
-    monkeypatch.setattr("stilt.cli.Model.run", fake_run)
-
     result = runner.invoke(app, ["run", str(tmp_path), "--no-skip"])
+
     assert result.exit_code == 0
-    assert calls == [False]
+    assert calls[0][1]["skip_existing"] is False
     assert "skip=no-skip" in result.output
 
 
-def test_run_forwards_compute_root(tmp_path, monkeypatch):
-    """run forwards --compute-root to model.run()."""
+def test_run_options_override_the_execution_settings(tmp_path, calls):
     _write_minimal_config(tmp_path)
-    captured: list[dict] = []
-    monkeypatch.setattr("stilt.cli.Model", _fake_model_factory(captured))
-
-    result = runner.invoke(
-        app,
-        ["run", str(tmp_path), "--compute-root", str(tmp_path / "scratch")],
-    )
-
-    assert result.exit_code == 0
-    assert captured == [
-        {
-            "project": str(tmp_path.resolve()),
-            "compute_root": str(tmp_path / "scratch"),
-        }
-    ]
-
-
-def test_run_backend_and_workers_override_the_config(tmp_path, monkeypatch):
-    """--backend and --n-workers replace those execution settings for this run."""
-    _write_minimal_config(tmp_path)
-
-    fake_handle = MagicMock()
-    fake_handle.detached = False
-    captured_executor = []
-
-    def fake_run(
-        self, skip_existing=None, wait=True, compute_root=None, execution=None
-    ):
-        captured_executor.append(execution)
-        return fake_handle
-
-    monkeypatch.setattr("stilt.cli.Model.run", fake_run)
 
     result = runner.invoke(
         app, ["run", str(tmp_path), "--backend", "local", "--cpus", "4"]
     )
+
     assert result.exit_code == 0
-    assert len(captured_executor) == 1
-    assert captured_executor[0].backend == "local"
-    assert captured_executor[0].cpus == 4
+    execution = calls[0][1]["execution"]
+    assert (execution.backend, execution.cpus) == ("local", 4)
     assert "tasks=1  cpus=4" in result.output
 
 
-def test_run_slurm_fire_and_forget(tmp_path, monkeypatch):
-    """For a SlurmHandle, prints job_id and exits without blocking by default."""
+def test_run_on_slurm_submits_and_returns(tmp_path, calls):
     _write_minimal_config(tmp_path)
-
-    fake_handle = MagicMock(detached=True, job_id="12345")
-
-    monkeypatch.setattr(
-        "stilt.cli.Model.run",
-        lambda self, skip_existing=None, wait=True, compute_root=None, execution=None: (
-            fake_handle
-        ),
-    )
 
     result = runner.invoke(
         app, ["run", str(tmp_path), "--backend", "slurm", "--n-workers", "2"]
     )
-    assert result.exit_code == 0
+
+    assert result.exit_code == 0, result.output
+    assert [verb for verb, _ in calls] == ["submit"]
+    assert calls[0][1]["execution"].n_workers == 2
     assert "Execution mode: submit-and-return" in result.output
     assert "Submitted job: 12345" in result.output
-    # --wait not passed → fire-and-forget, handle.wait() must NOT be called.
-    fake_handle.wait.assert_not_called()
 
 
-def test_run_slurm_with_wait_flag_blocks(tmp_path, monkeypatch):
-    """--wait causes the CLI to call handle.wait() for a SlurmHandle."""
+def test_run_on_slurm_with_wait_runs_until_the_job_is_done(tmp_path, calls):
     _write_minimal_config(tmp_path)
 
-    fake_handle = MagicMock(detached=True, job_id="99")
+    result = runner.invoke(app, ["run", str(tmp_path), "--backend", "slurm", "--wait"])
 
-    monkeypatch.setattr(
-        "stilt.cli.Model.run",
-        lambda self, skip_existing=None, wait=True, compute_root=None, execution=None: (
-            fake_handle
-        ),
-    )
-
-    result = runner.invoke(
-        app,
-        ["run", str(tmp_path), "--backend", "slurm", "--n-workers", "2", "--wait"],
-    )
     assert result.exit_code == 0
+    assert [verb for verb, _ in calls] == ["run"]
     assert "Execution mode: submit-and-wait" in result.output
-    assert "Waiting for job completion" in result.output
-    fake_handle.wait.assert_called_once()
-
-
-def test_run_detached_handle_prints_job_id(tmp_path, monkeypatch):
-    """Any detached handle (e.g. Slurm) prints the submitted job ID."""
-    _write_minimal_config(tmp_path)
-
-    fake_handle = MagicMock(detached=True, job_id="42")
-    monkeypatch.setattr(
-        "stilt.cli.Model.run",
-        lambda self, skip_existing=None, wait=True, compute_root=None, execution=None: (
-            fake_handle
-        ),
-    )
-
-    result = runner.invoke(app, ["run", str(tmp_path)])
-    assert result.exit_code == 0
-    assert "Submitted job: 42" in result.output
+    assert "waiting for the job" in result.output
 
 
 # ---------------------------------------------------------------------------
@@ -497,7 +347,7 @@ def test_init_writes_science_first_commented_config(tmp_path):
     parsed = yaml.safe_load(text)
 
     assert "#" in text
-    assert ModelConfig.from_yaml(project / "config.yaml")
+    assert ProjectConfig.from_yaml(project / "config.yaml")
     assert list(parsed) == [
         "mets",
         "grid",
@@ -510,7 +360,7 @@ def test_init_writes_science_first_commented_config(tmp_path):
     ]
     assert parsed["output"] == "./output"
     assert parsed["grid"]["xmin"] == -113.0
-    loaded = ModelConfig.from_yaml(project / "config.yaml")
+    loaded = ProjectConfig.from_yaml(project / "config.yaml")
     assert loaded.grid is not None and loaded.grid.xmin == -113.0
     assert list(loaded.resolve_variants()) == ["hrrr"]
     assert parsed["variants"] == {"hrrr": {}}
@@ -540,14 +390,13 @@ def test_init_aborts_when_config_exists(tmp_path):
 
 
 def test_status_lists_output_folders_no_variant_uses(tmp_path):
-    from stilt.model import Model
+    from stilt.project import Project
 
     _write_minimal_config(tmp_path)
-    model = Model(project=tmp_path)
-    register(model)
+    project = Project(tmp_path)
     # A run made under settings the config no longer has.
-    stale = model.variants["hrrr"].transport.model_copy(update={"numpar": 7})
-    model.output.run("old", stale)
+    stale = project.variants["hrrr"].transport.model_copy(update={"numpar": 7})
+    project.output.run("old", stale)
 
     result = runner.invoke(app, ["status", str(tmp_path)])
 

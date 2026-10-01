@@ -1,47 +1,195 @@
-"""Tests for stilt.project: the project directory and its input files."""
+"""Tests for stilt.project: the project directory, its tables, its results, and running it."""
 
+import datetime as dt
 from pathlib import Path
 
+import matplotlib
+import numpy as np
+import pandas as pd
 import pytest
+import xarray as xr
 
-from stilt.config import ModelConfig
-from stilt.project import (
-    CONFIG_KEY,
-    RECEPTORS_KEY,
-    Project,
-    project_slug,
-    resolve_directory,
-)
+from stilt.config import ExecutionConfig, Grid, MetConfig, ProjectConfig
+from stilt.execution import resolve_compute_root
+from stilt.footprint import Footprint
+from stilt.output import Output
+from stilt.project import CONFIG_KEY, RECEPTORS_KEY, Project, project_slug
+from stilt.receptors import PointReceptor
+from stilt.simulation import SimID
+from stilt.trajectory import Trajectories
+
+matplotlib.use("Agg")
+
+_XYERR = {
+    "siguverr": 1.0,
+    "tluverr": 60.0,
+    "zcoruverr": 100.0,
+    "horcoruverr": 10.0,
+}
+
+_GRID = Grid(xmin=-114.0, xmax=-113.0, ymin=39.0, ymax=40.0, xres=0.1, yres=0.1)
+
 
 # ---------------------------------------------------------------------------
-# resolve_directory
+# Helpers
 # ---------------------------------------------------------------------------
 
 
-def test_resolve_directory_none_returns_tempdir():
-    p = resolve_directory(None)
-    assert p.exists()
-    assert p.is_dir()
+def _met(tmp_path) -> MetConfig:
+    return MetConfig(
+        directory=tmp_path / "met", file_format="%Y%m%d_%H", file_tres="1h"
+    )
 
 
-def test_resolve_directory_absolute_path_unchanged(tmp_path):
-    assert resolve_directory(tmp_path) == tmp_path
+def _config(tmp_path, include_footprint=True, **overrides) -> ProjectConfig:
+    """Minimal ProjectConfig with one met and (optionally) a footprint grid."""
+    overrides.setdefault("grid", _GRID if include_footprint else None)
+    return ProjectConfig(mets={"hrrr": _met(tmp_path)}, **overrides)
 
 
-def test_resolve_directory_relative_paths_resolve(tmp_path, monkeypatch):
-    """runs/a used to stay relative, which broke workers started elsewhere (#58)."""
+def _project(tmp_path, receptors=None, name="proj", **overrides) -> Project:
+    """Make a project in ``tmp_path / name`` with the minimal config."""
+    return Project.init(
+        tmp_path / name, config=_config(tmp_path, **overrides), receptors=receptors
+    )
+
+
+def _receptor(hour: int, longitude: float = -111.85, **attrs) -> PointReceptor:
+    return PointReceptor(
+        time=dt.datetime(2023, 1, 1, hour),
+        longitude=longitude,
+        latitude=40.77,
+        altitude=5.0,
+        attrs=attrs,
+    )
+
+
+def _particles() -> pd.DataFrame:
+    return pd.DataFrame(
+        {
+            "time": [-60.0, -120.0],
+            "indx": [1.0, 1.0],
+            "long": [-113.9, -113.5],
+            "lati": [39.7, 39.6],
+            "zagl": [10.0, 20.0],
+            "foot": [1e-5, 2e-5],
+            "dens": [1.2, 1.2],
+            "samt": [1.0, 1.0],
+            "sigw": [0.1, 0.1],
+            "tlgr": [10.0, 10.0],
+            "mlht": [500.0, 500.0],
+        }
+    )
+
+
+def _write_trajectory(project: Project, receptor, variant="hrrr") -> Path:
+    """Write a small particle file for one simulation into the output directory."""
+    sim = project.simulation(receptor.id, variant)
+    traj = Trajectories.from_particles(
+        _particles(), receptor=sim.receptor, params=sim.params, met_files=[]
+    )
+    run = sim.output.run(sim.variant.name, sim.variant.transport)
+    return run.write_particles(traj)
+
+
+def _write_footprint(
+    project: Project, receptor, variant="hrrr", *, empty=False
+) -> Path:
+    """Write a footprint (or an empty one) for one simulation into the output directory."""
+    sim = project.simulation(receptor.id, variant)
+    assert sim.footprint_config is not None
+    run = sim.output.run(sim.variant.name, sim.variant.transport)
+    feet = run.footprints(sim.footprint_config, name=sim.variant.name)
+    if empty:
+        return feet.write_empty(sim.receptor, "outside_domain", name=sim.variant.name)
+    grid = sim.footprint_config.grid
+    assert grid is not None
+    x_axis, y_axis = grid.axes
+    data = xr.DataArray(
+        np.random.rand(1, len(y_axis), len(x_axis)),
+        dims=("time", "lat", "lon"),
+        coords={"time": [sim.receptor.time], "lat": y_axis, "lon": x_axis},
+    )
+    foot = Footprint(
+        receptor=sim.receptor,
+        config=sim.footprint_config,
+        data=data,
+        name=sim.variant.name,
+    )
+    return feet.write(foot)
+
+
+def _pairs(frame: pd.DataFrame) -> list[tuple[str, str]]:
+    return list(zip(frame["receptor"], frame["variant"], strict=True))
+
+
+# ---------------------------------------------------------------------------
+# Making and opening a project
+# ---------------------------------------------------------------------------
+
+
+def test_init_writes_the_settings_given_and_the_receptors(tmp_path, point_receptor):
+    project = Project.init(
+        tmp_path / "proj",
+        receptors=[point_receptor],
+        mets={"hrrr": _met(tmp_path)},
+        n_hours=-6,
+    )
+
+    text = (tmp_path / "proj" / CONFIG_KEY).read_text()
+    assert "n_hours: -6" in text and "numpar" not in text  # only what was given
+    assert (tmp_path / "proj" / RECEPTORS_KEY).exists()
+    assert project.config.n_hours == -6
+    assert list(project.receptors["receptor"]) == [point_receptor.id]
+    assert Project(tmp_path / "proj").config == project.config
+
+
+def test_init_refuses_a_project_that_has_a_config(tmp_path):
+    _project(tmp_path)
+    text = (tmp_path / "proj" / CONFIG_KEY).read_text()
+
+    with pytest.raises(FileExistsError, match="already has a config.yaml"):
+        Project.init(tmp_path / "proj", config=_config(tmp_path, numpar=10))
+    assert (tmp_path / "proj" / CONFIG_KEY).read_text() == text
+
+
+def test_init_takes_a_config_or_keywords_not_both(tmp_path):
+    with pytest.raises(TypeError, match="not both"):
+        Project.init(tmp_path / "proj", config=_config(tmp_path), n_hours=-6)
+    assert not (tmp_path / "proj").exists()
+
+
+def test_init_copies_receptors_from_a_csv(tmp_path):
+    csv = tmp_path / "mine.csv"
+    csv.write_text(
+        "time,longitude,latitude,altitude,site\n"
+        "2023-01-01 12:00:00,-111.85,40.77,5,WBB\n"
+    )
+    project = Project.init(tmp_path / "proj", config=_config(tmp_path), receptors=csv)
+
+    assert project.receptors["site"].tolist() == ["WBB"]
+
+
+def test_opening_reads_nothing_until_asked(tmp_path):
+    project = Project(tmp_path / "nothing")
+
+    assert project.directory == (tmp_path / "nothing").resolve()
+    assert project.name == "nothing"
+    assert repr(project) == f"Project({str(project.directory)!r})"
+    with pytest.raises(FileNotFoundError, match="Project.init"):
+        _ = project.config
+    assert not (tmp_path / "nothing").exists()
+
+
+def test_a_relative_path_is_taken_from_the_current_directory(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
-    assert resolve_directory("subdir") == tmp_path.resolve() / "subdir"
-    assert resolve_directory("runs/a") == tmp_path.resolve() / "runs" / "a"
-
-
-def test_resolve_directory_expands_user_and_env(tmp_path, monkeypatch):
-    monkeypatch.setenv("PYSTILT_TEST_DIR", str(tmp_path))
-    assert resolve_directory("$PYSTILT_TEST_DIR/x") == tmp_path.resolve() / "x"
+    monkeypatch.setenv("PROJECTS", str(tmp_path / "env"))
+    assert Project("rel").directory == (tmp_path / "rel").resolve()
+    assert Project("$PROJECTS/p").directory == (tmp_path / "env" / "p").resolve()
 
 
 @pytest.mark.parametrize(
-    ("root", "expected"),
+    ("directory", "expected"),
     [
         ("/data/projects/My_Project", "my-project"),
         ("/data/projects/My_Project/", "my-project"),
@@ -49,143 +197,692 @@ def test_resolve_directory_expands_user_and_env(tmp_path, monkeypatch):
         ("", "project"),
     ],
 )
-def test_project_slug(root, expected):
-    assert project_slug(root) == expected
+def test_project_slug(directory, expected):
+    assert project_slug(directory) == expected
+
+
+def test_views_are_cached(tmp_path):
+    project = _project(tmp_path)
+
+    assert project.config is project.config
+    assert project.receptors is project.receptors
+    assert project.simulations is project.simulations
+    assert project.variants is project.variants
+    assert project.plot is project.plot
 
 
 # ---------------------------------------------------------------------------
-# The directory
+# Output directory and scratch
 # ---------------------------------------------------------------------------
 
 
-def test_project_relative_name_resolves_against_cwd(tmp_path, monkeypatch):
-    monkeypatch.chdir(tmp_path)
-    project = Project("myproj")
-    assert project.directory == tmp_path.resolve() / "myproj"
-    assert project.root == str(project.directory)
-    assert project.name == "myproj"
+def test_output_defaults_to_the_projects_output_directory(tmp_path):
+    project = _project(tmp_path)
+
+    assert isinstance(project.output, Output)
+    assert project.output.path == tmp_path / "proj" / "output"
+    assert not project.output.path.exists()  # nothing is made by looking
 
 
-def test_project_none_makes_temp_dir():
-    project = Project(None)
-    assert project.directory.is_dir()
+def test_output_is_relative_to_the_project_unless_absolute(tmp_path):
+    relative = _project(tmp_path, name="a", output="../results")
+    absolute = _project(tmp_path, name="b", output=str(tmp_path / "abs"))
+
+    assert relative.output.path == (tmp_path / "results").resolve()
+    assert absolute.output.path == tmp_path / "abs"
 
 
-def test_project_str_and_repr(tmp_path):
-    project = Project(tmp_path / "proj")
-    assert str(project) == str(tmp_path / "proj")
-    assert str(tmp_path / "proj") in repr(project)
+def test_output_can_be_shared_between_projects(tmp_path, point_receptor):
+    shared = str(tmp_path / "shared")
+    a = _project(tmp_path, [point_receptor], name="a", output=shared)
+    b = _project(tmp_path, [point_receptor], name="b", output=shared)
+
+    _write_trajectory(a, point_receptor)
+
+    rid = point_receptor.id
+    assert a.output.path == b.output.path
+    assert b.simulation(rid, "hrrr").has_trajectory
+    assert a.simulation(rid, "hrrr").run == b.simulation(rid, "hrrr").run
 
 
-def test_output_path_is_relative_to_the_project_unless_absolute(tmp_path, model_config):
-    project = Project(tmp_path / "proj")
-    assert project.output_path(model_config) == tmp_path / "proj" / "output"
-    shared = model_config.model_copy(update={"output": str(tmp_path / "shared")})
-    assert project.output_path(shared) == tmp_path / "shared"
-    nested = model_config.model_copy(update={"output": "../results"})
-    assert project.output_path(nested) == (tmp_path / "results").resolve()
+def test_compute_root_defaults_under_tmpdir(tmp_path, monkeypatch):
+    monkeypatch.setenv("TMPDIR", str(tmp_path / "tmp"))
+    monkeypatch.delenv("PYSTILT_COMPUTE_ROOT", raising=False)
+
+    expected = (tmp_path / "tmp" / "pystilt" / "proj").resolve()
+    assert resolve_compute_root(_project(tmp_path)) == expected
+
+
+def test_default_compute_root_is_resolved_like_an_explicit_one(tmp_path, monkeypatch):
+    """A TMPDIR behind a symlink (as on macOS) gives the path a pool worker gets."""
+    real = tmp_path / "real"
+    real.mkdir()
+    (tmp_path / "link").symlink_to(real)
+    monkeypatch.setenv("TMPDIR", str(tmp_path / "link"))
+    monkeypatch.delenv("PYSTILT_COMPUTE_ROOT", raising=False)
+    project = _project(tmp_path)
+
+    default = resolve_compute_root(project)
+    assert default == real.resolve() / "pystilt" / "proj"
+    assert resolve_compute_root(project, str(default)) == default
+
+
+def test_compute_root_from_the_environment_and_explicit_wins(tmp_path, monkeypatch):
+    monkeypatch.setenv("PYSTILT_COMPUTE_ROOT", str(tmp_path / "scratch"))
+    project = _project(tmp_path)
+
+    assert resolve_compute_root(project) == (tmp_path / "scratch").resolve()
+    explicit = resolve_compute_root(project, tmp_path / "explicit")
+    assert explicit == (tmp_path / "explicit").resolve()
 
 
 # ---------------------------------------------------------------------------
-# config.yaml
+# Receptors
 # ---------------------------------------------------------------------------
 
 
-def test_project_has_config_false_and_load_raises_when_absent(tmp_path):
-    project = Project(tmp_path / "proj")
-    assert not project.has_config
-    with pytest.raises(FileNotFoundError):
-        project.load_config()
+def test_receptors_are_a_table_with_the_files_labels(tmp_path):
+    a, b = _receptor(12, site="WBB"), _receptor(13, longitude=-112.0, site="UOU")
+    project = _project(tmp_path, [a, b])
+
+    frame = project.receptors
+
+    assert list(frame.columns) == ["receptor", "time", "kind", "location", "site"]
+    assert frame["receptor"].tolist() == [a.id, b.id]
+    assert frame["kind"].tolist() == ["point", "point"]
+    assert frame["location"].tolist() == [a.location_id, b.location_id]
+    assert str(frame["time"].dtype).startswith("datetime64")
+    assert frame["site"].tolist() == ["WBB", "UOU"]
+    assert project.receptor(b.id) == b
+    with pytest.raises(KeyError, match="No receptor"):
+        project.receptor("202301011200_0_0_0")
 
 
-def test_project_config_round_trip(tmp_path, model_config):
-    project = Project(tmp_path / "proj")
-    project.save_config(model_config)
+def test_a_project_without_receptors_is_empty(tmp_path):
+    project = _project(tmp_path)
 
-    assert project.has_config
-    assert project.config_path == tmp_path / "proj" / CONFIG_KEY
-    assert project.config_path.is_file()
-    loaded = project.load_config()
-    assert isinstance(loaded, ModelConfig)
-    # The saved file always declares its variants; everything else is as given.
-    assert loaded.model_dump(exclude={"variants"}) == model_config.model_dump(
-        exclude={"variants"}
-    )
-    assert loaded.resolve_variants() == model_config.resolve_variants()
+    assert project.receptors.empty
+    assert list(project.receptors.columns) == ["receptor", "time", "kind", "location"]
+    assert project.simulations.empty
+    assert project.status().empty
+    assert project.run() == []
 
 
-# ---------------------------------------------------------------------------
-# receptors.csv
-# ---------------------------------------------------------------------------
-
-
-def test_project_load_receptors_none_when_absent(tmp_path):
-    project = Project(tmp_path / "proj")
-    assert not project.has_receptors
-    assert project.load_receptors() is None
-
-
-def test_project_receptors_round_trip_points(tmp_path, point_receptor):
-    project = Project(tmp_path / "proj")
-    assert project.add_receptors([point_receptor]) == [point_receptor]
-    assert project.receptors_path == tmp_path / "proj" / RECEPTORS_KEY
-    assert project.has_receptors
-    assert project.load_receptors() == [point_receptor]
-
-
-def test_project_receptors_round_trip_preserves_groups(
+def test_add_receptors_appends_only_new_ones_and_refreshes_the_views(
     tmp_path, point_receptor, column_receptor, multipoint_receptor
 ):
-    """r_idx grouping survives, so column/multipoint receptors come back intact."""
-    project = Project(tmp_path / "proj")
-    receptors = [point_receptor, column_receptor, multipoint_receptor]
-    project.add_receptors(receptors)
+    project = _project(tmp_path, [point_receptor])
+    assert len(project.simulations) == 1
 
-    loaded = project.load_receptors()
-    assert loaded == receptors
-    assert [type(r) for r in loaded] == [type(r) for r in receptors]
-    assert [len(r.coords()) for r in loaded] == [1, 2, 3]
+    added = project.add_receptors(
+        [point_receptor, column_receptor, multipoint_receptor]
+    )
 
-
-def test_project_add_receptors_appends_only_new_ones(
-    tmp_path, point_receptor, column_receptor
-):
-    project = Project(tmp_path / "proj")
-    project.add_receptors([point_receptor])
-    assert project.add_receptors([point_receptor, column_receptor]) == [column_receptor]
-    assert project.load_receptors() == [point_receptor, column_receptor]
+    assert added == [column_receptor.id, multipoint_receptor.id]
+    assert project.receptors["kind"].tolist() == ["point", "column", "multipoint"]
+    assert len(project.simulations) == 3
+    assert project.receptor(multipoint_receptor.id) == multipoint_receptor
+    reopened = Project(project.directory).receptors["receptor"].tolist()
+    assert reopened == project.receptors["receptor"].tolist()
+    assert project.add_receptors(point_receptor) == []
 
 
-def test_project_add_receptors_appends_in_the_files_own_columns(
+def test_add_receptors_appends_in_the_files_own_columns(
     tmp_path, point_receptor, column_receptor
 ):
     """A hand-written file keeps its columns, its r_idx values, and extra columns."""
-    project = Project(tmp_path / "proj")
-    project.directory.mkdir()
+    project = _project(tmp_path)
     text = (
         "r_idx,time,lati,long,zagl,scene\n"
         "1155,2023-01-01 12:00:00,40.77,-111.85,5.0,A\n"
     )
     project.receptors_path.write_text(text)
 
-    assert project.add_receptors([point_receptor, column_receptor]) == [column_receptor]
+    added = project.add_receptors([point_receptor, column_receptor])
 
+    assert added == [column_receptor.id]
     stored = project.receptors_path.read_text()
     assert stored.startswith(text)  # the original bytes are untouched
     lines = stored.splitlines()
-    assert lines[1].split(",")[0] == "1155"
     assert lines[2].split(",")[0] == "1156" and lines[2].endswith(",")
-    assert project.load_receptors() == [point_receptor, column_receptor]
 
 
-def test_project_add_receptors_refuses_a_group_without_r_idx(tmp_path, column_receptor):
-    project = Project(tmp_path / "proj")
-    project.directory.mkdir()
+def test_add_receptors_refuses_a_group_without_r_idx(tmp_path, column_receptor):
+    project = _project(tmp_path)
     project.receptors_path.write_text("time,lati,long,zagl\n")
     with pytest.raises(ValueError, match="r_idx"):
         project.add_receptors([column_receptor])
 
 
-def test_project_paths_are_paths(tmp_path):
+def test_receptors_that_would_share_result_files_are_refused(tmp_path):
+    """Two receptors with one id would overwrite each other's results."""
+    from stilt.receptors import MultiPointReceptor
+
+    def slant(alt):
+        return MultiPointReceptor(
+            time="2023-01-01 12:00",
+            longitudes=[-111.85, -111.86],
+            latitudes=[40.77, 40.78],
+            altitudes=[alt, 500.0],
+        )
+
+    a, b = slant(10.001), slant(10.004)
+    assert a.id == b.id and a != b
+    with pytest.raises(ValueError, match="share the id"):
+        _project(tmp_path, [a, b], name="both")
+
+    project = _project(tmp_path, [a])
+    with pytest.raises(ValueError, match="share the id"):
+        project.add_receptors([b])
+    assert project.add_receptors([slant(10.001)]) == []  # the same receptor again
+
+
+def test_add_receptors_takes_receptors_or_a_csv(tmp_path):
+    project = _project(tmp_path)
+    with pytest.raises(TypeError, match="Receptor"):
+        project.add_receptors([1, 2])
+
+
+# ---------------------------------------------------------------------------
+# Variants and simulations
+# ---------------------------------------------------------------------------
+
+
+def test_variants_default_to_one_per_met(tmp_path):
+    project = _project(tmp_path)
+
+    assert list(project.variants) == ["hrrr"]
+    assert project.variants["hrrr"].met == "hrrr"
+
+
+def test_simulations_are_receptors_times_variants(tmp_path):
+    a, b = _receptor(12, site="WBB"), _receptor(13, site="UOU")
+    project = _project(
+        tmp_path,
+        [a, b],
+        krand=4,
+        variants={"hrrr": {}, "err": {**_XYERR, "realizations": 2}},
+    )
+
+    sims = project.simulations
+
+    assert list(sims.columns[:3]) == ["receptor", "variant", "group"]
+    assert _pairs(sims) == [
+        (a.id, "hrrr"),
+        (a.id, "err-0"),
+        (a.id, "err-1"),
+        (b.id, "hrrr"),
+        (b.id, "err-0"),
+        (b.id, "err-1"),
+    ]
+    assert sims["group"].tolist()[:3] == ["hrrr", "err", "err"]
+    assert set(sims.columns) >= {"time", "kind", "location", "site"}
+
+
+def test_simulations_select_with_pandas(tmp_path):
+    a = _receptor(12, site="WBB")
+    b = _receptor(13, site="UOU")
+    c = _receptor(14, site="WBB")
+    project = _project(
+        tmp_path, [a, b, c], variants={"hrrr": {}, "zi08": {"ziscale": 0.8}}
+    )
+    sims = project.simulations
+
+    wbb = sims[(sims.site == "WBB") & (sims.variant == "zi08")]
+    assert _pairs(wbb) == [(a.id, "zi08"), (c.id, "zi08")]
+    later = sims[sims.time.between("2023-01-01 13:00", "2023-01-01 14:00")]
+    assert sorted(set(later["receptor"])) == sorted([b.id, c.id])
+    assert len(project.status(wbb)) == 2
+
+
+def test_simulation_handles_carry_the_variant_settings(tmp_path, point_receptor):
+    project = _project(
+        tmp_path,
+        [point_receptor],
+        krand=4,
+        variants={
+            "hrrr": {},
+            "err": {**_XYERR, "realizations": 2, "grid": None},
+            "zi08": {"ziscale": 0.8},
+            "s2": {"smooth_factor": 2},
+        },
+    )
+    rid = point_receptor.id
+
+    base = project.simulation(rid, "hrrr")
+    err = project.simulation(rid, "err-1")
+    zi = project.simulation(rid, "zi08")
+    s2 = project.simulation(rid, "s2")
+
+    assert base.params.winderrtf == 0
+    assert err.params.winderrtf == 1
+    assert err.footprint_config is None
+    assert zi.params.ziscale == 0.8
+    assert zi.footprint_config == base.footprint_config
+    assert s2.footprint_config is not None and s2.footprint_config.smooth_factor == 2
+    assert s2.variant.transport == base.variant.transport  # shares hrrr's particles
+    assert project.simulation(rid, "hrrr") == base  # a value, not a handle
+    with pytest.raises(KeyError, match="No variant"):
+        project.simulation(rid, "nope")
+
+
+def test_variants_with_equal_transport_settings_share_a_run(tmp_path, point_receptor):
+    project = _project(
+        tmp_path,
+        [point_receptor],
+        variants={"hrrr": {}, "s2": {"smooth_factor": 2}, "zi08": {"ziscale": 0.8}},
+    )
+
+    hrrr, s2, zi = (project.variants[v].transport for v in ("hrrr", "s2", "zi08"))
+    assert hrrr.hash == s2.hash != zi.hash
+
+    _write_trajectory(project, point_receptor)
+    assert project.simulation(point_receptor.id, "s2").has_trajectory
+    assert not project.simulation(point_receptor.id, "zi08").has_trajectory
+    assert len(project.output.runs()) == 1
+
+
+def test_unreferenced_lists_output_folders_the_config_no_longer_uses(
+    tmp_path, point_receptor
+):
+    project = _project(
+        tmp_path, [point_receptor], variants={"hrrr": {}, "zi08": {"ziscale": 0.8}}
+    )
+    for variant in ("hrrr", "zi08"):
+        _write_trajectory(project, point_receptor, variant)
+        _write_footprint(project, point_receptor, variant)
+    assert project.unreferenced() == {"particles": [], "footprints": []}
+
+    # The user drops zi08 and changes hrrr's smoothing in config.yaml.
+    _config(tmp_path, variants={"hrrr": {"smooth_factor": 0.5}}).to_yaml(
+        project.config_path
+    )
+    stale = Project(project.directory).unreferenced()
+    assert [k.split("-")[0] for k in stale["particles"]] == ["zi08"]
+    assert sorted(k.rsplit("-", 1)[0] for k in stale["footprints"]) == ["hrrr", "zi08"]
+    # Nothing was deleted.
+    assert project.simulation(point_receptor.id, "zi08").is_complete()
+
+
+# ---------------------------------------------------------------------------
+# Completion and status
+# ---------------------------------------------------------------------------
+
+
+def test_incomplete_follows_each_variant_outputs(tmp_path, point_receptor):
+    project = _project(
+        tmp_path,
+        [point_receptor],
+        variants={"hrrr": {}, "traj": {"grid": None}, "s2": {"smooth_factor": 2}},
+    )
+
+    assert project.incomplete()["variant"].tolist() == ["hrrr", "traj", "s2"]
+
+    _write_trajectory(project, point_receptor)  # shared by hrrr, traj, and s2
+    assert project.incomplete()["variant"].tolist() == ["hrrr", "s2"]
+
+    _write_footprint(project, point_receptor)
+    _write_footprint(project, point_receptor, "s2", empty=True)
+    assert project.incomplete().empty
+
+
+def test_status_marks_outputs_a_variant_does_not_produce(tmp_path, point_receptor):
+    project = _project(
+        tmp_path, [point_receptor], variants={"hrrr": {}, "traj": {"grid": None}}
+    )
+    _write_trajectory(project, point_receptor)
+
+    status = project.status()
+
+    assert list(status.columns[-4:]) == ["trajectory", "footprint", "empty", "complete"]
+    by_variant = status.set_index("variant")
+    assert by_variant.loc["hrrr", "trajectory"] == True  # noqa: E712
+    assert by_variant.loc["hrrr", "footprint"] == False  # noqa: E712
+    assert by_variant.loc["hrrr", "empty"] == False  # noqa: E712
+    assert pd.isna(by_variant.loc["traj", "footprint"])
+    assert pd.isna(by_variant.loc["traj", "empty"])
+    assert by_variant.loc["traj", "complete"] == True  # noqa: E712
+    assert by_variant.loc["hrrr", "complete"] == False  # noqa: E712
+
+
+def test_status_counts_an_empty_footprint_as_complete(tmp_path):
+    a, b = _receptor(12), _receptor(13)
+    project = _project(tmp_path, [a, b])
+    assert project.status()["complete"].tolist() == [False, False]
+
+    _write_trajectory(project, a)
+    _write_footprint(project, a)
+    _write_trajectory(project, b)
+    _write_footprint(project, b, empty=True)
+    status = project.status()
+    assert status["complete"].tolist() == [True, True]
+    assert status["empty"].tolist() == [False, True]
+
+
+def _mixed_state_project(tmp_path):
+    """Six receptors under three variants, in every state a simulation can be in."""
+    receptors = [_receptor(h) for h in range(10, 16)]
+    project = _project(
+        tmp_path,
+        receptors,
+        variants={
+            "hrrr": {},
+            "smooth": {"smooth_factor": 2},  # shares hrrr's particles
+            "zi08": {"ziscale": 0.8, "grid": None},  # particles only
+        },
+    )
+    a, b, c, d, e, _ = receptors
+    _write_trajectory(project, a)  # particles, no footprint
+    _write_trajectory(project, b)
+    _write_footprint(project, b)  # complete for hrrr, not for smooth
+    _write_trajectory(project, c)
+    _write_footprint(project, c, empty=True)  # an empty footprint counts
+    _write_footprint(project, c, "smooth")
+    _write_trajectory(project, d, "zi08")  # complete: zi08 makes no footprint
+    _write_trajectory(project, e)
+    _write_footprint(project, e)
+    _write_footprint(project, e, "smooth")
+    _write_trajectory(project, e, "zi08")  # complete under every variant
+    return project
+
+
+def test_incomplete_and_status_agree_with_is_complete(tmp_path):
+    """The folder listing must give `Simulation.is_complete()`'s answer."""
+    project = _mixed_state_project(tmp_path)
+    sims = project.simulations
+    handles = [project.simulation(r, v) for r, v in _pairs(sims)]
+
+    expected = [sim.id for sim in handles if not sim.is_complete()]
+    assert 0 < len(expected) < len(handles)
+    assert [SimID(r, v) for r, v in _pairs(project.incomplete())] == expected
+
+    status = project.status()
+    assert status["complete"].tolist() == [sim.is_complete() for sim in handles]
+    assert status["trajectory"].tolist() == [sim.has_trajectory for sim in handles]
+    for row, sim in zip(status.itertuples(), handles, strict=True):
+        if sim.makes_footprint:
+            assert row.footprint == sim.has_footprint
+            assert row.empty == (sim.empty_reason is not None)
+        else:
+            assert pd.isna(row.footprint) and pd.isna(row.empty)
+
+    smooth = sims[sims.variant == "smooth"]
+    assert _pairs(project.incomplete(smooth)) == [
+        (sim.receptor_id, "smooth")
+        for sim in handles
+        if sim.variant.name == "smooth" and not sim.is_complete()
+    ]
+
+
+def test_incomplete_of_a_project_with_no_results_is_everything(tmp_path):
+    project = _project(tmp_path, [_receptor(12)])
+    assert _pairs(project.incomplete()) == _pairs(project.simulations)
+    assert not project.output.path.exists()  # looking creates nothing
+
+
+# ---------------------------------------------------------------------------
+# Loading results
+# ---------------------------------------------------------------------------
+
+
+def test_load_trajectories_of_a_selection(tmp_path):
+    a, b = _receptor(12), _receptor(13)
+    project = _project(tmp_path, [a, b])
+    assert project.load_trajectories() == {}
+
+    path = _write_trajectory(project, a)
+
+    assert path.parent == project.output.runs()[0].particles_dir / "date=2023-01-01"
+    [(sid, traj)] = project.load_trajectories().items()
+    assert sid == SimID(a.id, "hrrr")
+    assert isinstance(traj, Trajectories) and traj.receptor.id == a.id
+    sims = project.simulations
+    assert project.load_trajectories(sims[sims.receptor == b.id]) == {}
+
+
+def test_load_footprints_skips_empty_footprints_and_trajectory_only_variants(
+    tmp_path,
+):
+    done, empty, missing = _receptor(12), _receptor(13), _receptor(14)
+    project = _project(
+        tmp_path,
+        [done, empty, missing],
+        variants={"hrrr": {}, "traj": {"grid": None}},
+    )
+    _write_footprint(project, done)
+    _write_footprint(project, empty, empty=True)
+    _write_trajectory(project, done, "traj")
+
+    loaded = project.load_footprints()
+
+    assert list(loaded) == [SimID(done.id, "hrrr")]
+    assert isinstance(loaded[SimID(done.id, "hrrr")], Footprint)
+
+
+def test_load_footprints_by_variant(tmp_path, point_receptor):
+    project = _project(
+        tmp_path, [point_receptor], variants={"hrrr": {}, "zi08": {"ziscale": 0.8}}
+    )
+    for variant in ("hrrr", "zi08"):
+        _write_footprint(project, point_receptor, variant)
+    sims = project.simulations
+
+    assert len(project.load_footprints()) == 2
+    [(sid, foot)] = project.load_footprints(sims[sims.variant == "zi08"]).items()
+    assert sid == SimID(point_receptor.id, "zi08")
+    assert foot.name == "zi08"
+
+
+def test_jacobian_of_a_variant(tmp_path):
+    a, b, c = _receptor(12), _receptor(13), _receptor(14)
+    project = _project(
+        tmp_path,
+        [a, b, c],
+        variants={"hrrr": {}, "zi08": {"ziscale": 0.8}, "traj": {"grid": None}},
+    )
+    _write_footprint(project, a)
+    _write_footprint(project, b, empty=True)
+    target = Grid(xmin=-114.0, xmax=-113.0, ymin=39.0, ymax=40.0, xres=0.5, yres=0.5)
+    bins = pd.IntervalIndex.from_breaks(
+        pd.date_range("2023-01-01 00:00", "2023-01-02 00:00", freq="12h"),
+        closed="left",
+    )
+
+    H = project.jacobian(target, bins, variant="hrrr")
+
+    assert list(H.receptors) == [a.id]
+    assert H.empty == [b.id]
+    assert H.missing == [c.id]
+    assert H.data.shape == (1, len(bins) * len(target.index))
+    expected = project.simulation(a.id, "hrrr").footprint.aggregate(target, bins)
+    np.testing.assert_allclose(
+        H.to_frame().iloc[0].to_numpy().reshape(len(bins), -1).T,
+        expected.to_numpy(),
+        rtol=1e-6,
+    )
+    some = project.jacobian(target, bins, "hrrr", receptors=[b.id, a.id])
+    assert list(some.receptors) == [a.id]
+    right_closed = pd.IntervalIndex.from_breaks(
+        bins.left.append(bins.right[-1:]), closed="right"
+    )
+    with pytest.raises(ValueError, match="closed on the left"):
+        project.jacobian(target, right_closed, variant="hrrr")
+    with pytest.raises(ValueError, match="no footprints yet"):
+        project.jacobian(target, bins, variant="zi08")
+    with pytest.raises(ValueError, match="no grid"):
+        project.jacobian(target, bins, variant="traj")
+
+
+def test_plot_availability_returns_axes(tmp_path, point_receptor):
+    import matplotlib.pyplot as plt
+
+    project = _project(tmp_path, [point_receptor])
+
+    ax = project.plot.availability()
+
+    assert ax is not None
+    plt.close("all")
+
+
+# ---------------------------------------------------------------------------
+# run() and submit()
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def ran(monkeypatch):
+    """Record what a local run hands to the workers, and run nothing."""
+    calls: list[dict] = []
+
+    def run_receptors(project, receptor_ids, **kwargs):
+        calls.append({"project": project, "ids": list(receptor_ids), **kwargs})
+        return [f"result-{rid}" for rid in receptor_ids]
+
+    monkeypatch.setattr("stilt.execution.worker.run_receptors", run_receptors)
+    return calls
+
+
+def test_run_hands_the_incomplete_receptors_to_the_workers(tmp_path, ran):
+    done, todo = _receptor(12), _receptor(13)
+    project = _project(
+        tmp_path, [done, todo], include_footprint=False, execution={"cpus": 3}
+    )
+    _write_trajectory(project, done)
+
+    results = project.run()
+
+    assert results == [f"result-{todo.id}"]
+    [call] = ran
+    assert call["ids"] == [todo.id]
+    assert call["project"] is project
+    assert call["n_cores"] == 3
+    assert call["compute_root"] is None and call["skip_existing"] is True
+
+
+def test_run_without_skip_runs_every_receptor_once(tmp_path, ran):
+    done, todo = _receptor(12), _receptor(13)
+    project = _project(
+        tmp_path, [done, todo], variants={"hrrr": {}, "zi08": {"ziscale": 0.8}}
+    )
+    _write_trajectory(project, done)
+
+    project.run(skip_existing=False, compute_root=tmp_path / "scratch")
+
+    [call] = ran
+    assert call["ids"] == [
+        done.id,
+        todo.id,
+    ]  # each receptor once, whatever its variants
+    assert call["skip_existing"] is False
+    assert call["compute_root"] == tmp_path / "scratch"
+
+
+def test_run_takes_execution_settings_in_place_of_the_configs(tmp_path, ran):
+    project = _project(tmp_path, [_receptor(12)], execution={"cpus": 3})
+
+    project.run(execution=ExecutionConfig(cpus=8))
+
+    assert ran[0]["n_cores"] == 8
+
+
+def test_run_with_nothing_to_do_starts_nothing(tmp_path, ran, point_receptor):
+    project = _project(tmp_path, [point_receptor])
+    _write_trajectory(project, point_receptor)
+    _write_footprint(project, point_receptor, empty=True)
+
+    assert project.run() == []
+    assert ran == []
+
+
+def test_run_after_adding_a_variant_runs_the_receptor_again(
+    tmp_path, ran, point_receptor
+):
+    """A finished project grows a variant: only that variant is incomplete."""
+    project = _project(tmp_path, [point_receptor])
+    _write_trajectory(project, point_receptor)
+    _write_footprint(project, point_receptor)
+    assert project.run() == []
+
+    # The user adds a variant to config.yaml.
+    _config(tmp_path, variants={"hrrr": {}, "zi08": {"ziscale": 0.8}}).to_yaml(
+        project.config_path
+    )
+    grown = Project(project.directory)
+    assert _pairs(grown.incomplete()) == [(point_receptor.id, "zi08")]
+
+    grown.run()
+
+    assert ran[0]["ids"] == [point_receptor.id]
+
+
+def test_run_finds_a_missing_realization(tmp_path, ran, point_receptor):
+    project = _project(
+        tmp_path,
+        [point_receptor],
+        grid=None,
+        krand=4,
+        variants={"hrrr": {}, "err": {**_XYERR, "realizations": 2}},
+    )
+    _write_trajectory(project, point_receptor)
+    _write_trajectory(project, point_receptor, "err-0")
+
+    project.run()
+
+    assert ran[0]["ids"] == [point_receptor.id]
+    assert _pairs(project.incomplete()) == [(point_receptor.id, "err-1")]
+
+
+def test_submit_needs_slurm(tmp_path, point_receptor):
+    project = _project(tmp_path, [point_receptor])
+    with pytest.raises(ValueError, match="slurm"):
+        project.submit()
+
+
+def test_run_on_slurm_submits_and_waits(tmp_path, monkeypatch, point_receptor):
+    project = _project(tmp_path, [point_receptor], execution={"backend": "slurm"})
+
+    class _Job:
+        def wait(self):
+            pass
+
+        def exception(self):
+            return None
+
+        def result(self):
+            return ["done"]
+
+    submitted = []
+
+    def submit(project, **kwargs):
+        submitted.append(kwargs)
+        return [_Job(), _Job()]
+
+    monkeypatch.setattr("stilt.execution.runner.submit", submit)
+
+    assert project.run(compute_root="/s") == ["done", "done"]
+    assert submitted[0]["compute_root"] == "/s"
+    assert submitted[0]["execution"].backend == "slurm"
+
+
+def test_receptors_are_built_only_when_asked_for(tmp_path):
+    a, b = _receptor(12, site="WBB"), _receptor(13, site="UOU")
+    _project(tmp_path, [a, b])
     project = Project(tmp_path / "proj")
-    assert isinstance(project.directory, Path)
+
+    assert len(project.receptors) == 2
+    project.status()
+    assert project._built == {}  # listing, selecting, and status build nothing
+
+    assert project.receptor(b.id) == b
+    assert list(project._built) == [b.id]
+    assert project.receptor(b.id) is project.receptor(b.id)
+
+
+def test_a_bad_receptors_file_fails_when_the_project_is_read(tmp_path):
+    project = _project(tmp_path)
+    project.receptors_path.write_text(
+        "time,longitude,latitude,altitude\n2023-01-01 12:00:00,-111.85,95.0,5\n"
+    )
+
+    with pytest.raises(ValueError, match="latitude must be within"):
+        _ = Project(project.directory).receptors

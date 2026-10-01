@@ -7,7 +7,7 @@ from stilt.config import (
     EngineInfo,
     MetConfig,
     MetSettings,
-    ModelConfig,
+    ProjectConfig,
     STILTParams,
     TransportSettings,
     hysplit_version,
@@ -118,7 +118,7 @@ def test_stored_settings_re_validate_to_the_same_hash(tmp_path):
 
 def test_variants_that_differ_only_in_footprint_fields_share_settings(tmp_path):
     met = _met(tmp_path)
-    config = ModelConfig(
+    config = ProjectConfig(
         mets={"hrrr": met},
         grid={
             "xmin": -112,
