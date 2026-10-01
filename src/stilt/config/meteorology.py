@@ -22,7 +22,8 @@ class MetSettings(BaseModel):
     They decide the particles a run produces, so they are saved in the run's
     ``_settings.yaml`` and are part of its hash
     (:class:`~stilt.config.TransportSettings`). The directories are left out,
-    so moving the met files does not change which runs are complete.
+    so moving the met files does not change which runs are complete, and so
+    are ``download_from`` and ``n_min``, which change no particle.
     """
 
     model_config = ConfigDict(extra="allow")
