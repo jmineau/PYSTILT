@@ -30,9 +30,9 @@ footprint is a file with no rows and its reason in the metadata.
 Start from :class:`Output`::
 
     out = Output("output")
-    run = out.run("hrrr", settings)
-    run.write_particles(trajectories)
-    feet = run.footprints(footprint_config)
+    particles = out.particles("hrrr", settings)
+    particles.write(traj)
+    feet = particles.footprints(footprint_config)
     feet.write(footprint)
     H = feet.jacobian(target, time_bins)
 """
@@ -68,8 +68,8 @@ from stilt.config import (
 from stilt.config.transport import canonical, settings_hash
 from stilt.footprint import Footprint
 from stilt.geometry import Geometry, check_resolution, overlap_weights
+from stilt.particles import Trajectories
 from stilt.receptors import Receptor
-from stilt.trajectory import Trajectories
 
 logger = logging.getLogger(__name__)
 
@@ -202,7 +202,7 @@ class Output:
         self.path = Path(path)
         # Folders found so far, by settings hash. A miss rescans the directory,
         # so a folder another worker created is picked up on the next lookup.
-        self._runs: dict[str, Run] = {}
+        self._particle_sets: dict[str, Particles] = {}
         self._footprints: dict[str, Footprints] = {}
 
     def __repr__(self) -> str:
@@ -230,10 +230,10 @@ class Output:
     def scratch_dir(self) -> Path:
         return self.path / "scratch"
 
-    def runs(self) -> list[Run]:
-        """Return every run (particles folder) in the directory, in folder-name order."""
-        found = [Run(self, key) for key in _settings_folders(self.particles_dir)]
-        self._runs = {run.hash: run for run in found}
+    def particle_sets(self) -> list[Particles]:
+        """Return every particles folder in the directory, in folder-name order."""
+        found = [Particles(self, key) for key in _settings_folders(self.particles_dir)]
+        self._particle_sets = {p.hash: p for p in found}
         return found
 
     def footprint_sets(self) -> list[Footprints]:
@@ -245,17 +245,17 @@ class Output:
         return found
 
     def find_footprints(
-        self, run_hash: str, config: FootprintConfig
+        self, particles_hash: str, config: FootprintConfig
     ) -> Footprints | None:
-        """Return the footprint folder for *config* on the particles of the run hashed *run_hash*, or ``None``."""
-        digest = Footprints.hash_for(run_hash, config)
+        """Return the footprint folder for *config* on the particles hashed *particles_hash*, or ``None``."""
+        digest = Footprints.hash_for(particles_hash, config)
         if digest not in self._footprints:
             self.footprint_sets()
         return self._footprints.get(digest)
 
-    def find_run(self, settings: TransportSettings) -> Run | None:
+    def find_particles(self, settings: TransportSettings) -> Particles | None:
         """
-        Return the run with these settings, whatever name its folder carries, or ``None``.
+        Return the particles folder for these settings, whatever name it carries, or ``None``.
 
         Each folder's stored settings are loaded back through
         :class:`~stilt.config.TransportSettings` and hashed again, so a
@@ -263,19 +263,19 @@ class Output:
         matches.
         """
         digest = settings.hash
-        if digest not in self._runs:
-            self.runs()
-        return self._runs.get(digest)
+        if digest not in self._particle_sets:
+            self.particle_sets()
+        return self._particle_sets.get(digest)
 
-    def run(self, name: str, settings: TransportSettings) -> Run:
+    def particles(self, name: str, settings: TransportSettings) -> Particles:
         """
-        Return the run for *settings*, creating its folder on first use.
+        Return the particles folder for *settings*, creating it on first use.
 
         The folder is ``particles/settings=<name>-<hash>``. An existing
         folder with the same settings is reused even if it was created under
         another name.
         """
-        existing = self.find_run(settings)
+        existing = self.find_particles(settings)
         if existing is not None:
             return existing
         digest = settings.hash
@@ -289,35 +289,36 @@ class Output:
                 "settings": settings.identity(),
             },
         )
-        run = Run(self, key)
-        self._runs[run.hash] = run
-        return run
+        created = Particles(self, key)
+        self._particle_sets[created.hash] = created
+        return created
 
 
-class Run:
+class Particles:
     """
-    The particles run under one set of settings, and their logs.
+    One particles folder: the particles of many receptors, one set of transport settings.
 
-    Get one from :meth:`Output.run`. ``key`` is the ``settings=`` value the
-    run's folders share across the ``particles/`` and ``logs/`` trees.
+    Get one from :meth:`Output.particles`. ``key`` is the ``settings=`` value
+    its folders share across the ``particles/``, ``logs/``, and ``scratch/``
+    trees. The logs of the HYSPLIT runs that made the particles are here too.
     """
 
     def __init__(self, output: Output, key: str) -> None:
         self.output = output
         self.key = key
-        record = yaml.safe_load((self.particles_dir / SETTINGS_FILE).read_text()) or {}
+        record = yaml.safe_load((self.path / SETTINGS_FILE).read_text()) or {}
         self.name: str = record["name"]
-        #: The settings the run was made with, re-validated by the current model.
+        #: The settings the particles were made with, re-validated by the current model.
         self.settings = TransportSettings.model_validate(record["settings"])
-        #: Hash of the re-validated settings (see :meth:`Output.find_run`).
+        #: Hash of the re-validated settings (see :meth:`Output.find_particles`).
         self.hash: str = self.settings.hash
 
     def __repr__(self) -> str:
-        return f"Run({self.key!r})"
+        return f"Particles({self.key!r})"
 
     def __eq__(self, other: object) -> bool:
         return (
-            isinstance(other, Run)
+            isinstance(other, Particles)
             and other.output.path == self.output.path
             and other.key == self.key
         )
@@ -327,11 +328,7 @@ class Run:
 
     @property
     def path(self) -> Path:
-        """The particles folder, ``particles/settings=<key>``."""
-        return self.particles_dir
-
-    @property
-    def particles_dir(self) -> Path:
+        """The folder, ``particles/settings=<key>``."""
         return self.output.particles_dir / f"settings={self.key}"
 
     @property
@@ -344,13 +341,13 @@ class Run:
 
     # -- particles ---------------------------------------------------------
 
-    def particles_path(self, receptor_id: str) -> Path:
+    def file(self, receptor_id: str) -> Path:
         """Return the particle file for a receptor, whether or not it exists."""
-        return self.particles_dir / _date_dir(receptor_id) / f"{receptor_id}.parquet"
+        return self.path / _date_dir(receptor_id) / f"{receptor_id}.parquet"
 
-    def has_particles(self, receptor_id: str) -> bool:
+    def has(self, receptor_id: str) -> bool:
         """Return whether the receptor's particle file exists."""
-        return self.particles_path(receptor_id).exists()
+        return self.file(receptor_id).exists()
 
     def receptors(self, among: Iterable[str] | None = None) -> list[str]:
         """
@@ -359,20 +356,19 @@ class Run:
         With *among*, only those receptors are checked, by listing their
         date folders alone.
         """
-        return list(_list_receptor_files(self.particles_dir, ".parquet", among))
+        return list(_list_receptor_files(self.path, ".parquet", among))
 
-    def write_particles(self, trajectories: Trajectories) -> Path:
+    def write(self, particles: Trajectories) -> Path:
         """
         Write a receptor's particles.
 
         ``time`` and ``indx`` are stored as int32 and ``datetime`` is left
         out, since it is the receptor time plus ``time``. Other columns keep
         their type. A ``receptor`` column holds the receptor id, so a scan
-        of the whole tree can tell receptors apart; :meth:`read_particles`
-        drops it. The receptor, transport parameters, and met files go in
+        of the whole tree can tell receptors apart; :meth:`read` drops it. The receptor, transport parameters, and met files go in
         the file's metadata, as :meth:`stilt.Trajectories.to_parquet` does.
         """
-        data = trajectories.data.drop(columns=["datetime"], errors="ignore")
+        data = particles.data.drop(columns=["datetime"], errors="ignore")
         for name in _INT_COLUMNS:
             if name in data.columns:
                 values = data[name].to_numpy()
@@ -380,7 +376,7 @@ class Run:
                     raise ValueError(f"Particle column {name!r} is not whole numbers.")
                 data = data.assign(**{name: values.astype(np.int32)})
         table = pa.Table.from_pandas(data, preserve_index=False)
-        receptor_id = str(trajectories.receptor.id)
+        receptor_id = str(particles.receptor.id)
         table = table.add_column(
             0,
             pa.field("receptor", pa.dictionary(pa.int32(), pa.string())),
@@ -390,27 +386,25 @@ class Run:
             ),
         )
         metadata = {
-            b"stilt:receptor": json.dumps(trajectories.receptor.to_dict()).encode(),
-            b"stilt:params": trajectories.params.model_dump_json().encode(),
+            b"stilt:receptor": json.dumps(particles.receptor.to_dict()).encode(),
+            b"stilt:params": particles.params.model_dump_json().encode(),
             b"stilt:met_files": json.dumps(
-                [str(p) for p in trajectories.met_files]
+                [str(p) for p in particles.met_files]
             ).encode(),
             b"stilt:hash": self.hash.encode(),
             b"stilt:pystilt": _pystilt_version().encode(),
         }
         table = table.replace_schema_metadata(metadata)
-        return _write_atomic_table(table, self.particles_path(receptor_id))
+        return _write_atomic_table(table, self.file(receptor_id))
 
-    def read_particles(
-        self, receptor_id: str, columns: list[str] | None = None
-    ) -> Trajectories:
+    def read(self, receptor_id: str, columns: list[str] | None = None) -> Trajectories:
         """
         Read a receptor's particles.
 
         ``datetime`` is rebuilt from the receptor time, and ``time`` and
         ``indx`` come back as float64, as HYSPLIT's output is read today.
         """
-        path = self.particles_path(receptor_id)
+        path = self.file(receptor_id)
         if columns is not None:
             columns = [c for c in columns if c != "datetime"]
         traj = Trajectories.from_parquet(path, columns=columns)
@@ -427,7 +421,7 @@ class Run:
     # -- logs and scratch --------------------------------------------------
 
     def scratch_path(self, receptor_id: str) -> Path:
-        """Return where a receptor's HYSPLIT working directory is kept when a run fails."""
+        """Return where a receptor's HYSPLIT working directory is kept when HYSPLIT fails."""
         return self.scratch_dir / _date_dir(receptor_id) / receptor_id
 
     def log_path(self, receptor_id: str) -> Path:
@@ -442,24 +436,24 @@ class Run:
     # -- footprints --------------------------------------------------------
 
     def footprint_sets(self) -> list[Footprints]:
-        """Return the footprint folders made from this run's particles."""
-        return [f for f in self.output.footprint_sets() if f.run_key == self.key]
+        """Return the footprint folders made from these particles."""
+        return [f for f in self.output.footprint_sets() if f.particles_key == self.key]
 
     def find_footprints(self, config: FootprintConfig) -> Footprints | None:
-        """Return the footprint folder for *config* on this run's particles, or ``None``."""
+        """Return the footprint folder for *config* on these particles, or ``None``."""
         return self.output.find_footprints(self.hash, config)
 
     def footprints(
         self, config: FootprintConfig, name: str | None = None
     ) -> Footprints:
         """
-        Return the footprint folder for *config* on this run's particles, creating it on first use.
+        Return the footprint folder for *config* on these particles, creating it on first use.
 
         The folder is ``footprints/settings=<name>-<hash>``, hashed over the
-        run's settings and *config* together, so two footprint settings on
-        the same particles get different folders and the same footprint
+        transport settings and *config* together, so two footprint settings
+        on the same particles get different folders and the same footprint
         settings on different particles do too. *name* is the variant the
-        footprints belong to; it defaults to the run's name.
+        footprints belong to; it defaults to the particles folder's name.
         """
         if config.grid is None:
             raise ValueError("Footprint settings need a grid.")
@@ -538,9 +532,9 @@ class Jacobian(NamedTuple):
 
 class Footprints:
     """
-    One footprint folder: footprints of many receptors, one setting, one run.
+    One footprint folder: the footprints of many receptors, one set of footprint settings, one set of particles.
 
-    Get one from :meth:`Run.footprints`. ``key`` is the ``settings=`` value
+    Get one from :meth:`Particles.footprints`. ``key`` is the ``settings=`` value
     of its folder under ``footprints/``.
     """
 
@@ -551,7 +545,7 @@ class Footprints:
         record = yaml.safe_load((self.path / SETTINGS_FILE).read_text()) or {}
         self.name: str = record["name"]
         #: ``settings=`` value of the particles folder these were made from.
-        self.run_key: str = record["particles"]
+        self.particles_key: str = record["particles"]
         #: The settings the footprints were made with, re-validated by the current model.
         self.config = FootprintConfig.model_validate(record["settings"])
         if self.config.grid is None:
@@ -574,20 +568,20 @@ class Footprints:
         return hash((str(self.output.path), self.key))
 
     @functools.cached_property
-    def run(self) -> Run:
-        """The run whose particles these footprints were made from."""
-        return Run(self.output, self.run_key)
+    def particles(self) -> Particles:
+        """The particles folder these footprints were made from."""
+        return Particles(self.output, self.particles_key)
 
     @functools.cached_property
     def hash(self) -> str:
-        """Hash of the run's settings and the footprint settings together, re-validated."""
-        return self.hash_for(self.run.hash, self.config)
+        """Hash of the transport settings and the footprint settings together, re-validated."""
+        return self.hash_for(self.particles.hash, self.config)
 
     @staticmethod
-    def hash_for(run_hash: str, config: FootprintConfig) -> str:
-        """Return the hash identifying footprints with *config* on the particles of the run hashed *run_hash*."""
+    def hash_for(particles_hash: str, config: FootprintConfig) -> str:
+        """Return the hash identifying footprints with *config* on the particles hashed *particles_hash*."""
         return settings_hash(
-            {"particles": run_hash, "footprint": config.model_dump(mode="json")}
+            {"particles": particles_hash, "footprint": config.model_dump(mode="json")}
         )
 
     @property
@@ -597,12 +591,13 @@ class Footprints:
             self._axes = self.grid.axes
         return self._axes
 
-    def footprint_path(self, receptor_id: str) -> Path:
+    def file(self, receptor_id: str) -> Path:
+        """Return the footprint file for a receptor, whether or not it exists."""
         return self.path / _date_dir(receptor_id) / f"{receptor_id}.parquet"
 
     def has(self, receptor_id: str) -> bool:
         """Return whether the receptor has a footprint file, empty or not."""
-        return self.footprint_path(receptor_id).exists()
+        return self.file(receptor_id).exists()
 
     def receptors(self, among: Iterable[str] | None = None) -> list[str]:
         """
@@ -669,16 +664,14 @@ class Footprints:
         table = table.replace_schema_metadata(
             self._metadata(footprint.receptor, footprint.name, hours.tolist(), "")
         )
-        return _write_atomic_table(
-            table, self.footprint_path(str(footprint.receptor.id))
-        )
+        return _write_atomic_table(table, self.file(str(footprint.receptor.id)))
 
     def write_empty(self, receptor: Receptor, reason: str, name: str = "") -> Path:
         """Record that a receptor's footprint is empty (no particle over the grid), with the reason."""
         table = _FOOTPRINT_SCHEMA.empty_table().replace_schema_metadata(
             self._metadata(receptor, name, [], reason)
         )
-        return _write_atomic_table(table, self.footprint_path(str(receptor.id)))
+        return _write_atomic_table(table, self.file(str(receptor.id)))
 
     def _metadata(
         self, receptor: Receptor, name: str, hours: list[int], empty_reason: str
@@ -694,7 +687,7 @@ class Footprints:
 
     def empty_reason(self, receptor_id: str) -> str | None:
         """Return why the receptor's footprint is empty, or ``None`` when it is not empty."""
-        meta = pq.read_schema(self.footprint_path(receptor_id)).metadata or {}
+        meta = pq.read_schema(self.file(receptor_id)).metadata or {}
         reason = meta.get(b"stilt:empty_reason", b"").decode()
         return reason or None
 
@@ -704,7 +697,7 @@ class Footprints:
 
         Returns ``None`` for an empty footprint (see :meth:`empty_reason`).
         """
-        table = pq.read_table(self.footprint_path(receptor_id))
+        table = pq.read_table(self.file(receptor_id))
         meta = table.schema.metadata or {}
         if meta.get(b"stilt:empty_reason", b""):
             return None
@@ -898,5 +891,5 @@ __all__ = [
     "Footprints",
     "Jacobian",
     "Output",
-    "Run",
+    "Particles",
 ]

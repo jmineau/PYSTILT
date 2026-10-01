@@ -220,7 +220,7 @@ def test_close_spaced_slant_release_heights_are_recovered(tmp_path, met_dir):
     position put the assigned release height off by ~240 m RMS; matching on
     height recovers it to within the vertical drift.
     """
-    from stilt.trajectory import Trajectories
+    from stilt.particles import Trajectories
 
     n_levels = 10
     altitudes = np.linspace(300.0, 3000.0, n_levels)

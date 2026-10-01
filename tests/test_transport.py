@@ -6,7 +6,7 @@ import pandas as pd
 import pytest
 
 from stilt.config import MetConfig, STILTParams, TransportSettings, VariantConfig
-from stilt.execution import run_trajectories, worker
+from stilt.execution import run_particles, worker
 from stilt.output import Output
 from stilt.simulation import Simulation
 from stilt.transport import ModelRun, get_model
@@ -134,10 +134,10 @@ def test_run_trajectories_goes_through_the_model_the_settings_name(
     )
     sim = Simulation(point_receptor, variant, Output(tmp_path / "output"))
 
-    traj = run_trajectories(sim, met=object(), workdir=tmp_path / "work", timeout=45)  # type: ignore[arg-type]
+    traj = run_particles(sim, met=object(), workdir=tmp_path / "work", timeout=45)  # type: ignore[arg-type]
 
     assert asked == ["hysplit"]
     assert calls[0]["receptor"] == point_receptor
     assert calls[0]["timeout"] == 45  # the override reaches the model
     assert traj.met_files == [tmp_path / "met_file"]
-    assert sim.has_trajectory
+    assert sim.has_particles

@@ -13,7 +13,7 @@ class FailureReason(StrEnum):
     MET_COVERAGE = "MET_COVERAGE"
     MET_TRUNCATED = "MET_TRUNCATED"
     VARYING_MET_INTERVAL = "VARYING_MET_INTERVAL"
-    NO_TRAJECTORY_DATA = "NO_TRAJECTORY_DATA"
+    NO_PARTICLE_DATA = "NO_PARTICLE_DATA"
     FORTRAN_RUNTIME_ERROR = "FORTRAN_RUNTIME_ERROR"
     EMPTY_LOG = "EMPTY_LOG"
     UNKNOWN = "UNKNOWN"
@@ -30,7 +30,7 @@ FAILURE_PHRASES: dict[str, FailureReason] = {
     "meteorological data time interval varies": FailureReason.VARYING_MET_INTERVAL,
     # Written by the HYSPLIT driver, not HYSPLIT (see MET_TRUNCATED_WARNING).
     "Meteorology ends early": FailureReason.MET_TRUNCATED,
-    "PARTICLE_STILT.DAT does not contain any trajectory data": FailureReason.NO_TRAJECTORY_DATA,
+    "PARTICLE_STILT.DAT does not contain any trajectory data": FailureReason.NO_PARTICLE_DATA,
     "Fortran runtime error": FailureReason.FORTRAN_RUNTIME_ERROR,
 }
 

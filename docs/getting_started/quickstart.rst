@@ -147,8 +147,8 @@ time step:
 
 .. code-block:: python
 
-   sim.trajectories.data.head()
-   sim.trajectories.plot.map()
+   sim.particles.data.head()
+   sim.particles.plot.map()
 
 What PYSTILT wrote
 ------------------

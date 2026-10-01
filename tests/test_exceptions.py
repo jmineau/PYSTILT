@@ -8,7 +8,7 @@ import stilt
 from stilt import exceptions
 from stilt.exceptions import (
     EmptyFootprint,
-    EmptyTrajectoryError,
+    EmptyParticleOutputError,
     HYSPLITFailureError,
     HYSPLITNotFoundError,
     HYSPLITTimeoutError,
@@ -27,7 +27,7 @@ PARENTS = {
     HYSPLITTimeoutError: (SimulationError,),
     NoParticleOutputError: (SimulationError,),
     HYSPLITFailureError: (SimulationError,),
-    EmptyTrajectoryError: (SimulationError,),
+    EmptyParticleOutputError: (SimulationError,),
     HYSPLITNotFoundError: (StiltError, FileNotFoundError),
     EmptyFootprint: (StiltError,),
 }

@@ -49,7 +49,7 @@ def _with(config: ProjectConfig, **updates) -> ProjectConfig:
 
 
 @integration
-def test_trajectory(tmp_path, wbb_receptor, traj_only_config):
+def test_particles(tmp_path, wbb_receptor, traj_only_config):
     """HYSPLIT runs and produces a non-empty trajectory parquet."""
     model = Project.init(
         tmp_path / "trajectory",
@@ -61,12 +61,12 @@ def test_trajectory(tmp_path, wbb_receptor, traj_only_config):
     sid = _sim_id(wbb_receptor)
     assert list(model.simulations["receptor"]) == [sid.receptor]
     sim = model.simulation(*sid)
-    assert sim.has_trajectory
-    assert sim.trajectories_path is not None
-    assert sim.trajectories_path.parent.name == "date=2021-01-15"
-    assert sim.trajectories_path.parent.parent.name.startswith("settings=hrrr-")
-    assert len(pd.read_parquet(sim.trajectories_path)) > 0, "Particle file is empty"
-    assert sim.trajectories is not None and len(sim.trajectories.data) > 0
+    assert sim.has_particles
+    assert sim.particles_path is not None
+    assert sim.particles_path.parent.name == "date=2021-01-15"
+    assert sim.particles_path.parent.parent.name.startswith("settings=hrrr-")
+    assert len(pd.read_parquet(sim.particles_path)) > 0, "Particle file is empty"
+    assert sim.particles is not None and len(sim.particles.data) > 0
     assert not (resolve_compute_root(model) / sim.id).exists(), (
         "the scratch working directory is removed"
     )
@@ -119,7 +119,7 @@ def test_empty_footprint(tmp_path, wbb_receptor, wbb_config):
 
     sim = model.simulation(*_sim_id(wbb_receptor))
     assert sim.is_complete()
-    assert sim.has_trajectory
+    assert sim.has_particles
     assert sim.empty_reason == "outside_domain"
     assert sim.footprint is None
     assert model.load_footprints() == {}
@@ -165,7 +165,7 @@ def test_failure_missing_met(tmp_path, wbb_receptor, traj_only_config):
     sim = model.simulation(*_sim_id(wbb_receptor))
     # The by-key store has no "failed" state, so the trajectory is simply absent
     # (incomplete). Failure is surfaced through the log-derived Simulation.outcome.
-    assert not sim.has_trajectory
+    assert not sim.has_particles
     assert sim.outcome == "failed:MISSING_MET_FILES"
 
 
@@ -203,7 +203,7 @@ def test_failure_met_cut_short(tmp_path, wbb_receptor, traj_only_config, met_dir
     project.run()
 
     sim = project.simulation(*_sim_id(wbb_receptor))
-    assert not sim.has_trajectory
+    assert not sim.has_particles
     assert sim.outcome == "failed:MET_TRUNCATED"
     assert sim.log_path is not None
     log = sim.log_path.read_text()
@@ -227,11 +227,11 @@ def test_idempotency(tmp_path, wbb_receptor, traj_only_config):
 
     model.run()
     sim = model.simulation(*_sim_id(wbb_receptor))
-    assert sim.has_trajectory
-    mtime_before = sim.trajectories_path.stat().st_mtime
+    assert sim.has_particles
+    mtime_before = sim.particles_path.stat().st_mtime
 
     model.run()  # skip_existing=True is the default
-    assert sim.trajectories_path.stat().st_mtime == mtime_before, (
+    assert sim.particles_path.stat().st_mtime == mtime_before, (
         "Parquet was overwritten on second run"
     )
 
@@ -258,7 +258,7 @@ def test_column(tmp_path, wbb_column_receptor, wbb_config):
     )
 
     sim = model.simulation(*sid)
-    assert sim.has_trajectory
+    assert sim.has_particles
     assert sim.has_footprint
 
 
@@ -276,7 +276,7 @@ def test_multipoint(tmp_path, wbb_multipoint_receptor, multipoint_config):
     assert "multi_" in sid.receptor, f"Expected a multipoint receptor id, got {sid}"
 
     sim = model.simulation(*sid)
-    assert sim.has_trajectory
+    assert sim.has_particles
     assert sim.has_footprint
 
 
@@ -301,9 +301,9 @@ def test_footprint_only_variant_rasterizes_the_same_particles(
     coarse = model.simulation(*_sim_id(wbb_receptor, "coarse"))
 
     assert fine.has_footprint and coarse.has_footprint
-    assert coarse.run == fine.run  # one set of particles
-    assert len(model.output.runs()) == 1
-    assert {f.name for f in fine.run.footprint_sets()} == {"hrrr", "coarse"}
+    assert coarse._particle_set == fine._particle_set  # one set of particles
+    assert len(model.output.particle_sets()) == 1
+    assert {f.name for f in fine._particle_set.footprint_sets()} == {"hrrr", "coarse"}
     assert coarse.footprint is not None and fine.footprint is not None
     assert coarse.footprint.grid.xres == 0.05
     assert fine.footprint.grid.xres == 0.01
@@ -320,7 +320,7 @@ def test_adding_a_footprint_only_variant_runs_no_hysplit(
     first = Project.init(project, config=wbb_config, receptors=[wbb_receptor])
     first.run()
     base = first.simulation(*_sim_id(wbb_receptor))
-    traj_mtime = base.trajectories_path.stat().st_mtime
+    traj_mtime = base.particles_path.stat().st_mtime
     log_before = base.log_path.read_text()
 
     # The user adds a variant to config.yaml.
@@ -331,7 +331,7 @@ def test_adding_a_footprint_only_variant_runs_no_hysplit(
     assert _incomplete(grown) == [_sim_id(wbb_receptor, "s2")]
     grown.run()
 
-    assert base.trajectories_path.stat().st_mtime == traj_mtime
+    assert base.particles_path.stat().st_mtime == traj_mtime
     assert base.log_path.read_text() == log_before
     assert grown.incomplete().empty
 
@@ -365,7 +365,7 @@ def test_cli_run(tmp_path, wbb_config, wbb_receptor):
     assert "completed=1" in result.output
 
     sim = Project(project_dir).simulation(*_sim_id(wbb_receptor))
-    assert sim.has_trajectory, "CLI run: no particles"
+    assert sim.has_particles, "CLI run: no particles"
     assert sim.has_footprint, "CLI run: no footprint"
     assert (project_dir / "output" / "particles").is_dir()
 
@@ -387,15 +387,15 @@ def test_error_variant(tmp_path, wbb_receptor, traj_only_config):
     main = model.simulation(*_sim_id(wbb_receptor))
     err = model.simulation(*_sim_id(wbb_receptor, "hrrr-err"))
     rid = str(wbb_receptor.id)
-    err_scratch = err.run.scratch_path(rid)
-    main_scratch = main.run.scratch_path(rid)
+    err_scratch = err._particle_set.scratch_path(rid)
+    main_scratch = main._particle_set.scratch_path(rid)
 
     assert (err_scratch / "WINDERR").exists()
     assert not (main_scratch / "WINDERR").exists()
     assert "winderrtf=1" in (err_scratch / "SETUP.CFG").read_text().lower()
 
-    main_traj = main.trajectories.data
-    error_traj = err.trajectories.data
+    main_traj = main.particles.data
+    error_traj = err.particles.data
     assert len(main_traj) > 0 and len(error_traj) > 0
     assert set(main_traj.columns) == set(error_traj.columns)
     assert (
@@ -403,7 +403,7 @@ def test_error_variant(tmp_path, wbb_receptor, traj_only_config):
         .reset_index(drop=True)
         .equals(error_traj["long"].reset_index(drop=True))
     ), "Error trajectory identical to main — wind perturbation had no effect"
-    assert err.trajectories.params.winderrtf == 1
+    assert err.particles.params.winderrtf == 1
 
 
 @integration
@@ -423,7 +423,7 @@ def test_error_realizations(tmp_path, wbb_receptor, traj_only_config):
     assert sims["variant"].tolist() == ["err-0", "err-1"]
     assert model.incomplete(sims).empty
 
-    e0, e1 = (t.data for t in model.load_trajectories(sims).values())
+    e0, e1 = (t.data for t in model.load_particles(sims).values())
     s0 = e0.groupby("indx")["foot"].sum()
     s1 = e1.groupby("indx")["foot"].sum().reindex(s0.index)
     assert not np.allclose(s0.to_numpy(), s1.to_numpy())
@@ -432,16 +432,16 @@ def test_error_realizations(tmp_path, wbb_receptor, traj_only_config):
     main = model.simulation(*_sim_id(wbb_receptor))
     err0 = model.simulation(*_sim_id(wbb_receptor, "err-0"))
     err1 = model.simulation(*_sim_id(wbb_receptor, "err-1"))
-    main_bytes = main.trajectories_path.read_bytes()
-    err0_bytes = err0.trajectories_path.read_bytes()
-    err1.trajectories_path.unlink()
+    main_bytes = main.particles_path.read_bytes()
+    err0_bytes = err0.particles_path.read_bytes()
+    err1.particles_path.unlink()
     assert _incomplete(model) == [err1.id]
 
     model.run(skip_existing=True)
 
-    assert main.trajectories_path.read_bytes() == main_bytes
-    assert err0.trajectories_path.read_bytes() == err0_bytes
-    assert err1.trajectories_path.exists()
+    assert main.particles_path.read_bytes() == main_bytes
+    assert err0.particles_path.read_bytes() == err0_bytes
+    assert err1.particles_path.exists()
 
 
 @integration
@@ -464,19 +464,19 @@ def test_seeded_error_realizations_differ_and_reproduce(
 
     a = run(tmp_path / "a")
     errs = a.simulations[a.simulations.group == "err"]
-    e0, e1 = (t.data for t in a.load_trajectories(errs).values())
+    e0, e1 = (t.data for t in a.load_particles(errs).values())
     s0 = e0.groupby("indx")["foot"].sum()
     s1 = e1.groupby("indx")["foot"].sum().reindex(s0.index)
     assert not np.allclose(s0.to_numpy(), s1.to_numpy())
-    main = a.simulation(*_sim_id(wbb_receptor)).trajectories.data
+    main = a.simulation(*_sim_id(wbb_receptor)).particles.data
     s_main = main.groupby("indx")["foot"].sum().reindex(s0.index)
     assert not np.allclose(s_main.to_numpy(), s0.to_numpy())
 
     b = run(tmp_path / "b")
     for variant in ("hrrr", "err-0", "err-1"):
         pd.testing.assert_frame_equal(
-            a.simulation(*_sim_id(wbb_receptor, variant)).trajectories.data,
-            b.simulation(*_sim_id(wbb_receptor, variant)).trajectories.data,
+            a.simulation(*_sim_id(wbb_receptor, variant)).particles.data,
+            b.simulation(*_sim_id(wbb_receptor, variant)).particles.data,
         )
 
 
@@ -596,10 +596,10 @@ def test_forward_run(tmp_path, met_dir, wbb_grid):
     model.run()
 
     sim = model.simulation(*_sim_id(receptor))
-    assert sim.has_trajectory, f"no trajectory for {sim.id}"
-    assert sim.trajectories is not None
+    assert sim.has_particles, f"no trajectory for {sim.id}"
+    assert sim.particles is not None
 
-    particles = sim.trajectories.data
+    particles = sim.particles.data
     assert len(particles) > 0
     # HYSPLIT reports elapsed minutes signed by run direction
     assert (particles["time"] >= 0).all()

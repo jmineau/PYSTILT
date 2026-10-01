@@ -20,8 +20,8 @@ import pytest
 
 from stilt.config import MetConfig, STILTParams
 from stilt.meteorology import Met
+from stilt.particles import Trajectories
 from stilt.receptors import ColumnReceptor
-from stilt.trajectory import Trajectories
 from stilt.transforms import PressureWeighting, particle_pwf, release_coordinate
 from stilt.transport.hysplit.driver import HYSPLITDriver
 

@@ -19,6 +19,26 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   in all three places it is checked; a platform with no bundled build used
   to raise `RuntimeError`. `FailureReason` and `identify_failure_reason`
   move to `stilt.transport.hysplit`, beside the driver whose log they read.
+- **"Particles" is the one name for a simulation's particle table**
+  ([#107](https://github.com/jmineau/PYSTILT/issues/107); breaking). The
+  folder of particle files under one set of settings is now `Particles`
+  (was `Run`), so "run" only means running something. The renames are:
+
+  | Before | After |
+  |---|---|
+  | `sim.trajectories`, `sim.has_trajectory`, `sim.trajectories_path` | `sim.particles`, `sim.has_particles`, `sim.particles_path` |
+  | `project.load_trajectories()` | `project.load_particles()` |
+  | the `trajectory` column of `project.status()` | `particles` |
+  | `stilt.trajectory` | `stilt.particles` |
+  | `stilt.execution.run_trajectories` | `stilt.execution.run_particles` |
+  | `Output.run()`, `Output.find_run()`, `Output.runs()` | `Output.particles()`, `Output.find_particles()`, `Output.particle_sets()` |
+  | `Run.particles_path()`, `has_particles()`, `read_particles()`, `write_particles()` | `Particles.file()`, `has()`, `read()`, `write()` |
+  | `Footprints.footprint_path()`, `Footprints.run`, `Footprints.run_key` | `Footprints.file()`, `Footprints.particles`, `Footprints.particles_key` |
+  | `EmptyTrajectoryError`, `FailureReason.NO_TRAJECTORY_DATA` | `EmptyParticleOutputError`, `FailureReason.NO_PARTICLE_DATA` |
+
+  A simulation is one receptor, so it no longer hands out the folders that
+  hold other receptors' results (`sim.run`, `sim.footprints`). Its own
+  file paths are still public.
 - **Receptor ids name everything that makes a receptor distinct**
   ([#105](https://github.com/jmineau/PYSTILT/issues/105); breaking for
   column and MSL receptors). A column id gives its bottom and top

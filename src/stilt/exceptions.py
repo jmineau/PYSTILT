@@ -58,7 +58,7 @@ class HYSPLITFailureError(SimulationError):
         super().__init__(f"HYSPLIT failed with {reason}; see {log_path}")
 
 
-class EmptyTrajectoryError(SimulationError):
+class EmptyParticleOutputError(SimulationError):
     """HYSPLIT ran, but its particle output holds no particles."""
 
 
@@ -99,7 +99,7 @@ class EmptyFootprint(StiltError):
 
 __all__ = [
     "EmptyFootprint",
-    "EmptyTrajectoryError",
+    "EmptyParticleOutputError",
     "HYSPLITFailureError",
     "HYSPLITNotFoundError",
     "HYSPLITTimeoutError",

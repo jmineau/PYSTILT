@@ -13,9 +13,9 @@ from typing import TYPE_CHECKING, NamedTuple
 from stilt.config import FootprintConfig, TransportSettings, VariantConfig
 from stilt.exceptions import EmptyFootprint
 from stilt.footprint import Footprint
-from stilt.output import Footprints, Output, Run
+from stilt.output import Footprints, Output, Particles
+from stilt.particles import Trajectories
 from stilt.receptors import Receptor, parse_receptor_id
-from stilt.trajectory import Trajectories
 from stilt.transforms import ParticleTransform, TransformContext
 from stilt.transport.hysplit.failures import identify_failure_reason
 
@@ -94,7 +94,7 @@ class Simulation:
     receptor : Receptor
         Where and when particles are released.
     variant : VariantConfig
-        The variant: its transport settings, which name the run, and its
+        The variant: its transport settings, which name the particles folder, and its
         footprint settings, if any.
     output : Output
         The output directory.
@@ -135,45 +135,48 @@ class Simulation:
 
     # -- where the results are ---------------------------------------------
 
-    @property
-    def run(self) -> Run | None:
-        """The run holding this simulation's particles, or ``None`` until one exists."""
-        return self.output.find_run(self.variant.transport)
+    # The folders hold many receptors' results; a simulation is one receptor,
+    # so they stay private and only this simulation's own paths are public.
 
     @property
-    def footprints(self) -> Footprints | None:
-        """The folder holding this variant's footprints, or ``None`` until one exists."""
+    def _particle_set(self) -> Particles | None:
+        """The folder holding this simulation's particles, or ``None`` until it exists."""
+        return self.output.find_particles(self.variant.transport)
+
+    @property
+    def _footprint_set(self) -> Footprints | None:
+        """The folder holding this variant's footprints, or ``None`` until it exists."""
         config = self.variant.footprint
-        run = self.run
-        if config is None or run is None:
+        particles = self._particle_set
+        if config is None or particles is None:
             return None
-        return self.output.find_footprints(run.hash, config)
+        return self.output.find_footprints(particles.hash, config)
 
     @property
-    def trajectories_path(self) -> Path | None:
-        """Path of the particle file in the output directory, or ``None`` before the run exists."""
-        run = self.run
-        return None if run is None else run.particles_path(self.receptor_id)
+    def particles_path(self) -> Path | None:
+        """Path of the particle file in the output directory, or ``None`` before its folder exists."""
+        folder = self._particle_set
+        return None if folder is None else folder.file(self.receptor_id)
 
     @property
     def footprint_path(self) -> Path | None:
         """Path of the footprint file in the output directory, or ``None`` before its folder exists."""
-        feet = self.footprints
-        return None if feet is None else feet.footprint_path(self.receptor_id)
+        feet = self._footprint_set
+        return None if feet is None else feet.file(self.receptor_id)
 
     @property
     def log_path(self) -> Path | None:
-        """Path of the run log in the output directory, or ``None`` before the run exists."""
-        run = self.run
-        return None if run is None else run.log_path(self.receptor_id)
+        """Path of the HYSPLIT log in the output directory, or ``None`` before its folder exists."""
+        folder = self._particle_set
+        return None if folder is None else folder.log_path(self.receptor_id)
 
     # -- presence and completion -------------------------------------------
 
     @property
-    def has_trajectory(self) -> bool:
+    def has_particles(self) -> bool:
         """Whether the particle file exists."""
-        run = self.run
-        return run is not None and run.has_particles(self.receptor_id)
+        folder = self._particle_set
+        return folder is not None and folder.has(self.receptor_id)
 
     @property
     def has_footprint(self) -> bool:
@@ -182,7 +185,7 @@ class Simulation:
 
         An empty footprint (no particles over the grid) is a finished result.
         """
-        feet = self.footprints
+        feet = self._footprint_set
         return feet is not None and feet.has(self.receptor_id)
 
     @property
@@ -196,7 +199,7 @@ class Simulation:
 
         That is the particles, and the footprint when the variant has a grid.
         """
-        return self.has_trajectory and (not self.makes_footprint or self.has_footprint)
+        return self.has_particles and (not self.makes_footprint or self.has_footprint)
 
     # -- status ------------------------------------------------------------
 
@@ -233,7 +236,7 @@ class Simulation:
         ``"outside_domain"`` means no particle reached the grid and
         ``"no_particles"`` that there were none.
         """
-        feet = self.footprints
+        feet = self._footprint_set
         if feet is None or not feet.has(self.receptor_id):
             return None
         return feet.empty_reason(self.receptor_id)
@@ -263,7 +266,7 @@ class Simulation:
     @property
     def log(self) -> str:
         """
-        Text of the run log.
+        Text of the HYSPLIT log.
 
         Raises
         ------
@@ -276,12 +279,12 @@ class Simulation:
         return log_path.read_text()
 
     @cached_property
-    def trajectories(self) -> Trajectories:
+    def particles(self) -> Trajectories:
         """
-        Particle trajectories.
+        The particles.
 
         Read from the output directory on first access and kept. Check
-        :attr:`has_trajectory` first when the run may not have finished.
+        :attr:`has_particles` first when the run may not have finished.
 
         Raises
         ------
@@ -289,10 +292,10 @@ class Simulation:
             If the particles have not been written yet. Nothing is kept, so
             a read after the run finishes loads them.
         """
-        run = self.run
-        if run is None or not run.has_particles(self.receptor_id):
+        folder = self._particle_set
+        if folder is None or not folder.has(self.receptor_id):
             raise FileNotFoundError(f"{self.id} has no particles yet.")
-        return run.read_particles(self.receptor_id)
+        return folder.read(self.receptor_id)
 
     @cached_property
     def footprint(self) -> Footprint | None:
@@ -312,7 +315,7 @@ class Simulation:
         """
         if not self.makes_footprint:
             return None
-        feet = self.footprints
+        feet = self._footprint_set
         if feet is None or not feet.has(self.receptor_id):
             raise FileNotFoundError(f"{self.id} has no footprint yet.")
         return feet.read(self.receptor_id)
@@ -367,7 +370,7 @@ class Simulation:
             raise TypeError(
                 f"{self.id} has no footprint settings; pass a FootprintConfig."
             )
-        traj = self.trajectories
+        traj = self.particles
         if transforms:
             config = config.model_copy(
                 update={"transforms": [*config.transforms, *transforms]}

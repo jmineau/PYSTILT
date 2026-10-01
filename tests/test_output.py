@@ -20,8 +20,8 @@ from stilt.config.transport import settings_hash
 from stilt.footprint import Footprint
 from stilt.geometry import Mesh
 from stilt.output import Footprints, Output
+from stilt.particles import Trajectories
 from stilt.receptors import PointReceptor
-from stilt.trajectory import Trajectories
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -110,7 +110,7 @@ def _footprint(
 
 def test_run_folder_is_name_and_hash_with_settings_file(tmp_path):
     out = Output(tmp_path / "output")
-    run = out.run("hrrr", SETTINGS)
+    run = out.particles("hrrr", SETTINGS)
     digest = SETTINGS.hash
     assert run.key == f"hrrr-{digest[:6]}"
     assert run.path == tmp_path / "output" / "particles" / f"settings=hrrr-{digest[:6]}"
@@ -124,26 +124,26 @@ def test_run_folder_is_name_and_hash_with_settings_file(tmp_path):
         and "directory" not in record["settings"]["met"]
     )
     assert run.settings.identity() == SETTINGS.identity()  # maxpar is stored as numpar
-    assert [r.path for r in out.runs()] == [run.path]
+    assert [r.path for r in out.particle_sets()] == [run.path]
 
 
 def test_same_settings_under_another_name_share_the_folder(tmp_path):
     out = Output(tmp_path / "output")
-    first = out.run("hrrr", SETTINGS)
-    second = out.run("hrrr-main", _settings())
+    first = out.particles("hrrr", SETTINGS)
+    second = out.particles("hrrr-main", _settings())
     assert second.path == first.path
     assert second.name == "hrrr"
 
 
 def test_changed_settings_make_a_new_folder_beside_the_old(tmp_path):
     out = Output(tmp_path / "output")
-    first = out.run("hrrr", SETTINGS)
-    second = out.run("hrrr", _settings(ziscale=0.8))
+    first = out.particles("hrrr", SETTINGS)
+    second = out.particles("hrrr", _settings(ziscale=0.8))
     assert second.path != first.path
     assert second.key.startswith("hrrr-")
-    assert {r.path for r in out.runs()} == {first.path, second.path}
-    assert out.find_run(SETTINGS).path == first.path
-    assert out.find_run(_settings(numpar=7)) is None
+    assert {r.path for r in out.particle_sets()} == {first.path, second.path}
+    assert out.find_particles(SETTINGS).path == first.path
+    assert out.find_particles(_settings(numpar=7)) is None
 
 
 # ---------------------------------------------------------------------------
@@ -152,15 +152,15 @@ def test_changed_settings_make_a_new_folder_beside_the_old(tmp_path):
 
 
 def test_particles_round_trip_in_date_folders(tmp_path):
-    run = Output(tmp_path / "output").run("hrrr", SETTINGS)
+    run = Output(tmp_path / "output").particles("hrrr", SETTINGS)
     receptor = _receptor()
     traj = _trajectories(receptor)
-    path = run.write_particles(traj)
-    assert path == run.particles_dir / "date=2024-07-15" / f"{receptor.id}.parquet"
-    assert run.has_particles(str(receptor.id))
+    path = run.write(traj)
+    assert path == run.path / "date=2024-07-15" / f"{receptor.id}.parquet"
+    assert run.has(str(receptor.id))
     assert run.receptors() == [str(receptor.id)]
 
-    back = run.read_particles(str(receptor.id))
+    back = run.read(str(receptor.id))
     assert back.receptor == receptor
     assert back.params == traj.params
     pd.testing.assert_frame_equal(
@@ -171,9 +171,9 @@ def test_particles_round_trip_in_date_folders(tmp_path):
 def test_particles_store_time_and_index_as_int32(tmp_path):
     import pyarrow.parquet as pq
 
-    run = Output(tmp_path / "output").run("hrrr", SETTINGS)
+    run = Output(tmp_path / "output").particles("hrrr", SETTINGS)
     traj = _trajectories(_receptor())
-    path = run.write_particles(traj)
+    path = run.write(traj)
     schema = pq.read_schema(path)
     assert str(schema.field("time").type) == "int32"
     assert str(schema.field("indx").type) == "int32"
@@ -185,45 +185,45 @@ def test_particle_files_name_their_receptor_in_a_column(tmp_path):
     """A scan of the particles tree tells receptors apart; one file reads without it (#105)."""
     import pyarrow.dataset as pads
 
-    run = Output(tmp_path / "output").run("hrrr", SETTINGS)
+    run = Output(tmp_path / "output").particles("hrrr", SETTINGS)
     receptors = [_receptor(hour=6), _receptor(hour=18, day=16)]
     for receptor in receptors:
-        run.write_particles(_trajectories(receptor, n=10))
+        run.write(_trajectories(receptor, n=10))
 
     from collections import Counter
 
-    scan = pads.dataset(run.particles_dir, format="parquet").to_table()
+    scan = pads.dataset(run.path, format="parquet").to_table()
     counts = Counter(scan.column("receptor").to_pylist())
     assert counts == {str(r.id): 100 for r in receptors}
 
-    back = run.read_particles(str(receptors[0].id))
+    back = run.read(str(receptors[0].id))
     assert "receptor" not in back.data.columns
 
 
 def test_particle_file_without_a_receptor_column_still_reads(tmp_path):
     """Files written before the receptor column read as before."""
-    run = Output(tmp_path / "output").run("hrrr", SETTINGS)
+    run = Output(tmp_path / "output").particles("hrrr", SETTINGS)
     receptor = _receptor()
     traj = _trajectories(receptor)
-    traj.to_parquet(run.particles_path(str(receptor.id)))  # no receptor column
-    back = run.read_particles(str(receptor.id))
+    traj.to_parquet(run.file(str(receptor.id)))  # no receptor column
+    back = run.read(str(receptor.id))
     pd.testing.assert_frame_equal(
         back.data[traj.data.columns], traj.data, check_like=True
     )
 
 
 def test_particles_reject_fractional_time(tmp_path):
-    run = Output(tmp_path / "output").run("hrrr", SETTINGS)
+    run = Output(tmp_path / "output").particles("hrrr", SETTINGS)
     traj = _trajectories(_receptor())
     traj.data.loc[0, "time"] = -1.5
     with pytest.raises(ValueError, match="whole numbers"):
-        run.write_particles(traj)
+        run.write(traj)
 
 
 def test_receptors_listed_in_date_order(tmp_path):
-    run = Output(tmp_path / "output").run("hrrr", SETTINGS)
+    run = Output(tmp_path / "output").particles("hrrr", SETTINGS)
     for day, hour in [(16, 0), (15, 18), (15, 6)]:
-        run.write_particles(_trajectories(_receptor(hour=hour, day=day)))
+        run.write(_trajectories(_receptor(hour=hour, day=day)))
     ids = run.receptors()
     assert ids == sorted(ids)
     assert [i[:10] for i in ids] == ["2024071506", "2024071518", "2024071600"]
@@ -236,7 +236,7 @@ def test_receptors_listed_in_date_order(tmp_path):
 
 def test_footprint_folder_is_variant_name_and_combined_hash(tmp_path):
     out = Output(tmp_path / "output")
-    run = out.run("hrrr", SETTINGS)
+    run = out.particles("hrrr", SETTINGS)
     config = FootprintConfig(grid=GRID, smooth_factor=1.0)
     feet = run.footprints(config)
     digest = Footprints.hash_for(run.hash, config)
@@ -247,7 +247,7 @@ def test_footprint_folder_is_variant_name_and_combined_hash(tmp_path):
     assert feet.path == out.footprints_dir / f"settings=hrrr-{digest[:6]}"
     assert feet.config == config
     assert feet.grid == GRID
-    assert feet.run == run
+    assert feet.particles == run
     record = yaml.safe_load((feet.path / "_settings.yaml").read_text())
     assert record["particles"] == run.key
 
@@ -261,13 +261,13 @@ def test_footprint_folder_is_variant_name_and_combined_hash(tmp_path):
     assert run.footprints(config) == feet
 
     # The same footprint settings on other particles are another folder.
-    other_run = out.run("hrrr", _settings(numpar=200))
+    other_run = out.particles("hrrr", _settings(numpar=200))
     assert other_run.footprints(config).path != feet.path
     assert other_run.footprint_sets() != run.footprint_sets()
 
 
 def test_footprint_round_trip_is_exact_in_float32(tmp_path):
-    run = Output(tmp_path / "output").run("hrrr", SETTINGS)
+    run = Output(tmp_path / "output").particles("hrrr", SETTINGS)
     feet = run.footprints(FootprintConfig(grid=GRID))
     receptor = _receptor()
     foot = _footprint(receptor, hours=(-3, -2, -1, 0), seed=1)
@@ -289,7 +289,7 @@ def test_footprint_round_trip_is_exact_in_float32(tmp_path):
 
 
 def test_footprint_all_zero_layer_keeps_its_shape(tmp_path):
-    run = Output(tmp_path / "output").run("hrrr", SETTINGS)
+    run = Output(tmp_path / "output").particles("hrrr", SETTINGS)
     feet = run.footprints(FootprintConfig(grid=GRID))
     foot = _footprint(_receptor(), hours=(-2, -1, 0))
     foot.data[1] = 0.0
@@ -300,7 +300,7 @@ def test_footprint_all_zero_layer_keeps_its_shape(tmp_path):
 
 
 def test_empty_footprint_is_a_file_with_no_rows_and_a_reason(tmp_path):
-    run = Output(tmp_path / "output").run("hrrr", SETTINGS)
+    run = Output(tmp_path / "output").particles("hrrr", SETTINGS)
     feet = run.footprints(FootprintConfig(grid=GRID))
     receptor = _receptor()
     feet.write_empty(receptor, "outside_domain")
@@ -312,7 +312,7 @@ def test_empty_footprint_is_a_file_with_no_rows_and_a_reason(tmp_path):
 
 def test_footprint_coordinates_off_by_rounding_still_match(tmp_path):
     """A stored footprint's axis can differ from the grid's by 1e-14, as real files do."""
-    run = Output(tmp_path / "output").run("hrrr", SETTINGS)
+    run = Output(tmp_path / "output").particles("hrrr", SETTINGS)
     feet = run.footprints(FootprintConfig(grid=GRID))
     foot = _footprint(_receptor(), seed=5)
     nudged = foot.data.assign_coords(
@@ -324,7 +324,7 @@ def test_footprint_coordinates_off_by_rounding_still_match(tmp_path):
 
 
 def test_footprint_on_another_grid_is_rejected(tmp_path):
-    run = Output(tmp_path / "output").run("hrrr", SETTINGS)
+    run = Output(tmp_path / "output").particles("hrrr", SETTINGS)
     feet = run.footprints(FootprintConfig(grid=GRID))
     foot = _footprint(_receptor())
     shifted = foot.data.assign_coords(lon=foot.data["lon"].values + 0.03)
@@ -339,7 +339,7 @@ def test_footprint_on_another_grid_is_rejected(tmp_path):
 
 @pytest.fixture
 def written_footprints(tmp_path):
-    run = Output(tmp_path / "output").run("hrrr", SETTINGS)
+    run = Output(tmp_path / "output").particles("hrrr", SETTINGS)
     feet = run.footprints(FootprintConfig(grid=GRID))
     feet_by_id = {}
     for k, hour in enumerate([6, 12, 18]):
@@ -418,7 +418,7 @@ def test_jacobian_rejects_bins_not_closed_on_the_left(written_footprints, closed
 
 
 def test_jacobian_with_no_footprints_is_empty(tmp_path):
-    run = Output(tmp_path / "output").run("hrrr", SETTINGS)
+    run = Output(tmp_path / "output").particles("hrrr", SETTINGS)
     feet = run.footprints(FootprintConfig(grid=GRID))
     H = feet.jacobian(GRID, _bins())
     assert H.data.shape == (0, len(_bins()) * len(GRID.index))
@@ -449,26 +449,26 @@ def _interleave(monkeypatch, competitor):
 def test_two_workers_starting_a_run_at_once_both_succeed(tmp_path, monkeypatch):
     """Both wrote `_settings.tmp`; the second rename found it already moved."""
     path = tmp_path / "output"
-    _interleave(monkeypatch, lambda: Output(path).run("hrrr", SETTINGS))
+    _interleave(monkeypatch, lambda: Output(path).particles("hrrr", SETTINGS))
 
-    run = Output(path).run("hrrr", SETTINGS)
+    run = Output(path).particles("hrrr", SETTINGS)
 
-    record = yaml.safe_load((run.particles_dir / "_settings.yaml").read_text())
+    record = yaml.safe_load((run.path / "_settings.yaml").read_text())
     assert record["hash"] == SETTINGS.hash
-    assert [p.name for p in run.particles_dir.iterdir()] == ["_settings.yaml"]
+    assert [p.name for p in run.path.iterdir()] == ["_settings.yaml"]
 
 
 def test_two_workers_writing_one_receptor_at_once_both_succeed(tmp_path, monkeypatch):
     """The other worker's cleanup removed the shared temporary file."""
     receptor = _receptor()
     traj = _trajectories(receptor)
-    run = Output(tmp_path / "output").run("hrrr", SETTINGS)
-    other = Output(tmp_path / "output").run("hrrr", SETTINGS)
-    _interleave(monkeypatch, lambda: other.write_particles(traj))
+    run = Output(tmp_path / "output").particles("hrrr", SETTINGS)
+    other = Output(tmp_path / "output").particles("hrrr", SETTINGS)
+    _interleave(monkeypatch, lambda: other.write(traj))
 
-    path = run.write_particles(traj)
+    path = run.write(traj)
 
-    assert len(run.read_particles(str(receptor.id)).data) == len(traj.data)
+    assert len(run.read(str(receptor.id)).data) == len(traj.data)
     assert [p.name for p in path.parent.iterdir()] == [path.name]  # no stray files
 
 
@@ -481,10 +481,10 @@ def test_receptors_among_lists_only_the_date_folders_asked_for(tmp_path, monkeyp
     """A few simulations of a large project must not list every date folder."""
     import stilt.output as output_module
 
-    run = Output(tmp_path / "output").run("hrrr", SETTINGS)
+    run = Output(tmp_path / "output").particles("hrrr", SETTINGS)
     day15, day16 = _receptor(12, day=15), _receptor(12, day=16)
     for receptor in (day15, day16):
-        run.write_particles(_trajectories(receptor))
+        run.write(_trajectories(receptor))
     never_run = _receptor(12, day=20)
 
     listed: list[str] = []
@@ -514,8 +514,8 @@ def test_each_result_file_names_its_settings_and_the_version_that_wrote_it(tmp_p
     import stilt
 
     receptor = _receptor()
-    run = Output(tmp_path / "output").run("hrrr", SETTINGS)
-    particles = run.write_particles(_trajectories(receptor))
+    run = Output(tmp_path / "output").particles("hrrr", SETTINGS)
+    particles = run.write(_trajectories(receptor))
     feet = run.footprints(FootprintConfig(grid=GRID))
     footprint = feet.write(_footprint(receptor))
     empty = feet.write_empty(_receptor(13), "outside_domain")

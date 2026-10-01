@@ -5,7 +5,7 @@ Every public class and function, grouped by what it is for. To find out how
 to do something, start with the :doc:`../guides/index` instead.
 
 :doc:`core`
-   ``Project``, receptors, simulations, trajectories, footprints, spatial
+   ``Project``, receptors, simulations, particles, footprints, spatial
    geometries, and flux sampling.
 
 :doc:`configuration`

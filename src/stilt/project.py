@@ -30,6 +30,7 @@ from stilt.footprint import Footprint
 from stilt.geometry import Geometry
 from stilt.meteorology import Met
 from stilt.output import Footprints, Jacobian, Output
+from stilt.particles import Trajectories
 from stilt.receptors import (
     COLUMNS,
     ROW_COLUMNS,
@@ -43,7 +44,6 @@ from stilt.receptors import (
     receptors_to_csv,
 )
 from stilt.simulation import SimID, Simulation
-from stilt.trajectory import Trajectories
 from stilt.transforms import TransformContext
 
 if TYPE_CHECKING:
@@ -94,7 +94,7 @@ class Project:
 
     ``Project(path)`` opens a project directory and reads it. It is every
     receptor under every variant, and a view of their results: list the
-    simulations, see which have finished, load trajectories and footprints.
+    simulations, see which have finished, load particles and footprints.
     The results are in the output directory ``config.yaml`` names
     (``./output`` by default), which several projects can share.
 
@@ -418,14 +418,14 @@ class Project:
         for name, rows in simulations.groupby("variant", sort=False):
             variant = self.variants[str(name)]
             among = set(rows["receptor"])
-            run = self.output.find_run(variant.transport)
-            particles = frozenset(run.receptors(among) if run is not None else ())
+            folder = self.output.find_particles(variant.transport)
+            particles = frozenset(folder.receptors(among) if folder is not None else ())
             footprints: frozenset[str] | None = None
             if variant.footprint is not None:
                 feet = (
                     None
-                    if run is None
-                    else self.output.find_footprints(run.hash, variant.footprint)
+                    if folder is None
+                    else self.output.find_footprints(folder.hash, variant.footprint)
                 )
                 footprints = frozenset(
                     feet.receptors(among) if feet is not None else ()
@@ -445,7 +445,7 @@ class Project:
         Returns
         -------
         pandas.DataFrame
-            *simulations* with four more columns. ``trajectory`` and
+            *simulations* with four more columns. ``particles`` and
             ``footprint`` are ``True`` when the result exists, ``False`` when
             it is missing, and ``NA`` when the simulation does not make it.
             ``empty`` is ``True`` when the footprint is empty (no particle
@@ -465,7 +465,7 @@ class Project:
         ]
         complete = [p and f is not False for p, f in zip(particles, feet, strict=True)]
         return sims.assign(
-            trajectory=pd.array(particles, dtype="boolean"),
+            particles=pd.array(particles, dtype="boolean"),
             footprint=pd.array(feet, dtype="boolean"),
             empty=pd.array(empty, dtype="boolean"),
             complete=pd.array(complete, dtype="bool"),
@@ -512,7 +512,9 @@ class Project:
             if v.footprint is not None
         }
         return {
-            "particles": [r.key for r in self.output.runs() if r.hash not in runs],
+            "particles": [
+                r.key for r in self.output.particle_sets() if r.hash not in runs
+            ],
             "footprints": [
                 f.key for f in self.output.footprint_sets() if f.hash not in feet
             ],
@@ -534,7 +536,7 @@ class Project:
             for r, v in zip(sims["receptor"], sims["variant"], strict=True)
         ]
 
-    def load_trajectories(
+    def load_particles(
         self, simulations: pd.DataFrame | None = None
     ) -> dict[SimID, Trajectories]:
         """
@@ -551,9 +553,9 @@ class Project:
             :class:`~stilt.Trajectories` by :class:`~stilt.SimID`.
         """
         return {
-            sim.id: sim.trajectories
+            sim.id: sim.particles
             for sim in self._simulations_of(simulations)
-            if sim.has_trajectory
+            if sim.has_particles
         }
 
     def load_footprints(
@@ -615,11 +617,11 @@ class Project:
         settings = self.variants[variant]
         if settings.footprint is None:
             raise ValueError(f"Variant {variant!r} makes no footprints (no grid).")
-        run = self.output.find_run(settings.transport)
+        folder = self.output.find_particles(settings.transport)
         feet = (
             None
-            if run is None
-            else self.output.find_footprints(run.hash, settings.footprint)
+            if folder is None
+            else self.output.find_footprints(folder.hash, settings.footprint)
         )
         if feet is None:
             raise ValueError(f"Variant {variant!r} has no footprints yet.")

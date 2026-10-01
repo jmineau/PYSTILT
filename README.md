@@ -72,7 +72,7 @@ project = stilt.Project.init(
 project.run()   # returns when the run is done
 
 sim = project.simulation(receptor.id, "hrrr")
-traj = sim.trajectories
+traj = sim.particles
 foot = sim.footprint
 ```
 

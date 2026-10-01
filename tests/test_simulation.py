@@ -17,8 +17,8 @@ from stilt.config import (
 from stilt.execution import write_footprint
 from stilt.footprint import Footprint
 from stilt.output import Output
+from stilt.particles import Trajectories
 from stilt.simulation import SimID, Simulation
-from stilt.trajectory import Trajectories
 from stilt.transforms import FirstOrderLifetime, TransformContext, transform_kind
 
 GRID = Grid(xmin=-114.0, xmax=-111.0, ymin=39.0, ymax=42.0, xres=0.1, yres=0.1)
@@ -77,7 +77,7 @@ def _trajectories(receptor, params, foot: float = 1e-5) -> Trajectories:
 def _write_particles(sim: Simulation) -> Trajectories:
     """Put particles for *sim* in the output directory and return them."""
     traj = _trajectories(sim.receptor, sim.params)
-    sim.output.run(sim.variant.name, sim.variant.transport).write_particles(traj)
+    sim.output.particles(sim.variant.name, sim.variant.transport).write(traj)
     return traj
 
 
@@ -137,27 +137,27 @@ def test_simulation_is_a_frozen_value(point_receptor, tmp_path):
 
 def test_paths_are_none_until_the_run_exists(point_receptor, tmp_path):
     sim = _sim(tmp_path, point_receptor, footprint=FOOT)
-    assert sim.run is None and sim.footprints is None
-    assert sim.trajectories_path is None
+    assert sim._particle_set is None and sim._footprint_set is None
+    assert sim.particles_path is None
     assert sim.footprint_path is None
     assert sim.log_path is None
-    assert not sim.has_trajectory and not sim.has_footprint
+    assert not sim.has_particles and not sim.has_footprint
     assert not sim.is_complete()
     assert sim.outcome is None
     with pytest.raises(FileNotFoundError):
-        _ = sim.trajectories
+        _ = sim.particles
     with pytest.raises(FileNotFoundError):
         _ = sim.footprint
 
-    run = sim.output.run(sim.variant.name, sim.variant.transport)
+    run = sim.output.particles(sim.variant.name, sim.variant.transport)
     rid = str(point_receptor.id)
-    assert sim.run == run
-    assert sim.trajectories_path == run.particles_path(rid)
+    assert sim._particle_set == run
+    assert sim.particles_path == run.file(rid)
     assert sim.log_path == run.log_path(rid)
     assert sim.footprint_path is None  # no footprint folder yet
     feet = run.footprints(FOOT, name="hrrr")
-    assert sim.footprints == feet
-    assert sim.footprint_path == feet.footprint_path(rid)
+    assert sim._footprint_set == feet
+    assert sim.footprint_path == feet.file(rid)
 
 
 def test_simulation_time_range_backward(point_receptor, tmp_path):
@@ -191,24 +191,24 @@ def test_reads_particles_written_under_the_same_settings(point_receptor, tmp_pat
     written = _write_particles(sim)
 
     again = _sim(tmp_path, point_receptor)  # a fresh value
-    assert again.has_trajectory and again.is_complete()
-    assert again.trajectories is not None
-    assert again.trajectories.receptor == point_receptor
-    assert again.trajectories.params.numpar == written.params.numpar == 10
-    assert "datetime" in again.trajectories.data.columns
-    assert again.trajectories is again.trajectories  # kept once read
+    assert again.has_particles and again.is_complete()
+    assert again.particles is not None
+    assert again.particles.receptor == point_receptor
+    assert again.particles.params.numpar == written.params.numpar == 10
+    assert "datetime" in again.particles.data.columns
+    assert again.particles is again.particles  # kept once read
 
 
 def test_results_read_before_the_run_are_read_again_after_it(point_receptor, tmp_path):
     """A read that finds nothing keeps nothing, so the same object sees the run land."""
     sim = _sim(tmp_path, point_receptor, footprint=FOOT)
     with pytest.raises(FileNotFoundError):
-        _ = sim.trajectories
+        _ = sim.particles
     with pytest.raises(FileNotFoundError):
         _ = sim.footprint
 
     traj = _write_particles(sim)
-    assert sim.trajectories is not None
+    assert sim.particles is not None
     with pytest.raises(FileNotFoundError):
         _ = sim.footprint
 
@@ -234,9 +234,11 @@ def test_variants_with_equal_transport_share_particles(point_receptor, tmp_path)
         ),
     )
     _write_particles(fine)
-    assert coarse.run == fine.run
-    assert coarse.has_trajectory  # written under fine's variant
-    assert fine.footprints is None and coarse.footprints is None  # no footprints yet
+    assert coarse._particle_set == fine._particle_set
+    assert coarse.has_particles  # written under fine's variant
+    assert (
+        fine._footprint_set is None and coarse._footprint_set is None
+    )  # no footprints yet
 
 
 def test_completion_needs_particles_and_the_footprint_when_configured(
@@ -244,10 +246,10 @@ def test_completion_needs_particles_and_the_footprint_when_configured(
 ):
     sim = _sim(tmp_path, point_receptor, footprint=FOOT)
     traj = _write_particles(sim)
-    assert sim.has_trajectory and not sim.is_complete()
+    assert sim.has_particles and not sim.is_complete()
     write_footprint(sim, traj, context=_context(sim))
     assert sim.is_complete()
-    assert sim.footprints is not None and sim.footprints.name == "hrrr"
+    assert sim._footprint_set is not None and sim._footprint_set.name == "hrrr"
 
 
 def test_particles_only_variant_is_complete_with_particles(point_receptor, tmp_path):
@@ -288,7 +290,7 @@ def test_empty_footprint_is_recorded_with_its_reason(point_receptor, tmp_path):
 
 def test_outcome_reads_a_failure_from_the_log(point_receptor, tmp_path):
     sim = _sim(tmp_path, point_receptor)
-    run = sim.output.run(sim.variant.name, sim.variant.transport)
+    run = sim.output.particles(sim.variant.name, sim.variant.transport)
     run.write_log(
         sim.receptor_id, "Insufficient number of meteorological files found\n"
     )
@@ -374,9 +376,11 @@ def test_generate_footprint_uses_the_receptor_kernel_from_a_project_table(
     sim = _sim(tmp_path, point_receptor, footprint=config)
     with_height = _trajectories(point_receptor, sim.params)
     with_height.data["xhgt"] = 10.0  # the kernel weights particles by release height
-    sim.output.run(sim.variant.name, sim.variant.transport).write_particles(with_height)
+    sim.output.particles(sim.variant.name, sim.variant.transport).write(with_height)
     plain = _sim(tmp_path, point_receptor, footprint=FOOT, variant="plain")
-    assert plain.run == sim.run  # same transport settings: the particles are shared
+    assert (
+        plain._particle_set == sim._particle_set
+    )  # same transport settings: the particles are shared
 
     weighted = sim.generate_footprint(context=_context(sim, directory=tmp_path))
     base = plain.generate_footprint()

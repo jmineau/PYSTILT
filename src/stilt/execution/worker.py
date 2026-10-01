@@ -3,7 +3,7 @@ Worker functions that run one simulation, one receptor, or many receptors.
 
 Workers are handed receptors. :func:`run_receptor` runs every variant of
 one receptor, and :func:`run_simulation` runs each one: HYSPLIT where the
-particles are missing (:func:`run_trajectories`), then the footprint
+particles are missing (:func:`run_particles`), then the footprint
 (:func:`write_footprint`). Variants with the same transport settings share
 one HYSPLIT run. :func:`run_receptors` runs a list of receptors in this
 process or a process pool. A :class:`~stilt.Simulation` itself runs
@@ -27,13 +27,13 @@ from typing import TYPE_CHECKING, Literal
 from stilt.config import FootprintConfig
 from stilt.exceptions import (
     EmptyFootprint,
-    EmptyTrajectoryError,
+    EmptyParticleOutputError,
     SimulationError,
 )
 from stilt.footprint import Footprint
 from stilt.meteorology import Met
+from stilt.particles import Trajectories
 from stilt.simulation import Simulation
-from stilt.trajectory import Trajectories
 from stilt.transforms import ParticleTransform, TransformContext
 from stilt.transport import get_model
 
@@ -143,8 +143,8 @@ class ReceptorResult:
 
 def _append_error_log(sim: Simulation, *, phase: str, error: BaseException) -> None:
     """Append the error and its traceback to the simulation's log in the output directory."""
-    run = sim.output.run(sim.variant.name, sim.variant.transport)
-    log_path = run.log_path(sim.receptor_id)
+    folder = sim.output.particles(sim.variant.name, sim.variant.transport)
+    log_path = folder.log_path(sim.receptor_id)
     log_path.parent.mkdir(parents=True, exist_ok=True)
     trace = traceback.format_exc()
     lines = [
@@ -160,7 +160,7 @@ def _append_error_log(sim: Simulation, *, phase: str, error: BaseException) -> N
         f.write("\n".join(lines) + "\n")
 
 
-def run_trajectories(
+def run_particles(
     sim: Simulation,
     *,
     met: Met,
@@ -199,7 +199,7 @@ def run_trajectories(
     Raises
     ------
     MeteorologyError, HYSPLITTimeoutError, HYSPLITFailureError,
-    NoParticleOutputError, EmptyTrajectoryError
+    NoParticleOutputError, EmptyParticleOutputError
         As the HYSPLIT driver and the particle reader raise them.
     """
     params = sim.params
@@ -210,7 +210,7 @@ def run_trajectories(
     }
     run_params = params.model_copy(update=overrides) if overrides else params
     model = get_model(params.model.name)
-    run = sim.output.run(sim.variant.name, sim.variant.transport)
+    folder = sim.output.particles(sim.variant.name, sim.variant.transport)
     rid = sim.receptor_id
     workdir.mkdir(parents=True, exist_ok=True)
     scratch_log = workdir / "stilt.log"
@@ -218,21 +218,21 @@ def run_trajectories(
     try:
         result = model.run(sim.receptor, run_params, met, workdir)
         if result.particles.empty:
-            raise EmptyTrajectoryError(f"No trajectory data for {sim.id}")
+            raise EmptyParticleOutputError(f"HYSPLIT wrote no particles for {sim.id}")
         traj = Trajectories.from_particles(
             result.particles,
             receptor=sim.receptor,
             params=params,
             met_files=result.met_files,
         )
-        run.write_particles(traj)
+        folder.write(traj)
         succeeded = True
         return traj
     finally:
         if scratch_log.exists():
-            run.write_log(rid, scratch_log.read_text())
+            folder.write_log(rid, scratch_log.read_text())
         _finish_scratch(
-            workdir, run.scratch_path(rid), keep=keep_scratch or not succeeded
+            workdir, folder.scratch_path(rid), keep=keep_scratch or not succeeded
         )
 
 
@@ -249,14 +249,14 @@ def _finish_scratch(workdir: Path, kept: Path, *, keep: bool) -> None:
 
 def write_footprint(
     sim: Simulation,
-    trajectories: Trajectories,
+    particles: Trajectories,
     *,
     context: TransformContext,
     config: FootprintConfig | None = None,
     transforms: Sequence[ParticleTransform] | None = None,
 ) -> Footprint | None:
     """
-    Calculate a footprint from *trajectories* and write it to the output directory.
+    Calculate a footprint from *particles* and write it to the output directory.
 
     With the variant's own settings (the default) it goes to the variant's
     footprint folder. Other settings go to their own folder beside it. When
@@ -276,10 +276,10 @@ def write_footprint(
         config = config.model_copy(
             update={"transforms": [*config.transforms, *transforms]}
         )
-    run = sim.output.run(sim.variant.name, sim.variant.transport)
-    feet = run.footprints(config, name=sim.variant.name)
+    folder = sim.output.particles(sim.variant.name, sim.variant.transport)
+    feet = folder.footprints(config, name=sim.variant.name)
     try:
-        foot = trajectories.footprint(config, name=sim.variant.name, context=context)
+        foot = particles.footprint(config, name=sim.variant.name, context=context)
     except EmptyFootprint as error:
         feet.write_empty(sim.receptor, error.reason, name=sim.variant.name)
         return None
@@ -332,12 +332,12 @@ def run_simulation(
     -------
     SimulationResult
     """
-    phase = "trajectory"
+    phase = "particles"
     ran_hysplit = False
     try:
         traj: Trajectories | None = None
-        if not (skip_existing and sim.has_trajectory):
-            traj = run_trajectories(
+        if not (skip_existing and sim.has_particles):
+            traj = run_particles(
                 sim, met=met, workdir=compute_root / sim.id, keep_scratch=keep_scratch
             )
             ran_hysplit = True
@@ -347,7 +347,7 @@ def run_simulation(
         ):
             phase = "footprint"
             if traj is None:
-                traj = sim.trajectories
+                traj = sim.particles
             context = TransformContext(
                 receptor=sim.receptor, variant=sim.variant.name, directory=project_dir
             )
@@ -490,7 +490,7 @@ def run_receptors(
     n_cores : int, default 1
         Number of worker processes. 1 runs in this process.
     skip_existing : bool, default True
-        Keep trajectories and footprints that already exist.
+        Keep particles and footprints that already exist.
 
     Returns
     -------
@@ -556,6 +556,6 @@ __all__ = [
     "run_receptor",
     "run_receptors",
     "run_simulation",
-    "run_trajectories",
+    "run_particles",
     "write_footprint",
 ]

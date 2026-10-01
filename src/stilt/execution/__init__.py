@@ -4,10 +4,10 @@ from .runner import Batch, resolve_compute_root, run, submit
 from .worker import (
     ReceptorResult,
     SimulationResult,
+    run_particles,
     run_receptor,
     run_receptors,
     run_simulation,
-    run_trajectories,
     sigterm_as_interrupt,
     write_footprint,
 )
@@ -21,7 +21,7 @@ __all__ = [
     "run_receptor",
     "run_receptors",
     "run_simulation",
-    "run_trajectories",
+    "run_particles",
     "sigterm_as_interrupt",
     "submit",
     "write_footprint",

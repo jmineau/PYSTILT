@@ -54,11 +54,11 @@ def scenario_outputs(request, met_dir, rscript, r_stilt_dir, tmp_path_factory) -
     print(f"\n[PROFILE] {scenario.name} PYSTILT sim: {time.perf_counter() - t0:.1f}s")
 
     sim = project.simulation(*SimID.parse(scenario.py_sim_id()))
-    if not sim.has_trajectory:
+    if not sim.has_particles:
         pytest.fail(f"[{scenario.name}] No particles written for {sim.id}")
     if not sim.has_footprint:
         pytest.fail(f"[{scenario.name}] No footprint written for {sim.id}")
-    traj_file = sim.trajectories_path
+    traj_file = sim.particles_path
     assert traj_file is not None
     # The footprint is stored sparse in float32; compare the footprint as
     # computed, in float64, by remaking it from the stored particles.
@@ -66,15 +66,15 @@ def scenario_outputs(request, met_dir, rscript, r_stilt_dir, tmp_path_factory) -
     assert foot is not None, f"[{scenario.name}] footprint is empty"
     foot_file = project_dir / "py_foot.nc"
     foot.to_netcdf(foot_file)
-    assert sim.run is not None
-    setup_file = sim.run.scratch_path(str(receptor.id)) / "SETUP.CFG"
+    assert sim._particle_set is not None
+    setup_file = sim._particle_set.scratch_path(str(receptor.id)) / "SETUP.CFG"
 
     error_traj_path = None
     if scenario.error_variant is not None:
         err = project.simulation(
             *SimID.parse(scenario.py_sim_id(scenario.error_variant))
         )
-        error_traj_path = err.trajectories_path if err.has_trajectory else None
+        error_traj_path = err.particles_path if err.has_particles else None
 
     # Skip R trajectory run for scenarios whose transport is identical to another.
     # test_trajectory_matches_r will pytest.skip() when r_traj is None.

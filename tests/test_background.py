@@ -11,7 +11,7 @@ from stilt.observations.backgrounds import (
     endpoint_weights,
     fill_missing,
 )
-from stilt.trajectory import endpoint_rows
+from stilt.particles import endpoint_rows
 from stilt.transforms import FirstOrderLifetime, PressureWeighting
 
 

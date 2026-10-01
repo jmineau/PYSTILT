@@ -26,10 +26,10 @@ from stilt.execution.worker import (
 )
 from stilt.meteorology import Met
 from stilt.output import Output
+from stilt.particles import Trajectories
 from stilt.project import Project
 from stilt.receptors import PointReceptor, Receptor
 from stilt.simulation import Simulation
-from stilt.trajectory import Trajectories
 from stilt.transforms import TransformContext
 
 # ---------------------------------------------------------------------------
@@ -138,13 +138,13 @@ def _particles(receptor, params) -> Trajectories:
 def _write_particles(sim: Simulation) -> Trajectories:
     """Put a small particle file for *sim* in the output directory."""
     traj = _particles(sim.receptor, sim.params)
-    sim.output.run(sim.variant.name, sim.variant.transport).write_particles(traj)
+    sim.output.particles(sim.variant.name, sim.variant.transport).write(traj)
     return traj
 
 
 def _write_footprint(sim: Simulation, *, empty: bool = False) -> None:
     """Record a footprint (or an empty one) for *sim* in the output directory."""
-    run = sim.output.run(sim.variant.name, sim.variant.transport)
+    run = sim.output.particles(sim.variant.name, sim.variant.transport)
     assert sim.footprint_config is not None
     if empty:
         feet = run.footprints(sim.footprint_config, name=sim.variant.name)
@@ -163,19 +163,19 @@ def _run(sim, met, compute_root, **kwargs) -> SimulationResult:
 
 def _no_hysplit(monkeypatch):
     monkeypatch.setattr(
-        worker, "run_trajectories", lambda *a, **k: pytest.fail("must not run HYSPLIT")
+        worker, "run_particles", lambda *a, **k: pytest.fail("must not run HYSPLIT")
     )
 
 
 def _fake_hysplit(monkeypatch, calls: list[str] | None = None):
-    """Replace run_trajectories with one that writes particles and records the call."""
+    """Replace run_particles with one that writes particles and records the call."""
 
     def fake(sim, *, met, workdir, keep_scratch=False, **kwargs):
         if calls is not None:
             calls.append("hysplit")
         return _write_particles(sim)
 
-    monkeypatch.setattr(worker, "run_trajectories", fake)
+    monkeypatch.setattr(worker, "run_particles", fake)
 
 
 def _fake_footprint(monkeypatch, calls: list[str] | None = None, result=None):
@@ -263,7 +263,7 @@ def test_run_simulation_trajectory_only_completes(sim, met, compute_root, monkey
     result = _run(sim, met, compute_root)
 
     assert result == SimulationResult(str(sim.id), "complete", ran_hysplit=True)
-    assert sim.has_trajectory
+    assert sim.has_particles
 
 
 def test_run_simulation_skips_existing_particles(sim, met, compute_root, monkeypatch):
@@ -292,7 +292,7 @@ def test_run_simulation_error_is_failed_and_logged(sim, met, compute_root, monke
     def fail(*a, **k):
         raise SimulationError("HYSPLIT failed")
 
-    monkeypatch.setattr(worker, "run_trajectories", fail)
+    monkeypatch.setattr(worker, "run_particles", fail)
 
     result = _run(sim, met, compute_root)
 
@@ -300,7 +300,7 @@ def test_run_simulation_error_is_failed_and_logged(sim, met, compute_root, monke
     assert result.error == "HYSPLIT failed"
     log_text = sim.log
     assert "=== PYSTILT ERROR ===" in log_text
-    assert "Phase: trajectory" in log_text
+    assert "Phase: particles" in log_text
     assert "Type: SimulationError" in log_text
     assert "Message: HYSPLIT failed" in log_text
     assert sim.outcome == "failed:UNKNOWN"
@@ -309,13 +309,13 @@ def test_run_simulation_error_is_failed_and_logged(sim, met, compute_root, monke
 def test_run_simulation_error_log_appends_to_existing_hysplit_log(
     sim, met, compute_root, monkeypatch
 ):
-    run = sim.output.run(sim.variant.name, sim.variant.transport)
+    run = sim.output.particles(sim.variant.name, sim.variant.transport)
     run.write_log(sim.receptor_id, "hysplit said hello\n")
 
     def fail(*a, **k):
         raise SimulationError("boom")
 
-    monkeypatch.setattr(worker, "run_trajectories", fail)
+    monkeypatch.setattr(worker, "run_particles", fail)
     _run(sim, met, compute_root)
 
     text = sim.log
@@ -327,7 +327,7 @@ def test_run_simulation_generic_exception_is_error(sim, met, compute_root, monke
     def fail(*a, **k):
         raise RuntimeError("unexpected")
 
-    monkeypatch.setattr(worker, "run_trajectories", fail)
+    monkeypatch.setattr(worker, "run_particles", fail)
 
     result = _run(sim, met, compute_root)
 
@@ -422,9 +422,7 @@ def test_run_simulation_backfills_missing_particles_and_remakes_the_footprint(
     )
     _write_particles(s)
     _write_footprint(s)
-    s.output.run(s.variant.name, s.variant.transport).particles_path(
-        s.receptor_id
-    ).unlink()
+    s.output.particles(s.variant.name, s.variant.transport).file(s.receptor_id).unlink()
     calls: list[str] = []
     _fake_hysplit(monkeypatch, calls)
     _fake_footprint(monkeypatch, calls)
