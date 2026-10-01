@@ -19,7 +19,7 @@ class FailureReason(StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
-#: Phrases written to stilt.log by HYSPLIT, mapped to their FailureReason.
+#: Phrases written to stilt.log by HYSPLIT or PYSTILT, mapped to their FailureReason.
 FAILURE_PHRASES: dict[str, FailureReason] = {
     # PYSTILT's MeteorologyError (raised Python-side before HYSPLIT runs, then
     # written to the log by the phase runner) shares HYSPLIT's exact wording, so
@@ -31,6 +31,10 @@ FAILURE_PHRASES: dict[str, FailureReason] = {
     # Written by the HYSPLIT driver, not HYSPLIT (see MET_TRUNCATED_WARNING).
     "Meteorology ends early": FailureReason.MET_TRUNCATED,
     "PARTICLE_STILT.DAT does not contain any trajectory data": FailureReason.NO_PARTICLE_DATA,
+    # PYSTILT's own errors for a run without particles, by the class name the
+    # worker writes to the log ("Type: ...").
+    "NoParticleOutputError": FailureReason.NO_PARTICLE_DATA,
+    "EmptyParticleOutputError": FailureReason.NO_PARTICLE_DATA,
     "Fortran runtime error": FailureReason.FORTRAN_RUNTIME_ERROR,
 }
 
