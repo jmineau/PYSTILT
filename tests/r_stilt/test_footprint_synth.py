@@ -49,8 +49,8 @@ from stilt.footprint import (
     _project_particles_to_crs,
     _wrap_antimeridian_longitudes,
 )
+from stilt.particles import calc_plume_dilution
 from stilt.receptors import PointReceptor
-from stilt.trajectory import calc_plume_dilution
 
 pytestmark = [pytest.mark.fidelity]
 

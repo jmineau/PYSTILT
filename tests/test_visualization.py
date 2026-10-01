@@ -15,8 +15,8 @@ import matplotlib.pyplot as plt  # noqa: E402 — must come after use("Agg")
 
 from stilt.config import FootprintConfig, Grid, STILTParams
 from stilt.footprint import Footprint
+from stilt.particles import Trajectories
 from stilt.receptors import ColumnReceptor, MultiPointReceptor, PointReceptor
-from stilt.trajectory import Trajectories
 from stilt.visualization import (
     ProjectPlotAccessor,
     SimulationPlotAccessor,
@@ -293,7 +293,7 @@ def test_simulation_map_no_data(receptor):
     sim = MagicMock()
     sim.receptor = receptor
     sim.footprint = None
-    sim.trajectories = None
+    sim.particles = None
     sim.id = "202301011200_test/hrrr"
 
     ax = SimulationPlotAccessor(sim).map()
@@ -306,7 +306,7 @@ def test_simulation_map_with_trajectories(receptor, minimal_trajectories):
     sim = MagicMock()
     sim.receptor = receptor
     sim.footprint = None
-    sim.trajectories = minimal_trajectories
+    sim.particles = minimal_trajectories
     sim.id = "202301011200_test/hrrr"
 
     ax = SimulationPlotAccessor(sim).map()
@@ -319,7 +319,7 @@ def test_simulation_map_with_footprint(receptor, minimal_footprint):
     sim = MagicMock()
     sim.receptor = receptor
     sim.footprint = minimal_footprint
-    sim.trajectories = None
+    sim.particles = None
     sim.id = "202301011200_test/hrrr"
 
     ax = SimulationPlotAccessor(sim).map()
@@ -332,7 +332,7 @@ def test_simulation_map_met_bounds(receptor, grid):
     sim = MagicMock()
     sim.receptor = receptor
     sim.footprint = None
-    sim.trajectories = None
+    sim.particles = None
     sim.id = "202301011200_test/hrrr"
 
     ax = SimulationPlotAccessor(sim).map(met_bounds=grid)
@@ -345,7 +345,7 @@ def test_simulation_map_show_traj_false(receptor, minimal_trajectories):
     sim = MagicMock()
     sim.receptor = receptor
     sim.footprint = None
-    sim.trajectories = minimal_trajectories
+    sim.particles = minimal_trajectories
     sim.id = "202301011200_test/hrrr"
 
     ax = SimulationPlotAccessor(sim).map(show_traj=False)
@@ -358,7 +358,7 @@ def test_simulation_map_show_receptor_false(receptor):
     sim = MagicMock()
     sim.receptor = receptor
     sim.footprint = None
-    sim.trajectories = None
+    sim.particles = None
     sim.id = "202301011200_test/hrrr"
 
     ax = SimulationPlotAccessor(sim).map(show_receptor=False)

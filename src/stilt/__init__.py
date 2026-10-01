@@ -2,7 +2,7 @@
 PYSTILT, a Python implementation of the STILT transport model.
 
 Start with :class:`Project`, a directory of receptors and settings that
-runs them through HYSPLIT and loads their trajectories and footprints.
+runs them through HYSPLIT and loads their particles and footprints.
 """
 
 from importlib.metadata import PackageNotFoundError
@@ -22,6 +22,7 @@ from .footprint import Footprint
 from .geometry import Geometry, Mesh, SpatialTarget, Zones
 from .meteorology import Met
 from .output import Output
+from .particles import Trajectories
 from .project import Project
 from .receptors import (
     ColumnReceptor,
@@ -31,7 +32,6 @@ from .receptors import (
     read_receptors,
 )
 from .simulation import SimID, Simulation
-from .trajectory import Trajectories
 from .transforms import ParticleTransform, TransformContext
 
 try:

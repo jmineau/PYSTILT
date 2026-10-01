@@ -52,7 +52,7 @@ Simulation tables
 ``project.receptors`` and ``project.simulations`` are pandas DataFrames,
 one row per receptor or per simulation. Select rows with pandas and pass
 them to :meth:`Project.status`, :meth:`Project.incomplete`,
-:meth:`Project.load_trajectories`, or :meth:`Project.load_footprints`.
+:meth:`Project.load_particles`, or :meth:`Project.load_footprints`.
 
 .. code-block:: python
 

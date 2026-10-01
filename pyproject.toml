@@ -129,7 +129,7 @@ source_modules = [
     "stilt.project",
     "stilt.receptors",
     "stilt.simulation",
-    "stilt.trajectory",
+    "stilt.particles",
     "stilt.transforms",
     "stilt.transport",
     "stilt.visualization",

@@ -14,7 +14,7 @@ def test_all_failure_reasons_exist():
         "MET_COVERAGE",
         "MET_TRUNCATED",
         "VARYING_MET_INTERVAL",
-        "NO_TRAJECTORY_DATA",
+        "NO_PARTICLE_DATA",
         "FORTRAN_RUNTIME_ERROR",
         "EMPTY_LOG",
         "UNKNOWN",
@@ -47,7 +47,7 @@ def test_identify_failure_reason_no_traj(tmp_path):
     (tmp_path / "stilt.log").write_text(
         "PARTICLE_STILT.DAT does not contain any trajectory data\n"
     )
-    assert identify_failure_reason(tmp_path) is FailureReason.NO_TRAJECTORY_DATA
+    assert identify_failure_reason(tmp_path) is FailureReason.NO_PARTICLE_DATA
 
 
 def test_identify_failure_reason_fortran(tmp_path):

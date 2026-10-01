@@ -25,7 +25,7 @@ class FootprintConfig(BaseModel):
     and every footprint keeps the settings it was calculated with.
 
     ``grid`` is the raster the footprint is computed on. Leave both ``grid``
-    and ``geometry`` unset for a variant that only produces trajectories.
+    and ``geometry`` unset for a variant that only produces particles.
     Give ``geometry`` to name the polygons the footprint will be aggregated
     to, and the grid is derived from them with
     :meth:`stilt.Grid.from_geometry` when the settings are resolved
@@ -38,7 +38,7 @@ class FootprintConfig(BaseModel):
         description=(
             "Domain and resolution of the footprint. Unset with ``geometry`` "
             "derives it from the geometry; unset without it gives a run that "
-            "produces trajectories only."
+            "produces particles only."
         ),
     )
     geometry: GeometrySpec | None = Field(

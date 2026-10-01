@@ -9,8 +9,8 @@ import pyarrow.parquet as pq
 import pytest
 
 from stilt.config import STILTParams
+from stilt.particles import Trajectories, calc_plume_dilution
 from stilt.receptors import ColumnReceptor, MultiPointReceptor, PointReceptor
-from stilt.trajectory import Trajectories, calc_plume_dilution
 
 
 def _particles_basic() -> pd.DataFrame:
@@ -142,7 +142,7 @@ def test_to_parquet_is_atomic_on_failure(point_receptor, tmp_path, monkeypatch):
         Path(write_path).write_bytes(b"partial parquet")
         raise RuntimeError("write failed")
 
-    monkeypatch.setattr("stilt.trajectory.pq.write_table", _broken_write)
+    monkeypatch.setattr("stilt.particles.pq.write_table", _broken_write)
 
     with pytest.raises(RuntimeError, match="write failed"):
         traj.to_parquet(path)
@@ -532,7 +532,7 @@ def test_from_particles_with_hnf_plume(point_receptor, tmp_path):
 def test_calc_plume_dilution_raises_when_no_xhgt_and_no_rzagl():
     """r_zagl=None with no xhgt column raises ValueError."""
     p = _particles_basic()
-    from stilt.trajectory import calc_plume_dilution
+    from stilt.particles import calc_plume_dilution
 
     with pytest.raises(ValueError, match="r_zagl must be provided"):
         calc_plume_dilution(particles=p, r_zagl=None, veght=0.5)

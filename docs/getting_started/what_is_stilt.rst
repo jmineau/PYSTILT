@@ -80,7 +80,8 @@ makes a few things easier.
   takes a few lines of configuration.
 * Column and slanted receptors, averaging kernels, and pressure weighting are
   built in for column and satellite measurements.
-* Trajectories are saved as Parquet files and footprints as NetCDF.
+* Particles and footprints are saved as Parquet files, which pandas, R, and
+  DuckDB can read. A footprint can also be written as NetCDF.
 
 Where PYSTILT comes from
 ------------------------

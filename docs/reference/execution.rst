@@ -10,7 +10,7 @@ work underneath.
 - :func:`~stilt.execution.submit` is what ``project.submit()`` calls. It
   submits those receptors to Slurm as one job array and returns the
   submitit jobs at once.
-- :func:`~stilt.execution.run_trajectories` runs HYSPLIT for one
+- :func:`~stilt.execution.run_particles` runs HYSPLIT for one
   :class:`~stilt.Simulation` and writes its particles and log.
 - :func:`~stilt.execution.write_footprint` makes the footprint from those
   particles and writes it.
@@ -35,7 +35,7 @@ Worker functions
    stilt.execution.run
    stilt.execution.submit
    stilt.execution.resolve_compute_root
-   stilt.execution.run_trajectories
+   stilt.execution.run_particles
    stilt.execution.write_footprint
    stilt.execution.run_simulation
    stilt.execution.run_receptor

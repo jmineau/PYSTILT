@@ -141,7 +141,7 @@ def test_status_counts_full_simulation_completion(tmp_path):
 
     # Particles exist but the required footprint does not: not complete.
     sim = project.simulation(receptor.id, "hrrr")
-    from stilt.trajectory import Trajectories
+    from stilt.particles import Trajectories
 
     particles = pd.DataFrame(
         {
@@ -153,8 +153,8 @@ def test_status_counts_full_simulation_completion(tmp_path):
             "foot": [1e-5],
         }
     )
-    run = sim.output.run(sim.variant.name, sim.variant.transport)
-    run.write_particles(
+    run = sim.output.particles(sim.variant.name, sim.variant.transport)
+    run.write(
         Trajectories(receptor=receptor, params=sim.params, met_files=[], data=particles)
     )
 
@@ -167,7 +167,7 @@ def test_status_counts_full_simulation_completion(tmp_path):
     from stilt.execution import write_footprint
 
     sim = project.simulation(receptor.id, "hrrr")  # a fresh value
-    write_footprint(sim, sim.trajectories, context=project.transform_context(sim))
+    write_footprint(sim, sim.particles, context=project.transform_context(sim))
 
     result = runner.invoke(app, ["status", str(tmp_path)])
 
@@ -396,7 +396,7 @@ def test_status_lists_output_folders_no_variant_uses(tmp_path):
     project = Project(tmp_path)
     # A run made under settings the config no longer has.
     stale = project.variants["hrrr"].transport.model_copy(update={"numpar": 7})
-    project.output.run("old", stale)
+    project.output.particles("old", stale)
 
     result = runner.invoke(app, ["status", str(tmp_path)])
 

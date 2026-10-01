@@ -20,7 +20,7 @@ you are new to PYSTILT, start with :doc:`../getting_started/quickstart`.
 
 **Working with results**
 
-- :doc:`outputs`: load, plot, and aggregate footprints and trajectories
+- :doc:`outputs`: load, plot, and aggregate footprints and particles
 - :doc:`transport_error`: the modelled enhancement from a flux field, and
   its transport uncertainty
 - :doc:`wind_errors`: estimate the wind-error statistics a transport-error

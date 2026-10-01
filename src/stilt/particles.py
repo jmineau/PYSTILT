@@ -146,7 +146,7 @@ class Trajectories:
     ``xhgt`` (release height, for column and multipoint receptors), and
     ``foot_no_hnf_dilution`` when ``hnf_plume`` is set.
 
-    Trajectories normally come from a simulation (``sim.trajectories``) or
+    Trajectories normally come from a simulation (``sim.particles``) or
     a file (:meth:`from_parquet`).
 
     Parameters

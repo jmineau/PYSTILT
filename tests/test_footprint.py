@@ -23,8 +23,8 @@ from stilt.footprint import (
     _wrap_antimeridian_longitudes,
 )
 from stilt.geometry import Mesh, Zones
+from stilt.particles import calc_plume_dilution
 from stilt.receptors import PointReceptor
-from stilt.trajectory import calc_plume_dilution
 from stilt.transforms import AveragingKernel
 
 

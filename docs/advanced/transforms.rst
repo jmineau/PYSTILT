@@ -148,7 +148,7 @@ To see what a transform did, apply it to the particle table yourself:
 
 .. code-block:: python
 
-   weighted = PressureWeighting().apply(sim.trajectories.data)
+   weighted = PressureWeighting().apply(sim.particles.data)
    weighted.drop_duplicates("indx")[["xhgt", "xpres", "pwf"]]
 
 Writing your own transform

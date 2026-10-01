@@ -63,9 +63,9 @@ def sim(monkeypatch, tmp_path, point_receptor):
 
 
 def _run(sim, tmp_path, **kwargs):
-    from stilt.execution import run_trajectories
+    from stilt.execution import run_particles
 
-    return run_trajectories(sim, met=_FakeMet(), workdir=tmp_path / "scratch", **kwargs)
+    return run_particles(sim, met=_FakeMet(), workdir=tmp_path / "scratch", **kwargs)
 
 
 def test_timeout_defaults_to_none():
@@ -76,7 +76,7 @@ def test_timeout_is_configurable():
     assert STILTParams(timeout=900).timeout == 900
 
 
-def test_run_trajectories_falls_back_to_params_timeout(sim, tmp_path):
+def test_run_particles_falls_back_to_params_timeout(sim, tmp_path):
     with pytest.raises(RuntimeError):
         _run(sim(600), tmp_path)
     assert _StopDriver.seen["timeout"] == 600

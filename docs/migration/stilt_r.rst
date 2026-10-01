@@ -149,10 +149,11 @@ an ``r_idx`` value. See :doc:`../guides/receptors`.
 Outputs
 -------
 
-Trajectories are Parquet files instead of R ``.rds`` files. You can open them
+Particles are saved as Parquet files instead of R ``.rds`` files. Open them
 in Python with pandas or :class:`stilt.Trajectories`, and in R with
-``arrow::read_parquet``. Footprints are NetCDF as before, with dimensions
-``(time, lat, lon)``.
+``arrow::read_parquet``. Footprints are saved as Parquet too, holding only
+the cells the particles reached. ``foot.to_netcdf()`` writes one as NetCDF
+with dimensions ``(time, lat, lon)``, as STILT-R does.
 
 A point or column receptor's ID has the same form as STILT-R's simulation
 ID. Each variant is a folder below it, for example

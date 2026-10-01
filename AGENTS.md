@@ -86,7 +86,7 @@ writes results.
 
 **Plurals are DataFrames; singular things are objects.**
 `project.receptors` and `project.simulations` are DataFrames selected with
-pandas, and `status`, `incomplete`, `load_trajectories`, and
+pandas, and `status`, `incomplete`, `load_particles`, and
 `load_footprints` take such a selection. `project.receptor(id)` and
 `project.simulation(id, variant)` return the objects. Do not add a custom
 collection class.
@@ -101,14 +101,15 @@ src/stilt/
   cli.py             Typer CLI; a thin adapter over Project and execution
   project.py         Project: the project directory, its receptors and
                      simulations as DataFrames, status, loading, run/submit
-  output.py          Output: the output directory (runs by settings hash, sparse
-                     footprint files, Jacobian assembly)
+  output.py          Output: the output directory. Particles and Footprints are
+                     its folders, one per settings hash; sparse footprint
+                     files; Jacobian assembly
   simulation.py      Simulation, SimID: a frozen value (receptor, variant, output)
                      that knows where its results are and whether they exist
   receptors.py       receptor types (frozen pydantic models: point, column,
                      multipoint), their ids, and the receptor table behind
                      the CSV reader, writer, and appender
-  trajectory.py      Trajectories: particle output container + Parquet I/O
+  particles.py       Trajectories: one receptor's particle table + Parquet I/O
   footprint.py       Footprint: gridded CF-1.8 NetCDF output, enhancement from
                      a flux field, aggregation onto other spatial targets
   flux.py            sampling a flux field at points or along particles
@@ -169,10 +170,10 @@ output directory, never only in memory.
   defaults). `ProjectConfig.resolve_variants()` turns them into one
   `VariantConfig` per simulation name, expanding `realizations: N` into
   `<name>-0..N-1` with `seed + k`. A `VariantConfig` is composed:
-  `transport: TransportSettings` (hashed, names the run) and
+  `transport: TransportSettings` (hashed, names the particles folder) and
   `footprint: FootprintConfig | None`. Variants whose transport settings
-  match share the run; `from:` is rejected. `grid: null` means trajectory
-  only, and footprint settings without a grid are an error. There is no
+  match share the particles; `from:` is rejected. `grid: null` means
+  particles only, and footprint settings without a grid are an error. There is no
   named-footprints dict.
 - Every field is a plain pydantic `Field(default, description=...)` and the
   public config stays flat (`ProjectConfig(numpar=..., seed=...)`). CONTRIBUTING
@@ -210,8 +211,11 @@ folder below a kind is hive-style, so each tree reads as one dataset:
   scratch/settings=<variant>-<hash>/date=YYYY-MM-DD/<receptor_id>/   failed runs' working dirs
 ```
 
-A run folder's hash is `TransportSettings.hash`; a footprint folder's is
-the hash of the run's settings and the footprint settings together. Lookup
+A particles folder's hash is `TransportSettings.hash`; a footprint
+folder's is the hash of the transport settings and the footprint settings
+together. "Particles" is the one word for the particle table in code
+(`Particles`, `sim.particles`, `has_particles`); "run" is only the verb, and
+"trajectory" means one particle's path. Lookup
 re-validates the stored `_settings.yaml` through the current models and
 re-hashes, so a field added later with a default still matches. `compute_root`
 is scratch: HYSPLIT runs there and the directory is discarded after success.
@@ -231,7 +235,7 @@ as complete.
   holds the two together). Never add a second
   "does this output exist" check, a completion registry, or a manifest; call
   the `Simulation` method.
-- **Identity is content.** A run is its settings hash; a changed setting is
+- **Identity is content.** A results folder is its settings hash; a changed setting is
   a new folder, never an overwrite, and PYSTILT never deletes a folder.
 - **State lives in the project directory and the output directory.**
   Anything kept in a process-local variable is lost to a Slurm task, which
@@ -411,12 +415,12 @@ Feature status lives in the roadmap tables in [README.md](README.md) and
   `None`, `sim.empty_reason` says why, and `footprint.load()` leaves the
   simulation out. Never synthesize a zero-valued footprint for it: a zero
   enhancement would flow into a comparison or an inversion unnoticed.
-- **A result that is not written yet raises.** `sim.trajectories` and
+- **A result that is not written yet raises.** `sim.particles` and
   `sim.footprint` are `cached_property` on a frozen value; a missing file
   raises `FileNotFoundError` (never cached, so the next read tries again)
-  rather than caching a `None` that would hide the run when it lands. `None`
+  rather than caching a `None` that would hide the result when it lands. `None`
   is only for final states (no grid, empty footprint). Do not write to a
-  simulation's `__dict__` by hand; use `has_trajectory` / `has_footprint` to
+  simulation's `__dict__` by hand; use `has_particles` / `has_footprint` to
   test presence.
 - **Declaring `realizations` makes a numbered group, even at 1.** `hrrr-err`
   with `realizations: 1` is `hrrr-err-0`, so raising the count later only
@@ -460,7 +464,7 @@ Feature status lives in the roadmap tables in [README.md](README.md) and
   analytically from `numpar` and the column, which is what `xhgt` is. Particle
   data is needed only for the two-parameter `p(z)` fit.
 - **Multipoint and slant `xhgt` recovery** (`_multipoint_release_heights` in
-  `trajectory.py`) prefers, in order: `t = 0` rows if present (exact), a match
+  `particles.py`) prefers, in order: `t = 0` rows if present (exact), a match
   on height when release altitudes are distinct (about 20 m apart), then
   horizontal position with a warning under 1 km. The bundled HYSPLIT v5.1.0
   writes no `t = 0` row; until a published build does, `STILTParams.exe_dir`

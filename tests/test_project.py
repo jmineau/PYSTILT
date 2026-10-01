@@ -13,10 +13,10 @@ from stilt.config import ExecutionConfig, Grid, MetConfig, ProjectConfig
 from stilt.execution import resolve_compute_root
 from stilt.footprint import Footprint
 from stilt.output import Output
+from stilt.particles import Trajectories
 from stilt.project import CONFIG_KEY, RECEPTORS_KEY, Project, project_slug
 from stilt.receptors import PointReceptor
 from stilt.simulation import SimID
-from stilt.trajectory import Trajectories
 
 matplotlib.use("Agg")
 
@@ -88,8 +88,8 @@ def _write_trajectory(project: Project, receptor, variant="hrrr") -> Path:
     traj = Trajectories.from_particles(
         _particles(), receptor=sim.receptor, params=sim.params, met_files=[]
     )
-    run = sim.output.run(sim.variant.name, sim.variant.transport)
-    return run.write_particles(traj)
+    run = sim.output.particles(sim.variant.name, sim.variant.transport)
+    return run.write(traj)
 
 
 def _write_footprint(
@@ -98,7 +98,7 @@ def _write_footprint(
     """Write a footprint (or an empty one) for one simulation into the output directory."""
     sim = project.simulation(receptor.id, variant)
     assert sim.footprint_config is not None
-    run = sim.output.run(sim.variant.name, sim.variant.transport)
+    run = sim.output.particles(sim.variant.name, sim.variant.transport)
     feet = run.footprints(sim.footprint_config, name=sim.variant.name)
     if empty:
         return feet.write_empty(sim.receptor, "outside_domain", name=sim.variant.name)
@@ -241,8 +241,11 @@ def test_output_can_be_shared_between_projects(tmp_path, point_receptor):
 
     rid = point_receptor.id
     assert a.output.path == b.output.path
-    assert b.simulation(rid, "hrrr").has_trajectory
-    assert a.simulation(rid, "hrrr").run == b.simulation(rid, "hrrr").run
+    assert b.simulation(rid, "hrrr").has_particles
+    assert (
+        a.simulation(rid, "hrrr")._particle_set
+        == b.simulation(rid, "hrrr")._particle_set
+    )
 
 
 def test_compute_root_defaults_under_tmpdir(tmp_path, monkeypatch):
@@ -477,9 +480,9 @@ def test_variants_with_equal_transport_settings_share_a_run(tmp_path, point_rece
     assert hrrr.hash == s2.hash != zi.hash
 
     _write_trajectory(project, point_receptor)
-    assert project.simulation(point_receptor.id, "s2").has_trajectory
-    assert not project.simulation(point_receptor.id, "zi08").has_trajectory
-    assert len(project.output.runs()) == 1
+    assert project.simulation(point_receptor.id, "s2").has_particles
+    assert not project.simulation(point_receptor.id, "zi08").has_particles
+    assert len(project.output.particle_sets()) == 1
 
 
 def test_unreferenced_lists_output_folders_the_config_no_longer_uses(
@@ -534,9 +537,9 @@ def test_status_marks_outputs_a_variant_does_not_produce(tmp_path, point_recepto
 
     status = project.status()
 
-    assert list(status.columns[-4:]) == ["trajectory", "footprint", "empty", "complete"]
+    assert list(status.columns[-4:]) == ["particles", "footprint", "empty", "complete"]
     by_variant = status.set_index("variant")
-    assert by_variant.loc["hrrr", "trajectory"] == True  # noqa: E712
+    assert by_variant.loc["hrrr", "particles"] == True  # noqa: E712
     assert by_variant.loc["hrrr", "footprint"] == False  # noqa: E712
     assert by_variant.loc["hrrr", "empty"] == False  # noqa: E712
     assert pd.isna(by_variant.loc["traj", "footprint"])
@@ -598,7 +601,7 @@ def test_incomplete_and_status_agree_with_is_complete(tmp_path):
 
     status = project.status()
     assert status["complete"].tolist() == [sim.is_complete() for sim in handles]
-    assert status["trajectory"].tolist() == [sim.has_trajectory for sim in handles]
+    assert status["particles"].tolist() == [sim.has_particles for sim in handles]
     for row, sim in zip(status.itertuples(), handles, strict=True):
         if sim.makes_footprint:
             assert row.footprint == sim.has_footprint
@@ -625,19 +628,19 @@ def test_incomplete_of_a_project_with_no_results_is_everything(tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_load_trajectories_of_a_selection(tmp_path):
+def test_load_particles_of_a_selection(tmp_path):
     a, b = _receptor(12), _receptor(13)
     project = _project(tmp_path, [a, b])
-    assert project.load_trajectories() == {}
+    assert project.load_particles() == {}
 
     path = _write_trajectory(project, a)
 
-    assert path.parent == project.output.runs()[0].particles_dir / "date=2023-01-01"
-    [(sid, traj)] = project.load_trajectories().items()
+    assert path.parent == project.output.particle_sets()[0].path / "date=2023-01-01"
+    [(sid, traj)] = project.load_particles().items()
     assert sid == SimID(a.id, "hrrr")
     assert isinstance(traj, Trajectories) and traj.receptor.id == a.id
     sims = project.simulations
-    assert project.load_trajectories(sims[sims.receptor == b.id]) == {}
+    assert project.load_particles(sims[sims.receptor == b.id]) == {}
 
 
 def test_load_footprints_skips_empty_footprints_and_trajectory_only_variants(

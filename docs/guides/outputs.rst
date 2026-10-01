@@ -4,12 +4,12 @@ Load And Plot Results
 Each simulation is one receptor run under one variant
 (:doc:`configuration`). It has up to two results in the output directory:
 
-- the **trajectories**, every particle's path, as a Parquet file
+- the **particles**, where every particle went, as a Parquet file
 - the **footprint**, when the variant has a grid, as a Parquet file of the
   cells the particles touched
 
 Variants that differ only in footprint settings share one set of
-trajectories; ``sim.trajectories`` returns the shared particles.
+particles.
 
 This page shows how to plot these outputs, load them for analysis, and add
 footprints up over the areas you care about.
@@ -26,9 +26,9 @@ Open the project, pick a simulation, and plot it:
    project = stilt.Project("./my_project")
    sim = project.simulation("202307151800_-111.848_40.766_10", "hrrr")
 
-   sim.footprint.plot.map()                     # footprint, summed over time
-   sim.trajectories.plot.map()                  # particle paths
-   sim.plot.map()                               # receptor, particles, and footprint together
+   sim.footprint.plot.map()     # footprint, summed over time
+   sim.particles.plot.map()     # particle paths
+   sim.plot.map()               # receptor, particles, and footprint together
 
 A simulation is named by its receptor id and its variant. To see them all,
 look at ``project.simulations``, a DataFrame with one row per simulation:
@@ -97,8 +97,8 @@ Select rows with pandas, then pass them to a loader:
        (sims.variant == "hrrr")
        & sims.time.between("2023-07-01", "2023-07-31 23:00")   # both ends included
    ]
-   footprints = project.load_footprints(july)         # {simulation id: Footprint}
-   trajectories = project.load_trajectories(july)     # {simulation id: Trajectories}
+   footprints = project.load_footprints(july)   # {simulation id: Footprint}
+   particles = project.load_particles(july)     # {simulation id: Trajectories}
 
 The results are dictionaries keyed by simulation id, so you always know
 which receptor a result belongs to:
@@ -110,7 +110,7 @@ which receptor a result belongs to:
 
 Leave out the selection to load every simulation. A simulation whose result
 does not exist yet is left out. To find a single file, use
-``sim.footprint_path`` or ``sim.trajectories_path``.
+``sim.footprint_path`` or ``sim.particles_path``.
 
 The extra columns of ``receptors.csv`` select one satellite scene or one
 site:
@@ -128,7 +128,7 @@ To see what is left to do:
    project.status()              # every row, with four more columns
    project.status(july)          # the same, for a selection
 
-``status()`` adds a ``trajectory`` and a ``footprint`` column that say
+``status()`` adds a ``particles`` and a ``footprint`` column that say
 whether each output exists. They are blank where the variant does not make
 that output. The ``empty`` column marks footprints that are empty (`Empty
 footprints`_), and the ``complete`` column says whether the simulation is
@@ -136,14 +136,14 @@ done. Finding empty footprints opens each footprint file, so ``status()``
 is slower than ``incomplete()`` on a large project. From the command line,
 ``stilt status`` prints the totals, per variant when there are several.
 
-Trajectories
-------------
+Particles
+---------
 
 .. code-block:: python
 
-   sim.has_trajectory             # True once the particle file exists
-   traj = sim.trajectories        # raises FileNotFoundError before that
-   df = traj.data                 # pandas DataFrame, one row per particle per time step
+   sim.has_particles      # True once the particle file exists
+   traj = sim.particles   # raises FileNotFoundError before that
+   df = traj.data         # pandas DataFrame, one row per particle per time step
 
 The columns you are most likely to use:
 
@@ -172,11 +172,14 @@ The columns you are most likely to use:
      - Mixed-layer height, vertical velocity spread, Lagrangian time scale,
        and pressure
 
-To open a trajectory file without a project:
+To open a particle file without a project:
 
 .. code-block:: python
 
-   traj = stilt.Trajectories.from_parquet("path/to/..._traj.parquet")
+   traj = stilt.Trajectories.from_parquet(
+       "output/particles/settings=hrrr-a3f9c2/date=2023-07-15/"
+       "202307151800_-111.848_40.766_10.parquet"
+   )
 
 Empty footprints
 ----------------

@@ -19,9 +19,9 @@ Glossary
       could have come from.
 
    trajectory
-      The path of one particle through time. PYSTILT stores all of a
-      simulation's particle paths together as a :class:`~stilt.Trajectories`
-      table (a Parquet file on disk).
+      The path of one particle through time. PYSTILT keeps every path of a
+      simulation in one table, the simulation's particles. On disk it is a
+      Parquet file.
 
    footprint
       A map of how much each surface grid cell influenced a measurement.
@@ -75,7 +75,7 @@ Glossary
       to move particles and includes a copy for Linux and macOS (Intel).
 
    simulation
-      One receptor run under one :term:`variant`: one set of trajectories and
+      One receptor run under one :term:`variant`: one set of particles and
       at most one footprint. A project with 100 receptors and 3 variants has
       300 simulations.
 

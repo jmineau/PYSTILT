@@ -97,8 +97,8 @@ as a list. It averages them before taking the difference:
    sims = project.simulations
    ensemble = sims[(sims.receptor == rid) & (sims.group == "hrrr-err")]
    err = transport_error(
-       project.simulation(rid, "hrrr").trajectories.data,
-       [t.data for t in project.load_trajectories(ensemble).values()],
+       project.simulation(rid, "hrrr").particles.data,
+       [t.data for t in project.load_particles(ensemble).values()],
        flux,
    )
    err.realizations  # 4
@@ -175,8 +175,8 @@ and perturbed particle tables and the flux field:
        sim = project.simulation(rid, "hrrr")
        err = project.simulation(rid, "hrrr-err")
        result = transport_error(
-           sim.trajectories.data,
-           err.trajectories.data,
+           sim.particles.data,
+           err.particles.data,
            flux,
            transforms=sim.footprint_config.transforms,
            context=project.transform_context(sim),

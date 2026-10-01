@@ -43,7 +43,7 @@ A worker records these as a failed simulation. Its log says why, and
    stilt.exceptions.HYSPLITTimeoutError
    stilt.exceptions.HYSPLITFailureError
    stilt.exceptions.NoParticleOutputError
-   stilt.exceptions.EmptyTrajectoryError
+   stilt.exceptions.EmptyParticleOutputError
 
 Setup
 -----

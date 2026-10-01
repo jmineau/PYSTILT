@@ -1,4 +1,4 @@
-"""Plotting for trajectories, footprints, receptors, simulations, and models."""
+"""Plotting for particles, footprints, receptors, simulations, and projects."""
 
 from __future__ import annotations
 
@@ -15,9 +15,9 @@ if TYPE_CHECKING:
 
     from stilt.config import Bounds
     from stilt.footprint import Footprint
+    from stilt.particles import Trajectories
     from stilt.project import Project
     from stilt.simulation import Simulation
-    from stilt.trajectory import Trajectories
 
 from stilt.receptors import ColumnReceptor, MultiPointReceptor, Receptor
 
@@ -553,7 +553,7 @@ class SimulationPlotAccessor:
         """
         sim = self._sim
         foot = sim.footprint if sim.has_footprint else None
-        traj = sim.trajectories if sim.has_trajectory else None
+        traj = sim.particles if sim.has_particles else None
 
         # Determine map extent: prefer footprint grid, fall back to traj bounds
         if foot is not None:

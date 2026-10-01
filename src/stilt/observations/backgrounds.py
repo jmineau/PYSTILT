@@ -26,7 +26,7 @@ import pandas as pd
 import xarray as xr
 
 from stilt.flux import sample_field, vertical_dim
-from stilt.trajectory import endpoint_rows
+from stilt.particles import endpoint_rows
 from stilt.transforms import TransformContext, apply_transforms
 
 
@@ -60,7 +60,7 @@ def particle_background(particles: pd.DataFrame, field: xr.DataArray) -> pd.Seri
     Return the field at each particle's endpoint, indexed by ``indx``.
 
     The endpoint is the row farthest in time from release
-    (:func:`stilt.trajectory.endpoint_rows`). A vertical dimension must be
+    (:func:`stilt.particles.endpoint_rows`). A vertical dimension must be
     named after the particle column it is matched against: ``pres`` for
     pressure in hPa, ``zagl`` for height above ground in meters, or a column
     you add, such as height above sea level from ``zagl + zsfc``. Rename it
@@ -158,12 +158,12 @@ def background(
     Parameters
     ----------
     particles : pandas.DataFrame
-        The simulation's particle table (``sim.trajectories.data``).
+        The simulation's particle table (``sim.particles.data``).
     field : xarray.DataArray or pandas.Series
         The background field (see :func:`particle_background` for its
         layout), or one value per particle that you sampled yourself, as a
         Series indexed by ``indx``. For example, lair's
-        ``CarbonTracker.sample`` on ``sim.trajectories.endpoints()``.
+        ``CarbonTracker.sample`` on ``sim.particles.endpoints()``.
     transforms : sequence, optional
         The footprint's particle transforms (``sim.config.transforms``), so
         the background is weighted like the footprint and adds to its

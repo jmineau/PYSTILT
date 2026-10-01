@@ -50,7 +50,7 @@ mets:
     file_tres: 6h  # Hours each met file covers; the docs' HRRR files hold six.
 
 
-# Footprint grid. Remove it (or set grid: null) for trajectory-only runs.
+# Footprint grid. Remove it (or set grid: null) to make particles only.
 grid:
   xmin: -113.0
   xmax: -110.5
