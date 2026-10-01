@@ -83,7 +83,9 @@ def test_identity_leaves_out_what_changes_no_particle(tmp_path):
     identity = base.identity()
     for name in ("timeout", "rm_dat", "exe_dir"):
         assert name not in identity
-    assert identity["met"] == met.settings().model_dump(mode="json")
+    assert identity["met"] == met.settings().model_dump(
+        mode="json", exclude={"download_from", "n_min"}
+    )
     assert identity["model"] == {"name": "hysplit", "version": "v5.1.0"}
     assert identity["maxpar"] == 100  # unset maxpar is numpar, as HYSPLIT receives it
 
@@ -100,6 +102,28 @@ def test_identity_leaves_out_what_changes_no_particle(tmp_path):
         STILTParams(numpar=100), met, model=ModelInfo(version="v5.3.2+t0-rows")
     )
     assert other_model.hash != base.hash
+
+
+def test_where_met_is_downloaded_from_does_not_identify_the_run(tmp_path):
+    base = TransportSettings.build(STILTParams(numpar=100), _met(tmp_path))
+    for override in ({"download_from": "ftp"}, {"n_min": 3}):
+        other = TransportSettings.build(
+            STILTParams(numpar=100), _met(tmp_path, **override)
+        )
+        assert other.hash == base.hash
+
+
+def test_a_folder_stored_with_download_settings_is_still_found(tmp_path):
+    """Folders written while download_from and n_min were hashed are found by re-hashing."""
+    settings = TransportSettings.build(STILTParams(numpar=100), _met(tmp_path))
+    folder = Output(tmp_path / "out").particles("hrrr", settings)
+    record_path = folder.path / "_settings.yaml"
+    record = yaml.safe_load(record_path.read_text())
+    record["settings"]["met"].update(download_from="ftp", n_min=3)
+    record_path.write_text(yaml.safe_dump(record))
+
+    found = Output(tmp_path / "out").find_particles(settings)
+    assert found is not None and found.key == folder.key
 
 
 def test_stored_settings_re_validate_to_the_same_hash(tmp_path):

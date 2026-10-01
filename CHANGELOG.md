@@ -327,6 +327,9 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   recognised and came out as `failed:UNKNOWN`.
 - `foot.stilt.plot.map()` and `facet()` work on a footprint on a projected
   grid (`x` and `y`). They read `lon` and `lat` and raised.
+- Changing a met's `download_from` or `n_min` no longer makes every run
+  look new. Neither changes the particles, so neither is part of a run's
+  hash. Existing output is still found.
 
 ### Added
 

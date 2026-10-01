@@ -24,6 +24,10 @@ from .params import STILTParams
 #: Transport fields that change no particle, so they are not part of a run's identity.
 UNRECORDED_FIELDS = frozenset({"timeout", "rm_dat", "exe_dir"})
 
+#: Met fields that change no particle: where the files are downloaded from,
+#: and how many a run needs before it is allowed to start.
+UNRECORDED_MET_FIELDS = frozenset({"download_from", "n_min"})
+
 
 def canonical(value: Any) -> Any:
     """Return *value* with the spellings that mean the same thing made equal."""
@@ -152,7 +156,9 @@ class TransportSettings(STILTParams):
         ``maxpar`` is given as HYSPLIT receives it, so an unset ``maxpar``
         equals ``numpar``.
         """
-        data = self.model_dump(mode="json", exclude=set(UNRECORDED_FIELDS))
+        exclude: dict[str, Any] = dict.fromkeys(UNRECORDED_FIELDS, True)
+        exclude["met"] = set(UNRECORDED_MET_FIELDS)
+        data = self.model_dump(mode="json", exclude=exclude)
         if data["maxpar"] is None:
             data["maxpar"] = self.numpar
         return canonical(data)
@@ -165,6 +171,7 @@ class TransportSettings(STILTParams):
 
 __all__ = [
     "UNRECORDED_FIELDS",
+    "UNRECORDED_MET_FIELDS",
     "ModelInfo",
     "TransportSettings",
     "canonical",
