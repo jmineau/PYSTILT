@@ -31,32 +31,6 @@ if TYPE_CHECKING:
 _MIN_RELIABLE_SPACING_M = 1000.0
 
 
-def endpoint_rows(particles: pd.DataFrame) -> pd.DataFrame:
-    """
-    Return the last row of each particle's trajectory, the one with the largest ``|time|``.
-
-    For a backward run this is where the air came from, and for a forward
-    run where it went. A particle that left the meteorology domain early
-    ends where it left.
-
-    Parameters
-    ----------
-    particles : pandas.DataFrame
-        Particle table with ``indx`` and ``time`` columns.
-
-    Returns
-    -------
-    pandas.DataFrame
-        One row per particle, with every column of *particles*.
-    """
-    p = particles.reset_index(drop=True)
-    if p.empty:
-        return p
-    reach = p["time"].abs()
-    last = reach.groupby(p["indx"], sort=False).idxmax().to_numpy(dtype=int)
-    return p.iloc[last]
-
-
 def _multipoint_release_heights(
     p: pd.DataFrame, receptor: MultiPointReceptor
 ) -> pd.Series:
@@ -361,58 +335,25 @@ class ParticlesAccessor:
 
     def endpoints(self) -> pd.DataFrame:
         """
-        Return where each particle ends.
+        Return the last row of each particle, the one farthest in time from release.
 
         For a backward run this is where the air came from, which is where
-        to sample a background concentration field. Each particle has one
-        endpoint, including particles that left the meteorology domain
-        early. Such a particle ends where it left the domain.
+        to sample a background concentration field. For a forward run it is
+        where the air went. A particle that left the meteorology domain
+        early ends where it left.
 
         Returns
         -------
         pandas.DataFrame
-            One row per particle, with columns ``indx``, ``time`` (UTC time
-            at the endpoint), ``lati``, ``long``, ``zagl``,
-            ``endpoint_age_min`` (minutes since release, negative for a
-            backward run), and ``receptor_time``.
-
-        Raises
-        ------
-        ValueError
-            If the table has no ``datetime`` column.
+            One row per particle, with every column of the particle table.
+            ``time`` is minutes since release and ``datetime`` the UTC time.
         """
-        cols = [
-            "indx",
-            "time",
-            "lati",
-            "long",
-            "zagl",
-            "endpoint_age_min",
-            "receptor_time",
-        ]
-        p = self._particles
+        p = self._particles.reset_index(drop=True)
         if p.empty:
-            return pd.DataFrame(columns=pd.Index(cols))
-        if "datetime" not in p.columns:
-            raise ValueError(
-                "endpoints() needs the datetime column, which read_particles "
-                "and sim.particles give."
-            )
-        ep = endpoint_rows(p)
-        end_time = pd.to_datetime(ep["datetime"])
-        age = ep["time"].to_numpy(dtype=float)
-        receptor_time = end_time - pd.to_timedelta(age, unit="min")
-        return pd.DataFrame(
-            {
-                "indx": ep["indx"].to_numpy(),
-                "time": end_time.to_numpy(),
-                "lati": ep["lati"].to_numpy(),
-                "long": ep["long"].to_numpy(),
-                "zagl": ep["zagl"].to_numpy(),
-                "endpoint_age_min": age,
-                "receptor_time": receptor_time.to_numpy(),
-            }
-        )
+            return p
+        reach = p["time"].abs()
+        last = reach.groupby(p["indx"], sort=False).idxmax().to_numpy(dtype=int)
+        return p.iloc[last]
 
     @property
     def plot(self) -> ParticlesPlotAccessor:

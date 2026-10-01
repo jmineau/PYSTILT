@@ -54,7 +54,8 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   | `foot.integrate_over_time()` | `foot.sum("time")` |
   | `foot.time_range` | `foot.indexes["time"]` |
   | `traj.met_files` | `sim.met_files` |
-  | the `run_time` column of `endpoints()` | `receptor_time` |
+  | `traj.endpoints()`, with `time` as a timestamp, `endpoint_age_min` and `run_time` | `particles.stilt.endpoints()`: each particle's last row, every column kept (`time` stays minutes since release, `datetime` is the timestamp) |
+  | `stilt.trajectory.endpoint_rows(p)` | `p.stilt.endpoints()` |
   | `show_traj=`, `traj_cmap=`, ... in `sim.plot.map()` | `show_particles=`, `particles_cmap=`, ... |
 
   Footprint files in the output directory now record their own settings,

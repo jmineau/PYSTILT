@@ -557,28 +557,19 @@ def test_endpoints_returns_far_end_per_particle(point_receptor, tmp_path):
     """
     endpoints() returns one row per particle at its largest-|time| row, with no
     duration filtering: a particle that left the domain early is a real endpoint."""
-    traj = prepare(_particles_two_lengths(), point_receptor, _params(tmp_path))
+    particles = prepare(_particles_two_lengths(), point_receptor, _params(tmp_path))
 
-    ep = traj.stilt.endpoints().sort_values("indx").reset_index(drop=True)
-    assert list(ep.columns) == [
-        "indx",
-        "time",
-        "lati",
-        "long",
-        "zagl",
-        "endpoint_age_min",
-        "receptor_time",
-    ]
+    ep = particles.stilt.endpoints().sort_values("indx").reset_index(drop=True)
+    assert list(ep.columns) == list(particles.columns)
     # Both particles kept, each at its far end (largest |time|): p1 at -120, p2 at -30.
     assert ep["indx"].tolist() == [1, 2]
-    assert ep["endpoint_age_min"].tolist() == [-120, -30]
+    assert ep["time"].tolist() == [-120, -30]
     assert ep.loc[0, ["long", "lati", "zagl"]].tolist() == [-112.0, 40.6, 20.0]
     assert ep.loc[1, ["long", "lati", "zagl"]].tolist() == [-111.8, 40.75, 15.0]
-    assert ep["time"].tolist() == [
+    assert ep["datetime"].tolist() == [
         point_receptor.time + pd.Timedelta(minutes=-120),
         point_receptor.time + pd.Timedelta(minutes=-30),
     ]
-    assert (ep["receptor_time"] == point_receptor.time).all()
 
 
 def test_calculate_regenerates_a_footprint_on_a_new_grid(tmp_path):

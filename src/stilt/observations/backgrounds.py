@@ -26,7 +26,6 @@ import pandas as pd
 import xarray as xr
 
 from stilt.flux import sample_field, vertical_dim
-from stilt.particles import endpoint_rows
 from stilt.transforms import TransformContext, apply_transforms
 
 
@@ -60,14 +59,14 @@ def particle_background(particles: pd.DataFrame, field: xr.DataArray) -> pd.Seri
     Return the field at each particle's endpoint, indexed by ``indx``.
 
     The endpoint is the row farthest in time from release
-    (:func:`stilt.particles.endpoint_rows`). A vertical dimension must be
+    (``particles.stilt.endpoints()``). A vertical dimension must be
     named after the particle column it is matched against: ``pres`` for
     pressure in hPa, ``zagl`` for height above ground in meters, or a column
     you add, such as height above sea level from ``zagl + zsfc``. Rename it
     with, for example, ``field.rename(level="pres")``. A field with a
     ``time`` dimension is sampled at the endpoint's ``datetime``.
     """
-    ends = endpoint_rows(particles)
+    ends = particles.stilt.endpoints()
     zdim = vertical_dim(field)
     z = None
     if zdim is not None:
@@ -112,10 +111,10 @@ def endpoint_weights(
         if context is None:
             context = default_context()
         particles = apply_transforms(particles.assign(foot=1.0), transforms, context)
-        ends = endpoint_rows(particles)
+        ends = particles.stilt.endpoints()
         weights = ends["foot"].to_numpy(dtype=float)
     else:
-        ends = endpoint_rows(particles)
+        ends = particles.stilt.endpoints()
         weights = np.ones(len(ends))
     return pd.Series(
         weights, index=pd.Index(ends["indx"].to_numpy(), name="indx"), name="weight"

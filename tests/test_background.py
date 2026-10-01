@@ -11,7 +11,6 @@ from stilt.observations.backgrounds import (
     endpoint_weights,
     fill_missing,
 )
-from stilt.particles import endpoint_rows
 from stilt.transforms import FirstOrderLifetime, PressureWeighting
 
 
@@ -60,25 +59,25 @@ def _particles():
 ENDPOINT_VALUES = [0.0, 205.0, 104.0]
 
 
-# -- endpoint_rows -----------------------------------------------------------------
+# -- endpoints ---------------------------------------------------------------------
 
 
-def test_endpoint_rows_picks_the_largest_abs_time_per_particle():
-    ends = endpoint_rows(_particles())
+def test_endpoints_pick_the_largest_abs_time_per_particle():
+    ends = _particles().stilt.endpoints()
 
     assert ends["indx"].tolist() == [1, 2, 3]
     assert ends["time"].tolist() == [-60.0, -60.0, -120.0]
 
 
-def test_endpoint_rows_handles_forward_runs_and_duplicate_index():
+def test_endpoints_handle_forward_runs_and_duplicate_index():
     p = _particles()
     p["time"] = -p["time"]
     p.index = [0, 0, 1, 1, 2, 2]
 
-    ends = endpoint_rows(p)
+    ends = p.stilt.endpoints()
 
     assert ends["time"].tolist() == [60.0, 60.0, 120.0]
-    assert endpoint_rows(p.iloc[0:0]).empty
+    assert p.iloc[0:0].stilt.endpoints().empty
 
 
 # -- vertical_dim / sample_field -----------------------------------------------------
