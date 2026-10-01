@@ -936,14 +936,14 @@ def test_a_selection_points_to_frame_for_other_pandas(tmp_path):
     assert sims.frame.groupby("variant").size().to_dict() == {"hrrr": 1}
 
 
-def test_simulations_of_a_table_made_with_pandas(tmp_path):
+def test_a_selection_from_a_table_made_with_pandas(tmp_path):
     a, b = _receptor(12), _receptor(13)
     project = _project(tmp_path, [a, b])
     mine = pd.DataFrame({"receptor": [b.id], "obs": [1.9]})
     merged = project.simulations.frame.merge(mine, on="receptor")
 
-    back = project.simulations_of(merged)
+    back = Simulations(project, merged)
     assert [s.id for s in back] == [SimID(b.id, "hrrr")]
     assert back.obs.tolist() == [1.9]
     with pytest.raises(ValueError, match="'receptor' and 'variant'"):
-        project.simulations_of(project.receptors)
+        Simulations(project, project.receptors)

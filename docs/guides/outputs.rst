@@ -146,13 +146,13 @@ A selection also gives you each simulation in turn:
 A selection only understands columns (``sims.variant`` or
 ``sims["site"]``) and picking rows with a condition. For anything else,
 use its table, ``sims.frame``. To turn a table back into a selection, for
-example after a merge with your own data, pass it to
-``project.simulations_of``:
+example after a merge with your own data, give it to
+``stilt.Simulations`` with the project:
 
 .. code-block:: python
 
    matched = sims.frame.merge(observations, on="receptor")
-   project.simulations_of(matched).load_footprints()
+   stilt.Simulations(project, matched).load_footprints()
 
 The extra columns of ``receptors.csv`` select one satellite scene or one
 site:

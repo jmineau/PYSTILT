@@ -381,20 +381,6 @@ class Project:
         frame = frame.loc[:, first + [c for c in frame.columns if c not in first]]
         return Simulations(self, frame)
 
-    def simulations_of(self, frame: pd.DataFrame) -> Simulations:
-        """
-        Return the simulations named by a table's ``receptor`` and ``variant`` columns.
-
-        Use it to get back to a :class:`Simulations` from a table you made
-        with pandas, such as a merge with your own data.
-
-        Raises
-        ------
-        ValueError
-            If *frame* lacks the ``receptor`` or ``variant`` column.
-        """
-        return Simulations(self, frame)
-
     def simulation(self, receptor_id: str, variant: str) -> Simulation:
         """
         Return one simulation: a receptor under a variant.
@@ -544,7 +530,7 @@ class Simulations:
     (``sims.variant`` or ``sims["site"]``) and rows by a mask
     (``sims[sims.variant == "hrrr"]``). For anything else, use the table,
     ``sims.frame``, and turn the result back into a selection with
-    :meth:`Project.simulations_of`.
+    ``Simulations(project, frame)``.
 
     Parameters
     ----------
@@ -653,6 +639,22 @@ class Simulations:
             present[str(name)] = (particles, footprints)
         return present
 
+    def _complete(
+        self, present: dict[str, tuple[frozenset[str], frozenset[str] | None]]
+    ) -> np.ndarray:
+        """
+        Return whether each row is complete, from :meth:`_present`.
+
+        The one place the selection decides "done": the particles exist, and
+        the footprint too when the variant makes one. It is the rule of
+        :meth:`stilt.Simulation.is_complete`.
+        """
+        done = []
+        for r, v in self._pairs():
+            particles, feet = present[v]
+            done.append(r in particles and (feet is None or r in feet))
+        return np.array(done, dtype=bool)
+
     def status(self) -> pd.DataFrame:
         """
         Return the table with columns saying which results exist.
@@ -679,12 +681,11 @@ class Simulations:
             else f and self.project.simulation(r, v).empty_reason is not None
             for (r, v), f in zip(pairs, feet, strict=True)
         ]
-        complete = [p and f is not False for p, f in zip(particles, feet, strict=True)]
         return self.frame.assign(
             particles=pd.array(particles, dtype="boolean"),
             footprint=pd.array(feet, dtype="boolean"),
             empty=pd.array(empty, dtype="boolean"),
-            complete=pd.array(complete, dtype="bool"),
+            complete=self._complete(present),
         )
 
     def incomplete(self) -> Simulations:
@@ -694,14 +695,8 @@ class Simulations:
         The same rows as :meth:`status` marks not ``complete``, found without
         opening any footprint file, so it is quick on a large project.
         """
-        present = self._present()
-        missing = [
-            r not in present[v][0]
-            or ((feet := present[v][1]) is not None and r not in feet)
-            for r, v in self._pairs()
-        ]
         return Simulations(
-            self.project, self.frame.loc[np.asarray(missing, dtype=bool)]
+            self.project, self.frame.loc[~self._complete(self._present())]
         )
 
     # -- results ------------------------------------------------------------

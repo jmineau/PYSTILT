@@ -26,7 +26,7 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `project.simulations` or a selection. `jacobian(target, time_bins)`
   takes a selection of one variant. A selection understands columns and
   row masks; for any other pandas operation use `sims.frame`, and
-  `project.simulations_of(frame)` makes a selection from a table again.
+  `stilt.Simulations(project, frame)` makes a selection from a table again.
   `Particles.table()` reads many receptors' particles at once, like
   `Footprints.table()`.
 - **Particles and footprints are plain data**

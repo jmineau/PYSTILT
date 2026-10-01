@@ -293,10 +293,10 @@ def transport_error(
     flux : xarray.DataArray
         Surface flux field (see :mod:`stilt.flux`).
     transforms : sequence, optional
-        The footprint's particle transforms (``sim.config.transforms``),
+        The footprint's particle transforms (``sim.variant.footprint.transforms``),
         applied to both tables so the error is weighted like the footprint.
     context : TransformContext, optional
-        Context to apply the transforms with (``sim.transform_context()``).
+        Context to apply the transforms with (``project.transform_context(sim)``).
     levels : int or sequence of float, default 20
         Release-height levels to compute statistics on: a number of
         equal-width bins between the lowest and highest release height, or

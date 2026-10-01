@@ -163,14 +163,14 @@ def background(
         The background field (see :func:`particle_background` for its
         layout), or one value per particle that you sampled yourself, as a
         Series indexed by ``indx``. For example, lair's
-        ``CarbonTracker.sample`` on ``sim.particles.endpoints()``.
+        ``CarbonTracker.sample`` on ``sim.particles.stilt.endpoints()``.
     transforms : sequence, optional
-        The footprint's particle transforms (``sim.config.transforms``), so
+        The footprint's particle transforms (``sim.variant.footprint.transforms``), so
         the background is weighted like the footprint and adds to its
         enhancement. A tower receptor has none.
     context : TransformContext, optional
         Context to apply the transforms with
-        (``sim.transform_context()``). Required by an averaging kernel read
+        (``project.transform_context(sim)``). Required by an averaging kernel read
         from a table.
 
     Returns
@@ -203,7 +203,7 @@ def default_context() -> TransformContext:
     Return a placeholder context for transforms that do not read it.
 
     An averaging kernel read from a ``table`` needs the real context from
-    ``sim.transform_context()``.
+    ``project.transform_context(sim)``.
     """
     import datetime as dt
 
