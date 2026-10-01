@@ -14,7 +14,11 @@ from stilt.config import (
     TransportSettings,
     VariantConfig,
 )
-from stilt.exceptions import SimulationError
+from stilt.exceptions import (
+    EmptyParticleOutputError,
+    NoParticleOutputError,
+    SimulationError,
+)
 from stilt.execution import resolve_compute_root, worker
 from stilt.execution.worker import (
     ReceptorResult,
@@ -305,6 +309,20 @@ def test_run_simulation_error_is_failed_and_logged(sim, met, compute_root, monke
     assert "Type: SimulationError" in log_text
     assert "Message: HYSPLIT failed" in log_text
     assert sim.outcome == "failed:UNKNOWN"
+
+
+@pytest.mark.parametrize("error", [NoParticleOutputError, EmptyParticleOutputError])
+def test_run_simulation_without_particles_reads_back_as_no_particle_data(
+    sim, met, compute_root, monkeypatch, error
+):
+    def fail(*a, **k):
+        raise error("no particles")
+
+    monkeypatch.setattr(worker, "run_particles", fail)
+
+    _run(sim, met, compute_root)
+
+    assert sim.outcome == "failed:NO_PARTICLE_DATA"
 
 
 def test_run_simulation_error_log_appends_to_existing_hysplit_log(

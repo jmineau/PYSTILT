@@ -322,6 +322,9 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - A calculated footprint's coordinates are rounded as a stored one's are
   when read back, so the two line up (`sim.generate_footprint() -
   sim.footprint` no longer misaligns some cells).
+- A run that ends without particles reports `failed:NO_PARTICLE_DATA` in
+  `sim.outcome` and `stilt status`. PYSTILT's own errors for it were not
+  recognised and came out as `failed:UNKNOWN`.
 
 ### Added
 
