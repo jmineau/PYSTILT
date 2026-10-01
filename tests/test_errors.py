@@ -28,6 +28,7 @@ def test_all_failure_reasons_exist():
     expected = {
         "MISSING_MET_FILES",
         "MET_COVERAGE",
+        "MET_TRUNCATED",
         "VARYING_MET_INTERVAL",
         "NO_TRAJECTORY_DATA",
         "FORTRAN_RUNTIME_ERROR",
@@ -68,6 +69,13 @@ def test_identify_failure_reason_no_traj(tmp_path):
 def test_identify_failure_reason_fortran(tmp_path):
     (tmp_path / "stilt.log").write_text("Fortran runtime error: end of file\n")
     assert identify_failure_reason(tmp_path) is FailureReason.FORTRAN_RUNTIME_ERROR
+
+
+def test_identify_failure_reason_met_truncated(tmp_path):
+    (tmp_path / "stilt.log").write_text(
+        "Meteorology ends early: the particles stop 13 h into a 24 h run.\n"
+    )
+    assert identify_failure_reason(tmp_path) is FailureReason.MET_TRUNCATED
 
 
 def test_identify_failure_reason_unknown(tmp_path):

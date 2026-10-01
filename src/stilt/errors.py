@@ -9,6 +9,7 @@ class FailureReason(StrEnum):
 
     MISSING_MET_FILES = "MISSING_MET_FILES"
     MET_COVERAGE = "MET_COVERAGE"
+    MET_TRUNCATED = "MET_TRUNCATED"
     VARYING_MET_INTERVAL = "VARYING_MET_INTERVAL"
     NO_TRAJECTORY_DATA = "NO_TRAJECTORY_DATA"
     FORTRAN_RUNTIME_ERROR = "FORTRAN_RUNTIME_ERROR"
@@ -25,9 +26,15 @@ FAILURE_PHRASES: dict[str, FailureReason] = {
     "start point not within (x,y,t) any data file": FailureReason.MET_COVERAGE,
     "start time after end of meteorology data": FailureReason.MET_COVERAGE,
     "meteorological data time interval varies": FailureReason.VARYING_MET_INTERVAL,
+    # Written by the HYSPLIT driver, not HYSPLIT (see MET_TRUNCATED_WARNING).
+    "Meteorology ends early": FailureReason.MET_TRUNCATED,
     "PARTICLE_STILT.DAT does not contain any trajectory data": FailureReason.NO_TRAJECTORY_DATA,
     "Fortran runtime error": FailureReason.FORTRAN_RUNTIME_ERROR,
 }
+
+#: HYSPLIT's warning for a met file that holds one time period. It is a
+#: failure only when the particles also stop before the end of the run.
+MET_TRUNCATED_WARNING = "Only one time period of meteo data"
 
 
 def identify_failure_reason(path: str | Path) -> FailureReason:

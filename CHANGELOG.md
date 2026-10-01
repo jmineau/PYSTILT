@@ -230,6 +230,15 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **A run on a damaged met file fails instead of counting as done**
+  ([#98](https://github.com/jmineau/PYSTILT/issues/98)). When a met file
+  holds only one time period, HYSPLIT warns and stops the particles where
+  the met runs out. The run used to write the short trajectories and its
+  footprint, which then missed every hour after that point. Now, when the
+  warning is in the log and no particle reaches the end of the run, the
+  run fails with the reason `MET_TRUNCATED` and is run again next time.
+  The warning alone is not a failure, since the damaged file may cover
+  hours the particles never reach.
 - **`stilt init` writes a receptors file that loads**
   ([#49](https://github.com/jmineau/PYSTILT/issues/49)). The starter
   `receptors.csv` held a `# Example: ...` line, which the reader parsed as

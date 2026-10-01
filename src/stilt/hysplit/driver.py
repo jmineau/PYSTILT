@@ -21,6 +21,8 @@ from stilt.config import (
 )
 from stilt.errors import (
     FAILURE_PHRASES,
+    MET_TRUNCATED_WARNING,
+    FailureReason,
     HYSPLITFailureError,
     HYSPLITTimeoutError,
     NoParticleOutputError,
@@ -240,20 +242,22 @@ class HYSPLITDriver:
         HYSPLITTimeoutError
             The run exceeded ``timeout``.
         HYSPLITFailureError
-            The log shows a known HYSPLIT failure.
+            The log shows a known HYSPLIT failure, or a met file was cut
+            short and the particles stop before the end of the run.
         NoParticleOutputError
             HYSPLIT wrote no ``PARTICLE_STILT.DAT``.
         """
         self.particle_stilt_path.unlink(missing_ok=True)
         self.particle_path.unlink(missing_ok=True)
-        self._run(timeout, label="hycs_std")
+        log_start = self._run(timeout, label="hycs_std")
         particles = self._read_particles(rm_dat)
+        self._check_met_reached_end(particles, log_start)
         return HYSPLITResult(particles=particles, log_path=self.log_path)
 
     # -- Private helpers -------------------------------------------------------
 
-    def _run(self, timeout: int | None, *, label: str = "hycs_std") -> None:
-        """Run ``hycs_std``, appending its output to the log file."""
+    def _run(self, timeout: int | None, *, label: str = "hycs_std") -> int:
+        """Run ``hycs_std``, appending its output to the log, and return the offset it starts at."""
         if not self.hycs_std_path.exists():
             raise FileNotFoundError(
                 f"HYSPLIT executable not found for {self.directory}: {self.hycs_std_path}"
@@ -277,6 +281,7 @@ class HYSPLITDriver:
                         f"hycs_std timed out after {timeout}s for {self.directory}"
                     ) from e
         self._check_log_for_failure(segment_start)
+        return segment_start
 
     def _terminate_process(self, proc: subprocess.Popen[Any]) -> None:
         """Stop a HYSPLIT process group with SIGTERM, then SIGKILL if it does not exit."""
@@ -311,6 +316,33 @@ class HYSPLITDriver:
                 for phrase, reason in FAILURE_PHRASES.items():
                     if phrase in line:
                         raise HYSPLITFailureError(reason, self.log_path)
+
+    def _check_met_reached_end(self, particles: pd.DataFrame, log_start: int) -> None:
+        """
+        Raise if a met file was cut short and no particle reaches the end of the run.
+
+        HYSPLIT only warns when a met file holds one time period, and its
+        particles stop where the met runs out. The warning alone is not a
+        failure, since the damaged file may cover hours the particles never
+        reach. Particles that leave the met domain do not trigger this
+        either, unless the warning is also in the log.
+        """
+        if particles.empty:
+            return
+        with self.log_path.open("r", encoding="utf-8", errors="replace") as handle:
+            handle.seek(log_start)
+            if MET_TRUNCATED_WARNING not in handle.read():
+                return
+        end = abs(self.params.n_hours) * 60
+        reach = float(np.abs(particles["time"].to_numpy()).max())
+        if reach >= end - max(self.params.outdt, 0):
+            return
+        with self.log_path.open("a", encoding="utf-8") as handle:
+            handle.write(
+                f"Meteorology ends early: the particles stop {reach / 60:g} h "
+                f"into a {end / 60:g} h run.\n"
+            )
+        raise HYSPLITFailureError(FailureReason.MET_TRUNCATED, self.log_path)
 
     def _read_particles(self, rm_dat: bool) -> pd.DataFrame:
         """Read ``PARTICLE_STILT.DAT``, deleting the particle files if ``rm_dat``."""
