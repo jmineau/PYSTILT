@@ -14,7 +14,7 @@ from stilt.execution import resolve_compute_root
 from stilt.footprint import _describe
 from stilt.output import Output
 from stilt.particles import prepare
-from stilt.project import CONFIG_KEY, RECEPTORS_KEY, Project, project_slug
+from stilt.project import CONFIG_KEY, RECEPTORS_KEY, Project, Simulations, project_slug
 from stilt.receptors import PointReceptor
 from stilt.simulation import SimID
 
@@ -299,8 +299,8 @@ def test_a_project_without_receptors_is_empty(tmp_path):
 
     assert project.receptors.empty
     assert list(project.receptors.columns) == ["receptor", "time", "kind", "location"]
-    assert project.simulations.empty
-    assert project.status().empty
+    assert len(project.simulations) == 0
+    assert project.simulations.status().empty
     assert project.run() == []
 
 
@@ -402,7 +402,7 @@ def test_simulations_are_receptors_times_variants(tmp_path):
 
     sims = project.simulations
 
-    assert list(sims.columns[:3]) == ["receptor", "variant", "group"]
+    assert list(sims.frame.columns[:3]) == ["receptor", "variant", "group"]
     assert _pairs(sims) == [
         (a.id, "hrrr"),
         (a.id, "err-0"),
@@ -412,7 +412,7 @@ def test_simulations_are_receptors_times_variants(tmp_path):
         (b.id, "err-1"),
     ]
     assert sims["group"].tolist()[:3] == ["hrrr", "err", "err"]
-    assert set(sims.columns) >= {"time", "kind", "location", "site"}
+    assert set(sims.frame.columns) >= {"time", "kind", "location", "site"}
 
 
 def test_simulations_select_with_pandas(tmp_path):
@@ -428,7 +428,7 @@ def test_simulations_select_with_pandas(tmp_path):
     assert _pairs(wbb) == [(a.id, "zi08"), (c.id, "zi08")]
     later = sims[sims.time.between("2023-01-01 13:00", "2023-01-01 14:00")]
     assert sorted(set(later["receptor"])) == sorted([b.id, c.id])
-    assert len(project.status(wbb)) == 2
+    assert len(wbb.status()) == 2
 
 
 def test_simulation_handles_carry_the_variant_settings(tmp_path, point_receptor):
@@ -512,14 +512,18 @@ def test_incomplete_follows_each_variant_outputs(tmp_path, point_receptor):
         variants={"hrrr": {}, "traj": {"grid": None}, "s2": {"smooth_factor": 2}},
     )
 
-    assert project.incomplete()["variant"].tolist() == ["hrrr", "traj", "s2"]
+    assert project.simulations.incomplete()["variant"].tolist() == [
+        "hrrr",
+        "traj",
+        "s2",
+    ]
 
     _write_trajectory(project, point_receptor)  # shared by hrrr, traj, and s2
-    assert project.incomplete()["variant"].tolist() == ["hrrr", "s2"]
+    assert project.simulations.incomplete()["variant"].tolist() == ["hrrr", "s2"]
 
     _write_footprint(project, point_receptor)
     _write_footprint(project, point_receptor, "s2", empty=True)
-    assert project.incomplete().empty
+    assert project.simulations.incomplete().frame.empty
 
 
 def test_status_marks_outputs_a_variant_does_not_produce(tmp_path, point_receptor):
@@ -528,7 +532,7 @@ def test_status_marks_outputs_a_variant_does_not_produce(tmp_path, point_recepto
     )
     _write_trajectory(project, point_receptor)
 
-    status = project.status()
+    status = project.simulations.status()
 
     assert list(status.columns[-4:]) == ["particles", "footprint", "empty", "complete"]
     by_variant = status.set_index("variant")
@@ -544,13 +548,13 @@ def test_status_marks_outputs_a_variant_does_not_produce(tmp_path, point_recepto
 def test_status_counts_an_empty_footprint_as_complete(tmp_path):
     a, b = _receptor(12), _receptor(13)
     project = _project(tmp_path, [a, b])
-    assert project.status()["complete"].tolist() == [False, False]
+    assert project.simulations.status()["complete"].tolist() == [False, False]
 
     _write_trajectory(project, a)
     _write_footprint(project, a)
     _write_trajectory(project, b)
     _write_footprint(project, b, empty=True)
-    status = project.status()
+    status = project.simulations.status()
     assert status["complete"].tolist() == [True, True]
     assert status["empty"].tolist() == [False, True]
 
@@ -590,9 +594,11 @@ def test_incomplete_and_status_agree_with_is_complete(tmp_path):
 
     expected = [sim.id for sim in handles if not sim.is_complete()]
     assert 0 < len(expected) < len(handles)
-    assert [SimID(r, v) for r, v in _pairs(project.incomplete())] == expected
+    assert [
+        SimID(r, v) for r, v in _pairs(project.simulations.incomplete())
+    ] == expected
 
-    status = project.status()
+    status = project.simulations.status()
     assert status["complete"].tolist() == [sim.is_complete() for sim in handles]
     assert status["particles"].tolist() == [sim.has_particles for sim in handles]
     for row, sim in zip(status.itertuples(), handles, strict=True):
@@ -603,7 +609,7 @@ def test_incomplete_and_status_agree_with_is_complete(tmp_path):
             assert pd.isna(row.footprint) and pd.isna(row.empty)
 
     smooth = sims[sims.variant == "smooth"]
-    assert _pairs(project.incomplete(smooth)) == [
+    assert _pairs(smooth.incomplete()) == [
         (sim.receptor_id, "smooth")
         for sim in handles
         if sim.variant.name == "smooth" and not sim.is_complete()
@@ -612,7 +618,7 @@ def test_incomplete_and_status_agree_with_is_complete(tmp_path):
 
 def test_incomplete_of_a_project_with_no_results_is_everything(tmp_path):
     project = _project(tmp_path, [_receptor(12)])
-    assert _pairs(project.incomplete()) == _pairs(project.simulations)
+    assert _pairs(project.simulations.incomplete()) == _pairs(project.simulations)
     assert not project.output.path.exists()  # looking creates nothing
 
 
@@ -621,19 +627,29 @@ def test_incomplete_of_a_project_with_no_results_is_everything(tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_load_particles_of_a_selection(tmp_path):
+def test_load_particles_of_a_selection_is_one_table(tmp_path):
     a, b = _receptor(12), _receptor(13)
-    project = _project(tmp_path, [a, b])
-    assert project.load_particles() == {}
+    project = _project(tmp_path, [a, b], variants={"hrrr": {}, "fine": {"grid": None}})
+    assert project.simulations.load_particles().empty
 
     path = _write_trajectory(project, a)
 
     assert path.parent == project.output.particle_sets()[0].path / "date=2023-01-01"
-    [(sid, traj)] = project.load_particles().items()
-    assert sid == SimID(a.id, "hrrr")
-    assert isinstance(traj, pd.DataFrame) and len(traj) > 0
+    particles = project.simulations.load_particles()
+    assert list(particles.columns[:2]) == ["receptor", "variant"]
+    one = project.simulation(a.id, "hrrr").particles
+    # Both variants share the run, so each gets its own copy of its rows.
+    assert particles["variant"].value_counts().to_dict() == {
+        "hrrr": len(one),
+        "fine": len(one),
+    }
+    assert set(particles["receptor"]) == {a.id}
+    hrrr = particles[particles.variant == "hrrr"].drop(columns=["receptor", "variant"])
+    pd.testing.assert_frame_equal(
+        hrrr.reset_index(drop=True)[one.columns], one, check_dtype=False
+    )
     sims = project.simulations
-    assert project.load_particles(sims[sims.receptor == b.id]) == {}
+    assert sims[sims.receptor == b.id].load_particles().empty
 
 
 def test_load_footprints_skips_empty_footprints_and_trajectory_only_variants(
@@ -649,7 +665,7 @@ def test_load_footprints_skips_empty_footprints_and_trajectory_only_variants(
     _write_footprint(project, empty, empty=True)
     _write_trajectory(project, done, "traj")
 
-    loaded = project.load_footprints()
+    loaded = project.simulations.load_footprints()
 
     assert list(loaded) == [SimID(done.id, "hrrr")]
     assert isinstance(loaded[SimID(done.id, "hrrr")], xr.DataArray)
@@ -663,8 +679,8 @@ def test_load_footprints_by_variant(tmp_path, point_receptor):
         _write_footprint(project, point_receptor, variant)
     sims = project.simulations
 
-    assert len(project.load_footprints()) == 2
-    [(sid, foot)] = project.load_footprints(sims[sims.variant == "zi08"]).items()
+    assert len(project.simulations.load_footprints()) == 2
+    [(sid, foot)] = sims[sims.variant == "zi08"].load_footprints().items()
     assert sid == SimID(point_receptor.id, "zi08")
     assert foot.stilt.name == "zi08"
 
@@ -684,7 +700,9 @@ def test_jacobian_of_a_variant(tmp_path):
         closed="left",
     )
 
-    H = project.jacobian(target, bins, variant="hrrr")
+    sims = project.simulations
+    hrrr = sims[sims.variant == "hrrr"]
+    H = hrrr.jacobian(target, bins)
 
     assert list(H.receptors) == [a.id]
     assert H.empty == [b.id]
@@ -696,17 +714,19 @@ def test_jacobian_of_a_variant(tmp_path):
         expected.to_numpy(),
         rtol=1e-6,
     )
-    some = project.jacobian(target, bins, "hrrr", receptors=[b.id, a.id])
+    some = hrrr[hrrr.receptor.isin([b.id, a.id])].jacobian(target, bins)
     assert list(some.receptors) == [a.id]
     right_closed = pd.IntervalIndex.from_breaks(
         bins.left.append(bins.right[-1:]), closed="right"
     )
     with pytest.raises(ValueError, match="closed on the left"):
-        project.jacobian(target, right_closed, variant="hrrr")
+        hrrr.jacobian(target, right_closed)
     with pytest.raises(ValueError, match="no footprints yet"):
-        project.jacobian(target, bins, variant="zi08")
+        sims[sims.variant == "zi08"].jacobian(target, bins)
     with pytest.raises(ValueError, match="no grid"):
-        project.jacobian(target, bins, variant="traj")
+        sims[sims.variant == "traj"].jacobian(target, bins)
+    with pytest.raises(ValueError, match="one variant"):
+        sims.jacobian(target, bins)
 
 
 def test_plot_availability_returns_axes(tmp_path, point_receptor):
@@ -804,7 +824,7 @@ def test_run_after_adding_a_variant_runs_the_receptor_again(
         project.config_path
     )
     grown = Project(project.directory)
-    assert _pairs(grown.incomplete()) == [(point_receptor.id, "zi08")]
+    assert _pairs(grown.simulations.incomplete()) == [(point_receptor.id, "zi08")]
 
     grown.run()
 
@@ -825,7 +845,7 @@ def test_run_finds_a_missing_realization(tmp_path, ran, point_receptor):
     project.run()
 
     assert ran[0]["ids"] == [point_receptor.id]
-    assert _pairs(project.incomplete()) == [(point_receptor.id, "err-1")]
+    assert _pairs(project.simulations.incomplete()) == [(point_receptor.id, "err-1")]
 
 
 def test_submit_needs_slurm(tmp_path, point_receptor):
@@ -866,7 +886,7 @@ def test_receptors_are_built_only_when_asked_for(tmp_path):
     project = Project(tmp_path / "proj")
 
     assert len(project.receptors) == 2
-    project.status()
+    project.simulations.status()
     assert project._built == {}  # listing, selecting, and status build nothing
 
     assert project.receptor(b.id) == b
@@ -882,3 +902,48 @@ def test_a_bad_receptors_file_fails_when_the_project_is_read(tmp_path):
 
     with pytest.raises(ValueError, match="latitude must be within"):
         _ = Project(project.directory).receptors
+
+
+# ---------------------------------------------------------------------------
+# A selection of simulations (#107)
+# ---------------------------------------------------------------------------
+
+
+def test_a_selection_takes_columns_and_masks_and_yields_simulations(tmp_path):
+    a, b = _receptor(12, site="WBB"), _receptor(13, site="UOU")
+    project = _project(
+        tmp_path, [a, b], variants={"hrrr": {}, "zi08": {"ziscale": 0.8}}
+    )
+    sims = project.simulations
+
+    assert isinstance(sims, Simulations)
+    assert len(sims) == 4
+    pd.testing.assert_series_equal(sims.variant, sims.frame["variant"])
+    pd.testing.assert_series_equal(sims["site"], sims.frame["site"])
+
+    wbb = sims[(sims.site == "WBB") & (sims.variant == "zi08")]
+    assert isinstance(wbb, Simulations)
+    [sim] = list(wbb)
+    assert sim == project.simulation(a.id, "zi08")
+    assert [s.id for s in sims] == [SimID(r, v) for r, v in _pairs(sims)]
+
+
+def test_a_selection_points_to_frame_for_other_pandas(tmp_path):
+    project = _project(tmp_path, [_receptor(12)])
+    sims = project.simulations
+    with pytest.raises(AttributeError, match="sims.frame"):
+        sims.groupby("variant")
+    assert sims.frame.groupby("variant").size().to_dict() == {"hrrr": 1}
+
+
+def test_simulations_of_a_table_made_with_pandas(tmp_path):
+    a, b = _receptor(12), _receptor(13)
+    project = _project(tmp_path, [a, b])
+    mine = pd.DataFrame({"receptor": [b.id], "obs": [1.9]})
+    merged = project.simulations.frame.merge(mine, on="receptor")
+
+    back = project.simulations_of(merged)
+    assert [s.id for s in back] == [SimID(b.id, "hrrr")]
+    assert back.obs.tolist() == [1.9]
+    with pytest.raises(ValueError, match="'receptor' and 'variant'"):
+        project.simulations_of(project.receptors)

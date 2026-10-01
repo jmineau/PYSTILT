@@ -247,6 +247,32 @@ def read_particles(path: str | Path, columns: list[str] | None = None) -> pd.Dat
     return data
 
 
+def particles_from_table(table: pa.Table) -> pd.DataFrame:
+    """
+    Return a table of many receptors' particles as one DataFrame.
+
+    The table is what :meth:`stilt.output.Particles.table` reads: a
+    ``receptor`` column, the stored particle columns, and ``date``. The
+    result has ``receptor`` first, ``time`` and ``indx`` as float64, and
+    ``datetime`` rebuilt from each receptor's time; ``date`` is dropped.
+    """
+    data = table.unify_dictionaries().to_pandas()
+    data = data.drop(columns=["date"], errors="ignore")
+    if data.empty:
+        return data
+    data["receptor"] = data["receptor"].astype(str)
+    for name in _INT_COLUMNS:
+        if name in data.columns:
+            data[name] = data[name].astype("float64")
+    if "time" in data.columns:
+        stamps = data["receptor"].str.slice(0, 12)
+        receptor_time = pd.to_datetime(stamps, format="%Y%m%d%H%M")
+        data["datetime"] = receptor_time + pd.to_timedelta(
+            data["time"].to_numpy(), unit="min"
+        )
+    return data
+
+
 def write_particles(
     path: str | Path,
     particles: pd.DataFrame,

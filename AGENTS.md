@@ -84,12 +84,18 @@ appends to `receptors.csv`. It knows no scheduler or scratch directory.
 the compute root, and start the workers, which are the only code that
 writes results.
 
-**Plurals are DataFrames; singular things are objects.**
-`project.receptors` and `project.simulations` are DataFrames selected with
-pandas, and `status`, `incomplete`, `load_particles`, and
-`load_footprints` take such a selection. `project.receptor(id)` and
-`project.simulation(id, variant)` return the objects. Do not add a custom
-collection class.
+**Plurals are handles that hand you a table; singles are values or data.**
+`project.simulations` is a `Simulations`: a pandas table plus the project
+it came from. Select it as in pandas (`sims[sims.variant == "hrrr"]`), then
+ask the selection: `status()`, `incomplete()`, `load_particles()` (one long
+table), `load_footprints()`, `jacobian()`. A selection forwards only column
+access and row masks; everything else is `sims.frame`, and
+`project.simulations_of(frame)` turns a table back into a selection. Do not
+give it query methods of its own (`sel`, `where`): that is how the old
+collection classes grew. `Particles` and `Footprints` are the folder
+handles of the output directory. `project.receptors` stays a plain
+DataFrame. `project.receptor(id)` and `project.simulation(id, variant)`
+return the values; `sim.particles` and `sim.footprint` are data.
 
 `stilt.__all__` (plus the `__all__` of each subpackage) is the public surface;
 everything else is internal and can change.
@@ -99,8 +105,9 @@ everything else is internal and can change.
 ```
 src/stilt/
   cli.py             Typer CLI; a thin adapter over Project and execution
-  project.py         Project: the project directory, its receptors and
-                     simulations as DataFrames, status, loading, run/submit
+  project.py         Project: the project directory, its receptors (a
+                     DataFrame), run/submit; Simulations: a selection's
+                     status, loading, and Jacobian
   output.py          Output: the output directory. Particles and Footprints are
                      its folders, one per settings hash; sparse footprint
                      files; Jacobian assembly
@@ -232,7 +239,7 @@ as complete.
   NetCDF output is CF-1.8 and deliberately not byte-compatible with STILT-R.
 - **Completion is by file.** A simulation is complete iff its files exist
   in the output directory. `Simulation.is_complete()` says so for one
-  simulation, and `Project._present()` reads the same rule for
+  simulation, and `Simulations._present()` reads the same rule for
   many from a listing of the date folders the selection falls in (a test
   holds the two together). Never add a second
   "does this output exist" check, a completion registry, or a manifest; call
@@ -415,7 +422,7 @@ Feature status lives in the roadmap tables in [README.md](README.md) and
   as attributes (`stilt_receptor`, `stilt_footprint`), which the accessor
   reads. Do not add wrapper classes back. Every result file records what
   it needs to be read alone (`read_particles`, `read_footprint`).
-- **`project.simulations` is a cached DataFrame.** `add_receptors` drops the
+- **`project.simulations` is cached.** `add_receptors` drops the
   cache; a `config.yaml` edited by hand needs a new `Project(path)`.
 - **Empty footprints are successes, and not footprints.** When no particle
   reaches the grid, `footprint.calculate` raises `EmptyFootprint` and

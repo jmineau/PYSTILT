@@ -92,8 +92,8 @@ directory, such as ``sim.footprint_path``, with nothing else around it.
 Many simulations at once
 ------------------------
 
-``project.simulations`` is a pandas DataFrame with one row per receptor
-under each variant. Its columns are:
+``project.simulations`` is a table with one row per receptor under each
+variant. Its columns are:
 
 - ``receptor``, the receptor id
 - ``variant``, the variant name
@@ -102,7 +102,8 @@ under each variant. Its columns are:
 - ``time``, ``kind``, and ``location`` of the receptor
 - one column for each extra column of ``receptors.csv``
 
-Select rows with pandas, then pass them to a loader:
+Select rows the way you would in pandas, then load the results of the
+selection:
 
 .. code-block:: python
 
@@ -111,20 +112,47 @@ Select rows with pandas, then pass them to a loader:
        (sims.variant == "hrrr")
        & sims.time.between("2023-07-01", "2023-07-31 23:00")   # both ends included
    ]
-   footprints = project.load_footprints(july)   # {simulation id: DataArray}
-   particles = project.load_particles(july)     # {simulation id: DataFrame}
+   footprints = july.load_footprints()   # {simulation id: DataArray}
+   particles = july.load_particles()     # one table, with receptor and variant columns
 
-The results are dictionaries keyed by simulation id, so you always know
-which receptor a result belongs to:
+The footprints come back in a dictionary keyed by simulation id, so you
+always know which receptor a footprint belongs to:
 
 .. code-block:: python
 
    for sid, foot in footprints.items():
        print(sid.receptor, float(foot.sum()))
 
-Leave out the selection to load every simulation. A simulation whose result
-does not exist yet is left out. To find a single file, use
-``sim.footprint_path`` or ``sim.particles_path``.
+The particles come back as one table, so pandas can group them:
+
+.. code-block:: python
+
+   particles.groupby("receptor")["foot"].sum()
+
+``project.simulations.load_footprints()`` loads every simulation. A
+simulation whose result does not exist yet is left out. Loading particles
+takes 10 to 20 MB per simulation. For thousands of simulations, read the
+``particles/`` folder of the output directory with pyarrow, DuckDB, or
+polars instead. To find a single file, use ``sim.footprint_path`` or
+``sim.particles_path``.
+
+A selection also gives you each simulation in turn:
+
+.. code-block:: python
+
+   for sim in july:
+       print(sim.id, sim.is_complete())
+
+A selection only understands columns (``sims.variant`` or
+``sims["site"]``) and picking rows with a condition. For anything else,
+use its table, ``sims.frame``. To turn a table back into a selection, for
+example after a merge with your own data, pass it to
+``project.simulations_of``:
+
+.. code-block:: python
+
+   matched = sims.frame.merge(observations, on="receptor")
+   project.simulations_of(matched).load_footprints()
 
 The extra columns of ``receptors.csv`` select one satellite scene or one
 site:
@@ -138,9 +166,9 @@ To see what is left to do:
 
 .. code-block:: python
 
-   project.incomplete()          # the rows that are not complete
-   project.status()              # every row, with four more columns
-   project.status(july)          # the same, for a selection
+   sims.incomplete()   # the simulations that are not complete
+   sims.status()       # every row, with four more columns
+   july.status()       # the same, for a selection
 
 ``status()`` adds a ``particles`` and a ``footprint`` column that say
 whether each output exists. They are blank where the variant does not make
@@ -216,9 +244,9 @@ Sometimes a simulation runs fine but no particle ever reaches the footprint
 grid. Usually the grid is too small or is not upwind. PYSTILT then writes a
 footprint file with no cells and the reason inside. The simulation counts
 as finished, so reruns skip it. ``sim.footprint`` is ``None``,
-``sim.empty_reason`` says why, and ``project.load_footprints()`` leaves the
+``sim.empty_reason`` says why, and ``load_footprints()`` leaves the
 simulation out because there is nothing to load. The ``empty`` column of
-``project.status()`` lists them. If you see many, make your
+``status()`` lists them. If you see many, make your
 footprint grid bigger.
 
 An empty footprint is not a footprint of zeros. It means the transport never

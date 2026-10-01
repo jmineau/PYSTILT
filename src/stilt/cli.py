@@ -263,7 +263,7 @@ def _counts(total: int, pending: int) -> str:
 def _print_status(project: Project) -> None:
     """Print a project status summary, per variant when there are several."""
     sims = project.simulations
-    pending = project.incomplete(sims)
+    pending = sims.incomplete()
     typer.echo(f"Project: {project.directory}  {_counts(len(sims), len(pending))}")
     if len(project.variants) > 1:
         total = Counter(sims["variant"])

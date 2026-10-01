@@ -54,8 +54,9 @@ Then check on the results:
 
 .. code-block:: python
 
-   project.status()                        # one row per simulation, with a "complete" column
-   footprints = project.load_footprints()  # {simulation id: DataArray}
+   sims = project.simulations
+   sims.status()                     # one row per simulation, with a "complete" column
+   footprints = sims.load_footprints()   # {simulation id: DataArray}
 
 Python or the command line?
 ---------------------------

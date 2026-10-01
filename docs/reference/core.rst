@@ -69,16 +69,22 @@ write particle and footprint files without a project.
 Simulation tables
 -----------------
 
-``project.receptors`` and ``project.simulations`` are pandas DataFrames,
-one row per receptor or per simulation. Select rows with pandas and pass
-them to :meth:`Project.status`, :meth:`Project.incomplete`,
-:meth:`Project.load_particles`, or :meth:`Project.load_footprints`.
+``project.receptors`` is a pandas DataFrame with one row per receptor.
+``project.simulations`` is a :class:`Simulations`, one row per simulation.
+Select its rows as in pandas, then ask the selection for its status or
+results.
 
 .. code-block:: python
 
    sims = project.simulations
    wbb = sims[(sims.variant == "hrrr") & (sims.site == "WBB")]
-   feet = project.load_footprints(wbb)
+   feet = wbb.load_footprints()
+
+.. autosummary::
+   :toctree: _api
+   :nosignatures:
+
+   Simulations
 
 .. currentmodule:: stilt
 

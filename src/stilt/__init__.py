@@ -23,7 +23,7 @@ from .geometry import Geometry, Mesh, SpatialTarget, Zones
 from .meteorology import Met
 from .output import Output
 from .particles import particles_metadata, read_particles, write_particles
-from .project import Project
+from .project import Project, Simulations
 from .receptors import (
     ColumnReceptor,
     MultiPointReceptor,
@@ -42,6 +42,7 @@ except PackageNotFoundError:
 __all__ = [
     # Core
     "Project",
+    "Simulations",
     "Output",
     # Configuration
     "ProjectConfig",
