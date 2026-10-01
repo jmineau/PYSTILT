@@ -87,6 +87,11 @@ Attributes
 .. autosummary::
    ~{{ objname }}.receptor
    ~{{ objname }}.variant
+{% elif fullname == 'stilt.hysplit.FailureReason' %}
+.. autoclass:: {{ fullname }}
+   :members:
+   :undoc-members:
+   :exclude-members: {{ methods | join(', ') }}
 {% else %}
 .. class-signature:: {{ fullname }}
 

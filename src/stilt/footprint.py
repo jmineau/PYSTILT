@@ -19,7 +19,7 @@ from stilt.config.spatial import (
     _grid_cell_starts,
     cf_axis_attrs,
 )
-from stilt.errors import EmptyFootprintError
+from stilt.exceptions import EmptyFootprint
 from stilt.geometry import (
     Mesh,
     SpatialTarget,
@@ -761,7 +761,7 @@ class Footprint:
         ImportError
             If a transform in ``config`` is a settings mapping that could not
             be imported (as read back by :meth:`from_netcdf`).
-        EmptyFootprintError
+        EmptyFootprint
             If no particle is over the grid. ``reason`` is ``"no_particles"``
             when the table is empty and ``"outside_domain"`` otherwise.
         """
@@ -787,7 +787,7 @@ class Footprint:
         time_integrate = config.time_integrate
 
         if particles.empty:
-            raise EmptyFootprintError("no_particles")
+            raise EmptyFootprint("no_particles")
 
         p = particles.copy(deep=False)
         n_particles = p["indx"].nunique()
@@ -855,7 +855,7 @@ class Footprint:
         )
 
         if p.empty:
-            raise EmptyFootprintError("outside_domain")
+            raise EmptyFootprint("outside_domain")
 
         foot_arr = _accumulate_smoothed_footprint(
             p,

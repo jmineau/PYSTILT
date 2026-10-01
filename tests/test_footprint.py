@@ -12,7 +12,7 @@ import xarray as xr
 
 from stilt.config import FootprintConfig, Grid
 from stilt.config.spatial import _grid_cell_starts
-from stilt.errors import EmptyFootprintError
+from stilt.exceptions import EmptyFootprint
 from stilt.footprint import (
     Footprint,
     _compute_kernel_bandwidths,
@@ -700,19 +700,19 @@ def test_calculate_dims_are_time_lat_lon(point_receptor):
 def test_calculate_raises_when_particles_outside_domain(
     point_receptor,
 ):
-    """All particles outside the domain is an EmptyFootprintError, not zeros."""
+    """All particles outside the domain is an EmptyFootprint, not zeros."""
     particles = _particles_in_domain()
     particles["long"] = 0.0  # far outside [-114, -113]
     particles["lati"] = 0.0
     config = _foot_config()
-    with pytest.raises(EmptyFootprintError) as info:
+    with pytest.raises(EmptyFootprint) as info:
         Footprint.calculate(particles, receptor=point_receptor, config=config)
     assert info.value.reason == "outside_domain"
 
 
 def test_calculate_raises_when_there_are_no_particles(point_receptor):
     particles = _particles_in_domain().iloc[0:0]
-    with pytest.raises(EmptyFootprintError) as info:
+    with pytest.raises(EmptyFootprint) as info:
         Footprint.calculate(particles, receptor=point_receptor, config=_foot_config())
     assert info.value.reason == "no_particles"
 

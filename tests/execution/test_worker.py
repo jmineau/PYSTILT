@@ -14,7 +14,7 @@ from stilt.config import (
     TransportSettings,
     VariantConfig,
 )
-from stilt.errors import SimulationError
+from stilt.exceptions import SimulationError
 from stilt.execution import resolve_compute_root, worker
 from stilt.execution.worker import (
     ReceptorResult,

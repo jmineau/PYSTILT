@@ -31,6 +31,9 @@ to do something, start with the :doc:`../guides/index` instead.
 :doc:`hysplit`
    The low-level HYSPLIT driver.
 
+:doc:`exceptions`
+   The exceptions PYSTILT raises.
+
 .. toctree::
    :maxdepth: 2
 
@@ -42,3 +45,4 @@ to do something, start with the :doc:`../guides/index` instead.
    observations
    project
    hysplit
+   exceptions

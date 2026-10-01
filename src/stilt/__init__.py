@@ -17,6 +17,7 @@ from .config import (
     RuntimeSettings,
     VariantConfig,
 )
+from .exceptions import StiltError
 from .footprint import Footprint
 from .geometry import Geometry, Mesh, SpatialTarget, Zones
 from .meteorology import Met
@@ -68,6 +69,8 @@ __all__ = [
     "SpatialTarget",
     # Meteorology
     "Met",
+    # Exceptions (all of them live in stilt.exceptions)
+    "StiltError",
     # Transforms (the interface; built-ins live in stilt.transforms)
     "ParticleTransform",
     "TransformContext",

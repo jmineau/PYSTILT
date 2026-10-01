@@ -11,8 +11,9 @@ from pathlib import Path
 from typing import TYPE_CHECKING, NamedTuple
 
 from stilt.config import FootprintConfig, TransportSettings, VariantConfig
-from stilt.errors import EmptyFootprintError, identify_failure_reason
+from stilt.exceptions import EmptyFootprint
 from stilt.footprint import Footprint
+from stilt.hysplit.failures import identify_failure_reason
 from stilt.output import Footprints, Output, Run
 from stilt.receptors import Receptor, parse_receptor_id
 from stilt.trajectory import Trajectories
@@ -247,7 +248,7 @@ class Simulation:
         str or None
             ``"complete"`` if every expected result exists,
             ``"failed:<reason>"`` if a log exists but results are missing
-            (see :class:`~stilt.errors.FailureReason`), or ``None`` if the
+            (see :class:`~stilt.hysplit.FailureReason`), or ``None`` if the
             simulation has not run.
         """
         if self.is_complete():
@@ -377,7 +378,7 @@ class Simulation:
             )
         try:
             return traj.footprint(config, name=self.variant.name, context=context)
-        except EmptyFootprintError:
+        except EmptyFootprint:
             return None
 
 

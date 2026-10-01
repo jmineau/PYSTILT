@@ -120,7 +120,7 @@ source_modules = [
     "stilt.cli",
     "stilt.config",
     "stilt.model",
-    "stilt.errors",
+    "stilt.exceptions",
     "stilt.execution",
     "stilt.flux",
     "stilt.footprint",
