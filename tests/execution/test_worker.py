@@ -298,6 +298,7 @@ def test_run_simulation_error_is_failed_and_logged(sim, met, compute_root, monke
 
     assert result.status == "failed"
     assert result.error == "HYSPLIT failed"
+    assert result.phase == "particles"
     log_text = sim.log
     assert "=== PYSTILT ERROR ===" in log_text
     assert "Phase: particles" in log_text
@@ -519,6 +520,73 @@ def test_run_receptor_remakes_sibling_footprints_when_the_particles_reran(
         {"variant": "hrrr-s2", "skip": True, "stale": True},  # same run: reuse, remake
         {"variant": "zi08", "skip": True, "stale": False},  # its own run
     ]
+
+
+def test_run_receptor_runs_failed_particles_once_per_transport_settings(
+    tmp_path, receptor, monkeypatch
+):
+    """A failed HYSPLIT run fails every variant that shares it, without running again."""
+    model = _model(
+        tmp_path,
+        [receptor],
+        grid=GRID,
+        variants={
+            "hrrr": {},
+            "hrrr-s2": {"smooth_factor": 2.0},
+            "zi08": {"ziscale": 0.8},
+        },
+    )
+    calls: list[str] = []
+
+    def fake(sim, **kwargs):
+        calls.append(sim.variant.name)
+        if sim.variant.name == "hrrr":
+            return SimulationResult(
+                str(sim.id), "failed", error="met ends early", phase="particles"
+            )
+        return SimulationResult(str(sim.id), "complete", ran_hysplit=True)
+
+    monkeypatch.setattr(worker, "run_simulation", fake)
+
+    result = run_receptor(
+        model, str(receptor.id), compute_root=tmp_path / "scratch", skip_existing=True
+    )
+
+    assert calls == ["hrrr", "zi08"]
+    assert [(r.status, r.error) for r in result.simulations] == [
+        ("failed", "met ends early"),
+        ("failed", "met ends early"),
+        ("complete", None),
+    ]
+
+
+def test_run_receptor_tries_again_after_a_footprint_failure(
+    tmp_path, receptor, monkeypatch
+):
+    """A failed footprint does not stop a sibling variant with other footprint settings."""
+    model = _model(
+        tmp_path,
+        [receptor],
+        grid=GRID,
+        variants={"hrrr": {}, "hrrr-s2": {"smooth_factor": 2.0}},
+    )
+    calls: list[str] = []
+
+    def fake(sim, **kwargs):
+        calls.append(sim.variant.name)
+        if sim.variant.name == "hrrr":
+            return SimulationResult(
+                str(sim.id), "error", error="bad grid", phase="footprint"
+            )
+        return SimulationResult(str(sim.id), "complete")
+
+    monkeypatch.setattr(worker, "run_simulation", fake)
+
+    run_receptor(
+        model, str(receptor.id), compute_root=tmp_path / "scratch", skip_existing=True
+    )
+
+    assert calls == ["hrrr", "hrrr-s2"]
 
 
 def test_run_receptor_no_skip_reruns_each_run_once(tmp_path, receptor, monkeypatch):

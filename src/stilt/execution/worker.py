@@ -103,12 +103,15 @@ class SimulationResult:
         Error message, when the simulation did not complete.
     ran_hysplit : bool
         Whether HYSPLIT ran in this call.
+    phase : {"particles", "footprint"} or None
+        Step that failed, when the simulation did not complete.
     """
 
     sim_id: str
     status: Status
     error: str | None = None
     ran_hysplit: bool = False
+    phase: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -360,7 +363,7 @@ def run_simulation(
         except Exception:
             logger.exception("simulation %s: could not write the failure log", sim.id)
         status = "failed" if isinstance(error, SimulationError) else "error"
-        return SimulationResult(str(sim.id), status, error=str(error))
+        return SimulationResult(str(sim.id), status, error=str(error), phase=phase)
 
 
 def run_receptor(
@@ -398,10 +401,21 @@ def run_receptor(
     sims = [project.simulation(receptor_id, variant) for variant in project.variants]
     results: list[SimulationResult] = []
     reran: set[str] = set()  # transport settings whose HYSPLIT ran in this call
+    failed: dict[str, SimulationResult] = {}  # ... and whose HYSPLIT failed
     sim = None
     try:
         for sim in sims:
             key = sim.variant.transport.hash
+            if key in failed:
+                # Variants with these transport settings share one HYSPLIT
+                # run, and it already failed. Running it again fails the same way.
+                first = failed[key]
+                results.append(
+                    SimulationResult(
+                        str(sim.id), first.status, error=first.error, phase="particles"
+                    )
+                )
+                continue
             result = run_simulation(
                 sim,
                 met=project.mets[sim.variant.met],
@@ -413,6 +427,8 @@ def run_receptor(
             )
             if result.ran_hysplit:
                 reran.add(key)
+            elif result.phase == "particles":
+                failed[key] = result
             results.append(result)
     except KeyboardInterrupt:
         label = str(sim.id) if sim is not None else receptor_id

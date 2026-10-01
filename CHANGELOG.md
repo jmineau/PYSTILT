@@ -308,6 +308,13 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `ConfigValidationError`, which nothing raised any more
   ([#80](https://github.com/jmineau/PYSTILT/issues/80)).
 
+### Fixed
+
+- When HYSPLIT fails for a receptor, the other variants that share its
+  transport settings fail with the same error instead of running HYSPLIT
+  again. A receptor with N such variants no longer runs, or times out,
+  N times.
+
 ### Added
 
 - **`TransportSettings`, what identifies a run**
