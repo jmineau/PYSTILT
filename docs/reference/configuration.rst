@@ -20,7 +20,7 @@ Config objects
 :class:`VariantConfig` is one variant with all of its settings filled in,
 as PYSTILT runs it. :class:`TransportSettings` is the part of a variant
 that decides its particles (its transport fields, the met's
-:class:`MetSettings`, and the :class:`EngineInfo`), whose hash names the
+:class:`MetSettings`, and the :class:`ModelInfo`), whose hash names the
 run in the output directory. :class:`FootprintConfig` holds the footprint
 settings, and each footprint keeps the ones it was calculated with.
 :class:`RuntimeSettings` reads the
@@ -34,7 +34,7 @@ change a result.
    ProjectConfig
    VariantConfig
    TransportSettings
-   EngineInfo
+   ModelInfo
    MetConfig
    MetSettings
    FootprintConfig

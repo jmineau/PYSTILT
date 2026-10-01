@@ -19,12 +19,12 @@ from .spatial import (
     kmsl_from_vertical_reference,
     validate_vertical_reference,
 )
-from .transport import EngineInfo, TransportSettings, hysplit_version, settings_hash
+from .transport import ModelInfo, TransportSettings, hysplit_version, settings_hash
 from .variant import VariantConfig
 
 __all__ = [
     "Bounds",
-    "EngineInfo",
+    "ModelInfo",
     "ErrorParams",
     "ExecutionConfig",
     "FileGeometrySpec",

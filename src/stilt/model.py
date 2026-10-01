@@ -1,10 +1,10 @@
 """
-The transport engine boundary.
+The transport model interface.
 
-A transport engine turns one receptor and one set of transport settings into
-a particle table. HYSPLIT (:class:`stilt.hysplit.HysplitEngine`) is the only
-engine today. The worker reaches it through :func:`get_engine` by the name a
-run's settings record, so a second engine needs no change to the worker.
+A transport model turns one receptor and one set of transport settings into
+a particle table. HYSPLIT (:class:`stilt.hysplit.HysplitModel`) is the only
+one today. The worker reaches it through :func:`get_model` by the name a
+run's settings record, so a second model needs no change to the worker.
 """
 
 from __future__ import annotations
@@ -22,9 +22,9 @@ if TYPE_CHECKING:
 
 
 @dataclass(frozen=True)
-class EngineRun:
+class ModelRun:
     """
-    What one engine run produced.
+    What one model run produced.
 
     Attributes
     ----------
@@ -39,7 +39,7 @@ class EngineRun:
     met_files: list[Path]
 
 
-class TransportEngine(Protocol):
+class TransportModel(Protocol):
     """
     A transport model that follows particles from a receptor.
 
@@ -57,7 +57,7 @@ class TransportEngine(Protocol):
 
     def run(
         self, receptor: Receptor, params: STILTParams, met: Met, workdir: Path
-    ) -> EngineRun:
+    ) -> ModelRun:
         """
         Run one receptor and return its particles.
 
@@ -72,25 +72,25 @@ class TransportEngine(Protocol):
         workdir : Path
             Scratch directory for the run's files. It exists and is empty.
             The caller discards it afterwards and keeps ``stilt.log`` from it
-            when the engine writes one.
+            when the model writes one.
         """
         ...
 
 
-def get_engine(name: str = "hysplit") -> TransportEngine:
+def get_model(name: str = "hysplit") -> TransportModel:
     """
-    Return the transport engine called *name*.
+    Return the transport model called *name*.
 
     Raises
     ------
     ValueError
-        If no engine has that name.
+        If no model has that name.
     """
     if name == "hysplit":
-        from stilt.hysplit import HysplitEngine
+        from stilt.hysplit import HysplitModel
 
-        return HysplitEngine()
-    raise ValueError(f"Unknown transport engine {name!r}. The engines are ['hysplit'].")
+        return HysplitModel()
+    raise ValueError(f"Unknown transport model {name!r}. The models are ['hysplit'].")
 
 
-__all__ = ["EngineRun", "TransportEngine", "get_engine"]
+__all__ = ["ModelRun", "TransportModel", "get_model"]

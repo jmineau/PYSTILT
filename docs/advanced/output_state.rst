@@ -45,7 +45,7 @@ Settings name the folders
 
 Each variant resolves into two parts. Its transport settings (everything
 that changes the particles: the HYSPLIT parameters, the content of the
-meteorology, and the engine version; :class:`stilt.config.TransportSettings`)
+meteorology, and the transport model's version; :class:`stilt.config.TransportSettings`)
 are hashed, and the hash names the ``particles/`` folder. Its footprint
 settings, hashed together with the transport hash, name the ``footprints/``
 folder. Each folder holds a ``_settings.yaml`` with the settings written out

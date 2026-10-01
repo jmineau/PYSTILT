@@ -4,9 +4,9 @@ import pytest
 import yaml
 
 from stilt.config import (
-    EngineInfo,
     MetConfig,
     MetSettings,
+    ModelInfo,
     ProjectConfig,
     STILTParams,
     TransportSettings,
@@ -38,7 +38,7 @@ def test_settings_hash_ignores_key_order_and_number_spelling():
 
 
 # ---------------------------------------------------------------------------
-# engine version
+# model version
 # ---------------------------------------------------------------------------
 
 
@@ -84,7 +84,7 @@ def test_identity_leaves_out_what_changes_no_particle(tmp_path):
     for name in ("timeout", "rm_dat", "exe_dir"):
         assert name not in identity
     assert identity["met"] == met.settings().model_dump(mode="json")
-    assert identity["engine"] == {"name": "hysplit", "version": "v5.1.0"}
+    assert identity["model"] == {"name": "hysplit", "version": "v5.1.0"}
     assert identity["maxpar"] == 100  # unset maxpar is numpar, as HYSPLIT receives it
 
     same = TransportSettings.build(
@@ -96,10 +96,10 @@ def test_identity_leaves_out_what_changes_no_particle(tmp_path):
         == base.hash
     )
     assert TransportSettings.build(STILTParams(numpar=200), met).hash != base.hash
-    other_engine = TransportSettings.build(
-        STILTParams(numpar=100), met, engine=EngineInfo(version="v5.3.2+t0-rows")
+    other_model = TransportSettings.build(
+        STILTParams(numpar=100), met, model=ModelInfo(version="v5.3.2+t0-rows")
     )
-    assert other_engine.hash != base.hash
+    assert other_model.hash != base.hash
 
 
 def test_stored_settings_re_validate_to_the_same_hash(tmp_path):

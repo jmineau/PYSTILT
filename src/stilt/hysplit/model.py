@@ -1,4 +1,4 @@
-"""HYSPLIT as a transport engine."""
+"""HYSPLIT as a transport model."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from stilt.config.transport import hysplit_version
-from stilt.engine import EngineRun
+from stilt.model import ModelRun
 
 from .driver import HYSPLITDriver
 
@@ -16,14 +16,15 @@ if TYPE_CHECKING:
     from stilt.receptors import Receptor
 
 
-class HysplitEngine:
+class HysplitModel:
     """
-    Run HYSPLIT's ``hycs_std`` for one receptor.
+    HYSPLIT as a transport model, the object ``get_model("hysplit")`` returns.
 
-    The run's ``CONTROL``, ``SETUP.CFG``, and particle file live in the
-    working directory for the duration of the run. HYSPLIT reads the
-    meteorology where it is (cropped copies when the met is cropped), so
-    nothing is staged per run.
+    :meth:`run` picks the met files a receptor needs and runs HYSPLIT
+    through a :class:`~stilt.hysplit.HYSPLITDriver`, which writes the input
+    files, runs ``hycs_std``, and reads the particles. HYSPLIT reads the met
+    where it is (the cropped copies when the met is cropped), so nothing is
+    staged per run.
     """
 
     name = "hysplit"
@@ -34,7 +35,7 @@ class HysplitEngine:
 
     def run(
         self, receptor: Receptor, params: STILTParams, met: Met, workdir: Path
-    ) -> EngineRun:
+    ) -> ModelRun:
         """Write the input files, run ``hycs_std``, and return the particles."""
         source = met.required_files(r_time=receptor.time, n_hours=params.n_hours)
         driver = HYSPLITDriver(
@@ -47,7 +48,7 @@ class HysplitEngine:
         result = driver.execute(timeout=params.timeout, rm_dat=params.rm_dat)
         # The record names the source files; the crop settings are in the
         # run's settings.
-        return EngineRun(particles=result.particles, met_files=source)
+        return ModelRun(particles=result.particles, met_files=source)
 
 
-__all__ = ["HysplitEngine"]
+__all__ = ["HysplitModel"]
