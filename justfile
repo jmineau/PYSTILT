@@ -92,7 +92,7 @@ check-dist:
         assert f"Tag: py3-none-{platform}\n" in meta, meta
         assert "Root-Is-Purelib: false\n" in meta, meta
         binaries = [n for n in names if n.endswith("/hycs_std")]
-        want = [f"stilt/hysplit/bin/{expected[platform]}/hycs_std"]
+        want = [f"stilt/transport/hysplit/bin/{expected[platform]}/hycs_std"]
         assert binaries == want, f"{wheel.name} holds {binaries}"
         print(f"{wheel.name}: {binaries[0]}")
     (sdist,) = Path("dist").glob("*.tar.gz")

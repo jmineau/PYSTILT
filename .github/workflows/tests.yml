@@ -189,7 +189,7 @@ jobs:
         .pkgtest/bin/python -c "import stilt; print(stilt.__version__)"
         .pkgtest/bin/python -m stilt --help
         .pkgtest/bin/stilt --help
-        .pkgtest/bin/python -c "from stilt.hysplit.driver import _bundled_exe_dir; print(_bundled_exe_dir())"
+        .pkgtest/bin/python -c "from stilt.transport.hysplit.driver import _bundled_exe_dir; print(_bundled_exe_dir())"
 
     - name: Install the sdist in a clean environment
       run: |
@@ -201,7 +201,7 @@ jobs:
       run: |
         .sdisttest/bin/python -c "import stilt; print(stilt.__version__)"
         .sdisttest/bin/python - <<'EOF'
-        from stilt.hysplit.driver import _bundled_exe_dir
+        from stilt.transport.hysplit.driver import _bundled_exe_dir
 
         try:
             _bundled_exe_dir()

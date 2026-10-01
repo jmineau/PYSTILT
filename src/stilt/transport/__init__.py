@@ -2,9 +2,10 @@
 The transport model interface.
 
 A transport model turns one receptor and one set of transport settings into
-a particle table. HYSPLIT (:class:`stilt.hysplit.HysplitModel`) is the only
-one today. The worker reaches it through :func:`get_model` by the name a
-run's settings record, so a second model needs no change to the worker.
+a particle table. Each model is a subpackage here. HYSPLIT
+(:class:`stilt.transport.hysplit.HysplitModel`) is the only one today. The
+worker reaches it through :func:`get_model` by the name a run's settings
+record, so a second model needs no change to the worker.
 """
 
 from __future__ import annotations
@@ -87,7 +88,7 @@ def get_model(name: str = "hysplit") -> TransportModel:
         If no model has that name.
     """
     if name == "hysplit":
-        from stilt.hysplit import HysplitModel
+        from stilt.transport.hysplit import HysplitModel
 
         return HysplitModel()
     raise ValueError(f"Unknown transport model {name!r}. The models are ['hysplit'].")

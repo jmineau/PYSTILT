@@ -39,9 +39,9 @@ class _FakeMet:
 def sim(monkeypatch, tmp_path, point_receptor):
     """A Simulation with the HYSPLIT driver stubbed out, and a runner for it."""
     from stilt.config import MetConfig, TransportSettings, VariantConfig
-    from stilt.hysplit import model
     from stilt.output import Output
     from stilt.simulation import Simulation
+    from stilt.transport.hysplit import model
 
     monkeypatch.setattr(model, "HYSPLITDriver", _StopDriver)
     _StopDriver.seen.clear()

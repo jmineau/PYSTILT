@@ -1,4 +1,4 @@
-"""Tests for stilt.hysplit low-level helpers."""
+"""Tests for stilt.transport.hysplit low-level helpers."""
 
 from pathlib import Path
 
@@ -11,9 +11,9 @@ from stilt.errors import (
     HYSPLITTimeoutError,
     NoParticleOutputError,
 )
-from stilt.hysplit import HYSPLITDriver
-from stilt.hysplit.control import ControlFile
 from stilt.receptors import ColumnReceptor, MultiPointReceptor
+from stilt.transport.hysplit import HYSPLITDriver
+from stilt.transport.hysplit.control import ControlFile
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -384,7 +384,7 @@ def test_terminate_process_escalates_when_group_kill_does_not_finish(
     proc = FakeProc()
     killpg_calls: list[tuple[int, int]] = []
     monkeypatch.setattr(
-        "stilt.hysplit.driver.os.killpg",
+        "stilt.transport.hysplit.driver.os.killpg",
         lambda pid, sig: killpg_calls.append((pid, sig)),
     )
 
@@ -849,7 +849,7 @@ def test_unperturbed_run_removes_a_stale_winderr(tmp_path, point_receptor):
 def test_bundled_exe_dir_picks_the_build_for_the_platform(
     monkeypatch, system, machine, subdir
 ):
-    from stilt.hysplit import driver
+    from stilt.transport.hysplit import driver
 
     monkeypatch.setattr(driver.platform, "system", lambda: system)
     monkeypatch.setattr(driver.platform, "machine", lambda: machine)
@@ -864,7 +864,7 @@ def test_bundled_exe_dir_rejects_platforms_without_a_build(
     monkeypatch, system, machine
 ):
     """An aarch64 Linux machine must not be handed the x86-64 binary (#61)."""
-    from stilt.hysplit import driver
+    from stilt.transport.hysplit import driver
 
     monkeypatch.setattr(driver.platform, "system", lambda: system)
     monkeypatch.setattr(driver.platform, "machine", lambda: machine)
@@ -874,7 +874,7 @@ def test_bundled_exe_dir_rejects_platforms_without_a_build(
 
 def test_bundled_exe_dir_rejects_an_install_without_the_binary(monkeypatch, tmp_path):
     """The source archive carries no hycs_std; say so rather than fail later."""
-    from stilt.hysplit import driver
+    from stilt.transport.hysplit import driver
 
     (tmp_path / "bin" / "linux_x64").mkdir(parents=True)
     monkeypatch.setattr(driver.platform, "system", lambda: "Linux")

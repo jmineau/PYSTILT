@@ -7,10 +7,10 @@ import pytest
 
 from stilt.config import MetConfig, STILTParams, TransportSettings, VariantConfig
 from stilt.execution import run_trajectories, worker
-from stilt.hysplit import HysplitModel
-from stilt.model import ModelRun, get_model
 from stilt.output import Output
 from stilt.simulation import Simulation
+from stilt.transport import ModelRun, get_model
+from stilt.transport.hysplit import HysplitModel
 
 
 def test_get_model_returns_hysplit_by_default_and_by_name():
@@ -73,7 +73,7 @@ class _FakeMet:
 def test_hysplit_model_reads_the_met_in_place_and_records_the_source(
     tmp_path, point_receptor, monkeypatch
 ):
-    from stilt.hysplit import model as model_module
+    from stilt.transport.hysplit import model as model_module
 
     monkeypatch.setattr(model_module, "HYSPLITDriver", _FakeDriver)
     source = [tmp_path / "archive" / "20230101_12"]

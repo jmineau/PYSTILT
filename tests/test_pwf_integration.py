@@ -19,11 +19,11 @@ import numpy as np
 import pytest
 
 from stilt.config import MetConfig, STILTParams
-from stilt.hysplit.driver import HYSPLITDriver
 from stilt.meteorology import Met
 from stilt.receptors import ColumnReceptor
 from stilt.trajectory import Trajectories
 from stilt.transforms import PressureWeighting, particle_pwf, release_coordinate
+from stilt.transport.hysplit.driver import HYSPLITDriver
 
 from .conftest import integration
 from .fixtures.r_stilt_reference import (

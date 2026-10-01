@@ -33,7 +33,7 @@ import pytest
 import xarray as xr
 
 from stilt.config import STILTParams
-from stilt.hysplit.driver import _bundled_exe_dir
+from stilt.transport.hysplit.driver import _bundled_exe_dir
 
 from ..conftest import integration
 from ..fixtures.r_stilt_reference import (

@@ -119,13 +119,11 @@ source_modules = [
     "stilt._atomic",
     "stilt.cli",
     "stilt.config",
-    "stilt.model",
     "stilt.errors",
     "stilt.execution",
     "stilt.flux",
     "stilt.footprint",
     "stilt.geometry",
-    "stilt.hysplit",
     "stilt.meteorology",
     "stilt.output",
     "stilt.project",
@@ -133,6 +131,7 @@ source_modules = [
     "stilt.simulation",
     "stilt.trajectory",
     "stilt.transforms",
+    "stilt.transport",
     "stilt.visualization",
 ]
 forbidden_modules = ["stilt.observations"]
@@ -183,4 +182,4 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 "stilt" = ["py.typed"]
-"stilt.hysplit" = ["bin/**/*", "data/*"]
+"stilt.transport.hysplit" = ["bin/**/*", "data/*"]

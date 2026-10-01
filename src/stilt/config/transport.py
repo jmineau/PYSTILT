@@ -67,7 +67,7 @@ def hysplit_version(exe_dir: str | Path | None = None) -> str:
         If *exe_dir* has no ``version`` file.
     """
     if exe_dir is None:
-        path = Path(str(pkg_files("stilt.hysplit") / "bin" / "version"))
+        path = Path(str(pkg_files("stilt.transport.hysplit") / "bin" / "version"))
     else:
         path = Path(exe_dir) / "version"
         if not path.exists():
