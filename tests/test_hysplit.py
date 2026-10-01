@@ -217,6 +217,21 @@ def test_run_persists_fortran_runtime_output_on_failure(tmp_path, point_receptor
     assert "Fortran runtime error" in log_text
 
 
+def test_run_returns_where_its_log_output_starts(tmp_path, point_receptor):
+    runner = _make_runner(tmp_path, point_receptor)
+    runner.log_path.write_text("previous attempt\n")
+    exe = tmp_path / "hycs_std"
+    exe.write_text("#!/usr/bin/env bash\necho 'this run'\n")
+    exe.chmod(0o755)
+
+    start = runner._run(timeout=5)
+
+    assert start == len("previous attempt\n")
+    with runner.log_path.open() as handle:
+        handle.seek(start)
+        assert "this run" in handle.read()
+
+
 def test_run_raises_clear_error_when_executable_missing(tmp_path, point_receptor):
     runner = _make_runner(tmp_path, point_receptor)
 
@@ -311,6 +326,25 @@ def test_execute_keeps_a_run_that_reaches_the_end_past_a_damaged_met_file(
     result = runner.execute(timeout=5, rm_dat=False)
 
     assert result.particles["time"].min() == -24 * 60
+
+
+def test_execute_leaves_an_empty_particle_file_to_the_caller(
+    tmp_path, point_receptor, monkeypatch
+):
+    runner = _make_runner(tmp_path, point_receptor)
+
+    def fake_run(timeout: int | None, *, label: str = "hycs_std") -> int:
+        runner.log_path.write_text(
+            " WARNING metset: Only one time period of meteo data\n"
+        )
+        _write_particle_dat(runner.particle_stilt_path, rows=[])
+        return 0
+
+    monkeypatch.setattr(runner, "_run", fake_run)
+
+    result = runner.execute(timeout=5, rm_dat=False)
+
+    assert result.particles.empty
 
 
 def test_execute_keeps_particles_that_left_the_met_domain(
