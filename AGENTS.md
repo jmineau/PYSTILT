@@ -90,7 +90,7 @@ it came from. Select it as in pandas (`sims[sims.variant == "hrrr"]`), then
 ask the selection: `status()`, `incomplete()`, `load_particles()` (one long
 table), `load_footprints()`, `jacobian()`. A selection forwards only column
 access and row masks; everything else is `sims.frame`, and
-`project.simulations_of(frame)` turns a table back into a selection. Do not
+`Simulations(project, frame)` turns a table back into a selection. Do not
 give it query methods of its own (`sel`, `where`): that is how the old
 collection classes grew. `Particles` and `Footprints` are the folder
 handles of the output directory. `project.receptors` stays a plain
@@ -239,8 +239,8 @@ as complete.
   NetCDF output is CF-1.8 and deliberately not byte-compatible with STILT-R.
 - **Completion is by file.** A simulation is complete iff its files exist
   in the output directory. `Simulation.is_complete()` says so for one
-  simulation, and `Simulations._present()` reads the same rule for
-  many from a listing of the date folders the selection falls in (a test
+  simulation, and `Simulations._complete()` applies the same rule to
+  many, from the listing of date folders that `_present()` reads (a test
   holds the two together). Never add a second
   "does this output exist" check, a completion registry, or a manifest; call
   the `Simulation` method.
