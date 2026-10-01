@@ -169,6 +169,48 @@ def test_failure_missing_met(tmp_path, wbb_receptor, traj_only_config):
     assert sim.outcome == "failed:MISSING_MET_FILES"
 
 
+@integration
+def test_failure_met_cut_short(tmp_path, wbb_receptor, traj_only_config, met_dir):
+    """A met file cut to one time period fails the run that needs it."""
+    cut_met = tmp_path / "met"
+    cut_met.mkdir()
+    for path in met_dir.iterdir():
+        (cut_met / path.name).symlink_to(path)
+    # 18-23 Z on the 14th is 12 to 7 h before the receptor. Its six hourly
+    # periods are the same size, so the first sixth is the 18 Z period alone.
+    damaged = next(cut_met.glob("20210114_18-23*"))
+    data = damaged.read_bytes()
+    period = len(data) // 6
+    assert data[period + 14 : period + 18] == b"INDX"
+    damaged.unlink()
+    damaged.write_bytes(data[:period])
+
+    met = traj_only_config.mets["hrrr"]
+    config = _with(
+        traj_only_config,
+        n_hours=-12,
+        mets={
+            "hrrr": {
+                "directory": cut_met,
+                "file_format": met.file_format,
+                "file_tres": met.file_tres,
+            }
+        },
+    )
+    project = Project.init(
+        tmp_path / "met_cut_short", config=config, receptors=[wbb_receptor]
+    )
+    project.run()
+
+    sim = project.simulation(*_sim_id(wbb_receptor))
+    assert not sim.has_trajectory
+    assert sim.outcome == "failed:MET_TRUNCATED"
+    assert sim.log_path is not None
+    log = sim.log_path.read_text()
+    assert "Only one time period of meteo data" in log
+    assert "Meteorology ends early" in log
+
+
 # ---------------------------------------------------------------------------
 # Idempotency - skip_existing=True
 # ---------------------------------------------------------------------------

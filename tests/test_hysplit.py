@@ -6,6 +6,7 @@ import pytest
 
 from stilt.config import STILTParams
 from stilt.errors import (
+    FailureReason,
     HYSPLITFailureError,
     HYSPLITTimeoutError,
     NoParticleOutputError,
@@ -245,11 +246,13 @@ def test_execute_discards_stale_particles_from_a_previous_run(
         runner.particle_stilt_path, rows=[[-60, 1, -111.9, 40.7, 10.0, 9e-5]]
     )
 
-    def fake_run(timeout: int | None, *, label: str = "hycs_std") -> None:
+    def fake_run(timeout: int | None, *, label: str = "hycs_std") -> int:
         assert not runner.particle_stilt_path.exists()
+        runner.log_path.write_text("")
         _write_particle_dat(
             runner.particle_stilt_path, rows=[[-60, 1, -111.9, 40.7, 10.0, 1e-5]]
         )
+        return 0
 
     monkeypatch.setattr(runner, "_run", fake_run)
 
@@ -257,6 +260,68 @@ def test_execute_discards_stale_particles_from_a_previous_run(
 
     assert float(result.particles["foot"].iloc[0]) == pytest.approx(1e-5)
     assert result.log_path == runner.log_path
+
+
+def _fake_hysplit(runner, monkeypatch, *, log: str, last_minute: int) -> None:
+    """Make ``runner._run`` write *log* and particles that end at *last_minute*."""
+
+    def fake_run(timeout: int | None, *, label: str = "hycs_std") -> int:
+        runner.log_path.write_text("previous attempt\n")
+        with runner.log_path.open("a") as handle:
+            handle.write(log)
+        _write_particle_dat(
+            runner.particle_stilt_path,
+            rows=[
+                [-1, 1, -111.9, 40.7, 10.0, 0.0],
+                [-last_minute, 1, -112.0, 40.6, 20.0, 0.0],
+            ],
+        )
+        return len("previous attempt\n")
+
+    monkeypatch.setattr(runner, "_run", fake_run)
+
+
+def test_execute_fails_when_the_met_is_cut_short(tmp_path, point_receptor, monkeypatch):
+    runner = _make_runner(tmp_path, point_receptor)
+    _fake_hysplit(
+        runner,
+        monkeypatch,
+        log=" WARNING metset: Only one time period of meteo data\n",
+        last_minute=13 * 60,
+    )
+
+    with pytest.raises(HYSPLITFailureError) as caught:
+        runner.execute(timeout=5, rm_dat=False)
+
+    assert caught.value.reason is FailureReason.MET_TRUNCATED
+    assert "particles stop 13 h into a 24 h run" in runner.log_path.read_text()
+
+
+def test_execute_keeps_a_run_that_reaches_the_end_past_a_damaged_met_file(
+    tmp_path, point_receptor, monkeypatch
+):
+    runner = _make_runner(tmp_path, point_receptor)
+    _fake_hysplit(
+        runner,
+        monkeypatch,
+        log=" WARNING metset: Only one time period of meteo data\n",
+        last_minute=24 * 60,
+    )
+
+    result = runner.execute(timeout=5, rm_dat=False)
+
+    assert result.particles["time"].min() == -24 * 60
+
+
+def test_execute_keeps_particles_that_left_the_met_domain(
+    tmp_path, point_receptor, monkeypatch
+):
+    runner = _make_runner(tmp_path, point_receptor)
+    _fake_hysplit(runner, monkeypatch, log="", last_minute=13 * 60)
+
+    result = runner.execute(timeout=5, rm_dat=False)
+
+    assert result.particles["time"].min() == -13 * 60
 
 
 def test_terminate_process_escalates_when_group_kill_does_not_finish(
@@ -699,11 +764,13 @@ def test_perturbed_run_writes_winderr_and_winderrtf_once(
     monkeypatch.setattr(runner, "_write_zicontrol", lambda: None)
     labels: list[str] = []
 
-    def fake_run(timeout: int | None, *, label: str = "hycs_std") -> None:
+    def fake_run(timeout: int | None, *, label: str = "hycs_std") -> int:
         labels.append(label)
+        runner.log_path.write_text("")
         _write_particle_dat(
             runner.particle_stilt_path, rows=[[-60, 1, -111.9, 40.7, 10.0, 1e-5]]
         )
+        return 0
 
     monkeypatch.setattr(runner, "_run", fake_run)
 
