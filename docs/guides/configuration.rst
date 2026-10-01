@@ -167,7 +167,7 @@ PYSTILT makes just the new footprints from the stored particles.
 A ``grid`` in a variant changes only the fields it names. A coarser version
 of the default domain is just ``grid: {xres: 0.1, yres: 0.1}``.
 
-You may not need a variant at all. :meth:`stilt.Footprint.aggregate` sums a
+You may not need a variant at all. ``foot.stilt.aggregate`` sums a
 fine footprint onto coarser cells or irregular areas after the run.
 
 Changing a variant that has run
@@ -251,7 +251,7 @@ The geometry is kept with the settings, and
 aggregate onto.
 
 Each footprint file also stores a hash of the geometry it was made for.
-:meth:`stilt.Footprint.aggregate` warns if the mesh you pass no longer
+``foot.stilt.aggregate`` warns if the mesh you pass no longer
 matches, for example because the shapefile was edited after the run.
 
 .. note::

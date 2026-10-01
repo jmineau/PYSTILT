@@ -41,7 +41,7 @@ average. Longitudes from 0 to 360, as in many global models, are handled.
 PYSTILT does not read model files. If your model's levels vary in space, as
 CarbonTracker's do, sample it yourself and pass one value per particle
 instead of a field, as a Series indexed by particle number (``indx``).
-``sim.particles.endpoints()`` gives the endpoints as a table for this,
+``sim.particles.stilt.endpoints()`` gives the endpoints as a table for this,
 and lair's ``CarbonTracker.sample`` takes that table directly.
 
 The background at a receptor
@@ -55,12 +55,12 @@ The background at a receptor
    for rid in project.receptors.receptor:
        sim = project.simulation(rid, "hrrr")
        bg = background(
-           sim.particles.data,
+           sim.particles,
            field,
            transforms=sim.footprint_config.transforms,
            context=project.transform_context(sim),
        )
-       enhancement = float(sim.footprint.enhancement(flux).sum())
+       enhancement = float(sim.footprint.stilt.enhancement(flux).sum())
        rows.append({"receptor": sim.receptor.id, "background": bg.value,
                     "enhancement": enhancement, "modelled": bg.value + enhancement})
 
@@ -99,7 +99,7 @@ each particle's modelled mole fraction, enhancement plus background:
 
    err = project.simulation(sim.receptor_id, "hrrr-err")
    result = transport_error(
-       sim.particles.data, err.particles.data, flux,
+       sim.particles, err.particles, flux,
        transforms=sim.footprint_config.transforms, context=project.transform_context(sim),
        background=field,
    )

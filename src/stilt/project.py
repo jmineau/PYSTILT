@@ -24,13 +24,12 @@ from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pandas as pd
+import xarray as xr
 
 from stilt.config import ExecutionConfig, ProjectConfig, VariantConfig
-from stilt.footprint import Footprint
 from stilt.geometry import Geometry
 from stilt.meteorology import Met
 from stilt.output import Footprints, Jacobian, Output
-from stilt.particles import Trajectories
 from stilt.receptors import (
     COLUMNS,
     ROW_COLUMNS,
@@ -538,7 +537,7 @@ class Project:
 
     def load_particles(
         self, simulations: pd.DataFrame | None = None
-    ) -> dict[SimID, Trajectories]:
+    ) -> dict[SimID, pd.DataFrame]:
         """
         Load the particles of every selected simulation that has them.
 
@@ -550,7 +549,7 @@ class Project:
         Returns
         -------
         dict
-            :class:`~stilt.Trajectories` by :class:`~stilt.SimID`.
+            Particle tables by :class:`~stilt.SimID`.
         """
         return {
             sim.id: sim.particles
@@ -560,7 +559,7 @@ class Project:
 
     def load_footprints(
         self, simulations: pd.DataFrame | None = None
-    ) -> dict[SimID, Footprint]:
+    ) -> dict[SimID, xr.DataArray]:
         """
         Load the footprint of every selected simulation that has one.
 
@@ -575,7 +574,7 @@ class Project:
         Returns
         -------
         dict
-            :class:`~stilt.Footprint` by :class:`~stilt.SimID`.
+            Footprints by :class:`~stilt.SimID`.
         """
         return {
             sim.id: foot

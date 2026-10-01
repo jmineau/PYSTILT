@@ -718,12 +718,14 @@ def test_footprint_config_cells_per_target_and_explicit_grid_wins():
     assert fc2.grid == explicit and fc2.geometry is not None
 
 
-def test_footprint_needs_a_grid():
-    from stilt.footprint import Footprint
+def test_footprint_needs_a_grid(point_receptor):
+    import pandas as pd
+
+    from stilt.footprint import calculate
 
     assert FootprintConfig().grid is None
     with pytest.raises(ValueError, match="grid"):
-        Footprint(receptor=None, config=FootprintConfig(), data=None)  # type: ignore[arg-type]
+        calculate(pd.DataFrame(), point_receptor, FootprintConfig())
 
 
 def test_footprint_config_h3_geometry():

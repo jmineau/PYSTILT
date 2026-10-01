@@ -122,7 +122,6 @@ autodoc_mock_imports = ["cartopy"]
 autodoc_type_aliases = {
     "ProjectConfig": "stilt.config.ProjectConfig",
     "Receptor": "stilt.receptor.Receptor",
-    "Trajectories": "stilt.particles.Trajectories",
 }
 
 # Autosummary settings

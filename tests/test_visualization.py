@@ -13,9 +13,8 @@ import xarray as xr
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402 — must come after use("Agg")
 
-from stilt.config import FootprintConfig, Grid, STILTParams
-from stilt.footprint import Footprint
-from stilt.particles import Trajectories
+from stilt.config import FootprintConfig, Grid
+from stilt.footprint import _describe
 from stilt.receptors import ColumnReceptor, MultiPointReceptor, PointReceptor
 from stilt.visualization import (
     ProjectPlotAccessor,
@@ -84,12 +83,7 @@ def minimal_trajectories(receptor):
             "foot": [0.1, 0.2, 0.3],
         }
     )
-    return Trajectories(
-        receptor=receptor,
-        params=STILTParams(n_hours=-24),
-        met_files=[],
-        data=data,
-    )
+    return data
 
 
 @pytest.fixture
@@ -103,7 +97,7 @@ def minimal_footprint(receptor, grid):
         coords={"time": times, "lat": lats, "lon": lons},
     )
     config = FootprintConfig(grid=grid)
-    return Footprint(receptor=receptor, config=config, data=data)
+    return _describe(data, receptor, config, "")
 
 
 # ---------------------------------------------------------------------------
@@ -194,33 +188,33 @@ def test_receptor_map_reuses_ax(receptor):
 
 
 # ---------------------------------------------------------------------------
-# TrajectoriesPlotAccessor
+# ParticlesPlotAccessor
 # ---------------------------------------------------------------------------
 
 
 def test_trajectories_map_default(minimal_trajectories):
-    ax = minimal_trajectories.plot.map()
+    ax = minimal_trajectories.stilt.plot.map()
     assert ax is not None
 
 
 def test_trajectories_map_color_by_zagl(minimal_trajectories):
-    ax = minimal_trajectories.plot.map(color_by="zagl")
+    ax = minimal_trajectories.stilt.plot.map(color_by="zagl")
     assert ax is not None
 
 
 def test_trajectories_map_color_by_foot(minimal_trajectories):
-    ax = minimal_trajectories.plot.map(color_by="foot")
+    ax = minimal_trajectories.stilt.plot.map(color_by="foot")
     assert ax is not None
 
 
 def test_trajectories_map_invalid_color_by_raises(minimal_trajectories):
     with pytest.raises(ValueError, match="color_by"):
-        minimal_trajectories.plot.map(color_by="bad_col")
+        minimal_trajectories.stilt.plot.map(color_by="bad_col")
 
 
 def test_trajectories_map_reuses_ax(minimal_trajectories):
     _, existing = plt.subplots()
-    ax = minimal_trajectories.plot.map(ax=existing)
+    ax = minimal_trajectories.stilt.plot.map(ax=existing)
     assert ax is existing
 
 
@@ -230,38 +224,38 @@ def test_trajectories_map_reuses_ax(minimal_trajectories):
 
 
 def test_footprint_map_default(minimal_footprint):
-    ax = minimal_footprint.plot.map()
+    ax = minimal_footprint.stilt.plot.map()
     assert ax is not None
 
 
 def test_footprint_map_no_log(minimal_footprint):
-    ax = minimal_footprint.plot.map(log=False)
+    ax = minimal_footprint.stilt.plot.map(log=False)
     assert ax is not None
 
 
 def test_footprint_map_specific_time(minimal_footprint):
-    ax = minimal_footprint.plot.map(time=dt.datetime(2023, 1, 1, 12))
+    ax = minimal_footprint.stilt.plot.map(time=dt.datetime(2023, 1, 1, 12))
     assert ax is not None
 
 
 def test_footprint_map_show_grid(minimal_footprint):
-    ax = minimal_footprint.plot.map(show_grid=True)
+    ax = minimal_footprint.stilt.plot.map(show_grid=True)
     assert ax is not None
 
 
 def test_footprint_map_met_bounds(minimal_footprint, grid):
-    ax = minimal_footprint.plot.map(met_bounds=grid)
+    ax = minimal_footprint.stilt.plot.map(met_bounds=grid)
     assert ax is not None
 
 
 def test_footprint_facet_returns_fig_axes(minimal_footprint):
-    fig, axes = minimal_footprint.plot.facet()
+    fig, axes = minimal_footprint.stilt.plot.facet()
     assert fig is not None
     assert axes is not None
 
 
 def test_footprint_facet_no_log(minimal_footprint):
-    fig, axes = minimal_footprint.plot.facet(log=False)
+    fig, axes = minimal_footprint.stilt.plot.facet(log=False)
     assert fig is not None
 
 
@@ -276,8 +270,8 @@ def test_footprint_facet_single_time(receptor, grid):
         coords={"time": times, "lat": lats, "lon": lons},
     )
     config = FootprintConfig(grid=grid)
-    foot = Footprint(receptor=receptor, config=config, data=data)
-    fig, axes = foot.plot.facet(ncols=3)
+    foot = _describe(data, receptor, config, "")
+    fig, axes = foot.stilt.plot.facet(ncols=3)
     assert fig is not None
 
 
@@ -348,7 +342,7 @@ def test_simulation_map_show_traj_false(receptor, minimal_trajectories):
     sim.particles = minimal_trajectories
     sim.id = "202301011200_test/hrrr"
 
-    ax = SimulationPlotAccessor(sim).map(show_traj=False)
+    ax = SimulationPlotAccessor(sim).map(show_particles=False)
     assert ax is not None
 
 

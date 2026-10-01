@@ -28,7 +28,7 @@ Extras add optional features. List them in the brackets, for example
    * - Extra
      - Adds
    * - ``visualization``
-     - Plotting (``.plot.map()`` on footprints, particles, and receptors).
+     - Plotting (``.stilt.plot.map()`` on footprints and particles, ``.plot.map()`` on receptors).
    * - ``geometry``
      - Adding footprints up over shapefiles, counties, or H3 hexagons.
    * - ``cloud``

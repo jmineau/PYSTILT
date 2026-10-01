@@ -26,9 +26,9 @@ Open the project, pick a simulation, and plot it:
    project = stilt.Project("./my_project")
    sim = project.simulation("202307151800_-111.848_40.766_10", "hrrr")
 
-   sim.footprint.plot.map()     # footprint, summed over time
-   sim.particles.plot.map()     # particle paths
-   sim.plot.map()               # receptor, particles, and footprint together
+   sim.footprint.stilt.plot.map()   # footprint, summed over time
+   sim.particles.stilt.plot.map()   # particle paths
+   sim.plot.map()                   # receptor, particles, and footprint together
 
 A simulation is named by its receptor id and its variant. To see them all,
 look at ``project.simulations``, a DataFrame with one row per simulation:
@@ -40,7 +40,7 @@ look at ``project.simulations``, a DataFrame with one row per simulation:
 Plotting needs the ``visualization`` extra. If cartopy is installed, maps
 also show coastlines and state borders. There are a few other plots:
 
-- ``foot.plot.facet()`` draws one panel per hour.
+- ``foot.stilt.plot.facet()`` draws one panel per hour.
 - ``receptor.plot.map()`` shows where the receptor is.
 - ``project.plot.availability()`` shows the receptor times at each
   location.
@@ -48,32 +48,46 @@ also show coastlines and state borders. There are a few other plots:
 Footprints
 ----------
 
-.. code-block:: python
-
-   sim.has_footprint                    # True once the footprint file exists
-   foot = sim.footprint                 # raises FileNotFoundError before that
-   foot.data                            # an xarray.DataArray
-   foot.time_range                      # (start, end) of the footprint's hours
-   foot.receptor                        # the receptor it belongs to
-
-``foot.data`` has dimensions ``(time, lat, lon)``, or ``(time, y, x)`` on a
-projected grid. There is one map for each hour back from the receptor time,
-in units of ppm per (µmol m⁻² s⁻¹). With ``time_integrate: true`` in the
-footprint settings there is a single time step. To sum over time:
+A footprint is an :class:`xarray.DataArray`:
 
 .. code-block:: python
 
-   total = foot.integrate_over_time()
+   sim.has_footprint        # True once the footprint file exists
+   foot = sim.footprint     # raises FileNotFoundError before that
+
+It has dimensions ``(time, lat, lon)``, or ``(time, y, x)`` on a projected
+grid. There is one map for each hour back from the receptor time, in units
+of ppm per (µmol m⁻² s⁻¹). With ``time_integrate: true`` in the footprint
+settings there is a single time step. Use xarray as you would on any other
+array:
+
+.. code-block:: python
+
+   total = foot.sum("time")                                     # summed over time
+   morning = foot.sel(time=slice("2023-07-15 06:00", "2023-07-15 11:00"))
+
+Methods that need the receptor or the grid are under ``foot.stilt``:
+
+.. code-block:: python
+
+   foot.stilt.receptor      # the receptor
+   foot.stilt.grid          # the grid it was made on
+   foot.stilt.config        # all the footprint settings
+
+The receptor id is also a coordinate, ``foot.receptor``. It stays on the
+array through sums and arithmetic.
 
 To write a footprint as a CF NetCDF file for other tools, and read one
 back:
 
 .. code-block:: python
 
-   foot.to_netcdf("wbb_2023-07-15_18.nc")
-   foot = stilt.Footprint.from_netcdf("wbb_2023-07-15_18.nc")
+   foot.stilt.to_netcdf("wbb_2023-07-15_18.nc")
+   foot = stilt.read_footprint("wbb_2023-07-15_18.nc")
 
 The file records the receptor and the settings used to make it.
+``stilt.read_footprint`` also opens a footprint file from the output
+directory, such as ``sim.footprint_path``, with nothing else around it.
 
 Many simulations at once
 ------------------------
@@ -97,8 +111,8 @@ Select rows with pandas, then pass them to a loader:
        (sims.variant == "hrrr")
        & sims.time.between("2023-07-01", "2023-07-31 23:00")   # both ends included
    ]
-   footprints = project.load_footprints(july)   # {simulation id: Footprint}
-   particles = project.load_particles(july)     # {simulation id: Trajectories}
+   footprints = project.load_footprints(july)   # {simulation id: DataArray}
+   particles = project.load_particles(july)     # {simulation id: DataFrame}
 
 The results are dictionaries keyed by simulation id, so you always know
 which receptor a result belongs to:
@@ -106,7 +120,7 @@ which receptor a result belongs to:
 .. code-block:: python
 
    for sid, foot in footprints.items():
-       print(sid.receptor, float(foot.integrate_over_time().sum()))
+       print(sid.receptor, float(foot.sum()))
 
 Leave out the selection to load every simulation. A simulation whose result
 does not exist yet is left out. To find a single file, use
@@ -141,9 +155,11 @@ Particles
 
 .. code-block:: python
 
-   sim.has_particles      # True once the particle file exists
-   traj = sim.particles   # raises FileNotFoundError before that
-   df = traj.data         # pandas DataFrame, one row per particle per time step
+   sim.has_particles           # True once the particle file exists
+   particles = sim.particles   # raises FileNotFoundError before that
+
+``sim.particles`` is a pandas DataFrame with one row per particle per time
+step.
 
 The columns you are most likely to use:
 
@@ -172,14 +188,26 @@ The columns you are most likely to use:
      - Mixed-layer height, vertical velocity spread, Lagrangian time scale,
        and pressure
 
+PYSTILT's methods for the particle table are under ``particles.stilt``:
+
+.. code-block:: python
+
+   particles.stilt.endpoints()    # where each particle ends, one row each
+   particles.stilt.plot.map()     # map of every particle position
+
 To open a particle file without a project:
 
 .. code-block:: python
 
-   traj = stilt.Trajectories.from_parquet(
+   path = (
        "output/particles/settings=hrrr-a3f9c2/date=2023-07-15/"
        "202307151800_-111.848_40.766_10.parquet"
    )
+   particles = stilt.read_particles(path)
+   receptor, params, met_files = stilt.particles_metadata(path)
+
+The file holds the receptor, the transport settings, and the meteorology
+files it was made with.
 
 Empty footprints
 ----------------
@@ -203,7 +231,7 @@ Adding footprints up over areas
 
 Footprints are always calculated on the regular grid in your config, as in
 STILT-R. To get the influence of other areas, such as counties, hexagons, or
-small windows around point sources, use :meth:`~stilt.Footprint.aggregate`.
+small windows around point sources, use ``foot.stilt.aggregate``.
 It adds up the footprint cells in each area, and the hours in each time
 bin:
 
@@ -212,12 +240,13 @@ bin:
    import pandas as pd
    import stilt
 
+   hours = foot.indexes["time"]   # the start of each footprint hour
    bins = pd.interval_range(
-       start=foot.time_range[0], end=foot.time_range[1], freq="1h", closed="left"
+       start=hours.min(), periods=len(hours), freq="1h", closed="left"
    )
    state = stilt.Grid(xmin=-112.3, xmax=-111.6, ymin=40.4, ymax=41.0,
                       xres=0.02, yres=0.02)
-   by_cell = foot.aggregate(state, time_bins=bins)        # index == state.index
+   by_cell = foot.stilt.aggregate(state, time_bins=bins)   # index == state.index
 
 The result is a DataFrame with one row per area and one column per time
 bin, labelled by the start of the bin. Footprint times are the start of
@@ -245,13 +274,13 @@ need from the result.
    sources = stilt.Mesh.from_windows(
        [(-111.97, 40.515), (-112.015, 40.779)], 0.01, ids=["landfill", "wwtp"]
    )
-   by_source = foot.aggregate(sources, time_bins=bins)    # index == ["landfill", "wwtp"]
+   by_source = foot.stilt.aggregate(sources, time_bins=bins)   # index == ["landfill", "wwtp"]
 
    counties = stilt.Mesh.from_file("counties.shp", ids="NAME")
-   by_county = foot.aggregate(counties, time_bins=bins)
+   by_county = foot.stilt.aggregate(counties, time_bins=bins)
 
    sectors = stilt.Zones.from_labels(state, labels)       # one label per cell of state
-   by_sector = foot.aggregate(sectors, time_bins=bins)
+   by_sector = foot.stilt.aggregate(sectors, time_bins=bins)
 
 Polygons in another coordinate system are reprojected onto the footprint
 grid. The overlaps between the footprint grid and your areas are worked out
@@ -271,7 +300,7 @@ finer grid:
    hexes = stilt.Mesh.from_h3(8, bounds=state)
    grid = stilt.Grid.from_geometry(hexes, cells_per_target=4)
    fine = sim.generate_footprint(sim.footprint_config.model_copy(update={"grid": grid}))
-   by_hex = fine.aggregate(hexes, time_bins=bins)
+   by_hex = fine.stilt.aggregate(hexes, time_bins=bins)
 
 ``Grid.from_geometry`` picks a grid that covers the areas with at least four
 cells across the smallest one. ``generate_footprint`` applies the

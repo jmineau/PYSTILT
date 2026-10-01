@@ -77,8 +77,7 @@ across all the forward runs, and outline them:
 
    window = (overpass - pd.Timedelta(minutes=3), overpass + pd.Timedelta(minutes=3))
    rows = []
-   for traj in forward.load_particles().values():
-       p = traj.data
+   for p in forward.load_particles().values():
        rows.append(p[p["datetime"].between(*window)])
    particles = pd.concat(rows)
 

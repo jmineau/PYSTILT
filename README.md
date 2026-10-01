@@ -72,8 +72,8 @@ project = stilt.Project.init(
 project.run()   # returns when the run is done
 
 sim = project.simulation(receptor.id, "hrrr")
-traj = sim.particles
-foot = sim.footprint
+particles = sim.particles   # a pandas DataFrame, one row per particle per step
+foot = sim.footprint        # an xarray DataArray, one map per hour
 ```
 
 Everything is saved in `./my_project`. Later, open it again with
@@ -236,11 +236,11 @@ time_bins = pd.interval_range(
 )
 
 for sim_id, footprint in footprints.items():       # keyed by (receptor, variant)
-    hourly = footprint.aggregate(target=coords, time_bins=time_bins)
+    hourly = footprint.stilt.aggregate(target=coords, time_bins=time_bins)
 ```
 
-If a simulation's particles never reach the grid, PYSTILT writes a small `.empty` file instead of
-a NetCDF. The simulation counts as finished, and `load()` leaves it out.
+If a simulation's particles never reach the grid, PYSTILT writes a footprint file with no cells
+and the reason. The simulation counts as finished, and `load_footprints()` leaves it out.
 
 ## STILT-R parity
 
@@ -287,11 +287,11 @@ observations and column weighting, and leaves the rest.
 | Per-sounding averaging kernels in batch runs (`averaging_kernel` with `table:`) | Implemented |
 | Product readers (OCO-2/3, TROPOMI, TCCON) | Implemented: `read_tropomi_ch4`, `read_oco2`, `read_tccon`; other instruments as one module each |
 | Transport error on the modelled enhancement (`transport_error`) | Implemented |
-| Modelled enhancement from a flux field (`Footprint.enhancement`) | Implemented |
+| Modelled enhancement from a flux field (`foot.stilt.enhancement`) | Implemented |
 | Background from a mole-fraction field at the trajectory endpoints (`background`) | Implemented |
 | Satellite-derived plume background (forward trajectories) | Implemented |
 | Forward runs (positive `n_hours`) for plume and dispersion studies | Implemented; see the plume-background guide |
-| Emission-error propagation to the modelled enhancement | Recipe on `Footprint.enhancement`; correlated case in fips |
+| Emission-error propagation to the modelled enhancement | Recipe on `foot.stilt.enhancement`; correlated case in fips |
 | Inventory readers | Out of scope: a flux field is an xarray array |
 
 ## Use of AI coding agents

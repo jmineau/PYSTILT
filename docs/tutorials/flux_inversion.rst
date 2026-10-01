@@ -27,7 +27,7 @@ A few point sources
 -------------------
 
 For a handful of known sources, draw a small window around each one with
-:meth:`stilt.Mesh.from_windows`. :meth:`stilt.Footprint.aggregate` adds up
+:meth:`stilt.Mesh.from_windows`. ``foot.stilt.aggregate`` adds up
 the footprint inside each window. Multiply each sum by that source's flux and
 add them up.
 
@@ -56,10 +56,13 @@ add them up.
 
    rows = []
    for foot in footprints.values():
-       whole_run = pd.IntervalIndex.from_tuples([foot.time_range], closed="left")
-       in_window = foot.aggregate(windows, whole_run).iloc[:, 0]  # one value per source
+       hours = foot.indexes["time"]
+       whole_run = pd.IntervalIndex.from_tuples(
+           [(hours.min(), hours.max() + pd.Timedelta("1h"))], closed="left"
+       )
+       in_window = foot.stilt.aggregate(windows, whole_run).iloc[:, 0]  # one value per source
        rows.append(
-           {"time": foot.receptor.time, "enhancement_ppm": (in_window * flux).sum()}
+           {"time": foot.stilt.receptor.time, "enhancement_ppm": (in_window * flux).sum()}
        )
 
    modeled = pd.DataFrame(rows).set_index("time").sort_index()
@@ -71,7 +74,7 @@ inside it.
 A gridded inventory
 -------------------
 
-For an emissions map, :meth:`stilt.Footprint.enhancement` does the
+For an emissions map, ``foot.stilt.enhancement`` does the
 multiplication. The inventory is an :class:`xarray.DataArray` in
 µmol m⁻² s⁻¹ with ``lat`` and ``lon`` dimensions. Each footprint cell takes
 the flux of the inventory cell it falls in. If the inventory has a ``time``
@@ -85,8 +88,8 @@ dimension, each footprint hour uses the nearest inventory time.
 
    rows = []
    for foot in footprints.values():
-       enhancement = float(foot.enhancement(inventory).sum())   # sum over hours
-       rows.append({"time": foot.receptor.time, "enhancement_ppm": enhancement})
+       enhancement = float(foot.stilt.enhancement(inventory).sum())   # sum over hours
+       rows.append({"time": foot.stilt.receptor.time, "enhancement_ppm": enhancement})
 
    modeled = pd.DataFrame(rows).set_index("time").sort_index()
 

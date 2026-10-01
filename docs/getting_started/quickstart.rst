@@ -128,27 +128,29 @@ the variant name, and plot its footprint:
    sim = project.simulation(receptor.id, "hrrr")
    foot = sim.footprint
 
-   foot.plot.map()
+   foot.stilt.plot.map()
 
 You should see the most influence near the receptor, trailing off in the
 direction the air came from. The map shows the footprint summed over all 24
 hours, on a log scale. Cells with more color influenced the measurement more.
 
-The footprint's data is an :class:`xarray.DataArray` with dimensions
-``(time, lat, lon)`` and units of ppm per (µmol m⁻² s⁻¹):
+The footprint is an :class:`xarray.DataArray` with dimensions
+``(time, lat, lon)`` and units of ppm per (µmol m⁻² s⁻¹), one map per
+hour. Sum it over time with xarray:
 
 .. code-block:: python
 
-   foot.data                     # hourly footprint
-   foot.integrate_over_time()    # summed over time
+   foot.sum("time")
 
-The particle paths are a :class:`pandas.DataFrame`, one row per particle per
+The particles are a :class:`pandas.DataFrame`, one row per particle per
 time step:
 
 .. code-block:: python
 
-   sim.particles.data.head()
-   sim.particles.plot.map()
+   sim.particles.head()
+   sim.particles.stilt.plot.map()
+
+PYSTILT's own methods on both are under ``.stilt``.
 
 What PYSTILT wrote
 ------------------

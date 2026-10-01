@@ -13,7 +13,7 @@ from .conftest import integration
 
 def _footprint_total(footprint) -> float:
     """Return the total scalar sensitivity in one footprint field."""
-    return float(np.asarray(footprint.data.sum()))
+    return float(np.asarray(footprint.sum()))
 
 
 @integration
@@ -52,10 +52,10 @@ def test_declarative_transform_config_changes_real_footprint(
     [baseline] = project.load_footprints(sims[sims.variant == "hrrr"]).values()
     [lifetime] = project.load_footprints(sims[sims.variant == "lifetime"]).values()
 
-    assert len(lifetime.config.transforms) == 1
+    assert len(lifetime.stilt.config.transforms) == 1
 
-    baseline_values = baseline.data.to_numpy()
-    lifetime_values = lifetime.data.to_numpy()
+    baseline_values = baseline.to_numpy()
+    lifetime_values = lifetime.to_numpy()
 
     assert baseline_values.shape == lifetime_values.shape
     assert np.all(lifetime_values <= baseline_values + 1e-12)

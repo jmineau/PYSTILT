@@ -15,7 +15,6 @@ def test_documented_top_level_symbols_are_importable():
         "Receptor",
         "Bounds",
         "ColumnReceptor",
-        "Footprint",
         "FootprintConfig",
         "Grid",
         "MetConfig",
@@ -28,8 +27,11 @@ def test_documented_top_level_symbols_are_importable():
         "RuntimeSettings",
         "SimID",
         "Simulation",
-        "Trajectories",
         "read_receptors",
+        "read_particles",
+        "particles_metadata",
+        "write_particles",
+        "read_footprint",
     ]
     for name in expected:
         assert hasattr(stilt, name), name
@@ -38,4 +40,10 @@ def test_documented_top_level_symbols_are_importable():
 def test_the_old_names_are_gone():
     """Model and its collections were replaced by Project (#99); no aliases in an alpha."""
     for name in ("Model", "ModelConfig"):
+        assert not hasattr(stilt, name), name
+
+
+def test_results_are_plain_data():
+    """Particles and footprints are a DataFrame and a DataArray, not wrapper classes (#107)."""
+    for name in ("Trajectories", "Footprint"):
         assert not hasattr(stilt, name), name

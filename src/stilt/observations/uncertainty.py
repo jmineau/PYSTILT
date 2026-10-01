@@ -285,11 +285,11 @@ def transport_error(
     Parameters
     ----------
     particles : pandas.DataFrame
-        Unperturbed particle table of a receptor (``sim.particles.data``).
+        Unperturbed particle table of a receptor (``sim.particles``).
     error_particles : pandas.DataFrame or sequence of pandas.DataFrame
         Particle table of a wind-error variant of the same receptor, or a
         list of them for a variant with ``realizations: N``, such as
-        ``[t.data for t in sims.sel(variant="hrrr-err").particles.load().values()]``.
+        ``list(project.load_particles(ensemble).values())``.
     flux : xarray.DataArray
         Surface flux field (see :mod:`stilt.flux`).
     transforms : sequence, optional

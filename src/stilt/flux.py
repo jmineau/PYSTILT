@@ -210,7 +210,7 @@ def particle_enhancement(particles: pd.DataFrame, flux: xr.DataArray) -> pd.Seri
     Return each particle's enhancement, ``foot`` times flux summed along its trajectory.
 
     The mean over particles, after any weighting, is the modelled
-    enhancement at the receptor. Unlike :meth:`stilt.Footprint.enhancement`,
+    enhancement at the receptor. Unlike ``foot.stilt.enhancement``,
     the flux is taken at each particle position, with no gridding or
     smoothing.
 

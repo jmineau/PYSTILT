@@ -14,13 +14,15 @@ from stilt.config import FootprintConfig, Grid
 from stilt.config.spatial import _grid_cell_starts
 from stilt.exceptions import EmptyFootprint
 from stilt.footprint import (
-    Footprint,
     _compute_kernel_bandwidths,
+    _describe,
     _interpolate_early_timesteps,
     _interpolation_times,
     _make_gauss_kernel,
     _project_particles_to_crs,
     _wrap_antimeridian_longitudes,
+    calculate,
+    read_footprint,
 )
 from stilt.geometry import Mesh, Zones
 from stilt.particles import calc_plume_dilution
@@ -30,7 +32,7 @@ from stilt.transforms import AveragingKernel
 
 def _make_footprint(
     xres: float = 0.1, yres: float = 0.1, n_times: int = 1
-) -> Footprint:
+) -> xr.DataArray:
     receptor_time = dt.datetime(2023, 1, 1, 12)
     receptor = PointReceptor(
         time=receptor_time,
@@ -58,7 +60,7 @@ def _make_footprint(
         coords={"time": times, "lat": lats, "lon": lons},
         attrs={"units": "ppm (umol-1 m2 s)"},
     )
-    return Footprint(receptor=receptor, config=config, data=data, name="slv")
+    return _describe(data, receptor, config, "slv")
 
 
 def test_grid_cell_starts_use_complete_half_open_cells():
@@ -111,10 +113,10 @@ def test_make_gauss_kernel_sigma_zero():
 def test_aggregate_returns_dataframe():
     foot = _make_footprint(n_times=1)
     t0 = pd.Timestamp("2023-01-01 12:00")
-    foot.data.loc[t0, 39.05, -113.95] = 1e-4
+    foot.loc[t0, 39.05, -113.95] = 1e-4
 
     bins = pd.interval_range(start=t0, periods=1, freq="1h", closed="left")
-    result = foot.aggregate(target=_one_cell(-113.95, 39.05, 0.1), time_bins=bins)
+    result = foot.stilt.aggregate(target=_one_cell(-113.95, 39.05, 0.1), time_bins=bins)
 
     assert isinstance(result, pd.DataFrame)
     assert result.iloc[0, 0] == pytest.approx(1e-4)
@@ -126,12 +128,12 @@ def test_aggregate_multiple_bins():
     t1 = t0 + pd.Timedelta(hours=1)
     t2 = t0 + pd.Timedelta(hours=2)
 
-    foot.data.loc[t0, 39.05, -113.95] = 1e-4
-    foot.data.loc[t1, 39.05, -113.95] = 2e-4
-    foot.data.loc[t2, 39.05, -113.95] = 3e-4
+    foot.loc[t0, 39.05, -113.95] = 1e-4
+    foot.loc[t1, 39.05, -113.95] = 2e-4
+    foot.loc[t2, 39.05, -113.95] = 3e-4
 
     bins = pd.interval_range(start=t0, periods=3, freq="1h", closed="left")
-    result = foot.aggregate(target=_one_cell(-113.95, 39.05, 0.1), time_bins=bins)
+    result = foot.stilt.aggregate(target=_one_cell(-113.95, 39.05, 0.1), time_bins=bins)
 
     assert list(result.columns) == list(bins.left)
     assert result.iloc[0, 0] == pytest.approx(1e-4)
@@ -147,7 +149,7 @@ def test_aggregate_rejects_bins_not_closed_on_the_left(closed):
     bins = pd.interval_range(start=t0, periods=2, freq="1h", closed=closed)
 
     with pytest.raises(ValueError, match="closed on the left"):
-        foot.aggregate(target=_one_cell(-113.95, 39.05, 0.1), time_bins=bins)
+        foot.stilt.aggregate(target=_one_cell(-113.95, 39.05, 0.1), time_bins=bins)
 
 
 def test_netcdf_roundtrip_preserves_name(tmp_path):
@@ -155,17 +157,17 @@ def test_netcdf_roundtrip_preserves_name(tmp_path):
     sim_dir = tmp_path / "202301011200_-111.85_40.77_5"
     sim_dir.mkdir()
     path = sim_dir / "202301011200_-111.85_40.77_5_slv_foot.nc"
-    foot.to_netcdf(path)
+    foot.stilt.to_netcdf(path)
 
-    loaded = Footprint.from_netcdf(path)
-    assert loaded.name == "slv"
-    assert loaded.grid.xres == pytest.approx(0.1)
+    loaded = read_footprint(path)
+    assert loaded.stilt.name == "slv"
+    assert loaded.stilt.grid.xres == pytest.approx(0.1)
 
 
 def test_from_netcdf_forwards_chunks_to_xarray(tmp_path, monkeypatch):
     foot = _make_footprint(n_times=1)
     path = tmp_path / "chunked_foot.nc"
-    foot.to_netcdf(path)
+    foot.stilt.to_netcdf(path)
     seen_kwargs = {}
     real_open_dataset = xr.open_dataset
 
@@ -175,9 +177,9 @@ def test_from_netcdf_forwards_chunks_to_xarray(tmp_path, monkeypatch):
 
     monkeypatch.setattr("stilt.footprint.xr.open_dataset", fake_open_dataset)
 
-    loaded = Footprint.from_netcdf(path, chunks={"time": 1})
+    loaded = read_footprint(path, chunks={"time": 1})
 
-    assert loaded.name == "slv"
+    assert loaded.stilt.name == "slv"
     assert seen_kwargs["chunks"] == {"time": 1}
 
 
@@ -185,7 +187,7 @@ def test_netcdf_writes_cf_grid_mapping_and_coordinates(tmp_path):
     foot = _make_footprint(n_times=1)
     path = tmp_path / "cf_foot.nc"
 
-    foot.to_netcdf(path)
+    foot.stilt.to_netcdf(path)
 
     ds = xr.open_dataset(path)
     try:
@@ -198,7 +200,9 @@ def test_netcdf_writes_cf_grid_mapping_and_coordinates(tmp_path):
         assert ds["lat"].attrs["standard_name"] == "latitude"
         assert ds["lat"].attrs["units"] == "degrees_north"
         assert ds["time"].attrs["standard_name"] == "time"
-        assert "receptor" in ds.attrs
+        assert "stilt_receptor" in ds["foot"].attrs
+        assert "stilt_footprint" in ds["foot"].attrs
+        assert ds["receptor"].item() == "202301011200_-111.85_40.77_5"
         assert "receptor_time" not in ds.coords
         assert "receptor_longitude" not in ds.coords
         assert "receptor_latitude" not in ds.coords
@@ -213,31 +217,32 @@ def test_netcdf_roundtrip_prefers_stored_name_attr(tmp_path):
     sim_dir.mkdir()
     original = sim_dir / "202301011200_-111.85_40.77_5_slv_foot.nc"
     renamed = sim_dir / "202301011200_-111.85_40.77_5_wrong_foot.nc"
-    foot.to_netcdf(original)
+    foot.stilt.to_netcdf(original)
 
     ds = xr.open_dataset(original)
     ds.load()
     ds.close()
-    ds.attrs["name"] = "stored"
+    ds["foot"].attrs["stilt_name"] = "stored"
     ds.to_netcdf(renamed)
 
-    loaded = Footprint.from_netcdf(renamed)
-    assert loaded.name == "stored"
+    loaded = read_footprint(renamed)
+    assert loaded.stilt.name == "stored"
 
 
 def test_netcdf_roundtrip_preserves_transforms(tmp_path):
     foot = _make_footprint(n_times=1)
     kernel = AveragingKernel(levels=[0.0, 1000.0], values=[0.1, 0.9], coordinate="xhgt")
-    foot.config = FootprintConfig(grid=foot.grid, transforms=[kernel])
+    config = FootprintConfig(grid=foot.stilt.grid, transforms=[kernel])
+    foot = _describe(foot, foot.stilt.receptor, config, "slv")
     sim_dir = tmp_path / "202301011200_-111.85_40.77_5"
     sim_dir.mkdir()
     path = sim_dir / "202301011200_-111.85_40.77_5_slv_foot.nc"
-    foot.to_netcdf(path)
+    foot.stilt.to_netcdf(path)
 
-    loaded = Footprint.from_netcdf(path)
+    loaded = read_footprint(path)
 
-    assert len(loaded.config.transforms) == 1
-    transform = loaded.config.transforms[0]
+    assert len(loaded.stilt.config.transforms) == 1
+    transform = loaded.stilt.config.transforms[0]
     assert isinstance(transform, AveragingKernel)
     assert transform == kernel
 
@@ -247,48 +252,52 @@ def test_netcdf_with_unimportable_transform_still_loads(tmp_path):
     # still open on a machine without that package; the transform is kept as
     # its settings mapping.
     foot = _make_footprint(n_times=1)
-    foot.config = FootprintConfig(
-        grid=foot.grid,
+    config = FootprintConfig(
+        grid=foot.stilt.grid,
         transforms=[AveragingKernel(levels=[0.0, 1000.0], values=[0.1, 0.9])],
     )
+    foot = _describe(foot, foot.stilt.receptor, config, "slv")
     sim_dir = tmp_path / "202301011200_-111.85_40.77_5"
     sim_dir.mkdir()
     original = sim_dir / "202301011200_-111.85_40.77_5_slv_foot.nc"
     patched = sim_dir / "202301011200_-111.85_40.77_5_user_foot.nc"
-    foot.to_netcdf(original)
+    foot.stilt.to_netcdf(original)
 
     missing_kind = "no_such_pkg_for_stilt_tests.transforms.MyKernel"
     ds = xr.open_dataset(original)
     ds.load()
     ds.close()
-    ds.attrs["transforms"] = json.dumps(
-        [{"kind": missing_kind, "levels": [0.0, 1000.0], "values": [0.1, 0.9]}]
-    )
+    settings = json.loads(ds["foot"].attrs["stilt_footprint"])
+    settings["transforms"] = [
+        {"kind": missing_kind, "levels": [0.0, 1000.0], "values": [0.1, 0.9]}
+    ]
+    ds["foot"].attrs["stilt_footprint"] = json.dumps(settings)
     ds.to_netcdf(patched)
 
     recorded = {"kind": missing_kind, "levels": [0.0, 1000.0], "values": [0.1, 0.9]}
+    loaded = read_footprint(patched)
     with pytest.warns(UserWarning, match="could not be imported"):
-        loaded = Footprint.from_netcdf(patched)
-    assert loaded.config.transforms == [recorded]
+        assert loaded.stilt.config.transforms == [recorded]
 
     # The mapping survives another write/read unchanged.
     rewritten = sim_dir / "202301011200_-111.85_40.77_5_again_foot.nc"
-    loaded.to_netcdf(rewritten)
     with pytest.warns(UserWarning):
-        again = Footprint.from_netcdf(rewritten)
-    assert again.config.transforms == [recorded]
+        loaded.stilt.to_netcdf(rewritten)
+    again = read_footprint(rewritten)
+    with pytest.warns(UserWarning):
+        assert again.stilt.config.transforms == [recorded]
 
 
 def test_netcdf_roundtrip_no_name(tmp_path):
     """Footprint with no name (unnamed) roundtrips as empty string."""
     foot = _make_footprint(n_times=1)
-    foot.name = ""
+    foot.attrs["stilt_name"] = ""
     sim_dir = tmp_path / "202301011200_-111.85_40.77_5"
     sim_dir.mkdir()
     path = sim_dir / "202301011200_-111.85_40.77_5_foot.nc"
-    foot.to_netcdf(path)
-    loaded = Footprint.from_netcdf(path)
-    assert loaded.name == ""
+    foot.stilt.to_netcdf(path)
+    loaded = read_footprint(path)
+    assert loaded.stilt.name == ""
 
 
 def test_netcdf_roundtrip_with_timezone_aware_time(tmp_path):
@@ -312,54 +321,20 @@ def test_netcdf_roundtrip_with_timezone_aware_time(tmp_path):
         },
         attrs={"units": "ppm (umol-1 m2 s)"},
     )
-    foot = Footprint(receptor=receptor, config=config, data=data, name="slv")
+    foot = _describe(data, receptor, config, "slv")
 
     path = tmp_path / "timezone_aware_foot.nc"
-    foot.to_netcdf(path)
+    foot.stilt.to_netcdf(path)
 
-    loaded = Footprint.from_netcdf(path)
-    assert tuple(loaded.data.dims) == ("time", "lat", "lon")
-    assert loaded.data.shape == (1, 2, 2)
-    assert float(loaded.data.sum()) == pytest.approx(4.0)
+    loaded = read_footprint(path)
+    assert tuple(loaded.dims) == ("time", "lat", "lon")
+    assert loaded.shape == (1, 2, 2)
+    assert float(loaded.sum()) == pytest.approx(4.0)
     # Time coord and receptor.time must come back as naive UTC.
-    assert loaded.receptor.time.tzinfo is None
-    loaded_time = pd.Timestamp(loaded.data.time.values[0])
+    assert loaded.stilt.receptor.time.tzinfo is None
+    loaded_time = pd.Timestamp(loaded.time.values[0])
     assert loaded_time.tzinfo is None
     assert loaded_time == pd.Timestamp("2023-01-01 12:00:00")
-
-
-def test_time_range_single_timestep():
-    foot = _make_footprint(n_times=1)
-    start, stop = foot.time_range
-    assert stop == start
-    assert isinstance(start, dt.datetime)
-
-
-def test_time_range_multiple_timesteps():
-    foot = _make_footprint(n_times=3)
-    start, stop = foot.time_range
-    assert stop > start
-
-
-def test_integrate_over_time_no_bounds():
-    foot = _make_footprint(n_times=3)
-    t0 = pd.Timestamp("2023-01-01 12:00")
-    foot.data.loc[t0, 39.05, -113.95] = 1e-4
-    result = foot.integrate_over_time()
-    assert result.shape == (len(foot.data.lat), len(foot.data.lon))
-    assert float(result.sel(lat=39.05, lon=-113.95)) == pytest.approx(1e-4)
-
-
-def test_integrate_over_time_with_bounds():
-    foot = _make_footprint(n_times=3)
-    t0 = pd.Timestamp("2023-01-01 12:00")
-    t1 = t0 + pd.Timedelta(hours=1)
-    t2 = t0 + pd.Timedelta(hours=2)
-    foot.data.loc[t0, 39.05, -113.95] = 1e-4
-    foot.data.loc[t2, 39.05, -113.95] = 3e-4
-    # Restrict to [t0, t1] - only t0 included
-    result = foot.integrate_over_time(start=t0.to_pydatetime(), end=t1.to_pydatetime())
-    assert float(result.sel(lat=39.05, lon=-113.95)) == pytest.approx(1e-4)
 
 
 def test_aggregate_zero_values_in_domain():
@@ -368,7 +343,7 @@ def test_aggregate_zero_values_in_domain():
     t0 = pd.Timestamp("2023-01-01 12:00")
     bins = pd.interval_range(start=t0, periods=1, freq="1h", closed="left")
     # -113.95 and 39.05 are valid cell centers in the footprint
-    result = foot.aggregate(target=_one_cell(-113.95, 39.05, 0.1), time_bins=bins)
+    result = foot.stilt.aggregate(target=_one_cell(-113.95, 39.05, 0.1), time_bins=bins)
     assert isinstance(result, pd.DataFrame)
     assert result.shape == (1, 1)
 
@@ -386,7 +361,7 @@ def _foot_on_grid(
     xres: float,
     yres: float,
     t0: pd.Timestamp | None = None,
-) -> Footprint:
+) -> xr.DataArray:
     """Build a Footprint from explicit lon/lat centers and a value array."""
     lons = np.asarray(lons, dtype=float)
     lats = np.asarray(lats, dtype=float)
@@ -417,7 +392,7 @@ def _foot_on_grid(
         coords={"time": times, "lat": lats, "lon": lons},
         attrs={"units": "ppm (umol-1 m2 s)"},
     )
-    return Footprint(receptor=receptor, config=FootprintConfig(grid=grid), data=data)
+    return _describe(data, receptor, FootprintConfig(grid=grid), "")
 
 
 def _block_centers(n_blocks: int, res: float, origin: float = 0.0) -> np.ndarray:
@@ -455,7 +430,9 @@ def test_aggregate_conserves_integral():
 
     t0 = pd.Timestamp("2023-01-01 12:00")
     bins = pd.interval_range(start=t0, periods=1, freq="1h", closed="left")
-    result = foot.aggregate(_grid_over(coarse, coarse, coarse_res), time_bins=bins)
+    result = foot.stilt.aggregate(
+        _grid_over(coarse, coarse, coarse_res), time_bins=bins
+    )
 
     assert result.to_numpy() == pytest.approx(v * 9)  # 3x3 native pixels per cell
     assert result.to_numpy().sum() == pytest.approx(v * 36)  # full native integral
@@ -471,7 +448,9 @@ def test_aggregate_block_sum_exact():
     coarse = _block_centers(2, coarse_res)
     t0 = pd.Timestamp("2023-01-01 12:00")
     bins = pd.interval_range(start=t0, periods=1, freq="1h", closed="left")
-    result = foot.aggregate(_grid_over(coarse, coarse, coarse_res), time_bins=bins)
+    result = foot.stilt.aggregate(
+        _grid_over(coarse, coarse, coarse_res), time_bins=bins
+    )
 
     half = coarse_res / 2
     for (cx, cy), value in zip(result.index, result.to_numpy().ravel(), strict=True):
@@ -492,7 +471,7 @@ def test_aggregate_drops_out_of_domain():
     # Single coarse cell covering only the lower-left 2x2 native pixels.
     t0 = pd.Timestamp("2023-01-01 12:00")
     bins = pd.interval_range(start=t0, periods=1, freq="1h", closed="left")
-    result = foot.aggregate(_one_cell(0.01, 0.01, 0.02), time_bins=bins)
+    result = foot.stilt.aggregate(_one_cell(0.01, 0.01, 0.02), time_bins=bins)
 
     # 4 in-domain pixels of value 1; the other 12 exterior pixels are dropped.
     assert result.to_numpy().sum() == pytest.approx(4.0)
@@ -508,7 +487,7 @@ def test_aggregate_matched_resolution_identity():
 
     t0 = pd.Timestamp("2023-01-01 12:00")
     bins = pd.interval_range(start=t0, periods=1, freq="1h", closed="left")
-    result = foot.aggregate(_grid_over(lons, lats, res), time_bins=bins)
+    result = foot.stilt.aggregate(_grid_over(lons, lats, res), time_bins=bins)
 
     for (cx, cy), value in zip(result.index, result.to_numpy().ravel(), strict=True):
         j = int(np.argmin(np.abs(lons - cx)))
@@ -529,9 +508,11 @@ def test_aggregate_total_invariance_to_target_resolution():
 
     coarse = _block_centers(2, coarse_res)
     native_grid = _grid_over(fine, fine, native_res)
-    total_native = foot.aggregate(native_grid, bins).to_numpy().sum()
+    total_native = foot.stilt.aggregate(native_grid, bins).to_numpy().sum()
     total_coarse = (
-        foot.aggregate(_grid_over(coarse, coarse, coarse_res), bins).to_numpy().sum()
+        foot.stilt.aggregate(_grid_over(coarse, coarse, coarse_res), bins)
+        .to_numpy()
+        .sum()
     )
 
     assert total_native == pytest.approx(vals.sum())
@@ -554,7 +535,7 @@ def test_aggregate_time_binning():
 
     t0 = pd.Timestamp("2023-01-01 12:00")
     bins = pd.interval_range(start=t0, periods=3, freq="1h", closed="left")
-    result = foot.aggregate(_grid_over(lons, lats, res), time_bins=bins)
+    result = foot.stilt.aggregate(_grid_over(lons, lats, res), time_bins=bins)
 
     assert result.to_numpy().sum() == pytest.approx(vals.sum())
 
@@ -573,7 +554,7 @@ def test_aggregate_misaligned_conserves_and_splits():
     t0 = pd.Timestamp("2023-01-01 12:00")
     bins = pd.interval_range(start=t0, periods=1, freq="1h", closed="left")
 
-    result = foot.aggregate(_grid_over(coarse, coarse, coarse_res), bins)
+    result = foot.stilt.aggregate(_grid_over(coarse, coarse, coarse_res), bins)
     # full coverage with split native cells -> all native mass retained
     assert result.to_numpy().sum() == pytest.approx(vals.sum())
 
@@ -590,7 +571,7 @@ def test_aggregate_splits_native_cell_by_area():
     # cells by 0.75 and the upper/right by 0.25 on each axis.
     t0 = pd.Timestamp("2023-01-01 12:00")
     bins = pd.interval_range(start=t0, periods=1, freq="1h", closed="left")
-    result = foot.aggregate(_one_cell(0.0075, 0.0075, res), bins)
+    result = foot.stilt.aggregate(_one_cell(0.0075, 0.0075, res), bins)
 
     fx = fy = np.array([0.75, 0.25])
     expected = float((fy[:, None] * fx[None, :] * vals).sum())  # 1.75
@@ -609,7 +590,7 @@ def test_aggregate_finer_target_downscaling_conserves():
     bins = pd.interval_range(start=t0, periods=1, freq="1h", closed="left")
 
     fine_grid = _grid_over(fine, fine, fine_res)
-    result = foot.aggregate(fine_grid, bins)
+    result = foot.stilt.aggregate(fine_grid, bins)
     assert result.to_numpy().sum() == pytest.approx(vals.sum())
     # each native cell spreads uniformly over its k*k fine sub-cells
     expected_corner = vals[0, 0] / (k * k)
@@ -637,11 +618,11 @@ def test_aggregate_onto_own_grid_is_identity():
     """Aggregating a footprint onto its own grid is the identity."""
     foot = _make_footprint(n_times=1)
     t0 = pd.Timestamp("2023-01-01 12:00")
-    foot.data.loc[t0, 39.05, -113.95] = 1e-4
-    foot.data.loc[t0, 39.15, -113.85] = 3e-4
+    foot.loc[t0, 39.05, -113.95] = 1e-4
+    foot.loc[t0, 39.15, -113.85] = 3e-4
 
     bins = pd.interval_range(start=t0, periods=1, freq="1h", closed="left")
-    result = foot.aggregate(foot.config.grid, bins)
+    result = foot.stilt.aggregate(foot.stilt.config.grid, bins)
 
     # identity round-trip: the two seeded native cells reappear unchanged.
     assert result.shape == (4, 1)
@@ -652,7 +633,7 @@ def test_aggregate_onto_own_grid_is_identity():
 
 
 # ---------------------------------------------------------------------------
-# Footprint.calculate()
+# calculate()
 # ---------------------------------------------------------------------------
 
 
@@ -681,20 +662,16 @@ def _foot_config(xres=0.1, yres=0.1):
 
 def test_calculate_returns_footprint_instance(point_receptor):
     particles = _particles_in_domain()
-    foot = Footprint.calculate(
-        particles, receptor=point_receptor, config=_foot_config()
-    )
+    foot = calculate(particles, receptor=point_receptor, config=_foot_config())
     assert foot is not None
-    assert isinstance(foot, Footprint)
+    assert isinstance(foot, xr.DataArray)
 
 
 def test_calculate_dims_are_time_lat_lon(point_receptor):
     particles = _particles_in_domain()
-    foot = Footprint.calculate(
-        particles, receptor=point_receptor, config=_foot_config()
-    )
+    foot = calculate(particles, receptor=point_receptor, config=_foot_config())
     assert foot is not None
-    assert tuple(foot.data.dims) == ("time", "lat", "lon")
+    assert tuple(foot.dims) == ("time", "lat", "lon")
 
 
 def test_calculate_raises_when_particles_outside_domain(
@@ -706,24 +683,24 @@ def test_calculate_raises_when_particles_outside_domain(
     particles["lati"] = 0.0
     config = _foot_config()
     with pytest.raises(EmptyFootprint) as info:
-        Footprint.calculate(particles, receptor=point_receptor, config=config)
+        calculate(particles, receptor=point_receptor, config=config)
     assert info.value.reason == "outside_domain"
 
 
 def test_calculate_raises_when_there_are_no_particles(point_receptor):
     particles = _particles_in_domain().iloc[0:0]
     with pytest.raises(EmptyFootprint) as info:
-        Footprint.calculate(particles, receptor=point_receptor, config=_foot_config())
+        calculate(particles, receptor=point_receptor, config=_foot_config())
     assert info.value.reason == "no_particles"
 
 
 def test_calculate_assigns_name(point_receptor):
     particles = _particles_in_domain()
-    foot = Footprint.calculate(
+    foot = calculate(
         particles, receptor=point_receptor, config=_foot_config(), name="test"
     )
     assert foot is not None
-    assert foot.name == "test"
+    assert foot.stilt.name == "test"
 
 
 def test_calculate_time_integrate_collapses_to_single_timestep(point_receptor):
@@ -732,19 +709,17 @@ def test_calculate_time_integrate_collapses_to_single_timestep(point_receptor):
         time_integrate=True,
     )
     particles = _particles_in_domain()
-    foot = Footprint.calculate(particles, receptor=point_receptor, config=config)
+    foot = calculate(particles, receptor=point_receptor, config=config)
     assert foot is not None
-    assert len(foot.data.time) == 1
+    assert len(foot.time) == 1
 
 
 def test_calculate_nonnegative_foot_values(point_receptor):
     """Footprint values should be non-negative."""
     particles = _particles_in_domain()
-    foot = Footprint.calculate(
-        particles, receptor=point_receptor, config=_foot_config()
-    )
+    foot = calculate(particles, receptor=point_receptor, config=_foot_config())
     assert foot is not None
-    assert float(foot.data.values.min()) >= 0.0
+    assert float(foot.values.min()) >= 0.0
 
 
 def test_calculate_smooth_factor_zero(point_receptor):
@@ -754,7 +729,7 @@ def test_calculate_smooth_factor_zero(point_receptor):
         smooth_factor=0.0,
     )
     particles = _particles_in_domain()
-    foot = Footprint.calculate(particles, receptor=point_receptor, config=config)
+    foot = calculate(particles, receptor=point_receptor, config=config)
     assert foot is not None
 
 
@@ -772,11 +747,11 @@ def test_calculate_irregular_grid_uses_complete_cells(point_receptor):
     )
     particles = _particles_in_domain()
 
-    foot = Footprint.calculate(particles, receptor=point_receptor, config=config)
+    foot = calculate(particles, receptor=point_receptor, config=config)
 
-    np.testing.assert_allclose(foot.data.lon.values, [-113.85, -113.55, -113.25])
-    np.testing.assert_allclose(foot.data.lat.values, [39.2, 39.6])
-    assert foot.data.shape == (2, 2, 3)
+    np.testing.assert_allclose(foot.lon.values, [-113.85, -113.55, -113.25])
+    np.testing.assert_allclose(foot.lat.values, [39.2, 39.6])
+    assert foot.shape == (2, 2, 3)
 
 
 def test_calculate_non_square_resolution_is_finite(point_receptor):
@@ -792,20 +767,20 @@ def test_calculate_non_square_resolution_is_finite(point_receptor):
     )
     particles = _particles_in_domain()
 
-    foot = Footprint.calculate(particles, receptor=point_receptor, config=config)
+    foot = calculate(particles, receptor=point_receptor, config=config)
 
-    assert foot.data.sizes["lon"] == 100
-    assert foot.data.sizes["lat"] == 20
-    assert np.isfinite(foot.data.values).all()
-    assert float(foot.data.values.min()) >= 0.0
+    assert foot.sizes["lon"] == 100
+    assert foot.sizes["lat"] == 20
+    assert np.isfinite(foot.values).all()
+    assert float(foot.values.min()) >= 0.0
 
 
 def test_calculate_grid_property(point_receptor):
     particles = _particles_in_domain()
     config = _foot_config()
-    foot = Footprint.calculate(particles, receptor=point_receptor, config=config)
+    foot = calculate(particles, receptor=point_receptor, config=config)
     assert foot is not None
-    assert foot.grid.xres == pytest.approx(0.1)
+    assert foot.stilt.grid.xres == pytest.approx(0.1)
 
 
 def test_make_gauss_kernel_normalized():
@@ -950,15 +925,15 @@ def test_calculate_linearity_in_foot_values(point_receptor):
     particles = _interior_particles()
     config = _interior_config(smooth_factor=1.0)
 
-    foot_1x = Footprint.calculate(particles, receptor=point_receptor, config=config)
+    foot_1x = calculate(particles, receptor=point_receptor, config=config)
 
     particles_2x = particles.copy()
     particles_2x["foot"] = particles_2x["foot"] * 2.0
-    foot_2x = Footprint.calculate(particles_2x, receptor=point_receptor, config=config)
+    foot_2x = calculate(particles_2x, receptor=point_receptor, config=config)
 
     np.testing.assert_allclose(
-        foot_2x.data.values,
-        foot_1x.data.values * 2.0,
+        foot_2x.values,
+        foot_1x.values * 2.0,
         rtol=1e-10,
         err_msg="Footprint must scale linearly with particle foot values",
     )
@@ -977,10 +952,10 @@ def test_calculate_total_equals_normalized_input_sum_at_zero_smooth(point_recept
     n = particles["indx"].nunique()
     config = _interior_config(smooth_factor=0.0)
 
-    foot = Footprint.calculate(particles, receptor=point_receptor, config=config)
+    foot = calculate(particles, receptor=point_receptor, config=config)
 
     expected = float(particles["foot"].sum()) / n
-    assert float(foot.data.values.sum()) == pytest.approx(expected, rel=1e-10)
+    assert float(foot.values.sum()) == pytest.approx(expected, rel=1e-10)
 
 
 def test_calculate_gaussian_smoothing_preserves_total_sensitivity(point_receptor):
@@ -996,11 +971,11 @@ def test_calculate_gaussian_smoothing_preserves_total_sensitivity(point_receptor
     config_0 = _interior_config(smooth_factor=0.0)
     config_s = _interior_config(smooth_factor=1.0)
 
-    foot_0 = Footprint.calculate(particles, receptor=point_receptor, config=config_0)
-    foot_s = Footprint.calculate(particles, receptor=point_receptor, config=config_s)
+    foot_0 = calculate(particles, receptor=point_receptor, config=config_0)
+    foot_s = calculate(particles, receptor=point_receptor, config=config_s)
 
-    total_0 = float(foot_0.data.values.sum())
-    total_s = float(foot_s.data.values.sum())
+    total_0 = float(foot_0.values.sum())
+    total_s = float(foot_s.values.sum())
 
     assert total_s == pytest.approx(total_0, rel=1e-5), (
         f"Smoothing changed total footprint: {total_0:.6g} → {total_s:.6g} "
@@ -1018,12 +993,12 @@ def test_calculate_reproducible(point_receptor):
     particles = _interior_particles()
     config = _interior_config(smooth_factor=1.0)
 
-    foot1 = Footprint.calculate(particles, receptor=point_receptor, config=config)
-    foot2 = Footprint.calculate(particles, receptor=point_receptor, config=config)
+    foot1 = calculate(particles, receptor=point_receptor, config=config)
+    foot2 = calculate(particles, receptor=point_receptor, config=config)
 
     np.testing.assert_array_equal(
-        foot1.data.values,
-        foot2.data.values,
+        foot1.values,
+        foot2.values,
         err_msg="Footprint.calculate must be deterministic — identical inputs must produce identical outputs",
     )
 
@@ -1039,20 +1014,20 @@ def test_calculate_time_integrate_equals_sum_of_time_slices(point_receptor):
     particles = _particles_in_domain()
     grid = Grid(xmin=-114.0, xmax=-113.0, ymin=39.0, ymax=40.0, xres=0.1, yres=0.1)
 
-    foot_ti = Footprint.calculate(
+    foot_ti = calculate(
         particles,
         receptor=point_receptor,
         config=FootprintConfig(grid=grid, time_integrate=True),
     )
-    foot_no = Footprint.calculate(
+    foot_no = calculate(
         particles,
         receptor=point_receptor,
         config=FootprintConfig(grid=grid, time_integrate=False),
     )
 
     np.testing.assert_allclose(
-        foot_ti.data.values.squeeze(),
-        foot_no.data.sum("time").values,
+        foot_ti.values.squeeze(),
+        foot_no.sum("time").values,
         rtol=1e-10,
         err_msg="time_integrate=True must equal the sum over all individual time slices",
     )
@@ -1085,13 +1060,13 @@ def test_calculate_smooth_zero_assigns_exact_cells(point_receptor):
         }
     )
 
-    foot = Footprint.calculate(particles, receptor=point_receptor, config=config)
+    foot = calculate(particles, receptor=point_receptor, config=config)
 
     # total = sum(foot) / n_particles = (n * foot_val) / n = foot_val
-    assert float(foot.data.values.sum()) == pytest.approx(foot_val, rel=1e-10)
+    assert float(foot.values.sum()) == pytest.approx(foot_val, rel=1e-10)
 
     # Exactly one non-zero cell across all time layers
-    nonzero_count = int((foot.data.values > 0).sum())
+    nonzero_count = int((foot.values > 0).sum())
     assert nonzero_count == 1, (
         f"smooth_factor=0: expected exactly 1 non-zero cell, got {nonzero_count}"
     )
@@ -1141,14 +1116,14 @@ def test_concentration_reconstruction_from_known_footprint(point_receptor):
         }
     )
 
-    foot = Footprint.calculate(particles, receptor=point_receptor, config=config)
+    foot = calculate(particles, receptor=point_receptor, config=config)
 
     # Verify the footprint cell values are exactly what the formula predicts.
     expected_fa = n_a * foot_a / n_total  # 1e-4
     expected_fb = n_b * foot_b / n_total  # 1.5e-4
 
-    f_a = float(foot.data.sel(lon=-113.85, lat=39.05, method="nearest").sum())
-    f_b = float(foot.data.sel(lon=-113.35, lat=39.55, method="nearest").sum())
+    f_a = float(foot.sel(lon=-113.85, lat=39.05, method="nearest").sum())
+    f_b = float(foot.sel(lon=-113.35, lat=39.55, method="nearest").sum())
 
     assert f_a == pytest.approx(expected_fa, rel=1e-10), (
         f"Cell A footprint: expected {expected_fa:.3e}, got {f_a:.3e}"
@@ -1159,10 +1134,10 @@ def test_concentration_reconstruction_from_known_footprint(point_receptor):
 
     # Apply flux field (non-zero at the two cluster cells only).
     q_a, q_b = 5.0, 8.0
-    flux = np.zeros_like(foot.data.values)
+    flux = np.zeros_like(foot.values)
 
-    lons = foot.data.lon.values
-    lats = foot.data.lat.values
+    lons = foot.lon.values
+    lats = foot.lat.values
     lon_a = int(np.argmin(np.abs(lons - (-113.85))))
     lat_a = int(np.argmin(np.abs(lats - 39.05)))
     lon_b = int(np.argmin(np.abs(lons - (-113.35))))
@@ -1172,7 +1147,7 @@ def test_concentration_reconstruction_from_known_footprint(point_receptor):
     flux[:, lat_b, lon_b] = q_b
 
     # c = F_A * q_A + F_B * q_B
-    c_computed = float((foot.data.values * flux).sum())
+    c_computed = float((foot.values * flux).sum())
     c_expected = expected_fa * q_a + expected_fb * q_b  # 1.7e-3 ppm
 
     assert c_computed == pytest.approx(c_expected, rel=1e-10), (
@@ -1401,9 +1376,9 @@ def test_aggregate_rejects_targets_that_are_not_geometries():
     t0 = pd.Timestamp("2023-01-01 12:00")
     bins = pd.interval_range(start=t0, periods=1, freq="1h", closed="left")
     with pytest.raises(TypeError, match="Grid, stilt.Mesh, or stilt.Zones"):
-        foot.aggregate(foot.config.grid.to_xarray(), bins)  # type: ignore[arg-type]
+        foot.stilt.aggregate(foot.stilt.config.grid.to_xarray(), bins)  # type: ignore[arg-type]
     with pytest.raises(TypeError, match="Grid, stilt.Mesh, or stilt.Zones"):
-        foot.aggregate([(-113.95, 39.05)], bins)  # type: ignore[arg-type]
+        foot.stilt.aggregate([(-113.95, 39.05)], bins)  # type: ignore[arg-type]
 
 
 def test_aggregate_mesh_window_sums_exactly():
@@ -1417,7 +1392,7 @@ def test_aggregate_mesh_window_sums_exactly():
     mesh = Mesh.from_windows([(0.015, 0.015), (0.025, 0.025)], 0.03, ids=["a", "b"])
     t0 = pd.Timestamp("2023-01-01 12:00")
     bins = pd.interval_range(start=t0, periods=1, freq="1h", closed="left")
-    result = foot.aggregate(mesh, bins)
+    result = foot.stilt.aggregate(mesh, bins)
 
     assert result.index.equals(mesh.index)
     assert result.loc["a"].iloc[0] == pytest.approx(vals[0:3, 0:3].sum())
@@ -1433,19 +1408,19 @@ def test_aggregate_mesh_off_lattice_splits_by_area():
     mesh = Mesh.from_windows([(0.015, 0.015)], 0.02)  # area = 4 native cells
     t0 = pd.Timestamp("2023-01-01 12:00")
     bins = pd.interval_range(start=t0, periods=1, freq="1h", closed="left")
-    result = foot.aggregate(mesh, bins)
+    result = foot.stilt.aggregate(mesh, bins)
     assert result.iloc[0, 0] == pytest.approx(4.0)
 
 
 def test_aggregate_mesh_ids_index_and_time_bins():
     foot = _make_footprint(n_times=2)
     t0 = pd.Timestamp("2023-01-01 12:00")
-    foot.data.loc[t0, 39.05, -113.95] = 1e-4
-    foot.data.loc[t0 + pd.Timedelta(hours=1), 39.15, -113.85] = 3e-4
+    foot.loc[t0, 39.05, -113.95] = 1e-4
+    foot.loc[t0 + pd.Timedelta(hours=1), 39.15, -113.85] = 3e-4
 
     mesh = Mesh.from_windows([(-113.95, 39.05), (-113.85, 39.15)], 0.1, ids=["a", "b"])
     bins = pd.interval_range(start=t0, periods=2, freq="1h", closed="left")
-    result = foot.aggregate(mesh, bins)
+    result = foot.stilt.aggregate(mesh, bins)
 
     assert result.index.tolist() == ["a", "b"]
     assert result.index.name == "cell"
@@ -1466,7 +1441,7 @@ def test_aggregate_zones_merge_grid_cells():
 
     t0 = pd.Timestamp("2023-01-01 12:00")
     bins = pd.interval_range(start=t0, periods=1, freq="1h", closed="left")
-    result = foot.aggregate(part, bins)
+    result = foot.stilt.aggregate(part, bins)
     assert result.index.tolist() == ["W", "E"]
     assert result.loc["W"].iloc[0] == pytest.approx(vals[:, :3].sum())
     assert result.loc["E"].iloc[0] == pytest.approx(vals[:, 3:].sum())
@@ -1479,15 +1454,15 @@ def test_aggregate_warns_when_target_cells_under_resolved():
     bins = pd.interval_range(start=t0, periods=1, freq="1h", closed="left")
     mesh = Mesh.from_windows([(-113.95, 39.05)], 0.05)  # half a native cell
     with pytest.warns(UserWarning, match="under-resolved"):
-        foot.aggregate(mesh, bins)
+        foot.stilt.aggregate(mesh, bins)
 
 
 def test_aggregate_grid_in_other_crs_is_reprojected():
     pytest.importorskip("pyproj")
     foot = _make_footprint()
     t0 = pd.Timestamp("2023-01-01 12:00")
-    foot.data.loc[t0, 39.05, -113.95] = 1.0
-    foot.data.loc[t0, 39.15, -113.85] = 1.0
+    foot.loc[t0, 39.05, -113.95] = 1.0
+    foot.loc[t0, 39.15, -113.85] = 1.0
     bins = pd.interval_range(start=t0, periods=1, freq="1h", closed="left")
     # Coarse 20 km UTM cells covering the seeded footprint cells
     grid = Grid(
@@ -1499,17 +1474,17 @@ def test_aggregate_grid_in_other_crs_is_reprojected():
         yres=20000.0,
         projection="EPSG:32612",
     )
-    result = foot.aggregate(grid, bins)
+    result = foot.stilt.aggregate(grid, bins)
     assert result.to_numpy().sum() == pytest.approx(2.0, rel=1e-6)
 
 
 def test_aggregate_mesh_empty_footprint_returns_zeros():
     foot = _make_footprint(n_times=1)
-    foot.data = foot.data.isel(time=slice(0, 0))
+    foot = foot.isel(time=slice(0, 0))
     t0 = pd.Timestamp("2023-01-01 12:00")
     bins = pd.interval_range(start=t0, periods=1, freq="1h", closed="left")
     mesh = Mesh.from_windows([(-113.95, 39.05)], 0.1)
-    result = foot.aggregate(mesh, bins)
+    result = foot.stilt.aggregate(mesh, bins)
     assert result.shape == (1, 1)
     assert result.to_numpy().sum() == 0.0
 
@@ -1540,39 +1515,88 @@ def test_footprint_config_records_geometry_hash():
 
 def test_netcdf_roundtrip_keeps_geometry_and_hash(tmp_path):
     fc = FootprintConfig(
-        grid=_make_footprint().config.grid, geometry=_windows_spec()
+        grid=_make_footprint().stilt.grid, geometry=_windows_spec()
     ).resolve()
     assert fc.geometry_hash
     foot = _make_footprint()
-    foot = Footprint(receptor=foot.receptor, config=fc, data=foot.data, name="geo")
-    path = foot.to_netcdf(tmp_path / "geo_foot.nc")
-    loaded = Footprint.from_netcdf(path)
-    assert loaded.config.geometry == fc.geometry
-    assert loaded.config.geometry_hash == fc.geometry_hash
+    foot = _describe(foot, foot.stilt.receptor, fc, "geo")
+    path = foot.stilt.to_netcdf(tmp_path / "geo_foot.nc")
+    loaded = read_footprint(path)
+    assert loaded.stilt.config.geometry == fc.geometry
+    assert loaded.stilt.config.geometry_hash == fc.geometry_hash
     # a grid-only footprint carries no geometry attrs at all
-    plain = _make_footprint().to_netcdf(tmp_path / "plain_foot.nc")
-    import xarray as xr
-
+    plain = _make_footprint().stilt.to_netcdf(tmp_path / "plain_foot.nc")
     with xr.open_dataset(plain) as ds:
-        assert "geometry" not in ds.attrs and "geometry_hash" not in ds.attrs
-    assert Footprint.from_netcdf(plain).config.geometry_hash is None
+        settings = json.loads(ds["foot"].attrs["stilt_footprint"])
+    assert settings["geometry"] is None and settings["geometry_hash"] is None
+    assert read_footprint(plain).stilt.config.geometry_hash is None
 
 
 def test_aggregate_warns_when_geometry_hash_differs():
     base = _make_footprint()
-    fc = FootprintConfig(grid=base.config.grid, geometry=_windows_spec()).resolve()
-    foot = Footprint(receptor=base.receptor, config=fc, data=base.data, name="geo")
+    fc = FootprintConfig(grid=base.stilt.grid, geometry=_windows_spec()).resolve()
+    foot = _describe(base, base.stilt.receptor, fc, "geo")
     t0 = pd.Timestamp("2023-01-01 12:00")
     bins = pd.interval_range(start=t0, periods=1, freq="1h", closed="left")
 
     same = fc.geometry.build()
     with warnings.catch_warnings():
         warnings.simplefilter("error")
-        foot.aggregate(same, bins)  # identical geometry: no warning
-        foot.aggregate(base.config.grid, bins)  # grids are never checked
+        foot.stilt.aggregate(same, bins)  # identical geometry: no warning
+        foot.stilt.aggregate(base.stilt.grid, bins)  # grids are never checked
 
     other = Mesh.from_windows([(-113.9, 39.1)], 0.25, ids=["c"])
     with pytest.warns(UserWarning, match="derived for geometry"):
-        foot.aggregate(other, bins)
+        foot.stilt.aggregate(other, bins)
     with pytest.warns(UserWarning, match="derived for geometry"):
-        foot.aggregate(Zones.from_labels(other, ["z"]), bins)
+        foot.stilt.aggregate(Zones.from_labels(other, ["z"]), bins)
+
+
+# ---------------------------------------------------------------------------
+# A footprint is a DataArray (#107)
+# ---------------------------------------------------------------------------
+
+
+def test_receptor_coordinate_survives_arithmetic_and_reductions():
+    """The receptor id is a coordinate, which xarray keeps where it drops attributes."""
+    foot = _make_footprint(n_times=2)
+    rid = "202301011200_-111.85_40.77_5"
+    for result in (foot * 2, foot.sum("time"), foot.isel(time=0), foot + foot):
+        assert result["receptor"].item() == rid
+
+
+def test_accessor_says_what_is_missing_without_attributes():
+    """Older xarray drops attributes in arithmetic; that gives a clear error, not a wrong answer."""
+    foot = _make_footprint()
+    bare = foot.copy()
+    bare.attrs = {}
+    with pytest.raises(ValueError, match="keep_attrs"):
+        _ = bare.stilt.grid
+    with xr.set_options(keep_attrs=True):
+        assert (foot * 2).stilt.grid == foot.stilt.grid
+
+
+def test_footprints_stack_along_the_receptor_coordinate():
+    """xr.concat labels a stack of footprints by receptor with no extra work."""
+    a = _make_footprint()
+    other = PointReceptor(
+        time=a.stilt.receptor.time, longitude=-112.0, latitude=40.0, altitude=5.0
+    )
+    b = _describe(a * 2, other, a.stilt.config, "slv")
+    stack = xr.concat([a, b], dim="receptor")
+    assert stack["receptor"].values.tolist() == [
+        str(a.stilt.receptor.id),
+        str(other.id),
+    ]
+    assert stack.sizes["receptor"] == 2
+
+
+def test_calculate_returns_a_named_dataarray_with_its_receptor(point_receptor):
+    particles = _particles_in_domain()
+    foot = calculate(particles, point_receptor, _foot_config(), name="hrrr")
+    assert isinstance(foot, xr.DataArray)
+    assert foot.name == "foot"
+    assert foot["receptor"].item() == str(point_receptor.id)
+    assert foot.stilt.receptor == point_receptor
+    assert foot.stilt.name == "hrrr"
+    assert foot.attrs["units"] == "ppm m2 s umol-1"

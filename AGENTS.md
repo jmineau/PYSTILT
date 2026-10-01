@@ -109,9 +109,11 @@ src/stilt/
   receptors.py       receptor types (frozen pydantic models: point, column,
                      multipoint), their ids, and the receptor table behind
                      the CSV reader, writer, and appender
-  particles.py       Trajectories: one receptor's particle table + Parquet I/O
-  footprint.py       Footprint: gridded CF-1.8 NetCDF output, enhancement from
-                     a flux field, aggregation onto other spatial targets
+  particles.py       the particle table (a DataFrame): prepare, read, and write
+                     particle files; the `.stilt` pandas accessor
+  footprint.py       the footprint (a DataArray): `calculate`, `read_footprint`,
+                     CF-1.8 NetCDF, and the `.stilt` xarray accessor
+                     (enhancement from a flux field, aggregation)
   flux.py            sampling a flux field at points or along particles
   geometry.py        aggregation targets (meshes, zones) and overlap weights
   meteorology.py     Met: ARL file discovery, download, and cropping (via arlmet)
@@ -406,13 +408,20 @@ Feature status lives in the roadmap tables in [README.md](README.md) and
 
 ## Gotchas and science notes
 
+- **Results are plain data.** `sim.particles` is a pandas DataFrame and
+  `sim.footprint` an xarray DataArray; PYSTILT's methods on them live in
+  `.stilt` accessors. A footprint carries its receptor id as a scalar
+  coordinate (kept through arithmetic) and the full receptor and settings
+  as attributes (`stilt_receptor`, `stilt_footprint`), which the accessor
+  reads. Do not add wrapper classes back. Every result file records what
+  it needs to be read alone (`read_particles`, `read_footprint`).
 - **`project.simulations` is a cached DataFrame.** `add_receptors` drops the
   cache; a `config.yaml` edited by hand needs a new `Project(path)`.
 - **Empty footprints are successes, and not footprints.** When no particle
-  reaches the grid, `Footprint.calculate` raises `EmptyFootprint` and
+  reaches the grid, `footprint.calculate` raises `EmptyFootprint` and
   the worker's `write_footprint` writes a footprint file with no rows and
   the reason in its metadata. `sim.is_complete()` is true, `sim.footprint` is
-  `None`, `sim.empty_reason` says why, and `footprint.load()` leaves the
+  `None`, `sim.empty_reason` says why, and `load_footprints()` leaves the
   simulation out. Never synthesize a zero-valued footprint for it: a zero
   enhancement would flow into a comparison or an inversion unnoticed.
 - **A result that is not written yet raises.** `sim.particles` and
@@ -434,7 +443,7 @@ Feature status lives in the roadmap tables in [README.md](README.md) and
   lines: bottom and top), and why a `MultiPointReceptor` may not repeat a
   horizontal location (the constructor raises). The bundled build releases
   column particles bottom-to-top in `indx` order, which
-  `Trajectories.from_particles` relies on for `xhgt`.
+  `particles.prepare` relies on for `xhgt`.
 - **Pressure weighting is derived from the particles.**
   `PressureWeighting` fits `ln p = b + a·z` to the particles' first-step
   `(zagl, pres)` and gives each distinct release height the pressure slab
@@ -445,7 +454,7 @@ Feature status lives in the roadmap tables in [README.md](README.md) and
   is the terrain under the lowest point. `PressureWeighting.apply` reads
   `altitude_ref` from the `TransformContext`; with no context it assumes
   AGL. `AveragingKernel` holds only the kernel.
-  `Footprint.calculate` divides by the particle count, so weights are scaled by
+  `footprint.calculate` divides by the particle count, so weights are scaled by
   `N`. Weights sum to the column's mass fraction (< 1) by design; the rest of
   the atmosphere is above the column top. This deliberately differs from
   X-STILT's "layer below each particle" convention, which gives a

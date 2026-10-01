@@ -24,15 +24,18 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
+import pandas as pd
+import xarray as xr
+
 from stilt.config import FootprintConfig
 from stilt.exceptions import (
     EmptyFootprint,
     EmptyParticleOutputError,
     SimulationError,
 )
-from stilt.footprint import Footprint
+from stilt.footprint import calculate
 from stilt.meteorology import Met
-from stilt.particles import Trajectories
+from stilt.particles import prepare
 from stilt.simulation import Simulation
 from stilt.transforms import ParticleTransform, TransformContext
 from stilt.transport import get_model
@@ -168,7 +171,7 @@ def run_particles(
     keep_scratch: bool = False,
     timeout: int | None = None,
     rm_dat: bool | None = None,
-) -> Trajectories:
+) -> pd.DataFrame:
     """
     Run the transport model for a simulation and write its particles to the output directory.
 
@@ -193,7 +196,7 @@ def run_particles(
 
     Returns
     -------
-    Trajectories
+    pandas.DataFrame
         The particles, also written to the output directory.
 
     Raises
@@ -219,15 +222,10 @@ def run_particles(
         result = model.run(sim.receptor, run_params, met, workdir)
         if result.particles.empty:
             raise EmptyParticleOutputError(f"HYSPLIT wrote no particles for {sim.id}")
-        traj = Trajectories.from_particles(
-            result.particles,
-            receptor=sim.receptor,
-            params=params,
-            met_files=result.met_files,
-        )
-        folder.write(traj)
+        particles = prepare(result.particles, sim.receptor, params)
+        folder.write(sim.receptor, particles, params, result.met_files)
         succeeded = True
-        return traj
+        return particles
     finally:
         if scratch_log.exists():
             folder.write_log(rid, scratch_log.read_text())
@@ -249,12 +247,12 @@ def _finish_scratch(workdir: Path, kept: Path, *, keep: bool) -> None:
 
 def write_footprint(
     sim: Simulation,
-    particles: Trajectories,
+    particles: pd.DataFrame,
     *,
     context: TransformContext,
     config: FootprintConfig | None = None,
     transforms: Sequence[ParticleTransform] | None = None,
-) -> Footprint | None:
+) -> xr.DataArray | None:
     """
     Calculate a footprint from *particles* and write it to the output directory.
 
@@ -279,7 +277,9 @@ def write_footprint(
     folder = sim.output.particles(sim.variant.name, sim.variant.transport)
     feet = folder.footprints(config, name=sim.variant.name)
     try:
-        foot = particles.footprint(config, name=sim.variant.name, context=context)
+        foot = calculate(
+            particles, sim.receptor, config, name=sim.variant.name, context=context
+        )
     except EmptyFootprint as error:
         feet.write_empty(sim.receptor, error.reason, name=sim.variant.name)
         return None
@@ -335,9 +335,9 @@ def run_simulation(
     phase = "particles"
     ran_hysplit = False
     try:
-        traj: Trajectories | None = None
+        particles: pd.DataFrame | None = None
         if not (skip_existing and sim.has_particles):
-            traj = run_particles(
+            particles = run_particles(
                 sim, met=met, workdir=compute_root / sim.id, keep_scratch=keep_scratch
             )
             ran_hysplit = True
@@ -346,12 +346,12 @@ def run_simulation(
             ran_hysplit or footprint_stale or not (skip_existing and sim.has_footprint)
         ):
             phase = "footprint"
-            if traj is None:
-                traj = sim.particles
+            if particles is None:
+                particles = sim.particles
             context = TransformContext(
                 receptor=sim.receptor, variant=sim.variant.name, directory=project_dir
             )
-            write_footprint(sim, traj, context=context)
+            write_footprint(sim, particles, context=context)
         return SimulationResult(str(sim.id), "complete", ran_hysplit=ran_hysplit)
     except Exception as error:
         logger.exception("simulation %s failed during %s: %s", sim.id, phase, error)

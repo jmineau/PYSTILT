@@ -150,7 +150,7 @@ Outputs
 -------
 
 Particles are saved as Parquet files instead of R ``.rds`` files. Open them
-in Python with pandas or :class:`stilt.Trajectories`, and in R with
+in Python with pandas or :func:`stilt.read_particles`, and in R with
 ``arrow::read_parquet``. Footprints are saved as Parquet too, holding only
 the cells the particles reached. ``foot.to_netcdf()`` writes one as NetCDF
 with dimensions ``(time, lat, lon)``, as STILT-R does.

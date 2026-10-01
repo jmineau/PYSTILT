@@ -141,14 +141,14 @@ These run after the transforms in the variant's own footprint config, and
 the footprint records all of them. To try other footprint settings without
 changing the project, pass
 ``config=sim.footprint_config.model_copy(update={...})``. Without a
-simulation, ``traj.footprint(config)`` applies ``config.transforms`` the
-same way.
+simulation, :func:`stilt.footprint.calculate` applies
+``config.transforms`` the same way.
 
 To see what a transform did, apply it to the particle table yourself:
 
 .. code-block:: python
 
-   weighted = PressureWeighting().apply(sim.particles.data)
+   weighted = PressureWeighting().apply(sim.particles)
    weighted.drop_duplicates("indx")[["xhgt", "xpres", "pwf"]]
 
 Writing your own transform
@@ -192,7 +192,7 @@ are the model's fields:
 
 A few rules keep custom transforms working everywhere:
 
-- **Return a copy.** ``Trajectories.data`` must still hold the unweighted
+- **Return a copy.** ``sim.particles`` must still hold the unweighted
   particles after a footprint is made. The built-ins all call
   ``particles.copy()`` first.
 - **Make it importable wherever it runs.** Workers open the project from

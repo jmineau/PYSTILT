@@ -26,7 +26,6 @@ from stilt.execution.worker import (
 )
 from stilt.meteorology import Met
 from stilt.output import Output
-from stilt.particles import Trajectories
 from stilt.project import Project
 from stilt.receptors import PointReceptor, Receptor
 from stilt.simulation import Simulation
@@ -118,7 +117,7 @@ def fsim(receptor, met_config, params, output) -> Simulation:
     return s
 
 
-def _particles(receptor, params) -> Trajectories:
+def _particles(receptor) -> pd.DataFrame:
     data = pd.DataFrame(
         {
             "time": [-60.0],
@@ -132,14 +131,15 @@ def _particles(receptor, params) -> Trajectories:
     data["datetime"] = pd.Timestamp(receptor.time) + pd.to_timedelta(
         data["time"], unit="min"
     )
-    return Trajectories(receptor=receptor, params=params, met_files=[], data=data)
+    return data
 
 
-def _write_particles(sim: Simulation) -> Trajectories:
+def _write_particles(sim: Simulation) -> pd.DataFrame:
     """Put a small particle file for *sim* in the output directory."""
-    traj = _particles(sim.receptor, sim.params)
-    sim.output.particles(sim.variant.name, sim.variant.transport).write(traj)
-    return traj
+    particles = _particles(sim.receptor)
+    folder = sim.output.particles(sim.variant.name, sim.variant.transport)
+    folder.write(sim.receptor, particles, sim.params, [])
+    return particles
 
 
 def _write_footprint(sim: Simulation, *, empty: bool = False) -> None:
@@ -152,7 +152,7 @@ def _write_footprint(sim: Simulation, *, empty: bool = False) -> None:
     else:
         write_footprint(
             sim,
-            _particles(sim.receptor, sim.params),
+            _particles(sim.receptor),
             context=TransformContext(receptor=sim.receptor, variant=sim.variant.name),
         )
 
@@ -449,7 +449,7 @@ def test_run_simulation_footprint_reads_the_stored_particles(
     _run(fsim, met, compute_root)
 
     [traj] = seen
-    assert isinstance(traj, Trajectories) and len(traj.data) == 1
+    assert isinstance(traj, pd.DataFrame) and len(traj) == 1
 
 
 # ---------------------------------------------------------------------------

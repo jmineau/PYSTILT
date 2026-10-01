@@ -105,7 +105,7 @@ def endpoint_weights(
     ``foot`` is 1 leaves each particle's weight: its averaging kernel and
     pressure weight, and the lifetime decay at its endpoint age. Without
     transforms every weight is 1. Divided by the particle count, these are
-    the weights :meth:`stilt.Footprint.calculate` gives the particles.
+    the weights :func:`stilt.footprint.calculate` gives the particles.
     """
     transforms = list(transforms)
     if transforms:
@@ -158,7 +158,7 @@ def background(
     Parameters
     ----------
     particles : pandas.DataFrame
-        The simulation's particle table (``sim.particles.data``).
+        The simulation's particle table (``sim.particles``).
     field : xarray.DataArray or pandas.Series
         The background field (see :func:`particle_background` for its
         layout), or one value per particle that you sampled yourself, as a

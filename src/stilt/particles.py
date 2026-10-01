@@ -1,10 +1,12 @@
-"""Particle trajectories from a HYSPLIT run, and the near-field plume dilution correction."""
+"""The particle table: reading and writing particle files, and the near-field plume dilution correction."""
+
+from __future__ import annotations
 
 import json
 import logging
 import warnings
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Self, cast
+from typing import TYPE_CHECKING, Any, NamedTuple, cast
 
 import numpy as np
 import pandas as pd
@@ -18,10 +20,7 @@ from stilt.receptors import ColumnReceptor, MultiPointReceptor, PointReceptor, R
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    from stilt.config import FootprintConfig
-    from stilt.footprint import Footprint
-    from stilt.transforms import TransformContext
-    from stilt.visualization import TrajectoriesPlotAccessor
+    from stilt.visualization import ParticlesPlotAccessor
 
 
 # Below this horizontal spacing, release points cannot be told apart from a
@@ -125,7 +124,7 @@ def _multipoint_release_heights(
 
 
 def _stored_params(stored: dict[str, Any], path: str | Path) -> STILTParams:
-    """Return the params stored in a trajectory file, dropping settings this version does not have."""
+    """Return the params stored in a particle file, dropping settings this version does not have."""
     unknown = sorted(set(stored) - set(STILTParams.model_fields))
     if unknown:
         logger.debug(
@@ -136,50 +135,207 @@ def _stored_params(stored: dict[str, Any], path: str | Path) -> STILTParams:
     )
 
 
-class Trajectories:
+#: Particle columns stored as int32 rather than float64.
+_INT_COLUMNS = ("time", "indx")
+
+
+class ParticleMetadata(NamedTuple):
+    """What a particle file records about the HYSPLIT run that made it."""
+
+    receptor: Receptor
+    params: STILTParams
+    met_files: list[Path]
+
+
+def prepare(raw: pd.DataFrame, receptor: Receptor, params: STILTParams) -> pd.DataFrame:
     """
-    Particle trajectories from one HYSPLIT run.
+    Return HYSPLIT's particle output as the particle table PYSTILT keeps.
 
-    ``data`` has one row per particle per output step. The columns are the
-    variables in ``varsiwant`` (``indx``, ``time`` in minutes since release,
-    ``long``, ``lati``, ``zagl``, ``foot``, ...), plus ``datetime`` (UTC),
-    ``xhgt`` (release height, for column and multipoint receptors), and
-    ``foot_no_hnf_dilution`` when ``hnf_plume`` is set.
-
-    Trajectories normally come from a simulation (``sim.particles``) or
-    a file (:meth:`from_parquet`).
+    Adds the release height ``xhgt`` for column and multipoint receptors,
+    applies the near-field plume dilution correction when
+    ``params.hnf_plume`` is set (:func:`calc_plume_dilution`), and adds a
+    ``datetime`` column from ``time``.
 
     Parameters
     ----------
+    raw : pandas.DataFrame
+        Particle table read from ``PARTICLE_STILT.DAT``.
+    receptor : Receptor
+        Receptor the particles were released from.
+    params : STILTParams
+        Transport settings of the run.
+
+    Returns
+    -------
+    pandas.DataFrame
+        One row per particle per output step.
+    """
+    p = raw.copy()
+    numpar = int(p["indx"].max())  # type: ignore[arg-type]
+
+    if isinstance(receptor, ColumnReceptor):
+        xhgt_step = (receptor.top - receptor.bottom) / numpar
+        p["xhgt"] = (p["indx"] - 0.5) * xhgt_step + receptor.bottom
+    elif isinstance(receptor, MultiPointReceptor):
+        p["xhgt"] = _multipoint_release_heights(p, receptor)
+
+    if params.hnf_plume:
+        r_zagl = receptor.altitude if isinstance(receptor, PointReceptor) else None
+        p = calc_plume_dilution(p, r_zagl, params.veght)
+
+    p["datetime"] = receptor.time + pd.to_timedelta(p["time"].to_numpy(), unit="min")
+    return p
+
+
+def particles_metadata(path: str | Path) -> ParticleMetadata:
+    """
+    Return the receptor, transport settings, and met files a particle file records.
+
+    Stored settings that this version of PYSTILT does not have are ignored.
+    """
+    meta = pq.read_schema(path).metadata or {}
+    return ParticleMetadata(
+        receptor=Receptor.from_dict(json.loads(meta[b"stilt:receptor"])),
+        params=_stored_params(json.loads(meta[b"stilt:params"]), path),
+        met_files=[Path(p) for p in json.loads(meta[b"stilt:met_files"])],
+    )
+
+
+def read_particles(path: str | Path, columns: list[str] | None = None) -> pd.DataFrame:
+    """
+    Read a particle file.
+
+    It needs nothing but the file: the receptor time in its metadata gives
+    the ``datetime`` column back. ``time`` and ``indx`` come back as
+    float64, as HYSPLIT writes them. :func:`particles_metadata` reads the
+    receptor and settings.
+
+    Parameters
+    ----------
+    path : str or Path
+        Particle file.
+    columns : list of str, optional
+        Columns to read. All columns by default.
+
+    Returns
+    -------
+    pandas.DataFrame
+        One row per particle per output step.
+
+    Examples
+    --------
+    >>> particles = stilt.read_particles(sim.particles_path)
+    >>> particles.stilt.endpoints()
+    """
+    pf = pq.ParquetFile(path)
+    stored = pf.schema_arrow.names
+    # The output directory adds a ``receptor`` column for scans of the whole
+    # tree. One file is one receptor, so it is not read here.
+    wanted = [c for c in (stored if columns is None else columns) if c != "receptor"]
+    want_datetime = "datetime" in wanted or columns is None
+    data = pf.read(columns=[c for c in wanted if c in stored]).to_pandas()
+    for name in _INT_COLUMNS:
+        if name in data.columns:
+            data[name] = data[name].astype("float64")
+    if "datetime" in data.columns:
+        data["datetime"] = pd.to_datetime(data["datetime"])
+    elif want_datetime and "time" in data.columns:
+        receptor = particles_metadata(path).receptor
+        data["datetime"] = pd.Timestamp(receptor.time) + pd.to_timedelta(
+            data["time"].to_numpy(), unit="min"
+        )
+    return data
+
+
+def write_particles(
+    path: str | Path,
+    particles: pd.DataFrame,
+    receptor: Receptor,
+    params: STILTParams,
+    met_files: list[Path],
+    metadata: dict[bytes, bytes] | None = None,
+) -> Path:
+    """
+    Write a particle table to a Parquet file that :func:`read_particles` reads alone.
+
+    ``time`` and ``indx`` are stored as int32, and ``datetime`` is left out
+    since it is the receptor time plus ``time``. A ``receptor`` column holds
+    the receptor id, so a scan of many files can tell receptors apart. The
+    receptor, transport settings, and met files go in the file's metadata.
+
+    Parameters
+    ----------
+    path : str or Path
+        File to write.
+    particles : pandas.DataFrame
+        The particle table.
     receptor : Receptor
         Receptor the particles were released from.
     params : STILTParams
         Transport settings of the run.
     met_files : list of Path
         Meteorology files the run used.
-    data : pandas.DataFrame
-        Particle table.
+    metadata : dict, optional
+        More file metadata, such as the settings hash.
+
+    Returns
+    -------
+    Path
+        The path written to.
+
+    Raises
+    ------
+    ValueError
+        If ``time`` or ``indx`` holds a value that is not a whole number.
+    """
+    data = particles.drop(columns=["datetime", "receptor"], errors="ignore")
+    for name in _INT_COLUMNS:
+        if name in data.columns:
+            values = data[name].to_numpy()
+            if not np.array_equal(values, np.round(values)):
+                raise ValueError(f"Particle column {name!r} is not whole numbers.")
+            data = data.assign(**{name: values.astype(np.int32)})
+    table = pa.Table.from_pandas(data, preserve_index=False)
+    table = table.add_column(
+        0,
+        pa.field("receptor", pa.dictionary(pa.int32(), pa.string())),
+        pa.DictionaryArray.from_arrays(
+            pa.array(np.zeros(table.num_rows, dtype=np.int32)),
+            pa.array([str(receptor.id)]),
+        ),
+    )
+    meta = {
+        b"stilt:receptor": json.dumps(receptor.to_dict()).encode(),
+        b"stilt:params": params.model_dump_json().encode(),
+        b"stilt:met_files": json.dumps([str(p) for p in met_files]).encode(),
+        **(metadata or {}),
+    }
+    table = table.replace_schema_metadata(meta)
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with atomic_path(path) as tmp:
+        pq.write_table(table, tmp, compression="zstd")
+    return path
+
+
+@pd.api.extensions.register_dataframe_accessor("stilt")
+class ParticlesAccessor:
+    """
+    PYSTILT methods on a particle table, as ``particles.stilt``.
+
+    Examples
+    --------
+    >>> particles = sim.particles
+    >>> particles.stilt.endpoints()
+    >>> particles.stilt.plot.map()
     """
 
-    def __init__(
-        self,
-        receptor: Receptor,
-        params: STILTParams,
-        met_files: list[Path],
-        data: pd.DataFrame,
-    ):
-        self.receptor = receptor
-        self.params = params
-        self.met_files = met_files
-        self.data = data
-        self._plot: TrajectoriesPlotAccessor | None = None
-
-    def __repr__(self) -> str:
-        return f"Trajectories(rows={len(self.data)!r}, receptor={self.receptor.id!r})"
+    def __init__(self, particles: pd.DataFrame) -> None:
+        self._particles = particles
 
     def endpoints(self) -> pd.DataFrame:
         """
-        Return where each particle's trajectory ends.
+        Return where each particle ends.
 
         For a backward run this is where the air came from, which is where
         to sample a background concentration field. Each particle has one
@@ -192,222 +348,52 @@ class Trajectories:
             One row per particle, with columns ``indx``, ``time`` (UTC time
             at the endpoint), ``lati``, ``long``, ``zagl``,
             ``endpoint_age_min`` (minutes since release, negative for a
-            backward run), and ``run_time`` (receptor time).
+            backward run), and ``receptor_time``.
+
+        Raises
+        ------
+        ValueError
+            If the table has no ``datetime`` column.
         """
-        cols = ["indx", "time", "lati", "long", "zagl", "endpoint_age_min", "run_time"]
-        if self.data.empty:
+        cols = [
+            "indx",
+            "time",
+            "lati",
+            "long",
+            "zagl",
+            "endpoint_age_min",
+            "receptor_time",
+        ]
+        p = self._particles
+        if p.empty:
             return pd.DataFrame(columns=pd.Index(cols))
-
-        ep = endpoint_rows(self.data)
-
-        if "datetime" in ep.columns:
-            end_time = pd.to_datetime(ep["datetime"]).to_numpy()
-        else:
-            end_time = (
-                pd.Timestamp(self.receptor.time)
-                + pd.to_timedelta(ep["time"].to_numpy(dtype=float), unit="min")
-            ).to_numpy()
-
+        if "datetime" not in p.columns:
+            raise ValueError(
+                "endpoints() needs the datetime column, which read_particles "
+                "and sim.particles give."
+            )
+        ep = endpoint_rows(p)
+        end_time = pd.to_datetime(ep["datetime"])
+        age = ep["time"].to_numpy(dtype=float)
+        receptor_time = end_time - pd.to_timedelta(age, unit="min")
         return pd.DataFrame(
             {
                 "indx": ep["indx"].to_numpy(),
-                "time": end_time,
+                "time": end_time.to_numpy(),
                 "lati": ep["lati"].to_numpy(),
                 "long": ep["long"].to_numpy(),
                 "zagl": ep["zagl"].to_numpy(),
-                "endpoint_age_min": ep["time"].to_numpy(),
-                "run_time": pd.Timestamp(self.receptor.time),
+                "endpoint_age_min": age,
+                "receptor_time": receptor_time.to_numpy(),
             }
         )
 
     @property
-    def plot(self) -> "TrajectoriesPlotAccessor":
-        """Plotting methods, such as ``traj.plot.map()``."""
-        if self._plot is None:
-            from stilt.visualization import TrajectoriesPlotAccessor
+    def plot(self) -> ParticlesPlotAccessor:
+        """Plotting methods, such as ``particles.stilt.plot.map()``."""
+        from stilt.visualization import ParticlesPlotAccessor
 
-            self._plot = TrajectoriesPlotAccessor(self)
-        return self._plot
-
-    @classmethod
-    def from_parquet(
-        cls,
-        path: str | Path,
-        *,
-        columns: list[str] | None = None,
-    ) -> Self:
-        """
-        Read trajectories from a Parquet file written by :meth:`to_parquet`.
-
-        The receptor, params, and met files are read from the file's
-        metadata. Stored settings that this version of PYSTILT does not
-        have are ignored.
-
-        Parameters
-        ----------
-        path : str or Path
-            Trajectory file.
-        columns : list of str, optional
-            Columns to read. All columns by default.
-
-        Returns
-        -------
-        Trajectories
-        """
-        # Get metadata
-        pf = pq.ParquetFile(path)
-        meta = pf.schema_arrow.metadata
-
-        # Parse metadata
-        receptor = Receptor.from_dict(json.loads(meta[b"stilt:receptor"]))
-        params = _stored_params(json.loads(meta[b"stilt:params"]), path)
-        met_files = [Path(p) for p in json.loads(meta[b"stilt:met_files"])]
-
-        # Read data. `datetime` is written naive UTC by ``from_particles``; keep
-        # it naive on read so the receptor/trajectory/footprint time axes align.
-        # The output directory adds a ``receptor`` column for scans of the
-        # whole tree; one file is one receptor, so it is dropped here.
-        if columns is None:
-            columns = [n for n in pf.schema_arrow.names if n != "receptor"]
-        data = pf.read(columns=columns).to_pandas()
-        if "datetime" in data.columns:
-            data["datetime"] = pd.to_datetime(data["datetime"])
-
-        return cls(
-            receptor=receptor,
-            params=params,
-            met_files=met_files,
-            data=data,
-        )
-
-    @classmethod
-    def from_particles(
-        cls,
-        particles: pd.DataFrame,
-        receptor: Receptor,
-        params: STILTParams,
-        met_files: list[Path],
-    ) -> "Trajectories":
-        """
-        Build trajectories from HYSPLIT's particle output.
-
-        Adds the release height ``xhgt`` for column and multipoint receptors,
-        applies the near-field plume dilution correction when
-        ``params.hnf_plume`` is set (:func:`calc_plume_dilution`), and adds a
-        ``datetime`` column from ``time``.
-
-        Parameters
-        ----------
-        particles : pandas.DataFrame
-            Particle table read from ``PARTICLE_STILT.DAT``.
-        receptor : Receptor
-            Receptor the particles were released from.
-        params : STILTParams
-            Transport settings of the run.
-        met_files : list of Path
-            Meteorology files the run used.
-
-        Returns
-        -------
-        Trajectories
-        """
-        p = particles.copy()
-        numpar = int(p["indx"].max())  # type: ignore[arg-type]
-
-        if isinstance(receptor, ColumnReceptor):
-            xhgt_step = (receptor.top - receptor.bottom) / numpar
-            p["xhgt"] = (p["indx"] - 0.5) * xhgt_step + receptor.bottom
-        elif isinstance(receptor, MultiPointReceptor):
-            p["xhgt"] = _multipoint_release_heights(p, receptor)
-
-        if params.hnf_plume:
-            r_zagl = receptor.altitude if isinstance(receptor, PointReceptor) else None
-            p = calc_plume_dilution(p, r_zagl, params.veght)
-
-        p["datetime"] = receptor.time + pd.to_timedelta(
-            p["time"].to_numpy(), unit="min"
-        )
-
-        return cls(
-            receptor=receptor,
-            data=p,
-            met_files=met_files,
-            params=params,
-        )
-
-    def footprint(
-        self,
-        config: "FootprintConfig",
-        name: str = "",
-        context: "TransformContext | None" = None,
-    ) -> "Footprint":
-        """
-        Calculate a footprint from these particles.
-
-        This is how every footprint is made. ``config.transforms`` are
-        applied to the particles first, and the footprint records them. Use
-        it for a footprint on another grid, with other smoothing, or with
-        other transforms, instead of regridding a saved footprint. Same as
-        :meth:`stilt.Footprint.calculate` with this run's receptor.
-
-        Parameters
-        ----------
-        config : FootprintConfig
-            Grid, smoothing, and particle transforms.
-        name : str, optional
-            Name of the footprint.
-        context : TransformContext, optional
-            Passed to every transform. :meth:`stilt.Simulation.transform_context`
-            gives one with the project store, which a transform needs to find
-            a file named relative to the project, such as an averaging-kernel
-            table. Defaults to one with the receptor and ``name`` only.
-
-        Returns
-        -------
-        Footprint
-
-        Raises
-        ------
-        EmptyFootprint
-            If no particle is over the grid.
-        """
-        from stilt.footprint import Footprint
-
-        return Footprint.calculate(
-            self.data, self.receptor, config, name=name, context=context
-        )
-
-    def to_parquet(self, path: str | Path) -> Path:
-        """
-        Write the trajectories to a Parquet file.
-
-        The receptor, params, and met files are stored in the file's
-        metadata, so :meth:`from_parquet` needs nothing else.
-
-        Parameters
-        ----------
-        path : str or Path
-            File to write.
-
-        Returns
-        -------
-        Path
-            The path written to.
-        """
-        path = Path(path)
-        path.parent.mkdir(parents=True, exist_ok=True)
-
-        table = pa.Table.from_pandas(self.data, preserve_index=False)
-        meta = {
-            b"stilt:receptor": json.dumps(self.receptor.to_dict()).encode(),
-            b"stilt:params": self.params.model_dump_json().encode(),
-            b"stilt:met_files": json.dumps([str(p) for p in self.met_files]).encode(),
-        }
-        existing = table.schema.metadata or {}
-        table = table.replace_schema_metadata({**existing, **meta})
-        with atomic_path(path) as tmp:
-            pq.write_table(table, tmp, compression="zstd")
-        return path
+        return ParticlesPlotAccessor(self._particles)
 
 
 def calc_plume_dilution(

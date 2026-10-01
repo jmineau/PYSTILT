@@ -58,7 +58,7 @@ Empty footprints
 ----------------
 
 :class:`~stilt.exceptions.EmptyFootprint` is a finished result, not a
-failure. :meth:`stilt.Trajectories.footprint` raises it when no particle
+failure. :func:`stilt.footprint.calculate` raises it when no particle
 reaches the grid, and its ``reason`` says why. A run stores the reason in
 an empty footprint file.
 

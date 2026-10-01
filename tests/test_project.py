@@ -11,9 +11,9 @@ import xarray as xr
 
 from stilt.config import ExecutionConfig, Grid, MetConfig, ProjectConfig
 from stilt.execution import resolve_compute_root
-from stilt.footprint import Footprint
+from stilt.footprint import _describe
 from stilt.output import Output
-from stilt.particles import Trajectories
+from stilt.particles import prepare
 from stilt.project import CONFIG_KEY, RECEPTORS_KEY, Project, project_slug
 from stilt.receptors import PointReceptor
 from stilt.simulation import SimID
@@ -85,11 +85,9 @@ def _particles() -> pd.DataFrame:
 def _write_trajectory(project: Project, receptor, variant="hrrr") -> Path:
     """Write a small particle file for one simulation into the output directory."""
     sim = project.simulation(receptor.id, variant)
-    traj = Trajectories.from_particles(
-        _particles(), receptor=sim.receptor, params=sim.params, met_files=[]
-    )
-    run = sim.output.particles(sim.variant.name, sim.variant.transport)
-    return run.write(traj)
+    particles = prepare(_particles(), sim.receptor, sim.params)
+    folder = sim.output.particles(sim.variant.name, sim.variant.transport)
+    return folder.write(sim.receptor, particles, sim.params, [])
 
 
 def _write_footprint(
@@ -98,8 +96,8 @@ def _write_footprint(
     """Write a footprint (or an empty one) for one simulation into the output directory."""
     sim = project.simulation(receptor.id, variant)
     assert sim.footprint_config is not None
-    run = sim.output.particles(sim.variant.name, sim.variant.transport)
-    feet = run.footprints(sim.footprint_config, name=sim.variant.name)
+    folder = sim.output.particles(sim.variant.name, sim.variant.transport)
+    feet = folder.footprints(sim.footprint_config, name=sim.variant.name)
     if empty:
         return feet.write_empty(sim.receptor, "outside_domain", name=sim.variant.name)
     grid = sim.footprint_config.grid
@@ -110,12 +108,7 @@ def _write_footprint(
         dims=("time", "lat", "lon"),
         coords={"time": [sim.receptor.time], "lat": y_axis, "lon": x_axis},
     )
-    foot = Footprint(
-        receptor=sim.receptor,
-        config=sim.footprint_config,
-        data=data,
-        name=sim.variant.name,
-    )
+    foot = _describe(data, sim.receptor, sim.footprint_config, sim.variant.name)
     return feet.write(foot)
 
 
@@ -638,7 +631,7 @@ def test_load_particles_of_a_selection(tmp_path):
     assert path.parent == project.output.particle_sets()[0].path / "date=2023-01-01"
     [(sid, traj)] = project.load_particles().items()
     assert sid == SimID(a.id, "hrrr")
-    assert isinstance(traj, Trajectories) and traj.receptor.id == a.id
+    assert isinstance(traj, pd.DataFrame) and len(traj) > 0
     sims = project.simulations
     assert project.load_particles(sims[sims.receptor == b.id]) == {}
 
@@ -659,7 +652,7 @@ def test_load_footprints_skips_empty_footprints_and_trajectory_only_variants(
     loaded = project.load_footprints()
 
     assert list(loaded) == [SimID(done.id, "hrrr")]
-    assert isinstance(loaded[SimID(done.id, "hrrr")], Footprint)
+    assert isinstance(loaded[SimID(done.id, "hrrr")], xr.DataArray)
 
 
 def test_load_footprints_by_variant(tmp_path, point_receptor):
@@ -673,7 +666,7 @@ def test_load_footprints_by_variant(tmp_path, point_receptor):
     assert len(project.load_footprints()) == 2
     [(sid, foot)] = project.load_footprints(sims[sims.variant == "zi08"]).items()
     assert sid == SimID(point_receptor.id, "zi08")
-    assert foot.name == "zi08"
+    assert foot.stilt.name == "zi08"
 
 
 def test_jacobian_of_a_variant(tmp_path):
@@ -697,7 +690,7 @@ def test_jacobian_of_a_variant(tmp_path):
     assert H.empty == [b.id]
     assert H.missing == [c.id]
     assert H.data.shape == (1, len(bins) * len(target.index))
-    expected = project.simulation(a.id, "hrrr").footprint.aggregate(target, bins)
+    expected = project.simulation(a.id, "hrrr").footprint.stilt.aggregate(target, bins)
     np.testing.assert_allclose(
         H.to_frame().iloc[0].to_numpy().reshape(len(bins), -1).T,
         expected.to_numpy(),

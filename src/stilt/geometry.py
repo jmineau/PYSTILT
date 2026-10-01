@@ -409,7 +409,7 @@ Geometry = Grid | Mesh | Zones
 """A geometry a footprint can be aggregated onto."""
 
 SpatialTarget = Geometry
-"""Every form :meth:`stilt.Footprint.aggregate` accepts as a target."""
+"""Every form ``foot.stilt.aggregate`` accepts as a target."""
 
 
 def _geometry_key(geometry: Geometry) -> str:
@@ -634,7 +634,7 @@ def check_resolution(geometry: Geometry, xres: float, yres: float, crs: str) -> 
         warnings.warn(
             f"Smallest target cell ({width:g}) spans fewer than two native raster "
             f"cells ({xres:g} x {yres:g}); the aggregate is under-resolved. "
-            "Regenerate the footprint on a finer grid (Trajectories.footprint with "
+            "Regenerate the footprint on a finer grid (sim.generate_footprint with "
             "Grid.from_geometry) for boundary accuracy.",
             stacklevel=3,
         )
