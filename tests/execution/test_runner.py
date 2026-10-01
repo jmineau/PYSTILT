@@ -73,9 +73,12 @@ def test_slurm_parameters_map_every_setting():
     }
 
 
-def test_slurm_parameters_render_as_a_submission_script(tmp_path):
+def test_slurm_parameters_render_as_a_submission_script(tmp_path, monkeypatch):
     """submitit accepts the parameters and writes the sbatch lines they stand for."""
     import submitit
+
+    # submitit refuses to build a Slurm executor where it cannot find srun.
+    monkeypatch.setattr(submitit.SlurmExecutor, "affinity", classmethod(lambda cls: 1))
 
     execution = ExecutionConfig(
         backend="slurm",

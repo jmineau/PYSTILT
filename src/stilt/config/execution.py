@@ -81,11 +81,13 @@ class ExecutionConfig(BaseModel):
     @field_validator("setup", mode="before")
     @classmethod
     def _one_command(cls, value: Any) -> Any:
+        """Accept one setup command as a string."""
         return [value] if isinstance(value, str) else value
 
     @field_validator("time")
     @classmethod
     def _slurm_time(cls, value: str | int | None) -> str | int | None:
+        """Raise on a time limit sbatch would not take."""
         if value is not None:
             slurm_minutes(value)  # raises on a form sbatch would not take
         return value
