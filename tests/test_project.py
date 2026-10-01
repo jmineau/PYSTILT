@@ -85,9 +85,9 @@ def _particles() -> pd.DataFrame:
 def _write_trajectory(project: Project, receptor, variant="hrrr") -> Path:
     """Write a small particle file for one simulation into the output directory."""
     sim = project.simulation(receptor.id, variant)
-    particles = prepare(_particles(), sim.receptor, sim.params)
+    particles = prepare(_particles(), sim.receptor, sim.variant.transport)
     folder = sim.output.particles(sim.variant.name, sim.variant.transport)
-    return folder.write(sim.receptor, particles, sim.params, [])
+    return folder.write(sim.receptor, particles, sim.variant.transport, [])
 
 
 def _write_footprint(
@@ -95,12 +95,12 @@ def _write_footprint(
 ) -> Path:
     """Write a footprint (or an empty one) for one simulation into the output directory."""
     sim = project.simulation(receptor.id, variant)
-    assert sim.footprint_config is not None
+    assert sim.variant.footprint is not None
     folder = sim.output.particles(sim.variant.name, sim.variant.transport)
-    feet = folder.footprints(sim.footprint_config, name=sim.variant.name)
+    feet = folder.footprints(sim.variant.footprint, name=sim.variant.name)
     if empty:
         return feet.write_empty(sim.receptor, "outside_domain", name=sim.variant.name)
-    grid = sim.footprint_config.grid
+    grid = sim.variant.footprint.grid
     assert grid is not None
     x_axis, y_axis = grid.axes
     data = xr.DataArray(
@@ -108,7 +108,7 @@ def _write_footprint(
         dims=("time", "lat", "lon"),
         coords={"time": [sim.receptor.time], "lat": y_axis, "lon": x_axis},
     )
-    foot = _describe(data, sim.receptor, sim.footprint_config, sim.variant.name)
+    foot = _describe(data, sim.receptor, sim.variant.footprint, sim.variant.name)
     return feet.write(foot)
 
 
@@ -450,12 +450,12 @@ def test_simulation_handles_carry_the_variant_settings(tmp_path, point_receptor)
     zi = project.simulation(rid, "zi08")
     s2 = project.simulation(rid, "s2")
 
-    assert base.params.winderrtf == 0
-    assert err.params.winderrtf == 1
-    assert err.footprint_config is None
-    assert zi.params.ziscale == 0.8
-    assert zi.footprint_config == base.footprint_config
-    assert s2.footprint_config is not None and s2.footprint_config.smooth_factor == 2
+    assert base.variant.transport.winderrtf == 0
+    assert err.variant.transport.winderrtf == 1
+    assert err.variant.footprint is None
+    assert zi.variant.transport.ziscale == 0.8
+    assert zi.variant.footprint == base.variant.footprint
+    assert s2.variant.footprint is not None and s2.variant.footprint.smooth_factor == 2
     assert s2.variant.transport == base.variant.transport  # shares hrrr's particles
     assert project.simulation(rid, "hrrr") == base  # a value, not a handle
     with pytest.raises(KeyError, match="No variant"):
@@ -610,7 +610,7 @@ def test_incomplete_and_status_agree_with_is_complete(tmp_path):
 
     smooth = sims[sims.variant == "smooth"]
     assert _pairs(smooth.incomplete()) == [
-        (sim.receptor_id, "smooth")
+        (sim.receptor.id, "smooth")
         for sim in handles
         if sim.variant.name == "smooth" and not sim.is_complete()
     ]

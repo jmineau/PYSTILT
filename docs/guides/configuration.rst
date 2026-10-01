@@ -247,7 +247,7 @@ footprint.
 
 If you give both ``grid`` and ``geometry``, the ``grid`` is used as given.
 The geometry is kept with the settings, and
-``sim.footprint_config.geometry.build()`` returns the :class:`stilt.Mesh` to
+``sim.variant.footprint.geometry.build()`` returns the :class:`stilt.Mesh` to
 aggregate onto.
 
 Each footprint file also stores a hash of the geometry it was made for.

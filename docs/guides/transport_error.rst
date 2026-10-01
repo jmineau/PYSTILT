@@ -179,7 +179,7 @@ and perturbed particle tables and the flux field:
            sim.particles,
            err.particles,
            flux,
-           transforms=sim.footprint_config.transforms,
+           transforms=sim.variant.footprint.transforms,
            context=project.transform_context(sim),
        )
        rows.append({"receptor": sim.receptor.id, "enhancement": result.enhancement,

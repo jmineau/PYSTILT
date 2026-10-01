@@ -152,7 +152,7 @@ def test_status_counts_full_simulation_completion(tmp_path):
         }
     )
     folder = sim.output.particles(sim.variant.name, sim.variant.transport)
-    folder.write(receptor, particles, sim.params, [])
+    folder.write(receptor, particles, sim.variant.transport, [])
 
     result = runner.invoke(app, ["status", str(tmp_path)])
 

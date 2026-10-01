@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, NamedTuple
 import pandas as pd
 import xarray as xr
 
-from stilt.config import FootprintConfig, TransportSettings, VariantConfig
+from stilt.config import FootprintConfig, VariantConfig
 from stilt.exceptions import EmptyFootprint
 from stilt.footprint import calculate
 from stilt.output import Footprints, Output, Particles
@@ -122,20 +122,6 @@ class Simulation:
         """``(receptor.id, variant.name)``."""
         return SimID(self.receptor.id, self.variant.name)
 
-    @property
-    def receptor_id(self) -> str:
-        return str(self.receptor.id)
-
-    @property
-    def params(self) -> TransportSettings:
-        """Transport settings of the variant, what HYSPLIT ran with."""
-        return self.variant.transport
-
-    @property
-    def footprint_config(self) -> FootprintConfig | None:
-        """Footprint settings, or ``None`` for a variant without a grid."""
-        return self.variant.footprint
-
     # -- where the results are ---------------------------------------------
 
     # The folders hold many receptors' results; a simulation is one receptor,
@@ -159,19 +145,19 @@ class Simulation:
     def particles_path(self) -> Path | None:
         """Path of the particle file in the output directory, or ``None`` before its folder exists."""
         folder = self._particle_set
-        return None if folder is None else folder.file(self.receptor_id)
+        return None if folder is None else folder.file(self.receptor.id)
 
     @property
     def footprint_path(self) -> Path | None:
         """Path of the footprint file in the output directory, or ``None`` before its folder exists."""
         feet = self._footprint_set
-        return None if feet is None else feet.file(self.receptor_id)
+        return None if feet is None else feet.file(self.receptor.id)
 
     @property
     def log_path(self) -> Path | None:
         """Path of the HYSPLIT log in the output directory, or ``None`` before its folder exists."""
         folder = self._particle_set
-        return None if folder is None else folder.log_path(self.receptor_id)
+        return None if folder is None else folder.log_path(self.receptor.id)
 
     # -- presence and completion -------------------------------------------
 
@@ -179,7 +165,7 @@ class Simulation:
     def has_particles(self) -> bool:
         """Whether the particle file exists."""
         folder = self._particle_set
-        return folder is not None and folder.has(self.receptor_id)
+        return folder is not None and folder.has(self.receptor.id)
 
     @property
     def has_footprint(self) -> bool:
@@ -189,7 +175,7 @@ class Simulation:
         An empty footprint (no particles over the grid) is a finished result.
         """
         feet = self._footprint_set
-        return feet is not None and feet.has(self.receptor_id)
+        return feet is not None and feet.has(self.receptor.id)
 
     @property
     def makes_footprint(self) -> bool:
@@ -209,7 +195,7 @@ class Simulation:
     @property
     def is_backward(self) -> bool:
         """Whether particles run backward in time (``n_hours < 0``)."""
-        return self.params.n_hours < 0
+        return self.variant.transport.n_hours < 0
 
     @property
     def time_range(self) -> tuple[dt.datetime, dt.datetime]:
@@ -224,11 +210,11 @@ class Simulation:
         """
         r_time = self.receptor.time
         if self.is_backward:
-            start = r_time + dt.timedelta(hours=self.params.n_hours)
+            start = r_time + dt.timedelta(hours=self.variant.transport.n_hours)
             stop = r_time
         else:
             start = r_time
-            stop = r_time + dt.timedelta(hours=self.params.n_hours)
+            stop = r_time + dt.timedelta(hours=self.variant.transport.n_hours)
         return start, stop
 
     @property
@@ -240,9 +226,9 @@ class Simulation:
         ``"no_particles"`` that there were none.
         """
         feet = self._footprint_set
-        if feet is None or not feet.has(self.receptor_id):
+        if feet is None or not feet.has(self.receptor.id):
             return None
-        return feet.empty_reason(self.receptor_id)
+        return feet.empty_reason(self.receptor.id)
 
     @property
     def outcome(self) -> str | None:
@@ -315,9 +301,9 @@ class Simulation:
             a read after the run finishes loads them.
         """
         folder = self._particle_set
-        if folder is None or not folder.has(self.receptor_id):
+        if folder is None or not folder.has(self.receptor.id):
             raise FileNotFoundError(f"{self.id} has no particles yet.")
-        return folder.read(self.receptor_id)
+        return folder.read(self.receptor.id)
 
     @cached_property
     def footprint(self) -> xr.DataArray | None:
@@ -341,9 +327,9 @@ class Simulation:
         if not self.makes_footprint:
             return None
         feet = self._footprint_set
-        if feet is None or not feet.has(self.receptor_id):
+        if feet is None or not feet.has(self.receptor.id):
             raise FileNotFoundError(f"{self.id} has no footprint yet.")
-        return feet.read(self.receptor_id)
+        return feet.read(self.receptor.id)
 
     @cached_property
     def plot(self) -> SimulationPlotAccessor:
@@ -362,7 +348,7 @@ class Simulation:
         Calculate a footprint from the stored particles, without writing it.
 
         Use it to try other settings than the variant's, for example
-        ``sim.footprint_config.model_copy(update={"smooth_factor": 0.5})``.
+        ``sim.variant.footprint.model_copy(update={"smooth_factor": 0.5})``.
         Nothing is written; the workers write the variant's own footprint.
 
         Parameters

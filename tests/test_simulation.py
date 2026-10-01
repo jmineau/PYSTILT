@@ -73,9 +73,9 @@ def _trajectories(receptor, params, foot: float = 1e-5) -> pd.DataFrame:
 
 def _write_particles(sim: Simulation) -> pd.DataFrame:
     """Put particles for *sim* in the output directory and return them."""
-    particles = _trajectories(sim.receptor, sim.params)
+    particles = _trajectories(sim.receptor, sim.variant.transport)
     folder = sim.output.particles(sim.variant.name, sim.variant.transport)
-    folder.write(sim.receptor, particles, sim.params, [])
+    folder.write(sim.receptor, particles, sim.variant.transport, [])
     return particles
 
 
@@ -128,8 +128,8 @@ def test_simulation_is_a_frozen_value(point_receptor, tmp_path):
     with pytest.raises(AttributeError):
         a.receptor = point_receptor  # type: ignore[misc]
     assert a.id == SimID(point_receptor.id, "hrrr")
-    assert a.params.numpar == 10
-    assert a.footprint_config == FOOT
+    assert a.variant.transport.numpar == 10
+    assert a.variant.footprint == FOOT
     assert not (tmp_path / "output").exists()  # building one creates nothing
 
 
@@ -292,7 +292,7 @@ def test_outcome_reads_a_failure_from_the_log(point_receptor, tmp_path):
     sim = _sim(tmp_path, point_receptor)
     run = sim.output.particles(sim.variant.name, sim.variant.transport)
     run.write_log(
-        sim.receptor_id, "Insufficient number of meteorological files found\n"
+        sim.receptor.id, "Insufficient number of meteorological files found\n"
     )
     assert sim.outcome == "failed:MISSING_MET_FILES"
     assert sim.log.startswith("Insufficient")
@@ -374,10 +374,10 @@ def test_generate_footprint_uses_the_receptor_kernel_from_a_project_table(
         update={"transforms": [AveragingKernel(table="kernels.parquet")]}
     )
     sim = _sim(tmp_path, point_receptor, footprint=config)
-    with_height = _trajectories(point_receptor, sim.params)
+    with_height = _trajectories(point_receptor, sim.variant.transport)
     with_height["xhgt"] = 10.0  # the kernel weights particles by release height
     folder = sim.output.particles(sim.variant.name, sim.variant.transport)
-    folder.write(point_receptor, with_height, sim.params, [])
+    folder.write(point_receptor, with_height, sim.variant.transport, [])
     plain = _sim(tmp_path, point_receptor, footprint=FOOT, variant="plain")
     assert (
         plain._particle_set == sim._particle_set

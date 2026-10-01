@@ -8,6 +8,9 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **One name for each part of a simulation** (breaking). `sim.params`,
+  `sim.footprint_config`, and `sim.receptor_id` are removed. Use
+  `sim.variant.transport`, `sim.variant.footprint`, and `sim.receptor.id`.
 - **A selection of simulations loads its own results**
   ([#107](https://github.com/jmineau/PYSTILT/issues/107); breaking).
   `project.simulations` is a `Simulations`: the table plus the project it
