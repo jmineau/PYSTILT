@@ -12,7 +12,7 @@ from pandas.tseries.frequencies import to_offset
 from stilt._atomic import atomic_path
 from stilt.config import MetConfig
 from stilt.config.transport import settings_hash
-from stilt.errors import MeteorologyError
+from stilt.exceptions import MeteorologyError
 
 if TYPE_CHECKING:
     from arlmet.archives import Archive

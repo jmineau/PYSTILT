@@ -8,6 +8,17 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **Exceptions share one base class, `stilt.StiltError`, and live in
+  `stilt.exceptions`** ([#80](https://github.com/jmineau/PYSTILT/issues/80);
+  breaking). `stilt.errors` is renamed `stilt.exceptions`, with no alias.
+  Each exception still subclasses its builtin, so `except RuntimeError`
+  and `except FileNotFoundError` keep working. `EmptyFootprintError` is
+  renamed `EmptyFootprint` and is no longer a `RuntimeError`, since an
+  empty footprint is a result rather than a failure. A missing HYSPLIT
+  executable raises the new `HYSPLITNotFoundError` (a `FileNotFoundError`)
+  in all three places it is checked; a platform with no bundled build used
+  to raise `RuntimeError`. `FailureReason` and `identify_failure_reason`
+  move to `stilt.transport.hysplit`, beside the driver whose log they read.
 - **Results live in an output directory, not inside the project**
   ([#74](https://github.com/jmineau/PYSTILT/issues/74), design in
   [#67](https://github.com/jmineau/PYSTILT/issues/67); breaking). A
@@ -210,6 +221,8 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `Simulation.publish`, `Simulation.parent`, `stilt.store` and object-store
   project roots (`s3://`, `gs://`), `RuntimeSettings.cache_dir`, and
   `VariantConfig.derived_from` / `record`.
+- `ConfigValidationError`, which nothing raised any more
+  ([#80](https://github.com/jmineau/PYSTILT/issues/80)).
 
 ### Added
 

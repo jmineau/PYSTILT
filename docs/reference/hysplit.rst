@@ -16,3 +16,18 @@ to run HYSPLIT outside a project.
    :nosignatures:
 
    stilt.transport.hysplit.HYSPLITDriver
+
+Failure reasons
+---------------
+
+When a run fails, :func:`stilt.transport.hysplit.identify_failure_reason`
+reads its log and returns the :class:`stilt.transport.hysplit.FailureReason`
+for the first message it knows. :attr:`stilt.Simulation.outcome` reports it
+as ``"failed:<reason>"``.
+
+.. autosummary::
+   :toctree: _api
+   :nosignatures:
+
+   stilt.transport.hysplit.FailureReason
+   stilt.transport.hysplit.identify_failure_reason

@@ -25,8 +25,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
 from stilt.config import FootprintConfig
-from stilt.errors import (
-    EmptyFootprintError,
+from stilt.exceptions import (
+    EmptyFootprint,
     EmptyTrajectoryError,
     SimulationError,
 )
@@ -280,7 +280,7 @@ def write_footprint(
     feet = run.footprints(config, name=sim.variant.name)
     try:
         foot = trajectories.footprint(config, name=sim.variant.name, context=context)
-    except EmptyFootprintError as error:
+    except EmptyFootprint as error:
         feet.write_empty(sim.receptor, error.reason, name=sim.variant.name)
         return None
     feet.write(foot)

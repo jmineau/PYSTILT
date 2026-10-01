@@ -5,14 +5,14 @@ from pathlib import Path
 import pytest
 
 from stilt.config import STILTParams
-from stilt.errors import (
-    FailureReason,
+from stilt.exceptions import (
     HYSPLITFailureError,
+    HYSPLITNotFoundError,
     HYSPLITTimeoutError,
     NoParticleOutputError,
 )
 from stilt.receptors import ColumnReceptor, MultiPointReceptor
-from stilt.transport.hysplit import HYSPLITDriver
+from stilt.transport.hysplit import FailureReason, HYSPLITDriver
 from stilt.transport.hysplit.control import ControlFile
 
 # ---------------------------------------------------------------------------
@@ -235,7 +235,7 @@ def test_run_returns_where_its_log_output_starts(tmp_path, point_receptor):
 def test_run_raises_clear_error_when_executable_missing(tmp_path, point_receptor):
     runner = _make_runner(tmp_path, point_receptor)
 
-    with pytest.raises(FileNotFoundError, match="HYSPLIT executable not found"):
+    with pytest.raises(HYSPLITNotFoundError, match="HYSPLIT executable not found"):
         runner._run(timeout=5)
 
 
@@ -730,7 +730,7 @@ def test_exe_dir_without_hycs_std_raises(tmp_path, point_receptor):
     empty = tmp_path / "empty"
     empty.mkdir()
     runner = _exe_driver(tmp_path, point_receptor, params_exe=empty)
-    with pytest.raises(FileNotFoundError, match="hycs_std"):
+    with pytest.raises(HYSPLITNotFoundError, match="hycs_std"):
         runner.prepare()
 
 
@@ -868,7 +868,7 @@ def test_bundled_exe_dir_rejects_platforms_without_a_build(
 
     monkeypatch.setattr(driver.platform, "system", lambda: system)
     monkeypatch.setattr(driver.platform, "machine", lambda: machine)
-    with pytest.raises(RuntimeError, match="exe_dir"):
+    with pytest.raises(HYSPLITNotFoundError, match="exe_dir"):
         driver._bundled_exe_dir()
 
 
@@ -880,5 +880,5 @@ def test_bundled_exe_dir_rejects_an_install_without_the_binary(monkeypatch, tmp_
     monkeypatch.setattr(driver.platform, "system", lambda: "Linux")
     monkeypatch.setattr(driver.platform, "machine", lambda: "x86_64")
     monkeypatch.setattr(driver, "pkg_files", lambda _package: tmp_path)
-    with pytest.raises(RuntimeError, match="exe_dir"):
+    with pytest.raises(HYSPLITNotFoundError, match="exe_dir"):
         driver._bundled_exe_dir()

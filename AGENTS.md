@@ -116,7 +116,7 @@ src/stilt/
   meteorology.py     Met: ARL file discovery, download, and cropping (via arlmet)
   transforms.py      pre-footprint particle transforms (averaging kernel,
                      pressure weighting, lifetime decay) and their YAML I/O
-  errors.py          failure reasons and structured error types
+  exceptions.py      every exception class, all under StiltError
   visualization.py   matplotlib helpers (optional dependency)
 
   config/            pydantic configuration: ProjectConfig and its parts
@@ -132,8 +132,9 @@ src/stilt/
   transport/         the TransportModel protocol and get_model (__init__.py),
                      one subpackage per transport model
     hysplit/         HYSPLIT, the one model today: HysplitModel, the driver
-                     (CONTROL / SETUP.CFG writers), and the bundled binaries
-                     (bin/) and data tables (data/)
+                     (CONTROL / SETUP.CFG writers), failure reasons read from
+                     its log (failures.py), and the bundled binaries (bin/)
+                     and data tables (data/)
 
 tests/               pytest; markers `integration` and `fidelity`
 docs/                Sphinx (pydata-sphinx-theme)
@@ -305,6 +306,9 @@ redistribute. Synthetic samples should keep the real format's quirks.
   --group dev`) and run `pyright --venvpath <dir> src/stilt`.
   Fix types at the source rather than reaching for `typing.cast`.
 - Keep the `from __future__ import annotations` headers.
+- Exception classes live in `stilt/exceptions.py`. Each subclasses
+  `StiltError` and the builtin that describes it; a failed run is a
+  `SimulationError`. Plain input checks raise builtins such as `ValueError`.
 - Runtime dependencies live in `[project]`; optional extras are `geometry`,
   `visualization`, `cloud`, and `complete`. The `dev` dependency group pulls
   in `pystilt[complete]` plus the test, lint, type, and docs tooling.
@@ -401,7 +405,7 @@ Feature status lives in the roadmap tables in [README.md](README.md) and
 - **`project.simulations` is a cached DataFrame.** `add_receptors` drops the
   cache; a `config.yaml` edited by hand needs a new `Project(path)`.
 - **Empty footprints are successes, and not footprints.** When no particle
-  reaches the grid, `Footprint.calculate` raises `EmptyFootprintError` and
+  reaches the grid, `Footprint.calculate` raises `EmptyFootprint` and
   the worker's `write_footprint` writes a footprint file with no rows and
   the reason in its metadata. `sim.is_complete()` is true, `sim.footprint` is
   `None`, `sim.empty_reason` says why, and `footprint.load()` leaves the

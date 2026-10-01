@@ -1,0 +1,70 @@
+"""Tests for stilt.exceptions: one StiltError base, each under its builtin."""
+
+import inspect
+
+import pytest
+
+import stilt
+from stilt import exceptions
+from stilt.exceptions import (
+    EmptyFootprint,
+    EmptyTrajectoryError,
+    HYSPLITFailureError,
+    HYSPLITNotFoundError,
+    HYSPLITTimeoutError,
+    MeteorologyError,
+    NoParticleOutputError,
+    SimulationError,
+    StiltError,
+)
+from stilt.transport.hysplit import FailureReason
+
+#: Each class and the parents it must have (#80).
+PARENTS = {
+    StiltError: (Exception,),
+    SimulationError: (StiltError, RuntimeError),
+    MeteorologyError: (SimulationError,),
+    HYSPLITTimeoutError: (SimulationError,),
+    NoParticleOutputError: (SimulationError,),
+    HYSPLITFailureError: (SimulationError,),
+    EmptyTrajectoryError: (SimulationError,),
+    HYSPLITNotFoundError: (StiltError, FileNotFoundError),
+    EmptyFootprint: (StiltError,),
+}
+
+
+def test_every_exception_class_is_in_the_table():
+    classes = {
+        obj
+        for _, obj in inspect.getmembers(exceptions, inspect.isclass)
+        if issubclass(obj, BaseException) and obj.__module__ == exceptions.__name__
+    }
+    assert classes == set(PARENTS)
+    assert set(exceptions.__all__) == {cls.__name__ for cls in PARENTS}
+
+
+@pytest.mark.parametrize("cls", list(PARENTS), ids=lambda cls: cls.__name__)
+def test_parents(cls):
+    assert cls.__bases__ == PARENTS[cls]
+    assert issubclass(cls, StiltError)
+
+
+def test_stilt_error_is_exported():
+    assert stilt.StiltError is StiltError
+
+
+def test_empty_footprint_is_not_a_failure():
+    assert not issubclass(EmptyFootprint, (SimulationError, RuntimeError))
+    assert EmptyFootprint("outside_domain").reason == "outside_domain"
+
+
+def test_hysplit_not_found_is_not_a_failed_run():
+    """A missing executable is a setup problem, so a worker reports it as an error."""
+    assert not issubclass(HYSPLITNotFoundError, SimulationError)
+
+
+def test_hysplit_failure_error_names_the_reason_and_the_log():
+    err = HYSPLITFailureError(FailureReason.MISSING_MET_FILES, "/runs/a/stilt.log")
+    assert err.reason is FailureReason.MISSING_MET_FILES
+    assert "MISSING_MET_FILES" in str(err)
+    assert "/runs/a/stilt.log" in str(err)

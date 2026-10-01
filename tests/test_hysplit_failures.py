@@ -1,22 +1,6 @@
-"""Tests for stilt.errors - FailureReason, identify_failure_reason, exception hierarchy."""
+"""Tests for stilt.transport.hysplit.failures: reading why a HYSPLIT run failed from its log."""
 
-import pytest
-
-from stilt.errors import (
-    ConfigChangedError,
-    ConfigValidationError,
-    EmptyTrajectoryError,
-    FailureReason,
-    HYSPLITFailureError,
-    HYSPLITTimeoutError,
-    NoParticleOutputError,
-    SimulationError,
-    identify_failure_reason,
-)
-
-# ---------------------------------------------------------------------------
-# FailureReason
-# ---------------------------------------------------------------------------
+from stilt.transport.hysplit import FailureReason, identify_failure_reason
 
 
 def test_failure_reason_is_str():
@@ -81,40 +65,3 @@ def test_identify_failure_reason_met_truncated(tmp_path):
 def test_identify_failure_reason_unknown(tmp_path):
     (tmp_path / "stilt.log").write_text("something completely unrecognized\n")
     assert identify_failure_reason(tmp_path) is FailureReason.UNKNOWN
-
-
-# ---------------------------------------------------------------------------
-# Exception hierarchy
-# ---------------------------------------------------------------------------
-
-
-def test_simulation_error_is_runtime_error():
-    assert issubclass(SimulationError, RuntimeError)
-
-
-def test_config_errors_are_value_errors_not_simulation_errors():
-    for cls in (ConfigValidationError, ConfigChangedError):
-        assert issubclass(cls, ValueError)
-        assert not issubclass(cls, SimulationError)
-
-
-def test_all_subclasses_inherit_simulation_error():
-    for cls in (
-        HYSPLITTimeoutError,
-        NoParticleOutputError,
-        EmptyTrajectoryError,
-        HYSPLITFailureError,
-    ):
-        assert issubclass(cls, SimulationError)
-
-
-def test_hysplit_failure_error_names_the_reason_and_the_log():
-    err = HYSPLITFailureError(FailureReason.MISSING_MET_FILES, "/runs/a/stilt.log")
-    assert err.reason is FailureReason.MISSING_MET_FILES
-    assert "MISSING_MET_FILES" in str(err)
-    assert "/runs/a/stilt.log" in str(err)
-
-
-def test_hysplit_failure_error_catchable_as_simulation_error():
-    with pytest.raises(SimulationError):
-        raise HYSPLITFailureError(FailureReason.UNKNOWN, "stilt.log")

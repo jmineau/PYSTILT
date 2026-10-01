@@ -38,7 +38,7 @@ import xarray as xr
 
 from stilt.config import FootprintConfig, Grid
 from stilt.config.spatial import _grid_cell_starts
-from stilt.errors import EmptyFootprintError
+from stilt.exceptions import EmptyFootprint
 from stilt.footprint import (
     Footprint,
     _build_buffered_grid,
@@ -556,7 +556,7 @@ def test_all_outside_domain(rscript, r_stilt_dir, tmp_path):
     All particles well outside the grid: neither tool makes a footprint.
 
     STILT-R returns NULL (read here as an all-zero array). PYSTILT raises
-    EmptyFootprintError, which a simulation records as its ``.empty`` marker.
+    EmptyFootprint, which a simulation records as its ``.empty`` marker.
     """
     p = _particles(
         n=5,
@@ -565,7 +565,7 @@ def test_all_outside_domain(rscript, r_stilt_dir, tmp_path):
         foot=[1e-4] * 5,
     )
 
-    with pytest.raises(EmptyFootprintError, match="outside_domain"):
+    with pytest.raises(EmptyFootprint, match="outside_domain"):
         _py_footprint(tmp_path / "py", p)
     r_ds = _r_footprint(tmp_path / "r", rscript, r_stilt_dir, p)
 

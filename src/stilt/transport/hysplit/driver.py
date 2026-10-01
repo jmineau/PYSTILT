@@ -19,16 +19,19 @@ from stilt.config import (
     STILTParams,
     kmsl_from_vertical_reference,
 )
-from stilt.errors import (
-    FAILURE_PHRASES,
-    MET_TRUNCATED_WARNING,
-    FailureReason,
+from stilt.exceptions import (
     HYSPLITFailureError,
+    HYSPLITNotFoundError,
     HYSPLITTimeoutError,
     NoParticleOutputError,
 )
 from stilt.receptors import Receptor
 from stilt.transport.hysplit.control import ControlFile
+from stilt.transport.hysplit.failures import (
+    FAILURE_PHRASES,
+    MET_TRUNCATED_WARNING,
+    FailureReason,
+)
 from stilt.transport.hysplit.namelist import NameList
 
 CONTROL_FILE = "CONTROL"
@@ -61,7 +64,7 @@ def _bundled_exe_dir() -> Path:
         exe_dir = Path(str(pkg_files("stilt.transport.hysplit") / "bin" / subdir))
         if (exe_dir / HYCS_STD_FILE).is_file():
             return exe_dir
-    raise RuntimeError(
+    raise HYSPLITNotFoundError(
         f"No bundled HYSPLIT binary for {system} {platform.machine()}. "
         "Build hycs_std for this machine and set exe_dir in config.yaml "
         "to the directory that holds it."
@@ -196,7 +199,7 @@ class HYSPLITDriver:
         # usually holds a whole HYSPLIT exec/ tree we have no business linking.
         exe = self.exe_dir / HYCS_STD_FILE
         if not exe.is_file():
-            raise FileNotFoundError(
+            raise HYSPLITNotFoundError(
                 f"No {HYCS_STD_FILE!r} executable in {self.exe_dir}. "
                 "Check STILTParams.exe_dir."
             )
@@ -264,7 +267,7 @@ class HYSPLITDriver:
     def _run(self, timeout: int | None, *, label: str = "hycs_std") -> int:
         """Run ``hycs_std``, appending its output to the log, and return the offset it starts at."""
         if not self.hycs_std_path.exists():
-            raise FileNotFoundError(
+            raise HYSPLITNotFoundError(
                 f"HYSPLIT executable not found for {self.directory}: {self.hycs_std_path}"
             )
         segment_start = self.log_path.stat().st_size if self.log_path.exists() else 0
