@@ -315,6 +315,13 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   transport settings fail with the same error instead of running HYSPLIT
   again. A receptor with N such variants no longer runs, or times out,
   N times.
+- A footprint with a single hourly layer that is not the receptor's own
+  hour, such as a backward run whose particles all leave the grid within
+  the first hour, is stamped at that hour, as in STILT-R. It was stamped at
+  the receptor time.
+- A calculated footprint's coordinates are rounded as a stored one's are
+  when read back, so the two line up (`sim.generate_footprint() -
+  sim.footprint` no longer misaligns some cells).
 
 ### Added
 

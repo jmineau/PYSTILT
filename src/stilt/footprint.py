@@ -103,19 +103,21 @@ def _build_footprint_array(
         layers = np.array([0], dtype=int)
     if len(foot_arr.shape) != 3:
         raise ValueError("foot_arr must be 3D in (time, y, x) order.")
-    if len(layers) == 1 and foot_arr.shape[0] == 1:
-        time_out = [receptor.time]
-    else:
-        time_out = [receptor.time + pd.Timedelta(hours=int(layer)) for layer in layers]
+    # Layer k is the hour from k hours after the receptor time, and is stamped
+    # there, as in STILT-R; a backward run's first hour is layer -1. A
+    # time-integrated footprint is the one layer 0, at the receptor time.
+    time_out = [receptor.time + pd.Timedelta(hours=int(layer)) for layer in layers]
     time_index = _utc_index(time_out).tz_localize(None)
     x_dim = "lon" if is_longlat else "x"
     y_dim = "lat" if is_longlat else "y"
-    x_coords = glong + xres / 2
-    y_coords = glati + yres / 2
+    # Rounded as Grid.axes rounds them, so a footprint read back from its
+    # file has the same coordinates as the one calculated.
+    x_coords = np.round(glong + xres / 2, 10)
+    y_coords = np.round(glati + yres / 2, 10)
     if wrapped_longitude:
         unwrapped = ((x_coords + 180.0) % 360.0) - 180.0
         order = np.argsort(unwrapped)
-        x_coords = unwrapped[order]
+        x_coords = np.round(unwrapped[order], 10)
         foot_arr = foot_arr[:, :, order]
     return xr.DataArray(
         foot_arr,

@@ -1600,3 +1600,54 @@ def test_calculate_returns_a_named_dataarray_with_its_receptor(point_receptor):
     assert foot.stilt.receptor == point_receptor
     assert foot.stilt.name == "hrrr"
     assert foot.attrs["units"] == "ppm m2 s umol-1"
+
+
+def _first_hour_particles(n: int = 20, seed: int = 0) -> pd.DataFrame:
+    """Backward particles that all stay within the first hour (layer -1)."""
+    rng = np.random.default_rng(seed)
+    return pd.DataFrame(
+        {
+            "time": np.repeat([-20.0, -40.0, -59.0], n),
+            "indx": np.tile(np.arange(1, n + 1), 3),
+            "long": rng.uniform(-112.2, -111.7, 3 * n),
+            "lati": rng.uniform(40.6, 40.9, 3 * n),
+            "zagl": rng.uniform(5, 100, 3 * n),
+            "foot": rng.uniform(0.0, 1e-3, 3 * n),
+        }
+    )
+
+
+def test_one_layer_footprint_is_stamped_at_its_hour():
+    """A backward footprint with only layer -1 is stamped an hour before the receptor, as in STILT-R."""
+    receptor = PointReceptor(
+        time="2023-01-01 12:00", longitude=-111.95, latitude=40.75, altitude=5.0
+    )
+    grid = Grid(xmin=-112.3, xmax=-111.6, ymin=40.5, ymax=41.0, xres=0.01, yres=0.01)
+
+    foot = calculate(_first_hour_particles(), receptor, FootprintConfig(grid=grid))
+    integrated = calculate(
+        _first_hour_particles(),
+        receptor,
+        FootprintConfig(grid=grid, time_integrate=True),
+    )
+
+    assert list(pd.DatetimeIndex(foot["time"].values)) == [
+        pd.Timestamp("2023-01-01 11:00")
+    ]
+    assert list(pd.DatetimeIndex(integrated["time"].values)) == [
+        pd.Timestamp("2023-01-01 12:00")
+    ]
+
+
+def test_calculated_coordinates_match_the_grid_axes():
+    """A calculated footprint has the coordinates a stored one is read back with."""
+    receptor = PointReceptor(
+        time="2023-01-01 12:00", longitude=-111.95, latitude=40.75, altitude=5.0
+    )
+    grid = Grid(xmin=-112.3, xmax=-111.6, ymin=40.5, ymax=41.0, xres=0.01, yres=0.01)
+
+    foot = calculate(_first_hour_particles(), receptor, FootprintConfig(grid=grid))
+
+    x, y = grid.axes
+    np.testing.assert_array_equal(foot["lon"].values, x)
+    np.testing.assert_array_equal(foot["lat"].values, y)
