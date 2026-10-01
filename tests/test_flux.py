@@ -1,4 +1,4 @@
-"""Tests for stilt.flux and Footprint.enhancement."""
+"""Tests for stilt.flux and the footprint enhancement."""
 
 import numpy as np
 import pandas as pd
@@ -7,7 +7,7 @@ import xarray as xr
 
 from stilt.config import FootprintConfig, Grid
 from stilt.flux import horizontal_dims, particle_enhancement, sample_flux
-from stilt.footprint import Footprint
+from stilt.footprint import _describe
 
 
 def _flux(values=None, lons=(-112.0, -111.0, -110.0), lats=(40.0, 41.0)):
@@ -124,13 +124,13 @@ def _footprint(point_receptor, values):
         dims=["time", "lat", "lon"],
         coords={"time": times, "lat": [40.0, 41.0], "lon": [-112.0, -111.0, -110.0]},
     )
-    return Footprint(point_receptor, FootprintConfig(grid=grid), data, name="test")
+    return _describe(data, point_receptor, FootprintConfig(grid=grid), "test")
 
 
 def test_footprint_enhancement_is_foot_times_flux_per_time_step(point_receptor):
     foot = _footprint(point_receptor, [np.ones((2, 3)), 2 * np.ones((2, 3))])
 
-    enhancement = foot.enhancement(_flux())  # flux cells 0..5 sum to 15
+    enhancement = foot.stilt.enhancement(_flux())  # flux cells 0..5 sum to 15
 
     assert enhancement.dims == ("time",)
     assert enhancement.to_numpy().tolist() == [15.0, 30.0]
@@ -143,7 +143,7 @@ def test_footprint_enhancement_samples_flux_on_its_own_grid(point_receptor):
     uniform = xr.DataArray(
         [[7.0]], dims=["lat", "lon"], coords={"lat": [40.5], "lon": [-111.0]}
     )
-    assert float(foot.enhancement(uniform)[0]) == 7.0 * 6
+    assert float(foot.stilt.enhancement(uniform)[0]) == 7.0 * 6
 
     # two 2-degree cells reach only one degree past their centres
     narrow = xr.DataArray(
@@ -151,7 +151,7 @@ def test_footprint_enhancement_samples_flux_on_its_own_grid(point_receptor):
         dims=["lat", "lon"],
         coords={"lat": [40.5], "lon": [-114.5, -112.5]},
     )
-    assert float(foot.enhancement(narrow)[0]) == 7.0 * 2  # only the -112 column
+    assert float(foot.stilt.enhancement(narrow)[0]) == 7.0 * 2  # only the -112 column
 
 
 def test_footprint_enhancement_time_varying_flux(point_receptor):
@@ -166,4 +166,4 @@ def test_footprint_enhancement_time_varying_flux(point_receptor):
         },
     )
 
-    assert foot.enhancement(flux).to_numpy().tolist() == [60.0, 6.0]
+    assert foot.stilt.enhancement(flux).to_numpy().tolist() == [60.0, 6.0]

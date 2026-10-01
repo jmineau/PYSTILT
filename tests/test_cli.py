@@ -141,8 +141,6 @@ def test_status_counts_full_simulation_completion(tmp_path):
 
     # Particles exist but the required footprint does not: not complete.
     sim = project.simulation(receptor.id, "hrrr")
-    from stilt.particles import Trajectories
-
     particles = pd.DataFrame(
         {
             "time": [-60.0],
@@ -153,10 +151,8 @@ def test_status_counts_full_simulation_completion(tmp_path):
             "foot": [1e-5],
         }
     )
-    run = sim.output.particles(sim.variant.name, sim.variant.transport)
-    run.write(
-        Trajectories(receptor=receptor, params=sim.params, met_files=[], data=particles)
-    )
+    folder = sim.output.particles(sim.variant.name, sim.variant.transport)
+    folder.write(receptor, particles, sim.params, [])
 
     result = runner.invoke(app, ["status", str(tmp_path)])
 

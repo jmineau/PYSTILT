@@ -17,6 +17,7 @@ import pandas as pd
 
 from stilt.config import MetConfig, ProjectConfig
 from stilt.execution import resolve_compute_root
+from stilt.particles import particles_metadata
 from stilt.project import Project
 from stilt.simulation import SimID
 
@@ -66,7 +67,7 @@ def test_particles(tmp_path, wbb_receptor, traj_only_config):
     assert sim.particles_path.parent.name == "date=2021-01-15"
     assert sim.particles_path.parent.parent.name.startswith("settings=hrrr-")
     assert len(pd.read_parquet(sim.particles_path)) > 0, "Particle file is empty"
-    assert sim.particles is not None and len(sim.particles.data) > 0
+    assert sim.particles is not None and len(sim.particles) > 0
     assert not (resolve_compute_root(model) / sim.id).exists(), (
         "the scratch working directory is removed"
     )
@@ -95,8 +96,8 @@ def test_footprint(tmp_path, wbb_receptor, wbb_config):
     assert sim.footprint_path is not None and sim.footprint_path.exists()
     assert sim.has_footprint
     assert sim.footprint is not None
-    assert {"time", "lat", "lon"} <= set(sim.footprint.data.dims)
-    assert float(sim.footprint.data.sum()) > 0
+    assert {"time", "lat", "lon"} <= set(sim.footprint.dims)
+    assert float(sim.footprint.sum()) > 0
 
 
 @integration
@@ -305,10 +306,10 @@ def test_footprint_only_variant_rasterizes_the_same_particles(
     assert len(model.output.particle_sets()) == 1
     assert {f.name for f in fine._particle_set.footprint_sets()} == {"hrrr", "coarse"}
     assert coarse.footprint is not None and fine.footprint is not None
-    assert coarse.footprint.grid.xres == 0.05
-    assert fine.footprint.grid.xres == 0.01
+    assert coarse.footprint.stilt.grid.xres == 0.05
+    assert fine.footprint.stilt.grid.xres == 0.01
     # Same particles, so the same total sensitivity inside the shared domain order.
-    assert float(coarse.footprint.data.sum()) > 0
+    assert float(coarse.footprint.sum()) > 0
 
 
 @integration
@@ -394,8 +395,8 @@ def test_error_variant(tmp_path, wbb_receptor, traj_only_config):
     assert not (main_scratch / "WINDERR").exists()
     assert "winderrtf=1" in (err_scratch / "SETUP.CFG").read_text().lower()
 
-    main_traj = main.particles.data
-    error_traj = err.particles.data
+    main_traj = main.particles
+    error_traj = err.particles
     assert len(main_traj) > 0 and len(error_traj) > 0
     assert set(main_traj.columns) == set(error_traj.columns)
     assert (
@@ -403,7 +404,7 @@ def test_error_variant(tmp_path, wbb_receptor, traj_only_config):
         .reset_index(drop=True)
         .equals(error_traj["long"].reset_index(drop=True))
     ), "Error trajectory identical to main — wind perturbation had no effect"
-    assert err.particles.params.winderrtf == 1
+    assert particles_metadata(err.particles_path).params.winderrtf == 1
 
 
 @integration
@@ -423,7 +424,7 @@ def test_error_realizations(tmp_path, wbb_receptor, traj_only_config):
     assert sims["variant"].tolist() == ["err-0", "err-1"]
     assert model.incomplete(sims).empty
 
-    e0, e1 = (t.data for t in model.load_particles(sims).values())
+    e0, e1 = model.load_particles(sims).values()
     s0 = e0.groupby("indx")["foot"].sum()
     s1 = e1.groupby("indx")["foot"].sum().reindex(s0.index)
     assert not np.allclose(s0.to_numpy(), s1.to_numpy())
@@ -464,19 +465,19 @@ def test_seeded_error_realizations_differ_and_reproduce(
 
     a = run(tmp_path / "a")
     errs = a.simulations[a.simulations.group == "err"]
-    e0, e1 = (t.data for t in a.load_particles(errs).values())
+    e0, e1 = a.load_particles(errs).values()
     s0 = e0.groupby("indx")["foot"].sum()
     s1 = e1.groupby("indx")["foot"].sum().reindex(s0.index)
     assert not np.allclose(s0.to_numpy(), s1.to_numpy())
-    main = a.simulation(*_sim_id(wbb_receptor)).particles.data
+    main = a.simulation(*_sim_id(wbb_receptor)).particles
     s_main = main.groupby("indx")["foot"].sum().reindex(s0.index)
     assert not np.allclose(s_main.to_numpy(), s0.to_numpy())
 
     b = run(tmp_path / "b")
     for variant in ("hrrr", "err-0", "err-1"):
         pd.testing.assert_frame_equal(
-            a.simulation(*_sim_id(wbb_receptor, variant)).particles.data,
-            b.simulation(*_sim_id(wbb_receptor, variant)).particles.data,
+            a.simulation(*_sim_id(wbb_receptor, variant)).particles,
+            b.simulation(*_sim_id(wbb_receptor, variant)).particles,
         )
 
 
@@ -529,9 +530,9 @@ def test_geometry_footprint(tmp_path, wbb_receptor, met_dir):
     assert sim.has_footprint
     foot = sim.footprint
     assert foot is not None
-    assert foot.config.grid == fc.grid
-    assert foot.config.geometry == fc.geometry
-    assert foot.config.geometry_hash == fc.geometry_hash
+    assert foot.stilt.config.grid == fc.grid
+    assert foot.stilt.config.geometry == fc.geometry
+    assert foot.stilt.config.geometry_hash == fc.geometry_hash
 
     assert fc.geometry is not None
     mesh = fc.geometry.build()
@@ -543,10 +544,10 @@ def test_geometry_footprint(tmp_path, wbb_receptor, met_dir):
 
     with warnings.catch_warnings():
         warnings.simplefilter("error", UserWarning)
-        agg = foot.aggregate(mesh, bins)
+        agg = foot.stilt.aggregate(mesh, bins)
     assert agg.index.tolist() == ["wbb", "nw"]
     assert agg.loc["wbb"].sum() > 0  # the receptor sits inside its own window
-    assert agg.to_numpy().sum() <= float(foot.data.sum()) + 1e-12
+    assert agg.to_numpy().sum() <= float(foot.sum()) + 1e-12
 
 
 # ---------------------------------------------------------------------------
@@ -599,7 +600,7 @@ def test_forward_run(tmp_path, met_dir, wbb_grid):
     assert sim.has_particles, f"no trajectory for {sim.id}"
     assert sim.particles is not None
 
-    particles = sim.particles.data
+    particles = sim.particles
     assert len(particles) > 0
     # HYSPLIT reports elapsed minutes signed by run direction
     assert (particles["time"] >= 0).all()
@@ -613,10 +614,10 @@ def test_forward_run(tmp_path, met_dir, wbb_grid):
     assert sim.has_footprint, f"no footprint for {sim.id}"
     foot = sim.footprint
     assert foot is not None
-    times = pd.DatetimeIndex(foot.data["time"].values)
+    times = pd.DatetimeIndex(foot["time"].values)
     # hourly layers running forward, inside the window time_range reports
     assert times.is_monotonic_increasing
     assert times.min() >= pd.Timestamp(start)
     assert times.max() <= pd.Timestamp(stop)
     assert set(times.to_series().diff().dropna()) == {pd.Timedelta(hours=1)}
-    assert float(foot.data.sum()) > 0
+    assert float(foot.sum()) > 0

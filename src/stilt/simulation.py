@@ -10,11 +10,14 @@ from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING, NamedTuple
 
+import pandas as pd
+import xarray as xr
+
 from stilt.config import FootprintConfig, TransportSettings, VariantConfig
 from stilt.exceptions import EmptyFootprint
-from stilt.footprint import Footprint
+from stilt.footprint import calculate
 from stilt.output import Footprints, Output, Particles
-from stilt.particles import Trajectories
+from stilt.particles import particles_metadata
 from stilt.receptors import Receptor, parse_receptor_id
 from stilt.transforms import ParticleTransform, TransformContext
 from stilt.transport.hysplit.failures import identify_failure_reason
@@ -278,12 +281,31 @@ class Simulation:
             raise FileNotFoundError(f"No log for {self.id} yet.")
         return log_path.read_text()
 
-    @cached_property
-    def particles(self) -> Trajectories:
+    @property
+    def met_files(self) -> list[Path]:
         """
-        The particles.
+        The meteorology files HYSPLIT read for these particles.
 
-        Read from the output directory on first access and kept. Check
+        Raises
+        ------
+        FileNotFoundError
+            If the particles have not been written yet.
+        """
+        path = self.particles_path
+        if path is None or not path.exists():
+            raise FileNotFoundError(f"{self.id} has no particles yet.")
+        return particles_metadata(path).met_files
+
+    @cached_property
+    def particles(self) -> pd.DataFrame:
+        """
+        The particle table, one row per particle per output step.
+
+        The columns are the variables in ``varsiwant`` (``indx``, ``time`` in
+        minutes since release, ``long``, ``lati``, ``zagl``, ``foot``, ...),
+        plus ``datetime`` (UTC) and ``xhgt`` (release height, for column and
+        multipoint receptors). Read from the output directory on first
+        access and kept. Check
         :attr:`has_particles` first when the run may not have finished.
 
         Raises
@@ -298,9 +320,12 @@ class Simulation:
         return folder.read(self.receptor_id)
 
     @cached_property
-    def footprint(self) -> Footprint | None:
+    def footprint(self) -> xr.DataArray | None:
         """
         The footprint, or ``None`` when the variant has no grid or it is empty.
+
+        An :class:`xarray.DataArray` with dimensions ``(time, lat, lon)``,
+        whose ``.stilt`` accessor has the PYSTILT methods.
 
         Read from the output directory on first access and kept. An empty
         footprint (no particle reached the grid) is ``None`` with the reason
@@ -332,7 +357,7 @@ class Simulation:
         config: FootprintConfig | None = None,
         transforms: Sequence[ParticleTransform] | None = None,
         context: TransformContext | None = None,
-    ) -> Footprint | None:
+    ) -> xr.DataArray | None:
         """
         Calculate a footprint from the stored particles, without writing it.
 
@@ -354,7 +379,7 @@ class Simulation:
 
         Returns
         -------
-        Footprint or None
+        xarray.DataArray or None
             The footprint, or ``None`` when no particle reaches the grid.
 
         Raises
@@ -370,7 +395,7 @@ class Simulation:
             raise TypeError(
                 f"{self.id} has no footprint settings; pass a FootprintConfig."
             )
-        traj = self.particles
+        particles = self.particles
         if transforms:
             config = config.model_copy(
                 update={"transforms": [*config.transforms, *transforms]}
@@ -380,7 +405,13 @@ class Simulation:
                 receptor=self.receptor, variant=self.variant.name
             )
         try:
-            return traj.footprint(config, name=self.variant.name, context=context)
+            return calculate(
+                particles,
+                self.receptor,
+                config,
+                name=self.variant.name,
+                context=context,
+            )
         except EmptyFootprint:
             return None
 

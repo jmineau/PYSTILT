@@ -326,7 +326,7 @@ class Grid(Bounds):
 
         The dataset has ``lon`` and ``lat`` coordinates (``x`` and ``y`` when
         projected) matching the footprint, and a ``crs`` grid-mapping
-        variable. Pass it to :meth:`stilt.Footprint.aggregate` as a target, or
+        variable. Pass it to ``foot.stilt.aggregate`` as a target, or
         to other tools that read CF grids. Projected grids need ``pyproj``.
         """
         import xarray as xr

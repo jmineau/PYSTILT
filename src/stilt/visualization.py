@@ -12,11 +12,11 @@ from matplotlib.figure import Figure
 
 if TYPE_CHECKING:
     import cartopy  # type: ignore[import-untyped]
+    import xarray as xr
 
     from stilt.config import Bounds
-    from stilt.footprint import Footprint
-    from stilt.particles import Trajectories
     from stilt.project import Project
+    from stilt.receptors import Receptor
     from stilt.simulation import Simulation
 
 from stilt.receptors import ColumnReceptor, MultiPointReceptor, Receptor
@@ -87,19 +87,20 @@ def _draw_bounds_box(
 
 
 # ---------------------------------------------------------------------------
-# Trajectories plot accessor
+# Particles plot accessor
 # ---------------------------------------------------------------------------
 
 
-class TrajectoriesPlotAccessor:
-    """Plotting methods of :class:`stilt.Trajectories`, as ``traj.plot``."""
+class ParticlesPlotAccessor:
+    """Plotting methods of a particle table, as ``particles.stilt.plot``."""
 
-    def __init__(self, traj: Trajectories) -> None:
-        self._traj = traj
+    def __init__(self, particles: pd.DataFrame) -> None:
+        self._particles = particles
 
     def map(
         self,
         color_by: str = "time",
+        receptor: Receptor | None = None,
         ax: Axes | None = None,
         cmap: str = "viridis_r",
         s: float = 1.0,
@@ -115,6 +116,8 @@ class TrajectoriesPlotAccessor:
         ----------
         color_by : {"time", "zagl", "foot"}, default "time"
             Particle variable to color by.
+        receptor : Receptor, optional
+            Mark this receptor on the map.
         ax : Axes, optional
             Axes to plot on. By default a new map is made, with cartopy when
             it is installed.
@@ -135,7 +138,7 @@ class TrajectoriesPlotAccessor:
         -------
         Axes
         """
-        p = self._traj.data
+        p = self._particles
         lons: np.ndarray = p["long"].to_numpy(dtype=float)
         lats: np.ndarray = p["lati"].to_numpy(dtype=float)
 
@@ -163,8 +166,9 @@ class TrajectoriesPlotAccessor:
         sc = ax.scatter(lons, lats, c=c, cmap=cmap, s=s, alpha=alpha, **kwargs)
         fig.colorbar(sc, ax=ax, label=cbar_label, shrink=0.7, pad=0.02)
 
-        self._traj.receptor.plot.map(ax=ax)
-        ax.set(xlabel="Longitude", ylabel="Latitude", title="Particle Trajectories")
+        if receptor is not None:
+            receptor.plot.map(ax=ax)
+        ax.set(xlabel="Longitude", ylabel="Latitude", title="Particles")
         return ax
 
 
@@ -174,9 +178,9 @@ class TrajectoriesPlotAccessor:
 
 
 class FootprintPlotAccessor:
-    """Plotting methods of :class:`stilt.Footprint`, as ``foot.plot``."""
+    """Plotting methods of a footprint, as ``foot.stilt.plot``."""
 
-    def __init__(self, foot: Footprint) -> None:
+    def __init__(self, foot: xr.DataArray) -> None:
         self._foot = foot
 
     def map(
@@ -222,9 +226,9 @@ class FootprintPlotAccessor:
         """
         foot = self._foot
         if time is not None:
-            data = foot.data.sel(time=time, method="nearest")
+            data = foot.sel(time=time, method="nearest")
         else:
-            data = foot.data.sum("time")
+            data = foot.sum("time")
 
         lons = data.lon.values
         lats = data.lat.values
@@ -250,7 +254,7 @@ class FootprintPlotAccessor:
         fig.colorbar(mesh, ax=ax, label=cbar_label, shrink=0.7, pad=0.02)
 
         if show_grid:
-            _draw_bounds_box(ax, foot.grid, label="Domain")
+            _draw_bounds_box(ax, foot.stilt.grid, label="Domain")
         if met_bounds is not None:
             _draw_bounds_box(
                 ax,
@@ -261,7 +265,8 @@ class FootprintPlotAccessor:
                 linewidth=1.2,
             )
 
-        foot.receptor.plot.map(ax=ax)
+        if "stilt_receptor" in foot.attrs:
+            foot.stilt.receptor.plot.map(ax=ax)
         title = "Footprint" if time is None else f"Footprint — {pd.Timestamp(time)}"
         ax.set(xlabel="Longitude", ylabel="Latitude", title=title)
         return ax
@@ -296,7 +301,7 @@ class FootprintPlotAccessor:
         axes : ndarray of Axes
         """
         foot = self._foot
-        times = foot.data.time.values
+        times = foot.time.values
         n = len(times)
         nrows = (n + ncols - 1) // ncols
 
@@ -305,11 +310,11 @@ class FootprintPlotAccessor:
         fig, axes = plt.subplots(nrows, ncols, figsize=figsize, constrained_layout=True)
         axes_flat: np.ndarray = np.array(axes).flatten()
 
-        lons = foot.data.lon.values
-        lats = foot.data.lat.values
+        lons = foot.lon.values
+        lats = foot.lat.values
         LON, LAT = np.meshgrid(lons, lats)
 
-        all_vals = foot.data.values.astype(float)
+        all_vals = foot.values.astype(float)
         if log:
             all_vals_plot = _log10_safe(all_vals)
             cbar_label = "log₁₀(footprint)"
@@ -504,14 +509,14 @@ class SimulationPlotAccessor:
 
     def map(
         self,
-        show_traj: bool = True,
+        show_particles: bool = True,
         show_receptor: bool = True,
         log: bool = True,
         foot_cmap: str = "YlOrRd",
-        traj_cmap: str = "viridis_r",
-        traj_color_by: str = "time",
-        traj_s: float = 1.0,
-        traj_alpha: float = 0.3,
+        particles_cmap: str = "viridis_r",
+        particles_color_by: str = "time",
+        particles_s: float = 1.0,
+        particles_alpha: float = 0.3,
         show_grid: bool = True,
         met_bounds: Bounds | None = None,
         ax: Axes | None = None,
@@ -524,7 +529,7 @@ class SimulationPlotAccessor:
 
         Parameters
         ----------
-        show_traj : bool, default True
+        show_particles : bool, default True
             Draw the particle positions.
         show_receptor : bool, default True
             Mark the receptor.
@@ -532,13 +537,13 @@ class SimulationPlotAccessor:
             Plot log10 of the footprint.
         foot_cmap : str, default "YlOrRd"
             Colormap of the footprint.
-        traj_cmap : str, default "viridis_r"
+        particles_cmap : str, default "viridis_r"
             Colormap of the particles.
-        traj_color_by : {"time", "zagl", "foot"}, default "time"
+        particles_color_by : {"time", "zagl", "foot"}, default "time"
             Particle variable to color by.
-        traj_s : float, default 1.0
+        particles_s : float, default 1.0
             Particle marker size.
-        traj_alpha : float, default 0.3
+        particles_alpha : float, default 0.3
             Particle marker opacity.
         show_grid : bool, default True
             Outline the footprint grid with a dashed line.
@@ -553,11 +558,11 @@ class SimulationPlotAccessor:
         """
         sim = self._sim
         foot = sim.footprint if sim.has_footprint else None
-        traj = sim.particles if sim.has_particles else None
+        particles = sim.particles if sim.has_particles else None
 
-        # Determine map extent: prefer footprint grid, fall back to traj bounds
+        # Map extent: the footprint grid, else the particles, else the receptor
         if foot is not None:
-            g = foot.grid
+            g = foot.stilt.grid
             pad = 0.1
             extent: tuple[float, float, float, float] = (
                 g.xmin - pad,
@@ -565,8 +570,8 @@ class SimulationPlotAccessor:
                 g.ymin - pad,
                 g.ymax + pad,
             )
-        elif traj is not None:
-            p = traj.data
+        elif particles is not None:
+            p = particles
             pad = 0.5
             extent = (
                 p["long"].min() - pad,
@@ -589,15 +594,15 @@ class SimulationPlotAccessor:
         _, ax = _make_ax(ax, extent=extent)
 
         if foot is not None:
-            foot.plot.map(ax=ax, log=log, cmap=foot_cmap, show_grid=show_grid)
+            foot.stilt.plot.map(ax=ax, log=log, cmap=foot_cmap, show_grid=show_grid)
 
-        if show_traj and traj is not None:
-            traj.plot.map(
+        if show_particles and particles is not None:
+            particles.stilt.plot.map(
                 ax=ax,
-                color_by=traj_color_by,
-                cmap=traj_cmap,
-                s=traj_s,
-                alpha=traj_alpha,
+                color_by=particles_color_by,
+                cmap=particles_cmap,
+                s=particles_s,
+                alpha=particles_alpha,
             )
 
         if show_receptor:

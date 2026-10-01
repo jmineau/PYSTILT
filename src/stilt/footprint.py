@@ -1,11 +1,13 @@
 """Footprints of receptors, calculated from particles and applied to surface fluxes."""
 
+from __future__ import annotations
+
 import datetime as dt
 import json
 import warnings
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Self, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 import pandas as pd
@@ -543,368 +545,418 @@ def _record_transform(transform: Any) -> dict[str, Any]:
         return {"kind": transform_kind(transform)}
 
 
-def _read_transform(spec: dict[str, Any], path: Path) -> Any:
+def _read_transform(spec: dict[str, Any], source: str) -> Any:
     """Return a recorded transform, or its mapping when it cannot be rebuilt here."""
     try:
         return load_transform(spec)
     except (ImportError, TypeError, ValueError) as exc:
         warnings.warn(
-            f"{path.name}: transform {spec.get('kind')!r} could not be rebuilt "
+            f"{source}: transform {spec.get('kind')!r} could not be rebuilt "
             f"({exc}). It is kept as its settings and cannot be applied.",
             stacklevel=3,
         )
         return spec
 
 
-class Footprint:
+#: Units of a footprint: ppm per (µmol m⁻² s⁻¹).
+UNITS = "ppm m2 s umol-1"
+
+
+def _settings_json(config: FootprintConfig) -> str:
+    """Return footprint settings as JSON, with each transform recorded as far as it can be."""
+    data = config.model_dump(mode="json", exclude={"transforms"})
+    data["transforms"] = [_record_transform(t) for t in config.transforms]
+    return json.dumps(data)
+
+
+def _settings_from_json(text: str, source: str) -> FootprintConfig:
+    """Return footprint settings from :func:`_settings_json`, keeping a transform that cannot be rebuilt as its mapping."""
+    data = json.loads(text)
+    specs = data.pop("transforms", [])
+    config = FootprintConfig.model_validate(data)
+    # model_copy skips validation, so a mapping stays a mapping.
+    return config.model_copy(
+        update={"transforms": [_read_transform(s, source) for s in specs]}
+    )
+
+
+def _describe(
+    data: xr.DataArray, receptor: Receptor, config: FootprintConfig, name: str
+) -> xr.DataArray:
     """
-    Gridded footprint of one receptor.
+    Name a footprint array and attach what it belongs to.
 
-    A footprint is the sensitivity of the concentration at the receptor to
-    the surface flux in each grid cell, in ppm per (µmol m⁻² s⁻¹). Multiply
-    it by a flux and sum over the grid to get the enhancement at the
-    receptor (:meth:`enhancement`).
+    The receptor id is a scalar coordinate, which xarray keeps through
+    arithmetic in every version. The full receptor and the settings are
+    attributes, which the ``.stilt`` accessor reads.
+    """
+    return (
+        data.rename("foot")
+        .assign_coords(receptor=str(receptor.id))
+        .assign_attrs(
+            {
+                "units": UNITS,
+                "long_name": "footprint",
+                "stilt_name": name,
+                "stilt_receptor": json.dumps(receptor.to_dict()),
+                "stilt_footprint": _settings_json(config),
+            }
+        )
+    )
 
-    Footprints normally come from a simulation (``sim.footprint``) or a
-    file (:meth:`from_netcdf`).
+
+def calculate(
+    particles: pd.DataFrame,
+    receptor: Receptor,
+    config: FootprintConfig,
+    name: str = "",
+    context: TransformContext | None = None,
+) -> xr.DataArray:
+    """
+    Calculate a footprint from particles.
+
+    The particle transforms in ``config.transforms`` are applied first, in
+    order, so the footprint records exactly the transforms it was made
+    with. The rest follows STILT-R's ``calc_footprint``. Near the receptor,
+    particle tracks are interpolated to finer times when particles cross
+    more than a grid cell per step. Each particle's ``foot`` is added to the
+    cell it is in, and each time step is smoothed with a Gaussian kernel
+    that widens with the particles' spread and age. The sum is divided by
+    the number of particles and binned by hour, unless
+    ``config.time_integrate`` is set.
+
+    :meth:`stilt.Simulation.generate_footprint` calls this with a
+    simulation's own particles and receptor.
 
     Parameters
     ----------
+    particles : pandas.DataFrame
+        Particle table, such as ``sim.particles``, with columns ``indx``,
+        ``time`` (minutes since release), ``long``, ``lati``, and ``foot``.
     receptor : Receptor
-        Receptor the footprint belongs to.
+        Receptor the particles were released from.
     config : FootprintConfig
-        Grid and smoothing settings it was calculated with. ``grid`` must
-        be set.
-    data : xarray.DataArray
-        Values with dimensions ``(time, lat, lon)``, or ``(time, y, x)`` on
-        a projected grid. Coordinates are cell centres, and ``time`` is the
-        start of each hour. A time-integrated footprint has one time, the
-        receptor time.
+        Grid, smoothing, and particle transforms. A grid given by
+        ``geometry`` is derived first
+        (:meth:`~stilt.config.FootprintConfig.resolve`).
     name : str, optional
         Name of the footprint, usually the variant name.
+    context : TransformContext, optional
+        Passed to every transform. Defaults to one holding ``receptor``
+        and ``name``, with no project directory.
 
-    Examples
-    --------
-    >>> foot = project.simulation(receptor.id, "hrrr").footprint
-    >>> foot.integrate_over_time().plot()
-    >>> foot.enhancement(flux).sum()
+    Returns
+    -------
+    xarray.DataArray
+        The footprint, named ``foot``, with dimensions ``(time, lat, lon)``
+        or ``(time, y, x)`` on a projected grid. Coordinates are cell
+        centres, and ``time`` is the start of each hour. The ``.stilt``
+        accessor has the methods that use it.
+
+    Raises
+    ------
+    ImportError
+        If a transform in ``config`` is a settings mapping that could not
+        be imported.
+    EmptyFootprint
+        If no particle is over the grid. ``reason`` is ``"no_particles"``
+        when the table is empty and ``"outside_domain"`` otherwise.
     """
-
-    def __init__(
-        self,
-        receptor: Receptor,
-        config: FootprintConfig,
-        data: xr.DataArray,
-        name: str = "",
-    ):
-        if config.grid is None:
-            raise ValueError("A footprint needs settings with a grid.")
-        self.receptor = receptor
-        self.config = config
-        #: Grid the footprint is on (``config.grid``).
-        self.grid: Grid = config.grid
-        self.data = data
-        self.name = name
-        self._plot: FootprintPlotAccessor | None = None
-
-    @property
-    def plot(self) -> "FootprintPlotAccessor":
-        """Plotting methods, such as ``foot.plot.map()``."""
-        if self._plot is None:
-            from stilt.visualization import FootprintPlotAccessor
-
-            self._plot = FootprintPlotAccessor(self)
-        return self._plot
-
-    @property
-    def time_range(self) -> tuple[dt.datetime, dt.datetime]:
-        """
-        Start and end of the period the footprint covers.
-
-        The end is one time step after the last one. Both are the same for a
-        time-integrated footprint or one with a single time step.
-
-        Raises
-        ------
-        ValueError
-            If the footprint has no valid times.
-        """
-        times = _utc_index(self.data.time.values)
-        start = pd.Timestamp(cast(Any, times.min()))
-        if str(start) == "NaT":
-            raise ValueError("Footprint has no valid time coordinates.")
-        if len(times) <= 1 or self.config.time_integrate:
-            stop = start
-        else:
-            step = times[1] - times[0]
-            stop = pd.Timestamp(cast(Any, times.max() + step))
-        return (
-            cast(dt.datetime, start.to_pydatetime()),
-            cast(dt.datetime, stop.to_pydatetime()),
-        )
-
-    def __repr__(self) -> str:
-        return f"Footprint(name={self.name!r}, dims={dict(self.data.sizes)!r})"
-
-    @classmethod
-    def from_netcdf(
-        cls, path: str | Path, *, chunks: Any | None = None, **kwargs: Any
-    ) -> Self:
-        """
-        Read a footprint from a NetCDF file written by :meth:`to_netcdf`.
-
-        Parameters
-        ----------
-        path : str or Path
-            Footprint file.
-        chunks : dict, int or "auto", optional
-            Passed to :func:`xarray.open_dataset` to load the data lazily
-            with dask.
-        **kwargs
-            Passed to :func:`xarray.open_dataset`.
-
-        Returns
-        -------
-        Footprint
-            The footprint, with its receptor and settings read from the
-            file's attributes. A recorded transform that cannot be rebuilt
-            here (its class cannot be imported, or is not a pydantic model)
-            is kept as its settings mapping, with a warning.
-        """
-        path = Path(path).resolve()
-
-        if chunks is not None:
-            kwargs["chunks"] = chunks
-        ds = xr.open_dataset(path, **kwargs)
-        attrs = dict(ds.attrs)
-
-        receptor = Receptor.from_dict(json.loads(attrs["receptor"]))
-
-        foot_config = FootprintConfig(
-            grid=Grid(
-                xmin=attrs["xmin"],
-                xmax=attrs["xmax"],
-                ymin=attrs["ymin"],
-                ymax=attrs["ymax"],
-                xres=attrs["xres"],
-                yres=attrs["yres"],
-                projection=attrs.get("projection", "+proj=longlat"),
-            ),
-            smooth_factor=attrs.get("smooth_factor", 1.0),
-            time_integrate=bool(attrs.get("time_integrate", False)),
-            geometry=json.loads(attrs["geometry"]) if "geometry" in attrs else None,
-            geometry_hash=attrs.get("geometry_hash") or None,
-        )
-        # model_copy skips validation, so a mapping stays a mapping.
-        transforms = [
-            _read_transform(spec, path)
-            for spec in json.loads(attrs.get("transforms", "[]"))
-        ]
-        foot_config = foot_config.model_copy(update={"transforms": transforms})
-
-        name = attrs.get("name", "")
-
-        return cls(
-            receptor=receptor,
-            config=foot_config,
-            data=ds.foot,
-            name=name,
-        )
-
-    @classmethod
-    def calculate(
-        cls,
-        particles: pd.DataFrame,
-        receptor: Receptor,
-        config: FootprintConfig,
-        name: str = "",
-        context: TransformContext | None = None,
-    ) -> Self:
-        """
-        Calculate a footprint from particles.
-
-        The particle transforms in ``config.transforms`` are applied first,
-        in order, so the footprint records exactly the transforms it was
-        made with. The rest follows STILT-R's ``calc_footprint``. Near the receptor, particle
-        tracks are interpolated to finer times when particles cross more
-        than a grid cell per step. Each particle's ``foot`` is added to the
-        cell it is in, and each time step is smoothed with a Gaussian kernel
-        that widens with the particles' spread and age. The sum is divided by
-        the number of particles and binned by hour, unless
-        ``config.time_integrate`` is set.
-
-        Parameters
-        ----------
-        particles : pandas.DataFrame
-            Particle table, such as ``Trajectories.data``, with columns
-            ``indx``, ``time`` (minutes since release), ``long``, ``lati``,
-            and ``foot``.
-        receptor : Receptor
-            Receptor the particles were released from.
-        config : FootprintConfig
-            Grid, smoothing, and particle transforms. A grid given by
-            ``geometry`` is derived first
-            (:meth:`~stilt.config.FootprintConfig.resolve`).
-        name : str, optional
-            Name of the footprint, usually the variant name.
-        context : TransformContext, optional
-            Passed to every transform. Defaults to one holding ``receptor``
-            and ``name``, with no project store.
-
-        Returns
-        -------
-        Footprint
-            The footprint.
-
-        Raises
-        ------
-        ImportError
-            If a transform in ``config`` is a settings mapping that could not
-            be imported (as read back by :meth:`from_netcdf`).
-        EmptyFootprint
-            If no particle is over the grid. ``reason`` is ``"no_particles"``
-            when the table is empty and ``"outside_domain"`` otherwise.
-        """
-        config = config.resolve()
-        grid = config.grid
-        if grid is None:
-            raise ValueError("A footprint needs settings with a grid.")
-        if config.transforms:
-            unresolved = [t["kind"] for t in config.transforms if isinstance(t, dict)]
-            if unresolved:
-                raise ImportError(
-                    f"Transforms {unresolved} could not be rebuilt, so they "
-                    "cannot be applied."
-                )
-            if context is None:
-                context = TransformContext(receptor=receptor, variant=name)
-            particles = apply_transforms(particles, config.transforms, context)
-        projection = grid.projection
-        xmin, xmax, xres = grid.xmin, grid.xmax, grid.xres
-        ymin, ymax, yres = grid.ymin, grid.ymax, grid.yres
-        is_longlat = "+proj=longlat" in projection
-        smooth_factor = config.smooth_factor
-        time_integrate = config.time_integrate
-
-        if particles.empty:
-            raise EmptyFootprint("no_particles")
-
-        p = particles.copy(deep=False)
-        n_particles = p["indx"].nunique()
-        # time_sign: -1 for backward runs, +1 for forward.
-        time_sign = int(np.sign(p["time"].median()))
-
-        wrapped_longitude = False
-        if is_longlat:
-            p, xmin, xmax, wrapped_longitude = _wrap_antimeridian_longitudes(
-                p, xmin=xmin, xmax=xmax
+    config = config.resolve()
+    grid = config.grid
+    if grid is None:
+        raise ValueError("A footprint needs settings with a grid.")
+    if config.transforms:
+        unresolved = [t["kind"] for t in config.transforms if isinstance(t, dict)]
+        if unresolved:
+            raise ImportError(
+                f"Transforms {unresolved} could not be rebuilt, so they "
+                "cannot be applied."
             )
+        if context is None:
+            context = TransformContext(receptor=receptor, variant=name)
+        particles = apply_transforms(particles, config.transforms, context)
+    projection = grid.projection
+    xmin, xmax, xres = grid.xmin, grid.xmax, grid.xres
+    ymin, ymax, yres = grid.ymin, grid.ymax, grid.yres
+    is_longlat = "+proj=longlat" in projection
+    smooth_factor = config.smooth_factor
+    time_integrate = config.time_integrate
 
-        p = _interpolate_early_timesteps(p, xres=xres, yres=yres, time_sign=time_sign)
+    if particles.empty:
+        raise EmptyFootprint("no_particles")
 
-        # rtime = time elapsed since each particle's first output step.
-        # Used below to compute kernel bandwidth (particles spread more with time).
-        min_abs_time = p["time"].abs().groupby(p["indx"], sort=False).transform("min")
-        p["rtime"] = p["time"] - time_sign * min_abs_time
+    p = particles.copy(deep=False)
+    n_particles = p["indx"].nunique()
+    # time_sign: -1 for backward runs, +1 for forward.
+    time_sign = int(np.sign(p["time"].median()))
 
-        if not is_longlat:
-            p, xmin, xmax, ymin, ymax = _project_particles_to_crs(
-                p,
-                projection=projection,
-                xmin=xmin,
-                xmax=xmax,
-                ymin=ymin,
-                ymax=ymax,
-            )
-
-        # Output grid lower-left corners for half-open extents [min, max).
-        glong = _grid_cell_starts(xmin, xmax, xres)
-        glati = _grid_cell_starts(ymin, ymax, yres)
-        n_lon = len(glong)
-        n_lat = len(glati)
-        rs = (xres, yres)
-
-        kernel_df, w = _compute_kernel_bandwidths(
-            p, smooth_factor=smooth_factor, is_longlat=is_longlat
-        )
-        max_kernel = (
-            _make_gauss_kernel(rs, float(np.max(w)))
-            if len(w) > 0
-            else np.array([[1.0]])
-        )
-        buffered = _build_buffered_grid(
-            xmin=xmin,
-            ymin=ymin,
-            xres=xres,
-            yres=yres,
-            n_lon=n_lon,
-            n_lat=n_lat,
-            max_kernel=max_kernel,
+    wrapped_longitude = False
+    if is_longlat:
+        p, xmin, xmax, wrapped_longitude = _wrap_antimeridian_longitudes(
+            p, xmin=xmin, xmax=xmax
         )
 
-        p, layers = _filter_and_rasterize_particles(
+    p = _interpolate_early_timesteps(p, xres=xres, yres=yres, time_sign=time_sign)
+
+    # rtime = time elapsed since each particle's first output step.
+    # Used below to compute kernel bandwidth (particles spread more with time).
+    min_abs_time = p["time"].abs().groupby(p["indx"], sort=False).transform("min")
+    p["rtime"] = p["time"] - time_sign * min_abs_time
+
+    if not is_longlat:
+        p, xmin, xmax, ymin, ymax = _project_particles_to_crs(
             p,
-            buffered=buffered,
+            projection=projection,
             xmin=xmin,
             xmax=xmax,
             ymin=ymin,
             ymax=ymax,
-            xres=xres,
-            yres=yres,
-            time_integrate=time_integrate,
         )
 
-        if p.empty:
-            raise EmptyFootprint("outside_domain")
+    # Output grid lower-left corners for half-open extents [min, max).
+    glong = _grid_cell_starts(xmin, xmax, xres)
+    glati = _grid_cell_starts(ymin, ymax, yres)
+    n_lon = len(glong)
+    n_lat = len(glati)
+    rs = (xres, yres)
 
-        foot_arr = _accumulate_smoothed_footprint(
-            p,
-            layers=layers,
-            buffered=buffered,
-            kernel_df=kernel_df,
-            w=w,
-            rs=rs,
+    kernel_df, w = _compute_kernel_bandwidths(
+        p, smooth_factor=smooth_factor, is_longlat=is_longlat
+    )
+    max_kernel = (
+        _make_gauss_kernel(rs, float(np.max(w))) if len(w) > 0 else np.array([[1.0]])
+    )
+    buffered = _build_buffered_grid(
+        xmin=xmin,
+        ymin=ymin,
+        xres=xres,
+        yres=yres,
+        n_lon=n_lon,
+        n_lat=n_lat,
+        max_kernel=max_kernel,
+    )
+
+    p, layers = _filter_and_rasterize_particles(
+        p,
+        buffered=buffered,
+        xmin=xmin,
+        xmax=xmax,
+        ymin=ymin,
+        ymax=ymax,
+        xres=xres,
+        yres=yres,
+        time_integrate=time_integrate,
+    )
+
+    if p.empty:
+        raise EmptyFootprint("outside_domain")
+
+    foot_arr = _accumulate_smoothed_footprint(
+        p,
+        layers=layers,
+        buffered=buffered,
+        kernel_df=kernel_df,
+        w=w,
+        rs=rs,
+    )
+
+    # Trim buffer and normalize by particle count.
+    foot_arr = (
+        foot_arr[
+            buffered.xbuf : buffered.xbuf + n_lon,
+            buffered.ybuf : buffered.ybuf + n_lat,
+            :,
+        ]
+        / n_particles
+    )
+
+    if foot_arr.shape != (n_lon, n_lat, len(layers)):
+        raise ValueError(
+            f"foot_arr shape mismatch: expected ({n_lon}, {n_lat}, {len(layers)}), "
+            f"got {foot_arr.shape}"
         )
 
-        # Trim buffer and normalize by particle count.
-        foot_arr = (
-            foot_arr[
-                buffered.xbuf : buffered.xbuf + n_lon,
-                buffered.ybuf : buffered.ybuf + n_lat,
-                :,
-            ]
-            / n_particles
-        )
+    data = _build_footprint_array(
+        foot_arr=foot_arr.transpose(2, 1, 0),
+        layers=layers,
+        receptor=receptor,
+        is_longlat=is_longlat,
+        glong=glong,
+        glati=glati,
+        xres=xres,
+        yres=yres,
+        wrapped_longitude=wrapped_longitude,
+    )
+    return _describe(data, receptor, config, name)
 
-        if foot_arr.shape != (n_lon, n_lat, len(layers)):
+
+def _from_sparse_table(table: Any, config: FootprintConfig) -> xr.DataArray | None:
+    """Return the dense footprint of a stored sparse table, or ``None`` when it is empty."""
+    meta = table.schema.metadata or {}
+    if meta.get(b"stilt:empty_reason", b""):
+        return None
+    receptor = Receptor.from_dict(json.loads(meta[b"stilt:receptor"]))
+    hours = json.loads(meta[b"stilt:hours"])
+    name = meta.get(b"stilt:name", b"").decode()
+    grid = config.grid
+    if grid is None:
+        raise ValueError("A stored footprint needs settings with a grid.")
+
+    x_axis, y_axis = grid.axes
+    values = np.zeros((len(hours), len(y_axis), len(x_axis)), dtype=np.float64)
+    if table.num_rows:
+        layer = {h: i for i, h in enumerate(hours)}
+        t = np.fromiter(
+            (layer[h] for h in table["hour"].to_numpy()),
+            dtype=np.intp,
+            count=table.num_rows,
+        )
+        values[t, table["y"].to_numpy(), table["x"].to_numpy()] = table[
+            "foot"
+        ].to_numpy()
+
+    receptor_time = pd.Timestamp(receptor.time)
+    times = pd.DatetimeIndex(
+        [receptor_time + pd.Timedelta(hours=int(h)) for h in hours]
+    )
+    x_dim, y_dim = ("lon", "lat") if grid.is_longlat else ("x", "y")
+    data = xr.DataArray(
+        values,
+        dims=["time", y_dim, x_dim],
+        coords={"time": times, y_dim: y_axis, x_dim: x_axis},
+    )
+    return _describe(data, receptor, config, name)
+
+
+def read_footprint(
+    path: str | Path,
+    *,
+    config: FootprintConfig | None = None,
+    chunks: Any | None = None,
+) -> xr.DataArray | None:
+    """
+    Read a footprint file, NetCDF or the Parquet files PYSTILT stores.
+
+    Each file holds its receptor and settings, so it needs nothing else.
+
+    Parameters
+    ----------
+    path : str or Path
+        A ``.nc`` file written by ``foot.stilt.to_netcdf``, or a footprint
+        file from an output directory.
+    config : FootprintConfig, optional
+        The footprint settings of a stored file, when they are already
+        known. By default they are read from the file.
+    chunks : dict, int or "auto", optional
+        For a NetCDF file, passed to :func:`xarray.open_dataset` to load the
+        data lazily with dask.
+
+    Returns
+    -------
+    xarray.DataArray or None
+        The footprint, or ``None`` for an empty one (no particle reached the
+        grid).
+
+    Examples
+    --------
+    >>> foot = stilt.read_footprint(sim.footprint_path)
+    >>> foot.stilt.receptor
+    """
+    import pyarrow.parquet as pq
+
+    path = Path(path)
+    if path.suffix == ".nc":
+        if chunks is not None:
+            foot = xr.open_dataset(path, chunks=chunks)["foot"]
+        else:
+            with xr.open_dataset(path) as ds:
+                foot = ds["foot"].load()
+        foot.attrs.pop("grid_mapping", None)
+        return foot
+    table = pq.read_table(path)
+    if config is None:
+        stored = (table.schema.metadata or {}).get(b"stilt:footprint")
+        if stored is None:
             raise ValueError(
-                f"foot_arr shape mismatch: expected ({n_lon}, {n_lat}, {len(layers)}), "
-                f"got {foot_arr.shape}"
+                f"{path} does not record its footprint settings. Pass config=, "
+                "or read it through its output folder."
             )
+        config = _settings_from_json(stored.decode(), path.name)
+    return _from_sparse_table(table, config)
 
-        return cls(
-            receptor=receptor,
-            config=config,
-            data=_build_footprint_array(
-                foot_arr=foot_arr.transpose(2, 1, 0),
-                layers=layers,
-                receptor=receptor,
-                is_longlat=is_longlat,
-                glong=glong,
-                glati=glati,
-                xres=xres,
-                yres=yres,
-                wrapped_longitude=wrapped_longitude,
-            ),
-            name=name,
-        )
+
+@xr.register_dataarray_accessor("stilt")
+class FootprintAccessor:
+    """
+    PYSTILT methods on a footprint, as ``foot.stilt``.
+
+    A footprint is an :class:`xarray.DataArray`, so sums, selections, and
+    plots are plain xarray (``foot.sum("time")``,
+    ``foot.sel(time=slice(a, b))``). The accessor adds what needs the
+    receptor or the footprint settings, which ride in the array's
+    attributes. Recent xarray keeps attributes through arithmetic. Older
+    versions drop them (``foot * 2``), so with those, call these methods
+    on the footprint as read, or use ``xr.set_options(keep_attrs=True)``.
+
+    Examples
+    --------
+    >>> foot = sim.footprint
+    >>> foot.stilt.receptor
+    >>> foot.stilt.enhancement(flux).sum()
+    >>> foot.stilt.aggregate(counties, time_bins=bins)
+    """
+
+    def __init__(self, foot: xr.DataArray) -> None:
+        self._foot = foot
+
+    def _attr(self, key: str) -> str:
+        """Return a PYSTILT attribute, or raise when arithmetic has dropped it."""
+        value = self._foot.attrs.get(key)
+        if value is None:
+            raise ValueError(
+                f"This array has no {key!r} attribute. Older xarray versions "
+                "drop attributes in arithmetic. Call this on the footprint as "
+                "read, or use xr.set_options(keep_attrs=True)."
+            )
+        return value
+
+    @property
+    def receptor(self) -> Receptor:
+        """The receptor the footprint belongs to."""
+        return Receptor.from_dict(json.loads(self._attr("stilt_receptor")))
+
+    @property
+    def config(self) -> FootprintConfig:
+        """The footprint settings: grid, smoothing, and particle transforms."""
+        return _settings_from_json(self._attr("stilt_footprint"), "footprint")
+
+    @property
+    def grid(self) -> Grid:
+        """The grid the footprint is on."""
+        grid = self.config.grid
+        if grid is None:  # calculate() never makes a footprint without one
+            raise ValueError("The footprint settings have no grid.")
+        return grid
+
+    @property
+    def name(self) -> str:
+        """The footprint's name, usually the variant name."""
+        return str(self._foot.attrs.get("stilt_name", ""))
+
+    @property
+    def plot(self) -> FootprintPlotAccessor:
+        """Plotting methods, such as ``foot.stilt.plot.map()``."""
+        from stilt.visualization import FootprintPlotAccessor
+
+        return FootprintPlotAccessor(self._foot)
 
     def to_netcdf(self, path: str | Path) -> Path:
         """
         Write the footprint to a CF-1.8 NetCDF file.
 
-        The receptor and footprint settings are stored as global attributes
-        so :meth:`from_netcdf` can rebuild the object.
+        :func:`stilt.read_footprint` reads it back with its receptor and
+        settings.
 
         Parameters
         ----------
@@ -918,68 +970,16 @@ class Footprint:
         """
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
-
-        grid = self.grid
-
-        ds = xr.Dataset({"foot": self.data})
-        if "time" in ds.coords:
-            ds = ds.assign_coords(
-                time=pd.DatetimeIndex(
-                    pd.to_datetime(ds["time"].values, utc=True)
-                ).tz_convert(None)
-            )
-        ds = _with_cf_metadata(ds, grid=grid)
-        ds.attrs.update(
-            {
-                "name": self.name,
-                "receptor": json.dumps(self.receptor.to_dict()),
-                "projection": grid.projection,
-                "xmin": grid.xmin,
-                "xmax": grid.xmax,
-                "ymin": grid.ymin,
-                "ymax": grid.ymax,
-                "xres": grid.xres,
-                "yres": grid.yres,
-                "smooth_factor": self.config.smooth_factor,
-                "time_integrate": int(self.config.time_integrate),
-                "transforms": json.dumps(
-                    [_record_transform(t) for t in self.config.transforms]
-                ),
-                "time_created": dt.datetime.now(dt.UTC)
-                .replace(tzinfo=None)
-                .isoformat(),
-            }
+        ds = xr.Dataset({"foot": self._foot})
+        # NetCDF stores naive times; footprint times are UTC.
+        ds = ds.assign_coords(time=_utc_index(ds["time"].values).tz_convert(None))
+        ds = _with_cf_metadata(ds, grid=self.grid)
+        ds.attrs["time_created"] = (
+            dt.datetime.now(dt.UTC).replace(tzinfo=None).isoformat()
         )
-        if self.config.geometry is not None:
-            ds.attrs["geometry"] = json.dumps(
-                self.config.geometry.model_dump(mode="json")
-            )
-            ds.attrs["geometry_hash"] = self.config.geometry_hash or ""
-
         with atomic_path(path) as tmp:
             ds.to_netcdf(tmp, encoding={"foot": {"zlib": True, "complevel": 4}})
         return path
-
-    def integrate_over_time(
-        self, start: dt.datetime | None = None, end: dt.datetime | None = None
-    ) -> xr.DataArray:
-        """
-        Sum the footprint over time.
-
-        Parameters
-        ----------
-        start, end : datetime, optional
-            First and last time step to include (UTC). All times are
-            included when omitted.
-
-        Returns
-        -------
-        xarray.DataArray
-            Footprint with the ``time`` dimension summed out.
-        """
-        start_ts = _naive_utc_timestamp(start)
-        end_ts = _naive_utc_timestamp(end)
-        return self.data.sel(time=slice(start_ts, end_ts)).sum("time")
 
     def enhancement(self, flux: xr.DataArray) -> xr.DataArray:
         """
@@ -1005,9 +1005,10 @@ class Footprint:
         """
         from stilt.flux import sample_flux
 
-        y_dim, x_dim = self.data.dims[-2], self.data.dims[-1]
+        foot = self._foot
+        y_dim, x_dim = foot.dims[-2], foot.dims[-1]
         yy, xx = np.meshgrid(
-            self.data[y_dim].to_numpy(), self.data[x_dim].to_numpy(), indexing="ij"
+            foot[y_dim].to_numpy(), foot[x_dim].to_numpy(), indexing="ij"
         )
         shape = yy.shape
         if "time" in flux.dims:
@@ -1015,16 +1016,16 @@ class Footprint:
                 sample_flux(flux, xx.ravel(), yy.ravel(), np.full(xx.size, t)).reshape(
                     shape
                 )
-                for t in self.data["time"].to_numpy()
+                for t in foot["time"].to_numpy()
             ]
             sampled = np.stack(layers)
         else:
             sampled = sample_flux(flux, xx.ravel(), yy.ravel()).reshape(shape)[None]
-        values = (self.data.to_numpy() * sampled).sum(axis=(1, 2))
+        values = (foot.to_numpy() * sampled).sum(axis=(1, 2))
         return xr.DataArray(
             values,
             dims=["time"],
-            coords={"time": self.data["time"]},
+            coords={"time": foot["time"]},
             name="enhancement",
         )
 
@@ -1084,21 +1085,22 @@ class Footprint:
                 "closed='left', for example "
                 "pd.interval_range(start, end, freq='1h', closed='left')."
             )
-        is_latlon = "lon" in self.data.dims and "lat" in self.data.dims
-        x_dim = "lon" if is_latlon else "x"
-        y_dim = "lat" if is_latlon else "y"
-
         if not isinstance(target, (Grid, Mesh, Zones)):
             raise TypeError(
                 "aggregate target must be a stilt.Grid, stilt.Mesh, or stilt.Zones, "
                 f"not {type(target).__name__}."
             )
-        self._check_geometry_hash(target)
-        return self._aggregate_geometry(target, time_bins, x_dim, y_dim)
+        foot = self._foot
+        is_latlon = "lon" in foot.dims and "lat" in foot.dims
+        x_dim = "lon" if is_latlon else "x"
+        y_dim = "lat" if is_latlon else "y"
+        config = self.config
+        self._check_geometry_hash(target, config)
+        return self._aggregate_geometry(target, time_bins, x_dim, y_dim, config)
 
-    def _check_geometry_hash(self, target: object) -> None:
+    def _check_geometry_hash(self, target: object, config: FootprintConfig) -> None:
         """Warn when the target mesh differs from the one the footprint grid was chosen for."""
-        expected = self.config.geometry_hash
+        expected = config.geometry_hash
         if not expected:
             return
         mesh = target.base if isinstance(target, Zones) else target
@@ -1117,6 +1119,7 @@ class Footprint:
         time_bins: pd.IntervalIndex,
         x_dim: str,
         y_dim: str,
+        config: FootprintConfig,
     ) -> pd.DataFrame:
         """
         Sum onto a geometry with its cached overlap weights.
@@ -1125,22 +1128,26 @@ class Footprint:
         footprint cell inside each target cell, so each time bin is
         ``W @ F.ravel()``.
         """
+        foot = self._foot
         columns = _utc_index(time_bins.left).tz_localize(None)
         result = pd.DataFrame(0.0, index=target.index, columns=columns)
 
-        ntime = int(self.data.sizes.get("time", 0))
-        if self.data.size == 0 or ntime == 0:
+        ntime = int(foot.sizes.get("time", 0))
+        if foot.size == 0 or ntime == 0:
             return result
 
-        px = np.asarray(self.data[x_dim].values, dtype=float)
-        py = np.asarray(self.data[y_dim].values, dtype=float)
-        xres, yres = self.grid.xres, self.grid.yres
-        crs = self.grid.projection
+        grid = config.grid
+        if grid is None:
+            raise ValueError("The footprint settings have no grid.")
+        px = np.asarray(foot[x_dim].values, dtype=float)
+        py = np.asarray(foot[y_dim].values, dtype=float)
+        xres, yres = grid.xres, grid.yres
+        crs = grid.projection
         check_resolution(target, xres, yres, crs)
         weights = overlap_weights(target, px, py, xres, yres, crs)
 
-        data_arr = self.data.transpose("time", y_dim, x_dim).to_numpy()
-        native_times = _utc_index(self.data["time"].values).tz_localize(None)
+        data_arr = foot.transpose("time", y_dim, x_dim).to_numpy()
+        native_times = _utc_index(foot["time"].values).tz_localize(None)
         for interval, left_edge in zip(time_bins, columns, strict=False):
             left = _naive_utc_timestamp(interval.left)
             right = _naive_utc_timestamp(interval.right)

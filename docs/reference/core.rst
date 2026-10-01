@@ -43,8 +43,28 @@ Simulation objects
 
    Simulation
    SimID
-   Trajectories
-   Footprint
+
+Particles and footprints
+------------------------
+
+A simulation's particles are a pandas DataFrame and its footprint an xarray
+DataArray. PYSTILT's methods on them are under ``.stilt``
+(:class:`~stilt.particles.ParticlesAccessor`,
+:class:`~stilt.footprint.FootprintAccessor`). The functions below read and
+write particle and footprint files without a project.
+
+.. autosummary::
+   :toctree: _api
+   :nosignatures:
+
+   read_particles
+   particles_metadata
+   write_particles
+   read_footprint
+   particles.prepare
+   particles.ParticlesAccessor
+   footprint.calculate
+   footprint.FootprintAccessor
 
 Simulation tables
 -----------------
@@ -65,7 +85,7 @@ them to :meth:`Project.status`, :meth:`Project.incomplete`,
 Spatial geometries
 ------------------
 
-The cells :meth:`Footprint.aggregate` sums a footprint into, such as
+The cells ``foot.stilt.aggregate`` sums a footprint into, such as
 polygons, hexagons, windows around point sources, or groups of grid cells.
 A :class:`Grid` works as well. It is documented under :doc:`configuration`.
 
@@ -95,7 +115,7 @@ Flux fields
 -----------
 
 :mod:`stilt.flux` looks up a surface flux field under a footprint (used by
-:meth:`Footprint.enhancement`) or along particle paths.
+``foot.stilt.enhancement``) or along particle paths.
 
 .. autosummary::
    :toctree: _api

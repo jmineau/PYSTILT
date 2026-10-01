@@ -95,7 +95,7 @@ def test_hysplit_model_reads_the_met_in_place_and_records_the_source(
     assert (_FakeDriver.built["timeout"], _FakeDriver.built["rm_dat"]) == (30, False)
 
 
-def test_run_trajectories_goes_through_the_model_the_settings_name(
+def test_run_particles_goes_through_the_model_the_settings_name(
     tmp_path, point_receptor, monkeypatch
 ):
     calls: list[dict] = []
@@ -139,5 +139,6 @@ def test_run_trajectories_goes_through_the_model_the_settings_name(
     assert asked == ["hysplit"]
     assert calls[0]["receptor"] == point_receptor
     assert calls[0]["timeout"] == 45  # the override reaches the model
-    assert traj.met_files == [tmp_path / "met_file"]
+    assert len(traj) == 1
     assert sim.has_particles
+    assert sim.met_files == [tmp_path / "met_file"]

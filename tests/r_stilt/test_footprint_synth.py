@@ -40,7 +40,6 @@ from stilt.config import FootprintConfig, Grid
 from stilt.config.spatial import _grid_cell_starts
 from stilt.exceptions import EmptyFootprint
 from stilt.footprint import (
-    Footprint,
     _build_buffered_grid,
     _compute_kernel_bandwidths,
     _filter_and_rasterize_particles,
@@ -48,6 +47,7 @@ from stilt.footprint import (
     _make_gauss_kernel,
     _project_particles_to_crs,
     _wrap_antimeridian_longitudes,
+    calculate,
 )
 from stilt.particles import calc_plume_dilution
 from stilt.receptors import PointReceptor
@@ -210,14 +210,14 @@ def _py_footprint(
     smooth_factor: float = 1.0,
     time_integrate: bool = False,
 ) -> xr.Dataset:
-    """Call PYSTILT Footprint.calculate on *particles*, return xr.Dataset."""
+    """Call PYSTILT's calculate on *particles*, return xr.Dataset."""
     tmp_path.mkdir(parents=True, exist_ok=True)
     config = FootprintConfig(
         grid=grid, smooth_factor=smooth_factor, time_integrate=time_integrate
     )
-    foot = Footprint.calculate(particles, receptor=receptor, config=config, name="test")
+    foot = calculate(particles, receptor=receptor, config=config, name="test")
     nc_path = tmp_path / "py_foot.nc"
-    foot.to_netcdf(nc_path)
+    foot.stilt.to_netcdf(nc_path)
     ds = xr.open_dataset(nc_path)
     ds.load()
     ds.close()

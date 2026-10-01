@@ -55,7 +55,7 @@ Then check on the results:
 .. code-block:: python
 
    project.status()                        # one row per simulation, with a "complete" column
-   footprints = project.load_footprints()  # {simulation id: Footprint}
+   footprints = project.load_footprints()  # {simulation id: DataArray}
 
 Python or the command line?
 ---------------------------

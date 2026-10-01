@@ -220,7 +220,7 @@ def test_close_spaced_slant_release_heights_are_recovered(tmp_path, met_dir):
     position put the assigned release height off by ~240 m RMS; matching on
     height recovers it to within the vertical drift.
     """
-    from stilt.particles import Trajectories
+    from stilt.particles import prepare
 
     n_levels = 10
     altitudes = np.linspace(300.0, 3000.0, n_levels)
@@ -244,9 +244,7 @@ def test_close_spaced_slant_release_heights_are_recovered(tmp_path, met_dir):
     )
     runner.prepare()
     particles = runner.execute(timeout=300, rm_dat=True).particles
-    data = Trajectories.from_particles(
-        particles=particles, receptor=receptor, params=params, met_files=met_files
-    ).data
+    data = prepare(particles, receptor, params)
 
     release = _release_time_rows(data).drop_duplicates("indx")
     # Each group's actual height should sit at the altitude it was assigned.

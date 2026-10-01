@@ -15,9 +15,8 @@ from stilt.config import (
     VariantConfig,
 )
 from stilt.execution import write_footprint
-from stilt.footprint import Footprint
 from stilt.output import Output
-from stilt.particles import Trajectories
+from stilt.particles import particles_metadata, prepare
 from stilt.simulation import SimID, Simulation
 from stilt.transforms import FirstOrderLifetime, TransformContext, transform_kind
 
@@ -58,7 +57,7 @@ def _sim(
     )
 
 
-def _trajectories(receptor, params, foot: float = 1e-5) -> Trajectories:
+def _trajectories(receptor, params, foot: float = 1e-5) -> pd.DataFrame:
     particles = pd.DataFrame(
         {
             "time": [-60],
@@ -69,16 +68,15 @@ def _trajectories(receptor, params, foot: float = 1e-5) -> Trajectories:
             "foot": [foot],
         }
     )
-    return Trajectories.from_particles(
-        particles=particles, receptor=receptor, params=params, met_files=[]
-    )
+    return prepare(particles, receptor, params)
 
 
-def _write_particles(sim: Simulation) -> Trajectories:
+def _write_particles(sim: Simulation) -> pd.DataFrame:
     """Put particles for *sim* in the output directory and return them."""
-    traj = _trajectories(sim.receptor, sim.params)
-    sim.output.particles(sim.variant.name, sim.variant.transport).write(traj)
-    return traj
+    particles = _trajectories(sim.receptor, sim.params)
+    folder = sim.output.particles(sim.variant.name, sim.variant.transport)
+    folder.write(sim.receptor, particles, sim.params, [])
+    return particles
 
 
 def _context(sim: Simulation, directory=None) -> TransformContext:
@@ -192,10 +190,12 @@ def test_reads_particles_written_under_the_same_settings(point_receptor, tmp_pat
 
     again = _sim(tmp_path, point_receptor)  # a fresh value
     assert again.has_particles and again.is_complete()
-    assert again.particles is not None
-    assert again.particles.receptor == point_receptor
-    assert again.particles.params.numpar == written.params.numpar == 10
-    assert "datetime" in again.particles.data.columns
+    assert len(again.particles) == len(written)
+    meta = particles_metadata(again.particles_path)
+    assert meta.receptor == point_receptor
+    assert meta.params.numpar == 10
+    assert again.met_files == []
+    assert "datetime" in again.particles.columns
     assert again.particles is again.particles  # kept once read
 
 
@@ -263,13 +263,13 @@ def test_written_footprint_reads_back(point_receptor, tmp_path):
     sim = _sim(tmp_path, point_receptor, footprint=FOOT)
     traj = _write_particles(sim)
     foot = write_footprint(sim, traj, context=_context(sim))
-    assert foot is not None and foot.name == "hrrr"
+    assert foot is not None and foot.stilt.name == "hrrr"
 
     again = _sim(tmp_path, point_receptor, footprint=FOOT)
     back = again.footprint
-    assert isinstance(back, Footprint)
-    assert back.receptor == point_receptor and back.grid == GRID
-    xr.testing.assert_allclose(back.data, foot.data.astype("float32").astype("float64"))
+    assert isinstance(back, xr.DataArray)
+    assert back.stilt.receptor == point_receptor and back.stilt.grid == GRID
+    xr.testing.assert_allclose(back, foot.astype("float32").astype("float64"))
     assert again.outcome == "complete"
 
 
@@ -309,7 +309,7 @@ def test_generate_footprint_uses_the_variant_settings_and_writes_nothing(
     sim = _sim(tmp_path, point_receptor, footprint=FOOT)
     _write_particles(sim)
     foot = sim.generate_footprint()
-    assert foot is not None and foot.config == FOOT and foot.name == "hrrr"
+    assert foot is not None and foot.stilt.config == FOOT and foot.stilt.name == "hrrr"
     assert not sim.has_footprint
     with pytest.raises(FileNotFoundError):
         _ = sim.footprint
@@ -336,15 +336,15 @@ def test_generate_footprint_takes_other_settings_and_extra_transforms(
 
     base = sim.generate_footprint()
     halved = sim.generate_footprint(transforms=[Halve()])
-    assert float(halved.data.sum()) == pytest.approx(0.5 * float(base.data.sum()))
+    assert float(halved.sum()) == pytest.approx(0.5 * float(base.sum()))
     coarse = sim.generate_footprint(
         FOOT.model_copy(
             update={"grid": GRID.model_copy(update={"xres": 0.5, "yres": 0.5})}
         )
     )
-    assert coarse.grid.xres == 0.5
+    assert coarse.stilt.grid.xres == 0.5
     decay = sim.generate_footprint(transforms=[FirstOrderLifetime(lifetime_hours=1.0)])
-    assert [transform_kind(t) for t in decay.config.transforms] == [
+    assert [transform_kind(t) for t in decay.stilt.config.transforms] == [
         "first_order_lifetime"
     ]
 
@@ -375,8 +375,9 @@ def test_generate_footprint_uses_the_receptor_kernel_from_a_project_table(
     )
     sim = _sim(tmp_path, point_receptor, footprint=config)
     with_height = _trajectories(point_receptor, sim.params)
-    with_height.data["xhgt"] = 10.0  # the kernel weights particles by release height
-    sim.output.particles(sim.variant.name, sim.variant.transport).write(with_height)
+    with_height["xhgt"] = 10.0  # the kernel weights particles by release height
+    folder = sim.output.particles(sim.variant.name, sim.variant.transport)
+    folder.write(point_receptor, with_height, sim.params, [])
     plain = _sim(tmp_path, point_receptor, footprint=FOOT, variant="plain")
     assert (
         plain._particle_set == sim._particle_set
@@ -384,4 +385,4 @@ def test_generate_footprint_uses_the_receptor_kernel_from_a_project_table(
 
     weighted = sim.generate_footprint(context=_context(sim, directory=tmp_path))
     base = plain.generate_footprint()
-    assert float(weighted.data.sum()) == pytest.approx(0.5 * float(base.data.sum()))
+    assert float(weighted.sum()) == pytest.approx(0.5 * float(base.sum()))

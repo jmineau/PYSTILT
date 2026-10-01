@@ -55,7 +55,7 @@ the ones that have an equivalent.
        becomes one more variant.
    * - Modelled enhancement from an inventory (``ff.trajfoot``)
      - ``error_functions/``, ``run.xco2ff.sim``
-     - :meth:`stilt.Footprint.enhancement`, :func:`stilt.flux.particle_enhancement`
+     - ``foot.stilt.enhancement``, :func:`stilt.flux.particle_enhancement`
    * - Wind error statistics from radiosondes and surface stations
      - ``get.uverr``, ``get.siguverr``, ``cal.wind.err``, ``grab.raob``
      - :func:`~stilt.observations.variogram` and
@@ -76,7 +76,7 @@ the ones that have an equivalent.
        (:doc:`/guides/background`)
    * - Emission-error propagation (``cal.emiss.err``, footprint × inventory spread)
      - ``error_functions/``
-     - the same product as the enhancement, ``foot.enhancement(sigma)``. With
+     - the same product as the enhancement, ``foot.stilt.enhancement(sigma)``. With
        a spatial correlation, use fips's ``prior_obs_error`` (see the
        emission error section of :doc:`/guides/transport_error`).
    * - Satellite-derived plume background (``compute_bg``, forward trajectories)

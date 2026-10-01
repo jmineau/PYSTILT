@@ -18,11 +18,11 @@ from .config import (
     VariantConfig,
 )
 from .exceptions import StiltError
-from .footprint import Footprint
+from .footprint import read_footprint
 from .geometry import Geometry, Mesh, SpatialTarget, Zones
 from .meteorology import Met
 from .output import Output
-from .particles import Trajectories
+from .particles import particles_metadata, read_particles, write_particles
 from .project import Project
 from .receptors import (
     ColumnReceptor,
@@ -51,11 +51,13 @@ __all__ = [
     "MetConfig",
     "RuntimeSettings",
     "VariantConfig",
-    # Data objects (returned by Project methods)
+    # Simulations and their results
     "Simulation",
     "SimID",
-    "Footprint",
-    "Trajectories",
+    "read_particles",
+    "particles_metadata",
+    "write_particles",
+    "read_footprint",
     # Receptors
     "Receptor",
     "ColumnReceptor",

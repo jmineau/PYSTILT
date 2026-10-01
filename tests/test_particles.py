@@ -1,4 +1,4 @@
-"""Tests for trajectory model and plume-dilution helpers."""
+"""Tests for the particle table: preparing, reading, and writing it, and plume dilution."""
 
 import json
 from pathlib import Path
@@ -9,7 +9,13 @@ import pyarrow.parquet as pq
 import pytest
 
 from stilt.config import STILTParams
-from stilt.particles import Trajectories, calc_plume_dilution
+from stilt.particles import (
+    calc_plume_dilution,
+    particles_metadata,
+    prepare,
+    read_particles,
+    write_particles,
+)
 from stilt.receptors import ColumnReceptor, MultiPointReceptor, PointReceptor
 
 
@@ -63,16 +69,13 @@ def _params(tmp_path, hnf_plume=False) -> STILTParams:
     )
 
 
-def test_from_particles_adds_datetime(point_receptor, tmp_path):
-    traj = Trajectories.from_particles(
-        particles=_particles_basic(),
-        receptor=point_receptor,
-        params=_params(tmp_path, hnf_plume=False),
-        met_files=[Path("/tmp/met1")],
+def test_prepare_adds_datetime(point_receptor, tmp_path):
+    traj = prepare(
+        _particles_basic(), point_receptor, _params(tmp_path, hnf_plume=False)
     )
 
-    assert "datetime" in traj.data.columns
-    assert pd.api.types.is_datetime64_any_dtype(traj.data["datetime"])
+    assert "datetime" in traj.columns
+    assert pd.api.types.is_datetime64_any_dtype(traj["datetime"])
 
 
 def test_parquet_roundtrip_preserves_naive_utc_from_tz_aware_receptor(tmp_path):
@@ -89,51 +92,46 @@ def test_parquet_roundtrip_preserves_naive_utc_from_tz_aware_receptor(tmp_path):
     # Receptor normalizes tz-aware input to naive UTC.
     assert aware_receptor.time.tzinfo is None
 
-    traj = Trajectories.from_particles(
-        particles=_particles_basic(),
-        receptor=aware_receptor,
-        params=_params(tmp_path, hnf_plume=False),
-        met_files=[Path("/tmp/met1")],
+    traj = prepare(
+        _particles_basic(), aware_receptor, _params(tmp_path, hnf_plume=False)
     )
-    assert traj.data["datetime"].dt.tz is None
+    assert traj["datetime"].dt.tz is None
 
     path = tmp_path / "traj.parquet"
-    traj.to_parquet(path)
-    loaded = Trajectories.from_parquet(path)
+    params = _params(tmp_path, hnf_plume=False)
+    write_particles(path, traj, aware_receptor, params, [Path("/tmp/met1")])
+    loaded = read_particles(path)
 
-    assert loaded.receptor.time.tzinfo is None
-    assert loaded.receptor.time == aware_receptor.time
-    assert loaded.data["datetime"].dt.tz is None
+    receptor = particles_metadata(path).receptor
+    assert receptor.time.tzinfo is None
+    assert receptor.time == aware_receptor.time
+    assert loaded["datetime"].dt.tz is None
     pd.testing.assert_series_equal(
-        loaded.data["datetime"].reset_index(drop=True),
-        traj.data["datetime"].reset_index(drop=True),
+        loaded["datetime"].reset_index(drop=True),
+        traj["datetime"].reset_index(drop=True),
     )
 
 
-def test_to_from_parquet_roundtrip(point_receptor, tmp_path):
-    traj = Trajectories.from_particles(
-        particles=_particles_basic(),
-        receptor=point_receptor,
-        params=_params(tmp_path, hnf_plume=False),
-        met_files=[Path("/tmp/met1")],
-    )
+def test_write_and_read_particles_round_trip(point_receptor, tmp_path):
+    """A particle file holds everything needed to read it back."""
+    params = _params(tmp_path, hnf_plume=False)
+    traj = prepare(_particles_basic(), point_receptor, params)
     path = tmp_path / "traj.parquet"
-    traj.to_parquet(path)
+    write_particles(path, traj, point_receptor, params, [Path("/tmp/met1")])
 
-    loaded = Trajectories.from_parquet(path)
-    assert len(loaded.data) == 2
-    assert loaded.receptor.id == point_receptor.id
-    assert loaded.params == traj.params
-    assert loaded.met_files == [Path("/tmp/met1")]
+    loaded = read_particles(path)
+    assert len(loaded) == 2
+    assert "receptor" not in loaded.columns
+    pd.testing.assert_frame_equal(loaded[traj.columns], traj, check_dtype=False)
+    meta = particles_metadata(path)
+    assert meta.receptor == point_receptor
+    assert meta.params == params
+    assert meta.met_files == [Path("/tmp/met1")]
 
 
-def test_to_parquet_is_atomic_on_failure(point_receptor, tmp_path, monkeypatch):
-    traj = Trajectories.from_particles(
-        particles=_particles_basic(),
-        receptor=point_receptor,
-        params=_params(tmp_path, hnf_plume=False),
-        met_files=[Path("/tmp/met1")],
-    )
+def test_write_particles_is_atomic_on_failure(point_receptor, tmp_path, monkeypatch):
+    params = _params(tmp_path, hnf_plume=False)
+    traj = prepare(_particles_basic(), point_receptor, params)
     path = tmp_path / "traj.parquet"
     tmp = path.with_suffix(".parquet.tmp")
 
@@ -145,7 +143,7 @@ def test_to_parquet_is_atomic_on_failure(point_receptor, tmp_path, monkeypatch):
     monkeypatch.setattr("stilt.particles.pq.write_table", _broken_write)
 
     with pytest.raises(RuntimeError, match="write failed"):
-        traj.to_parquet(path)
+        write_particles(path, traj, point_receptor, params, [])
 
     assert not path.exists()
     assert not tmp.exists()
@@ -181,19 +179,14 @@ def test_calc_plume_dilution_grows_outward_from_release_when_forward():
     assert fwd_out["foot"].iloc[0] > fwd_out["foot"].iloc[1]
 
 
-def test_from_particles_column_receptor_assigns_xhgt(column_receptor, tmp_path):
+def test_prepare_column_receptor_assigns_xhgt(column_receptor, tmp_path):
     particles = _particles_basic().assign(indx=[1, 2])
-    traj = Trajectories.from_particles(
-        particles=particles,
-        receptor=column_receptor,
-        params=_params(tmp_path, hnf_plume=False),
-        met_files=[Path("/tmp/met1")],
-    )
-    assert "xhgt" in traj.data.columns
-    assert traj.data["xhgt"].tolist() == pytest.approx([16.25, 38.75])
+    traj = prepare(particles, column_receptor, _params(tmp_path, hnf_plume=False))
+    assert "xhgt" in traj.columns
+    assert traj["xhgt"].tolist() == pytest.approx([16.25, 38.75])
 
 
-def test_from_particles_column_receptor_spans_column_monotonically(tmp_path):
+def test_prepare_column_receptor_spans_column_monotonically(tmp_path):
     receptor = ColumnReceptor(
         time="2023-01-01 12:00:00",
         longitude=-111.85,
@@ -206,22 +199,19 @@ def test_from_particles_column_receptor_spans_column_monotonically(tmp_path):
         longs=[-111.85] * 12,
         lats=[40.77] * 12,
     )
-    traj = Trajectories.from_particles(
-        particles=particles,
-        receptor=receptor,
-        params=STILTParams(n_hours=-24, numpar=12, hnf_plume=False),
-        met_files=[Path("/tmp/met1")],
+    traj = prepare(
+        particles, receptor, STILTParams(n_hours=-24, numpar=12, hnf_plume=False)
     )
 
     expected = [
         ((i - 0.5) * (receptor.top - receptor.bottom) / 12) + receptor.bottom
         for i in range(1, 13)
     ]
-    assert traj.data["xhgt"].tolist() == pytest.approx(expected)
-    assert traj.data["xhgt"].is_monotonic_increasing
+    assert traj["xhgt"].tolist() == pytest.approx(expected)
+    assert traj["xhgt"].is_monotonic_increasing
 
 
-def test_from_particles_multipoint_receptor_assigns_xhgt_from_release_locations(
+def test_prepare_multipoint_receptor_assigns_xhgt_from_release_locations(
     tmp_path,
 ):
     receptor = MultiPointReceptor(
@@ -275,15 +265,12 @@ def test_from_particles_multipoint_receptor_assigns_xhgt_from_release_locations(
             893.0,
         ],
     )
-    traj = Trajectories.from_particles(
-        particles=particles,
-        receptor=receptor,
-        params=STILTParams(n_hours=-24, numpar=12, hnf_plume=False),
-        met_files=[Path("/tmp/met1")],
+    traj = prepare(
+        particles, receptor, STILTParams(n_hours=-24, numpar=12, hnf_plume=False)
     )
 
-    assert "xhgt" in traj.data.columns
-    assert traj.data["xhgt"].tolist() == pytest.approx(
+    assert "xhgt" in traj.columns
+    assert traj["xhgt"].tolist() == pytest.approx(
         [
             100.0,
             100.0,
@@ -301,7 +288,7 @@ def test_from_particles_multipoint_receptor_assigns_xhgt_from_release_locations(
     )
 
 
-def test_from_particles_multipoint_nondivisible_particle_blocks_follow_release_locations(
+def test_prepare_multipoint_nondivisible_particle_blocks_follow_release_locations(
     tmp_path,
 ):
     receptor = MultiPointReceptor(
@@ -338,14 +325,11 @@ def test_from_particles_multipoint_nondivisible_particle_blocks_follow_release_l
         ],
         zagl=[98.0, 104.0, 91.0, 110.0, 512.0, 489.0, 503.0, 497.0, 880.0, 905.0],
     )
-    traj = Trajectories.from_particles(
-        particles=particles,
-        receptor=receptor,
-        params=STILTParams(n_hours=-24, numpar=10, hnf_plume=False),
-        met_files=[Path("/tmp/met1")],
+    traj = prepare(
+        particles, receptor, STILTParams(n_hours=-24, numpar=10, hnf_plume=False)
     )
 
-    assert traj.data["xhgt"].tolist() == pytest.approx(
+    assert traj["xhgt"].tolist() == pytest.approx(
         [100.0, 100.0, 100.0, 100.0, 500.0, 500.0, 500.0, 500.0, 900.0, 900.0]
     )
 
@@ -372,13 +356,12 @@ def _slant(spacing_deg: float = 0.002, n: int = 4, **kwargs) -> MultiPointRecept
     )
 
 
-def _from_particles(particles, receptor):
-    return Trajectories.from_particles(
-        particles=particles,
-        receptor=receptor,
-        params=STILTParams(n_hours=-24, numpar=len(particles), hnf_plume=False),
-        met_files=[Path("/tmp/met1")],
-    ).data
+def _prepare(particles, receptor):
+    return prepare(
+        particles,
+        receptor,
+        STILTParams(n_hours=-24, numpar=len(particles), hnf_plume=False),
+    )
 
 
 def test_multipoint_close_points_are_matched_on_height_not_position():
@@ -395,7 +378,7 @@ def test_multipoint_close_points_are_matched_on_height_not_position():
             for k, dz in zip(true_level, [-12, 9, 15, -6, 4, -18, 11, -3], strict=True)
         ],
     )
-    data = _from_particles(particles, receptor)
+    data = _prepare(particles, receptor)
     assert data["xhgt"].tolist() == [
         300.0,
         300.0,
@@ -434,7 +417,7 @@ def test_multipoint_release_time_rows_are_used_when_present():
         zagl=[5000.0] * 4,
         time=-1,
     )
-    data = _from_particles(pd.concat([later, t0], ignore_index=True), receptor)
+    data = _prepare(pd.concat([later, t0], ignore_index=True), receptor)
     by_particle = data.drop_duplicates("indx").set_index("indx")["xhgt"]
     assert by_particle.loc[[1, 2, 3, 4]].tolist() == [300.0, 600.0, 900.0, 1200.0]
 
@@ -451,7 +434,7 @@ def test_multipoint_xhgt_is_constant_along_each_trajectory():
         )
         for step in range(3)
     ]
-    data = _from_particles(pd.concat(rows, ignore_index=True), receptor)
+    data = _prepare(pd.concat(rows, ignore_index=True), receptor)
     assert (data.groupby("indx")["xhgt"].nunique() == 1).all()
     assert data.drop_duplicates("indx").set_index("indx")["xhgt"].to_dict() == {
         1: 300.0,
@@ -471,7 +454,7 @@ def test_multipoint_msl_receptor_matches_on_height_above_sea_level():
         [1, 2], [-111.843, -111.841], [40.77] * 2, zagl=[905.0, 292.0]
     )
     particles["zsfc"] = [1500.0, 1500.0]  # 905+1500=2405, 292+1500=1792
-    data = _from_particles(particles, receptor)
+    data = _prepare(particles, receptor)
     assert data["xhgt"].tolist() == [2400.0, 1800.0]
 
 
@@ -486,7 +469,7 @@ def test_multipoint_same_altitude_close_points_warn():
         [1, 2], [-111.85, -111.848], [40.77] * 2, zagl=[500.0, 500.0]
     )
     with pytest.warns(UserWarning, match="cannot be reliably matched"):
-        _from_particles(particles, receptor)
+        _prepare(particles, receptor)
 
 
 def test_multipoint_same_altitude_wide_points_do_not_warn(recwarn):
@@ -499,7 +482,7 @@ def test_multipoint_same_altitude_wide_points_do_not_warn(recwarn):
     particles = _particles_release_rows(
         [1, 2], [-111.995, -111.795], [40.5] * 2, zagl=[500.0, 500.0]
     )
-    data = _from_particles(particles, receptor)
+    data = _prepare(particles, receptor)
     assert data["xhgt"].tolist() == [500.0, 500.0]
     assert not [w for w in recwarn if "reliably matched" in str(w.message)]
 
@@ -514,19 +497,16 @@ def test_multipoint_release_time_rows_silence_the_warning(recwarn):
     particles = _particles_release_rows(
         [1, 2], [-111.85, -111.848], [40.77] * 2, zagl=[500.0, 500.0], time=0
     )
-    _from_particles(particles, receptor)
+    _prepare(particles, receptor)
     assert not [w for w in recwarn if "reliably matched" in str(w.message)]
 
 
-def test_from_particles_with_hnf_plume(point_receptor, tmp_path):
+def test_prepare_with_hnf_plume(point_receptor, tmp_path):
     """hnf_plume=True runs plume-dilution correction and adds reference column."""
-    traj = Trajectories.from_particles(
-        particles=_particles_basic(),
-        receptor=point_receptor,
-        params=_params(tmp_path, hnf_plume=True),
-        met_files=[Path("/tmp/met1")],
+    traj = prepare(
+        _particles_basic(), point_receptor, _params(tmp_path, hnf_plume=True)
     )
-    assert "foot_no_hnf_dilution" in traj.data.columns
+    assert "foot_no_hnf_dilution" in traj.columns
 
 
 def test_calc_plume_dilution_raises_when_no_xhgt_and_no_rzagl():
@@ -539,22 +519,19 @@ def test_calc_plume_dilution_raises_when_no_xhgt_and_no_rzagl():
 
 
 def test_footprint_calculate_from_trajectory(point_receptor, tmp_path):
-    """Footprint.calculate works directly on Trajectories.data and receptor."""
+    """calculate works directly on a particle table and its receptor."""
     from stilt.config import FootprintConfig, Grid
-    from stilt.footprint import Footprint
+    from stilt.footprint import calculate
 
-    traj = Trajectories.from_particles(
-        particles=_particles_basic(),
-        receptor=point_receptor,
-        params=_params(tmp_path, hnf_plume=False),
-        met_files=[Path("/tmp/met1")],
+    traj = prepare(
+        _particles_basic(), point_receptor, _params(tmp_path, hnf_plume=False)
     )
     config = FootprintConfig(
         grid=Grid(xmin=-115.0, xmax=-110.0, ymin=38.0, ymax=43.0, xres=0.1, yres=0.1)
     )
     # particles are at [-111.9, -112.0] x [40.7, 40.6] - inside the grid
-    result = Footprint.calculate(traj.data, receptor=traj.receptor, config=config)
-    assert result is not None or result is None  # just ensure it doesn't crash
+    result = calculate(traj, receptor=point_receptor, config=config)
+    assert float(result.sum()) > 0
 
 
 def _particles_two_lengths() -> pd.DataFrame:
@@ -580,14 +557,9 @@ def test_endpoints_returns_far_end_per_particle(point_receptor, tmp_path):
     """
     endpoints() returns one row per particle at its largest-|time| row, with no
     duration filtering: a particle that left the domain early is a real endpoint."""
-    traj = Trajectories.from_particles(
-        particles=_particles_two_lengths(),
-        receptor=point_receptor,
-        params=_params(tmp_path),
-        met_files=[Path("/tmp/met1")],
-    )
+    traj = prepare(_particles_two_lengths(), point_receptor, _params(tmp_path))
 
-    ep = traj.endpoints().sort_values("indx").reset_index(drop=True)
+    ep = traj.stilt.endpoints().sort_values("indx").reset_index(drop=True)
     assert list(ep.columns) == [
         "indx",
         "time",
@@ -595,7 +567,7 @@ def test_endpoints_returns_far_end_per_particle(point_receptor, tmp_path):
         "long",
         "zagl",
         "endpoint_age_min",
-        "run_time",
+        "receptor_time",
     ]
     # Both particles kept, each at its far end (largest |time|): p1 at -120, p2 at -30.
     assert ep["indx"].tolist() == [1, 2]
@@ -606,13 +578,13 @@ def test_endpoints_returns_far_end_per_particle(point_receptor, tmp_path):
         point_receptor.time + pd.Timedelta(minutes=-120),
         point_receptor.time + pd.Timedelta(minutes=-30),
     ]
-    assert (ep["run_time"] == point_receptor.time).all()
+    assert (ep["receptor_time"] == point_receptor.time).all()
 
 
-def test_trajectories_footprint_regenerates_on_new_grid(tmp_path):
-    """Trajectories.footprint() calculates a footprint on an arbitrary grid."""
+def test_calculate_regenerates_a_footprint_on_a_new_grid(tmp_path):
+    """calculate makes a footprint on any grid from stored particles."""
     from stilt.config import FootprintConfig, Grid
-    from stilt.footprint import Footprint
+    from stilt.footprint import calculate
 
     rng = np.random.default_rng(0)
     n = 20
@@ -629,45 +601,38 @@ def test_trajectories_footprint_regenerates_on_new_grid(tmp_path):
     receptor = PointReceptor(
         time="2023-01-01 12:00:00", longitude=-113.5, latitude=39.5, altitude=5.0
     )
-    traj = Trajectories.from_particles(
-        particles=particles,
-        receptor=receptor,
-        params=STILTParams(n_hours=-2, numpar=n, hnf_plume=False),
-        met_files=[Path("/tmp/met1")],
+    traj = prepare(
+        particles, receptor, STILTParams(n_hours=-2, numpar=n, hnf_plume=False)
     )
     config = FootprintConfig(
         grid=Grid(xmin=-114.0, xmax=-113.0, ymin=39.0, ymax=40.0, xres=0.1, yres=0.1)
     )
     from stilt.transforms import FirstOrderLifetime
 
-    fp = traj.footprint(config, name="coarse")
-    assert isinstance(fp, Footprint)
-    assert fp.name == "coarse"
-    assert fp.receptor == receptor
-    assert fp.config.grid == config.grid
-    assert float(fp.data.sum()) > 0
+    fp = calculate(traj, receptor, config, name="coarse")
+    assert fp.stilt.name == "coarse"
+    assert fp.stilt.receptor == receptor
+    assert fp.stilt.grid == config.grid
+    assert float(fp.sum()) > 0
 
-    decayed = traj.footprint(
+    decayed = calculate(
+        traj,
+        receptor,
         config.model_copy(
             update={"transforms": [FirstOrderLifetime(lifetime_hours=0.5)]}
-        )
+        ),
     )
-    assert float(decayed.data.sum()) < float(fp.data.sum())
-    assert decayed.config.transforms == [FirstOrderLifetime(lifetime_hours=0.5)]
+    assert float(decayed.sum()) < float(fp.sum())
+    assert decayed.stilt.config.transforms == [FirstOrderLifetime(lifetime_hours=0.5)]
 
 
-def test_from_parquet_skips_stored_params_this_version_does_not_have(
+def test_metadata_skips_stored_params_this_version_does_not_have(
     point_receptor, tmp_path
 ):
     """Files written before a setting was removed still load (#44)."""
-    traj = Trajectories.from_particles(
-        particles=_particles_basic(),
-        receptor=point_receptor,
-        params=_params(tmp_path),
-        met_files=[],
-    )
+    traj = prepare(_particles_basic(), point_receptor, _params(tmp_path))
     path = tmp_path / "traj.parquet"
-    traj.to_parquet(path)
+    write_particles(path, traj, point_receptor, _params(tmp_path), [])
     table = pq.read_table(path)
     meta = dict(table.schema.metadata)
     stored = json.loads(meta[b"stilt:params"])
@@ -675,5 +640,4 @@ def test_from_parquet_skips_stored_params_this_version_does_not_have(
     meta[b"stilt:is_error"] = b"true"  # written by earlier versions; ignored
     pq.write_table(table.replace_schema_metadata(meta), path)
 
-    loaded = Trajectories.from_parquet(path)
-    assert loaded.params == traj.params
+    assert particles_metadata(path).params == _params(tmp_path)

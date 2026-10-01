@@ -65,7 +65,7 @@ def scenario_outputs(request, met_dir, rscript, r_stilt_dir, tmp_path_factory) -
     foot = sim.generate_footprint()
     assert foot is not None, f"[{scenario.name}] footprint is empty"
     foot_file = project_dir / "py_foot.nc"
-    foot.to_netcdf(foot_file)
+    foot.stilt.to_netcdf(foot_file)
     assert sim._particle_set is not None
     setup_file = sim._particle_set.scratch_path(str(receptor.id)) / "SETUP.CFG"
 

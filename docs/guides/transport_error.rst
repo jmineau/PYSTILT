@@ -97,8 +97,8 @@ as a list. It averages them before taking the difference:
    sims = project.simulations
    ensemble = sims[(sims.receptor == rid) & (sims.group == "hrrr-err")]
    err = transport_error(
-       project.simulation(rid, "hrrr").particles.data,
-       [t.data for t in project.load_particles(ensemble).values()],
+       project.simulation(rid, "hrrr").particles,
+       list(project.load_particles(ensemble).values()),
        flux,
    )
    err.realizations  # 4
@@ -124,7 +124,7 @@ smaller than the footprint cells, regrid the flux first.
 
    flux = xr.open_dataarray("ch4_flux.nc")          # µmol m⁻² s⁻¹ on lat/lon
    foot = project.simulation(rid, "hrrr").footprint
-   enhancement = foot.enhancement(flux)             # ppm per footprint time step
+   enhancement = foot.stilt.enhancement(flux)             # ppm per footprint time step
    total = float(enhancement.sum())
 
 A flux in µmol m⁻² s⁻¹ times a footprint in ppm per (µmol m⁻² s⁻¹) gives
@@ -141,7 +141,7 @@ units. Put it on the footprint grid and compute two limits:
 
    import numpy as np
 
-   f = foot.integrate_over_time()
+   f = foot.sum("time")
    s = sigma.reindex(lat=f["lat"], lon=f["lon"], method="nearest")
    err_correlated = float((f * s).sum())                   # every cell errs the same way
    err_independent = float(np.sqrt(((f * s) ** 2).sum()))  # each cell on its own
@@ -175,8 +175,8 @@ and perturbed particle tables and the flux field:
        sim = project.simulation(rid, "hrrr")
        err = project.simulation(rid, "hrrr-err")
        result = transport_error(
-           sim.particles.data,
-           err.particles.data,
+           sim.particles,
+           err.particles,
            flux,
            transforms=sim.footprint_config.transforms,
            context=project.transform_context(sim),

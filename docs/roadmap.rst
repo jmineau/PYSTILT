@@ -25,8 +25,8 @@ on a rectangular grid and then summed onto a :class:`stilt.Grid`, a
 :class:`stilt.Mesh` (from shapefiles, H3 hexagons, or windows around points),
 or :class:`stilt.Zones` (groups of cells), using cached overlap weights.
 ``Grid.from_geometry`` picks a grid for a geometry, the ``geometry``
-footprint setting names one in YAML, and ``Trajectories.footprint`` makes new
-footprints from saved particles.
+footprint setting names one in YAML, and ``sim.generate_footprint`` makes
+new footprints from saved particles.
 
 Most new work is on column and slant-column workflows for satellite and
 ground-based instruments (see *Future plans* below).
@@ -94,7 +94,7 @@ feature.
      - Implemented (see *Reading Retrieval Products*); other instruments as one module each
    * - Transport error on the modelled enhancement (``transport_error``)
      - Implemented
-   * - Modelled enhancement from a flux field (``Footprint.enhancement``)
+   * - Modelled enhancement from a flux field (``foot.stilt.enhancement``)
      - Implemented
    * - Background from a mole-fraction field at the trajectory endpoints (``background``)
      - Implemented
@@ -103,7 +103,7 @@ feature.
    * - Forward runs (positive ``n_hours``) for plume and dispersion studies
      - Implemented (see the *Plume Background* guide)
    * - Emission-error propagation to the modelled enhancement
-     - A recipe on ``Footprint.enhancement`` (see the *Transport Error* guide); the
+     - A recipe on ``foot.stilt.enhancement`` (see the *Transport Error* guide); the
        correlated case is fips's ``prior_obs_error``
    * - Inventory readers
      - Out of scope; a flux field is an xarray array

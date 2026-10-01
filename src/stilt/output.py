@@ -31,7 +31,7 @@ Start from :class:`Output`::
 
     out = Output("output")
     particles = out.particles("hrrr", settings)
-    particles.write(traj)
+    particles.write(receptor, frame, params, met_files)
     feet = particles.footprints(footprint_config)
     feet.write(footprint)
     H = feet.jacobian(target, time_bins)
@@ -63,12 +63,13 @@ from stilt._atomic import atomic_path
 from stilt.config import (
     FootprintConfig,
     Grid,
+    STILTParams,
     TransportSettings,
 )
 from stilt.config.transport import canonical, settings_hash
-from stilt.footprint import Footprint
+from stilt.footprint import _settings_json, read_footprint
 from stilt.geometry import Geometry, check_resolution, overlap_weights
-from stilt.particles import Trajectories
+from stilt.particles import read_particles, write_particles
 from stilt.receptors import Receptor
 
 logger = logging.getLogger(__name__)
@@ -77,10 +78,6 @@ logger = logging.getLogger(__name__)
 SETTINGS_FILE = "_settings.yaml"
 HASH_CHARS = 6
 _RECEPTOR_ID_RE = re.compile(r"^\d{12}_")
-
-#: Particle columns stored as int32 rather than float64.
-_INT_COLUMNS = ("time", "indx")
-
 
 # -- identity -----------------------------------------------------------------
 
@@ -358,65 +355,34 @@ class Particles:
         """
         return list(_list_receptor_files(self.path, ".parquet", among))
 
-    def write(self, particles: Trajectories) -> Path:
+    def write(
+        self,
+        receptor: Receptor,
+        particles: pd.DataFrame,
+        params: STILTParams,
+        met_files: list[Path],
+    ) -> Path:
         """
-        Write a receptor's particles.
+        Write a receptor's particles (:func:`stilt.write_particles`).
 
-        ``time`` and ``indx`` are stored as int32 and ``datetime`` is left
-        out, since it is the receptor time plus ``time``. Other columns keep
-        their type. A ``receptor`` column holds the receptor id, so a scan
-        of the whole tree can tell receptors apart; :meth:`read` drops it. The receptor, transport parameters, and met files go in
-        the file's metadata, as :meth:`stilt.Trajectories.to_parquet` does.
+        The file also records this folder's settings hash and the PYSTILT
+        version.
         """
-        data = particles.data.drop(columns=["datetime"], errors="ignore")
-        for name in _INT_COLUMNS:
-            if name in data.columns:
-                values = data[name].to_numpy()
-                if not np.array_equal(values, np.round(values)):
-                    raise ValueError(f"Particle column {name!r} is not whole numbers.")
-                data = data.assign(**{name: values.astype(np.int32)})
-        table = pa.Table.from_pandas(data, preserve_index=False)
-        receptor_id = str(particles.receptor.id)
-        table = table.add_column(
-            0,
-            pa.field("receptor", pa.dictionary(pa.int32(), pa.string())),
-            pa.DictionaryArray.from_arrays(
-                pa.array(np.zeros(table.num_rows, dtype=np.int32)),
-                pa.array([receptor_id]),
-            ),
+        return write_particles(
+            self.file(str(receptor.id)),
+            particles,
+            receptor,
+            params,
+            met_files,
+            metadata={
+                b"stilt:hash": self.hash.encode(),
+                b"stilt:pystilt": _pystilt_version().encode(),
+            },
         )
-        metadata = {
-            b"stilt:receptor": json.dumps(particles.receptor.to_dict()).encode(),
-            b"stilt:params": particles.params.model_dump_json().encode(),
-            b"stilt:met_files": json.dumps(
-                [str(p) for p in particles.met_files]
-            ).encode(),
-            b"stilt:hash": self.hash.encode(),
-            b"stilt:pystilt": _pystilt_version().encode(),
-        }
-        table = table.replace_schema_metadata(metadata)
-        return _write_atomic_table(table, self.file(receptor_id))
 
-    def read(self, receptor_id: str, columns: list[str] | None = None) -> Trajectories:
-        """
-        Read a receptor's particles.
-
-        ``datetime`` is rebuilt from the receptor time, and ``time`` and
-        ``indx`` come back as float64, as HYSPLIT's output is read today.
-        """
-        path = self.file(receptor_id)
-        if columns is not None:
-            columns = [c for c in columns if c != "datetime"]
-        traj = Trajectories.from_parquet(path, columns=columns)
-        data = traj.data
-        for name in _INT_COLUMNS:
-            if name in data.columns:
-                data[name] = data[name].astype("float64")
-        if "time" in data.columns and (columns is None or "datetime" in columns):
-            data["datetime"] = pd.Timestamp(traj.receptor.time) + pd.to_timedelta(
-                data["time"].to_numpy(), unit="min"
-            )
-        return traj
+    def read(self, receptor_id: str, columns: list[str] | None = None) -> pd.DataFrame:
+        """Read a receptor's particles (:func:`stilt.read_particles`)."""
+        return read_particles(self.file(receptor_id), columns=columns)
 
     # -- logs and scratch --------------------------------------------------
 
@@ -622,22 +588,26 @@ class Footprints:
             )
         return idx
 
-    def write(self, footprint: Footprint) -> Path:
+    def write(self, foot: xr.DataArray) -> Path:
         """
         Write one receptor's footprint as its non-zero cells.
 
         The footprint must be on this folder's grid. ``hour`` is the offset
         of each time layer from the receptor time; every layer is recorded
         in the metadata, so the dense array reads back with the same shape.
+        The metadata also holds the receptor and the footprint settings, so
+        :func:`stilt.read_footprint` opens the file alone.
         """
-        data = footprint.data
+        data = foot
+        receptor = foot.stilt.receptor
+        name = foot.stilt.name
         x_dim = "lon" if "lon" in data.dims else "x"
         y_dim = "lat" if "lat" in data.dims else "y"
         x_axis, y_axis = self.axes
         xi = self._indices(np.asarray(data[x_dim].values, dtype=float), x_axis, x_dim)
         yi = self._indices(np.asarray(data[y_dim].values, dtype=float), y_axis, y_dim)
 
-        receptor_time = pd.Timestamp(footprint.receptor.time)
+        receptor_time = pd.Timestamp(receptor.time)
         times = pd.DatetimeIndex(pd.to_datetime(data["time"].values, utc=True))
         hours_f = (times.tz_convert(None) - receptor_time) / pd.Timedelta(hours=1)
         hours = np.asarray(hours_f, dtype=float)
@@ -651,9 +621,7 @@ class Footprints:
         t, y, x = np.nonzero(np.nan_to_num(values, nan=0.0))
         table = pa.table(
             {
-                "receptor": pa.array(
-                    [str(footprint.receptor.id)] * len(t)
-                ).dictionary_encode(),
+                "receptor": pa.array([str(receptor.id)] * len(t)).dictionary_encode(),
                 "hour": pa.array(hours[t]),
                 "y": pa.array(yi[y].astype(np.int16)),
                 "x": pa.array(xi[x].astype(np.int16)),
@@ -662,9 +630,9 @@ class Footprints:
             schema=_FOOTPRINT_SCHEMA,
         )
         table = table.replace_schema_metadata(
-            self._metadata(footprint.receptor, footprint.name, hours.tolist(), "")
+            self._metadata(receptor, name, hours.tolist(), "")
         )
-        return _write_atomic_table(table, self.file(str(footprint.receptor.id)))
+        return _write_atomic_table(table, self.file(str(receptor.id)))
 
     def write_empty(self, receptor: Receptor, reason: str, name: str = "") -> Path:
         """Record that a receptor's footprint is empty (no particle over the grid), with the reason."""
@@ -681,6 +649,7 @@ class Footprints:
             b"stilt:name": name.encode(),
             b"stilt:hours": json.dumps(hours).encode(),
             b"stilt:empty_reason": empty_reason.encode(),
+            b"stilt:footprint": _settings_json(self.config).encode(),
             b"stilt:hash": self.hash.encode(),
             b"stilt:pystilt": _pystilt_version().encode(),
         }
@@ -691,45 +660,13 @@ class Footprints:
         reason = meta.get(b"stilt:empty_reason", b"").decode()
         return reason or None
 
-    def read(self, receptor_id: str) -> Footprint | None:
+    def read(self, receptor_id: str) -> xr.DataArray | None:
         """
-        Read one receptor's footprint as a dense :class:`~stilt.Footprint`.
+        Read one receptor's footprint as a dense array (:func:`stilt.read_footprint`).
 
         Returns ``None`` for an empty footprint (see :meth:`empty_reason`).
         """
-        table = pq.read_table(self.file(receptor_id))
-        meta = table.schema.metadata or {}
-        if meta.get(b"stilt:empty_reason", b""):
-            return None
-        receptor = Receptor.from_dict(json.loads(meta[b"stilt:receptor"]))
-        hours = json.loads(meta[b"stilt:hours"])
-        name = meta.get(b"stilt:name", b"").decode()
-
-        x_axis, y_axis = self.axes
-        values = np.zeros((len(hours), len(y_axis), len(x_axis)), dtype=np.float64)
-        if table.num_rows:
-            layer = {h: i for i, h in enumerate(hours)}
-            t = np.fromiter(
-                (layer[h] for h in table["hour"].to_numpy()),
-                dtype=np.intp,
-                count=table.num_rows,
-            )
-            values[t, table["y"].to_numpy(), table["x"].to_numpy()] = table[
-                "foot"
-            ].to_numpy()
-
-        receptor_time = pd.Timestamp(receptor.time)
-        times = pd.DatetimeIndex(
-            [receptor_time + pd.Timedelta(hours=int(h)) for h in hours]
-        )
-        x_dim, y_dim = ("lon", "lat") if self.grid.is_longlat else ("x", "y")
-        data = xr.DataArray(
-            values,
-            dims=["time", y_dim, x_dim],
-            coords={"time": times, y_dim: y_axis, x_dim: x_axis},
-            attrs={"units": "ppm m2 s umol-1"},
-        )
-        return Footprint(receptor=receptor, config=self.config, data=data, name=name)
+        return read_footprint(self.file(receptor_id), config=self.config)
 
     # -- many receptors at once --------------------------------------------
 
@@ -764,7 +701,7 @@ class Footprints:
         """
         Sum many footprints onto a target, per time bin, as one sparse matrix.
 
-        The same operation as :meth:`stilt.Footprint.aggregate`, for every
+        The same operation as ``foot.stilt.aggregate``, for every
         receptor in the folder (or *receptors*) at once. Each footprint cell
         is split among the target cells it overlaps in proportion to area,
         time layers are summed within each of *time_bins*, and cells or

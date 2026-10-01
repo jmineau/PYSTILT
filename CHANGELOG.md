@@ -8,6 +8,34 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **Particles and footprints are plain data**
+  ([#107](https://github.com/jmineau/PYSTILT/issues/107); breaking).
+  `sim.particles` is a pandas DataFrame and `sim.footprint` an xarray
+  DataArray, so pandas and xarray work on them directly with no `.data`
+  step. PYSTILT's own methods are under `.stilt`:
+  `foot.stilt.aggregate(...)`, `foot.stilt.enhancement(flux)`,
+  `foot.stilt.receptor`, `foot.stilt.plot.map()`,
+  `particles.stilt.endpoints()`, `particles.stilt.plot.map()`. The
+  `Trajectories` and `Footprint` classes are gone. A footprint keeps its
+  receptor id as the coordinate `foot.receptor`, so
+  `xr.concat(feet, dim="receptor")` stacks footprints labelled by receptor.
+
+  | Before | After |
+  |---|---|
+  | `traj.data`, `foot.data` | `sim.particles`, `sim.footprint` themselves |
+  | `Footprint.calculate(...)`, `traj.footprint(config)` | `stilt.footprint.calculate(particles, receptor, config)`, or `sim.generate_footprint(config)` |
+  | `Trajectories.from_particles(...)` | `stilt.particles.prepare(raw, receptor, params)` |
+  | `Trajectories.from_parquet(path)`, `traj.to_parquet(path)` | `stilt.read_particles(path)`, `stilt.particles_metadata(path)`, `stilt.write_particles(...)` |
+  | `Footprint.from_netcdf(path)`, `foot.to_netcdf(path)` | `stilt.read_footprint(path)`, `foot.stilt.to_netcdf(path)` |
+  | `foot.integrate_over_time()` | `foot.sum("time")` |
+  | `foot.time_range` | `foot.indexes["time"]` |
+  | `traj.met_files` | `sim.met_files` |
+  | the `run_time` column of `endpoints()` | `receptor_time` |
+  | `show_traj=`, `traj_cmap=`, ... in `sim.plot.map()` | `show_particles=`, `particles_cmap=`, ... |
+
+  Footprint files in the output directory now record their own settings,
+  grid included, so `stilt.read_footprint(path)` opens one without its
+  folder. It reads NetCDF files too.
 - **Exceptions share one base class, `stilt.StiltError`, and live in
   `stilt.exceptions`** ([#80](https://github.com/jmineau/PYSTILT/issues/80);
   breaking). `stilt.errors` is renamed `stilt.exceptions`, with no alias.
