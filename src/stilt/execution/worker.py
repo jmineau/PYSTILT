@@ -147,7 +147,7 @@ class ReceptorResult:
 def _append_error_log(sim: Simulation, *, phase: str, error: BaseException) -> None:
     """Append the error and its traceback to the simulation's log in the output directory."""
     folder = sim.output.particles(sim.variant.name, sim.variant.transport)
-    log_path = folder.log_path(sim.receptor_id)
+    log_path = folder.log_path(sim.receptor.id)
     log_path.parent.mkdir(parents=True, exist_ok=True)
     trace = traceback.format_exc()
     lines = [
@@ -205,7 +205,7 @@ def run_particles(
     NoParticleOutputError, EmptyParticleOutputError
         As the HYSPLIT driver and the particle reader raise them.
     """
-    params = sim.params
+    params = sim.variant.transport
     overrides = {
         name: value
         for name, value in (("timeout", timeout), ("rm_dat", rm_dat))
@@ -214,7 +214,7 @@ def run_particles(
     run_params = params.model_copy(update=overrides) if overrides else params
     model = get_model(params.model.name)
     folder = sim.output.particles(sim.variant.name, sim.variant.transport)
-    rid = sim.receptor_id
+    rid = sim.receptor.id
     workdir.mkdir(parents=True, exist_ok=True)
     scratch_log = workdir / "stilt.log"
     succeeded = False

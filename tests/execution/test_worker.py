@@ -138,16 +138,16 @@ def _write_particles(sim: Simulation) -> pd.DataFrame:
     """Put a small particle file for *sim* in the output directory."""
     particles = _particles(sim.receptor)
     folder = sim.output.particles(sim.variant.name, sim.variant.transport)
-    folder.write(sim.receptor, particles, sim.params, [])
+    folder.write(sim.receptor, particles, sim.variant.transport, [])
     return particles
 
 
 def _write_footprint(sim: Simulation, *, empty: bool = False) -> None:
     """Record a footprint (or an empty one) for *sim* in the output directory."""
     run = sim.output.particles(sim.variant.name, sim.variant.transport)
-    assert sim.footprint_config is not None
+    assert sim.variant.footprint is not None
     if empty:
-        feet = run.footprints(sim.footprint_config, name=sim.variant.name)
+        feet = run.footprints(sim.variant.footprint, name=sim.variant.name)
         feet.write_empty(sim.receptor, "outside_domain", name=sim.variant.name)
     else:
         write_footprint(
@@ -310,7 +310,7 @@ def test_run_simulation_error_log_appends_to_existing_hysplit_log(
     sim, met, compute_root, monkeypatch
 ):
     run = sim.output.particles(sim.variant.name, sim.variant.transport)
-    run.write_log(sim.receptor_id, "hysplit said hello\n")
+    run.write_log(sim.receptor.id, "hysplit said hello\n")
 
     def fail(*a, **k):
         raise SimulationError("boom")
@@ -422,7 +422,7 @@ def test_run_simulation_backfills_missing_particles_and_remakes_the_footprint(
     )
     _write_particles(s)
     _write_footprint(s)
-    s.output.particles(s.variant.name, s.variant.transport).file(s.receptor_id).unlink()
+    s.output.particles(s.variant.name, s.variant.transport).file(s.receptor.id).unlink()
     calls: list[str] = []
     _fake_hysplit(monkeypatch, calls)
     _fake_footprint(monkeypatch, calls)

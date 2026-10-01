@@ -57,7 +57,7 @@ The background at a receptor
        bg = background(
            sim.particles,
            field,
-           transforms=sim.footprint_config.transforms,
+           transforms=sim.variant.footprint.transforms,
            context=project.transform_context(sim),
        )
        enhancement = float(sim.footprint.stilt.enhancement(flux).sum())
@@ -97,10 +97,10 @@ each particle's modelled mole fraction, enhancement plus background:
 
 .. code-block:: python
 
-   err = project.simulation(sim.receptor_id, "hrrr-err")
+   err = project.simulation(sim.receptor.id, "hrrr-err")
    result = transport_error(
        sim.particles, err.particles, flux,
-       transforms=sim.footprint_config.transforms, context=project.transform_context(sim),
+       transforms=sim.variant.footprint.transforms, context=project.transform_context(sim),
        background=field,
    )
    result.enhancement - result.background   # the enhancement alone
