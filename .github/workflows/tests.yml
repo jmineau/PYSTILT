@@ -201,11 +201,12 @@ jobs:
       run: |
         .sdisttest/bin/python -c "import stilt; print(stilt.__version__)"
         .sdisttest/bin/python - <<'EOF'
+        from stilt.exceptions import HYSPLITNotFoundError
         from stilt.hysplit.driver import _bundled_exe_dir
 
         try:
             _bundled_exe_dir()
-        except RuntimeError as err:
+        except HYSPLITNotFoundError as err:
             print(err)
         else:
             raise SystemExit("the sdist install found a bundled hycs_std")
