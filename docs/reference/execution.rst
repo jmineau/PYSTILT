@@ -52,17 +52,17 @@ Batches
 
    stilt.execution.Batch
 
-Transport engine
+Transport model
 ----------------
 
-The worker runs a simulation through the engine its settings name. HYSPLIT
-is the one engine.
+The worker runs a simulation through the model its settings name. HYSPLIT
+is the one transport model.
 
 .. autosummary::
    :toctree: _api
    :nosignatures:
 
-   stilt.engine.TransportEngine
-   stilt.engine.EngineRun
-   stilt.engine.get_engine
-   stilt.hysplit.HysplitEngine
+   stilt.model.TransportModel
+   stilt.model.ModelRun
+   stilt.model.get_model
+   stilt.hysplit.HysplitModel

@@ -3,7 +3,7 @@ The settings that identify a run, and their hash.
 
 A run is one receptor under one :class:`TransportSettings`: the transport
 fields that change its particles, the settings of its meteorology, and the
-engine that produced them. Two variants with equal settings are one run.
+model that produced them. Two variants with equal settings are one run.
 The hash of the settings names the run's folder in the output directory.
 """
 
@@ -79,12 +79,12 @@ def hysplit_version(exe_dir: str | Path | None = None) -> str:
     return path.read_text().strip()
 
 
-class EngineInfo(BaseModel):
-    """The transport engine a run was made with."""
+class ModelInfo(BaseModel):
+    """The transport model a run was made with."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    name: str = Field(default="hysplit", description="Engine name.")
+    name: str = Field(default="hysplit", description="Model name.")
     version: str = Field(
         ..., description="Version string of the build, such as ``v5.1.0``."
     )
@@ -97,7 +97,7 @@ class TransportSettings(STILTParams):
     The transport fields of :class:`~stilt.config.STILTParams` (which also
     carry HYSPLIT's namelist writers and validators, so this is the object
     the driver runs with), the :class:`~stilt.config.MetSettings` of its
-    meteorology, and the :class:`EngineInfo`. Fields that change no particle
+    meteorology, and the :class:`ModelInfo`. Fields that change no particle
     (``timeout``, ``rm_dat``, ``exe_dir``) are carried for running but left
     out of :meth:`identity` and :attr:`hash`.
 
@@ -108,8 +108,8 @@ class TransportSettings(STILTParams):
     """
 
     met: MetSettings = Field(description="Settings of the meteorology the run used.")
-    engine: EngineInfo = Field(
-        description="Engine and version that produced the particles."
+    model: ModelInfo = Field(
+        description="Model and version that produced the particles."
     )
     realization: int | None = Field(
         None,
@@ -125,22 +125,22 @@ class TransportSettings(STILTParams):
         cls,
         params: STILTParams,
         met: MetSettings | MetConfig,
-        engine: EngineInfo | None = None,
+        model: ModelInfo | None = None,
         realization: int | None = None,
     ) -> Self:
         """
         Return the settings for *params* run with *met*.
 
-        *engine* defaults to HYSPLIT at the version of the build
+        *model* defaults to HYSPLIT at the version of the build
         ``params.exe_dir`` points at, or the bundled build.
         """
-        if engine is None:
-            engine = EngineInfo(version=hysplit_version(params.exe_dir))
+        if model is None:
+            model = ModelInfo(version=hysplit_version(params.exe_dir))
         met_settings = met.settings() if isinstance(met, MetConfig) else met
         return cls(
             **params.model_dump(),
             met=met_settings,
-            engine=engine,
+            model=model,
             realization=realization,
         )
 
@@ -165,7 +165,7 @@ class TransportSettings(STILTParams):
 
 __all__ = [
     "UNRECORDED_FIELDS",
-    "EngineInfo",
+    "ModelInfo",
     "TransportSettings",
     "canonical",
     "hysplit_version",

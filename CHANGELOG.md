@@ -107,12 +107,12 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   only some receptors. `stilt status` no longer
   opens every footprint file. `status()` still reports `empty`, which needs
   the file.
-- **HYSPLIT sits behind an engine boundary**
+- **HYSPLIT sits behind a transport model interface**
   ([#87](https://github.com/jmineau/PYSTILT/issues/87), decision 8 of
   [#67](https://github.com/jmineau/PYSTILT/issues/67)). The worker runs a
-  simulation through `stilt.engine.get_engine(name)`, where the name is the
-  one the run's settings record. `stilt.hysplit.HysplitEngine` is the one
-  engine. HYSPLIT now reads the meteorology files where they are (the
+  simulation through `stilt.model.get_model(name)`, where the name is the
+  one the run's settings record. `stilt.hysplit.HysplitModel` is the one
+  transport model. HYSPLIT now reads the meteorology files where they are (the
   cropped copies when a met is cropped) instead of through links made in
   each run's working directory, so a kept `scratch/` folder no longer has a
   `met/` folder. `Met.stage_files_for_simulation` is replaced by
@@ -159,8 +159,8 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   multipoint receptors 18 s instead of 53 s. Ids are unchanged. `project.run()`
   blocks on either backend and returns the receptor results;
   `project.submit()` sends the work to Slurm and returns the submitit jobs.
-  `ModelConfig` is now `ProjectConfig`. `Model`, `stilt.model`,
-  `stilt.collections` (`SimulationCollection`, `ReceptorCollection`,
+  `ModelConfig` is now `ProjectConfig`. `Model` (its module, `stilt.model`,
+  now holds the transport model interface), `stilt.collections` (`SimulationCollection`, `ReceptorCollection`,
   `OutputCollection`), `stilt.execution.register`, and the run handles
   (`JobHandle`, `LocalHandle`, `SlurmHandle`) are removed. Pass the scratch
   directory to the run (`project.run(compute_root=...)`,
@@ -214,8 +214,8 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **`TransportSettings`, what identifies a run**
   ([#74](https://github.com/jmineau/PYSTILT/issues/74)). The transport
   fields that change a run's particles, the settings of its meteorology
-  (`MetSettings`, which `MetConfig` now builds on), and the engine and
-  version that produced them (`EngineInfo`). Its hash names the run's folder
+  (`MetSettings`, which `MetConfig` now builds on), and the transport
+  model and version that produced them (`ModelInfo`). Its hash names the run's folder
   in the output directory, and a stored `settings.yaml` loads back through
   it, so a field added later with a default still matches. A custom
   `exe_dir` needs a `version` file beside `hycs_std`. Nothing uses this yet

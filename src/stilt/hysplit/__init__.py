@@ -1,6 +1,6 @@
 """Writing HYSPLIT input files and running ``hycs_std``."""
 
 from .driver import HYSPLITDriver
-from .engine import HysplitEngine
+from .model import HysplitModel
 
-__all__ = ["HYSPLITDriver", "HysplitEngine"]
+__all__ = ["HYSPLITDriver", "HysplitModel"]

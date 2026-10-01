@@ -126,7 +126,12 @@ def _write_values(path: Path, values: list[float] | None) -> None:
 
 class HYSPLITDriver:
     """
-    Set up and run one HYSPLIT simulation in a directory.
+    Run HYSPLIT's ``hycs_std`` once, for one receptor in one directory.
+
+    :meth:`prepare` writes the input files (``CONTROL``, ``SETUP.CFG``, and
+    the error files) and :meth:`execute` runs the binary and reads the
+    particles it writes. :class:`~stilt.hysplit.HysplitModel` makes one per
+    run. Use it directly only to run HYSPLIT outside a project.
 
     Parameters
     ----------

@@ -1,4 +1,4 @@
-"""Tests for the transport engine boundary."""
+"""Tests for the transport model boundary."""
 
 from __future__ import annotations
 
@@ -6,40 +6,40 @@ import pandas as pd
 import pytest
 
 from stilt.config import MetConfig, STILTParams, TransportSettings, VariantConfig
-from stilt.engine import EngineRun, get_engine
 from stilt.execution import run_trajectories, worker
-from stilt.hysplit import HysplitEngine
+from stilt.hysplit import HysplitModel
+from stilt.model import ModelRun, get_model
 from stilt.output import Output
 from stilt.simulation import Simulation
 
 
-def test_get_engine_returns_hysplit_by_default_and_by_name():
-    assert isinstance(get_engine(), HysplitEngine)
-    assert get_engine("hysplit").name == "hysplit"
+def test_get_model_returns_hysplit_by_default_and_by_name():
+    assert isinstance(get_model(), HysplitModel)
+    assert get_model("hysplit").name == "hysplit"
 
 
-def test_get_engine_names_the_engines_it_knows():
+def test_get_model_names_the_models_it_knows():
     with pytest.raises(
-        ValueError, match=r"Unknown transport engine 'flexpart'.*hysplit"
+        ValueError, match=r"Unknown transport model 'flexpart'.*hysplit"
     ):
-        get_engine("flexpart")
+        get_model("flexpart")
 
 
-def test_hysplit_engine_version_is_the_bundled_build_or_exe_dirs(tmp_path):
+def test_hysplit_model_version_is_the_bundled_build_or_exe_dirs(tmp_path):
     from stilt.config import hysplit_version
 
-    engine = HysplitEngine()
-    assert engine.version(STILTParams(n_hours=-1)) == hysplit_version()
+    model = HysplitModel()
+    assert model.version(STILTParams(n_hours=-1)) == hysplit_version()
 
     (tmp_path / "version").write_text("v9.9.9+patched\n")
-    assert engine.version(STILTParams(n_hours=-1, exe_dir=tmp_path)) == "v9.9.9+patched"
+    assert model.version(STILTParams(n_hours=-1, exe_dir=tmp_path)) == "v9.9.9+patched"
 
 
-def test_the_settings_record_the_engine_that_makes_the_particles(tmp_path):
+def test_the_settings_record_the_model_that_makes_the_particles(tmp_path):
     met = MetConfig(directory=tmp_path, file_format="%Y%m%d_%H", file_tres="1h")
     settings = TransportSettings.build(STILTParams(n_hours=-1), met)
-    engine = get_engine(settings.engine.name)
-    assert settings.engine.version == engine.version(settings)
+    model = get_model(settings.model.name)
+    assert settings.model.version == model.version(settings)
 
 
 class _FakeDriver:
@@ -70,24 +70,24 @@ class _FakeMet:
         return self.read
 
 
-def test_hysplit_engine_reads_the_met_in_place_and_records_the_source(
+def test_hysplit_model_reads_the_met_in_place_and_records_the_source(
     tmp_path, point_receptor, monkeypatch
 ):
-    from stilt.hysplit import engine as engine_module
+    from stilt.hysplit import model as model_module
 
-    monkeypatch.setattr(engine_module, "HYSPLITDriver", _FakeDriver)
+    monkeypatch.setattr(model_module, "HYSPLITDriver", _FakeDriver)
     source = [tmp_path / "archive" / "20230101_12"]
     cropped = [tmp_path / "crops" / "20230101_12"]
     params = STILTParams(n_hours=-1, timeout=30, rm_dat=False)
 
-    result = HysplitEngine().run(
+    result = HysplitModel().run(
         point_receptor,
         params,
         _FakeMet(source, cropped),
         tmp_path / "work",  # type: ignore[arg-type]
     )
 
-    assert isinstance(result, EngineRun)
+    assert isinstance(result, ModelRun)
     assert result.met_files == source  # the record names the source files
     assert _FakeDriver.built["met_files"] == cropped  # HYSPLIT reads the crops
     assert _FakeDriver.built["directory"] == tmp_path / "work"
@@ -95,12 +95,12 @@ def test_hysplit_engine_reads_the_met_in_place_and_records_the_source(
     assert (_FakeDriver.built["timeout"], _FakeDriver.built["rm_dat"]) == (30, False)
 
 
-def test_run_trajectories_goes_through_the_engine_the_settings_name(
+def test_run_trajectories_goes_through_the_model_the_settings_name(
     tmp_path, point_receptor, monkeypatch
 ):
     calls: list[dict] = []
 
-    class _Engine:
+    class _Model:
         name = "hysplit"
 
         def run(self, receptor, params, met, workdir):
@@ -117,11 +117,11 @@ def test_run_trajectories_goes_through_the_engine_the_settings_name(
                     "foot": [1e-5],
                 }
             )
-            return EngineRun(particles=particles, met_files=[tmp_path / "met_file"])
+            return ModelRun(particles=particles, met_files=[tmp_path / "met_file"])
 
     asked: list[str] = []
     monkeypatch.setattr(
-        worker, "get_engine", lambda name: asked.append(name) or _Engine()
+        worker, "get_model", lambda name: asked.append(name) or _Model()
     )
     met_config = MetConfig(directory=tmp_path, file_format="%Y%m%d_%H", file_tres="1h")
     variant = VariantConfig(
@@ -138,6 +138,6 @@ def test_run_trajectories_goes_through_the_engine_the_settings_name(
 
     assert asked == ["hysplit"]
     assert calls[0]["receptor"] == point_receptor
-    assert calls[0]["timeout"] == 45  # the override reaches the engine
+    assert calls[0]["timeout"] == 45  # the override reaches the model
     assert traj.met_files == [tmp_path / "met_file"]
     assert sim.has_trajectory

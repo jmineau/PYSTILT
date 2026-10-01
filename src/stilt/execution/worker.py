@@ -25,7 +25,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
 from stilt.config import FootprintConfig
-from stilt.engine import get_engine
 from stilt.errors import (
     EmptyFootprintError,
     EmptyTrajectoryError,
@@ -33,6 +32,7 @@ from stilt.errors import (
 )
 from stilt.footprint import Footprint
 from stilt.meteorology import Met
+from stilt.model import get_model
 from stilt.simulation import Simulation
 from stilt.trajectory import Trajectories
 from stilt.transforms import ParticleTransform, TransformContext
@@ -170,9 +170,9 @@ def run_trajectories(
     rm_dat: bool | None = None,
 ) -> Trajectories:
     """
-    Run the transport engine for a simulation and write its particles to the output directory.
+    Run the transport model for a simulation and write its particles to the output directory.
 
-    The engine the settings name (HYSPLIT) runs in *workdir*, on scratch.
+    The model the settings name (HYSPLIT) runs in *workdir*, on scratch.
     The log is copied into the output directory whether the run succeeds or
     fails. The working directory is then removed, unless the run failed or
     *keep_scratch* is set, in which case it is copied under the output
@@ -209,14 +209,14 @@ def run_trajectories(
         if value is not None
     }
     run_params = params.model_copy(update=overrides) if overrides else params
-    engine = get_engine(params.engine.name)
+    model = get_model(params.model.name)
     run = sim.output.run(sim.variant.name, sim.variant.transport)
     rid = sim.receptor_id
     workdir.mkdir(parents=True, exist_ok=True)
     scratch_log = workdir / "stilt.log"
     succeeded = False
     try:
-        result = engine.run(sim.receptor, run_params, met, workdir)
+        result = model.run(sim.receptor, run_params, met, workdir)
         if result.particles.empty:
             raise EmptyTrajectoryError(f"No trajectory data for {sim.id}")
         traj = Trajectories.from_particles(
