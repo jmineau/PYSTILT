@@ -10,7 +10,7 @@ from stilt.config import (
     FootprintConfig,
     Grid,
     MetConfig,
-    STILTParams,
+    TransportParams,
     TransportSettings,
     VariantConfig,
 )
@@ -34,7 +34,7 @@ def _variant(
     tmp_path, name="hrrr", footprint: FootprintConfig | None = None, **overrides
 ) -> VariantConfig:
     """A resolved variant with the test transport defaults and an optional footprint."""
-    params = STILTParams(
+    params = TransportParams(
         **{"n_hours": -24, "numpar": 10, "hnf_plume": False, **overrides}
     )
     return VariantConfig(

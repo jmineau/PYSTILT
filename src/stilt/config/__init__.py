@@ -9,7 +9,7 @@ from .geometry import (
     WindowsGeometrySpec,
 )
 from .meteorology import MetConfig, MetSettings
-from .params import ErrorParams, ModelParams, STILTParams, TransportParams
+from .params import TransportParams
 from .project import ProjectConfig
 from .spatial import (
     Bounds,
@@ -23,7 +23,6 @@ from .variant import VariantConfig
 __all__ = [
     "Bounds",
     "ModelInfo",
-    "ErrorParams",
     "ExecutionConfig",
     "FileGeometrySpec",
     "FootprintConfig",
@@ -33,8 +32,6 @@ __all__ = [
     "MetConfig",
     "MetSettings",
     "ProjectConfig",
-    "ModelParams",
-    "STILTParams",
     "TransportParams",
     "TransportSettings",
     "VariantConfig",

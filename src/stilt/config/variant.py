@@ -21,7 +21,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from .footprint import FootprintConfig
 from .meteorology import MetConfig
-from .params import STILTParams
+from .params import TransportParams
 from .transport import UNRECORDED_FIELDS, TransportSettings
 
 #: Pattern for variant and met names, which become directory names.
@@ -56,7 +56,7 @@ class VariantConfig(BaseModel):
     )
 
 
-_TRANSPORT_FIELDS = frozenset(STILTParams.model_fields)
+_TRANSPORT_FIELDS = frozenset(TransportParams.model_fields)
 _FOOTPRINT_FIELDS = frozenset(FootprintConfig.model_fields)
 
 
@@ -68,7 +68,7 @@ class _Plan:
     met_name: str
     met: MetConfig
     transport_fields: dict[str, Any]
-    params: STILTParams
+    params: TransportParams
     footprint: FootprintConfig | None
     realizations: int | None
 
@@ -147,7 +147,7 @@ def _plan(
                 raise ValueError(f"Variant {group!r}: realizations must be >= 1")
         merged = _override(group, defaults, spec)
         transport_fields, footprint_fields = _split(group, merged)
-        params = STILTParams(**transport_fields)
+        params = TransportParams(**transport_fields)
         if realizations is not None:
             _check_realizations(group, params, realizations, declared)
         plans.append(
@@ -254,7 +254,7 @@ def _footprint(name: str, fields: dict[str, Any]) -> FootprintConfig | None:
 
 def _check_realizations(
     group: str,
-    params: STILTParams,
+    params: TransportParams,
     realizations: int,
     declared: dict[str, dict[str, Any]],
 ) -> None:
@@ -288,7 +288,7 @@ def _build(plan: _Plan) -> list[VariantConfig]:
     """
 
     def variant(
-        name: str, realization: int | None, params: STILTParams
+        name: str, realization: int | None, params: TransportParams
     ) -> VariantConfig:
         return VariantConfig(
             name=name,
@@ -307,7 +307,7 @@ def _build(plan: _Plan) -> list[VariantConfig]:
         variant(
             f"{plan.group}-{k}",
             k,
-            STILTParams(
+            TransportParams(
                 **{**plan.transport_fields, "seed": None if seed is None else seed + k}
             ),
         )

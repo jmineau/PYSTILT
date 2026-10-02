@@ -174,7 +174,7 @@ output directory, never only in memory.
 
 ### Configuration
 
-- `ProjectConfig` is the root: flat transport (`STILTParams`) and footprint
+- `ProjectConfig` is the root: flat transport (`TransportParams`) and footprint
   (`FootprintConfig`) defaults, `mets`, and `variants` (overrides of the
   defaults). `ProjectConfig.resolve_variants()` turns them into one
   `VariantConfig` per simulation name, expanding `realizations: N` into
@@ -483,7 +483,7 @@ Feature status lives in the roadmap tables in [README.md](README.md) and
   `particles.py`) prefers, in order: `t = 0` rows if present (exact), a match
   on height when release altitudes are distinct (about 20 m apart), then
   horizontal position with a warning under 1 km. The bundled HYSPLIT v5.1.0
-  writes no `t = 0` row; until a published build does, `STILTParams.exe_dir`
+  writes no `t = 0` row; until a published build does, `exe_dir`
   can point at a patched `hycs_std`, and nothing needs undoing when one lands.
   The existing multipoint tests space points about 17 km apart, the one regime
   where horizontal matching works; they do not cover close-spaced slants
@@ -491,7 +491,7 @@ Feature status lives in the roadmap tables in [README.md](README.md) and
 - **Transport-error settings** behave in ways that are easy to misread; see
   `docs/guides/transport_error.rst` before changing or validating them.
 - **The HYSPLIT seed is remapped.** `SETUP.CFG` gets `SEED = -(|seed| + 1)`
-  (`STILTParams.setup_seed`), not the user's value: HYSPLIT sets its generator
+  (`setup_seed` in the HYSPLIT driver), not the user's value: HYSPLIT sets its generator
   state to `-1 + SEED`, and under `krand=2` the generator (`ran1`)
   re-initializes only from a negative value and collapses every state `>= -1`
   onto one stream, so a positive `SEED` is inert. `krand=4` discards the seed

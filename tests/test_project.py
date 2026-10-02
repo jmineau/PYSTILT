@@ -17,6 +17,7 @@ from stilt.particles import prepare
 from stilt.project import Project, Simulations, project_slug
 from stilt.receptors import PointReceptor
 from stilt.simulation import SimID
+from stilt.transport.hysplit.driver import winderrtf
 
 matplotlib.use("Agg")
 
@@ -459,8 +460,8 @@ def test_simulation_handles_carry_the_variant_settings(tmp_path, point_receptor)
     zi = project.simulation(rid, "zi08")
     s2 = project.simulation(rid, "s2")
 
-    assert base.variant.transport.winderrtf == 0
-    assert err.variant.transport.winderrtf == 1
+    assert winderrtf(base.variant.transport) == 0
+    assert winderrtf(err.variant.transport) == 1
     assert err.variant.footprint is None
     assert zi.variant.transport.ziscale == 0.8
     assert zi.variant.footprint == base.variant.footprint

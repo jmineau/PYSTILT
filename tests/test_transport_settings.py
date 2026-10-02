@@ -8,7 +8,7 @@ from stilt.config import (
     MetSettings,
     ModelInfo,
     ProjectConfig,
-    STILTParams,
+    TransportParams,
     TransportSettings,
     hysplit_version,
     settings_hash,
@@ -79,7 +79,7 @@ def test_met_settings_are_the_config_without_its_directories(tmp_path):
 
 def test_identity_leaves_out_what_changes_no_particle(tmp_path):
     met = _met(tmp_path)
-    base = TransportSettings.build(STILTParams(numpar=100), met)
+    base = TransportSettings.build(TransportParams(numpar=100), met)
     identity = base.identity()
     assert "exe_dir" not in identity
     assert identity["met"] == met.settings().model_dump(
@@ -88,31 +88,31 @@ def test_identity_leaves_out_what_changes_no_particle(tmp_path):
     assert identity["model"] == {"name": "hysplit", "version": "v5.1.0"}
     assert identity["maxpar"] == 100  # unset maxpar is numpar, as HYSPLIT receives it
 
-    same = TransportSettings.build(STILTParams(numpar=100, exe_dir=None), met)
+    same = TransportSettings.build(TransportParams(numpar=100, exe_dir=None), met)
     assert same.hash == base.hash
     assert (
-        TransportSettings.build(STILTParams(numpar=100, maxpar=100), met).hash
+        TransportSettings.build(TransportParams(numpar=100, maxpar=100), met).hash
         == base.hash
     )
-    assert TransportSettings.build(STILTParams(numpar=200), met).hash != base.hash
+    assert TransportSettings.build(TransportParams(numpar=200), met).hash != base.hash
     other_model = TransportSettings.build(
-        STILTParams(numpar=100), met, model=ModelInfo(version="v5.3.2+t0-rows")
+        TransportParams(numpar=100), met, model=ModelInfo(version="v5.3.2+t0-rows")
     )
     assert other_model.hash != base.hash
 
 
 def test_where_met_is_downloaded_from_does_not_identify_the_run(tmp_path):
-    base = TransportSettings.build(STILTParams(numpar=100), _met(tmp_path))
+    base = TransportSettings.build(TransportParams(numpar=100), _met(tmp_path))
     for override in ({"download_from": "ftp"}, {"n_min": 3}):
         other = TransportSettings.build(
-            STILTParams(numpar=100), _met(tmp_path, **override)
+            TransportParams(numpar=100), _met(tmp_path, **override)
         )
         assert other.hash == base.hash
 
 
 def test_a_folder_stored_with_download_settings_is_still_found(tmp_path):
     """Folders written while download_from and n_min were hashed are found by re-hashing."""
-    settings = TransportSettings.build(STILTParams(numpar=100), _met(tmp_path))
+    settings = TransportSettings.build(TransportParams(numpar=100), _met(tmp_path))
     folder = Output(tmp_path / "out").particles("hrrr", settings)
     record_path = folder.path / "_settings.yaml"
     record = yaml.safe_load(record_path.read_text())
@@ -124,7 +124,7 @@ def test_a_folder_stored_with_download_settings_is_still_found(tmp_path):
 
 
 def test_stored_settings_re_validate_to_the_same_hash(tmp_path):
-    settings = TransportSettings.build(STILTParams(numpar=100), _met(tmp_path))
+    settings = TransportSettings.build(TransportParams(numpar=100), _met(tmp_path))
     stored = settings.identity()
     assert TransportSettings.model_validate(stored).hash == settings.hash
 
@@ -140,17 +140,17 @@ def test_stored_settings_re_validate_to_the_same_hash(tmp_path):
 def test_nested_and_flat_ziscale_are_one_run(tmp_path):
     """STILT-R's ``[[0.8, 0.9]]`` and ``[0.8, 0.9]`` are the same factors and the same hash."""
     met = _met(tmp_path)
-    flat = TransportSettings.build(STILTParams(ziscale=[0.8, 0.9]), met)
-    nested = TransportSettings.build(STILTParams(ziscale=[[0.8, 0.9]]), met)
+    flat = TransportSettings.build(TransportParams(ziscale=[0.8, 0.9]), met)
+    nested = TransportSettings.build(TransportParams(ziscale=[[0.8, 0.9]]), met)
     assert nested.ziscale == [0.8, 0.9]
     assert nested.hash == flat.hash
     with pytest.raises(ValueError, match="Per-simulation"):
-        STILTParams(ziscale=[[0.8], [0.9]])
+        TransportParams(ziscale=[[0.8], [0.9]])
 
 
 def test_a_folder_with_a_setting_this_version_lacks_still_loads(tmp_path):
     """A setting removed after a folder was written is ignored, so the folder is found."""
-    settings = TransportSettings.build(STILTParams(numpar=100), _met(tmp_path))
+    settings = TransportSettings.build(TransportParams(numpar=100), _met(tmp_path))
     folder = Output(tmp_path / "out").particles("hrrr", settings)
     record_path = folder.path / "_settings.yaml"
     record = yaml.safe_load(record_path.read_text())
@@ -197,7 +197,7 @@ def test_variants_that_differ_only_in_footprint_fields_share_settings(tmp_path):
 
 def test_output_finds_a_run_whose_stored_settings_predate_a_field(tmp_path):
     out = Output(tmp_path / "output")
-    settings = TransportSettings.build(STILTParams(numpar=100), _met(tmp_path))
+    settings = TransportSettings.build(TransportParams(numpar=100), _met(tmp_path))
     run = out.particles("hrrr", settings)
 
     record = yaml.safe_load((run.path / "_settings.yaml").read_text())

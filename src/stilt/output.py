@@ -61,7 +61,7 @@ from stilt._atomic import atomic_path, write_parquet
 from stilt.config import (
     FootprintConfig,
     Grid,
-    STILTParams,
+    TransportParams,
     TransportSettings,
     VariantConfig,
 )
@@ -372,7 +372,7 @@ class Particles:
         self,
         receptor: Receptor,
         particles: pd.DataFrame,
-        params: STILTParams,
+        params: TransportParams,
         met_files: list[Path],
     ) -> Path:
         """

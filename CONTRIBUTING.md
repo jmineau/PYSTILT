@@ -50,13 +50,16 @@ The public config is flat. Fields such as `seed`, `numpar`, and `ziscale` are
 passed straight to `ProjectConfig(...)` and `Project.init(...)`. Don't add nested
 parameter objects to the public API.
 
-Each config field is a plain pydantic `Field(default, description=...)`.
-`STILTParams.setup_entries()` writes every `TransportParams` field to
-HYSPLIT's `SETUP.CFG`, except the fields listed in `STILTParams.CONTROL_FIELDS`
-(written to `CONTROL`) and `ZICONTROL_FIELDS` (written to `ZICONTROL`).
-`ErrorParams` fields go to `WINDERR` and `ZIERR`. If HYSPLIT reads your new
-field from a file other than `SETUP.CFG`, add it to the matching set and to
-the routing test in `tests/test_config.py`.
+Each setting of a run is a field of `TransportParams`
+(`src/stilt/config/params.py`): a plain pydantic
+`Field(default, description=..., json_schema_extra=SETUP)`. The last
+argument says where the setting goes: `SETUP` (HYSPLIT's `SETUP.CFG`),
+`CONTROL`, `ZICONTROL`, `WINDERR`, `ZIERR`, or `PYSTILT` for a setting
+PYSTILT uses itself. The HYSPLIT driver writes each file from
+`fields_in(...)`, so a new `SETUP.CFG` entry needs only the field. A
+`CONTROL` setting also needs a line in the driver's `ControlFile` call, and
+the routing test in `tests/test_config.py` lists the fields of every file
+but `SETUP.CFG`.
 
 ## Project store and completion
 

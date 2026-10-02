@@ -8,6 +8,16 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **One `TransportParams` class** (breaking). `STILTParams` and the three
+  classes it combined (`ModelParams`, the old `TransportParams`, and
+  `ErrorParams`) are one class, `stilt.config.TransportParams`, with the
+  same fields under the same names, so `config.yaml` and the run hashes do
+  not change. Each field records the HYSPLIT file it goes to (or that
+  PYSTILT uses it), and `stilt.config.params.fields_in(file)` lists them.
+  The file builders moved to `stilt.transport.hysplit.driver` as functions:
+  `params.setup_entries()` is `setup_entries(params)`, and so are
+  `setup_seed`, `ziscale_factors`, `zicontroltf`, `winderr`, `zierr`, and
+  `winderrtf`.
 - **`timeout` and `keep_scratch` move under `execution:`, and `rm_dat` is
   removed** (breaking). They change no result and say how runs are carried
   out. A successful run's working directory is removed anyway, so `rm_dat`

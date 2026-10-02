@@ -19,7 +19,7 @@ from typing import Any, Self
 from pydantic import BaseModel, ConfigDict, Field
 
 from .meteorology import MetConfig, MetSettings
-from .params import STILTParams
+from .params import TransportParams
 
 #: Transport fields that change no particle, so they are not part of a run's identity.
 UNRECORDED_FIELDS = frozenset({"exe_dir"})
@@ -94,11 +94,11 @@ class ModelInfo(BaseModel):
     )
 
 
-class TransportSettings(STILTParams):
+class TransportSettings(TransportParams):
     """
     Everything that decides a run's particles.
 
-    The transport fields of :class:`~stilt.config.STILTParams` (which also
+    The transport fields of :class:`~stilt.config.TransportParams` (which also
     carry HYSPLIT's namelist writers and validators, so this is the object
     the driver runs with), the :class:`~stilt.config.MetSettings` of its
     meteorology, and the :class:`ModelInfo`. ``exe_dir``, which changes no
@@ -127,7 +127,7 @@ class TransportSettings(STILTParams):
     @classmethod
     def build(
         cls,
-        params: STILTParams,
+        params: TransportParams,
         met: MetSettings | MetConfig,
         model: ModelInfo | None = None,
         realization: int | None = None,

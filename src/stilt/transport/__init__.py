@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING, Protocol
 import pandas as pd
 
 if TYPE_CHECKING:
-    from stilt.config import STILTParams
+    from stilt.config import TransportParams
     from stilt.meteorology import Met
     from stilt.receptors import Receptor
 
@@ -52,14 +52,14 @@ class TransportModel(Protocol):
 
     name: str
 
-    def version(self, params: STILTParams) -> str:
+    def version(self, params: TransportParams) -> str:
         """Return the version of the build *params* would run, recorded with the run."""
         ...
 
     def run(
         self,
         receptor: Receptor,
-        params: STILTParams,
+        params: TransportParams,
         met: Met,
         workdir: Path,
         timeout: int | None = None,
@@ -71,7 +71,7 @@ class TransportModel(Protocol):
         ----------
         receptor : Receptor
             Where and when particles are released.
-        params : STILTParams
+        params : TransportParams
             Transport settings.
         met : Met
             The meteorology to read.

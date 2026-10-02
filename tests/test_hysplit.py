@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from stilt.config import STILTParams
+from stilt.config import TransportParams
 from stilt.exceptions import (
     HYSPLITFailureError,
     HYSPLITNotFoundError,
@@ -146,7 +146,7 @@ def _write_particle_dat(path: Path, rows: list[list[float]]) -> None:
 
 
 def _make_runner(tmp_path, point_receptor) -> HYSPLITDriver:
-    params = STILTParams(
+    params = TransportParams(
         n_hours=-24,
         numpar=10,
         hnf_plume=False,
@@ -414,7 +414,7 @@ def test_write_setup_includes_seed_when_configured(tmp_path, point_receptor):
     runner = HYSPLITDriver(
         directory=tmp_path,
         receptor=point_receptor,
-        params=STILTParams(seed=17, krand=2),
+        params=TransportParams(seed=17, krand=2),
         met_files=[tmp_path / "met" / "dummy"],
         exe_dir=tmp_path,
     )
@@ -455,7 +455,7 @@ def test_write_setup_derives_kmsl_from_msl_receptor(tmp_path, point_receptor):
 
 
 def test_write_setup_rejects_conflicting_explicit_kmsl(tmp_path, point_receptor):
-    params = STILTParams(
+    params = TransportParams(
         n_hours=-24,
         numpar=10,
         hnf_plume=False,
@@ -487,7 +487,7 @@ def test_write_setup_rejects_conflicting_explicit_kmsl(tmp_path, point_receptor)
 
 
 def _make_runner_with_xyerr(tmp_path, point_receptor) -> HYSPLITDriver:
-    params = STILTParams(
+    params = TransportParams(
         n_hours=-24,
         numpar=10,
         hnf_plume=False,
@@ -507,7 +507,7 @@ def _make_runner_with_xyerr(tmp_path, point_receptor) -> HYSPLITDriver:
 
 
 def _make_runner_with_zierr(tmp_path, point_receptor) -> HYSPLITDriver:
-    params = STILTParams(
+    params = TransportParams(
         n_hours=-24,
         numpar=10,
         hnf_plume=False,
@@ -558,7 +558,7 @@ def test_write_zierr_no_op_without_zierr(tmp_path, point_receptor):
 
 
 def test_write_zicontrol_creates_file_from_shared_vector(tmp_path, point_receptor):
-    params = STILTParams(
+    params = TransportParams(
         n_hours=-24,
         numpar=10,
         hnf_plume=False,
@@ -581,7 +581,7 @@ def test_write_zicontrol_creates_file_from_shared_vector(tmp_path, point_recepto
 
 
 def test_write_zicontrol_expands_scalar_to_run_length(tmp_path, point_receptor):
-    params = STILTParams(
+    params = TransportParams(
         n_hours=-4,
         numpar=10,
         hnf_plume=False,
@@ -623,7 +623,7 @@ def test_prepare_writes_control_and_setup(tmp_path, point_receptor):
     (exe_dir / "hycs_std").write_text("fake binary")
 
     sim_dir = tmp_path / "sim"
-    params = STILTParams(
+    params = TransportParams(
         n_hours=-24,
         numpar=10,
         hnf_plume=False,
@@ -649,7 +649,7 @@ def test_prepare_writes_zicontrol_when_enabled(tmp_path, point_receptor):
     (exe_dir / "hycs_std").write_text("fake binary")
 
     sim_dir = tmp_path / "sim"
-    params = STILTParams(
+    params = TransportParams(
         n_hours=-24,
         numpar=10,
         hnf_plume=False,
@@ -673,7 +673,7 @@ def test_prepare_writes_zicontrol_when_enabled(tmp_path, point_receptor):
 
 
 # ---------------------------------------------------------------------------
-# Custom HYSPLIT build (STILTParams.exe_dir)
+# Custom HYSPLIT build (TransportParams.exe_dir)
 # ---------------------------------------------------------------------------
 
 
@@ -684,7 +684,7 @@ def _fake_build(path, marker="fake binary"):
 
 
 def _exe_driver(tmp_path, point_receptor, *, params_exe=None, arg_exe=None, sim="sim"):
-    params = STILTParams(
+    params = TransportParams(
         n_hours=-24,
         numpar=10,
         hnf_plume=False,
@@ -779,7 +779,7 @@ def _error_runner(tmp_path, point_receptor, **overrides) -> HYSPLITDriver:
     return HYSPLITDriver(
         directory=tmp_path,
         receptor=point_receptor,
-        params=STILTParams(**params),
+        params=TransportParams(**params),
         met_files=[tmp_path / "met" / "dummy"],
         exe_dir=tmp_path,
     )

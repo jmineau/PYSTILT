@@ -111,7 +111,7 @@ class Simulation:
         return f"Simulation(id={str(self.id)!r})"
 
     def __hash__(self) -> int:
-        # Transport settings are not hashable (STILTParams is mutable), so hash
+        # Transport settings are not hashable (TransportParams is mutable), so hash
         # what identifies the simulation: its id and where its results are.
         return hash((self.id, self.output))
 

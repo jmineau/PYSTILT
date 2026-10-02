@@ -11,7 +11,7 @@ from stilt.transport import ModelRun
 from .driver import HYSPLITDriver
 
 if TYPE_CHECKING:
-    from stilt.config import STILTParams
+    from stilt.config import TransportParams
     from stilt.meteorology import Met
     from stilt.receptors import Receptor
 
@@ -29,14 +29,14 @@ class HysplitModel:
 
     name = "hysplit"
 
-    def version(self, params: STILTParams) -> str:
+    def version(self, params: TransportParams) -> str:
         """Return the version of the bundled build, or of the one in ``params.exe_dir``."""
         return hysplit_version(params.exe_dir)
 
     def run(
         self,
         receptor: Receptor,
-        params: STILTParams,
+        params: TransportParams,
         met: Met,
         workdir: Path,
         timeout: int | None = None,

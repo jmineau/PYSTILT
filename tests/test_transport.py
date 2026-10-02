@@ -5,7 +5,7 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
-from stilt.config import MetConfig, STILTParams, TransportSettings, VariantConfig
+from stilt.config import MetConfig, TransportParams, TransportSettings, VariantConfig
 from stilt.execution import run_particles, worker
 from stilt.output import Output
 from stilt.simulation import Simulation
@@ -29,15 +29,17 @@ def test_hysplit_model_version_is_the_bundled_build_or_exe_dirs(tmp_path):
     from stilt.config import hysplit_version
 
     model = HysplitModel()
-    assert model.version(STILTParams(n_hours=-1)) == hysplit_version()
+    assert model.version(TransportParams(n_hours=-1)) == hysplit_version()
 
     (tmp_path / "version").write_text("v9.9.9+patched\n")
-    assert model.version(STILTParams(n_hours=-1, exe_dir=tmp_path)) == "v9.9.9+patched"
+    assert (
+        model.version(TransportParams(n_hours=-1, exe_dir=tmp_path)) == "v9.9.9+patched"
+    )
 
 
 def test_the_settings_record_the_model_that_makes_the_particles(tmp_path):
     met = MetConfig(directory=tmp_path, file_format="%Y%m%d_%H", file_tres="1h")
-    settings = TransportSettings.build(STILTParams(n_hours=-1), met)
+    settings = TransportSettings.build(TransportParams(n_hours=-1), met)
     model = get_model(settings.model.name)
     assert settings.model.version == model.version(settings)
 
@@ -78,7 +80,7 @@ def test_hysplit_model_reads_the_met_in_place_and_records_the_source(
     monkeypatch.setattr(model_module, "HYSPLITDriver", _FakeDriver)
     source = [tmp_path / "archive" / "20230101_12"]
     cropped = [tmp_path / "crops" / "20230101_12"]
-    params = STILTParams(n_hours=-1)
+    params = TransportParams(n_hours=-1)
 
     result = HysplitModel().run(
         point_receptor,
@@ -128,7 +130,7 @@ def test_run_particles_goes_through_the_model_the_settings_name(
         group="hrrr",
         met="hrrr",
         transport=TransportSettings.build(
-            STILTParams(n_hours=-1, numpar=1, hnf_plume=False), met_config
+            TransportParams(n_hours=-1, numpar=1, hnf_plume=False), met_config
         ),
     )
     sim = Simulation(point_receptor, variant, Output(tmp_path / "output"))
