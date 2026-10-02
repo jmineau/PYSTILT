@@ -52,8 +52,6 @@ if TYPE_CHECKING:
     from stilt.execution import ReceptorResult
     from stilt.visualization import ProjectPlotAccessor
 
-CONFIG_KEY = "config.yaml"
-RECEPTORS_KEY = "receptors.csv"
 
 #: The columns of :attr:`Project.receptors` before the label columns.
 RECEPTOR_COLUMNS = ("receptor", "time", "kind", "location")
@@ -186,15 +184,14 @@ class Project:
             raise TypeError("Give a ProjectConfig or keyword settings, not both.")
         if config is None:
             config = ProjectConfig(**settings)
-        directory = _absolute(path)
-        if (directory / CONFIG_KEY).exists():
+        project = cls(path)
+        if project.config_path.exists():
             raise FileExistsError(
-                f"{directory} already has a config.yaml. Open it with "
+                f"{project.directory} already has a config.yaml. Open it with "
                 "Project(path), and edit config.yaml to change its settings."
             )
-        directory.mkdir(parents=True, exist_ok=True)
-        config.to_yaml(directory / CONFIG_KEY)
-        project = cls(directory)
+        project.directory.mkdir(parents=True, exist_ok=True)
+        config.to_yaml(project.config_path)
         if receptors is not None:
             project.add_receptors(receptors)
         return project
@@ -212,12 +209,12 @@ class Project:
     @property
     def config_path(self) -> Path:
         """The project's ``config.yaml``."""
-        return self.directory / CONFIG_KEY
+        return self.directory / "config.yaml"
 
     @property
     def receptors_path(self) -> Path:
         """The project's ``receptors.csv``."""
-        return self.directory / RECEPTORS_KEY
+        return self.directory / "receptors.csv"
 
     @cached_property
     def config(self) -> ProjectConfig:
@@ -800,4 +797,4 @@ class Simulations:
         return feet.jacobian(target, time_bins, receptors=list(self.frame["receptor"]))
 
 
-__all__ = ["CONFIG_KEY", "RECEPTORS_KEY", "Project", "Simulations", "project_slug"]
+__all__ = ["Project", "Simulations", "project_slug"]
