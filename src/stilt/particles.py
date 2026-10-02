@@ -15,7 +15,13 @@ import pyarrow.parquet as pq
 
 from stilt._atomic import atomic_path
 from stilt.config import STILTParams
-from stilt.receptors import ColumnReceptor, MultiPointReceptor, PointReceptor, Receptor
+from stilt.receptors import (
+    ColumnReceptor,
+    MultiPointReceptor,
+    PointReceptor,
+    Receptor,
+    parse_receptor_id,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -239,8 +245,8 @@ def particles_from_table(table: pa.Table) -> pd.DataFrame:
         if name in data.columns:
             data[name] = data[name].astype("float64")
     if "time" in data.columns:
-        stamps = data["receptor"].str.slice(0, 12)
-        receptor_time = pd.to_datetime(stamps, format="%Y%m%d%H%M")
+        times = {r: parse_receptor_id(r)[0] for r in data["receptor"].unique()}
+        receptor_time = pd.to_datetime(data["receptor"].map(times))
         data["datetime"] = receptor_time + pd.to_timedelta(
             data["time"].to_numpy(), unit="min"
         )
