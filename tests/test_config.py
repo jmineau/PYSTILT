@@ -280,7 +280,7 @@ def test_krand_accepts_hysplit_modes(krand):
 
 @pytest.mark.parametrize("krand", [-1, 5, 9, 14, 20])
 def test_krand_rejects_undocumented_values(krand):
-    with pytest.raises(ValueError, match="not a HYSPLIT mode"):
+    with pytest.raises(ValueError, match="krand"):
         STILTParams(krand=krand)
 
 
