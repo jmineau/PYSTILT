@@ -834,8 +834,8 @@ def test_unknown_field_is_rejected():
         )
 
 
-def test_from_dict_reads_the_dict_earlier_versions_stored():
-    """Particle and footprint files written before the `kind` field still load."""
+def test_from_dict_needs_the_kind_key():
+    """A dict without ``kind``, such as the ``type`` form older versions wrote, is refused."""
     old = {
         "type": "ColumnReceptor",
         "time": "2023-01-01T12:00:00",
@@ -845,13 +845,13 @@ def test_from_dict_reads_the_dict_earlier_versions_stored():
         "top": 3000.0,
         "altitude_ref": "agl",
     }
-    r = Receptor.from_dict(old)
+    with pytest.raises(ValueError, match="'kind'"):
+        Receptor.from_dict(old)
+    r = Receptor.from_dict(
+        {**{k: v for k, v in old.items() if k != "type"}, "kind": "column"}
+    )
     assert isinstance(r, ColumnReceptor) and r.top == 3000.0
     assert Receptor.from_dict(r.to_dict()) == r
-    with pytest.raises(ValueError, match="Unknown receptor type"):
-        Receptor.from_dict({**old, "type": "BoxReceptor"})
-    with pytest.raises(ValueError, match="'kind'"):
-        Receptor.from_dict({k: v for k, v in old.items() if k != "type"})
 
 
 def test_parse_receptor_id_splits_time_and_location(

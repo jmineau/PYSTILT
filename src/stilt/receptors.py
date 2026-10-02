@@ -302,27 +302,14 @@ class Receptor(BaseModel):
         """
         Build a receptor of the right type from a dict made by :meth:`to_dict`.
 
-        Dicts written by earlier versions name the type under ``"type"``
-        (``"PointReceptor"``). Those load too.
-
         Raises
         ------
         ValueError
-            If the dict names no known receptor kind.
+            If the dict has no ``kind`` key, or names no known kind.
         """
         data = dict(d)
         if "kind" not in data:
-            legacy = {
-                "PointReceptor": "point",
-                "ColumnReceptor": "column",
-                "MultiPointReceptor": "multipoint",
-            }
-            type_name = data.pop("type", None)
-            if not type_name:
-                raise ValueError("Receptor dict must contain a 'kind' key.")
-            if type_name not in legacy:
-                raise ValueError(f"Unknown receptor type: {type_name!r}.")
-            data["kind"] = legacy[type_name]
+            raise ValueError("Receptor dict must contain a 'kind' key.")
         return _ANY_RECEPTOR.validate_python(data)
 
     @classmethod
