@@ -85,7 +85,8 @@ else ``$TMPDIR/pystilt/<project name>``. After a successful run the particle
 file and the log are written to the output directory and the folder is
 removed. After a failure the folder is copied to ``scratch/`` in the output
 directory first, so CONTROL, SETUP.CFG, and MESSAGE survive the job.
-``keep_scratch: true`` in ``config.yaml`` keeps every run's folder.
+``keep_scratch: true`` under ``execution:`` in ``config.yaml`` keeps every
+run's folder.
 
 Files are written through a temporary name and renamed into place, so a
 reader never sees a partial file, and two workers that run the same receptor

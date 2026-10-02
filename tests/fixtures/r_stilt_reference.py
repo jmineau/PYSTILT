@@ -239,7 +239,8 @@ class ReferenceScenario:
             "seed": self.seed,
             "hnf_plume": self.hnf_plume,
             "varsiwant": REFERENCE_VARSIWANT,
-            "keep_scratch": True,  # the fidelity tests read SETUP.CFG afterwards
+            # The fidelity tests read SETUP.CFG afterwards.
+            "execution": {"keep_scratch": True},
             **self.make_footprint_config().model_dump(),
         }
         if self.error_variant is not None:

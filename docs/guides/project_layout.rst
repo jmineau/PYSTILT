@@ -182,5 +182,5 @@ HYSPLIT runs in a scratch directory (``compute_root``,
 removed when a run succeeds. When a run fails, its working directory is
 copied to ``scratch/`` in the output directory, with CONTROL, SETUP.CFG,
 and MESSAGE, and its log has the error appended. ``sim.log`` and
-``sim.outcome`` show what happened. Set ``keep_scratch: true`` to keep every
-run's working directory.
+``sim.outcome`` show what happened. Set ``keep_scratch: true`` under
+``execution:`` to keep every run's working directory.

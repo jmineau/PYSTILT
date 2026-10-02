@@ -53,7 +53,6 @@ def test_hysplit_multipoint_release_points_follow_control_order(tmp_path, met_di
         n_hours=-1,
         numpar=12,
         hnf_plume=False,
-        rm_dat=True,
         varsiwant=["time", "indx", "long", "lati", "zagl", "foot"],
     )
     met_files = Met(
@@ -67,7 +66,7 @@ def test_hysplit_multipoint_release_points_follow_control_order(tmp_path, met_di
         directory=Path(tmp_path) / "hysplit_assignment",
     )
     runner.prepare()
-    result = runner.execute(timeout=120, rm_dat=True)
+    result = runner.execute(timeout=120)
 
     release_rows = _release_time_rows(result.particles)
     assert release_rows["indx"].tolist() == list(range(1, params.numpar + 1))
@@ -114,7 +113,6 @@ def test_hysplit_multipoint_release_points_follow_control_order_nondivisible(
         n_hours=-1,
         numpar=10,
         hnf_plume=False,
-        rm_dat=True,
         varsiwant=["time", "indx", "long", "lati", "zagl", "foot"],
     )
     met_files = Met(
@@ -128,7 +126,7 @@ def test_hysplit_multipoint_release_points_follow_control_order_nondivisible(
         directory=Path(tmp_path) / "hysplit_assignment_nondivisible",
     )
     runner.prepare()
-    result = runner.execute(timeout=120, rm_dat=True)
+    result = runner.execute(timeout=120)
 
     release_rows = _release_time_rows(result.particles)
     assert release_rows["indx"].tolist() == list(range(1, params.numpar + 1))
@@ -167,7 +165,6 @@ def test_hysplit_column_release_spans_vertical_line_without_endpoint_chunking(
         krand=2,
         seed=42,
         hnf_plume=False,
-        rm_dat=True,
         varsiwant=["time", "indx", "long", "lati", "zagl", "foot"],
     )
     met_files = Met(
@@ -181,7 +178,7 @@ def test_hysplit_column_release_spans_vertical_line_without_endpoint_chunking(
         directory=Path(tmp_path) / "hysplit_column_assignment",
     )
     runner.prepare()
-    result = runner.execute(timeout=120, rm_dat=True)
+    result = runner.execute(timeout=120)
 
     release_rows = _release_time_rows(result.particles)
     assert release_rows["indx"].tolist() == list(range(1, params.numpar + 1))
@@ -231,7 +228,7 @@ def test_close_spaced_slant_release_heights_are_recovered(tmp_path, met_dir):
         latitudes=np.full(n_levels, 40.766),
         altitudes=altitudes,
     )
-    params = STILTParams(n_hours=-1, numpar=200, hnf_plume=False, rm_dat=True)
+    params = STILTParams(n_hours=-1, numpar=200, hnf_plume=False)
     met_files = Met(
         "hrrr", MetConfig(directory=met_dir, file_format="%Y%m%d_%H", file_tres="6h")
     ).required_files(r_time=receptor.time, n_hours=params.n_hours)
@@ -243,7 +240,7 @@ def test_close_spaced_slant_release_heights_are_recovered(tmp_path, met_dir):
         directory=Path(tmp_path) / "close_slant",
     )
     runner.prepare()
-    particles = runner.execute(timeout=300, rm_dat=True).particles
+    particles = runner.execute(timeout=300).particles
     data = prepare(particles, receptor, params)
 
     release = _release_time_rows(data).drop_duplicates("indx")

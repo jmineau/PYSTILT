@@ -22,7 +22,7 @@ from .meteorology import MetConfig, MetSettings
 from .params import STILTParams
 
 #: Transport fields that change no particle, so they are not part of a run's identity.
-UNRECORDED_FIELDS = frozenset({"timeout", "rm_dat", "exe_dir"})
+UNRECORDED_FIELDS = frozenset({"exe_dir"})
 
 #: Met fields that change no particle: where the files are downloaded from,
 #: and how many a run needs before it is allowed to start.
@@ -101,9 +101,9 @@ class TransportSettings(STILTParams):
     The transport fields of :class:`~stilt.config.STILTParams` (which also
     carry HYSPLIT's namelist writers and validators, so this is the object
     the driver runs with), the :class:`~stilt.config.MetSettings` of its
-    meteorology, and the :class:`ModelInfo`. Fields that change no particle
-    (``timeout``, ``rm_dat``, ``exe_dir``) are carried for running but left
-    out of :meth:`identity` and :attr:`hash`.
+    meteorology, and the :class:`ModelInfo`. ``exe_dir``, which changes no
+    particle (the build's version does, and is recorded), is carried for
+    running but left out of :meth:`identity` and :attr:`hash`.
 
     A stored ``settings.yaml`` loads back through this class, so a run is
     found by re-validating and re-hashing what was stored rather than by

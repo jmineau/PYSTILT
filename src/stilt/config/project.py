@@ -56,13 +56,6 @@ class ProjectConfig(STILTParams, FootprintConfig):
             "share runs."
         ),
     )
-    keep_scratch: bool = Field(
-        False,
-        description=(
-            "Keep every run's HYSPLIT working directory under ``scratch/`` in "
-            "the output directory. A failed run's is always kept."
-        ),
-    )
 
     @model_validator(mode="after")
     def _validate_mets(self) -> Self:

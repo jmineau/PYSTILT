@@ -64,9 +64,13 @@ The workflow side by side
      - ``grid: xres``, ``yres``, ``projection``
    * - ``smooth_factor``, ``time_integrate``
      - same names, top level
-   * - ``n_hours``, ``numpar``, ``hnf_plume``, ``rm_dat``, ``timeout``,
-       ``varsiwant``
+   * - ``n_hours``, ``numpar``, ``hnf_plume``, ``varsiwant``
      - same names, top level
+   * - ``timeout``
+     - ``execution: timeout``
+   * - ``rm_dat``
+     - no setting: a successful run's working directory is removed;
+       ``execution: keep_scratch`` keeps it
    * - HYSPLIT settings (``capemin``, ``delt``, ``kmix0``, ``tlfrac``,
        ``veght``, …)
      - same names, top level

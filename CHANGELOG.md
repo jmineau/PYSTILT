@@ -8,6 +8,19 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **`timeout` and `keep_scratch` move under `execution:`, and `rm_dat` is
+  removed** (breaking). They change no result and say how runs are carried
+  out. A successful run's working directory is removed anyway, so `rm_dat`
+  had an effect only with `keep_scratch`, which now keeps the directory as
+  HYSPLIT left it. Move the two keys in `config.yaml`:
+
+  ```yaml
+  execution:
+    timeout: 900
+    keep_scratch: true
+  ```
+
+  A transport model's `run()` takes `timeout=`.
 - **One name for each part of a simulation** (breaking). `sim.params`,
   `sim.footprint_config`, and `sim.receptor_id` are removed. Use
   `sim.variant.transport`, `sim.variant.footprint`, and `sim.receptor.id`.

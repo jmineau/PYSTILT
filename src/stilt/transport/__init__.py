@@ -57,7 +57,12 @@ class TransportModel(Protocol):
         ...
 
     def run(
-        self, receptor: Receptor, params: STILTParams, met: Met, workdir: Path
+        self,
+        receptor: Receptor,
+        params: STILTParams,
+        met: Met,
+        workdir: Path,
+        timeout: int | None = None,
     ) -> ModelRun:
         """
         Run one receptor and return its particles.
@@ -74,6 +79,8 @@ class TransportModel(Protocol):
             Scratch directory for the run's files. It exists and is empty.
             The caller discards it afterwards and keeps ``stilt.log`` from it
             when the model writes one.
+        timeout : int, optional
+            Time limit in seconds. ``None`` waits indefinitely.
         """
         ...
 

@@ -145,12 +145,11 @@ def _write_particle_dat(path: Path, rows: list[list[float]]) -> None:
     path.write_text("\n".join(lines) + "\n")
 
 
-def _make_runner(tmp_path, point_receptor, rm_dat_default=True) -> HYSPLITDriver:
+def _make_runner(tmp_path, point_receptor) -> HYSPLITDriver:
     params = STILTParams(
         n_hours=-24,
         numpar=10,
         hnf_plume=False,
-        rm_dat=rm_dat_default,
         varsiwant=["time", "indx", "long", "lati", "zagl", "foot"],
     )
     return HYSPLITDriver(
@@ -173,29 +172,27 @@ def test_read_particles_parses_expected_columns(tmp_path, point_receptor):
         ],
     )
 
-    df = runner._read_particles(rm_dat=False)
+    df = runner._read_particles()
     assert len(df) == 2
     assert list(df.columns) == runner.params.varsiwant
     assert df["indx"].iloc[0] == 1
 
 
-def test_read_particles_removes_dat_files_when_requested(tmp_path, point_receptor):
+def test_read_particles_leaves_the_particle_files(tmp_path, point_receptor):
+    """The worker removes the whole working directory, unless it is kept to inspect."""
     runner = _make_runner(tmp_path, point_receptor)
     dat = tmp_path / "PARTICLE_STILT.DAT"
-    dat2 = tmp_path / "PARTICLE.DAT"
     _write_particle_dat(dat, rows=[[-60, 1, -111.9, 40.7, 10.0, 1e-5]])
-    dat2.write_text("unused\n")
 
-    _ = runner._read_particles(rm_dat=True)
-    assert not dat.exists()
-    assert not dat2.exists()
+    runner._read_particles()
+    assert dat.exists()
 
 
 def test_read_particles_raises_domain_error_when_file_missing(tmp_path, point_receptor):
     runner = _make_runner(tmp_path, point_receptor)
 
     with pytest.raises(NoParticleOutputError, match="PARTICLE_STILT.DAT"):
-        runner._read_particles(rm_dat=False)
+        runner._read_particles()
 
 
 def test_run_persists_fortran_runtime_output_on_failure(tmp_path, point_receptor):
@@ -256,7 +253,7 @@ def test_run_times_out_and_keeps_labeled_log_output(tmp_path, point_receptor):
 def test_execute_discards_stale_particles_from_a_previous_run(
     tmp_path, point_receptor, monkeypatch
 ):
-    runner = _make_runner(tmp_path, point_receptor, rm_dat_default=False)
+    runner = _make_runner(tmp_path, point_receptor)
     _write_particle_dat(
         runner.particle_stilt_path, rows=[[-60, 1, -111.9, 40.7, 10.0, 9e-5]]
     )
@@ -271,7 +268,7 @@ def test_execute_discards_stale_particles_from_a_previous_run(
 
     monkeypatch.setattr(runner, "_run", fake_run)
 
-    result = runner.execute(timeout=5, rm_dat=False)
+    result = runner.execute(timeout=5)
 
     assert float(result.particles["foot"].iloc[0]) == pytest.approx(1e-5)
     assert result.log_path == runner.log_path
@@ -306,7 +303,7 @@ def test_execute_fails_when_the_met_is_cut_short(tmp_path, point_receptor, monke
     )
 
     with pytest.raises(HYSPLITFailureError) as caught:
-        runner.execute(timeout=5, rm_dat=False)
+        runner.execute(timeout=5)
 
     assert caught.value.reason is FailureReason.MET_TRUNCATED
     assert "particles stop 13 h into a 24 h run" in runner.log_path.read_text()
@@ -323,7 +320,7 @@ def test_execute_keeps_a_run_that_reaches_the_end_past_a_damaged_met_file(
         last_minute=24 * 60,
     )
 
-    result = runner.execute(timeout=5, rm_dat=False)
+    result = runner.execute(timeout=5)
 
     assert result.particles["time"].min() == -24 * 60
 
@@ -342,7 +339,7 @@ def test_execute_leaves_an_empty_particle_file_to_the_caller(
 
     monkeypatch.setattr(runner, "_run", fake_run)
 
-    result = runner.execute(timeout=5, rm_dat=False)
+    result = runner.execute(timeout=5)
 
     assert result.particles.empty
 
@@ -353,7 +350,7 @@ def test_execute_keeps_particles_that_left_the_met_domain(
     runner = _make_runner(tmp_path, point_receptor)
     _fake_hysplit(runner, monkeypatch, log="", last_minute=13 * 60)
 
-    result = runner.execute(timeout=5, rm_dat=False)
+    result = runner.execute(timeout=5)
 
     assert result.particles["time"].min() == -13 * 60
 
@@ -462,7 +459,6 @@ def test_write_setup_rejects_conflicting_explicit_kmsl(tmp_path, point_receptor)
         n_hours=-24,
         numpar=10,
         hnf_plume=False,
-        rm_dat=True,
         kmsl=0,
         varsiwant=["time", "indx", "long", "lati", "zagl", "foot"],
     )
@@ -772,7 +768,6 @@ def _error_runner(tmp_path, point_receptor, **overrides) -> HYSPLITDriver:
     params = dict(
         n_hours=-24,
         numpar=10,
-        rm_dat=False,
         hnf_plume=False,  # the six-column particle rows below carry no plume vars
         siguverr=1.0,
         tluverr=60.0,
@@ -811,7 +806,7 @@ def test_perturbed_run_writes_winderr_and_winderrtf_once(
     runner._write_setup()
     runner._write_winderr()
     runner._write_zierr()
-    result = runner.execute(timeout=5, rm_dat=False)
+    result = runner.execute(timeout=5)
 
     assert labels == ["hycs_std"]
     assert runner.winderr_path.exists()

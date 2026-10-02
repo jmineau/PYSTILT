@@ -229,7 +229,7 @@ class HYSPLITDriver:
         self._write_winderr()
         self._write_zierr()
 
-    def execute(self, timeout: int | None, rm_dat: bool) -> HYSPLITResult:
+    def execute(self, timeout: int | None = None) -> HYSPLITResult:
         """
         Run HYSPLIT once and read its particle output.
 
@@ -237,8 +237,6 @@ class HYSPLITDriver:
         ----------
         timeout : int or None
             Time limit for the run, in seconds. ``None`` waits indefinitely.
-        rm_dat : bool
-            Delete ``PARTICLE_STILT.DAT`` and ``PARTICLE.DAT`` after reading.
 
         Returns
         -------
@@ -258,7 +256,7 @@ class HYSPLITDriver:
         self.particle_stilt_path.unlink(missing_ok=True)
         self.particle_path.unlink(missing_ok=True)
         log_start = self._run(timeout, label="hycs_std")
-        particles = self._read_particles(rm_dat)
+        particles = self._read_particles()
         self._check_met_reached_end(particles, log_start)
         return HYSPLITResult(particles=particles, log_path=self.log_path)
 
@@ -352,20 +350,15 @@ class HYSPLITDriver:
             )
         raise HYSPLITFailureError(FailureReason.MET_TRUNCATED, self.log_path)
 
-    def _read_particles(self, rm_dat: bool) -> pd.DataFrame:
-        """Read ``PARTICLE_STILT.DAT``, deleting the particle files if ``rm_dat``."""
+    def _read_particles(self) -> pd.DataFrame:
+        """Read ``PARTICLE_STILT.DAT``."""
         particle_path = self.particle_stilt_path
         if not particle_path.exists():
             raise NoParticleOutputError(
                 f"{particle_path.name} not produced for {self.directory}"
             )
 
-        particles = _read_particle_dat(particle_path, self.params.varsiwant)
-
-        if rm_dat:
-            particle_path.unlink(missing_ok=True)
-            self.particle_path.unlink(missing_ok=True)
-        return particles
+        return _read_particle_dat(particle_path, self.params.varsiwant)
 
     def _write_setup(self) -> None:
         """Write ``SETUP.CFG``."""

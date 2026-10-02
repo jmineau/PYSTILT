@@ -53,8 +53,8 @@ class _FakeDriver:
     def prepare(self):
         _FakeDriver.built["prepared"] = True
 
-    def execute(self, timeout=None, rm_dat=None):
-        _FakeDriver.built.update(timeout=timeout, rm_dat=rm_dat)
+    def execute(self, timeout=None):
+        _FakeDriver.built.update(timeout=timeout)
         return type("Result", (), {"particles": pd.DataFrame({"indx": [1]})})()
 
 
@@ -78,13 +78,14 @@ def test_hysplit_model_reads_the_met_in_place_and_records_the_source(
     monkeypatch.setattr(model_module, "HYSPLITDriver", _FakeDriver)
     source = [tmp_path / "archive" / "20230101_12"]
     cropped = [tmp_path / "crops" / "20230101_12"]
-    params = STILTParams(n_hours=-1, timeout=30, rm_dat=False)
+    params = STILTParams(n_hours=-1)
 
     result = HysplitModel().run(
         point_receptor,
         params,
-        _FakeMet(source, cropped),
-        tmp_path / "work",  # type: ignore[arg-type]
+        _FakeMet(source, cropped),  # type: ignore[arg-type]
+        tmp_path / "work",
+        timeout=30,
     )
 
     assert isinstance(result, ModelRun)
@@ -92,7 +93,7 @@ def test_hysplit_model_reads_the_met_in_place_and_records_the_source(
     assert _FakeDriver.built["met_files"] == cropped  # HYSPLIT reads the crops
     assert _FakeDriver.built["directory"] == tmp_path / "work"
     assert _FakeDriver.built["prepared"]
-    assert (_FakeDriver.built["timeout"], _FakeDriver.built["rm_dat"]) == (30, False)
+    assert _FakeDriver.built["timeout"] == 30
 
 
 def test_run_particles_goes_through_the_model_the_settings_name(
@@ -103,10 +104,8 @@ def test_run_particles_goes_through_the_model_the_settings_name(
     class _Model:
         name = "hysplit"
 
-        def run(self, receptor, params, met, workdir):
-            calls.append(
-                {"receptor": receptor, "timeout": params.timeout, "workdir": workdir}
-            )
+        def run(self, receptor, params, met, workdir, timeout=None):
+            calls.append({"receptor": receptor, "timeout": timeout, "workdir": workdir})
             particles = pd.DataFrame(
                 {
                     "time": [-60.0],
@@ -138,7 +137,7 @@ def test_run_particles_goes_through_the_model_the_settings_name(
 
     assert asked == ["hysplit"]
     assert calls[0]["receptor"] == point_receptor
-    assert calls[0]["timeout"] == 45  # the override reaches the model
+    assert calls[0]["timeout"] == 45  # the timeout reaches the model
     assert len(traj) == 1
     assert sim.has_particles
     assert sim.met_files == [tmp_path / "met_file"]
