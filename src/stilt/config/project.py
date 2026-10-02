@@ -12,7 +12,7 @@ from .execution import ExecutionConfig
 from .footprint import FootprintConfig
 from .meteorology import MetConfig
 from .params import STILTParams
-from .variant import VARIANT_NAME_RE, VariantConfig, expand_variants
+from .variant import VARIANT_NAME_RE, VariantConfig, check_variants, expand_variants
 
 
 class ProjectConfig(STILTParams, FootprintConfig):
@@ -81,12 +81,12 @@ class ProjectConfig(STILTParams, FootprintConfig):
     @model_validator(mode="after")
     def _validate_variants(self) -> Self:
         """
-        Expand the variants so a bad declaration fails when the config loads.
+        Check the variants so a bad declaration fails when the config loads.
 
-        The footprint settings are not resolved, so loading a config never
-        reads a geometry file.
+        Nothing is built: loading a config reads no geometry file and does
+        not look up the HYSPLIT build. :meth:`resolve_variants` builds them.
         """
-        self._expand_variants()
+        check_variants(self._declared(), self.defaults(), self.mets)
         return self
 
     def defaults(self) -> dict[str, Any]:
@@ -114,13 +114,14 @@ class ProjectConfig(STILTParams, FootprintConfig):
             name: variant
             if variant.footprint is None
             else variant.model_copy(update={"footprint": variant.footprint.resolve()})
-            for name, variant in self._expand_variants().items()
+            for name, variant in expand_variants(
+                self._declared(), self.defaults(), self.mets
+            ).items()
         }
 
-    def _expand_variants(self) -> dict[str, VariantConfig]:
-        """Return the variants with their footprint settings not yet resolved."""
-        declared = self.variants or {met: {"met": met} for met in self.mets}
-        return expand_variants(declared, self.defaults(), self.mets)
+    def _declared(self) -> dict[str, dict[str, Any]]:
+        """Return the declared variants, one per met when none are declared."""
+        return self.variants or {met: {"met": met} for met in self.mets}
 
     def to_yaml(self, path: str | Path | None = None) -> str:
         """

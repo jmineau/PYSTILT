@@ -319,6 +319,17 @@ def test_model_config_rejects_met_keys_that_cannot_name_a_variant(tmp_path):
         ProjectConfig(mets={"hrrr_v2": mc})
 
 
+def test_a_config_loads_without_its_hysplit_build(tmp_path):
+    """Loading checks the variants but builds none, so exe_dir is not needed yet."""
+    mc = MetConfig(directory=tmp_path / "met", file_format="%Y%m%d_%H", file_tres="1h")
+    elsewhere = tmp_path / "not-mounted"
+    cfg = ProjectConfig(mets={"hrrr": mc}, exe_dir=elsewhere)
+    with pytest.raises(FileNotFoundError, match="version"):
+        cfg.resolve_variants()
+    with pytest.raises(ValueError, match="realizations must be >= 1"):
+        ProjectConfig(mets={"hrrr": mc}, variants={"e": {"realizations": 0}})
+
+
 def _default_footprint(cfg):
     """The footprint settings of the first variant, which inherits the defaults."""
     return next(iter(cfg.resolve_variants().values())).footprint
