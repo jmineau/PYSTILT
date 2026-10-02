@@ -834,7 +834,6 @@ def _from_sparse_table(table: Any, config: FootprintConfig) -> xr.DataArray | No
 def read_footprint(
     path: str | Path,
     *,
-    config: FootprintConfig | None = None,
     chunks: Any | None = None,
 ) -> xr.DataArray | None:
     """
@@ -847,9 +846,6 @@ def read_footprint(
     path : str or Path
         A ``.nc`` file written by ``foot.stilt.to_netcdf``, or a footprint
         file from an output directory.
-    config : FootprintConfig, optional
-        The footprint settings of a stored file, when they are already
-        known. By default they are read from the file.
     chunks : dict, int or "auto", optional
         For a NetCDF file, passed to :func:`xarray.open_dataset` to load the
         data lazily with dask.
@@ -877,15 +873,10 @@ def read_footprint(
         foot.attrs.pop("grid_mapping", None)
         return foot
     table = pq.read_table(path)
-    if config is None:
-        stored = (table.schema.metadata or {}).get(b"stilt:footprint")
-        if stored is None:
-            raise ValueError(
-                f"{path} does not record its footprint settings. Pass config=, "
-                "or read it through its output folder."
-            )
-        config = _settings_from_json(stored.decode(), path.name)
-    return _from_sparse_table(table, config)
+    stored = (table.schema.metadata or {}).get(b"stilt:footprint")
+    if stored is None:
+        raise ValueError(f"{path} does not record its footprint settings.")
+    return _from_sparse_table(table, _settings_from_json(stored.decode(), path.name))
 
 
 @xr.register_dataarray_accessor("stilt")
