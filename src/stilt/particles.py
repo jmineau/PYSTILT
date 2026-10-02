@@ -13,7 +13,7 @@ import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from stilt._atomic import atomic_path
+from stilt._atomic import write_parquet
 from stilt.config import STILTParams
 from stilt.receptors import (
     ColumnReceptor,
@@ -317,11 +317,7 @@ def write_particles(
         **(metadata or {}),
     }
     table = table.replace_schema_metadata(meta)
-    path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with atomic_path(path) as tmp:
-        pq.write_table(table, tmp, compression="zstd")
-    return path
+    return write_parquet(table, Path(path))
 
 
 @pd.api.extensions.register_dataframe_accessor("stilt")
