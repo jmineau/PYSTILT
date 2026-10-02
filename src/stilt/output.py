@@ -128,6 +128,24 @@ def _list_receptor_files(
     return found
 
 
+def _read_files(root: Path, files: dict[str, Path], empty: pa.Table) -> pa.Table:
+    """
+    Return the files of a results folder as one table, or *empty* when there are none.
+
+    *files* is what :func:`_list_receptor_files` returns for *root*. The
+    ``date`` column comes from the files' ``date=`` folders.
+    """
+    if not files:
+        return empty
+    dataset = pads.dataset(
+        [str(p) for p in files.values()],
+        format="parquet",
+        partitioning=_DATE_PARTITIONING,
+        partition_base_dir=str(root),
+    )
+    return dataset.to_table()
+
+
 def _write_settings(path: Path, record: dict[str, Any]) -> None:
     """Write a ``settings.yaml`` once. An existing file with the same hash is left alone."""
     if path.exists():
@@ -381,22 +399,14 @@ class Particles:
 
         Columns are ``receptor``, the particle columns as stored, and
         ``date`` (the receptor date, from the folder, as ``date32``). With
-        *receptors*, only those files are read. Particle files written
-        before the ``receptor`` column existed cannot be read this way.
+        *receptors*, only those files are read, and only their date folders
+        are listed. Particle files written before the ``receptor`` column
+        existed cannot be read this way.
         """
-        files = _list_receptor_files(self.path, ".parquet")
-        if receptors is not None:
-            wanted = set(receptors)
-            files = {rid: p for rid, p in files.items() if rid in wanted}
-        if not files:
-            return pa.table({"receptor": pa.array([], pa.string())})
-        dataset = pads.dataset(
-            [str(p) for p in files.values()],
-            format="parquet",
-            partitioning=_DATE_PARTITIONING,
-            partition_base_dir=str(self.path),
+        files = _list_receptor_files(self.path, ".parquet", receptors)
+        return _read_files(
+            self.path, files, pa.table({"receptor": pa.array([], pa.string())})
         )
-        return dataset.to_table()
 
     def read(self, receptor_id: str, columns: list[str] | None = None) -> pd.DataFrame:
         """Read a receptor's particles (:func:`stilt.read_particles`)."""
@@ -686,21 +696,11 @@ class Footprints:
 
         Columns are ``receptor``, ``hour``, ``y``, ``x``, ``foot``, and
         ``date`` (the receptor date, from the folder, as ``date32``). With
-        *receptors*, only those files are read.
+        *receptors*, only those files are read, and only their date folders
+        are listed.
         """
-        files = _list_receptor_files(self.path, ".parquet")
-        if receptors is not None:
-            wanted = set(receptors)
-            files = {rid: p for rid, p in files.items() if rid in wanted}
-        if not files:
-            return _FOOTPRINT_TABLE_SCHEMA.empty_table()
-        dataset = pads.dataset(
-            [str(p) for p in files.values()],
-            format="parquet",
-            partitioning=_DATE_PARTITIONING,
-            partition_base_dir=str(self.path),
-        )
-        return dataset.to_table()
+        files = _list_receptor_files(self.path, ".parquet", receptors)
+        return _read_files(self.path, files, _FOOTPRINT_TABLE_SCHEMA.empty_table())
 
     def jacobian(
         self,
@@ -747,13 +747,13 @@ class Footprints:
                 "closed='left', for example "
                 "pd.interval_range(start, end, freq='1h', closed='left')."
             )
-        files = _list_receptor_files(self.path, ".parquet")
         if receptors is None:
+            files = _list_receptor_files(self.path, ".parquet")
             requested = list(files)
-            missing: list[str] = []
         else:
             requested = list(dict.fromkeys(receptors))
-            missing = [r for r in requested if r not in files]
+            files = _list_receptor_files(self.path, ".parquet", requested)
+        missing = [r for r in requested if r not in files]
         present = [r for r in requested if r in files]
 
         x_axis, y_axis = self.axes
@@ -774,8 +774,10 @@ class Footprints:
         ).tz_localize(None)
         n_bins = len(time_bins)
 
-        table = (
-            self.table(present) if present else _FOOTPRINT_TABLE_SCHEMA.empty_table()
+        table = _read_files(
+            self.path,
+            {r: files[r] for r in present},
+            _FOOTPRINT_TABLE_SCHEMA.empty_table(),
         )
         if table.num_rows:
             # Work with the dictionary indices of the receptor column: one
