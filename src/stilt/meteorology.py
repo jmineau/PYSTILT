@@ -224,10 +224,6 @@ class Met:
 
         return files
 
-    def files(self, r_time, n_hours: int) -> list[Path]:
-        """Return the met files one simulation reads: :meth:`readable` of :meth:`required_files`."""
-        return self.readable(self.required_files(r_time=r_time, n_hours=n_hours))
-
     def readable(self, files: list[Path]) -> list[Path]:
         """
         Return the files a transport model should read in place of *files*.

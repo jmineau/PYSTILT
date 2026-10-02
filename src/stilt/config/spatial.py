@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal, cast
+from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 from pydantic import BaseModel, ConfigDict, Field
@@ -12,16 +12,6 @@ if TYPE_CHECKING:
     import xarray as xr
 
 VerticalReference = Literal["agl", "msl"]
-
-
-def validate_vertical_reference(reference: str) -> VerticalReference:
-    """Return ``reference`` in lower case, raising unless it is ``agl`` or ``msl``."""
-    normalized = reference.lower()
-    if normalized not in {"agl", "msl"}:
-        raise ValueError(
-            f"Vertical reference must be 'agl' or 'msl'. Got {reference!r}."
-        )
-    return cast(VerticalReference, normalized)
 
 
 def kmsl_from_vertical_reference(reference: VerticalReference) -> int:

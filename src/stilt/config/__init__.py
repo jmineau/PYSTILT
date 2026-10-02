@@ -16,7 +16,6 @@ from .spatial import (
     Grid,
     VerticalReference,
     kmsl_from_vertical_reference,
-    validate_vertical_reference,
 )
 from .transport import ModelInfo, TransportSettings, hysplit_version, settings_hash
 from .variant import VariantConfig
@@ -44,5 +43,4 @@ __all__ = [
     "hysplit_version",
     "kmsl_from_vertical_reference",
     "settings_hash",
-    "validate_vertical_reference",
 ]

@@ -525,7 +525,7 @@ def test_geometry_footprint(tmp_path, wbb_receptor, met_dir):
         geometry=spec,
         cells_per_target=10,
     )
-    fc = config.footprint
+    fc = next(iter(config.resolve_variants().values())).footprint
     assert fc is not None
     assert fc.grid.xres == fc.grid.yres == 0.05  # 0.5 / 10
     assert fc.geometry_hash
