@@ -63,6 +63,7 @@ from stilt.config import (
     Grid,
     STILTParams,
     TransportSettings,
+    VariantConfig,
 )
 from stilt.config.transport import canonical, settings_hash
 from stilt.footprint import _settings_json, read_footprint
@@ -224,11 +225,22 @@ class Output:
         self._footprints = {feet.hash: feet for feet in found}
         return found
 
-    def find_footprints(
-        self, particles_hash: str, config: FootprintConfig
-    ) -> Footprints | None:
-        """Return the footprint folder for *config* on the particles hashed *particles_hash*, or ``None``."""
-        digest = Footprints.hash_for(particles_hash, config)
+    def find_footprints(self, variant: VariantConfig) -> Footprints | None:
+        """
+        Return the footprint folder of *variant*, or ``None``.
+
+        ``None`` when the variant makes no footprints (it has no grid) or
+        none have been written yet. The folder is found by the hash of the
+        variant's transport and footprint settings, whatever name it carries.
+        """
+        if variant.footprint is None:
+            return None
+        return self._footprints_by_hash(
+            Footprints.hash_for(variant.transport.hash, variant.footprint)
+        )
+
+    def _footprints_by_hash(self, digest: str) -> Footprints | None:
+        """Return the footprint folder whose settings hash to *digest*, or ``None``."""
         if digest not in self._footprints:
             self.footprint_sets()
         return self._footprints.get(digest)
@@ -407,10 +419,6 @@ class Particles:
 
     # -- footprints --------------------------------------------------------
 
-    def find_footprints(self, config: FootprintConfig) -> Footprints | None:
-        """Return the footprint folder for *config* on these particles, or ``None``."""
-        return self.output.find_footprints(self.hash, config)
-
     def footprints(
         self, config: FootprintConfig, name: str | None = None
     ) -> Footprints:
@@ -425,10 +433,10 @@ class Particles:
         """
         if config.grid is None:
             raise ValueError("Footprint settings need a grid.")
-        existing = self.find_footprints(config)
+        digest = Footprints.hash_for(self.hash, config)
+        existing = self.output._footprints_by_hash(digest)
         if existing is not None:
             return existing
-        digest = Footprints.hash_for(self.hash, config)
         name = name or self.name
         key = f"{name}-{digest[:HASH_CHARS]}"
         _write_settings(

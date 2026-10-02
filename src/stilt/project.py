@@ -625,11 +625,7 @@ class Simulations:
             particles = frozenset(folder.receptors(among) if folder is not None else ())
             footprints: frozenset[str] | None = None
             if variant.footprint is not None:
-                feet = (
-                    None
-                    if folder is None
-                    else output.find_footprints(folder.hash, variant.footprint)
-                )
+                feet = output.find_footprints(variant)
                 footprints = frozenset(
                     feet.receptors(among) if feet is not None else ()
                 )
@@ -785,13 +781,7 @@ class Simulations:
         settings = self.project.variants[name]
         if settings.footprint is None:
             raise ValueError(f"Variant {name!r} makes no footprints (no grid).")
-        output = self.project.output
-        folder = output.find_particles(settings.transport)
-        feet = (
-            None
-            if folder is None
-            else output.find_footprints(folder.hash, settings.footprint)
-        )
+        feet = self.project.output.find_footprints(settings)
         if feet is None:
             raise ValueError(f"Variant {name!r} has no footprints yet.")
         return feet.jacobian(target, time_bins, receptors=list(self.frame["receptor"]))

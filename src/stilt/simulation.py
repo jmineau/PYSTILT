@@ -135,11 +135,7 @@ class Simulation:
     @property
     def _footprint_set(self) -> Footprints | None:
         """The folder holding this variant's footprints, or ``None`` until it exists."""
-        config = self.variant.footprint
-        particles = self._particle_set
-        if config is None or particles is None:
-            return None
-        return self.output.find_footprints(particles.hash, config)
+        return self.output.find_footprints(self.variant)
 
     @property
     def particles_path(self) -> Path | None:
