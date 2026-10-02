@@ -16,20 +16,18 @@ from scipy.ndimage import convolve as _convolve
 
 from stilt._atomic import atomic_path
 from stilt.config import FootprintConfig, Grid
-from stilt.config.spatial import (
-    _cf_grid_mapping_attrs,
-    _grid_cell_starts,
-    cf_axis_attrs,
-)
 from stilt.exceptions import EmptyFootprint
-from stilt.geometry import (
+from stilt.receptors import Receptor
+from stilt.spatial import (
     Mesh,
     SpatialTarget,
     Zones,
+    _cf_grid_mapping_attrs,
+    _grid_cell_starts,
+    cf_axis_attrs,
     check_resolution,
     overlap_weights,
 )
-from stilt.receptors import Receptor
 from stilt.transforms import (
     TransformContext,
     apply_transforms,

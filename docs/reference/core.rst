@@ -104,7 +104,7 @@ A :class:`Grid` works as well. It is documented under :doc:`configuration`.
    Geometry
    SpatialTarget
 
-:mod:`stilt.geometry` also has the helpers that compute how much of each
+:mod:`stilt.spatial` also has the helpers that compute how much of each
 footprint cell falls in each target cell. These overlap weights are cached,
 so each geometry's weights are computed once per footprint grid.
 
@@ -112,10 +112,10 @@ so each geometry's weights are computed once per footprint grid.
    :toctree: _api
    :nosignatures:
 
-   geometry.overlap_weights
-   geometry.check_resolution
-   geometry.same_crs
-   geometry.is_longlat_crs
+   spatial.overlap_weights
+   spatial.check_resolution
+   spatial.same_crs
+   spatial.is_longlat
 
 Flux fields
 -----------

@@ -1,9 +1,16 @@
 """Configuration models for PYSTILT projects."""
 
+from stilt.spatial import (
+    Bounds,
+    Grid,
+    VerticalReference,
+    kmsl_from_vertical_reference,
+)
+
 from .execution import ExecutionConfig
-from .footprint import FootprintConfig
-from .geometry import (
+from .footprint import (
     FileGeometrySpec,
+    FootprintConfig,
     GeometrySpec,
     H3GeometrySpec,
     WindowsGeometrySpec,
@@ -11,12 +18,6 @@ from .geometry import (
 from .meteorology import MetConfig, MetSettings
 from .params import TransportParams
 from .project import ProjectConfig
-from .spatial import (
-    Bounds,
-    Grid,
-    VerticalReference,
-    kmsl_from_vertical_reference,
-)
 from .transport import ModelInfo, TransportSettings, hysplit_version, settings_hash
 from .variant import VariantConfig
 

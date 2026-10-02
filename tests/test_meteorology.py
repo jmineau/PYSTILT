@@ -8,9 +8,9 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from stilt.config.meteorology import MetConfig
-from stilt.config.spatial import Bounds
 from stilt.exceptions import MeteorologyError
 from stilt.meteorology import Met
+from stilt.spatial import Bounds
 
 # ---------------------------------------------------------------------------
 # Helpers
