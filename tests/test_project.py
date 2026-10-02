@@ -14,7 +14,7 @@ from stilt.execution import resolve_compute_root
 from stilt.footprint import _describe
 from stilt.output import Output
 from stilt.particles import prepare
-from stilt.project import CONFIG_KEY, RECEPTORS_KEY, Project, Simulations, project_slug
+from stilt.project import Project, Simulations, project_slug
 from stilt.receptors import PointReceptor
 from stilt.simulation import SimID
 
@@ -129,9 +129,9 @@ def test_init_writes_the_settings_given_and_the_receptors(tmp_path, point_recept
         n_hours=-6,
     )
 
-    text = (tmp_path / "proj" / CONFIG_KEY).read_text()
+    text = (tmp_path / "proj" / "config.yaml").read_text()
     assert "n_hours: -6" in text and "numpar" not in text  # only what was given
-    assert (tmp_path / "proj" / RECEPTORS_KEY).exists()
+    assert (tmp_path / "proj" / "receptors.csv").exists()
     assert project.config.n_hours == -6
     assert list(project.receptors["receptor"]) == [point_receptor.id]
     assert Project(tmp_path / "proj").config == project.config
@@ -139,11 +139,11 @@ def test_init_writes_the_settings_given_and_the_receptors(tmp_path, point_recept
 
 def test_init_refuses_a_project_that_has_a_config(tmp_path):
     _project(tmp_path)
-    text = (tmp_path / "proj" / CONFIG_KEY).read_text()
+    text = (tmp_path / "proj" / "config.yaml").read_text()
 
     with pytest.raises(FileExistsError, match="already has a config.yaml"):
         Project.init(tmp_path / "proj", config=_config(tmp_path, numpar=10))
-    assert (tmp_path / "proj" / CONFIG_KEY).read_text() == text
+    assert (tmp_path / "proj" / "config.yaml").read_text() == text
 
 
 def test_init_takes_a_config_or_keywords_not_both(tmp_path):

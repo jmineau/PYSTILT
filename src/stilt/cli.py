@@ -24,7 +24,7 @@ import typer
 
 from stilt.config import ExecutionConfig
 from stilt.execution import resolve_compute_root
-from stilt.project import CONFIG_KEY, RECEPTORS_KEY, Project
+from stilt.project import Project
 
 app = typer.Typer(
     name="stilt",
@@ -117,7 +117,7 @@ def _resolve_project(path: str | Path | None) -> str:
     """Return the absolute project path, exiting if it has no config.yaml."""
     raw = str(path or Path.cwd())
     resolved = Path(raw).resolve()
-    if not (resolved / CONFIG_KEY).exists():
+    if not Project(resolved).config_path.exists():
         typer.echo(
             f"Error: '{resolved}' does not look like a STILT project directory "
             "(no config.yaml found).",
@@ -141,8 +141,8 @@ def init(project: Path = _NEW_PROJECT_ARG) -> None:
     already has a config.yaml.
     """
     project = (project or Path.cwd()).resolve()
-    config_path = project / CONFIG_KEY
-    receptors_path = project / RECEPTORS_KEY
+    config_path = Project(project).config_path
+    receptors_path = Project(project).receptors_path
 
     if config_path.exists():
         typer.echo(
