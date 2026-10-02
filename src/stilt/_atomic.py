@@ -6,7 +6,11 @@ import os
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
+from typing import TYPE_CHECKING
 from uuid import uuid4
+
+if TYPE_CHECKING:
+    import pyarrow as pa
 
 
 @contextmanager
@@ -28,3 +32,17 @@ def atomic_path(path: Path) -> Iterator[Path]:
         os.replace(tmp, path)
     finally:
         tmp.unlink(missing_ok=True)
+
+
+def write_parquet(table: pa.Table, path: Path) -> Path:
+    """
+    Write *table* as a zstd-compressed Parquet file, so no reader sees it half-written.
+
+    The parent directory is created when needed. Returns *path*.
+    """
+    import pyarrow.parquet as pq
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with atomic_path(path) as tmp:
+        pq.write_table(table, tmp, compression="zstd")
+    return path

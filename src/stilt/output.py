@@ -57,7 +57,7 @@ import xarray as xr
 import yaml
 from scipy import sparse
 
-from stilt._atomic import atomic_path
+from stilt._atomic import atomic_path, write_parquet
 from stilt.config import (
     FootprintConfig,
     Grid,
@@ -125,14 +125,6 @@ def _list_receptor_files(
     if wanted is not None:
         found = {rid: path for rid, path in found.items() if rid in wanted}
     return found
-
-
-def _write_atomic_table(table: pa.Table, path: Path) -> Path:
-    """Write *table* as zstd Parquet through a temporary file, so a reader never sees a partial file."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with atomic_path(path) as tmp:
-        pq.write_table(table, tmp, compression="zstd")
-    return path
 
 
 def _write_settings(path: Path, record: dict[str, Any]) -> None:
@@ -642,14 +634,14 @@ class Footprints:
         table = table.replace_schema_metadata(
             self._metadata(receptor, name, hours.tolist(), "")
         )
-        return _write_atomic_table(table, self.file(str(receptor.id)))
+        return write_parquet(table, self.file(str(receptor.id)))
 
     def write_empty(self, receptor: Receptor, reason: str, name: str = "") -> Path:
         """Record that a receptor's footprint is empty (no particle over the grid), with the reason."""
         table = _FOOTPRINT_SCHEMA.empty_table().replace_schema_metadata(
             self._metadata(receptor, name, [], reason)
         )
-        return _write_atomic_table(table, self.file(str(receptor.id)))
+        return write_parquet(table, self.file(str(receptor.id)))
 
     def _metadata(
         self, receptor: Receptor, name: str, hours: list[int], empty_reason: str
