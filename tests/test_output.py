@@ -337,7 +337,7 @@ def test_footprint_on_another_grid_is_rejected(tmp_path):
     feet = run.footprints(FootprintConfig(grid=GRID))
     foot = _footprint(_receptor())
     shifted = foot.assign_coords(lon=foot["lon"].values + 0.03)
-    with pytest.raises(ValueError, match="not cells of the folder's grid"):
+    with pytest.raises(ValueError, match="not cells of the grid"):
         feet.write(shifted)
 
 

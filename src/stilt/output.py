@@ -40,7 +40,6 @@ Start from :class:`Output`::
 from __future__ import annotations
 
 import functools
-import json
 import logging
 import os
 from collections.abc import Iterable
@@ -57,7 +56,7 @@ import xarray as xr
 import yaml
 from scipy import sparse
 
-from stilt._atomic import atomic_path, write_parquet
+from stilt._atomic import atomic_path
 from stilt.config import (
     FootprintConfig,
     Grid,
@@ -66,7 +65,12 @@ from stilt.config import (
     VariantConfig,
 )
 from stilt.config.transport import canonical, settings_hash
-from stilt.footprint import _settings_json, read_footprint
+from stilt.footprint import (
+    FOOTPRINT_SCHEMA,
+    read_footprint,
+    write_empty_footprint,
+    write_footprint,
+)
 from stilt.particles import read_particles, write_particles
 from stilt.receptors import Receptor, parse_receptor_id
 from stilt.spatial import Geometry, check_resolution, overlap_weights
@@ -465,21 +469,12 @@ class Particles:
         return feet
 
 
-_FOOTPRINT_SCHEMA = pa.schema(
-    [
-        ("receptor", pa.dictionary(pa.int32(), pa.string())),
-        ("hour", pa.int16()),
-        ("y", pa.int16()),
-        ("x", pa.int16()),
-        ("foot", pa.float32()),
-    ]
-)
 #: The ``date=YYYY-MM-DD`` folders, read as a ``date32`` column.
 _DATE_PARTITIONING = pads.partitioning(
     pa.schema([("date", pa.date32())]), flavor="hive"
 )
 #: What :meth:`Footprints.table` returns: the file columns plus ``date``.
-_FOOTPRINT_TABLE_SCHEMA = _FOOTPRINT_SCHEMA.append(pa.field("date", pa.date32()))
+_FOOTPRINT_TABLE_SCHEMA = FOOTPRINT_SCHEMA.append(pa.field("date", pa.date32()))
 
 
 class Jacobian(NamedTuple):
@@ -594,82 +589,26 @@ class Footprints:
         """
         return list(_list_receptor_files(self.path, ".parquet", among))
 
-    def _indices(self, coords: np.ndarray, axis: np.ndarray, name: str) -> np.ndarray:
-        """Return the index of each coordinate's cell in the regular grid axis, or raise."""
-        step = axis[1] - axis[0] if len(axis) > 1 else 1.0
-        idx = np.rint((coords - axis[0]) / step).astype(np.intp)
-        if (
-            idx.min() < 0
-            or idx.max() >= len(axis)
-            or not np.allclose(axis[idx], coords, rtol=0, atol=1e-8)
-        ):
-            raise ValueError(
-                f"Footprint {name} coordinates are not cells of the folder's grid."
-            )
-        return idx
-
     def write(self, foot: xr.DataArray) -> Path:
         """
-        Write one receptor's footprint as its non-zero cells.
+        Write one receptor's footprint (:func:`stilt.footprint.write_footprint`).
 
-        The footprint must be on this folder's grid. ``hour`` is the offset
-        of each time layer from the receptor time; every layer is recorded
-        in the metadata, so the dense array reads back with the same shape.
-        The metadata also holds the receptor and the footprint settings, so
-        :func:`stilt.read_footprint` opens the file alone.
+        The footprint must be on this folder's grid. The file records this
+        folder's settings and hash, so it reads alone.
         """
-        data = foot
-        receptor = foot.stilt.receptor
-        name = foot.stilt.name
-        x_dim = "lon" if "lon" in data.dims else "x"
-        y_dim = "lat" if "lat" in data.dims else "y"
-        x_axis, y_axis = self.axes
-        xi = self._indices(np.asarray(data[x_dim].values, dtype=float), x_axis, x_dim)
-        yi = self._indices(np.asarray(data[y_dim].values, dtype=float), y_axis, y_dim)
-
-        receptor_time = pd.Timestamp(receptor.time)
-        times = pd.DatetimeIndex(pd.to_datetime(data["time"].values, utc=True))
-        hours_f = (times.tz_convert(None) - receptor_time) / pd.Timedelta(hours=1)
-        hours = np.asarray(hours_f, dtype=float)
-        if not np.allclose(hours, np.round(hours)):
-            raise ValueError(
-                "Footprint time layers are not whole hours from the receptor time."
-            )
-        hours = np.round(hours).astype(np.int16)
-
-        values = data.transpose("time", y_dim, x_dim).to_numpy()
-        t, y, x = np.nonzero(np.nan_to_num(values, nan=0.0))
-        table = pa.table(
-            {
-                "receptor": pa.array([str(receptor.id)] * len(t)).dictionary_encode(),
-                "hour": pa.array(hours[t]),
-                "y": pa.array(yi[y].astype(np.int16)),
-                "x": pa.array(xi[x].astype(np.int16)),
-                "foot": pa.array(values[t, y, x].astype(np.float32)),
-            },
-            schema=_FOOTPRINT_SCHEMA,
-        )
-        table = table.replace_schema_metadata(
-            self._metadata(receptor, name, hours.tolist(), "")
-        )
-        return write_parquet(table, self.file(str(receptor.id)))
+        path = self.file(str(foot.stilt.receptor.id))
+        return write_footprint(path, foot, self.config, self._stamp())
 
     def write_empty(self, receptor: Receptor, reason: str, name: str = "") -> Path:
         """Record that a receptor's footprint is empty (no particle over the grid), with the reason."""
-        table = _FOOTPRINT_SCHEMA.empty_table().replace_schema_metadata(
-            self._metadata(receptor, name, [], reason)
+        path = self.file(str(receptor.id))
+        return write_empty_footprint(
+            path, receptor, reason, self.config, name, self._stamp()
         )
-        return write_parquet(table, self.file(str(receptor.id)))
 
-    def _metadata(
-        self, receptor: Receptor, name: str, hours: list[int], empty_reason: str
-    ) -> dict[bytes, bytes]:
+    def _stamp(self) -> dict[bytes, bytes]:
+        """Return the metadata a file of this folder records besides its footprint."""
         return {
-            b"stilt:receptor": json.dumps(receptor.to_dict()).encode(),
-            b"stilt:name": name.encode(),
-            b"stilt:hours": json.dumps(hours).encode(),
-            b"stilt:empty_reason": empty_reason.encode(),
-            b"stilt:footprint": _settings_json(self.config).encode(),
             b"stilt:hash": self.hash.encode(),
             b"stilt:pystilt": _pystilt_version().encode(),
         }

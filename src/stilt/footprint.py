@@ -11,10 +11,11 @@ from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 import pandas as pd
+import pyarrow as pa
 import xarray as xr
 from scipy.ndimage import convolve as _convolve
 
-from stilt._atomic import atomic_path
+from stilt._atomic import atomic_path, write_parquet
 from stilt.config import FootprintConfig, Grid
 from stilt.exceptions import EmptyFootprint
 from stilt.receptors import Receptor
@@ -875,6 +876,144 @@ def read_footprint(
     if stored is None:
         raise ValueError(f"{path} does not record its footprint settings.")
     return _from_sparse_table(table, _settings_from_json(stored.decode(), path.name))
+
+
+#: The columns of a stored footprint: its non-zero cells, indexed into its grid.
+FOOTPRINT_SCHEMA = pa.schema(
+    [
+        ("receptor", pa.dictionary(pa.int32(), pa.string())),
+        ("hour", pa.int16()),
+        ("y", pa.int16()),
+        ("x", pa.int16()),
+        ("foot", pa.float32()),
+    ]
+)
+
+
+def _cell_indices(coords: np.ndarray, axis: np.ndarray, name: str) -> np.ndarray:
+    """Return the index of each coordinate's cell on a regular grid axis, or raise."""
+    step = axis[1] - axis[0] if len(axis) > 1 else 1.0
+    idx = np.rint((coords - axis[0]) / step).astype(np.intp)
+    if (
+        idx.min() < 0
+        or idx.max() >= len(axis)
+        or not np.allclose(axis[idx], coords, rtol=0, atol=1e-8)
+    ):
+        raise ValueError(f"Footprint {name} coordinates are not cells of the grid.")
+    return idx
+
+
+def _file_metadata(
+    receptor: Receptor,
+    config: FootprintConfig,
+    name: str,
+    hours: list[int],
+    empty_reason: str,
+    metadata: dict[bytes, bytes] | None,
+) -> dict[bytes, bytes]:
+    """Return what a footprint file records so that it reads alone."""
+    return {
+        b"stilt:receptor": json.dumps(receptor.to_dict()).encode(),
+        b"stilt:name": name.encode(),
+        b"stilt:hours": json.dumps(hours).encode(),
+        b"stilt:empty_reason": empty_reason.encode(),
+        b"stilt:footprint": _settings_json(config).encode(),
+        **(metadata or {}),
+    }
+
+
+def write_footprint(
+    path: str | Path,
+    foot: xr.DataArray,
+    config: FootprintConfig | None = None,
+    metadata: dict[bytes, bytes] | None = None,
+) -> Path:
+    """
+    Write a footprint to a Parquet file that :func:`read_footprint` reads alone.
+
+    Only the non-zero cells are stored, as ``hour`` (the offset of the time
+    layer from the receptor time), ``y`` and ``x`` (the cell's place on the
+    grid), and ``foot`` in float32. Every layer is recorded in the metadata,
+    so the dense array reads back with the same shape. The metadata also
+    holds the receptor and the footprint settings.
+
+    Parameters
+    ----------
+    path : str or Path
+        File to write.
+    foot : xarray.DataArray
+        The footprint, as :func:`calculate` returns it.
+    config : FootprintConfig, optional
+        Settings to record, whose grid the footprint must be on. Defaults to
+        the footprint's own, ``foot.stilt.config``.
+    metadata : dict, optional
+        More file metadata, such as the settings hash.
+
+    Returns
+    -------
+    Path
+        The path written to.
+
+    Raises
+    ------
+    ValueError
+        If the footprint is not on the grid, or a time layer is not a whole
+        number of hours from the receptor time.
+    """
+    settings = foot.stilt.config if config is None else config
+    if settings.grid is None:
+        raise ValueError("Footprint settings need a grid.")
+    receptor = foot.stilt.receptor
+    x_dim, y_dim = ("lon", "lat") if "lon" in foot.dims else ("x", "y")
+    x_axis, y_axis = settings.grid.axes
+    xi = _cell_indices(np.asarray(foot[x_dim].values, dtype=float), x_axis, x_dim)
+    yi = _cell_indices(np.asarray(foot[y_dim].values, dtype=float), y_axis, y_dim)
+
+    receptor_time = pd.Timestamp(receptor.time)
+    times = pd.DatetimeIndex(pd.to_datetime(foot["time"].values, utc=True))
+    hours_f = (times.tz_convert(None) - receptor_time) / pd.Timedelta(hours=1)
+    hours = np.asarray(hours_f, dtype=float)
+    if not np.allclose(hours, np.round(hours)):
+        raise ValueError(
+            "Footprint time layers are not whole hours from the receptor time."
+        )
+    hours = np.round(hours).astype(np.int16)
+
+    values = foot.transpose("time", y_dim, x_dim).to_numpy()
+    t, y, x = np.nonzero(np.nan_to_num(values, nan=0.0))
+    table = pa.table(
+        {
+            "receptor": pa.array([str(receptor.id)] * len(t)).dictionary_encode(),
+            "hour": pa.array(hours[t]),
+            "y": pa.array(yi[y].astype(np.int16)),
+            "x": pa.array(xi[x].astype(np.int16)),
+            "foot": pa.array(values[t, y, x].astype(np.float32)),
+        },
+        schema=FOOTPRINT_SCHEMA,
+    )
+    meta = _file_metadata(
+        receptor, settings, foot.stilt.name, hours.tolist(), "", metadata
+    )
+    return write_parquet(table.replace_schema_metadata(meta), Path(path))
+
+
+def write_empty_footprint(
+    path: str | Path,
+    receptor: Receptor,
+    reason: str,
+    config: FootprintConfig,
+    name: str = "",
+    metadata: dict[bytes, bytes] | None = None,
+) -> Path:
+    """
+    Record in a footprint file that a receptor's footprint is empty, and why.
+
+    The file has no rows; :func:`read_footprint` returns ``None`` for it.
+    ``reason`` is, for example, ``"outside_domain"``.
+    """
+    meta = _file_metadata(receptor, config, name, [], reason, metadata)
+    table = FOOTPRINT_SCHEMA.empty_table().replace_schema_metadata(meta)
+    return write_parquet(table, Path(path))
 
 
 @xr.register_dataarray_accessor("stilt")
