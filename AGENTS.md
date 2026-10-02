@@ -109,8 +109,8 @@ src/stilt/
                      DataFrame), run/submit; Simulations: a selection's
                      status, loading, and Jacobian
   output.py          Output: the output directory. Particles and Footprints are
-                     its folders, one per settings hash; sparse footprint
-                     files; Jacobian assembly
+                     its folders, one per settings hash: finding, listing,
+                     and reading many files at once; Jacobian assembly
   simulation.py      Simulation, SimID: a frozen value (receptor, variant, output)
                      that knows where its results are and whether they exist
   receptors.py       receptor types (frozen pydantic models: point, column,
@@ -118,8 +118,9 @@ src/stilt/
                      the CSV reader, writer, and appender
   particles.py       the particle table (a DataFrame): prepare, read, and write
                      particle files; the `.stilt` pandas accessor
-  footprint.py       the footprint (a DataArray): `calculate`, `read_footprint`,
-                     CF-1.8 NetCDF, and the `.stilt` xarray accessor
+  footprint.py       the footprint (a DataArray): `calculate`, reading and
+                     writing footprint files (`read_footprint`,
+                     `write_footprint`), CF-1.8 NetCDF, and the `.stilt` xarray accessor
                      (enhancement from a flux field, aggregation)
   flux.py            sampling a flux field at points or along particles
   spatial.py         where things are: bounds, the footprint Grid, the
