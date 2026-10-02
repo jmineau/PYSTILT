@@ -5,7 +5,7 @@ import pytest
 import shapely
 
 from stilt import Grid, Mesh, Zones
-from stilt.geometry import (
+from stilt.spatial import (
     _mesh_weights,
     _mesh_weights_exactextract,
     overlap_weights,
@@ -363,3 +363,23 @@ def test_exactextract_backend_matches_shapely_on_random_polygons():
     b = _mesh_weights_exactextract(mesh, x, y, 0.1, 0.1)
     assert a.shape == b.shape
     np.testing.assert_allclose(a.toarray(), b.toarray(), atol=1e-9)
+
+
+def test_one_longlat_test_for_grids_and_meshes():
+    """EPSG:4326 is longitude/latitude for a grid as it is for a mesh."""
+    from stilt.spatial import Grid, Mesh, is_longlat
+
+    grid = Grid(
+        xmin=-112.0,
+        xmax=-111.0,
+        ymin=40.0,
+        ymax=41.0,
+        xres=0.5,
+        yres=0.5,
+        projection="EPSG:4326",
+    )
+    assert is_longlat("EPSG:4326") and is_longlat("+proj=longlat")
+    assert not is_longlat("EPSG:32612")
+    assert grid.is_longlat
+    assert list(grid.index.names) == ["lon", "lat"]
+    assert Mesh.from_grid(grid).is_longlat

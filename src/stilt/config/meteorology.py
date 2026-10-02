@@ -8,7 +8,7 @@ from typing import Any, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from .spatial import Bounds
+from stilt.spatial import Bounds
 
 #: Met fields that change no output: where the files are, not what they hold.
 UNRECORDED_MET_FIELDS = frozenset({"directory", "subgrid_dir"})

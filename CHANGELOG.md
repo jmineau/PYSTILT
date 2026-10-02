@@ -8,6 +8,16 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **`stilt.spatial`** (breaking for module imports). `Grid`, `Bounds`,
+  `Mesh`, `Zones`, the CRS helpers, and the overlap weights are in one
+  module, `stilt.spatial`, replacing `stilt.geometry` and
+  `stilt.config.spatial`. `stilt.Grid`, `stilt.Mesh` and the other
+  package-root names are unchanged; `from stilt.geometry import Mesh`
+  becomes `from stilt.spatial import Mesh`. The geometry specs moved into
+  `stilt.config.footprint` and are still exported from `stilt.config`.
+  `is_longlat_crs` is `stilt.spatial.is_longlat`, the one test for
+  longitude/latitude, so a grid with `projection: EPSG:4326` is now
+  treated as longitude/latitude, as a mesh already was.
 - **One `TransportParams` class** (breaking). `STILTParams` and the three
   classes it combined (`ModelParams`, the old `TransportParams`, and
   `ErrorParams`) are one class, `stilt.config.TransportParams`, with the

@@ -67,9 +67,9 @@ from stilt.config import (
 )
 from stilt.config.transport import canonical, settings_hash
 from stilt.footprint import _settings_json, read_footprint
-from stilt.geometry import Geometry, check_resolution, overlap_weights
 from stilt.particles import read_particles, write_particles
 from stilt.receptors import Receptor, parse_receptor_id
+from stilt.spatial import Geometry, check_resolution, overlap_weights
 
 logger = logging.getLogger(__name__)
 
