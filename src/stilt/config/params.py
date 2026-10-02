@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, ClassVar, Literal, Self
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class ModelParams(BaseModel):
@@ -244,7 +244,7 @@ class TransportParams(BaseModel):
     kpuff: int = Field(
         0, description="Horizontal puff growth: linear (0) or empirical (1)."
     )
-    krand: int = Field(
+    krand: Literal[0, 1, 2, 3, 4, 10, 11, 12, 13] = Field(
         4,
         description=(
             "How HYSPLIT draws the random numbers for turbulence. 0 picks 2 "
@@ -559,8 +559,6 @@ class STILTParams(ModelParams, TransportParams, ErrorParams):
     #: Most hourly ZICONTROL factors HYSPLIT can hold (``ZIPRESC(150)`` in
     #: hymodelc.F); it reads more without a bounds check.
     MAX_ZISCALE_HOURS: ClassVar[int] = 150
-    #: ``krand`` values HYSPLIT documents (``hysetup.f``); others degenerate silently.
-    KRAND_VALUES: ClassVar[frozenset[int]] = frozenset({0, 1, 2, 3, 4, 10, 11, 12, 13})
     #: ModelParams fields that are SETUP.CFG entries.
     _MODEL_SETUP_FIELDS: ClassVar[frozenset[str]] = frozenset({"numpar", "varsiwant"})
 
@@ -654,18 +652,6 @@ class STILTParams(ModelParams, TransportParams, ErrorParams):
                 "is unscaled."
             )
         return self
-
-    @field_validator("krand")
-    @classmethod
-    def _validate_krand(cls, value: int) -> int:
-        """Reject ``krand`` values HYSPLIT does not document."""
-        if value not in cls.KRAND_VALUES:
-            raise ValueError(
-                f"krand={value} is not a HYSPLIT mode (0-4 or 10-13): HYSPLIT does "
-                "not check it and any other value makes every turbulence draw the "
-                "same constant, or hangs."
-            )
-        return value
 
     @model_validator(mode="after")
     def _validate_seed(self) -> Self:
