@@ -130,7 +130,7 @@ def _build_footprint_array(
 def _with_cf_metadata(ds: xr.Dataset, *, grid: Grid) -> xr.Dataset:
     """Add CF coordinate and CRS attributes to a footprint dataset."""
     ds.attrs.setdefault("Conventions", "CF-1.8")
-    ds["crs"] = xr.DataArray(0, attrs=_cf_grid_mapping_attrs(grid.projection))
+    ds["crs"] = xr.DataArray(0, attrs=_cf_grid_mapping_attrs(grid.crs))
     ds["foot"].attrs["grid_mapping"] = "crs"
 
     for dim in ("lon", "lat", "x", "y"):
@@ -301,7 +301,7 @@ def _interpolate_particle_tracks(p: pd.DataFrame, *, t_new: np.ndarray) -> pd.Da
 def _project_particles_to_crs(
     p: pd.DataFrame,
     *,
-    projection: str,
+    crs: str,
     xmin: float,
     xmax: float,
     ymin: float,
@@ -315,7 +315,7 @@ def _project_particles_to_crs(
     """
     from pyproj import Transformer
 
-    tr = Transformer.from_crs("EPSG:4326", projection, always_xy=True)
+    tr = Transformer.from_crs("EPSG:4326", crs, always_xy=True)
     p = p.copy()
     p["long"], p["lati"] = tr.transform(p["long"].values, p["lati"].values)
     corners_x, corners_y = tr.transform([xmin, xmax], [ymin, ymax])
@@ -676,10 +676,10 @@ def calculate(
         if context is None:
             context = TransformContext(receptor=receptor, variant=name)
         particles = apply_transforms(particles, config.transforms, context)
-    projection = grid.projection
+    crs = grid.crs
     xmin, xmax, xres = grid.xmin, grid.xmax, grid.xres
     ymin, ymax, yres = grid.ymin, grid.ymax, grid.yres
-    is_longlat = "+proj=longlat" in projection
+    is_longlat = grid.is_longlat
     smooth_factor = config.smooth_factor
     time_integrate = config.time_integrate
 
@@ -707,7 +707,7 @@ def calculate(
     if not is_longlat:
         p, xmin, xmax, ymin, ymax = _project_particles_to_crs(
             p,
-            projection=projection,
+            crs=crs,
             xmin=xmin,
             xmax=xmax,
             ymin=ymin,
@@ -1133,7 +1133,7 @@ class FootprintAccessor:
         px = np.asarray(foot[x_dim].values, dtype=float)
         py = np.asarray(foot[y_dim].values, dtype=float)
         xres, yres = grid.xres, grid.yres
-        crs = grid.projection
+        crs = grid.crs
         check_resolution(target, xres, yres, crs)
         weights = overlap_weights(target, px, py, xres, yres, crs)
 

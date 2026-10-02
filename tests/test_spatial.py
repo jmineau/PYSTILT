@@ -50,7 +50,7 @@ def test_grid_from_geometry_derives_resolution_and_snapped_bounds():
     mesh = Mesh.from_windows([(-111.9, 40.7), (-112.05, 40.6)], (0.0095, 0.03))
     grid = Grid.from_geometry(mesh)
     assert grid.xres == grid.yres == 0.002
-    assert grid.projection == "+proj=longlat"
+    assert grid.crs == "+proj=longlat"
     xmin, ymin, xmax, ymax = mesh.bounds
     assert grid.xmin <= xmin and grid.xmax >= xmax
     assert grid.ymin <= ymin and grid.ymax >= ymax
@@ -301,7 +301,7 @@ def test_grid_from_geometry_projected_mesh_keeps_lonlat_bounds():
     cx, cy = tr.transform(-111.9, 40.7)
     mesh = Mesh.from_windows([(cx, cy)], 2500.0, crs="EPSG:32612")  # 2.5 km box
     grid = Grid.from_geometry(mesh)
-    assert grid.projection == "EPSG:32612"
+    assert grid.crs == "EPSG:32612"
     assert grid.xres == grid.yres == pytest.approx(600.0)  # 2500/4 = 625 -> 600
     # bounds are lon/lat and enclose the window
     assert grid.xmin < -111.9 < grid.xmax and grid.ymin < 40.7 < grid.ymax
@@ -376,10 +376,27 @@ def test_one_longlat_test_for_grids_and_meshes():
         ymax=41.0,
         xres=0.5,
         yres=0.5,
-        projection="EPSG:4326",
+        crs="EPSG:4326",
     )
     assert is_longlat("EPSG:4326") and is_longlat("+proj=longlat")
     assert not is_longlat("EPSG:32612")
     assert grid.is_longlat
     assert list(grid.index.names) == ["lon", "lat"]
     assert Mesh.from_grid(grid).is_longlat
+
+
+def test_grid_reads_stilt_r_projection_as_crs():
+    """``projection``, STILT-R's name, is read as ``crs``; PYSTILT writes ``crs``."""
+    from stilt.spatial import Grid
+
+    kw = {
+        "xmin": -112.0,
+        "xmax": -111.0,
+        "ymin": 40.0,
+        "ymax": 41.0,
+        "xres": 0.5,
+        "yres": 0.5,
+    }
+    old = Grid(**kw, projection="EPSG:32612")
+    assert old == Grid(**kw, crs="EPSG:32612")
+    assert "crs" in old.model_dump() and "projection" not in old.model_dump()

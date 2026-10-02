@@ -572,3 +572,17 @@ def test_a_footprint_file_without_its_settings_is_refused(tmp_path):
 
     with pytest.raises(ValueError, match="does not record its footprint settings"):
         feet.read(str(receptor.id))
+
+
+def test_a_footprint_folder_stored_with_projection_is_found_by_crs(tmp_path):
+    """Folders written when the grid said ``projection`` are found by a ``crs`` config."""
+    config = FootprintConfig(grid=GRID)
+    feet = Output(tmp_path / "output").particles("hrrr", SETTINGS).footprints(config)
+    record_path = feet.path / "_settings.yaml"
+    record = yaml.safe_load(record_path.read_text())
+    grid = record["settings"]["grid"]
+    grid["projection"] = grid.pop("crs")
+    record_path.write_text(yaml.safe_dump(record))
+
+    again = Output(tmp_path / "output").particles("hrrr", SETTINGS).footprints(config)
+    assert again.key == feet.key

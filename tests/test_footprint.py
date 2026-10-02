@@ -1302,7 +1302,7 @@ def test_project_particles_to_crs_raises_on_missing_pyproj(monkeypatch):
     with pytest.raises(ImportError, match="pyproj"):
         _project_particles_to_crs(
             p,
-            projection="+proj=utm +zone=12 +datum=WGS84 +units=m +no_defs",
+            crs="+proj=utm +zone=12 +datum=WGS84 +units=m +no_defs",
             xmin=-113.0,
             xmax=-111.0,
             ymin=39.0,
@@ -1318,7 +1318,7 @@ def test_project_particles_to_crs_rejects_invalid_proj_string():
     with pytest.raises(CRSError):
         _project_particles_to_crs(
             p,
-            projection="+proj=nope-not-a-projection",
+            crs="+proj=nope-not-a-projection",
             xmin=-113.0,
             xmax=-111.0,
             ymin=39.0,
@@ -1471,7 +1471,7 @@ def test_aggregate_grid_in_other_crs_is_reprojected():
         ymax=39.4,
         xres=20000.0,
         yres=20000.0,
-        projection="EPSG:32612",
+        crs="EPSG:32612",
     )
     result = foot.stilt.aggregate(grid, bins)
     assert result.to_numpy().sum() == pytest.approx(2.0, rel=1e-6)

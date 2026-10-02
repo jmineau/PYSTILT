@@ -285,7 +285,7 @@ def projected_footprint(receptor):
         ymax=41.1,
         xres=10000.0,
         yres=10000.0,
-        projection="EPSG:32612",
+        crs="EPSG:32612",
     )
     x, y = grid.axes
     data = xr.DataArray(

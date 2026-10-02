@@ -61,7 +61,7 @@ The workflow side by side
    * - ``xmn``, ``xmx``, ``ymn``, ``ymx``
      - ``grid: xmin``, ``xmax``, ``ymin``, ``ymax``
    * - ``xres``, ``yres``, ``projection``
-     - ``grid: xres``, ``yres``, ``projection``
+     - ``grid: xres``, ``yres``, ``crs`` (``projection`` is read too)
    * - ``smooth_factor``, ``time_integrate``
      - same names, top level
    * - ``n_hours``, ``numpar``, ``hnf_plume``, ``varsiwant``
