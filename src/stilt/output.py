@@ -758,9 +758,9 @@ class Footprints:
 
         x_axis, y_axis = self.axes
         grid = self.grid
-        check_resolution(target, grid.xres, grid.yres, grid.projection)
+        check_resolution(target, grid.xres, grid.yres, grid.crs)
         weights = overlap_weights(
-            target, x_axis, y_axis, grid.xres, grid.yres, grid.projection
+            target, x_axis, y_axis, grid.xres, grid.yres, grid.crs
         )  # (n_cells, ny * nx)
         n_cells = len(target.index)
         nx = len(x_axis)

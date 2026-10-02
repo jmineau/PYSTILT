@@ -203,7 +203,7 @@ class ReferenceScenario:
             ymax=self.ymax,
             xres=self.xres,
             yres=self.yres,
-            projection=self.projection,
+            crs=self.projection,
         )
 
     def make_footprint_config(self):

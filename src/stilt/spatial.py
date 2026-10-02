@@ -38,7 +38,7 @@ from typing import TYPE_CHECKING, Any, Literal
 import numpy as np
 import pandas as pd
 import shapely
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, model_validator
 from scipy import sparse
 from shapely.geometry.base import BaseGeometry
 
@@ -147,9 +147,9 @@ class Bounds(BaseModel):
 
 class Grid(Bounds):
     """
-    Footprint grid: longitude/latitude bounds, cell size, and projection.
+    Footprint grid: longitude/latitude bounds, cell size, and CRS.
 
-    The bounds are always longitude/latitude. With a projected ``projection``,
+    The bounds are always longitude/latitude. With a projected ``crs``,
     the grid covers the bounds' extent in that projection and ``xres`` and
     ``yres`` are in its units.
     """
@@ -164,11 +164,13 @@ class Grid(Bounds):
         ...,
         description="Cell height in projection units (degrees for longlat, meters for UTM).",
     )
-    projection: str = Field(
+    crs: str = Field(
         "+proj=longlat",
+        validation_alias=AliasChoices("crs", "projection"),
         description=(
-            "Projection of the footprint grid, as a PROJ string. Particles and "
-            "bounds are projected to it before gridding."
+            "Coordinate reference system of the footprint grid, such as a PROJ "
+            "string or ``EPSG:32612``. Particles and bounds are projected to it "
+            "before gridding. Also read under STILT-R's name, ``projection``."
         ),
     )
 
@@ -180,7 +182,7 @@ class Grid(Bounds):
     @property
     def is_longlat(self) -> bool:
         """Whether the grid is in longitude/latitude degrees."""
-        return is_longlat(self.projection)
+        return is_longlat(self.crs)
 
     @property
     def min_cell_width(self) -> float:
@@ -193,7 +195,7 @@ class Grid(Bounds):
         geometry,
         *,
         cells_per_target: float = 4.0,
-        projection: str | None = None,
+        crs: str | None = None,
         max_cells: int = 50_000_000,
     ) -> Grid:
         """
@@ -207,12 +209,12 @@ class Grid(Bounds):
         ----------
         geometry : Mesh, Zones, or Grid
             Geometry to resolve. Any object with ``bounds``,
-            ``min_cell_width``, ``crs`` or ``projection``, and ``is_longlat``.
+            ``min_cell_width``, ``crs``, and ``is_longlat``.
         cells_per_target : float, default 4
             Grid cells across the smallest geometry cell.
-        projection : str, optional
-            Projection of the grid. Defaults to the geometry's CRS; the
-            geometry is reprojected when they differ.
+        crs : str, optional
+            CRS of the grid. Defaults to the geometry's; the geometry is
+            reprojected when they differ.
         max_cells : int, default 50_000_000
             Warn when the grid would have more cells than this.
 
@@ -224,16 +226,12 @@ class Grid(Bounds):
         import math
         import warnings
 
-        crs = getattr(geometry, "crs", None) or getattr(geometry, "projection", None)
-        if not isinstance(crs, str):
-            raise TypeError("geometry must expose a 'crs' or 'projection' string.")
-        if projection is not None and projection != crs:
+        if crs is not None and crs != geometry.crs:
             geometry = geometry.base if isinstance(geometry, Zones) else geometry
             if isinstance(geometry, Grid):
                 geometry = Mesh.from_grid(geometry)
-            geometry = geometry.to_crs(projection)
-            crs = projection
-        projection = crs
+            geometry = geometry.to_crs(crs)
+        crs = geometry.crs
 
         width = float(geometry.min_cell_width) / float(cells_per_target)
         if width <= 0:
@@ -266,7 +264,7 @@ class Grid(Bounds):
             xmin, xmax, ymin, ymax = xmin - res, xmax + res, ymin - res, ymax + res
             from pyproj import Transformer
 
-            tr = Transformer.from_crs(projection, "EPSG:4326", always_xy=True)
+            tr = Transformer.from_crs(crs, "EPSG:4326", always_xy=True)
             xs, ys = tr.transform([xmin, xmax, xmin, xmax], [ymin, ymin, ymax, ymax])
             xmin, xmax = float(min(xs)), float(max(xs))
             ymin, ymax = float(min(ys)), float(max(ys))
@@ -278,7 +276,7 @@ class Grid(Bounds):
             ymax=float(ymax),
             xres=res,
             yres=res,
-            projection=projection,
+            crs=crs,
         )
 
     @classmethod
@@ -291,7 +289,7 @@ class Grid(Bounds):
         """
         grids = [cls.from_geometry(g, **kwargs) for g in geometries]
         res = min(min(g.xres, g.yres) for g in grids)
-        projection = grids[0].projection
+        crs = grids[0].crs
         return cls(
             xmin=min(g.xmin for g in grids),
             xmax=max(g.xmax for g in grids),
@@ -299,7 +297,7 @@ class Grid(Bounds):
             ymax=max(g.ymax for g in grids),
             xres=res,
             yres=res,
-            projection=projection,
+            crs=crs,
         )
 
     @property
@@ -316,7 +314,7 @@ class Grid(Bounds):
         if not self.is_longlat:
             from pyproj import Transformer
 
-            tr = Transformer.from_crs("EPSG:4326", self.projection, always_xy=True)
+            tr = Transformer.from_crs("EPSG:4326", self.crs, always_xy=True)
             corners_x, corners_y = tr.transform([xmin, xmax], [ymin, ymax])
             xmin, xmax = float(np.min(corners_x)), float(np.max(corners_x))
             ymin, ymax = float(np.min(corners_y)), float(np.max(corners_y))
@@ -363,7 +361,7 @@ class Grid(Bounds):
 
         ds = xr.Dataset(coords={x_dim: x_centers, y_dim: y_centers})
         ds.attrs["Conventions"] = "CF-1.8"
-        ds["crs"] = xr.DataArray(0, attrs=_cf_grid_mapping_attrs(self.projection))
+        ds["crs"] = xr.DataArray(0, attrs=_cf_grid_mapping_attrs(self.crs))
         ds[x_dim].attrs.update(cf_axis_attrs(x_dim))
         ds[y_dim].attrs.update(cf_axis_attrs(y_dim))
         return ds
@@ -552,7 +550,7 @@ class Mesh(BaseModel):
             x - grid.xres / 2, y - grid.yres / 2, x + grid.xres / 2, y + grid.yres / 2
         )
         labels = tuple(f"{xi:g},{yi:g}" for xi, yi in zip(x, y, strict=True))
-        return cls(ids=labels, geometries=tuple(boxes.tolist()), crs=grid.projection)
+        return cls(ids=labels, geometries=tuple(boxes.tolist()), crs=grid.crs)
 
     @classmethod
     def from_h3(cls, resolution: int, bounds) -> Mesh:
@@ -687,7 +685,7 @@ class Zones(BaseModel):
     @property
     def crs(self) -> str:
         """CRS of the base geometry."""
-        return self.base.projection if isinstance(self.base, Grid) else self.base.crs
+        return self.base.crs
 
     @property
     def is_longlat(self) -> bool:
@@ -936,7 +934,7 @@ def overlap_weights(
         base_w = overlap_weights(geometry.base, x, y, xres, yres, crs)
         w = sparse.csr_matrix(geometry.membership @ base_w)
     elif isinstance(geometry, Grid):
-        if same_crs(geometry.projection, crs):
+        if same_crs(geometry.crs, crs):
             w = _grid_weights(geometry, x, y, xres, yres)
         else:
             w = _polygon_weights(Mesh.from_grid(geometry).to_crs(crs), x, y, xres, yres)
@@ -956,11 +954,9 @@ def check_resolution(geometry: Geometry, xres: float, yres: float, crs: str) -> 
     and neither does a geometry in a different CRS, whose units differ.
     """
     width = geometry.min_cell_width
-    if isinstance(geometry, Grid) and same_crs(geometry.projection, crs):
+    if isinstance(geometry, Grid) and same_crs(geometry.crs, crs):
         return  # exact per-axis overlap; no rasterization error to warn about
-    if not same_crs(
-        geometry.crs if not isinstance(geometry, Grid) else geometry.projection, crs
-    ):
+    if not same_crs(geometry.crs, crs):
         return  # units differ; skip the heuristic rather than mislead
     if width < 2.0 * max(xres, yres):
         warnings.warn(

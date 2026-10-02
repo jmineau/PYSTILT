@@ -112,7 +112,7 @@ def _r_footprint(
             str(smooth_factor),
             str(time_integrate).upper(),
             str(r_stilt_dir),
-            grid.projection,
+            grid.crs,
         ],
         capture_output=True,
         text=True,
@@ -177,7 +177,7 @@ def _r_footprint_stages(
             str(smooth_factor),
             str(time_integrate).upper(),
             str(r_stilt_dir),
-            grid.projection,
+            grid.crs,
         ],
         capture_output=True,
         text=True,
@@ -231,7 +231,7 @@ def _py_footprint_stages(
     time_integrate: bool = False,
 ) -> dict[str, pd.DataFrame]:
     """Return Python-side calc_footprint intermediate tables matching the R helper."""
-    projection = grid.projection
+    projection = grid.crs
     xmin, xmax, xres = grid.xmin, grid.xmax, grid.xres
     ymin, ymax, yres = grid.ymin, grid.ymax, grid.yres
     is_longlat = "+proj=longlat" in projection
@@ -256,7 +256,7 @@ def _py_footprint_stages(
     if not is_longlat:
         p_with_rtime, xmin, xmax, ymin, ymax = _project_particles_to_crs(
             p_with_rtime,
-            projection=projection,
+            crs=projection,
             xmin=xmin,
             xmax=xmax,
             ymin=ymin,
@@ -661,7 +661,7 @@ def test_utm_projection_matches_r(rscript, r_stilt_dir, tmp_path):
         ymax=40.8,
         xres=1_000.0,
         yres=1_000.0,
-        projection=projection,
+        crs=projection,
     )
     rng = np.random.default_rng(21)
     n = 80
@@ -1004,7 +1004,7 @@ def test_calc_footprint_utm_intermediate_tables_match_r(rscript, r_stilt_dir, tm
         ymax=40.8,
         xres=1_000.0,
         yres=1_000.0,
-        projection=projection,
+        crs=projection,
     )
 
     rng = np.random.default_rng(32)

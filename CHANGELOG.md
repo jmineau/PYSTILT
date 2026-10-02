@@ -8,6 +8,11 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **`Grid.projection` is `Grid.crs`**, matching `Mesh.crs` (breaking for
+  code that reads `grid.projection`). `config.yaml`, stored settings, and
+  footprint files that say `projection` still load; PYSTILT writes `crs`.
+  `Grid.from_geometry(projection=)` is `Grid.from_geometry(crs=)`. Existing
+  footprint folders are still found.
 - **`stilt.spatial`** (breaking for module imports). `Grid`, `Bounds`,
   `Mesh`, `Zones`, the CRS helpers, and the overlap weights are in one
   module, `stilt.spatial`, replacing `stilt.geometry` and

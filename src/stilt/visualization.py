@@ -67,9 +67,7 @@ def _cell_lonlat(foot: xr.DataArray) -> tuple[np.ndarray, np.ndarray]:
         return np.meshgrid(foot["lon"].values, foot["lat"].values)
     from pyproj import Transformer
 
-    to_lonlat = Transformer.from_crs(
-        foot.stilt.grid.projection, "EPSG:4326", always_xy=True
-    )
+    to_lonlat = Transformer.from_crs(foot.stilt.grid.crs, "EPSG:4326", always_xy=True)
     x, y = np.meshgrid(foot["x"].values, foot["y"].values)
     lon, lat = to_lonlat.transform(x, y)
     return np.asarray(lon), np.asarray(lat)
