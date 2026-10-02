@@ -476,6 +476,24 @@ def test_run_simulation_footprint_reads_the_stored_particles(
 # ---------------------------------------------------------------------------
 
 
+def test_run_receptor_takes_timeout_and_keep_scratch_from_execution(
+    tmp_path, receptor, monkeypatch
+):
+    model = _model(
+        tmp_path, [receptor], execution={"timeout": 120, "keep_scratch": True}
+    )
+    seen: list[dict] = []
+
+    def fake(sim, **kwargs):
+        seen.append(kwargs)
+        return SimulationResult(str(sim.id), "complete")
+
+    monkeypatch.setattr(worker, "run_simulation", fake)
+    run_receptor(model, str(receptor.id), compute_root=tmp_path / "scratch")
+
+    assert seen and all(k["timeout"] == 120 and k["keep_scratch"] for k in seen)
+
+
 def test_run_receptor_runs_every_variant_in_config_order(
     tmp_path, receptor, monkeypatch
 ):

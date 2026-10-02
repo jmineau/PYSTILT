@@ -188,8 +188,9 @@ example ``sel(variant=["hrrr", "hrrr-zi08"])``. Each folder's
 
 Some settings do not change a result, so changing them changes no folder:
 
-- ``execution``, ``output``, and ``keep_scratch``
-- ``timeout``, ``rm_dat``, and ``exe_dir``
+- ``execution`` (including ``timeout`` and ``keep_scratch``) and ``output``
+- the ``exe_dir`` path (the build's version is recorded, so a different
+  build is a new folder)
 - where the meteorology files are (``directory`` and ``subgrid_dir``)
 
 Taking a variant out of ``config.yaml`` does not delete its results.

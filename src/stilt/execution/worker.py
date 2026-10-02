@@ -175,7 +175,6 @@ def run_particles(
     workdir: Path,
     keep_scratch: bool = False,
     timeout: int | None = None,
-    rm_dat: bool | None = None,
 ) -> pd.DataFrame:
     """
     Run the transport model for a simulation and write its particles to the output directory.
@@ -196,8 +195,8 @@ def run_particles(
         Scratch directory to run in. Created here.
     keep_scratch : bool, default False
         Keep the working directory of a successful run too.
-    timeout, rm_dat : optional
-        Override ``params.timeout`` and ``params.rm_dat``.
+    timeout : int, optional
+        Time limit for the transport model run, in seconds.
 
     Returns
     -------
@@ -211,12 +210,6 @@ def run_particles(
         As the HYSPLIT driver and the particle reader raise them.
     """
     params = sim.variant.transport
-    overrides = {
-        name: value
-        for name, value in (("timeout", timeout), ("rm_dat", rm_dat))
-        if value is not None
-    }
-    run_params = params.model_copy(update=overrides) if overrides else params
     model = get_model(params.model.name)
     folder = sim.output.particles(sim.variant.name, sim.variant.transport)
     rid = sim.receptor.id
@@ -224,7 +217,7 @@ def run_particles(
     scratch_log = workdir / "stilt.log"
     succeeded = False
     try:
-        result = model.run(sim.receptor, run_params, met, workdir)
+        result = model.run(sim.receptor, params, met, workdir, timeout=timeout)
         if result.particles.empty:
             raise EmptyParticleOutputError(f"HYSPLIT wrote no particles for {sim.id}")
         particles = prepare(result.particles, sim.receptor, params)
@@ -299,6 +292,7 @@ def run_simulation(
     compute_root: Path,
     project_dir: Path | None = None,
     keep_scratch: bool = False,
+    timeout: int | None = None,
     skip_existing: bool = True,
     footprint_stale: bool = False,
 ) -> SimulationResult:
@@ -326,6 +320,8 @@ def run_simulation(
         from.
     keep_scratch : bool, default False
         Keep every run's working directory under the output directory.
+    timeout : int, optional
+        Time limit for one HYSPLIT run, in seconds.
     skip_existing : bool, default True
         Keep particles and footprints that already exist.
     footprint_stale : bool, default False
@@ -343,7 +339,11 @@ def run_simulation(
         particles: pd.DataFrame | None = None
         if not (skip_existing and sim.has_particles):
             particles = run_particles(
-                sim, met=met, workdir=compute_root / sim.id, keep_scratch=keep_scratch
+                sim,
+                met=met,
+                workdir=compute_root / sim.id,
+                keep_scratch=keep_scratch,
+                timeout=timeout,
             )
             ran_hysplit = True
 
@@ -423,7 +423,8 @@ def run_receptor(
                 met=project.mets[sim.variant.met],
                 compute_root=compute_root,
                 project_dir=project.directory,
-                keep_scratch=project.config.keep_scratch,
+                keep_scratch=project.config.execution.keep_scratch,
+                timeout=project.config.execution.timeout,
                 skip_existing=skip_existing or key in reran,
                 footprint_stale=key in reran,
             )

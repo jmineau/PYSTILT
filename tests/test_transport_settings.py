@@ -81,17 +81,14 @@ def test_identity_leaves_out_what_changes_no_particle(tmp_path):
     met = _met(tmp_path)
     base = TransportSettings.build(STILTParams(numpar=100), met)
     identity = base.identity()
-    for name in ("timeout", "rm_dat", "exe_dir"):
-        assert name not in identity
+    assert "exe_dir" not in identity
     assert identity["met"] == met.settings().model_dump(
         mode="json", exclude={"download_from", "n_min"}
     )
     assert identity["model"] == {"name": "hysplit", "version": "v5.1.0"}
     assert identity["maxpar"] == 100  # unset maxpar is numpar, as HYSPLIT receives it
 
-    same = TransportSettings.build(
-        STILTParams(numpar=100, timeout=60, rm_dat=False), met
-    )
+    same = TransportSettings.build(STILTParams(numpar=100, exe_dir=None), met)
     assert same.hash == base.hash
     assert (
         TransportSettings.build(STILTParams(numpar=100, maxpar=100), met).hash

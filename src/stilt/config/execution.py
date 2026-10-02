@@ -20,7 +20,8 @@ class ExecutionConfig(BaseModel):
     With ``backend: slurm`` they are split among ``n_workers`` tasks of one
     Slurm job array. Either way a task runs ``cpus`` receptors at once. The
     Slurm settings are ignored by a local run, so a config can hold them and
-    be run either way. None of these settings change a result.
+    be run either way. ``timeout`` and ``keep_scratch`` apply to both. None
+    of these settings change a result.
 
     Examples
     --------
@@ -57,6 +58,24 @@ class ExecutionConfig(BaseModel):
     partition: str | None = Field(None, description="Slurm partition.")
     account: str | None = Field(None, description="Slurm account.")
     qos: str | None = Field(None, description="Slurm quality of service.")
+    timeout: int | None = Field(
+        None,
+        ge=1,
+        description=(
+            "Time limit for one HYSPLIT run, in seconds. A run that exceeds it "
+            "is stopped and recorded as a failed simulation, and the worker "
+            "moves on. Unset waits indefinitely, so a hung HYSPLIT process can "
+            "hold a worker until its job ends."
+        ),
+    )
+    keep_scratch: bool = Field(
+        False,
+        description=(
+            "Keep every run's HYSPLIT working directory, as HYSPLIT left it, "
+            "under ``scratch/`` in the output directory. A failed run's is "
+            "always kept."
+        ),
+    )
     array_parallelism: int | None = Field(
         None,
         ge=1,

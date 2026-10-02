@@ -32,22 +32,6 @@ class ModelParams(BaseModel):
             "``mlht``, and ``samt``."
         ),
     )
-    rm_dat: bool = Field(
-        True,
-        description=(
-            "Delete HYSPLIT's particle files (``PARTICLE_STILT.DAT`` and "
-            "``PARTICLE.DAT``) once they have been read, to save disk space."
-        ),
-    )
-    timeout: int | None = Field(
-        None,
-        description=(
-            "Time limit for one ``hycs_std`` run, in seconds. A run that "
-            "exceeds it is stopped and recorded as a failed simulation, and the "
-            "worker moves on to the next one. Unset waits indefinitely, so a "
-            "hung HYSPLIT process can hold a batch worker until its job ends."
-        ),
-    )
     exe_dir: Path | None = Field(
         None,
         description=(

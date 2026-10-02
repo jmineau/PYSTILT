@@ -2,12 +2,13 @@
 A wedged hycs_std must be capped, not waited on forever.
 
 Without a deadline a single spinning HYSPLIT process holds its batch worker until Slurm
-kills the task, which on a preempted-and-requeued guest job can be days. `params.timeout`
+kills the task, which on a preempted-and-requeued guest job can be days. `execution.timeout`
 makes that a HYSPLITTimeoutError the execution loop already handles.
 """
 
 import pytest
 
+from stilt.config import ExecutionConfig
 from stilt.config.params import STILTParams
 
 
@@ -22,7 +23,7 @@ class _StopDriver:
     def prepare(self):
         pass
 
-    def execute(self, timeout=None, rm_dat=None):
+    def execute(self, timeout=None):
         _StopDriver.seen["timeout"] = timeout
         raise RuntimeError("stop before running HYSPLIT")
 
@@ -49,8 +50,8 @@ def sim(monkeypatch, tmp_path, point_receptor):
         directory=tmp_path / "met", file_format="%Y%m%d_%H", file_tres="1h"
     )
 
-    def _make(timeout):
-        params = STILTParams(n_hours=-24, numpar=10, timeout=timeout)
+    def _make():
+        params = STILTParams(n_hours=-24, numpar=10)
         config = VariantConfig(
             name="hrrr",
             group="hrrr",
@@ -68,27 +69,19 @@ def _run(sim, tmp_path, **kwargs):
     return run_particles(sim, met=_FakeMet(), workdir=tmp_path / "scratch", **kwargs)
 
 
-def test_timeout_defaults_to_none():
-    assert STILTParams().timeout is None
+def test_timeout_is_an_execution_setting():
+    assert ExecutionConfig().timeout is None
+    assert ExecutionConfig(timeout=900).timeout == 900
+    assert "timeout" not in STILTParams.model_fields
 
 
-def test_timeout_is_configurable():
-    assert STILTParams(timeout=900).timeout == 900
-
-
-def test_run_particles_falls_back_to_params_timeout(sim, tmp_path):
+def test_run_particles_hands_the_model_its_timeout(sim, tmp_path):
     with pytest.raises(RuntimeError):
-        _run(sim(600), tmp_path)
-    assert _StopDriver.seen["timeout"] == 600
-
-
-def test_explicit_timeout_wins_over_params(sim, tmp_path):
-    with pytest.raises(RuntimeError):
-        _run(sim(600), tmp_path, timeout=30)
+        _run(sim(), tmp_path, timeout=30)
     assert _StopDriver.seen["timeout"] == 30
 
 
-def test_no_timeout_configured_still_waits_indefinitely(sim, tmp_path):
+def test_no_timeout_waits_indefinitely(sim, tmp_path):
     with pytest.raises(RuntimeError):
-        _run(sim(None), tmp_path)
+        _run(sim(), tmp_path)
     assert _StopDriver.seen["timeout"] is None

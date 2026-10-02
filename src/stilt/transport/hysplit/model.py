@@ -34,7 +34,12 @@ class HysplitModel:
         return hysplit_version(params.exe_dir)
 
     def run(
-        self, receptor: Receptor, params: STILTParams, met: Met, workdir: Path
+        self,
+        receptor: Receptor,
+        params: STILTParams,
+        met: Met,
+        workdir: Path,
+        timeout: int | None = None,
     ) -> ModelRun:
         """Write the input files, run ``hycs_std``, and return the particles."""
         source = met.required_files(r_time=receptor.time, n_hours=params.n_hours)
@@ -45,7 +50,7 @@ class HysplitModel:
             met_files=met.readable(source),
         )
         driver.prepare()
-        result = driver.execute(timeout=params.timeout, rm_dat=params.rm_dat)
+        result = driver.execute(timeout=timeout)
         # The record names the source files; the crop settings are in the
         # run's settings.
         return ModelRun(particles=result.particles, met_files=source)
