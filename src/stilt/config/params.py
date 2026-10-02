@@ -549,11 +549,6 @@ class ErrorParams(BaseModel):
         """HYSPLIT ``WINDERRTF`` flag: 1 for wind errors, 2 for mixed-layer errors, 3 for both."""
         return (self.winderr is not None) + 2 * (self.zierr is not None)
 
-    @property
-    def error_enabled(self) -> bool:
-        """Whether wind or mixed-layer errors are set, making this a perturbed run."""
-        return self.winderrtf > 0
-
 
 class STILTParams(ModelParams, TransportParams, ErrorParams):
     """
@@ -610,18 +605,6 @@ class STILTParams(ModelParams, TransportParams, ErrorParams):
         value works with both builds.
         """
         return -(abs(seed) + 1)
-
-    def realization_seed(self, realization: int) -> int | None:
-        """
-        Return the seed for one realization of a variant.
-
-        Realization ``k`` runs with ``seed + k``, so realization 0 uses the
-        configured seed, as STILT-R's single error run does. Returns ``None``
-        when no seed is set.
-        """
-        if self.seed is None:
-            return None
-        return self.seed + realization
 
     @property
     def ziscale_factors(self) -> list[float] | None:

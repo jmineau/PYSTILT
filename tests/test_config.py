@@ -81,25 +81,6 @@ def test_winderrtf_partial_zi_raises():
         ErrorParams(sigzierr=0.6, tlzierr=60.0)  # missing horcorzierr
 
 
-def test_error_enabled_false_by_default():
-    assert ErrorParams().error_enabled is False
-
-
-def test_error_enabled_true_when_xy_params_set():
-    e = ErrorParams(siguverr=1.0, tluverr=60.0, zcoruverr=500.0, horcoruverr=40.0)
-    assert e.error_enabled is True
-
-
-def test_error_enabled_true_when_zi_params_set():
-    e = ErrorParams(sigzierr=0.6, tlzierr=60.0, horcorzierr=40.0)
-    assert e.error_enabled is True
-
-
-# ---------------------------------------------------------------------------
-# STILTParams - flat construction and maxpar default
-# ---------------------------------------------------------------------------
-
-
 def test_stilt_params_flat_construction():
     """STILTParams accepts all fields flat (no met fields)."""
     p = STILTParams(
@@ -261,12 +242,6 @@ def test_setup_entries_map_seed_to_negative_namelist_value():
     assert STILTParams.setup_seed(42) == -43
 
 
-def test_realization_seeds_are_distinct_and_start_at_the_main_seed():
-    p = STILTParams(seed=42, krand=2)
-    assert [p.realization_seed(k) for k in range(3)] == [42, 43, 44]
-    assert STILTParams().realization_seed(0) is None
-
-
 @pytest.mark.parametrize("krand", [0, 1, 3, 4, 10, 13])
 def test_seed_requires_krand_2(krand):
     with pytest.raises(ValueError, match="requires krand=2"):
@@ -344,15 +319,20 @@ def test_model_config_rejects_met_keys_that_cannot_name_a_variant(tmp_path):
         ProjectConfig(mets={"hrrr_v2": mc})
 
 
+def _default_footprint(cfg):
+    """The footprint settings of the first variant, which inherits the defaults."""
+    return next(iter(cfg.resolve_variants().values())).footprint
+
+
 def test_model_config_footprint_fields_are_flat(tmp_path, grid):
     """The footprint settings sit beside the transport ones and form the footprint."""
     mc = MetConfig(directory=tmp_path / "met", file_format="%Y%m%d_%H", file_tres="1h")
     cfg = ProjectConfig(mets={"hrrr": mc}, grid=grid, smooth_factor=0.5)
-    foot = cfg.footprint
+    foot = _default_footprint(cfg)
     assert foot is not None
     assert foot.grid == grid
     assert foot.smooth_factor == 0.5
-    assert ProjectConfig(mets={"hrrr": mc}).footprint is None
+    assert _default_footprint(ProjectConfig(mets={"hrrr": mc})) is None
 
 
 # ---------------------------------------------------------------------------
@@ -450,8 +430,10 @@ def test_model_config_yaml_roundtrip_with_footprint(tmp_path, grid):
     path = tmp_path / "config.yaml"
     cfg.to_yaml(path)
     loaded = ProjectConfig.from_yaml(path)
-    assert loaded.footprint is not None
-    assert loaded.footprint.model_dump() == cfg.footprint.model_dump()
+    assert _default_footprint(loaded) is not None
+    assert (
+        _default_footprint(loaded).model_dump() == _default_footprint(cfg).model_dump()
+    )
 
 
 def _met_config(tmp_path):
@@ -768,7 +750,7 @@ def test_model_config_yaml_roundtrip_with_geometry(tmp_path):
         numpar=100,
         geometry={"kind": "file", "path": str(shp), "ids": "NAME"},
     )
-    fc = config.footprint
+    fc = next(iter(config.resolve_variants().values())).footprint
     assert fc is not None
     assert fc.grid.xres == pytest.approx(0.02)  # 0.1 / 4 -> 0.025 -> 0.02
     assert fc.geometry is not None and fc.geometry.kind == "file"
@@ -776,7 +758,7 @@ def test_model_config_yaml_roundtrip_with_geometry(tmp_path):
     path = tmp_path / "config.yaml"
     config.to_yaml(path)
     loaded = ProjectConfig.from_yaml(path)
-    lfc = loaded.footprint
+    lfc = next(iter(loaded.resolve_variants().values())).footprint
     assert lfc is not None
     assert lfc.grid == fc.grid
     assert lfc.geometry == fc.geometry
@@ -939,7 +921,7 @@ def test_realizations_expand_into_numbered_variants_with_their_own_seed(tmp_path
     assert list(variants) == ["hrrr", "err-0", "err-1", "err-2"]
     assert [variants[f"err-{k}"].transport.seed for k in range(3)] == [42, 43, 44]
     assert all(variants[f"err-{k}"].group == "err" for k in range(3))
-    assert [variants[f"err-{k}"].realization for k in range(3)] == [0, 1, 2]
+    assert [variants[f"err-{k}"].transport.realization for k in range(3)] == [0, 1, 2]
     assert variants["err-1"].transport.winderrtf == 1
     assert variants["hrrr"].transport.winderrtf == 0
 
@@ -964,7 +946,7 @@ def test_declaring_realizations_always_makes_a_group(tmp_path):
     cfg = _variant_config(tmp_path, variants={"e": {"realizations": 1}, "single": {}})
     assert list(cfg.resolve_variants()) == ["e-0", "single"]
     assert cfg.resolve_variants()["e-0"].group == "e"
-    assert cfg.resolve_variants()["single"].realization is None
+    assert cfg.resolve_variants()["single"].transport.realization is None
 
 
 def test_realization_names_may_not_collide_with_declared_variants(tmp_path):
@@ -1098,7 +1080,6 @@ def test_each_geometry_is_built_once_and_not_on_load(tmp_path, monkeypatch):
     assert len(calls) == 2  # the default geometry and the one of "src"
     inherited = [variants[n].footprint for n in ("hrrr", "np50", "err-0", "err-1")]
     assert all(f is not None and f.grid == inherited[0].grid for f in inherited)
-    assert cfg.footprint == inherited[0]
     assert len(calls) == 2
 
 
@@ -1127,7 +1108,8 @@ def test_resolved_settings_do_not_build_again(monkeypatch):
 
 def test_to_yaml_does_not_write_the_derived_grid(tmp_path):
     cfg = _variant_config(tmp_path, geometry=_WINDOWS)
-    assert cfg.footprint is not None and cfg.footprint.grid is not None
+    foot = _default_footprint(cfg)
+    assert foot is not None and foot.grid is not None
     text = cfg.to_yaml()
     assert "geometry:" in text
     assert "grid:" not in text and "geometry_hash" not in text

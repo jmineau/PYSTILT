@@ -230,7 +230,9 @@ def _archive_met(tmp_path: Path, **kwargs) -> Met:
 
 def _files(met: Met) -> list[Path]:
     """Return the files one simulation at the test time reads."""
-    return met.files(r_time=dt.datetime(2023, 1, 1, 12), n_hours=-1)
+    return met.readable(
+        met.required_files(r_time=dt.datetime(2023, 1, 1, 12), n_hours=-1)
+    )
 
 
 def _fake_extract(text: str = "cropped"):
@@ -395,7 +397,9 @@ def test_readable_returns_local_files_where_they_are(tmp_path):
     met = _make_met(source_dir, "%Y%m%d_%H", "1h")
 
     assert met.readable([src]) == [src]
-    assert met.files(r_time=dt.datetime(2023, 1, 1, 12), n_hours=-1) == [src]
+    assert met.readable(
+        met.required_files(r_time=dt.datetime(2023, 1, 1, 12), n_hours=-1)
+    ) == [src]
     assert sorted(p.name for p in tmp_path.iterdir()) == ["met"]
 
 

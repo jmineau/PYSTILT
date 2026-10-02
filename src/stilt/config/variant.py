@@ -42,10 +42,6 @@ class VariantConfig(BaseModel):
     name: str = Field(description="Variant name its simulations run under.")
     group: str = Field(description="Variant name as declared in ``config.yaml``.")
     met: str = Field(description="Name of the meteorology this variant runs with.")
-    realization: int | None = Field(
-        None,
-        description="Realization number within ``group``. ``None`` for a single run.",
-    )
     transport: TransportSettings = Field(
         description=(
             "Everything that decides the particles. Its hash names the run in "
@@ -247,7 +243,6 @@ def _expand_realizations(
             name=name,
             group=group,
             met=met_name,
-            realization=realization,
             transport=TransportSettings.build(p, met, realization=realization),
             footprint=footprint,
         )
@@ -271,7 +266,10 @@ def _expand_realizations(
             raise ValueError(
                 f"Variant {name!r} collides with realization {k} of {group!r}"
             )
-        out.append(variant(name, k, params.realization_seed(k)))
+        # Realization k runs with seed + k, so realization 0 uses the
+        # configured seed, as STILT-R's single error run does.
+        seed = None if params.seed is None else params.seed + k
+        out.append(variant(name, k, seed))
     return out
 
 

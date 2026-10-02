@@ -310,6 +310,10 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   ([#80](https://github.com/jmineau/PYSTILT/issues/80)).
 - `stilt.execution.sigterm_as_interrupt`, now private. The worker uses it to
   clean up when Slurm stops a task.
+- `validate_vertical_reference`, `Met.files`, `ErrorParams.error_enabled`
+  (use `winderrtf > 0`), `ProjectConfig.footprint` (use a variant's
+  `footprint`), `VariantConfig.realization` (use
+  `variant.transport.realization`), and `STILTParams.realization_seed`.
 - `read_footprint(config=)`. A footprint file records its own settings,
   and the output folder reads it like any other file. Footprint files
   written before files recorded their settings need them added first.

@@ -98,16 +98,6 @@ class ProjectConfig(STILTParams, FootprintConfig):
         values["geometry"] = self.geometry
         return values
 
-    @property
-    def footprint(self) -> FootprintConfig | None:
-        """The default footprint settings, resolved, or ``None`` without a grid or geometry."""
-        settings = FootprintConfig(
-            **{name: getattr(self, name) for name in FootprintConfig.model_fields}
-        )
-        if settings.grid is None and settings.geometry is None:
-            return None
-        return settings.resolve()
-
     def resolve_variants(self) -> dict[str, VariantConfig]:
         """
         Return one :class:`VariantConfig` per simulation name, in declared order.
