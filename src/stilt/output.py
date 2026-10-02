@@ -686,7 +686,7 @@ class Footprints:
 
         Returns ``None`` for an empty footprint (see :meth:`empty_reason`).
         """
-        return read_footprint(self.file(receptor_id), config=self.config)
+        return read_footprint(self.file(receptor_id))
 
     # -- many receptors at once --------------------------------------------
 

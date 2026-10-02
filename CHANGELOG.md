@@ -310,6 +310,9 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   ([#80](https://github.com/jmineau/PYSTILT/issues/80)).
 - `stilt.execution.sigterm_as_interrupt`, now private. The worker uses it to
   clean up when Slurm stops a task.
+- `read_footprint(config=)`. A footprint file records its own settings,
+  and the output folder reads it like any other file. Footprint files
+  written before files recorded their settings need them added first.
 - `Particles.find_footprints(config)`. `Output.find_footprints` now takes a
   variant: `output.find_footprints(variant)`.
 - `Simulation.is_backward` (`sim.time_range` gives the period either way)

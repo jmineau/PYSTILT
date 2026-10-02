@@ -556,3 +556,19 @@ def test_a_stored_footprint_file_opens_on_its_own(tmp_path):
     xr.testing.assert_identical(alone, feet.read(str(receptor.id)))
     assert alone.stilt.grid == GRID
     assert alone.stilt.receptor == receptor
+
+
+def test_a_footprint_file_without_its_settings_is_refused(tmp_path):
+    """The folder reads each file alone, so a file must record its settings."""
+    import pyarrow.parquet as pq
+
+    run = Output(tmp_path / "output").particles("hrrr", SETTINGS)
+    feet = run.footprints(FootprintConfig(grid=GRID))
+    receptor = _receptor()
+    path = feet.write(_footprint(receptor, seed=3))
+    table = pq.read_table(path)
+    meta = {k: v for k, v in table.schema.metadata.items() if k != b"stilt:footprint"}
+    pq.write_table(table.replace_schema_metadata(meta), path)
+
+    with pytest.raises(ValueError, match="does not record its footprint settings"):
+        feet.read(str(receptor.id))
