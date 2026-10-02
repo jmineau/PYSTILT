@@ -140,6 +140,22 @@ def test_stored_settings_re_validate_to_the_same_hash(tmp_path):
     assert TransportSettings.model_validate(stored).hash != settings.hash
 
 
+def test_a_folder_with_a_setting_this_version_lacks_still_loads(tmp_path):
+    """A setting removed after a folder was written is ignored, so the folder is found."""
+    settings = TransportSettings.build(STILTParams(numpar=100), _met(tmp_path))
+    folder = Output(tmp_path / "out").particles("hrrr", settings)
+    record_path = folder.path / "_settings.yaml"
+    record = yaml.safe_load(record_path.read_text())
+    record["settings"]["removed_setting"] = 3
+    record["settings"]["model"]["removed_too"] = "x"
+    record_path.write_text(yaml.safe_dump(record))
+
+    found = Output(tmp_path / "out").find_particles(settings)
+    assert found is not None and found.key == folder.key
+    with pytest.raises(ValueError, match="removed_setting"):
+        TransportSettings.model_validate(record["settings"])
+
+
 def test_variants_that_differ_only_in_footprint_fields_share_settings(tmp_path):
     met = _met(tmp_path)
     config = ProjectConfig(
