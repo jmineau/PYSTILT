@@ -12,7 +12,7 @@ from stilt.config import (
     Grid,
     MetConfig,
     ProjectConfig,
-    STILTParams,
+    TransportParams,
 )
 from stilt.receptors import ColumnReceptor, MultiPointReceptor, PointReceptor
 
@@ -157,8 +157,8 @@ def met_config(tmp_path):
 
 @pytest.fixture
 def stilt_params(tmp_path):
-    """Minimal STILTParams for use in simulation tests."""
-    return STILTParams(
+    """Minimal TransportParams for use in simulation tests."""
+    return TransportParams(
         n_hours=-24,
         numpar=100,
     )

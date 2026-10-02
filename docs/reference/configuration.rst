@@ -43,17 +43,14 @@ directory HYSPLIT runs in. It never changes a result.
 Parameters
 ----------
 
-The STILT and HYSPLIT settings, in three groups. :class:`STILTParams`
-combines them.
+The settings that shape a run's particles, flat in ``config.yaml``. Most
+are HYSPLIT's own, under HYSPLIT's names.
 
 .. autosummary::
    :toctree: _api
    :nosignatures:
 
-   ModelParams
    TransportParams
-   ErrorParams
-   STILTParams
 
 
 Geometry specifications

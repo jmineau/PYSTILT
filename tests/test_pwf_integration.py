@@ -18,7 +18,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from stilt.config import MetConfig, STILTParams
+from stilt.config import MetConfig, TransportParams
 from stilt.meteorology import Met
 from stilt.particles import prepare
 from stilt.receptors import ColumnReceptor
@@ -50,7 +50,7 @@ def _column_trajectory(
     receptor = ColumnReceptor(
         time=time, longitude=WBB_LON, latitude=WBB_LAT, bottom=0.0, top=top
     )
-    params = STILTParams(n_hours=-2, numpar=numpar, hnf_plume=False, rm_dat=True)
+    params = TransportParams(n_hours=-2, numpar=numpar, hnf_plume=False, rm_dat=True)
     met_files = Met(
         "hrrr",
         MetConfig(

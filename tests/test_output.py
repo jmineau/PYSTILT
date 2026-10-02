@@ -13,7 +13,7 @@ from stilt.config import (
     FootprintConfig,
     Grid,
     MetConfig,
-    STILTParams,
+    TransportParams,
     TransportSettings,
 )
 from stilt.config.transport import settings_hash
@@ -33,7 +33,7 @@ MET = MetConfig(directory="/data/hrrr", file_format="%Y%m%d_%H", file_tres="6h")
 
 def _settings(**overrides) -> TransportSettings:
     """Transport settings for the tests; *overrides* change the transport fields."""
-    params = STILTParams(**{"n_hours": -24, "numpar": 100, **overrides})
+    params = TransportParams(**{"n_hours": -24, "numpar": 100, **overrides})
     return TransportSettings.build(params, MET)
 
 
@@ -50,7 +50,7 @@ def _receptor(hour: int = 12, day: int = 15) -> PointReceptor:
 
 
 #: Transport settings recorded in the test particle files.
-PARAMS = STILTParams(n_hours=-24, numpar=50)
+PARAMS = TransportParams(n_hours=-24, numpar=50)
 
 
 def _trajectories(receptor: PointReceptor, n: int = 50) -> pd.DataFrame:

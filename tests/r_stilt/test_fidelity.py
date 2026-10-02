@@ -32,8 +32,7 @@ import pandas as pd
 import pytest
 import xarray as xr
 
-from stilt.config import STILTParams
-from stilt.transport.hysplit.driver import _bundled_exe_dir
+from stilt.transport.hysplit.driver import _bundled_exe_dir, setup_seed
 
 from ..conftest import integration
 from ..fixtures.r_stilt_reference import (
@@ -297,8 +296,8 @@ def test_setup_cfg_pins_krand_and_seed(scenario_outputs: dict) -> None:
         f"[{s.name}] krand={s.krand} not found in SETUP.CFG"
     )
     # PYSTILT writes -(|seed|+1): the value HYSPLIT's generator honours
-    assert f"seed={STILTParams.setup_seed(s.seed)}" in content, (
-        f"[{s.name}] seed={STILTParams.setup_seed(s.seed)} not found in SETUP.CFG"
+    assert f"seed={setup_seed(s.seed)}" in content, (
+        f"[{s.name}] seed={setup_seed(s.seed)} not found in SETUP.CFG"
     )
 
 

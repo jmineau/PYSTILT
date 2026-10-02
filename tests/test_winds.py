@@ -4,9 +4,10 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from stilt.config import ErrorParams
+from stilt.config import TransportParams
 from stilt.observations import VariogramFit, fit_variogram, variogram
 from stilt.observations.selection import _haversine_km
+from stilt.transport.hysplit.driver import winderrtf
 
 
 def _ar1(n: int, sigma: float, length: float, step: float, rng) -> np.ndarray:
@@ -187,7 +188,7 @@ def test_recipe_recovers_known_scales():
     assert zcoruverr == pytest.approx(l_z, rel=0.2)
     assert tluverr == pytest.approx(l_t, rel=0.2)
     assert horcoruverr == pytest.approx(l_x, rel=0.25)
-    params = ErrorParams(
+    params = TransportParams(
         siguverr=siguverr, tluverr=tluverr, zcoruverr=zcoruverr, horcoruverr=horcoruverr
     )
-    assert params.winderrtf == 1
+    assert winderrtf(params) == 1

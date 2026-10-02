@@ -15,10 +15,8 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from stilt.config import (
-    STILTParams,
-    kmsl_from_vertical_reference,
-)
+from stilt.config import TransportParams, kmsl_from_vertical_reference
+from stilt.config.params import fields_in
 from stilt.exceptions import (
     HYSPLITFailureError,
     HYSPLITNotFoundError,
@@ -119,6 +117,81 @@ class HYSPLITResult:
     log_path: Path
 
 
+# -- what each input file holds -----------------------------------------------
+
+
+def setup_entries(params: TransportParams) -> dict[str, Any]:
+    """
+    Return the ``SETUP.CFG`` namelist entries of *params*, leaving out unset ones.
+
+    The driver adds ``KMSL``, ``IVMAX``, and ``WINDERRTF``, which depend on
+    the receptor or follow from other settings.
+    """
+    entries = {
+        name: getattr(params, name)
+        for name in fields_in("SETUP.CFG")
+        if getattr(params, name) is not None
+    }
+    entries.setdefault("maxpar", params.numpar)
+    entries["zicontroltf"] = zicontroltf(params)
+    if params.seed is not None:
+        entries["seed"] = setup_seed(params.seed)
+    return entries
+
+
+def setup_seed(seed: int) -> int:
+    """
+    Return the ``SEED`` value written to ``SETUP.CFG`` for a user seed.
+
+    HYSPLIT sets its generator state to ``-1 + SEED``. Under ``krand=2`` it
+    reinitializes only from a negative state, and every state of -1 or more
+    gives the same stream. Writing ``-(|seed| + 1)`` puts the state at
+    ``-(|seed| + 2)``. That is negative, different for each ``|seed|``, and
+    never the unseeded default (``SEED = 0``). A patched HYSPLIT that uses
+    ``SEED`` directly maps a negative ``SEED`` to the same state, so the
+    value works with both builds.
+    """
+    return -(abs(seed) + 1)
+
+
+def ziscale_factors(params: TransportParams) -> list[float] | None:
+    """
+    Return the hourly mixed-layer factors for ``ZICONTROL``, or ``None`` when unscaled.
+
+    A single ``ziscale`` value is repeated for every hour of the run and a
+    list is used as given. Factors that are all 1.0 give ``None``.
+    """
+    if isinstance(params.ziscale, int | float):
+        values = [float(params.ziscale)] * max(abs(params.n_hours), 1)
+    else:
+        values = [float(v) for v in params.ziscale]
+    if all(v == 1.0 for v in values):
+        return None
+    return values
+
+
+def zicontroltf(params: TransportParams) -> int:
+    """Return HYSPLIT's ``ZICONTROLTF`` flag: 1 when ``ziscale`` scales the mixed layer."""
+    return int(ziscale_factors(params) is not None)
+
+
+def winderr(params: TransportParams) -> list[float] | None:
+    """Return the ``WINDERR`` values, in the file's order, or ``None`` when unset."""
+    values = [getattr(params, name) for name in fields_in("WINDERR")]
+    return None if values[0] is None else values
+
+
+def zierr(params: TransportParams) -> list[float] | None:
+    """Return the ``ZIERR`` values, in the file's order, or ``None`` when unset."""
+    values = [getattr(params, name) for name in fields_in("ZIERR")]
+    return None if values[0] is None else values
+
+
+def winderrtf(params: TransportParams) -> int:
+    """Return HYSPLIT's ``WINDERRTF`` flag: 1 for wind errors, 2 for mixed-layer errors, 3 for both."""
+    return (winderr(params) is not None) + 2 * (zierr(params) is not None)
+
+
 def _write_values(path: Path, values: list[float] | None) -> None:
     """Write one value per line to ``path``, or remove it when ``values`` is ``None``."""
     if values is None:
@@ -140,7 +213,7 @@ class HYSPLITDriver:
     ----------
     receptor : Receptor
         Receptor to release particles from.
-    params : STILTParams
+    params : TransportParams
         Transport and error settings.
     met_files : list of Path
         Meteorology files, in the order HYSPLIT should read them.
@@ -156,7 +229,7 @@ class HYSPLITDriver:
     def __init__(
         self,
         receptor: Receptor,
-        params: STILTParams,
+        params: TransportParams,
         met_files: list[Path],
         directory: Path | None = None,
         exe_dir: Path | None = None,
@@ -179,7 +252,7 @@ class HYSPLITDriver:
         self.receptor = receptor
         self.params = params
         self.met_files = met_files
-        # explicit argument > STILTParams.exe_dir > binary bundled with the package
+        # explicit argument > TransportParams.exe_dir > binary bundled with the package
         chosen = exe_dir if exe_dir is not None else params.exe_dir
         self.exe_dir = Path(chosen) if chosen is not None else _bundled_exe_dir()
         self.data_dir = Path(data_dir) if data_dir is not None else _bundled_data_dir()
@@ -201,7 +274,7 @@ class HYSPLITDriver:
         if not exe.is_file():
             raise HYSPLITNotFoundError(
                 f"No {HYCS_STD_FILE!r} executable in {self.exe_dir}. "
-                "Check STILTParams.exe_dir."
+                "Check TransportParams.exe_dir."
             )
         # A reused simulation directory may still point at a different build.
         if self.hycs_std_path.is_symlink() and (
@@ -362,10 +435,10 @@ class HYSPLITDriver:
 
     def _write_setup(self) -> None:
         """Write ``SETUP.CFG``."""
-        entries = self.params.setup_entries()
+        entries = setup_entries(self.params)
         entries["kmsl"] = self._resolved_kmsl()
         entries["ivmax"] = len(self.params.varsiwant)  # number of output variables
-        entries["winderrtf"] = self.params.winderrtf
+        entries["winderrtf"] = winderrtf(self.params)
 
         nl = NameList("SETUP")
         nl.update(entries)
@@ -385,15 +458,15 @@ class HYSPLITDriver:
 
     def _write_winderr(self) -> None:
         """Write ``WINDERR`` when wind perturbations are enabled, else remove it."""
-        _write_values(self.winderr_path, self.params.winderr)
+        _write_values(self.winderr_path, winderr(self.params))
 
     def _write_zierr(self) -> None:
         """Write ``ZIERR`` when mixed-layer perturbations are enabled, else remove it."""
-        _write_values(self.zierr_path, self.params.zierr)
+        _write_values(self.zierr_path, zierr(self.params))
 
     def _write_zicontrol(self) -> None:
         """Write ``ZICONTROL`` when ``ziscale`` scales the mixed layer, else remove it."""
-        values = self.params.ziscale_factors
+        values = ziscale_factors(self.params)
         if values is None:
             self.zicontrol_path.unlink(missing_ok=True)
             return

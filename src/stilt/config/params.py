@@ -1,19 +1,54 @@
-"""STILT and HYSPLIT run parameters."""
+"""
+The transport settings of a run.
+
+:class:`TransportParams` holds every setting that shapes a run's particles.
+Most are HYSPLIT's own (written to its ``SETUP.CFG``, ``CONTROL``,
+``ZICONTROL``, ``WINDERR``, and ``ZIERR`` files, under the same names); a few
+are used by PYSTILT itself. Each field records which, as
+``json_schema_extra={"file": ...}``, and :func:`fields_in` lists them. The
+HYSPLIT driver writes the files from that, so adding a setting is one field.
+"""
 
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, ClassVar, Literal, Self
+from typing import Any, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+#: Where a setting goes: one of HYSPLIT's input files, or PYSTILT itself.
+SETUP: dict[str, Any] = {"file": "SETUP.CFG"}
+CONTROL: dict[str, Any] = {"file": "CONTROL"}
+ZICONTROL: dict[str, Any] = {"file": "ZICONTROL"}
+WINDERR: dict[str, Any] = {"file": "WINDERR"}
+ZIERR: dict[str, Any] = {"file": "ZIERR"}
+PYSTILT: dict[str, Any] = {"file": "PYSTILT"}
 
-class ModelParams(BaseModel):
-    """Simulation length, particle count, and particle output settings."""
+#: Most hourly ZICONTROL factors HYSPLIT can hold (``ZIPRESC(150)`` in
+#: hymodelc.F); it reads more without a bounds check.
+MAX_ZISCALE_HOURS = 150
+
+
+class TransportParams(BaseModel):
+    """
+    Every setting that shapes a run's particles.
+
+    In ``config.yaml`` they are flat, top-level keys, and a variant may
+    override any of them. Most are HYSPLIT ``SETUP.CFG`` entries with
+    HYSPLIT's own names; see the HYSPLIT user guide for the full meaning of
+    each. The wind-error group (``siguverr``, ``tluverr``, ``zcoruverr``,
+    ``horcoruverr``) perturbs the particles' winds, and the mixed-layer group
+    (``sigzierr``, ``tlzierr``, ``horcorzierr``) perturbs each particle's
+    footprint by a random mixed-layer height error. Each group is set in full
+    or not at all.
+    """
+
+    model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
 
     n_hours: int = Field(
         -24,
         description="Length of each simulation, in hours. Negative runs backward in time.",
+        json_schema_extra=CONTROL,
     )
     numpar: int = Field(
         200,
@@ -21,6 +56,7 @@ class ModelParams(BaseModel):
             "Number of particles released per simulation. More particles give a "
             "less noisy footprint and take longer to run."
         ),
+        json_schema_extra=SETUP,
     )
     hnf_plume: bool = Field(
         True,
@@ -31,6 +67,7 @@ class ModelParams(BaseModel):
             "``varsiwant`` to include ``dens``, ``tlgr``, ``sigw``, ``foot``, "
             "``mlht``, and ``samt``."
         ),
+        json_schema_extra=PYSTILT,
     )
     exe_dir: Path | None = Field(
         None,
@@ -41,6 +78,7 @@ class ModelParams(BaseModel):
             "``PARTICLE_STILT.DAT`` gives exact release heights for multipoint "
             "and slant receptors."
         ),
+        json_schema_extra=PYSTILT,
     )
     varsiwant: list[
         Literal[
@@ -94,17 +132,8 @@ class ModelParams(BaseModel):
             "The default is the set footprints need, plus ``pres`` for "
             "pressure weighting."
         ),
+        json_schema_extra=SETUP,
     )
-
-
-class TransportParams(BaseModel):
-    """
-    HYSPLIT transport and turbulence settings.
-
-    Most of these are ``SETUP.CFG`` namelist entries with HYSPLIT's own
-    names. See the HYSPLIT user guide for the full meaning of each.
-    """
-
     capemin: float = Field(
         -1.0,
         description=(
@@ -112,64 +141,101 @@ class TransportParams(BaseModel):
             "scheme, and a positive value mixes vertically when CAPE exceeds "
             "it, in J/kg."
         ),
+        json_schema_extra=SETUP,
     )
     cmass: int = Field(
         0,
         description="Compute grid concentrations (0) or grid mass (1).",
+        json_schema_extra=SETUP,
     )
     conage: int = Field(
-        48, description="Particle age at which particles and puffs convert, in hours."
+        48,
+        description="Particle age at which particles and puffs convert, in hours.",
+        json_schema_extra=SETUP,
     )
-    cpack: int = Field(1, description="Packing of the binary concentration grid.")
+    cpack: int = Field(
+        1,
+        description="Packing of the binary concentration grid.",
+        json_schema_extra=SETUP,
+    )
     delt: float = Field(
         1.0,
         description=(
             "Integration time step, in minutes. 0 lets HYSPLIT choose; a "
             "negative value sets the minimum step."
         ),
+        json_schema_extra=SETUP,
     )
     dxf: float = Field(
-        1.0, description="Horizontal x-grid offset factor for ensemble runs."
+        1.0,
+        description="Horizontal x-grid offset factor for ensemble runs.",
+        json_schema_extra=SETUP,
     )
     dyf: float = Field(
-        1.0, description="Horizontal y-grid offset factor for ensemble runs."
+        1.0,
+        description="Horizontal y-grid offset factor for ensemble runs.",
+        json_schema_extra=SETUP,
     )
     dzf: float = Field(
         0.01,
         description="Vertical offset factor for ensemble runs (0.01 is about 250 m).",
+        json_schema_extra=SETUP,
     )
     efile: str = Field(
         "",
         description="Name of a time-varying emissions file. Blank uses none.",
+        json_schema_extra=SETUP,
     )
     emisshrs: float = Field(
         0.01,
         description="Duration of the particle release, in hours.",
+        json_schema_extra=CONTROL,
     )
     frhmax: float = Field(
-        3.0, description="Maximum horizontal puff-rounding parameter."
+        3.0,
+        description="Maximum horizontal puff-rounding parameter.",
+        json_schema_extra=SETUP,
     )
     frhs: float = Field(
-        1.0, description="Horizontal puff-rounding fraction for merging."
+        1.0,
+        description="Horizontal puff-rounding fraction for merging.",
+        json_schema_extra=SETUP,
     )
-    frme: float = Field(0.1, description="Mass-rounding fraction for enhanced merging.")
-    frmr: float = Field(0.0, description="Mass-removal fraction for enhanced merging.")
-    frts: float = Field(0.1, description="Temporal puff-rounding fraction.")
-    frvs: float = Field(0.01, description="Vertical puff-rounding fraction.")
+    frme: float = Field(
+        0.1,
+        description="Mass-rounding fraction for enhanced merging.",
+        json_schema_extra=SETUP,
+    )
+    frmr: float = Field(
+        0.0,
+        description="Mass-removal fraction for enhanced merging.",
+        json_schema_extra=SETUP,
+    )
+    frts: float = Field(
+        0.1, description="Temporal puff-rounding fraction.", json_schema_extra=SETUP
+    )
+    frvs: float = Field(
+        0.01, description="Vertical puff-rounding fraction.", json_schema_extra=SETUP
+    )
     hscale: float = Field(
-        10800.0, description="Horizontal Lagrangian timescale, in seconds."
+        10800.0,
+        description="Horizontal Lagrangian timescale, in seconds.",
+        json_schema_extra=SETUP,
     )
     ichem: int = Field(
         8,
         description="HYSPLIT chemistry and output mode. 8 is the STILT emulation mode.",
+        json_schema_extra=SETUP,
     )
     idsp: int = Field(
         2,
         description="Particle dispersion scheme: 1 for HYSPLIT, 2 for STILT.",
+        json_schema_extra=SETUP,
     )
     initd: int = Field(
         0,
         description="Initial distribution as particles, puffs, or a mix. 0 is 3D particles.",
+        json_schema_extra=SETUP,
     )
     k10m: int = Field(
         1,
@@ -177,10 +243,12 @@ class TransportParams(BaseModel):
             "Use the 10 m winds and 2 m temperature as the lowest meteorology "
             "level (1) or skip them (0)."
         ),
+        json_schema_extra=SETUP,
     )
     kagl: int = Field(
         1,
         description="Write trajectory heights above ground (1) or above sea level (0).",
+        json_schema_extra=SETUP,
     )
     kbls: int = Field(
         1,
@@ -188,6 +256,7 @@ class TransportParams(BaseModel):
             "Derive boundary-layer stability from surface fluxes (1) or from "
             "wind and temperature profiles (2)."
         ),
+        json_schema_extra=SETUP,
     )
     kblt: int = Field(
         5,
@@ -195,20 +264,28 @@ class TransportParams(BaseModel):
             "Boundary-layer turbulence scheme: 1 Beljaars, 2 Kantha-Clayson, "
             "3 TKE, 4 measured variances, 5 Hanna."
         ),
+        json_schema_extra=SETUP,
     )
     kdef: int = Field(
         0,
         description="Horizontal turbulence from vertical mixing (0) or wind deformation (1).",
+        json_schema_extra=SETUP,
     )
     khinp: int = Field(
         0,
         description="Age, in hours, given to particles read from ``pinpf``. 0 keeps their own age.",
+        json_schema_extra=SETUP,
     )
     khmax: int = Field(
         9999,
         description="Maximum particle or trajectory age, in hours.",
+        json_schema_extra=SETUP,
     )
-    kmix0: int = Field(150, description="Minimum mixed-layer depth, in meters.")
+    kmix0: int = Field(
+        150,
+        description="Minimum mixed-layer depth, in meters.",
+        json_schema_extra=SETUP,
+    )
     kmixd: int = Field(
         3,
         description=(
@@ -216,6 +293,7 @@ class TransportParams(BaseModel):
             "temperature profile, 2 from the TKE profile, 3 from a modified "
             "Richardson number."
         ),
+        json_schema_extra=SETUP,
     )
     kmsl: Literal[0, 1] | None = Field(
         None,
@@ -224,9 +302,12 @@ class TransportParams(BaseModel):
             "Unset takes it from each receptor's ``altitude_ref``, and a value "
             "that disagrees with a receptor is an error."
         ),
+        json_schema_extra=SETUP,
     )
     kpuff: int = Field(
-        0, description="Horizontal puff growth: linear (0) or empirical (1)."
+        0,
+        description="Horizontal puff growth: linear (0) or empirical (1).",
+        json_schema_extra=SETUP,
     )
     krand: Literal[0, 1, 2, 3, 4, 10, 11, 12, 13] = Field(
         4,
@@ -241,6 +322,7 @@ class TransportParams(BaseModel):
             "check this value and other values silently break the turbulence, "
             "so PYSTILT rejects them."
         ),
+        json_schema_extra=SETUP,
     )
     seed: int | None = Field(
         None,
@@ -255,12 +337,20 @@ class TransportParams(BaseModel):
             "with ``seed + k``, so realization 0 shares the unperturbed run's "
             "seed, as STILT-R's error run does."
         ),
+        json_schema_extra=SETUP,
     )
-    krnd: int = Field(6, description="Enhanced-merging interval, in hours.")
-    kspl: int = Field(1, description="Standard puff-splitting interval, in hours.")
+    krnd: int = Field(
+        6, description="Enhanced-merging interval, in hours.", json_schema_extra=SETUP
+    )
+    kspl: int = Field(
+        1,
+        description="Standard puff-splitting interval, in hours.",
+        json_schema_extra=SETUP,
+    )
     kwet: int = Field(
         1,
         description="Precipitation from the meteorology (1) or from an external ARL file (2).",
+        json_schema_extra=SETUP,
     )
     kzmix: int = Field(
         0,
@@ -268,30 +358,42 @@ class TransportParams(BaseModel):
             "Vertical mixing adjustment: 0 none, 1 a single PBL-average value, "
             "2 scale by ``tvmix``."
         ),
+        json_schema_extra=SETUP,
     )
     maxdim: int = Field(
         1,
         description="Maximum number of pollutant species carried on one particle.",
+        json_schema_extra=SETUP,
     )
     maxpar: int | None = Field(
         None,
         description="Maximum number of particles in a simulation. Unset uses ``numpar``.",
+        json_schema_extra=SETUP,
     )
     mgmin: int = Field(
-        10, description="Minimum meteorological subgrid size, in grid points."
+        10,
+        description="Minimum meteorological subgrid size, in grid points.",
+        json_schema_extra=SETUP,
     )
-    mhrs: int = Field(9999, description="Trajectory restart duration limit, in hours.")
+    mhrs: int = Field(
+        9999,
+        description="Trajectory restart duration limit, in hours.",
+        json_schema_extra=SETUP,
+    )
     nbptyp: int = Field(
         1,
         description="Number of particle-size bins per pollutant type.",
+        json_schema_extra=SETUP,
     )
     ncycl: int = Field(
         0,
         description="Cycle time of the particle dump file, in hours.",
+        json_schema_extra=SETUP,
     )
     ndump: int = Field(
         0,
         description="Interval between particle dumps, in hours. 0 writes none.",
+        json_schema_extra=SETUP,
     )
     ninit: int = Field(
         1,
@@ -299,43 +401,61 @@ class TransportParams(BaseModel):
             "Particle initialization from ``pinpf``: 0 none, 1 once at the "
             "start, 2 add every hour, 3 replace every hour."
         ),
+        json_schema_extra=SETUP,
     )
-    nstr: int = Field(0, description="Trajectory restart interval, in hours.")
+    nstr: int = Field(
+        0, description="Trajectory restart interval, in hours.", json_schema_extra=SETUP
+    )
     nturb: int = Field(
         0,
         description="Turbulence on (0) or off (1).",
+        json_schema_extra=SETUP,
     )
-    nver: int = Field(0, description="Trajectory vertical split number.")
+    nver: int = Field(
+        0, description="Trajectory vertical split number.", json_schema_extra=SETUP
+    )
     outdt: int = Field(
         0,
         description=(
             "Interval between particle outputs in ``PARTICLE_STILT.DAT``, in "
             "minutes. 0 writes every time step and a negative value writes none."
         ),
+        json_schema_extra=SETUP,
     )
-    p10f: float = Field(1.0, description="Dust threshold velocity sensitivity factor.")
+    p10f: float = Field(
+        1.0,
+        description="Dust threshold velocity sensitivity factor.",
+        json_schema_extra=SETUP,
+    )
     pinbc: str = Field(
         "",
         description="Particle input file for time-varying boundary conditions.",
+        json_schema_extra=SETUP,
     )
     pinpf: str = Field(
         "",
         description="Particle input file for initialization or boundary-condition runs.",
+        json_schema_extra=SETUP,
     )
     poutf: str = Field(
         "",
         description="Particle output file name.",
+        json_schema_extra=SETUP,
     )
     qcycle: float = Field(
-        0.0, description="Emission cycling period, in hours. 0 turns cycling off."
+        0.0,
+        description="Emission cycling period, in hours. 0 turns cycling off.",
+        json_schema_extra=SETUP,
     )
     rhb: int = Field(
         80,
         description="Relative humidity that defines a cloud base, in percent.",
+        json_schema_extra=SETUP,
     )
     rht: int = Field(
         60,
         description="Relative humidity that defines a cloud top, in percent.",
+        json_schema_extra=SETUP,
     )
     splitf: float = Field(
         1.0,
@@ -343,12 +463,17 @@ class TransportParams(BaseModel):
             "Factor for the automatic horizontal splitting size. A negative "
             "value turns the automatic sizing off."
         ),
+        json_schema_extra=SETUP,
     )
     tkerd: float = Field(
-        0.18, description="Ratio w'²/(u'²+v'²) of TKE components when unstable."
+        0.18,
+        description="Ratio w'²/(u'²+v'²) of TKE components when unstable.",
+        json_schema_extra=SETUP,
     )
     tkern: float = Field(
-        0.18, description="Ratio w'²/(u'²+v'²) of TKE components when stable."
+        0.18,
+        description="Ratio w'²/(u'²+v'²) of TKE components when stable.",
+        json_schema_extra=SETUP,
     )
     tlfrac: float = Field(
         0.1,
@@ -356,18 +481,22 @@ class TransportParams(BaseModel):
             "Fraction of the vertical Lagrangian timescale used as the time "
             "step of the STILT dispersion scheme."
         ),
+        json_schema_extra=SETUP,
     )
     tout: int = Field(
         0,
         description="Trajectory output interval, in minutes.",
+        json_schema_extra=SETUP,
     )
     tratio: float = Field(
         0.75,
         description="Advection stability ratio (fraction of a grid cell per time step).",
+        json_schema_extra=SETUP,
     )
     tvmix: float = Field(
         1.0,
         description="Vertical mixing scale factor, used by the ``kzmix`` scaling modes.",
+        json_schema_extra=SETUP,
     )
     veght: float = Field(
         0.5,
@@ -376,14 +505,17 @@ class TransportParams(BaseModel):
             "A value of 1 or less is a fraction of the mixed-layer height; a "
             "larger value is meters above ground."
         ),
+        json_schema_extra=SETUP,
     )
     vscale: float = Field(
         200.0,
         description="Vertical Lagrangian timescale, in seconds.",
+        json_schema_extra=SETUP,
     )
     vscaleu: float = Field(
         200.0,
         description="Vertical Lagrangian timescale in an unstable boundary layer, in seconds.",
+        json_schema_extra=SETUP,
     )
     vscales: float = Field(
         -1.0,
@@ -392,6 +524,7 @@ class TransportParams(BaseModel):
             "seconds. -1 uses the Hanna timescale, which varies with the "
             "turbulence, and then ``vscaleu`` is not used."
         ),
+        json_schema_extra=SETUP,
     )
     w_option: int = Field(
         0,
@@ -399,6 +532,7 @@ class TransportParams(BaseModel):
             "Vertical motion method: 0 the meteorology's vertical velocity, "
             "1 isobaric, 2 isentropic, 3 constant density, 4 constant sigma."
         ),
+        json_schema_extra=CONTROL,
     )
     wbbh: float = Field(
         0.0,
@@ -406,22 +540,27 @@ class TransportParams(BaseModel):
             "Height at which the fixed vertical velocity switches from rise to "
             "fall, in meters. Used by vertical motion option 9."
         ),
+        json_schema_extra=SETUP,
     )
     wbwf: float = Field(
         0.0,
         description="Fixed fall velocity, in m/s. Used by vertical motion options 9 and 10.",
+        json_schema_extra=SETUP,
     )
     wbwr: float = Field(
         0.0,
         description="Fixed rise velocity, in m/s. Used by vertical motion option 9.",
+        json_schema_extra=SETUP,
     )
     wvert: bool = Field(
         False,
         description="Interpolate WRF fields vertically with the WRF scheme instead of HYSPLIT's.",
+        json_schema_extra=SETUP,
     )
     z_top: float = Field(
         25000.0,
         description="Top of the model domain, in meters above ground.",
+        json_schema_extra=CONTROL,
     )
     ziscale: float | list[float] = Field(
         1.0,
@@ -434,6 +573,42 @@ class TransportParams(BaseModel):
             "below ``kmix0``. A negative value uses the meteorology's own PBL "
             "height where the met files carry one."
         ),
+        json_schema_extra=ZICONTROL,
+    )
+    siguverr: float | None = Field(
+        None,
+        description="Standard deviation of the horizontal wind error, in m/s.",
+        json_schema_extra=WINDERR,
+    )
+    tluverr: float | None = Field(
+        None,
+        description="Correlation timescale of the horizontal wind error, in minutes.",
+        json_schema_extra=WINDERR,
+    )
+    zcoruverr: float | None = Field(
+        None,
+        description="Vertical correlation length of the horizontal wind error, in meters.",
+        json_schema_extra=WINDERR,
+    )
+    horcoruverr: float | None = Field(
+        None,
+        description="Horizontal correlation length of the horizontal wind error, in km.",
+        json_schema_extra=WINDERR,
+    )
+    sigzierr: float | None = Field(
+        None,
+        description="Standard deviation of the mixed-layer height error, in percent.",
+        json_schema_extra=ZIERR,
+    )
+    tlzierr: float | None = Field(
+        None,
+        description="Correlation timescale of the mixed-layer height error, in minutes.",
+        json_schema_extra=ZIERR,
+    )
+    horcorzierr: float | None = Field(
+        None,
+        description="Horizontal correlation length of the mixed-layer height error, in km.",
+        json_schema_extra=ZIERR,
     )
 
     @field_validator("ziscale", mode="before")
@@ -453,62 +628,10 @@ class TransportParams(BaseModel):
             return value[0]
         return value
 
-
-class ErrorParams(BaseModel):
-    """
-    Transport-error settings for perturbed runs.
-
-    Setting the four wind-error fields perturbs the particles' winds (HYSPLIT's
-    ``WINDERR`` file). Setting the three mixed-layer fields perturbs each
-    particle's footprint by a random mixed-layer height error (``ZIERR``).
-    Each group must be set in full or not at all.
-    """
-
-    siguverr: float | None = Field(
-        None,
-        description="Standard deviation of the horizontal wind error, in m/s.",
-    )
-    tluverr: float | None = Field(
-        None,
-        description="Correlation timescale of the horizontal wind error, in minutes.",
-    )
-    zcoruverr: float | None = Field(
-        None,
-        description="Vertical correlation length of the horizontal wind error, in meters.",
-    )
-    horcoruverr: float | None = Field(
-        None,
-        description="Horizontal correlation length of the horizontal wind error, in km.",
-    )
-    sigzierr: float | None = Field(
-        None,
-        description="Standard deviation of the mixed-layer height error, in percent.",
-    )
-    tlzierr: float | None = Field(
-        None,
-        description="Correlation timescale of the mixed-layer height error, in minutes.",
-    )
-    horcorzierr: float | None = Field(
-        None,
-        description="Horizontal correlation length of the mixed-layer height error, in km.",
-    )
-
-    XYERR_PARAMS: ClassVar[tuple[str, ...]] = (
-        "siguverr",
-        "tluverr",
-        "zcoruverr",
-        "horcoruverr",
-    )
-    ZIERR_PARAMS: ClassVar[tuple[str, ...]] = (
-        "sigzierr",
-        "tlzierr",
-        "horcorzierr",
-    )
-
     @model_validator(mode="after")
     def _validate_error_params(self) -> Self:
         """Require each error group to be set in full or not at all."""
-        for name, fields in (("XY", self.XYERR_PARAMS), ("ZI", self.ZIERR_PARAMS)):
+        for name, fields in (("XY", fields_in("WINDERR")), ("ZI", fields_in("ZIERR"))):
             unset = [getattr(self, f) is None for f in fields]
             if any(unset) and not all(unset):
                 raise ValueError(
@@ -516,123 +639,27 @@ class ErrorParams(BaseModel):
                 )
         return self
 
-    @property
-    def winderr(self) -> list[float] | None:
-        """The wind-error values in ``WINDERR`` order, or ``None`` when unset."""
-        values = [getattr(self, f) for f in self.XYERR_PARAMS]
-        return None if values[0] is None else values
-
-    @property
-    def zierr(self) -> list[float] | None:
-        """The mixed-layer error values in ``ZIERR`` order, or ``None`` when unset."""
-        values = [getattr(self, f) for f in self.ZIERR_PARAMS]
-        return None if values[0] is None else values
-
-    @property
-    def winderrtf(self) -> int:
-        """HYSPLIT ``WINDERRTF`` flag: 1 for wind errors, 2 for mixed-layer errors, 3 for both."""
-        return (self.winderr is not None) + 2 * (self.zierr is not None)
-
-
-class STILTParams(ModelParams, TransportParams, ErrorParams):
-    """
-    All STILT and HYSPLIT run parameters in one flat model.
-
-    Each :class:`TransportParams` field is written to ``SETUP.CFG``, except
-    those in ``CONTROL_FIELDS`` (written to ``CONTROL``) and ``ziscale``
-    (written to ``ZICONTROL``). The :class:`ErrorParams` fields are written to
-    ``WINDERR`` and ``ZIERR``.
-    """
-
-    model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
-
-    #: Fields HYSPLIT reads from CONTROL rather than SETUP.CFG.
-    CONTROL_FIELDS: ClassVar[frozenset[str]] = frozenset(
-        {"n_hours", "emisshrs", "w_option", "z_top"}
-    )
-    #: Fields written to ZICONTROL rather than SETUP.CFG.
-    ZICONTROL_FIELDS: ClassVar[frozenset[str]] = frozenset({"ziscale"})
-    #: Most hourly ZICONTROL factors HYSPLIT can hold (``ZIPRESC(150)`` in
-    #: hymodelc.F); it reads more without a bounds check.
-    MAX_ZISCALE_HOURS: ClassVar[int] = 150
-    #: ModelParams fields that are SETUP.CFG entries.
-    _MODEL_SETUP_FIELDS: ClassVar[frozenset[str]] = frozenset({"numpar", "varsiwant"})
-
-    def setup_entries(self) -> dict[str, Any]:
-        """Return the ``SETUP.CFG`` namelist entries, leaving out unset fields."""
-        names = [
-            *(n for n in ModelParams.model_fields if n in self._MODEL_SETUP_FIELDS),
-            *(
-                n
-                for n in TransportParams.model_fields
-                if n not in self.CONTROL_FIELDS and n not in self.ZICONTROL_FIELDS
-            ),
-        ]
-        entries = {n: getattr(self, n) for n in names if getattr(self, n) is not None}
-        entries.setdefault("maxpar", self.numpar)
-        entries["zicontroltf"] = self.zicontroltf
-        if self.seed is not None:
-            entries["seed"] = self.setup_seed(self.seed)
-        return entries
-
-    @staticmethod
-    def setup_seed(seed: int) -> int:
-        """
-        Return the ``SEED`` value written to ``SETUP.CFG`` for a user seed.
-
-        HYSPLIT sets its generator state to ``-1 + SEED``. Under ``krand=2``
-        it reinitializes only from a negative state, and every state of -1 or
-        more gives the same stream. Writing ``-(|seed| + 1)`` puts the state at
-        ``-(|seed| + 2)``. That is negative, different for each ``|seed|``, and
-        never the unseeded default (``SEED = 0``). A patched HYSPLIT that uses
-        ``SEED`` directly maps a negative ``SEED`` to the same state, so the
-        value works with both builds.
-        """
-        return -(abs(seed) + 1)
-
-    @property
-    def ziscale_factors(self) -> list[float] | None:
-        """
-        Hourly mixed-layer factors for ``ZICONTROL``, or ``None`` when unscaled.
-
-        A single ``ziscale`` value is repeated for every hour of the run and a
-        list is used as given. Factors that are all 1.0 give ``None``.
-        """
-        if isinstance(self.ziscale, int | float):
-            values = [float(self.ziscale)] * max(abs(self.n_hours), 1)
-        else:
-            values = [float(v) for v in self.ziscale]
-        if all(v == 1.0 for v in values):
-            return None
-        return values
-
-    @property
-    def zicontroltf(self) -> int:
-        """HYSPLIT ``ZICONTROLTF`` flag, 1 when ``ziscale`` scales the mixed layer."""
-        return int(self.ziscale_factors is not None)
-
     @model_validator(mode="after")
     def _validate_ziscale(self) -> Self:
-        """Reject ``ziscale`` values that are empty, zero, or longer than 150 hours."""
+        """Reject ziscale values that are empty, zero, or longer than 150 hours."""
         if isinstance(self.ziscale, int | float):
-            values = [float(self.ziscale)]
+            hourly = [float(self.ziscale)] * max(abs(self.n_hours), 1)
         else:
-            values = [float(v) for v in self.ziscale]
-        if not values:
+            hourly = [float(v) for v in self.ziscale]
+        if not hourly:
             raise ValueError("ziscale cannot be empty; use 1.0 for no scaling.")
-        if any(v == 0.0 for v in values):
+        if any(v == 0.0 for v in hourly):
             raise ValueError(
                 "ziscale of 0 would collapse the mixed layer to kmix0. STILT-R "
                 "uses 0 to mean unset; use 1.0 for no scaling."
             )
-        factors = self.ziscale_factors
-        if factors is not None and len(factors) > self.MAX_ZISCALE_HOURS:
+        if any(v != 1.0 for v in hourly) and len(hourly) > MAX_ZISCALE_HOURS:
             raise ValueError(
-                f"ziscale gives {len(factors)} hourly factors, but HYSPLIT holds at "
-                f"most {self.MAX_ZISCALE_HOURS}. A scalar ziscale is repeated for "
+                f"ziscale gives {len(hourly)} hourly factors, but HYSPLIT holds at "
+                f"most {MAX_ZISCALE_HOURS}. A scalar ziscale is repeated for "
                 "every hour, so it needs abs(n_hours) <= "
-                f"{self.MAX_ZISCALE_HOURS}; for longer runs give a list of up to "
-                f"{self.MAX_ZISCALE_HOURS} factors, after which the mixed layer "
+                f"{MAX_ZISCALE_HOURS}; for longer runs give a list of up to "
+                f"{MAX_ZISCALE_HOURS} factors, after which the mixed layer "
                 "is unscaled."
             )
         return self
@@ -662,4 +689,19 @@ class STILTParams(ModelParams, TransportParams, ErrorParams):
         return self
 
 
-__all__ = ["ErrorParams", "ModelParams", "STILTParams", "TransportParams"]
+def fields_in(file: str) -> list[str]:
+    """
+    Return the names of the settings that go to *file*, in declaration order.
+
+    *file* is ``"SETUP.CFG"``, ``"CONTROL"``, ``"ZICONTROL"``, ``"WINDERR"``,
+    ``"ZIERR"``, or ``"PYSTILT"`` for the settings PYSTILT uses itself.
+    """
+    return [
+        name
+        for name, info in TransportParams.model_fields.items()
+        if isinstance(info.json_schema_extra, dict)
+        and info.json_schema_extra.get("file") == file
+    ]
+
+
+__all__ = ["MAX_ZISCALE_HOURS", "TransportParams", "fields_in"]

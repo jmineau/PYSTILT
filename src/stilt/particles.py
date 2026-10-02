@@ -14,7 +14,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 
 from stilt._atomic import write_parquet
-from stilt.config import STILTParams
+from stilt.config import TransportParams
 from stilt.receptors import (
     ColumnReceptor,
     MultiPointReceptor,
@@ -94,7 +94,7 @@ def _multipoint_release_heights(
                     "HYSPLIT build writes no t=0 row, so particles cannot be "
                     "reliably matched to their release points; 'xhgt' may be wrong. "
                     "Use a HYSPLIT build that writes release-time rows "
-                    "(STILTParams.exe_dir) or space the points more than "
+                    "(TransportParams.exe_dir) or space the points more than "
                     f"{_MIN_RELIABLE_SPACING_M:.0f} m apart.",
                     stacklevel=3,
                 )
@@ -103,14 +103,14 @@ def _multipoint_release_heights(
     return cast(pd.Series, p["indx"]).map(mapping.get)
 
 
-def _stored_params(stored: dict[str, Any], path: str | Path) -> STILTParams:
+def _stored_params(stored: dict[str, Any], path: str | Path) -> TransportParams:
     """Return the params stored in a particle file, dropping settings this version does not have."""
-    unknown = sorted(set(stored) - set(STILTParams.model_fields))
+    unknown = sorted(set(stored) - set(TransportParams.model_fields))
     if unknown:
         logger.debug(
             "%s: skipping stored params this version does not have: %s", path, unknown
         )
-    return STILTParams.model_validate(
+    return TransportParams.model_validate(
         {k: v for k, v in stored.items() if k not in unknown}
     )
 
@@ -123,11 +123,13 @@ class ParticleMetadata(NamedTuple):
     """What a particle file records about the HYSPLIT run that made it."""
 
     receptor: Receptor
-    params: STILTParams
+    params: TransportParams
     met_files: list[Path]
 
 
-def prepare(raw: pd.DataFrame, receptor: Receptor, params: STILTParams) -> pd.DataFrame:
+def prepare(
+    raw: pd.DataFrame, receptor: Receptor, params: TransportParams
+) -> pd.DataFrame:
     """
     Return HYSPLIT's particle output as the particle table PYSTILT keeps.
 
@@ -142,7 +144,7 @@ def prepare(raw: pd.DataFrame, receptor: Receptor, params: STILTParams) -> pd.Da
         Particle table read from ``PARTICLE_STILT.DAT``.
     receptor : Receptor
         Receptor the particles were released from.
-    params : STILTParams
+    params : TransportParams
         Transport settings of the run.
 
     Returns
@@ -257,7 +259,7 @@ def write_particles(
     path: str | Path,
     particles: pd.DataFrame,
     receptor: Receptor,
-    params: STILTParams,
+    params: TransportParams,
     met_files: list[Path],
     metadata: dict[bytes, bytes] | None = None,
 ) -> Path:
@@ -277,7 +279,7 @@ def write_particles(
         The particle table.
     receptor : Receptor
         Receptor the particles were released from.
-    params : STILTParams
+    params : TransportParams
         Transport settings of the run.
     met_files : list of Path
         Meteorology files the run used.

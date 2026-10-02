@@ -10,7 +10,7 @@ from stilt.config import (
     Grid,
     MetConfig,
     ProjectConfig,
-    STILTParams,
+    TransportParams,
     TransportSettings,
     VariantConfig,
 )
@@ -75,8 +75,8 @@ def met(met_config) -> Met:
 
 
 @pytest.fixture
-def params() -> STILTParams:
-    return STILTParams(n_hours=-24, numpar=10)
+def params() -> TransportParams:
+    return TransportParams(n_hours=-24, numpar=10)
 
 
 @pytest.fixture

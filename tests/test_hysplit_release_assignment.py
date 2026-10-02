@@ -7,7 +7,7 @@ from pathlib import Path
 
 import numpy as np
 
-from stilt.config import MetConfig, STILTParams
+from stilt.config import MetConfig, TransportParams
 from stilt.meteorology import Met
 from stilt.receptors import ColumnReceptor, MultiPointReceptor
 from stilt.transport.hysplit.driver import HYSPLITDriver
@@ -49,7 +49,7 @@ def test_hysplit_multipoint_release_points_follow_control_order(tmp_path, met_di
         latitudes=[40.5, 40.5, 40.5],
         altitudes=[100.0, 500.0, 900.0],
     )
-    params = STILTParams(
+    params = TransportParams(
         n_hours=-1,
         numpar=12,
         hnf_plume=False,
@@ -109,7 +109,7 @@ def test_hysplit_multipoint_release_points_follow_control_order_nondivisible(
         latitudes=[40.5, 40.5, 40.5],
         altitudes=[100.0, 500.0, 900.0],
     )
-    params = STILTParams(
+    params = TransportParams(
         n_hours=-1,
         numpar=10,
         hnf_plume=False,
@@ -157,7 +157,7 @@ def test_hysplit_column_release_spans_vertical_line_without_endpoint_chunking(
         bottom=5.0,
         top=1000.0,
     )
-    params = STILTParams(
+    params = TransportParams(
         n_hours=-1,
         numpar=12,
         # Seed the release so the column heights are reproducible run-to-run
@@ -228,7 +228,7 @@ def test_close_spaced_slant_release_heights_are_recovered(tmp_path, met_dir):
         latitudes=np.full(n_levels, 40.766),
         altitudes=altitudes,
     )
-    params = STILTParams(n_hours=-1, numpar=200, hnf_plume=False)
+    params = TransportParams(n_hours=-1, numpar=200, hnf_plume=False)
     met_files = Met(
         "hrrr", MetConfig(directory=met_dir, file_format="%Y%m%d_%H", file_tres="6h")
     ).required_files(r_time=receptor.time, n_hours=params.n_hours)

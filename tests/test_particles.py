@@ -8,7 +8,7 @@ import pandas as pd
 import pyarrow.parquet as pq
 import pytest
 
-from stilt.config import STILTParams
+from stilt.config import TransportParams
 from stilt.particles import (
     calc_plume_dilution,
     particles_metadata,
@@ -61,8 +61,8 @@ def _particles_release_rows(
     )
 
 
-def _params(tmp_path, hnf_plume=False) -> STILTParams:
-    return STILTParams(
+def _params(tmp_path, hnf_plume=False) -> TransportParams:
+    return TransportParams(
         n_hours=-24,
         numpar=10,
         hnf_plume=hnf_plume,
@@ -200,7 +200,7 @@ def test_prepare_column_receptor_spans_column_monotonically(tmp_path):
         lats=[40.77] * 12,
     )
     traj = prepare(
-        particles, receptor, STILTParams(n_hours=-24, numpar=12, hnf_plume=False)
+        particles, receptor, TransportParams(n_hours=-24, numpar=12, hnf_plume=False)
     )
 
     expected = [
@@ -266,7 +266,7 @@ def test_prepare_multipoint_receptor_assigns_xhgt_from_release_locations(
         ],
     )
     traj = prepare(
-        particles, receptor, STILTParams(n_hours=-24, numpar=12, hnf_plume=False)
+        particles, receptor, TransportParams(n_hours=-24, numpar=12, hnf_plume=False)
     )
 
     assert "xhgt" in traj.columns
@@ -326,7 +326,7 @@ def test_prepare_multipoint_nondivisible_particle_blocks_follow_release_location
         zagl=[98.0, 104.0, 91.0, 110.0, 512.0, 489.0, 503.0, 497.0, 880.0, 905.0],
     )
     traj = prepare(
-        particles, receptor, STILTParams(n_hours=-24, numpar=10, hnf_plume=False)
+        particles, receptor, TransportParams(n_hours=-24, numpar=10, hnf_plume=False)
     )
 
     assert traj["xhgt"].tolist() == pytest.approx(
@@ -360,7 +360,7 @@ def _prepare(particles, receptor):
     return prepare(
         particles,
         receptor,
-        STILTParams(n_hours=-24, numpar=len(particles), hnf_plume=False),
+        TransportParams(n_hours=-24, numpar=len(particles), hnf_plume=False),
     )
 
 
@@ -593,7 +593,7 @@ def test_calculate_regenerates_a_footprint_on_a_new_grid(tmp_path):
         time="2023-01-01 12:00:00", longitude=-113.5, latitude=39.5, altitude=5.0
     )
     traj = prepare(
-        particles, receptor, STILTParams(n_hours=-2, numpar=n, hnf_plume=False)
+        particles, receptor, TransportParams(n_hours=-2, numpar=n, hnf_plume=False)
     )
     config = FootprintConfig(
         grid=Grid(xmin=-114.0, xmax=-113.0, ymin=39.0, ymax=40.0, xres=0.1, yres=0.1)

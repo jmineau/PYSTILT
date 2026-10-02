@@ -9,7 +9,7 @@ makes that a HYSPLITTimeoutError the execution loop already handles.
 import pytest
 
 from stilt.config import ExecutionConfig
-from stilt.config.params import STILTParams
+from stilt.config.params import TransportParams
 
 
 class _StopDriver:
@@ -51,7 +51,7 @@ def sim(monkeypatch, tmp_path, point_receptor):
     )
 
     def _make():
-        params = STILTParams(n_hours=-24, numpar=10)
+        params = TransportParams(n_hours=-24, numpar=10)
         config = VariantConfig(
             name="hrrr",
             group="hrrr",
@@ -72,7 +72,7 @@ def _run(sim, tmp_path, **kwargs):
 def test_timeout_is_an_execution_setting():
     assert ExecutionConfig().timeout is None
     assert ExecutionConfig(timeout=900).timeout == 900
-    assert "timeout" not in STILTParams.model_fields
+    assert "timeout" not in TransportParams.model_fields
 
 
 def test_run_particles_hands_the_model_its_timeout(sim, tmp_path):

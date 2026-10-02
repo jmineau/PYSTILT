@@ -6,8 +6,6 @@
    '__init__',
    '__weakref__',
    'DEFAULT_TARGET',
-   'XYERR_PARAMS',
-   'ZIERR_PARAMS',
    'construct',
    'copy',
    'dict',

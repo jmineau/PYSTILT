@@ -6,16 +6,20 @@ import pytest
 from pydantic import BaseModel, ConfigDict, ValidationError
 
 from stilt.config import (
-    ErrorParams,
     FootprintConfig,
     Grid,
     MetConfig,
-    ModelParams,
     ProjectConfig,
-    STILTParams,
     TransportParams,
 )
 from stilt.transforms import AveragingKernel, FirstOrderLifetime, PressureWeighting
+from stilt.transport.hysplit.driver import (
+    setup_entries,
+    setup_seed,
+    winderrtf,
+    zicontroltf,
+    ziscale_factors,
+)
 
 
 class ScaleFoot(BaseModel):
@@ -34,26 +38,26 @@ class ScaleFoot(BaseModel):
 SCALE_FOOT_KIND = f"{__name__}.ScaleFoot"
 
 # ---------------------------------------------------------------------------
-# ErrorParams.winderrtf
+# winderrtf
 # ---------------------------------------------------------------------------
 
 
 def test_winderrtf_all_none():
-    assert ErrorParams().winderrtf == 0
+    assert winderrtf(TransportParams()) == 0
 
 
 def test_winderrtf_xy_only():
-    e = ErrorParams(siguverr=1.0, tluverr=60.0, zcoruverr=500.0, horcoruverr=40.0)
-    assert e.winderrtf == 1
+    e = TransportParams(siguverr=1.0, tluverr=60.0, zcoruverr=500.0, horcoruverr=40.0)
+    assert winderrtf(e) == 1
 
 
 def test_winderrtf_zi_only():
-    e = ErrorParams(sigzierr=0.6, tlzierr=60.0, horcorzierr=40.0)
-    assert e.winderrtf == 2
+    e = TransportParams(sigzierr=0.6, tlzierr=60.0, horcorzierr=40.0)
+    assert winderrtf(e) == 2
 
 
 def test_winderrtf_both():
-    e = ErrorParams(
+    e = TransportParams(
         siguverr=1.0,
         tluverr=60.0,
         zcoruverr=500.0,
@@ -62,28 +66,28 @@ def test_winderrtf_both():
         tlzierr=60.0,
         horcorzierr=40.0,
     )
-    assert e.winderrtf == 3
+    assert winderrtf(e) == 3
 
 
 def test_winderrtf_zero_value_params():
     """0.0 error params are set (not None) - winderrtf must still be 1."""
-    e = ErrorParams(siguverr=0.0, tluverr=0.0, zcoruverr=0.0, horcoruverr=0.0)
-    assert e.winderrtf == 1
+    e = TransportParams(siguverr=0.0, tluverr=0.0, zcoruverr=0.0, horcoruverr=0.0)
+    assert winderrtf(e) == 1
 
 
 def test_winderrtf_partial_xy_raises():
     with pytest.raises(ValidationError):
-        ErrorParams(siguverr=1.0)  # only one of four XY params set
+        TransportParams(siguverr=1.0)  # only one of four XY params set
 
 
 def test_winderrtf_partial_zi_raises():
     with pytest.raises(ValidationError):
-        ErrorParams(sigzierr=0.6, tlzierr=60.0)  # missing horcorzierr
+        TransportParams(sigzierr=0.6, tlzierr=60.0)  # missing horcorzierr
 
 
 def test_stilt_params_flat_construction():
-    """STILTParams accepts all fields flat (no met fields)."""
-    p = STILTParams(
+    """TransportParams accepts all fields flat (no met fields)."""
+    p = TransportParams(
         n_hours=-24,
         numpar=500,
     )
@@ -93,77 +97,77 @@ def test_stilt_params_flat_construction():
 
 def test_stilt_params_maxpar_defaults_to_numpar():
     """maxpar stays unset in the config; SETUP.CFG gets numpar in its place."""
-    p = STILTParams(numpar=500)
+    p = TransportParams(numpar=500)
     assert p.maxpar is None
-    assert p.setup_entries()["maxpar"] == 500
-    assert STILTParams(numpar=500, maxpar=800).setup_entries()["maxpar"] == 800
+    assert setup_entries(p)["maxpar"] == 500
+    assert setup_entries(TransportParams(numpar=500, maxpar=800))["maxpar"] == 800
 
 
 def test_stilt_params_ziscale_defaults_to_scalar_one():
-    p = STILTParams()
+    p = TransportParams()
     assert p.ziscale == 1.0
 
 
 def test_zicontroltf_is_derived_from_ziscale():
-    assert STILTParams().zicontroltf == 0
-    assert STILTParams().ziscale_factors is None
-    assert STILTParams(ziscale=[1.0, 1.0]).zicontroltf == 0
-    assert STILTParams(ziscale=0.8).zicontroltf == 1
-    assert STILTParams(ziscale=[1.0, 0.9]).zicontroltf == 1
+    assert zicontroltf(TransportParams()) == 0
+    assert ziscale_factors(TransportParams()) is None
+    assert zicontroltf(TransportParams(ziscale=[1.0, 1.0])) == 0
+    assert zicontroltf(TransportParams(ziscale=0.8)) == 1
+    assert zicontroltf(TransportParams(ziscale=[1.0, 0.9])) == 1
 
 
 def test_ziscale_scalar_repeats_for_every_hour_and_list_is_used_as_given():
-    assert STILTParams(n_hours=-3, ziscale=0.8).ziscale_factors == [0.8, 0.8, 0.8]
-    assert STILTParams(n_hours=-24, ziscale=[0.8]).ziscale_factors == [0.8]
-    assert STILTParams(ziscale=[[0.8, 0.9]]).ziscale_factors == [0.8, 0.9]
+    assert ziscale_factors(TransportParams(n_hours=-3, ziscale=0.8)) == [0.8, 0.8, 0.8]
+    assert ziscale_factors(TransportParams(n_hours=-24, ziscale=[0.8])) == [0.8]
+    assert ziscale_factors(TransportParams(ziscale=[[0.8, 0.9]])) == [0.8, 0.9]
 
 
 def test_setup_entries_write_the_derived_zicontroltf():
-    assert STILTParams().setup_entries()["zicontroltf"] == 0
-    assert STILTParams(ziscale=1.2).setup_entries()["zicontroltf"] == 1
+    assert setup_entries(TransportParams())["zicontroltf"] == 0
+    assert setup_entries(TransportParams(ziscale=1.2))["zicontroltf"] == 1
 
 
 def test_saved_config_no_longer_carries_zicontroltf():
-    assert "zicontroltf" not in STILTParams(ziscale=0.8).model_dump()
+    assert "zicontroltf" not in TransportParams(ziscale=0.8).model_dump()
 
 
 def test_zicontroltf_is_not_a_setting():
     with pytest.raises(ValidationError, match="zicontroltf"):
-        STILTParams(zicontroltf=1)
+        TransportParams(zicontroltf=1)
 
 
 @pytest.mark.parametrize("ziscale", [0.0, [1.0, 0.0]])
 def test_ziscale_zero_is_rejected(ziscale):
     with pytest.raises(ValueError, match="ziscale of 0"):
-        STILTParams(ziscale=ziscale)
+        TransportParams(ziscale=ziscale)
 
 
 def test_ziscale_empty_list_is_rejected():
     with pytest.raises(ValueError, match="cannot be empty"):
-        STILTParams(ziscale=[])
+        TransportParams(ziscale=[])
 
 
 def test_ziscale_rejects_multiple_per_simulation_lists():
     with pytest.raises(ValueError, match="Per-simulation ziscale lists"):
-        STILTParams(ziscale=[[0.8, 0.8], [0.9, 0.9]])
+        TransportParams(ziscale=[[0.8, 0.8], [0.9, 0.9]])
 
 
 def test_ziscale_at_most_150_hourly_factors():
-    assert len(STILTParams(n_hours=-150, ziscale=0.8).ziscale_factors) == 150
-    assert STILTParams(n_hours=-240, ziscale=[0.8] * 150).zicontroltf == 1
+    assert len(ziscale_factors(TransportParams(n_hours=-150, ziscale=0.8))) == 150
+    assert zicontroltf(TransportParams(n_hours=-240, ziscale=[0.8] * 150)) == 1
     with pytest.raises(ValueError, match="at most 150"):
-        STILTParams(n_hours=-151, ziscale=0.8)
+        TransportParams(n_hours=-151, ziscale=0.8)
     with pytest.raises(ValueError, match="at most 150"):
-        STILTParams(ziscale=[0.8] * 151)
+        TransportParams(ziscale=[0.8] * 151)
 
 
 def test_long_run_without_scaling_is_fine():
-    assert STILTParams(n_hours=-240).zicontroltf == 0
+    assert zicontroltf(TransportParams(n_hours=-240)) == 0
 
 
 def test_setup_entries_route_transport_params_to_setup_cfg():
-    p = STILTParams()
-    entries = p.setup_entries()
+    p = TransportParams()
+    entries = setup_entries(p)
 
     assert entries["numpar"] == p.numpar
     assert entries["varsiwant"] == p.varsiwant
@@ -207,7 +211,7 @@ HYSPLIT_SETUP_TYPES = {
 
 
 def test_hysplit_setup_types_cover_every_setup_entry():
-    entries = STILTParams(seed=1, krand=2, kmsl=0).setup_entries()
+    entries = setup_entries(TransportParams(seed=1, krand=2, kmsl=0))
     assert set(entries) == set(HYSPLIT_SETUP_TYPES)
 
 
@@ -216,7 +220,7 @@ def test_hysplit_setup_types_cover_every_setup_entry():
 )
 def test_real_setup_fields_accept_fractions(name):
     # HYSPLIT reads these as REAL, so a fractional value is valid.
-    assert STILTParams(**{name: 0.5}).setup_entries()[name] == 0.5
+    assert setup_entries(TransportParams(**{name: 0.5}))[name] == 0.5
 
 
 @pytest.mark.parametrize(
@@ -224,52 +228,52 @@ def test_real_setup_fields_accept_fractions(name):
     [
         n
         for n, t in HYSPLIT_SETUP_TYPES.items()
-        if t == "INTEGER" and n in STILTParams.model_fields
+        if t == "INTEGER" and n in TransportParams.model_fields
     ],
 )
 def test_integer_setup_fields_reject_fractions(name):
     # HYSPLIT stops with a namelist read error on a fractional INTEGER.
     with pytest.raises(ValidationError):
-        STILTParams(**{name: 0.5})
+        TransportParams(**{name: 0.5})
 
 
 def test_setup_entries_map_seed_to_negative_namelist_value():
     # HYSPLIT's ran1 re-initializes only from a negative value; -(|seed|+1)
     # keeps every seed distinct and off the unseeded default (state 1).
-    assert STILTParams(seed=17, krand=2).setup_entries()["seed"] == -18
-    assert STILTParams(seed=-17, krand=2).setup_entries()["seed"] == -18
-    assert STILTParams(seed=0, krand=2).setup_entries()["seed"] == -1
-    assert STILTParams.setup_seed(42) == -43
+    assert setup_entries(TransportParams(seed=17, krand=2))["seed"] == -18
+    assert setup_entries(TransportParams(seed=-17, krand=2))["seed"] == -18
+    assert setup_entries(TransportParams(seed=0, krand=2))["seed"] == -1
+    assert setup_seed(42) == -43
 
 
 @pytest.mark.parametrize("krand", [0, 1, 3, 4, 10, 13])
 def test_seed_requires_krand_2(krand):
     with pytest.raises(ValueError, match="requires krand=2"):
-        STILTParams(seed=1, krand=krand)
+        TransportParams(seed=1, krand=krand)
 
 
 @pytest.mark.parametrize("krand", [0, 1, 2, 3, 4, 10, 11, 12, 13])
 def test_krand_accepts_hysplit_modes(krand):
-    assert STILTParams(krand=krand).krand == krand
+    assert TransportParams(krand=krand).krand == krand
 
 
 @pytest.mark.parametrize("krand", [-1, 5, 9, 14, 20])
 def test_krand_rejects_undocumented_values(krand):
     with pytest.raises(ValueError, match="krand"):
-        STILTParams(krand=krand)
+        TransportParams(krand=krand)
 
 
-def test_control_and_zicontrol_fields_are_transport_params():
-    for name in STILTParams.CONTROL_FIELDS - {"n_hours"}:
-        assert name in TransportParams.model_fields
-    assert "n_hours" in ModelParams.model_fields
-    for name in STILTParams.ZICONTROL_FIELDS:
-        assert name in TransportParams.model_fields
+def test_each_setting_records_the_file_it_goes_to():
+    from stilt.config.params import fields_in
 
-
-# ---------------------------------------------------------------------------
-# MetConfig - construction
-# ---------------------------------------------------------------------------
+    assert fields_in("CONTROL") == ["n_hours", "emisshrs", "w_option", "z_top"]
+    assert fields_in("ZICONTROL") == ["ziscale"]
+    assert fields_in("WINDERR") == ["siguverr", "tluverr", "zcoruverr", "horcoruverr"]
+    assert fields_in("ZIERR") == ["sigzierr", "tlzierr", "horcorzierr"]
+    assert fields_in("PYSTILT") == ["hnf_plume", "exe_dir"]
+    files = {"SETUP.CFG", "CONTROL", "ZICONTROL", "WINDERR", "ZIERR", "PYSTILT"}
+    assert sum(len(fields_in(f)) for f in files) == len(TransportParams.model_fields)
+    assert fields_in("SETUP.CFG")[:2] == ["numpar", "varsiwant"]
 
 
 def test_met_config_construction(tmp_path):
@@ -933,8 +937,8 @@ def test_realizations_expand_into_numbered_variants_with_their_own_seed(tmp_path
     assert [variants[f"err-{k}"].transport.seed for k in range(3)] == [42, 43, 44]
     assert all(variants[f"err-{k}"].group == "err" for k in range(3))
     assert [variants[f"err-{k}"].transport.realization for k in range(3)] == [0, 1, 2]
-    assert variants["err-1"].transport.winderrtf == 1
-    assert variants["hrrr"].transport.winderrtf == 0
+    assert winderrtf(variants["err-1"].transport) == 1
+    assert winderrtf(variants["hrrr"].transport) == 0
 
 
 @pytest.mark.parametrize("krand", [0, 1, 2, 3, 12])
@@ -1141,8 +1145,8 @@ def test_maxpar_follows_each_variants_numpar(tmp_path):
         tmp_path, numpar=1000, variants={"hrrr": {}, "np3k": {"numpar": 3000}}
     )
     variants = cfg.resolve_variants()
-    assert variants["hrrr"].transport.setup_entries()["maxpar"] == 1000
-    assert variants["np3k"].transport.setup_entries()["maxpar"] == 3000
+    assert setup_entries(variants["hrrr"].transport)["maxpar"] == 1000
+    assert setup_entries(variants["np3k"].transport)["maxpar"] == 3000
     # A run's identity holds the value HYSPLIT got, so an unset maxpar equals
     # numpar and a variant that raises numpar is a different run.
     assert variants["hrrr"].transport.identity()["maxpar"] == 1000

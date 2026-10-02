@@ -11,11 +11,11 @@ from pydantic import ConfigDict, Field, model_validator
 from .execution import ExecutionConfig
 from .footprint import FootprintConfig
 from .meteorology import MetConfig
-from .params import STILTParams
+from .params import TransportParams
 from .variant import VARIANT_NAME_RE, VariantConfig, check_variants, expand_variants
 
 
-class ProjectConfig(STILTParams, FootprintConfig):
+class ProjectConfig(TransportParams, FootprintConfig):
     """
     A project's configuration, as read from ``config.yaml``.
 
@@ -84,7 +84,9 @@ class ProjectConfig(STILTParams, FootprintConfig):
 
     def defaults(self) -> dict[str, Any]:
         """Return the default transport and footprint parameters every variant starts from."""
-        parameters = set(STILTParams.model_fields) | set(FootprintConfig.model_fields)
+        parameters = set(TransportParams.model_fields) | set(
+            FootprintConfig.model_fields
+        )
         values = self.model_dump(include=parameters)
         # Keep the geometry spec itself, so the variants that inherit it share
         # one spec and build its mesh once.
