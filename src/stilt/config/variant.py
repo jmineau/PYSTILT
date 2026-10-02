@@ -14,9 +14,10 @@ from __future__ import annotations
 
 import re
 from collections.abc import Mapping
-from typing import Any, Self
+from dataclasses import dataclass
+from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field
 
 from .footprint import FootprintConfig
 from .meteorology import MetConfig
@@ -54,19 +55,38 @@ class VariantConfig(BaseModel):
         description="Footprint settings, or ``None`` for particles only (``grid: null``).",
     )
 
-    @model_validator(mode="after")
-    def _validate_name(self) -> Self:
-        """Require names that are safe as directory names."""
-        for value in (self.name, self.group):
-            if not VARIANT_NAME_RE.fullmatch(value):
-                raise ValueError(
-                    f"Variant name {value!r} must match {VARIANT_NAME_RE.pattern}"
-                )
-        return self
-
 
 _TRANSPORT_FIELDS = frozenset(STILTParams.model_fields)
 _FOOTPRINT_FIELDS = frozenset(FootprintConfig.model_fields)
+
+
+@dataclass(frozen=True)
+class _Plan:
+    """One declared variant, checked: its met, transport parameters, footprint, and realizations."""
+
+    group: str
+    met_name: str
+    met: MetConfig
+    transport_fields: dict[str, Any]
+    params: STILTParams
+    footprint: FootprintConfig | None
+    realizations: int | None
+
+
+def check_variants(
+    declared: dict[str, dict[str, Any]],
+    defaults: dict[str, Any],
+    mets: Mapping[str, MetConfig],
+) -> None:
+    """
+    Raise if a variant declaration is invalid, without building any variant.
+
+    It checks names, mets, settings, and realizations, but does not look up
+    the HYSPLIT build, so a config can be loaded on a machine where
+    ``exe_dir`` is not reachable. Takes the arguments of
+    :func:`expand_variants`.
+    """
+    _plan(declared, defaults, mets)
 
 
 def expand_variants(
@@ -96,14 +116,21 @@ def expand_variants(
         no grid yet. :meth:`~stilt.config.ProjectConfig.resolve_variants`
         resolves them.
     """
-    for group in declared:
+    return {v.name: v for plan in _plan(declared, defaults, mets) for v in _build(plan)}
+
+
+def _plan(
+    declared: dict[str, dict[str, Any]],
+    defaults: dict[str, Any],
+    mets: Mapping[str, MetConfig],
+) -> list[_Plan]:
+    """Check every declared variant and return what each one builds from."""
+    plans = []
+    for group, spec in declared.items():
         if not VARIANT_NAME_RE.fullmatch(group):
             raise ValueError(
                 f"Variant name {group!r} must match {VARIANT_NAME_RE.pattern}"
             )
-
-    runs: dict[str, list[VariantConfig]] = {}
-    for group, spec in declared.items():
         spec = dict(spec or {})
         if "from" in spec:
             raise ValueError(
@@ -119,11 +146,22 @@ def expand_variants(
             if realizations < 1:
                 raise ValueError(f"Variant {group!r}: realizations must be >= 1")
         merged = _override(group, defaults, spec)
-        runs[group] = _expand_realizations(
-            group, merged, met_name, mets[met_name], realizations, declared
+        transport_fields, footprint_fields = _split(group, merged)
+        params = STILTParams(**transport_fields)
+        if realizations is not None:
+            _check_realizations(group, params, realizations, declared)
+        plans.append(
+            _Plan(
+                group=group,
+                met_name=met_name,
+                met=mets[met_name],
+                transport_fields=transport_fields,
+                params=params,
+                footprint=_footprint(group, footprint_fields),
+                realizations=realizations,
+            )
         )
-
-    return {v.name: v for group in declared for v in runs[group]}
+    return plans
 
 
 def _met_name(group: str, spec: dict[str, Any], mets: Mapping[str, MetConfig]) -> str:
@@ -214,41 +252,13 @@ def _footprint(name: str, fields: dict[str, Any]) -> FootprintConfig | None:
     return None
 
 
-def _expand_realizations(
+def _check_realizations(
     group: str,
-    merged: dict[str, Any],
-    met_name: str,
-    met: MetConfig,
-    realizations: int | None,
+    params: STILTParams,
+    realizations: int,
     declared: dict[str, dict[str, Any]],
-) -> list[VariantConfig]:
-    """
-    Return the variant, or its realizations when ``realizations`` is declared.
-
-    Realization ``k`` is named ``<group>-k`` and runs with ``seed + k``. A
-    group of one is still ``<group>-0``, so raising ``realizations`` later
-    only adds simulations.
-    """
-    transport_fields, footprint_fields = _split(group, merged)
-    params = STILTParams(**transport_fields)
-    footprint = _footprint(group, footprint_fields)
-
-    def variant(name: str, realization: int | None, seed: int | None) -> VariantConfig:
-        p = (
-            params
-            if realization is None
-            else STILTParams(**{**transport_fields, "seed": seed})
-        )
-        return VariantConfig(
-            name=name,
-            group=group,
-            met=met_name,
-            transport=TransportSettings.build(p, met, realization=realization),
-            footprint=footprint,
-        )
-
-    if realizations is None:
-        return [variant(group, None, params.seed)]
+) -> None:
+    """Raise unless *realizations* runs of *params* would differ and their names are free."""
     if realizations > 1 and not (
         params.krand == 4 or (params.krand == 2 and params.seed is not None)
     ):
@@ -259,23 +269,56 @@ def _expand_realizations(
             "PYSTILT gives each realization its own seed. Any other mode would "
             "repeat the same perturbation."
         )
-    out = []
     for k in range(realizations):
         name = f"{group}-{k}"
         if name in declared:
             raise ValueError(
                 f"Variant {name!r} collides with realization {k} of {group!r}"
             )
-        # Realization k runs with seed + k, so realization 0 uses the
-        # configured seed, as STILT-R's single error run does.
-        seed = None if params.seed is None else params.seed + k
-        out.append(variant(name, k, seed))
-    return out
+
+
+def _build(plan: _Plan) -> list[VariantConfig]:
+    """
+    Return the variant, or its realizations when ``realizations`` is declared.
+
+    Realization ``k`` is named ``<group>-k`` and runs with ``seed + k``, so
+    realization 0 uses the configured seed, as STILT-R's single error run
+    does. A group of one is still ``<group>-0``, so raising ``realizations``
+    later only adds simulations.
+    """
+
+    def variant(
+        name: str, realization: int | None, params: STILTParams
+    ) -> VariantConfig:
+        return VariantConfig(
+            name=name,
+            group=plan.group,
+            met=plan.met_name,
+            transport=TransportSettings.build(
+                params, plan.met, realization=realization
+            ),
+            footprint=plan.footprint,
+        )
+
+    if plan.realizations is None:
+        return [variant(plan.group, None, plan.params)]
+    seed = plan.params.seed
+    return [
+        variant(
+            f"{plan.group}-{k}",
+            k,
+            STILTParams(
+                **{**plan.transport_fields, "seed": None if seed is None else seed + k}
+            ),
+        )
+        for k in range(plan.realizations)
+    ]
 
 
 __all__ = [
     "UNRECORDED_FIELDS",
     "VARIANT_NAME_RE",
     "VariantConfig",
+    "check_variants",
     "expand_variants",
 ]
