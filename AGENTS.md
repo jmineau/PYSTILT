@@ -122,7 +122,9 @@ src/stilt/
                      CF-1.8 NetCDF, and the `.stilt` xarray accessor
                      (enhancement from a flux field, aggregation)
   flux.py            sampling a flux field at points or along particles
-  geometry.py        aggregation targets (meshes, zones) and overlap weights
+  spatial.py         where things are: bounds, the footprint Grid, the
+                     aggregation targets (Mesh, Zones), CRS helpers
+                     (one is_longlat), and overlap weights
   meteorology.py     Met: ARL file discovery, download, and cropping (via arlmet)
   transforms.py      pre-footprint particle transforms (averaging kernel,
                      pressure weighting, lifetime decay) and their YAML I/O
