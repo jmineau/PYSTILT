@@ -148,6 +148,23 @@ class TransportSettings(STILTParams):
             realization=realization,
         )
 
+    @classmethod
+    def from_stored(cls, stored: Mapping[str, Any]) -> Self:
+        """
+        Return the settings a ``_settings.yaml`` records, ignoring fields this version does not have.
+
+        A setting removed from PYSTILT after a folder was written is dropped
+        here, so the folder still loads, and lookup re-hashes what is left.
+        A ``config.yaml`` is read strictly instead, so a typo there is an
+        error.
+        """
+        known = {k: v for k, v in stored.items() if k in cls.model_fields}
+        if isinstance(known.get("model"), Mapping):
+            known["model"] = {
+                k: v for k, v in known["model"].items() if k in ModelInfo.model_fields
+            }
+        return cls.model_validate(known)
+
     def identity(self) -> dict[str, Any]:
         """
         Return the settings that identify the run, in canonical form.

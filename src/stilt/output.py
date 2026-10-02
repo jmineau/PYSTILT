@@ -319,7 +319,7 @@ class Particles:
         record = yaml.safe_load((self.path / SETTINGS_FILE).read_text()) or {}
         self.name: str = record["name"]
         #: The settings the particles were made with, re-validated by the current model.
-        self.settings = TransportSettings.model_validate(record["settings"])
+        self.settings = TransportSettings.from_stored(record["settings"])
         #: Hash of the re-validated settings (see :meth:`Output.find_particles`).
         self.hash: str = self.settings.hash
 
