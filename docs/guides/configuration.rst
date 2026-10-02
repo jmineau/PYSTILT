@@ -183,7 +183,7 @@ folder no variant uses any more.
 If you want to keep both, give the new settings a new name instead:
 add ``hrrr-zi08: {ziscale: 0.8}`` and leave ``hrrr`` as it was. Then only
 the new variant runs, and you can select both when you load results, for
-example ``sel(variant=["hrrr", "hrrr-zi08"])``. Each folder's
+example ``sims[sims.variant.isin(["hrrr", "hrrr-zi08"])]``. Each folder's
 ``_settings.yaml`` shows what it ran with.
 
 Some settings do not change a result, so changing them changes no folder:
