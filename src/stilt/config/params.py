@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, ClassVar, Literal, Self
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class ModelParams(BaseModel):
@@ -439,7 +439,7 @@ class TransportParams(BaseModel):
         25000.0,
         description="Top of the model domain, in meters above ground.",
     )
-    ziscale: float | list[float] | list[list[float]] = Field(
+    ziscale: float | list[float] = Field(
         1.0,
         description=(
             "Factor applied to the mixed-layer height, written to HYSPLIT's "
@@ -451,6 +451,23 @@ class TransportParams(BaseModel):
             "height where the met files carry one."
         ),
     )
+
+    @field_validator("ziscale", mode="before")
+    @classmethod
+    def _flatten_ziscale(cls, value: Any) -> Any:
+        """
+        Read STILT-R's one-element nested list, ``[[0.8, 0.9]]``, as ``[0.8, 0.9]``.
+
+        Both mean the same factors, so they must hash the same.
+        """
+        if isinstance(value, list) and value and isinstance(value[0], list):
+            if len(value) != 1:
+                raise ValueError(
+                    "Per-simulation ziscale lists are not supported. Pass one shared "
+                    "list of hourly factors for all simulations."
+                )
+            return value[0]
+        return value
 
 
 class ErrorParams(BaseModel):
@@ -617,7 +634,7 @@ class STILTParams(ModelParams, TransportParams, ErrorParams):
         if isinstance(self.ziscale, int | float):
             values = [float(self.ziscale)] * max(abs(self.n_hours), 1)
         else:
-            values = _hourly_ziscale(self.ziscale)
+            values = [float(v) for v in self.ziscale]
         if all(v == 1.0 for v in values):
             return None
         return values
@@ -633,7 +650,7 @@ class STILTParams(ModelParams, TransportParams, ErrorParams):
         if isinstance(self.ziscale, int | float):
             values = [float(self.ziscale)]
         else:
-            values = _hourly_ziscale(self.ziscale)
+            values = [float(v) for v in self.ziscale]
         if not values:
             raise ValueError("ziscale cannot be empty; use 1.0 for no scaling.")
         if any(v == 0.0 for v in values):
@@ -676,19 +693,6 @@ class STILTParams(ModelParams, TransportParams, ErrorParams):
                     f"hnf_plume=True requires varsiwant to include: {sorted(missing)}"
                 )
         return self
-
-
-def _hourly_ziscale(raw: list[float] | list[list[float]]) -> list[float]:
-    """Flatten a ``ziscale`` list, allowing STILT-R's one-element nested form."""
-    items: list[Any] = list(raw)
-    if items and isinstance(items[0], list):
-        if len(items) != 1:
-            raise ValueError(
-                "Per-simulation ziscale lists are not supported. Pass one shared "
-                "list of hourly factors for all simulations."
-            )
-        items = list(items[0])
-    return [float(v) for v in items]
 
 
 __all__ = ["ErrorParams", "ModelParams", "STILTParams", "TransportParams"]

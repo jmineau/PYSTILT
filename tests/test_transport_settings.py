@@ -140,6 +140,17 @@ def test_stored_settings_re_validate_to_the_same_hash(tmp_path):
     assert TransportSettings.model_validate(stored).hash != settings.hash
 
 
+def test_nested_and_flat_ziscale_are_one_run(tmp_path):
+    """STILT-R's ``[[0.8, 0.9]]`` and ``[0.8, 0.9]`` are the same factors and the same hash."""
+    met = _met(tmp_path)
+    flat = TransportSettings.build(STILTParams(ziscale=[0.8, 0.9]), met)
+    nested = TransportSettings.build(STILTParams(ziscale=[[0.8, 0.9]]), met)
+    assert nested.ziscale == [0.8, 0.9]
+    assert nested.hash == flat.hash
+    with pytest.raises(ValueError, match="Per-simulation"):
+        STILTParams(ziscale=[[0.8], [0.9]])
+
+
 def test_a_folder_with_a_setting_this_version_lacks_still_loads(tmp_path):
     """A setting removed after a folder was written is ignored, so the folder is found."""
     settings = TransportSettings.build(STILTParams(numpar=100), _met(tmp_path))
