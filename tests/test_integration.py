@@ -304,7 +304,12 @@ def test_footprint_only_variant_rasterizes_the_same_particles(
     assert fine.has_footprint and coarse.has_footprint
     assert coarse._particle_set == fine._particle_set  # one set of particles
     assert len(model.output.particle_sets()) == 1
-    assert {f.name for f in fine._particle_set.footprint_sets()} == {"hrrr", "coarse"}
+    made_from_fine = [
+        f
+        for f in model.output.footprint_sets()
+        if f.particles_key == fine._particle_set.key
+    ]
+    assert {f.name for f in made_from_fine} == {"hrrr", "coarse"}
     assert coarse.footprint is not None and fine.footprint is not None
     assert coarse.footprint.stilt.grid.xres == 0.05
     assert fine.footprint.stilt.grid.xres == 0.01

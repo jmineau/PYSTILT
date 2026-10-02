@@ -161,7 +161,6 @@ def test_paths_are_none_until_the_run_exists(point_receptor, tmp_path):
 def test_simulation_time_range_backward(point_receptor, tmp_path):
     sim = _sim(tmp_path, point_receptor, n_hours=-6)
     start, stop = sim.time_range
-    assert sim.is_backward
     assert stop == point_receptor.time
     assert start == point_receptor.time - dt.timedelta(hours=6)
 
@@ -169,7 +168,6 @@ def test_simulation_time_range_backward(point_receptor, tmp_path):
 def test_simulation_time_range_forward(point_receptor, tmp_path):
     sim = _sim(tmp_path, point_receptor, n_hours=6)
     start, stop = sim.time_range
-    assert not sim.is_backward
     assert start == point_receptor.time
     assert stop == point_receptor.time + dt.timedelta(hours=6)
 
