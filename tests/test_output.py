@@ -266,14 +266,13 @@ def test_footprint_folder_is_variant_name_and_combined_hash(tmp_path):
     )
     assert other.path != feet.path
     assert other.key.startswith("hrrr-smooth-")
-    assert set(run.footprint_sets()) == {feet, other}
     assert set(out.footprint_sets()) == {feet, other}
+    assert {f.particles_key for f in out.footprint_sets()} == {run.key}
     assert run.footprints(config) == feet
 
     # The same footprint settings on other particles are another folder.
     other_run = out.particles("hrrr", _settings(numpar=200))
     assert other_run.footprints(config).path != feet.path
-    assert other_run.footprint_sets() != run.footprint_sets()
 
 
 def test_footprint_round_trip_is_exact_in_float32(tmp_path):

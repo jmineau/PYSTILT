@@ -310,6 +310,9 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   ([#80](https://github.com/jmineau/PYSTILT/issues/80)).
 - `stilt.execution.sigterm_as_interrupt`, now private. The worker uses it to
   clean up when Slurm stops a task.
+- `Simulation.is_backward` (`sim.time_range` gives the period either way)
+  and `Particles.footprint_sets()` (filter `Output.footprint_sets()` by
+  `particles_key`).
 - Reading receptors stored with their kind under `"type"`, as particle
   and footprint files from the old `simulations/by-id/` layout do.
   `Receptor.from_dict` needs the `kind` key.

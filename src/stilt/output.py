@@ -424,10 +424,6 @@ class Particles:
 
     # -- footprints --------------------------------------------------------
 
-    def footprint_sets(self) -> list[Footprints]:
-        """Return the footprint folders made from these particles."""
-        return [f for f in self.output.footprint_sets() if f.particles_key == self.key]
-
     def find_footprints(self, config: FootprintConfig) -> Footprints | None:
         """Return the footprint folder for *config* on these particles, or ``None``."""
         return self.output.find_footprints(self.hash, config)

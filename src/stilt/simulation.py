@@ -193,11 +193,6 @@ class Simulation:
     # -- status ------------------------------------------------------------
 
     @property
-    def is_backward(self) -> bool:
-        """Whether particles run backward in time (``n_hours < 0``)."""
-        return self.variant.transport.n_hours < 0
-
-    @property
     def time_range(self) -> tuple[dt.datetime, dt.datetime]:
         """
         Start and end of the period the particles cover.
@@ -209,13 +204,8 @@ class Simulation:
             runs alike.
         """
         r_time = self.receptor.time
-        if self.is_backward:
-            start = r_time + dt.timedelta(hours=self.variant.transport.n_hours)
-            stop = r_time
-        else:
-            start = r_time
-            stop = r_time + dt.timedelta(hours=self.variant.transport.n_hours)
-        return start, stop
+        other_end = r_time + dt.timedelta(hours=self.variant.transport.n_hours)
+        return min(r_time, other_end), max(r_time, other_end)
 
     @property
     def empty_reason(self) -> str | None:
