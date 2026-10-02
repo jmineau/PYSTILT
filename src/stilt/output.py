@@ -39,12 +39,10 @@ Start from :class:`Output`::
 
 from __future__ import annotations
 
-import datetime as dt
 import functools
 import json
 import logging
 import os
-import re
 from collections.abc import Iterable
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -70,28 +68,21 @@ from stilt.config.transport import canonical, settings_hash
 from stilt.footprint import _settings_json, read_footprint
 from stilt.geometry import Geometry, check_resolution, overlap_weights
 from stilt.particles import read_particles, write_particles
-from stilt.receptors import Receptor
+from stilt.receptors import Receptor, parse_receptor_id
 
 logger = logging.getLogger(__name__)
 
 #: Underscore-prefixed, so dataset readers skip it.
 SETTINGS_FILE = "_settings.yaml"
 HASH_CHARS = 6
-_RECEPTOR_ID_RE = re.compile(r"^\d{12}_")
 
 # -- identity -----------------------------------------------------------------
 
 
 def _date_dir(receptor_id: str) -> str:
     """Return the ``date=YYYY-MM-DD`` folder of a receptor id, which starts with the receptor time."""
-    if not _RECEPTOR_ID_RE.match(receptor_id):
-        raise ValueError(f"Receptor id {receptor_id!r} does not start with a time.")
-    return f"date={receptor_id[:4]}-{receptor_id[4:6]}-{receptor_id[6:8]}"
-
-
-def _receptor_time(receptor_id: str) -> dt.datetime:
-    """Return the receptor time encoded at the start of a receptor id."""
-    return dt.datetime.strptime(receptor_id[:12], "%Y%m%d%H%M")
+    time, _ = parse_receptor_id(receptor_id)
+    return f"date={time:%Y-%m-%d}"
 
 
 def _list_receptor_files(
@@ -812,7 +803,7 @@ class Footprints:
 
             ns_per_hour = 3_600_000_000_000
             release_ns = np.array(
-                [np.datetime64(_receptor_time(r), "ns") for r in ids]
+                [np.datetime64(parse_receptor_id(r)[0], "ns") for r in ids]
             ).astype(np.int64)
             t_ns = release_ns[dict_idx] + hour * ns_per_hour
             # Explicit nanoseconds: pandas may hold these edges at another resolution.
