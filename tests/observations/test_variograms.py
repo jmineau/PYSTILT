@@ -1,4 +1,4 @@
-"""Tests for stilt.observations.winds: variograms and wind-error scales."""
+"""Tests for stilt.observations.variograms: variograms and wind-error scales."""
 
 import numpy as np
 import pandas as pd
