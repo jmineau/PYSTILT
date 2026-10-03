@@ -277,47 +277,36 @@ def jacobian(
     )
 
 
-def _build_footprint_array(
-    *,
-    foot_arr: np.ndarray,
-    layers: np.ndarray,
+def _footprint_array(
+    values: np.ndarray,
+    hours: Any,
     receptor: Receptor,
-    is_longlat: bool,
-    glong: np.ndarray,
-    glati: np.ndarray,
-    xres: float,
-    yres: float,
-    wrapped_longitude: bool,
+    config: FootprintConfig,
+    name: str,
+    x: np.ndarray,
+    y: np.ndarray,
 ) -> xr.DataArray:
-    """Build one footprint DataArray from rasterized numpy output."""
-    if len(layers) == 0:
-        layers = np.array([0], dtype=int)
-    if len(foot_arr.shape) != 3:
-        raise ValueError("foot_arr must be 3D in (time, y, x) order.")
-    # Layer k is the hour from k hours after the receptor time, and is stamped
-    # there, as in STILT-R; a backward run's first hour is layer -1. A
-    # time-integrated footprint is the one layer 0, at the receptor time.
-    time_out = [receptor.time + pd.Timedelta(hours=int(layer)) for layer in layers]
-    time_index = _utc_index(time_out).tz_localize(None)
-    x_dim = "lon" if is_longlat else "x"
-    y_dim = "lat" if is_longlat else "y"
-    # Rounded as Grid.axes rounds them, so a footprint read back from its
-    # file has the same coordinates as the one calculated.
-    x_coords = np.round(glong + xres / 2, 10)
-    y_coords = np.round(glati + yres / 2, 10)
-    if wrapped_longitude:
-        unwrapped = ((x_coords + 180.0) % 360.0) - 180.0
-        order = np.argsort(unwrapped)
-        x_coords = np.round(unwrapped[order], 10)
-        foot_arr = foot_arr[:, :, order]
-    return xr.DataArray(
-        foot_arr,
+    """
+    Return a footprint: *values* in ``(time, y, x)`` order, at cell centres *x* and *y*.
+
+    Layer ``k`` is the hour from ``hours[k]`` hours after the receptor time,
+    and is stamped there, as in STILT-R; a backward run's first hour is
+    layer -1, and a time-integrated footprint is the one layer 0. This is
+    the one place a footprint array is made, for :func:`calculate` and for
+    :func:`read_footprint` alike.
+    """
+    if config.grid is None:
+        raise ValueError("Footprint settings need a grid.")
+    times = _utc_index(
+        [receptor.time + pd.Timedelta(hours=int(h)) for h in hours]
+    ).tz_localize(None)
+    y_dim, x_dim = config.grid.dims
+    data = xr.DataArray(
+        values,
         dims=["time", y_dim, x_dim],
-        coords={"time": time_index, y_dim: y_coords, x_dim: x_coords},
-        attrs={
-            "units": "ppm m2 s umol-1"
-        },  # surface influence function: ppm per (µmol m⁻² s⁻¹)
+        coords={"time": times, y_dim: y, x_dim: x},
     )
+    return _describe(data, receptor, config, name)
 
 
 def _with_cf_metadata(ds: xr.Dataset, *, grid: Grid) -> xr.Dataset:
@@ -970,18 +959,19 @@ def calculate(
             f"got {foot_arr.shape}"
         )
 
-    data = _build_footprint_array(
-        foot_arr=foot_arr.transpose(2, 1, 0),
-        layers=layers,
-        receptor=receptor,
-        is_longlat=is_longlat,
-        glong=glong,
-        glati=glati,
-        xres=xres,
-        yres=yres,
-        wrapped_longitude=wrapped_longitude,
-    )
-    return _describe(data, receptor, config, name)
+    values = foot_arr.transpose(2, 1, 0)  # (time, y, x)
+    if len(layers) == 0:
+        layers = np.array([0], dtype=int)
+    # Rounded as Grid.axes rounds them, so a footprint read back from its
+    # file has the same coordinates as the one calculated.
+    x_coords = np.round(glong + xres / 2, 10)
+    y_coords = np.round(glati + yres / 2, 10)
+    if wrapped_longitude:
+        unwrapped = ((x_coords + 180.0) % 360.0) - 180.0
+        order = np.argsort(unwrapped)
+        x_coords = np.round(unwrapped[order], 10)
+        values = values[:, :, order]
+    return _footprint_array(values, layers, receptor, config, name, x_coords, y_coords)
 
 
 def _from_sparse_table(table: Any, config: FootprintConfig) -> xr.DataArray | None:
@@ -1009,17 +999,7 @@ def _from_sparse_table(table: Any, config: FootprintConfig) -> xr.DataArray | No
             "foot"
         ].to_numpy()
 
-    receptor_time = pd.Timestamp(receptor.time)
-    times = pd.DatetimeIndex(
-        [receptor_time + pd.Timedelta(hours=int(h)) for h in hours]
-    )
-    y_dim, x_dim = grid.dims
-    data = xr.DataArray(
-        values,
-        dims=["time", y_dim, x_dim],
-        coords={"time": times, y_dim: y_axis, x_dim: x_axis},
-    )
-    return _describe(data, receptor, config, name)
+    return _footprint_array(values, hours, receptor, config, name, x_axis, y_axis)
 
 
 def read_footprint(
