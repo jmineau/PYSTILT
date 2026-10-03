@@ -45,16 +45,14 @@ import os
 from collections.abc import Iterable
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import Any, NamedTuple
+from typing import Any
 
-import numpy as np
 import pandas as pd
 import pyarrow as pa
 import pyarrow.dataset as pads
 import pyarrow.parquet as pq
 import xarray as xr
 import yaml
-from scipy import sparse
 
 from stilt._atomic import atomic_path
 from stilt.config import (
@@ -67,13 +65,15 @@ from stilt.config import (
 from stilt.config.transport import canonical, settings_hash
 from stilt.footprint import (
     FOOTPRINT_SCHEMA,
+    Jacobian,
+    jacobian,
     read_footprint,
     write_empty_footprint,
     write_footprint,
 )
 from stilt.particles import read_particles, write_particles
 from stilt.receptors import Receptor, parse_receptor_id
-from stilt.spatial import Geometry, check_resolution, overlap_weights
+from stilt.spatial import Geometry
 
 logger = logging.getLogger(__name__)
 
@@ -477,40 +477,6 @@ _DATE_PARTITIONING = pads.partitioning(
 _FOOTPRINT_TABLE_SCHEMA = FOOTPRINT_SCHEMA.append(pa.field("date", pa.date32()))
 
 
-class Jacobian(NamedTuple):
-    """
-    Footprints of many receptors summed onto a target, as one sparse matrix.
-
-    Attributes
-    ----------
-    data : scipy.sparse.csr_matrix
-        Shape ``(n_receptors, n_bins * n_cells)``. Row ``i`` is
-        ``receptors[i]``; the columns run through every target cell for the
-        first time bin, then the second, in ``columns`` order.
-    receptors : pandas.Index
-        Receptor ids of the rows.
-    columns : pandas.MultiIndex
-        ``(time, cell)`` for each column: the left edge of the time bin and
-        the target cell's label.
-    empty : list of str
-        Receptors whose footprint is empty. They have no row.
-    missing : list of str
-        Requested receptors that have no footprint file. They have no row.
-    """
-
-    data: sparse.csr_matrix
-    receptors: pd.Index
-    columns: pd.MultiIndex
-    empty: list[str]
-    missing: list[str]
-
-    def to_frame(self) -> pd.DataFrame:
-        """Return the matrix as a dense DataFrame (receptors × columns)."""
-        return pd.DataFrame(
-            self.data.toarray(), index=self.receptors, columns=self.columns
-        )
-
-
 class Footprints:
     """
     One footprint folder: the footprints of many receptors, one set of footprint settings, one set of particles.
@@ -533,7 +499,6 @@ class Footprints:
             raise ValueError(f"{self.path / SETTINGS_FILE} has no grid.")
         #: Grid the stored ``x`` and ``y`` index (``config.grid``).
         self.grid: Grid = self.config.grid
-        self._axes: tuple[np.ndarray, np.ndarray] | None = None
 
     def __repr__(self) -> str:
         return f"Footprints({self.key!r})"
@@ -564,13 +529,6 @@ class Footprints:
         return settings_hash(
             {"particles": particles_hash, "footprint": config.model_dump(mode="json")}
         )
-
-    @property
-    def axes(self) -> tuple[np.ndarray, np.ndarray]:
-        """Cell-center coordinates ``(x, y)`` that the stored ``x`` and ``y`` index."""
-        if self._axes is None:
-            self._axes = self.grid.axes
-        return self._axes
 
     def file(self, receptor_id: str) -> Path:
         """Return the footprint file for a receptor, whether or not it exists."""
@@ -678,106 +636,30 @@ class Footprints:
         ValueError
             If ``time_bins`` is not closed on the left.
         """
-        if time_bins.closed != "left":
-            raise ValueError(
-                f"time_bins must be closed on the left, not {time_bins.closed!r}. "
-                "A footprint time is the start of its hour, so each bin takes "
-                "the hours that start in it. Build the bins with "
-                "closed='left', for example "
-                "pd.interval_range(start, end, freq='1h', closed='left')."
-            )
         if receptors is None:
             files = _list_receptor_files(self.path, ".parquet")
             requested = list(files)
         else:
             requested = list(dict.fromkeys(receptors))
             files = _list_receptor_files(self.path, ".parquet", requested)
-        missing = [r for r in requested if r not in files]
         present = [r for r in requested if r in files]
-
-        x_axis, y_axis = self.axes
-        grid = self.grid
-        check_resolution(target, grid.xres, grid.yres, grid.crs)
-        weights = overlap_weights(
-            target, x_axis, y_axis, grid.xres, grid.yres, grid.crs
-        )  # (n_cells, ny * nx)
-        n_cells = len(target.index)
-        nx = len(x_axis)
-        n_raster = nx * len(y_axis)
-
-        bin_left = pd.DatetimeIndex(
-            pd.to_datetime(time_bins.left, utc=True)
-        ).tz_localize(None)
-        bin_right = pd.DatetimeIndex(
-            pd.to_datetime(time_bins.right, utc=True)
-        ).tz_localize(None)
-        n_bins = len(time_bins)
-
         table = _read_files(
             self.path,
             {r: files[r] for r in present},
             _FOOTPRINT_TABLE_SCHEMA.empty_table(),
         )
-        if table.num_rows:
-            # Work with the dictionary indices of the receptor column: one
-            # small array of ids, and an int32 per row.
-            table = table.unify_dictionaries().combine_chunks()
-            receptor_col = table.column("receptor").combine_chunks()
-            ids: list[str] = receptor_col.dictionary.to_pylist()  # type: ignore[attr-defined]
-            dict_idx = receptor_col.indices.to_numpy()  # type: ignore[attr-defined]
-        else:
-            ids, dict_idx = [], np.zeros(0, dtype=np.int32)
-        found = set(ids)
-        rows = [r for r in present if r in found]
-        empty = [r for r in present if r not in found]
-        row_of = {r: i for i, r in enumerate(rows)}
-
-        if table.num_rows:
-            row_by_id = np.array([row_of[r] for r in ids], dtype=np.int64)
-            row_idx = row_by_id[dict_idx]
-            hour = table.column("hour").to_numpy().astype(np.int64)
-            flat = (
-                table.column("y").to_numpy().astype(np.int64) * nx
-                + table.column("x").to_numpy()
-            )
-            foot = table.column("foot").to_numpy().astype(np.float64)
-
-            ns_per_hour = 3_600_000_000_000
-            release_ns = np.array(
-                [np.datetime64(parse_receptor_id(r)[0], "ns") for r in ids]
-            ).astype(np.int64)
-            t_ns = release_ns[dict_idx] + hour * ns_per_hour
-            # Explicit nanoseconds: pandas may hold these edges at another resolution.
-            left_ns = np.asarray(bin_left, dtype="datetime64[ns]").astype(np.int64)
-            right_ns = np.asarray(bin_right, dtype="datetime64[ns]").astype(np.int64)
-            bin_idx = np.searchsorted(left_ns, t_ns, side="right") - 1
-            inside = (bin_idx >= 0) & (t_ns < right_ns[np.clip(bin_idx, 0, n_bins - 1)])
-
-            # F: (receptor) x (bin, raster cell); one product with the block
-            # diagonal of W^T gives every bin at once.
-            f_all = sparse.coo_matrix(
-                (
-                    foot[inside],
-                    (row_idx[inside], bin_idx[inside] * n_raster + flat[inside]),
-                ),
-                shape=(len(rows), n_bins * n_raster),
-            ).tocsr()
-            blocks = sparse.kron(
-                sparse.identity(n_bins, format="csr"), weights.T.tocsr()
-            )
-            data = sparse.csr_matrix(f_all @ blocks)
-        else:
-            data = sparse.csr_matrix((len(rows), n_bins * n_cells))
-
-        # A grid target's cells are (x, y) tuples; keep them as one label each.
-        cells = pd.Index(list(target.index), tupleize_cols=False)
-        columns = pd.MultiIndex.from_product([bin_left, cells], names=["time", "cell"])
-        return Jacobian(data, pd.Index(rows, name="receptor"), columns, empty, missing)
+        return jacobian(
+            table,
+            self.config,
+            target,
+            time_bins,
+            receptors=present,
+            missing=[r for r in requested if r not in files],
+        )
 
 
 __all__ = [
     "Footprints",
-    "Jacobian",
     "Output",
     "Particles",
 ]
