@@ -16,7 +16,6 @@ the only code that writes results.
 from __future__ import annotations
 
 import os
-import re
 from collections.abc import Iterable, Iterator
 from functools import cached_property
 from pathlib import Path
@@ -61,13 +60,6 @@ RECEPTOR_COLUMNS = ("receptor", "time", "kind", "location")
 def _absolute(path: str | Path) -> Path:
     """Return *path* absolute, with ``~`` and variables expanded, so a worker started elsewhere finds the same place."""
     return Path(os.path.expandvars(os.path.expanduser(str(path)))).resolve()
-
-
-def project_slug(directory: str | Path) -> str:
-    """Return a lowercase, hyphenated name for a project directory, safe for file and job names."""
-    name = Path(str(directory).rstrip("/")).name or "project"
-    slug = re.sub(r"[^a-z0-9-]+", "-", name.lower().replace("_", "-"))
-    return re.sub(r"-{2,}", "-", slug).strip("-") or "project"
 
 
 def _as_receptors(
@@ -788,4 +780,4 @@ class Simulations:
         return feet.jacobian(target, time_bins, receptors=list(self.frame["receptor"]))
 
 
-__all__ = ["Project", "Simulations", "project_slug"]
+__all__ = ["Project", "Simulations"]

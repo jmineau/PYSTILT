@@ -14,7 +14,7 @@ from stilt.execution import resolve_compute_root
 from stilt.footprint import _describe
 from stilt.output import Output
 from stilt.particles import prepare
-from stilt.project import Project, Simulations, project_slug
+from stilt.project import Project, Simulations
 from stilt.receptors import PointReceptor
 from stilt.simulation import SimID
 from stilt.transport.hysplit.driver import winderrtf
@@ -185,19 +185,6 @@ def test_a_relative_path_is_taken_from_the_current_directory(tmp_path, monkeypat
     monkeypatch.setenv("PROJECTS", str(tmp_path / "env"))
     assert Project("rel").directory == (tmp_path / "rel").resolve()
     assert Project("$PROJECTS/p").directory == (tmp_path / "env" / "p").resolve()
-
-
-@pytest.mark.parametrize(
-    ("directory", "expected"),
-    [
-        ("/data/projects/My_Project", "my-project"),
-        ("/data/projects/My_Project/", "my-project"),
-        ("/data/Weird  Name!!", "weird-name"),
-        ("", "project"),
-    ],
-)
-def test_project_slug(directory, expected):
-    assert project_slug(directory) == expected
 
 
 def test_views_are_cached(tmp_path):
@@ -787,7 +774,9 @@ def test_run_hands_the_incomplete_receptors_to_the_workers(tmp_path, ran):
     assert call["ids"] == [todo.id]
     assert call["project"] is project
     assert call["n_cores"] == 3
-    assert call["compute_root"] is None and call["skip_existing"] is True
+    # The runner works out the scratch directory before handing it over.
+    assert call["compute_root"] == resolve_compute_root(project)
+    assert call["skip_existing"] is True
 
 
 def test_run_without_skip_runs_every_receptor_once(tmp_path, ran):

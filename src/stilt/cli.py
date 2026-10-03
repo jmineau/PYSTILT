@@ -102,7 +102,6 @@ _NEW_PROJECT_ARG = typer.Argument(
     None,
     help="Directory for the new project. Defaults to the current directory.",
 )
-_REQUIRED_PROJECT_ARG = typer.Argument(..., help="Path or URI of the STILT project.")
 _NO_SKIP = typer.Option(
     False, "--no-skip", help="Run simulations again even if their outputs exist."
 )

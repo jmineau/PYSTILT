@@ -19,7 +19,7 @@ from stilt.exceptions import (
     NoParticleOutputError,
     SimulationError,
 )
-from stilt.execution import resolve_compute_root, worker
+from stilt.execution import worker
 from stilt.execution.worker import (
     SimulationResult,
     make_footprint,
@@ -692,7 +692,9 @@ def test_run_receptors_inline_returns_results_in_order(
     calls: list[dict] = []
     monkeypatch.setattr(worker, "run_simulation", _fake_run_simulation(calls))
 
-    results = run_receptors(model, ids, n_cores=1, skip_existing=True)
+    results = run_receptors(
+        model, ids, compute_root=tmp_path / "scratch", n_cores=1, skip_existing=True
+    )
 
     assert [r.sim_id.split("/")[0] for r in results] == ids
     assert [r.status for r in results] == ["complete", "complete"]
@@ -705,7 +707,7 @@ def test_run_receptors_empty_ids_returns_empty(tmp_path, receptor, monkeypatch):
         worker, "run_simulation", lambda *a, **k: pytest.fail("must not run")
     )
 
-    assert run_receptors(model, [], n_cores=1) == []
+    assert run_receptors(model, [], compute_root=tmp_path / "scratch", n_cores=1) == []
 
 
 def test_run_receptors_inline_skips_existing_by_default(
@@ -715,8 +717,16 @@ def test_run_receptors_inline_skips_existing_by_default(
     calls: list[dict] = []
     monkeypatch.setattr(worker, "run_simulation", _fake_run_simulation(calls))
 
-    run_receptors(model, [str(receptor.id)], n_cores=1)
-    run_receptors(model, [str(receptor.id)], n_cores=1, skip_existing=False)
+    run_receptors(
+        model, [str(receptor.id)], compute_root=tmp_path / "scratch", n_cores=1
+    )
+    run_receptors(
+        model,
+        [str(receptor.id)],
+        compute_root=tmp_path / "scratch",
+        n_cores=1,
+        skip_existing=False,
+    )
 
     assert [c["skip_existing"] for c in calls] == [True, False]
 
@@ -734,7 +744,7 @@ def test_run_receptors_inline_stops_after_interrupt(
 
     monkeypatch.setattr(worker, "run_simulation", fake)
 
-    results = run_receptors(model, ids, n_cores=1)
+    results = run_receptors(model, ids, compute_root=tmp_path / "scratch", n_cores=1)
 
     assert [(r.sim_id.split("/")[0], r.status, r.error) for r in results] == [
         (ids[0], "interrupted", "Worker preempted")
@@ -755,7 +765,7 @@ def test_run_receptors_inline_continues_after_failed_result(
 
     monkeypatch.setattr(worker, "run_simulation", fake)
 
-    results = run_receptors(model, ids, n_cores=1)
+    results = run_receptors(model, ids, compute_root=tmp_path / "scratch", n_cores=1)
 
     assert [r.status for r in results] == ["failed", "complete"]
     assert results[0].error == "boom"
@@ -827,7 +837,9 @@ def test_run_receptors_pool_rebuilds_model_and_orders_results(
     calls: list[dict] = []
     monkeypatch.setattr(worker, "run_simulation", _fake_run_simulation(calls))
 
-    results = run_receptors(model, ids, n_cores=2, skip_existing=False)
+    results = run_receptors(
+        model, ids, compute_root=tmp_path / "scratch", n_cores=2, skip_existing=False
+    )
 
     [pool] = fake_pool.instances
     assert pool.n_cores == 2
@@ -837,7 +849,7 @@ def test_run_receptors_pool_rebuilds_model_and_orders_results(
     assert worker._POOL_PROJECT is not None
     assert worker._POOL_PROJECT is not model
     assert worker._POOL_PROJECT.directory == model.directory
-    assert resolve_compute_root(model) == worker._POOL_COMPUTE_ROOT
+    assert tmp_path / "scratch" == worker._POOL_COMPUTE_ROOT
     assert worker._POOL_SKIP is False
     # Results come back in input order even though the pool yielded reversed.
     assert [r.sim_id.split("/")[0] for r in results] == ids
@@ -858,7 +870,7 @@ def test_run_receptors_pool_terminates_on_interrupted_result(
 
     monkeypatch.setattr(worker, "run_simulation", fake)
 
-    results = run_receptors(model, ids, n_cores=2)
+    results = run_receptors(model, ids, compute_root=tmp_path / "scratch", n_cores=2)
 
     [pool] = fake_pool.instances
     assert pool.terminated
@@ -889,7 +901,7 @@ def test_run_receptors_pool_keyboard_interrupt_terminates_and_returns(
         ),
     )
 
-    results = run_receptors(model, ids, n_cores=2)
+    results = run_receptors(model, ids, compute_root=tmp_path / "scratch", n_cores=2)
 
     [pool] = fake_pool.instances
     assert pool.terminated

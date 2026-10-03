@@ -17,7 +17,6 @@ Project
    :toctree: _api
    :nosignatures:
 
-   stilt.project.project_slug
 
 Output directory
 ----------------
