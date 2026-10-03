@@ -38,14 +38,12 @@ directory HYSPLIT runs in. It never changes a result.
 Parameters
 ----------
 
-The settings that shape a run's particles, flat in ``config.yaml``. Most
-are HYSPLIT's own, under HYSPLIT's names.
-
-.. autosummary::
-   :toctree: _api
-   :nosignatures:
-
-   TransportParams
+The settings that shape a run's particles belong to the transport model,
+whose ``config.yaml`` name is the ``model`` field (``hysplit`` unless set).
+They are flat, top-level keys. HYSPLIT's are in
+:class:`stilt.transport.hysplit.HysplitConfig`, under HYSPLIT's names (see
+:doc:`hysplit`). A variant that names another ``model`` gives that model's
+parameters itself and inherits only the met and the footprint settings.
 
 
 Geometry specifications

@@ -91,7 +91,7 @@ def _multipoint_release_heights(
                     "HYSPLIT build writes no t=0 row, so particles cannot be "
                     "reliably matched to their release points; 'xhgt' may be wrong. "
                     "Use a HYSPLIT build that writes release-time rows "
-                    "(TransportParams.exe_dir) or space the points more than "
+                    "(HysplitConfig.exe_dir) or space the points more than "
                     f"{_MIN_RELIABLE_SPACING_M:.0f} m apart.",
                     stacklevel=3,
                 )

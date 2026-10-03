@@ -183,7 +183,7 @@ def run_particles(
         result = model.run(sim.receptor, params, met, workdir, timeout=timeout)
         if result.particles.empty:
             raise EmptyParticleOutputError(f"HYSPLIT wrote no particles for {sim.id}")
-        particles = prepare(result.particles, sim.receptor, params)
+        particles = prepare(result.particles, sim.receptor)
         folder.write(sim.receptor, particles, params, result.met_files)
         succeeded = True
         return particles

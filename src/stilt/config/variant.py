@@ -14,19 +14,22 @@ from __future__ import annotations
 
 import re
 from collections.abc import Mapping
+from dataclasses import dataclass
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import ValidationError
+
+from stilt.transport import TransportConfig, get_model
 
 from .footprint import FootprintConfig
 from .meteorology import MetConfig
-from .params import TransportParams
 
 #: Pattern for variant and met names, which become directory names.
 VARIANT_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 
 
-class VariantConfig(BaseModel):
+@dataclass(frozen=True)
+class VariantConfig:
     """
     One variant as declared, merged with the defaults.
 
@@ -35,31 +38,59 @@ class VariantConfig(BaseModel):
     ``hrrr-err`` with ``realizations: 3`` gives ``hrrr-err-0`` to
     ``hrrr-err-2``. A footprint given by a geometry has no grid yet;
     :func:`stilt.variants.resolve` derives it.
+
+    Attributes
+    ----------
+    name : str
+        Name its simulations run under.
+    group : str
+        Name as declared in ``config.yaml``.
+    met : str
+        Name of the met it runs with.
+    model : str
+        Name of the transport model it runs with, such as ``"hysplit"``.
+    transport : TransportConfig
+        That model's config.
+    footprint : FootprintConfig or None
+        Footprint config, or ``None`` for particles only (``grid: null``).
+    realization : int or None
+        Realization number within an ensemble, or ``None`` for a single run.
     """
 
-    model_config = ConfigDict(extra="forbid", frozen=True)
-
-    name: str = Field(description="Variant name its simulations run under.")
-    group: str = Field(description="Variant name as declared in ``config.yaml``.")
-    met: str = Field(description="Name of the met this variant runs with.")
-    transport: TransportParams = Field(description="Transport config.")
-    footprint: FootprintConfig | None = Field(
-        None,
-        description="Footprint config, or ``None`` for particles only (``grid: null``).",
-    )
-    realization: int | None = Field(
-        None,
-        description="Realization number within an ensemble, or ``None`` for a single run.",
-    )
+    name: str
+    group: str
+    met: str
+    model: str
+    transport: TransportConfig
+    footprint: FootprintConfig | None = None
+    realization: int | None = None
 
 
-_TRANSPORT_FIELDS = frozenset(TransportParams.model_fields)
+#: The fields that belong to the footprint; every other setting belongs to the model.
 _FOOTPRINT_FIELDS = frozenset(FootprintConfig.model_fields)
+
+
+def transport_config(model: str, fields: dict[str, Any], where: str) -> Any:
+    """
+    Return *fields* validated by the config class of the transport model called *model*.
+
+    Raises
+    ------
+    ValueError
+        If there is no such model, or a field is unknown to it or invalid.
+    """
+    config_class = get_model(model).config_class
+    try:
+        return config_class.model_validate(fields)
+    except ValidationError as error:
+        raise ValueError(f"{where}: {error}") from None
 
 
 def expand_variants(
     declared: dict[str, dict[str, Any]],
-    defaults: dict[str, Any],
+    model: str,
+    transport: dict[str, Any],
+    footprint: dict[str, Any],
     mets: Mapping[str, MetConfig],
 ) -> dict[str, VariantConfig]:
     """
@@ -69,18 +100,26 @@ def expand_variants(
     ----------
     declared : dict
         ``{name: overrides}`` as written in ``config.yaml``. Besides
-        overrides of the defaults, each may set ``met`` and ``realizations``.
-    defaults : dict
-        The top-level transport and footprint fields.
+        overrides of the defaults, each may set ``met``, ``model``, and
+        ``realizations``.
+    model : str
+        The project's transport model.
+    transport : dict
+        The top-level fields of that model's config.
+    footprint : dict
+        The top-level footprint fields.
     mets : mapping of str to MetConfig
         The config's mets. A variant without ``met`` uses the met with its
         own name, or the only met.
 
+    A variant that names another ``model`` inherits only the met and the
+    footprint fields; it gives that model's fields itself.
+
     Raises
     ------
     ValueError
-        For a bad name, an unknown met or setting, a bad ``realizations``,
-        or footprint settings without a grid.
+        For a bad name, an unknown met, model, or setting, a bad
+        ``realizations``, or footprint settings without a grid.
     """
     variants: dict[str, VariantConfig] = {}
     for group, spec in declared.items():
@@ -97,39 +136,52 @@ def expand_variants(
                 f"{spec['from']!r} (if any) and its own footprint settings."
             )
         met = _met_name(group, spec, mets)
+        variant_model = spec.pop("model", model)
         realizations = spec.pop("realizations", None)
         if realizations is not None:
             realizations = int(realizations)
             if realizations < 1:
                 raise ValueError(f"Variant {group!r}: realizations must be >= 1")
-        transport_fields, footprint_fields = _split(
-            group, _override(group, defaults, spec)
+        base = {**(transport if variant_model == model else {}), **footprint}
+        merged = _override(group, base, spec)
+        config = transport_config(
+            variant_model,
+            {k: v for k, v in merged.items() if k not in _FOOTPRINT_FIELDS},
+            f"Variant {group!r} ({variant_model})",
         )
-        transport = TransportParams(**transport_fields)
-        footprint = _footprint(group, footprint_fields)
+        footprint_config = _footprint(
+            group, {k: v for k, v in merged.items() if k in _FOOTPRINT_FIELDS}
+        )
         if realizations is None:
             variants[group] = VariantConfig(
                 name=group,
                 group=group,
                 met=met,
-                transport=transport,
-                footprint=footprint,
-                realization=None,
+                model=variant_model,
+                transport=config,
+                footprint=footprint_config,
             )
             continue
-        _check_realizations(group, transport, realizations, declared)
-        seed = transport.seed
         for k in range(realizations):
-            # Realization k runs with seed + k, so realization 0 uses the
-            # configured seed, as STILT-R's single error run does. A group of
-            # one is still <group>-0, so raising realizations only adds runs.
-            fields = {**transport_fields, "seed": None if seed is None else seed + k}
+            name = f"{group}-{k}"
+            if name in declared:
+                raise ValueError(
+                    f"Variant {name!r} collides with realization {k} of {group!r}"
+                )
+        try:
+            copies = config.realizations(realizations)
+        except ValueError as error:
+            raise ValueError(f"Variant {group!r}: {error}") from None
+        # A group of one is still <group>-0, so raising realizations later
+        # only adds simulations.
+        for k, copy in enumerate(copies):
             variants[f"{group}-{k}"] = VariantConfig(
                 name=f"{group}-{k}",
                 group=group,
                 met=met,
-                transport=TransportParams(**fields),
-                footprint=footprint,
+                model=variant_model,
+                transport=copy,
+                footprint=footprint_config,
                 realization=k,
             )
     return variants
@@ -184,16 +236,6 @@ def _override(group: str, base: dict[str, Any], spec: dict[str, Any]) -> dict[st
     return merged
 
 
-def _split(group: str, merged: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
-    """Split the flat settings of a variant into its transport and footprint parts."""
-    unknown = set(merged) - _TRANSPORT_FIELDS - _FOOTPRINT_FIELDS
-    if unknown:
-        raise ValueError(f"Variant {group!r} has unknown settings {sorted(unknown)}")
-    transport = {k: v for k, v in merged.items() if k in _TRANSPORT_FIELDS}
-    footprint = {k: v for k, v in merged.items() if k in _FOOTPRINT_FIELDS}
-    return transport, footprint
-
-
 def _footprint(name: str, fields: dict[str, Any]) -> FootprintConfig | None:
     """
     Return the footprint settings, or ``None`` when they give no grid or geometry.
@@ -220,33 +262,9 @@ def _footprint(name: str, fields: dict[str, Any]) -> FootprintConfig | None:
     return None
 
 
-def _check_realizations(
-    group: str,
-    params: TransportParams,
-    realizations: int,
-    declared: dict[str, dict[str, Any]],
-) -> None:
-    """Raise unless *realizations* runs of *params* would differ and their names are free."""
-    if realizations > 1 and not (
-        params.krand == 4 or (params.krand == 2 and params.seed is not None)
-    ):
-        raise ValueError(
-            f"Variant {group!r}: realizations={realizations} requires krand=4 "
-            f"or krand=2 with a seed (got krand={params.krand}, seed={params.seed}): "
-            "under krand=4 HYSPLIT seeds each run from the clock; under krand=2 "
-            "PYSTILT gives each realization its own seed. Any other mode would "
-            "repeat the same perturbation."
-        )
-    for k in range(realizations):
-        name = f"{group}-{k}"
-        if name in declared:
-            raise ValueError(
-                f"Variant {name!r} collides with realization {k} of {group!r}"
-            )
-
-
 __all__ = [
     "VARIANT_NAME_RE",
     "VariantConfig",
     "expand_variants",
+    "transport_config",
 ]

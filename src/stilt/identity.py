@@ -23,8 +23,8 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
-from stilt.config import FootprintConfig, MetConfig, TransportParams
-from stilt.transport import ModelInfo
+from stilt.config import FootprintConfig, MetConfig
+from stilt.transport import ModelInfo, TransportConfig, get_model
 
 
 def canonical(value: Any) -> Any:
@@ -58,7 +58,7 @@ def settings_hash(settings: Mapping[str, Any]) -> str:
 
 
 def run_settings(
-    transport: TransportParams,
+    transport: TransportConfig,
     met: MetConfig,
     model: ModelInfo,
     realization: int | None,
@@ -66,13 +66,10 @@ def run_settings(
     """
     Return the settings that identify a run, in canonical form.
 
-    The transport fields sit at the top level, beside ``met``, ``model``,
-    and ``realization``. ``maxpar`` is given as HYSPLIT receives it, so an
-    unset ``maxpar`` equals ``numpar``.
+    The transport model's settings (``transport.settings()``) sit at the top
+    level, beside ``met``, ``model``, and ``realization``.
     """
-    data = transport.model_dump(mode="json", exclude=set(TransportParams.UNRECORDED))
-    if data["maxpar"] is None:
-        data["maxpar"] = transport.numpar
+    data = dict(transport.settings())
     data["met"] = met.model_dump(mode="json", exclude=set(MetConfig.UNRECORDED))
     record = model.model_dump(mode="json")
     if record.get("data_files") is None:
@@ -88,17 +85,19 @@ def read_run_settings(stored: Mapping[str, Any]) -> dict[str, Any]:
     """
     Return the run settings a ``_settings.yaml`` records, read through the current classes.
 
-    Settings this version does not have are dropped, so a folder written
-    before a setting was removed still loads.
+    ``model.name`` says which model's config class reads the transport
+    settings. Settings this version does not have are dropped, so a folder
+    written before a setting was removed still loads.
     """
-    fields = TransportParams.model_fields
-    transport = TransportParams.model_validate(
-        {k: v for k, v in stored.items() if k in fields}
-    )
-    met = MetConfig.model_validate(stored["met"])
     model = ModelInfo.model_validate(
         {k: v for k, v in stored["model"].items() if k in ModelInfo.model_fields}
     )
+    config_class = get_model(model.name).config_class
+    fields = config_class.model_fields
+    transport = config_class.model_validate(
+        {k: v for k, v in stored.items() if k in fields}
+    )
+    met = MetConfig.model_validate(stored["met"])
     return run_settings(transport, met, model, stored.get("realization"))
 
 

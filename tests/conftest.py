@@ -12,9 +12,9 @@ from stilt.config import (
     Grid,
     MetConfig,
     ProjectConfig,
-    TransportParams,
 )
 from stilt.receptors import ColumnReceptor, MultiPointReceptor, PointReceptor
+from stilt.transport.hysplit import HysplitConfig
 
 from .fixtures.r_stilt_reference import (
     REFERENCE_MET_FILE_FORMAT,
@@ -157,8 +157,8 @@ def met_config(tmp_path):
 
 @pytest.fixture
 def stilt_params(tmp_path):
-    """Minimal TransportParams for use in simulation tests."""
-    return TransportParams(
+    """Minimal HysplitConfig for use in simulation tests."""
+    return HysplitConfig(
         n_hours=-24,
         numpar=100,
     )

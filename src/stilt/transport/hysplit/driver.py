@@ -14,8 +14,6 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from stilt.config import TransportParams
-from stilt.config.params import fields_in
 from stilt.exceptions import (
     HYSPLITFailureError,
     HYSPLITNotFoundError,
@@ -23,6 +21,7 @@ from stilt.exceptions import (
     NoParticleOutputError,
 )
 from stilt.receptors import Receptor
+from stilt.transport.hysplit.config import HysplitConfig, fields_in
 from stilt.transport.hysplit.control import ControlFile
 from stilt.transport.hysplit.failures import (
     FAILURE_PHRASES,
@@ -101,7 +100,7 @@ def _read_particle_dat(path: Path, names: Sequence[str]) -> pd.DataFrame:
 # -- what each input file holds -----------------------------------------------
 
 
-def setup_entries(params: TransportParams) -> dict[str, Any]:
+def setup_entries(params: HysplitConfig) -> dict[str, Any]:
     """
     Return the ``SETUP.CFG`` namelist entries of *params*, leaving out unset ones.
 
@@ -135,7 +134,7 @@ def setup_seed(seed: int) -> int:
     return -(abs(seed) + 1)
 
 
-def ziscale_factors(params: TransportParams) -> list[float] | None:
+def ziscale_factors(params: HysplitConfig) -> list[float] | None:
     """
     Return the hourly mixed-layer factors for ``ZICONTROL``, or ``None`` when unscaled.
 
@@ -151,24 +150,24 @@ def ziscale_factors(params: TransportParams) -> list[float] | None:
     return values
 
 
-def zicontroltf(params: TransportParams) -> int:
+def zicontroltf(params: HysplitConfig) -> int:
     """Return HYSPLIT's ``ZICONTROLTF`` flag: 1 when ``ziscale`` scales the mixed layer."""
     return int(ziscale_factors(params) is not None)
 
 
-def winderr(params: TransportParams) -> list[float] | None:
+def winderr(params: HysplitConfig) -> list[float] | None:
     """Return the ``WINDERR`` values, in the file's order, or ``None`` when unset."""
     values = [getattr(params, name) for name in fields_in("WINDERR")]
     return None if values[0] is None else values
 
 
-def zierr(params: TransportParams) -> list[float] | None:
+def zierr(params: HysplitConfig) -> list[float] | None:
     """Return the ``ZIERR`` values, in the file's order, or ``None`` when unset."""
     values = [getattr(params, name) for name in fields_in("ZIERR")]
     return None if values[0] is None else values
 
 
-def winderrtf(params: TransportParams) -> int:
+def winderrtf(params: HysplitConfig) -> int:
     """Return HYSPLIT's ``WINDERRTF`` flag: 1 for wind errors, 2 for mixed-layer errors, 3 for both."""
     return (winderr(params) is not None) + 2 * (zierr(params) is not None)
 
@@ -194,7 +193,7 @@ class HYSPLITDriver:
     ----------
     receptor : Receptor
         Receptor to release particles from.
-    params : TransportParams
+    params : HysplitConfig
         Transport and error settings.
     met_files : list of Path
         Meteorology files, in the order HYSPLIT should read them.
@@ -212,7 +211,7 @@ class HYSPLITDriver:
     def __init__(
         self,
         receptor: Receptor,
-        params: TransportParams,
+        params: HysplitConfig,
         met_files: list[Path],
         directory: Path | None = None,
         exe_dir: Path | None = None,
@@ -235,7 +234,7 @@ class HYSPLITDriver:
         self.receptor = receptor
         self.params = params
         self.met_files = met_files
-        # explicit argument > TransportParams.exe_dir > binary bundled with the package
+        # explicit argument > HysplitConfig.exe_dir > binary bundled with the package
         chosen = exe_dir if exe_dir is not None else params.exe_dir
         self.exe_dir = Path(chosen) if chosen is not None else _bundled_exe_dir()
         chosen = data_dir if data_dir is not None else params.data_dir
@@ -259,7 +258,7 @@ class HYSPLITDriver:
         if not exe.is_file():
             raise HYSPLITNotFoundError(
                 f"No {HYCS_STD_FILE!r} executable in {self.exe_dir}. "
-                "Check TransportParams.exe_dir."
+                "Check HysplitConfig.exe_dir."
             )
         links = {HYCS_STD_FILE: exe}
         links.update({f.name: f for f in _bundled_data_dir().iterdir()})
@@ -424,7 +423,7 @@ class HYSPLITDriver:
             return receptor_kmsl
         if self.params.kmsl != receptor_kmsl:
             raise ValueError(
-                "TransportParams.kmsl conflicts with receptor altitude_ref: "
+                "HysplitConfig.kmsl conflicts with receptor altitude_ref: "
                 f"kmsl={self.params.kmsl}, altitude_ref={self.receptor.altitude_ref!r}."
             )
         return self.params.kmsl

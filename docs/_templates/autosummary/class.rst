@@ -47,7 +47,7 @@
 {% endif %}
 {% endfor %}
 
-{% if fullname.startswith('stilt.config.') %}
+{% if (fullname.startswith('stilt.config.') and objname != 'VariantConfig') or fullname == 'stilt.transport.hysplit.HysplitConfig' %}
 .. class-signature:: {{ fullname }}
 
 Parameters

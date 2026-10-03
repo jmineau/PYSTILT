@@ -2,7 +2,7 @@
 Verify PYSTILT's SETUP.CFG matches calc_trajectory.r's physics namelist.
 
 The R helper calc_trajectory.r passes an explicit 40-parameter namelist to
-STILT-R's write_setup().  PYSTILT builds its SETUP.CFG from TransportParams
+STILT-R's write_setup().  PYSTILT builds its SETUP.CFG from HysplitConfig
 defaults.  This module checks that every physics-affecting entry agrees, so
 that a silent default divergence is caught before it can affect trajectories.
 

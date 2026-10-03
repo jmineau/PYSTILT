@@ -177,7 +177,7 @@ def particle_pwf(
         if col not in particles.columns:
             raise ValueError(
                 f"Pressure weighting requires the {col!r} particle variable; "
-                "include it in TransportParams.varsiwant."
+                "include it in varsiwant."
             )
     pres = release_coordinate(particles, "pres")
     zagl = release_coordinate(particles, "zagl")
@@ -189,7 +189,7 @@ def particle_pwf(
             raise ValueError(
                 "Pressure weighting for a receptor with altitude_ref='msl' "
                 "requires the 'zsfc' particle variable; include it in "
-                "TransportParams.varsiwant."
+                "varsiwant."
             )
         zsfc = release_coordinate(particles, "zsfc")
         z_fit = zagl + zsfc

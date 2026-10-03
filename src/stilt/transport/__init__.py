@@ -10,15 +10,15 @@ record, so a second model needs no change to the worker.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Protocol
+from typing import TYPE_CHECKING, Any, ClassVar, Protocol, Self
 
 import pandas as pd
 from pydantic import BaseModel, ConfigDict, Field
 
 if TYPE_CHECKING:
-    from stilt.config import TransportParams
     from stilt.meteorology import Met
     from stilt.receptors import Receptor
 
@@ -59,6 +59,46 @@ class ModelInfo(BaseModel):
     )
 
 
+class TransportConfig(Protocol):
+    """
+    What PYSTILT needs from any transport model's config.
+
+    A model's config is a pydantic model of its own parameters, which the
+    model names as its ``config_class``. In ``config.yaml`` they are flat,
+    top-level keys for the project's model, and a variant that names another
+    model gives that model's parameters itself.
+
+    Attributes
+    ----------
+    n_hours : int
+        Length of each simulation, in hours. Negative runs backward in time.
+    UNRECORDED : frozenset of str
+        Fields that change no particle, such as where the build is, left
+        out of a run's recorded settings.
+    """
+
+    n_hours: int
+    UNRECORDED: ClassVar[frozenset[str]]
+
+    def settings(self) -> dict[str, Any]:
+        """Return what a run records of this config: the fields that change its particles."""
+        ...
+
+    def realizations(self, n: int) -> list[Self]:
+        """Return *n* realizations of this config, for an ensemble, raising if they would repeat."""
+        ...
+
+    # Every model's config is a pydantic model; the core uses these two of its methods.
+
+    def model_dump(self, **kwargs: Any) -> dict[str, Any]:
+        """Return the config as a dict (pydantic's ``model_dump``)."""
+        ...
+
+    def model_dump_json(self, **kwargs: Any) -> str:
+        """Return the config as JSON (pydantic's ``model_dump_json``)."""
+        ...
+
+
 class TransportModel(Protocol):
     """
     A transport model that follows particles from a receptor.
@@ -66,18 +106,23 @@ class TransportModel(Protocol):
     Attributes
     ----------
     name : str
-        Name recorded in a run's settings, such as ``"hysplit"``.
+        Name recorded in a run's settings, such as ``"hysplit"``, and
+        written as ``model:`` in ``config.yaml``.
+    config_class : type
+        The model's config (a :class:`TransportConfig`), which validates its
+        parameters.
     """
 
     name: str
+    config_class: type[Any]
 
-    def version(self, params: TransportParams) -> str:
-        """Return the version of the build *params* would run, recorded with the run."""
+    def version(self, config: Any) -> str:
+        """Return the version of the build *config* would run, recorded with the run."""
         ...
 
-    def data_files(self, params: TransportParams) -> dict[str, str] | None:
+    def data_files(self, config: Any) -> dict[str, str] | None:
         """
-        Return the checksum of each data file *params* replaces, by file name.
+        Return the checksum of each data file *config* replaces, by file name.
 
         ``None`` when the run uses the model's own data files. These are part
         of the run's identity, since the data change the particles.
@@ -87,7 +132,7 @@ class TransportModel(Protocol):
     def run(
         self,
         receptor: Receptor,
-        params: TransportParams,
+        config: Any,
         met: Met,
         workdir: Path,
         timeout: int | None = None,
@@ -99,8 +144,8 @@ class TransportModel(Protocol):
         ----------
         receptor : Receptor
             Where and when particles are released.
-        params : TransportParams
-            Transport settings.
+        config : TransportConfig
+            The model's config, of its ``config_class``.
         met : Met
             The meteorology to read.
         workdir : Path
@@ -113,6 +158,18 @@ class TransportModel(Protocol):
         ...
 
 
+def _hysplit() -> TransportModel:
+    """Return HYSPLIT, importing its package only when it is asked for."""
+    from stilt.transport.hysplit import HysplitModel
+
+    return HysplitModel()
+
+
+#: The transport models PYSTILT can run, by the name ``model:`` takes in
+#: ``config.yaml``. A port of another model adds its entry here.
+MODELS: dict[str, Callable[[], TransportModel]] = {"hysplit": _hysplit}
+
+
 def get_model(name: str = "hysplit") -> TransportModel:
     """
     Return the transport model called *name*.
@@ -122,11 +179,19 @@ def get_model(name: str = "hysplit") -> TransportModel:
     ValueError
         If no model has that name.
     """
-    if name == "hysplit":
-        from stilt.transport.hysplit import HysplitModel
+    factory = MODELS.get(name)
+    if factory is None:
+        raise ValueError(
+            f"Unknown transport model {name!r}. The models are {sorted(MODELS)}."
+        )
+    return factory()
 
-        return HysplitModel()
-    raise ValueError(f"Unknown transport model {name!r}. The models are ['hysplit'].")
 
-
-__all__ = ["ModelInfo", "ModelRun", "TransportModel", "get_model"]
+__all__ = [
+    "MODELS",
+    "ModelInfo",
+    "ModelRun",
+    "TransportConfig",
+    "TransportModel",
+    "get_model",
+]

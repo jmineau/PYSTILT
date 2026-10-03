@@ -350,8 +350,8 @@ class Project:
 
         A :class:`Simulations`: a table with the columns ``receptor``,
         ``variant``, ``group`` (the variant's name in ``config.yaml``,
-        shared by the realizations of one variant), then the other columns
-        of :attr:`receptors`. Rows run receptor by receptor, with variants in
+        shared by the realizations of one variant), ``model`` (its
+        transport model), then the other columns of :attr:`receptors`. Rows run receptor by receptor, with variants in
         config order. Select rows as with pandas, then ask the selection for
         its status or results.
 
@@ -363,11 +363,11 @@ class Project:
         >>> july.load_footprints()
         """
         variants = pd.DataFrame(
-            [(name, v.group) for name, v in self.variants.items()],
-            columns=["variant", "group"],
+            [(name, v.group, v.model.name) for name, v in self.variants.items()],
+            columns=["variant", "group", "model"],
         )
         frame = self.receptors.merge(variants, how="cross")
-        first = ["receptor", "variant", "group"]
+        first = ["receptor", "variant", "group", "model"]
         frame = frame.loc[:, first + [c for c in frame.columns if c not in first]]
         return Simulations(self, frame)
 

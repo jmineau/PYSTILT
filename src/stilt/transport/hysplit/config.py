@@ -1,12 +1,12 @@
 """
-The transport settings of a run.
+HYSPLIT's config: every setting that shapes the particles HYSPLIT makes.
 
-:class:`TransportParams` holds every setting that shapes a run's particles.
-Most are HYSPLIT's own (written to its ``SETUP.CFG``, ``CONTROL``,
-``ZICONTROL``, ``WINDERR``, and ``ZIERR`` files, under the same names); a few
-are used by PYSTILT itself. Each field records which, as
-``json_schema_extra={"file": ...}``, and :func:`fields_in` lists them. The
-HYSPLIT driver writes the files from that, so adding a setting is one field.
+:class:`HysplitConfig` holds them. Most are HYSPLIT's own (written to its
+``SETUP.CFG``, ``CONTROL``, ``ZICONTROL``, ``WINDERR``, and ``ZIERR`` files,
+under the same names); a few are used by PYSTILT itself. Each field records
+which, as ``json_schema_extra={"file": ...}``, and :func:`fields_in` lists
+them. The HYSPLIT driver writes the files from that, so adding a setting is
+one field.
 """
 
 from __future__ import annotations
@@ -29,12 +29,13 @@ PYSTILT: dict[str, Any] = {"file": "PYSTILT"}
 MAX_ZISCALE_HOURS = 150
 
 
-class TransportParams(BaseModel):
+class HysplitConfig(BaseModel):
     """
-    Every setting that shapes a run's particles.
+    HYSPLIT's config: every setting that shapes the particles it makes.
 
-    In ``config.yaml`` they are flat, top-level keys, and a variant may
-    override any of them. Most are HYSPLIT ``SETUP.CFG`` entries with
+    In ``config.yaml`` they are flat, top-level keys when HYSPLIT is the
+    project's model, as it is by default, and a variant may override any of
+    them. Most are HYSPLIT ``SETUP.CFG`` entries with
     HYSPLIT's own names; see the HYSPLIT user guide for the full meaning of
     each. The wind-error group (``siguverr``, ``tluverr``, ``zcoruverr``,
     ``horcoruverr``) perturbs the particles' winds, and the mixed-layer group
@@ -704,6 +705,50 @@ class TransportParams(BaseModel):
                 )
         return self
 
+    def settings(self) -> dict[str, Any]:
+        """
+        Return what a run records of this config, the fields that change its particles.
+
+        ``exe_dir`` and ``data_dir`` are left out (:attr:`UNRECORDED`); the
+        build's version and the data files that differ from the bundled ones
+        are recorded with the model instead. ``maxpar`` is given as HYSPLIT
+        receives it, so an unset ``maxpar`` equals ``numpar``.
+        """
+        data = self.model_dump(mode="json", exclude=set(self.UNRECORDED))
+        if data["maxpar"] is None:
+            data["maxpar"] = self.numpar
+        return data
+
+    def realizations(self, n: int) -> list[Self]:
+        """
+        Return *n* realizations of this config, realization ``k`` with ``seed + k``.
+
+        Realization 0 uses the configured seed, as STILT-R's single error run
+        does.
+
+        Raises
+        ------
+        ValueError
+            If *n* is more than one and the runs would repeat one another:
+            only ``krand=4`` (HYSPLIT seeds each run from the clock) and
+            ``krand=2`` with a seed give each realization its own draws.
+        """
+        if n > 1 and not (
+            self.krand == 4 or (self.krand == 2 and self.seed is not None)
+        ):
+            raise ValueError(
+                f"realizations={n} requires krand=4 or krand=2 with a seed (got "
+                f"krand={self.krand}, seed={self.seed}): under krand=4 HYSPLIT "
+                "seeds each run from the clock; under krand=2 PYSTILT gives each "
+                "realization its own seed. Any other mode would repeat the same "
+                "perturbation."
+            )
+        seed = self.seed
+        return [
+            self.model_copy(update={"seed": None if seed is None else seed + k})
+            for k in range(n)
+        ]
+
 
 def fields_in(file: str) -> list[str]:
     """
@@ -714,10 +759,10 @@ def fields_in(file: str) -> list[str]:
     """
     return [
         name
-        for name, info in TransportParams.model_fields.items()
+        for name, info in HysplitConfig.model_fields.items()
         if isinstance(info.json_schema_extra, dict)
         and info.json_schema_extra.get("file") == file
     ]
 
 
-__all__ = ["MAX_ZISCALE_HOURS", "TransportParams", "fields_in"]
+__all__ = ["MAX_ZISCALE_HOURS", "HysplitConfig", "fields_in"]

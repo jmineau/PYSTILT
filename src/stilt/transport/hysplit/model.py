@@ -7,13 +7,17 @@ from importlib.resources import files as pkg_files
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import pandas as pd
+
+from stilt.particles import calc_plume_dilution
+from stilt.receptors import PointReceptor
 from stilt.transport import ModelRun
 
+from .config import HysplitConfig
 from .driver import HYSPLITDriver, _bundled_data_dir
 from .release import add_release_heights
 
 if TYPE_CHECKING:
-    from stilt.config import TransportParams
     from stilt.meteorology import Met
     from stilt.receptors import Receptor
 
@@ -50,6 +54,24 @@ def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def finish_particles(
+    particles: pd.DataFrame, receptor: Receptor, config: HysplitConfig
+) -> pd.DataFrame:
+    """
+    Return HYSPLIT's particles with what the config asks added.
+
+    Each particle gets its release height (``xhgt``) for a column or
+    multipoint receptor, and ``foot`` is corrected for plume dilution near
+    the receptor when ``hnf_plume`` is set
+    (:func:`stilt.particles.calc_plume_dilution`).
+    """
+    particles = add_release_heights(particles, receptor)
+    if config.hnf_plume:
+        r_zagl = receptor.altitude if isinstance(receptor, PointReceptor) else None
+        particles = calc_plume_dilution(particles, r_zagl, config.veght)
+    return particles
+
+
 class HysplitModel:
     """
     HYSPLIT as a transport model, the object ``get_model("hysplit")`` returns.
@@ -62,23 +84,24 @@ class HysplitModel:
     """
 
     name = "hysplit"
+    config_class = HysplitConfig
 
-    def version(self, params: TransportParams) -> str:
-        """Return the version of the bundled build, or of the one in ``params.exe_dir``."""
-        return hysplit_version(params.exe_dir)
+    def version(self, config: HysplitConfig) -> str:
+        """Return the version of the bundled build, or of the one in ``config.exe_dir``."""
+        return hysplit_version(config.exe_dir)
 
-    def data_files(self, params: TransportParams) -> dict[str, str] | None:
+    def data_files(self, config: HysplitConfig) -> dict[str, str] | None:
         """
-        Return the SHA-256 of each table in ``params.data_dir`` that differs from the bundled one.
+        Return the SHA-256 of each table in ``config.data_dir`` that differs from the bundled one.
 
         ``None`` when there is no ``data_dir`` or every table in it matches
         the bundled table of the same name.
         """
-        if params.data_dir is None:
+        if config.data_dir is None:
             return None
         bundled = _bundled_data_dir()
         changed = {}
-        for path in sorted(Path(params.data_dir).iterdir()):
+        for path in sorted(Path(config.data_dir).iterdir()):
             if not path.is_file():
                 continue
             digest = _sha256(path)
@@ -90,17 +113,17 @@ class HysplitModel:
     def run(
         self,
         receptor: Receptor,
-        params: TransportParams,
+        config: HysplitConfig,
         met: Met,
         workdir: Path,
         timeout: int | None = None,
     ) -> ModelRun:
-        """Write the input files, run ``hycs_std``, and return the particles."""
-        source = met.required_files(r_time=receptor.time, n_hours=params.n_hours)
+        """Write the input files, run ``hycs_std``, and return the finished particles (:func:`finish_particles`)."""
+        source = met.required_files(r_time=receptor.time, n_hours=config.n_hours)
         driver = HYSPLITDriver(
             directory=workdir,
             receptor=receptor,
-            params=params,
+            params=config,
             met_files=met.readable(source),
         )
         driver.prepare()
@@ -108,9 +131,8 @@ class HysplitModel:
         # The record names the source files; the crop settings are in the
         # run's settings.
         return ModelRun(
-            particles=add_release_heights(particles, receptor),
-            met_files=source,
+            particles=finish_particles(particles, receptor, config), met_files=source
         )
 
 
-__all__ = ["HysplitModel", "hysplit_version"]
+__all__ = ["HysplitModel", "finish_particles", "hysplit_version"]

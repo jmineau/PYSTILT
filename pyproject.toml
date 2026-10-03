@@ -175,7 +175,9 @@ ignore_imports = [
 
 # What the user writes (config.yaml, receptors.csv) is plain data. Resolving
 # it, reading geometries or asking a transport model its version, happens
-# above, in stilt.variants. Imports inside functions count too.
+# above, in stilt.variants. Imports inside functions count too. Config may
+# look up a model's config class through the stilt.transport registry, which
+# imports a model's package only when asked for it.
 [[tool.importlinter.contracts]]
 name = "Config and receptors import nothing above them"
 type = "forbidden"
@@ -189,9 +191,18 @@ forbidden_modules = [
     "stilt.particles",
     "stilt.project",
     "stilt.simulation",
-    "stilt.transport",
+    "stilt.transport.hysplit",
     "stilt.variants",
 ]
+ignore_imports = ["stilt.transport -> stilt.transport.hysplit"]
+
+# A transport model owns its config. The core reaches it through
+# stilt.transport.get_model, so a second model has its own parameters.
+[[tool.importlinter.contracts]]
+name = "HYSPLIT's package does not import the project config"
+type = "forbidden"
+source_modules = ["stilt.transport.hysplit"]
+forbidden_modules = ["stilt.config", "stilt.project", "stilt.variants"]
 
 [tool.pyright]
 include = ["src"]

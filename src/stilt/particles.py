@@ -13,13 +13,12 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 
 from stilt._atomic import write_parquet
-from stilt.config import TransportParams
 from stilt.receptors import (
-    PointReceptor,
     Receptor,
     parse_receptor_id,
 )
 from stilt.sampling import sample_field
+from stilt.transport import TransportConfig, get_model
 
 logger = logging.getLogger(__name__)
 
@@ -36,14 +35,15 @@ if TYPE_CHECKING:
 # it was off by about 190 m.
 
 
-def _stored_params(stored: dict[str, Any], path: str | Path) -> TransportParams:
-    """Return the params stored in a particle file, dropping settings this version does not have."""
-    unknown = sorted(set(stored) - set(TransportParams.model_fields))
+def _stored_params(stored: dict[str, Any], path: str | Path, model: str) -> Any:
+    """Return the config stored in a particle file, read by *model*'s config class, dropping settings this version does not have."""
+    config_class = get_model(model).config_class
+    unknown = sorted(set(stored) - set(config_class.model_fields))
     if unknown:
         logger.debug(
             "%s: skipping stored params this version does not have: %s", path, unknown
         )
-    return TransportParams.model_validate(
+    return config_class.model_validate(
         {k: v for k, v in stored.items() if k not in unknown}
     )
 
@@ -56,21 +56,18 @@ class ParticleMetadata(NamedTuple):
     """What a particle file records about the HYSPLIT run that made it."""
 
     receptor: Receptor
-    params: TransportParams
+    params: TransportConfig
     met_files: list[Path]
 
 
-def prepare(
-    raw: pd.DataFrame, receptor: Receptor, params: TransportParams
-) -> pd.DataFrame:
+def prepare(raw: pd.DataFrame, receptor: Receptor) -> pd.DataFrame:
     """
     Return a transport model's particle output as the particle table PYSTILT keeps.
 
-    Applies the near-field plume dilution correction when
-    ``params.hnf_plume`` is set (:func:`calc_plume_dilution`), and adds a
-    ``datetime`` column from ``time``. The transport model has already
-    added each particle's release height ``xhgt`` for a column or
-    multipoint receptor.
+    Adds a ``datetime`` column from ``time``. The transport model has
+    already done what its config asks, such as the near-field plume
+    dilution correction (:func:`calc_plume_dilution`), and added each
+    particle's release height ``xhgt`` for a column or multipoint receptor.
 
     Parameters
     ----------
@@ -78,8 +75,6 @@ def prepare(
         Particles as the transport model returns them.
     receptor : Receptor
         Receptor the particles were released from.
-    params : TransportParams
-        Transport settings of the run.
 
     Returns
     -------
@@ -87,10 +82,6 @@ def prepare(
         One row per particle per output step.
     """
     p = raw.copy()
-    if params.hnf_plume:
-        r_zagl = receptor.altitude if isinstance(receptor, PointReceptor) else None
-        p = calc_plume_dilution(p, r_zagl, params.veght)
-
     p["datetime"] = receptor.time + pd.to_timedelta(p["time"].to_numpy(), unit="min")
     return p
 
@@ -104,7 +95,11 @@ def particles_metadata(path: str | Path) -> ParticleMetadata:
     meta = pq.read_schema(path).metadata or {}
     return ParticleMetadata(
         receptor=Receptor.from_dict(json.loads(meta[b"stilt:receptor"])),
-        params=_stored_params(json.loads(meta[b"stilt:params"]), path),
+        params=_stored_params(
+            json.loads(meta[b"stilt:params"]),
+            path,
+            meta.get(b"stilt:model", b"hysplit").decode(),
+        ),
         met_files=[Path(p) for p in json.loads(meta[b"stilt:met_files"])],
     )
 
@@ -185,7 +180,7 @@ def write_particles(
     path: str | Path,
     particles: pd.DataFrame,
     receptor: Receptor,
-    params: TransportParams,
+    params: TransportConfig,
     met_files: list[Path],
     metadata: dict[bytes, bytes] | None = None,
 ) -> Path:
@@ -205,8 +200,8 @@ def write_particles(
         The particle table.
     receptor : Receptor
         Receptor the particles were released from.
-    params : TransportParams
-        Transport settings of the run.
+    params : TransportConfig
+        The transport model's config for the run.
     met_files : list of Path
         Meteorology files the run used.
     metadata : dict, optional

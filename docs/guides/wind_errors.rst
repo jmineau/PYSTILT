@@ -165,7 +165,7 @@ The recipe makes these choices, and you can change any of them:
   perturbation does not represent it.
 
 The four values go into ``config.yaml`` under the same names, or into
-:class:`~stilt.config.TransportParams`. Look at the fits before you trust
+:class:`~stilt.transport.hysplit.HysplitConfig`. Look at the fits before you trust
 them:
 
 .. code-block:: python

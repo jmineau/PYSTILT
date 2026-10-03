@@ -6,10 +6,11 @@ from dataclasses import replace
 import pytest
 import yaml
 
-from stilt.config import MetConfig, ProjectConfig, TransportParams
+from stilt.config import MetConfig, ProjectConfig
 from stilt.identity import read_run_settings, run_settings, settings_hash
 from stilt.output import Output
 from stilt.transport import ModelInfo
+from stilt.transport.hysplit import HysplitConfig
 from stilt.transport.hysplit.model import hysplit_version
 from stilt.variants import Variant, resolve
 
@@ -66,14 +67,14 @@ def test_custom_build_needs_a_version_file(tmp_path):
 
 def test_a_runs_met_is_recorded_without_its_directories(tmp_path):
     met = _met(tmp_path, subgrid_dir=tmp_path / "sub", n_min=2)
-    recorded = run_settings(TransportParams(), met, ModelInfo(version="v5.1.0"), None)
+    recorded = run_settings(HysplitConfig(), met, ModelInfo(version="v5.1.0"), None)
     assert not {"directory", "subgrid_dir", "n_min", "download_from"} & set(
         recorded["met"]
     )
     moved = met.model_copy(update={"directory": tmp_path / "elsewhere"})
-    assert run_settings(
-        TransportParams(), moved, ModelInfo(version="v5.1.0"), None
-    ) == (recorded)
+    assert run_settings(HysplitConfig(), moved, ModelInfo(version="v5.1.0"), None) == (
+        recorded
+    )
 
 
 def test_run_settings_leave_out_what_changes_no_particle(tmp_path):
@@ -105,7 +106,7 @@ def test_nested_and_flat_ziscale_are_one_run(tmp_path):
     assert nested.transport.ziscale == [0.8, 0.9]
     assert nested.particles_hash == flat.particles_hash
     with pytest.raises(ValueError, match="Per-simulation"):
-        TransportParams(ziscale=[[0.8], [0.9]])
+        HysplitConfig(ziscale=[[0.8], [0.9]])
 
 
 def test_variants_that_differ_only_in_footprint_fields_share_particles(tmp_path):

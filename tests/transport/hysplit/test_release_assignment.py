@@ -7,11 +7,12 @@ from pathlib import Path
 
 import numpy as np
 
-from stilt.config import MetConfig, TransportParams
+from stilt.config import MetConfig
 from stilt.meteorology import Met
 from stilt.receptors import ColumnReceptor, MultiPointReceptor
+from stilt.transport.hysplit import HysplitConfig
 from stilt.transport.hysplit.driver import HYSPLITDriver
-from stilt.transport.hysplit.release import add_release_heights
+from stilt.transport.hysplit.model import finish_particles
 
 from ...conftest import integration
 
@@ -50,7 +51,7 @@ def test_hysplit_multipoint_release_points_follow_control_order(tmp_path, met_di
         latitudes=[40.5, 40.5, 40.5],
         altitudes=[100.0, 500.0, 900.0],
     )
-    params = TransportParams(
+    params = HysplitConfig(
         n_hours=-1,
         numpar=12,
         hnf_plume=False,
@@ -110,7 +111,7 @@ def test_hysplit_multipoint_release_points_follow_control_order_nondivisible(
         latitudes=[40.5, 40.5, 40.5],
         altitudes=[100.0, 500.0, 900.0],
     )
-    params = TransportParams(
+    params = HysplitConfig(
         n_hours=-1,
         numpar=10,
         hnf_plume=False,
@@ -158,7 +159,7 @@ def test_hysplit_column_release_spans_vertical_line_without_endpoint_chunking(
         bottom=5.0,
         top=1000.0,
     )
-    params = TransportParams(
+    params = HysplitConfig(
         n_hours=-1,
         numpar=12,
         # Seed the release so the column heights are reproducible run-to-run
@@ -229,7 +230,7 @@ def test_close_spaced_slant_release_heights_are_recovered(tmp_path, met_dir):
         latitudes=np.full(n_levels, 40.766),
         altitudes=altitudes,
     )
-    params = TransportParams(n_hours=-1, numpar=200, hnf_plume=False)
+    params = HysplitConfig(n_hours=-1, numpar=200, hnf_plume=False)
     met_files = Met(
         "hrrr", MetConfig(directory=met_dir, file_format="%Y%m%d_%H", file_tres="6h")
     ).required_files(r_time=receptor.time, n_hours=params.n_hours)
@@ -242,7 +243,7 @@ def test_close_spaced_slant_release_heights_are_recovered(tmp_path, met_dir):
     )
     runner.prepare()
     particles = runner.execute(timeout=300)
-    data = prepare(add_release_heights(particles, receptor), receptor, params)
+    data = prepare(finish_particles(particles, receptor, params), receptor)
 
     release = _release_time_rows(data).drop_duplicates("indx")
     # Each group's actual height should sit at the altitude it was assigned.

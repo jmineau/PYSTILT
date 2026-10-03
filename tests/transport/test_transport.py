@@ -5,12 +5,12 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
-from stilt.config import MetConfig, ProjectConfig, TransportParams
+from stilt.config import MetConfig, ProjectConfig
 from stilt.execution import run_particles, worker
 from stilt.output import Output
 from stilt.simulation import Simulation
 from stilt.transport import ModelInfo, ModelRun, get_model
-from stilt.transport.hysplit import HysplitModel
+from stilt.transport.hysplit import HysplitConfig, HysplitModel
 from stilt.variants import Variant, resolve
 
 
@@ -30,11 +30,11 @@ def test_hysplit_model_version_is_the_bundled_build_or_exe_dirs(tmp_path):
     from stilt.transport.hysplit.model import hysplit_version
 
     model = HysplitModel()
-    assert model.version(TransportParams(n_hours=-1)) == hysplit_version()
+    assert model.version(HysplitConfig(n_hours=-1)) == hysplit_version()
 
     (tmp_path / "version").write_text("v9.9.9+patched\n")
     assert (
-        model.version(TransportParams(n_hours=-1, exe_dir=tmp_path)) == "v9.9.9+patched"
+        model.version(HysplitConfig(n_hours=-1, exe_dir=tmp_path)) == "v9.9.9+patched"
     )
 
 
@@ -58,7 +58,7 @@ class _FakeDriver:
 
     def execute(self, timeout=None):
         _FakeDriver.built.update(timeout=timeout)
-        return type("Result", (), {"particles": pd.DataFrame({"indx": [1]})})()
+        return pd.DataFrame({"indx": [1]})
 
 
 class _FakeMet:
@@ -81,7 +81,7 @@ def test_hysplit_model_reads_the_met_in_place_and_records_the_source(
     monkeypatch.setattr(model_module, "HYSPLITDriver", _FakeDriver)
     source = [tmp_path / "archive" / "20230101_12"]
     cropped = [tmp_path / "crops" / "20230101_12"]
-    params = TransportParams(n_hours=-1)
+    params = HysplitConfig(n_hours=-1, hnf_plume=False)
 
     result = HysplitModel().run(
         point_receptor,
@@ -131,7 +131,7 @@ def test_run_particles_goes_through_the_model_the_settings_name(
         group="hrrr",
         met="hrrr",
         met_config=met_config,
-        transport=TransportParams(n_hours=-1, numpar=1, hnf_plume=False),
+        transport=HysplitConfig(n_hours=-1, numpar=1, hnf_plume=False),
         model=ModelInfo(version="v5.1.0"),
     )
     sim = Simulation(point_receptor, variant, Output(tmp_path / "output"))

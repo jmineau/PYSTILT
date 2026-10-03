@@ -34,7 +34,7 @@ v1.0**, so prefer the clean design over a compatibility shim.
 | Import name | `stilt` (`import stilt`, never `import pystilt`) |
 | Source directory | `src/stilt/` |
 | CLI entry point | `stilt` (Typer; see `[project.scripts]`) |
-| Config | What the user writes: always a class (`ProjectConfig`, `MetConfig`, `FootprintConfig`, `ExecutionConfig`, `VariantConfig`) |
+| Config | What the user writes: always a class (`ProjectConfig`, `MetConfig`, `FootprintConfig`, `ExecutionConfig`, `VariantConfig`, a model's `HysplitConfig`) |
 | Settings | What a result was made with, as recorded: `_settings.yaml`, the `settings=` folders, a settings hash. Never a class |
 | Parameters | Plain English for a config's fields; names no class or module |
 
@@ -162,9 +162,11 @@ src/stilt/
                      selection, slant geometry, transport error, wind-error
                      statistics, backgrounds, plume backgrounds. Arrays in,
                      plain values out; there is no observation object.
-  transport/         the TransportModel protocol and get_model (__init__.py),
-                     one subpackage per transport model
-    hysplit/         HYSPLIT, the one model today: HysplitModel, the driver
+  transport/         the TransportModel and TransportConfig protocols, ModelInfo,
+                     and get_model with its MODELS table (__init__.py); one
+                     subpackage per transport model, which owns its config
+    hysplit/         HYSPLIT, the one model today: HysplitConfig (config.py, its
+                     parameters and where each goes), HysplitModel, the driver
                      (CONTROL / SETUP.CFG writers), failure reasons read from
                      its log (failures.py), and the bundled binaries (bin/)
                      and data tables (data/)
@@ -202,9 +204,14 @@ output directory, never only in memory.
 
 ### Configuration
 
-- `ProjectConfig` is the root: flat transport (`TransportParams`) and footprint
-  (`FootprintConfig`) defaults, `mets`, and `variants` (overrides of the
-  defaults). When it loads it merges each declared variant with the
+- `ProjectConfig` is the root: `model` (the transport model, `hysplit`
+  unless set), that model's parameters and the footprint (`FootprintConfig`)
+  fields as flat defaults, `mets`, and `variants` (overrides of the
+  defaults). The model's parameters are checked by its own config class
+  (`stilt.transport.hysplit.HysplitConfig`; `config.transport`), reached
+  through `stilt.transport.get_model`. A model is a variant axis, like a
+  met: a variant that names another `model` gives that model's parameters
+  itself and inherits only the met and the footprint fields. When it loads it merges each declared variant with the
   defaults, once, into a `VariantConfig` per simulation name
   (`config.variant_configs`), expanding `realizations: N` into
   `<name>-0..N-1` with `seed + k`. Nothing outside the file is read then.
