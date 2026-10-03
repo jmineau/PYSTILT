@@ -1,8 +1,12 @@
 name: Deploy Documentation
 
+# The site shows the latest release, so it deploys only from a release tag.
+# Pull requests build the docs as a check. To redeploy a release (a docs fix
+# that cannot wait), run this workflow by hand on that tag.
 on:
   push:
-    branches: [ main ]
+    tags:
+      - "v*.*.*"
   pull_request:
     branches: [ main ]
   workflow_dispatch:
@@ -48,9 +52,8 @@ jobs:
           path: docs/_build/html
 
   deploy:
-    # Pages accepts deploys from main only; on a pull request the build job
-    # alone checks that the docs build.
-    if: github.event_name != 'pull_request'
+    # The github-pages environment must allow v* tags (Settings > Environments).
+    if: startsWith(github.ref, 'refs/tags/v')
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
