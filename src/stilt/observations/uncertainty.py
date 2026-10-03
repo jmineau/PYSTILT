@@ -124,17 +124,35 @@ def _level_labels(heights: pd.Series, edges: np.ndarray) -> pd.Series:
     return pd.Series(np.asarray(label, dtype=float), index=heights.index)
 
 
-def _level_stats(values: np.ndarray, percentile: float) -> tuple[float, float]:
-    """Return the mean of all values and the variance of those at or below ``percentile``."""
-    v = values[np.isfinite(values)]
-    if v.size == 0:
-        return np.nan, np.nan
-    mean = float(v.mean())
-    if percentile < 1.0:
-        v = v[v <= np.quantile(v, percentile)]
-    if v.size < 2:
-        return mean, np.nan
-    return mean, float(v.var(ddof=0))
+def _level_stats(x: pd.Series, labels: pd.Series, percentile: float) -> pd.DataFrame:
+    """
+    Return each level's mean and variance of ``x``, indexed by level.
+
+    The mean is over all the level's finite values and the variance over
+    those at or below ``percentile``. A level with fewer than two such
+    values has NaN variance.
+    """
+
+    def var(values: pd.Series) -> float:
+        v = _finite(values)
+        if v.size and percentile < 1.0:
+            v = v[v <= np.quantile(v, percentile)]
+        return float(v.var(ddof=0)) if v.size >= 2 else np.nan
+
+    groups = x.reindex(labels.index).groupby(labels)
+    return pd.DataFrame({"mean": groups.apply(_mean), "var": groups.apply(var)})
+
+
+def _finite(values: pd.Series) -> np.ndarray:
+    """Return the finite values as an array."""
+    v = values.to_numpy(dtype=float)
+    return v[np.isfinite(v)]
+
+
+def _mean(values: pd.Series) -> float:
+    """Return numpy's mean of the finite values, or NaN when there are none."""
+    v = _finite(values)
+    return float(v.mean()) if v.size else np.nan
 
 
 def _signed_sqrt(values: np.ndarray) -> np.ndarray:
@@ -181,40 +199,35 @@ def _level_table(
     error realizations (one ``x_errs`` and ``label_errs`` pair each) before
     ``dvar`` is taken.
     """
-    rows = []
-    n_total = len(x_orig)
-    for lvl, height in level_height.items():
-        idx_o = label_orig.index.to_numpy()[(label_orig == lvl).to_numpy()]
-        mean_o, var_o = _level_stats(x_orig.reindex(idx_o).to_numpy(), percentile)
-        means_e, vars_e = [], []
-        for x_err, label_err in zip(x_errs, label_errs, strict=True):
-            idx_e = label_err.index.to_numpy()[(label_err == lvl).to_numpy()]
-            m, v = _level_stats(x_err.reindex(idx_e).to_numpy(), percentile)
-            means_e.append(m)
-            vars_e.append(v)
-        mean_e, var_e = _nanmean(means_e), _nanmean(vars_e)
-        rows.append(
-            {
-                "height": float(height),
-                "n": int(len(idx_o)),
-                "weight": len(idx_o) / n_total,
-                "mean_orig": mean_o,
-                "mean_err": mean_e,
-                "var_orig": var_o,
-                "var_err": var_e,
-            }
-        )
-    table = pd.DataFrame(rows)
+    orig = _level_stats(x_orig, label_orig, percentile).reindex(level_height.index)
+    errs = [
+        _level_stats(x, label, percentile).reindex(level_height.index)
+        for x, label in zip(x_errs, label_errs, strict=True)
+    ]
+    n = label_orig.value_counts().reindex(level_height.index, fill_value=0)
+    table = pd.DataFrame(
+        {
+            "height": level_height.to_numpy(dtype=float),
+            "n": n.to_numpy(dtype=int),
+            "weight": n.to_numpy() / len(x_orig),
+            "mean_orig": orig["mean"].to_numpy(),
+            "mean_err": _nanmean([e["mean"].to_numpy(dtype=float) for e in errs]),
+            "var_orig": orig["var"].to_numpy(),
+            "var_err": _nanmean([e["var"].to_numpy(dtype=float) for e in errs]),
+        }
+    )
     table["dvar"] = table["var_err"] - table["var_orig"]
     table["sd_trans"] = _signed_sqrt(table["dvar"].to_numpy())
     return table
 
 
-def _nanmean(values: Sequence[float]) -> float:
-    """Return the mean ignoring NaN, or NaN when every value is NaN."""
-    arr = np.asarray(values, dtype=float)
-    finite = arr[np.isfinite(arr)]
-    return float(finite.mean()) if finite.size else float("nan")
+def _nanmean(columns: Sequence[np.ndarray]) -> np.ndarray:
+    """Return the mean across *columns* per row, ignoring NaN; NaN where all are."""
+    arr = np.column_stack(columns)
+    ok = np.isfinite(arr)
+    count = ok.sum(axis=1)
+    total = np.where(ok, arr, 0.0).sum(axis=1)
+    return np.divide(total, count, out=np.full(len(arr), np.nan), where=count > 0)
 
 
 def _noise(
@@ -385,9 +398,7 @@ def transport_error(
 
     edges = _level_edges(h_orig, levels)
     label_orig = _level_labels(h_orig, edges)
-    lab, hgt = label_orig.to_numpy(), h_orig.to_numpy(dtype=float)
-    present = np.unique(lab[np.isfinite(lab)])
-    level_height = pd.Series([hgt[lab == u].mean() for u in present], index=present)
+    level_height = h_orig.groupby(label_orig).apply(_mean)
 
     x_errs, label_errs = [], []
     for err in error_tables:

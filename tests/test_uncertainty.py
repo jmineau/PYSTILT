@@ -87,6 +87,26 @@ def test_percentile_clips_the_top_of_each_level():
     assert clipped.enhancement == raw.enhancement
 
 
+def test_level_statistics_are_numpy_means_and_variances():
+    main = _column(spread=1.0, seed=8)
+    errs = [_column(spread=2.0, seed=9), _column(spread=3.0, seed=10)]
+    errs[0] = errs[0].drop(index=errs[0].index[:30])  # level 0 loses particles
+
+    result = transport_error(main, errs, FLUX, percentile=0.9, noise_splits=0)
+
+    def stats(p, level):
+        v = p.loc[p["xhgt"] == 250.0 + 500.0 * level, "foot"].to_numpy()
+        return v.mean(), v[v <= np.quantile(v, 0.9)].var()
+
+    for level, row in result.levels.iterrows():
+        mean_o, var_o = stats(main, level)
+        means_e, vars_e = zip(*(stats(e, level) for e in errs), strict=True)
+        assert row["mean_orig"] == mean_o
+        assert row["var_orig"] == var_o
+        assert row["mean_err"] == np.mean(means_e)
+        assert row["var_err"] == np.mean(vars_e)
+
+
 def test_point_receptor_particles_are_one_level():
     main = _column(n_levels=1, spread=1.0, seed=5).drop(columns="xhgt")
     err = _column(n_levels=1, spread=2.0, seed=6).drop(columns="xhgt")
