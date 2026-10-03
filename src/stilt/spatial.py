@@ -101,6 +101,18 @@ def cf_axis_attrs(dim: str) -> dict[str, str]:
     }[dim]
 
 
+def _with_cf_grid(ds: xr.Dataset, crs: str) -> xr.Dataset:
+    """Add the CF-1.8 grid mapping for *crs* and the axis attributes to *ds*, and return it."""
+    import xarray as xr
+
+    ds.attrs.setdefault("Conventions", "CF-1.8")
+    ds["crs"] = xr.DataArray(0, attrs=_cf_grid_mapping_attrs(crs))
+    for dim in ("lon", "lat", "x", "y"):
+        if dim in ds.coords:
+            ds[dim].attrs.update(cf_axis_attrs(dim))
+    return ds
+
+
 _HORIZONTAL_DIMS = (("lat", "lon"), ("y", "x"))
 
 
@@ -230,13 +242,8 @@ class Grid(Bounds):
 
         x_centers, y_centers = self.axes
         y_dim, x_dim = self.dims
-
         ds = xr.Dataset(coords={x_dim: x_centers, y_dim: y_centers})
-        ds.attrs["Conventions"] = "CF-1.8"
-        ds["crs"] = xr.DataArray(0, attrs=_cf_grid_mapping_attrs(self.crs))
-        ds[x_dim].attrs.update(cf_axis_attrs(x_dim))
-        ds[y_dim].attrs.update(cf_axis_attrs(y_dim))
-        return ds
+        return _with_cf_grid(ds, self.crs)
 
 
 # ---------------------------------------------------------------------------

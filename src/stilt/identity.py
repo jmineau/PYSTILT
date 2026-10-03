@@ -19,11 +19,13 @@ from __future__ import annotations
 
 import hashlib
 import json
+import warnings
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
 from stilt.config import FootprintConfig, MetConfig
+from stilt.transforms import dump_transform, load_transform, transform_kind
 from stilt.transport import ModelInfo, TransportConfig, get_model
 
 
@@ -119,22 +121,61 @@ def read_run_settings(stored: Mapping[str, Any]) -> dict[str, Any]:
 # -- footprints ---------------------------------------------------------------
 
 
+def _record_transform(transform: Any) -> dict[str, Any]:
+    """Return a transform as recorded, its ``kind`` alone if it has no settings to write."""
+    try:
+        return dump_transform(transform)
+    except TypeError:
+        return {"kind": transform_kind(transform)}
+
+
+def _read_transform(spec: dict[str, Any], source: str) -> Any:
+    """Return a recorded transform, or its mapping when it cannot be rebuilt here."""
+    try:
+        return load_transform(spec)
+    except (ImportError, TypeError, ValueError) as exc:
+        warnings.warn(
+            f"{source}: transform {spec.get('kind')!r} could not be rebuilt "
+            f"({exc}). It is kept as its settings and cannot be applied.",
+            stacklevel=3,
+        )
+        return spec
+
+
 def footprint_settings(
     footprint: FootprintConfig, geometry_hash: str | None
 ) -> dict[str, Any]:
-    """Return the settings that identify a footprint, besides its particles, in canonical form."""
-    data = footprint.model_dump(mode="json")
+    """
+    Return the settings that identify a footprint, besides its particles, in canonical form.
+
+    The same record goes in a footprint folder's ``_settings.yaml`` and in
+    each footprint file and array. A transform that is not a pydantic model
+    is recorded by its ``kind`` alone.
+    """
+    data = footprint.model_dump(mode="json", exclude={"transforms"})
+    data["transforms"] = [_record_transform(t) for t in footprint.transforms]
     data["geometry_hash"] = geometry_hash
     return canonical(data)
 
 
 def read_footprint_settings(
-    stored: Mapping[str, Any],
+    stored: Mapping[str, Any], source: str = "footprint settings"
 ) -> tuple[FootprintConfig, str | None]:
-    """Return the footprint config and geometry hash a ``_settings.yaml`` records."""
+    """
+    Return the footprint config and geometry hash that :func:`footprint_settings` recorded.
+
+    A transform whose class cannot be imported here is kept as its mapping,
+    with a warning naming *source*, so the record still reads.
+    """
     data = dict(stored)
     geometry_hash = data.pop("geometry_hash", None)
-    return FootprintConfig.model_validate(data), geometry_hash
+    specs = data.pop("transforms", [])
+    config = FootprintConfig.model_validate(data)
+    # model_copy skips validation, so a mapping stays a mapping.
+    config = config.model_copy(
+        update={"transforms": [_read_transform(s, source) for s in specs]}
+    )
+    return config, geometry_hash
 
 
 def footprint_hash(particles_hash: str, settings: Mapping[str, Any]) -> str:

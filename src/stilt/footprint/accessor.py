@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -13,10 +14,11 @@ import xarray as xr
 
 from stilt._atomic import atomic_path
 from stilt.config import FootprintConfig, Grid
+from stilt.identity import read_footprint_settings
 from stilt.receptors import Receptor
 
 from .aggregation import aggregate
-from .io import _settings_from_json, _utc_index, _with_cf_metadata
+from .io import _utc_index, _with_cf_metadata
 from .targets import Geometry
 
 if TYPE_CHECKING:
@@ -58,20 +60,28 @@ class FootprintAccessor:
             )
         return value
 
-    @property
+    # xarray keeps one accessor per array, so each attribute is parsed once.
+
+    @cached_property
     def receptor(self) -> Receptor:
         """The receptor the footprint belongs to."""
-        return Receptor.from_dict(json.loads(self._attr("stilt_receptor")))
+        return Receptor.from_json(self._attr("stilt_receptor"))
+
+    @cached_property
+    def _settings(self) -> tuple[FootprintConfig, str | None]:
+        return read_footprint_settings(
+            json.loads(self._attr("stilt_footprint")), "footprint"
+        )
 
     @property
     def config(self) -> FootprintConfig:
         """The footprint settings: grid, smoothing, and particle transforms."""
-        return _settings_from_json(self._attr("stilt_footprint"), "footprint")[0]
+        return self._settings[0]
 
     @property
     def geometry_hash(self) -> str | None:
         """Hash of the geometry the grid was derived for, or ``None`` when the footprint has no geometry."""
-        return _settings_from_json(self._attr("stilt_footprint"), "footprint")[1]
+        return self._settings[1]
 
     @property
     def grid(self) -> Grid:

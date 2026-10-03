@@ -278,10 +278,10 @@ def test_netcdf_with_unimportable_transform_still_loads(tmp_path):
     with pytest.warns(UserWarning, match="could not be imported"):
         assert loaded.stilt.config.transforms == [recorded]
 
-    # The mapping survives another write/read unchanged.
+    # The mapping survives another write/read unchanged. The accessor read the
+    # settings once above, so writing does not warn again.
     rewritten = sim_dir / "202301011200_-111.85_40.77_5_again_foot.nc"
-    with pytest.warns(UserWarning):
-        loaded.stilt.to_netcdf(rewritten)
+    loaded.stilt.to_netcdf(rewritten)
     again = read_footprint(rewritten)
     with pytest.warns(UserWarning):
         assert again.stilt.config.transforms == [recorded]
