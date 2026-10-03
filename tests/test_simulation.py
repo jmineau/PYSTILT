@@ -8,6 +8,7 @@ import xarray as xr
 
 from stilt.execution import make_footprint
 from stilt.footprint.config import FootprintConfig
+from stilt.identity import settings_hash
 from stilt.meteorology import MetConfig
 from stilt.output import Output
 from stilt.particles import particles_metadata
@@ -385,3 +386,15 @@ def test_generate_footprint_uses_the_receptor_kernel_from_a_project_table(
     weighted = sim.generate_footprint(context=_context(sim, directory=tmp_path))
     base = plain.generate_footprint()
     assert float(weighted.sum()) == pytest.approx(0.5 * float(base.sum()))
+
+
+def test_settings_are_the_records_that_name_the_folders(point_receptor, tmp_path):
+    grid = Grid(xmin=-112.0, xmax=-111.5, ymin=40.5, ymax=41.0, xres=0.1, yres=0.1)
+    sim = _sim(tmp_path, point_receptor, footprint=FootprintConfig(grid=grid))
+    settings = sim.settings
+    assert settings["particles"] == sim.variant.run_settings
+    assert settings["particles"]["numpar"] == 10
+    assert settings["footprint"]["grid"]["xres"] == 0.1
+    assert settings_hash(settings["particles"]) == sim.variant.particles_hash
+
+    assert _sim(tmp_path, point_receptor).settings["footprint"] is None
