@@ -18,7 +18,7 @@ import numpy as np
 import pandas as pd
 from netCDF4 import Dataset, chartostring
 
-from ._common import _float, _rows, _seconds_since, _wrap_azimuth
+from ._common import _float, _rows, _seconds_since, _span, _wrap_azimuth
 
 _STD_ATMOSPHERE_HPA = 1013.25
 _AIRMASS_VAR = "o2_7885_am_o2"
@@ -268,12 +268,11 @@ def read_ggg_netcdf(
             start, stop = (pd.Timestamp(t) for t in time_range)
             keep &= (times_all >= start) & (times_all <= stop)
         (ii,) = np.nonzero(keep)
-        i0, i1 = (int(ii.min()), int(ii.max()) + 1) if ii.size else (0, 0)
-        ri = ii - i0
+        block, ri = _span(ii)
 
         def pick(var: Any) -> np.ndarray:
             """Return one time-indexed variable for the selected spectra."""
-            return _float(var, slice(i0, i1))[ri]
+            return _float(var, block)[ri]
 
         site = str(getattr(ds, "long_name", "") or "").strip() or path.stem[:2]
         times = times_all[ii]
@@ -303,9 +302,9 @@ def read_ggg_netcdf(
 
             def prior(var: Any) -> np.ndarray:
                 """Return one prior row per selected spectrum."""
-                return _float(var, slice(i0, i1))[prior_rows]
+                return _float(var, block)[prior_rows]
         else:
-            prior_rows = np.asarray(ds["prior_index"][i0:i1], dtype=int)[ri]
+            prior_rows = np.asarray(ds["prior_index"][block], dtype=int)[ri]
 
             def prior(var: Any) -> np.ndarray:
                 """Return the prior each selected spectrum points to."""
@@ -326,7 +325,7 @@ def read_ggg_netcdf(
             pick(ds["flag"]) == 0 if "flag" in ds.variables else np.ones(len(ii), bool)
         )
         if "spectrum" in ds.variables:
-            spectra = ds["spectrum"][i0:i1]
+            spectra = ds["spectrum"][block]
             if (
                 np.ndim(spectra) == 2
             ):  # raw chars; netCDF4 decodes when _Encoding is set

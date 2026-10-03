@@ -38,6 +38,19 @@ def _in_ranges(
     return keep
 
 
+def _span(rows: np.ndarray) -> tuple[slice, np.ndarray]:
+    """
+    Return the slice that spans *rows*, and the rows' positions within it.
+
+    A reader reads that one block of each variable and picks the rows out
+    of it, which is much faster than reading the rows one by one.
+    """
+    if rows.size == 0:
+        return slice(0, 0), rows
+    start = int(rows.min())
+    return slice(start, int(rows.max()) + 1), rows - start
+
+
 def _seconds_since(var: Any, idx: Any = Ellipsis) -> pd.DatetimeIndex:
     """Return the times of a ``seconds since <origin>`` variable, as naive UTC."""
     units = str(getattr(var, "units", "seconds since 1970-01-01 00:00:00"))

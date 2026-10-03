@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 from netCDF4 import Dataset
 
-from ._common import _float, _in_ranges, _orbit_from_name, _rows, _wrap_azimuth
+from ._common import _float, _in_ranges, _orbit_from_name, _rows, _span, _wrap_azimuth
 
 
 def read_tropomi_ch4(
@@ -80,22 +80,19 @@ def _tropomi_operational(
     lon = _float(p["longitude"])[0]
     keep = _in_ranges(lon, lat, lon_range, lat_range)
     sl, gp = np.nonzero(keep)
-
-    # read the box around the kept pixels once, then pick them out
-    s0, s1 = (int(sl.min()), int(sl.max()) + 1) if sl.size else (0, 0)
-    g0, g1 = (int(gp.min()), int(gp.max()) + 1) if gp.size else (0, 0)
-    si, gi = sl - s0, gp - g0
+    lines, si = _span(sl)
+    pixels, gi = _span(gp)
 
     def pick(var: Any) -> np.ndarray:
         """Return one variable for the selected pixels."""
-        return _float(var, (0, slice(s0, s1), slice(g0, g1)))[si, gi]
+        return _float(var, (0, lines, pixels))[si, gi]
 
-    time_utc = np.asarray(p["time_utc"][0, s0:s1]).astype(str)
+    time_utc = np.asarray(p["time_utc"][0, lines]).astype(str)
     times = pd.to_datetime(time_utc[si]).tz_localize(None)
     orbit = getattr(ds, "orbit", None)
     orbit_str = f"{int(orbit):05d}" if orbit is not None else _orbit_from_name(path)
-    scanline = np.asarray(p["scanline"][s0:s1])[si]
-    ground_pixel = np.asarray(p["ground_pixel"][g0:g1])[gi]
+    scanline = np.asarray(p["scanline"][lines])[si]
+    ground_pixel = np.asarray(p["ground_pixel"][pixels])[gi]
 
     psfc = pick(inp["surface_pressure"]) / 100.0
     dp = pick(inp["pressure_interval"]) / 100.0
@@ -151,14 +148,13 @@ def _tropomi_blended(
     lon = _float(ds["longitude"])
     keep = _in_ranges(lon, lat, lon_range, lat_range)
     (ii,) = np.nonzero(keep)
-    i0, i1 = (int(ii.min()), int(ii.max()) + 1) if ii.size else (0, 0)
-    ri = ii - i0
+    block, ri = _span(ii)
 
     def pick(var: Any) -> np.ndarray:
         """Return one variable for the selected soundings."""
-        return _float(var, slice(i0, i1))[ri]
+        return _float(var, block)[ri]
 
-    times = pd.to_datetime(np.asarray(ds["time_utc"][i0:i1]).astype(str)[ri])
+    times = pd.to_datetime(np.asarray(ds["time_utc"][block]).astype(str)[ri])
     times = times.tz_localize(None)
     orbit_str = _orbit_from_name(path)
     psfc = pick(ds["surface_pressure"]) / 100.0
