@@ -11,20 +11,32 @@ from pydantic import ConfigDict, Field, PrivateAttr, model_validator
 from .execution import ExecutionConfig
 from .footprint import FootprintConfig
 from .meteorology import MetConfig
-from .params import TransportParams
-from .variant import VARIANT_NAME_RE, VariantConfig, expand_variants
+from .variant import VARIANT_NAME_RE, VariantConfig, expand_variants, transport_config
 
 
-class ProjectConfig(TransportParams, FootprintConfig):
+class ProjectConfig(FootprintConfig):
     """
     A project's configuration, as read from ``config.yaml``.
 
-    The transport and footprint fields are the defaults for every variant.
-    Each variant names a met and overrides some of the defaults. Without
-    ``variants``, each met runs as one variant with the met's name.
+    The transport model's parameters and the footprint fields are flat,
+    top-level keys, and are the defaults for every variant. ``model`` names
+    the transport model, HYSPLIT unless set; its parameters are checked by
+    its own config class (:class:`stilt.transport.hysplit.HysplitConfig`)
+    and are in :attr:`transport`. Each variant names a met and overrides
+    some of the defaults. A variant that names another ``model`` gives that
+    model's parameters itself. Without ``variants``, each met runs as one
+    variant with the met's name.
     """
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="allow")
+
+    model: str = Field(
+        "hysplit",
+        description=(
+            "Transport model the variants run with, unless a variant names "
+            "another. Its parameters are top-level keys of the config."
+        ),
+    )
 
     mets: dict[str, MetConfig] = Field(
         default_factory=dict,
@@ -57,6 +69,7 @@ class ProjectConfig(TransportParams, FootprintConfig):
         ),
     )
 
+    _transport: Any = PrivateAttr(None)
     _variant_configs: dict[str, VariantConfig] = PrivateAttr(default_factory=dict)
 
     @model_validator(mode="after")
@@ -94,10 +107,22 @@ class ProjectConfig(TransportParams, FootprintConfig):
         the transport model build, are found by
         :func:`stilt.variants.resolve`.
         """
+        self._transport = transport_config(
+            self.model, dict(self.model_extra or {}), f"config ({self.model})"
+        )
         self._variant_configs = expand_variants(
-            self._declared(), self.defaults(), self.mets
+            self._declared(),
+            self.model,
+            self._transport.model_dump(),
+            self.model_dump(include=set(FootprintConfig.model_fields)),
+            self.mets,
         )
         return self
+
+    @property
+    def transport(self) -> Any:
+        """The transport model's config, from the top-level keys: the defaults every variant starts from."""
+        return self._transport
 
     @property
     def variant_configs(self) -> dict[str, VariantConfig]:
@@ -109,11 +134,6 @@ class ProjectConfig(TransportParams, FootprintConfig):
         ``project.variants`` resolves them.
         """
         return self._variant_configs
-
-    def defaults(self) -> dict[str, Any]:
-        """Return the default transport and footprint fields every variant starts from."""
-        fields = set(TransportParams.model_fields) | set(FootprintConfig.model_fields)
-        return self.model_dump(include=fields)
 
     def _declared(self) -> dict[str, dict[str, Any]]:
         """Return the declared variants, one per met when none are declared."""

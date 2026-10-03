@@ -10,7 +10,6 @@ from stilt.config import (
     Grid,
     MetConfig,
     ProjectConfig,
-    TransportParams,
 )
 from stilt.exceptions import (
     EmptyParticleOutputError,
@@ -32,6 +31,7 @@ from stilt.receptors import PointReceptor, Receptor
 from stilt.simulation import Simulation
 from stilt.transforms import TransformContext
 from stilt.transport import ModelInfo
+from stilt.transport.hysplit import HysplitConfig
 from stilt.variants import Variant
 
 # ---------------------------------------------------------------------------
@@ -74,8 +74,8 @@ def met(met_config) -> Met:
 
 
 @pytest.fixture
-def params() -> TransportParams:
-    return TransportParams(n_hours=-24, numpar=10)
+def params() -> HysplitConfig:
+    return HysplitConfig(n_hours=-24, numpar=10)
 
 
 @pytest.fixture

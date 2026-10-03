@@ -50,8 +50,8 @@ The public config is flat. Fields such as `seed`, `numpar`, and `ziscale` are
 passed straight to `ProjectConfig(...)` and `Project.init(...)`. Don't add nested
 parameter objects to the public API.
 
-Each setting of a run is a field of `TransportParams`
-(`src/stilt/config/params.py`): a plain pydantic
+Each HYSPLIT setting is a field of `HysplitConfig`
+(`src/stilt/transport/hysplit/config.py`): a plain pydantic
 `Field(default, description=..., json_schema_extra=SETUP)`. The last
 argument says where the setting goes: `SETUP` (HYSPLIT's `SETUP.CFG`),
 `CONTROL`, `ZICONTROL`, `WINDERR`, `ZIERR`, or `PYSTILT` for a setting
@@ -60,6 +60,19 @@ PYSTILT uses itself. The HYSPLIT driver writes each file from
 `CONTROL` setting also needs a line in the driver's `ControlFile` call, and
 the routing test in `tests/test_config.py` lists the fields of every file
 but `SETUP.CFG`.
+
+## Adding a transport model
+
+A transport model owns its config: a pydantic class of its own parameters
+that provides `n_hours`, an `UNRECORDED` set of the fields that change no
+particle, `settings()` (what a run records), and `realizations(n)`
+(`stilt.transport.TransportConfig`). The model itself names that class as
+`config_class` and gives `version`, `data_files`, and `run`
+(`stilt.transport.TransportModel`); `run` returns the particle table PYSTILT
+keeps (`indx`, `time` in minutes, `long`, `lati`, `zagl`, `foot`, and what the
+transforms read). Add it to `stilt.transport.MODELS` under the name
+`model:` takes in `config.yaml`. Keep its package out of the core: the
+import contracts in `pyproject.toml` say how.
 
 ## Output directory and completion
 

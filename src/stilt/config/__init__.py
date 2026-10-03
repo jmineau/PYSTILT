@@ -11,7 +11,6 @@ from .footprint import (
     WindowsGeometrySpec,
 )
 from .meteorology import MetConfig
-from .params import TransportParams
 from .project import ProjectConfig
 from .variant import VariantConfig
 
@@ -25,7 +24,6 @@ __all__ = [
     "Grid",
     "MetConfig",
     "ProjectConfig",
-    "TransportParams",
     "VariantConfig",
     "WindowsGeometrySpec",
 ]

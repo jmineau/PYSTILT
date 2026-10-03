@@ -10,7 +10,6 @@ from stilt.config import (
     FootprintConfig,
     Grid,
     MetConfig,
-    TransportParams,
 )
 from stilt.execution import make_footprint
 from stilt.output import Output
@@ -18,7 +17,8 @@ from stilt.particles import particles_metadata, prepare
 from stilt.simulation import SimID, Simulation
 from stilt.transforms import FirstOrderLifetime, TransformContext, transform_kind
 from stilt.transport import ModelInfo
-from stilt.transport.hysplit.release import add_release_heights
+from stilt.transport.hysplit import HysplitConfig
+from stilt.transport.hysplit.model import finish_particles
 from stilt.variants import Variant
 
 GRID = Grid(xmin=-114.0, xmax=-111.0, ymin=39.0, ymax=42.0, xres=0.1, yres=0.1)
@@ -35,7 +35,7 @@ def _variant(
     tmp_path, name="hrrr", footprint: FootprintConfig | None = None, **overrides
 ) -> Variant:
     """A resolved variant with the test transport defaults and an optional footprint."""
-    params = TransportParams(
+    params = HysplitConfig(
         **{"n_hours": -24, "numpar": 10, "hnf_plume": False, **overrides}
     )
     return Variant(
@@ -71,7 +71,7 @@ def _trajectories(receptor, params, foot: float = 1e-5) -> pd.DataFrame:
             "foot": [foot],
         }
     )
-    return prepare(add_release_heights(particles, receptor), receptor, params)
+    return prepare(finish_particles(particles, receptor, params), receptor)
 
 
 def _write_particles(sim: Simulation) -> pd.DataFrame:

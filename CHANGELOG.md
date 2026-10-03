@@ -8,6 +8,23 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **A transport model owns its config, and a model is a variant axis**
+  (breaking). `stilt.config.TransportParams` is
+  `stilt.transport.hysplit.HysplitConfig`. `ProjectConfig` gains `model`
+  (`hysplit` unless set); the model's parameters stay flat, top-level keys,
+  checked by its config class, and are in `config.transport` (so
+  `config.numpar` is `config.transport.numpar`). A variant may name another
+  `model`; it then gives that model's parameters itself and inherits only
+  the met and the footprint settings, so models compare in one project.
+  `project.simulations` has a `model` column. Existing `config.yaml` files
+  read as before, and the hashes of existing folders are unchanged.
+- The near-field plume correction (`hnf_plume`) is applied by the HYSPLIT
+  model, whose config holds it (`stilt.transport.hysplit.model.finish_particles`).
+  `stilt.particles.prepare(raw, receptor)` no longer takes the config.
+  Particle files record their model (`stilt:model`); files without it are
+  read as HYSPLIT's.
+- `stilt.transport.get_model` reads the `stilt.transport.MODELS` table, where
+  another model's port adds its entry.
 - **Variants resolve in one place, and settings have one home** (breaking).
   `project.variants` holds `stilt.Variant` objects, which carry a variant's
   configs, its met, the transport model build (`stilt.transport.ModelInfo`),

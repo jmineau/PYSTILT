@@ -18,13 +18,14 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from stilt.config import MetConfig, TransportParams
+from stilt.config import MetConfig
 from stilt.meteorology import Met
 from stilt.particles import prepare
 from stilt.receptors import ColumnReceptor
 from stilt.transforms import PressureWeighting, particle_pwf, release_coordinate
+from stilt.transport.hysplit import HysplitConfig
 from stilt.transport.hysplit.driver import HYSPLITDriver
-from stilt.transport.hysplit.release import add_release_heights
+from stilt.transport.hysplit.model import finish_particles
 
 from .conftest import integration
 from .fixtures.r_stilt_reference import (
@@ -51,7 +52,7 @@ def _column_trajectory(
     receptor = ColumnReceptor(
         time=time, longitude=WBB_LON, latitude=WBB_LAT, bottom=0.0, top=top
     )
-    params = TransportParams(n_hours=-2, numpar=numpar, hnf_plume=False)
+    params = HysplitConfig(n_hours=-2, numpar=numpar, hnf_plume=False)
     met_files = Met(
         "hrrr",
         MetConfig(
@@ -67,7 +68,7 @@ def _column_trajectory(
     )
     driver.prepare()
     result = driver.execute(timeout=900)
-    return receptor, prepare(add_release_heights(result, receptor), receptor, params)
+    return receptor, prepare(finish_particles(result, receptor, params), receptor)
 
 
 @integration

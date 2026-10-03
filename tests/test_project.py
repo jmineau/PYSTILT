@@ -18,7 +18,7 @@ from stilt.project import Project, Simulations
 from stilt.receptors import PointReceptor
 from stilt.simulation import SimID
 from stilt.transport.hysplit.driver import winderrtf
-from stilt.transport.hysplit.release import add_release_heights
+from stilt.transport.hysplit.model import finish_particles
 
 matplotlib.use("Agg")
 
@@ -88,9 +88,8 @@ def _write_trajectory(project: Project, receptor, variant="hrrr") -> Path:
     """Write a small particle file for one simulation into the output directory."""
     sim = project.simulation(receptor.id, variant)
     particles = prepare(
-        add_release_heights(_particles(), sim.receptor),
+        finish_particles(_particles(), sim.receptor, sim.variant.transport),
         sim.receptor,
-        sim.variant.transport,
     )
     folder = sim.output.particles(sim.variant)
     return folder.write(sim.receptor, particles, sim.variant.transport, [])
@@ -404,7 +403,8 @@ def test_simulations_are_receptors_times_variants(tmp_path):
 
     sims = project.simulations
 
-    assert list(sims.frame.columns[:3]) == ["receptor", "variant", "group"]
+    assert list(sims.frame.columns[:4]) == ["receptor", "variant", "group", "model"]
+    assert set(sims["model"]) == {"hysplit"}
     assert _pairs(sims) == [
         (a.id, "hrrr"),
         (a.id, "err-0"),

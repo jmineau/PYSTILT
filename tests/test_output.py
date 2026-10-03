@@ -9,7 +9,7 @@ import pytest
 import xarray as xr
 import yaml
 
-from stilt.config import FootprintConfig, Grid, MetConfig, TransportParams
+from stilt.config import FootprintConfig, Grid, MetConfig
 from stilt.footprint.io import _describe
 from stilt.footprint.targets import Mesh
 from stilt.identity import footprint_hash, footprint_settings, settings_hash
@@ -17,6 +17,7 @@ from stilt.output import Output
 from stilt.particles import particles_metadata, write_particles
 from stilt.receptors import PointReceptor
 from stilt.transport import ModelInfo
+from stilt.transport.hysplit import HysplitConfig
 from stilt.variants import Variant
 
 # ---------------------------------------------------------------------------
@@ -34,7 +35,7 @@ def _variant(name: str = "hrrr", **overrides) -> Variant:
         group=name,
         met="hrrr",
         met_config=MET,
-        transport=TransportParams(**{"n_hours": -24, "numpar": 100, **overrides}),
+        transport=HysplitConfig(**{"n_hours": -24, "numpar": 100, **overrides}),
         model=ModelInfo(version="v5.1.0"),
     )
 
@@ -52,7 +53,7 @@ def _receptor(hour: int = 12, day: int = 15) -> PointReceptor:
 
 
 #: Transport settings recorded in the test particle files.
-PARAMS = TransportParams(n_hours=-24, numpar=50)
+PARAMS = HysplitConfig(n_hours=-24, numpar=50)
 
 
 def _trajectories(receptor: PointReceptor, n: int = 50) -> pd.DataFrame:

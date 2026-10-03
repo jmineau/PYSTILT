@@ -14,10 +14,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from functools import cached_property
-from pathlib import Path
 from typing import Any
 
-from stilt.config import FootprintConfig, MetConfig, ProjectConfig, TransportParams
+from stilt.config import FootprintConfig, MetConfig, ProjectConfig
 from stilt.footprint.targets import Mesh
 from stilt.identity import (
     footprint_hash,
@@ -25,7 +24,7 @@ from stilt.identity import (
     run_settings,
     settings_hash,
 )
-from stilt.transport import ModelInfo, get_model
+from stilt.transport import ModelInfo, TransportConfig, get_model
 
 
 @dataclass(frozen=True)
@@ -53,8 +52,9 @@ class Variant:
         Name of the met it runs with.
     met_config : MetConfig
         That met's config.
-    transport : TransportParams
-        Transport config.
+    transport : TransportConfig
+        The transport model's config, such as a
+        :class:`~stilt.transport.hysplit.HysplitConfig`.
     model : ModelInfo
         The transport model build that runs it.
     realization : int or None
@@ -70,7 +70,7 @@ class Variant:
     group: str
     met: str
     met_config: MetConfig
-    transport: TransportParams
+    transport: TransportConfig
     model: ModelInfo
     realization: int | None = None
     footprint: FootprintConfig | None = None
@@ -110,7 +110,8 @@ def resolve(config: ProjectConfig) -> dict[str, Variant]:
     Each geometry is read once, however many variants use it, and the grid
     of a footprint given only by a geometry is derived from it
     (:meth:`stilt.Mesh.to_grid`). The transport model's version and data
-    files are read once for each distinct build.
+    files are read once for each distinct build: the fields of its config
+    that change no particle, such as ``exe_dir``.
 
     Parameters
     ----------
@@ -118,7 +119,7 @@ def resolve(config: ProjectConfig) -> dict[str, Variant]:
         The project's config.
     """
     meshes: dict[str, Mesh] = {}
-    builds: dict[tuple[Path | None, Path | None], ModelInfo] = {}
+    builds: dict[tuple[str, str], ModelInfo] = {}
     variants: dict[str, Variant] = {}
     for spec in config.variant_configs.values():
         footprint, geometry_hash = spec.footprint, None
@@ -131,9 +132,10 @@ def resolve(config: ProjectConfig) -> dict[str, Variant]:
             if footprint.grid is None:
                 grid = mesh.to_grid(cells_per_target=footprint.cells_per_target)
                 footprint = footprint.model_copy(update={"grid": grid})
-        build = (spec.transport.exe_dir, spec.transport.data_dir)
+        where = spec.transport.model_dump_json(include=set(spec.transport.UNRECORDED))
+        build = (spec.model, where)
         if build not in builds:
-            model = get_model("hysplit")
+            model = get_model(spec.model)
             builds[build] = ModelInfo(
                 name=model.name,
                 version=model.version(spec.transport),

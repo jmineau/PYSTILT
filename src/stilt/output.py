@@ -55,7 +55,7 @@ import xarray as xr
 import yaml
 
 from stilt._atomic import atomic_path
-from stilt.config import FootprintConfig, Grid, TransportParams
+from stilt.config import FootprintConfig, Grid
 from stilt.footprint import (
     FOOTPRINT_SCHEMA,
     Geometry,
@@ -74,6 +74,7 @@ from stilt.identity import (
 )
 from stilt.particles import read_particles, write_particles
 from stilt.receptors import Receptor, parse_receptor_id
+from stilt.transport import TransportConfig
 
 if TYPE_CHECKING:
     from stilt.variants import Variant
@@ -393,14 +394,14 @@ class Particles:
         self,
         receptor: Receptor,
         particles: pd.DataFrame,
-        params: TransportParams,
+        params: TransportConfig,
         met_files: list[Path],
     ) -> Path:
         """
         Write a receptor's particles (:func:`stilt.write_particles`).
 
-        The file also records this folder's settings hash and the PYSTILT
-        version.
+        The file also records this folder's settings hash, its transport
+        model, and the PYSTILT version.
         """
         return write_particles(
             self.file(str(receptor.id)),
@@ -410,6 +411,7 @@ class Particles:
             met_files,
             metadata={
                 b"stilt:hash": self.hash.encode(),
+                b"stilt:model": str(self.settings["model"]["name"]).encode(),
                 b"stilt:pystilt": _pystilt_version().encode(),
             },
         )
