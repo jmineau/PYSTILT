@@ -116,6 +116,18 @@ def _draw_bounds_box(
     ax.add_patch(rect)
 
 
+def _draw_met_box(ax: Axes, bounds: Bounds) -> None:
+    """Draw the outline of a met's crop box on ``ax``."""
+    _draw_bounds_box(
+        ax,
+        bounds,
+        label="Met domain",
+        edgecolor="steelblue",
+        linestyle=":",
+        linewidth=1.2,
+    )
+
+
 # ---------------------------------------------------------------------------
 # Particles plot accessor
 # ---------------------------------------------------------------------------
@@ -272,14 +284,7 @@ class FootprintPlotAccessor:
         if show_grid:
             _draw_bounds_box(ax, foot.stilt.grid, label="Domain")
         if met_bounds is not None:
-            _draw_bounds_box(
-                ax,
-                met_bounds,
-                label="Met domain",
-                edgecolor="steelblue",
-                linestyle=":",
-                linewidth=1.2,
-            )
+            _draw_met_box(ax, met_bounds)
 
         if "stilt_receptor" in foot.attrs:
             foot.stilt.receptor.plot.map(ax=ax)
@@ -455,14 +460,7 @@ class ReceptorPlotAccessor:
         if domain is not None:
             _draw_bounds_box(ax, domain, label="Domain")
         if met_bounds is not None:
-            _draw_bounds_box(
-                ax,
-                met_bounds,
-                label="Met domain",
-                edgecolor="steelblue",
-                linestyle=":",
-                linewidth=1.2,
-            )
+            _draw_met_box(ax, met_bounds)
 
         ax.legend(fontsize=8)
         if standalone:
@@ -564,14 +562,7 @@ class SimulationPlotAccessor:
             sim.receptor.plot.map(ax=ax, color="red")
 
         if met_bounds is not None:
-            _draw_bounds_box(
-                ax,
-                met_bounds,
-                label="Met domain",
-                edgecolor="steelblue",
-                linestyle=":",
-                linewidth=1.2,
-            )
+            _draw_met_box(ax, met_bounds)
             ax.legend(fontsize=8)
 
         ax.set_title(f"Simulation {sim.id}")
