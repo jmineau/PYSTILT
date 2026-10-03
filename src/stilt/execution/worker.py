@@ -196,10 +196,15 @@ def run_particles(
 
 
 def _finish_scratch(workdir: Path, kept: Path, *, keep: bool) -> None:
-    """Copy *workdir* to *kept* when *keep*, then remove it."""
+    """
+    Copy *workdir* to *kept* when *keep*, then remove it.
+
+    An empty directory is not kept: a run that failed before writing
+    anything, such as on missing meteorology, has nothing to look at.
+    """
     if not workdir.exists():
         return
-    if keep:
+    if keep and any(workdir.iterdir()):
         shutil.rmtree(kept, ignore_errors=True)
         kept.parent.mkdir(parents=True, exist_ok=True)
         shutil.copytree(workdir, kept, symlinks=True)
