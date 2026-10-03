@@ -11,6 +11,7 @@ from stilt.config import MetConfig, TransportParams
 from stilt.meteorology import Met
 from stilt.receptors import ColumnReceptor, MultiPointReceptor
 from stilt.transport.hysplit.driver import HYSPLITDriver
+from stilt.transport.hysplit.release import add_release_heights
 
 from .conftest import integration
 
@@ -241,7 +242,7 @@ def test_close_spaced_slant_release_heights_are_recovered(tmp_path, met_dir):
     )
     runner.prepare()
     particles = runner.execute(timeout=300).particles
-    data = prepare(particles, receptor, params)
+    data = prepare(add_release_heights(particles, receptor), receptor, params)
 
     release = _release_time_rows(data).drop_duplicates("indx")
     # Each group's actual height should sit at the altitude it was assigned.

@@ -19,6 +19,7 @@ from stilt.output import Output
 from stilt.particles import particles_metadata, prepare
 from stilt.simulation import SimID, Simulation
 from stilt.transforms import FirstOrderLifetime, TransformContext, transform_kind
+from stilt.transport.hysplit.release import add_release_heights
 
 GRID = Grid(xmin=-114.0, xmax=-111.0, ymin=39.0, ymax=42.0, xres=0.1, yres=0.1)
 FOOT = FootprintConfig(grid=GRID, time_integrate=True, smooth_factor=0.0)
@@ -68,7 +69,7 @@ def _trajectories(receptor, params, foot: float = 1e-5) -> pd.DataFrame:
             "foot": [foot],
         }
     )
-    return prepare(particles, receptor, params)
+    return prepare(add_release_heights(particles, receptor), receptor, params)
 
 
 def _write_particles(sim: Simulation) -> pd.DataFrame:

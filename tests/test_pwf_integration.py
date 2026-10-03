@@ -24,6 +24,7 @@ from stilt.particles import prepare
 from stilt.receptors import ColumnReceptor
 from stilt.transforms import PressureWeighting, particle_pwf, release_coordinate
 from stilt.transport.hysplit.driver import HYSPLITDriver
+from stilt.transport.hysplit.release import add_release_heights
 
 from .conftest import integration
 from .fixtures.r_stilt_reference import (
@@ -66,7 +67,9 @@ def _column_trajectory(
     )
     driver.prepare()
     result = driver.execute(timeout=900)
-    return receptor, prepare(result.particles, receptor, params)
+    return receptor, prepare(
+        add_release_heights(result.particles, receptor), receptor, params
+    )
 
 
 @integration

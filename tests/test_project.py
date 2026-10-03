@@ -18,6 +18,7 @@ from stilt.project import Project, Simulations, project_slug
 from stilt.receptors import PointReceptor
 from stilt.simulation import SimID
 from stilt.transport.hysplit.driver import winderrtf
+from stilt.transport.hysplit.release import add_release_heights
 
 matplotlib.use("Agg")
 
@@ -86,7 +87,11 @@ def _particles() -> pd.DataFrame:
 def _write_trajectory(project: Project, receptor, variant="hrrr") -> Path:
     """Write a small particle file for one simulation into the output directory."""
     sim = project.simulation(receptor.id, variant)
-    particles = prepare(_particles(), sim.receptor, sim.variant.transport)
+    particles = prepare(
+        add_release_heights(_particles(), sim.receptor),
+        sim.receptor,
+        sim.variant.transport,
+    )
     folder = sim.output.particles(sim.variant.name, sim.variant.transport)
     return folder.write(sim.receptor, particles, sim.variant.transport, [])
 

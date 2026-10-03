@@ -338,6 +338,11 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Removed
 
+- `stilt.particles.prepare` no longer adds the release height `xhgt`. The
+  HYSPLIT model adds it before returning its particles
+  (`stilt.transport.hysplit.release.add_release_heights`), since it depends
+  on how HYSPLIT orders particles. Call that function first when preparing
+  particles read straight from HYSPLIT's output.
 - `stilt.config.hysplit_version` is `stilt.transport.hysplit.model.hysplit_version`.
   `TransportSettings.build` asks the transport model for its version.
 
