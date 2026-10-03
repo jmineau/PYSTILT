@@ -287,7 +287,9 @@ Driven by [`just`](https://github.com/casey/just) and [`uv`](https://docs.astral
 | `just clean` | remove build artifacts, caches, coverage, docs build |
 
 CI (`.github/workflows/`): `tests.yml`, `quality.yml`, `docs.yml`, and
-`publish.yml` for releases.
+`publish.yml` for releases. `docs.yml` builds the docs on every pull request
+but deploys the site only from a `vX.Y.Z` tag, so the site matches the
+latest release; a docs change on `main` goes live with the next release.
 
 ### Tests
 
