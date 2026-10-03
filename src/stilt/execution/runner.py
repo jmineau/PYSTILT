@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 import tempfile
 from datetime import datetime
 from pathlib import Path
@@ -13,7 +14,6 @@ from uuid import uuid4
 import submitit
 
 from stilt.config import ExecutionConfig
-from stilt.project import project_slug
 
 if TYPE_CHECKING:
     from stilt.project import Project
@@ -76,10 +76,12 @@ class Batch(submitit.helpers.Checkpointable):
 
         logging.basicConfig(level=logging.WARNING, format="%(message)s")
         logging.getLogger("stilt.execution.worker").setLevel(logging.INFO)
+        project = Project(self.project)
         return run_receptors(
-            Project(self.project),
+            project,
             self.receptor_ids,
-            compute_root=self.compute_root,
+            # Worked out here, in the task, so it is this node's scratch.
+            compute_root=resolve_compute_root(project, self.compute_root),
             n_cores=self.cpus,
             skip_existing=self.skip_existing,
         )
@@ -126,6 +128,13 @@ def slurm_parameters(execution: ExecutionConfig, *, job_name: str) -> dict[str, 
 # ---------------------------------------------------------------------------
 # Running a project
 # ---------------------------------------------------------------------------
+
+
+def _project_slug(directory: str | Path) -> str:
+    """Return a lowercase, hyphenated name for a project directory, for the Slurm job name."""
+    name = Path(str(directory).rstrip("/")).name or "project"
+    slug = re.sub(r"[^a-z0-9-]+", "-", name.lower().replace("_", "-"))
+    return re.sub(r"-{2,}", "-", slug).strip("-") or "project"
 
 
 def resolve_compute_root(
@@ -219,7 +228,7 @@ def run(
     return run_receptors(
         project,
         pending,
-        compute_root=compute_root,
+        compute_root=resolve_compute_root(project, compute_root),
         n_cores=execution.cpus,
         skip_existing=skip_existing,
     )
@@ -273,7 +282,7 @@ def submit(
     )
     executor.update_parameters(
         **slurm_parameters(
-            execution, job_name=f"pystilt-{project_slug(project.directory)}"
+            execution, job_name=f"pystilt-{_project_slug(project.directory)}"
         )
     )
     # A compute root that was not asked for is left to each compute node,

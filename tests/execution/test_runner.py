@@ -8,7 +8,7 @@ import pytest
 
 from stilt.config import ExecutionConfig
 from stilt.execution import Batch, runner
-from stilt.execution.runner import slurm_parameters, split
+from stilt.execution.runner import _project_slug, slurm_parameters, split
 from stilt.project import Project
 
 # ---------------------------------------------------------------------------
@@ -131,7 +131,7 @@ def test_batch_opens_the_project_and_runs_its_receptors(monkeypatch, tmp_path):
         {
             "project": f"Project({tmp_path})",
             "ids": ["a", "b"],
-            "compute_root": "/scratch/x",
+            "compute_root": Path("/scratch/x").resolve(),
             "n_cores": 2,
             "skip_existing": False,
         }
@@ -316,3 +316,16 @@ def test_a_time_limit_sbatch_would_not_take_is_an_error(time):
 def test_no_time_limit_is_left_to_the_partition():
     assert ExecutionConfig().time_minutes is None
     assert "slurm_time" not in slurm_parameters(ExecutionConfig(), job_name="x")
+
+
+@pytest.mark.parametrize(
+    ("directory", "expected"),
+    [
+        ("/data/projects/My_Project", "my-project"),
+        ("/data/projects/My_Project/", "my-project"),
+        ("/data/Weird  Name!!", "weird-name"),
+        ("", "project"),
+    ],
+)
+def test_project_slug_names_the_slurm_job(directory, expected):
+    assert _project_slug(directory) == expected

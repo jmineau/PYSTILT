@@ -38,8 +38,6 @@ from stilt.simulation import Simulation
 from stilt.transforms import TransformContext
 from stilt.transport import get_model
 
-from .runner import resolve_compute_root
-
 if TYPE_CHECKING:
     from stilt.project import Project
 
@@ -451,7 +449,7 @@ def run_receptors(
     project: Project,
     receptor_ids: list[str],
     *,
-    compute_root: str | Path | None = None,
+    compute_root: Path,
     n_cores: int = 1,
     skip_existing: bool = True,
 ) -> list[SimulationResult]:
@@ -468,9 +466,9 @@ def run_receptors(
         Project the receptors belong to.
     receptor_ids : list of str
         Receptors to run.
-    compute_root : str or Path, optional
-        Scratch directory under which HYSPLIT runs
-        (:func:`~stilt.execution.resolve_compute_root`).
+    compute_root : Path
+        Scratch directory under which HYSPLIT runs, as
+        :func:`~stilt.execution.resolve_compute_root` returns it.
     n_cores : int, default 1
         Number of worker processes. 1 runs in this process.
     skip_existing : bool, default True
@@ -484,7 +482,7 @@ def run_receptors(
     """
     if not receptor_ids:
         return []
-    scratch = resolve_compute_root(project, compute_root)
+    scratch = compute_root
 
     if n_cores <= 1:
         results: list[SimulationResult] = []

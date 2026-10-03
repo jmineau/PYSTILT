@@ -338,6 +338,9 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Removed
 
+- `stilt.project.project_slug`, now a private helper of the runner, which
+  names Slurm jobs with it. `run_receptors` requires `compute_root`, as
+  `resolve_compute_root` returns it.
 - `stilt.execution.ReceptorResult`. `project.run()`, `stilt.execution.run`,
   and `run_receptors` return a flat list of `SimulationResult`, receptor by
   receptor; `run_receptor` returns that receptor's list.
