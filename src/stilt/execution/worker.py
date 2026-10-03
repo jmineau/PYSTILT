@@ -222,18 +222,15 @@ def make_footprint(
 
     Raises
     ------
-    TypeError
+    ValueError
         If the variant has no grid.
     """
-    config = sim.variant.footprint
-    if config is None:
-        raise TypeError(f"{sim.id} has no footprint settings (no grid).")
     feet = sim.output.footprints(sim.variant)
     try:
         foot = calculate(
             particles,
             sim.receptor,
-            config,
+            feet.config,
             name=sim.variant.name,
             context=context,
             geometry_hash=sim.variant.geometry_hash,
@@ -486,7 +483,6 @@ def run_receptors(
     """
     if not receptor_ids:
         return []
-    scratch = compute_root
 
     if n_cores <= 1:
         results: list[SimulationResult] = []
@@ -495,7 +491,7 @@ def run_receptors(
                 done = run_receptor(
                     project,
                     receptor_id,
-                    compute_root=scratch,
+                    compute_root=compute_root,
                     skip_existing=skip_existing,
                 )
                 results.extend(done)
@@ -508,7 +504,7 @@ def run_receptors(
     pool = multiprocessing.Pool(
         n_cores,
         initializer=_init_pool_worker,
-        initargs=(str(project.directory), str(scratch), skip_existing),
+        initargs=(str(project.directory), str(compute_root), skip_existing),
     )
     with _sigterm_as_interrupt():
         try:
