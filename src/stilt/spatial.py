@@ -34,7 +34,7 @@ import functools
 import hashlib
 import warnings
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pandas as pd
@@ -49,13 +49,6 @@ if TYPE_CHECKING:
 # ---------------------------------------------------------------------------
 # Bounds and grids
 # ---------------------------------------------------------------------------
-
-VerticalReference = Literal["agl", "msl"]
-
-
-def kmsl_from_vertical_reference(reference: VerticalReference) -> int:
-    """Return HYSPLIT's ``KMSL`` value for a vertical reference: 0 for AGL, 1 for MSL."""
-    return 0 if reference == "agl" else 1
 
 
 def _grid_cell_starts(minimum: float, maximum: float, resolution: float) -> np.ndarray:
@@ -976,10 +969,8 @@ __all__ = [
     "Grid",
     "horizontal_dims",
     "is_longlat",
-    "kmsl_from_vertical_reference",
     "Mesh",
     "overlap_weights",
     "same_crs",
-    "VerticalReference",
     "Zones",
 ]

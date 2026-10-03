@@ -1,11 +1,6 @@
 """Configuration models for PYSTILT projects."""
 
-from stilt.spatial import (
-    Bounds,
-    Grid,
-    VerticalReference,
-    kmsl_from_vertical_reference,
-)
+from stilt.spatial import Bounds, Grid
 
 from .execution import ExecutionConfig
 from .footprint import (
@@ -36,8 +31,6 @@ __all__ = [
     "TransportParams",
     "TransportSettings",
     "VariantConfig",
-    "VerticalReference",
     "WindowsGeometrySpec",
-    "kmsl_from_vertical_reference",
     "settings_hash",
 ]

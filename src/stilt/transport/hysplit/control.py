@@ -5,8 +5,7 @@ from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict
 
-from stilt.config import VerticalReference
-from stilt.receptors import Receptor
+from stilt.receptors import Receptor, VerticalReference
 
 
 class ControlFile(BaseModel):

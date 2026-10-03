@@ -41,12 +41,13 @@ from pydantic import (
 )
 from shapely import Geometry, LineString, MultiPoint, Point
 
-from stilt.config import VerticalReference
-
 if TYPE_CHECKING:
     from stilt.visualization import ReceptorPlotAccessor
 
 TimeLike: TypeAlias = dt.datetime | pd.Timestamp | np.datetime64 | str
+
+#: Whether an altitude is above ground level or above mean sea level.
+VerticalReference: TypeAlias = Literal["agl", "msl"]
 
 #: The columns of a receptor table, one row per release point.
 COLUMNS = ("r_idx", "time", "longitude", "latitude", "altitude", "altitude_ref")
@@ -1152,6 +1153,7 @@ __all__ = [
     "MultiPointReceptor",
     "PointReceptor",
     "Receptor",
+    "VerticalReference",
     "append_receptors_csv",
     "parse_receptor_id",
     "read_receptor_frame",
