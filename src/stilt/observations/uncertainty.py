@@ -32,7 +32,6 @@ import xarray as xr
 
 from stilt.flux import particle_enhancement
 from stilt.observations.backgrounds import (
-    default_context,
     endpoint_weights,
     fill_missing,
     particle_background,
@@ -360,8 +359,6 @@ def transport_error(
         raise ValueError("length_scale must be > 0 or None.")
     if noise_splits < 0:
         raise ValueError("noise_splits must be >= 0.")
-    if context is None:
-        context = default_context()
     transforms = list(transforms)
     error_tables = (
         [error_particles]

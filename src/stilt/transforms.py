@@ -80,9 +80,18 @@ class TransformContext:
 
 @runtime_checkable
 class ParticleTransform(Protocol):
-    """Interface for a transform: any object with ``apply(particles, context) -> DataFrame``."""
+    """
+    Interface for a transform: any object with ``apply(particles, context) -> DataFrame``.
 
-    def apply(self, particles: pd.DataFrame, context: TransformContext) -> pd.DataFrame:
+    ``context`` is ``None`` when the caller has none to give, as when a
+    background or transport error is computed from particles alone. A
+    transform that needs it, such as an averaging kernel read from a table,
+    raises then.
+    """
+
+    def apply(
+        self, particles: pd.DataFrame, context: TransformContext | None
+    ) -> pd.DataFrame:
         """Return a new, reweighted particle table, leaving ``particles`` unchanged."""
         ...
 
@@ -646,7 +655,7 @@ def dump_transform(transform: Any) -> dict[str, Any]:
 def apply_transforms(
     particles: pd.DataFrame,
     transforms: list[Any],
-    context: TransformContext,
+    context: TransformContext | None = None,
 ) -> pd.DataFrame:
     """Apply ``transforms`` in order. Returns ``particles`` itself when there are none."""
     for transform in transforms:
