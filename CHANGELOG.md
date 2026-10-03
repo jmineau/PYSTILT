@@ -342,6 +342,9 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Removed
 
+- `stilt.observations.slant`. `slant_points`, `pressure_altitudes`, and
+  `jitter_points` are in `stilt.observations.placement`; import them from
+  `stilt.observations` as before.
 - The single-value `temperature` of `pressure_altitudes`. Pass one
   temperature per pressure level, or none for the standard atmosphere.
 - `stilt.observations.particle_background`, `endpoint_weights`, and

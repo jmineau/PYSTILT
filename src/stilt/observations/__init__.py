@@ -31,6 +31,7 @@ is in :mod:`stilt.transforms`.
 """
 
 from .backgrounds import Background, background
+from .placement import jitter_points, pressure_altitudes, slant_points
 from .plumes import Plume, PlumeBackground, plume_background, plume_polygon
 from .readers import (
     read_ggg_netcdf,
@@ -39,8 +40,7 @@ from .readers import (
     read_tccon,
     read_tropomi_ch4,
 )
-from .selection import group_by_overpass, jitter_points, select_observations_spatial
-from .slant import pressure_altitudes, slant_points
+from .selection import group_by_overpass, select_observations_spatial
 from .uncertainty import TransportError, transport_error
 from .winds import VariogramFit, fit_variogram, variogram
 
