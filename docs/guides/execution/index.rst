@@ -36,11 +36,13 @@ Commands you'll use
    ``receptors.csv``.
 
 ``stilt run <project>``
-   Run every simulation that isn't finished yet. On your computer it returns
-   when they are all done. On Slurm it submits a job array and returns right
-   away. Add ``--wait`` to wait for the job. From Python,
-   ``project.run()`` always waits, and ``project.submit()`` submits to Slurm
-   and returns.
+   Run every simulation that isn't finished yet, and wait until they are
+   done, on your computer or as a Slurm job array. From Python, this is
+   ``project.run()``.
+
+``stilt submit <project>``
+   Submit the unfinished simulations to Slurm as a job array, and return as
+   soon as it is submitted. From Python, this is ``project.submit()``.
 
 ``stilt status <project>``
    Count finished and remaining simulations.

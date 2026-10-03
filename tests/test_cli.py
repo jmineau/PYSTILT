@@ -179,6 +179,7 @@ def test_cli_help_lists_current_commands():
         "init",
         "run",
         "status",
+        "submit",
     }
     for command in expected:
         assert command in result.output
@@ -266,7 +267,7 @@ def test_run_options_override_the_execution_settings(tmp_path, calls):
     assert "tasks=1  cpus=4" in result.output
 
 
-def test_run_on_slurm_submits_and_returns(tmp_path, calls):
+def test_run_on_slurm_waits_for_the_job(tmp_path, calls):
     _write_minimal_config(tmp_path)
 
     result = runner.invoke(
@@ -274,21 +275,23 @@ def test_run_on_slurm_submits_and_returns(tmp_path, calls):
     )
 
     assert result.exit_code == 0, result.output
-    assert [verb for verb, _ in calls] == ["submit"]
-    assert calls[0][1]["execution"].n_workers == 2
-    assert "Execution mode: submit-and-return" in result.output
-    assert "Submitted job: 12345" in result.output
-
-
-def test_run_on_slurm_with_wait_runs_until_the_job_is_done(tmp_path, calls):
-    _write_minimal_config(tmp_path)
-
-    result = runner.invoke(app, ["run", str(tmp_path), "--backend", "slurm", "--wait"])
-
-    assert result.exit_code == 0
     assert [verb for verb, _ in calls] == ["run"]
+    assert calls[0][1]["execution"].n_workers == 2
     assert "Execution mode: submit-and-wait" in result.output
     assert "waiting for the job" in result.output
+
+
+def test_submit_submits_to_slurm_and_returns(tmp_path, calls):
+    _write_minimal_config(tmp_path)  # its backend is local
+
+    result = runner.invoke(app, ["submit", str(tmp_path), "--n-workers", "2"])
+
+    assert result.exit_code == 0, result.output
+    assert [verb for verb, _ in calls] == ["submit"]
+    execution = calls[0][1]["execution"]
+    assert (execution.backend, execution.n_workers) == ("slurm", 2)
+    assert "Execution mode: submit-and-return" in result.output
+    assert "Submitted job: 12345" in result.output
 
 
 # ---------------------------------------------------------------------------

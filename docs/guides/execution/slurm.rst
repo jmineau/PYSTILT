@@ -28,10 +28,11 @@ Then submit from the environment PYSTILT is installed in:
 
 .. code-block:: bash
 
-   stilt run ./my_project
+   stilt submit ./my_project
 
-``stilt run`` prints the Slurm job ID and returns once the job is submitted.
-Add ``--wait`` to keep watching until it finishes. Each task runs with the
+``stilt submit`` prints the Slurm job ID and returns once the job is
+submitted. ``stilt run`` submits it too, then waits until it finishes. Each
+task runs with the
 same Python that submitted it, so there is nothing to activate inside the
 job.
 

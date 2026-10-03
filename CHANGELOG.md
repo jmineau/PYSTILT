@@ -43,6 +43,10 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `params.setup_entries()` is `setup_entries(params)`, and so are
   `setup_seed`, `ziscale_factors`, `zicontroltf`, `winderr`, `zierr`, and
   `winderrtf`.
+- **`stilt run` always waits, and `stilt submit` returns** (breaking for
+  scripts). They now match `project.run()` and `project.submit()`.
+  `stilt run --backend slurm` submits the job array and waits for it; the
+  new `stilt submit` submits it and returns. `--wait` is gone.
 - **`timeout` and `keep_scratch` move under `execution:`, and `rm_dat` is
   removed** (breaking). They change no result and say how runs are carried
   out. A successful run's working directory is removed anyway, so `rm_dat`
