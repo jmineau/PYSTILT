@@ -13,7 +13,7 @@ from stilt.receptors import ColumnReceptor, MultiPointReceptor
 from stilt.transport.hysplit.driver import HYSPLITDriver
 from stilt.transport.hysplit.release import add_release_heights
 
-from .conftest import integration
+from ...conftest import integration
 
 
 def _release_time_rows(particles):

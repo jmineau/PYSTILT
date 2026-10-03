@@ -1,12 +1,12 @@
 """
-Build the small product files under ``tests/data/products``.
+Build the small product files under ``tests/observations/data/products``.
 
 Each sample is a slice of a real granule with only the variables the readers
 use, kept under the granule's own file name, so the tests run against the
 products' own layouts. Re-run this with the
 source files at hand when a product changes::
 
-    uv run python tests/data/products/make_samples.py \
+    uv run python tests/observations/data/products/make_samples.py \
         --tropomi S5P_OFFL_L2__CH4____20231019T192749_....nc \
         --blended S5P_BLND_L2__CH4____20180430T001950_....nc \
         --tccon if20120823_20121201.public.qc.nc
@@ -40,7 +40,7 @@ def copy_subset(src: Path, dst: Path, keep: set[str], slices: dict[str, slice]) 
         d.setncattr("stilt_sample_source", src.name)
         d.setncattr(
             "stilt_sample_note",
-            "Subset of the source granule, made by tests/data/products/make_samples.py "
+            "Subset of the source granule, made by tests/observations/data/products/make_samples.py "
             "for the PYSTILT test suite. Not for science use.",
         )
 
@@ -247,7 +247,7 @@ def oof_synthetic(n: int = 12) -> None:
     zenith falling and the azimuth rising through the morning.
     """
     header = [
-        "  written by tests/data/products/make_samples.py",
+        "  written by tests/observations/data/products/make_samples.py",
         "  SYNTHETIC FILE - invented values on the GGG2020 official-output layout.",
         "  Not measurements, not for science use.",
         "missing:  9.8765E+35",
@@ -308,7 +308,7 @@ def ggg_private_synthetic() -> None:
         d.setncattr(
             "stilt_sample_note",
             "Invented values on the GGG2020 *.private.nc layout, made by "
-            "tests/data/products/make_samples.py. Not measurements.",
+            "tests/observations/data/products/make_samples.py. Not measurements.",
         )
         d.createDimension("time", nt)
         d.createDimension("prior_time", 2)
@@ -436,7 +436,7 @@ def oco2_synthetic() -> None:
         d.setncattr(
             "stilt_sample_note",
             "Synthetic file following the OCO-2 L2 Lite FP v11 layout with invented "
-            "values, made by tests/data/products/make_samples.py. Not a real granule.",
+            "values, made by tests/observations/data/products/make_samples.py. Not a real granule.",
         )
         d.createDimension("sounding_id", n)
         d.createDimension("levels", nlev)

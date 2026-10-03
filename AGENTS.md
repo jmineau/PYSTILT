@@ -149,7 +149,9 @@ src/stilt/
                      its log (failures.py), and the bundled binaries (bin/)
                      and data tables (data/)
 
-tests/               pytest; markers `integration` and `fidelity`
+tests/               pytest; markers `integration` and `fidelity`. Folders
+                     follow src/stilt (execution/, observations/,
+                     transport/hysplit/); r_stilt/ holds the STILT-R comparisons
 docs/                Sphinx (pydata-sphinx-theme)
 ```
 
@@ -305,9 +307,17 @@ Plain `pytest` runs the unit tests. Two opt-in markers:
 A local `.env` is loaded by `pytest-dotenv`, which is the place for
 `STILT_R_DIR` and similar settings.
 
-Committed test data (`tests/data/`) stays small and synthetic. Do not commit
-real instrument retrievals or met files: they are large and often not ours to
-redistribute. Synthetic samples should keep the real format's quirks.
+Test folders follow the package: tests for `stilt.execution` go in
+`tests/execution/`, for HYSPLIT in `tests/transport/hysplit/`, and so on.
+Modules without a subpackage stay at the top of `tests/`. `tests/observations/`
+is self-contained: its tests use only its own `conftest.py` and `data/`, never
+the shared fixtures in `tests/conftest.py`, so the observation layer can leave
+the repository with its tests. Keep it that way.
+
+Committed test data (`tests/observations/data/`) stays small and synthetic. Do
+not commit real instrument retrievals or met files: they are large and often
+not ours to redistribute. Synthetic samples should keep the real format's
+quirks.
 
 ### Code conventions
 
@@ -493,7 +503,7 @@ Feature status lives in the roadmap tables in [README.md](README.md) and
   can point at a patched `hycs_std`, and nothing needs undoing when one lands.
   The existing multipoint tests space points about 17 km apart, the one regime
   where horizontal matching works; they do not cover close-spaced slants
-  (`tests/test_hysplit_release_assignment.py` does).
+  (`tests/transport/hysplit/test_release_assignment.py` does).
 - **Transport-error settings** behave in ways that are easy to misread; see
   `docs/guides/transport_error.rst` before changing or validating them.
 - **The HYSPLIT seed is remapped.** `SETUP.CFG` gets `SEED = -(|seed| + 1)`
