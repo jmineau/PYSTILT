@@ -613,3 +613,42 @@ def test_a_footprint_folder_stored_with_projection_is_found_by_crs(tmp_path):
 
     again = Output(tmp_path / "output").particles(VARIANT).footprints(config)
     assert again.key == feet.key
+
+
+def test_a_lookup_reads_each_folder_once(tmp_path, monkeypatch):
+    """A lookup that misses lists the tree again but reads only the folders it has not seen."""
+    out = Output(tmp_path / "output")
+    out.particles(VARIANT)
+    out.particles(_variant(ziscale=0.8))
+
+    import stilt.output
+
+    reads: list[str] = []
+    real = stilt.output.read_run_settings
+
+    def counting(stored):
+        reads.append(stored["numpar"])
+        return real(stored)
+
+    monkeypatch.setattr(stilt.output, "read_run_settings", counting)
+    fresh = Output(tmp_path / "output")
+    for _ in range(3):  # a variant that has not run misses every time
+        assert fresh.find_particles(_variant(numpar=7)) is None
+    assert len(reads) == 2  # each existing folder once
+
+    # A folder another worker creates is found on the next lookup, which
+    # reads that folder alone.
+    Output(tmp_path / "output").particles(_variant(numpar=7))
+    before = len(reads)
+    assert fresh.find_particles(_variant(numpar=7)) is not None
+    assert len(reads) == before + 1
+
+
+def test_a_footprint_folder_finds_its_particles_folder_in_the_cache(tmp_path):
+    out = Output(tmp_path / "output")
+    run = out.particles(VARIANT)
+    feet = run.footprints(FootprintConfig(grid=GRID))
+    fresh = Output(tmp_path / "output")
+    found = fresh.footprint_sets()[0]
+    assert found == feet
+    assert found.particles is fresh.particle_sets()[0]

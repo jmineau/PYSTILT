@@ -39,13 +39,12 @@ Start from :class:`Output` and a resolved variant (``project.variants``)::
 
 from __future__ import annotations
 
-import functools
 import logging
 import os
 from collections.abc import Iterable
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, ClassVar, TypeVar
 
 import pandas as pd
 import pyarrow as pa
@@ -215,9 +214,10 @@ class Output:
 
     def __init__(self, path: str | Path) -> None:
         self.path = Path(path)
-        # Folders found so far, by settings hash. A miss rescans the directory,
-        # so a folder another worker created is picked up on the next lookup.
-        self._particle_sets: dict[str, Particles] = {}
+        # Every folder read so far, by key. Reading a folder means reading its
+        # _settings.yaml and hashing it again, so each is read once; a lookup
+        # that misses lists the tree again and reads only the new folders.
+        self._particles: dict[str, Particles] = {}
         self._footprints: dict[str, Footprints] = {}
 
     def __repr__(self) -> str:
@@ -231,11 +231,11 @@ class Output:
 
     @property
     def particles_dir(self) -> Path:
-        return self.path / "particles"
+        return self.path / Particles.tree
 
     @property
     def footprints_dir(self) -> Path:
-        return self.path / "footprints"
+        return self.path / Footprints.tree
 
     @property
     def logs_dir(self) -> Path:
@@ -245,19 +245,40 @@ class Output:
     def scratch_dir(self) -> Path:
         return self.path / "scratch"
 
+    # -- finding folders ----------------------------------------------------
+
+    def _list(self, kind: type[F], known: dict[str, F]) -> dict[str, F]:
+        """List *kind*'s tree and add the folders not in *known*, reading only those."""
+        for key in _settings_folders(self.path / kind.tree):
+            if key not in known:
+                known[key] = kind(self, key)
+        return known
+
+    def _find(self, kind: type[F], known: dict[str, F], digest: str) -> F | None:
+        """Return the folder whose settings hash to *digest*, listing the tree again only on a miss."""
+        for folders in (known, self._list(kind, known)):
+            for folder in folders.values():
+                if folder.hash == digest:
+                    return folder
+        return None
+
+    def _particles_folder(self, key: str) -> Particles:
+        """Return the particles folder named *key*, reading it on first use."""
+        if key not in self._particles:
+            self._particles[key] = Particles(self, key)
+        return self._particles[key]
+
     def particle_sets(self) -> list[Particles]:
         """Return every particles folder in the directory, in folder-name order."""
-        found = [Particles(self, key) for key in _settings_folders(self.particles_dir)]
-        self._particle_sets = {p.hash: p for p in found}
-        return found
+        return sorted(
+            self._list(Particles, self._particles).values(), key=lambda f: f.key
+        )
 
     def footprint_sets(self) -> list[Footprints]:
         """Return every footprint folder in the directory, in folder-name order."""
-        found = [
-            Footprints(self, key) for key in _settings_folders(self.footprints_dir)
-        ]
-        self._footprints = {feet.hash: feet for feet in found}
-        return found
+        return sorted(
+            self._list(Footprints, self._footprints).values(), key=lambda f: f.key
+        )
 
     def find_particles(self, variant: Variant) -> Particles | None:
         """
@@ -269,10 +290,7 @@ class Output:
         setting added since the folder was written, with a default, still
         matches.
         """
-        digest = variant.particles_hash
-        if digest not in self._particle_sets:
-            self.particle_sets()
-        return self._particle_sets.get(digest)
+        return self._find(Particles, self._particles, variant.particles_hash)
 
     def find_footprints(self, variant: Variant) -> Footprints | None:
         """
@@ -282,12 +300,21 @@ class Output:
         none have been written yet. The folder is found by
         ``variant.footprint_hash``, whatever name it carries.
         """
-        digest = variant.footprint_hash
-        if digest is None:
+        if variant.footprint_hash is None:
             return None
-        if digest not in self._footprints:
-            self.footprint_sets()
-        return self._footprints.get(digest)
+        return self._find(Footprints, self._footprints, variant.footprint_hash)
+
+    # -- making folders ---------------------------------------------------------
+
+    def _create(
+        self, kind: type[F], known: dict[str, F], key: str, record: dict[str, Any]
+    ) -> F:
+        """Write a folder's settings file and return the folder."""
+        _write_settings(
+            self.path / kind.tree / f"settings={key}" / SETTINGS_FILE, record
+        )
+        known[key] = kind(self, key)
+        return known[key]
 
     def particles(self, variant: Variant) -> Particles:
         """
@@ -301,9 +328,10 @@ class Output:
         if existing is not None:
             return existing
         digest = variant.particles_hash
-        key = f"{variant.name}-{digest[:HASH_CHARS]}"
-        _write_settings(
-            self.particles_dir / f"settings={key}" / SETTINGS_FILE,
+        return self._create(
+            Particles,
+            self._particles,
+            f"{variant.name}-{digest[:HASH_CHARS]}",
             {
                 "name": variant.name,
                 "hash": digest,
@@ -311,9 +339,6 @@ class Output:
                 "settings": variant.run_settings,
             },
         )
-        created = Particles(self, key)
-        self._particle_sets[created.hash] = created
-        return created
 
     def footprints(self, variant: Variant) -> Footprints:
         """
@@ -334,69 +359,106 @@ class Output:
         )
 
 
-class Particles:
-    """
-    One particles folder: the particles of many receptors, one set of transport settings.
+F = TypeVar("F", bound="_Folder")
 
-    Get one from :meth:`Output.particles`. ``key`` is the ``settings=`` value
-    its folders share across the ``particles/``, ``logs/``, and ``scratch/``
-    trees. The logs of the HYSPLIT runs that made the particles are here too.
+#: The ``date=YYYY-MM-DD`` folders, read as a ``date32`` column.
+_DATE_PARTITIONING = pads.partitioning(
+    pa.schema([("date", pa.date32())]), flavor="hive"
+)
+
+
+class _Folder:
     """
+    What a particles folder and a footprint folder share.
+
+    A folder is ``<output>/<tree>/settings=<key>/``: a ``_settings.yaml``
+    and one Parquet file per receptor in ``date=YYYY-MM-DD`` folders.
+    Get one from :class:`Output`.
+    """
+
+    #: The tree under the output directory: ``particles`` or ``footprints``.
+    tree: ClassVar[str]
+    #: What :meth:`table` returns when no file is read.
+    _empty: ClassVar[pa.Table]
+    #: Hash of the folder's settings, read through the current config classes;
+    #: it is what finds the folder.
+    hash: str
 
     def __init__(self, output: Output, key: str) -> None:
         self.output = output
         self.key = key
-        record = yaml.safe_load((self.path / SETTINGS_FILE).read_text()) or {}
-        self.name: str = record["name"]
-        #: The settings the particles were made with, read through the current config classes.
-        self.settings: dict[str, Any] = read_run_settings(record["settings"])
-        #: Hash of :attr:`settings` (see :meth:`Output.find_particles`).
-        self.hash: str = settings_hash(self.settings)
+        #: The folder's ``_settings.yaml``, as written.
+        self.record: dict[str, Any] = (
+            yaml.safe_load((self.path / SETTINGS_FILE).read_text()) or {}
+        )
+        self.name: str = self.record["name"]
 
     def __repr__(self) -> str:
-        return f"Particles({self.key!r})"
+        return f"{type(self).__name__}({self.key!r})"
 
     def __eq__(self, other: object) -> bool:
         return (
-            isinstance(other, Particles)
+            isinstance(other, _Folder)
+            and type(other) is type(self)
             and other.output.path == self.output.path
             and other.key == self.key
         )
 
     def __hash__(self) -> int:
-        return hash((str(self.output.path), self.key))
+        return hash((self.tree, str(self.output.path), self.key))
 
     @property
     def path(self) -> Path:
-        """The folder, ``particles/settings=<key>``."""
-        return self.output.particles_dir / f"settings={self.key}"
-
-    @property
-    def logs_dir(self) -> Path:
-        return self.output.logs_dir / f"settings={self.key}"
-
-    @property
-    def scratch_dir(self) -> Path:
-        return self.output.scratch_dir / f"settings={self.key}"
-
-    # -- particles ---------------------------------------------------------
+        """The folder, ``<tree>/settings=<key>``."""
+        return self.output.path / self.tree / f"settings={self.key}"
 
     def file(self, receptor_id: str) -> Path:
-        """Return the particle file for a receptor, whether or not it exists."""
+        """Return a receptor's file, whether or not it exists."""
         return self.path / _date_dir(receptor_id) / f"{receptor_id}.parquet"
 
     def has(self, receptor_id: str) -> bool:
-        """Return whether the receptor's particle file exists."""
+        """Return whether a receptor's file exists."""
         return self.file(receptor_id).exists()
 
     def receptors(self, among: Iterable[str] | None = None) -> list[str]:
         """
-        Return the ids of the receptors that have particles, in date order.
+        Return the ids of the receptors that have a file here, in date order.
 
         With *among*, only those receptors are checked, by listing their
         date folders alone.
         """
         return list(_list_receptor_files(self.path, ".parquet", among))
+
+    def table(self, receptors: Iterable[str] | None = None) -> pa.Table:
+        """
+        Return the files of many receptors as one table.
+
+        Columns are ``receptor``, the stored columns, and ``date`` (the
+        receptor date, from the folder, as ``date32``). With *receptors*,
+        only those files are read, and only their date folders are listed.
+        """
+        files = _list_receptor_files(self.path, ".parquet", receptors)
+        return _read_files(self.path, files, self._empty)
+
+
+class Particles(_Folder):
+    """
+    One particles folder: the particles of many receptors, one set of transport settings.
+
+    Get one from :meth:`Output.particles`. ``key`` is the ``settings=`` value
+    its folders share across the ``particles/``, ``logs/``, and ``scratch/``
+    trees, so the logs of the HYSPLIT runs that made the particles are here
+    too.
+    """
+
+    tree = "particles"
+    _empty = pa.table({"receptor": pa.array([], pa.string())})
+
+    def __init__(self, output: Output, key: str) -> None:
+        super().__init__(output, key)
+        #: The settings the particles were made with, read through the current config classes.
+        self.settings: dict[str, Any] = read_run_settings(self.record["settings"])
+        self.hash = settings_hash(self.settings)
 
     def write(
         self,
@@ -419,35 +481,32 @@ class Particles:
             metadata=_stamp(self.hash),
         )
 
-    def table(self, receptors: Iterable[str] | None = None) -> pa.Table:
-        """
-        Return the particles of many receptors as one table.
-
-        Columns are ``receptor``, the particle columns as stored, and
-        ``date`` (the receptor date, from the folder, as ``date32``). With
-        *receptors*, only those files are read, and only their date folders
-        are listed. Particle files written before the ``receptor`` column
-        existed cannot be read this way.
-        """
-        files = _list_receptor_files(self.path, ".parquet", receptors)
-        return _read_files(
-            self.path, files, pa.table({"receptor": pa.array([], pa.string())})
-        )
-
     def read(self, receptor_id: str, columns: list[str] | None = None) -> pd.DataFrame:
         """Read a receptor's particles (:func:`stilt.read_particles`)."""
         return read_particles(self.file(receptor_id), columns=columns)
 
     # -- logs and scratch --------------------------------------------------
 
+    @property
+    def logs_dir(self) -> Path:
+        """The folder of this folder's HYSPLIT logs, ``logs/settings=<key>``."""
+        return self.output.logs_dir / f"settings={self.key}"
+
+    @property
+    def scratch_dir(self) -> Path:
+        """The folder kept HYSPLIT working directories go in, ``scratch/settings=<key>``."""
+        return self.output.scratch_dir / f"settings={self.key}"
+
     def scratch_path(self, receptor_id: str) -> Path:
         """Return where a receptor's HYSPLIT working directory is kept when HYSPLIT fails."""
         return self.scratch_dir / _date_dir(receptor_id) / receptor_id
 
     def log_path(self, receptor_id: str) -> Path:
+        """Return where a receptor's HYSPLIT log is kept."""
         return self.logs_dir / _date_dir(receptor_id) / f"{receptor_id}.log"
 
     def write_log(self, receptor_id: str, text: str) -> Path:
+        """Write a receptor's HYSPLIT log."""
         path = self.log_path(receptor_id)
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(text)
@@ -475,15 +534,14 @@ class Particles:
             raise ValueError("Footprint settings need a grid.")
         settings = footprint_settings(config, geometry_hash)
         digest = footprint_hash(self.hash, settings)
-        if digest not in self.output._footprints:
-            self.output.footprint_sets()
-        existing = self.output._footprints.get(digest)
+        existing = self.output._find(Footprints, self.output._footprints, digest)
         if existing is not None:
             return existing
         name = name or self.name
-        key = f"{name}-{digest[:HASH_CHARS]}"
-        _write_settings(
-            self.output.footprints_dir / f"settings={key}" / SETTINGS_FILE,
+        return self.output._create(
+            Footprints,
+            self.output._footprints,
+            f"{name}-{digest[:HASH_CHARS]}",
             {
                 "name": name,
                 "hash": digest,
@@ -493,84 +551,41 @@ class Particles:
                 "settings": settings,
             },
         )
-        feet = Footprints(self.output, key)
-        self.output._footprints[feet.hash] = feet
-        return feet
 
 
-#: The ``date=YYYY-MM-DD`` folders, read as a ``date32`` column.
-_DATE_PARTITIONING = pads.partitioning(
-    pa.schema([("date", pa.date32())]), flavor="hive"
-)
-#: What :meth:`Footprints.table` returns: the file columns plus ``date``.
-_FOOTPRINT_TABLE_SCHEMA = FOOTPRINT_SCHEMA.append(pa.field("date", pa.date32()))
-
-
-class Footprints:
+class Footprints(_Folder):
     """
     One footprint folder: the footprints of many receptors, one set of footprint settings, one set of particles.
 
-    Get one from :meth:`Particles.footprints`. ``key`` is the ``settings=`` value
-    of its folder under ``footprints/``.
+    Get one from :meth:`Output.footprints` or :meth:`Particles.footprints`.
+    ``key`` is the ``settings=`` value of its folder under ``footprints/``.
     """
 
+    tree = "footprints"
+    _empty = FOOTPRINT_SCHEMA.append(pa.field("date", pa.date32())).empty_table()
+
     def __init__(self, output: Output, key: str) -> None:
-        self.output = output
-        self.key = key
-        self.path = output.footprints_dir / f"settings={key}"
-        record = yaml.safe_load((self.path / SETTINGS_FILE).read_text()) or {}
-        self.name: str = record["name"]
+        super().__init__(output, key)
         #: ``settings=`` value of the particles folder these were made from.
-        self.particles_key: str = record["particles"]
+        self.particles_key: str = self.record["particles"]
         #: The footprint config the footprints were made with, and the hash of
         #: the geometry its grid was derived for, read through the current classes.
-        self.config, self.geometry_hash = read_footprint_settings(record["settings"])
+        self.config, self.geometry_hash = read_footprint_settings(
+            self.record["settings"], str(self.path / SETTINGS_FILE)
+        )
         if self.config.grid is None:
             raise ValueError(f"{self.path / SETTINGS_FILE} has no grid.")
         #: Grid the stored ``x`` and ``y`` index (``config.grid``).
         self.grid: Grid = self.config.grid
-
-    def __repr__(self) -> str:
-        return f"Footprints({self.key!r})"
-
-    def __eq__(self, other: object) -> bool:
-        return (
-            isinstance(other, Footprints)
-            and other.output.path == self.output.path
-            and other.key == self.key
-        )
-
-    def __hash__(self) -> int:
-        return hash((str(self.output.path), self.key))
-
-    @functools.cached_property
-    def particles(self) -> Particles:
-        """The particles folder these footprints were made from."""
-        return Particles(self.output, self.particles_key)
-
-    @functools.cached_property
-    def hash(self) -> str:
-        """Hash of the particles and the footprint settings together, read through the current classes."""
-        return footprint_hash(
+        # Over the particles' hash and the footprint settings together.
+        self.hash = footprint_hash(
             self.particles.hash, footprint_settings(self.config, self.geometry_hash)
         )
 
-    def file(self, receptor_id: str) -> Path:
-        """Return the footprint file for a receptor, whether or not it exists."""
-        return self.path / _date_dir(receptor_id) / f"{receptor_id}.parquet"
-
-    def has(self, receptor_id: str) -> bool:
-        """Return whether the receptor has a footprint file, empty or not."""
-        return self.file(receptor_id).exists()
-
-    def receptors(self, among: Iterable[str] | None = None) -> list[str]:
-        """
-        Return the ids of the receptors that have a footprint file, in date order.
-
-        With *among*, only those receptors are checked, by listing their
-        date folders alone.
-        """
-        return list(_list_receptor_files(self.path, ".parquet", among))
+    @property
+    def particles(self) -> Particles:
+        """The particles folder these footprints were made from."""
+        return self.output._particles_folder(self.particles_key)
 
     def write(self, foot: xr.DataArray) -> Path:
         """
@@ -586,9 +601,8 @@ class Footprints:
 
     def write_empty(self, receptor: Receptor, reason: str, name: str = "") -> Path:
         """Record that a receptor's footprint is empty (no particle over the grid), with the reason."""
-        path = self.file(str(receptor.id))
         return write_empty_footprint(
-            path,
+            self.file(str(receptor.id)),
             receptor,
             reason,
             self.config,
@@ -610,20 +624,6 @@ class Footprints:
         Returns ``None`` for an empty footprint (see :meth:`empty_reason`).
         """
         return read_footprint(self.file(receptor_id))
-
-    # -- many receptors at once --------------------------------------------
-
-    def table(self, receptors: Iterable[str] | None = None) -> pa.Table:
-        """
-        Return the non-zero cells of many footprints as one table.
-
-        Columns are ``receptor``, ``hour``, ``y``, ``x``, ``foot``, and
-        ``date`` (the receptor date, from the folder, as ``date32``). With
-        *receptors*, only those files are read, and only their date folders
-        are listed.
-        """
-        files = _list_receptor_files(self.path, ".parquet", receptors)
-        return _read_files(self.path, files, _FOOTPRINT_TABLE_SCHEMA.empty_table())
 
     def jacobian(
         self,
@@ -669,11 +669,7 @@ class Footprints:
             requested = list(dict.fromkeys(receptors))
             files = _list_receptor_files(self.path, ".parquet", requested)
         present = [r for r in requested if r in files]
-        table = _read_files(
-            self.path,
-            {r: files[r] for r in present},
-            _FOOTPRINT_TABLE_SCHEMA.empty_table(),
-        )
+        table = _read_files(self.path, {r: files[r] for r in present}, self._empty)
         return jacobian(
             table,
             self.config,
