@@ -108,8 +108,6 @@ def endpoint_weights(
     """
     transforms = list(transforms)
     if transforms:
-        if context is None:
-            context = default_context()
         particles = apply_transforms(particles.assign(foot=1.0), transforms, context)
         ends = particles.stilt.endpoints()
         weights = ends["foot"].to_numpy(dtype=float)
@@ -194,24 +192,6 @@ def background(
     value = float((weights * filled).sum()) if np.isfinite(filled).any() else np.nan
     return Background(
         value=value, per_particle=per_particle.reindex(weights.index), weights=weights
-    )
-
-
-def default_context() -> TransformContext:
-    """
-    Return a placeholder context for transforms that do not read it.
-
-    An averaging kernel read from a ``table`` needs the real context from
-    ``project.transform_context(sim)``.
-    """
-    import datetime as dt
-
-    from stilt.receptors import PointReceptor
-
-    return TransformContext(
-        receptor=PointReceptor(
-            time=dt.datetime(2000, 1, 1), longitude=0.0, latitude=0.0, altitude=0.0
-        )
     )
 
 
