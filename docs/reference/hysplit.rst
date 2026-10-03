@@ -38,14 +38,14 @@ to run HYSPLIT outside a project.
 Failure reasons
 ---------------
 
-When a run fails, :func:`stilt.transport.hysplit.identify_failure_reason`
-reads its log and returns the :class:`stilt.transport.hysplit.FailureReason`
-for the first message it knows. :attr:`stilt.Simulation.outcome` reports it
-as ``"failed:<reason>"``.
+When a run ends, the driver reads HYSPLIT's log for the messages it knows.
+A known failure, a timeout, or a run without particle output raises a
+:class:`~stilt.exceptions.SimulationError` whose ``reason`` is a
+:class:`stilt.transport.hysplit.FailureReason`. The worker records it, and
+:attr:`stilt.Simulation.failure` and ``stilt status`` report it.
 
 .. autosummary::
    :toctree: _api
    :nosignatures:
 
    stilt.transport.hysplit.FailureReason
-   stilt.transport.hysplit.identify_failure_reason

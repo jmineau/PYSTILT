@@ -31,8 +31,11 @@ Base class
 Failed runs
 -----------
 
-A worker records these as a failed simulation. Its log says why, and
-:class:`stilt.transport.hysplit.FailureReason` names the HYSPLIT messages it knows.
+A worker records a :class:`~stilt.exceptions.SimulationError` as a failed
+simulation (:attr:`stilt.Simulation.failure`). Its ``reason`` is a short
+name for the cause: for HYSPLIT, one of
+:class:`stilt.transport.hysplit.FailureReason`, such as ``MET_COVERAGE``,
+``MET_TRUNCATED``, ``NO_PARTICLE_DATA``, or ``TIMEOUT``.
 
 .. autosummary::
    :toctree: _api
@@ -40,10 +43,6 @@ A worker records these as a failed simulation. Its log says why, and
 
    stilt.exceptions.SimulationError
    stilt.exceptions.MeteorologyError
-   stilt.exceptions.HYSPLITTimeoutError
-   stilt.exceptions.HYSPLITFailureError
-   stilt.exceptions.NoParticleOutputError
-   stilt.exceptions.EmptyParticleOutputError
 
 Setup
 -----

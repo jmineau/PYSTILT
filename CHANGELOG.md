@@ -8,6 +8,29 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **One failure record per simulation** (breaking). When a run fails, the
+  worker writes `<receptor id>.failure.yaml` beside the receptor's log:
+  the step that failed, the exception, a short `reason` (such as
+  `MET_COVERAGE` or `TIMEOUT`), the message, and the HYSPLIT log and
+  scratch folder kept in the output directory. A success removes it.
+  `sim.failure` reads it, `sims.failures()` lists the failed simulations,
+  `status()` has a `reason` column, and `stilt status` counts failures by
+  reason. The worker no longer appends a `PYSTILT ERROR` block to the
+  HYSPLIT log, and error messages no longer name the scratch folder that
+  is removed after the run (#134).
+- **Variants that share particles run as one group** (#134). HYSPLIT runs
+  at most once per group, and every footprint of the group is made from
+  the particles in memory, where each variant read them back from Parquet.
+  `run_receptor` does this directly; `run_simulation` is gone, and
+  `SimulationResult` no longer has `ran_hysplit` or `phase`.
+- `HYSPLITTimeoutError`, `HYSPLITFailureError`, `NoParticleOutputError` and
+  `EmptyParticleOutputError` are `SimulationError` with a `reason`
+  (`TIMEOUT`, the `FailureReason` from the log, or `NO_PARTICLE_DATA`)
+  (breaking). `MeteorologyError` keeps its class, with reason
+  `MISSING_MET_FILES` (#134).
+- The core no longer imports HYSPLIT's package at all; the one exception to
+  that import contract, `Simulation.outcome`, is gone (#134).
+
 - An `Output` reads each settings folder's `_settings.yaml` once. A
   lookup that misses (a variant that has not run yet) lists the tree again
   but reads only folders it has not seen, where it used to read and hash
@@ -480,6 +503,10 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Removed
 
+- `Simulation.outcome` and `stilt.transport.hysplit.identify_failure_reason`,
+  which guessed why a run failed from phrases in a log shared by every
+  variant on the same particles. `sim.failure` replaces them (#134).
+
 - `stilt.particles.prepare`. It added a `datetime` column that nothing on
   the way to the particle file or the footprint read; `read_particles`
   adds `datetime` when it reads (#134).
@@ -552,6 +579,11 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   unset rather than the current directory.
 
 ### Fixed
+
+- `Simulation.outcome` reported `failed:UNKNOWN` for a variant whose
+  footprint was never made when another variant on the same particles had
+  run. Its replacement, `sim.failure`, reads the variant's own record
+  (#134).
 
 - Downloaded meteorology now includes the next file when the receptor is in
   the last hour of a file, as local meteorology and STILT-R do. HYSPLIT
