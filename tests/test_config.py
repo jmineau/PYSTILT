@@ -1050,7 +1050,7 @@ def test_variant_geometry_derives_its_own_grid_and_hash(tmp_path, grid, defaults
     )
     variants = cfg.resolve_variants()
     mesh = variants["src"].footprint.geometry.build()
-    expected = Grid.from_geometry(mesh)
+    expected = mesh.to_grid()
     for name in ("src", "src-run"):
         assert variants[name].footprint.grid == expected
         assert variants[name].footprint.geometry_hash == mesh.hash
