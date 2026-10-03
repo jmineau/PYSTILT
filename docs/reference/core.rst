@@ -102,7 +102,6 @@ A :class:`Grid` works as well. It is documented under :doc:`configuration`.
    Mesh
    Zones
    Geometry
-   SpatialTarget
 
 :mod:`stilt.spatial` also has the helpers that compute how much of each
 footprint cell falls in each target cell. These overlap weights are cached,

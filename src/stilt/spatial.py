@@ -175,11 +175,6 @@ class Grid(Bounds):
     )
 
     @property
-    def resolution(self) -> str:
-        """Cell size as text, such as ``'0.01x0.01'``."""
-        return f"{self.xres}x{self.yres}"
-
-    @property
     def is_longlat(self) -> bool:
         """Whether the grid is in longitude/latitude degrees."""
         return is_longlat(self.crs)
@@ -279,27 +274,6 @@ class Grid(Bounds):
             crs=crs,
         )
 
-    @classmethod
-    def from_geometries(cls, geometries, **kwargs) -> Grid:
-        """
-        Return one grid that resolves several geometries.
-
-        The grid covers all their extents at the finest cell size any of them
-        needs. Keyword arguments are passed to :meth:`from_geometry`.
-        """
-        grids = [cls.from_geometry(g, **kwargs) for g in geometries]
-        res = min(min(g.xres, g.yres) for g in grids)
-        crs = grids[0].crs
-        return cls(
-            xmin=min(g.xmin for g in grids),
-            xmax=max(g.xmax for g in grids),
-            ymin=min(g.ymin for g in grids),
-            ymax=max(g.ymax for g in grids),
-            xres=res,
-            yres=res,
-            crs=crs,
-        )
-
     @property
     def axes(self) -> tuple[np.ndarray, np.ndarray]:
         """
@@ -350,8 +324,10 @@ class Grid(Bounds):
 
         The dataset has ``lon`` and ``lat`` coordinates (``x`` and ``y`` when
         projected) matching the footprint, and a ``crs`` grid-mapping
-        variable. Pass it to ``foot.stilt.aggregate`` as a target, or
-        to other tools that read CF grids. Projected grids need ``pyproj``.
+        variable. Use it to regrid a flux field onto the footprint grid, or
+        with other tools that read CF grids. To sum a footprint onto this
+        grid, pass the grid itself to ``foot.stilt.aggregate``. Projected
+        grids need ``pyproj``.
         """
         import xarray as xr
 
@@ -738,9 +714,6 @@ class Zones(BaseModel):
 Geometry = Grid | Mesh | Zones
 """A geometry a footprint can be aggregated onto."""
 
-SpatialTarget = Geometry
-"""Every form ``foot.stilt.aggregate`` accepts as a target."""
-
 
 def _geometry_key(geometry: Geometry) -> str:
     """Return a cache key identifying the geometry."""
@@ -979,7 +952,6 @@ __all__ = [
     "Mesh",
     "overlap_weights",
     "same_crs",
-    "SpatialTarget",
     "VerticalReference",
     "Zones",
 ]

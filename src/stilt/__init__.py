@@ -30,7 +30,7 @@ from .receptors import (
     read_receptors,
 )
 from .simulation import SimID, Simulation
-from .spatial import Geometry, Mesh, SpatialTarget, Zones
+from .spatial import Geometry, Mesh, Zones
 from .transforms import ParticleTransform, TransformContext
 
 try:
@@ -67,7 +67,6 @@ __all__ = [
     "Geometry",
     "Mesh",
     "Zones",
-    "SpatialTarget",
     # Meteorology
     "Met",
     # Exceptions (all of them live in stilt.exceptions)
