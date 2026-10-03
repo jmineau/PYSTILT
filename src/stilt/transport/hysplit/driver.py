@@ -23,9 +23,9 @@ from stilt.receptors import Receptor
 from stilt.transport.hysplit.config import HysplitConfig, fields_in
 from stilt.transport.hysplit.control import ControlFile
 from stilt.transport.hysplit.failures import (
-    FAILURE_PHRASES,
     MET_TRUNCATED_WARNING,
     FailureReason,
+    failure_in,
 )
 from stilt.transport.hysplit.namelist import NameList
 
@@ -349,11 +349,9 @@ class HYSPLITDriver:
 
     def _check_log_for_failure(self) -> None:
         """Raise if the log shows a known HYSPLIT failure."""
-        with self.log_path.open("r", encoding="utf-8", errors="replace") as handle:
-            for line in handle:
-                for phrase, reason in FAILURE_PHRASES.items():
-                    if phrase in line:
-                        raise HYSPLITFailureError(reason, self.log_path)
+        reason = failure_in(self.log_path.read_text(encoding="utf-8", errors="replace"))
+        if reason is not None:
+            raise HYSPLITFailureError(reason, self.log_path)
 
     def _check_met_reached_end(self, particles: pd.DataFrame) -> None:
         """
