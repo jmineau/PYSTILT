@@ -77,8 +77,6 @@ class Met:
         buf = self.config.subgrid_buffer
         if b is None:
             raise ValueError("subgrid_bounds is required to compute effective bbox.")
-        if buf is None or buf < 0:
-            raise ValueError("subgrid_buffer must be a non-negative number.")
         return (b.xmin - buf, b.ymin - buf, b.xmax + buf, b.ymax + buf)
 
     @property

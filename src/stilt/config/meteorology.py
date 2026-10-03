@@ -93,6 +93,7 @@ class MetConfig(BaseModel):
     )
     subgrid_buffer: float = Field(
         0.2,
+        ge=0,
         description="Margin added to every side of ``subgrid_bounds``, in degrees.",
     )
     subgrid_levels: int | None = Field(
