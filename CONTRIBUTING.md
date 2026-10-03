@@ -31,7 +31,7 @@ architecture and the rules the code relies on.
    that fails without the fix. User-facing changes need a docs update.
 3. Run the checks:
    ```bash
-   just quality-check   # ruff, pyright, and the unit tests
+   just quality-check   # ruff, pyright, the import contracts, and the unit tests
    just pre-commit      # all pre-commit hooks
    ```
 4. Commit with a [Conventional Commits](https://www.conventionalcommits.org/)
@@ -61,27 +61,32 @@ PYSTILT uses itself. The HYSPLIT driver writes each file from
 the routing test in `tests/test_config.py` lists the fields of every file
 but `SETUP.CFG`.
 
-## Project store and completion
+## Output directory and completion
 
-A project is one root directory or URI (`stilt.project.Project`) with a
-`Store` (`stilt.store`: `LocalStore` or `FsspecStore`) that reads and writes
-its files by key. `Simulation` owns the file names, the keys, and the single
-definition of a finished simulation, `Simulation.is_complete()`. Don't add
-another "does this output exist" check. Call that method instead. A new store
-backend implements the six methods of the `Store` protocol.
+A project is a local directory of inputs (`stilt.project.Project`):
+`config.yaml` and `receptors.csv`. Results go to an output directory
+(`stilt.output.Output`) that `config.yaml` names and that several projects
+can share. Each results folder is named by the hash of its settings, so a
+changed setting writes a new folder and never overwrites a result.
+
+`Simulation` knows where its files are and holds the one definition of a
+finished simulation, `Simulation.is_complete()`. `Simulations` applies the
+same rule to many simulations from one listing of their date folders, and a
+test keeps the two in agreement. Don't add another "does this output exist"
+check, a registry, or a manifest. Call these instead.
 
 ## Changing how work is run
 
-`stilt.execution.run` plans the receptors with missing results and hands
-them to `_dispatch` in `execution/runner.py`. A local run calls
-`run_receptors` in this process. A Slurm run splits the receptors into
-`Batch` objects and submits them as one job array with submitit.
+`stilt.execution.run` (`execution/runner.py`) finds the receptors with
+missing results. A local run calls `run_receptors` in this process. A Slurm
+run goes through `submit`, which splits the receptors into `Batch` objects
+and submits them as one job array with submitit.
 
 A `Batch` is the unit to build on: a project path and a list of receptor
 ids, picklable, that any worker with the project's filesystem can call. Its
 `checkpoint()` is what lets a preempted or timed-out task be submitted again.
-Another scheduler means another branch in `_dispatch` that calls the same
-batches, and a handle with `job_id`, `detached`, and `wait()`.
+Another scheduler means another branch in `run` and `submit` that calls
+the same batches.
 
 New `execution:` settings go on `ExecutionConfig` (`config/execution.py`)
 with a description. Settings that only `sbatch` understands do not need a
