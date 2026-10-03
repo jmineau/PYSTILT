@@ -197,7 +197,6 @@ def test_read_particles_raises_domain_error_when_file_missing(tmp_path, point_re
 
 def test_run_persists_fortran_runtime_output_on_failure(tmp_path, point_receptor):
     runner = _make_runner(tmp_path, point_receptor)
-    runner.log_path.write_text("previous attempt\n")
     exe = tmp_path / "hycs_std"
     exe.write_text(
         "#!/usr/bin/env bash\n"
@@ -210,23 +209,7 @@ def test_run_persists_fortran_runtime_output_on_failure(tmp_path, point_receptor
         runner._run(timeout=5)
 
     log_text = runner.log_path.read_text()
-    assert "previous attempt" in log_text
     assert "Fortran runtime error" in log_text
-
-
-def test_run_returns_where_its_log_output_starts(tmp_path, point_receptor):
-    runner = _make_runner(tmp_path, point_receptor)
-    runner.log_path.write_text("previous attempt\n")
-    exe = tmp_path / "hycs_std"
-    exe.write_text("#!/usr/bin/env bash\necho 'this run'\n")
-    exe.chmod(0o755)
-
-    start = runner._run(timeout=5)
-
-    assert start == len("previous attempt\n")
-    with runner.log_path.open() as handle:
-        handle.seek(start)
-        assert "this run" in handle.read()
 
 
 def test_run_raises_clear_error_when_executable_missing(tmp_path, point_receptor):
@@ -236,7 +219,7 @@ def test_run_raises_clear_error_when_executable_missing(tmp_path, point_receptor
         runner._run(timeout=5)
 
 
-def test_run_times_out_and_keeps_labeled_log_output(tmp_path, point_receptor):
+def test_run_times_out_and_keeps_log_output(tmp_path, point_receptor):
     runner = _make_runner(tmp_path, point_receptor)
     exe = tmp_path / "hycs_std"
     exe.write_text("#!/usr/bin/env bash\necho 'starting hycs_std'\nsleep 30\n")
@@ -246,40 +229,14 @@ def test_run_times_out_and_keeps_labeled_log_output(tmp_path, point_receptor):
         runner._run(timeout=1)
 
     log_text = runner.log_path.read_text()
-    assert "=== hycs_std run ===" in log_text
     assert "starting hycs_std" in log_text
-
-
-def test_execute_discards_stale_particles_from_a_previous_run(
-    tmp_path, point_receptor, monkeypatch
-):
-    runner = _make_runner(tmp_path, point_receptor)
-    _write_particle_dat(
-        runner.particle_stilt_path, rows=[[-60, 1, -111.9, 40.7, 10.0, 9e-5]]
-    )
-
-    def fake_run(timeout: int | None, *, label: str = "hycs_std") -> int:
-        assert not runner.particle_stilt_path.exists()
-        runner.log_path.write_text("")
-        _write_particle_dat(
-            runner.particle_stilt_path, rows=[[-60, 1, -111.9, 40.7, 10.0, 1e-5]]
-        )
-        return 0
-
-    monkeypatch.setattr(runner, "_run", fake_run)
-
-    result = runner.execute(timeout=5)
-
-    assert float(result["foot"].iloc[0]) == pytest.approx(1e-5)
 
 
 def _fake_hysplit(runner, monkeypatch, *, log: str, last_minute: int) -> None:
     """Make ``runner._run`` write *log* and particles that end at *last_minute*."""
 
-    def fake_run(timeout: int | None, *, label: str = "hycs_std") -> int:
-        runner.log_path.write_text("previous attempt\n")
-        with runner.log_path.open("a") as handle:
-            handle.write(log)
+    def fake_run(timeout: int | None) -> None:
+        runner.log_path.write_text(log)
         _write_particle_dat(
             runner.particle_stilt_path,
             rows=[
@@ -287,7 +244,6 @@ def _fake_hysplit(runner, monkeypatch, *, log: str, last_minute: int) -> None:
                 [-last_minute, 1, -112.0, 40.6, 20.0, 0.0],
             ],
         )
-        return len("previous attempt\n")
 
     monkeypatch.setattr(runner, "_run", fake_run)
 
@@ -329,12 +285,11 @@ def test_execute_leaves_an_empty_particle_file_to_the_caller(
 ):
     runner = _make_runner(tmp_path, point_receptor)
 
-    def fake_run(timeout: int | None, *, label: str = "hycs_std") -> int:
+    def fake_run(timeout: int | None) -> None:
         runner.log_path.write_text(
             " WARNING metset: Only one time period of meteo data\n"
         )
         _write_particle_dat(runner.particle_stilt_path, rows=[])
-        return 0
 
     monkeypatch.setattr(runner, "_run", fake_run)
 
@@ -742,15 +697,6 @@ def test_only_hycs_std_is_linked_from_a_custom_build_dir(tmp_path, point_recepto
     assert not (sim / "concplot").exists()
 
 
-def test_reused_sim_directory_is_relinked_to_the_new_build(tmp_path, point_receptor):
-    old = _fake_build(tmp_path / "old", "old build")
-    new = _fake_build(tmp_path / "new", "new build")
-    _exe_driver(tmp_path, point_receptor, params_exe=old).prepare()
-    assert (tmp_path / "sim" / "hycs_std").read_text() == "old build"
-    _exe_driver(tmp_path, point_receptor, params_exe=new).prepare()
-    assert (tmp_path / "sim" / "hycs_std").read_text() == "new build"
-
-
 def test_exe_dir_is_not_written_to_setup_cfg(tmp_path, point_receptor):
     build = _fake_build(tmp_path / "my_build")
     runner = _exe_driver(tmp_path, point_receptor, params_exe=build)
@@ -790,15 +736,14 @@ def test_perturbed_run_writes_winderr_and_winderrtf_once(
     """A perturbed variant is one HYSPLIT call with WINDERR and winderrtf set."""
     runner = _error_runner(tmp_path, point_receptor)
     monkeypatch.setattr(runner, "_write_zicontrol", lambda: None)
-    labels: list[str] = []
+    calls: list[int | None] = []
 
-    def fake_run(timeout: int | None, *, label: str = "hycs_std") -> int:
-        labels.append(label)
+    def fake_run(timeout: int | None) -> None:
+        calls.append(timeout)
         runner.log_path.write_text("")
         _write_particle_dat(
             runner.particle_stilt_path, rows=[[-60, 1, -111.9, 40.7, 10.0, 1e-5]]
         )
-        return 0
 
     monkeypatch.setattr(runner, "_run", fake_run)
 
@@ -807,7 +752,7 @@ def test_perturbed_run_writes_winderr_and_winderrtf_once(
     runner._write_zierr()
     result = runner.execute(timeout=5)
 
-    assert labels == ["hycs_std"]
+    assert calls == [5]  # one HYSPLIT call
     assert runner.winderr_path.exists()
     assert not runner.zierr_path.exists()
     assert "winderrtf=1" in runner.setup_path.read_text().lower()

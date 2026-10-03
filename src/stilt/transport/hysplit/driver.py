@@ -257,15 +257,8 @@ class HYSPLITDriver:
                 f"No {HYCS_STD_FILE!r} executable in {self.exe_dir}. "
                 "Check TransportParams.exe_dir."
             )
-        # A reused simulation directory may still point at a different build.
-        if self.hycs_std_path.is_symlink() and (
-            self.hycs_std_path.resolve() != exe.resolve()
-        ):
-            self.hycs_std_path.unlink()
         for f in [exe, *self.data_dir.iterdir()]:
-            link = self.directory / f.name
-            if not link.exists():
-                link.symlink_to(f.resolve())
+            (self.directory / f.name).symlink_to(f.resolve())
 
         # Write HYSPLIT CONTROL
         ControlFile(
@@ -308,41 +301,37 @@ class HYSPLITDriver:
         NoParticleOutputError
             HYSPLIT wrote no ``PARTICLE_STILT.DAT``.
         """
-        self.particle_stilt_path.unlink(missing_ok=True)
-        self.particle_path.unlink(missing_ok=True)
-        log_start = self._run(timeout, label="hycs_std")
+        self._run(timeout)
         particles = self._read_particles()
-        self._check_met_reached_end(particles, log_start)
+        self._check_met_reached_end(particles)
         return particles
 
     # -- Private helpers -------------------------------------------------------
 
-    def _run(self, timeout: int | None, *, label: str = "hycs_std") -> int:
-        """Run ``hycs_std``, appending its output to the log, and return the offset it starts at."""
+    def _run(self, timeout: int | None) -> None:
+        """Run ``hycs_std``, writing its output to the log."""
         if not self.hycs_std_path.exists():
             raise HYSPLITNotFoundError(
                 f"HYSPLIT executable not found for {self.directory}: {self.hycs_std_path}"
             )
-        segment_start = self.log_path.stat().st_size if self.log_path.exists() else 0
-        with self.log_path.open("a", encoding="utf-8") as handle:
-            handle.write(f"\n=== {label} run ===\n")
-            handle.flush()
-            with subprocess.Popen(
+        with (
+            self.log_path.open("w", encoding="utf-8") as handle,
+            subprocess.Popen(
                 [str(self.hycs_std_path)],
                 cwd=self.directory,
                 stdout=handle,
                 stderr=subprocess.STDOUT,
                 start_new_session=True,
-            ) as proc:
-                try:
-                    proc.wait(timeout=timeout)
-                except subprocess.TimeoutExpired as e:
-                    self._terminate_process(proc)
-                    raise HYSPLITTimeoutError(
-                        f"hycs_std timed out after {timeout}s for {self.directory}"
-                    ) from e
-        self._check_log_for_failure(segment_start)
-        return segment_start
+            ) as proc,
+        ):
+            try:
+                proc.wait(timeout=timeout)
+            except subprocess.TimeoutExpired as e:
+                self._terminate_process(proc)
+                raise HYSPLITTimeoutError(
+                    f"hycs_std timed out after {timeout}s for {self.directory}"
+                ) from e
+        self._check_log_for_failure()
 
     def _terminate_process(self, proc: subprocess.Popen[Any]) -> None:
         """Stop a HYSPLIT process group with SIGTERM, then SIGKILL if it does not exit."""
@@ -364,21 +353,15 @@ class HYSPLITDriver:
         except subprocess.TimeoutExpired:
             proc.wait()
 
-    def _check_log_for_failure(self, start: int) -> None:
-        """
-        Raise if the log written since byte ``start`` shows a known HYSPLIT failure.
-
-        Seeking to a byte offset in text mode is safe here because
-        ``hycs_std`` writes no multi-byte characters.
-        """
+    def _check_log_for_failure(self) -> None:
+        """Raise if the log shows a known HYSPLIT failure."""
         with self.log_path.open("r", encoding="utf-8", errors="replace") as handle:
-            handle.seek(start)
             for line in handle:
                 for phrase, reason in FAILURE_PHRASES.items():
                     if phrase in line:
                         raise HYSPLITFailureError(reason, self.log_path)
 
-    def _check_met_reached_end(self, particles: pd.DataFrame, log_start: int) -> None:
+    def _check_met_reached_end(self, particles: pd.DataFrame) -> None:
         """
         Raise if a met file was cut short and no particle reaches the end of the run.
 
@@ -390,10 +373,9 @@ class HYSPLITDriver:
         """
         if particles.empty:
             return
-        with self.log_path.open("r", encoding="utf-8", errors="replace") as handle:
-            handle.seek(log_start)
-            if MET_TRUNCATED_WARNING not in handle.read():
-                return
+        log = self.log_path.read_text(encoding="utf-8", errors="replace")
+        if MET_TRUNCATED_WARNING not in log:
+            return
         end = abs(self.params.n_hours) * 60
         reach = float(np.abs(particles["time"].to_numpy()).max())
         if reach >= end - max(self.params.outdt, 0):

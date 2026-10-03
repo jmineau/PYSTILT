@@ -211,7 +211,10 @@ def run_particles(
     model = get_model(params.model.name)
     folder = sim.output.particles(sim.variant.name, sim.variant.transport)
     rid = sim.receptor.id
-    workdir.mkdir(parents=True, exist_ok=True)
+    # The model runs in an empty directory. A job stopped partway can leave
+    # this simulation's directory behind; it is PYSTILT's own, so clear it.
+    shutil.rmtree(workdir, ignore_errors=True)
+    workdir.mkdir(parents=True)
     scratch_log = workdir / "stilt.log"
     succeeded = False
     try:
