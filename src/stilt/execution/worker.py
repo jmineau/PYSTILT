@@ -33,7 +33,6 @@ from stilt.exceptions import (
 )
 from stilt.footprint import calculate
 from stilt.meteorology import Met
-from stilt.particles import prepare
 from stilt.simulation import Simulation
 from stilt.transforms import TransformContext
 from stilt.transport import get_model
@@ -183,10 +182,9 @@ def run_particles(
         result = model.run(sim.receptor, params, met, workdir, timeout=timeout)
         if result.particles.empty:
             raise EmptyParticleOutputError(f"HYSPLIT wrote no particles for {sim.id}")
-        particles = prepare(result.particles, sim.receptor)
-        folder.write(sim.receptor, particles, result.met_files)
+        folder.write(sim.receptor, result.particles, result.met_files)
         succeeded = True
-        return particles
+        return result.particles
     finally:
         if scratch_log.exists():
             folder.write_log(rid, scratch_log.read_text())

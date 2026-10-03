@@ -13,7 +13,6 @@ from stilt.config import ExecutionConfig, Grid, MetConfig, ProjectConfig
 from stilt.execution import resolve_compute_root
 from stilt.footprint.io import _describe
 from stilt.output import Output
-from stilt.particles import prepare
 from stilt.project import Project, Simulations
 from stilt.receptors import PointReceptor
 from stilt.simulation import SimID
@@ -87,10 +86,7 @@ def _particles() -> pd.DataFrame:
 def _write_trajectory(project: Project, receptor, variant="hrrr") -> Path:
     """Write a small particle file for one simulation into the output directory."""
     sim = project.simulation(receptor.id, variant)
-    particles = prepare(
-        finish_particles(_particles(), sim.receptor, sim.variant.transport),
-        sim.receptor,
-    )
+    particles = finish_particles(_particles(), sim.receptor, sim.variant.transport)
     folder = sim.output.particles(sim.variant)
     return folder.write(sim.receptor, particles, [])
 
