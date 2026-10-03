@@ -342,6 +342,9 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Removed
 
+- `stilt.observations.particle_background`, `endpoint_weights`, and
+  `fill_missing`. `background(...).per_particle` is the field at each
+  endpoint, and `background(...).weights` the weights.
 - `stilt.project.project_slug`, now a private helper of the runner, which
   names Slurm jobs with it. `run_receptors` requires `compute_root`, as
   `resolve_compute_root` returns it.
