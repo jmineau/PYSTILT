@@ -8,6 +8,31 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **Each part owns its config** (breaking). `FootprintConfig` and the
+  geometry specs are in `stilt.footprint.config`, `Grid` in
+  `stilt.footprint.grid`, `MetConfig` in `stilt.meteorology`, and
+  `ExecutionConfig` in `stilt.execution.config`; the `stilt.config` package
+  is one module holding `ProjectConfig`. Import them from `stilt`
+  (`stilt.Grid`, `stilt.FootprintConfig`, `stilt.MetConfig`, and now
+  `stilt.ExecutionConfig`) or from their new modules; `stilt.config` no
+  longer re-exports them. `stilt.spatial` keeps `Bounds` and the CRS
+  helpers (#134).
+- **A variant's transport settings are checked when it resolves**
+  (breaking). `VariantConfig` and `config.variant_configs` are gone.
+  `ProjectConfig` still checks at load what needs no transport model
+  (variant names, mets, `model`, `realizations`, `from:`, grid merging,
+  footprint settings without a grid) and offers each declared variant
+  merged with the defaults as `config.variant(name)`. `project.variants`
+  (`stilt.variants.resolve`) validates each variant's transport settings
+  once, with its model's config class, and expands `realizations`, so a
+  misspelled HYSPLIT setting inside a variant is reported there.
+  `Project.init` resolves before it writes `config.yaml`, so it still
+  refuses a bad config (#134).
+- `ProjectConfig` is no longer a `FootprintConfig`. The top-level footprint
+  settings are `config.footprint`, as the model's are `config.transport`;
+  `config.grid` is now the raw value from the file, as `config.numpar`
+  already was (#134).
+
 - `HYSPLITDriver` needs the `directory` to run in. Without one it made a
   temporary directory that nothing removed (#134).
 - `MetConfig.subgrid_buffer` must be 0 or more; a negative buffer is a

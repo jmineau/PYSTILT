@@ -24,7 +24,8 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
-from stilt.config import FootprintConfig, MetConfig
+from stilt.footprint.config import FootprintConfig
+from stilt.meteorology import MetConfig
 from stilt.transforms import dump_transform, load_transform, transform_kind
 from stilt.transport import ModelInfo, TransportConfig, get_model
 

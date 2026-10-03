@@ -18,8 +18,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from stilt.config import MetConfig
-from stilt.meteorology import Met
+from stilt.meteorology import Met, MetConfig
 from stilt.receptors import ColumnReceptor
 from stilt.transforms import PressureWeighting, particle_pwf, release_coordinate
 from stilt.transport.hysplit import HysplitConfig

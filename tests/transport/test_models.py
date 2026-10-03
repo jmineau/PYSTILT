@@ -70,13 +70,12 @@ def test_a_variant_may_run_another_model(tmp_path, toy):
         numpar=500,
         variants={"hrrr": {}, "toy": {"model": "toy", "nparticles": 10}},
     )
-    hrrr, toy_variant = config.variant_configs["hrrr"], config.variant_configs["toy"]
-    assert hrrr.model == "hysplit" and hrrr.transport.numpar == 500
-    # Another model's variant gives its own parameters and inherits the footprint.
-    assert toy_variant.model == "toy" and toy_variant.transport.nparticles == 10
-    assert toy_variant.footprint == hrrr.footprint
-
     variants = resolve(config)
+    hrrr, toy_variant = variants["hrrr"], variants["toy"]
+    assert hrrr.model.name == "hysplit" and hrrr.transport.numpar == 500
+    # Another model's variant gives its own parameters and inherits the footprint.
+    assert toy_variant.model.name == "toy" and toy_variant.transport.nparticles == 10
+    assert toy_variant.footprint == hrrr.footprint
     assert variants["toy"].model == ModelInfo(name="toy", version="1.0")
     assert variants["toy"].particles_hash != variants["hrrr"].particles_hash
     recorded = variants["toy"].run_settings
@@ -86,17 +85,17 @@ def test_a_variant_may_run_another_model(tmp_path, toy):
 
 
 def test_another_models_variant_takes_only_its_own_parameters(tmp_path, toy):
+    config = ProjectConfig(
+        mets=_mets(tmp_path), variants={"toy": {"model": "toy", "numpar": 5}}
+    )
     with pytest.raises(ValueError, match="numpar"):
-        ProjectConfig(
-            mets=_mets(tmp_path),
-            variants={"toy": {"model": "toy", "numpar": 5}},
-        )
+        resolve(config)
 
 
 def test_the_projects_model_takes_its_parameters_at_the_top(tmp_path, toy):
     config = ProjectConfig(mets=_mets(tmp_path), model="toy", nparticles=7)
     assert config.transport.nparticles == 7
-    assert config.variant_configs["hrrr"].model == "toy"
+    assert resolve(config)["hrrr"].model.name == "toy"
     with pytest.raises(ValueError, match="numpar"):
         ProjectConfig(mets=_mets(tmp_path), model="toy", numpar=7)
 

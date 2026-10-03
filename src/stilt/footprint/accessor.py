@@ -13,7 +13,8 @@ import pandas as pd
 import xarray as xr
 
 from stilt._atomic import atomic_path
-from stilt.config import FootprintConfig, Grid
+from stilt.footprint.config import FootprintConfig
+from stilt.footprint.grid import Grid
 from stilt.identity import read_footprint_settings
 from stilt.receptors import Receptor
 
@@ -207,7 +208,7 @@ class FootprintAccessor:
         target : Grid, Mesh, or Zones
             Cells to sum onto:
 
-            - :class:`~stilt.config.Grid`, every cell of a regular grid, in
+            - :class:`~stilt.Grid`, every cell of a regular grid, in
               ``Grid.index`` order.
             - :class:`~stilt.Mesh`, any polygons (a shapefile, H3 hexagons,
               nested grids). Rows are indexed by cell id.

@@ -194,7 +194,7 @@ class ReferenceScenario:
 
     def make_grid(self):
         """Return the :class:`~stilt.config.Grid` for this scenario."""
-        from stilt.config import Grid
+        from stilt.footprint.grid import Grid
 
         return Grid(
             xmin=self.xmin,
@@ -208,7 +208,7 @@ class ReferenceScenario:
 
     def make_footprint_config(self):
         """Return the :class:`~stilt.config.FootprintConfig` for this scenario."""
-        from stilt.config import FootprintConfig
+        from stilt.footprint.config import FootprintConfig
 
         return FootprintConfig(
             grid=self.make_grid(),

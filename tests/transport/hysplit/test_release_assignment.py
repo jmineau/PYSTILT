@@ -7,8 +7,7 @@ from pathlib import Path
 
 import numpy as np
 
-from stilt.config import MetConfig
-from stilt.meteorology import Met
+from stilt.meteorology import Met, MetConfig
 from stilt.receptors import ColumnReceptor, MultiPointReceptor
 from stilt.transport.hysplit import HysplitConfig
 from stilt.transport.hysplit.driver import HYSPLITDriver

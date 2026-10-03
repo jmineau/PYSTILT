@@ -6,8 +6,9 @@ from dataclasses import replace
 import pytest
 import yaml
 
-from stilt.config import MetConfig, ProjectConfig
+from stilt.config import ProjectConfig
 from stilt.identity import read_run_settings, run_settings, settings_hash
+from stilt.meteorology import MetConfig
 from stilt.output import Output
 from stilt.transport import ModelInfo
 from stilt.transport.hysplit import HysplitConfig

@@ -1,14 +1,17 @@
 Configuration
 =============
 
-.. currentmodule:: stilt.config
+.. currentmodule:: stilt
 
 Everything you can write in ``config.yaml`` is a field of
 :class:`ProjectConfig`. That covers the mets
 (:class:`MetConfig`), the footprint settings (:class:`FootprintConfig`),
-the ``variants``, the ``execution`` section, and the STILT and HYSPLIT
-settings. Each page below lists its fields with their defaults and is
-generated from the code.
+the ``variants``, the ``execution`` section (:class:`ExecutionConfig`), and
+the STILT and HYSPLIT settings. Each class lives next to the code that uses
+it (``stilt.footprint.config``, ``stilt.meteorology``,
+``stilt.execution.config``), and all of them are importable from ``stilt``.
+Each page below lists its fields with their defaults and is generated from
+the code.
 
 .. tip::
   New to PYSTILT? The :doc:`configuration guide <../guides/configuration>`
@@ -17,10 +20,11 @@ generated from the code.
 Config objects
 --------------
 
-A config is what you write. :class:`VariantConfig` is one declared
-variant merged with the defaults. ``project.variants`` resolves each into a
-:class:`stilt.Variant`, which adds what the file alone does not say: the
-grid of a footprint given by a geometry, and the transport model build.
+A config is what you write. ``project.variants`` resolves each declared
+variant into a :class:`stilt.Variant`: its transport settings checked by the
+model's config class, its realizations expanded, and what the file alone
+does not say, the grid of a footprint given by a geometry and the transport
+model build.
 The ``PYSTILT_COMPUTE_ROOT`` environment variable sets the scratch
 directory HYSPLIT runs in. It never changes a result.
 
@@ -29,9 +33,9 @@ directory HYSPLIT runs in. It never changes a result.
    :nosignatures:
 
    ProjectConfig
-   VariantConfig
    MetConfig
    FootprintConfig
+   ExecutionConfig
    Bounds
    Grid
 
@@ -56,6 +60,6 @@ The kinds of area you can name in the ``geometry`` footprint setting.
    :toctree: _api
    :nosignatures:
 
-   FileGeometrySpec
-   H3GeometrySpec
-   WindowsGeometrySpec
+   footprint.config.FileGeometrySpec
+   footprint.config.H3GeometrySpec
+   footprint.config.WindowsGeometrySpec

@@ -9,9 +9,12 @@ import pandas as pd
 import pytest
 import xarray as xr
 
-from stilt.config import ExecutionConfig, Grid, MetConfig, ProjectConfig
+from stilt.config import ProjectConfig
 from stilt.execution import resolve_compute_root
+from stilt.execution.config import ExecutionConfig
+from stilt.footprint.grid import Grid
 from stilt.footprint.io import _describe
+from stilt.meteorology import MetConfig
 from stilt.output import Output
 from stilt.project import Project, Simulations
 from stilt.receptors import PointReceptor
@@ -947,3 +950,17 @@ def test_a_selection_from_a_table_made_with_pandas(tmp_path):
     assert back.obs.tolist() == [1.9]
     with pytest.raises(ValueError, match="'receptor' and 'variant'"):
         Simulations(project, project.receptors)
+
+
+def test_init_refuses_a_variant_with_bad_settings_and_writes_nothing(tmp_path):
+    """A variant's transport settings are checked before config.yaml is written."""
+    met = {
+        "directory": str(tmp_path / "met"),
+        "file_format": "%Y%m%d_%H",
+        "file_tres": "1h",
+    }
+    with pytest.raises(ValueError, match="numpr"):
+        Project.init(
+            tmp_path / "proj", mets={"hrrr": met}, variants={"hrrr": {"numpr": 10}}
+        )
+    assert not (tmp_path / "proj" / "config.yaml").exists()

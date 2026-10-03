@@ -14,10 +14,10 @@ if TYPE_CHECKING:
     import cartopy  # type: ignore[import-untyped]
     import xarray as xr
 
-    from stilt.config import Bounds
     from stilt.project import Project
     from stilt.receptors import Receptor
     from stilt.simulation import Simulation
+    from stilt.spatial import Bounds
 
 from stilt.receptors import ColumnReceptor, MultiPointReceptor, Receptor
 from stilt.spatial import horizontal_dims

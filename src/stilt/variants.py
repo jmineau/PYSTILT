@@ -2,12 +2,13 @@
 Variants, resolved: everything a variant's results are made with, and the hashes that find them.
 
 ``config.yaml`` declares variants, and :class:`~stilt.config.ProjectConfig`
-merges each with the defaults when it loads (a
-:class:`~stilt.config.VariantConfig`). Two things are still unknown then,
-because they need more than the file: the grid of a footprint given by a
-geometry, which needs the geometry read, and the build of the transport
-model. :func:`resolve` finds both and returns one :class:`Variant` per
-simulation name. ``project.variants`` holds them.
+checks each against the defaults when it loads
+(:meth:`~stilt.config.ProjectConfig.variant`). :func:`resolve` does the rest,
+which needs more than the file: it validates each variant's transport
+settings with its model's config class, expands ``realizations``, reads
+each geometry to derive its grid, and asks the transport model for its
+build. It returns one :class:`Variant` per simulation name, and
+``project.variants`` holds them.
 """
 
 from __future__ import annotations
@@ -16,7 +17,8 @@ from dataclasses import dataclass
 from functools import cached_property
 from typing import Any
 
-from stilt.config import FootprintConfig, MetConfig, ProjectConfig
+from stilt.config import ProjectConfig, transport_config
+from stilt.footprint.config import FootprintConfig
 from stilt.footprint.targets import Mesh
 from stilt.identity import (
     footprint_hash,
@@ -24,6 +26,7 @@ from stilt.identity import (
     run_settings,
     settings_hash,
 )
+from stilt.meteorology import MetConfig
 from stilt.transport import ModelInfo, TransportConfig, get_model
 
 
@@ -107,22 +110,35 @@ def resolve(config: ProjectConfig) -> dict[str, Variant]:
     """
     Return one :class:`Variant` per simulation name, in declared order.
 
-    Each geometry is read once, however many variants use it, and the grid
-    of a footprint given only by a geometry is derived from it
-    (:meth:`stilt.Mesh.to_grid`). The transport model's version and data
-    files are read once for each distinct build: the fields of its config
-    that change no particle, such as ``exe_dir``.
+    Each variant's transport settings are validated by its model's config
+    class, and a ``realizations`` group becomes ``<name>-0`` to
+    ``<name>-<N-1>``, realization ``k`` with ``seed + k``. Each geometry is
+    read once, however many variants use it, and the grid of a footprint
+    given only by a geometry is derived from it (:meth:`stilt.Mesh.to_grid`).
+    The transport model's version and data files are read once for each
+    distinct build: the fields of its config that change no particle, such
+    as ``exe_dir``.
 
     Parameters
     ----------
     config : ProjectConfig
         The project's config.
+
+    Raises
+    ------
+    ValueError
+        If a variant's transport settings are invalid for its model, or its
+        realizations would repeat one another.
     """
     meshes: dict[str, Mesh] = {}
     builds: dict[tuple[str, str], ModelInfo] = {}
     variants: dict[str, Variant] = {}
-    for spec in config.variant_configs.values():
-        footprint, geometry_hash = spec.footprint, None
+    for group in config.declared():
+        declared = config.variant(group)
+        transport = transport_config(
+            declared.model, declared.transport, f"Variant {group!r} ({declared.model})"
+        )
+        footprint, geometry_hash = declared.footprint, None
         if footprint is not None and footprint.geometry is not None:
             key = footprint.geometry.model_dump_json()
             if key not in meshes:
@@ -132,26 +148,37 @@ def resolve(config: ProjectConfig) -> dict[str, Variant]:
             if footprint.grid is None:
                 grid = mesh.to_grid(cells_per_target=footprint.cells_per_target)
                 footprint = footprint.model_copy(update={"grid": grid})
-        where = spec.transport.model_dump_json(include=set(spec.transport.UNRECORDED))
-        build = (spec.model, where)
+        where = transport.model_dump_json(include=set(transport.UNRECORDED))
+        build = (declared.model, where)
         if build not in builds:
-            model = get_model(spec.model)
+            model = get_model(declared.model)
             builds[build] = ModelInfo(
                 name=model.name,
-                version=model.version(spec.transport),
-                data_files=model.data_files(spec.transport),
+                version=model.version(transport),
+                data_files=model.data_files(transport),
             )
-        variants[spec.name] = Variant(
-            name=spec.name,
-            group=spec.group,
-            met=spec.met,
-            met_config=config.mets[spec.met],
-            transport=spec.transport,
-            model=builds[build],
-            realization=spec.realization,
-            footprint=footprint,
-            geometry_hash=geometry_hash,
-        )
+        if declared.realizations is None:
+            runs = [(group, None, transport)]
+        else:
+            try:
+                copies = transport.realizations(declared.realizations)
+            except ValueError as error:
+                raise ValueError(f"Variant {group!r}: {error}") from None
+            # A group of one is still <group>-0, so raising realizations
+            # later only adds simulations.
+            runs = [(f"{group}-{k}", k, copy) for k, copy in enumerate(copies)]
+        for name, realization, run_transport in runs:
+            variants[name] = Variant(
+                name=name,
+                group=group,
+                met=declared.met,
+                met_config=config.mets[declared.met],
+                transport=run_transport,
+                model=builds[build],
+                realization=realization,
+                footprint=footprint,
+                geometry_hash=geometry_hash,
+            )
     return variants
 
 

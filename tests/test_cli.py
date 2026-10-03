@@ -10,7 +10,9 @@ from typer.testing import CliRunner
 
 import stilt.__main__
 from stilt.cli import _resolve_project, app
-from stilt.config import ExecutionConfig, Grid, ProjectConfig
+from stilt.config import ProjectConfig
+from stilt.execution.config import ExecutionConfig
+from stilt.footprint.grid import Grid
 from stilt.variants import resolve
 
 runner = CliRunner()
@@ -362,7 +364,7 @@ def test_init_writes_science_first_commented_config(tmp_path):
     assert parsed["output"] == "./output"
     assert parsed["grid"]["xmin"] == -113.0
     loaded = ProjectConfig.from_yaml(project / "config.yaml")
-    assert loaded.grid is not None and loaded.grid.xmin == -113.0
+    assert loaded.footprint.grid is not None and loaded.footprint.grid.xmin == -113.0
     assert list(resolve(loaded)) == ["hrrr"]
     assert parsed["variants"] == {"hrrr": {}}
     assert text.index("mets:") < text.index("grid:")

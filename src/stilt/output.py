@@ -55,7 +55,6 @@ import xarray as xr
 import yaml
 
 from stilt._atomic import atomic_path
-from stilt.config import FootprintConfig, Grid
 from stilt.footprint import (
     FOOTPRINT_SCHEMA,
     Geometry,
@@ -65,6 +64,8 @@ from stilt.footprint import (
     write_empty_footprint,
     write_footprint,
 )
+from stilt.footprint.config import FootprintConfig
+from stilt.footprint.grid import Grid
 from stilt.identity import (
     footprint_hash,
     footprint_settings,

@@ -101,7 +101,7 @@ ids, picklable, that any worker with the project's filesystem can call. Its
 Another scheduler means another branch in `run` and `submit` that calls
 the same batches.
 
-New `execution:` settings go on `ExecutionConfig` (`config/execution.py`)
+New `execution:` settings go on `ExecutionConfig` (`execution/config.py`)
 with a description. Settings that only `sbatch` understands do not need a
 field: users put them under `slurm:`.
 

@@ -5,14 +5,12 @@ import textwrap
 import pytest
 from pydantic import BaseModel, ConfigDict, ValidationError
 
-from stilt.config import (
-    FootprintConfig,
-    Grid,
-    MetConfig,
-    ProjectConfig,
-)
+from stilt.config import ProjectConfig
+from stilt.footprint.config import FootprintConfig
+from stilt.footprint.grid import Grid
 from stilt.footprint.targets import Mesh
 from stilt.identity import footprint_settings, read_footprint_settings
+from stilt.meteorology import MetConfig
 from stilt.transforms import AveragingKernel, FirstOrderLifetime, PressureWeighting
 from stilt.transport.hysplit import HysplitConfig
 from stilt.transport.hysplit.driver import (
@@ -426,7 +424,7 @@ def test_unknown_execution_setting_is_an_error(tmp_path):
 
 
 def test_execution_accepts_one_setup_line():
-    from stilt.config import ExecutionConfig
+    from stilt.execution.config import ExecutionConfig
 
     execution = ExecutionConfig.model_validate({"setup": "module load hysplit"})
     assert execution.setup == ["module load hysplit"]
@@ -474,7 +472,7 @@ def test_model_config_yaml_roundtrip_with_footprint_transforms(tmp_path, grid):
     path = tmp_path / "config.yaml"
     cfg.to_yaml(path)
     loaded = ProjectConfig.from_yaml(path)
-    transforms = loaded.transforms
+    transforms = loaded.footprint.transforms
     assert len(transforms) == 3
     assert transforms == given
     assert isinstance(transforms[0], AveragingKernel)
@@ -495,7 +493,7 @@ def test_model_config_yaml_roundtrip_with_user_transform(tmp_path, grid):
     assert "factor: 2.5" in text
 
     loaded = ProjectConfig.from_yaml(path)
-    transforms = loaded.transforms
+    transforms = loaded.footprint.transforms
     assert len(transforms) == 1
     assert isinstance(transforms[0], ScaleFoot)
     assert transforms[0].factor == pytest.approx(2.5)
@@ -560,10 +558,10 @@ def test_model_config_inline_grid_in_yaml(tmp_path):
     path = tmp_path / "config.yaml"
     path.write_text(yaml_text)
     loaded = ProjectConfig.from_yaml(path)
-    assert loaded.grid is not None
-    assert loaded.grid.xres == 0.05
-    assert loaded.grid.xmin == -114.0
-    assert loaded.smooth_factor == 0.75
+    assert loaded.footprint.grid is not None
+    assert loaded.footprint.grid.xres == 0.05
+    assert loaded.footprint.grid.xmin == -114.0
+    assert loaded.footprint.smooth_factor == 0.75
 
 
 def test_model_config_null_grid_means_trajectory_only(tmp_path):
@@ -625,7 +623,7 @@ def test_model_config_loads_footprint_transforms_from_yaml(tmp_path):
     path.write_text(yaml_text)
 
     loaded = ProjectConfig.from_yaml(path)
-    transforms = loaded.transforms
+    transforms = loaded.footprint.transforms
 
     assert len(transforms) == 4
     assert isinstance(transforms[0], AveragingKernel)
@@ -792,7 +790,7 @@ def test_file_geometry_spec_layer_and_where(tmp_path):
     gpd = pytest.importorskip("geopandas")
     import shapely
 
-    from stilt.config import FileGeometrySpec
+    from stilt.footprint.config import FileGeometrySpec
 
     gdf = gpd.GeoDataFrame(
         {"NAME": ["a", "b", "c"], "KEEP": [1, 1, 0]},
@@ -950,8 +948,9 @@ def test_realizations_expand_into_numbered_variants_with_their_own_seed(tmp_path
 
 @pytest.mark.parametrize("krand", [0, 1, 2, 3, 12])
 def test_several_realizations_require_krand_4_or_a_seed(tmp_path, krand):
+    config = _variant_config(tmp_path, krand=krand, variants={"e": {"realizations": 3}})
     with pytest.raises(ValueError, match="requires krand=4 or krand=2 with a seed"):
-        _variant_config(tmp_path, krand=krand, variants={"e": {"realizations": 3}})
+        resolve(config)
 
 
 def test_several_realizations_accept_krand_4_or_seeded_krand_2(tmp_path):
@@ -1108,7 +1107,7 @@ def test_config_loads_without_its_geometry_file(tmp_path):
     cfg = _variant_config(
         tmp_path, geometry={"kind": "file", "path": str(tmp_path / "missing.shp")}
     )
-    assert cfg.geometry is not None and cfg.grid is None
+    assert cfg.footprint.geometry is not None and cfg.footprint.grid is None
     with pytest.raises(Exception, match="missing.shp"):
         resolve(cfg)
 

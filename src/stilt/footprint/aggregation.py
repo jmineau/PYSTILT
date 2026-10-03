@@ -17,7 +17,8 @@ import pyarrow as pa
 import xarray as xr
 from scipy import sparse
 
-from stilt.config import FootprintConfig, Grid
+from stilt.footprint.config import FootprintConfig
+from stilt.footprint.grid import Grid
 from stilt.receptors import parse_receptor_id
 from stilt.spatial import horizontal_dims
 

@@ -13,9 +13,9 @@ from typing import TYPE_CHECKING, NamedTuple
 import pandas as pd
 import xarray as xr
 
-from stilt.config import FootprintConfig
 from stilt.exceptions import EmptyFootprint
 from stilt.footprint import calculate
+from stilt.footprint.config import FootprintConfig
 from stilt.output import Footprints, Output, Particles
 from stilt.particles import particles_metadata
 from stilt.receptors import Receptor, parse_receptor_id
