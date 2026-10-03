@@ -33,11 +33,8 @@ class ControlFile(BaseModel):
         Parameters
         ----------
         path : str or Path
-            File to write. Missing parent directories are created.
+            File to write.
         """
-        path = Path(path)
-        path.parent.mkdir(parents=True, exist_ok=True)
-
         lines: list[str] = []
 
         # Receptor time - 2-digit year (HYSPLIT convention)
@@ -100,7 +97,7 @@ class ControlFile(BaseModel):
         lines.append("0.0")  # (30) radioactive decay half-life (days)
         lines.append("0.0")  # (31) pollutant resuspension (1/m)
 
-        path.write_text("\n".join(lines) + "\n")
+        Path(path).write_text("\n".join(lines) + "\n")
 
     @classmethod
     def read(cls, path, *, altitude_ref: VerticalReference = "agl"):

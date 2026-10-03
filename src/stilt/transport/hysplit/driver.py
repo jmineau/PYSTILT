@@ -4,7 +4,6 @@ import os
 import platform
 import signal
 import subprocess
-import tempfile
 import warnings
 from collections.abc import Sequence
 from importlib.resources import files as pkg_files
@@ -173,10 +172,8 @@ def winderrtf(params: HysplitConfig) -> int:
 
 
 def _write_values(path: Path, values: list[float] | None) -> None:
-    """Write one value per line to ``path``, or remove it when ``values`` is ``None``."""
-    if values is None:
-        path.unlink(missing_ok=True)
-    else:
+    """Write one value per line to ``path``; nothing is written when ``values`` is ``None``."""
+    if values is not None:
         path.write_text("\n".join(str(v) for v in values) + "\n", encoding="utf-8")
 
 
@@ -197,8 +194,8 @@ class HYSPLITDriver:
         Transport and error settings.
     met_files : list of Path
         Meteorology files, in the order HYSPLIT should read them.
-    directory : Path, optional
-        Simulation directory to run in.
+    directory : Path
+        Directory to run in. It is created if needed.
     exe_dir : Path, optional
         Directory holding ``hycs_std``. Defaults to ``params.exe_dir``, then
         to the bundled build.
@@ -213,15 +210,11 @@ class HYSPLITDriver:
         receptor: Receptor,
         params: HysplitConfig,
         met_files: list[Path],
-        directory: Path | None = None,
+        directory: Path,
         exe_dir: Path | None = None,
         data_dir: Path | None = None,
     ):
-        self.directory = (
-            Path(tempfile.mkdtemp(prefix="pystilt_"))
-            if directory is None
-            else Path(directory).expanduser().resolve()
-        )
+        self.directory = Path(directory).expanduser().resolve()
         self.control_path = self.directory / CONTROL_FILE
         self.setup_path = self.directory / SETUP_FILE
         self.hycs_std_path = self.directory / HYCS_STD_FILE
@@ -277,7 +270,8 @@ class HYSPLITDriver:
             met_files=self.met_files,
         ).write(self.control_path)
 
-        # SETUP.CFG carries winderrtf; WINDERR / ZIERR exist only when perturbed.
+        # SETUP.CFG carries winderrtf; WINDERR / ZIERR are written only when
+        # perturbed. The directory is empty, so nothing stale needs removing.
         self._write_setup()
         self._write_zicontrol()
         self._write_winderr()
@@ -317,10 +311,6 @@ class HYSPLITDriver:
 
     def _run(self, timeout: int | None) -> None:
         """Run ``hycs_std``, writing its output to the log."""
-        if not self.hycs_std_path.exists():
-            raise HYSPLITNotFoundError(
-                f"HYSPLIT executable not found for {self.directory}: {self.hycs_std_path}"
-            )
         with (
             self.log_path.open("w", encoding="utf-8") as handle,
             subprocess.Popen(
@@ -429,18 +419,17 @@ class HYSPLITDriver:
         return self.params.kmsl
 
     def _write_winderr(self) -> None:
-        """Write ``WINDERR`` when wind perturbations are enabled, else remove it."""
+        """Write ``WINDERR`` when wind perturbations are enabled."""
         _write_values(self.winderr_path, winderr(self.params))
 
     def _write_zierr(self) -> None:
-        """Write ``ZIERR`` when mixed-layer perturbations are enabled, else remove it."""
+        """Write ``ZIERR`` when mixed-layer perturbations are enabled."""
         _write_values(self.zierr_path, zierr(self.params))
 
     def _write_zicontrol(self) -> None:
-        """Write ``ZICONTROL`` when ``ziscale`` scales the mixed layer, else remove it."""
+        """Write ``ZICONTROL`` when ``ziscale`` scales the mixed layer."""
         values = ziscale_factors(self.params)
         if values is None:
-            self.zicontrol_path.unlink(missing_ok=True)
             return
         text = "\n".join([str(len(values)), *(str(v) for v in values)]) + "\n"
         self.zicontrol_path.write_text(text)
