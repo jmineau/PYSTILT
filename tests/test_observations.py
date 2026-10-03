@@ -266,28 +266,16 @@ def test_pressure_altitudes_start_at_the_surface_and_sort_upward():
     assert np.all(np.diff(z) > 0)
 
 
-def test_pressure_altitudes_isothermal_uses_the_scale_height():
-    t_k = 250.0
-    scale_height = 287.05 * t_k / 9.80665
+def test_pressure_altitudes_constant_profile_uses_the_scale_height():
+    levels = np.array([950.0, 800.0, 600.0, 400.0])
+    scale_height = 287.05 * 260.0 / 9.80665
     z = pressure_altitudes(
-        [800.0, 400.0], surface_pressure=1000.0, surface_altitude=100.0, temperature=t_k
-    )
-    expected = 100.0 + scale_height * np.log(1000.0 / np.array([800.0, 400.0]))
-    np.testing.assert_allclose(z, expected)
-
-
-def test_pressure_altitudes_constant_profile_matches_the_scalar():
-    levels = [950.0, 800.0, 600.0, 400.0]
-    scalar = pressure_altitudes(
-        levels, surface_pressure=1000.0, surface_altitude=0.0, temperature=260.0
-    )
-    profile = pressure_altitudes(
         levels,
         surface_pressure=1000.0,
-        surface_altitude=0.0,
+        surface_altitude=100.0,
         temperature=[260.0] * 4,
     )
-    np.testing.assert_allclose(profile, scalar)
+    np.testing.assert_allclose(z, 100.0 + scale_height * np.log(1000.0 / levels))
 
 
 def test_pressure_altitudes_profile_integrates_layer_means():
@@ -325,7 +313,7 @@ def test_pressure_altitudes_reject_bad_inputs():
             [900.0, 500.0],
             surface_pressure=1000.0,
             surface_altitude=0.0,
-            temperature=[250.0],
+            temperature=250.0,
         )
     with pytest.raises(ValueError, match="at or above the surface"):
         pressure_altitudes([1050.0], surface_pressure=1000.0, surface_altitude=0.0)

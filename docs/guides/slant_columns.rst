@@ -226,8 +226,7 @@ levels above ``top``. The top of the meteorology is a sensible value for
 Without a temperature, the conversion uses the standard-atmosphere lapse
 rate (6.5 K/km) from the surface. This matches the U.S. Standard Atmosphere
 below 11 km. If the retrieval or its prior gives a temperature profile,
-pass it as ``temperature=`` with one value per level, in kelvin. A single
-value gives an isothermal atmosphere.
+pass it as ``temperature=`` with one value per level, in kelvin.
 
 HYSPLIT still sees these points as heights. The weighting in `Weighting`_
 applies unchanged. :doc:`../advanced/observations` shows how to choose

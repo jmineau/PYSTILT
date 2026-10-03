@@ -73,7 +73,7 @@ def pressure_altitudes(
     *,
     surface_pressure: float,
     surface_altitude: float,
-    temperature: float | ArrayLike | None = None,
+    temperature: ArrayLike | None = None,
     top: float | None = None,
 ) -> np.ndarray:
     """
@@ -94,16 +94,15 @@ def pressure_altitudes(
         are below the surface and are dropped.
     surface_altitude : float
         The sounding's surface altitude, in meters above sea level.
-    temperature : float or array-like, optional
-        Temperature in K. ``None`` uses the standard atmosphere lapse rate of
-        6.5 K/km from a surface temperature of 288.15 K minus 6.5 K/km times
-        the surface altitude; this matches the U.S. Standard Atmosphere below
-        11 km. A single value assumes an isothermal atmosphere, with scale
-        height ``R_d T / g`` (7.3 km at 250 K). One value per level
-        integrates layer by layer with each layer's mean temperature, and the
+    temperature : array-like, optional
+        Temperature at each pressure level, in K. The altitudes are
+        integrated layer by layer with each layer's mean temperature, and the
         layer between the surface and the first level takes the first
-        level's temperature. Use a profile when the retrieval or its prior
-        gives one.
+        level's temperature. Pass it when the retrieval or its prior gives a
+        profile. ``None`` uses the standard atmosphere lapse rate of 6.5 K/km
+        from a surface temperature of 288.15 K minus 6.5 K/km times the
+        surface altitude; this matches the U.S. Standard Atmosphere below
+        11 km.
     top : float, optional
         Drop levels above this altitude, in meters above sea level, such as
         the top of the meteorology.
@@ -122,8 +121,7 @@ def pressure_altitudes(
     if not surface_pressure > 0:
         raise ValueError("pressure_altitudes surface_pressure must be positive (hPa).")
 
-    t_in = None if temperature is None else np.asarray(temperature, dtype=float)
-    t = t_in.ravel() if t_in is not None and t_in.ndim > 0 else None
+    t = None if temperature is None else np.asarray(temperature, dtype=float).ravel()
     if t is not None and t.shape != p.shape:
         raise ValueError(
             "pressure_altitudes temperature profile must have one value per "
@@ -148,9 +146,6 @@ def pressure_altitudes(
         t_mean = 0.5 * (edges_t[:-1] + edges_t[1:])
         dz = _R_DRY * t_mean / _GRAVITY * np.log(edges_p[:-1] / edges_p[1:])
         z = z_sfc + np.cumsum(dz)
-    elif t_in is not None:
-        scale_height = _R_DRY * float(t_in) / _GRAVITY
-        z = z_sfc + scale_height * np.log(surface_pressure / p)
     else:
         t_sfc = _STD_SEA_LEVEL_TEMPERATURE - _STD_LAPSE_RATE * z_sfc
         exponent = _R_DRY * _STD_LAPSE_RATE / _GRAVITY
