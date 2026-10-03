@@ -24,7 +24,7 @@ from stilt.simulation import Simulation
 from stilt.spatial import Grid
 from stilt.transforms import TransformContext
 from stilt.transport import ModelInfo, ModelRun
-from stilt.transport.hysplit import HysplitConfig
+from stilt.transport.hysplit import FailureReason, HysplitConfig
 from stilt.variants import Variant
 
 # ---------------------------------------------------------------------------
@@ -456,8 +456,9 @@ def test_a_failed_hysplit_run_fails_its_whole_group_once_and_is_recorded(
     def fake(sim, **kwargs):
         hysplit.append(sim.variant.name)
         if sim.variant.name == "hrrr":
+            # The driver passes the enum; the record must still write.
             raise SimulationError(
-                "HYSPLIT failed (MET_COVERAGE).", reason="MET_COVERAGE"
+                "HYSPLIT failed (MET_COVERAGE).", reason=FailureReason.MET_COVERAGE
             )
         return _write_particles(sim)
 

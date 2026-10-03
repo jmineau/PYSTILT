@@ -60,6 +60,7 @@ def test_a_simulation_error_carries_its_reason():
         "HYSPLIT failed (MET_COVERAGE).", reason=FailureReason.MET_COVERAGE
     )
     assert err.reason == "MET_COVERAGE"
+    assert type(err.reason) is str  # the failure record's YAML writes only plain types
     assert SimulationError("no short name").reason is None
 
 

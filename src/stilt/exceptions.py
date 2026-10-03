@@ -33,7 +33,9 @@ class SimulationError(StiltError, RuntimeError):
     Attributes
     ----------
     reason : str or None
-        The cause, or ``None`` when it has no short name.
+        The cause as a plain string (an enum member such as a
+        ``FailureReason`` is stored by its value), or ``None`` when it has no
+        short name.
     """
 
     reason: str | None = None
@@ -41,7 +43,7 @@ class SimulationError(StiltError, RuntimeError):
     def __init__(self, message: str, reason: str | None = None):
         super().__init__(message)
         if reason is not None:
-            self.reason = reason
+            self.reason = str(reason)  # a plain string, as the failure record stores it
 
 
 class MeteorologyError(SimulationError):

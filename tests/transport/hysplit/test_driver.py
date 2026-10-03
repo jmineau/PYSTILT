@@ -187,7 +187,7 @@ def test_read_particles_raises_domain_error_when_file_missing(tmp_path, point_re
 
     with pytest.raises(SimulationError, match="PARTICLE_STILT.DAT") as caught:
         runner._read_particles()
-    assert caught.value.reason is FailureReason.NO_PARTICLE_DATA
+    assert caught.value.reason == FailureReason.NO_PARTICLE_DATA
 
 
 def test_run_persists_fortran_runtime_output_on_failure(tmp_path, point_receptor):
@@ -202,7 +202,7 @@ def test_run_persists_fortran_runtime_output_on_failure(tmp_path, point_receptor
 
     with pytest.raises(SimulationError) as caught:
         runner._run(timeout=5)
-    assert caught.value.reason is FailureReason.FORTRAN_RUNTIME_ERROR
+    assert caught.value.reason == FailureReason.FORTRAN_RUNTIME_ERROR
 
     log_text = runner.log_path.read_text()
     assert "Fortran runtime error" in log_text
@@ -216,7 +216,7 @@ def test_run_times_out_and_keeps_log_output(tmp_path, point_receptor):
 
     with pytest.raises(SimulationError, match="timeout") as caught:
         runner._run(timeout=1)
-    assert caught.value.reason is FailureReason.TIMEOUT
+    assert caught.value.reason == FailureReason.TIMEOUT
 
     log_text = runner.log_path.read_text()
     assert "starting hycs_std" in log_text
@@ -250,7 +250,7 @@ def test_execute_fails_when_the_met_is_cut_short(tmp_path, point_receptor, monke
     with pytest.raises(SimulationError) as caught:
         runner.execute(timeout=5)
 
-    assert caught.value.reason is FailureReason.MET_TRUNCATED
+    assert caught.value.reason == FailureReason.MET_TRUNCATED
     assert "particles stop 13 h into a 24 h run" in runner.log_path.read_text()
 
 
