@@ -62,13 +62,11 @@ class NameList:
         path : str or Path
             File to write.
         """
-        path = Path(path)
-        path.unlink(missing_ok=True)
         lines = [f"${self.group}"]
         for key, fmt in self._entries:
             lines.append(f"{key}={fmt},")
         lines.append("$END\n")
-        path.write_text("\n".join(lines))
+        Path(path).write_text("\n".join(lines))
 
     # ------------------------------------------------------------------
 

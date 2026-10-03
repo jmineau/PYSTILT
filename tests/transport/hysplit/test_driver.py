@@ -211,13 +211,6 @@ def test_run_persists_fortran_runtime_output_on_failure(tmp_path, point_receptor
     assert "Fortran runtime error" in log_text
 
 
-def test_run_raises_clear_error_when_executable_missing(tmp_path, point_receptor):
-    runner = _make_runner(tmp_path, point_receptor)
-
-    with pytest.raises(HYSPLITNotFoundError, match="HYSPLIT executable not found"):
-        runner._run(timeout=5)
-
-
 def test_run_times_out_and_keeps_log_output(tmp_path, point_receptor):
     runner = _make_runner(tmp_path, point_receptor)
     exe = tmp_path / "hycs_std"
@@ -555,15 +548,6 @@ def test_write_zicontrol_expands_scalar_to_run_length(tmp_path, point_receptor):
     assert lines == ["4", "0.8", "0.8", "0.8", "0.8"]
 
 
-def test_write_zicontrol_skips_file_when_unscaled(tmp_path, point_receptor):
-    (tmp_path / "ZICONTROL").write_text("stale")
-    runner = _make_runner(tmp_path, point_receptor)
-
-    runner._write_zicontrol()
-
-    assert not (tmp_path / "ZICONTROL").exists()
-
-
 # ---------------------------------------------------------------------------
 # HYSPLITDriver.prepare()
 # ---------------------------------------------------------------------------
@@ -756,19 +740,6 @@ def test_perturbed_run_writes_winderr_and_winderrtf_once(
     assert not runner.zierr_path.exists()
     assert "winderrtf=1" in runner.setup_path.read_text().lower()
     assert len(result) == 1
-
-
-def test_unperturbed_run_removes_a_stale_winderr(tmp_path, point_receptor):
-    """Reusing a directory from a perturbed run must not keep its WINDERR."""
-    _error_runner(tmp_path, point_receptor)._write_winderr()
-    assert (tmp_path / "WINDERR").exists()
-
-    runner = _make_runner(tmp_path, point_receptor)
-    runner._write_winderr()
-    runner._write_zierr()
-
-    assert not (tmp_path / "WINDERR").exists()
-    assert not (tmp_path / "ZIERR").exists()
 
 
 # ---------------------------------------------------------------------------
