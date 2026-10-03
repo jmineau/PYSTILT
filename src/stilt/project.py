@@ -27,8 +27,9 @@ import pandas as pd
 import xarray as xr
 
 from stilt.config import ExecutionConfig, ProjectConfig, VariantConfig
+from stilt.footprint import Jacobian
 from stilt.meteorology import Met
-from stilt.output import Footprints, Jacobian, Output
+from stilt.output import Footprints, Output
 from stilt.particles import particles_from_table
 from stilt.receptors import (
     COLUMNS,

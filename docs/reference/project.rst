@@ -29,4 +29,4 @@ Output directory
    stilt.output.Output
    stilt.output.Particles
    stilt.output.Footprints
-   stilt.output.Jacobian
+   stilt.footprint.Jacobian
