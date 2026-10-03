@@ -107,6 +107,8 @@ exclude_also = [
 
 [tool.importlinter]
 root_package = "stilt"
+# An import used only for type hints is not a dependency at run time.
+exclude_type_checking_imports = true
 
 # The observation layer (product readers, selection, backgrounds) sits above
 # the transport core: it builds receptors and reads results. The core must
@@ -134,6 +136,38 @@ source_modules = [
     "stilt.visualization",
 ]
 forbidden_modules = ["stilt.observations"]
+
+# HYSPLIT is one transport model, reached through stilt.transport.get_model.
+# Its package is the only place that knows HYSPLIT's files and behaviour, so
+# a second model would not have to touch the core.
+[[tool.importlinter.contracts]]
+name = "The core does not import HYSPLIT's package"
+type = "forbidden"
+source_modules = [
+    "stilt._atomic",
+    "stilt.cli",
+    "stilt.config",
+    "stilt.exceptions",
+    "stilt.execution",
+    "stilt.flux",
+    "stilt.footprint",
+    "stilt.spatial",
+    "stilt.meteorology",
+    "stilt.output",
+    "stilt.project",
+    "stilt.receptors",
+    "stilt.simulation",
+    "stilt.particles",
+    "stilt.transforms",
+    "stilt.visualization",
+]
+forbidden_modules = ["stilt.transport.hysplit"]
+# get_model imports a model's package when asked for it; that is the boundary.
+allow_indirect_imports = true
+ignore_imports = [
+    # sim.outcome names why a run failed, from the reasons HYSPLIT writes.
+    "stilt.simulation -> stilt.transport.hysplit.failures",
+]
 
 [tool.pyright]
 include = ["src"]
