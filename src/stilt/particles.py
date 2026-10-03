@@ -61,32 +61,6 @@ class ParticleMetadata(NamedTuple):
     met_files: list[Path]
 
 
-def prepare(raw: pd.DataFrame, receptor: Receptor) -> pd.DataFrame:
-    """
-    Return a transport model's particle output as the particle table PYSTILT keeps.
-
-    Adds a ``datetime`` column from ``time``. The transport model has
-    already done what its config asks, such as the near-field plume
-    dilution correction (:func:`calc_plume_dilution`), and added each
-    particle's release height ``xhgt`` for a column or multipoint receptor.
-
-    Parameters
-    ----------
-    raw : pandas.DataFrame
-        Particles as the transport model returns them.
-    receptor : Receptor
-        Receptor the particles were released from.
-
-    Returns
-    -------
-    pandas.DataFrame
-        One row per particle per output step.
-    """
-    p = raw.copy()
-    p["datetime"] = receptor.time + pd.to_timedelta(p["time"].to_numpy(), unit="min")
-    return p
-
-
 def particles_metadata(path: str | Path) -> ParticleMetadata:
     """
     Return the receptor, run settings, and met files a particle file records.

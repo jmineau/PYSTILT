@@ -89,7 +89,6 @@ write particle and footprint files without a project.
    particles_metadata
    write_particles
    read_footprint
-   particles.prepare
    particles.ParticlesAccessor
    footprint.calculate
    footprint.FootprintAccessor

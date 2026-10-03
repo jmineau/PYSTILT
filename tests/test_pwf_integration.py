@@ -20,7 +20,6 @@ import pytest
 
 from stilt.config import MetConfig
 from stilt.meteorology import Met
-from stilt.particles import prepare
 from stilt.receptors import ColumnReceptor
 from stilt.transforms import PressureWeighting, particle_pwf, release_coordinate
 from stilt.transport.hysplit import HysplitConfig
@@ -68,7 +67,7 @@ def _column_trajectory(
     )
     driver.prepare()
     result = driver.execute(timeout=900)
-    return receptor, prepare(finish_particles(result, receptor, params), receptor)
+    return receptor, finish_particles(result, receptor, params)
 
 
 @integration

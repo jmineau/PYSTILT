@@ -13,7 +13,7 @@ from stilt.config import (
 )
 from stilt.execution import make_footprint
 from stilt.output import Output
-from stilt.particles import particles_metadata, prepare
+from stilt.particles import particles_metadata
 from stilt.simulation import SimID, Simulation
 from stilt.transforms import FirstOrderLifetime, TransformContext, transform_kind
 from stilt.transport import ModelInfo
@@ -71,7 +71,7 @@ def _trajectories(receptor, params, foot: float = 1e-5) -> pd.DataFrame:
             "foot": [foot],
         }
     )
-    return prepare(finish_particles(particles, receptor, params), receptor)
+    return finish_particles(particles, receptor, params)
 
 
 def _write_particles(sim: Simulation) -> pd.DataFrame:
