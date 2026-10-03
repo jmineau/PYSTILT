@@ -4,7 +4,7 @@ Worker functions that run one simulation, one receptor, or many receptors.
 Workers are handed receptors. :func:`run_receptor` runs every variant of
 one receptor, and :func:`run_simulation` runs each one: HYSPLIT where the
 particles are missing (:func:`run_particles`), then the footprint
-(:func:`write_footprint`). Variants with the same transport settings share
+(:func:`make_footprint`). Variants with the same transport settings share
 one HYSPLIT run. :func:`run_receptors` runs a list of receptors in this
 process or a process pool. A :class:`~stilt.Simulation` itself runs
 nothing; these functions write through its output directory.
@@ -19,7 +19,6 @@ import shutil
 import signal
 import threading
 import traceback
-from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
@@ -27,7 +26,6 @@ from typing import TYPE_CHECKING, Literal
 import pandas as pd
 import xarray as xr
 
-from stilt.config import FootprintConfig
 from stilt.exceptions import (
     EmptyFootprint,
     EmptyParticleOutputError,
@@ -37,7 +35,7 @@ from stilt.footprint import calculate
 from stilt.meteorology import Met
 from stilt.particles import prepare
 from stilt.simulation import Simulation
-from stilt.transforms import ParticleTransform, TransformContext
+from stilt.transforms import TransformContext
 from stilt.transport import get_model
 
 from .runner import resolve_compute_root
@@ -243,35 +241,28 @@ def _finish_scratch(workdir: Path, kept: Path, *, keep: bool) -> None:
     shutil.rmtree(workdir, ignore_errors=True)
 
 
-def write_footprint(
+def make_footprint(
     sim: Simulation,
     particles: pd.DataFrame,
     *,
     context: TransformContext,
-    config: FootprintConfig | None = None,
-    transforms: Sequence[ParticleTransform] | None = None,
 ) -> xr.DataArray | None:
     """
-    Calculate a footprint from *particles* and write it to the output directory.
+    Calculate a simulation's footprint from *particles* and write it to its folder.
 
-    With the variant's own settings (the default) it goes to the variant's
-    footprint folder. Other settings go to their own folder beside it. When
-    no particle reaches the grid, an empty footprint is recorded with the
-    reason and ``None`` is returned.
+    The settings are the variant's own. When no particle reaches the grid,
+    an empty footprint is recorded with the reason and ``None`` is returned.
+    :meth:`stilt.Simulation.generate_footprint` makes footprints with other
+    settings, without writing them.
 
     Raises
     ------
     TypeError
-        If the variant has no grid and no *config* is given.
+        If the variant has no grid.
     """
+    config = sim.variant.footprint
     if config is None:
-        config = sim.variant.footprint
-    if config is None:
-        raise TypeError(f"{sim.id} has no footprint settings; pass a FootprintConfig.")
-    if transforms:
-        config = config.model_copy(
-            update={"transforms": [*config.transforms, *transforms]}
-        )
+        raise TypeError(f"{sim.id} has no footprint settings (no grid).")
     folder = sim.output.particles(sim.variant.name, sim.variant.transport)
     feet = folder.footprints(config, name=sim.variant.name)
     try:
@@ -356,7 +347,7 @@ def run_simulation(
             context = TransformContext(
                 receptor=sim.receptor, variant=sim.variant.name, directory=project_dir
             )
-            write_footprint(sim, particles, context=context)
+            make_footprint(sim, particles, context=context)
         return SimulationResult(str(sim.id), "complete", ran_hysplit=ran_hysplit)
     except Exception as error:
         logger.exception("simulation %s failed during %s: %s", sim.id, phase, error)
@@ -571,5 +562,5 @@ __all__ = [
     "run_receptors",
     "run_simulation",
     "run_particles",
-    "write_footprint",
+    "make_footprint",
 ]

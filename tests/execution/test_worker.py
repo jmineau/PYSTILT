@@ -23,10 +23,10 @@ from stilt.execution import resolve_compute_root, worker
 from stilt.execution.worker import (
     ReceptorResult,
     SimulationResult,
+    make_footprint,
     run_receptor,
     run_receptors,
     run_simulation,
-    write_footprint,
 )
 from stilt.meteorology import Met
 from stilt.output import Output
@@ -154,7 +154,7 @@ def _write_footprint(sim: Simulation, *, empty: bool = False) -> None:
         feet = run.footprints(sim.variant.footprint, name=sim.variant.name)
         feet.write_empty(sim.receptor, "outside_domain", name=sim.variant.name)
     else:
-        write_footprint(
+        make_footprint(
             sim,
             _particles(sim.receptor),
             context=TransformContext(receptor=sim.receptor, variant=sim.variant.name),
@@ -188,7 +188,7 @@ def _fake_footprint(monkeypatch, calls: list[str] | None = None, result=None):
             calls.append("footprint")
         return result
 
-    monkeypatch.setattr(worker, "write_footprint", fake)
+    monkeypatch.setattr(worker, "make_footprint", fake)
 
 
 def _model_config(tmp_path, **kwargs) -> ProjectConfig:
@@ -261,7 +261,7 @@ def test_receptor_result_reports_the_worst_simulation():
 def test_run_simulation_trajectory_only_completes(sim, met, compute_root, monkeypatch):
     _fake_hysplit(monkeypatch)
     monkeypatch.setattr(
-        worker, "write_footprint", lambda *a, **k: pytest.fail("no footprint")
+        worker, "make_footprint", lambda *a, **k: pytest.fail("no footprint")
     )
 
     result = _run(sim, met, compute_root)
@@ -362,7 +362,7 @@ def test_run_simulation_empty_footprint_is_complete(
         _write_footprint(fsim, empty=True)
         return None
 
-    monkeypatch.setattr(worker, "write_footprint", fake)
+    monkeypatch.setattr(worker, "make_footprint", fake)
 
     result = _run(fsim, met, compute_root)
 
@@ -375,7 +375,7 @@ def test_run_simulation_footprint_error_is_failed(fsim, met, compute_root, monke
     def fail(*a, **k):
         raise SimulationError("Footprint failed")
 
-    monkeypatch.setattr(worker, "write_footprint", fail)
+    monkeypatch.setattr(worker, "make_footprint", fail)
 
     result = _run(fsim, met, compute_root)
 
@@ -386,7 +386,7 @@ def test_run_simulation_footprint_error_is_failed(fsim, met, compute_root, monke
 def test_run_simulation_skips_existing_footprint(fsim, met, compute_root, monkeypatch):
     _write_footprint(fsim)
     monkeypatch.setattr(
-        worker, "write_footprint", lambda *a, **k: pytest.fail("must not regenerate")
+        worker, "make_footprint", lambda *a, **k: pytest.fail("must not regenerate")
     )
 
     result = _run(fsim, met, compute_root)
@@ -399,7 +399,7 @@ def test_run_simulation_skips_existing_empty_footprint(
 ):
     _write_footprint(fsim, empty=True)
     monkeypatch.setattr(
-        worker, "write_footprint", lambda *a, **k: pytest.fail("must not regenerate")
+        worker, "make_footprint", lambda *a, **k: pytest.fail("must not regenerate")
     )
 
     assert _run(fsim, met, compute_root).status == "complete"
@@ -462,7 +462,7 @@ def test_run_simulation_footprint_reads_the_stored_particles(
         seen.append(trajectories)
         return None
 
-    monkeypatch.setattr(worker, "write_footprint", fake)
+    monkeypatch.setattr(worker, "make_footprint", fake)
     _no_hysplit(monkeypatch)
 
     _run(fsim, met, compute_root)

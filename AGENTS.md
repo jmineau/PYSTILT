@@ -432,7 +432,7 @@ Feature status lives in the roadmap tables in [README.md](README.md) and
   cache; a `config.yaml` edited by hand needs a new `Project(path)`.
 - **Empty footprints are successes, and not footprints.** When no particle
   reaches the grid, `footprint.calculate` raises `EmptyFootprint` and
-  the worker's `write_footprint` writes a footprint file with no rows and
+  the worker's `make_footprint` writes a footprint file with no rows and
   the reason in its metadata. `sim.is_complete()` is true, `sim.footprint` is
   `None`, `sim.empty_reason` says why, and `load_footprints()` leaves the
   simulation out. Never synthesize a zero-valued footprint for it: a zero

@@ -4,11 +4,11 @@ from .runner import Batch, resolve_compute_root, run, submit
 from .worker import (
     ReceptorResult,
     SimulationResult,
+    make_footprint,
     run_particles,
     run_receptor,
     run_receptors,
     run_simulation,
-    write_footprint,
 )
 
 __all__ = [
@@ -22,5 +22,5 @@ __all__ = [
     "run_simulation",
     "run_particles",
     "submit",
-    "write_footprint",
+    "make_footprint",
 ]
