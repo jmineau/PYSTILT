@@ -8,6 +8,12 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- `Mesh`, `Zones`, `Geometry`, `overlap_weights`, and `check_resolution` are
+  in `stilt.footprint` (module `stilt.footprint.targets`), since only
+  footprints are summed onto them. `stilt.Mesh`, `stilt.Zones`, and
+  `stilt.Geometry` are unchanged; `from stilt.spatial import Mesh` becomes
+  `from stilt.footprint import Mesh`. `stilt.spatial` keeps `Bounds`,
+  `Grid`, and the CRS helpers, the values configuration is made of.
 - `stilt.footprint` is a package: `gridding` (`calculate`), `aggregation`
   (`aggregate`, `jacobian`), `io` (the array and footprint files), and
   `accessor`. Everything `stilt.footprint` exported is still exported

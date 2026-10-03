@@ -18,10 +18,10 @@ from stilt.config import (
 )
 from stilt.config.transport import settings_hash
 from stilt.footprint.io import _describe
+from stilt.footprint.targets import Mesh
 from stilt.output import Footprints, Output
 from stilt.particles import particles_metadata, write_particles
 from stilt.receptors import PointReceptor
-from stilt.spatial import Mesh
 
 # ---------------------------------------------------------------------------
 # Helpers

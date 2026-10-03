@@ -125,12 +125,13 @@ src/stilt/
                      `jacobian`, their time binning and target weights
     io.py            the footprint array and its attributes; footprint files
                      (`read_footprint`, `write_footprint`) and CF-1.8 NetCDF
+    targets.py       the geometries footprints are summed onto (Mesh, Zones),
+                     the overlap weights, and `to_grid`
     accessor.py      the `.stilt` xarray accessor (enhancement from a flux
                      field, aggregation)
   sampling.py        sampling a gridded field (a flux, a mole fraction) at points
-  spatial.py         where things are: bounds, the footprint Grid, the
-                     aggregation targets (Mesh, Zones), CRS helpers
-                     (one is_longlat), and overlap weights
+  spatial.py         the values config fields are made of: Bounds and the
+                     footprint Grid; CRS helpers (one is_longlat)
   meteorology.py     Met: ARL file discovery, download, and cropping (via arlmet)
   transforms.py      pre-footprint particle transforms (averaging kernel,
                      pressure weighting, lifetime decay) and their YAML I/O

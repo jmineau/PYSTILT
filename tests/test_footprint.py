@@ -22,9 +22,10 @@ from stilt.footprint.gridding import (
     _wrap_antimeridian_longitudes,
 )
 from stilt.footprint.io import _describe
+from stilt.footprint.targets import Mesh, Zones
 from stilt.particles import calc_plume_dilution
 from stilt.receptors import PointReceptor
-from stilt.spatial import Mesh, Zones, _grid_cell_starts
+from stilt.spatial import _grid_cell_starts
 from stilt.transforms import AveragingKernel
 
 

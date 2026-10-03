@@ -26,7 +26,7 @@ import pandas as pd
 import xarray as xr
 
 from stilt.config import ExecutionConfig, ProjectConfig, VariantConfig
-from stilt.footprint import Jacobian
+from stilt.footprint import Geometry, Jacobian
 from stilt.meteorology import Met
 from stilt.output import Footprints, Output
 from stilt.particles import particles_from_table
@@ -43,7 +43,6 @@ from stilt.receptors import (
     receptors_to_csv,
 )
 from stilt.simulation import SimID, Simulation
-from stilt.spatial import Geometry
 from stilt.transforms import TransformContext
 
 if TYPE_CHECKING:

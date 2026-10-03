@@ -17,7 +17,7 @@ from .config import (
     VariantConfig,
 )
 from .exceptions import StiltError
-from .footprint import read_footprint
+from .footprint import Geometry, Mesh, Zones, read_footprint
 from .meteorology import Met
 from .output import Output
 from .particles import particles_metadata, read_particles, write_particles
@@ -30,7 +30,6 @@ from .receptors import (
     read_receptors,
 )
 from .simulation import SimID, Simulation
-from .spatial import Geometry, Mesh, Zones
 from .transforms import ParticleTransform, TransformContext
 
 try:

@@ -7,6 +7,9 @@ Footprints of receptors, calculated from particles and applied to surface fluxes
     Summing footprints onto other grids or polygons (:func:`jacobian`).
 ``io``
     The footprint array and its attributes, and footprint files.
+``targets``
+    The geometries a footprint is summed onto (:class:`Mesh`, :class:`Zones`)
+    and the overlap weights.
 ``accessor``
     ``foot.stilt``, registered when this package is imported.
 """
@@ -21,14 +24,20 @@ from .io import (
     write_empty_footprint,
     write_footprint,
 )
+from .targets import Geometry, Mesh, Zones, check_resolution, overlap_weights
 
 __all__ = [
     "FOOTPRINT_SCHEMA",
     "UNITS",
     "FootprintAccessor",
+    "Geometry",
     "Jacobian",
+    "Mesh",
+    "Zones",
     "calculate",
+    "check_resolution",
     "jacobian",
+    "overlap_weights",
     "read_footprint",
     "write_empty_footprint",
     "write_footprint",
