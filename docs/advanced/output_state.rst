@@ -43,13 +43,14 @@ it. ``project.add_receptors()`` appends new receptors to
 Settings name the folders
 -------------------------
 
-Each variant resolves into two parts. Its transport settings (everything
-that changes the particles: the HYSPLIT parameters, the content of the
-meteorology, and the transport model's version; :class:`stilt.config.TransportSettings`)
-are hashed, and the hash names the ``particles/`` folder. Its footprint
-settings, hashed together with the transport hash, name the ``footprints/``
-folder. Each folder holds a ``_settings.yaml`` with the settings written out
-in full.
+Each variant resolves into two records of settings (:mod:`stilt.identity`).
+Its run settings hold everything that changes the particles: the HYSPLIT
+parameters, the content of the meteorology, and the transport model's
+build. Their hash names the ``particles/`` folder. Its footprint settings
+hold the footprint config, its grid, and the hash of the geometry the grid
+was derived for. Hashed together with the run settings, they name the
+``footprints/`` folder. Each folder holds a ``_settings.yaml`` with the
+settings written out in full.
 
 That is how PYSTILT knows a setting changed: the variant now hashes to a
 folder that does not exist yet, so its receptors run again into it. The old
@@ -57,8 +58,8 @@ folder is untouched. It is also how two variants come to share particles:
 if only their footprint fields differ, their transport settings hash the
 same and they resolve to one ``particles/`` folder.
 
-A folder is found by loading its ``_settings.yaml`` back through the current
-settings model and hashing that, rather than by comparing stored digests.
+A folder is found by reading its ``_settings.yaml`` back through the current
+config classes and hashing that, rather than by comparing stored digests.
 So a setting added in a later version, with a default, still matches folders
 written before it existed; a default whose meaning changed does not, which
 is right, because the particles would differ.

@@ -5,12 +5,13 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
-from stilt.config import MetConfig, TransportParams, TransportSettings, VariantConfig
+from stilt.config import MetConfig, ProjectConfig, TransportParams
 from stilt.execution import run_particles, worker
 from stilt.output import Output
 from stilt.simulation import Simulation
-from stilt.transport import ModelRun, get_model
+from stilt.transport import ModelInfo, ModelRun, get_model
 from stilt.transport.hysplit import HysplitModel
+from stilt.variants import Variant, resolve
 
 
 def test_get_model_returns_hysplit_by_default_and_by_name():
@@ -39,9 +40,9 @@ def test_hysplit_model_version_is_the_bundled_build_or_exe_dirs(tmp_path):
 
 def test_the_settings_record_the_model_that_makes_the_particles(tmp_path):
     met = MetConfig(directory=tmp_path, file_format="%Y%m%d_%H", file_tres="1h")
-    settings = TransportSettings.build(TransportParams(n_hours=-1), met)
-    model = get_model(settings.model.name)
-    assert settings.model.version == model.version(settings)
+    variant = resolve(ProjectConfig(mets={"hrrr": met}, n_hours=-1))["hrrr"]
+    model = get_model(variant.model.name)
+    assert variant.model.version == model.version(variant.transport)
 
 
 class _FakeDriver:
@@ -125,13 +126,13 @@ def test_run_particles_goes_through_the_model_the_settings_name(
         worker, "get_model", lambda name: asked.append(name) or _Model()
     )
     met_config = MetConfig(directory=tmp_path, file_format="%Y%m%d_%H", file_tres="1h")
-    variant = VariantConfig(
+    variant = Variant(
         name="hrrr",
         group="hrrr",
         met="hrrr",
-        transport=TransportSettings.build(
-            TransportParams(n_hours=-1, numpar=1, hnf_plume=False), met_config
-        ),
+        met_config=met_config,
+        transport=TransportParams(n_hours=-1, numpar=1, hnf_plume=False),
+        model=ModelInfo(version="v5.1.0"),
     )
     sim = Simulation(point_receptor, variant, Output(tmp_path / "output"))
 

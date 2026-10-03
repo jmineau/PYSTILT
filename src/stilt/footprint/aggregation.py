@@ -65,6 +65,7 @@ def _require_geometry(target: object) -> Geometry:
 def _target_weights(
     target: object,
     config: FootprintConfig,
+    geometry_hash: str | None,
     x: np.ndarray,
     y: np.ndarray,
     name: str = "",
@@ -77,7 +78,7 @@ def _target_weights(
     for the target's cells.
     """
     target = _require_geometry(target)
-    expected = config.geometry_hash
+    expected = geometry_hash
     mesh = target.base if isinstance(target, Zones) else target
     if expected and isinstance(mesh, Mesh) and mesh.hash != expected:
         warnings.warn(
@@ -135,6 +136,7 @@ def jacobian(
     time_bins: pd.IntervalIndex,
     receptors: list[str],
     missing: list[str] | None = None,
+    geometry_hash: str | None = None,
 ) -> Jacobian:
     """
     Sum the footprints in *table* onto a target, per time bin, as one sparse matrix.
@@ -158,6 +160,9 @@ def jacobian(
         are empty footprints and get none.
     missing : list of str, optional
         Receptors asked for that have no footprint file, to report.
+    geometry_hash : str, optional
+        Hash of the geometry the grid was derived for, to warn when *target*
+        is another mesh.
 
     Returns
     -------
@@ -168,7 +173,7 @@ def jacobian(
     if grid is None:
         raise ValueError("The footprint settings have no grid.")
     x_axis, y_axis = grid.axes
-    weights = _target_weights(target, config, x_axis, y_axis)  # (n_cells, ny * nx)
+    weights = _target_weights(target, config, geometry_hash, x_axis, y_axis)
     n_cells = len(target.index)
     nx = len(x_axis)
     n_raster = nx * len(y_axis)
@@ -240,6 +245,7 @@ def aggregate(
     weights = _target_weights(
         target,
         foot.stilt.config,
+        foot.stilt.geometry_hash,
         np.asarray(foot[x_dim].values, dtype=float),
         np.asarray(foot[y_dim].values, dtype=float),
         foot.stilt.name,

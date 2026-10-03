@@ -66,7 +66,12 @@ class FootprintAccessor:
     @property
     def config(self) -> FootprintConfig:
         """The footprint settings: grid, smoothing, and particle transforms."""
-        return _settings_from_json(self._attr("stilt_footprint"), "footprint")
+        return _settings_from_json(self._attr("stilt_footprint"), "footprint")[0]
+
+    @property
+    def geometry_hash(self) -> str | None:
+        """Hash of the geometry the grid was derived for, or ``None`` when the footprint has no geometry."""
+        return _settings_from_json(self._attr("stilt_footprint"), "footprint")[1]
 
     @property
     def grid(self) -> Grid:

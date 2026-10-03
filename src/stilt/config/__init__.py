@@ -10,15 +10,13 @@ from .footprint import (
     H3GeometrySpec,
     WindowsGeometrySpec,
 )
-from .meteorology import MetConfig, MetSettings
+from .meteorology import MetConfig
 from .params import TransportParams
 from .project import ProjectConfig
-from .transport import ModelInfo, TransportSettings, settings_hash
 from .variant import VariantConfig
 
 __all__ = [
     "Bounds",
-    "ModelInfo",
     "ExecutionConfig",
     "FileGeometrySpec",
     "FootprintConfig",
@@ -26,11 +24,8 @@ __all__ = [
     "H3GeometrySpec",
     "Grid",
     "MetConfig",
-    "MetSettings",
     "ProjectConfig",
     "TransportParams",
-    "TransportSettings",
     "VariantConfig",
     "WindowsGeometrySpec",
-    "settings_hash",
 ]

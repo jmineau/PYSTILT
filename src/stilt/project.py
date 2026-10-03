@@ -25,10 +25,10 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
-from stilt.config import ExecutionConfig, ProjectConfig, VariantConfig
+from stilt.config import ExecutionConfig, ProjectConfig
 from stilt.footprint import Geometry, Jacobian
 from stilt.meteorology import Met
-from stilt.output import Footprints, Output
+from stilt.output import Output
 from stilt.particles import particles_from_table
 from stilt.receptors import (
     Receptor,
@@ -43,6 +43,7 @@ from stilt.receptors import (
 from stilt.receptors.table import COLUMNS, ROW_COLUMNS
 from stilt.simulation import SimID, Simulation
 from stilt.transforms import TransformContext
+from stilt.variants import Variant, resolve
 
 if TYPE_CHECKING:
     import submitit
@@ -231,14 +232,15 @@ class Project:
         return Output(raw if raw.is_absolute() else (self.directory / raw).resolve())
 
     @cached_property
-    def variants(self) -> dict[str, VariantConfig]:
+    def variants(self) -> dict[str, Variant]:
         """
-        Settings of each variant, by name, in config order.
+        Each variant, resolved, by name, in config order.
 
         A realization group appears once per realization (``hrrr-err-0``,
-        ``hrrr-err-1``, ...).
+        ``hrrr-err-1``, ...). A footprint given by a geometry gets its grid
+        here, so the geometry is read on first use (:func:`stilt.variants.resolve`).
         """
-        return self.config.resolve_variants()
+        return resolve(self.config)
 
     @cached_property
     def mets(self) -> dict[str, Met]:
@@ -403,12 +405,8 @@ class Project:
             that were changed or variants that were dropped, or from another
             project sharing the directory. PYSTILT never deletes them.
         """
-        runs = {v.transport.hash for v in self.variants.values()}
-        feet = {
-            Footprints.hash_for(v.transport.hash, v.footprint)
-            for v in self.variants.values()
-            if v.footprint is not None
-        }
+        runs = {v.particles_hash for v in self.variants.values()}
+        feet = {v.footprint_hash for v in self.variants.values()}
         return {
             "particles": [
                 r.key for r in self.output.particle_sets() if r.hash not in runs
@@ -612,7 +610,7 @@ class Simulations:
         for name, rows in self.frame.groupby("variant", sort=False):
             variant = self.project.variants[str(name)]
             among = set(rows["receptor"])
-            folder = output.find_particles(variant.transport)
+            folder = output.find_particles(variant)
             particles = frozenset(folder.receptors(among) if folder is not None else ())
             footprints: frozenset[str] | None = None
             if variant.footprint is not None:
@@ -708,7 +706,7 @@ class Simulations:
         parts = []
         for name, rows in self.frame.groupby("variant", sort=False):
             variant = self.project.variants[str(name)]
-            folder = output.find_particles(variant.transport)
+            folder = output.find_particles(variant)
             if folder is None:
                 continue
             table = folder.table(list(dict.fromkeys(rows["receptor"])))

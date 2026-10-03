@@ -1,0 +1,139 @@
+"""
+What a result was made with, and the hash that names its folder.
+
+Every folder in an output directory holds the results of one set of
+settings, recorded in its ``_settings.yaml``. This module writes those
+records and hashes them. A run's settings are its transport config without
+the fields that change no particle (``exe_dir``, ``data_dir``), its met
+without the directories, the model build, and the realization number. A
+footprint's settings are its footprint config, with the grid it is
+computed on, and the hash of the geometry the grid was derived for.
+
+The hash depends on what the settings mean rather than how they were
+written. A stored record is read back through the current config classes,
+so a setting added since, with a default, still matches, and a changed
+default does not.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import json
+from collections.abc import Mapping
+from pathlib import Path
+from typing import Any
+
+from stilt.config import FootprintConfig, MetConfig, TransportParams
+from stilt.transport import ModelInfo
+
+
+def canonical(value: Any) -> Any:
+    """Return *value* with the spellings that mean the same thing made equal."""
+    if isinstance(value, Mapping):
+        return {str(k): canonical(v) for k, v in sorted(value.items())}
+    if isinstance(value, (list, tuple)):
+        return [canonical(v) for v in value]
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, float) and value.is_integer():
+        return int(value)
+    if isinstance(value, Path):
+        return str(value)
+    return value
+
+
+def settings_hash(settings: Mapping[str, Any]) -> str:
+    """
+    Return the SHA-256 hex digest of *settings*.
+
+    Keys are sorted, whole-number floats equal their integers, and paths are
+    strings, so the hash depends on what the settings mean rather than how
+    they were written.
+    """
+    text = json.dumps(canonical(settings), separators=(",", ":"), default=str)
+    return hashlib.sha256(text.encode()).hexdigest()
+
+
+# -- runs ---------------------------------------------------------------------
+
+
+def run_settings(
+    transport: TransportParams,
+    met: MetConfig,
+    model: ModelInfo,
+    realization: int | None,
+) -> dict[str, Any]:
+    """
+    Return the settings that identify a run, in canonical form.
+
+    The transport fields sit at the top level, beside ``met``, ``model``,
+    and ``realization``. ``maxpar`` is given as HYSPLIT receives it, so an
+    unset ``maxpar`` equals ``numpar``.
+    """
+    data = transport.model_dump(mode="json", exclude=set(TransportParams.UNRECORDED))
+    if data["maxpar"] is None:
+        data["maxpar"] = transport.numpar
+    data["met"] = met.model_dump(mode="json", exclude=set(MetConfig.UNRECORDED))
+    record = model.model_dump(mode="json")
+    if record.get("data_files") is None:
+        # Runs with the model's own data files keep the hash they had
+        # before data files were recorded.
+        record.pop("data_files", None)
+    data["model"] = record
+    data["realization"] = realization
+    return canonical(data)
+
+
+def read_run_settings(stored: Mapping[str, Any]) -> dict[str, Any]:
+    """
+    Return the run settings a ``_settings.yaml`` records, read through the current classes.
+
+    Settings this version does not have are dropped, so a folder written
+    before a setting was removed still loads.
+    """
+    fields = TransportParams.model_fields
+    transport = TransportParams.model_validate(
+        {k: v for k, v in stored.items() if k in fields}
+    )
+    met = MetConfig.model_validate(stored["met"])
+    model = ModelInfo.model_validate(
+        {k: v for k, v in stored["model"].items() if k in ModelInfo.model_fields}
+    )
+    return run_settings(transport, met, model, stored.get("realization"))
+
+
+# -- footprints ---------------------------------------------------------------
+
+
+def footprint_settings(
+    footprint: FootprintConfig, geometry_hash: str | None
+) -> dict[str, Any]:
+    """Return the settings that identify a footprint, besides its particles, in canonical form."""
+    data = footprint.model_dump(mode="json")
+    data["geometry_hash"] = geometry_hash
+    return canonical(data)
+
+
+def read_footprint_settings(
+    stored: Mapping[str, Any],
+) -> tuple[FootprintConfig, str | None]:
+    """Return the footprint config and geometry hash a ``_settings.yaml`` records."""
+    data = dict(stored)
+    geometry_hash = data.pop("geometry_hash", None)
+    return FootprintConfig.model_validate(data), geometry_hash
+
+
+def footprint_hash(particles_hash: str, settings: Mapping[str, Any]) -> str:
+    """Return the hash of footprints with *settings*, made from the particles hashed *particles_hash*."""
+    return settings_hash({"particles": particles_hash, "footprint": settings})
+
+
+__all__ = [
+    "canonical",
+    "footprint_hash",
+    "footprint_settings",
+    "read_footprint_settings",
+    "read_run_settings",
+    "run_settings",
+    "settings_hash",
+]

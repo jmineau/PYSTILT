@@ -11,8 +11,6 @@ from stilt.config import (
     MetConfig,
     ProjectConfig,
     TransportParams,
-    TransportSettings,
-    VariantConfig,
 )
 from stilt.exceptions import (
     EmptyParticleOutputError,
@@ -33,6 +31,8 @@ from stilt.project import Project
 from stilt.receptors import PointReceptor, Receptor
 from stilt.simulation import Simulation
 from stilt.transforms import TransformContext
+from stilt.transport import ModelInfo
+from stilt.variants import Variant
 
 # ---------------------------------------------------------------------------
 # Fixtures and helpers
@@ -83,12 +83,14 @@ def output(tmp_path) -> Output:
     return Output(tmp_path / "output")
 
 
-def _variant(params, met_config, *, name="hrrr", footprint=None) -> VariantConfig:
-    return VariantConfig(
+def _variant(params, met_config, *, name="hrrr", footprint=None) -> Variant:
+    return Variant(
         name=name,
         group=name,
         met="hrrr",
-        transport=TransportSettings.build(params, met_config),
+        met_config=met_config,
+        transport=params,
+        model=ModelInfo(version="v5.1.0"),
         footprint=footprint,
     )
 
@@ -140,14 +142,14 @@ def _particles(receptor) -> pd.DataFrame:
 def _write_particles(sim: Simulation) -> pd.DataFrame:
     """Put a small particle file for *sim* in the output directory."""
     particles = _particles(sim.receptor)
-    folder = sim.output.particles(sim.variant.name, sim.variant.transport)
+    folder = sim.output.particles(sim.variant)
     folder.write(sim.receptor, particles, sim.variant.transport, [])
     return particles
 
 
 def _write_footprint(sim: Simulation, *, empty: bool = False) -> None:
     """Record a footprint (or an empty one) for *sim* in the output directory."""
-    run = sim.output.particles(sim.variant.name, sim.variant.transport)
+    run = sim.output.particles(sim.variant)
     assert sim.variant.footprint is not None
     if empty:
         feet = run.footprints(sim.variant.footprint, name=sim.variant.name)
@@ -336,7 +338,7 @@ def test_run_simulation_without_particles_reads_back_as_no_particle_data(
 def test_run_simulation_error_log_appends_to_existing_hysplit_log(
     sim, met, compute_root, monkeypatch
 ):
-    run = sim.output.particles(sim.variant.name, sim.variant.transport)
+    run = sim.output.particles(sim.variant)
     run.write_log(sim.receptor.id, "hysplit said hello\n")
 
     def fail(*a, **k):
@@ -449,7 +451,7 @@ def test_run_simulation_backfills_missing_particles_and_remakes_the_footprint(
     )
     _write_particles(s)
     _write_footprint(s)
-    s.output.particles(s.variant.name, s.variant.transport).file(s.receptor.id).unlink()
+    s.output.particles(s.variant).file(s.receptor.id).unlink()
     calls: list[str] = []
     _fake_hysplit(monkeypatch, calls)
     _fake_footprint(monkeypatch, calls)

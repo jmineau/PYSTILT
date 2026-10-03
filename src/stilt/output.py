@@ -27,12 +27,12 @@ tree. Particles are one Parquet file per receptor. Footprints are sparse
 tables of the non-zero cells, in float32 as STILT-R writes them; an empty
 footprint is a file with no rows and its reason in the metadata.
 
-Start from :class:`Output`::
+Start from :class:`Output` and a resolved variant (``project.variants``)::
 
     out = Output("output")
-    particles = out.particles("hrrr", settings)
-    particles.write(receptor, frame, params, met_files)
-    feet = particles.footprints(footprint_config)
+    particles = out.particles(variant)
+    particles.write(receptor, frame, variant.transport, met_files)
+    feet = out.footprints(variant)
     feet.write(footprint)
     H = feet.jacobian(target, time_bins)
 """
@@ -45,7 +45,7 @@ import os
 from collections.abc import Iterable
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pandas as pd
 import pyarrow as pa
@@ -55,14 +55,7 @@ import xarray as xr
 import yaml
 
 from stilt._atomic import atomic_path
-from stilt.config import (
-    FootprintConfig,
-    Grid,
-    TransportParams,
-    TransportSettings,
-    VariantConfig,
-)
-from stilt.config.transport import canonical, settings_hash
+from stilt.config import FootprintConfig, Grid, TransportParams
 from stilt.footprint import (
     FOOTPRINT_SCHEMA,
     Geometry,
@@ -72,8 +65,18 @@ from stilt.footprint import (
     write_empty_footprint,
     write_footprint,
 )
+from stilt.identity import (
+    footprint_hash,
+    footprint_settings,
+    read_footprint_settings,
+    read_run_settings,
+    settings_hash,
+)
 from stilt.particles import read_particles, write_particles
 from stilt.receptors import Receptor, parse_receptor_id
+
+if TYPE_CHECKING:
+    from stilt.variants import Variant
 
 logger = logging.getLogger(__name__)
 
@@ -247,65 +250,79 @@ class Output:
         self._footprints = {feet.hash: feet for feet in found}
         return found
 
-    def find_footprints(self, variant: VariantConfig) -> Footprints | None:
+    def find_particles(self, variant: Variant) -> Particles | None:
         """
-        Return the footprint folder of *variant*, or ``None``.
+        Return the particles folder of *variant*, whatever name it carries, or ``None``.
 
-        ``None`` when the variant makes no footprints (it has no grid) or
-        none have been written yet. The folder is found by the hash of the
-        variant's transport and footprint settings, whatever name it carries.
-        """
-        if variant.footprint is None:
-            return None
-        return self._footprints_by_hash(
-            Footprints.hash_for(variant.transport.hash, variant.footprint)
-        )
-
-    def _footprints_by_hash(self, digest: str) -> Footprints | None:
-        """Return the footprint folder whose settings hash to *digest*, or ``None``."""
-        if digest not in self._footprints:
-            self.footprint_sets()
-        return self._footprints.get(digest)
-
-    def find_particles(self, settings: TransportSettings) -> Particles | None:
-        """
-        Return the particles folder for these settings, whatever name it carries, or ``None``.
-
-        Each folder's stored settings are loaded back through
-        :class:`~stilt.config.TransportSettings` and hashed again, so a
-        field added since the folder was written, with a default, still
+        The folder is found by ``variant.particles_hash``. Each folder's
+        stored settings are read back through the current config classes
+        and hashed again (:func:`stilt.identity.read_run_settings`), so a
+        setting added since the folder was written, with a default, still
         matches.
         """
-        digest = settings.hash
+        digest = variant.particles_hash
         if digest not in self._particle_sets:
             self.particle_sets()
         return self._particle_sets.get(digest)
 
-    def particles(self, name: str, settings: TransportSettings) -> Particles:
+    def find_footprints(self, variant: Variant) -> Footprints | None:
         """
-        Return the particles folder for *settings*, creating it on first use.
+        Return the footprint folder of *variant*, or ``None``.
+
+        ``None`` when the variant makes no footprints (it has no grid) or
+        none have been written yet. The folder is found by
+        ``variant.footprint_hash``, whatever name it carries.
+        """
+        digest = variant.footprint_hash
+        if digest is None:
+            return None
+        if digest not in self._footprints:
+            self.footprint_sets()
+        return self._footprints.get(digest)
+
+    def particles(self, variant: Variant) -> Particles:
+        """
+        Return the particles folder of *variant*, creating it on first use.
 
         The folder is ``particles/settings=<name>-<hash>``. An existing
         folder with the same settings is reused even if it was created under
         another name.
         """
-        existing = self.find_particles(settings)
+        existing = self.find_particles(variant)
         if existing is not None:
             return existing
-        digest = settings.hash
-        key = f"{name}-{digest[:HASH_CHARS]}"
+        digest = variant.particles_hash
+        key = f"{variant.name}-{digest[:HASH_CHARS]}"
         _write_settings(
             self.particles_dir / f"settings={key}" / SETTINGS_FILE,
             {
-                "name": name,
+                "name": variant.name,
                 "hash": digest,
                 "pystilt": _pystilt_version(),
-                "settings": settings.identity(),
+                "settings": variant.run_settings,
             },
         )
         created = Particles(self, key)
         self._particle_sets[created.hash] = created
         return created
+
+    def footprints(self, variant: Variant) -> Footprints:
+        """
+        Return the footprint folder of *variant*, creating it, and its particles folder, on first use.
+
+        Raises
+        ------
+        ValueError
+            If the variant makes no footprints (it has no grid).
+        """
+        if variant.footprint is None:
+            raise ValueError(f"Variant {variant.name!r} makes no footprints (no grid).")
+        existing = self.find_footprints(variant)
+        if existing is not None:
+            return existing
+        return self.particles(variant).footprints(
+            variant.footprint, name=variant.name, geometry_hash=variant.geometry_hash
+        )
 
 
 class Particles:
@@ -322,10 +339,10 @@ class Particles:
         self.key = key
         record = yaml.safe_load((self.path / SETTINGS_FILE).read_text()) or {}
         self.name: str = record["name"]
-        #: The settings the particles were made with, re-validated by the current model.
-        self.settings = TransportSettings.from_stored(record["settings"])
-        #: Hash of the re-validated settings (see :meth:`Output.find_particles`).
-        self.hash: str = self.settings.hash
+        #: The settings the particles were made with, read through the current config classes.
+        self.settings: dict[str, Any] = read_run_settings(record["settings"])
+        #: Hash of :attr:`settings` (see :meth:`Output.find_particles`).
+        self.hash: str = settings_hash(self.settings)
 
     def __repr__(self) -> str:
         return f"Particles({self.key!r})"
@@ -434,21 +451,28 @@ class Particles:
     # -- footprints --------------------------------------------------------
 
     def footprints(
-        self, config: FootprintConfig, name: str | None = None
+        self,
+        config: FootprintConfig,
+        name: str | None = None,
+        geometry_hash: str | None = None,
     ) -> Footprints:
         """
         Return the footprint folder for *config* on these particles, creating it on first use.
 
         The folder is ``footprints/settings=<name>-<hash>``, hashed over the
-        transport settings and *config* together, so two footprint settings
-        on the same particles get different folders and the same footprint
-        settings on different particles do too. *name* is the variant the
+        particles and the footprint settings together, so two footprint
+        configs on the same particles get different folders and the same
+        config on different particles does too. *name* is the variant the
         footprints belong to; it defaults to the particles folder's name.
+        *geometry_hash* is the hash of the geometry the grid was derived for.
         """
         if config.grid is None:
             raise ValueError("Footprint settings need a grid.")
-        digest = Footprints.hash_for(self.hash, config)
-        existing = self.output._footprints_by_hash(digest)
+        settings = footprint_settings(config, geometry_hash)
+        digest = footprint_hash(self.hash, settings)
+        if digest not in self.output._footprints:
+            self.output.footprint_sets()
+        existing = self.output._footprints.get(digest)
         if existing is not None:
             return existing
         name = name or self.name
@@ -461,7 +485,7 @@ class Particles:
                 "particles": self.key,
                 "particles_hash": self.hash,
                 "pystilt": _pystilt_version(),
-                "settings": canonical(config.model_dump(mode="json")),
+                "settings": settings,
             },
         )
         feet = Footprints(self.output, key)
@@ -493,8 +517,9 @@ class Footprints:
         self.name: str = record["name"]
         #: ``settings=`` value of the particles folder these were made from.
         self.particles_key: str = record["particles"]
-        #: The settings the footprints were made with, re-validated by the current model.
-        self.config = FootprintConfig.model_validate(record["settings"])
+        #: The footprint config the footprints were made with, and the hash of
+        #: the geometry its grid was derived for, read through the current classes.
+        self.config, self.geometry_hash = read_footprint_settings(record["settings"])
         if self.config.grid is None:
             raise ValueError(f"{self.path / SETTINGS_FILE} has no grid.")
         #: Grid the stored ``x`` and ``y`` index (``config.grid``).
@@ -520,14 +545,9 @@ class Footprints:
 
     @functools.cached_property
     def hash(self) -> str:
-        """Hash of the transport settings and the footprint settings together, re-validated."""
-        return self.hash_for(self.particles.hash, self.config)
-
-    @staticmethod
-    def hash_for(particles_hash: str, config: FootprintConfig) -> str:
-        """Return the hash identifying footprints with *config* on the particles hashed *particles_hash*."""
-        return settings_hash(
-            {"particles": particles_hash, "footprint": config.model_dump(mode="json")}
+        """Hash of the particles and the footprint settings together, read through the current classes."""
+        return footprint_hash(
+            self.particles.hash, footprint_settings(self.config, self.geometry_hash)
         )
 
     def file(self, receptor_id: str) -> Path:
@@ -555,13 +575,21 @@ class Footprints:
         folder's settings and hash, so it reads alone.
         """
         path = self.file(str(foot.stilt.receptor.id))
-        return write_footprint(path, foot, self.config, self._stamp())
+        return write_footprint(
+            path, foot, self.config, self._stamp(), geometry_hash=self.geometry_hash
+        )
 
     def write_empty(self, receptor: Receptor, reason: str, name: str = "") -> Path:
         """Record that a receptor's footprint is empty (no particle over the grid), with the reason."""
         path = self.file(str(receptor.id))
         return write_empty_footprint(
-            path, receptor, reason, self.config, name, self._stamp()
+            path,
+            receptor,
+            reason,
+            self.config,
+            name,
+            self._stamp(),
+            geometry_hash=self.geometry_hash,
         )
 
     def _stamp(self) -> dict[bytes, bytes]:
@@ -655,6 +683,7 @@ class Footprints:
             time_bins,
             receptors=present,
             missing=[r for r in requested if r not in files],
+            geometry_hash=self.geometry_hash,
         )
 
 

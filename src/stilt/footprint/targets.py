@@ -42,6 +42,11 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from scipy import sparse
 from shapely.geometry.base import BaseGeometry
 
+from stilt.config.footprint import (
+    FileGeometrySpec,
+    GeometrySpec,
+    H3GeometrySpec,
+)
 from stilt.spatial import Grid, is_longlat, same_crs
 
 
@@ -187,6 +192,24 @@ class Mesh(BaseModel):
         )
         labels = tuple(f"{xi:g},{yi:g}" for xi, yi in zip(x, y, strict=True))
         return cls(ids=labels, geometries=tuple(boxes.tolist()), crs=grid.crs)
+
+    @classmethod
+    def from_spec(cls, spec: GeometrySpec) -> Mesh:
+        """
+        Return the mesh a footprint config's ``geometry`` describes, reading its source now.
+
+        A ``file`` spec needs geopandas and an ``h3`` spec needs ``h3``.
+        """
+        if isinstance(spec, FileGeometrySpec):
+            kwargs = {}
+            if spec.layer is not None:
+                kwargs["layer"] = spec.layer
+            if spec.where is not None:
+                kwargs["where"] = spec.where
+            return cls.from_file(spec.path, ids=spec.ids, **kwargs)
+        if isinstance(spec, H3GeometrySpec):
+            return cls.from_h3(spec.resolution, spec.bounds)
+        return cls.from_windows(spec.coords, spec.size, ids=spec.ids, crs=spec.crs)
 
     @classmethod
     def from_h3(cls, resolution: int, bounds) -> Mesh:

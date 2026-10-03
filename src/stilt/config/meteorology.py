@@ -1,32 +1,55 @@
-"""Settings for one met, a named set of meteorology files."""
+"""The config of one met, a named set of meteorology files."""
 
 from __future__ import annotations
 
 import inspect
 from pathlib import Path
-from typing import Any, Literal, Self
+from typing import Any, ClassVar, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from stilt.spatial import Bounds
 
-#: Met fields that change no output: where the files are, not what they hold.
-UNRECORDED_MET_FIELDS = frozenset({"directory", "subgrid_dir"})
 
-
-class MetSettings(BaseModel):
+class MetConfig(BaseModel):
     """
-    The settings of a met that are recorded with each run.
+    Config for one met, as written under ``mets:`` in ``config.yaml``.
 
-    These are the fields of :class:`MetConfig` without its two directories.
-    They decide the particles a run produces, so they are saved in the run's
-    ``_settings.yaml`` and are part of its hash
-    (:class:`~stilt.config.TransportSettings`). The directories are left out,
-    so moving the met files does not change which runs are complete, and so
-    are ``download_from`` and ``n_min``, which change no particle.
+    Give either ``download`` to download ARL files with arlmet, or
+    ``file_format`` and ``file_tres`` to find them in ``directory``. With
+    ``download``, other keys are options for that archive (such as
+    ``domain`` for ``nams``). Any other unknown key is an error.
+
+    A run records its met in its ``_settings.yaml`` without the fields in
+    :attr:`UNRECORDED`: the directories, so moving the met files does not
+    change which runs are complete, and ``download_from`` and ``n_min``,
+    which change no particle. A project requires ``directory`` for every
+    met, and ``subgrid_dir`` when it crops local files.
     """
 
     model_config = ConfigDict(extra="allow")
+
+    #: Fields left out of a run's recorded settings, since they change no particle.
+    UNRECORDED: ClassVar[frozenset[str]] = frozenset(
+        {"directory", "subgrid_dir", "download_from", "n_min"}
+    )
+
+    directory: Path | None = Field(
+        None,
+        description=(
+            "Directory holding the ARL meteorology files. Downloads are saved "
+            "here. A project requires it."
+        ),
+    )
+    subgrid_dir: Path | None = Field(
+        None,
+        description=(
+            "Directory for the cropped files, shared by every simulation that "
+            "uses this meteorology. Each crop box gets its own folder inside "
+            "it. Required when cropping your own files; not used with "
+            "``download``, which crops files as it downloads them."
+        ),
+    )
 
     download: str | None = Field(
         None,
@@ -117,45 +140,3 @@ class MetSettings(BaseModel):
     def download_options(self) -> dict[str, Any]:
         """Extra fields, passed as keyword arguments to the arlmet archive."""
         return dict(self.model_extra) if self.model_extra else {}
-
-    def settings(self) -> MetSettings:
-        """Return the recorded settings alone, without the directories a :class:`MetConfig` adds."""
-        return MetSettings.model_validate(
-            self.model_dump(exclude=set(UNRECORDED_MET_FIELDS))
-        )
-
-
-class MetConfig(MetSettings):
-    """
-    Settings for one met, as written under ``mets:`` in ``config.yaml``.
-
-    Give either ``download`` to download ARL files with arlmet, or
-    ``file_format`` and ``file_tres`` to find them in ``directory``. With
-    ``download``, other keys are options for that archive (such as
-    ``domain`` for ``nams``). Any other unknown key is an error.
-    """
-
-    directory: Path = Field(
-        ...,
-        description="Directory holding the ARL meteorology files. Downloads are saved here.",
-    )
-    subgrid_dir: Path | None = Field(
-        None,
-        description=(
-            "Directory for the cropped files, shared by every simulation that "
-            "uses this meteorology. Each crop box gets its own folder inside "
-            "it. Required when cropping your own files; not used with "
-            "``download``, which crops files as it downloads them."
-        ),
-    )
-
-    @model_validator(mode="after")
-    def _require_subgrid_dir(self) -> Self:
-        """Require ``subgrid_dir`` when local files are cropped."""
-        if self.subgrid_enable and self.download is None and self.subgrid_dir is None:
-            raise ValueError(
-                "subgrid_dir is required when subgrid_enable=True without "
-                "download. Set it to a directory for the cropped files, outside "
-                "the met archive."
-            )
-        return self

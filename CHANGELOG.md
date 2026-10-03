@@ -8,6 +8,28 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **Variants resolve in one place, and settings have one home** (breaking).
+  `project.variants` holds `stilt.Variant` objects, which carry a variant's
+  configs, its met, the transport model build (`stilt.transport.ModelInfo`),
+  and two hashes: `particles_hash` and `footprint_hash`, computed once.
+  `stilt.variants.resolve(config)` replaces `ProjectConfig.resolve_variants()`.
+  `stilt.config.VariantConfig` is now one declared variant merged with the
+  defaults, before the geometry and the model build are read
+  (`config.variant_configs`). The settings records and their hashes are in
+  `stilt.identity`. The hashes of existing folders are unchanged.
+- `TransportSettings`, `MetSettings`, `FootprintConfig.resolve()`, and the
+  geometry specs' `build()` are removed. `Mesh.from_spec(spec)` reads a
+  geometry spec. `FootprintConfig.geometry_hash` is gone; the hash is on the
+  `Variant` and in each footprint's settings (`foot.stilt.geometry_hash`).
+- `MetConfig.directory` is optional on the class, and a project requires it
+  for every met when its config loads, so a met read back from a folder's
+  settings validates. A project also checks `subgrid_dir` for cropped local
+  mets, which `MetConfig` alone no longer does.
+- `Output.particles(variant)`, `Output.footprints(variant)`,
+  `Output.find_particles(variant)`, and `Output.find_footprints(variant)`
+  take a `Variant`. `Footprints.hash_for` is `stilt.identity.footprint_hash`.
+- `stilt.config` and `stilt.receptors` import nothing above them, checked by
+  an import-linter contract.
 - `stilt.receptors` is a package: `models` (the receptor types and their
   ids), `table` (the receptor table and CSV files), and `validation` (the
   checks a receptor must pass, now written once and shared by the models

@@ -11,8 +11,8 @@ from pandas.tseries.frequencies import to_offset
 
 from stilt._atomic import atomic_path
 from stilt.config import MetConfig
-from stilt.config.transport import settings_hash
 from stilt.exceptions import MeteorologyError
+from stilt.identity import settings_hash
 
 if TYPE_CHECKING:
     from arlmet.archives import Archive
@@ -40,6 +40,8 @@ class Met:
     """
 
     def __init__(self, name: str, config: MetConfig):
+        if config.directory is None:
+            raise ValueError(f"Met {name!r} has no directory.")
         self.name = name
         self.config = config
         #: ``config.directory``, made absolute.

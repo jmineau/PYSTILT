@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, NamedTuple
 import pandas as pd
 import xarray as xr
 
-from stilt.config import FootprintConfig, VariantConfig
+from stilt.config import FootprintConfig
 from stilt.exceptions import EmptyFootprint
 from stilt.footprint import calculate
 from stilt.output import Footprints, Output, Particles
@@ -23,6 +23,7 @@ from stilt.transforms import ParticleTransform, TransformContext
 from stilt.transport.hysplit.failures import identify_failure_reason
 
 if TYPE_CHECKING:
+    from stilt.variants import Variant
     from stilt.visualization import SimulationPlotAccessor
 
 logger = logging.getLogger(__name__)
@@ -96,23 +97,21 @@ class Simulation:
     ----------
     receptor : Receptor
         Where and when particles are released.
-    variant : VariantConfig
-        The variant: its transport settings, which name the particles folder, and its
-        footprint settings, if any.
+    variant : Variant
+        The variant, resolved: its configs, and the hashes that find its
+        particles and footprint folders.
     output : Output
         The output directory.
     """
 
     receptor: Receptor
-    variant: VariantConfig
+    variant: Variant
     output: Output
 
     def __repr__(self) -> str:
         return f"Simulation(id={str(self.id)!r})"
 
     def __hash__(self) -> int:
-        # Transport settings are not hashable (TransportParams is mutable), so hash
-        # what identifies the simulation: its id and where its results are.
         return hash((self.id, self.output))
 
     # -- identity ----------------------------------------------------------
@@ -130,7 +129,7 @@ class Simulation:
     @property
     def _particle_set(self) -> Particles | None:
         """The folder holding this simulation's particles, or ``None`` until it exists."""
-        return self.output.find_particles(self.variant.transport)
+        return self.output.find_particles(self.variant)
 
     @property
     def _footprint_set(self) -> Footprints | None:
@@ -361,8 +360,10 @@ class Simulation:
         FileNotFoundError
             If the particles have not been written yet.
         """
+        geometry_hash = None
         if config is None:
             config = self.variant.footprint
+            geometry_hash = self.variant.geometry_hash
         if config is None:
             raise TypeError(
                 f"{self.id} has no footprint settings; pass a FootprintConfig."
@@ -383,6 +384,7 @@ class Simulation:
                 config,
                 name=self.variant.name,
                 context=context,
+                geometry_hash=geometry_hash,
             )
         except EmptyFootprint:
             return None

@@ -34,6 +34,9 @@ v1.0**, so prefer the clean design over a compatibility shim.
 | Import name | `stilt` (`import stilt`, never `import pystilt`) |
 | Source directory | `src/stilt/` |
 | CLI entry point | `stilt` (Typer; see `[project.scripts]`) |
+| Config | What the user writes: always a class (`ProjectConfig`, `MetConfig`, `FootprintConfig`, `ExecutionConfig`, `VariantConfig`) |
+| Settings | What a result was made with, as recorded: `_settings.yaml`, the `settings=` folders, a settings hash. Never a class |
+| Parameters | Plain English for a config's fields; names no class or module |
 
 Use `pystilt` only for installation, the repository, and documentation URLs;
 tracebacks say `stilt`, pip and uv say `pystilt`. The R implementation
@@ -63,10 +66,12 @@ inputs (`stilt.project.Project`: `config.yaml` and `receptors.csv`) and an
 output directory (`stilt.output.Output`) that `config.yaml` names and that
 several projects can share. The simulations a project defines are
 **receptors × variants**: `receptors.csv` crossed with the named variants in
-`config.yaml` (one per met when none are declared). A variant resolves into
-transport settings (`TransportSettings`, whose hash identifies a *run*) and
-optional footprint settings. Variants with equal transport settings share
-one run per receptor and differ only in the footprint made from it. Whether
+`config.yaml` (one per met when none are declared). Each variant resolves
+into a `Variant` (`stilt.variants`) with two records of settings
+(`stilt.identity`): its run settings, whose hash identifies a *run* and
+names its particles folder, and optional footprint settings. Variants with
+equal run settings share one run per receptor and differ only in the
+footprint made from it. Whether
 a simulation is complete is decided **by the files in the output
 directory**, by `Simulation.is_complete()`: that method is the single
 definition of "done". `config.yaml` and `receptors.csv` are the user's
@@ -113,6 +118,11 @@ src/stilt/
                      and reading many files at once; Jacobian assembly
   simulation.py      Simulation, SimID: a frozen value (receptor, variant, output)
                      that knows where its results are and whether they exist
+  variants.py        Variant: one variant resolved (its configs, the model build,
+                     its two hashes); resolve() reads geometries and the model
+                     version once each
+  identity.py        settings records and their hashes: what a run and a footprint
+                     were made with, written to and read back from _settings.yaml
   receptors/         receptors and receptors.csv
     models.py        receptor types (frozen pydantic models: point, column,
                      multipoint), their times, and their ids
@@ -194,14 +204,24 @@ output directory, never only in memory.
 
 - `ProjectConfig` is the root: flat transport (`TransportParams`) and footprint
   (`FootprintConfig`) defaults, `mets`, and `variants` (overrides of the
-  defaults). `ProjectConfig.resolve_variants()` turns them into one
-  `VariantConfig` per simulation name, expanding `realizations: N` into
-  `<name>-0..N-1` with `seed + k`. A `VariantConfig` is composed:
-  `transport: TransportSettings` (hashed, names the particles folder) and
-  `footprint: FootprintConfig | None`. Variants whose transport settings
+  defaults). When it loads it merges each declared variant with the
+  defaults, once, into a `VariantConfig` per simulation name
+  (`config.variant_configs`), expanding `realizations: N` into
+  `<name>-0..N-1` with `seed + k`. Nothing outside the file is read then.
+  `stilt.variants.resolve` (behind `project.variants`) turns each into a
+  `Variant`: it reads each geometry once to derive the grid, and asks the
+  transport model its version once per build. Variants whose run settings
   match share the particles; `from:` is rejected. `grid: null` means
   particles only, and footprint settings without a grid are an error. There is no
   named-footprints dict.
+- **Config is data.** `stilt.config` and `stilt.receptors` import nothing
+  above them, not even inside a function; an import-linter contract holds
+  this. Anything that reads a file or asks a model goes in `stilt.variants`.
+- A config's fields that change no result are listed in its `UNRECORDED`
+  class variable (`exe_dir` and `data_dir`; a met's directories,
+  `download_from`, and `n_min`), and left out of the settings records. A
+  project requires each met's `directory`, so a met config read back from a
+  record, without one, still validates.
 - Every field is a plain pydantic `Field(default, description=...)` and the
   public config stays flat (`ProjectConfig(numpar=..., seed=...)`). CONTRIBUTING
   explains how a field is routed to `SETUP.CFG`, `CONTROL`, `WINDERR`, or
@@ -238,13 +258,14 @@ folder below a kind is hive-style, so each tree reads as one dataset:
   scratch/settings=<variant>-<hash>/date=YYYY-MM-DD/<receptor_id>/   failed runs' working dirs
 ```
 
-A particles folder's hash is `TransportSettings.hash`; a footprint
-folder's is the hash of the transport settings and the footprint settings
-together. "Particles" is the one word for the particle table in code
+A particles folder's hash is `Variant.particles_hash`; a footprint
+folder's is `Variant.footprint_hash`, over the run settings' hash and the
+footprint settings together. "Particles" is the one word for the particle table in code
 (`Particles`, `sim.particles`, `has_particles`); "run" is only the verb, and
 "trajectory" means one particle's path. Lookup
-re-validates the stored `_settings.yaml` through the current models and
-re-hashes, so a field added later with a default still matches. `compute_root`
+reads the stored `_settings.yaml` back through the current config classes
+(`stilt.identity`) and re-hashes, so a field added later with a default
+still matches. `compute_root`
 is scratch: HYSPLIT runs there and the directory is discarded after success.
 Footprints are sparse tables (`hour, y, x, foot`, float32); an empty
 footprint is a file with no rows and the reason in its metadata, and counts

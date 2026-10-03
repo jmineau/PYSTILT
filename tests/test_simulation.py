@@ -11,15 +11,15 @@ from stilt.config import (
     Grid,
     MetConfig,
     TransportParams,
-    TransportSettings,
-    VariantConfig,
 )
 from stilt.execution import make_footprint
 from stilt.output import Output
 from stilt.particles import particles_metadata, prepare
 from stilt.simulation import SimID, Simulation
 from stilt.transforms import FirstOrderLifetime, TransformContext, transform_kind
+from stilt.transport import ModelInfo
 from stilt.transport.hysplit.release import add_release_heights
+from stilt.variants import Variant
 
 GRID = Grid(xmin=-114.0, xmax=-111.0, ymin=39.0, ymax=42.0, xres=0.1, yres=0.1)
 FOOT = FootprintConfig(grid=GRID, time_integrate=True, smooth_factor=0.0)
@@ -33,16 +33,18 @@ def _met_config(tmp_path, **kwargs) -> MetConfig:
 
 def _variant(
     tmp_path, name="hrrr", footprint: FootprintConfig | None = None, **overrides
-) -> VariantConfig:
+) -> Variant:
     """A resolved variant with the test transport defaults and an optional footprint."""
     params = TransportParams(
         **{"n_hours": -24, "numpar": 10, "hnf_plume": False, **overrides}
     )
-    return VariantConfig(
+    return Variant(
         name=name,
         group=name,
         met="hrrr",
-        transport=TransportSettings.build(params, _met_config(tmp_path)),
+        met_config=_met_config(tmp_path),
+        transport=params,
+        model=ModelInfo(version="v5.1.0"),
         footprint=footprint,
     )
 
@@ -75,7 +77,7 @@ def _trajectories(receptor, params, foot: float = 1e-5) -> pd.DataFrame:
 def _write_particles(sim: Simulation) -> pd.DataFrame:
     """Put particles for *sim* in the output directory and return them."""
     particles = _trajectories(sim.receptor, sim.variant.transport)
-    folder = sim.output.particles(sim.variant.name, sim.variant.transport)
+    folder = sim.output.particles(sim.variant)
     folder.write(sim.receptor, particles, sim.variant.transport, [])
     return particles
 
@@ -148,7 +150,7 @@ def test_paths_are_none_until_the_run_exists(point_receptor, tmp_path):
     with pytest.raises(FileNotFoundError):
         _ = sim.footprint
 
-    run = sim.output.particles(sim.variant.name, sim.variant.transport)
+    run = sim.output.particles(sim.variant)
     rid = str(point_receptor.id)
     assert sim._particle_set == run
     assert sim.particles_path == run.file(rid)
@@ -289,7 +291,7 @@ def test_empty_footprint_is_recorded_with_its_reason(point_receptor, tmp_path):
 
 def test_outcome_reads_a_failure_from_the_log(point_receptor, tmp_path):
     sim = _sim(tmp_path, point_receptor)
-    run = sim.output.particles(sim.variant.name, sim.variant.transport)
+    run = sim.output.particles(sim.variant)
     run.write_log(
         sim.receptor.id, "Insufficient number of meteorological files found\n"
     )
@@ -375,7 +377,7 @@ def test_generate_footprint_uses_the_receptor_kernel_from_a_project_table(
     sim = _sim(tmp_path, point_receptor, footprint=config)
     with_height = _trajectories(point_receptor, sim.variant.transport)
     with_height["xhgt"] = 10.0  # the kernel weights particles by release height
-    folder = sim.output.particles(sim.variant.name, sim.variant.transport)
+    folder = sim.output.particles(sim.variant)
     folder.write(point_receptor, with_height, sim.variant.transport, [])
     plain = _sim(tmp_path, point_receptor, footprint=FOOT, variant="plain")
     assert (
