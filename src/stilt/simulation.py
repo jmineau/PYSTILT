@@ -20,7 +20,6 @@ from stilt.output import Footprints, Output, Particles
 from stilt.particles import particles_metadata
 from stilt.receptors import Receptor, parse_receptor_id
 from stilt.transforms import ParticleTransform, TransformContext
-from stilt.transport.hysplit.failures import identify_failure_reason
 
 if TYPE_CHECKING:
     from stilt.variants import Variant
@@ -233,6 +232,9 @@ class Simulation:
         log_path = self.log_path
         if log_path is None or not log_path.exists():
             return None
+        # Imported here, so `import stilt` does not load HYSPLIT's driver.
+        from stilt.transport.hysplit.failures import identify_failure_reason
+
         return f"failed:{identify_failure_reason(log_path)}"
 
     # -- reading the results -----------------------------------------------
