@@ -111,7 +111,7 @@ def setup_entries(params: HysplitConfig) -> dict[str, Any]:
         for name in fields_in("SETUP.CFG")
         if getattr(params, name) is not None
     }
-    entries.setdefault("maxpar", params.numpar)
+    entries["maxpar"] = params.effective_maxpar
     entries["zicontroltf"] = zicontroltf(params)
     if params.seed is not None:
         entries["seed"] = setup_seed(params.seed)
@@ -140,10 +140,7 @@ def ziscale_factors(params: HysplitConfig) -> list[float] | None:
     A single ``ziscale`` value is repeated for every hour of the run and a
     list is used as given. Factors that are all 1.0 give ``None``.
     """
-    if isinstance(params.ziscale, int | float):
-        values = [float(params.ziscale)] * max(abs(params.n_hours), 1)
-    else:
-        values = [float(v) for v in params.ziscale]
+    values = params.hourly_ziscale()
     if all(v == 1.0 for v in values):
         return None
     return values

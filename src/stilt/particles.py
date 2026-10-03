@@ -38,6 +38,12 @@ if TYPE_CHECKING:
 #: Particle columns stored as int32 rather than float64.
 _INT_COLUMNS = ("time", "indx")
 
+#: Particle columns the near-field plume correction reads (``varsiwant`` must include them).
+HNF_PLUME_COLUMNS: tuple[str, ...] = ("dens", "samt", "sigw", "tlgr", "foot", "mlht")
+
+#: Molar mass of dry air, kg/mol.
+_MOLAR_MASS_DRY_AIR = 0.02897
+
 
 class ParticleMetadata(NamedTuple):
     """
@@ -365,8 +371,7 @@ def calc_plume_dilution(
         If a required column is missing, or neither *r_zagl* nor ``xhgt``
         gives the release height.
     """
-    required = {"dens", "samt", "sigw", "tlgr", "foot", "mlht"}
-    missing = required - set(particles.columns)
+    missing = set(HNF_PLUME_COLUMNS) - set(particles.columns)
     if missing:
         raise ValueError(
             f"hnf_plume requires varsiwant to include: {', '.join(sorted(missing))}"
@@ -403,7 +408,7 @@ def calc_plume_dilution(
     )
     p["foot"] = np.where(
         p["plume"] < p["pbl_mixing"],
-        0.02897 / (p["plume"] * p["dens"]) * p["samt"] * 60,
+        _MOLAR_MASS_DRY_AIR / (p["plume"] * p["dens"]) * p["samt"] * 60,
         p["foot"],
     )
     return p.drop(columns=["sigma", "pbl_mixing", "plume", "elapsed"])
