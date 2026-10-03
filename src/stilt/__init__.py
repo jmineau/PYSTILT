@@ -14,7 +14,6 @@ from .config import (
     Grid,
     MetConfig,
     ProjectConfig,
-    VariantConfig,
 )
 from .exceptions import StiltError
 from .footprint import Geometry, Mesh, Zones, read_footprint
@@ -31,6 +30,7 @@ from .receptors import (
 )
 from .simulation import SimID, Simulation
 from .transforms import ParticleTransform, TransformContext
+from .variants import Variant
 
 try:
     __version__ = _version("pystilt")
@@ -48,8 +48,8 @@ __all__ = [
     "Grid",
     "Bounds",
     "MetConfig",
-    "VariantConfig",
     # Simulations and their results
+    "Variant",
     "Simulation",
     "SimID",
     "read_particles",

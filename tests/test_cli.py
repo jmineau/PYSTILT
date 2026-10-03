@@ -1,5 +1,6 @@
 """Tests for stilt.cli - Typer command-line interface."""
 
+from dataclasses import replace
 from types import SimpleNamespace
 
 import pandas as pd
@@ -10,6 +11,7 @@ from typer.testing import CliRunner
 import stilt.__main__
 from stilt.cli import _resolve_project, app
 from stilt.config import ExecutionConfig, Grid, ProjectConfig
+from stilt.variants import resolve
 
 runner = CliRunner()
 
@@ -151,7 +153,7 @@ def test_status_counts_full_simulation_completion(tmp_path):
             "foot": [1e-5],
         }
     )
-    folder = sim.output.particles(sim.variant.name, sim.variant.transport)
+    folder = sim.output.particles(sim.variant)
     folder.write(receptor, particles, sim.variant.transport, [])
 
     result = runner.invoke(app, ["status", str(tmp_path)])
@@ -361,7 +363,7 @@ def test_init_writes_science_first_commented_config(tmp_path):
     assert parsed["grid"]["xmin"] == -113.0
     loaded = ProjectConfig.from_yaml(project / "config.yaml")
     assert loaded.grid is not None and loaded.grid.xmin == -113.0
-    assert list(loaded.resolve_variants()) == ["hrrr"]
+    assert list(resolve(loaded)) == ["hrrr"]
     assert parsed["variants"] == {"hrrr": {}}
     assert text.index("mets:") < text.index("grid:")
     assert text.index("grid:") < text.index("n_hours:")
@@ -394,8 +396,13 @@ def test_status_lists_output_folders_no_variant_uses(tmp_path):
     _write_minimal_config(tmp_path)
     project = Project(tmp_path)
     # A run made under settings the config no longer has.
-    stale = project.variants["hrrr"].transport.model_copy(update={"numpar": 7})
-    project.output.particles("old", stale)
+    variant = project.variants["hrrr"]
+    stale = replace(
+        variant,
+        name="old",
+        transport=variant.transport.model_copy(update={"numpar": 7}),
+    )
+    project.output.particles(stale)
 
     result = runner.invoke(app, ["status", str(tmp_path)])
 

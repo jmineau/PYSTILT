@@ -111,7 +111,7 @@ class SimulationResult:
 
 def _append_error_log(sim: Simulation, *, phase: str, error: BaseException) -> None:
     """Append the error and its traceback to the simulation's log in the output directory."""
-    folder = sim.output.particles(sim.variant.name, sim.variant.transport)
+    folder = sim.output.particles(sim.variant)
     log_path = folder.log_path(sim.receptor.id)
     log_path.parent.mkdir(parents=True, exist_ok=True)
     trace = traceback.format_exc()
@@ -170,8 +170,8 @@ def run_particles(
         As the HYSPLIT driver and the particle reader raise them.
     """
     params = sim.variant.transport
-    model = get_model(params.model.name)
-    folder = sim.output.particles(sim.variant.name, sim.variant.transport)
+    model = get_model(sim.variant.model.name)
+    folder = sim.output.particles(sim.variant)
     rid = sim.receptor.id
     # The model runs in an empty directory. A job stopped partway can leave
     # this simulation's directory behind; it is PYSTILT's own, so clear it.
@@ -228,11 +228,15 @@ def make_footprint(
     config = sim.variant.footprint
     if config is None:
         raise TypeError(f"{sim.id} has no footprint settings (no grid).")
-    folder = sim.output.particles(sim.variant.name, sim.variant.transport)
-    feet = folder.footprints(config, name=sim.variant.name)
+    feet = sim.output.footprints(sim.variant)
     try:
         foot = calculate(
-            particles, sim.receptor, config, name=sim.variant.name, context=context
+            particles,
+            sim.receptor,
+            config,
+            name=sim.variant.name,
+            context=context,
+            geometry_hash=sim.variant.geometry_hash,
         )
     except EmptyFootprint as error:
         feet.write_empty(sim.receptor, error.reason, name=sim.variant.name)
@@ -365,7 +369,7 @@ def run_receptor(
     sim = None
     try:
         for sim in sims:
-            key = sim.variant.transport.hash
+            key = sim.variant.particles_hash
             if key in failed:
                 # Variants with these transport settings share one HYSPLIT
                 # run, and it already failed. Running it again fails the same way.

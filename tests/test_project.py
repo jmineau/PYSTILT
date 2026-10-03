@@ -92,7 +92,7 @@ def _write_trajectory(project: Project, receptor, variant="hrrr") -> Path:
         sim.receptor,
         sim.variant.transport,
     )
-    folder = sim.output.particles(sim.variant.name, sim.variant.transport)
+    folder = sim.output.particles(sim.variant)
     return folder.write(sim.receptor, particles, sim.variant.transport, [])
 
 
@@ -102,7 +102,7 @@ def _write_footprint(
     """Write a footprint (or an empty one) for one simulation into the output directory."""
     sim = project.simulation(receptor.id, variant)
     assert sim.variant.footprint is not None
-    folder = sim.output.particles(sim.variant.name, sim.variant.transport)
+    folder = sim.output.particles(sim.variant)
     feet = folder.footprints(sim.variant.footprint, name=sim.variant.name)
     if empty:
         return feet.write_empty(sim.receptor, "outside_domain", name=sim.variant.name)
@@ -471,8 +471,8 @@ def test_variants_with_equal_transport_settings_share_a_run(tmp_path, point_rece
         variants={"hrrr": {}, "s2": {"smooth_factor": 2}, "zi08": {"ziscale": 0.8}},
     )
 
-    hrrr, s2, zi = (project.variants[v].transport for v in ("hrrr", "s2", "zi08"))
-    assert hrrr.hash == s2.hash != zi.hash
+    hrrr, s2, zi = (project.variants[v] for v in ("hrrr", "s2", "zi08"))
+    assert hrrr.particles_hash == s2.particles_hash != zi.particles_hash
 
     _write_trajectory(project, point_receptor)
     assert project.simulation(point_receptor.id, "s2").has_particles

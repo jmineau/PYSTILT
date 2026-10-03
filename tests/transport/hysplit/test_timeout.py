@@ -39,10 +39,12 @@ class _FakeMet:
 @pytest.fixture
 def sim(monkeypatch, tmp_path, point_receptor):
     """A Simulation with the HYSPLIT driver stubbed out, and a runner for it."""
-    from stilt.config import MetConfig, TransportSettings, VariantConfig
+    from stilt.config import MetConfig
     from stilt.output import Output
     from stilt.simulation import Simulation
+    from stilt.transport import ModelInfo
     from stilt.transport.hysplit import model
+    from stilt.variants import Variant
 
     monkeypatch.setattr(model, "HYSPLITDriver", _StopDriver)
     _StopDriver.seen.clear()
@@ -52,11 +54,13 @@ def sim(monkeypatch, tmp_path, point_receptor):
 
     def _make():
         params = TransportParams(n_hours=-24, numpar=10)
-        config = VariantConfig(
+        config = Variant(
             name="hrrr",
             group="hrrr",
             met="hrrr",
-            transport=TransportSettings.build(params, met_config),
+            met_config=met_config,
+            transport=params,
+            model=ModelInfo(version="v5.1.0"),
         )
         return Simulation(point_receptor, config, Output(tmp_path / "output"))
 

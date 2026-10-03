@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Protocol
 
 import pandas as pd
+from pydantic import BaseModel, ConfigDict, Field
 
 if TYPE_CHECKING:
     from stilt.config import TransportParams
@@ -38,6 +39,24 @@ class ModelRun:
 
     particles: pd.DataFrame
     met_files: list[Path]
+
+
+class ModelInfo(BaseModel):
+    """The transport model build a run was made with, recorded in the run's settings."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    name: str = Field(default="hysplit", description="Model name.")
+    version: str = Field(
+        ..., description="Version string of the build, such as ``v5.1.0``."
+    )
+    data_files: dict[str, str] | None = Field(
+        None,
+        description=(
+            "SHA-256 of each data file the run used in place of the model's "
+            "own, by file name. ``None`` when it used the model's own."
+        ),
+    )
 
 
 class TransportModel(Protocol):
@@ -110,4 +129,4 @@ def get_model(name: str = "hysplit") -> TransportModel:
     raise ValueError(f"Unknown transport model {name!r}. The models are ['hysplit'].")
 
 
-__all__ = ["ModelRun", "TransportModel", "get_model"]
+__all__ = ["ModelInfo", "ModelRun", "TransportModel", "get_model"]

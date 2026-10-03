@@ -124,6 +124,7 @@ source_modules = [
     "stilt.execution",
     "stilt.sampling",
     "stilt.footprint",
+    "stilt.identity",
     "stilt.spatial",
     "stilt.meteorology",
     "stilt.output",
@@ -133,6 +134,7 @@ source_modules = [
     "stilt.particles",
     "stilt.transforms",
     "stilt.transport",
+    "stilt.variants",
     "stilt.visualization",
 ]
 forbidden_modules = ["stilt.observations"]
@@ -151,6 +153,7 @@ source_modules = [
     "stilt.execution",
     "stilt.sampling",
     "stilt.footprint",
+    "stilt.identity",
     "stilt.spatial",
     "stilt.meteorology",
     "stilt.output",
@@ -159,6 +162,7 @@ source_modules = [
     "stilt.simulation",
     "stilt.particles",
     "stilt.transforms",
+    "stilt.variants",
     "stilt.visualization",
 ]
 forbidden_modules = ["stilt.transport.hysplit"]
@@ -167,6 +171,26 @@ allow_indirect_imports = true
 ignore_imports = [
     # sim.outcome names why a run failed, from the reasons HYSPLIT writes.
     "stilt.simulation -> stilt.transport.hysplit.failures",
+]
+
+# What the user writes (config.yaml, receptors.csv) is plain data. Resolving
+# it, reading geometries or asking a transport model its version, happens
+# above, in stilt.variants. Imports inside functions count too.
+[[tool.importlinter.contracts]]
+name = "Config and receptors import nothing above them"
+type = "forbidden"
+source_modules = ["stilt.config", "stilt.receptors"]
+forbidden_modules = [
+    "stilt.execution",
+    "stilt.footprint",
+    "stilt.identity",
+    "stilt.meteorology",
+    "stilt.output",
+    "stilt.particles",
+    "stilt.project",
+    "stilt.simulation",
+    "stilt.transport",
+    "stilt.variants",
 ]
 
 [tool.pyright]

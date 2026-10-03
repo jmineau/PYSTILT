@@ -12,7 +12,7 @@ HYSPLIT driver writes the files from that, so adding a setting is one field.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Literal, Self
+from typing import Any, ClassVar, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -44,6 +44,11 @@ class TransportParams(BaseModel):
     """
 
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
+
+    #: Fields left out of a run's recorded settings. What they point at is
+    #: recorded instead: the build's version and the checksums of data files
+    #: that differ from the bundled ones.
+    UNRECORDED: ClassVar[frozenset[str]] = frozenset({"exe_dir", "data_dir"})
 
     n_hours: int = Field(
         -24,

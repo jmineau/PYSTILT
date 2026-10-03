@@ -17,10 +17,12 @@ import pandas as pd
 
 from stilt.config import MetConfig, ProjectConfig
 from stilt.execution import resolve_compute_root
+from stilt.footprint.targets import Mesh
 from stilt.particles import particles_metadata
 from stilt.project import Project
 from stilt.simulation import SimID
 from stilt.transport.hysplit.driver import winderrtf
+from stilt.variants import resolve
 
 from .conftest import integration
 
@@ -528,10 +530,11 @@ def test_geometry_footprint(tmp_path, wbb_receptor, met_dir):
         geometry=spec,
         cells_per_target=10,
     )
-    fc = next(iter(config.resolve_variants().values())).footprint
+    variant = next(iter(resolve(config).values()))
+    fc = variant.footprint
     assert fc is not None
     assert fc.grid.xres == fc.grid.yres == 0.05  # 0.5 / 10
-    assert fc.geometry_hash
+    assert variant.geometry_hash
 
     model = Project.init(tmp_path / "geom", config=config, receptors=[wbb_receptor])
     model.run()
@@ -542,10 +545,10 @@ def test_geometry_footprint(tmp_path, wbb_receptor, met_dir):
     assert foot is not None
     assert foot.stilt.config.grid == fc.grid
     assert foot.stilt.config.geometry == fc.geometry
-    assert foot.stilt.config.geometry_hash == fc.geometry_hash
+    assert foot.stilt.geometry_hash == variant.geometry_hash
 
     assert fc.geometry is not None
-    mesh = fc.geometry.build()
+    mesh = Mesh.from_spec(fc.geometry)
     r_time = pd.Timestamp(wbb_receptor.time)
     bins = pd.interval_range(
         start=r_time - pd.Timedelta(hours=6), end=r_time, freq="1h", closed="left"

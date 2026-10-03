@@ -1502,43 +1502,42 @@ def _windows_spec(shift: float = 0.0):
     }
 
 
-def test_footprint_config_records_geometry_hash():
-    fc = FootprintConfig(geometry=_windows_spec()).resolve()
-    assert fc.geometry_hash == fc.geometry.build().hash
-    # explicit grid still records the hash; reload with both present builds nothing
-    reloaded = FootprintConfig(
-        grid=fc.grid, geometry=_windows_spec(), geometry_hash="deadbeef00"
-    )
-    assert reloaded.geometry_hash == "deadbeef00"
+def _geometry_footprint() -> tuple[xr.DataArray, FootprintConfig, Mesh]:
+    """A footprint whose grid was derived for the windows geometry, and that geometry."""
+    base = _make_footprint()
+    fc = FootprintConfig(grid=base.stilt.grid, geometry=_windows_spec())
+    assert fc.geometry is not None
+    mesh = Mesh.from_spec(fc.geometry)
+    return _describe(base, base.stilt.receptor, fc, "geo", mesh.hash), fc, mesh
+
+
+def test_a_footprint_records_its_geometry_and_hash():
+    foot, fc, mesh = _geometry_footprint()
+    assert foot.stilt.config == fc
+    assert foot.stilt.geometry_hash == mesh.hash
+    assert _make_footprint().stilt.geometry_hash is None
 
 
 def test_netcdf_roundtrip_keeps_geometry_and_hash(tmp_path):
-    fc = FootprintConfig(
-        grid=_make_footprint().stilt.grid, geometry=_windows_spec()
-    ).resolve()
-    assert fc.geometry_hash
-    foot = _make_footprint()
-    foot = _describe(foot, foot.stilt.receptor, fc, "geo")
+    foot, fc, mesh = _geometry_footprint()
     path = foot.stilt.to_netcdf(tmp_path / "geo_foot.nc")
     loaded = read_footprint(path)
     assert loaded.stilt.config.geometry == fc.geometry
-    assert loaded.stilt.config.geometry_hash == fc.geometry_hash
+    assert loaded.stilt.geometry_hash == mesh.hash
     # a grid-only footprint carries no geometry attrs at all
     plain = _make_footprint().stilt.to_netcdf(tmp_path / "plain_foot.nc")
     with xr.open_dataset(plain) as ds:
         settings = json.loads(ds["foot"].attrs["stilt_footprint"])
     assert settings["geometry"] is None and settings["geometry_hash"] is None
-    assert read_footprint(plain).stilt.config.geometry_hash is None
+    assert read_footprint(plain).stilt.geometry_hash is None
 
 
 def test_aggregate_warns_when_geometry_hash_differs():
+    foot, _, same = _geometry_footprint()
     base = _make_footprint()
-    fc = FootprintConfig(grid=base.stilt.grid, geometry=_windows_spec()).resolve()
-    foot = _describe(base, base.stilt.receptor, fc, "geo")
     t0 = pd.Timestamp("2023-01-01 12:00")
     bins = pd.interval_range(start=t0, periods=1, freq="1h", closed="left")
 
-    same = fc.geometry.build()
     with warnings.catch_warnings():
         warnings.simplefilter("error")
         foot.stilt.aggregate(same, bins)  # identical geometry: no warning

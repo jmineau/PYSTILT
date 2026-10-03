@@ -6,13 +6,13 @@ from pathlib import Path
 from typing import Any, Self
 
 import yaml
-from pydantic import ConfigDict, Field, model_validator
+from pydantic import ConfigDict, Field, PrivateAttr, model_validator
 
 from .execution import ExecutionConfig
 from .footprint import FootprintConfig
 from .meteorology import MetConfig
 from .params import TransportParams
-from .variant import VARIANT_NAME_RE, VariantConfig, check_variants, expand_variants
+from .variant import VARIANT_NAME_RE, VariantConfig, expand_variants
 
 
 class ProjectConfig(TransportParams, FootprintConfig):
@@ -57,9 +57,11 @@ class ProjectConfig(TransportParams, FootprintConfig):
         ),
     )
 
+    _variant_configs: dict[str, VariantConfig] = PrivateAttr(default_factory=dict)
+
     @model_validator(mode="after")
     def _validate_mets(self) -> Self:
-        """Require at least one met, each with a valid variant name."""
+        """Require at least one met, each with a valid name and a directory."""
         if not self.mets:
             raise ValueError(
                 "ProjectConfig.mets must contain at least one meteorology configuration"
@@ -69,50 +71,49 @@ class ProjectConfig(TransportParams, FootprintConfig):
             raise ValueError(
                 f"Met names must match {VARIANT_NAME_RE.pattern}, got: {bad}"
             )
+        for name, met in self.mets.items():
+            if met.directory is None:
+                raise ValueError(
+                    f"Met {name!r} needs a directory: where its files are, or "
+                    "where downloaded files are saved."
+                )
+            if met.subgrid_enable and met.download is None and met.subgrid_dir is None:
+                raise ValueError(
+                    f"Met {name!r}: subgrid_dir is required when subgrid_enable=True "
+                    "without download. Set it to a directory for the cropped "
+                    "files, outside the met archive."
+                )
         return self
 
     @model_validator(mode="after")
-    def _validate_variants(self) -> Self:
+    def _expand_variants(self) -> Self:
         """
-        Check the variants so a bad declaration fails when the config loads.
+        Merge each declared variant with the defaults, so a bad declaration fails when the config loads.
 
-        Nothing is built: loading a config reads no geometry file and does
-        not look up the HYSPLIT build. :meth:`resolve_variants` builds them.
+        No file is read: the grid of a footprint given by a geometry, and
+        the transport model build, are found by
+        :func:`stilt.variants.resolve`.
         """
-        check_variants(self._declared(), self.defaults(), self.mets)
+        self._variant_configs = expand_variants(
+            self._declared(), self.defaults(), self.mets
+        )
         return self
 
-    def defaults(self) -> dict[str, Any]:
-        """Return the default transport and footprint parameters every variant starts from."""
-        parameters = set(TransportParams.model_fields) | set(
-            FootprintConfig.model_fields
-        )
-        values = self.model_dump(include=parameters)
-        # Keep the geometry spec itself, so the variants that inherit it share
-        # one spec and build its mesh once.
-        values["geometry"] = self.geometry
-        return values
-
-    def resolve_variants(self) -> dict[str, VariantConfig]:
+    @property
+    def variant_configs(self) -> dict[str, VariantConfig]:
         """
-        Return one :class:`VariantConfig` per simulation name, in declared order.
+        Each variant merged with the defaults, by simulation name, in declared order.
 
         A variant with ``realizations`` becomes several, so ``hrrr-err`` with
         ``realizations: 3`` gives ``hrrr-err-0`` to ``hrrr-err-2``.
-
-        The footprint settings are resolved
-        (:meth:`~stilt.config.FootprintConfig.resolve`). A footprint given by
-        ``geometry`` gets its grid and geometry hash here, and each geometry
-        is built once however many variants inherit it.
+        ``project.variants`` resolves them.
         """
-        return {
-            name: variant
-            if variant.footprint is None
-            else variant.model_copy(update={"footprint": variant.footprint.resolve()})
-            for name, variant in expand_variants(
-                self._declared(), self.defaults(), self.mets
-            ).items()
-        }
+        return self._variant_configs
+
+    def defaults(self) -> dict[str, Any]:
+        """Return the default transport and footprint fields every variant starts from."""
+        fields = set(TransportParams.model_fields) | set(FootprintConfig.model_fields)
+        return self.model_dump(include=fields)
 
     def _declared(self) -> dict[str, dict[str, Any]]:
         """Return the declared variants, one per met when none are declared."""

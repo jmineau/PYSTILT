@@ -17,12 +17,10 @@ generated from the code.
 Config objects
 --------------
 
-:class:`VariantConfig` is one variant with all of its settings filled in,
-as PYSTILT runs it. :class:`TransportSettings` is the part of a variant
-that decides its particles (its transport fields, the met's
-:class:`MetSettings`, and the :class:`ModelInfo`), whose hash names the
-run in the output directory. :class:`FootprintConfig` holds the footprint
-settings, and each footprint keeps the ones it was calculated with.
+A config is what you write. :class:`VariantConfig` is one declared
+variant merged with the defaults. ``project.variants`` resolves each into a
+:class:`stilt.Variant`, which adds what the file alone does not say: the
+grid of a footprint given by a geometry, and the transport model build.
 The ``PYSTILT_COMPUTE_ROOT`` environment variable sets the scratch
 directory HYSPLIT runs in. It never changes a result.
 
@@ -32,10 +30,7 @@ directory HYSPLIT runs in. It never changes a result.
 
    ProjectConfig
    VariantConfig
-   TransportSettings
-   ModelInfo
    MetConfig
-   MetSettings
    FootprintConfig
    Bounds
    Grid
@@ -56,8 +51,8 @@ are HYSPLIT's own, under HYSPLIT's names.
 Geometry specifications
 -----------------------
 
-The kinds of area you can name in the ``geometry`` footprint setting. Each
-has a ``build()`` method that returns a :class:`stilt.Mesh`.
+The kinds of area you can name in the ``geometry`` footprint setting.
+:meth:`stilt.Mesh.from_spec` reads one into a :class:`stilt.Mesh`.
 
 .. autosummary::
    :toctree: _api

@@ -409,6 +409,7 @@ def calculate(
     config: FootprintConfig,
     name: str = "",
     context: TransformContext | None = None,
+    geometry_hash: str | None = None,
 ) -> xr.DataArray:
     """
     Calculate a footprint from particles.
@@ -434,14 +435,16 @@ def calculate(
     receptor : Receptor
         Receptor the particles were released from.
     config : FootprintConfig
-        Grid, smoothing, and particle transforms. A grid given by
-        ``geometry`` is derived first
-        (:meth:`~stilt.config.FootprintConfig.resolve`).
+        Grid, smoothing, and particle transforms. For a footprint given by a
+        geometry, derive the grid first: ``Mesh.from_spec(config.geometry).to_grid()``.
     name : str, optional
         Name of the footprint, usually the variant name.
     context : TransformContext, optional
         Passed to every transform. Defaults to one holding ``receptor``
         and ``name``, with no project directory.
+    geometry_hash : str, optional
+        Hash of the geometry the grid was derived for, recorded with the
+        footprint so aggregating it onto another mesh warns.
 
     Returns
     -------
@@ -460,10 +463,12 @@ def calculate(
         If no particle is over the grid. ``reason`` is ``"no_particles"``
         when the table is empty and ``"outside_domain"`` otherwise.
     """
-    config = config.resolve()
     grid = config.grid
     if grid is None:
-        raise ValueError("A footprint needs settings with a grid.")
+        raise ValueError(
+            "The footprint config has no grid. Give one, or derive it from the "
+            "geometry with stilt.Mesh.from_spec(config.geometry).to_grid()."
+        )
     if config.transforms:
         unresolved = [t["kind"] for t in config.transforms if isinstance(t, dict)]
         if unresolved:
@@ -578,4 +583,6 @@ def calculate(
         order = np.argsort(unwrapped)
         x_coords = np.round(unwrapped[order], 10)
         values = values[:, :, order]
-    return _footprint_array(values, layers, receptor, config, name, x_coords, y_coords)
+    return _footprint_array(
+        values, layers, receptor, config, name, x_coords, y_coords, geometry_hash
+    )

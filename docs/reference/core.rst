@@ -37,12 +37,39 @@ Receptor objects
 Simulation objects
 ------------------
 
+A :class:`Variant` is one variant of a project, resolved: its configs, its
+met, the transport model build, and the hashes that find its results.
+``project.variants`` holds them, and :func:`stilt.variants.resolve` makes
+them from a config.
+
 .. autosummary::
    :toctree: _api
    :nosignatures:
 
    Simulation
    SimID
+   Variant
+   variants.resolve
+
+Settings and their hashes
+-------------------------
+
+:mod:`stilt.identity` records what a result was made with, as each output
+folder's ``_settings.yaml`` holds it, and hashes it. A stored record is read
+back through the current config classes, so a setting added since, with a
+default, still matches.
+
+.. autosummary::
+   :toctree: _api
+   :nosignatures:
+
+   identity.run_settings
+   identity.read_run_settings
+   identity.footprint_settings
+   identity.read_footprint_settings
+   identity.footprint_hash
+   identity.settings_hash
+   transport.ModelInfo
 
 Particles and footprints
 ------------------------

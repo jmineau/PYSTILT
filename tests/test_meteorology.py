@@ -354,16 +354,31 @@ def test_a_failed_crop_leaves_nothing_behind(tmp_path):
     assert list(met.crop_dir.iterdir()) == []
 
 
-def test_metconfig_local_crop_requires_subgrid_dir(tmp_path):
+def test_a_project_needs_subgrid_dir_to_crop_local_files(tmp_path):
     """Crops are never written into the met archive by default (#53)."""
+    from stilt.config import ProjectConfig
+
+    met = MetConfig(
+        directory=tmp_path,
+        file_format="%Y%m%d_%H",
+        file_tres="1h",
+        subgrid_enable=True,
+        subgrid_bounds=BOUNDS,
+    )
     with pytest.raises(ValueError, match="subgrid_dir is required"):
-        MetConfig(
-            directory=tmp_path,
-            file_format="%Y%m%d_%H",
-            file_tres="1h",
-            subgrid_enable=True,
-            subgrid_bounds=BOUNDS,
-        )
+        ProjectConfig(mets={"hrrr": met})
+
+
+def test_a_project_needs_each_met_directory(tmp_path):
+    """A met config without its directory reads back from a stored record, but a project needs it."""
+    from stilt.config import ProjectConfig
+
+    met = MetConfig(file_format="%Y%m%d_%H", file_tres="1h")
+    assert met.directory is None
+    with pytest.raises(ValueError, match="'hrrr' needs a directory"):
+        ProjectConfig(mets={"hrrr": met})
+    with pytest.raises(ValueError, match="has no directory"):
+        Met("hrrr", met)
 
 
 def test_metconfig_download_crop_needs_no_subgrid_dir(tmp_path):
