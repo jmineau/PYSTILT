@@ -429,6 +429,15 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **`data_dir`**: a folder of HYSPLIT data tables (`ASCDATA.CFG`,
+  `LANDUSE.ASC`, `ROUGLEN.ASC`, `TERRAIN.ASC`) to use in place of the
+  bundled ones, as `exe_dir` does for `hycs_std`. A table the folder does
+  not hold comes from the bundled set. Each table that differs from the
+  bundled one is recorded by its SHA-256 in the run's settings
+  (`ModelInfo.data_files`) and is part of its hash; runs on the bundled
+  tables keep their hashes. Transport models report these with
+  `data_files(params)`.
+
 - **`TransportSettings`, what identifies a run**
   ([#74](https://github.com/jmineau/PYSTILT/issues/74)). The transport
   fields that change a run's particles, the settings of its meteorology

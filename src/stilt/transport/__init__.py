@@ -56,6 +56,15 @@ class TransportModel(Protocol):
         """Return the version of the build *params* would run, recorded with the run."""
         ...
 
+    def data_files(self, params: TransportParams) -> dict[str, str] | None:
+        """
+        Return the checksum of each data file *params* replaces, by file name.
+
+        ``None`` when the run uses the model's own data files. These are part
+        of the run's identity, since the data change the particles.
+        """
+        ...
+
     def run(
         self,
         receptor: Receptor,

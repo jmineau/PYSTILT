@@ -63,4 +63,16 @@ as ``v5.3.2``. Then set ``exe_dir`` in ``config.yaml`` to that folder:
 
    exe_dir: /path/to/hysplit/exec
 
+HYSPLIT's data tables (``ASCDATA.CFG``, ``LANDUSE.ASC``, ``ROUGLEN.ASC``,
+``TERRAIN.ASC``) come with PYSTILT too. To use your own, such as a
+higher-resolution land use, put them in a folder and set ``data_dir``. A
+table the folder does not hold comes from the bundled set:
+
+.. code-block:: yaml
+
+   data_dir: /path/to/hysplit/bdyfiles
+
+The tables change the particles, so a run records each table that differs
+from the bundled one, and such runs are kept apart from the others.
+
 Next: :doc:`quickstart`.
