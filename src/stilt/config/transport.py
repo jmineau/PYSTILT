@@ -12,7 +12,6 @@ from __future__ import annotations
 import hashlib
 import json
 from collections.abc import Mapping
-from importlib.resources import files as pkg_files
 from pathlib import Path
 from typing import Any, Self
 
@@ -54,33 +53,6 @@ def settings_hash(settings: Mapping[str, Any]) -> str:
     """
     text = json.dumps(canonical(settings), separators=(",", ":"), default=str)
     return hashlib.sha256(text.encode()).hexdigest()
-
-
-def hysplit_version(exe_dir: str | Path | None = None) -> str:
-    """
-    Return the version of the HYSPLIT build in *exe_dir*, or of the bundled build.
-
-    A build directory names its version in a ``version`` file beside
-    ``hycs_std``, as the bundled one does. Two builds with the same settings
-    can give different particles, so the version is part of a run's
-    identity.
-
-    Raises
-    ------
-    FileNotFoundError
-        If *exe_dir* has no ``version`` file.
-    """
-    if exe_dir is None:
-        path = Path(str(pkg_files("stilt.transport.hysplit") / "bin" / "version"))
-    else:
-        path = Path(exe_dir) / "version"
-        if not path.exists():
-            raise FileNotFoundError(
-                f"{exe_dir} has no 'version' file. A custom hycs_std build needs "
-                "one beside the binary, holding its version string (such as "
-                "v5.3.2+t0-rows), so its runs are told apart from other builds'."
-            )
-    return path.read_text().strip()
 
 
 class ModelInfo(BaseModel):
@@ -135,11 +107,15 @@ class TransportSettings(TransportParams):
         """
         Return the settings for *params* run with *met*.
 
-        *model* defaults to HYSPLIT at the version of the build
-        ``params.exe_dir`` points at, or the bundled build.
+        *model* defaults to HYSPLIT at the version its transport model
+        reports for *params* (the build ``params.exe_dir`` points at, or the
+        bundled build).
         """
         if model is None:
-            model = ModelInfo(version=hysplit_version(params.exe_dir))
+            from stilt.transport import get_model
+
+            name = "hysplit"
+            model = ModelInfo(name=name, version=get_model(name).version(params))
         met_settings = met.settings() if isinstance(met, MetConfig) else met
         return cls(
             **params.model_dump(),
@@ -192,6 +168,5 @@ __all__ = [
     "ModelInfo",
     "TransportSettings",
     "canonical",
-    "hysplit_version",
     "settings_hash",
 ]

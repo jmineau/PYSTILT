@@ -338,6 +338,9 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Removed
 
+- `stilt.config.hysplit_version` is `stilt.transport.hysplit.model.hysplit_version`.
+  `TransportSettings.build` asks the transport model for its version.
+
 - The PostgreSQL work queue (`stilt.service`, `PYSTILT_DB_URL`,
   `stilt register`, `stilt pull-worker`, `stilt serve`), the Kubernetes
   backend and manifests, `stilt push-worker` and chunk files, and the

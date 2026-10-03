@@ -18,7 +18,7 @@ from .footprint import (
 from .meteorology import MetConfig, MetSettings
 from .params import TransportParams
 from .project import ProjectConfig
-from .transport import ModelInfo, TransportSettings, hysplit_version, settings_hash
+from .transport import ModelInfo, TransportSettings, settings_hash
 from .variant import VariantConfig
 
 __all__ = [
@@ -38,7 +38,6 @@ __all__ = [
     "VariantConfig",
     "VerticalReference",
     "WindowsGeometrySpec",
-    "hysplit_version",
     "kmsl_from_vertical_reference",
     "settings_hash",
 ]
