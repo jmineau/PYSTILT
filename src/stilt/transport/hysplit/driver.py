@@ -14,7 +14,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from stilt.config import TransportParams, kmsl_from_vertical_reference
+from stilt.config import TransportParams
 from stilt.config.params import fields_in
 from stilt.exceptions import (
     HYSPLITFailureError,
@@ -418,7 +418,8 @@ class HYSPLITDriver:
 
     def _resolved_kmsl(self) -> int:
         """Return ``KMSL`` for this receptor, raising if ``params.kmsl`` disagrees."""
-        receptor_kmsl = kmsl_from_vertical_reference(self.receptor.altitude_ref)
+        # HYSPLIT's KMSL: 0 for heights above ground, 1 above sea level.
+        receptor_kmsl = 1 if self.receptor.altitude_ref == "msl" else 0
         if self.params.kmsl is None:
             return receptor_kmsl
         if self.params.kmsl != receptor_kmsl:

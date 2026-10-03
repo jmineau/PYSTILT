@@ -8,6 +8,10 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- `VerticalReference` is `stilt.receptors.VerticalReference` (it was
+  `stilt.config.VerticalReference`), so `stilt.receptors` no longer
+  imports `stilt.config`. `stilt.config.kmsl_from_vertical_reference` is
+  removed; the HYSPLIT driver sets `KMSL` from the receptor itself.
 - **`Mesh.to_grid` replaces `Grid.from_geometry`** (breaking).
   `Grid.from_geometry(mesh, ...)` becomes `mesh.to_grid(...)`, with the same
   arguments. `Zones.to_grid` hands off to its base, and returns a grid base
