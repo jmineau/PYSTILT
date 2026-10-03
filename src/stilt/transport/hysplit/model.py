@@ -78,11 +78,11 @@ class HysplitModel:
             met_files=met.readable(source),
         )
         driver.prepare()
-        result = driver.execute(timeout=timeout)
+        particles = driver.execute(timeout=timeout)
         # The record names the source files; the crop settings are in the
         # run's settings.
         return ModelRun(
-            particles=add_release_heights(result.particles, receptor),
+            particles=add_release_heights(particles, receptor),
             met_files=source,
         )
 

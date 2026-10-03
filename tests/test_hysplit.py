@@ -270,8 +270,7 @@ def test_execute_discards_stale_particles_from_a_previous_run(
 
     result = runner.execute(timeout=5)
 
-    assert float(result.particles["foot"].iloc[0]) == pytest.approx(1e-5)
-    assert result.log_path == runner.log_path
+    assert float(result["foot"].iloc[0]) == pytest.approx(1e-5)
 
 
 def _fake_hysplit(runner, monkeypatch, *, log: str, last_minute: int) -> None:
@@ -322,7 +321,7 @@ def test_execute_keeps_a_run_that_reaches_the_end_past_a_damaged_met_file(
 
     result = runner.execute(timeout=5)
 
-    assert result.particles["time"].min() == -24 * 60
+    assert result["time"].min() == -24 * 60
 
 
 def test_execute_leaves_an_empty_particle_file_to_the_caller(
@@ -341,7 +340,7 @@ def test_execute_leaves_an_empty_particle_file_to_the_caller(
 
     result = runner.execute(timeout=5)
 
-    assert result.particles.empty
+    assert result.empty
 
 
 def test_execute_keeps_particles_that_left_the_met_domain(
@@ -352,7 +351,7 @@ def test_execute_keeps_particles_that_left_the_met_domain(
 
     result = runner.execute(timeout=5)
 
-    assert result.particles["time"].min() == -13 * 60
+    assert result["time"].min() == -13 * 60
 
 
 def test_terminate_process_escalates_when_group_kill_does_not_finish(
@@ -812,7 +811,7 @@ def test_perturbed_run_writes_winderr_and_winderrtf_once(
     assert runner.winderr_path.exists()
     assert not runner.zierr_path.exists()
     assert "winderrtf=1" in runner.setup_path.read_text().lower()
-    assert len(result.particles) == 1
+    assert len(result) == 1
 
 
 def test_unperturbed_run_removes_a_stale_winderr(tmp_path, point_receptor):

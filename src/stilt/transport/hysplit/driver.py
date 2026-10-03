@@ -7,7 +7,6 @@ import subprocess
 import tempfile
 import warnings
 from collections.abc import Sequence
-from dataclasses import dataclass
 from importlib.resources import files as pkg_files
 from pathlib import Path
 from typing import Any
@@ -97,24 +96,6 @@ def _read_particle_dat(path: Path, names: Sequence[str]) -> pd.DataFrame:
             f"from varsiwant={list(names)!r}."
         )
     return pd.DataFrame(values, columns=pd.Index(names))
-
-
-@dataclass
-class HYSPLITResult:
-    """
-    Output of one HYSPLIT run.
-
-    Attributes
-    ----------
-    particles : pandas.DataFrame
-        Particle table read from ``PARTICLE_STILT.DAT``, one column per
-        ``varsiwant`` variable.
-    log_path : Path
-        Log file holding the run's standard output.
-    """
-
-    particles: pd.DataFrame
-    log_path: Path
 
 
 # -- what each input file holds -----------------------------------------------
@@ -302,7 +283,7 @@ class HYSPLITDriver:
         self._write_winderr()
         self._write_zierr()
 
-    def execute(self, timeout: int | None = None) -> HYSPLITResult:
+    def execute(self, timeout: int | None = None) -> pd.DataFrame:
         """
         Run HYSPLIT once and read its particle output.
 
@@ -313,8 +294,9 @@ class HYSPLITDriver:
 
         Returns
         -------
-        HYSPLITResult
-            The particles and the log path.
+        pandas.DataFrame
+            The particles read from ``PARTICLE_STILT.DAT``, one column per
+            ``varsiwant`` variable. The run's log is at :attr:`log_path`.
 
         Raises
         ------
@@ -331,7 +313,7 @@ class HYSPLITDriver:
         log_start = self._run(timeout, label="hycs_std")
         particles = self._read_particles()
         self._check_met_reached_end(particles, log_start)
-        return HYSPLITResult(particles=particles, log_path=self.log_path)
+        return particles
 
     # -- Private helpers -------------------------------------------------------
 

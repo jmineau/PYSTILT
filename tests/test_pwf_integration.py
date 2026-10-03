@@ -67,9 +67,7 @@ def _column_trajectory(
     )
     driver.prepare()
     result = driver.execute(timeout=900)
-    return receptor, prepare(
-        add_release_heights(result.particles, receptor), receptor, params
-    )
+    return receptor, prepare(add_release_heights(result, receptor), receptor, params)
 
 
 @integration
