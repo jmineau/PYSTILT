@@ -117,18 +117,18 @@ so each geometry's weights are computed once per footprint grid.
    spatial.is_longlat
    spatial.horizontal_dims
 
-Flux fields
------------
+Sampling fields
+---------------
 
-:mod:`stilt.flux` looks up a surface flux field under a footprint (used by
-``foot.stilt.enhancement``) or along particle paths.
+:mod:`stilt.sampling` looks up a gridded field at points: a surface flux
+under a footprint or along particle paths (``foot.stilt.enhancement``,
+``particles.stilt.enhancement``), or a mole-fraction field at particle
+endpoints (:func:`stilt.observations.background`).
 
 .. autosummary::
    :toctree: _api
    :nosignatures:
 
-   flux.sample_flux
-   flux.sample_field
-   flux.vertical_dim
-   flux.particle_enhancement
-   flux.nearest_cell
+   sampling.sample_field
+   sampling.vertical_dim
+   sampling.nearest_cell

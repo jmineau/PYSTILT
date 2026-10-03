@@ -1,4 +1,4 @@
-"""Tests for stilt.flux and the footprint enhancement."""
+"""Tests for stilt.sampling and the enhancement of footprints and particles."""
 
 import numpy as np
 import pandas as pd
@@ -6,8 +6,9 @@ import pytest
 import xarray as xr
 
 from stilt.config import FootprintConfig, Grid
-from stilt.flux import horizontal_dims, particle_enhancement, sample_flux
 from stilt.footprint import _describe
+from stilt.sampling import sample_field
+from stilt.spatial import horizontal_dims
 
 
 def _flux(values=None, lons=(-112.0, -111.0, -110.0), lats=(40.0, 41.0)):
@@ -31,39 +32,50 @@ def test_horizontal_dims_lonlat_and_projected():
         horizontal_dims(xr.DataArray(np.zeros((2, 2)), dims=["a", "b"]))
 
 
-def test_sample_flux_nearest_cell_and_outside_is_zero():
+def test_sample_field_with_zero_fill_nearest_cell_and_outside_is_zero():
     flux = _flux()  # rows: lat 40 -> [0,1,2], lat 41 -> [3,4,5]
 
-    sampled = sample_flux(
+    sampled = sample_field(
         flux,
         x=[-112.0, -111.4, -110.6, -109.4, -112.6, -111.0],
         y=[40.0, 40.4, 40.6, 41.0, 40.0, 41.6],
+        fill_value=0.0,
     )
 
     # nearest centres: (-112,40)=0, (-111,40)=1, (-111,41)=4, outside east, outside west, outside north
     assert sampled.tolist() == [0.0, 1.0, 4.0, 0.0, 0.0, 0.0]
 
 
-def test_sample_flux_edges_extend_half_a_cell():
+def test_sample_field_with_zero_fill_edges_extend_half_a_cell():
     flux = _flux()
-    inside = sample_flux(flux, x=[-112.49, -109.51], y=[39.51, 41.49])
-    outside = sample_flux(flux, x=[-112.51, -109.49], y=[39.49, 41.51])
+    inside = sample_field(flux, x=[-112.49, -109.51], y=[39.51, 41.49], fill_value=0.0)
+    outside = sample_field(flux, x=[-112.51, -109.49], y=[39.49, 41.51], fill_value=0.0)
     assert inside.tolist() == [0.0, 5.0]
     assert outside.tolist() == [0.0, 0.0]
 
 
-def test_sample_flux_descending_latitude_axis():
+def test_sample_field_with_zero_fill_descending_latitude_axis():
     flux = _flux(values=np.array([[3.0, 4.0, 5.0], [0.0, 1.0, 2.0]]), lats=(41.0, 40.0))
-    assert sample_flux(flux, x=[-111.0, -111.0], y=[40.0, 41.0]).tolist() == [1.0, 4.0]
+    assert sample_field(
+        flux, x=[-111.0, -111.0], y=[40.0, 41.0], fill_value=0.0
+    ).tolist() == [1.0, 4.0]
 
 
-def test_sample_flux_nan_cells_count_as_zero():
+def test_sample_field_with_zero_fill_nan_cells_count_as_zero():
     values = np.arange(6, dtype=float).reshape(2, 3)
     values[0, 1] = np.nan
-    assert sample_flux(_flux(values), x=[-111.0], y=[40.0]).tolist() == [0.0]
+    assert sample_field(
+        _flux(values), x=[-111.0], y=[40.0], fill_value=0.0
+    ).tolist() == [0.0]
 
 
-def test_sample_flux_time_varying_uses_nearest_time():
+def test_sample_field_leaves_missing_cells_missing_by_default():
+    values = np.array([[np.nan, 1.0, 2.0], [3.0, 4.0, 5.0]])
+    sampled = sample_field(_flux(values), x=[-112.0, -111.0, -100.0], y=[40.0] * 3)
+    assert np.isnan(sampled[0]) and sampled[1] == 1.0 and np.isnan(sampled[2])
+
+
+def test_sample_field_with_zero_fill_time_varying_uses_nearest_time():
     times = pd.to_datetime(["2023-01-01 00:00", "2023-01-01 06:00"])
     flux = xr.DataArray(
         np.stack([np.full((2, 3), 1.0), np.full((2, 3), 10.0)]),
@@ -71,21 +83,22 @@ def test_sample_flux_time_varying_uses_nearest_time():
         coords={"time": times, "lat": [40.0, 41.0], "lon": [-112.0, -111.0, -110.0]},
     )
 
-    sampled = sample_flux(
+    sampled = sample_field(
         flux,
         x=[-111.0, -111.0, -111.0],
         y=[40.0, 40.0, 40.0],
         times=["2023-01-01 02:00", "2023-01-01 05:00", "2023-01-02 00:00"],
+        fill_value=0.0,
     )
 
     assert sampled.tolist() == [1.0, 10.0, 10.0]
     with pytest.raises(ValueError, match="pass times"):
-        sample_flux(flux, x=[-111.0], y=[40.0])
+        sample_field(flux, x=[-111.0], y=[40.0], fill_value=0.0)
 
 
-def test_sample_flux_rejects_mismatched_lengths():
+def test_sample_field_with_zero_fill_rejects_mismatched_lengths():
     with pytest.raises(ValueError, match="same length"):
-        sample_flux(_flux(), x=[0.0, 1.0], y=[0.0])
+        sample_field(_flux(), x=[0.0, 1.0], y=[0.0], fill_value=0.0)
 
 
 def _particles():
@@ -101,19 +114,19 @@ def _particles():
     )
 
 
-def test_particle_enhancement_sums_foot_times_flux_per_particle():
-    per_particle = particle_enhancement(_particles(), _flux())
+def test_particles_enhancement_sums_foot_times_flux_per_particle():
+    per_particle = _particles().stilt.enhancement(_flux())
 
     assert per_particle.index.tolist() == [1, 2, 3]
     assert per_particle.tolist() == [2.0 * 0 + 3.0 * 1, 1.0 * 5 + 0.0, 0.0]
     assert per_particle.name == "enhancement"
 
 
-def test_particle_enhancement_time_varying_needs_datetime():
+def test_particles_enhancement_time_varying_needs_datetime():
     flux = _flux().expand_dims(time=pd.to_datetime(["2023-01-01"]))
-    assert particle_enhancement(_particles(), flux).tolist() == [3.0, 5.0, 0.0]
+    assert _particles().stilt.enhancement(flux).tolist() == [3.0, 5.0, 0.0]
     with pytest.raises(ValueError, match="datetime"):
-        particle_enhancement(_particles().drop(columns="datetime"), flux)
+        _particles().drop(columns="datetime").stilt.enhancement(flux)
 
 
 def _footprint(point_receptor, values):

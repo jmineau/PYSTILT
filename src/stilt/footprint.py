@@ -1235,7 +1235,7 @@ class FootprintAccessor:
         Return the modelled enhancement at the receptor, footprint times flux summed over the grid.
 
         The flux is taken at each footprint cell centre from the nearest
-        flux cell (:func:`stilt.flux.sample_flux`). Regrid a flux with much
+        flux cell (:func:`stilt.sampling.sample_field`). Regrid a flux with much
         smaller cells than the footprint's before calling this.
 
         Parameters
@@ -1252,7 +1252,7 @@ class FootprintAccessor:
             Enhancement for each footprint time step. ``.sum()`` gives the
             total.
         """
-        from stilt.flux import sample_flux
+        from stilt.sampling import sample_field
 
         foot = self._foot
         y_dim, x_dim = foot.dims[-2], foot.dims[-1]
@@ -1262,14 +1262,20 @@ class FootprintAccessor:
         shape = yy.shape
         if "time" in flux.dims:
             layers = [
-                sample_flux(flux, xx.ravel(), yy.ravel(), np.full(xx.size, t)).reshape(
-                    shape
-                )
+                sample_field(
+                    flux,
+                    xx.ravel(),
+                    yy.ravel(),
+                    times=np.full(xx.size, t),
+                    fill_value=0.0,
+                ).reshape(shape)
                 for t in foot["time"].to_numpy()
             ]
             sampled = np.stack(layers)
         else:
-            sampled = sample_flux(flux, xx.ravel(), yy.ravel()).reshape(shape)[None]
+            sampled = sample_field(
+                flux, xx.ravel(), yy.ravel(), fill_value=0.0
+            ).reshape(shape)[None]
         values = (foot.to_numpy() * sampled).sum(axis=(1, 2))
         return xr.DataArray(
             values,

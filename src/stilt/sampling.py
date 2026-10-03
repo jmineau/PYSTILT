@@ -1,11 +1,14 @@
 """
-Sampling gridded fields, such as a surface flux, at points.
+Sampling gridded fields, such as a surface flux or a mole fraction, at points.
 
-A flux field is an :class:`xarray.DataArray` on a regular ``lat``/``lon``
-grid (``y``/``x`` for a projected footprint grid), with an optional ``time``
-dimension. Each point takes the value of the flux cell it falls in, and a
-point outside the field gets zero. PYSTILT does not convert units. A flux
-in µmol m⁻² s⁻¹ times a footprint in ppm per (µmol m⁻² s⁻¹) gives ppm.
+A field is an :class:`xarray.DataArray` on a regular ``lat``/``lon`` grid
+(``y``/``x`` for a projected footprint grid), with an optional vertical
+dimension and an optional ``time`` dimension. Each point takes the value of
+the cell it falls in. ``foot.stilt.enhancement`` and
+``particles.stilt.enhancement`` sample a surface flux this way, and
+:func:`stilt.observations.background` a mole-fraction field. PYSTILT does
+not convert units. A flux in µmol m⁻² s⁻¹ times a footprint in ppm per
+(µmol m⁻² s⁻¹) gives ppm.
 """
 
 from __future__ import annotations
@@ -40,7 +43,7 @@ def nearest_cell(coords: np.ndarray, values: np.ndarray) -> np.ndarray:
     """
     coords = np.asarray(coords, dtype=float)
     if coords.ndim != 1 or coords.size == 0:
-        raise ValueError("Flux coordinates must be a non-empty 1-D array.")
+        raise ValueError("Field coordinates must be a non-empty 1-D array.")
     ascending = coords[0] <= coords[-1]
     c = coords if ascending else coords[::-1]
     if c.size == 1:
@@ -81,14 +84,14 @@ def sample_field(
     y: ArrayLike,
     z: ArrayLike | None = None,
     times: ArrayLike | None = None,
+    fill_value: float = np.nan,
 ) -> np.ndarray:
     """
     Return the field's value in the cell nearest each point.
 
-    A point outside the field horizontally gives ``NaN``, since a missing
-    mole fraction is unknown rather than zero (:func:`sample_flux` fills
-    with zero instead). Longitudes are wrapped to the field's
-    convention (-180 to 180 or 0 to 360).
+    A point outside the field horizontally, or in a missing cell, gives
+    ``fill_value``. Longitudes are wrapped to the field's convention (-180
+    to 180 or 0 to 360).
 
     Parameters
     ----------
@@ -104,7 +107,12 @@ def sample_field(
         nearest level, so a point above the top level takes the top level.
     times : array-like, optional
         Time of each point. Required when the field has a ``time``
-        dimension. Matched to the nearest time.
+        dimension. Matched to the nearest time, so times outside the
+        field's span take the first or last step.
+    fill_value : float, default NaN
+        Value for points outside the field and for missing cells. Use 0 for
+        a surface flux, where no data means no emission. ``NaN`` suits a
+        mole fraction, which is unknown there.
 
     Returns
     -------
@@ -144,7 +152,7 @@ def sample_field(
         it = field.indexes["time"].get_indexer(stamps, method="nearest")
         indexers["time"] = xr.DataArray(it, dims="points")
     sampled = field.isel(indexers).to_numpy().astype(float)
-    return np.where(inside, sampled, np.nan)
+    return np.where(inside & ~np.isnan(sampled), sampled, fill_value)
 
 
 def _nearest_level(levels: xr.DataArray, z: np.ndarray) -> np.ndarray:
@@ -155,89 +163,8 @@ def _nearest_level(levels: xr.DataArray, z: np.ndarray) -> np.ndarray:
     return np.abs(coords[None, :] - z[:, None]).argmin(axis=1)
 
 
-def sample_flux(
-    flux: xr.DataArray,
-    x: ArrayLike,
-    y: ArrayLike,
-    times: ArrayLike | None = None,
-) -> np.ndarray:
-    """
-    Return the flux at each point, or zero outside the field.
-
-    :func:`sample_field` with missing values, and points outside the field,
-    counted as zero flux.
-
-    Parameters
-    ----------
-    flux : xarray.DataArray
-        Flux on a ``lat``/``lon`` or ``y``/``x`` grid, with an optional
-        ``time`` dimension.
-    x, y : array-like
-        Point coordinates, longitude and latitude for a ``lat``/``lon``
-        field.
-    times : array-like, optional
-        Time of each point. Required when *flux* has a ``time`` dimension.
-        Each point takes the nearest time step, so times outside the
-        field's span take the first or last one.
-
-    Returns
-    -------
-    numpy.ndarray
-        Flux at each point, in the flux's units.
-    """
-    return np.nan_to_num(sample_field(flux, x, y, times=times), nan=0.0)
-
-
-def particle_enhancement(particles: pd.DataFrame, flux: xr.DataArray) -> pd.Series:
-    """
-    Return each particle's enhancement, ``foot`` times flux summed along its trajectory.
-
-    The mean over particles, after any weighting, is the modelled
-    enhancement at the receptor. Unlike ``foot.stilt.enhancement``,
-    the flux is taken at each particle position, with no gridding or
-    smoothing.
-
-    Parameters
-    ----------
-    particles : pandas.DataFrame
-        Particle table with ``indx``, ``long``, ``lati``, and ``foot``
-        columns, and ``datetime`` when the flux varies in time.
-    flux : xarray.DataArray
-        Surface flux field. See :func:`sample_flux`.
-
-    Returns
-    -------
-    pandas.Series
-        Enhancement indexed by ``indx``, in the flux's units times the
-        footprint's. A particle that never crosses the flux field gets 0.
-
-    Raises
-    ------
-    ValueError
-        If the flux varies in time and the particles have no ``datetime``
-        column.
-    """
-    times = (
-        particles["datetime"].to_numpy() if "datetime" in particles.columns else None
-    )
-    if "time" in flux.dims and times is None:
-        raise ValueError(
-            "flux varies in time but the particles have no 'datetime' column."
-        )
-    sampled = sample_flux(
-        flux, particles["long"].to_numpy(), particles["lati"].to_numpy(), times
-    )
-    contribution = particles["foot"].to_numpy(dtype=float) * sampled
-    indx = particles["indx"].to_numpy()
-    unique, inverse = np.unique(indx, return_inverse=True)
-    sums = np.bincount(inverse, weights=contribution, minlength=unique.size)
-    return pd.Series(sums, index=pd.Index(unique, name="indx"), name="enhancement")
-
-
 __all__ = [
     "nearest_cell",
-    "particle_enhancement",
     "sample_field",
-    "sample_flux",
     "vertical_dim",
 ]

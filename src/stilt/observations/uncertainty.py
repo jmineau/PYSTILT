@@ -30,7 +30,6 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
-from stilt.flux import particle_enhancement
 from stilt.observations import backgrounds
 from stilt.transforms import TransformContext, apply_transforms, release_coordinate
 
@@ -299,7 +298,7 @@ def transport_error(
         list of them for a variant with ``realizations: N``, such as
         ``[rows for _, rows in ensemble.load_particles().groupby("variant")]``.
     flux : xarray.DataArray
-        Surface flux field (see :mod:`stilt.flux`).
+        Surface flux field (see ``particles.stilt.enhancement``).
     transforms : sequence, optional
         The footprint's particle transforms (``sim.variant.footprint.transforms``),
         applied to both tables so the error is weighted like the footprint.
@@ -382,7 +381,7 @@ def transport_error(
     ) -> tuple[pd.Series, pd.Series, float]:
         """Return the modeled value and release height per particle, and the background."""
         weighted = apply_transforms(table, transforms, context) if transforms else table
-        x = particle_enhancement(weighted, flux)
+        x = weighted.stilt.enhancement(flux)
         if background is None:
             return x, _release_heights(weighted), 0.0
         bg = backgrounds.background(

@@ -55,7 +55,7 @@ the ones that have an equivalent.
        becomes one more variant.
    * - Modelled enhancement from an inventory (``ff.trajfoot``)
      - ``error_functions/``, ``run.xco2ff.sim``
-     - ``foot.stilt.enhancement``, :func:`stilt.flux.particle_enhancement`
+     - ``foot.stilt.enhancement``, ``particles.stilt.enhancement``
    * - Wind error statistics from radiosondes and surface stations
      - ``get.uverr``, ``get.siguverr``, ``cal.wind.err``, ``grab.raob``
      - :func:`~stilt.observations.variogram` and

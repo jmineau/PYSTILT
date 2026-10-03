@@ -8,6 +8,14 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **`stilt.flux` is `stilt.sampling`** (breaking for module imports). It
+  samples any gridded field at points, a surface flux or a mole fraction.
+  `sample_flux(flux, x, y, times)` is `sample_field(flux, x, y,
+  times=times, fill_value=0.0)`. `fill_value` is the value for points
+  outside the field and for missing cells, `NaN` by default.
+  `particle_enhancement(particles, flux)` is
+  `particles.stilt.enhancement(flux)`, the per-particle twin of
+  `foot.stilt.enhancement(flux)`.
 - `VerticalReference` is `stilt.receptors.VerticalReference` (it was
   `stilt.config.VerticalReference`), so `stilt.receptors` no longer
   imports `stilt.config`. `stilt.config.kmsl_from_vertical_reference` is
