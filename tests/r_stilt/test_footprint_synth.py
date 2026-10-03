@@ -39,11 +39,11 @@ import xarray as xr
 from stilt.config import FootprintConfig, Grid
 from stilt.exceptions import EmptyFootprint
 from stilt.footprint import (
-    _build_buffered_grid,
     _compute_kernel_bandwidths,
     _filter_and_rasterize_particles,
     _interpolate_early_timesteps,
     _make_gauss_kernel,
+    _padded_axes,
     _project_particles_to_crs,
     _wrap_antimeridian_longitudes,
     calculate,
@@ -273,18 +273,23 @@ def _py_footprint_stages(
         if len(w) > 0
         else np.array([[1.0]])
     )
-    buffered = _build_buffered_grid(
+    xbuf, ybuf = max_kernel.shape
+    glong_buf, glati_buf = _padded_axes(
         xmin=xmin,
         ymin=ymin,
         xres=xres,
         yres=yres,
         n_lon=len(glong),
         n_lat=len(glati),
-        max_kernel=max_kernel,
+        xbuf=xbuf,
+        ybuf=ybuf,
     )
     raster, _ = _filter_and_rasterize_particles(
         p_with_rtime,
-        buffered=buffered,
+        glong_buf=glong_buf,
+        glati_buf=glati_buf,
+        xbufh=(xbuf - 1) // 2,
+        ybufh=(ybuf - 1) // 2,
         xmin=xmin,
         xmax=xmax,
         ymin=ymin,
