@@ -8,6 +8,11 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- `stilt.receptors` is a package: `models` (the receptor types and their
+  ids), `table` (the receptor table and CSV files), and `validation` (the
+  checks a receptor must pass, now written once and shared by the models
+  and the table). Everything `stilt.receptors` exported is still exported
+  from it.
 - `Mesh`, `Zones`, `Geometry`, `overlap_weights`, and `check_resolution` are
   in `stilt.footprint` (module `stilt.footprint.targets`), since only
   footprints are summed onto them. `stilt.Mesh`, `stilt.Zones`, and

@@ -113,9 +113,13 @@ src/stilt/
                      and reading many files at once; Jacobian assembly
   simulation.py      Simulation, SimID: a frozen value (receptor, variant, output)
                      that knows where its results are and whether they exist
-  receptors.py       receptor types (frozen pydantic models: point, column,
-                     multipoint), their ids, and the receptor table behind
-                     the CSV reader, writer, and appender
+  receptors/         receptors and receptors.csv
+    models.py        receptor types (frozen pydantic models: point, column,
+                     multipoint), their times, and their ids
+    table.py         the receptor table (`receptor_rows`) behind the CSV
+                     reader, writer, and appender
+    validation.py    the checks a receptor must pass, written once for many
+                     points and shared by the models and the table
   particles.py       the particle table (a DataFrame): prepare, read, and write
                      particle files; the `.stilt` pandas accessor (endpoints,
                      enhancement from a flux field)

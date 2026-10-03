@@ -31,8 +31,6 @@ from stilt.meteorology import Met
 from stilt.output import Footprints, Output
 from stilt.particles import particles_from_table
 from stilt.receptors import (
-    COLUMNS,
-    ROW_COLUMNS,
     Receptor,
     append_receptors_csv,
     check_distinct_ids,
@@ -42,6 +40,7 @@ from stilt.receptors import (
     receptor_rows,
     receptors_to_csv,
 )
+from stilt.receptors.table import COLUMNS, ROW_COLUMNS
 from stilt.simulation import SimID, Simulation
 from stilt.transforms import TransformContext
 
