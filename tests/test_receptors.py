@@ -1040,7 +1040,7 @@ def test_receptor_rows_ids_match_the_receptors(
     point_receptor, column_receptor, multipoint_receptor
 ):
     """The table's ids come from the same rules as receptor.id, for every kind."""
-    from stilt.receptors import receptor_from_rows, receptor_rows, receptors_to_frame
+    from stilt.receptors import receptor_rows, receptors_from_rows, receptors_to_frame
 
     sub_metre = MultiPointReceptor(
         time="2023-01-01 13:00",
@@ -1073,8 +1073,7 @@ def test_receptor_rows_ids_match_the_receptors(
         "column",
     ]
     assert first["location"].tolist() == [r.location_id for r in receptors]
-    for r in receptors:
-        assert receptor_from_rows(rows[rows.receptor == r.id]) == r
+    assert receptors_from_rows(rows) == receptors
 
 
 def test_receptor_rows_column_id_does_not_depend_on_row_order():
@@ -1131,3 +1130,28 @@ def test_a_receptor_listed_twice_is_kept_once(point_receptor):
     rows = receptor_rows(receptors_to_frame([point_receptor, point_receptor]))
 
     assert rows["receptor"].tolist() == [point_receptor.id]
+
+
+def test_receptors_from_checked_rows_are_not_checked_again(
+    monkeypatch, point_receptor, column_receptor, multipoint_receptor
+):
+    """The table runs a receptor's checks once; building from its rows skips them."""
+    import stilt.receptors.models as models
+    from stilt.receptors import receptor_rows, receptors_from_rows, receptors_to_frame
+
+    receptors = [point_receptor, column_receptor, multipoint_receptor]
+    rows = receptor_rows(receptors_to_frame(receptors))
+
+    def refuse(*args, **kwargs):
+        raise AssertionError("a checked row was checked again")
+
+    monkeypatch.setattr(models, "point_errors", refuse)
+    built = receptors_from_rows(rows)
+
+    assert built == receptors
+    assert [r.id for r in built] == [r.id for r in receptors]
+    assert [r.geometry.geom_type for r in built] == [
+        "Point",
+        "LineString",
+        "MultiPoint",
+    ]

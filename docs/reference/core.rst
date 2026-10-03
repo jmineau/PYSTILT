@@ -30,7 +30,7 @@ Receptor objects
    receptors.receptors_to_frame
    receptors.receptors_from_frame
    receptors.receptor_rows
-   receptors.receptor_from_rows
+   receptors.receptors_from_rows
    receptors.read_receptor_frame
    receptors.parse_receptor_id
 

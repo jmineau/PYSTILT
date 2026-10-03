@@ -130,8 +130,10 @@ src/stilt/
   receptors/         receptors and receptors.csv
     models.py        receptor types (frozen pydantic models: point, column,
                      multipoint), their times, and their ids
-    table.py         the receptor table (`receptor_rows`) behind the CSV
-                     reader, writer, and appender
+    table.py         the receptor table behind the CSV reader, writer, and
+                     appender: `receptor_rows` checks it once, and
+                     `receptors_from_rows` builds receptors from checked rows
+                     without checking them again
     validation.py    the checks a receptor must pass, written once for many
                      points and shared by the models and the table
   particles.py       the particle table (a DataFrame): prepare, read, and write

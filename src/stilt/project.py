@@ -37,8 +37,8 @@ from stilt.receptors import (
     check_distinct_ids,
     read_receptor_frame,
     read_receptors,
-    receptor_from_rows,
     receptor_rows,
+    receptors_from_rows,
     receptors_to_csv,
 )
 from stilt.receptors.table import COLUMNS, ROW_COLUMNS
@@ -267,14 +267,9 @@ class Project:
 
     @cached_property
     def _positions(self) -> dict[str, np.ndarray]:
-        """The positions of each receptor's rows in :attr:`_rows`, by id, in file order."""
+        """Where each receptor's rows are in :attr:`_rows`, by id, so :meth:`receptor` need not search."""
         groups = self._rows.groupby("receptor", sort=False).indices
         return {str(rid): positions for rid, positions in groups.items()}
-
-    @cached_property
-    def _built(self) -> dict[str, Receptor]:
-        """The receptors built so far, by id."""
-        return {}
 
     @cached_property
     def receptors(self) -> pd.DataFrame:
@@ -294,21 +289,17 @@ class Project:
 
     def receptor(self, receptor_id: str) -> Receptor:
         """
-        Return one receptor by id, built from its rows on first use.
+        Return one receptor by id, built from its rows.
 
         Raises
         ------
         KeyError
             If the project has no receptor with that id.
         """
-        built = self._built.get(receptor_id)
-        if built is None:
-            positions = self._positions.get(receptor_id)
-            if positions is None:
-                raise KeyError(f"No receptor {receptor_id!r} in {self.directory}.")
-            built = receptor_from_rows(self._rows.iloc[positions])
-            self._built[receptor_id] = built
-        return built
+        positions = self._positions.get(receptor_id)
+        if positions is None:
+            raise KeyError(f"No receptor {receptor_id!r} in {self.directory}.")
+        return receptors_from_rows(self._rows.iloc[positions])[0]
 
     def add_receptors(
         self, receptors: Receptor | Iterable[Receptor] | str | Path
@@ -342,8 +333,8 @@ class Project:
                 self.receptors_path.write_text(append_receptors_csv(text, new))
             else:
                 self.receptors_path.write_text(receptors_to_csv(new))
-            # The views below were read from the file that just changed.
-            for name in ("_rows", "_positions", "_built", "receptors", "simulations"):
+            # These were read from the file that just changed.
+            for name in ("_rows", "_positions", "receptors", "simulations"):
                 vars(self).pop(name, None)
         return [r.id for r in new]
 

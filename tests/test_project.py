@@ -890,18 +890,28 @@ def test_run_on_slurm_submits_and_waits(tmp_path, monkeypatch, point_receptor):
     assert submitted[0]["execution"].backend == "slurm"
 
 
-def test_receptors_are_built_only_when_asked_for(tmp_path):
+def test_receptors_are_built_only_when_asked_for(tmp_path, monkeypatch):
+    import stilt.project
+
     a, b = _receptor(12, site="WBB"), _receptor(13, site="UOU")
     _project(tmp_path, [a, b])
     project = Project(tmp_path / "proj")
+    built = []
+    build = stilt.project.receptors_from_rows
+
+    def counting(rows):
+        receptors = build(rows)
+        built.extend(r.id for r in receptors)
+        return receptors
+
+    monkeypatch.setattr(stilt.project, "receptors_from_rows", counting)
 
     assert len(project.receptors) == 2
     project.simulations.status()
-    assert project._built == {}  # listing, selecting, and status build nothing
+    assert built == []  # listing, selecting, and status build nothing
 
     assert project.receptor(b.id) == b
-    assert list(project._built) == [b.id]
-    assert project.receptor(b.id) is project.receptor(b.id)
+    assert built == [b.id]
 
 
 def test_a_bad_receptors_file_fails_when_the_project_is_read(tmp_path):
