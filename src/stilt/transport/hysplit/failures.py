@@ -43,6 +43,14 @@ FAILURE_PHRASES: dict[str, FailureReason] = {
 MET_TRUNCATED_WARNING = "Only one time period of meteo data"
 
 
+def failure_in(text: str) -> FailureReason | None:
+    """Return the reason for the first known failure message in *text*, in the order of :data:`FAILURE_PHRASES`, or ``None``."""
+    for phrase, reason in FAILURE_PHRASES.items():
+        if phrase in text:
+            return reason
+    return None
+
+
 def identify_failure_reason(path: str | Path) -> FailureReason:
     """
     Return why a simulation failed, from the messages in its log.
@@ -63,8 +71,4 @@ def identify_failure_reason(path: str | Path) -> FailureReason:
         log = log / "stilt.log"
     if not log.exists():
         return FailureReason.EMPTY_LOG
-    text = log.read_text()
-    for phrase, reason in FAILURE_PHRASES.items():
-        if phrase in text:
-            return reason
-    return FailureReason.UNKNOWN
+    return failure_in(log.read_text()) or FailureReason.UNKNOWN
