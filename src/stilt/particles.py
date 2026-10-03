@@ -4,9 +4,8 @@ from __future__ import annotations
 
 import json
 import logging
-import warnings
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, NamedTuple, cast
+from typing import TYPE_CHECKING, Any, NamedTuple
 
 import numpy as np
 import pandas as pd
@@ -16,8 +15,6 @@ import pyarrow.parquet as pq
 from stilt._atomic import write_parquet
 from stilt.config import TransportParams
 from stilt.receptors import (
-    ColumnReceptor,
-    MultiPointReceptor,
     PointReceptor,
     Receptor,
     parse_receptor_id,
@@ -34,73 +31,6 @@ if TYPE_CHECKING:
 # 200-600 m in the first minute, by an amount that varied with height. At
 # 1000 m spacing the release height was recovered to about 15 m, and at 300 m
 # it was off by about 190 m.
-_MIN_RELIABLE_SPACING_M = 1000.0
-
-
-def _multipoint_release_heights(
-    p: pd.DataFrame, receptor: MultiPointReceptor
-) -> pd.Series:
-    """
-    Return each row's release altitude for a multipoint receptor.
-
-    HYSPLIT does not record which starting location a particle came from.
-    It is recovered from each particle's row nearest the release time:
-
-    1. If the HYSPLIT build writes release-time (``t = 0``) rows, match the
-       nearest release point horizontally. Nothing has moved yet, so this
-       is exact.
-    2. Otherwise the first row is one time step after release. Height
-       drifts about 30 times less than horizontal position over that step,
-       so when all release heights differ (as in a slanted column), match
-       on height.
-    3. Otherwise match on horizontal position, and warn when the release
-       points are too close together for that to be reliable.
-    """
-    first = (
-        p.assign(_age=p["time"].abs())
-        .sort_values("_age", kind="stable")
-        .drop_duplicates(subset="indx")
-    )
-    lons = np.asarray(receptor.longitudes, dtype=float)
-    lats = np.asarray(receptor.latitudes, dtype=float)
-    alts = np.asarray(receptor.altitudes, dtype=float)
-    has_t0 = bool((first["_age"] == 0).all())
-
-    # Height of each particle in the receptor's own vertical reference.
-    height = None
-    if "zagl" in first.columns:
-        if receptor.altitude_ref == "agl":
-            height = first["zagl"].to_numpy(dtype=float)
-        elif "zsfc" in first.columns:
-            height = (first["zagl"] + first["zsfc"]).to_numpy(dtype=float)
-
-    if not has_t0 and height is not None and len(np.unique(alts)) == len(alts):
-        nearest = np.argmin(np.abs(height[:, None] - alts[None, :]), axis=1)
-    else:
-        xy = first[["long", "lati"]].to_numpy(dtype=float)
-        pts = np.column_stack((lons, lats))
-        nearest = np.argmin(
-            np.sum((xy[:, None, :] - pts[None, :, :]) ** 2, axis=2), axis=1
-        )
-        if not has_t0 and len(alts) > 1:
-            x = lons * np.cos(np.radians(lats.mean())) * 111_320.0
-            y = lats * 111_320.0
-            gaps = np.hypot(x[:, None] - x[None, :], y[:, None] - y[None, :])
-            spacing = float(gaps[np.triu_indices(len(alts), k=1)].min())
-            if spacing < _MIN_RELIABLE_SPACING_M:
-                warnings.warn(
-                    f"MultiPointReceptor release points are as close as "
-                    f"{spacing:.0f} m and cannot be separated by altitude, and this "
-                    "HYSPLIT build writes no t=0 row, so particles cannot be "
-                    "reliably matched to their release points; 'xhgt' may be wrong. "
-                    "Use a HYSPLIT build that writes release-time rows "
-                    "(TransportParams.exe_dir) or space the points more than "
-                    f"{_MIN_RELIABLE_SPACING_M:.0f} m apart.",
-                    stacklevel=3,
-                )
-
-    mapping = dict(zip(first["indx"].to_numpy(), alts[nearest], strict=True))
-    return cast(pd.Series, p["indx"]).map(mapping.get)
 
 
 def _stored_params(stored: dict[str, Any], path: str | Path) -> TransportParams:
@@ -131,17 +61,18 @@ def prepare(
     raw: pd.DataFrame, receptor: Receptor, params: TransportParams
 ) -> pd.DataFrame:
     """
-    Return HYSPLIT's particle output as the particle table PYSTILT keeps.
+    Return a transport model's particle output as the particle table PYSTILT keeps.
 
-    Adds the release height ``xhgt`` for column and multipoint receptors,
-    applies the near-field plume dilution correction when
+    Applies the near-field plume dilution correction when
     ``params.hnf_plume`` is set (:func:`calc_plume_dilution`), and adds a
-    ``datetime`` column from ``time``.
+    ``datetime`` column from ``time``. The transport model has already
+    added each particle's release height ``xhgt`` for a column or
+    multipoint receptor.
 
     Parameters
     ----------
     raw : pandas.DataFrame
-        Particle table read from ``PARTICLE_STILT.DAT``.
+        Particles as the transport model returns them.
     receptor : Receptor
         Receptor the particles were released from.
     params : TransportParams
@@ -153,14 +84,6 @@ def prepare(
         One row per particle per output step.
     """
     p = raw.copy()
-    numpar = int(p["indx"].max())  # type: ignore[arg-type]
-
-    if isinstance(receptor, ColumnReceptor):
-        xhgt_step = (receptor.top - receptor.bottom) / numpar
-        p["xhgt"] = (p["indx"] - 0.5) * xhgt_step + receptor.bottom
-    elif isinstance(receptor, MultiPointReceptor):
-        p["xhgt"] = _multipoint_release_heights(p, receptor)
-
     if params.hnf_plume:
         r_zagl = receptor.altitude if isinstance(receptor, PointReceptor) else None
         p = calc_plume_dilution(p, r_zagl, params.veght)

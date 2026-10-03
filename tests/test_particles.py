@@ -17,6 +17,7 @@ from stilt.particles import (
     write_particles,
 )
 from stilt.receptors import ColumnReceptor, MultiPointReceptor, PointReceptor
+from stilt.transport.hysplit.release import add_release_heights
 
 
 def _particles_basic() -> pd.DataFrame:
@@ -71,7 +72,9 @@ def _params(tmp_path, hnf_plume=False) -> TransportParams:
 
 def test_prepare_adds_datetime(point_receptor, tmp_path):
     traj = prepare(
-        _particles_basic(), point_receptor, _params(tmp_path, hnf_plume=False)
+        add_release_heights(_particles_basic(), point_receptor),
+        point_receptor,
+        _params(tmp_path, hnf_plume=False),
     )
 
     assert "datetime" in traj.columns
@@ -93,7 +96,9 @@ def test_parquet_roundtrip_preserves_naive_utc_from_tz_aware_receptor(tmp_path):
     assert aware_receptor.time.tzinfo is None
 
     traj = prepare(
-        _particles_basic(), aware_receptor, _params(tmp_path, hnf_plume=False)
+        add_release_heights(_particles_basic(), aware_receptor),
+        aware_receptor,
+        _params(tmp_path, hnf_plume=False),
     )
     assert traj["datetime"].dt.tz is None
 
@@ -115,7 +120,9 @@ def test_parquet_roundtrip_preserves_naive_utc_from_tz_aware_receptor(tmp_path):
 def test_write_and_read_particles_round_trip(point_receptor, tmp_path):
     """A particle file holds everything needed to read it back."""
     params = _params(tmp_path, hnf_plume=False)
-    traj = prepare(_particles_basic(), point_receptor, params)
+    traj = prepare(
+        add_release_heights(_particles_basic(), point_receptor), point_receptor, params
+    )
     path = tmp_path / "traj.parquet"
     write_particles(path, traj, point_receptor, params, [Path("/tmp/met1")])
 
@@ -131,7 +138,9 @@ def test_write_and_read_particles_round_trip(point_receptor, tmp_path):
 
 def test_write_particles_is_atomic_on_failure(point_receptor, tmp_path, monkeypatch):
     params = _params(tmp_path, hnf_plume=False)
-    traj = prepare(_particles_basic(), point_receptor, params)
+    traj = prepare(
+        add_release_heights(_particles_basic(), point_receptor), point_receptor, params
+    )
     path = tmp_path / "traj.parquet"
     tmp = path.with_suffix(".parquet.tmp")
 
@@ -181,7 +190,11 @@ def test_calc_plume_dilution_grows_outward_from_release_when_forward():
 
 def test_prepare_column_receptor_assigns_xhgt(column_receptor, tmp_path):
     particles = _particles_basic().assign(indx=[1, 2])
-    traj = prepare(particles, column_receptor, _params(tmp_path, hnf_plume=False))
+    traj = prepare(
+        add_release_heights(particles, column_receptor),
+        column_receptor,
+        _params(tmp_path, hnf_plume=False),
+    )
     assert "xhgt" in traj.columns
     assert traj["xhgt"].tolist() == pytest.approx([16.25, 38.75])
 
@@ -200,7 +213,9 @@ def test_prepare_column_receptor_spans_column_monotonically(tmp_path):
         lats=[40.77] * 12,
     )
     traj = prepare(
-        particles, receptor, TransportParams(n_hours=-24, numpar=12, hnf_plume=False)
+        add_release_heights(particles, receptor),
+        receptor,
+        TransportParams(n_hours=-24, numpar=12, hnf_plume=False),
     )
 
     expected = [
@@ -266,7 +281,9 @@ def test_prepare_multipoint_receptor_assigns_xhgt_from_release_locations(
         ],
     )
     traj = prepare(
-        particles, receptor, TransportParams(n_hours=-24, numpar=12, hnf_plume=False)
+        add_release_heights(particles, receptor),
+        receptor,
+        TransportParams(n_hours=-24, numpar=12, hnf_plume=False),
     )
 
     assert "xhgt" in traj.columns
@@ -326,7 +343,9 @@ def test_prepare_multipoint_nondivisible_particle_blocks_follow_release_location
         zagl=[98.0, 104.0, 91.0, 110.0, 512.0, 489.0, 503.0, 497.0, 880.0, 905.0],
     )
     traj = prepare(
-        particles, receptor, TransportParams(n_hours=-24, numpar=10, hnf_plume=False)
+        add_release_heights(particles, receptor),
+        receptor,
+        TransportParams(n_hours=-24, numpar=10, hnf_plume=False),
     )
 
     assert traj["xhgt"].tolist() == pytest.approx(
@@ -358,7 +377,7 @@ def _slant(spacing_deg: float = 0.002, n: int = 4, **kwargs) -> MultiPointRecept
 
 def _prepare(particles, receptor):
     return prepare(
-        particles,
+        add_release_heights(particles, receptor),
         receptor,
         TransportParams(n_hours=-24, numpar=len(particles), hnf_plume=False),
     )
@@ -504,7 +523,9 @@ def test_multipoint_release_time_rows_silence_the_warning(recwarn):
 def test_prepare_with_hnf_plume(point_receptor, tmp_path):
     """hnf_plume=True runs plume-dilution correction and adds reference column."""
     traj = prepare(
-        _particles_basic(), point_receptor, _params(tmp_path, hnf_plume=True)
+        add_release_heights(_particles_basic(), point_receptor),
+        point_receptor,
+        _params(tmp_path, hnf_plume=True),
     )
     assert "foot_no_hnf_dilution" in traj.columns
 
@@ -524,7 +545,9 @@ def test_footprint_calculate_from_trajectory(point_receptor, tmp_path):
     from stilt.footprint import calculate
 
     traj = prepare(
-        _particles_basic(), point_receptor, _params(tmp_path, hnf_plume=False)
+        add_release_heights(_particles_basic(), point_receptor),
+        point_receptor,
+        _params(tmp_path, hnf_plume=False),
     )
     config = FootprintConfig(
         grid=Grid(xmin=-115.0, xmax=-110.0, ymin=38.0, ymax=43.0, xres=0.1, yres=0.1)
@@ -557,7 +580,11 @@ def test_endpoints_returns_far_end_per_particle(point_receptor, tmp_path):
     """
     endpoints() returns one row per particle at its largest-|time| row, with no
     duration filtering: a particle that left the domain early is a real endpoint."""
-    particles = prepare(_particles_two_lengths(), point_receptor, _params(tmp_path))
+    particles = prepare(
+        add_release_heights(_particles_two_lengths(), point_receptor),
+        point_receptor,
+        _params(tmp_path),
+    )
 
     ep = particles.stilt.endpoints().sort_values("indx").reset_index(drop=True)
     assert list(ep.columns) == list(particles.columns)
@@ -593,7 +620,9 @@ def test_calculate_regenerates_a_footprint_on_a_new_grid(tmp_path):
         time="2023-01-01 12:00:00", longitude=-113.5, latitude=39.5, altitude=5.0
     )
     traj = prepare(
-        particles, receptor, TransportParams(n_hours=-2, numpar=n, hnf_plume=False)
+        add_release_heights(particles, receptor),
+        receptor,
+        TransportParams(n_hours=-2, numpar=n, hnf_plume=False),
     )
     config = FootprintConfig(
         grid=Grid(xmin=-114.0, xmax=-113.0, ymin=39.0, ymax=40.0, xres=0.1, yres=0.1)
@@ -621,7 +650,11 @@ def test_metadata_skips_stored_params_this_version_does_not_have(
     point_receptor, tmp_path
 ):
     """Files written before a setting was removed still load (#44)."""
-    traj = prepare(_particles_basic(), point_receptor, _params(tmp_path))
+    traj = prepare(
+        add_release_heights(_particles_basic(), point_receptor),
+        point_receptor,
+        _params(tmp_path),
+    )
     path = tmp_path / "traj.parquet"
     write_particles(path, traj, point_receptor, _params(tmp_path), [])
     table = pq.read_table(path)

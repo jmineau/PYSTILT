@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 from stilt.transport import ModelRun
 
 from .driver import HYSPLITDriver
+from .release import add_release_heights
 
 if TYPE_CHECKING:
     from stilt.config import TransportParams
@@ -80,7 +81,10 @@ class HysplitModel:
         result = driver.execute(timeout=timeout)
         # The record names the source files; the crop settings are in the
         # run's settings.
-        return ModelRun(particles=result.particles, met_files=source)
+        return ModelRun(
+            particles=add_release_heights(result.particles, receptor),
+            met_files=source,
+        )
 
 
 __all__ = ["HysplitModel", "hysplit_version"]
