@@ -31,7 +31,7 @@ Start from :class:`Output` and a resolved variant (``project.variants``)::
 
     out = Output("output")
     particles = out.particles(variant)
-    particles.write(receptor, frame, variant.transport, met_files)
+    particles.write(receptor, frame, met_files)
     feet = out.footprints(variant)
     feet.write(footprint)
     H = feet.jacobian(target, time_bins)
@@ -74,7 +74,6 @@ from stilt.identity import (
 )
 from stilt.particles import read_particles, write_particles
 from stilt.receptors import Receptor, parse_receptor_id
-from stilt.transport import TransportConfig
 
 if TYPE_CHECKING:
     from stilt.variants import Variant
@@ -394,24 +393,22 @@ class Particles:
         self,
         receptor: Receptor,
         particles: pd.DataFrame,
-        params: TransportConfig,
         met_files: list[Path],
     ) -> Path:
         """
         Write a receptor's particles (:func:`stilt.write_particles`).
 
-        The file also records this folder's settings hash, its transport
-        model, and the PYSTILT version.
+        The file records this folder's settings, so it reads alone, and the
+        folder's settings hash and the PYSTILT version.
         """
         return write_particles(
             self.file(str(receptor.id)),
             particles,
             receptor,
-            params,
+            self.settings,
             met_files,
             metadata={
                 b"stilt:hash": self.hash.encode(),
-                b"stilt:model": str(self.settings["model"]["name"]).encode(),
                 b"stilt:pystilt": _pystilt_version().encode(),
             },
         )

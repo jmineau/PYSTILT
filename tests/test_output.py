@@ -52,10 +52,6 @@ def _receptor(hour: int = 12, day: int = 15) -> PointReceptor:
     )
 
 
-#: Transport settings recorded in the test particle files.
-PARAMS = HysplitConfig(n_hours=-24, numpar=50)
-
-
 def _trajectories(receptor: PointReceptor, n: int = 50) -> pd.DataFrame:
     rng = np.random.default_rng(int(receptor.time.timestamp()) % 1000)
     steps = np.arange(-1, -11, -1, dtype=float)
@@ -179,7 +175,7 @@ def test_particles_round_trip_in_date_folders(tmp_path):
     run = Output(tmp_path / "output").particles(VARIANT)
     receptor = _receptor()
     traj = _trajectories(receptor)
-    path = run.write(receptor, traj, PARAMS, [])
+    path = run.write(receptor, traj, [])
     assert path == run.path / "date=2024-07-15" / f"{receptor.id}.parquet"
     assert run.has(str(receptor.id))
     assert run.receptors() == [str(receptor.id)]
@@ -187,7 +183,7 @@ def test_particles_round_trip_in_date_folders(tmp_path):
     back = run.read(str(receptor.id))
     meta = particles_metadata(path)
     assert meta.receptor == receptor
-    assert meta.params == PARAMS
+    assert meta.settings == run.settings
     pd.testing.assert_frame_equal(
         back[traj.columns], traj, check_dtype=True, check_like=True
     )
@@ -199,7 +195,7 @@ def test_particles_store_time_and_index_as_int32(tmp_path):
     run = Output(tmp_path / "output").particles(VARIANT)
     receptor = _receptor()
     traj = _trajectories(receptor)
-    path = run.write(receptor, traj, PARAMS, [])
+    path = run.write(receptor, traj, [])
     schema = pq.read_schema(path)
     assert str(schema.field("time").type) == "int32"
     assert str(schema.field("indx").type) == "int32"
@@ -214,7 +210,7 @@ def test_particle_files_name_their_receptor_in_a_column(tmp_path):
     run = Output(tmp_path / "output").particles(VARIANT)
     receptors = [_receptor(hour=6), _receptor(hour=18, day=16)]
     for receptor in receptors:
-        run.write(receptor, _trajectories(receptor, n=10), PARAMS, [])
+        run.write(receptor, _trajectories(receptor, n=10), [])
 
     from collections import Counter
 
@@ -233,8 +229,8 @@ def test_particle_file_without_a_receptor_column_still_reads(tmp_path):
     traj = _trajectories(receptor)
     import pyarrow.parquet as pq
 
-    path = write_particles(run.file(str(receptor.id)), traj, receptor, PARAMS, [])
-    table = pq.read_table(path)
+    path = write_particles(run.file(str(receptor.id)), traj, receptor, run.settings, [])
+    table = pq.ParquetFile(path).read()
     old = table.drop_columns(["receptor"]).replace_schema_metadata(
         table.schema.metadata
     )
@@ -249,7 +245,7 @@ def test_particles_reject_fractional_time(tmp_path):
     traj = _trajectories(receptor)
     traj.loc[0, "time"] = -1.5
     with pytest.raises(ValueError, match="whole numbers"):
-        run.write(receptor, traj, PARAMS, [])
+        run.write(receptor, traj, [])
 
 
 def test_receptors_listed_in_date_order(tmp_path):
@@ -258,7 +254,6 @@ def test_receptors_listed_in_date_order(tmp_path):
         run.write(
             _receptor(hour=hour, day=day),
             _trajectories(_receptor(hour=hour, day=day)),
-            PARAMS,
             [],
         )
     ids = run.receptors()
@@ -503,9 +498,9 @@ def test_two_workers_writing_one_receptor_at_once_both_succeed(tmp_path, monkeyp
     traj = _trajectories(receptor)
     run = Output(tmp_path / "output").particles(VARIANT)
     other = Output(tmp_path / "output").particles(VARIANT)
-    _interleave(monkeypatch, lambda: other.write(receptor, traj, PARAMS, []))
+    _interleave(monkeypatch, lambda: other.write(receptor, traj, []))
 
-    path = run.write(receptor, traj, PARAMS, [])
+    path = run.write(receptor, traj, [])
 
     assert len(run.read(str(receptor.id))) == len(traj)
     assert [p.name for p in path.parent.iterdir()] == [path.name]  # no stray files
@@ -523,7 +518,7 @@ def test_receptors_among_lists_only_the_date_folders_asked_for(tmp_path, monkeyp
     run = Output(tmp_path / "output").particles(VARIANT)
     day15, day16 = _receptor(12, day=15), _receptor(12, day=16)
     for receptor in (day15, day16):
-        run.write(receptor, _trajectories(receptor), PARAMS, [])
+        run.write(receptor, _trajectories(receptor), [])
     never_run = _receptor(12, day=20)
 
     listed: list[str] = []
@@ -554,7 +549,7 @@ def test_each_result_file_names_its_settings_and_the_version_that_wrote_it(tmp_p
 
     receptor = _receptor()
     run = Output(tmp_path / "output").particles(VARIANT)
-    particles = run.write(receptor, _trajectories(receptor), PARAMS, [])
+    particles = run.write(receptor, _trajectories(receptor), [])
     feet = run.footprints(FootprintConfig(grid=GRID))
     footprint = feet.write(_footprint(receptor))
     empty = feet.write_empty(_receptor(13), "outside_domain")
@@ -596,7 +591,7 @@ def test_a_footprint_file_without_its_settings_is_refused(tmp_path):
     feet = run.footprints(FootprintConfig(grid=GRID))
     receptor = _receptor()
     path = feet.write(_footprint(receptor, seed=3))
-    table = pq.read_table(path)
+    table = pq.ParquetFile(path).read()
     meta = {k: v for k, v in table.schema.metadata.items() if k != b"stilt:footprint"}
     pq.write_table(table.replace_schema_metadata(meta), path)
 

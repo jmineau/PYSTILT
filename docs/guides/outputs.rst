@@ -232,10 +232,13 @@ To open a particle file without a project:
        "202307151800_-111.848_40.766_10.parquet"
    )
    particles = stilt.read_particles(path)
-   receptor, params, met_files = stilt.particles_metadata(path)
+   receptor, settings, met_files = stilt.particles_metadata(path)
 
-The file holds the receptor, the transport settings, and the meteorology
-files it was made with.
+The file holds the receptor, the meteorology files it was made with, and
+the run's settings, the same ones its folder's ``_settings.yaml`` holds:
+the transport model's settings, the met's, the model build, and the
+realization number. ``stilt.identity.transport_from_settings(settings)``
+rebuilds the transport model's config from them.
 
 Empty footprints
 ----------------

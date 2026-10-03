@@ -18,6 +18,7 @@ import pandas as pd
 from stilt.config import MetConfig, ProjectConfig
 from stilt.execution import resolve_compute_root
 from stilt.footprint.targets import Mesh
+from stilt.identity import transport_from_settings
 from stilt.particles import particles_metadata
 from stilt.project import Project
 from stilt.simulation import SimID
@@ -414,7 +415,8 @@ def test_error_variant(tmp_path, wbb_receptor, traj_only_config):
         .reset_index(drop=True)
         .equals(error_traj["long"].reset_index(drop=True))
     ), "Error trajectory identical to main — wind perturbation had no effect"
-    assert winderrtf(particles_metadata(err.particles_path).params) == 1
+    settings = particles_metadata(err.particles_path).settings
+    assert winderrtf(transport_from_settings(settings)) == 1
 
 
 @integration

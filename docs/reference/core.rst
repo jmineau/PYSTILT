@@ -65,6 +65,7 @@ default, still matches.
 
    identity.run_settings
    identity.read_run_settings
+   identity.transport_from_settings
    identity.footprint_settings
    identity.read_footprint_settings
    identity.footprint_hash

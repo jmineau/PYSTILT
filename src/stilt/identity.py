@@ -81,24 +81,39 @@ def run_settings(
     return canonical(data)
 
 
+def _model_info(stored: Mapping[str, Any]) -> ModelInfo:
+    """Return the model build a run settings record names, dropping fields this version does not have."""
+    return ModelInfo.model_validate(
+        {k: v for k, v in stored["model"].items() if k in ModelInfo.model_fields}
+    )
+
+
+def transport_from_settings(stored: Mapping[str, Any]) -> TransportConfig:
+    """
+    Return the transport model's config a run settings record holds.
+
+    ``model.name`` says which model's config class reads it. Settings this
+    version does not have are dropped. The fields a record leaves out
+    (``exe_dir`` and ``data_dir`` for HYSPLIT) come back unset.
+    """
+    config_class = get_model(_model_info(stored).name).config_class
+    fields = config_class.model_fields
+    return config_class.model_validate({k: v for k, v in stored.items() if k in fields})
+
+
 def read_run_settings(stored: Mapping[str, Any]) -> dict[str, Any]:
     """
     Return the run settings a ``_settings.yaml`` records, read through the current classes.
 
-    ``model.name`` says which model's config class reads the transport
-    settings. Settings this version does not have are dropped, so a folder
-    written before a setting was removed still loads.
+    Settings this version does not have are dropped, so a folder written
+    before a setting was removed still loads.
     """
-    model = ModelInfo.model_validate(
-        {k: v for k, v in stored["model"].items() if k in ModelInfo.model_fields}
+    return run_settings(
+        transport_from_settings(stored),
+        MetConfig.model_validate(stored["met"]),
+        _model_info(stored),
+        stored.get("realization"),
     )
-    config_class = get_model(model.name).config_class
-    fields = config_class.model_fields
-    transport = config_class.model_validate(
-        {k: v for k, v in stored.items() if k in fields}
-    )
-    met = MetConfig.model_validate(stored["met"])
-    return run_settings(transport, met, model, stored.get("realization"))
 
 
 # -- footprints ---------------------------------------------------------------
@@ -134,5 +149,6 @@ __all__ = [
     "read_footprint_settings",
     "read_run_settings",
     "run_settings",
+    "transport_from_settings",
     "settings_hash",
 ]

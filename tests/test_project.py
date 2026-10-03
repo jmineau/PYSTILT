@@ -92,7 +92,7 @@ def _write_trajectory(project: Project, receptor, variant="hrrr") -> Path:
         sim.receptor,
     )
     folder = sim.output.particles(sim.variant)
-    return folder.write(sim.receptor, particles, sim.variant.transport, [])
+    return folder.write(sim.receptor, particles, [])
 
 
 def _write_footprint(
