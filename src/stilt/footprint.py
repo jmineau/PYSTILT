@@ -28,6 +28,7 @@ from stilt.spatial import (
     _grid_cell_starts,
     cf_axis_attrs,
     check_resolution,
+    horizontal_dims,
     overlap_weights,
 )
 from stilt.transforms import (
@@ -1012,7 +1013,7 @@ def _from_sparse_table(table: Any, config: FootprintConfig) -> xr.DataArray | No
     times = pd.DatetimeIndex(
         [receptor_time + pd.Timedelta(hours=int(h)) for h in hours]
     )
-    x_dim, y_dim = ("lon", "lat") if grid.is_longlat else ("x", "y")
+    y_dim, x_dim = grid.dims
     data = xr.DataArray(
         values,
         dims=["time", y_dim, x_dim],
@@ -1155,7 +1156,7 @@ def write_footprint(
     if settings.grid is None:
         raise ValueError("Footprint settings need a grid.")
     receptor = foot.stilt.receptor
-    x_dim, y_dim = ("lon", "lat") if "lon" in foot.dims else ("x", "y")
+    y_dim, x_dim = horizontal_dims(foot)
     x_axis, y_axis = settings.grid.axes
     xi = _cell_indices(np.asarray(foot[x_dim].values, dtype=float), x_axis, x_dim)
     yi = _cell_indices(np.asarray(foot[y_dim].values, dtype=float), y_axis, y_dim)
@@ -1400,7 +1401,7 @@ class FootprintAccessor:
         """
         left_ns, right_ns = _bin_edges(time_bins)
         foot = self._foot
-        x_dim, y_dim = ("lon", "lat") if "lon" in foot.dims else ("x", "y")
+        y_dim, x_dim = horizontal_dims(foot)
         _require_geometry(target)
         columns = _utc_index(time_bins.left).tz_localize(None)
         result = pd.DataFrame(0.0, index=target.index, columns=columns)

@@ -15,24 +15,7 @@ import pandas as pd
 import xarray as xr
 from numpy.typing import ArrayLike
 
-_HORIZONTAL_DIMS = (("lat", "lon"), ("y", "x"))
-
-
-def horizontal_dims(data: xr.DataArray) -> tuple[str, str]:
-    """
-    Return the names of the horizontal dimensions, ``(y_dim, x_dim)``.
-
-    Raises
-    ------
-    ValueError
-        If *data* has neither ``lat``/``lon`` nor ``y``/``x`` dimensions.
-    """
-    for y_dim, x_dim in _HORIZONTAL_DIMS:
-        if y_dim in data.dims and x_dim in data.dims:
-            return y_dim, x_dim
-    raise ValueError(
-        f"Expected 'lat'/'lon' or 'y'/'x' dimensions; got {tuple(data.dims)}."
-    )
+from stilt.spatial import horizontal_dims
 
 
 def nearest_cell(coords: np.ndarray, values: np.ndarray) -> np.ndarray:
@@ -252,7 +235,6 @@ def particle_enhancement(particles: pd.DataFrame, flux: xr.DataArray) -> pd.Seri
 
 
 __all__ = [
-    "horizontal_dims",
     "nearest_cell",
     "particle_enhancement",
     "sample_field",

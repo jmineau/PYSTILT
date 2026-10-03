@@ -8,6 +8,8 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- `stilt.flux.horizontal_dims` is `stilt.spatial.horizontal_dims`, and
+  `Grid.dims` gives a footprint's dimension names on that grid.
 - `stilt.SpatialTarget` (it was another name for `stilt.Geometry`),
   `Grid.from_geometries`, and `Grid.resolution`.
 - `stilt.output.Jacobian` is `stilt.footprint.Jacobian`. A Jacobian built
