@@ -380,22 +380,87 @@ class Receptor(BaseModel):
         )
 
 
-def _check_lon(values: Iterable[float]) -> None:
-    """Raise if a longitude is outside [-180, 180]."""
-    if any(not -180 <= v <= 180 for v in values):
-        raise ValueError("longitude must be within [-180, 180].")
+# ---------------------------------------------------------------------------
+# Checks
+# ---------------------------------------------------------------------------
+#
+# Each check is written once, for many points at a time, and returns
+# ``(bad, message)``: the points that fail it and why. A receptor runs the
+# checks on its own points and raises the first failure. The receptor table
+# (receptor_rows) runs them on a whole file and names the first bad row.
+
+#: Why a multipoint receptor's points may not share a horizontal location.
+REPEATED_LOCATION = (
+    "MultiPointReceptor points must have distinct horizontal locations "
+    "(HYSPLIT collapses starting locations that share a lat/lon into a "
+    "single vertical line source and releases only between the last two "
+    "heights). Use ColumnReceptor for a vertical column, or one "
+    "PointReceptor per height (distinct r_idx) for discrete release "
+    "heights at one location."
+)
 
 
-def _check_lat(values: Iterable[float]) -> None:
-    """Raise if a latitude is outside [-90, 90]."""
-    if any(not -90 <= v <= 90 for v in values):
-        raise ValueError("latitude must be within [-90, 90].")
+def point_errors(
+    lon: Any, lat: Any, alt: Any, altitude_ref: Any
+) -> list[tuple[np.ndarray, str]]:
+    """
+    Return the checks every release point must pass, as ``(bad, message)``.
+
+    *lon*, *lat*, and *alt* hold one value per point; *altitude_ref* holds
+    one per point or one for all.
+    """
+    lon = np.asarray(lon, dtype=float)
+    lat = np.asarray(lat, dtype=float)
+    alt = np.asarray(alt, dtype=float)
+    agl = np.asarray(altitude_ref) == "agl"
+    return [
+        ((lon < -180) | (lon > 180), "longitude must be within [-180, 180]."),
+        ((lat < -90) | (lat > 90), "latitude must be within [-90, 90]."),
+        (agl & (alt < 0), "AGL altitudes must be >= 0."),
+    ]
 
 
-def _check_agl(values: Iterable[float], altitude_ref: str) -> None:
-    """Raise if a height above ground is negative."""
-    if altitude_ref == "agl" and any(v < 0 for v in values):
-        raise ValueError("AGL altitudes must be >= 0.")
+def column_errors(bottom: Any, top: Any) -> list[tuple[np.ndarray, str]]:
+    """Return the check a column must pass, as ``(bad, message)``: bottom below top."""
+    bad = np.asarray(bottom, dtype=float) >= np.asarray(top, dtype=float)
+    return [(bad, "'bottom' must be less than 'top'.")]
+
+
+def multipoint_errors(
+    lon: Any, lat: Any, receptor: Any
+) -> list[tuple[np.ndarray, str]]:
+    """
+    Return the check a multipoint receptor must pass, as ``(bad, message)``.
+
+    No two points of one receptor may share a horizontal location, to 5
+    decimal places. *receptor* labels each point's receptor. A point is bad
+    when an earlier point of its receptor is at the same location.
+
+    HYSPLIT joins consecutive starting locations at one latitude and
+    longitude into a vertical line source and releases only from the last
+    pair, and PYSTILT matches particles to their release point by
+    horizontal position.
+    """
+    seen: set[tuple[Any, float, float]] = set()
+    bad = np.zeros(len(lon), dtype=bool)
+    for i, key in enumerate(
+        zip(
+            np.asarray(receptor).tolist(),
+            (round(float(v), 5) for v in lon),
+            (round(float(v), 5) for v in lat),
+            strict=True,
+        )
+    ):
+        bad[i] = key in seen
+        seen.add(key)
+    return [(bad, REPEATED_LOCATION)]
+
+
+def _raise_first(errors: Iterable[tuple[np.ndarray, str]]) -> None:
+    """Raise the message of the first check any point fails."""
+    for bad, message in errors:
+        if bad.any():
+            raise ValueError(message)
 
 
 class PointReceptor(Receptor):
@@ -433,9 +498,11 @@ class PointReceptor(Receptor):
     @model_validator(mode="after")
     def _check(self) -> PointReceptor:
         """Check the coordinates and the height."""
-        _check_lon([self.longitude])
-        _check_lat([self.latitude])
-        _check_agl([self.altitude], self.altitude_ref)
+        _raise_first(
+            point_errors(
+                [self.longitude], [self.latitude], [self.altitude], self.altitude_ref
+            )
+        )
         return self
 
     @property
@@ -491,11 +558,14 @@ class ColumnReceptor(Receptor):
     @model_validator(mode="after")
     def _check(self) -> ColumnReceptor:
         """Check the coordinates and that the bottom is below the top."""
-        _check_lon([self.longitude])
-        _check_lat([self.latitude])
-        if self.bottom >= self.top:
-            raise ValueError("'bottom' must be less than 'top'.")
-        _check_agl([self.bottom], self.altitude_ref)
+        _raise_first(
+            [
+                *point_errors(
+                    [self.longitude], [self.latitude], [self.bottom], self.altitude_ref
+                ),
+                *column_errors([self.bottom], [self.top]),
+            ]
+        )
         return self
 
     @property
@@ -580,26 +650,16 @@ class MultiPointReceptor(Receptor):
             raise ValueError(
                 "longitudes, latitudes, and altitudes must have the same length."
             )
-        _check_lon(self.longitudes)
-        _check_lat(self.latitudes)
-        _check_agl(self.altitudes, self.altitude_ref)
-        # HYSPLIT joins consecutive starting locations at one latitude and
-        # longitude into a vertical line source and releases only from the
-        # last pair, and PYSTILT matches particles to their release point by
-        # horizontal position.
-        horizontal = {
-            (round(lon, 5), round(lat, 5))
-            for lon, lat in zip(self.longitudes, self.latitudes, strict=True)
-        }
-        if len(horizontal) != len(self.longitudes):
-            raise ValueError(
-                "MultiPointReceptor points must have distinct horizontal locations "
-                "(HYSPLIT collapses starting locations that share a lat/lon into a "
-                "single vertical line source and releases only between the last two "
-                "heights). Use ColumnReceptor for a vertical column, or one "
-                "PointReceptor per height (distinct r_idx) for discrete release "
-                "heights at one location."
-            )
+        _raise_first(
+            [
+                *point_errors(
+                    self.longitudes, self.latitudes, self.altitudes, self.altitude_ref
+                ),
+                *multipoint_errors(
+                    self.longitudes, self.latitudes, [0] * len(self.longitudes)
+                ),
+            ]
+        )
         return self
 
     @property
@@ -761,9 +821,8 @@ def receptor_rows(frame: pd.DataFrame) -> pd.DataFrame:
             raise ValueError(f"{label}: {message}")
 
     fail(~np.isin(ref, ("agl", "msl")), "altitude_ref must be 'agl' or 'msl'.")
-    fail((lon < -180) | (lon > 180), "longitude must be within [-180, 180].")
-    fail((lat < -90) | (lat > 90), "latitude must be within [-90, 90].")
-    fail((ref == "agl") & (alt < 0), "AGL altitudes must be >= 0.")
+    for bad, message in point_errors(lon, lat, alt, ref):
+        fail(bad, message)
 
     g = pd.DataFrame(
         {
@@ -790,10 +849,11 @@ def receptor_rows(frame: pd.DataFrame) -> pd.DataFrame:
     kind = np.where(
         size == 1, "point", np.where((size == 2) & same_xy, "column", "multipoint")
     )
-    fail(
-        (kind == "column") & (g["alt"].transform("nunique").to_numpy() == 1),
-        "'bottom' must be less than 'top'.",
-    )
+    # A column's two rows may come in either order.
+    bottom = g["alt"].transform("min").to_numpy()
+    top = g["alt"].transform("max").to_numpy()
+    for bad, message in column_errors(bottom, top):
+        fail((kind == "column") & bad, message)
 
     # Ids are made once per receptor, from its first row (or all its rows for
     # a multipoint), then spread to its rows. Python floats round much faster
@@ -802,9 +862,7 @@ def receptor_rows(frame: pd.DataFrame) -> pd.DataFrame:
     lon_f, lat_f, alt_f = lon.tolist(), lat.tolist(), alt.tolist()
     group_kind = kind[first_rows]
     group_ref = ref[first_rows].tolist()
-    # A column's two rows may come in either order.
-    bottom = g["alt"].transform("min").to_numpy().tolist()
-    top = g["alt"].transform("max").to_numpy().tolist()
+    bottom_f, top_f = bottom.tolist(), top.tolist()
     group_location = np.empty(len(first_rows), dtype=object)
     for code, row in enumerate(first_rows):
         if group_kind[code] == "point":
@@ -813,31 +871,14 @@ def receptor_rows(frame: pd.DataFrame) -> pd.DataFrame:
             )
         elif group_kind[code] == "column":
             group_location[code] = _column_location(
-                lon_f[row], lat_f[row], bottom[row], top[row], group_ref[code]
+                lon_f[row], lat_f[row], bottom_f[row], top_f[row], group_ref[code]
             )
     multi = np.flatnonzero(kind == "multipoint")
     if len(multi):
-        # HYSPLIT joins consecutive starting locations at one latitude and
-        # longitude into a vertical line source, and particles are matched
-        # to their release point by horizontal position.
-        horizontal = pd.DataFrame(
-            {
-                "code": codes[multi],
-                "lon": [round(lon_f[i], 5) for i in multi],
-                "lat": [round(lat_f[i], 5) for i in multi],
-            }
-        )
-        dup = np.zeros(n, dtype=bool)
-        dup[multi] = horizontal.duplicated().to_numpy()
-        fail(
-            dup,
-            "MultiPointReceptor points must have distinct horizontal locations "
-            "(HYSPLIT collapses starting locations that share a lat/lon into a "
-            "single vertical line source and releases only between the last two "
-            "heights). Use ColumnReceptor for a vertical column, or one "
-            "PointReceptor per height (distinct r_idx) for discrete release "
-            "heights at one location.",
-        )
+        for bad, message in multipoint_errors(lon[multi], lat[multi], codes[multi]):
+            dup = np.zeros(n, dtype=bool)
+            dup[multi] = bad
+            fail(dup, message)
         members: dict[int, list[int]] = {}
         for i, code in zip(multi.tolist(), codes[multi].tolist(), strict=True):
             members.setdefault(code, []).append(i)
