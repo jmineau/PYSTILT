@@ -105,7 +105,7 @@ jobs:
         STILT_TEST_FETCH_MET: "1"
       run: |
         uv run pytest \
-          tests/test_hysplit_release_assignment.py::test_hysplit_multipoint_release_points_follow_control_order \
+          tests/transport/hysplit/test_release_assignment.py::test_hysplit_multipoint_release_points_follow_control_order \
           --setup-only -q
 
     - name: Save HRRR met cache

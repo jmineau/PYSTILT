@@ -236,9 +236,9 @@ Copy the reader module closest to your product from
 product's conventions, and its output must have the columns above. Keep it a
 plain function that returns the table.
 
-Add a small slice of a real file under ``tests/data/products``, and a test
+Add a small slice of a real file under ``tests/observations/data/products``, and a test
 that checks the columns, the units, and that the vertical arrays start at
-the surface. ``tests/data/products/make_samples.py`` shows how the existing
+the surface. ``tests/observations/data/products/make_samples.py`` shows how the existing
 slices were cut. Readers for PROFFAST EM27/SUN output, MethaneAIR, and
 MethaneSAT are welcome. The maintainers have no files to write them
 against.
