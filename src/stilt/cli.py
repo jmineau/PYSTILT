@@ -22,8 +22,8 @@ from typing import Any
 
 import typer
 
-from stilt.config import ExecutionConfig
 from stilt.execution import resolve_compute_root
+from stilt.execution.config import ExecutionConfig
 from stilt.project import Project
 
 app = typer.Typer(

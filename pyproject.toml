@@ -173,16 +173,61 @@ ignore_imports = [
     "stilt.simulation -> stilt.transport.hysplit.failures",
 ]
 
+# Each part owns its config class, next to the code that uses it
+# (footprint/config.py, meteorology.py, execution/config.py, a transport
+# model's package). stilt.config reads config.yaml and composes them, so it
+# sits above those parts, and nothing below the project imports it: that
+# would be an import cycle. Direct imports only, since the runner opens a
+# Project inside a function.
+[[tool.importlinter.contracts]]
+name = "Nothing below the project imports the project config"
+type = "forbidden"
+source_modules = [
+    "stilt._atomic",
+    "stilt.exceptions",
+    "stilt.execution",
+    "stilt.footprint",
+    "stilt.identity",
+    "stilt.meteorology",
+    "stilt.output",
+    "stilt.particles",
+    "stilt.receptors",
+    "stilt.sampling",
+    "stilt.simulation",
+    "stilt.spatial",
+    "stilt.transforms",
+    "stilt.transport",
+    "stilt.visualization",
+]
+forbidden_modules = ["stilt.config"]
+allow_indirect_imports = true
+
 # What the user writes (config.yaml, receptors.csv) is plain data. Resolving
 # it, reading geometries or asking a transport model its version, happens
 # above, in stilt.variants. Imports inside functions count too. Config may
 # look up a model's config class through the stilt.transport registry, which
 # imports a model's package only when asked for it.
 [[tool.importlinter.contracts]]
-name = "Config and receptors import nothing above them"
+name = "The project config reads no results and runs nothing"
 type = "forbidden"
-source_modules = ["stilt.config", "stilt.receptors"]
+source_modules = ["stilt.config"]
 forbidden_modules = [
+    "stilt.execution.runner",
+    "stilt.execution.worker",
+    "stilt.output",
+    "stilt.project",
+    "stilt.simulation",
+    "stilt.transport.hysplit",
+    "stilt.variants",
+]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "Receptors import nothing above them"
+type = "forbidden"
+source_modules = ["stilt.receptors"]
+forbidden_modules = [
+    "stilt.config",
     "stilt.execution",
     "stilt.footprint",
     "stilt.identity",
@@ -191,10 +236,9 @@ forbidden_modules = [
     "stilt.particles",
     "stilt.project",
     "stilt.simulation",
-    "stilt.transport.hysplit",
+    "stilt.transport",
     "stilt.variants",
 ]
-ignore_imports = ["stilt.transport -> stilt.transport.hysplit"]
 
 # A transport model owns its config. The core reaches it through
 # stilt.transport.get_model, so a second model has its own parameters.

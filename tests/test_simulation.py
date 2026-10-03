@@ -6,12 +6,10 @@ import pandas as pd
 import pytest
 import xarray as xr
 
-from stilt.config import (
-    FootprintConfig,
-    Grid,
-    MetConfig,
-)
 from stilt.execution import make_footprint
+from stilt.footprint.config import FootprintConfig
+from stilt.footprint.grid import Grid
+from stilt.meteorology import MetConfig
 from stilt.output import Output
 from stilt.particles import particles_metadata
 from stilt.simulation import SimID, Simulation

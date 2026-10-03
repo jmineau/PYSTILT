@@ -47,7 +47,7 @@
 {% endif %}
 {% endfor %}
 
-{% if (fullname.startswith('stilt.config.') and objname != 'VariantConfig') or fullname == 'stilt.transport.hysplit.HysplitConfig' %}
+{% if objname.endswith('Config') or objname.endswith('GeometrySpec') or objname in ('Bounds', 'Grid') %}
 .. class-signature:: {{ fullname }}
 
 Parameters

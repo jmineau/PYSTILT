@@ -5,7 +5,8 @@ import pandas as pd
 import pytest
 import xarray as xr
 
-from stilt.config import FootprintConfig, Grid
+from stilt.footprint.config import FootprintConfig
+from stilt.footprint.grid import Grid
 from stilt.footprint.io import _describe
 from stilt.sampling import sample_field
 from stilt.spatial import horizontal_dims

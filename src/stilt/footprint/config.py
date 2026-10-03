@@ -37,7 +37,8 @@ from pydantic import (
     field_validator,
 )
 
-from stilt.spatial import Bounds, Grid
+from stilt.footprint.grid import Grid
+from stilt.spatial import Bounds
 from stilt.transforms import dump_transform, load_transform
 
 

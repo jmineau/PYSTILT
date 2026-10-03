@@ -13,7 +13,8 @@ import xarray as xr
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402 — must come after use("Agg")
 
-from stilt.config import FootprintConfig, Grid
+from stilt.footprint.config import FootprintConfig
+from stilt.footprint.grid import Grid
 from stilt.footprint.io import _describe
 from stilt.receptors import ColumnReceptor, MultiPointReceptor, PointReceptor
 from stilt.visualization import (

@@ -19,10 +19,11 @@ import pyarrow as pa
 import xarray as xr
 
 from stilt._atomic import write_parquet
-from stilt.config import FootprintConfig, Grid
+from stilt.footprint.config import FootprintConfig
+from stilt.footprint.grid import Grid, _with_cf_grid
 from stilt.identity import footprint_settings, read_footprint_settings
 from stilt.receptors import Receptor
-from stilt.spatial import _with_cf_grid, horizontal_dims
+from stilt.spatial import horizontal_dims
 
 
 def _utc_index(values: Any) -> pd.DatetimeIndex:

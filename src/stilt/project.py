@@ -25,7 +25,8 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
-from stilt.config import ExecutionConfig, ProjectConfig
+from stilt.config import ProjectConfig
+from stilt.execution.config import ExecutionConfig
 from stilt.footprint import Geometry, Jacobian
 from stilt.meteorology import Met
 from stilt.output import Output
@@ -171,11 +172,16 @@ class Project:
             ``Project(path)`` instead, and edit the file to change settings.
         TypeError
             If both *config* and keyword settings are given.
+        ValueError
+            If a variant's settings are invalid. Nothing is written.
         """
         if config is not None and settings:
             raise TypeError("Give a ProjectConfig or keyword settings, not both.")
         if config is None:
             config = ProjectConfig(**settings)
+        # The config checks a variant's transport settings only when it is
+        # resolved; do it now, so a bad config is never written.
+        resolve(config)
         project = cls(path)
         if project.config_path.exists():
             raise FileExistsError(

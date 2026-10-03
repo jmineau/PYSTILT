@@ -331,7 +331,7 @@ check:
        numpar=500,
    )
    project = stilt.Project.init("./my_project", config=config)
-   project.variants        # {"hrrr": VariantConfig(...)}, each with its full settings
+   project.variants        # {"hrrr": Variant(...)}, each with its full settings
 
 ``Project.init`` writes ``config.yaml`` once and raises a
 ``FileExistsError`` if the folder already has one. After that the file is

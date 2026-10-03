@@ -42,12 +42,9 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from scipy import sparse
 from shapely.geometry.base import BaseGeometry
 
-from stilt.config.footprint import (
-    FileGeometrySpec,
-    GeometrySpec,
-    H3GeometrySpec,
-)
-from stilt.spatial import Grid, is_longlat, same_crs
+from stilt.footprint.config import FileGeometrySpec, GeometrySpec, H3GeometrySpec
+from stilt.footprint.grid import Grid
+from stilt.spatial import is_longlat, same_crs
 
 
 def _transform_geometries(
@@ -216,7 +213,7 @@ class Mesh(BaseModel):
         """
         Return the H3 hexagons of one resolution inside ``bounds``. Requires ``h3``.
 
-        ``bounds`` is a :class:`~stilt.config.Bounds` or ``Grid``, or an
+        ``bounds`` is a :class:`~stilt.Bounds` or ``Grid``, or an
         ``(xmin, ymin, xmax, ymax)`` tuple in degrees. The cell ids are the H3
         cell strings.
         """

@@ -34,7 +34,7 @@ v1.0**, so prefer the clean design over a compatibility shim.
 | Import name | `stilt` (`import stilt`, never `import pystilt`) |
 | Source directory | `src/stilt/` |
 | CLI entry point | `stilt` (Typer; see `[project.scripts]`) |
-| Config | What the user writes: always a class (`ProjectConfig`, `MetConfig`, `FootprintConfig`, `ExecutionConfig`, `VariantConfig`, a model's `HysplitConfig`) |
+| Config | What the user writes: always a class (`ProjectConfig`, `MetConfig`, `FootprintConfig`, `ExecutionConfig`, a model's `HysplitConfig`), each next to the code that uses it |
 | Settings | What a result was made with, as recorded: `_settings.yaml`, the `settings=` folders, a settings hash. Never a class |
 | Parameters | Plain English for a config's fields; names no class or module |
 
@@ -118,9 +118,13 @@ src/stilt/
                      and reading many files at once; Jacobian assembly
   simulation.py      Simulation, SimID: a frozen value (receptor, variant, output)
                      that knows where its results are and whether they exist
+  config.py          ProjectConfig: reads config.yaml, splits the flat keys into
+                     the model's config and the footprint's, checks each
+                     declared variant (`config.variant(name)`)
   variants.py        Variant: one variant resolved (its configs, the model build,
-                     its two hashes); resolve() reads geometries and the model
-                     version once each
+                     its two hashes); resolve() validates each variant's
+                     transport settings, expands realizations, and reads
+                     geometries and the model version once each
   identity.py        settings records and their hashes: what a run and a footprint
                      were made with, written to and read back from _settings.yaml
   receptors/         receptors and receptors.csv
@@ -134,6 +138,9 @@ src/stilt/
                      particle files; the `.stilt` pandas accessor (endpoints,
                      enhancement from a flux field)
   footprint/         the footprint (a DataArray)
+    config.py        FootprintConfig and the geometry specs
+    grid.py          Grid, the raster a footprint is on, and its cell and CF
+                     attribute helpers
     gridding.py      `calculate`, STILT-R's calc_footprint (fidelity-guarded)
     aggregation.py   summing footprints onto other geometries: `aggregate`,
                      `jacobian`, their time binning and target weights
@@ -144,16 +151,15 @@ src/stilt/
     accessor.py      the `.stilt` xarray accessor (enhancement from a flux
                      field, aggregation)
   sampling.py        sampling a gridded field (a flux, a mole fraction) at points
-  spatial.py         the values config fields are made of: Bounds and the
-                     footprint Grid; CRS helpers (one is_longlat)
-  meteorology.py     Met: ARL file discovery, download, and cropping (via arlmet)
+  spatial.py         Bounds and the CRS helpers (one is_longlat)
+  meteorology.py     MetConfig, and Met: ARL file discovery, download, and
+                     cropping (via arlmet)
   transforms.py      pre-footprint particle transforms (averaging kernel,
                      pressure weighting, lifetime decay) and their YAML I/O
   exceptions.py      every exception class, all under StiltError
   visualization.py   matplotlib helpers (optional dependency)
 
-  config/            pydantic configuration: ProjectConfig and its parts
-  execution/         the runner (saves a model's inputs, plans what is missing,
+  execution/         ExecutionConfig (config.py), the runner (saves a model's inputs, plans what is missing,
                      runs it here or submits batches to Slurm through submitit)
                      and the worker (runs HYSPLIT on scratch and writes results
                      for one or many simulations)
@@ -211,19 +217,27 @@ output directory, never only in memory.
   (`stilt.transport.hysplit.HysplitConfig`; `config.transport`), reached
   through `stilt.transport.get_model`. A model is a variant axis, like a
   met: a variant that names another `model` gives that model's parameters
-  itself and inherits only the met and the footprint fields. When it loads it merges each declared variant with the
-  defaults, once, into a `VariantConfig` per simulation name
-  (`config.variant_configs`), expanding `realizations: N` into
-  `<name>-0..N-1` with `seed + k`. Nothing outside the file is read then.
-  `stilt.variants.resolve` (behind `project.variants`) turns each into a
-  `Variant`: it reads each geometry once to derive the grid, and asks the
-  transport model its version once per build. Variants whose run settings
+  itself and inherits only the met and the footprint fields. The top-level
+  footprint fields are `config.footprint`, as the model's are
+  `config.transport`. When it loads, `ProjectConfig` checks each declared
+  variant against the defaults (`config.variant(name)`: names, met, model,
+  `realizations`, grid merging), reading no other file.
+  `stilt.variants.resolve` (behind `project.variants`) turns each into
+  `Variant`s: it validates the variant's transport settings with its
+  model's config class (once), expands `realizations: N` into
+  `<name>-0..N-1` with `seed + k`, reads each geometry once to derive the
+  grid, and asks the transport model its version once per build.
+  `Project.init` resolves before it writes `config.yaml`. Variants whose run settings
   match share the particles; `from:` is rejected. `grid: null` means
   particles only, and footprint settings without a grid are an error. There is no
   named-footprints dict.
-- **Config is data.** `stilt.config` and `stilt.receptors` import nothing
-  above them, not even inside a function; an import-linter contract holds
-  this. Anything that reads a file or asks a model goes in `stilt.variants`.
+- **Each part owns its config.** `FootprintConfig` is in
+  `stilt.footprint.config`, `Grid` in `stilt.footprint.grid`, `MetConfig`
+  in `stilt.meteorology`, `ExecutionConfig` in `stilt.execution.config`, a
+  model's config in its package. `stilt.config` composes them, so nothing
+  below the project imports `stilt.config` (an import-linter contract).
+  Config classes read no file; anything that reads one or asks a model goes
+  in `stilt.variants`.
 - A config's fields that change no result are listed in its `UNRECORDED`
   class variable (`exe_dir` and `data_dir`; a met's directories,
   `download_from`, and `n_min`), and left out of the settings records. A

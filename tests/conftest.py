@@ -7,12 +7,10 @@ from pathlib import Path
 
 import pytest
 
-from stilt.config import (
-    FootprintConfig,
-    Grid,
-    MetConfig,
-    ProjectConfig,
-)
+from stilt.config import ProjectConfig
+from stilt.footprint.config import FootprintConfig
+from stilt.footprint.grid import Grid
+from stilt.meteorology import MetConfig
 from stilt.receptors import ColumnReceptor, MultiPointReceptor, PointReceptor
 from stilt.transport.hysplit import HysplitConfig
 

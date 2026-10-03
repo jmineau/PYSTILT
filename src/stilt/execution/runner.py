@@ -13,7 +13,7 @@ from uuid import uuid4
 
 import submitit
 
-from stilt.config import ExecutionConfig
+from stilt.execution.config import ExecutionConfig
 
 if TYPE_CHECKING:
     from stilt.project import Project

@@ -8,8 +8,8 @@ import pandas as pd
 import pyarrow.parquet as pq
 import pytest
 
-from stilt.config import MetConfig
 from stilt.identity import run_settings, transport_from_settings
+from stilt.meteorology import MetConfig
 from stilt.particles import (
     calc_plume_dilution,
     particles_metadata,
@@ -536,8 +536,9 @@ def test_calc_plume_dilution_raises_when_no_xhgt_and_no_rzagl():
 
 def test_footprint_calculate_from_trajectory(point_receptor, tmp_path):
     """calculate works directly on a particle table and its receptor."""
-    from stilt.config import FootprintConfig, Grid
     from stilt.footprint import calculate
+    from stilt.footprint.config import FootprintConfig
+    from stilt.footprint.grid import Grid
 
     traj = finish_particles(
         _particles_basic(), point_receptor, _params(tmp_path, hnf_plume=False)
@@ -596,8 +597,9 @@ def test_endpoints_returns_far_end_per_particle(point_receptor, tmp_path):
 
 def test_calculate_regenerates_a_footprint_on_a_new_grid(tmp_path):
     """calculate makes a footprint on any grid from stored particles."""
-    from stilt.config import FootprintConfig, Grid
     from stilt.footprint import calculate
+    from stilt.footprint.config import FootprintConfig
+    from stilt.footprint.grid import Grid
 
     rng = np.random.default_rng(0)
     n = 20

@@ -10,9 +10,10 @@ import pandas as pd
 import pytest
 import xarray as xr
 
-from stilt.config import FootprintConfig, Grid
 from stilt.exceptions import EmptyFootprint
 from stilt.footprint import calculate, read_footprint
+from stilt.footprint.config import FootprintConfig
+from stilt.footprint.grid import Grid, _grid_cell_starts
 from stilt.footprint.gridding import (
     _compute_kernel_bandwidths,
     _interpolate_early_timesteps,
@@ -25,7 +26,6 @@ from stilt.footprint.io import _describe
 from stilt.footprint.targets import Mesh, Zones
 from stilt.particles import calc_plume_dilution
 from stilt.receptors import PointReceptor
-from stilt.spatial import _grid_cell_starts
 from stilt.transforms import AveragingKernel
 
 

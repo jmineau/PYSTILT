@@ -8,7 +8,7 @@ makes that a HYSPLITTimeoutError the execution loop already handles.
 
 import pytest
 
-from stilt.config import ExecutionConfig
+from stilt.execution.config import ExecutionConfig
 from stilt.transport.hysplit.config import HysplitConfig
 
 
@@ -39,7 +39,7 @@ class _FakeMet:
 @pytest.fixture
 def sim(monkeypatch, tmp_path, point_receptor):
     """A Simulation with the HYSPLIT driver stubbed out, and a runner for it."""
-    from stilt.config import MetConfig
+    from stilt.meteorology import MetConfig
     from stilt.output import Output
     from stilt.simulation import Simulation
     from stilt.transport import ModelInfo

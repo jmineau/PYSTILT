@@ -46,8 +46,9 @@ def test_grid_axes_rounding_keeps_coarse_centres():
 
 def test_one_longlat_test_for_grids_and_meshes():
     """EPSG:4326 is longitude/latitude for a grid as it is for a mesh."""
+    from stilt.footprint.grid import Grid
     from stilt.footprint.targets import Mesh
-    from stilt.spatial import Grid, is_longlat
+    from stilt.spatial import is_longlat
 
     grid = Grid(
         xmin=-112.0,
@@ -67,7 +68,7 @@ def test_one_longlat_test_for_grids_and_meshes():
 
 def test_grid_reads_stilt_r_projection_as_crs():
     """``projection``, STILT-R's name, is read as ``crs``; PYSTILT writes ``crs``."""
-    from stilt.spatial import Grid
+    from stilt.footprint.grid import Grid
 
     kw = {
         "xmin": -112.0,

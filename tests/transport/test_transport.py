@@ -5,8 +5,9 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
-from stilt.config import MetConfig, ProjectConfig
+from stilt.config import ProjectConfig
 from stilt.execution import run_particles, worker
+from stilt.meteorology import MetConfig
 from stilt.output import Output
 from stilt.simulation import Simulation
 from stilt.transport import ModelInfo, ModelRun, get_model

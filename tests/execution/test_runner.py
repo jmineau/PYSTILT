@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from stilt.config import ExecutionConfig
 from stilt.execution import Batch, runner
+from stilt.execution.config import ExecutionConfig
 from stilt.execution.runner import _project_slug, slurm_parameters, split
 from stilt.project import Project
 

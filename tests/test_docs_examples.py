@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from stilt.config import ExecutionConfig
+from stilt.execution.config import ExecutionConfig
 
 DOCS = Path(__file__).parent.parent / "docs"
 README = DOCS.parent / "README.md"

@@ -5,12 +5,7 @@ import datetime as dt
 import pandas as pd
 import pytest
 
-from stilt.config import (
-    FootprintConfig,
-    Grid,
-    MetConfig,
-    ProjectConfig,
-)
+from stilt.config import ProjectConfig
 from stilt.exceptions import (
     EmptyParticleOutputError,
     MeteorologyError,
@@ -25,7 +20,9 @@ from stilt.execution.worker import (
     run_receptors,
     run_simulation,
 )
-from stilt.meteorology import Met
+from stilt.footprint.config import FootprintConfig
+from stilt.footprint.grid import Grid
+from stilt.meteorology import Met, MetConfig
 from stilt.output import Output
 from stilt.project import Project
 from stilt.receptors import PointReceptor, Receptor
