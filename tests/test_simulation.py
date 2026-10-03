@@ -143,7 +143,7 @@ def test_paths_are_none_until_the_run_exists(point_receptor, tmp_path):
     assert sim.log_path is None
     assert not sim.has_particles and not sim.has_footprint
     assert not sim.is_complete()
-    assert sim.outcome is None
+    assert sim.failure is None
     with pytest.raises(FileNotFoundError):
         _ = sim.particles
     with pytest.raises(FileNotFoundError):
@@ -270,7 +270,7 @@ def test_written_footprint_reads_back(point_receptor, tmp_path):
     assert isinstance(back, xr.DataArray)
     assert back.stilt.receptor == point_receptor and back.stilt.grid == GRID
     xr.testing.assert_allclose(back, foot.astype("float32").astype("float64"))
-    assert again.outcome == "complete"
+    assert again.is_complete() and again.failure is None
 
 
 def test_empty_footprint_is_recorded_with_its_reason(point_receptor, tmp_path):
@@ -285,17 +285,37 @@ def test_empty_footprint_is_recorded_with_its_reason(point_receptor, tmp_path):
     assert sim.footprint is None
     assert sim.has_footprint and sim.is_complete()
     assert sim.empty_reason == "outside_domain"
-    assert sim.outcome == "complete"
+    assert sim.is_complete() and sim.failure is None
 
 
-def test_outcome_reads_a_failure_from_the_log(point_receptor, tmp_path):
-    sim = _sim(tmp_path, point_receptor)
+def test_failure_reads_the_record_for_the_missing_step(point_receptor, tmp_path):
+    grid = Grid(xmin=-112.0, xmax=-111.5, ymin=40.5, ymax=41.0, xres=0.1, yres=0.1)
+    sim = _sim(tmp_path, point_receptor, footprint=FootprintConfig(grid=grid))
     run = sim.output.particles(sim.variant)
-    run.write_log(
-        sim.receptor.id, "Insufficient number of meteorological files found\n"
+    run.write_failure(
+        sim.receptor.id,
+        {
+            "particles": {"error": "MeteorologyError", "reason": "MISSING_MET_FILES"},
+            "footprints": {"hrrr": {"error": "ValueError", "reason": None}},
+        },
     )
-    assert sim.outcome == "failed:MISSING_MET_FILES"
-    assert sim.log.startswith("Insufficient")
+    # The particles are missing, so the particles step is why.
+    assert sim.failure == {
+        "step": "particles",
+        "error": "MeteorologyError",
+        "reason": "MISSING_MET_FILES",
+    }
+    # Once they exist, a stale particles entry does not count; the footprint's does.
+    _write_particles(sim)
+    assert sim.failure == {"step": "footprint", "error": "ValueError", "reason": None}
+
+
+def test_a_log_alone_is_not_a_failure(point_receptor, tmp_path):
+    """A simulation that shares a log with one that ran is not failed for it."""
+    sim = _sim(tmp_path, point_receptor)
+    sim.output.particles(sim.variant).write_log(sim.receptor.id, "hycs_std ran\n")
+    assert sim.failure is None
+    assert sim.log.startswith("hycs_std")
 
 
 # ---------------------------------------------------------------------------

@@ -9,67 +9,54 @@ keeps working. Plain input checks raise builtins such as ``ValueError``.
 
 from __future__ import annotations
 
-from pathlib import Path
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from stilt.transport.hysplit.failures import FailureReason
-
 
 class StiltError(Exception):
     """Base class for every exception PYSTILT raises."""
 
 
 class SimulationError(StiltError, RuntimeError):
-    """A simulation failed while it ran."""
+    """
+    A simulation failed while it ran.
+
+    The worker catches it, records it with the simulation
+    (:attr:`stilt.Simulation.failure`), and goes on to the next one.
+
+    Parameters
+    ----------
+    message : str
+        What went wrong.
+    reason : str, optional
+        A short name for the cause, such as ``"MET_COVERAGE"`` or
+        ``"TIMEOUT"`` (:class:`stilt.transport.hysplit.FailureReason` lists
+        HYSPLIT's). ``stilt status`` counts failures by it.
+
+    Attributes
+    ----------
+    reason : str or None
+        The cause, or ``None`` when it has no short name.
+    """
+
+    reason: str | None = None
+
+    def __init__(self, message: str, reason: str | None = None):
+        super().__init__(message)
+        if reason is not None:
+            self.reason = reason
 
 
 class MeteorologyError(SimulationError):
     """The meteorology files a simulation needs could not be found or staged."""
 
-
-class HYSPLITTimeoutError(SimulationError):
-    """HYSPLIT (``hycs_std``) ran longer than the configured timeout."""
-
-
-class NoParticleOutputError(SimulationError):
-    """HYSPLIT finished without writing ``PARTICLE_STILT.DAT``."""
-
-
-class HYSPLITFailureError(SimulationError):
-    """
-    HYSPLIT wrote a known failure message to its log.
-
-    Parameters
-    ----------
-    reason : FailureReason
-        The failure the message identifies.
-    log_path : str or Path
-        The HYSPLIT log holding the message.
-
-    Attributes
-    ----------
-    reason : FailureReason
-        The failure the message identifies.
-    """
-
-    def __init__(self, reason: FailureReason, log_path: str | Path):
-        self.reason = reason
-        super().__init__(f"HYSPLIT failed with {reason}; see {log_path}")
-
-
-class EmptyParticleOutputError(SimulationError):
-    """HYSPLIT ran, but its particle output holds no particles."""
+    reason = "MISSING_MET_FILES"
 
 
 class HYSPLITNotFoundError(StiltError, FileNotFoundError):
     """
     The HYSPLIT executable (``hycs_std``) is missing.
 
-    Raised when there is no bundled build for this platform, when
-    ``exe_dir`` holds no ``hycs_std``, and when the executable is gone by
-    the time the run starts. Build ``hycs_std`` and set ``exe_dir`` in
-    ``config.yaml`` to the directory that holds it.
+    Raised when there is no bundled build for this platform, and when
+    ``exe_dir`` holds no ``hycs_std``. Build ``hycs_std`` and set
+    ``exe_dir`` in ``config.yaml`` to the directory that holds it.
     """
 
 
@@ -99,12 +86,8 @@ class EmptyFootprint(StiltError):
 
 __all__ = [
     "EmptyFootprint",
-    "EmptyParticleOutputError",
-    "HYSPLITFailureError",
     "HYSPLITNotFoundError",
-    "HYSPLITTimeoutError",
     "MeteorologyError",
-    "NoParticleOutputError",
     "SimulationError",
     "StiltError",
 ]

@@ -535,7 +535,14 @@ def test_status_marks_outputs_a_variant_does_not_produce(tmp_path, point_recepto
 
     status = project.simulations.status()
 
-    assert list(status.columns[-4:]) == ["particles", "footprint", "empty", "complete"]
+    assert list(status.columns[-5:]) == [
+        "particles",
+        "footprint",
+        "empty",
+        "complete",
+        "reason",
+    ]
+    assert status["reason"].isna().all()
     by_variant = status.set_index("variant")
     assert by_variant.loc["hrrr", "particles"] == True  # noqa: E712
     assert by_variant.loc["hrrr", "footprint"] == False  # noqa: E712
@@ -964,3 +971,39 @@ def test_init_refuses_a_variant_with_bad_settings_and_writes_nothing(tmp_path):
             tmp_path / "proj", mets={"hrrr": met}, variants={"hrrr": {"numpr": 10}}
         )
     assert not (tmp_path / "proj" / "config.yaml").exists()
+
+
+def test_failures_lists_the_incomplete_simulations_that_failed_and_why(
+    tmp_path, point_receptor
+):
+    other = PointReceptor(
+        time="2023-07-15 19:00", longitude=-111.848, latitude=40.766, altitude=10
+    )
+    project = _project(
+        tmp_path, [point_receptor, other], variants={"traj": {"grid": None}}
+    )
+    sim = project.simulation(str(point_receptor.id), "traj")
+    sim.output.particles(sim.variant).write_failure(
+        sim.receptor.id,
+        {
+            "particles": {
+                "error": "SimulationError",
+                "reason": "MET_COVERAGE",
+                "message": "m",
+            }
+        },
+    )
+
+    failed = project.simulations.failures()
+
+    assert failed[["receptor", "variant", "step", "reason"]].to_dict("records") == [
+        {
+            "receptor": str(point_receptor.id),
+            "variant": "traj",
+            "step": "particles",
+            "reason": "MET_COVERAGE",
+        }
+    ]
+    status = project.simulations.status().set_index("receptor")
+    assert status.loc[str(point_receptor.id), "reason"] == "MET_COVERAGE"
+    assert pd.isna(status.loc[str(other.id), "reason"])

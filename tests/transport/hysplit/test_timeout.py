@@ -3,7 +3,7 @@ A wedged hycs_std must be capped, not waited on forever.
 
 Without a deadline a single spinning HYSPLIT process holds its batch worker until Slurm
 kills the task, which on a preempted-and-requeued guest job can be days. `execution.timeout`
-makes that a HYSPLITTimeoutError the execution loop already handles.
+makes that a SimulationError (reason TIMEOUT) the execution loop already handles.
 """
 
 import pytest

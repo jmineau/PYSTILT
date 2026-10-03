@@ -13,12 +13,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from stilt.exceptions import (
-    HYSPLITFailureError,
-    HYSPLITNotFoundError,
-    HYSPLITTimeoutError,
-    NoParticleOutputError,
-)
+from stilt.exceptions import HYSPLITNotFoundError, SimulationError
 from stilt.receptors import Receptor
 from stilt.transport.hysplit.config import HysplitConfig, fields_in
 from stilt.transport.hysplit.control import ControlFile
@@ -291,13 +286,12 @@ class HYSPLITDriver:
 
         Raises
         ------
-        HYSPLITTimeoutError
-            The run exceeded ``timeout``.
-        HYSPLITFailureError
-            The log shows a known HYSPLIT failure, or a met file was cut
-            short and the particles stop before the end of the run.
-        NoParticleOutputError
-            HYSPLIT wrote no ``PARTICLE_STILT.DAT``.
+        SimulationError
+            With ``reason`` ``TIMEOUT`` when the run exceeded ``timeout``;
+            the :class:`FailureReason` of a known failure message in the
+            log, or ``MET_TRUNCATED`` when a met file was cut short and the
+            particles stop before the end of the run; ``NO_PARTICLE_DATA``
+            when HYSPLIT wrote no ``PARTICLE_STILT.DAT``.
         """
         self._run(timeout)
         particles = self._read_particles()
@@ -322,8 +316,9 @@ class HYSPLITDriver:
                 proc.wait(timeout=timeout)
             except subprocess.TimeoutExpired as e:
                 self._terminate_process(proc)
-                raise HYSPLITTimeoutError(
-                    f"hycs_std timed out after {timeout}s for {self.directory}"
+                raise SimulationError(
+                    f"HYSPLIT ran longer than the {timeout} s timeout.",
+                    reason=FailureReason.TIMEOUT,
                 ) from e
         self._check_log_for_failure()
 
@@ -351,7 +346,7 @@ class HYSPLITDriver:
         """Raise if the log shows a known HYSPLIT failure."""
         reason = failure_in(self.log_path.read_text(encoding="utf-8", errors="replace"))
         if reason is not None:
-            raise HYSPLITFailureError(reason, self.log_path)
+            raise SimulationError(f"HYSPLIT failed ({reason}).", reason=reason)
 
     def _check_met_reached_end(self, particles: pd.DataFrame) -> None:
         """
@@ -377,14 +372,19 @@ class HYSPLITDriver:
                 f"Meteorology ends early: the particles stop {reach / 60:g} h "
                 f"into a {end / 60:g} h run.\n"
             )
-        raise HYSPLITFailureError(FailureReason.MET_TRUNCATED, self.log_path)
+        raise SimulationError(
+            f"Meteorology ends early: the particles stop {reach / 60:g} h into a "
+            f"{end / 60:g} h run.",
+            reason=FailureReason.MET_TRUNCATED,
+        )
 
     def _read_particles(self) -> pd.DataFrame:
         """Read ``PARTICLE_STILT.DAT``."""
         particle_path = self.particle_stilt_path
         if not particle_path.exists():
-            raise NoParticleOutputError(
-                f"{particle_path.name} not produced for {self.directory}"
+            raise SimulationError(
+                f"HYSPLIT wrote no {particle_path.name}.",
+                reason=FailureReason.NO_PARTICLE_DATA,
             )
 
         return _read_particle_dat(particle_path, self.params.varsiwant)

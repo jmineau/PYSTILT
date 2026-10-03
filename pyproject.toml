@@ -168,10 +168,6 @@ source_modules = [
 forbidden_modules = ["stilt.transport.hysplit"]
 # get_model imports a model's package when asked for it; that is the boundary.
 allow_indirect_imports = true
-ignore_imports = [
-    # sim.outcome names why a run failed, from the reasons HYSPLIT writes.
-    "stilt.simulation -> stilt.transport.hysplit.failures",
-]
 
 # Each part owns its config class, next to the code that uses it
 # (footprint/config.py, meteorology.py, execution/config.py, a transport

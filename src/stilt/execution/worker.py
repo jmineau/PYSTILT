@@ -1,18 +1,21 @@
 """
-Worker functions that run one simulation, one receptor, or many receptors.
+Worker functions that run one receptor, or many receptors.
 
 Workers are handed receptors. :func:`run_receptor` runs every variant of
-one receptor, and :func:`run_simulation` runs each one: HYSPLIT where the
-particles are missing (:func:`run_particles`), then the footprint
-(:func:`make_footprint`). Variants with the same transport settings share
-one HYSPLIT run. :func:`run_receptors` runs a list of receptors in this
-process or a process pool. A :class:`~stilt.Simulation` itself runs
-nothing; these functions write through its output directory.
+one receptor. Variants with the same transport settings share one set of
+particles, so it groups them: HYSPLIT runs once per group where the
+particles are missing (:func:`run_particles`), then each variant's
+footprint is made from the particles in memory (:func:`make_footprint`).
+A failure is recorded with the simulation and the worker goes on.
+:func:`run_receptors` runs a list of receptors in this process or a
+process pool. A :class:`~stilt.Simulation` itself runs nothing; these
+functions write through its output directory.
 """
 
 from __future__ import annotations
 
 import contextlib
+import datetime as dt
 import logging
 import multiprocessing
 import shutil
@@ -21,16 +24,12 @@ import threading
 import traceback
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 import pandas as pd
 import xarray as xr
 
-from stilt.exceptions import (
-    EmptyFootprint,
-    EmptyParticleOutputError,
-    SimulationError,
-)
+from stilt.exceptions import EmptyFootprint, SimulationError
 from stilt.footprint import calculate
 from stilt.meteorology import Met
 from stilt.simulation import Simulation
@@ -93,38 +92,71 @@ class SimulationResult:
     status : {"complete", "failed", "error", "interrupted"}
         ``failed`` is a HYSPLIT or STILT failure (a :class:`SimulationError`),
         ``error`` any other exception, and ``interrupted`` a stopped worker.
+        A failure is also recorded with the simulation
+        (:attr:`stilt.Simulation.failure`).
     error : str or None
         Error message, when the simulation did not complete.
-    ran_hysplit : bool
-        Whether HYSPLIT ran in this call.
-    phase : {"particles", "footprint"} or None
-        Step that failed, when the simulation did not complete.
     """
 
     sim_id: str
     status: Status
     error: str | None = None
-    ran_hysplit: bool = False
-    phase: str | None = None
 
 
-def _append_error_log(sim: Simulation, *, phase: str, error: BaseException) -> None:
-    """Append the error and its traceback to the simulation's log in the output directory."""
-    folder = sim.output.particles(sim.variant)
-    log_path = folder.log_path(sim.receptor.id)
-    log_path.parent.mkdir(parents=True, exist_ok=True)
-    trace = traceback.format_exc()
-    lines = [
-        "",
-        "=== PYSTILT ERROR ===",
-        f"Phase: {phase}",
-        f"Type: {type(error).__name__}",
-        f"Message: {error}",
-    ]
-    if trace and trace.strip() and trace.strip() != "NoneType: None":
-        lines.extend(["", "Traceback:", trace.rstrip()])
-    with log_path.open("a", encoding="utf-8") as f:
-        f.write("\n".join(lines) + "\n")
+# -- failure records ---------------------------------------------------------
+
+
+def _failed(sim: Simulation, step: str, error: Exception) -> SimulationResult:
+    """
+    Record why *sim* failed at *step* and return its result.
+
+    The record goes beside the receptor's log
+    (:meth:`stilt.output.Particles.write_failure`). For the ``particles``
+    step it covers every variant on these particles; for the ``footprint``
+    step it is the variant's own.
+    """
+    logger.exception("simulation %s failed during %s: %s", sim.id, step, error)
+    entry: dict[str, Any] = {
+        "error": type(error).__name__,
+        "reason": getattr(error, "reason", None),
+        "message": str(error),
+        "time": dt.datetime.now(dt.UTC).replace(microsecond=0).isoformat(),
+    }
+    if not isinstance(error, SimulationError):
+        entry["traceback"] = traceback.format_exc()
+    try:
+        folder = sim.output.particles(sim.variant)
+        rid = sim.receptor.id
+        if step == "particles":
+            log, kept = folder.log_path(rid), folder.scratch_path(rid)
+            entry["log"] = str(log) if log.exists() else None
+            entry["scratch"] = str(kept) if kept.exists() else None
+        record = folder.failure(rid)
+        if step == "particles":
+            record["particles"] = entry
+        else:
+            record.setdefault("footprints", {})[sim.variant.name] = entry
+        folder.write_failure(rid, record)
+    except Exception:
+        logger.exception("simulation %s: could not record the failure", sim.id)
+    status: Status = "failed" if isinstance(error, SimulationError) else "error"
+    return SimulationResult(str(sim.id), status, error=str(error))
+
+
+def _succeeded(sim: Simulation, step: str) -> SimulationResult:
+    """Remove *sim*'s failure record for *step*, which has now succeeded, and return its result."""
+    folder = sim.output.find_particles(sim.variant)
+    rid = sim.receptor.id
+    if folder is not None and folder.failure_path(rid).exists():
+        record = folder.failure(rid)
+        if step == "particles":
+            record.pop("particles", None)
+        else:
+            record.get("footprints", {}).pop(sim.variant.name, None)
+            if not record.get("footprints"):
+                record.pop("footprints", None)
+        folder.write_failure(rid, record)
+    return SimulationResult(str(sim.id), "complete")
 
 
 def run_particles(
@@ -164,9 +196,11 @@ def run_particles(
 
     Raises
     ------
-    MeteorologyError, HYSPLITTimeoutError, HYSPLITFailureError,
-    NoParticleOutputError, EmptyParticleOutputError
-        As the HYSPLIT driver and the particle reader raise them.
+    SimulationError
+        As the transport model raises it (with a ``reason``), or with
+        ``reason`` ``NO_PARTICLE_DATA`` when the model wrote no particles.
+        :class:`~stilt.exceptions.MeteorologyError` when the met files are
+        missing.
     """
     params = sim.variant.transport
     model = get_model(sim.variant.model.name)
@@ -181,7 +215,9 @@ def run_particles(
     try:
         result = model.run(sim.receptor, params, met, workdir, timeout=timeout)
         if result.particles.empty:
-            raise EmptyParticleOutputError(f"HYSPLIT wrote no particles for {sim.id}")
+            raise SimulationError(
+                "The transport model wrote no particles.", reason="NO_PARTICLE_DATA"
+            )
         folder.write(sim.receptor, result.particles, result.met_files)
         succeeded = True
         return result.particles
@@ -245,89 +281,6 @@ def make_footprint(
     return foot
 
 
-def run_simulation(
-    sim: Simulation,
-    *,
-    met: Met,
-    compute_root: Path,
-    project_dir: Path | None = None,
-    keep_scratch: bool = False,
-    timeout: int | None = None,
-    skip_existing: bool = True,
-    footprint_stale: bool = False,
-) -> SimulationResult:
-    """
-    Run one simulation and write its results to the output directory.
-
-    HYSPLIT runs when the particles are missing, or always when
-    ``skip_existing`` is false. When the variant has a grid, the footprint
-    is computed if it is missing, and again whenever HYSPLIT ran or
-    ``footprint_stale`` says the particles changed, so a footprint always
-    matches its particles. An empty footprint is recorded with its reason
-    and counts as complete. Errors are caught, written to the log, and
-    returned in the result.
-
-    Parameters
-    ----------
-    sim : Simulation
-        Simulation to run.
-    met : Met
-        Meteorology for the run.
-    compute_root : Path
-        Scratch root; HYSPLIT runs in ``compute_root / sim.id``.
-    project_dir : Path, optional
-        Directory that relative file names in transform settings are taken
-        from.
-    keep_scratch : bool, default False
-        Keep every run's working directory under the output directory.
-    timeout : int, optional
-        Time limit for one HYSPLIT run, in seconds.
-    skip_existing : bool, default True
-        Keep particles and footprints that already exist.
-    footprint_stale : bool, default False
-        Recompute the footprint even if it exists, because the particles it
-        was made from were replaced in this call (by a variant that shares
-        them).
-
-    Returns
-    -------
-    SimulationResult
-    """
-    phase = "particles"
-    ran_hysplit = False
-    try:
-        particles: pd.DataFrame | None = None
-        if not (skip_existing and sim.has_particles):
-            particles = run_particles(
-                sim,
-                met=met,
-                workdir=compute_root / sim.id,
-                keep_scratch=keep_scratch,
-                timeout=timeout,
-            )
-            ran_hysplit = True
-
-        if sim.makes_footprint and (
-            ran_hysplit or footprint_stale or not (skip_existing and sim.has_footprint)
-        ):
-            phase = "footprint"
-            if particles is None:
-                particles = sim.particles
-            context = TransformContext(
-                receptor=sim.receptor, variant=sim.variant.name, directory=project_dir
-            )
-            make_footprint(sim, particles, context=context)
-        return SimulationResult(str(sim.id), "complete", ran_hysplit=ran_hysplit)
-    except Exception as error:
-        logger.exception("simulation %s failed during %s: %s", sim.id, phase, error)
-        try:
-            _append_error_log(sim, phase=phase, error=error)
-        except Exception:
-            logger.exception("simulation %s: could not write the failure log", sim.id)
-        status = "failed" if isinstance(error, SimulationError) else "error"
-        return SimulationResult(str(sim.id), status, error=str(error), phase=phase)
-
-
 def run_receptor(
     project: Project,
     receptor_id: str,
@@ -338,11 +291,15 @@ def run_receptor(
     """
     Run every simulation of one receptor, and return their results.
 
-    Variants with the same transport settings share one HYSPLIT run: the
-    first of them runs it, the others reuse the particles and make their own
-    footprints. A footprint whose particles were replaced in this call is
-    recomputed even with ``skip_existing``. A ``KeyboardInterrupt``, such as
-    a preempted job, gives an ``interrupted`` result.
+    Variants with the same transport settings share one set of particles,
+    so they run as a group: HYSPLIT runs once for the group when the
+    particles are missing (or always, without ``skip_existing``), and each
+    variant's footprint is made from those particles in memory. A footprint
+    is made again whenever its particles were, so it always matches them.
+    A failure is recorded with the simulation (:attr:`stilt.Simulation.failure`)
+    and does not stop the others; a failed HYSPLIT run fails every variant
+    of its group. A ``KeyboardInterrupt``, such as a preempted job, gives an
+    ``interrupted`` result.
 
     Parameters
     ----------
@@ -359,45 +316,80 @@ def run_receptor(
     Returns
     -------
     list of SimulationResult
-        One per variant, in config order. After an interruption, the last
-        one is ``interrupted``.
+        One per variant, in config order. After an interruption, the
+        finished ones and then one ``interrupted``.
     """
     sims = [project.simulation(receptor_id, variant) for variant in project.variants]
-    results: list[SimulationResult] = []
-    reran: set[str] = set()  # transport settings whose HYSPLIT ran in this call
-    failed: dict[str, SimulationResult] = {}  # ... and whose HYSPLIT failed
-    sim = None
+    groups: dict[str, list[Simulation]] = {}
+    for sim in sims:
+        groups.setdefault(sim.variant.particles_hash, []).append(sim)
+    results: dict[str, SimulationResult] = {}
     try:
-        for sim in sims:
-            key = sim.variant.particles_hash
-            if key in failed:
-                # Variants with these transport settings share one HYSPLIT
-                # run, and it already failed. Running it again fails the same way.
-                first = failed[key]
-                results.append(
-                    SimulationResult(
-                        str(sim.id), first.status, error=first.error, phase="particles"
-                    )
+        for group in groups.values():
+            results.update(
+                _run_group(
+                    project,
+                    group,
+                    compute_root=compute_root,
+                    skip_existing=skip_existing,
                 )
-                continue
-            result = run_simulation(
-                sim,
-                met=project.mets[sim.variant.met],
-                compute_root=compute_root,
-                project_dir=project.directory,
+            )
+    except KeyboardInterrupt:
+        stopped = next((s for s in sims if str(s.id) not in results), None)
+        label = str(stopped.id) if stopped is not None else receptor_id
+        done = [results[str(s.id)] for s in sims if str(s.id) in results]
+        return [*done, SimulationResult(label, "interrupted", error="Worker preempted")]
+    return [results[str(s.id)] for s in sims]
+
+
+def _run_group(
+    project: Project,
+    sims: list[Simulation],
+    *,
+    compute_root: Path,
+    skip_existing: bool,
+) -> dict[str, SimulationResult]:
+    """Run the simulations of one receptor that share particles: HYSPLIT at most once, then each footprint."""
+    first = sims[0]
+    particles: pd.DataFrame | None = None
+    rerun = not (skip_existing and first.has_particles)
+    if rerun:
+        try:
+            particles = run_particles(
+                first,
+                met=project.mets[first.variant.met],
+                workdir=compute_root / first.id,
                 keep_scratch=project.config.execution.keep_scratch,
                 timeout=project.config.execution.timeout,
-                skip_existing=skip_existing or key in reran,
-                footprint_stale=key in reran,
             )
-            if result.ran_hysplit:
-                reran.add(key)
-            elif result.phase == "particles":
-                failed[key] = result
-            results.append(result)
-    except KeyboardInterrupt:
-        label = str(sim.id) if sim is not None else receptor_id
-        results.append(SimulationResult(label, "interrupted", error="Worker preempted"))
+        except Exception as error:
+            failed = _failed(first, "particles", error)
+            return {
+                str(sim.id): SimulationResult(str(sim.id), failed.status, failed.error)
+                for sim in sims
+            }
+        _succeeded(first, "particles")
+
+    results: dict[str, SimulationResult] = {}
+    for sim in sims:
+        if not sim.makes_footprint or (
+            not rerun and skip_existing and sim.has_footprint
+        ):
+            results[str(sim.id)] = SimulationResult(str(sim.id), "complete")
+            continue
+        try:
+            if particles is None:
+                particles = first.particles  # read once for the group
+            context = TransformContext(
+                receptor=sim.receptor,
+                variant=sim.variant.name,
+                directory=project.directory,
+            )
+            make_footprint(sim, particles, context=context)
+        except Exception as error:
+            results[str(sim.id)] = _failed(sim, "footprint", error)
+            continue
+        results[str(sim.id)] = _succeeded(sim, "footprint")
     return results
 
 
@@ -537,9 +529,8 @@ def run_receptors(
 
 __all__ = [
     "SimulationResult",
+    "make_footprint",
+    "run_particles",
     "run_receptor",
     "run_receptors",
-    "run_simulation",
-    "run_particles",
-    "make_footprint",
 ]

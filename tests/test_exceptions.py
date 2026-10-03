@@ -8,12 +8,8 @@ import stilt
 from stilt import exceptions
 from stilt.exceptions import (
     EmptyFootprint,
-    EmptyParticleOutputError,
-    HYSPLITFailureError,
     HYSPLITNotFoundError,
-    HYSPLITTimeoutError,
     MeteorologyError,
-    NoParticleOutputError,
     SimulationError,
     StiltError,
 )
@@ -24,10 +20,6 @@ PARENTS = {
     StiltError: (Exception,),
     SimulationError: (StiltError, RuntimeError),
     MeteorologyError: (SimulationError,),
-    HYSPLITTimeoutError: (SimulationError,),
-    NoParticleOutputError: (SimulationError,),
-    HYSPLITFailureError: (SimulationError,),
-    EmptyParticleOutputError: (SimulationError,),
     HYSPLITNotFoundError: (StiltError, FileNotFoundError),
     EmptyFootprint: (StiltError,),
 }
@@ -63,8 +55,15 @@ def test_hysplit_not_found_is_not_a_failed_run():
     assert not issubclass(HYSPLITNotFoundError, SimulationError)
 
 
-def test_hysplit_failure_error_names_the_reason_and_the_log():
-    err = HYSPLITFailureError(FailureReason.MISSING_MET_FILES, "/runs/a/stilt.log")
-    assert err.reason is FailureReason.MISSING_MET_FILES
-    assert "MISSING_MET_FILES" in str(err)
-    assert "/runs/a/stilt.log" in str(err)
+def test_a_simulation_error_carries_its_reason():
+    err = SimulationError(
+        "HYSPLIT failed (MET_COVERAGE).", reason=FailureReason.MET_COVERAGE
+    )
+    assert err.reason == "MET_COVERAGE"
+    assert SimulationError("no short name").reason is None
+
+
+def test_a_meteorology_error_names_missing_met_files():
+    assert MeteorologyError(
+        "Insufficient number of meteorological files found."
+    ).reason == ("MISSING_MET_FILES")

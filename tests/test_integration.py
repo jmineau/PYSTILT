@@ -169,10 +169,11 @@ def test_failure_missing_met(tmp_path, wbb_receptor, traj_only_config):
     model.run()
 
     sim = model.simulation(*_sim_id(wbb_receptor))
-    # The by-key store has no "failed" state, so the trajectory is simply absent
-    # (incomplete). Failure is surfaced through the log-derived Simulation.outcome.
+    # The particles are absent (incomplete), and the worker recorded why.
     assert not sim.has_particles
-    assert sim.outcome == "failed:MISSING_MET_FILES"
+    assert sim.failure is not None
+    assert sim.failure["reason"] == "MISSING_MET_FILES"
+    assert model.simulations.status()["reason"].tolist() == ["MISSING_MET_FILES"]
 
 
 @integration
@@ -210,7 +211,7 @@ def test_failure_met_cut_short(tmp_path, wbb_receptor, traj_only_config, met_dir
 
     sim = project.simulation(*_sim_id(wbb_receptor))
     assert not sim.has_particles
-    assert sim.outcome == "failed:MET_TRUNCATED"
+    assert sim.failure is not None and sim.failure["reason"] == "MET_TRUNCATED"
     assert sim.log_path is not None
     log = sim.log_path.read_text()
     assert "Only one time period of meteo data" in log

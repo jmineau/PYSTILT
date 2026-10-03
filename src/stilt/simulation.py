@@ -231,27 +231,39 @@ class Simulation:
         return feet.empty_reason(self.receptor.id)
 
     @property
-    def outcome(self) -> str | None:
+    def failure(self) -> dict[str, Any] | None:
         """
-        How this simulation ended, read from its results and log.
+        Why this simulation is not complete, as the worker recorded it, or ``None``.
 
-        Returns
-        -------
-        str or None
-            ``"complete"`` if every expected result exists,
-            ``"failed:<reason>"`` if a log exists but results are missing
-            (see :class:`~stilt.transport.hysplit.FailureReason`), or ``None`` if the
-            simulation has not run.
+        ``None`` when it is complete, or has not run, or the step that
+        failed has since succeeded. Otherwise a dict with ``step``
+        (``"particles"`` or ``"footprint"``), ``error`` (the exception's
+        class), ``reason`` (a short cause such as ``"MET_COVERAGE"``, or
+        ``None``), ``message``, and ``time``. A particles failure also has
+        ``log`` and ``scratch``, the HYSPLIT log and the working directory
+        kept in the output directory; an unexpected error has a
+        ``traceback``. A failed HYSPLIT run fails every variant that shares
+        its particles.
+
+        Examples
+        --------
+        >>> sim.failure
+        {'step': 'particles', 'error': 'MeteorologyError', 'reason': 'MISSING_MET_FILES', ...}
         """
         if self.is_complete():
-            return "complete"
-        log_path = self.log_path
-        if log_path is None or not log_path.exists():
             return None
-        # Imported here, so `import stilt` does not load HYSPLIT's driver.
-        from stilt.transport.hysplit.failures import identify_failure_reason
-
-        return f"failed:{identify_failure_reason(log_path)}"
+        folder = self._particle_set
+        if folder is None:
+            return None
+        record = folder.failure(self.receptor.id)
+        if not self.has_particles:
+            entry, step = record.get("particles"), "particles"
+        else:
+            entry, step = (
+                record.get("footprints", {}).get(self.variant.name),
+                "footprint",
+            )
+        return None if entry is None else {"step": step, **entry}
 
     # -- reading the results -----------------------------------------------
 

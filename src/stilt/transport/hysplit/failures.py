@@ -1,13 +1,19 @@
-"""Why a HYSPLIT run failed, read from the messages in its log."""
+"""Why a HYSPLIT run failed, read from the messages in its log while it runs."""
 
 from __future__ import annotations
 
 from enum import StrEnum
-from pathlib import Path
 
 
 class FailureReason(StrEnum):
-    """Why a HYSPLIT run failed, as read from its ``stilt.log``."""
+    """
+    Why a HYSPLIT run failed.
+
+    The driver reads it from HYSPLIT's log when the run ends, or knows it
+    (a timeout, no particle output), and raises a
+    :class:`~stilt.exceptions.SimulationError` with it as ``reason``. The
+    worker records it with the simulation.
+    """
 
     MISSING_MET_FILES = "MISSING_MET_FILES"
     MET_COVERAGE = "MET_COVERAGE"
@@ -15,15 +21,11 @@ class FailureReason(StrEnum):
     VARYING_MET_INTERVAL = "VARYING_MET_INTERVAL"
     NO_PARTICLE_DATA = "NO_PARTICLE_DATA"
     FORTRAN_RUNTIME_ERROR = "FORTRAN_RUNTIME_ERROR"
-    EMPTY_LOG = "EMPTY_LOG"
-    UNKNOWN = "UNKNOWN"
+    TIMEOUT = "TIMEOUT"
 
 
-#: Phrases written to stilt.log by HYSPLIT or PYSTILT, mapped to their FailureReason.
+#: Phrases HYSPLIT (or the driver) writes to stilt.log, mapped to their FailureReason.
 FAILURE_PHRASES: dict[str, FailureReason] = {
-    # PYSTILT's MeteorologyError (raised Python-side before HYSPLIT runs, then
-    # written to the log by the phase runner) shares HYSPLIT's exact wording, so
-    # one phrase classifies both.
     "Insufficient number of meteorological files found": FailureReason.MISSING_MET_FILES,
     "start point not within (x,y,t) any data file": FailureReason.MET_COVERAGE,
     "start time after end of meteorology data": FailureReason.MET_COVERAGE,
@@ -31,10 +33,6 @@ FAILURE_PHRASES: dict[str, FailureReason] = {
     # Written by the HYSPLIT driver, not HYSPLIT (see MET_TRUNCATED_WARNING).
     "Meteorology ends early": FailureReason.MET_TRUNCATED,
     "PARTICLE_STILT.DAT does not contain any trajectory data": FailureReason.NO_PARTICLE_DATA,
-    # PYSTILT's own errors for a run without particles, by the class name the
-    # worker writes to the log ("Type: ...").
-    "NoParticleOutputError": FailureReason.NO_PARTICLE_DATA,
-    "EmptyParticleOutputError": FailureReason.NO_PARTICLE_DATA,
     "Fortran runtime error": FailureReason.FORTRAN_RUNTIME_ERROR,
 }
 
@@ -49,26 +47,3 @@ def failure_in(text: str) -> FailureReason | None:
         if phrase in text:
             return reason
     return None
-
-
-def identify_failure_reason(path: str | Path) -> FailureReason:
-    """
-    Return why a simulation failed, from the messages in its log.
-
-    Parameters
-    ----------
-    path : str or Path
-        The log file, or a directory holding ``stilt.log``.
-
-    Returns
-    -------
-    FailureReason
-        The reason for the first known message in the log. ``EMPTY_LOG``
-        when there is no log, and ``UNKNOWN`` when no known message matches.
-    """
-    log = Path(path)
-    if log.is_dir():
-        log = log / "stilt.log"
-    if not log.exists():
-        return FailureReason.EMPTY_LOG
-    return failure_in(log.read_text()) or FailureReason.UNKNOWN
