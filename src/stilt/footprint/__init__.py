@@ -3,8 +3,6 @@ Footprints of receptors, calculated from particles and applied to surface fluxes
 
 ``config``
     :class:`FootprintConfig`, the footprint settings.
-``grid``
-    :class:`Grid`, the grid a footprint is computed on.
 ``gridding``
     :func:`calculate`, the footprint from particles, as in STILT-R.
 ``aggregation``
@@ -21,7 +19,6 @@ Footprints of receptors, calculated from particles and applied to surface fluxes
 from .accessor import FootprintAccessor
 from .aggregation import Jacobian, jacobian
 from .config import FootprintConfig
-from .grid import Grid
 from .gridding import calculate
 from .io import (
     FOOTPRINT_SCHEMA,
@@ -38,7 +35,6 @@ __all__ = [
     "FootprintAccessor",
     "FootprintConfig",
     "Geometry",
-    "Grid",
     "Jacobian",
     "Mesh",
     "Zones",

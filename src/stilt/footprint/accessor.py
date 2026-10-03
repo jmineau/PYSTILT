@@ -14,9 +14,9 @@ import xarray as xr
 
 from stilt._atomic import atomic_path
 from stilt.footprint.config import FootprintConfig
-from stilt.footprint.grid import Grid
 from stilt.identity import read_footprint_settings
 from stilt.receptors import Receptor
+from stilt.spatial import Grid
 
 from .aggregation import aggregate
 from .io import _utc_index, _with_cf_metadata

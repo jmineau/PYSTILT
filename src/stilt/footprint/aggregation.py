@@ -18,9 +18,8 @@ import xarray as xr
 from scipy import sparse
 
 from stilt.footprint.config import FootprintConfig
-from stilt.footprint.grid import Grid
 from stilt.receptors import parse_receptor_id
-from stilt.spatial import horizontal_dims
+from stilt.spatial import Grid, horizontal_dims
 
 from .io import _naive_utc_ns, _utc_index
 from .targets import Geometry, Mesh, Zones, check_resolution, overlap_weights

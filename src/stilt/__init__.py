@@ -11,7 +11,7 @@ from importlib.metadata import version as _version
 from .config import ProjectConfig
 from .exceptions import StiltError
 from .execution import ExecutionConfig
-from .footprint import FootprintConfig, Geometry, Grid, Mesh, Zones, read_footprint
+from .footprint import FootprintConfig, Geometry, Mesh, Zones, read_footprint
 from .meteorology import Met, MetConfig
 from .output import Output
 from .particles import particles_metadata, read_particles, write_particles
@@ -24,7 +24,7 @@ from .receptors import (
     read_receptors,
 )
 from .simulation import SimID, Simulation
-from .spatial import Bounds
+from .spatial import Bounds, Grid
 from .transforms import ParticleTransform, TransformContext
 from .variants import Variant
 

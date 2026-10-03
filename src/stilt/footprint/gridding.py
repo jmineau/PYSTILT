@@ -16,8 +16,8 @@ from scipy.ndimage import convolve as _convolve
 
 from stilt.exceptions import EmptyFootprint
 from stilt.footprint.config import FootprintConfig
-from stilt.footprint.grid import _grid_cell_starts
 from stilt.receptors import Receptor
+from stilt.spatial import _grid_cell_starts
 from stilt.transforms import TransformContext, apply_transforms
 
 from .io import _footprint_array

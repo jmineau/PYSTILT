@@ -43,8 +43,7 @@ from scipy import sparse
 from shapely.geometry.base import BaseGeometry
 
 from stilt.footprint.config import FileGeometrySpec, GeometrySpec, H3GeometrySpec
-from stilt.footprint.grid import Grid
-from stilt.spatial import is_longlat, same_crs
+from stilt.spatial import Grid, is_longlat, same_crs
 
 
 def _transform_geometries(

@@ -6,10 +6,9 @@ import pytest
 import xarray as xr
 
 from stilt.footprint.config import FootprintConfig
-from stilt.footprint.grid import Grid
 from stilt.footprint.io import _describe
 from stilt.sampling import sample_field
-from stilt.spatial import horizontal_dims
+from stilt.spatial import Grid, horizontal_dims
 
 
 def _flux(values=None, lons=(-112.0, -111.0, -110.0), lats=(40.0, 41.0)):

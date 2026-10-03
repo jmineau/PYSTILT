@@ -65,7 +65,6 @@ from stilt.footprint import (
     write_footprint,
 )
 from stilt.footprint.config import FootprintConfig
-from stilt.footprint.grid import Grid
 from stilt.identity import (
     footprint_hash,
     footprint_settings,
@@ -75,6 +74,7 @@ from stilt.identity import (
 )
 from stilt.particles import read_particles, write_particles
 from stilt.receptors import Receptor, parse_receptor_id
+from stilt.spatial import Grid
 
 if TYPE_CHECKING:
     from stilt.variants import Variant

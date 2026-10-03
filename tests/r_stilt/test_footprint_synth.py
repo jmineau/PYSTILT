@@ -39,7 +39,6 @@ import xarray as xr
 from stilt.exceptions import EmptyFootprint
 from stilt.footprint import calculate
 from stilt.footprint.config import FootprintConfig
-from stilt.footprint.grid import Grid, _grid_cell_starts
 from stilt.footprint.gridding import (
     _compute_kernel_bandwidths,
     _filter_and_rasterize_particles,
@@ -51,6 +50,7 @@ from stilt.footprint.gridding import (
 )
 from stilt.particles import calc_plume_dilution
 from stilt.receptors import PointReceptor
+from stilt.spatial import Grid, _grid_cell_starts
 
 pytestmark = [pytest.mark.fidelity]
 

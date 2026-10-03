@@ -8,11 +8,11 @@ import xarray as xr
 
 from stilt.execution import make_footprint
 from stilt.footprint.config import FootprintConfig
-from stilt.footprint.grid import Grid
 from stilt.meteorology import MetConfig
 from stilt.output import Output
 from stilt.particles import particles_metadata
 from stilt.simulation import SimID, Simulation
+from stilt.spatial import Grid
 from stilt.transforms import FirstOrderLifetime, TransformContext, transform_kind
 from stilt.transport import ModelInfo
 from stilt.transport.hysplit import HysplitConfig

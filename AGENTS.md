@@ -139,8 +139,6 @@ src/stilt/
                      enhancement from a flux field)
   footprint/         the footprint (a DataArray)
     config.py        FootprintConfig and the geometry specs
-    grid.py          Grid, the raster a footprint is on, and its cell and CF
-                     attribute helpers
     gridding.py      `calculate`, STILT-R's calc_footprint (fidelity-guarded)
     aggregation.py   summing footprints onto other geometries: `aggregate`,
                      `jacobian`, their time binning and target weights
@@ -151,7 +149,8 @@ src/stilt/
     accessor.py      the `.stilt` xarray accessor (enhancement from a flux
                      field, aggregation)
   sampling.py        sampling a gridded field (a flux, a mole fraction) at points
-  spatial.py         Bounds and the CRS helpers (one is_longlat)
+  spatial.py         rasters and CRS, no shapely: Bounds, Grid (with its cell
+                     and CF helpers), horizontal_dims, is_longlat, same_crs
   meteorology.py     MetConfig, and Met: ARL file discovery, download, and
                      cropping (via arlmet)
   transforms.py      pre-footprint particle transforms (averaging kernel,
@@ -232,9 +231,10 @@ output directory, never only in memory.
   particles only, and footprint settings without a grid are an error. There is no
   named-footprints dict.
 - **Each part owns its config.** `FootprintConfig` is in
-  `stilt.footprint.config`, `Grid` in `stilt.footprint.grid`, `MetConfig`
-  in `stilt.meteorology`, `ExecutionConfig` in `stilt.execution.config`, a
-  model's config in its package. `stilt.config` composes them, so nothing
+  `stilt.footprint.config`, `MetConfig` in `stilt.meteorology`, `ExecutionConfig` in `stilt.execution.config`, a
+  model's config in its package. `Bounds` and `Grid` are in `stilt.spatial`,
+  the raster and CRS layer that needs no shapely, since more than footprints
+  use rasters (a flux put on the footprint grid). `stilt.config` composes them, so nothing
   below the project imports `stilt.config` (an import-linter contract).
   Config classes read no file; anything that reads one or asks a model goes
   in `stilt.variants`.

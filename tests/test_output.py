@@ -10,7 +10,6 @@ import xarray as xr
 import yaml
 
 from stilt.footprint.config import FootprintConfig
-from stilt.footprint.grid import Grid
 from stilt.footprint.io import _describe
 from stilt.footprint.targets import Mesh
 from stilt.identity import footprint_hash, footprint_settings, settings_hash
@@ -18,6 +17,7 @@ from stilt.meteorology import MetConfig
 from stilt.output import Output
 from stilt.particles import particles_metadata, write_particles
 from stilt.receptors import PointReceptor
+from stilt.spatial import Grid
 from stilt.transport import ModelInfo
 from stilt.transport.hysplit import HysplitConfig
 from stilt.variants import Variant
