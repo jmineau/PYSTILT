@@ -11,20 +11,10 @@ import datetime as dt
 from collections.abc import Iterable
 from io import StringIO
 from pathlib import Path
-from typing import (
-    IO,
-    TYPE_CHECKING,
-    Any,
-)
+from typing import IO, Any
 
 import numpy as np
 import pandas as pd
-from pydantic import (
-    ValidationError,
-)
-
-if TYPE_CHECKING:
-    pass
 
 from .models import (
     ColumnReceptor,
@@ -382,15 +372,6 @@ def receptors_from_frame(frame: pd.DataFrame) -> list[Receptor]:
             )
         )
     return receptors
-
-
-def _message(exc: ValueError) -> str:
-    """Return the message of *exc* on one line, without pydantic's framing."""
-    if isinstance(exc, ValidationError):
-        return "; ".join(
-            str(e["msg"]).removeprefix("Value error, ") for e in exc.errors()
-        )
-    return str(exc)
 
 
 def check_distinct_ids(receptors: Iterable[Receptor]) -> None:

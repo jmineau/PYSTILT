@@ -10,16 +10,9 @@ file and names the first bad row (:func:`stilt.receptors.receptor_rows`).
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import (
-    TYPE_CHECKING,
-    Any,
-)
+from typing import Any
 
 import numpy as np
-
-if TYPE_CHECKING:
-    pass
-
 
 #: Why a multipoint receptor's points may not share a horizontal location.
 REPEATED_LOCATION = (
