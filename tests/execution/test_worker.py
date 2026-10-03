@@ -13,6 +13,7 @@ from stilt.config import (
 )
 from stilt.exceptions import (
     EmptyParticleOutputError,
+    MeteorologyError,
     NoParticleOutputError,
     SimulationError,
 )
@@ -300,6 +301,24 @@ def test_run_particles_starts_in_an_empty_directory(
     with pytest.raises(RuntimeError):
         worker.run_particles(sim, met=met, workdir=workdir)
     assert seen == [[]]
+
+
+def test_run_particles_keeps_no_empty_scratch_copy(sim, met, compute_root, monkeypatch):
+    """A run that fails before writing anything, such as on missing met, leaves no scratch copy."""
+
+    class _Model:
+        name = "hysplit"
+
+        def run(self, receptor, params, met, workdir, timeout=None):
+            raise MeteorologyError("Insufficient number of meteorological files found.")
+
+    monkeypatch.setattr(worker, "get_model", lambda name: _Model())
+    with pytest.raises(MeteorologyError):
+        worker.run_particles(sim, met=met, workdir=compute_root / sim.id)
+
+    kept = sim.output.particles(sim.variant).scratch_path(sim.receptor.id)
+    assert not kept.exists()
+    assert not (compute_root / sim.id).exists()
 
 
 def test_run_simulation_error_is_failed_and_logged(sim, met, compute_root, monkeypatch):
