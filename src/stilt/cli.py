@@ -6,10 +6,10 @@ prints a short summary. Examples::
 
     stilt init                        # start a project in the current directory
     stilt init ./my_project           # start a project in ./my_project
-    stilt run                         # run locally and wait until done
+    stilt run                         # run, and wait until done
     stilt run ./my_project --no-skip  # run every simulation again
-    stilt run --backend slurm         # submit a Slurm job array and return
-    stilt run --wait                  # with Slurm, wait for the jobs to finish
+    stilt run --backend slurm         # run as a Slurm job array, and wait
+    stilt submit                      # submit a Slurm job array and return
     stilt status                      # count finished simulations
 """
 
@@ -161,46 +161,37 @@ def init(project: Path = _NEW_PROJECT_ARG) -> None:
     typer.echo("                  2023-01-01 12:00:00,-111.85,40.77,5")
 
 
-@app.command()
-def run(
-    project: str | None = _PROJECT_ARG,
-    no_skip: bool = _NO_SKIP,
-    backend: str | None = typer.Option(
-        None,
-        "--backend",
-        help="Where to run: local or slurm. Overrides execution.backend in config.yaml.",
+_BACKEND = typer.Option(
+    None,
+    "--backend",
+    help="Where to run: local or slurm. Overrides execution.backend in config.yaml.",
+)
+_N_WORKERS = typer.Option(
+    None,
+    "--n-workers",
+    help="Number of Slurm array tasks. Overrides execution.n_workers in config.yaml.",
+)
+_CPUS = typer.Option(
+    None,
+    "--cpus",
+    help=(
+        "Receptors each task runs at once (local processes, or CPUs per "
+        "Slurm task). Overrides execution.cpus in config.yaml."
     ),
-    n_workers: int | None = typer.Option(
-        None,
-        "--n-workers",
-        help="Number of Slurm array tasks. Overrides execution.n_workers in config.yaml.",
-    ),
-    cpus: int | None = typer.Option(
-        None,
-        "--cpus",
-        help=(
-            "Receptors each task runs at once (local processes, or CPUs per "
-            "Slurm task). Overrides execution.cpus in config.yaml."
-        ),
-    ),
-    wait: bool = typer.Option(
-        False,
-        "--wait/--no-wait",
-        help=(
-            "Wait for submitted Slurm jobs to finish. Without it, a Slurm run "
-            "returns once the jobs are submitted. Local runs always wait."
-        ),
-    ),
-    compute_root: str | None = _COMPUTE_ROOT,
-) -> None:
-    """
-    Run every unfinished simulation in a project.
+)
 
-    Runs HYSPLIT for each receptor and variant, then the footprint when the
-    variant has a grid. Simulations whose outputs exist are skipped unless
-    --no-skip is given. A local run returns when all simulations are done.
-    A Slurm run submits a job array and returns. Add --wait to wait for it.
-    """
+
+def _start(
+    project: str | None,
+    *,
+    backend: str | None,
+    n_workers: int | None,
+    cpus: int | None,
+    no_skip: bool,
+    compute_root: str | None,
+    waits: bool,
+) -> tuple[Project, dict[str, Any]]:
+    """Open the project, print what is about to run, and return the run's options."""
     opened = Project(_resolve_project(project))
     # Progress is the worker's one line per finished receptor.
     logging.basicConfig(level=logging.WARNING, format="%(message)s")
@@ -216,31 +207,84 @@ def run(
     execution = ExecutionConfig.model_validate(
         {**opened.config.execution.model_dump(exclude_unset=True), **overrides}
     )
-
     _print_run_start(
         opened,
         execution,
         compute_root=compute_root,
         skip_existing=not no_skip,
-        wait=wait,
+        waits=waits,
     )
-    options: dict[str, Any] = {
+    options = {
         "skip_existing": not no_skip,
         "compute_root": compute_root,
         "execution": execution,
     }
-    if execution.backend == "slurm" and not wait:
-        jobs = opened.submit(**options)
-        if jobs:
-            typer.echo(f"Submitted job: {str(jobs[0].job_id).split('_')[0]}")
-            return
-    else:
-        if execution.backend == "slurm":
-            typer.echo(
-                "Submitted; waiting for the job to finish (squeue shows its tasks)..."
-            )
-        opened.run(**options)
+    return opened, options
+
+
+@app.command()
+def run(
+    project: str | None = _PROJECT_ARG,
+    no_skip: bool = _NO_SKIP,
+    backend: str | None = _BACKEND,
+    n_workers: int | None = _N_WORKERS,
+    cpus: int | None = _CPUS,
+    compute_root: str | None = _COMPUTE_ROOT,
+) -> None:
+    """
+    Run every unfinished simulation in a project, and wait until they are done.
+
+    Runs HYSPLIT for each receptor and variant, then the footprint when the
+    variant has a grid. Simulations whose outputs exist are skipped unless
+    --no-skip is given. With the Slurm backend this submits a job array and
+    waits for it; use stilt submit to return as soon as it is submitted.
+    """
+    opened, options = _start(
+        project,
+        backend=backend,
+        n_workers=n_workers,
+        cpus=cpus,
+        no_skip=no_skip,
+        compute_root=compute_root,
+        waits=True,
+    )
+    if options["execution"].backend == "slurm":
+        typer.echo(
+            "Submitted; waiting for the job to finish (squeue shows its tasks)..."
+        )
+    opened.run(**options)
     _print_status(opened)
+
+
+@app.command()
+def submit(
+    project: str | None = _PROJECT_ARG,
+    no_skip: bool = _NO_SKIP,
+    n_workers: int | None = _N_WORKERS,
+    cpus: int | None = _CPUS,
+    compute_root: str | None = _COMPUTE_ROOT,
+) -> None:
+    """
+    Submit every unfinished simulation in a project to Slurm, and return.
+
+    The receptors are split among a Slurm job array's tasks, with the
+    resources under execution in config.yaml. Check on them with stilt
+    status.
+    """
+    opened, options = _start(
+        project,
+        backend="slurm",
+        n_workers=n_workers,
+        cpus=cpus,
+        no_skip=no_skip,
+        compute_root=compute_root,
+        waits=False,
+    )
+    jobs = opened.submit(**options)
+    if jobs:
+        typer.echo(f"Submitted job: {str(jobs[0].job_id).split('_')[0]}")
+    else:
+        _print_status(opened)
 
 
 @app.command()
@@ -285,7 +329,7 @@ def _print_run_start(
     *,
     compute_root: str | None,
     skip_existing: bool,
-    wait: bool,
+    waits: bool,
 ) -> None:
     """Print the settings ``stilt run`` is about to use."""
     backend = execution.backend
@@ -305,7 +349,7 @@ def _print_run_start(
     typer.echo(f"Receptors loaded: {len(project.receptors)}")
     typer.echo(f"Variants: {', '.join(project.variants)}")
     typer.echo(
-        "Execution mode: " + ("submit-and-wait" if wait else "submit-and-return")
+        "Execution mode: " + ("submit-and-wait" if waits else "submit-and-return")
         if backend != "local"
         else "Execution mode: local, one line per receptor as it finishes"
     )

@@ -144,7 +144,7 @@ execution:
 ```
 
 ```bash
-stilt run ./my_project          # submits and returns; add --wait to wait
+stilt submit ./my_project       # submits and returns; stilt run waits
 stilt status ./my_project
 ```
 
