@@ -342,6 +342,8 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Removed
 
+- The single-value `temperature` of `pressure_altitudes`. Pass one
+  temperature per pressure level, or none for the standard atmosphere.
 - `stilt.observations.particle_background`, `endpoint_weights`, and
   `fill_missing`. `background(...).per_particle` is the field at each
   endpoint, and `background(...).weights` the weights.
