@@ -8,6 +8,16 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- An `Output` reads each settings folder's `_settings.yaml` once. A
+  lookup that misses (a variant that has not run yet) lists the tree again
+  but reads only folders it has not seen, where it used to read and hash
+  every folder again on each miss. A footprint folder finds its particles
+  folder in the same cache (#134).
+- `Particles` and `Footprints` share one base for what every settings
+  folder does (`file`, `has`, `receptors`, `table`, `path`, equality);
+  each keeps only what differs. `Footprints.hash` is an attribute set when
+  the folder is read, as `Particles.hash` already was (#134).
+
 - **Each part owns its config** (breaking). `FootprintConfig` and the
   geometry specs are in `stilt.footprint.config`, `MetConfig` in
   `stilt.meteorology`, and
@@ -584,6 +594,9 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   hash. Existing output is still found.
 
 ### Added
+
+- `Simulation.settings`: the run and footprint settings a simulation's
+  results are made with, as the output folders record them (#134).
 
 - `Receptor.to_json()` and `Receptor.from_json()`, the form result files
   record a receptor in (#134).
