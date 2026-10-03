@@ -23,7 +23,6 @@ from stilt.receptors import Receptor, parse_receptor_id
 from stilt.spatial import (
     Geometry,
     Mesh,
-    SpatialTarget,
     Zones,
     _cf_grid_mapping_attrs,
     _grid_cell_starts,
@@ -1353,7 +1352,7 @@ class FootprintAccessor:
 
     def aggregate(
         self,
-        target: SpatialTarget,
+        target: Geometry,
         time_bins: pd.IntervalIndex,
     ) -> pd.DataFrame:
         """
@@ -1368,7 +1367,7 @@ class FootprintAccessor:
 
         Parameters
         ----------
-        target : SpatialTarget
+        target : Grid, Mesh, or Zones
             Cells to sum onto:
 
             - :class:`~stilt.config.Grid`, every cell of a regular grid, in

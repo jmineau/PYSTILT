@@ -66,14 +66,6 @@ def test_grid_from_geometry_cells_per_target_knob():
     assert Grid.from_geometry(mesh, cells_per_target=2).xres == pytest.approx(0.05)
 
 
-def test_grid_from_geometries_takes_union_and_finest():
-    a = Mesh.from_windows([(0.5, 0.5)], 0.1)
-    b = Mesh.from_windows([(2.0, 2.0)], 0.4)
-    grid = Grid.from_geometries([a, b])
-    assert grid.xres == pytest.approx(0.02)
-    assert grid.xmin <= 0.45 and grid.xmax >= 2.2
-
-
 def test_grid_from_geometry_warns_when_huge():
     mesh = Mesh.from_windows([(0.0, 0.0), (50.0, 50.0)], 0.001)
     with pytest.warns(UserWarning, match="cells"):

@@ -8,6 +8,8 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- `stilt.SpatialTarget` (it was another name for `stilt.Geometry`),
+  `Grid.from_geometries`, and `Grid.resolution`.
 - `stilt.output.Jacobian` is `stilt.footprint.Jacobian`. A Jacobian built
   for a footprint folder now also warns when the target mesh is not the one
   the footprint grid was chosen for, as `foot.stilt.aggregate` does.
