@@ -117,12 +117,13 @@ src/stilt/
                      multipoint), their ids, and the receptor table behind
                      the CSV reader, writer, and appender
   particles.py       the particle table (a DataFrame): prepare, read, and write
-                     particle files; the `.stilt` pandas accessor
+                     particle files; the `.stilt` pandas accessor (endpoints,
+                     enhancement from a flux field)
   footprint.py       the footprint (a DataArray): `calculate`, reading and
                      writing footprint files (`read_footprint`,
                      `write_footprint`), CF-1.8 NetCDF, and the `.stilt` xarray accessor
                      (enhancement from a flux field, aggregation)
-  flux.py            sampling a flux field at points or along particles
+  sampling.py        sampling a gridded field (a flux, a mole fraction) at points
   spatial.py         where things are: bounds, the footprint Grid, the
                      aggregation targets (Mesh, Zones), CRS helpers
                      (one is_longlat), and overlap weights

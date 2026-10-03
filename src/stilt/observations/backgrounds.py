@@ -25,7 +25,7 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
-from stilt.flux import sample_field, vertical_dim
+from stilt.sampling import sample_field, vertical_dim
 from stilt.transforms import TransformContext, apply_transforms
 
 

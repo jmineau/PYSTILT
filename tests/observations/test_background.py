@@ -5,8 +5,8 @@ import pandas as pd
 import pytest
 import xarray as xr
 
-from stilt.flux import sample_field, vertical_dim
 from stilt.observations import Background, background
+from stilt.sampling import sample_field, vertical_dim
 from stilt.transforms import FirstOrderLifetime, PressureWeighting
 
 
