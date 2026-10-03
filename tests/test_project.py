@@ -11,7 +11,7 @@ import xarray as xr
 
 from stilt.config import ExecutionConfig, Grid, MetConfig, ProjectConfig
 from stilt.execution import resolve_compute_root
-from stilt.footprint import _describe
+from stilt.footprint.io import _describe
 from stilt.output import Output
 from stilt.particles import prepare
 from stilt.project import Project, Simulations

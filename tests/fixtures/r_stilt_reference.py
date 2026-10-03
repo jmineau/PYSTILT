@@ -803,7 +803,7 @@ WINDERR = ReferenceScenario(
 # three branches the other scenarios never hit together:
 #
 #   1. The ``foot > 0 & inside-buffered-bounds`` filter at
-#      ``footprint.py:_filter_and_rasterize_particles`` drops most particles.
+#      ``footprint/gridding.py:_filter_and_rasterize_particles`` drops most particles.
 #   2. The ``n_particles`` denominator (computed pre-filter, line 843) divides
 #      by the original ensemble size, not the surviving count — both R and
 #      PYSTILT must agree on this denominator.

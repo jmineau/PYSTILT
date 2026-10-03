@@ -14,7 +14,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402 — must come after use("Agg")
 
 from stilt.config import FootprintConfig, Grid
-from stilt.footprint import _describe
+from stilt.footprint.io import _describe
 from stilt.receptors import ColumnReceptor, MultiPointReceptor, PointReceptor
 from stilt.visualization import (
     ProjectPlotAccessor,

@@ -17,7 +17,7 @@ from stilt.config import (
     TransportSettings,
 )
 from stilt.config.transport import settings_hash
-from stilt.footprint import _describe
+from stilt.footprint.io import _describe
 from stilt.output import Footprints, Output
 from stilt.particles import particles_metadata, write_particles
 from stilt.receptors import PointReceptor
