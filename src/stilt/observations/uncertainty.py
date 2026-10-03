@@ -31,11 +31,7 @@ import pandas as pd
 import xarray as xr
 
 from stilt.flux import particle_enhancement
-from stilt.observations.backgrounds import (
-    endpoint_weights,
-    fill_missing,
-    particle_background,
-)
+from stilt.observations import backgrounds
 from stilt.transforms import TransformContext, apply_transforms, release_coordinate
 
 #: X-STILT's empirical mean vertical correlation length of transport errors, m.
@@ -370,25 +366,22 @@ def transport_error(
 
     def _prepare(
         table: pd.DataFrame,
-    ) -> tuple[pd.Series, pd.Series, pd.Series | None]:
-        """Return the modeled value, release height, and weighted background per particle."""
-        ctx = context
-        sampled_background = None
-        if background is not None:
-            # each particle's background, weighted like its enhancement
-            weights = endpoint_weights(table, transforms, ctx)
-            sampled = fill_missing(particle_background(table, background), weights)
-            sampled_background = weights * sampled
-        if transforms:
-            table = apply_transforms(table, transforms, ctx)
-        x = particle_enhancement(table, flux)
-        if sampled_background is not None:
-            x = x + sampled_background.reindex(x.index)
-        return x, _release_heights(table), sampled_background
+    ) -> tuple[pd.Series, pd.Series, float]:
+        """Return the modeled value and release height per particle, and the background."""
+        weighted = apply_transforms(table, transforms, context) if transforms else table
+        x = particle_enhancement(weighted, flux)
+        if background is None:
+            return x, _release_heights(weighted), 0.0
+        bg = backgrounds.background(
+            table, background, transforms=transforms, context=context
+        )
+        # Each particle's background, weighted like its enhancement. A
+        # particle's enhancement is N times its share of the footprint's.
+        filled = backgrounds._fill_missing(bg.per_particle, bg.weights)
+        x = x + (len(bg.weights) * bg.weights * filled).reindex(x.index)
+        return x, _release_heights(weighted), bg.value
 
-    x_orig, h_orig, b_orig = _prepare(particles)
-    # the unperturbed particles' weighted background, reported separately
-    background_value = 0.0 if b_orig is None else float(b_orig.mean())
+    x_orig, h_orig, background_value = _prepare(particles)
 
     edges = _level_edges(h_orig, levels)
     label_orig = _level_labels(h_orig, edges)

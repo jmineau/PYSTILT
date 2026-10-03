@@ -54,18 +54,8 @@ class Background:
     weights: pd.Series
 
 
-def particle_background(particles: pd.DataFrame, field: xr.DataArray) -> pd.Series:
-    """
-    Return the field at each particle's endpoint, indexed by ``indx``.
-
-    The endpoint is the row farthest in time from release
-    (``particles.stilt.endpoints()``). A vertical dimension must be
-    named after the particle column it is matched against: ``pres`` for
-    pressure in hPa, ``zagl`` for height above ground in meters, or a column
-    you add, such as height above sea level from ``zagl + zsfc``. Rename it
-    with, for example, ``field.rename(level="pres")``. A field with a
-    ``time`` dimension is sampled at the endpoint's ``datetime``.
-    """
+def _particle_background(particles: pd.DataFrame, field: xr.DataArray) -> pd.Series:
+    """Return the field at each particle's endpoint, indexed by ``indx``."""
     ends = particles.stilt.endpoints()
     zdim = vertical_dim(field)
     z = None
@@ -92,7 +82,7 @@ def particle_background(particles: pd.DataFrame, field: xr.DataArray) -> pd.Seri
     )
 
 
-def endpoint_weights(
+def _endpoint_weights(
     particles: pd.DataFrame,
     transforms: Sequence[Any] = (),
     context: TransformContext | None = None,
@@ -103,8 +93,7 @@ def endpoint_weights(
     Transforms multiply ``foot``, so applying them to particles whose
     ``foot`` is 1 leaves each particle's weight: its averaging kernel and
     pressure weight, and the lifetime decay at its endpoint age. Without
-    transforms every weight is 1. Divided by the particle count, these are
-    the weights :func:`stilt.footprint.calculate` gives the particles.
+    transforms every weight is 1.
     """
     transforms = list(transforms)
     if transforms:
@@ -119,7 +108,7 @@ def endpoint_weights(
     )
 
 
-def fill_missing(per_particle: pd.Series, weights: pd.Series) -> pd.Series:
+def _fill_missing(per_particle: pd.Series, weights: pd.Series) -> pd.Series:
     """
     Replace missing per-particle values with the weighted mean of the others.
 
@@ -157,10 +146,17 @@ def background(
     particles : pandas.DataFrame
         The simulation's particle table (``sim.particles``).
     field : xarray.DataArray or pandas.Series
-        The background field (see :func:`particle_background` for its
-        layout), or one value per particle that you sampled yourself, as a
-        Series indexed by ``indx``. For example, lair's
-        ``CarbonTracker.sample`` on ``sim.particles.stilt.endpoints()``.
+        The background field, or one value per particle that you sampled
+        yourself, as a Series indexed by ``indx``. For example, lair's
+        ``CarbonTracker.sample`` on ``sim.particles.stilt.endpoints()``. A
+        field is sampled at each particle's endpoint, the row farthest in
+        time from release (``particles.stilt.endpoints()``). Its vertical
+        dimension must be named after the particle column it is matched
+        against: ``pres`` for pressure in hPa, ``zagl`` for height above
+        ground in meters, or a column you add, such as height above sea
+        level from ``zagl + zsfc``. Rename it with, for example,
+        ``field.rename(level="pres")``. A field with a ``time`` dimension is
+        sampled at the endpoint's ``datetime``.
     transforms : sequence, optional
         The footprint's particle transforms (``sim.variant.footprint.transforms``), so
         the background is weighted like the footprint and adds to its
@@ -185,10 +181,10 @@ def background(
     if isinstance(field, pd.Series):
         per_particle = field.rename("background")
     else:
-        per_particle = particle_background(particles, field)
-    weights = endpoint_weights(particles, transforms, context)
+        per_particle = _particle_background(particles, field)
+    weights = _endpoint_weights(particles, transforms, context)
     weights = weights / len(weights)
-    filled = fill_missing(per_particle, weights)
+    filled = _fill_missing(per_particle, weights)
     value = float((weights * filled).sum()) if np.isfinite(filled).any() else np.nan
     return Background(
         value=value, per_particle=per_particle.reindex(weights.index), weights=weights
@@ -198,7 +194,4 @@ def background(
 __all__ = [
     "Background",
     "background",
-    "endpoint_weights",
-    "fill_missing",
-    "particle_background",
 ]

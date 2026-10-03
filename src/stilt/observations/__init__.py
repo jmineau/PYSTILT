@@ -30,7 +30,7 @@ Particle weighting (averaging kernel, pressure weighting, lifetime decay)
 is in :mod:`stilt.transforms`.
 """
 
-from .backgrounds import Background, background, particle_background
+from .backgrounds import Background, background
 from .plumes import Plume, PlumeBackground, plume_background, plume_polygon
 from .readers import (
     read_ggg_netcdf,
@@ -54,7 +54,6 @@ __all__ = [
     "fit_variogram",
     "group_by_overpass",
     "jitter_points",
-    "particle_background",
     "plume_background",
     "plume_polygon",
     "pressure_altitudes",

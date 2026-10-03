@@ -6,11 +6,7 @@ import pytest
 import xarray as xr
 
 from stilt.flux import sample_field, vertical_dim
-from stilt.observations import Background, background, particle_background
-from stilt.observations.backgrounds import (
-    endpoint_weights,
-    fill_missing,
-)
+from stilt.observations import Background, background
 from stilt.transforms import FirstOrderLifetime, PressureWeighting
 
 
@@ -128,11 +124,11 @@ def test_sample_field_requires_z_and_times_when_the_field_has_them():
         sample_field(_field_3d(), x=[-112.0], y=[40.0], z=[1.0, 2.0])
 
 
-# -- particle_background -------------------------------------------------------------
+# -- sampling the field ---------------------------------------------------------------
 
 
-def test_particle_background_samples_each_endpoint():
-    per = particle_background(_particles(), _field_3d())
+def test_background_samples_each_endpoint():
+    per = background(_particles(), _field_3d()).per_particle
 
     assert per.index.name == "indx"
     assert per.index.tolist() == [1, 2, 3]
@@ -140,44 +136,22 @@ def test_particle_background_samples_each_endpoint():
     assert per.name == "background"
 
 
-def test_particle_background_time_varying_uses_the_endpoint_datetime():
+def test_background_time_varying_uses_the_endpoint_datetime():
     times = pd.to_datetime(["2023-01-01 11:00", "2023-01-01 12:00"])
     field = xr.concat([_field(), _field() + 1000.0], dim="time").assign_coords(
         time=times
     )
 
-    per = particle_background(_particles(), field)  # endpoints are at 11:00
+    per = background(_particles(), field).per_particle  # endpoints are at 11:00
 
     assert per.tolist() == [0.0, 5.0, 4.0]
     with pytest.raises(ValueError, match="datetime"):
-        particle_background(_particles().drop(columns="datetime"), field)
+        background(_particles().drop(columns="datetime"), field)
 
 
-def test_particle_background_vertical_dimension_must_name_a_particle_column():
+def test_background_vertical_dimension_must_name_a_particle_column():
     with pytest.raises(ValueError, match="'level' is not a particle column"):
-        particle_background(_particles(), _field_3d().rename(pres="level"))
-
-
-# -- endpoint_weights / fill_missing --------------------------------------------------
-
-
-def test_endpoint_weights_are_one_without_transforms_and_the_transform_factor_with():
-    ones = endpoint_weights(_particles())
-    assert ones.tolist() == [1.0, 1.0, 1.0]
-    assert ones.index.name == "indx"
-
-    decayed = endpoint_weights(_particles(), [FirstOrderLifetime(lifetime_hours=1.0)])
-    assert decayed.to_numpy() == pytest.approx(np.exp(-np.array([1.0, 1.0, 2.0])))
-
-
-def test_fill_missing_uses_the_weighted_mean_of_the_others():
-    per = pd.Series([1.0, np.nan, 3.0], index=pd.Index([1, 2, 3], name="indx"))
-    w = pd.Series([3.0, 1.0, 1.0], index=per.index)
-
-    filled = fill_missing(per, w)
-
-    assert filled.tolist() == [1.0, 1.5, 3.0]
-    assert np.isnan(fill_missing(per * np.nan, w)).all()
+        background(_particles(), _field_3d().rename(pres="level"))
 
 
 # -- background ----------------------------------------------------------------------
@@ -236,6 +210,18 @@ def _column(n=60, p_sfc=1000.0):
             "foot": np.ones(n),
         }
     )
+
+
+def test_background_fills_missing_particles_with_the_weighted_mean_of_the_others():
+    sampled = pd.Series([1.0, np.nan, 3.0], index=pd.Index([1, 2, 3], name="indx"))
+    w = np.exp(-np.array([1.0, 1.0, 2.0])) / 3.0
+
+    result = background(
+        _particles(), sampled, transforms=[FirstOrderLifetime(lifetime_hours=1.0)]
+    )
+
+    mean = (w[0] * 1.0 + w[2] * 3.0) / (w[0] + w[2])
+    assert result.value == pytest.approx(mean * w.sum())
 
 
 def test_background_pressure_weighting_covers_the_column_mass_fraction():
