@@ -207,7 +207,7 @@ You may plan to add footprints up over irregular areas, such as counties
 from a shapefile, H3 hexagons, or small windows around point sources. You
 can then name those areas in ``geometry`` instead of giving a grid. PYSTILT
 picks a grid fine enough to resolve them (see
-:meth:`stilt.Grid.from_geometry`). This needs the ``geometry`` extra
+:meth:`stilt.Mesh.to_grid`). This needs the ``geometry`` extra
 (``pip install "pystilt[geometry]"``).
 
 .. code-block:: yaml

@@ -5,7 +5,7 @@ A footprint's ``grid`` is the raster it is computed on. Its ``geometry``,
 when given, names the polygons it will be aggregated to: a vector file, H3
 hexagons, or windows around points. Each geometry spec's ``build`` method
 returns a :class:`stilt.Mesh`, and without a ``grid`` the grid is derived
-from the geometry with :meth:`stilt.Grid.from_geometry`.
+from the mesh with :meth:`stilt.Mesh.to_grid`.
 
 Loading a config does not read the geometry. The mesh is built the first
 time a variant's settings are resolved (:meth:`FootprintConfig.resolve`),
@@ -147,7 +147,7 @@ class FootprintConfig(BaseModel):
     and ``geometry`` unset for a variant that only produces particles.
     Give ``geometry`` to name the polygons the footprint will be aggregated
     to, and the grid is derived from them with
-    :meth:`stilt.Grid.from_geometry` when the settings are resolved
+    :meth:`stilt.Mesh.to_grid` when the settings are resolved
     (:meth:`resolve`), not when they are loaded. When both are given,
     ``grid`` is used as is and ``geometry`` is kept with the footprint.
     """
@@ -230,8 +230,8 @@ class FootprintConfig(BaseModel):
             return self
         update: dict[str, Any] = {}
         if self.grid is None:
-            update["grid"] = Grid.from_geometry(
-                self.geometry.mesh, cells_per_target=self.cells_per_target
+            update["grid"] = self.geometry.mesh.to_grid(
+                cells_per_target=self.cells_per_target
             )
         if self.geometry_hash is None:
             update["geometry_hash"] = self.geometry.mesh.hash

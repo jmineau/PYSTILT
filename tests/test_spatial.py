@@ -1,4 +1,6 @@
-"""Tests for spatial geometries: Grid derivation, Mesh, Zones, overlap weights."""
+"""Tests for spatial geometries: Grid, Mesh, Zones, deriving a grid, overlap weights."""
+
+import warnings
 
 import numpy as np
 import pytest
@@ -8,6 +10,7 @@ from stilt import Grid, Mesh, Zones
 from stilt.spatial import (
     _mesh_weights,
     _mesh_weights_exactextract,
+    check_resolution,
     overlap_weights,
     same_crs,
 )
@@ -32,7 +35,6 @@ def test_grid_axes_cells_index_are_consistent():
     assert idx.names == ["lon", "lat"]
     np.testing.assert_allclose(idx.get_level_values("lon"), cx)
     assert grid.is_longlat
-    assert grid.min_cell_width == 0.1
 
 
 def test_grid_axes_keep_last_cell_for_inexact_bounds():
@@ -45,10 +47,10 @@ def test_grid_axes_keep_last_cell_for_inexact_bounds():
     assert y[-1] == 40.925
 
 
-def test_grid_from_geometry_derives_resolution_and_snapped_bounds():
+def test_mesh_to_grid_derives_resolution_and_snapped_bounds():
     # Smallest cell 0.0095 wide / 4 = 0.002375 -> rounded down to 0.002
     mesh = Mesh.from_windows([(-111.9, 40.7), (-112.05, 40.6)], (0.0095, 0.03))
-    grid = Grid.from_geometry(mesh)
+    grid = mesh.to_grid()
     assert grid.xres == grid.yres == 0.002
     assert grid.crs == "+proj=longlat"
     xmin, ymin, xmax, ymax = mesh.bounds
@@ -60,16 +62,25 @@ def test_grid_from_geometry_derives_resolution_and_snapped_bounds():
     assert mesh.min_cell_width / grid.xres >= 4
 
 
-def test_grid_from_geometry_cells_per_target_knob():
+def test_mesh_to_grid_cells_per_target_knob():
     mesh = Mesh.from_windows([(0.5, 0.5)], 0.1)
-    assert Grid.from_geometry(mesh, cells_per_target=10).xres == pytest.approx(0.01)
-    assert Grid.from_geometry(mesh, cells_per_target=2).xres == pytest.approx(0.05)
+    assert mesh.to_grid(cells_per_target=10).xres == pytest.approx(0.01)
+    assert mesh.to_grid(cells_per_target=2).xres == pytest.approx(0.05)
 
 
-def test_grid_from_geometry_warns_when_huge():
+def test_mesh_to_grid_warns_when_huge():
     mesh = Mesh.from_windows([(0.0, 0.0), (50.0, 50.0)], 0.001)
     with pytest.warns(UserWarning, match="cells"):
-        Grid.from_geometry(mesh, max_cells=1000)
+        mesh.to_grid(max_cells=1000)
+
+
+def test_mesh_to_grid_in_another_crs():
+    pytest.importorskip("pyproj")
+    mesh = Mesh.from_windows([(-111.9, 40.7)], 0.05)  # about 4 km across
+    grid = mesh.to_grid(crs="EPSG:32612")
+    assert grid.crs == "EPSG:32612"
+    assert grid.xres == grid.yres == pytest.approx(1000.0)  # 4.3 km / 4, rounded down
+    assert grid.xmin < -111.9 < grid.xmax and grid.ymin < 40.7 < grid.ymax
 
 
 # ---------------------------------------------------------------------------
@@ -166,7 +177,6 @@ def test_zones_index_and_membership():
     assert part.index.tolist() == ["A", "B"]
     m = part.membership.toarray()
     np.testing.assert_array_equal(m, [[1, 1, 0, 1], [0, 0, 1, 0]])
-    assert part.min_cell_width == 0.1
     assert part.is_longlat
 
 
@@ -174,6 +184,71 @@ def test_zones_reject_wrong_label_count():
     grid = Grid(xmin=0.0, xmax=0.2, ymin=0.0, ymax=0.2, xres=0.1, yres=0.1)
     with pytest.raises(ValueError, match="one entry per base cell"):
         Zones.from_labels(grid, ["A"])
+
+
+def test_zones_to_grid_over_a_grid_is_that_grid():
+    # Zones over a grid used to derive a new grid from their bounds, which
+    # crashed for a grid itself and gave a box near the equator for a
+    # projected grid (its longitude/latitude bounds read as metres).
+    lonlat = Grid(
+        xmin=-112.05, xmax=-111.55, ymin=40.35, ymax=40.85, xres=0.1, yres=0.1
+    )
+    utm = Grid(
+        xmin=-112.05,
+        xmax=-111.55,
+        ymin=40.35,
+        ymax=40.85,
+        xres=1000.0,
+        yres=1000.0,
+        crs="EPSG:32612",
+    )
+    for grid in (lonlat, utm):
+        zones = Zones.from_labels(grid, ["a"] * len(grid.index))
+        assert zones.to_grid() == grid
+        assert zones.to_grid(crs=grid.crs) == grid
+
+
+def test_zones_to_grid_over_a_grid_in_another_crs():
+    pytest.importorskip("pyproj")
+    utm = Grid(
+        xmin=-112.05,
+        xmax=-111.55,
+        ymin=40.35,
+        ymax=40.85,
+        xres=1000.0,
+        yres=1000.0,
+        crs="EPSG:32612",
+    )
+    zones = Zones.from_labels(utm, ["a"] * len(utm.index))
+    grid = zones.to_grid(crs="+proj=longlat")
+    assert grid.is_longlat
+    assert -112.2 < grid.xmin < -112.0 and -111.6 < grid.xmax < -111.4
+    assert 40.2 < grid.ymin < 40.4 and 40.8 < grid.ymax < 41.0
+
+
+def test_zones_to_grid_over_a_mesh_is_the_mesh_grid():
+    mesh = Mesh.from_windows([(0.5, 0.5), (1.5, 0.5)], 0.1)
+    zones = Zones.from_labels(mesh, ["z", "z"])
+    assert zones.to_grid(cells_per_target=2) == mesh.to_grid(cells_per_target=2)
+
+
+def test_check_resolution_is_quiet_for_zones_of_the_raster_cells():
+    # The overlap is exact, so there is nothing to warn about. It used to
+    # warn because zones were not recognised as cells of a grid.
+    grid = Grid(xmin=0.0, xmax=0.2, ymin=0.0, ymax=0.2, xres=0.1, yres=0.1)
+    zones = Zones.from_labels(grid, ["A", "A", "B", "A"])
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        check_resolution(grid, 0.1, 0.1, grid.crs)
+        check_resolution(zones, 0.1, 0.1, grid.crs)
+
+
+def test_check_resolution_warns_for_zones_of_a_small_mesh():
+    mesh = Mesh.from_windows([(0.5, 0.5), (1.5, 0.5)], 0.1)
+    zones = Zones.from_labels(mesh, ["z", "z"])
+    for target in (mesh, zones):
+        with pytest.warns(UserWarning, match="under-resolved"):
+            check_resolution(target, 0.1, 0.1, "+proj=longlat")
 
 
 # ---------------------------------------------------------------------------
@@ -263,7 +338,7 @@ def test_overlap_weights_reproject_mesh_to_raster_crs():
 
 
 # ---------------------------------------------------------------------------
-# Remaining paths: Zones over a Mesh, projected from_geometry, from_file
+# Remaining paths: Zones over a Mesh, a grid for a projected mesh, from_file
 # ---------------------------------------------------------------------------
 
 
@@ -279,20 +354,20 @@ def test_zones_over_mesh_merge_polygon_rows():
     )
     zones = Zones.from_labels(mesh, ["west", "east", "east"])
     assert zones.index.tolist() == ["west", "east"]
-    assert zones.crs == mesh.crs and zones.min_cell_width == 2.0
+    assert zones.crs == mesh.crs
     w = overlap_weights(zones, x, y, xres, yres, "+proj=longlat")
     np.testing.assert_allclose(np.asarray(w.sum(axis=1)).ravel(), [8.0, 8.0])
     np.testing.assert_allclose(np.asarray(w.sum(axis=0)).ravel(), 1.0)
 
 
-def test_grid_from_geometry_projected_mesh_keeps_lonlat_bounds():
+def test_mesh_to_grid_projected_mesh_keeps_lonlat_bounds():
     pytest.importorskip("pyproj")
     from pyproj import Transformer
 
     tr = Transformer.from_crs("EPSG:4326", "EPSG:32612", always_xy=True)
     cx, cy = tr.transform(-111.9, 40.7)
     mesh = Mesh.from_windows([(cx, cy)], 2500.0, crs="EPSG:32612")  # 2.5 km box
-    grid = Grid.from_geometry(mesh)
+    grid = mesh.to_grid()
     assert grid.crs == "EPSG:32612"
     assert grid.xres == grid.yres == pytest.approx(600.0)  # 2500/4 = 625 -> 600
     # bounds are lon/lat and enclose the window

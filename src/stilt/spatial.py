@@ -22,9 +22,10 @@ Geometries
     Labels that merge the cells of a ``Grid`` or ``Mesh`` into larger
     regions.
 
-Each has ``index`` (the cells in result order), ``bounds``, ``crs`` or
-``projection``, ``is_longlat``, ``min_cell_width``, and ``hash``.
+Each has ``index`` (the cells in result order) and ``crs``.
 :func:`overlap_weights` builds the weight matrix for any of them.
+:meth:`Mesh.to_grid` and :meth:`Zones.to_grid` return a footprint grid fine
+enough to resolve their cells. A ``Grid`` knows nothing of the other two.
 """
 
 from __future__ import annotations
@@ -203,101 +204,6 @@ class Grid(Bounds):
     def dims(self) -> tuple[str, str]:
         """The names of a footprint's horizontal dimensions on this grid: ``("lat", "lon")`` or ``("y", "x")``."""
         return ("lat", "lon") if self.is_longlat else ("y", "x")
-
-    @property
-    def min_cell_width(self) -> float:
-        """Smaller of ``xres`` and ``yres``, as other geometries report it."""
-        return float(min(self.xres, self.yres))
-
-    @classmethod
-    def from_geometry(
-        cls,
-        geometry,
-        *,
-        cells_per_target: float = 4.0,
-        crs: str | None = None,
-        max_cells: int = 50_000_000,
-    ) -> Grid:
-        """
-        Return a grid fine enough to resolve the cells of a geometry.
-
-        The bounds are the geometry's extent, rounded outward to whole cells.
-        The cell size is the smallest geometry cell width divided by
-        ``cells_per_target``, rounded down to one significant figure.
-
-        Parameters
-        ----------
-        geometry : Mesh, Zones, or Grid
-            Geometry to resolve. Any object with ``bounds``,
-            ``min_cell_width``, ``crs``, and ``is_longlat``.
-        cells_per_target : float, default 4
-            Grid cells across the smallest geometry cell.
-        crs : str, optional
-            CRS of the grid. Defaults to the geometry's; the geometry is
-            reprojected when they differ.
-        max_cells : int, default 50_000_000
-            Warn when the grid would have more cells than this.
-
-        Returns
-        -------
-        Grid
-            The derived grid, with longitude/latitude bounds.
-        """
-        import math
-        import warnings
-
-        if crs is not None and crs != geometry.crs:
-            geometry = geometry.base if isinstance(geometry, Zones) else geometry
-            if isinstance(geometry, Grid):
-                geometry = Mesh.from_grid(geometry)
-            geometry = geometry.to_crs(crs)
-        crs = geometry.crs
-
-        width = float(geometry.min_cell_width) / float(cells_per_target)
-        if width <= 0:
-            raise ValueError("Geometry cells must have positive width.")
-        exp = math.floor(math.log10(width))
-        res = math.floor(width / 10**exp) * 10**exp  # round down, 1 sig fig
-        res = float(f"{res:.1g}")
-
-        xmin, ymin, xmax, ymax = geometry.bounds
-        xmin, ymin = math.floor(xmin / res) * res, math.floor(ymin / res) * res
-        xmax, ymax = math.ceil(xmax / res) * res, math.ceil(ymax / res) * res
-        if xmax <= xmin:
-            xmax = xmin + res
-        if ymax <= ymin:
-            ymax = ymin + res
-
-        n_cells = ((xmax - xmin) / res) * ((ymax - ymin) / res)
-        if n_cells > max_cells:
-            warnings.warn(
-                f"Derived grid has ~{n_cells:.3g} cells at resolution {res:g}; "
-                "consider a coarser cells_per_target or a smaller domain.",
-                stacklevel=2,
-            )
-
-        if not geometry.is_longlat:
-            # Bounds are always lon/lat: back-transform the snapped envelope.
-            # Pad by one cell first; ``axes`` re-projects the lon/lat corners
-            # and takes their extremes, which can shave an edge cell off a
-            # rotated projection otherwise.
-            xmin, xmax, ymin, ymax = xmin - res, xmax + res, ymin - res, ymax + res
-            from pyproj import Transformer
-
-            tr = Transformer.from_crs(crs, "EPSG:4326", always_xy=True)
-            xs, ys = tr.transform([xmin, xmax, xmin, xmax], [ymin, ymin, ymax, ymax])
-            xmin, xmax = float(min(xs)), float(max(xs))
-            ymin, ymax = float(min(ys)), float(max(ys))
-
-        return cls(
-            xmin=float(xmin),
-            xmax=float(xmax),
-            ymin=float(ymin),
-            ymax=float(ymax),
-            xres=res,
-            yres=res,
-            crs=crs,
-        )
 
     @property
     def axes(self) -> tuple[np.ndarray, np.ndarray]:
@@ -629,6 +535,91 @@ class Mesh(BaseModel):
             crs=crs,
         )
 
+    def to_grid(
+        self,
+        *,
+        cells_per_target: float = 4.0,
+        crs: str | None = None,
+        max_cells: int = 50_000_000,
+    ) -> Grid:
+        """
+        Return a footprint grid fine enough to resolve the cells.
+
+        The bounds are the mesh's extent, rounded outward to whole cells.
+        The cell size is the smallest cell width divided by
+        ``cells_per_target``, rounded down to one significant figure.
+
+        Parameters
+        ----------
+        cells_per_target : float, default 4
+            Grid cells across the smallest mesh cell.
+        crs : str, optional
+            CRS of the grid. Defaults to the mesh's; the mesh is reprojected
+            when they differ.
+        max_cells : int, default 50_000_000
+            Warn when the grid would have more cells than this.
+
+        Returns
+        -------
+        Grid
+            The grid, with longitude/latitude bounds.
+
+        Examples
+        --------
+        >>> hexes = stilt.Mesh.from_h3(7, bounds)
+        >>> grid = hexes.to_grid(cells_per_target=4)
+        """
+        import math
+        import warnings
+
+        mesh = self if crs is None else self.to_crs(crs)
+
+        width = mesh.min_cell_width / float(cells_per_target)
+        if width <= 0:
+            raise ValueError("Mesh cells must have positive width.")
+        exp = math.floor(math.log10(width))
+        res = math.floor(width / 10**exp) * 10**exp  # round down, 1 sig fig
+        res = float(f"{res:.1g}")
+
+        xmin, ymin, xmax, ymax = mesh.bounds
+        xmin, ymin = math.floor(xmin / res) * res, math.floor(ymin / res) * res
+        xmax, ymax = math.ceil(xmax / res) * res, math.ceil(ymax / res) * res
+        if xmax <= xmin:
+            xmax = xmin + res
+        if ymax <= ymin:
+            ymax = ymin + res
+
+        n_cells = ((xmax - xmin) / res) * ((ymax - ymin) / res)
+        if n_cells > max_cells:
+            warnings.warn(
+                f"Derived grid has ~{n_cells:.3g} cells at resolution {res:g}; "
+                "consider a coarser cells_per_target or a smaller domain.",
+                stacklevel=2,
+            )
+
+        if not mesh.is_longlat:
+            # Bounds are always lon/lat: back-transform the snapped envelope.
+            # Pad by one cell first; ``axes`` re-projects the lon/lat corners
+            # and takes their extremes, which can shave an edge cell off a
+            # rotated projection otherwise.
+            xmin, xmax, ymin, ymax = xmin - res, xmax + res, ymin - res, ymax + res
+            from pyproj import Transformer
+
+            tr = Transformer.from_crs(mesh.crs, "EPSG:4326", always_xy=True)
+            xs, ys = tr.transform([xmin, xmax, xmin, xmax], [ymin, ymin, ymax, ymax])
+            xmin, xmax = float(min(xs)), float(max(xs))
+            ymin, ymax = float(min(ys)), float(max(ys))
+
+        return Grid(
+            xmin=float(xmin),
+            xmax=float(xmax),
+            ymin=float(ymin),
+            ymax=float(ymax),
+            xres=res,
+            yres=res,
+            crs=mesh.crs,
+        )
+
     def __repr__(self) -> str:
         return f"Mesh(n_cells={len(self)}, crs={self.crs!r})"
 
@@ -692,20 +683,32 @@ class Zones(BaseModel):
         """Whether the base geometry is in longitude/latitude degrees."""
         return self.base.is_longlat
 
-    @property
-    def bounds(self) -> tuple[float, float, float, float]:
-        """``(xmin, ymin, xmax, ymax)`` extent of the base geometry."""
-        if isinstance(self.base, Grid):
-            b = self.base
-            return b.xmin, b.ymin, b.xmax, b.ymax
-        return self.base.bounds
+    def to_grid(
+        self,
+        *,
+        cells_per_target: float = 4.0,
+        crs: str | None = None,
+        max_cells: int = 50_000_000,
+    ) -> Grid:
+        """
+        Return a footprint grid fine enough to resolve the regions.
 
-    @property
-    def min_cell_width(self) -> float:
-        """Smallest cell width of the base geometry, since no region is smaller."""
-        if isinstance(self.base, Grid):
-            return float(min(self.base.xres, self.base.yres))
-        return self.base.min_cell_width
+        Each region is a union of base cells, so a grid that resolves the
+        base resolves the regions. A mesh base gives :meth:`Mesh.to_grid`.
+        A grid base is returned as it is, since a footprint on that grid
+        overlaps every region exactly. With another ``crs``, a grid base is
+        reprojected as a mesh first.
+
+        Parameters are those of :meth:`Mesh.to_grid`.
+        """
+        base = self.base
+        if isinstance(base, Grid):
+            if crs is None or same_crs(crs, base.crs):
+                return base
+            base = Mesh.from_grid(base)
+        return base.to_grid(
+            cells_per_target=cells_per_target, crs=crs, max_cells=max_cells
+        )
 
     @property
     def membership(self) -> sparse.csr_matrix:
@@ -946,21 +949,21 @@ def check_resolution(geometry: Geometry, xres: float, yres: float, crs: str) -> 
     """
     Warn when the raster is too coarse to resolve the smallest target cell.
 
-    The warning is about the error of rasterizing polygon boundaries. A grid
-    in the raster's own CRS is exact at any resolution, so it never warns,
-    and neither does a geometry in a different CRS, whose units differ.
+    The warning is about the error of rasterizing polygon boundaries, so
+    only a mesh can get it, or zones made from one. A grid in the raster's
+    own CRS is exact at any resolution, and so are zones of its cells. A
+    geometry in a different CRS is skipped, since its units differ.
     """
-    width = geometry.min_cell_width
-    if isinstance(geometry, Grid) and same_crs(geometry.crs, crs):
-        return  # exact per-axis overlap; no rasterization error to warn about
-    if not same_crs(geometry.crs, crs):
-        return  # units differ; skip the heuristic rather than mislead
+    target = geometry.base if isinstance(geometry, Zones) else geometry
+    if isinstance(target, Grid) or not same_crs(target.crs, crs):
+        return
+    width = target.min_cell_width
     if width < 2.0 * max(xres, yres):
         warnings.warn(
             f"Smallest target cell ({width:g}) spans fewer than two native raster "
             f"cells ({xres:g} x {yres:g}); the aggregate is under-resolved. "
-            "Regenerate the footprint on a finer grid (sim.generate_footprint with "
-            "Grid.from_geometry) for boundary accuracy.",
+            "Regenerate the footprint on a finer grid (sim.generate_footprint "
+            "with a grid from mesh.to_grid()) for boundary accuracy.",
             stacklevel=3,
         )
 

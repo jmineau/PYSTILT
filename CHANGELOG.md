@@ -8,6 +8,13 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **`Mesh.to_grid` replaces `Grid.from_geometry`** (breaking).
+  `Grid.from_geometry(mesh, ...)` becomes `mesh.to_grid(...)`, with the same
+  arguments. `Zones.to_grid` hands off to its base, and returns a grid base
+  as it is, since a footprint on that grid overlaps every zone exactly. A
+  `Grid` no longer knows about meshes and zones. `Grid.min_cell_width`,
+  `Zones.bounds`, and `Zones.min_cell_width` are removed; only the grid
+  derivation read them.
 - `stilt.observations.winds` is `stilt.observations.variograms`. The public
   names (`variogram`, `fit_variogram`, `VariogramFit`) are unchanged.
 - The documentation site shows the latest release rather than `main`.
@@ -412,6 +419,12 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- A grid derived for zones over a projected grid covered a box near the
+  equator, because the base grid's longitude/latitude bounds were read as
+  projected coordinates. Deriving one for a `Grid` raised `AttributeError`.
+- `foot.stilt.aggregate` and `jacobian` warned that zones made of the
+  footprint grid's own cells were under-resolved, although the overlap is
+  exact.
 - When HYSPLIT fails for a receptor, the other variants that share its
   transport settings fail with the same error instead of running HYSPLIT
   again. A receptor with N such variants no longer runs, or times out,
