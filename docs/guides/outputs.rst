@@ -167,7 +167,8 @@ To see what is left to do:
 .. code-block:: python
 
    sims.incomplete()   # the simulations that are not complete
-   sims.status()       # every row, with four more columns
+   sims.status()       # every row, with five more columns
+   sims.failures()     # the failed simulations, and why
    july.status()       # the same, for a selection
 
 ``status()`` adds a ``particles`` and a ``footprint`` column that say

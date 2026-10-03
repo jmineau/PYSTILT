@@ -14,9 +14,11 @@ work underneath.
   :class:`~stilt.Simulation` and writes its particles and log.
 - :func:`~stilt.execution.make_footprint` makes the footprint from those
   particles and writes it.
-- :func:`~stilt.execution.run_simulation` does both, skipping what exists.
-- :func:`~stilt.execution.run_receptor` runs every variant of one receptor.
-  Workers are always handed receptors.
+- :func:`~stilt.execution.run_receptor` runs every variant of one receptor,
+  skipping what exists. Variants that share particles run HYSPLIT once and
+  make their footprints from the particles in memory. A failure is recorded
+  with the simulation (:attr:`stilt.Simulation.failure`). Workers are
+  always handed receptors.
 - :func:`~stilt.execution.run_receptors` runs a list of receptors, in this
   process or in a process pool.
 
@@ -37,7 +39,6 @@ Worker functions
    stilt.execution.resolve_compute_root
    stilt.execution.run_particles
    stilt.execution.make_footprint
-   stilt.execution.run_simulation
    stilt.execution.run_receptor
    stilt.execution.run_receptors
    stilt.execution.SimulationResult

@@ -200,8 +200,7 @@ docs/                Sphinx (pydata-sphinx-theme)
    core module imports `stilt.observations`; a new top-level module goes on
    that contract's list. A second contract keeps HYSPLIT's package
    (`stilt.transport.hysplit`) out of the core, which reaches it only
-   through `stilt.transport.get_model`; `Simulation.outcome` reading
-   HYSPLIT's failure reasons is the one listed exception.
+   through `stilt.transport.get_model`, with no exceptions.
 
 Slurm tasks rebuild the model from the project in another process on
 another node, so anything a worker needs must be in the project or the
@@ -501,6 +500,13 @@ Feature status lives in the roadmap tables in [README.md](README.md) and
   `None`, `sim.empty_reason` says why, and `load_footprints()` leaves the
   simulation out. Never synthesize a zero-valued footprint for it: a zero
   enhancement would flow into a comparison or an inversion unnoticed.
+- **A failure record is a note, not a result.** When a step fails the
+  worker writes `<receptor id>.failure.yaml` beside the receptor's log
+  (particles failures for the group, footprint failures by variant) and
+  removes the entry when the step later succeeds. Completion never reads it:
+  a simulation is done by its result files alone. `sim.failure`,
+  `sims.failures()`, the `reason` column of `status()`, and `stilt status`
+  read it.
 - **A result that is not written yet raises.** `sim.particles` and
   `sim.footprint` are `cached_property` on a frozen value; a missing file
   raises `FileNotFoundError` (never cached, so the next read tries again)
