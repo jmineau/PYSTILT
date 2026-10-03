@@ -12,17 +12,16 @@ import xarray as xr
 
 from stilt.config import FootprintConfig, Grid
 from stilt.exceptions import EmptyFootprint
-from stilt.footprint import (
+from stilt.footprint import calculate, read_footprint
+from stilt.footprint.gridding import (
     _compute_kernel_bandwidths,
-    _describe,
     _interpolate_early_timesteps,
     _interpolation_times,
     _make_gauss_kernel,
     _project_particles_to_crs,
     _wrap_antimeridian_longitudes,
-    calculate,
-    read_footprint,
 )
+from stilt.footprint.io import _describe
 from stilt.particles import calc_plume_dilution
 from stilt.receptors import PointReceptor
 from stilt.spatial import Mesh, Zones, _grid_cell_starts
@@ -174,7 +173,7 @@ def test_from_netcdf_forwards_chunks_to_xarray(tmp_path, monkeypatch):
         seen_kwargs.update(kwargs)
         return real_open_dataset(path_arg)
 
-    monkeypatch.setattr("stilt.footprint.xr.open_dataset", fake_open_dataset)
+    monkeypatch.setattr("stilt.footprint.io.xr.open_dataset", fake_open_dataset)
 
     loaded = read_footprint(path, chunks={"time": 1})
 

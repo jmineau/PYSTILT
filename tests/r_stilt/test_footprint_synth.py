@@ -38,7 +38,8 @@ import xarray as xr
 
 from stilt.config import FootprintConfig, Grid
 from stilt.exceptions import EmptyFootprint
-from stilt.footprint import (
+from stilt.footprint import calculate
+from stilt.footprint.gridding import (
     _compute_kernel_bandwidths,
     _filter_and_rasterize_particles,
     _interpolate_early_timesteps,
@@ -46,7 +47,6 @@ from stilt.footprint import (
     _padded_axes,
     _project_particles_to_crs,
     _wrap_antimeridian_longitudes,
-    calculate,
 )
 from stilt.particles import calc_plume_dilution
 from stilt.receptors import PointReceptor

@@ -119,10 +119,14 @@ src/stilt/
   particles.py       the particle table (a DataFrame): prepare, read, and write
                      particle files; the `.stilt` pandas accessor (endpoints,
                      enhancement from a flux field)
-  footprint.py       the footprint (a DataArray): `calculate`, reading and
-                     writing footprint files (`read_footprint`,
-                     `write_footprint`), CF-1.8 NetCDF, and the `.stilt` xarray accessor
-                     (enhancement from a flux field, aggregation)
+  footprint/         the footprint (a DataArray)
+    gridding.py      `calculate`, STILT-R's calc_footprint (fidelity-guarded)
+    aggregation.py   summing footprints onto other geometries: `aggregate`,
+                     `jacobian`, their time binning and target weights
+    io.py            the footprint array and its attributes; footprint files
+                     (`read_footprint`, `write_footprint`) and CF-1.8 NetCDF
+    accessor.py      the `.stilt` xarray accessor (enhancement from a flux
+                     field, aggregation)
   sampling.py        sampling a gridded field (a flux, a mole fraction) at points
   spatial.py         where things are: bounds, the footprint Grid, the
                      aggregation targets (Mesh, Zones), CRS helpers

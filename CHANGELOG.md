@@ -8,6 +8,10 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- `stilt.footprint` is a package: `gridding` (`calculate`), `aggregation`
+  (`aggregate`, `jacobian`), `io` (the array and footprint files), and
+  `accessor`. Everything `stilt.footprint` exported is still exported
+  from it; only private helpers moved.
 - **`stilt.flux` is `stilt.sampling`** (breaking for module imports). It
   samples any gridded field at points, a surface flux or a mole fraction.
   `sample_flux(flux, x, y, times)` is `sample_field(flux, x, y,
