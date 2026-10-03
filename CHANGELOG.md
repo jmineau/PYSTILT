@@ -8,6 +8,18 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **Particle files record their run's settings** (breaking). A particle
+  file's metadata holds the same settings as its folder's `_settings.yaml`
+  (`stilt:settings`): the transport model's settings, the met's, the model
+  build, and the realization number, in place of the model's whole config
+  (`stilt:params`). `particles_metadata(path)` returns
+  `(receptor, settings, met_files)`;
+  `stilt.identity.transport_from_settings(settings)` rebuilds the config.
+  `write_particles` takes the settings, and `Particles.write` no longer
+  takes a config. `particles_metadata` raises on a particle file written
+  before this change, which records no settings; `read_particles` still
+  reads it. #132 describes the one-time rewrite of an existing output
+  directory.
 - **A transport model owns its config, and a model is a variant axis**
   (breaking). `stilt.config.TransportParams` is
   `stilt.transport.hysplit.HysplitConfig`. `ProjectConfig` gains `model`

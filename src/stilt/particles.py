@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+from collections.abc import Mapping
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, NamedTuple
 
@@ -18,7 +19,6 @@ from stilt.receptors import (
     parse_receptor_id,
 )
 from stilt.sampling import sample_field
-from stilt.transport import TransportConfig, get_model
 
 logger = logging.getLogger(__name__)
 
@@ -35,28 +35,29 @@ if TYPE_CHECKING:
 # it was off by about 190 m.
 
 
-def _stored_params(stored: dict[str, Any], path: str | Path, model: str) -> Any:
-    """Return the config stored in a particle file, read by *model*'s config class, dropping settings this version does not have."""
-    config_class = get_model(model).config_class
-    unknown = sorted(set(stored) - set(config_class.model_fields))
-    if unknown:
-        logger.debug(
-            "%s: skipping stored params this version does not have: %s", path, unknown
-        )
-    return config_class.model_validate(
-        {k: v for k, v in stored.items() if k not in unknown}
-    )
-
-
 #: Particle columns stored as int32 rather than float64.
 _INT_COLUMNS = ("time", "indx")
 
 
 class ParticleMetadata(NamedTuple):
-    """What a particle file records about the HYSPLIT run that made it."""
+    """
+    What a particle file records about the run that made it.
+
+    Attributes
+    ----------
+    receptor : Receptor
+        Receptor the particles were released from.
+    settings : dict
+        The run's settings, as its folder's ``_settings.yaml`` records them:
+        the transport model's settings, the met's, the model build, and the
+        realization number. :func:`stilt.identity.transport_from_settings`
+        rebuilds the transport model's config from it.
+    met_files : list of Path
+        Meteorology files the run read.
+    """
 
     receptor: Receptor
-    params: TransportConfig
+    settings: dict[str, Any]
     met_files: list[Path]
 
 
@@ -88,18 +89,29 @@ def prepare(raw: pd.DataFrame, receptor: Receptor) -> pd.DataFrame:
 
 def particles_metadata(path: str | Path) -> ParticleMetadata:
     """
-    Return the receptor, transport settings, and met files a particle file records.
+    Return the receptor, run settings, and met files a particle file records.
 
-    Stored settings that this version of PYSTILT does not have are ignored.
+    Raises
+    ------
+    ValueError
+        If the file records no run settings, as files written before
+        PYSTILT recorded them do.
+
+    Examples
+    --------
+    >>> receptor, settings, met_files = stilt.particles_metadata(sim.particles_path)
+    >>> settings["model"]
+    {'name': 'hysplit', 'version': 'v5.1.0'}
     """
     meta = pq.read_schema(path).metadata or {}
+    if b"stilt:settings" not in meta:
+        raise ValueError(
+            f"{path} records no run settings. It was written before particle "
+            "files recorded them; rewrite its output directory (see #132)."
+        )
     return ParticleMetadata(
         receptor=Receptor.from_dict(json.loads(meta[b"stilt:receptor"])),
-        params=_stored_params(
-            json.loads(meta[b"stilt:params"]),
-            path,
-            meta.get(b"stilt:model", b"hysplit").decode(),
-        ),
+        settings=json.loads(meta[b"stilt:settings"]),
         met_files=[Path(p) for p in json.loads(meta[b"stilt:met_files"])],
     )
 
@@ -143,7 +155,8 @@ def read_particles(path: str | Path, columns: list[str] | None = None) -> pd.Dat
     if "datetime" in data.columns:
         data["datetime"] = pd.to_datetime(data["datetime"])
     elif want_datetime and "time" in data.columns:
-        receptor = particles_metadata(path).receptor
+        meta = pf.schema_arrow.metadata or {}
+        receptor = Receptor.from_dict(json.loads(meta[b"stilt:receptor"]))
         data["datetime"] = pd.Timestamp(receptor.time) + pd.to_timedelta(
             data["time"].to_numpy(), unit="min"
         )
@@ -180,7 +193,7 @@ def write_particles(
     path: str | Path,
     particles: pd.DataFrame,
     receptor: Receptor,
-    params: TransportConfig,
+    settings: Mapping[str, Any],
     met_files: list[Path],
     metadata: dict[bytes, bytes] | None = None,
 ) -> Path:
@@ -190,7 +203,8 @@ def write_particles(
     ``time`` and ``indx`` are stored as int32, and ``datetime`` is left out
     since it is the receptor time plus ``time``. A ``receptor`` column holds
     the receptor id, so a scan of many files can tell receptors apart. The
-    receptor, transport settings, and met files go in the file's metadata.
+    receptor, the run's settings, and the met files go in the file's
+    metadata, so the file reads alone.
 
     Parameters
     ----------
@@ -200,8 +214,9 @@ def write_particles(
         The particle table.
     receptor : Receptor
         Receptor the particles were released from.
-    params : TransportConfig
-        The transport model's config for the run.
+    settings : mapping
+        The run's settings, as its folder records them
+        (:attr:`stilt.Variant.run_settings`).
     met_files : list of Path
         Meteorology files the run used.
     metadata : dict, optional
@@ -235,7 +250,7 @@ def write_particles(
     )
     meta = {
         b"stilt:receptor": json.dumps(receptor.to_dict()).encode(),
-        b"stilt:params": params.model_dump_json().encode(),
+        b"stilt:settings": json.dumps(dict(settings)).encode(),
         b"stilt:met_files": json.dumps([str(p) for p in met_files]).encode(),
         **(metadata or {}),
     }

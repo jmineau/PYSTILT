@@ -143,7 +143,7 @@ def _write_particles(sim: Simulation) -> pd.DataFrame:
     """Put a small particle file for *sim* in the output directory."""
     particles = _particles(sim.receptor)
     folder = sim.output.particles(sim.variant)
-    folder.write(sim.receptor, particles, sim.variant.transport, [])
+    folder.write(sim.receptor, particles, [])
     return particles
 
 

@@ -240,7 +240,9 @@ def read_footprint(
                 foot = ds["foot"].load()
         foot.attrs.pop("grid_mapping", None)
         return foot
-    table = pq.read_table(path)
+    # One file alone: pq.read_table would add the settings= and date=
+    # folder names of an output directory as columns.
+    table = pq.ParquetFile(path).read()
     stored = (table.schema.metadata or {}).get(b"stilt:footprint")
     if stored is None:
         raise ValueError(f"{path} does not record its footprint settings.")

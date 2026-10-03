@@ -78,7 +78,7 @@ def _write_particles(sim: Simulation) -> pd.DataFrame:
     """Put particles for *sim* in the output directory and return them."""
     particles = _trajectories(sim.receptor, sim.variant.transport)
     folder = sim.output.particles(sim.variant)
-    folder.write(sim.receptor, particles, sim.variant.transport, [])
+    folder.write(sim.receptor, particles, [])
     return particles
 
 
@@ -194,7 +194,7 @@ def test_reads_particles_written_under_the_same_settings(point_receptor, tmp_pat
     assert len(again.particles) == len(written)
     meta = particles_metadata(again.particles_path)
     assert meta.receptor == point_receptor
-    assert meta.params.numpar == 10
+    assert meta.settings["numpar"] == 10
     assert again.met_files == []
     assert "datetime" in again.particles.columns
     assert again.particles is again.particles  # kept once read
@@ -378,7 +378,7 @@ def test_generate_footprint_uses_the_receptor_kernel_from_a_project_table(
     with_height = _trajectories(point_receptor, sim.variant.transport)
     with_height["xhgt"] = 10.0  # the kernel weights particles by release height
     folder = sim.output.particles(sim.variant)
-    folder.write(point_receptor, with_height, sim.variant.transport, [])
+    folder.write(point_receptor, with_height, [])
     plain = _sim(tmp_path, point_receptor, footprint=FOOT, variant="plain")
     assert (
         plain._particle_set == sim._particle_set

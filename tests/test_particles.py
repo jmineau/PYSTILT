@@ -8,6 +8,8 @@ import pandas as pd
 import pyarrow.parquet as pq
 import pytest
 
+from stilt.config import MetConfig
+from stilt.identity import run_settings, transport_from_settings
 from stilt.particles import (
     calc_plume_dilution,
     particles_metadata,
@@ -16,6 +18,7 @@ from stilt.particles import (
     write_particles,
 )
 from stilt.receptors import ColumnReceptor, MultiPointReceptor, PointReceptor
+from stilt.transport import ModelInfo
 from stilt.transport.hysplit import HysplitConfig
 from stilt.transport.hysplit.model import finish_particles
 
@@ -70,6 +73,12 @@ def _params(tmp_path, hnf_plume=False) -> HysplitConfig:
     )
 
 
+def _settings(params: HysplitConfig) -> dict:
+    """The run settings a particle file records, for *params* and a test met."""
+    met = MetConfig(file_format="%Y%m%d_%H", file_tres="1h")
+    return run_settings(params, met, ModelInfo(version="v5.1.0"), None)
+
+
 def test_prepare_adds_datetime(point_receptor, tmp_path):
     traj = prepare(
         finish_particles(
@@ -106,7 +115,7 @@ def test_parquet_roundtrip_preserves_naive_utc_from_tz_aware_receptor(tmp_path):
 
     path = tmp_path / "traj.parquet"
     params = _params(tmp_path, hnf_plume=False)
-    write_particles(path, traj, aware_receptor, params, [Path("/tmp/met1")])
+    write_particles(path, traj, aware_receptor, _settings(params), [Path("/tmp/met1")])
     loaded = read_particles(path)
 
     receptor = particles_metadata(path).receptor
@@ -126,7 +135,7 @@ def test_write_and_read_particles_round_trip(point_receptor, tmp_path):
         finish_particles(_particles_basic(), point_receptor, params), point_receptor
     )
     path = tmp_path / "traj.parquet"
-    write_particles(path, traj, point_receptor, params, [Path("/tmp/met1")])
+    write_particles(path, traj, point_receptor, _settings(params), [Path("/tmp/met1")])
 
     loaded = read_particles(path)
     assert len(loaded) == 2
@@ -134,8 +143,28 @@ def test_write_and_read_particles_round_trip(point_receptor, tmp_path):
     pd.testing.assert_frame_equal(loaded[traj.columns], traj, check_dtype=False)
     meta = particles_metadata(path)
     assert meta.receptor == point_receptor
-    assert meta.params == params
+    assert meta.settings == _settings(params)
+    # Rebuilt from the record: what changes a particle, as the run recorded it.
+    assert transport_from_settings(meta.settings).settings() == params.settings()
     assert meta.met_files == [Path("/tmp/met1")]
+
+
+def test_a_file_without_settings_is_refused_for_its_metadata(point_receptor, tmp_path):
+    """A particle file written before files recorded settings still reads, but has no metadata."""
+    params = _params(tmp_path, hnf_plume=False)
+    traj = prepare(
+        finish_particles(_particles_basic(), point_receptor, params), point_receptor
+    )
+    path = tmp_path / "traj.parquet"
+    write_particles(path, traj, point_receptor, _settings(params), [])
+    table = pq.ParquetFile(path).read()
+    meta = dict(table.schema.metadata)
+    del meta[b"stilt:settings"]
+    pq.write_table(table.replace_schema_metadata(meta), path)
+
+    assert len(read_particles(path)) == len(traj)
+    with pytest.raises(ValueError, match="records no run settings"):
+        particles_metadata(path)
 
 
 def test_write_particles_is_atomic_on_failure(point_receptor, tmp_path, monkeypatch):
@@ -154,7 +183,7 @@ def test_write_particles_is_atomic_on_failure(point_receptor, tmp_path, monkeypa
     monkeypatch.setattr("stilt.particles.pq.write_table", _broken_write)
 
     with pytest.raises(RuntimeError, match="write failed"):
-        write_particles(path, traj, point_receptor, params, [])
+        write_particles(path, traj, point_receptor, _settings(params), [])
 
     assert not path.exists()
     assert not tmp.exists()
@@ -651,21 +680,22 @@ def test_calculate_regenerates_a_footprint_on_a_new_grid(tmp_path):
     assert decayed.stilt.config.transforms == [FirstOrderLifetime(lifetime_hours=0.5)]
 
 
-def test_metadata_skips_stored_params_this_version_does_not_have(
+def test_stored_settings_this_version_does_not_have_are_dropped(
     point_receptor, tmp_path
 ):
     """Files written before a setting was removed still load (#44)."""
+    params = _params(tmp_path)
     traj = prepare(
-        finish_particles(_particles_basic(), point_receptor, _params(tmp_path)),
-        point_receptor,
+        finish_particles(_particles_basic(), point_receptor, params), point_receptor
     )
     path = tmp_path / "traj.parquet"
-    write_particles(path, traj, point_receptor, _params(tmp_path), [])
-    table = pq.read_table(path)
+    write_particles(path, traj, point_receptor, _settings(params), [])
+    table = pq.ParquetFile(path).read()
     meta = dict(table.schema.metadata)
-    stored = json.loads(meta[b"stilt:params"])
-    meta[b"stilt:params"] = json.dumps({**stored, "zicontroltf": 0, "gone": 1}).encode()
+    stored = json.loads(meta[b"stilt:settings"])
+    meta[b"stilt:settings"] = json.dumps({**stored, "gone": 1}).encode()
     meta[b"stilt:is_error"] = b"true"  # written by earlier versions; ignored
     pq.write_table(table.replace_schema_metadata(meta), path)
 
-    assert particles_metadata(path).params == _params(tmp_path)
+    rebuilt = transport_from_settings(particles_metadata(path).settings)
+    assert rebuilt.settings() == params.settings()
