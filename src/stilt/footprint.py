@@ -5,7 +5,6 @@ from __future__ import annotations
 import datetime as dt
 import json
 import warnings
-from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, NamedTuple, cast
 
@@ -323,36 +322,6 @@ def _with_cf_metadata(ds: xr.Dataset, *, grid: Grid) -> xr.Dataset:
     return ds
 
 
-@dataclass(frozen=True, slots=True)
-class _BufferedGrid:
-    """Output grid padded by the widest smoothing kernel on each side."""
-
-    glong_buf: np.ndarray
-    glati_buf: np.ndarray
-    xbuf: int
-    ybuf: int
-
-    @property
-    def n_lon_buf(self) -> int:
-        """Number of longitude (x) cells, padding included."""
-        return len(self.glong_buf)
-
-    @property
-    def n_lat_buf(self) -> int:
-        """Number of latitude (y) cells, padding included."""
-        return len(self.glati_buf)
-
-    @property
-    def xbufh(self) -> int:
-        """Half-width of the widest kernel along x, in cells."""
-        return (self.xbuf - 1) // 2
-
-    @property
-    def ybufh(self) -> int:
-        """Half-width of the widest kernel along y, in cells."""
-        return (self.ybuf - 1) // 2
-
-
 def _wrap_antimeridian_longitudes(
     p: pd.DataFrame, *, xmin: float, xmax: float
 ) -> tuple[pd.DataFrame, float, float, bool]:
@@ -553,7 +522,7 @@ def _compute_kernel_bandwidths(
     return kernel_df, w
 
 
-def _build_buffered_grid(
+def _padded_axes(
     *,
     xmin: float,
     ymin: float,
@@ -561,27 +530,27 @@ def _build_buffered_grid(
     yres: float,
     n_lon: int,
     n_lat: int,
-    max_kernel: np.ndarray,
-) -> _BufferedGrid:
+    xbuf: int,
+    ybuf: int,
+) -> tuple[np.ndarray, np.ndarray]:
     """
-    Pad the output grid by the size of the largest kernel on each side.
+    Return the lower cell edges of the output grid padded by *xbuf* and *ybuf* cells per side.
 
-    The padding lets particles just outside the grid be smoothed into it.
+    The padding, the size of the largest kernel, lets particles just outside
+    the grid be smoothed into it.
     """
-    xbuf = max_kernel.shape[0]
-    ybuf = max_kernel.shape[1]
-    return _BufferedGrid(
-        glong_buf=xmin - xbuf * xres + np.arange(n_lon + 2 * xbuf) * xres,
-        glati_buf=ymin - ybuf * yres + np.arange(n_lat + 2 * ybuf) * yres,
-        xbuf=xbuf,
-        ybuf=ybuf,
-    )
+    glong_buf = xmin - xbuf * xres + np.arange(n_lon + 2 * xbuf) * xres
+    glati_buf = ymin - ybuf * yres + np.arange(n_lat + 2 * ybuf) * yres
+    return glong_buf, glati_buf
 
 
 def _filter_and_rasterize_particles(
     p: pd.DataFrame,
     *,
-    buffered: _BufferedGrid,
+    glong_buf: np.ndarray,
+    glati_buf: np.ndarray,
+    xbufh: int,
+    ybufh: int,
     xmin: float,
     xmax: float,
     ymin: float,
@@ -595,20 +564,9 @@ def _filter_and_rasterize_particles(
 
     Returns ``(p, layers)``. ``p`` has columns ``loi, lai, time, rtime,
     foot, layer``, and ``layers`` holds the sorted hour indices, or ``[0]``
-    when ``time_integrate`` is set.
+    when ``time_integrate`` is set. Both are empty when no particle is on
+    the padded grid.
     """
-    # Layer axis is derived from unfiltered particles so that empty
-    # footprints still carry the right layer count downstream.
-    layer_series = (
-        pd.Series(0, index=p.index, dtype=int)
-        if time_integrate
-        else np.floor(p["time"] / 60).astype(int)
-    )
-    all_layers = np.sort(np.asarray(pd.Series(layer_series).unique(), dtype=int))
-    if len(all_layers) == 0:
-        all_layers = np.array([0], dtype=int)
-
-    xbufh, ybufh = buffered.xbufh, buffered.ybufh
     filtered = cast(
         pd.DataFrame,
         p[
@@ -621,11 +579,11 @@ def _filter_and_rasterize_particles(
     )
 
     if filtered.empty:
-        return filtered, all_layers
+        return filtered, np.zeros(0, dtype=int)
 
     filtered["loi"] = (
         np.searchsorted(
-            buffered.glong_buf,
+            glong_buf,
             filtered["long"].to_numpy(dtype=float),
             side="right",
         )
@@ -633,7 +591,7 @@ def _filter_and_rasterize_particles(
     )
     filtered["lai"] = (
         np.searchsorted(
-            buffered.glati_buf,
+            glati_buf,
             filtered["lati"].to_numpy(dtype=float),
             side="right",
         )
@@ -656,8 +614,9 @@ def _accumulate_smoothed_footprint(
     p: pd.DataFrame,
     *,
     layers: np.ndarray,
-    buffered: _BufferedGrid,
-    kernel_df: pd.DataFrame,
+    n_lon_buf: int,
+    n_lat_buf: int,
+    rtimes: np.ndarray,
     w: np.ndarray,
     rs: tuple[float, float],
 ) -> np.ndarray:
@@ -669,10 +628,7 @@ def _accumulate_smoothed_footprint(
     the same result as the whole grid because the cells outside it are
     zero.
     """
-    foot_arr = np.zeros(
-        (buffered.n_lon_buf, buffered.n_lat_buf, len(layers)), dtype=float
-    )
-    rtimes_all = kernel_df["rtime"].values
+    foot_arr = np.zeros((n_lon_buf, n_lat_buf, len(layers)), dtype=float)
     kernel_cache: dict[float, np.ndarray] = {}
 
     layer_index = {int(layer): i for i, layer in enumerate(layers)}
@@ -681,7 +637,7 @@ def _accumulate_smoothed_footprint(
         i = layer_index[int(layer)]
 
         # Nearest-neighbour kernel bandwidth for this rtime.
-        step_w_idx = int(np.argmin(np.abs(rtimes_all - rtime_val)))
+        step_w_idx = int(np.argmin(np.abs(rtimes - rtime_val)))
         step_w = float(w[step_w_idx])
         if step_w not in kernel_cache:
             kernel_cache[step_w] = _make_gauss_kernel(rs, step_w)
@@ -692,16 +648,16 @@ def _accumulate_smoothed_footprint(
         foot_vals = step["foot"].to_numpy(dtype=float)
         valid = (
             (loi_arr >= 0)
-            & (loi_arr < buffered.n_lon_buf)
+            & (loi_arr < n_lon_buf)
             & (lai_arr >= 0)
-            & (lai_arr < buffered.n_lat_buf)
+            & (lai_arr < n_lat_buf)
         )
-        lin_idx = loi_arr[valid] * buffered.n_lat_buf + lai_arr[valid]
+        lin_idx = loi_arr[valid] * n_lat_buf + lai_arr[valid]
         sparse = np.bincount(
             lin_idx,
             weights=foot_vals[valid],
-            minlength=buffered.n_lon_buf * buffered.n_lat_buf,
-        ).reshape(buffered.n_lon_buf, buffered.n_lat_buf)
+            minlength=n_lon_buf * n_lat_buf,
+        ).reshape(n_lon_buf, n_lat_buf)
 
         nz_r, nz_c = np.nonzero(sparse)
         if len(nz_r) == 0:
@@ -709,9 +665,9 @@ def _accumulate_smoothed_footprint(
         kh_x = k.shape[0] // 2
         kh_y = k.shape[1] // 2
         r0 = max(0, nz_r.min() - kh_x)
-        r1 = min(buffered.n_lon_buf, nz_r.max() + kh_x + 1)
+        r1 = min(n_lon_buf, nz_r.max() + kh_x + 1)
         c0 = max(0, nz_c.min() - kh_y)
-        c1 = min(buffered.n_lat_buf, nz_c.max() + kh_y + 1)
+        c1 = min(n_lat_buf, nz_c.max() + kh_y + 1)
         foot_arr[r0:r1, c0:c1, i] += _convolve(
             sparse[r0:r1, c0:c1], k, mode="constant", cval=0.0
         )
@@ -909,19 +865,24 @@ def calculate(
     max_kernel = (
         _make_gauss_kernel(rs, float(np.max(w))) if len(w) > 0 else np.array([[1.0]])
     )
-    buffered = _build_buffered_grid(
+    xbuf, ybuf = max_kernel.shape
+    glong_buf, glati_buf = _padded_axes(
         xmin=xmin,
         ymin=ymin,
         xres=xres,
         yres=yres,
         n_lon=n_lon,
         n_lat=n_lat,
-        max_kernel=max_kernel,
+        xbuf=xbuf,
+        ybuf=ybuf,
     )
 
     p, layers = _filter_and_rasterize_particles(
         p,
-        buffered=buffered,
+        glong_buf=glong_buf,
+        glati_buf=glati_buf,
+        xbufh=(xbuf - 1) // 2,
+        ybufh=(ybuf - 1) // 2,
         xmin=xmin,
         xmax=xmax,
         ymin=ymin,
@@ -937,31 +898,17 @@ def calculate(
     foot_arr = _accumulate_smoothed_footprint(
         p,
         layers=layers,
-        buffered=buffered,
-        kernel_df=kernel_df,
+        n_lon_buf=len(glong_buf),
+        n_lat_buf=len(glati_buf),
+        rtimes=kernel_df["rtime"].to_numpy(),
         w=w,
         rs=rs,
     )
 
-    # Trim buffer and normalize by particle count.
-    foot_arr = (
-        foot_arr[
-            buffered.xbuf : buffered.xbuf + n_lon,
-            buffered.ybuf : buffered.ybuf + n_lat,
-            :,
-        ]
-        / n_particles
-    )
-
-    if foot_arr.shape != (n_lon, n_lat, len(layers)):
-        raise ValueError(
-            f"foot_arr shape mismatch: expected ({n_lon}, {n_lat}, {len(layers)}), "
-            f"got {foot_arr.shape}"
-        )
+    # Trim the padding and normalize by the particle count.
+    foot_arr = foot_arr[xbuf : xbuf + n_lon, ybuf : ybuf + n_lat, :] / n_particles
 
     values = foot_arr.transpose(2, 1, 0)  # (time, y, x)
-    if len(layers) == 0:
-        layers = np.array([0], dtype=int)
     # Rounded as Grid.axes rounds them, so a footprint read back from its
     # file has the same coordinates as the one calculated.
     x_coords = np.round(glong + xres / 2, 10)
