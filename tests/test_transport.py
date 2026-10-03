@@ -26,7 +26,7 @@ def test_get_model_names_the_models_it_knows():
 
 
 def test_hysplit_model_version_is_the_bundled_build_or_exe_dirs(tmp_path):
-    from stilt.config import hysplit_version
+    from stilt.transport.hysplit.model import hysplit_version
 
     model = HysplitModel()
     assert model.version(TransportParams(n_hours=-1)) == hysplit_version()

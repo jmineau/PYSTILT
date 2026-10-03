@@ -10,10 +10,10 @@ from stilt.config import (
     ProjectConfig,
     TransportParams,
     TransportSettings,
-    hysplit_version,
     settings_hash,
 )
 from stilt.output import Output
+from stilt.transport.hysplit.model import hysplit_version
 
 
 def _met(tmp_path, **overrides) -> MetConfig:
