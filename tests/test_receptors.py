@@ -13,11 +13,11 @@ from stilt.receptors import (
     MultiPointReceptor,
     PointReceptor,
     Receptor,
-    _format_coord,
     read_receptors,
     receptors_to_csv,
     write_receptors,
 )
+from stilt.receptors.models import _format_coord
 
 # ---------------------------------------------------------------------------
 # _format_coord
