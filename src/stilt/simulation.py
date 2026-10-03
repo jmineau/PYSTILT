@@ -8,7 +8,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
-from typing import TYPE_CHECKING, NamedTuple
+from typing import TYPE_CHECKING, Any, NamedTuple
 
 import pandas as pd
 import xarray as xr
@@ -153,13 +153,29 @@ class Simulation:
         folder = self._particle_set
         return None if folder is None else folder.log_path(self.receptor.id)
 
+    @property
+    def settings(self) -> dict[str, Any]:
+        """
+        What this simulation's results are made with, as the output folders record them.
+
+        ``{"particles": ..., "footprint": ...}``: the run settings (the
+        transport model's, the met's, the model build, the realization) and
+        the footprint settings, ``None`` for a variant without a grid. These
+        are the records the folders' ``_settings.yaml`` hold, and their
+        hashes name the folders.
+        """
+        return {
+            "particles": self.variant.run_settings,
+            "footprint": self.variant.footprint_settings,
+        }
+
     # -- presence and completion -------------------------------------------
 
     @property
     def has_particles(self) -> bool:
         """Whether the particle file exists."""
-        folder = self._particle_set
-        return folder is not None and folder.has(self.receptor.id)
+        path = self.particles_path
+        return path is not None and path.exists()
 
     @property
     def has_footprint(self) -> bool:
@@ -168,8 +184,8 @@ class Simulation:
 
         An empty footprint (no particles over the grid) is a finished result.
         """
-        feet = self._footprint_set
-        return feet is not None and feet.has(self.receptor.id)
+        path = self.footprint_path
+        return path is not None and path.exists()
 
     @property
     def makes_footprint(self) -> bool:
@@ -210,7 +226,7 @@ class Simulation:
         ``"no_particles"`` that there were none.
         """
         feet = self._footprint_set
-        if feet is None or not feet.has(self.receptor.id):
+        if feet is None or not self.has_footprint:
             return None
         return feet.empty_reason(self.receptor.id)
 
@@ -288,7 +304,7 @@ class Simulation:
             a read after the run finishes loads them.
         """
         folder = self._particle_set
-        if folder is None or not folder.has(self.receptor.id):
+        if folder is None or not self.has_particles:
             raise FileNotFoundError(f"{self.id} has no particles yet.")
         return folder.read(self.receptor.id)
 
@@ -314,7 +330,7 @@ class Simulation:
         if not self.makes_footprint:
             return None
         feet = self._footprint_set
-        if feet is None or not feet.has(self.receptor.id):
+        if feet is None or not self.has_footprint:
             raise FileNotFoundError(f"{self.id} has no footprint yet.")
         return feet.read(self.receptor.id)
 
