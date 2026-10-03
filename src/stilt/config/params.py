@@ -80,6 +80,17 @@ class TransportParams(BaseModel):
         ),
         json_schema_extra=PYSTILT,
     )
+    data_dir: Path | None = Field(
+        None,
+        description=(
+            "Directory of HYSPLIT data tables (``ASCDATA.CFG``, ``LANDUSE.ASC``, "
+            "``ROUGLEN.ASC``, ``TERRAIN.ASC``) to use in place of the bundled "
+            "ones. A table it does not hold comes from the bundled set. The "
+            "tables change the particles, so each table that differs from the "
+            "bundled one is recorded with the run by its checksum."
+        ),
+        json_schema_extra=PYSTILT,
+    )
     varsiwant: list[
         Literal[
             "time",

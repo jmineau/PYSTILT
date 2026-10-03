@@ -204,7 +204,9 @@ class HYSPLITDriver:
         Directory holding ``hycs_std``. Defaults to ``params.exe_dir``, then
         to the bundled build.
     data_dir : Path, optional
-        Directory of HYSPLIT data tables. Defaults to the bundled tables.
+        Directory of HYSPLIT data tables that replace the bundled ones.
+        Defaults to ``params.data_dir``; without either, the bundled tables
+        are used.
     """
 
     def __init__(
@@ -236,7 +238,8 @@ class HYSPLITDriver:
         # explicit argument > TransportParams.exe_dir > binary bundled with the package
         chosen = exe_dir if exe_dir is not None else params.exe_dir
         self.exe_dir = Path(chosen) if chosen is not None else _bundled_exe_dir()
-        self.data_dir = Path(data_dir) if data_dir is not None else _bundled_data_dir()
+        chosen = data_dir if data_dir is not None else params.data_dir
+        self.data_dir = Path(chosen) if chosen is not None else None
 
     def prepare(self) -> None:
         """
@@ -248,17 +251,22 @@ class HYSPLITDriver:
         """
         self.directory.mkdir(parents=True, exist_ok=True)
 
-        # Symlink the binary from exe_dir and data files from data_dir (mirrors
-        # STILT-R). Only hycs_std is taken from exe_dir: a custom build directory
-        # usually holds a whole HYSPLIT exec/ tree we have no business linking.
+        # Symlink the binary from exe_dir and the data tables (mirrors STILT-R):
+        # the bundled tables, replaced by any in data_dir. Only hycs_std is
+        # taken from exe_dir: a custom build directory usually holds a whole
+        # HYSPLIT exec/ tree we have no business linking.
         exe = self.exe_dir / HYCS_STD_FILE
         if not exe.is_file():
             raise HYSPLITNotFoundError(
                 f"No {HYCS_STD_FILE!r} executable in {self.exe_dir}. "
                 "Check TransportParams.exe_dir."
             )
-        for f in [exe, *self.data_dir.iterdir()]:
-            (self.directory / f.name).symlink_to(f.resolve())
+        links = {HYCS_STD_FILE: exe}
+        links.update({f.name: f for f in _bundled_data_dir().iterdir()})
+        if self.data_dir is not None:  # its tables replace the bundled ones
+            links.update({f.name: f for f in self.data_dir.iterdir() if f.is_file()})
+        for name, target in links.items():
+            (self.directory / name).symlink_to(target.resolve())
 
         # Write HYSPLIT CONTROL
         ControlFile(

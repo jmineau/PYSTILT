@@ -189,8 +189,10 @@ example ``sims[sims.variant.isin(["hrrr", "hrrr-zi08"])]``. Each folder's
 Some settings do not change a result, so changing them changes no folder:
 
 - ``execution`` (including ``timeout`` and ``keep_scratch``) and ``output``
-- the ``exe_dir`` path (the build's version is recorded, so a different
-  build is a new folder)
+- the ``exe_dir`` and ``data_dir`` paths (what they hold is recorded
+  instead: the build's version, and a checksum of each data table that
+  differs from the bundled one, so a different build or table is a new
+  folder)
 - where the meteorology files are (``directory`` and ``subgrid_dir``)
 
 Taking a variant out of ``config.yaml`` does not delete its results.

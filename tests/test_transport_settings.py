@@ -207,3 +207,41 @@ def test_output_finds_a_run_whose_stored_settings_predate_a_field(tmp_path):
     found = out.find_particles(settings)
     assert found is not None and found.path == run.path
     assert out.particles("hrrr-renamed", settings).path == run.path
+
+
+def _bundled_table(name: str):
+    from stilt.transport.hysplit.driver import _bundled_data_dir
+
+    return _bundled_data_dir() / name
+
+
+def test_a_data_dir_of_bundled_copies_is_the_same_run(tmp_path):
+    """Pointing data_dir at copies of the bundled tables changes nothing."""
+    import shutil
+
+    data = tmp_path / "tables"
+    data.mkdir()
+    shutil.copy(_bundled_table("LANDUSE.ASC"), data / "LANDUSE.ASC")
+    base = TransportSettings.build(TransportParams(numpar=100), _met(tmp_path))
+    same = TransportSettings.build(
+        TransportParams(numpar=100, data_dir=data), _met(tmp_path)
+    )
+    assert same.model.data_files is None
+    assert "data_dir" not in same.identity()
+    assert same.hash == base.hash
+
+
+def test_a_changed_data_table_is_recorded_and_makes_another_run(tmp_path):
+    """A land-use table that differs from the bundled one changes the particles."""
+    data = tmp_path / "tables"
+    data.mkdir()
+    table = data / "LANDUSE.ASC"
+    table.write_bytes(_bundled_table("LANDUSE.ASC").read_bytes() + b"\n")
+    base = TransportSettings.build(TransportParams(numpar=100), _met(tmp_path))
+    other = TransportSettings.build(
+        TransportParams(numpar=100, data_dir=data), _met(tmp_path)
+    )
+    assert other.model.data_files is not None
+    assert set(other.model.data_files) == {"LANDUSE.ASC"}
+    assert other.identity()["model"]["data_files"] == other.model.data_files
+    assert other.hash != base.hash

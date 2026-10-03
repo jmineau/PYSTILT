@@ -821,3 +821,38 @@ def test_bundled_exe_dir_rejects_an_install_without_the_binary(monkeypatch, tmp_
     monkeypatch.setattr(driver, "pkg_files", lambda _package: tmp_path)
     with pytest.raises(HYSPLITNotFoundError, match="exe_dir"):
         driver._bundled_exe_dir()
+
+
+def test_data_dir_tables_replace_the_bundled_ones(tmp_path, point_receptor):
+    """A table in data_dir is linked in place of the bundled one; the rest are bundled."""
+    from stilt.transport.hysplit.driver import _bundled_data_dir
+
+    data = tmp_path / "tables"
+    data.mkdir()
+    (data / "ROUGLEN.ASC").write_text("custom roughness\n")
+    exe_dir = tmp_path / "exe"
+    exe_dir.mkdir()
+    (exe_dir / "hycs_std").write_text("#!/bin/sh\n")
+    params = TransportParams(
+        n_hours=-1,
+        numpar=10,
+        hnf_plume=False,
+        varsiwant=["time", "indx", "long", "lati", "zagl", "foot"],
+        data_dir=data,
+    )
+    runner = HYSPLITDriver(
+        directory=tmp_path / "run",
+        receptor=point_receptor,
+        params=params,
+        met_files=[tmp_path / "met" / "dummy"],
+        exe_dir=exe_dir,
+    )
+    runner.prepare()
+
+    assert (runner.directory / "ROUGLEN.ASC").resolve() == (
+        data / "ROUGLEN.ASC"
+    ).resolve()
+    bundled = _bundled_data_dir()
+    assert (runner.directory / "LANDUSE.ASC").resolve() == (
+        bundled / "LANDUSE.ASC"
+    ).resolve()

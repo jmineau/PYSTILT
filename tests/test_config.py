@@ -270,7 +270,7 @@ def test_each_setting_records_the_file_it_goes_to():
     assert fields_in("ZICONTROL") == ["ziscale"]
     assert fields_in("WINDERR") == ["siguverr", "tluverr", "zcoruverr", "horcoruverr"]
     assert fields_in("ZIERR") == ["sigzierr", "tlzierr", "horcorzierr"]
-    assert fields_in("PYSTILT") == ["hnf_plume", "exe_dir"]
+    assert fields_in("PYSTILT") == ["hnf_plume", "exe_dir", "data_dir"]
     files = {"SETUP.CFG", "CONTROL", "ZICONTROL", "WINDERR", "ZIERR", "PYSTILT"}
     assert sum(len(fields_in(f)) for f in files) == len(TransportParams.model_fields)
     assert fields_in("SETUP.CFG")[:2] == ["numpar", "varsiwant"]

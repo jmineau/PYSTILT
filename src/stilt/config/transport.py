@@ -21,7 +21,7 @@ from .meteorology import MetConfig, MetSettings
 from .params import TransportParams
 
 #: Transport fields that change no particle, so they are not part of a run's identity.
-UNRECORDED_FIELDS = frozenset({"exe_dir"})
+UNRECORDED_FIELDS = frozenset({"exe_dir", "data_dir"})
 
 #: Met fields that change no particle: where the files are downloaded from,
 #: and how many a run needs before it is allowed to start.
@@ -64,6 +64,13 @@ class ModelInfo(BaseModel):
     version: str = Field(
         ..., description="Version string of the build, such as ``v5.1.0``."
     )
+    data_files: dict[str, str] | None = Field(
+        None,
+        description=(
+            "SHA-256 of each data file the run used in place of the model's "
+            "own, by file name. ``None`` when it used the model's own."
+        ),
+    )
 
 
 class TransportSettings(TransportParams):
@@ -73,9 +80,10 @@ class TransportSettings(TransportParams):
     The transport fields of :class:`~stilt.config.TransportParams` (which also
     carry HYSPLIT's namelist writers and validators, so this is the object
     the driver runs with), the :class:`~stilt.config.MetSettings` of its
-    meteorology, and the :class:`ModelInfo`. ``exe_dir``, which changes no
-    particle (the build's version does, and is recorded), is carried for
-    running but left out of :meth:`identity` and :attr:`hash`.
+    meteorology, and the :class:`ModelInfo`. ``exe_dir`` and ``data_dir``
+    are carried for running but left out of :meth:`identity` and
+    :attr:`hash`: what they point at is recorded instead, as the build's
+    version and the checksums of data files that differ from the bundled ones.
 
     A stored ``settings.yaml`` loads back through this class, so a run is
     found by re-validating and re-hashing what was stored rather than by
@@ -115,7 +123,12 @@ class TransportSettings(TransportParams):
             from stilt.transport import get_model
 
             name = "hysplit"
-            model = ModelInfo(name=name, version=get_model(name).version(params))
+            transport_model = get_model(name)
+            model = ModelInfo(
+                name=name,
+                version=transport_model.version(params),
+                data_files=transport_model.data_files(params),
+            )
         met_settings = met.settings() if isinstance(met, MetConfig) else met
         return cls(
             **params.model_dump(),
@@ -152,6 +165,10 @@ class TransportSettings(TransportParams):
         exclude: dict[str, Any] = dict.fromkeys(UNRECORDED_FIELDS, True)
         exclude["met"] = set(UNRECORDED_MET_FIELDS)
         data = self.model_dump(mode="json", exclude=exclude)
+        if data["model"].get("data_files") is None:
+            # Runs with the model's own data files keep the hash they had
+            # before data files were recorded.
+            data["model"].pop("data_files", None)
         if data["maxpar"] is None:
             data["maxpar"] = self.numpar
         return canonical(data)

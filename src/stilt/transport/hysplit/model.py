@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+import hashlib
 from importlib.resources import files as pkg_files
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from stilt.transport import ModelRun
 
-from .driver import HYSPLITDriver
+from .driver import HYSPLITDriver, _bundled_data_dir
 from .release import add_release_heights
 
 if TYPE_CHECKING:
@@ -44,6 +45,11 @@ def hysplit_version(exe_dir: str | Path | None = None) -> str:
     return path.read_text().strip()
 
 
+def _sha256(path: Path) -> str:
+    """Return the SHA-256 hex digest of a file."""
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
 class HysplitModel:
     """
     HYSPLIT as a transport model, the object ``get_model("hysplit")`` returns.
@@ -60,6 +66,26 @@ class HysplitModel:
     def version(self, params: TransportParams) -> str:
         """Return the version of the bundled build, or of the one in ``params.exe_dir``."""
         return hysplit_version(params.exe_dir)
+
+    def data_files(self, params: TransportParams) -> dict[str, str] | None:
+        """
+        Return the SHA-256 of each table in ``params.data_dir`` that differs from the bundled one.
+
+        ``None`` when there is no ``data_dir`` or every table in it matches
+        the bundled table of the same name.
+        """
+        if params.data_dir is None:
+            return None
+        bundled = _bundled_data_dir()
+        changed = {}
+        for path in sorted(Path(params.data_dir).iterdir()):
+            if not path.is_file():
+                continue
+            digest = _sha256(path)
+            own = bundled / path.name
+            if not own.is_file() or _sha256(own) != digest:
+                changed[path.name] = digest
+        return changed or None
 
     def run(
         self,
