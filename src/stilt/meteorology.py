@@ -20,6 +20,30 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+def _met_window(
+    r_time: pd.Timestamp, n_hours: int, file_tres: str | None = None
+) -> tuple[pd.Timestamp, pd.Timestamp]:
+    """
+    Return the first and last time a run needs meteorology for, in time order.
+
+    A backward run released after the start of a met file also needs the
+    hour after its release, because HYSPLIT interpolates the release time
+    between two hours. For a release in the last hour of a file that hour is
+    in the next file, which STILT-R also reads. *file_tres* is the period of
+    one file; without it (downloads, whose archive files are 6 hours or
+    longer) the next hour is always added, which never adds a file a release
+    on a file boundary does not need.
+    """
+    sim_end = r_time + pd.Timedelta(hours=n_hours)
+    assert isinstance(sim_end, pd.Timestamp)  # not NaT: r_time is a time
+    earlier, later = min(r_time, sim_end), max(r_time, sim_end)
+    if n_hours < 0 and (file_tres is None or later != later.floor(file_tres)):
+        next_hour = later.floor("h") + pd.Timedelta(hours=1)
+        assert isinstance(next_hour, pd.Timestamp)  # not NaT: later is a time
+        later = next_hour
+    return earlier, later
+
+
 class Met:
     """
     The meteorology files of one met, found locally or downloaded.
@@ -107,9 +131,7 @@ class Met:
 
     def _download(self, r_time: pd.Timestamp, n_hours: int) -> list[Path]:
         """Return the files for a run from the ARL archive, downloading any not yet in ``directory``."""
-        sim_end = r_time + pd.Timedelta(hours=n_hours)
-        t_start: pd.Timestamp = min(r_time, sim_end)  # type: ignore[assignment]
-        t_end: pd.Timestamp = max(r_time, sim_end)  # type: ignore[assignment]
+        t_start, t_end = _met_window(r_time, n_hours)
 
         bbox = self._effective_bbox() if self.config.subgrid_enable else None
         levels = self._level_indices() if self.config.subgrid_enable else None
@@ -165,27 +187,12 @@ class Met:
             return self._download(_r_time, n_hours)
 
         # Local files
-        sim_end = _r_time + pd.Timedelta(hours=n_hours)
-        assert isinstance(sim_end, pd.Timestamp)  # not NaT: _r_time is a time
-
-        earlier = min(_r_time, sim_end)
-        later = max(_r_time, sim_end)
-
         file_format, file_tres = self.config.file_format, self.config.file_tres
         # MetConfig requires both when there is no download.
         assert file_format is not None and file_tres is not None
         tres = to_offset(pd.to_timedelta(file_tres)).freqstr
-        met_start = earlier.floor(tres)
-        met_end = later
-
-        if n_hours < 0:
-            met_end_ceil = later.ceil(tres)
-            # As in STILT-R: a release in the last hour of a file interpolates
-            # against the next file's first hour; anywhere else it doesn't.
-            if later.floor("h") + pd.Timedelta(hours=1) == met_end_ceil:  # type: ignore[arg-type]
-                met_end = met_end_ceil
-
-        met_times = pd.date_range(met_start, met_end, freq=tres)
+        earlier, later = _met_window(_r_time, n_hours, tres)
+        met_times = pd.date_range(earlier.floor(tres), later, freq=tres)
         patterns = list(dict.fromkeys(t.strftime(file_format) for t in met_times))
 
         files: list[Path] = []
