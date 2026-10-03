@@ -338,6 +338,10 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Removed
 
+- `stilt.execution.write_footprint` is `make_footprint`, and takes no
+  `config=` or `transforms=`: it makes the variant's own footprint.
+  `sim.generate_footprint` makes footprints with other settings.
+  `stilt.footprint.write_footprint` writes a footprint file.
 - `stilt.particles.prepare` no longer adds the release height `xhgt`. The
   HYSPLIT model adds it before returning its particles
   (`stilt.transport.hysplit.release.add_release_heights`), since it depends

@@ -160,10 +160,10 @@ def test_status_counts_full_simulation_completion(tmp_path):
     assert "total=1  completed=0  pending=1" in result.output
 
     # Once the footprint is present too, the simulation counts as complete.
-    from stilt.execution import write_footprint
+    from stilt.execution import make_footprint
 
     sim = project.simulation(receptor.id, "hrrr")  # a fresh value
-    write_footprint(sim, sim.particles, context=project.transform_context(sim))
+    make_footprint(sim, sim.particles, context=project.transform_context(sim))
 
     result = runner.invoke(app, ["status", str(tmp_path)])
 

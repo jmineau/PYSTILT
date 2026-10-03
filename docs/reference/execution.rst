@@ -12,7 +12,7 @@ work underneath.
   submitit jobs at once.
 - :func:`~stilt.execution.run_particles` runs HYSPLIT for one
   :class:`~stilt.Simulation` and writes its particles and log.
-- :func:`~stilt.execution.write_footprint` makes the footprint from those
+- :func:`~stilt.execution.make_footprint` makes the footprint from those
   particles and writes it.
 - :func:`~stilt.execution.run_simulation` does both, skipping what exists.
 - :func:`~stilt.execution.run_receptor` runs every variant of one receptor.
@@ -36,7 +36,7 @@ Worker functions
    stilt.execution.submit
    stilt.execution.resolve_compute_root
    stilt.execution.run_particles
-   stilt.execution.write_footprint
+   stilt.execution.make_footprint
    stilt.execution.run_simulation
    stilt.execution.run_receptor
    stilt.execution.run_receptors

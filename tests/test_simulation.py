@@ -14,7 +14,7 @@ from stilt.config import (
     TransportSettings,
     VariantConfig,
 )
-from stilt.execution import write_footprint
+from stilt.execution import make_footprint
 from stilt.output import Output
 from stilt.particles import particles_metadata, prepare
 from stilt.simulation import SimID, Simulation
@@ -211,7 +211,7 @@ def test_results_read_before_the_run_are_read_again_after_it(point_receptor, tmp
     with pytest.raises(FileNotFoundError):
         _ = sim.footprint
 
-    write_footprint(sim, traj, context=_context(sim))
+    make_footprint(sim, traj, context=_context(sim))
     assert sim.footprint is not None
     assert sim.footprint is sim.footprint  # kept once read
 
@@ -246,7 +246,7 @@ def test_completion_needs_particles_and_the_footprint_when_configured(
     sim = _sim(tmp_path, point_receptor, footprint=FOOT)
     traj = _write_particles(sim)
     assert sim.has_particles and not sim.is_complete()
-    write_footprint(sim, traj, context=_context(sim))
+    make_footprint(sim, traj, context=_context(sim))
     assert sim.is_complete()
     assert sim._footprint_set is not None and sim._footprint_set.name == "hrrr"
 
@@ -261,7 +261,7 @@ def test_particles_only_variant_is_complete_with_particles(point_receptor, tmp_p
 def test_written_footprint_reads_back(point_receptor, tmp_path):
     sim = _sim(tmp_path, point_receptor, footprint=FOOT)
     traj = _write_particles(sim)
-    foot = write_footprint(sim, traj, context=_context(sim))
+    foot = make_footprint(sim, traj, context=_context(sim))
     assert foot is not None and foot.stilt.name == "hrrr"
 
     again = _sim(tmp_path, point_receptor, footprint=FOOT)
@@ -279,7 +279,7 @@ def test_empty_footprint_is_recorded_with_its_reason(point_receptor, tmp_path):
     sim = _sim(tmp_path, point_receptor, footprint=far)
     traj = _write_particles(sim)
 
-    assert write_footprint(sim, traj, context=_context(sim)) is None
+    assert make_footprint(sim, traj, context=_context(sim)) is None
 
     assert sim.footprint is None
     assert sim.has_footprint and sim.is_complete()
