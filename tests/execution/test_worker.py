@@ -292,6 +292,28 @@ def test_run_simulation_reruns_without_skip_existing(
     assert result.ran_hysplit
 
 
+def test_run_particles_starts_in_an_empty_directory(
+    sim, met, compute_root, monkeypatch
+):
+    """A directory left by a stopped job is cleared before the model runs."""
+    workdir = compute_root / sim.id
+    workdir.mkdir(parents=True)
+    (workdir / "PARTICLE_STILT.DAT").write_text("left over\n")
+    seen: list[list[str]] = []
+
+    class _Model:
+        name = "hysplit"
+
+        def run(self, receptor, params, met, workdir, timeout=None):
+            seen.append(sorted(p.name for p in workdir.iterdir()))
+            raise RuntimeError("stop here")
+
+    monkeypatch.setattr(worker, "get_model", lambda name: _Model())
+    with pytest.raises(RuntimeError):
+        worker.run_particles(sim, met=met, workdir=workdir)
+    assert seen == [[]]
+
+
 def test_run_simulation_error_is_failed_and_logged(sim, met, compute_root, monkeypatch):
     def fail(*a, **k):
         raise SimulationError("HYSPLIT failed")
