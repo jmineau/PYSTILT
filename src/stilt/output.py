@@ -178,6 +178,14 @@ def _pystilt_version() -> str:
     return __version__
 
 
+def _stamp(digest: str) -> dict[bytes, bytes]:
+    """Return what every result file records besides its contents: its folder's settings hash and the PYSTILT version."""
+    return {
+        b"stilt:hash": digest.encode(),
+        b"stilt:pystilt": _pystilt_version().encode(),
+    }
+
+
 # -- the output directory -----------------------------------------------------
 
 
@@ -407,10 +415,7 @@ class Particles:
             receptor,
             self.settings,
             met_files,
-            metadata={
-                b"stilt:hash": self.hash.encode(),
-                b"stilt:pystilt": _pystilt_version().encode(),
-            },
+            metadata=_stamp(self.hash),
         )
 
     def table(self, receptors: Iterable[str] | None = None) -> pa.Table:
@@ -575,7 +580,7 @@ class Footprints:
         """
         path = self.file(str(foot.stilt.receptor.id))
         return write_footprint(
-            path, foot, self.config, self._stamp(), geometry_hash=self.geometry_hash
+            path, foot, self.config, _stamp(self.hash), geometry_hash=self.geometry_hash
         )
 
     def write_empty(self, receptor: Receptor, reason: str, name: str = "") -> Path:
@@ -587,16 +592,9 @@ class Footprints:
             reason,
             self.config,
             name,
-            self._stamp(),
+            _stamp(self.hash),
             geometry_hash=self.geometry_hash,
         )
-
-    def _stamp(self) -> dict[bytes, bytes]:
-        """Return the metadata a file of this folder records besides its footprint."""
-        return {
-            b"stilt:hash": self.hash.encode(),
-            b"stilt:pystilt": _pystilt_version().encode(),
-        }
 
     def empty_reason(self, receptor_id: str) -> str | None:
         """Return why the receptor's footprint is empty, or ``None`` when it is not empty."""
