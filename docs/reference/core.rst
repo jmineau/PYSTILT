@@ -115,6 +115,7 @@ so each geometry's weights are computed once per footprint grid.
    spatial.check_resolution
    spatial.same_crs
    spatial.is_longlat
+   spatial.horizontal_dims
 
 Flux fields
 -----------
@@ -130,5 +131,4 @@ Flux fields
    flux.sample_field
    flux.vertical_dim
    flux.particle_enhancement
-   flux.horizontal_dims
    flux.nearest_cell

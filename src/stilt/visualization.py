@@ -20,6 +20,7 @@ if TYPE_CHECKING:
     from stilt.simulation import Simulation
 
 from stilt.receptors import ColumnReceptor, MultiPointReceptor, Receptor
+from stilt.spatial import horizontal_dims
 
 # ---------------------------------------------------------------------------
 # Internal helpers
@@ -63,7 +64,8 @@ def _cell_lonlat(foot: xr.DataArray) -> tuple[np.ndarray, np.ndarray]:
     A footprint on a projected grid (``x`` and ``y``) is converted with its
     grid's projection, from ``foot.stilt.grid``.
     """
-    if "lon" in foot.dims:
+    y_dim, x_dim = horizontal_dims(foot)
+    if x_dim == "lon":
         return np.meshgrid(foot["lon"].values, foot["lat"].values)
     from pyproj import Transformer
 

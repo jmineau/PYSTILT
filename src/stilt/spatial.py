@@ -134,6 +134,26 @@ def cf_axis_attrs(dim: str) -> dict[str, str]:
     }[dim]
 
 
+_HORIZONTAL_DIMS = (("lat", "lon"), ("y", "x"))
+
+
+def horizontal_dims(data: xr.DataArray) -> tuple[str, str]:
+    """
+    Return the names of the horizontal dimensions, ``(y_dim, x_dim)``.
+
+    Raises
+    ------
+    ValueError
+        If *data* has neither ``lat``/``lon`` nor ``y``/``x`` dimensions.
+    """
+    for y_dim, x_dim in _HORIZONTAL_DIMS:
+        if y_dim in data.dims and x_dim in data.dims:
+            return y_dim, x_dim
+    raise ValueError(
+        f"Expected 'lat'/'lon' or 'y'/'x' dimensions; got {tuple(data.dims)}."
+    )
+
+
 class Bounds(BaseModel):
     """Longitude/latitude bounding box, in degrees."""
 
@@ -178,6 +198,11 @@ class Grid(Bounds):
     def is_longlat(self) -> bool:
         """Whether the grid is in longitude/latitude degrees."""
         return is_longlat(self.crs)
+
+    @property
+    def dims(self) -> tuple[str, str]:
+        """The names of a footprint's horizontal dimensions on this grid: ``("lat", "lon")`` or ``("y", "x")``."""
+        return ("lat", "lon") if self.is_longlat else ("y", "x")
 
     @property
     def min_cell_width(self) -> float:
@@ -331,9 +356,8 @@ class Grid(Bounds):
         """
         import xarray as xr
 
-        is_longlat = self.is_longlat
         x_centers, y_centers = self.axes
-        x_dim, y_dim = ("lon", "lat") if is_longlat else ("x", "y")
+        y_dim, x_dim = self.dims
 
         ds = xr.Dataset(coords={x_dim: x_centers, y_dim: y_centers})
         ds.attrs["Conventions"] = "CF-1.8"
@@ -947,6 +971,7 @@ __all__ = [
     "check_resolution",
     "Geometry",
     "Grid",
+    "horizontal_dims",
     "is_longlat",
     "kmsl_from_vertical_reference",
     "Mesh",
