@@ -19,7 +19,7 @@ import shutil
 import signal
 import threading
 import traceback
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
@@ -83,9 +83,6 @@ def _sigterm_as_interrupt():
 
 Status = Literal["complete", "failed", "error", "interrupted"]
 
-#: Statuses from worst to best, for summarizing a receptor's simulations.
-_SEVERITY: tuple[Status, ...] = ("interrupted", "error", "failed", "complete")
-
 
 @dataclass(frozen=True, slots=True)
 class SimulationResult:
@@ -112,39 +109,6 @@ class SimulationResult:
     error: str | None = None
     ran_hysplit: bool = False
     phase: str | None = None
-
-
-@dataclass(frozen=True, slots=True)
-class ReceptorResult:
-    """
-    Outcome of running every simulation of one receptor.
-
-    Attributes
-    ----------
-    receptor_id : str
-        Receptor id.
-    status : {"complete", "failed", "error", "interrupted"}
-        Worst status among the receptor's simulations.
-    error : str or None
-        Error message of the simulation with the worst status.
-    simulations : tuple of SimulationResult
-        Result of each simulation.
-    """
-
-    receptor_id: str
-    status: Status
-    error: str | None = None
-    simulations: tuple[SimulationResult, ...] = field(default_factory=tuple)
-
-    @classmethod
-    def summarise(
-        cls, receptor_id: str, results: list[SimulationResult]
-    ) -> ReceptorResult:
-        """Return the receptor result for a list of simulation results."""
-        if not results:
-            return cls(receptor_id, "complete")
-        worst = min(results, key=lambda r: _SEVERITY.index(r.status))
-        return cls(receptor_id, worst.status, worst.error, tuple(results))
 
 
 def _append_error_log(sim: Simulation, *, phase: str, error: BaseException) -> None:
@@ -368,9 +332,9 @@ def run_receptor(
     *,
     compute_root: Path,
     skip_existing: bool = True,
-) -> ReceptorResult:
+) -> list[SimulationResult]:
     """
-    Run every simulation of one receptor.
+    Run every simulation of one receptor, and return their results.
 
     Variants with the same transport settings share one HYSPLIT run: the
     first of them runs it, the others reuse the particles and make their own
@@ -392,7 +356,9 @@ def run_receptor(
 
     Returns
     -------
-    ReceptorResult
+    list of SimulationResult
+        One per variant, in config order. After an interruption, the last
+        one is ``interrupted``.
     """
     sims = [project.simulation(receptor_id, variant) for variant in project.variants]
     results: list[SimulationResult] = []
@@ -430,15 +396,25 @@ def run_receptor(
     except KeyboardInterrupt:
         label = str(sim.id) if sim is not None else receptor_id
         results.append(SimulationResult(label, "interrupted", error="Worker preempted"))
-    return ReceptorResult.summarise(receptor_id, results)
+    return results
 
 
-def _log_result(result: ReceptorResult, done: int, total: int) -> None:
-    """Log one progress line for a finished receptor."""
-    detail = f": {result.error}" if result.error else ""
-    logger.info(
-        "[%d/%d] %s %s%s", done, total, result.receptor_id, result.status, detail
-    )
+def _log_result(
+    receptor_id: str, results: list[SimulationResult], done: int, total: int
+) -> None:
+    """Log one progress line for a finished receptor: complete, or its first problem."""
+    problem = next((r for r in results if r.status != "complete"), None)
+    if problem is None:
+        logger.info("[%d/%d] %s complete", done, total, receptor_id)
+    else:
+        logger.info(
+            "[%d/%d] %s %s: %s", done, total, receptor_id, problem.status, problem.error
+        )
+
+
+def _interrupted(results: list[SimulationResult]) -> bool:
+    """Return whether a receptor's run was stopped."""
+    return any(r.status == "interrupted" for r in results)
 
 
 # -- process pool -------------------------------------------------------------
@@ -459,7 +435,7 @@ def _init_pool_worker(project: str, compute_root: str, skip_existing: bool) -> N
     _POOL_SKIP = skip_existing
 
 
-def _pool_run(item: tuple[int, str]) -> tuple[int, ReceptorResult]:
+def _pool_run(item: tuple[int, str]) -> tuple[int, list[SimulationResult]]:
     """Run one receptor in a pool worker, returning its index and result."""
     idx, receptor_id = item
     assert _POOL_PROJECT is not None and _POOL_COMPUTE_ROOT is not None
@@ -478,7 +454,7 @@ def run_receptors(
     compute_root: str | Path | None = None,
     n_cores: int = 1,
     skip_existing: bool = True,
-) -> list[ReceptorResult]:
+) -> list[SimulationResult]:
     """
     Run a list of receptors, in this process or in a process pool.
 
@@ -502,31 +478,31 @@ def run_receptors(
 
     Returns
     -------
-    list of ReceptorResult
-        One result per receptor, in input order. After an interruption, only
-        the receptors that finished.
+    list of SimulationResult
+        The results of every simulation, receptor by receptor in input
+        order. After an interruption, only the receptors that finished.
     """
     if not receptor_ids:
         return []
     scratch = resolve_compute_root(project, compute_root)
 
     if n_cores <= 1:
-        results: list[ReceptorResult] = []
+        results: list[SimulationResult] = []
         with _sigterm_as_interrupt():
             for i, receptor_id in enumerate(receptor_ids, 1):
-                result = run_receptor(
+                done = run_receptor(
                     project,
                     receptor_id,
                     compute_root=scratch,
                     skip_existing=skip_existing,
                 )
-                results.append(result)
-                _log_result(result, i, len(receptor_ids))
-                if result.status == "interrupted":
+                results.extend(done)
+                _log_result(receptor_id, done, i, len(receptor_ids))
+                if _interrupted(done):
                     break
         return results
 
-    ordered: dict[int, ReceptorResult] = {}
+    ordered: dict[int, list[SimulationResult]] = {}
     pool = multiprocessing.Pool(
         n_cores,
         initializer=_init_pool_worker,
@@ -534,12 +510,12 @@ def run_receptors(
     )
     with _sigterm_as_interrupt():
         try:
-            for idx, result in pool.imap_unordered(
+            for idx, done in pool.imap_unordered(
                 _pool_run, list(enumerate(receptor_ids))
             ):
-                ordered[idx] = result
-                _log_result(result, len(ordered), len(receptor_ids))
-                if result.status == "interrupted":
+                ordered[idx] = done
+                _log_result(receptor_ids[idx], done, len(ordered), len(receptor_ids))
+                if _interrupted(done):
                     pool.terminate()
                     break
             else:
@@ -555,11 +531,10 @@ def run_receptors(
             raise
         finally:
             pool.join()
-    return [ordered[i] for i in sorted(ordered)]
+    return [result for i in sorted(ordered) for result in ordered[i]]
 
 
 __all__ = [
-    "ReceptorResult",
     "SimulationResult",
     "run_receptor",
     "run_receptors",
