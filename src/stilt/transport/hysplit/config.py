@@ -16,6 +16,8 @@ from typing import Any, ClassVar, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from stilt.particles import HNF_PLUME_COLUMNS
+
 #: Where a setting goes: one of HYSPLIT's input files, or PYSTILT itself.
 SETUP: dict[str, Any] = {"file": "SETUP.CFG"}
 CONTROL: dict[str, Any] = {"file": "CONTROL"}
@@ -659,10 +661,7 @@ class HysplitConfig(BaseModel):
     @model_validator(mode="after")
     def _validate_ziscale(self) -> Self:
         """Reject ziscale values that are empty, zero, or longer than 150 hours."""
-        if isinstance(self.ziscale, int | float):
-            hourly = [float(self.ziscale)] * max(abs(self.n_hours), 1)
-        else:
-            hourly = [float(v) for v in self.ziscale]
+        hourly = self.hourly_ziscale()
         if not hourly:
             raise ValueError("ziscale cannot be empty; use 1.0 for no scaling.")
         if any(v == 0.0 for v in hourly):
@@ -697,13 +696,23 @@ class HysplitConfig(BaseModel):
     def _validate_hnf_plume(self) -> Self:
         """Require the variables the near-field plume model reads when ``hnf_plume`` is on."""
         if self.hnf_plume:
-            required = {"dens", "samt", "sigw", "tlgr", "foot", "mlht"}
-            missing = required - set(self.varsiwant)
+            missing = set(HNF_PLUME_COLUMNS) - set(self.varsiwant)
             if missing:
                 raise ValueError(
                     f"hnf_plume=True requires varsiwant to include: {sorted(missing)}"
                 )
         return self
+
+    @property
+    def effective_maxpar(self) -> int:
+        """``maxpar`` as HYSPLIT receives it: ``numpar`` when unset."""
+        return self.numpar if self.maxpar is None else self.maxpar
+
+    def hourly_ziscale(self) -> list[float]:
+        """Return ``ziscale`` as one factor per hour: a single value repeated over the run, or the list as given."""
+        if isinstance(self.ziscale, int | float):
+            return [float(self.ziscale)] * max(abs(self.n_hours), 1)
+        return [float(v) for v in self.ziscale]
 
     def settings(self) -> dict[str, Any]:
         """
@@ -715,8 +724,7 @@ class HysplitConfig(BaseModel):
         receives it, so an unset ``maxpar`` equals ``numpar``.
         """
         data = self.model_dump(mode="json", exclude=set(self.UNRECORDED))
-        if data["maxpar"] is None:
-            data["maxpar"] = self.numpar
+        data["maxpar"] = self.effective_maxpar
         return data
 
     def realizations(self, n: int) -> list[Self]:
