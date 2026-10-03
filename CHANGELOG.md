@@ -8,6 +8,8 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- `stilt.observations.winds` is `stilt.observations.variograms`. The public
+  names (`variogram`, `fit_variogram`, `VariogramFit`) are unchanged.
 - The documentation site shows the latest release rather than `main`.
 - `foot.stilt.plot.facet()` is xarray's faceted plot, in the footprint's
   own coordinates (`x`/`y` for a projected grid). Its keyword arguments go

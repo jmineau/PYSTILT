@@ -42,7 +42,7 @@ from .readers import (
 )
 from .selection import group_by_overpass, select_observations_spatial
 from .uncertainty import TransportError, transport_error
-from .winds import VariogramFit, fit_variogram, variogram
+from .variograms import VariogramFit, fit_variogram, variogram
 
 __all__ = [
     "Background",
