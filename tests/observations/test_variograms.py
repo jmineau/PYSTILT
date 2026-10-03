@@ -5,7 +5,7 @@ import pandas as pd
 import pytest
 
 from stilt.observations import VariogramFit, fit_variogram, variogram
-from stilt.observations.selection import _haversine_km
+from stilt.observations.selection import haversine_km
 from stilt.transport.hysplit import HysplitConfig
 from stilt.transport.hysplit.driver import winderrtf
 
@@ -140,7 +140,7 @@ def test_recipe_recovers_known_scales():
     lons, lats = np.meshgrid(-112.2 + 0.12 * np.arange(4), 40.5 + 0.09 * np.arange(4))
     lons, lats = lons.ravel(), lats.ravel()
     dist = np.array(
-        [_haversine_km(lo, la, lons, lats) for lo, la in zip(lons, lats, strict=True)]
+        [haversine_km(lo, la, lons, lats) for lo, la in zip(lons, lats, strict=True)]
     )
     chol_x = np.linalg.cholesky(np.exp(-dist / l_x))
     hours = pd.date_range("2024-01-01", periods=120 * 24, freq="h")
