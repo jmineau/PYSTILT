@@ -313,6 +313,14 @@ def _print_status(project: Project) -> None:
         waiting = Counter(pending["variant"])
         for variant in project.variants:
             typer.echo(f"  {variant}: {_counts(total[variant], waiting[variant])}")
+    failed = pending.failures()
+    if len(failed):
+        causes = Counter(
+            reason if isinstance(reason, str) else error
+            for reason, error in zip(failed["reason"], failed["error"], strict=True)
+        )
+        listed = ", ".join(f"{cause} {n}" for cause, n in causes.most_common())
+        typer.echo(f"failed: {listed}  (sim.failure says why)")
     unreferenced = project.unreferenced()
     for kind, keys in unreferenced.items():
         if keys:

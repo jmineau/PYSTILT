@@ -650,12 +650,14 @@ class Simulations:
         Returns
         -------
         pandas.DataFrame
-            The selection's table with four more columns. ``particles`` and
+            The selection's table with five more columns. ``particles`` and
             ``footprint`` are ``True`` when the result exists, ``False`` when
             it is missing, and ``NA`` when the simulation does not make it.
             ``empty`` is ``True`` when the footprint is empty (no particle
             reached the grid), which needs each footprint file opened.
-            ``complete`` is :meth:`~stilt.Simulation.is_complete`.
+            ``complete`` is :meth:`~stilt.Simulation.is_complete`, and
+            ``reason`` why an incomplete simulation failed (:meth:`failures`),
+            ``NA`` when it has not failed.
         """
         present = self._present()
         pairs = self._pairs()
@@ -669,12 +671,50 @@ class Simulations:
             else f and self.project.simulation(r, v).empty_reason is not None
             for (r, v), f in zip(pairs, feet, strict=True)
         ]
+        failed = self.failures()
+        reasons = {
+            (r, v): reason if reason is not None else error
+            for r, v, reason, error in zip(
+                failed["receptor"],
+                failed["variant"],
+                failed["reason"],
+                failed["error"],
+                strict=True,
+            )
+        }
         return self.frame.assign(
             particles=pd.array(particles, dtype="boolean"),
             footprint=pd.array(feet, dtype="boolean"),
             empty=pd.array(empty, dtype="boolean"),
             complete=self._complete(present),
+            reason=pd.array([reasons.get(pair) for pair in pairs], dtype="string"),
         )
+
+    def failures(self) -> pd.DataFrame:
+        """
+        Return the selected simulations that failed, and why.
+
+        One row per incomplete simulation whose last run failed, with the
+        selection's columns and ``step``, ``error``, ``reason``, and
+        ``message`` from :attr:`stilt.Simulation.failure`. Only the
+        receptors with a failure record are read, found by listing their
+        date folders.
+        """
+        columns = ["step", "error", "reason", "message"]
+        incomplete = self.incomplete()
+        rows = []
+        for name, frame in incomplete.frame.groupby("variant", sort=False):
+            folder = self.project.output.find_particles(
+                self.project.variants[str(name)]
+            )
+            if folder is None:
+                continue
+            for rid in folder.failed(set(frame["receptor"])):
+                failure = self.project.simulation(rid, str(name)).failure
+                if failure is not None:
+                    rows.append({"receptor": rid, "variant": str(name), **failure})
+        found = pd.DataFrame(rows, columns=pd.Index(["receptor", "variant", *columns]))
+        return incomplete.frame.merge(found[["receptor", "variant", *columns]])
 
     def incomplete(self) -> Simulations:
         """

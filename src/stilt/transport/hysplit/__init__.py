@@ -2,7 +2,7 @@
 
 from .config import HysplitConfig
 from .driver import HYSPLITDriver
-from .failures import FailureReason, identify_failure_reason
+from .failures import FailureReason
 from .model import HysplitModel
 
 __all__ = [
@@ -10,5 +10,4 @@ __all__ = [
     "HYSPLITDriver",
     "HysplitConfig",
     "HysplitModel",
-    "identify_failure_reason",
 ]

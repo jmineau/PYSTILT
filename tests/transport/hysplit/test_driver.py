@@ -4,12 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from stilt.exceptions import (
-    HYSPLITFailureError,
-    HYSPLITNotFoundError,
-    HYSPLITTimeoutError,
-    NoParticleOutputError,
-)
+from stilt.exceptions import HYSPLITNotFoundError, SimulationError
 from stilt.receptors import ColumnReceptor, MultiPointReceptor
 from stilt.transport.hysplit import FailureReason, HysplitConfig, HYSPLITDriver
 from stilt.transport.hysplit.control import ControlFile
@@ -190,8 +185,9 @@ def test_read_particles_leaves_the_particle_files(tmp_path, point_receptor):
 def test_read_particles_raises_domain_error_when_file_missing(tmp_path, point_receptor):
     runner = _make_runner(tmp_path, point_receptor)
 
-    with pytest.raises(NoParticleOutputError, match="PARTICLE_STILT.DAT"):
+    with pytest.raises(SimulationError, match="PARTICLE_STILT.DAT") as caught:
         runner._read_particles()
+    assert caught.value.reason is FailureReason.NO_PARTICLE_DATA
 
 
 def test_run_persists_fortran_runtime_output_on_failure(tmp_path, point_receptor):
@@ -204,8 +200,9 @@ def test_run_persists_fortran_runtime_output_on_failure(tmp_path, point_receptor
     )
     exe.chmod(0o755)
 
-    with pytest.raises(HYSPLITFailureError):
+    with pytest.raises(SimulationError) as caught:
         runner._run(timeout=5)
+    assert caught.value.reason is FailureReason.FORTRAN_RUNTIME_ERROR
 
     log_text = runner.log_path.read_text()
     assert "Fortran runtime error" in log_text
@@ -217,8 +214,9 @@ def test_run_times_out_and_keeps_log_output(tmp_path, point_receptor):
     exe.write_text("#!/usr/bin/env bash\necho 'starting hycs_std'\nsleep 30\n")
     exe.chmod(0o755)
 
-    with pytest.raises(HYSPLITTimeoutError, match="timed out"):
+    with pytest.raises(SimulationError, match="timeout") as caught:
         runner._run(timeout=1)
+    assert caught.value.reason is FailureReason.TIMEOUT
 
     log_text = runner.log_path.read_text()
     assert "starting hycs_std" in log_text
@@ -249,7 +247,7 @@ def test_execute_fails_when_the_met_is_cut_short(tmp_path, point_receptor, monke
         last_minute=13 * 60,
     )
 
-    with pytest.raises(HYSPLITFailureError) as caught:
+    with pytest.raises(SimulationError) as caught:
         runner.execute(timeout=5)
 
     assert caught.value.reason is FailureReason.MET_TRUNCATED

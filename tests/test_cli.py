@@ -412,3 +412,39 @@ def test_status_lists_output_folders_no_variant_uses(tmp_path):
     assert "particles folders" in result.output
     assert "settings=old-" in result.output
     assert "never deletes" in result.output
+
+
+def test_status_counts_failures_by_reason(tmp_path):
+    from stilt.project import Project
+    from stilt.receptors import PointReceptor
+
+    receptors = [
+        PointReceptor(
+            time=f"2023-01-01 {h}:00", longitude=-111.85, latitude=40.77, altitude=5
+        )
+        for h in (12, 13, 14)
+    ]
+    project = Project.init(
+        tmp_path,
+        mets={
+            "hrrr": {
+                "directory": tmp_path / "met",
+                "file_format": "%Y%m%d_%H",
+                "file_tres": "1h",
+            }
+        },
+        receptors=receptors,
+    )
+    reasons = ["MISSING_MET_FILES", "MISSING_MET_FILES", None]
+    for receptor, reason in zip(receptors, reasons, strict=True):
+        sim = project.simulation(str(receptor.id), "hrrr")
+        error = "MeteorologyError" if reason else "ValueError"
+        sim.output.particles(sim.variant).write_failure(
+            sim.receptor.id,
+            {"particles": {"error": error, "reason": reason, "message": "m"}},
+        )
+
+    result = runner.invoke(app, ["status", str(tmp_path)])
+
+    assert result.exit_code == 0, result.output
+    assert "failed: MISSING_MET_FILES 2, ValueError 1" in result.output

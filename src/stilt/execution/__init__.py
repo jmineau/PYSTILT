@@ -8,7 +8,6 @@ from .worker import (
     run_particles,
     run_receptor,
     run_receptors,
-    run_simulation,
 )
 
 __all__ = [
@@ -19,7 +18,6 @@ __all__ = [
     "run",
     "run_receptor",
     "run_receptors",
-    "run_simulation",
     "run_particles",
     "submit",
     "make_footprint",
