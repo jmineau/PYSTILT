@@ -75,6 +75,17 @@ def _cell_lonlat(foot: xr.DataArray) -> tuple[np.ndarray, np.ndarray]:
     return np.asarray(lon), np.asarray(lat)
 
 
+def _extent(lons, lats, pad: float) -> tuple[float, float, float, float]:
+    """Return the ``(west, east, south, north)`` box around *lons* and *lats*, widened by *pad* degrees."""
+    lons, lats = np.asarray(lons, dtype=float), np.asarray(lats, dtype=float)
+    return (
+        float(lons.min()) - pad,
+        float(lons.max()) + pad,
+        float(lats.min()) - pad,
+        float(lats.max()) + pad,
+    )
+
+
 def _log10_safe(vals: np.ndarray) -> np.ndarray:
     """Return log10 of ``vals``, with NaN where a value is zero or negative."""
     with np.errstate(divide="ignore", invalid="ignore"):
@@ -173,13 +184,7 @@ class ParticlesPlotAccessor:
         c: np.ndarray = p[color_by].to_numpy(dtype=float)
         cbar_label = _color_labels[color_by]
 
-        pad = 0.5
-        extent = (
-            lons.min() - pad,
-            lons.max() + pad,
-            lats.min() - pad,
-            lats.max() + pad,
-        )
+        extent = _extent(lons, lats, pad=0.5)
         fig, ax = _make_ax(ax, extent=extent, tiler=tiler, tiler_zoom=tiler_zoom)
 
         sc = ax.scatter(lons, lats, c=c, cmap=cmap, s=s, alpha=alpha, **kwargs)
@@ -258,13 +263,7 @@ class FootprintPlotAccessor:
         else:
             cbar_label = "footprint"
 
-        pad = 0.05
-        extent = (
-            LON.min() - pad,
-            LON.max() + pad,
-            LAT.min() - pad,
-            LAT.max() + pad,
-        )
+        extent = _extent(LON, LAT, pad=0.05)
         fig, ax = _make_ax(ax, extent=extent, tiler=tiler, tiler_zoom=tiler_zoom)
 
         mesh = ax.pcolormesh(LON, LAT, vals, cmap=cmap, shading="auto", **kwargs)
@@ -297,20 +296,22 @@ class FootprintPlotAccessor:
         **kwargs,
     ) -> tuple[Figure, np.ndarray]:
         """
-        Map each time step of the footprint in its own panel, with one colorbar.
+        Plot each time step of the footprint in its own panel, with one colorbar.
+
+        This is xarray's faceted plot, in the footprint's own coordinates.
 
         Parameters
         ----------
         ncols : int, default 3
             Number of panel columns.
         log : bool, default True
-            Plot log10 of the footprint.
+            Plot log10 of the footprint. Cells of zero are left blank.
         cmap : str, default "cool"
             Colormap name.
         figsize : tuple of float, optional
             Figure size. Defaults to ``(ncols * 4, nrows * 3)``.
         **kwargs
-            Forwarded to :func:`matplotlib.axes.Axes.pcolormesh`.
+            Forwarded to :meth:`xarray.DataArray.plot`.
 
         Returns
         -------
@@ -318,57 +319,24 @@ class FootprintPlotAccessor:
         axes : ndarray of Axes
         """
         foot = self._foot
-        times = foot.time.values
-        n = len(times)
-        nrows = (n + ncols - 1) // ncols
-
-        if figsize is None:
-            figsize = (ncols * 4, nrows * 3)
-        fig, axes = plt.subplots(nrows, ncols, figsize=figsize, constrained_layout=True)
-        axes_flat: np.ndarray = np.array(axes).flatten()
-
-        LON, LAT = _cell_lonlat(foot)
-
-        all_vals = foot.values.astype(float)
+        data = foot
         if log:
-            all_vals_plot = _log10_safe(all_vals)
-            cbar_label = "log₁₀(footprint)"
-        else:
-            all_vals_plot = all_vals
-            cbar_label = "footprint"
-
-        vmin = float(np.nanmin(all_vals_plot))
-        vmax = float(np.nanmax(all_vals_plot))
-
-        mesh = None
-        for i, (t, panel_ax) in enumerate(zip(times, axes_flat, strict=False)):
-            vals = all_vals_plot[i]
-            mesh = panel_ax.pcolormesh(
-                LON,
-                LAT,
-                vals,
-                cmap=cmap,
-                vmin=vmin,
-                vmax=vmax,
-                shading="auto",
-                **kwargs,
-            )
-            panel_time_raw = pd.Timestamp(t)
-            title = (
-                "NaT"
-                if not isinstance(panel_time_raw, pd.Timestamp)
-                else panel_time_raw.strftime("%Y-%m-%d %H:%M")
-            )
-            panel_ax.set_title(title, fontsize=9)
-            panel_ax.tick_params(labelsize=7)
-
-        for panel_ax in axes_flat[n:]:
-            panel_ax.set_visible(False)
-
-        if mesh is not None:
-            fig.colorbar(mesh, ax=axes_flat[:n], label=cbar_label, shrink=0.6)
-        fig.suptitle("Footprint by Time Step")
-        return fig, axes
+            blank_zeros = foot.where(foot > 0)
+            data = blank_zeros.copy(data=np.log10(blank_zeros.values))
+        y_dim, x_dim = horizontal_dims(foot)
+        nrows = -(-foot.sizes["time"] // ncols)
+        facets = data.plot(
+            x=x_dim,
+            y=y_dim,
+            col="time",
+            col_wrap=ncols,
+            cmap=cmap,
+            figsize=figsize or (ncols * 4, nrows * 3),
+            cbar_kwargs={"label": "log₁₀(footprint)" if log else "footprint"},
+            **kwargs,
+        )
+        facets.fig.suptitle("Footprint by time step")
+        return facets.fig, facets.axs
 
 
 # ---------------------------------------------------------------------------
@@ -429,12 +397,8 @@ class ReceptorPlotAccessor:
         alts = np.array([c[2] for c in coords])
 
         if domain is not None:
-            pad = 0.5
-            extent = (
-                domain.xmin - pad,
-                domain.xmax + pad,
-                domain.ymin - pad,
-                domain.ymax + pad,
+            extent = _extent(
+                [domain.xmin, domain.xmax], [domain.ymin, domain.ymax], pad=0.5
             )
         else:
             pad = max(
@@ -442,12 +406,7 @@ class ReceptorPlotAccessor:
                 (lons.max() - lons.min()) * 0.3 + 0.5,
                 (lats.max() - lats.min()) * 0.3 + 0.5,
             )
-            extent = (
-                lons.min() - pad,
-                lons.max() + pad,
-                lats.min() - pad,
-                lats.max() + pad,
-            )
+            extent = _extent(lons, lats, pad=pad)
 
         fig, ax = _make_ax(ax, extent=extent, tiler=tiler, tiler_zoom=tiler_zoom)
 
@@ -578,32 +537,13 @@ class SimulationPlotAccessor:
         # Map extent: the footprint grid, else the particles, else the receptor
         if foot is not None:
             g = foot.stilt.grid
-            pad = 0.1
-            extent: tuple[float, float, float, float] = (
-                g.xmin - pad,
-                g.xmax + pad,
-                g.ymin - pad,
-                g.ymax + pad,
-            )
+            extent = _extent([g.xmin, g.xmax], [g.ymin, g.ymax], pad=0.1)
         elif particles is not None:
-            p = particles
-            pad = 0.5
-            extent = (
-                p["long"].min() - pad,
-                p["long"].max() + pad,
-                p["lati"].min() - pad,
-                p["lati"].max() + pad,
-            )
+            extent = _extent(particles["long"], particles["lati"], pad=0.5)
         else:
-            r = sim.receptor
-            pad = 2.0
-            _lats = np.array([lat for lat, lon, alt in r.coords()])
-            _lons = np.array([lon for lat, lon, alt in r.coords()])
-            extent = (
-                _lons.min() - pad,
-                _lons.max() + pad,
-                _lats.min() - pad,
-                _lats.max() + pad,
+            coords = sim.receptor.coords()
+            extent = _extent(
+                [lon for _, lon, _ in coords], [lat for lat, _, _ in coords], pad=2.0
             )
 
         _, ax = _make_ax(ax, extent=extent)

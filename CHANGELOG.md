@@ -8,6 +8,9 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- `foot.stilt.plot.facet()` is xarray's faceted plot, in the footprint's
+  own coordinates (`x`/`y` for a projected grid). Its keyword arguments go
+  to `DataArray.plot`.
 - `stilt.flux.horizontal_dims` is `stilt.spatial.horizontal_dims`, and
   `Grid.dims` gives a footprint's dimension names on that grid.
 - `stilt.SpatialTarget` (it was another name for `stilt.Geometry`),
