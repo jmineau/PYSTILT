@@ -664,9 +664,7 @@ def apply_transforms(
 
 
 __all__ = [
-    "KERNEL_TABLE_COLUMNS",
     "AveragingKernel",
-    "BuiltinTransform",
     "FirstOrderLifetime",
     "ParticleTransform",
     "PressureWeighting",
