@@ -731,11 +731,12 @@ class Simulations:
             Footprints by :class:`~stilt.SimID`. ``xr.concat(list(feet.values()),
             dim="receptor")`` stacks footprints of one variant.
         """
+        present = self._present()
         return {
             sim.id: foot
             for sim in self
-            if sim.makes_footprint
-            and sim.has_footprint
+            if (written := present[sim.variant.name][1]) is not None
+            and sim.receptor.id in written
             and (foot := sim.footprint) is not None
         }
 
