@@ -50,7 +50,7 @@ def _column_trajectory(
     receptor = ColumnReceptor(
         time=time, longitude=WBB_LON, latitude=WBB_LAT, bottom=0.0, top=top
     )
-    params = TransportParams(n_hours=-2, numpar=numpar, hnf_plume=False, rm_dat=True)
+    params = TransportParams(n_hours=-2, numpar=numpar, hnf_plume=False)
     met_files = Met(
         "hrrr",
         MetConfig(
@@ -65,7 +65,7 @@ def _column_trajectory(
         directory=Path(tmp_path) / label,
     )
     driver.prepare()
-    result = driver.execute(timeout=900, rm_dat=True)
+    result = driver.execute(timeout=900)
     return receptor, prepare(result.particles, receptor, params)
 
 
