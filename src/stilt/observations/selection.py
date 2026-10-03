@@ -60,7 +60,7 @@ def group_by_overpass(
 # -- spatial selection ------------------------------------------------------------
 
 
-def _haversine_km(
+def haversine_km(
     lon1: np.ndarray | float,
     lat1: np.ndarray | float,
     lon2: np.ndarray | float,
@@ -154,7 +154,7 @@ def select_observations_spatial(
     ]
 
     selected = {
-        int(np.argmin(_haversine_km(g_lon, g_lat, lons, lats)))
+        int(np.argmin(haversine_km(g_lon, g_lat, lons, lats)))
         for g_lon, g_lat in grid_points
     }
     return np.array(sorted(selected, key=lambda i: (lats[i], i)), dtype=int)

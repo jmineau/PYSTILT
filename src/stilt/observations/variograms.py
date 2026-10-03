@@ -33,7 +33,7 @@ import pandas as pd
 from numpy.typing import ArrayLike
 from scipy.optimize import curve_fit
 
-from .selection import _haversine_km
+from .selection import haversine_km
 
 
 def _bin(
@@ -70,7 +70,7 @@ def _pairs_geo(
     if len(errors) < 2:
         return
     i, j = np.triu_indices(len(errors), 1)
-    h = _haversine_km(lon[i], lat[i], lon[j], lat[j])
+    h = haversine_km(lon[i], lat[i], lon[j], lat[j])
     _bin(sums, edges, h, (errors[i] - errors[j]) ** 2)
 
 
