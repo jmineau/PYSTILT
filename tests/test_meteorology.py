@@ -5,6 +5,7 @@ import logging
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pandas as pd
 import pytest
 
 from stilt.config.meteorology import MetConfig
@@ -649,3 +650,56 @@ def test_required_files_ignores_backup_copies(tmp_path):
     met = _make_met(tmp_path, "%Y%m%d_%H", "6h")
     files = met.required_files(r_time=dt.datetime(2020, 1, 7, 20), n_hours=-1)
     assert [f.name for f in files] == ["20200107_18-23_hrrr"]
+
+
+def test_downloaded_met_gets_the_next_file_in_the_last_hour_of_a_file(tmp_path):
+    """
+    A receptor in the last hour of a met file also needs the next file, as for local met.
+
+    At 17:30 with 6-hour HRRR files (12-17, 18-23), HYSPLIT interpolates
+    between 17:00 and 18:00, so the 18:00 file is needed. STILT-R applies
+    this rule, and so does the local path (see the test below); the
+    download asks the archive for files through 18:00.
+    """
+    mock_archive = MagicMock()
+    mock_archive.fetch.return_value = [tmp_path / "file1"]
+    (tmp_path / "file1").touch()
+    met = _make_download_met(tmp_path)
+    met._archive = mock_archive
+
+    met.required_files(r_time="2024-07-18 17:30", n_hours=-24)
+
+    start, end = mock_archive.fetch.call_args.args[:2]
+    assert start == pd.Timestamp("2024-07-17 17:30")
+    assert end == pd.Timestamp("2024-07-18 18:00")
+
+
+def test_local_met_gets_the_next_file_in_the_last_hour_of_a_file(tmp_path):
+    for name in ("20240718_12", "20240718_18"):
+        (tmp_path / name).touch()
+    met = Met(
+        "hrrr",
+        MetConfig(directory=tmp_path, file_format="%Y%m%d_%H", file_tres="6h", n_min=1),
+    )
+
+    in_last_hour = met.required_files(r_time="2024-07-18 17:30", n_hours=-1)
+    earlier = met.required_files(r_time="2024-07-18 16:30", n_hours=-1)
+
+    assert [p.name for p in in_last_hour] == ["20240718_12", "20240718_18"]
+    assert [p.name for p in earlier] == ["20240718_12"]
+
+
+def test_local_hourly_met_on_the_hour_reads_no_extra_file(tmp_path):
+    """With 1-hour files, a release exactly on the hour needs only its own file, as in STILT-R."""
+    for name in ("20240718_17", "20240718_18", "20240718_19"):
+        (tmp_path / name).touch()
+    met = Met(
+        "hrrr",
+        MetConfig(directory=tmp_path, file_format="%Y%m%d_%H", file_tres="1h", n_min=1),
+    )
+
+    on_the_hour = met.required_files(r_time="2024-07-18 18:00", n_hours=-1)
+    past_it = met.required_files(r_time="2024-07-18 18:30", n_hours=-1)
+
+    assert [p.name for p in on_the_hour] == ["20240718_17", "20240718_18"]
+    assert [p.name for p in past_it] == ["20240718_17", "20240718_18", "20240718_19"]
