@@ -200,18 +200,18 @@ A few rules keep custom transforms working everywhere:
   the container. A project config that names a transform PYSTILT cannot
   import fails to load, with the import error. A stored footprint that
   names one can still be read, with a warning. That entry of
-  ``foot.config.transforms`` is left as its settings mapping.
+  ``foot.stilt.config.transforms`` is left as its settings mapping.
 - **Get anything outside the table from the context.**
   ``context.receptor`` is the receptor, and its ``id`` is the key for any
   per-receptor input file. ``context.variant`` is the variant name.
-  ``context.store`` is the project store. Its ``local_path(key)`` gives a
-  readable local file for a path relative to the project root, wherever
-  the worker runs. The ``averaging_kernel`` table is found this way.
+  ``context.directory`` is the project directory. Read a file named in
+  your transform's settings relative to it, as the ``averaging_kernel``
+  table is read.
 
 A transform named in ``config.yaml`` must be a pydantic model, because
-PYSTILT writes it back out to the variants record and the footprint's
-netCDF file. A config that names a plain class fails to load. The Python
-``transforms=`` argument takes any object with ``apply``.
+PYSTILT writes it back out to the footprint folder's ``_settings.yaml``
+and to each footprint file. A config that names a plain class fails to
+load. The Python ``transforms=`` argument takes any object with ``apply``.
 
 The functions the built-ins use are public in :mod:`stilt.transforms`:
 :func:`~stilt.transforms.release_coordinate`,
