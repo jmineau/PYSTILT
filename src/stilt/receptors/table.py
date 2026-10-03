@@ -24,7 +24,6 @@ from .models import (
     _column_location,
     _multipoint_location,
     _point_location,
-    parse_time,
 )
 from .validation import column_errors, multipoint_errors, point_errors
 
@@ -110,7 +109,7 @@ def receptor_rows(frame: pd.DataFrame) -> pd.DataFrame:
     ``receptor`` (the id), ``kind`` (``point``, ``column``, or
     ``multipoint``), and ``location`` (the location id). A receptor listed
     twice keeps its first rows. No receptor object is built, so this is quick
-    on a large file; :func:`receptor_from_rows` builds one from its rows.
+    on a large file; :func:`receptors_from_rows` builds the receptors.
 
     Raises
     ------
@@ -243,7 +242,7 @@ def receptor_rows(frame: pd.DataFrame) -> pd.DataFrame:
         drop: list[int] = []
         for group in by_id.values():
             check_distinct_ids(
-                [receptor_from_rows(out.loc[codes == code]) for code in group]
+                [receptors_from_rows(out.loc[codes == code])[0] for code in group]
             )
             drop.extend(group[1:])  # the same receptor listed again
         out = out.loc[~np.isin(codes, drop)]
@@ -259,24 +258,29 @@ def _build(
     lat: np.ndarray,
     alt: np.ndarray,
 ) -> Receptor:
-    """Return the receptor of one group of rows, given as plain values."""
+    """
+    Return the receptor of one group of checked rows, given as plain values.
+
+    The rows passed :func:`receptor_rows`, which runs every check a receptor
+    runs, so the receptor is built without running them again.
+    """
     common = {"time": time, "altitude_ref": altitude_ref, "attrs": attrs}
     if kind == "point":
-        return PointReceptor(
+        return PointReceptor.model_construct(
             longitude=float(lon[0]),
             latitude=float(lat[0]),
             altitude=float(alt[0]),
             **common,
         )
     if kind == "column":
-        return ColumnReceptor(
+        return ColumnReceptor.model_construct(
             longitude=float(lon[0]),
             latitude=float(lat[0]),
             bottom=float(alt.min()),
             top=float(alt.max()),
             **common,
         )
-    return MultiPointReceptor(
+    return MultiPointReceptor.model_construct(
         longitudes=tuple(lon.tolist()),
         latitudes=tuple(lat.tolist()),
         altitudes=tuple(alt.tolist()),
@@ -284,37 +288,50 @@ def _build(
     )
 
 
-def _labels(rows: pd.DataFrame) -> list[str]:
-    """Return the label columns of a :func:`receptor_rows` table."""
-    return [str(c) for c in rows.columns if c not in COLUMNS and c not in ROW_COLUMNS]
-
-
-def _attrs(values: Iterable[Any], names: list[str]) -> dict[str, Any]:
-    """Return one row's labels as a dict, with empty cells as ``None``."""
-    return {k: (None if pd.isna(v) else v) for k, v in zip(names, values, strict=True)}
-
-
-def receptor_from_rows(rows: pd.DataFrame) -> Receptor:
+def receptors_from_rows(rows: pd.DataFrame) -> list[Receptor]:
     """
-    Build the receptor of its rows of a :func:`receptor_rows` table.
+    Build the receptors of a table that :func:`receptor_rows` checked.
 
-    Its labels (``attrs``) are the other columns of its first row.
+    The rows are not checked again. Each receptor's labels (``attrs``) are
+    the other columns of its first row.
+
+    Returns
+    -------
+    list of Receptor
+        In table order, one per receptor id.
     """
-    names = _labels(rows)
-    return _build(
-        str(rows["kind"].iloc[0]),
-        parse_time(rows["time"].iloc[0]),
-        str(rows["altitude_ref"].iloc[0]),
-        _attrs(rows[names].astype(object).iloc[0].tolist(), names),
-        rows["longitude"].to_numpy(dtype=float),
-        rows["latitude"].to_numpy(dtype=float),
-        rows["altitude"].to_numpy(dtype=float),
-    )
+    names = [str(c) for c in rows.columns if c not in COLUMNS and c not in ROW_COLUMNS]
+    labels = rows[names].astype(object).to_numpy()
+    times = rows["time"].dt.to_pydatetime()
+    lon = rows["longitude"].to_numpy(dtype=float)
+    lat = rows["latitude"].to_numpy(dtype=float)
+    alt = rows["altitude"].to_numpy(dtype=float)
+    kind = rows["kind"].to_numpy()
+    ref = rows["altitude_ref"].to_numpy()
+    receptors = []
+    for idx in rows.groupby("receptor", sort=False).indices.values():
+        i = idx[0]
+        attrs = {
+            k: (None if pd.isna(v) else v)
+            for k, v in zip(names, labels[i], strict=True)
+        }
+        receptors.append(
+            _build(
+                str(kind[i]),
+                times[i],
+                str(ref[i]),
+                attrs,
+                lon[idx],
+                lat[idx],
+                alt[idx],
+            )
+        )
+    return receptors
 
 
 def receptors_from_frame(frame: pd.DataFrame) -> list[Receptor]:
     """
-    Build receptors from a table with a row per release point.
+    Check a table with a row per release point and build its receptors.
 
     The table needs ``time``, ``longitude``, ``latitude``, and ``altitude``
     columns. Each row is one :class:`PointReceptor`, unless an ``r_idx``
@@ -348,30 +365,7 @@ def receptors_from_frame(frame: pd.DataFrame) -> list[Receptor]:
     ValueError
         As :func:`receptor_rows` raises.
     """
-    rows = receptor_rows(frame)
-    names = _labels(rows)
-    labels = rows[names].astype(object).to_numpy()
-    times = rows["time"].dt.to_pydatetime()
-    lon = rows["longitude"].to_numpy(dtype=float)
-    lat = rows["latitude"].to_numpy(dtype=float)
-    alt = rows["altitude"].to_numpy(dtype=float)
-    kind = rows["kind"].to_numpy()
-    ref = rows["altitude_ref"].to_numpy()
-    receptors = []
-    for idx in rows.groupby("receptor", sort=False).indices.values():
-        i = idx[0]
-        receptors.append(
-            _build(
-                str(kind[i]),
-                times[i],
-                str(ref[i]),
-                _attrs(labels[i], names),
-                lon[idx],
-                lat[idx],
-                alt[idx],
-            )
-        )
-    return receptors
+    return receptors_from_rows(receptor_rows(frame))
 
 
 def check_distinct_ids(receptors: Iterable[Receptor]) -> None:

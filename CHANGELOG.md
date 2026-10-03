@@ -8,6 +8,16 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Receptors are checked once (#134). A receptor built from the rows of a
+  checked table (`receptors.csv`, `receptors_from_frame`) no longer runs
+  the same checks again. `receptors_from_rows(rows)` builds every receptor
+  of a `receptor_rows` table and replaces `receptor_from_rows` (breaking).
+  The check that a multipoint receptor's points have distinct locations
+  runs on arrays. On a file of 2.5 million multipoint rows (82,000
+  receptors), checking the table went from 21 to 13 seconds and reading
+  every receptor from 35 to 16 seconds.
+- A receptor's `repr` shows its class and id; `geometry` is built in one
+  place for every kind (#134).
 - **One failure record per simulation** (breaking). When a run fails, the
   worker writes `<receptor id>.failure.yaml` beside the receptor's log:
   the step that failed, the exception, a short `reason` (such as
