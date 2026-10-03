@@ -169,7 +169,10 @@ docs/                Sphinx (pydata-sphinx-theme)
    transport core. Keep observation logic out of `project.py`. An import-linter
    contract in `pyproject.toml` (run by `lint-imports` in CI) fails when a
    core module imports `stilt.observations`; a new top-level module goes on
-   that contract's list.
+   that contract's list. A second contract keeps HYSPLIT's package
+   (`stilt.transport.hysplit`) out of the core, which reaches it only
+   through `stilt.transport.get_model`; `Simulation.outcome` reading
+   HYSPLIT's failure reasons is the one listed exception.
 
 Slurm tasks rebuild the model from the project in another process on
 another node, so anything a worker needs must be in the project or the
