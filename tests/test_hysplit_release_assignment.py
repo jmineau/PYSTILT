@@ -69,7 +69,7 @@ def test_hysplit_multipoint_release_points_follow_control_order(tmp_path, met_di
     runner.prepare()
     result = runner.execute(timeout=120)
 
-    release_rows = _release_time_rows(result.particles)
+    release_rows = _release_time_rows(result)
     assert release_rows["indx"].tolist() == list(range(1, params.numpar + 1))
 
     nearest_release = _nearest_release_assignments(release_rows, receptor)
@@ -129,7 +129,7 @@ def test_hysplit_multipoint_release_points_follow_control_order_nondivisible(
     runner.prepare()
     result = runner.execute(timeout=120)
 
-    release_rows = _release_time_rows(result.particles)
+    release_rows = _release_time_rows(result)
     assert release_rows["indx"].tolist() == list(range(1, params.numpar + 1))
     assert _nearest_release_assignments(release_rows, receptor) == [
         0,
@@ -181,7 +181,7 @@ def test_hysplit_column_release_spans_vertical_line_without_endpoint_chunking(
     runner.prepare()
     result = runner.execute(timeout=120)
 
-    release_rows = _release_time_rows(result.particles)
+    release_rows = _release_time_rows(result)
     assert release_rows["indx"].tolist() == list(range(1, params.numpar + 1))
     assert (
         release_rows["zagl"].between(receptor.bottom - 50.0, receptor.top + 50.0).all()
@@ -241,7 +241,7 @@ def test_close_spaced_slant_release_heights_are_recovered(tmp_path, met_dir):
         directory=Path(tmp_path) / "close_slant",
     )
     runner.prepare()
-    particles = runner.execute(timeout=300).particles
+    particles = runner.execute(timeout=300)
     data = prepare(add_release_heights(particles, receptor), receptor, params)
 
     release = _release_time_rows(data).drop_duplicates("indx")
