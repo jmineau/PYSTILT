@@ -7,13 +7,13 @@ import pytest
 import shapely
 
 from stilt import Grid, Mesh, Zones
-from stilt.spatial import (
+from stilt.footprint.targets import (
     _mesh_weights,
     _mesh_weights_exactextract,
     check_resolution,
     overlap_weights,
-    same_crs,
 )
+from stilt.spatial import same_crs
 
 # ---------------------------------------------------------------------------
 # Grid as a geometry
@@ -434,7 +434,8 @@ def test_exactextract_backend_matches_shapely_on_random_polygons():
 
 def test_one_longlat_test_for_grids_and_meshes():
     """EPSG:4326 is longitude/latitude for a grid as it is for a mesh."""
-    from stilt.spatial import Grid, Mesh, is_longlat
+    from stilt.footprint.targets import Mesh
+    from stilt.spatial import Grid, is_longlat
 
     grid = Grid(
         xmin=-112.0,

@@ -42,7 +42,7 @@ from stilt.spatial import Bounds, Grid
 from stilt.transforms import dump_transform, load_transform
 
 if TYPE_CHECKING:
-    from stilt.spatial import Mesh
+    from stilt.footprint.targets import Mesh
 
 
 class _GeometrySpec(BaseModel):
@@ -83,7 +83,7 @@ class FileGeometrySpec(_GeometrySpec):
 
     def build(self) -> Mesh:
         """Read the file into a :class:`stilt.Mesh`. Requires geopandas."""
-        from stilt.spatial import Mesh
+        from stilt.footprint.targets import Mesh
 
         kwargs = {}
         if self.layer is not None:
@@ -102,7 +102,7 @@ class H3GeometrySpec(_GeometrySpec):
 
     def build(self) -> Mesh:
         """Build the hexagons as a :class:`stilt.Mesh`. Requires ``h3``."""
-        from stilt.spatial import Mesh
+        from stilt.footprint.targets import Mesh
 
         return Mesh.from_h3(self.resolution, self.bounds)
 
@@ -124,7 +124,7 @@ class WindowsGeometrySpec(_GeometrySpec):
 
     def build(self) -> Mesh:
         """Build the windows as a :class:`stilt.Mesh`."""
-        from stilt.spatial import Mesh
+        from stilt.footprint.targets import Mesh
 
         return Mesh.from_windows(self.coords, self.size, ids=self.ids, crs=self.crs)
 

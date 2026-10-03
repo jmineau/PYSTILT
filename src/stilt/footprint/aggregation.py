@@ -19,16 +19,10 @@ from scipy import sparse
 
 from stilt.config import FootprintConfig, Grid
 from stilt.receptors import parse_receptor_id
-from stilt.spatial import (
-    Geometry,
-    Mesh,
-    Zones,
-    check_resolution,
-    horizontal_dims,
-    overlap_weights,
-)
+from stilt.spatial import horizontal_dims
 
 from .io import _naive_utc_ns, _utc_index
+from .targets import Geometry, Mesh, Zones, check_resolution, overlap_weights
 
 
 def _bin_edges(time_bins: pd.IntervalIndex) -> tuple[np.ndarray, np.ndarray]:

@@ -103,16 +103,17 @@ A :class:`Grid` works as well. It is documented under :doc:`configuration`.
    Zones
    Geometry
 
-:mod:`stilt.spatial` also has the helpers that compute how much of each
+:mod:`stilt.footprint` also has the helpers that compute how much of each
 footprint cell falls in each target cell. These overlap weights are cached,
 so each geometry's weights are computed once per footprint grid.
+:mod:`stilt.spatial` has the CRS helpers.
 
 .. autosummary::
    :toctree: _api
    :nosignatures:
 
-   spatial.overlap_weights
-   spatial.check_resolution
+   footprint.overlap_weights
+   footprint.check_resolution
    spatial.same_crs
    spatial.is_longlat
    spatial.horizontal_dims

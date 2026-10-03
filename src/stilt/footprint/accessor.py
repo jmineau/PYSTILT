@@ -14,10 +14,10 @@ import xarray as xr
 from stilt._atomic import atomic_path
 from stilt.config import FootprintConfig, Grid
 from stilt.receptors import Receptor
-from stilt.spatial import Geometry
 
 from .aggregation import aggregate
 from .io import _settings_from_json, _utc_index, _with_cf_metadata
+from .targets import Geometry
 
 if TYPE_CHECKING:
     from stilt.visualization import FootprintPlotAccessor

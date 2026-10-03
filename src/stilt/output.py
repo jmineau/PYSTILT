@@ -65,6 +65,7 @@ from stilt.config import (
 from stilt.config.transport import canonical, settings_hash
 from stilt.footprint import (
     FOOTPRINT_SCHEMA,
+    Geometry,
     Jacobian,
     jacobian,
     read_footprint,
@@ -73,7 +74,6 @@ from stilt.footprint import (
 )
 from stilt.particles import read_particles, write_particles
 from stilt.receptors import Receptor, parse_receptor_id
-from stilt.spatial import Geometry
 
 logger = logging.getLogger(__name__)
 
