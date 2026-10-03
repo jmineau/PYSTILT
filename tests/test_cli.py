@@ -12,7 +12,7 @@ import stilt.__main__
 from stilt.cli import _resolve_project, app
 from stilt.config import ProjectConfig
 from stilt.execution.config import ExecutionConfig
-from stilt.footprint.grid import Grid
+from stilt.spatial import Grid
 from stilt.variants import resolve
 
 runner = CliRunner()

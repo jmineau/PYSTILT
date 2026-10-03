@@ -9,9 +9,9 @@ import pytest
 
 from stilt.config import ProjectConfig
 from stilt.footprint.config import FootprintConfig
-from stilt.footprint.grid import Grid
 from stilt.meteorology import MetConfig
 from stilt.receptors import ColumnReceptor, MultiPointReceptor, PointReceptor
+from stilt.spatial import Grid
 from stilt.transport.hysplit import HysplitConfig
 
 from .fixtures.r_stilt_reference import (

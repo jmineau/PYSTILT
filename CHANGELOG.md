@@ -9,14 +9,14 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
 
 - **Each part owns its config** (breaking). `FootprintConfig` and the
-  geometry specs are in `stilt.footprint.config`, `Grid` in
-  `stilt.footprint.grid`, `MetConfig` in `stilt.meteorology`, and
+  geometry specs are in `stilt.footprint.config`, `MetConfig` in
+  `stilt.meteorology`, and
   `ExecutionConfig` in `stilt.execution.config`; the `stilt.config` package
   is one module holding `ProjectConfig`. Import them from `stilt`
   (`stilt.Grid`, `stilt.FootprintConfig`, `stilt.MetConfig`, and now
   `stilt.ExecutionConfig`) or from their new modules; `stilt.config` no
-  longer re-exports them. `stilt.spatial` keeps `Bounds` and the CRS
-  helpers (#134).
+  longer re-exports them. `Bounds` and `Grid` stay in `stilt.spatial`, the
+  raster and CRS layer (#134).
 - **A variant's transport settings are checked when it resolves**
   (breaking). `VariantConfig` and `config.variant_configs` are gone.
   `ProjectConfig` still checks at load what needs no transport model

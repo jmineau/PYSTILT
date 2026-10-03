@@ -7,10 +7,10 @@ from pydantic import BaseModel, ConfigDict, ValidationError
 
 from stilt.config import ProjectConfig
 from stilt.footprint.config import FootprintConfig
-from stilt.footprint.grid import Grid
 from stilt.footprint.targets import Mesh
 from stilt.identity import footprint_settings, read_footprint_settings
 from stilt.meteorology import MetConfig
+from stilt.spatial import Grid
 from stilt.transforms import AveragingKernel, FirstOrderLifetime, PressureWeighting
 from stilt.transport.hysplit import HysplitConfig
 from stilt.transport.hysplit.driver import (

@@ -538,7 +538,7 @@ def test_footprint_calculate_from_trajectory(point_receptor, tmp_path):
     """calculate works directly on a particle table and its receptor."""
     from stilt.footprint import calculate
     from stilt.footprint.config import FootprintConfig
-    from stilt.footprint.grid import Grid
+    from stilt.spatial import Grid
 
     traj = finish_particles(
         _particles_basic(), point_receptor, _params(tmp_path, hnf_plume=False)
@@ -599,7 +599,7 @@ def test_calculate_regenerates_a_footprint_on_a_new_grid(tmp_path):
     """calculate makes a footprint on any grid from stored particles."""
     from stilt.footprint import calculate
     from stilt.footprint.config import FootprintConfig
-    from stilt.footprint.grid import Grid
+    from stilt.spatial import Grid
 
     rng = np.random.default_rng(0)
     n = 20

@@ -21,12 +21,12 @@ from stilt.execution.worker import (
     run_simulation,
 )
 from stilt.footprint.config import FootprintConfig
-from stilt.footprint.grid import Grid
 from stilt.meteorology import Met, MetConfig
 from stilt.output import Output
 from stilt.project import Project
 from stilt.receptors import PointReceptor, Receptor
 from stilt.simulation import Simulation
+from stilt.spatial import Grid
 from stilt.transforms import TransformContext
 from stilt.transport import ModelInfo
 from stilt.transport.hysplit import HysplitConfig
