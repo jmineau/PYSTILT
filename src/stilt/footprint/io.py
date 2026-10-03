@@ -10,7 +10,6 @@ files of an output directory, and CF-1.8 NetCDF.
 from __future__ import annotations
 
 import json
-import warnings
 from pathlib import Path
 from typing import Any
 
@@ -21,9 +20,9 @@ import xarray as xr
 
 from stilt._atomic import write_parquet
 from stilt.config import FootprintConfig, Grid
+from stilt.identity import footprint_settings, read_footprint_settings
 from stilt.receptors import Receptor
-from stilt.spatial import _cf_grid_mapping_attrs, cf_axis_attrs, horizontal_dims
-from stilt.transforms import dump_transform, load_transform, transform_kind
+from stilt.spatial import _with_cf_grid, horizontal_dims
 
 
 def _utc_index(values: Any) -> pd.DatetimeIndex:
@@ -72,70 +71,20 @@ def _footprint_array(
 
 def _with_cf_metadata(ds: xr.Dataset, *, grid: Grid) -> xr.Dataset:
     """Add CF coordinate and CRS attributes to a footprint dataset."""
-    ds.attrs.setdefault("Conventions", "CF-1.8")
-    ds["crs"] = xr.DataArray(0, attrs=_cf_grid_mapping_attrs(grid.crs))
+    ds = _with_cf_grid(ds, grid.crs)
     ds["foot"].attrs["grid_mapping"] = "crs"
-
-    for dim in ("lon", "lat", "x", "y"):
-        if dim in ds.coords:
-            ds[dim].attrs.update(cf_axis_attrs(dim))
     if "time" in ds.coords:
         ds["time"].attrs.update({"standard_name": "time", "axis": "T"})
     return ds
-
-
-def _record_transform(transform: Any) -> dict[str, Any]:
-    """Return a transform as recorded in a footprint file, its ``kind`` alone if it has no settings to write."""
-    try:
-        return dump_transform(transform)
-    except TypeError:
-        return {"kind": transform_kind(transform)}
-
-
-def _read_transform(spec: dict[str, Any], source: str) -> Any:
-    """Return a recorded transform, or its mapping when it cannot be rebuilt here."""
-    try:
-        return load_transform(spec)
-    except (ImportError, TypeError, ValueError) as exc:
-        warnings.warn(
-            f"{source}: transform {spec.get('kind')!r} could not be rebuilt "
-            f"({exc}). It is kept as its settings and cannot be applied.",
-            stacklevel=3,
-        )
-        return spec
 
 
 #: Units of a footprint: ppm per (µmol m⁻² s⁻¹).
 UNITS = "ppm m2 s umol-1"
 
 
-def _settings_json(config: FootprintConfig, geometry_hash: str | None = None) -> str:
-    """
-    Return a footprint's settings as JSON: its config and the hash of the geometry its grid was derived for.
-
-    Each transform is recorded as far as it can be.
-    """
-    data = config.model_dump(mode="json", exclude={"transforms"})
-    data["transforms"] = [_record_transform(t) for t in config.transforms]
-    data["geometry_hash"] = geometry_hash
-    return json.dumps(data)
-
-
-def _settings_from_json(text: str, source: str) -> tuple[FootprintConfig, str | None]:
-    """
-    Return the footprint config and geometry hash :func:`_settings_json` recorded.
-
-    A transform that cannot be rebuilt is kept as its mapping.
-    """
-    data = json.loads(text)
-    specs = data.pop("transforms", [])
-    geometry_hash = data.pop("geometry_hash", None)
-    config = FootprintConfig.model_validate(data)
-    # model_copy skips validation, so a mapping stays a mapping.
-    config = config.model_copy(
-        update={"transforms": [_read_transform(s, source) for s in specs]}
-    )
-    return config, geometry_hash
+def _settings_json(config: FootprintConfig, geometry_hash: str | None) -> str:
+    """Return a footprint's settings as JSON (:func:`stilt.identity.footprint_settings`)."""
+    return json.dumps(footprint_settings(config, geometry_hash))
 
 
 def _describe(
@@ -160,7 +109,7 @@ def _describe(
                 "units": UNITS,
                 "long_name": "footprint",
                 "stilt_name": name,
-                "stilt_receptor": json.dumps(receptor.to_dict()),
+                "stilt_receptor": receptor.to_json(),
                 "stilt_footprint": _settings_json(config, geometry_hash),
             }
         )
@@ -174,7 +123,7 @@ def _from_sparse_table(
     meta = table.schema.metadata or {}
     if meta.get(b"stilt:empty_reason", b""):
         return None
-    receptor = Receptor.from_dict(json.loads(meta[b"stilt:receptor"]))
+    receptor = Receptor.from_json(meta[b"stilt:receptor"])
     hours = json.loads(meta[b"stilt:hours"])
     name = meta.get(b"stilt:name", b"").decode()
     grid = config.grid
@@ -246,7 +195,7 @@ def read_footprint(
     stored = (table.schema.metadata or {}).get(b"stilt:footprint")
     if stored is None:
         raise ValueError(f"{path} does not record its footprint settings.")
-    config, geometry_hash = _settings_from_json(stored.decode(), path.name)
+    config, geometry_hash = read_footprint_settings(json.loads(stored), path.name)
     return _from_sparse_table(table, config, geometry_hash)
 
 
@@ -286,7 +235,7 @@ def _file_metadata(
 ) -> dict[bytes, bytes]:
     """Return what a footprint file records so that it reads alone."""
     return {
-        b"stilt:receptor": json.dumps(receptor.to_dict()).encode(),
+        b"stilt:receptor": receptor.to_json().encode(),
         b"stilt:name": name.encode(),
         b"stilt:hours": json.dumps(hours).encode(),
         b"stilt:empty_reason": empty_reason.encode(),
@@ -346,9 +295,8 @@ def write_footprint(
     xi = _cell_indices(np.asarray(foot[x_dim].values, dtype=float), x_axis, x_dim)
     yi = _cell_indices(np.asarray(foot[y_dim].values, dtype=float), y_axis, y_dim)
 
-    receptor_time = pd.Timestamp(receptor.time)
-    times = pd.DatetimeIndex(pd.to_datetime(foot["time"].values, utc=True))
-    hours_f = (times.tz_convert(None) - receptor_time) / pd.Timedelta(hours=1)
+    times = _utc_index(foot["time"].values).tz_convert(None)
+    hours_f = (times - pd.Timestamp(receptor.time)) / pd.Timedelta(hours=1)
     hours = np.asarray(hours_f, dtype=float)
     if not np.allclose(hours, np.round(hours)):
         raise ValueError(

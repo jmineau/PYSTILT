@@ -90,7 +90,7 @@ def particles_metadata(path: str | Path) -> ParticleMetadata:
             "files recorded them; rewrite its output directory (see #132)."
         )
     return ParticleMetadata(
-        receptor=Receptor.from_dict(json.loads(meta[b"stilt:receptor"])),
+        receptor=Receptor.from_json(meta[b"stilt:receptor"]),
         settings=json.loads(meta[b"stilt:settings"]),
         met_files=[Path(p) for p in json.loads(meta[b"stilt:met_files"])],
     )
@@ -136,7 +136,7 @@ def read_particles(path: str | Path, columns: list[str] | None = None) -> pd.Dat
         data["datetime"] = pd.to_datetime(data["datetime"])
     elif want_datetime and "time" in data.columns:
         meta = pf.schema_arrow.metadata or {}
-        receptor = Receptor.from_dict(json.loads(meta[b"stilt:receptor"]))
+        receptor = Receptor.from_json(meta[b"stilt:receptor"])
         data["datetime"] = pd.Timestamp(receptor.time) + pd.to_timedelta(
             data["time"].to_numpy(), unit="min"
         )
@@ -229,7 +229,7 @@ def write_particles(
         ),
     )
     meta = {
-        b"stilt:receptor": json.dumps(receptor.to_dict()).encode(),
+        b"stilt:receptor": receptor.to_json().encode(),
         b"stilt:settings": json.dumps(dict(settings)).encode(),
         b"stilt:met_files": json.dumps([str(p) for p in met_files]).encode(),
         **(metadata or {}),

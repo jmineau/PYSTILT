@@ -281,6 +281,15 @@ class Receptor(BaseModel):
         """Return this receptor as a plain dict that :meth:`from_dict` reads back."""
         return self.model_dump(mode="json")
 
+    def to_json(self) -> str:
+        """Return this receptor as JSON, as result files record it; :meth:`from_json` reads it back."""
+        return json.dumps(self.to_dict())
+
+    @classmethod
+    def from_json(cls, text: str | bytes) -> Receptor:
+        """Build a receptor from the JSON :meth:`to_json` wrote."""
+        return cls.from_dict(json.loads(text))
+
     @classmethod
     def from_dict(cls, d: Mapping[str, Any]) -> Receptor:
         """
