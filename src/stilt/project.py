@@ -50,7 +50,7 @@ from stilt.transforms import TransformContext
 if TYPE_CHECKING:
     import submitit
 
-    from stilt.execution import ReceptorResult
+    from stilt.execution import SimulationResult
     from stilt.visualization import ProjectPlotAccessor
 
 
@@ -448,7 +448,7 @@ class Project:
         skip_existing: bool = True,
         compute_root: str | Path | None = None,
         execution: ExecutionConfig | None = None,
-    ) -> list[ReceptorResult]:
+    ) -> list[SimulationResult]:
         """
         Run every simulation that has not finished, and wait for it.
 
@@ -471,8 +471,8 @@ class Project:
 
         Returns
         -------
-        list of ReceptorResult
-            One per receptor that ran.
+        list of SimulationResult
+            One per simulation that ran, receptor by receptor.
         """
         from stilt.execution import run
 

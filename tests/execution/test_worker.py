@@ -21,7 +21,6 @@ from stilt.exceptions import (
 )
 from stilt.execution import resolve_compute_root, worker
 from stilt.execution.worker import (
-    ReceptorResult,
     SimulationResult,
     make_footprint,
     run_receptor,
@@ -238,19 +237,6 @@ def test_simulation_result_is_frozen_with_optional_error():
     assert result.error is None and not result.ran_hysplit
     with pytest.raises(AttributeError):
         result.status = "failed"  # type: ignore[misc]
-
-
-def test_receptor_result_reports_the_worst_simulation():
-    results = [
-        SimulationResult("r/a", "complete"),
-        SimulationResult("r/b", "failed", error="boom"),
-        SimulationResult("r/c", "error", error="worse"),
-    ]
-    summary = ReceptorResult.summarise("r", results)
-    assert summary.status == "error"
-    assert summary.error == "worse"
-    assert summary.simulations == tuple(results)
-    assert ReceptorResult.summarise("r", []).status == "complete"
 
 
 # ---------------------------------------------------------------------------
@@ -533,9 +519,8 @@ def test_run_receptor_runs_every_variant_in_config_order(
     )
 
     assert [c["sim_id"].split("/")[1] for c in calls] == ["s2", "hrrr", "zi08"]
-    assert result.status == "complete"
-    assert result.receptor_id == str(receptor.id)
-    assert len(result.simulations) == 3
+    assert [r.status for r in result] == ["complete"] * 3
+    assert {r.sim_id.split("/")[0] for r in result} == {str(receptor.id)}
 
 
 def test_run_receptor_remakes_sibling_footprints_when_the_particles_reran(
@@ -611,7 +596,7 @@ def test_run_receptor_runs_failed_particles_once_per_transport_settings(
     )
 
     assert calls == ["hrrr", "zi08"]
-    assert [(r.status, r.error) for r in result.simulations] == [
+    assert [(r.status, r.error) for r in result] == [
         ("failed", "met ends early"),
         ("failed", "met ends early"),
         ("complete", None),
@@ -689,8 +674,9 @@ def test_run_receptor_normalises_preemption(tmp_path, receptor, monkeypatch):
 
     result = run_receptor(model, str(receptor.id), compute_root=tmp_path / "scratch")
 
-    assert result.status == "interrupted"
-    assert result.error == "Worker preempted"
+    assert [(r.status, r.error) for r in result] == [
+        ("interrupted", "Worker preempted")
+    ]
 
 
 # ---------------------------------------------------------------------------
@@ -708,7 +694,7 @@ def test_run_receptors_inline_returns_results_in_order(
 
     results = run_receptors(model, ids, n_cores=1, skip_existing=True)
 
-    assert [r.receptor_id for r in results] == ids
+    assert [r.sim_id.split("/")[0] for r in results] == ids
     assert [r.status for r in results] == ["complete", "complete"]
     assert [c["sim_id"] for c in calls] == [f"{rid}/hrrr" for rid in ids]
 
@@ -750,7 +736,7 @@ def test_run_receptors_inline_stops_after_interrupt(
 
     results = run_receptors(model, ids, n_cores=1)
 
-    assert [(r.receptor_id, r.status, r.error) for r in results] == [
+    assert [(r.sim_id.split("/")[0], r.status, r.error) for r in results] == [
         (ids[0], "interrupted", "Worker preempted")
     ]
     assert seen == [f"{ids[0]}/hrrr"]
@@ -854,7 +840,7 @@ def test_run_receptors_pool_rebuilds_model_and_orders_results(
     assert resolve_compute_root(model) == worker._POOL_COMPUTE_ROOT
     assert worker._POOL_SKIP is False
     # Results come back in input order even though the pool yielded reversed.
-    assert [r.receptor_id for r in results] == ids
+    assert [r.sim_id.split("/")[0] for r in results] == ids
     assert [c["skip_existing"] for c in calls] == [False, False]
 
 
@@ -876,7 +862,7 @@ def test_run_receptors_pool_terminates_on_interrupted_result(
 
     [pool] = fake_pool.instances
     assert pool.terminated
-    assert [(r.receptor_id, r.status) for r in results] == [
+    assert [(r.sim_id.split("/")[0], r.status) for r in results] == [
         (ids[0], "interrupted"),
         (ids[1], "complete"),
     ]
@@ -907,4 +893,4 @@ def test_run_receptors_pool_keyboard_interrupt_terminates_and_returns(
 
     [pool] = fake_pool.instances
     assert pool.terminated
-    assert [r.receptor_id for r in results] == [ids[0]]
+    assert [r.sim_id.split("/")[0] for r in results] == [ids[0]]

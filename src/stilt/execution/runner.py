@@ -18,7 +18,7 @@ from stilt.project import project_slug
 if TYPE_CHECKING:
     from stilt.project import Project
 
-    from .worker import ReceptorResult
+    from .worker import SimulationResult
 
 logger = logging.getLogger(__name__)
 
@@ -68,8 +68,8 @@ class Batch(submitit.helpers.Checkpointable):
         self.cpus = cpus
         self.skip_existing = skip_existing
 
-    def __call__(self) -> list[ReceptorResult]:
-        """Run the batch and return one result per receptor."""
+    def __call__(self) -> list[SimulationResult]:
+        """Run the batch and return the result of every simulation."""
         from stilt.project import Project
 
         from .worker import run_receptors
@@ -162,7 +162,7 @@ def run(
     execution: ExecutionConfig | None = None,
     skip_existing: bool = True,
     compute_root: str | Path | None = None,
-) -> list[ReceptorResult]:
+) -> list[SimulationResult]:
     """
     Run every simulation of a project that has not finished, and wait for it.
 
@@ -190,8 +190,8 @@ def run(
 
     Returns
     -------
-    list of ReceptorResult
-        One per receptor that ran.
+    list of SimulationResult
+        One per simulation that ran, receptor by receptor.
 
     Raises
     ------
@@ -302,9 +302,9 @@ def submit(
     return jobs
 
 
-def _wait(jobs: list[submitit.Job[Any]]) -> list[ReceptorResult]:
+def _wait(jobs: list[submitit.Job[Any]]) -> list[SimulationResult]:
     """
-    Wait until every task has left the queue and return their receptor results.
+    Wait until every task has left the queue and return their simulation results.
 
     Raises
     ------

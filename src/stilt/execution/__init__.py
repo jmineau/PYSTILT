@@ -2,7 +2,6 @@
 
 from .runner import Batch, resolve_compute_root, run, submit
 from .worker import (
-    ReceptorResult,
     SimulationResult,
     make_footprint,
     run_particles,
@@ -13,7 +12,6 @@ from .worker import (
 
 __all__ = [
     "Batch",
-    "ReceptorResult",
     "SimulationResult",
     "resolve_compute_root",
     "run",

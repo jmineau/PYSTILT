@@ -41,7 +41,6 @@ Worker functions
    stilt.execution.run_receptor
    stilt.execution.run_receptors
    stilt.execution.SimulationResult
-   stilt.execution.ReceptorResult
 
 Batches
 -------

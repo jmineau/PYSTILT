@@ -338,6 +338,9 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Removed
 
+- `stilt.execution.ReceptorResult`. `project.run()`, `stilt.execution.run`,
+  and `run_receptors` return a flat list of `SimulationResult`, receptor by
+  receptor; `run_receptor` returns that receptor's list.
 - `stilt.execution.write_footprint` is `make_footprint`, and takes no
   `config=` or `transforms=`: it makes the variant's own footprint.
   `sim.generate_footprint` makes footprints with other settings.
