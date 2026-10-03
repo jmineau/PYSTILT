@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 from netCDF4 import Dataset
 
-from ._common import _float, _in_ranges, _rows, _seconds_since, _wrap_azimuth
+from ._common import _float, _in_ranges, _rows, _seconds_since, _span, _wrap_azimuth
 
 
 def read_oco2(
@@ -51,17 +51,16 @@ def read_oco2(
         lon = _float(ds["longitude"])
         keep = _in_ranges(lon, lat, lon_range, lat_range)
         (ii,) = np.nonzero(keep)
-        i0, i1 = (int(ii.min()), int(ii.max()) + 1) if ii.size else (0, 0)
-        ri = ii - i0
+        block, ri = _span(ii)
 
         def pick(var: Any) -> np.ndarray:
             """Return one variable for the selected soundings."""
-            return _float(var, slice(i0, i1))[ri]
+            return _float(var, block)[ri]
 
         sounding = ds["Sounding"]
         retrieval = ds["Retrieval"]
-        ids = np.asarray(ds["sounding_id"][i0:i1])[ri]
-        times = _seconds_since(ds["time"], slice(i0, i1))[ri]
+        ids = np.asarray(ds["sounding_id"][block])[ri]
+        times = _seconds_since(ds["time"], block)[ri]
         flag = pick(ds["xco2_quality_flag"])
         columns = {
             "sounding_id": [str(int(s)) for s in ids.tolist()],
