@@ -1,19 +1,10 @@
-"""Overpass grouping, sounding selection, and pixel jitter."""
+"""Overpass grouping and sounding selection."""
 
 from __future__ import annotations
-
-import math
-from collections.abc import Sequence
-from random import Random
-from typing import Literal
 
 import numpy as np
 import pandas as pd
 from numpy.typing import ArrayLike
-from shapely.geometry import Point, Polygon
-
-JitterMethod = Literal["regular", "random"]
-
 
 # -- overpasses -----------------------------------------------------------------
 
@@ -169,85 +160,4 @@ def select_observations_spatial(
     return np.array(sorted(selected, key=lambda i: (lats[i], i)), dtype=int)
 
 
-# -- jitter ------------------------------------------------------------------------
-
-
-def _sample_regular(polygon: Polygon, n: int) -> list[tuple[float, float]]:
-    """Return ``n`` points on a regular grid inside a polygon."""
-    minx, miny, maxx, maxy = polygon.bounds
-    if polygon.area <= 0:
-        raise ValueError("Cannot jitter within a zero-area polygon.")
-    resolution = max(2, math.ceil(math.sqrt(n)))
-    for _ in range(12):
-        xs = [minx + (i + 0.5) * (maxx - minx) / resolution for i in range(resolution)]
-        ys = [miny + (j + 0.5) * (maxy - miny) / resolution for j in range(resolution)]
-        points = [(x, y) for y in ys for x in xs if polygon.covers(Point(x, y))]
-        if len(points) >= n:
-            return points[:n]
-        resolution += 1
-    raise ValueError("Unable to generate enough regular jitter points inside polygon.")
-
-
-def _sample_random(
-    polygon: Polygon, n: int, *, seed: int | None = None
-) -> list[tuple[float, float]]:
-    """Return ``n`` uniformly random points inside a polygon."""
-    minx, miny, maxx, maxy = polygon.bounds
-    rng = Random(seed)
-    points: list[tuple[float, float]] = []
-    attempts = 0
-    max_attempts = max(100, n * 200)
-    while len(points) < n and attempts < max_attempts:
-        attempts += 1
-        x = rng.uniform(minx, maxx)
-        y = rng.uniform(miny, maxy)
-        if polygon.covers(Point(x, y)):
-            points.append((x, y))
-    if len(points) < n:
-        raise ValueError(
-            "Unable to generate enough random jitter points inside polygon."
-        )
-    return points
-
-
-def jitter_points(
-    polygon: Polygon | Sequence[tuple[float, float]],
-    n: int,
-    *,
-    method: JitterMethod = "regular",
-    seed: int | None = None,
-) -> list[tuple[float, float]]:
-    """
-    Return ``(longitude, latitude)`` points spread over one pixel.
-
-    Running several receptors across a large pixel and averaging their
-    footprints represents the pixel better than one receptor at its center.
-    This is X-STILT's ``jitterTF``.
-
-    Parameters
-    ----------
-    polygon : shapely.Polygon or sequence of (float, float)
-        Pixel outline, as a polygon or its corner coordinates.
-    n : int
-        Number of points.
-    method : {"regular", "random"}, default "regular"
-        ``"regular"`` places the points on a grid clipped to the polygon.
-        ``"random"`` draws them uniformly.
-    seed : int, optional
-        Random seed for ``method="random"``.
-
-    Returns
-    -------
-    list of (float, float)
-    """
-    if n <= 0:
-        raise ValueError("n must be > 0")
-    outline = polygon if isinstance(polygon, Polygon) else Polygon(polygon)
-    if method == "regular":
-        return _sample_regular(outline, n)
-    if method == "random":
-        return _sample_random(outline, n, seed=seed)
-    raise ValueError(f"Unknown jitter method: {method!r}")
-
-
-__all__ = ["group_by_overpass", "jitter_points", "select_observations_spatial"]
+__all__ = ["group_by_overpass", "select_observations_spatial"]
