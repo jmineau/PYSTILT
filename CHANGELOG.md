@@ -8,6 +8,9 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- `stilt.output.Jacobian` is `stilt.footprint.Jacobian`. A Jacobian built
+  for a footprint folder now also warns when the target mesh is not the one
+  the footprint grid was chosen for, as `foot.stilt.aggregate` does.
 - **`Grid.projection` is `Grid.crs`**, matching `Mesh.crs` (breaking for
   code that reads `grid.projection`). `config.yaml`, stored settings, and
   footprint files that say `projection` still load; PYSTILT writes `crs`.
