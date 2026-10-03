@@ -249,28 +249,19 @@ class Receptor(BaseModel):
             (type(self).__name__, self.time, self.altitude_ref, tuple(self.coords()))
         )
 
-    def __repr__(self) -> str:
-        return f"{type(self).__name__}(id={self.id!r})"
-
     def __str__(self) -> str:
         return repr(self)
 
     # -- geometry ----------------------------------------------------------
 
+    def _build_geometry(self) -> Geometry:
+        """Return the shapely geometry of the release points."""
+        raise NotImplementedError
+
     @cached_property
     def geometry(self) -> Geometry:
-        """
-        Shapely geometry of the release points, in ``(lon, lat, alt)``.
-
-        A ``Point`` for a point receptor, a vertical ``LineString`` from the
-        bottom to the top of a column, and a ``MultiPoint`` otherwise.
-        """
-        points = [(lon, lat, alt) for lat, lon, alt in self.coords()]
-        if self.kind == "point":
-            return Point(points[0])
-        if self.kind == "column":
-            return LineString(points)
-        return MultiPoint(points)
+        """Shapely geometry of the release points."""
+        return self._build_geometry()
 
     @property
     def points(self) -> list[Point]:
@@ -434,6 +425,16 @@ class PointReceptor(Receptor):
         """Return ``(lat, lon, alt)`` of the release point."""
         return [(self.latitude, self.longitude, self.altitude)]
 
+    def __repr__(self) -> str:
+        return (
+            f"PointReceptor(id={self.id!r}, lon={self.longitude:.5f}, "
+            f"lat={self.latitude:.5f}, alt={self.altitude:g} {self.altitude_ref})"
+        )
+
+    def _build_geometry(self) -> Point:
+        """Return a shapely Point at the release point."""
+        return Point(self.longitude, self.latitude, self.altitude)
+
 
 class ColumnReceptor(Receptor):
     """
@@ -489,6 +490,22 @@ class ColumnReceptor(Receptor):
             (self.latitude, self.longitude, self.bottom),
             (self.latitude, self.longitude, self.top),
         ]
+
+    def __repr__(self) -> str:
+        return (
+            f"ColumnReceptor(id={self.id!r}, lon={self.longitude:.5f}, "
+            f"lat={self.latitude:.5f}, bottom={self.bottom:g} {self.altitude_ref}, "
+            f"top={self.top:g} {self.altitude_ref})"
+        )
+
+    def _build_geometry(self) -> LineString:
+        """Return a shapely LineString from the bottom to the top."""
+        return LineString(
+            [
+                (self.longitude, self.latitude, self.bottom),
+                (self.longitude, self.latitude, self.top),
+            ]
+        )
 
 
 class MultiPointReceptor(Receptor):
@@ -570,6 +587,18 @@ class MultiPointReceptor(Receptor):
     def coords(self) -> list[tuple[float, float, float]]:
         """Return ``(lat, lon, alt)`` of each release point."""
         return list(zip(self.latitudes, self.longitudes, self.altitudes, strict=True))
+
+    def __repr__(self) -> str:
+        return (
+            f"MultiPointReceptor(id={self.id!r}, n_points={len(self.coords())}, "
+            f"altitude_ref={self.altitude_ref})"
+        )
+
+    def _build_geometry(self) -> MultiPoint:
+        """Return a shapely MultiPoint of the release points."""
+        return MultiPoint(
+            list(zip(self.longitudes, self.latitudes, self.altitudes, strict=True))
+        )
 
 
 def _hash_altitude(alt: float) -> int | float:
