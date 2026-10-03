@@ -513,7 +513,10 @@ def _raster_key(
     return h.hexdigest()[:16]
 
 
+#: Overlap weights by (raster, geometry), oldest first. A project aggregates
+#: onto a few geometries at most, so a small cache holds them all.
 _weight_cache: dict[tuple[str, str], sparse.csr_matrix] = {}
+_WEIGHT_CACHE_SIZE = 32
 
 
 def _overlap_1d(src_edges: np.ndarray, dst_edges: np.ndarray) -> sparse.csr_matrix:
@@ -694,6 +697,8 @@ def overlap_weights(
     else:
         w = _polygon_weights(geometry.to_crs(crs), x, y, xres, yres)
 
+    if len(_weight_cache) >= _WEIGHT_CACHE_SIZE:
+        del _weight_cache[next(iter(_weight_cache))]
     _weight_cache[key] = w
     return w
 
