@@ -13,6 +13,7 @@ from collections.abc import Iterable
 from typing import Any
 
 import numpy as np
+import pandas as pd
 
 #: Why a multipoint receptor's points may not share a horizontal location.
 REPEATED_LOCATION = (
@@ -66,19 +67,14 @@ def multipoint_errors(
     pair, and PYSTILT matches particles to their release point by
     horizontal position.
     """
-    seen: set[tuple[Any, float, float]] = set()
-    bad = np.zeros(len(lon), dtype=bool)
-    for i, key in enumerate(
-        zip(
-            np.asarray(receptor).tolist(),
-            (round(float(v), 5) for v in lon),
-            (round(float(v), 5) for v in lat),
-            strict=True,
-        )
-    ):
-        bad[i] = key in seen
-        seen.add(key)
-    return [(bad, REPEATED_LOCATION)]
+    points = pd.DataFrame(
+        {
+            "receptor": np.asarray(receptor),
+            "lon": np.round(np.asarray(lon, dtype=float), 5),
+            "lat": np.round(np.asarray(lat, dtype=float), 5),
+        }
+    )
+    return [(points.duplicated().to_numpy(), REPEATED_LOCATION)]
 
 
 def _raise_first(errors: Iterable[tuple[np.ndarray, str]]) -> None:
