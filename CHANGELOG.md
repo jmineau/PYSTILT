@@ -8,6 +8,21 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- `HYSPLITDriver` needs the `directory` to run in. Without one it made a
+  temporary directory that nothing removed (#134).
+- `MetConfig.subgrid_buffer` must be 0 or more; a negative buffer is a
+  validation error when the config loads (#134).
+- A footprint's `.stilt` accessor reads the receptor and settings
+  attributes once per array, so a transform that cannot be imported warns
+  once rather than on every access (#134).
+- A footprint folder whose `_settings.yaml` names a transform this machine
+  cannot import still lists and reads, with a warning, as footprint files
+  already did (#134).
+- `import stilt` no longer imports HYSPLIT's driver; `stilt.transport.get_model`
+  loads it when a run needs it (#134).
+- `stilt.observations.selection.haversine_km` is the great-circle distance
+  the variogram code uses, public in its module (#134).
+
 - **Particle files record their run's settings** (breaking). A particle
   file's metadata holds the same settings as its folder's `_settings.yaml`
   (`stilt:settings`): the transport model's settings, the met's, the model
@@ -430,6 +445,12 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Removed
 
+- `stilt.particles.prepare`. It added a `datetime` column that nothing on
+  the way to the particle file or the footprint read; `read_particles`
+  adds `datetime` when it reads (#134).
+- `BuiltinTransform` and `KERNEL_TABLE_COLUMNS` from
+  `stilt.transforms.__all__` (#134).
+
 - `stilt.observations.slant`. `slant_points`, `pressure_altitudes`, and
   `jitter_points` are in `stilt.observations.placement`; import them from
   `stilt.observations` as before.
@@ -497,6 +518,14 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Downloaded meteorology now includes the next file when the receptor is in
+  the last hour of a file, as local meteorology and STILT-R do. HYSPLIT
+  interpolates the release time between two hours, so a backward run at,
+  for example, 17:30 with 6-hour HRRR files needs the 18:00 file (#134).
+- A run that fails before writing anything, such as on missing
+  meteorology, no longer leaves an empty copy of its directory under the
+  output directory's `scratch/` (#134).
+
 - A grid derived for zones over a projected grid covered a box near the
   equator, because the base grid's longitude/latitude bounds were read as
   projected coordinates. Deriving one for a `Grid` raised `AttributeError`.
@@ -530,6 +559,9 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   hash. Existing output is still found.
 
 ### Added
+
+- `Receptor.to_json()` and `Receptor.from_json()`, the form result files
+  record a receptor in (#134).
 
 - **`data_dir`**: a folder of HYSPLIT data tables (`ASCDATA.CFG`,
   `LANDUSE.ASC`, `ROUGLEN.ASC`, `TERRAIN.ASC`) to use in place of the
