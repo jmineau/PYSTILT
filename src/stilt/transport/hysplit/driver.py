@@ -15,7 +15,11 @@ import pandas as pd
 
 from stilt.exceptions import HYSPLITNotFoundError, SimulationError
 from stilt.receptors import Receptor
-from stilt.transport.hysplit.config import HysplitConfig, fields_in
+from stilt.transport.hysplit.config import (
+    WIND_ERROR_SETTINGS,
+    ZI_ERROR_SETTINGS,
+    HysplitConfig,
+)
 from stilt.transport.hysplit.control import ControlFile
 from stilt.transport.hysplit.failures import (
     MET_TRUNCATED_WARNING,
@@ -32,6 +36,23 @@ PARTICLE_FILE = "PARTICLE.DAT"
 WINDERR_FILE = "WINDERR"
 ZIERR_FILE = "ZIERR"
 ZICONTROL_FILE = "ZICONTROL"
+
+#: The settings ``CONTROL`` takes; :class:`ControlFile` writes them.
+CONTROL_SETTINGS = ("n_hours", "emisshrs", "w_option", "z_top")
+
+#: Settings PYSTILT uses itself, in no HYSPLIT input file.
+PYSTILT_SETTINGS = ("hnf_plume", "exe_dir", "data_dir")
+
+#: Every setting that is not a ``SETUP.CFG`` entry. All other settings are.
+NOT_IN_SETUP = frozenset(
+    {
+        *CONTROL_SETTINGS,
+        "ziscale",  # ZICONTROL
+        *WIND_ERROR_SETTINGS,
+        *ZI_ERROR_SETTINGS,
+        *PYSTILT_SETTINGS,
+    }
+)
 
 
 def _bundled_exe_dir() -> Path:
@@ -98,13 +119,14 @@ def setup_entries(params: HysplitConfig) -> dict[str, Any]:
     """
     Return the ``SETUP.CFG`` namelist entries of *params*, leaving out unset ones.
 
-    The driver adds ``KMSL``, ``IVMAX``, and ``WINDERRTF``, which depend on
-    the receptor or follow from other settings.
+    Every setting not in :data:`NOT_IN_SETUP` is an entry, in declaration
+    order. The driver adds ``KMSL``, ``IVMAX``, and ``WINDERRTF``, which
+    depend on the receptor or follow from other settings.
     """
     entries = {
         name: getattr(params, name)
-        for name in fields_in("SETUP.CFG")
-        if getattr(params, name) is not None
+        for name in HysplitConfig.model_fields
+        if name not in NOT_IN_SETUP and getattr(params, name) is not None
     }
     entries["maxpar"] = params.effective_maxpar
     entries["zicontroltf"] = zicontroltf(params)
@@ -148,13 +170,13 @@ def zicontroltf(params: HysplitConfig) -> int:
 
 def winderr(params: HysplitConfig) -> list[float] | None:
     """Return the ``WINDERR`` values, in the file's order, or ``None`` when unset."""
-    values = [getattr(params, name) for name in fields_in("WINDERR")]
+    values = [getattr(params, name) for name in WIND_ERROR_SETTINGS]
     return None if values[0] is None else values
 
 
 def zierr(params: HysplitConfig) -> list[float] | None:
     """Return the ``ZIERR`` values, in the file's order, or ``None`` when unset."""
-    values = [getattr(params, name) for name in fields_in("ZIERR")]
+    values = [getattr(params, name) for name in ZI_ERROR_SETTINGS]
     return None if values[0] is None else values
 
 
@@ -392,26 +414,14 @@ class HYSPLITDriver:
     def _write_setup(self) -> None:
         """Write ``SETUP.CFG``."""
         entries = setup_entries(self.params)
-        entries["kmsl"] = self._resolved_kmsl()
+        # HYSPLIT's KMSL: 0 for heights above ground, 1 above sea level.
+        entries["kmsl"] = 1 if self.receptor.altitude_ref == "msl" else 0
         entries["ivmax"] = len(self.params.varsiwant)  # number of output variables
         entries["winderrtf"] = winderrtf(self.params)
 
         nl = NameList("SETUP")
         nl.update(entries)
         nl.write(self.setup_path)
-
-    def _resolved_kmsl(self) -> int:
-        """Return ``KMSL`` for this receptor, raising if ``params.kmsl`` disagrees."""
-        # HYSPLIT's KMSL: 0 for heights above ground, 1 above sea level.
-        receptor_kmsl = 1 if self.receptor.altitude_ref == "msl" else 0
-        if self.params.kmsl is None:
-            return receptor_kmsl
-        if self.params.kmsl != receptor_kmsl:
-            raise ValueError(
-                "HysplitConfig.kmsl conflicts with receptor altitude_ref: "
-                f"kmsl={self.params.kmsl}, altitude_ref={self.receptor.altitude_ref!r}."
-            )
-        return self.params.kmsl
 
     def _write_winderr(self) -> None:
         """Write ``WINDERR`` when wind perturbations are enabled."""

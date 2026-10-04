@@ -8,6 +8,15 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- `kmsl` is no longer a setting (breaking). HYSPLIT's `KMSL` is written
+  from each receptor's `altitude_ref`, which the setting could only
+  contradict. A `config.yaml` that sets it now fails to load; stored
+  settings that record `kmsl: null` still read (#134).
+- The HYSPLIT driver decides which input file each setting goes to; the
+  config's fields no longer carry routing tags, and `fields_in` is gone.
+  The `WINDERR` and `ZIERR` lines follow the explicit
+  `WIND_ERROR_SETTINGS` and `ZI_ERROR_SETTINGS`, not the order fields are
+  declared in. The files HYSPLIT reads are unchanged (#134).
 - `aggregate` and `jacobian` sum footprint cells through one function, so
   binning hours and applying the overlap weights is written once.
   `Footprints.jacobian` is gone (breaking): a selection's `jacobian` reads

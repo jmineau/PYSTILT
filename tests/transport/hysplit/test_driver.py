@@ -398,31 +398,10 @@ def test_write_setup_derives_kmsl_from_msl_receptor(tmp_path, point_receptor):
     assert "kmsl=1" in content
 
 
-def test_write_setup_rejects_conflicting_explicit_kmsl(tmp_path, point_receptor):
-    params = HysplitConfig(
-        n_hours=-24,
-        numpar=10,
-        hnf_plume=False,
-        kmsl=0,
-        varsiwant=["time", "indx", "long", "lati", "zagl", "foot"],
-    )
-    receptor = point_receptor.__class__(
-        time=point_receptor.time,
-        longitude=point_receptor.longitude,
-        latitude=point_receptor.latitude,
-        altitude=1500.0,
-        altitude_ref="msl",
-    )
-    runner = HYSPLITDriver(
-        directory=tmp_path,
-        receptor=receptor,
-        params=params,
-        met_files=[tmp_path / "met" / "dummy"],
-        exe_dir=tmp_path,
-    )
-
-    with pytest.raises(ValueError, match="conflicts with receptor altitude_ref"):
-        runner._write_setup()
+def test_kmsl_comes_only_from_the_receptor():
+    """KMSL follows each receptor's altitude_ref; there is no setting to contradict it."""
+    with pytest.raises(ValueError, match="kmsl"):
+        HysplitConfig(kmsl=0)
 
 
 # ---------------------------------------------------------------------------
