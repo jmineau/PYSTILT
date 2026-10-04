@@ -24,8 +24,9 @@ from typing import TYPE_CHECKING, Any
 import numpy as np
 import pandas as pd
 import xarray as xr
+import yaml
 
-from stilt.config import ProjectConfig
+from stilt.config import STARTER_CONFIG, ProjectConfig
 from stilt.execution.config import ExecutionConfig
 from stilt.footprint import Geometry, Jacobian, jacobian
 from stilt.meteorology import Met
@@ -143,14 +144,17 @@ class Project:
         path: str | Path,
         config: ProjectConfig | None = None,
         receptors: Receptor | Iterable[Receptor] | str | Path | None = None,
+        *,
+        starter: bool = False,
         **settings: Any,
     ) -> Project:
         """
         Make a new project and return it.
 
         Writes ``config.yaml``, with only the settings given, and
-        ``receptors.csv`` when receptors are given. ``stilt init`` does the
-        same from the command line, with a commented starter config.
+        ``receptors.csv`` when receptors are given. With ``starter=True`` it
+        writes the commented starter config instead, to edit by hand, as
+        ``stilt init`` does.
 
         Parameters
         ----------
@@ -160,6 +164,10 @@ class Project:
             The settings. Or give them as keywords instead.
         receptors : Receptor, iterable of Receptor, str or Path, optional
             Receptors, or the path of a receptors CSV to copy them from.
+        starter : bool, default False
+            Write the commented starter ``config.yaml``
+            (:data:`stilt.config.STARTER_CONFIG`) in place of a config.
+            Without receptors, ``receptors.csv`` gets only its header.
         **settings
             Settings for :class:`~stilt.ProjectConfig`, such as ``mets``,
             ``n_hours``, ``numpar``, and ``grid``.
@@ -170,13 +178,20 @@ class Project:
             If the directory already has a ``config.yaml``. Open it with
             ``Project(path)`` instead, and edit the file to change settings.
         TypeError
-            If both *config* and keyword settings are given.
+            If both *config* and keyword settings are given, or either is
+            given with ``starter=True``.
         ValueError
             If a variant's settings are invalid. Nothing is written.
         """
         if config is not None and settings:
             raise TypeError("Give a ProjectConfig or keyword settings, not both.")
-        if config is None:
+        if starter and (config is not None or settings):
+            raise TypeError(
+                "A starter config takes no settings; edit its config.yaml instead."
+            )
+        if starter:
+            config = ProjectConfig.model_validate(yaml.safe_load(STARTER_CONFIG))
+        elif config is None:
             config = ProjectConfig(**settings)
         # The config checks a variant's transport settings only when it is
         # resolved; do it now, so a bad config is never written.
@@ -188,9 +203,15 @@ class Project:
                 "Project(path), and edit config.yaml to change its settings."
             )
         project.directory.mkdir(parents=True, exist_ok=True)
-        config.to_yaml(project.config_path)
+        if starter:
+            project.config_path.write_text(STARTER_CONFIG)
+        else:
+            config.to_yaml(project.config_path)
         if receptors is not None:
             project.add_receptors(receptors)
+        elif starter:
+            # Header only: every other line of a receptors file is a receptor.
+            project.receptors_path.write_text("time,longitude,latitude,altitude\n")
         return project
 
     def __repr__(self) -> str:

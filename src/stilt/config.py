@@ -295,6 +295,61 @@ class ProjectConfig(BaseModel):
         return cls.model_validate(raw)
 
 
+#: The commented ``config.yaml`` that ``Project.init(path, starter=True)`` and
+#: ``stilt init`` write, to edit by hand.
+STARTER_CONFIG = """# PYSTILT project configuration
+# See docs for details: https://jmineau.github.io/PYSTILT
+
+
+# Meteorology, by name. Edit directory to point to your ARL files, or replace
+# file_format and file_tres with "download: hrrr" to download them from NOAA.
+mets:
+  hrrr:  # Unique name for this met.
+    directory: /path/to/arl/meteorology
+    file_format: "%Y%m%d_%H"
+    file_tres: 6h  # Hours each met file covers; the docs' HRRR files hold six.
+
+
+# Footprint grid. Remove it (or set grid: null) to make particles only.
+grid:
+  xmin: -113.0
+  xmax: -110.5
+  ymin: 40.0
+  ymax: 42.0
+  xres: 0.01
+  yres: 0.01
+
+
+# Variants. Every receptor runs once per variant, with the settings in this
+# file as the defaults. An entry with no overrides runs the defaults as they
+# are; add others to run the same receptors under other settings, e.g. a
+# mixed-layer bracket or a wind-error ensemble (see the docs). Only the
+# variants listed here run.
+variants:
+  hrrr: {}
+#  hrrr-zi08: {ziscale: 0.8}
+
+
+# Common run controls. Negative n_hours means backward in time.
+n_hours: -24
+numpar: 1000
+varsiwant: [time, indx, long, lati, zagl, foot, mlht, pres, dens, samt, sigw, tlgr]
+hnf_plume: true  # rescale footprints via a gaussian plume model in the hyper-near field
+
+
+# Results go to this directory, relative to the project unless absolute.
+# Several projects can name the same directory and share runs.
+output: ./output
+
+
+# Execution is optional. Local execution is the default.
+# execution:
+#   backend: local  # or "slurm"
+#   cpus: 1         # receptors at once (per array task on Slurm)
+#   n_workers: 1    # Slurm array tasks
+"""
+
+
 def _met_name(group: str, spec: dict[str, Any], mets: dict[str, MetConfig]) -> str:
     """Return the met a variant runs with, taking ``met`` out of *spec*."""
     met = spec.pop("met", None)
@@ -370,4 +425,10 @@ def _footprint(name: str, fields: dict[str, Any]) -> FootprintConfig | None:
     return None
 
 
-__all__ = ["VARIANT_NAME_RE", "Declared", "ProjectConfig", "transport_config"]
+__all__ = [
+    "STARTER_CONFIG",
+    "VARIANT_NAME_RE",
+    "Declared",
+    "ProjectConfig",
+    "transport_config",
+]
