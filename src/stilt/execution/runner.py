@@ -259,6 +259,8 @@ def submit(
     -------
     list of submitit.Job
         One per array task, empty when nothing needs to run.
+        ``job.wait()``, ``job.result()``, ``job.stdout()``, and
+        ``job.cancel()`` follow and control them.
 
     Raises
     ------

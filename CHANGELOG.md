@@ -8,6 +8,11 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Docs: a receptor's and a `Mesh`'s fields are described once, in their
+  field descriptions, and the reference pages list them from there.
+  `Project.run` and `Project.submit` point to `stilt.execution.run` and
+  `submit` for their parameters. The `PointReceptor` example builds a
+  receptor with keyword arguments, the only way it can be built (#134).
 - `Project.init(path, starter=True)` writes the commented starter
   `config.yaml` that `stilt init` writes (`stilt.config.STARTER_CONFIG`),
   and `stilt init` calls it. `stilt run` resolves the local scratch

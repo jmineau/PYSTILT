@@ -451,27 +451,8 @@ class Project:
         """
         Run every simulation that has not finished, and wait for it.
 
-        Shorthand for :func:`stilt.execution.run`. The receptors with missing
-        results run here, or as a Slurm job array when ``execution`` says
-        ``backend: slurm``. Use :meth:`submit` to submit to Slurm and return
-        at once.
-
-        Parameters
-        ----------
-        skip_existing : bool, default True
-            Skip simulations whose results all exist. ``False`` runs every
-            simulation again.
-        compute_root : str or Path, optional
-            Scratch directory under which HYSPLIT runs. Defaults to
-            ``PYSTILT_COMPUTE_ROOT``, then to ``$TMPDIR/pystilt/<project name>``.
-        execution : ExecutionConfig, optional
-            Where to run and with what resources, in place of the config's
-            ``execution`` settings.
-
-        Returns
-        -------
-        list of SimulationResult
-            One per simulation that ran, receptor by receptor.
+        Shorthand for :func:`stilt.execution.run`, which documents the
+        parameters. Use :meth:`submit` to submit to Slurm and return at once.
         """
         from stilt.execution import run
 
@@ -491,19 +472,8 @@ class Project:
         """
         Submit every simulation that has not finished to Slurm, and return at once.
 
-        Shorthand for :func:`stilt.execution.submit`. The parameters are those
-        of :meth:`run`.
-
-        Returns
-        -------
-        list of submitit.Job
-            One per array task. ``job.wait()``, ``job.result()``,
-            ``job.stdout()``, and ``job.cancel()`` follow and control them.
-
-        Raises
-        ------
-        ValueError
-            If the execution backend is not Slurm.
+        Shorthand for :func:`stilt.execution.submit`, which documents the
+        parameters and the jobs it returns.
         """
         from stilt.execution import submit
 

@@ -175,26 +175,17 @@ class Receptor(BaseModel):
     ``(lat, lon, alt)`` for each release point. Two receptors are equal when
     their type, time, points, and ``altitude_ref`` match; ``attrs`` do not
     count.
-
-    Attributes
-    ----------
-    time : datetime
-        Release time (UTC, naive). Aware values are converted to UTC, and a
-        string may be ISO or ``"YYYYMMDDHHMM"``.
-    altitude_ref : {"agl", "msl"}
-        Whether heights are above ground level or above mean sea level.
-    attrs : dict
-        Extra labels, such as a site or scene name. These are the columns of
-        ``receptors.csv`` that PYSTILT does not use. They are kept when the
-        receptors are written back to CSV, and are columns of
-        ``project.receptors`` and ``project.simulations`` to select on. They
-        are not part of the receptor's id or of equality.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     kind: str = Field(description="Receptor type: point, column, or multipoint.")
-    time: dt.datetime = Field(description="Release time, UTC.")
+    time: dt.datetime = Field(
+        description=(
+            "Release time, UTC. A time-zone-aware value is converted to UTC and "
+            "a naive one taken as UTC. A string may be ISO or ``YYYYMMDDHHMM``."
+        )
+    )
     altitude_ref: VerticalReference = Field(
         default="agl",
         description="Whether heights are above ground (agl) or sea level (msl).",
@@ -203,7 +194,13 @@ class Receptor(BaseModel):
         default_factory=dict,
         exclude=True,
         repr=False,
-        description="Extra labels from the receptor file; not part of the id.",
+        description=(
+            "Extra labels, such as a site or scene name: the columns of "
+            "``receptors.csv`` that PYSTILT does not use. They are kept when the "
+            "receptors are written back, and are columns of "
+            "``project.receptors`` and ``project.simulations`` to select on. "
+            "They are not part of the receptor's id or of equality."
+        ),
     )
 
     @field_validator("time", mode="before")
@@ -376,33 +373,21 @@ class PointReceptor(Receptor):
     """
     Receptor that releases particles from one point.
 
-    Parameters
-    ----------
-    time : datetime-like or str
-        Release time. Time zone aware values are converted to UTC, and naive
-        values are taken as UTC. A string may also be ``"YYYYMMDDHHMM"``.
-    longitude : float
-        Longitude in degrees, from -180 to 180.
-    latitude : float
-        Latitude in degrees, from -90 to 90.
-    altitude : float
-        Release height in metres.
-    altitude_ref : {"agl", "msl"}, default "agl"
-        Whether *altitude* is above ground level or above mean sea level.
-    attrs : dict, optional
-        Extra labels.
-
     Examples
     --------
-    >>> r = PointReceptor("2023-07-15 18:00", -111.848, 40.766, 10)
+    >>> r = PointReceptor(
+    ...     time="2023-07-15 18:00", longitude=-111.848, latitude=40.766, altitude=10
+    ... )
     >>> r.id
     '202307151800_-111.848_40.766_10'
     """
 
-    kind: Literal["point"] = "point"
-    longitude: float = Field(description="Longitude of the release point, degrees.")
-    latitude: float = Field(description="Latitude of the release point, degrees.")
-    altitude: float = Field(description="Release height, metres.")
+    kind: Literal["point"] = Field(default="point", description="Receptor type.")
+    longitude: float = Field(description="Longitude in degrees, from -180 to 180.")
+    latitude: float = Field(description="Latitude in degrees, from -90 to 90.")
+    altitude: float = Field(
+        description="Release height in metres, above ground or sea level (``altitude_ref``)."
+    )
 
     @model_validator(mode="after")
     def _check(self) -> PointReceptor:
@@ -439,30 +424,15 @@ class PointReceptor(Receptor):
 class ColumnReceptor(Receptor):
     """
     Receptor that releases particles evenly along a vertical line.
-
-    Parameters
-    ----------
-    time : datetime-like or str
-        Release time, as for :class:`PointReceptor`.
-    longitude : float
-        Longitude in degrees, from -180 to 180.
-    latitude : float
-        Latitude in degrees, from -90 to 90.
-    bottom : float
-        Bottom of the column in metres. Must be less than *top*.
-    top : float
-        Top of the column in metres.
-    altitude_ref : {"agl", "msl"}, default "agl"
-        Whether the heights are above ground level or above mean sea level.
-    attrs : dict, optional
-        Extra labels.
     """
 
-    kind: Literal["column"] = "column"
-    longitude: float = Field(description="Longitude of the column, degrees.")
-    latitude: float = Field(description="Latitude of the column, degrees.")
-    bottom: float = Field(description="Bottom of the column, metres.")
-    top: float = Field(description="Top of the column, metres.")
+    kind: Literal["column"] = Field(default="column", description="Receptor type.")
+    longitude: float = Field(description="Longitude in degrees, from -180 to 180.")
+    latitude: float = Field(description="Latitude in degrees, from -90 to 90.")
+    bottom: float = Field(
+        description="Bottom of the column in metres. Must be less than ``top``."
+    )
+    top: float = Field(description="Top of the column in metres.")
 
     @model_validator(mode="after")
     def _check(self) -> ColumnReceptor:
@@ -517,21 +487,6 @@ class MultiPointReceptor(Receptor):
     longitude and latitude. For several heights at one location, use a
     :class:`ColumnReceptor` or one :class:`PointReceptor` per height.
 
-    Parameters
-    ----------
-    time : datetime-like or str
-        Release time, as for :class:`PointReceptor`.
-    longitudes : array-like of float
-        Longitude of each point in degrees.
-    latitudes : array-like of float
-        Latitude of each point in degrees.
-    altitudes : array-like of float
-        Height of each point in metres.
-    altitude_ref : {"agl", "msl"}, default "agl"
-        Whether the heights are above ground level or above mean sea level.
-    attrs : dict, optional
-        Extra labels.
-
     Raises
     ------
     ValueError
@@ -539,12 +494,16 @@ class MultiPointReceptor(Receptor):
         points share a horizontal location.
     """
 
-    kind: Literal["multipoint"] = "multipoint"
-    longitudes: tuple[float, ...] = Field(
-        description="Longitude of each point, degrees."
+    kind: Literal["multipoint"] = Field(
+        default="multipoint", description="Receptor type."
     )
-    latitudes: tuple[float, ...] = Field(description="Latitude of each point, degrees.")
-    altitudes: tuple[float, ...] = Field(description="Height of each point, metres.")
+    longitudes: tuple[float, ...] = Field(
+        description="Longitude of each point in degrees, from -180 to 180."
+    )
+    latitudes: tuple[float, ...] = Field(
+        description="Latitude of each point in degrees, from -90 to 90."
+    )
+    altitudes: tuple[float, ...] = Field(description="Height of each point in metres.")
 
     @field_validator("longitudes", "latitudes", "altitudes", mode="before")
     @classmethod
