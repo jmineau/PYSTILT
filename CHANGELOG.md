@@ -8,6 +8,12 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- `HYSPLITDriver` is gone (breaking). `write_inputs(workdir, receptor,
+  config, met_files)` writes the files `hycs_std` reads, and
+  `read_particle_dat(path, columns)` reads a `PARTICLE_STILT.DAT` as a
+  particle table; both are in `stilt.transport.hysplit`, with
+  `finish_particles`. `HysplitModel.run` holds the working directory and
+  runs `hycs_std` between them (#134).
 - `kmsl` is no longer a setting (breaking). HYSPLIT's `KMSL` is written
   from each receptor's `altitude_ref`, which the setting could only
   contradict. A `config.yaml` that sets it now fails to load; stored

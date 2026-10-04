@@ -9,11 +9,19 @@ import numpy as np
 
 from stilt.meteorology import Met, MetConfig
 from stilt.receptors import ColumnReceptor, MultiPointReceptor
-from stilt.transport.hysplit import HysplitConfig
-from stilt.transport.hysplit.driver import HYSPLITDriver
+from stilt.transport.hysplit import HysplitConfig, read_particle_dat, write_inputs
+from stilt.transport.hysplit.driver import _run_hycs_std
 from stilt.transport.hysplit.model import finish_particles
 
 from ...conftest import integration
+
+
+def _raw_particles(receptor, config, met, workdir, timeout):
+    """Run hycs_std and return its particles as HYSPLIT wrote them, before release heights are added."""
+    files = met.required_files(r_time=receptor.time, n_hours=config.n_hours)
+    write_inputs(workdir, receptor, config, files)
+    _run_hycs_std(workdir, timeout)
+    return read_particle_dat(workdir / "PARTICLE_STILT.DAT", config.varsiwant)
 
 
 def _release_time_rows(particles):
@@ -56,18 +64,12 @@ def test_hysplit_multipoint_release_points_follow_control_order(tmp_path, met_di
         hnf_plume=False,
         varsiwant=["time", "indx", "long", "lati", "zagl", "foot"],
     )
-    met_files = Met(
+    met = Met(
         "hrrr", MetConfig(directory=met_dir, file_format="%Y%m%d_%H", file_tres="6h")
-    ).required_files(r_time=receptor.time, n_hours=params.n_hours)
-
-    runner = HYSPLITDriver(
-        receptor=receptor,
-        params=params,
-        met_files=met_files,
-        directory=Path(tmp_path) / "hysplit_assignment",
     )
-    runner.prepare()
-    result = runner.execute(timeout=120)
+    result = _raw_particles(
+        receptor, params, met, Path(tmp_path) / "hysplit_assignment", timeout=120
+    )
 
     release_rows = _release_time_rows(result)
     assert release_rows["indx"].tolist() == list(range(1, params.numpar + 1))
@@ -116,18 +118,16 @@ def test_hysplit_multipoint_release_points_follow_control_order_nondivisible(
         hnf_plume=False,
         varsiwant=["time", "indx", "long", "lati", "zagl", "foot"],
     )
-    met_files = Met(
+    met = Met(
         "hrrr", MetConfig(directory=met_dir, file_format="%Y%m%d_%H", file_tres="6h")
-    ).required_files(r_time=receptor.time, n_hours=params.n_hours)
-
-    runner = HYSPLITDriver(
-        receptor=receptor,
-        params=params,
-        met_files=met_files,
-        directory=Path(tmp_path) / "hysplit_assignment_nondivisible",
     )
-    runner.prepare()
-    result = runner.execute(timeout=120)
+    result = _raw_particles(
+        receptor,
+        params,
+        met,
+        Path(tmp_path) / "hysplit_assignment_nondivisible",
+        timeout=120,
+    )
 
     release_rows = _release_time_rows(result)
     assert release_rows["indx"].tolist() == list(range(1, params.numpar + 1))
@@ -168,18 +168,12 @@ def test_hysplit_column_release_spans_vertical_line_without_endpoint_chunking(
         hnf_plume=False,
         varsiwant=["time", "indx", "long", "lati", "zagl", "foot"],
     )
-    met_files = Met(
+    met = Met(
         "hrrr", MetConfig(directory=met_dir, file_format="%Y%m%d_%H", file_tres="6h")
-    ).required_files(r_time=receptor.time, n_hours=params.n_hours)
-
-    runner = HYSPLITDriver(
-        receptor=receptor,
-        params=params,
-        met_files=met_files,
-        directory=Path(tmp_path) / "hysplit_column_assignment",
     )
-    runner.prepare()
-    result = runner.execute(timeout=120)
+    result = _raw_particles(
+        receptor, params, met, Path(tmp_path) / "hysplit_column_assignment", timeout=120
+    )
 
     release_rows = _release_time_rows(result)
     assert release_rows["indx"].tolist() == list(range(1, params.numpar + 1))
@@ -229,18 +223,12 @@ def test_close_spaced_slant_release_heights_are_recovered(tmp_path, met_dir):
         altitudes=altitudes,
     )
     params = HysplitConfig(n_hours=-1, numpar=200, hnf_plume=False)
-    met_files = Met(
+    met = Met(
         "hrrr", MetConfig(directory=met_dir, file_format="%Y%m%d_%H", file_tres="6h")
-    ).required_files(r_time=receptor.time, n_hours=params.n_hours)
-
-    runner = HYSPLITDriver(
-        receptor=receptor,
-        params=params,
-        met_files=met_files,
-        directory=Path(tmp_path) / "close_slant",
     )
-    runner.prepare()
-    particles = runner.execute(timeout=300)
+    particles = _raw_particles(
+        receptor, params, met, Path(tmp_path) / "close_slant", timeout=300
+    )
     data = finish_particles(particles, receptor, params)
 
     release = _release_time_rows(data).drop_duplicates("indx")

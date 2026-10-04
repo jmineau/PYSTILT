@@ -1,4 +1,4 @@
-"""Tests for stilt.transport.hysplit low-level helpers."""
+"""Tests for HYSPLIT's input files, running hycs_std, and reading its particles."""
 
 from pathlib import Path
 
@@ -6,7 +6,15 @@ import pytest
 
 from stilt.exceptions import HYSPLITNotFoundError, SimulationError
 from stilt.receptors import ColumnReceptor, MultiPointReceptor
-from stilt.transport.hysplit import FailureReason, HysplitConfig, HYSPLITDriver
+from stilt.transport.hysplit import (
+    FailureReason,
+    HysplitConfig,
+    HysplitModel,
+    driver,
+    model,
+    read_particle_dat,
+    write_inputs,
+)
 from stilt.transport.hysplit.control import ControlFile
 
 # ---------------------------------------------------------------------------
@@ -128,8 +136,32 @@ def test_control_file_read_missing_raises(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# read_particle_dat
+# Inputs, runs, and particle files
 # ---------------------------------------------------------------------------
+
+VARS = ["time", "indx", "long", "lati", "zagl", "foot"]
+
+
+def _config(**overrides) -> HysplitConfig:
+    """A small config whose particle rows are the six columns of VARS."""
+    return HysplitConfig(
+        **{"n_hours": -24, "numpar": 10, "hnf_plume": False, "varsiwant": VARS}
+        | overrides
+    )
+
+
+def _fake_build(path: Path, marker: str = "fake binary") -> Path:
+    """Return a build directory holding a stand-in hycs_std."""
+    path.mkdir(parents=True, exist_ok=True)
+    (path / "hycs_std").write_text(marker)
+    return path
+
+
+def _inputs(tmp_path, receptor, config=None) -> Path:
+    """Write the input files for *receptor* and return the working directory."""
+    workdir = tmp_path / "run"
+    write_inputs(workdir, receptor, config or _config(), [tmp_path / "met" / "dummy"])
+    return workdir
 
 
 def _write_particle_dat(path: Path, rows: list[list[float]]) -> None:
@@ -139,24 +171,22 @@ def _write_particle_dat(path: Path, rows: list[list[float]]) -> None:
     path.write_text("\n".join(lines) + "\n")
 
 
-def _make_runner(tmp_path, point_receptor) -> HYSPLITDriver:
-    params = HysplitConfig(
-        n_hours=-24,
-        numpar=10,
-        hnf_plume=False,
-        varsiwant=["time", "indx", "long", "lati", "zagl", "foot"],
-    )
-    return HYSPLITDriver(
-        directory=tmp_path,
-        receptor=point_receptor,
-        params=params,
-        met_files=[tmp_path / "met" / "dummy"],
-        exe_dir=tmp_path,
-    )
+class _FakeMet:
+    """A met that needs no files."""
+
+    def required_files(self, **kwargs):
+        return []
+
+    def readable(self, files):
+        return files
 
 
-def test_read_particles_parses_expected_columns(tmp_path, point_receptor):
-    runner = _make_runner(tmp_path, point_receptor)
+# ---------------------------------------------------------------------------
+# read_particle_dat
+# ---------------------------------------------------------------------------
+
+
+def test_read_particle_dat_parses_the_columns(tmp_path):
     dat = tmp_path / "PARTICLE_STILT.DAT"
     _write_particle_dat(
         dat,
@@ -166,151 +196,72 @@ def test_read_particles_parses_expected_columns(tmp_path, point_receptor):
         ],
     )
 
-    df = runner._read_particles()
+    df = read_particle_dat(dat, VARS)
     assert len(df) == 2
-    assert list(df.columns) == runner.params.varsiwant
+    assert list(df.columns) == VARS
     assert df["indx"].iloc[0] == 1
+    assert dat.exists()  # the worker removes the working directory, or keeps it
 
 
-def test_read_particles_leaves_the_particle_files(tmp_path, point_receptor):
-    """The worker removes the whole working directory, unless it is kept to inspect."""
-    runner = _make_runner(tmp_path, point_receptor)
+def test_read_particle_dat_rejects_other_columns(tmp_path):
     dat = tmp_path / "PARTICLE_STILT.DAT"
     _write_particle_dat(dat, rows=[[-60, 1, -111.9, 40.7, 10.0, 1e-5]])
 
-    runner._read_particles()
-    assert dat.exists()
+    with pytest.raises(ValueError, match="6 columns, expected 2"):
+        read_particle_dat(dat, ["time", "indx"])
 
 
-def test_read_particles_raises_domain_error_when_file_missing(tmp_path, point_receptor):
-    runner = _make_runner(tmp_path, point_receptor)
+def test_read_particle_dat_of_an_empty_file_is_an_empty_table(tmp_path):
+    dat = tmp_path / "PARTICLE_STILT.DAT"
+    _write_particle_dat(dat, rows=[])
 
-    with pytest.raises(SimulationError, match="PARTICLE_STILT.DAT") as caught:
-        runner._read_particles()
-    assert caught.value.reason == FailureReason.NO_PARTICLE_DATA
+    df = read_particle_dat(dat, VARS)
+    assert df.empty
+    assert list(df.columns) == VARS
 
 
-def test_run_persists_fortran_runtime_output_on_failure(tmp_path, point_receptor):
-    runner = _make_runner(tmp_path, point_receptor)
-    exe = tmp_path / "hycs_std"
-    exe.write_text(
-        "#!/usr/bin/env bash\n"
-        "echo 'Fortran runtime error: File already opened in another unit'\n"
-        "exit 2\n"
-    )
+# ---------------------------------------------------------------------------
+# Running hycs_std
+# ---------------------------------------------------------------------------
+
+
+def _script(workdir: Path, text: str) -> None:
+    """Put a shell script where hycs_std is run from."""
+    workdir.mkdir(parents=True, exist_ok=True)
+    exe = workdir / "hycs_std"
+    exe.write_text("#!/usr/bin/env bash\n" + text)
     exe.chmod(0o755)
+
+
+def test_run_keeps_fortran_runtime_output_on_failure(tmp_path):
+    _script(
+        tmp_path,
+        "echo 'Fortran runtime error: File already opened in another unit'\nexit 2\n",
+    )
 
     with pytest.raises(SimulationError) as caught:
-        runner._run(timeout=5)
+        driver._run_hycs_std(tmp_path, timeout=5)
     assert caught.value.reason == FailureReason.FORTRAN_RUNTIME_ERROR
-
-    log_text = runner.log_path.read_text()
-    assert "Fortran runtime error" in log_text
+    assert "Fortran runtime error" in (tmp_path / "stilt.log").read_text()
 
 
-def test_run_times_out_and_keeps_log_output(tmp_path, point_receptor):
-    runner = _make_runner(tmp_path, point_receptor)
-    exe = tmp_path / "hycs_std"
-    exe.write_text("#!/usr/bin/env bash\necho 'starting hycs_std'\nsleep 30\n")
-    exe.chmod(0o755)
+def test_run_times_out_and_keeps_log_output(tmp_path):
+    _script(tmp_path, "echo 'starting hycs_std'\nsleep 30\n")
 
     with pytest.raises(SimulationError, match="timeout") as caught:
-        runner._run(timeout=1)
+        driver._run_hycs_std(tmp_path, timeout=1)
     assert caught.value.reason == FailureReason.TIMEOUT
-
-    log_text = runner.log_path.read_text()
-    assert "starting hycs_std" in log_text
+    assert "starting hycs_std" in (tmp_path / "stilt.log").read_text()
 
 
-def _fake_hysplit(runner, monkeypatch, *, log: str, last_minute: int) -> None:
-    """Make ``runner._run`` write *log* and particles that end at *last_minute*."""
-
-    def fake_run(timeout: int | None) -> None:
-        runner.log_path.write_text(log)
-        _write_particle_dat(
-            runner.particle_stilt_path,
-            rows=[
-                [-1, 1, -111.9, 40.7, 10.0, 0.0],
-                [-last_minute, 1, -112.0, 40.6, 20.0, 0.0],
-            ],
-        )
-
-    monkeypatch.setattr(runner, "_run", fake_run)
-
-
-def test_execute_fails_when_the_met_is_cut_short(tmp_path, point_receptor, monkeypatch):
-    runner = _make_runner(tmp_path, point_receptor)
-    _fake_hysplit(
-        runner,
-        monkeypatch,
-        log=" WARNING metset: Only one time period of meteo data\n",
-        last_minute=13 * 60,
-    )
-
-    with pytest.raises(SimulationError) as caught:
-        runner.execute(timeout=5)
-
-    assert caught.value.reason == FailureReason.MET_TRUNCATED
-    assert "particles stop 13 h into a 24 h run" in runner.log_path.read_text()
-
-
-def test_execute_keeps_a_run_that_reaches_the_end_past_a_damaged_met_file(
-    tmp_path, point_receptor, monkeypatch
-):
-    runner = _make_runner(tmp_path, point_receptor)
-    _fake_hysplit(
-        runner,
-        monkeypatch,
-        log=" WARNING metset: Only one time period of meteo data\n",
-        last_minute=24 * 60,
-    )
-
-    result = runner.execute(timeout=5)
-
-    assert result["time"].min() == -24 * 60
-
-
-def test_execute_leaves_an_empty_particle_file_to_the_caller(
-    tmp_path, point_receptor, monkeypatch
-):
-    runner = _make_runner(tmp_path, point_receptor)
-
-    def fake_run(timeout: int | None) -> None:
-        runner.log_path.write_text(
-            " WARNING metset: Only one time period of meteo data\n"
-        )
-        _write_particle_dat(runner.particle_stilt_path, rows=[])
-
-    monkeypatch.setattr(runner, "_run", fake_run)
-
-    result = runner.execute(timeout=5)
-
-    assert result.empty
-
-
-def test_execute_keeps_particles_that_left_the_met_domain(
-    tmp_path, point_receptor, monkeypatch
-):
-    runner = _make_runner(tmp_path, point_receptor)
-    _fake_hysplit(runner, monkeypatch, log="", last_minute=13 * 60)
-
-    result = runner.execute(timeout=5)
-
-    assert result["time"].min() == -13 * 60
-
-
-def test_terminate_process_escalates_when_group_kill_does_not_finish(
-    tmp_path, point_receptor, monkeypatch
-):
+def test_terminate_escalates_when_group_kill_does_not_finish(monkeypatch):
+    import signal
     import subprocess
-
-    runner = _make_runner(tmp_path, point_receptor)
 
     class FakeProc:
         pid = 1234
 
         def __init__(self) -> None:
-            self.kill_calls = 0
             self.wait_calls = 0
 
         def wait(self, timeout: int) -> int:
@@ -319,83 +270,154 @@ def test_terminate_process_escalates_when_group_kill_does_not_finish(
                 raise subprocess.TimeoutExpired(cmd="hycs_std", timeout=timeout)
             return 0
 
-        def kill(self) -> None:
-            self.kill_calls += 1
-
     proc = FakeProc()
     killpg_calls: list[tuple[int, int]] = []
     monkeypatch.setattr(
-        "stilt.transport.hysplit.driver.os.killpg",
-        lambda pid, sig: killpg_calls.append((pid, sig)),
+        driver.os, "killpg", lambda pid, sig: killpg_calls.append((pid, sig))
     )
 
-    runner._terminate_process(proc)
-
-    import signal
+    driver._terminate(proc)  # type: ignore[arg-type]
 
     assert killpg_calls == [(proc.pid, signal.SIGTERM), (proc.pid, signal.SIGKILL)]
     assert proc.wait_calls == 2
 
 
 # ---------------------------------------------------------------------------
-# HYSPLITDriver._write_setup
+# HysplitModel.run: what a finished hycs_std leaves behind
 # ---------------------------------------------------------------------------
 
 
-def test_write_setup_creates_cfg(tmp_path, point_receptor):
-    runner = _make_runner(tmp_path, point_receptor)
-    runner._write_setup()
-    cfg = tmp_path / "SETUP.CFG"
-    assert cfg.exists()
-    content = cfg.read_text()
-    assert "numpar" in content.lower()
-    assert "varsiwant" in content.lower()
-    assert "kmsl=0" in content.lower()
-    assert "seed=" not in content.lower()
+def _fake_hysplit(monkeypatch, *, log: str, rows: list[list[float]] | None) -> list:
+    """Replace hycs_std with one that writes *log* and particle *rows* (none: no file)."""
+    calls: list[int | None] = []
+
+    def fake_run(workdir: Path, timeout: int | None) -> None:
+        calls.append(timeout)
+        (workdir / "stilt.log").write_text(log)
+        if rows is not None:
+            _write_particle_dat(workdir / "PARTICLE_STILT.DAT", rows)
+
+    monkeypatch.setattr(model, "_run_hycs_std", fake_run)
+    return calls
 
 
-def test_write_setup_includes_seed_when_configured(tmp_path, point_receptor):
-    runner = HYSPLITDriver(
-        directory=tmp_path,
-        receptor=point_receptor,
-        params=HysplitConfig(seed=17, krand=2),
-        met_files=[tmp_path / "met" / "dummy"],
-        exe_dir=tmp_path,
+def _ending_at(minute: int) -> list[list[float]]:
+    """Particle rows of one particle whose last row is *minute* before release."""
+    return [[-1, 1, -111.9, 40.7, 10.0, 0.0], [-minute, 1, -112.0, 40.6, 20.0, 0.0]]
+
+
+def _run(tmp_path, receptor, config=None):
+    return HysplitModel().run(
+        receptor, config or _config(), _FakeMet(), tmp_path / "run", timeout=5
     )
-    runner._write_setup()
-    content = (tmp_path / "SETUP.CFG").read_text().lower()
 
+
+def test_run_fails_when_the_met_is_cut_short(tmp_path, point_receptor, monkeypatch):
+    _fake_hysplit(
+        monkeypatch,
+        log=" WARNING metset: Only one time period of meteo data\n",
+        rows=_ending_at(13 * 60),
+    )
+
+    with pytest.raises(SimulationError) as caught:
+        _run(tmp_path, point_receptor)
+
+    assert caught.value.reason == FailureReason.MET_TRUNCATED
+    log = (tmp_path / "run" / "stilt.log").read_text()
+    assert "particles stop 13 h into a 24 h run" in log
+
+
+def test_run_keeps_a_run_that_reaches_the_end_past_a_damaged_met_file(
+    tmp_path, point_receptor, monkeypatch
+):
+    _fake_hysplit(
+        monkeypatch,
+        log=" WARNING metset: Only one time period of meteo data\n",
+        rows=_ending_at(24 * 60),
+    )
+
+    assert _run(tmp_path, point_receptor).particles["time"].min() == -24 * 60
+
+
+def test_run_leaves_an_empty_particle_file_to_the_caller(
+    tmp_path, point_receptor, monkeypatch
+):
+    _fake_hysplit(
+        monkeypatch,
+        log=" WARNING metset: Only one time period of meteo data\n",
+        rows=[],
+    )
+
+    assert _run(tmp_path, point_receptor).particles.empty
+
+
+def test_run_keeps_particles_that_left_the_met_domain(
+    tmp_path, point_receptor, monkeypatch
+):
+    _fake_hysplit(monkeypatch, log="", rows=_ending_at(13 * 60))
+
+    assert _run(tmp_path, point_receptor).particles["time"].min() == -13 * 60
+
+
+def test_run_without_a_particle_file_fails(tmp_path, point_receptor, monkeypatch):
+    _fake_hysplit(monkeypatch, log="", rows=None)
+
+    with pytest.raises(SimulationError, match="PARTICLE_STILT.DAT") as caught:
+        _run(tmp_path, point_receptor)
+    assert caught.value.reason == FailureReason.NO_PARTICLE_DATA
+
+
+def test_a_perturbed_run_is_one_hycs_std_call_with_winderr(
+    tmp_path, point_receptor, monkeypatch
+):
+    calls = _fake_hysplit(
+        monkeypatch, log="", rows=[[-60, 1, -111.9, 40.7, 10.0, 1e-5]]
+    )
+    config = _config(siguverr=1.0, tluverr=60.0, zcoruverr=500.0, horcoruverr=40.0)
+
+    result = _run(tmp_path, point_receptor, config)
+
+    workdir = tmp_path / "run"
+    assert calls == [5]
+    assert (workdir / "WINDERR").exists()
+    assert not (workdir / "ZIERR").exists()
+    assert "winderrtf=1" in (workdir / "SETUP.CFG").read_text().lower()
+    assert len(result.particles) == 1
+
+
+# ---------------------------------------------------------------------------
+# write_inputs: SETUP.CFG
+# ---------------------------------------------------------------------------
+
+
+def _setup_cfg(tmp_path, receptor, config=None) -> str:
+    return (_inputs(tmp_path, receptor, config) / "SETUP.CFG").read_text().lower()
+
+
+def test_setup_cfg_holds_the_settings_and_kmsl(tmp_path, point_receptor):
+    content = _setup_cfg(tmp_path, point_receptor)
+    assert "numpar" in content
+    assert "varsiwant" in content
+    assert "kmsl=0" in content
+    assert "seed=" not in content
+
+
+def test_setup_cfg_includes_the_seed_when_configured(tmp_path, point_receptor):
+    content = _setup_cfg(tmp_path, point_receptor, HysplitConfig(seed=17, krand=2))
     assert "seed=-18" in content  # -(|seed|+1): the value HYSPLIT honours
     assert "winderrtf=0" in content
 
 
-def test_write_setup_sets_winderrtf_from_error_params(tmp_path, point_receptor):
-    runner = _make_runner_with_xyerr(tmp_path, point_receptor)
-    runner._write_setup()
-    content = (tmp_path / "SETUP.CFG").read_text().lower()
-    assert "winderrtf=1" in content
+def test_setup_cfg_sets_winderrtf_from_error_settings(tmp_path, point_receptor):
+    config = _config(siguverr=1.0, tluverr=60.0, zcoruverr=500.0, horcoruverr=40.0)
+    assert "winderrtf=1" in _setup_cfg(tmp_path, point_receptor, config)
 
 
-def test_write_setup_removes_existing_cfg(tmp_path, point_receptor):
-    runner = _make_runner(tmp_path, point_receptor)
-    cfg = tmp_path / "SETUP.CFG"
-    cfg.write_text("old content")
-    runner._write_setup()
-    assert "old content" not in cfg.read_text()
-
-
-def test_write_setup_derives_kmsl_from_msl_receptor(tmp_path, point_receptor):
-    receptor = point_receptor.__class__(
-        time=point_receptor.time,
-        longitude=point_receptor.longitude,
-        latitude=point_receptor.latitude,
-        altitude=1500.0,
-        altitude_ref="msl",
+def test_setup_cfg_takes_kmsl_from_an_msl_receptor(tmp_path, point_receptor):
+    receptor = point_receptor.model_copy(
+        update={"altitude": 1500.0, "altitude_ref": "msl"}
     )
-    runner = _make_runner(tmp_path, receptor)
-    runner._write_setup()
-    content = (tmp_path / "SETUP.CFG").read_text().lower()
-    assert "kmsl=1" in content
+    assert "kmsl=1" in _setup_cfg(tmp_path, receptor)
 
 
 def test_kmsl_comes_only_from_the_receptor():
@@ -405,243 +427,65 @@ def test_kmsl_comes_only_from_the_receptor():
 
 
 # ---------------------------------------------------------------------------
-# HYSPLITDriver._write_winderr / _write_zierr
+# write_inputs: CONTROL and the error and mixed-layer files
 # ---------------------------------------------------------------------------
 
 
-def _make_runner_with_xyerr(tmp_path, point_receptor) -> HYSPLITDriver:
-    params = HysplitConfig(
-        n_hours=-24,
-        numpar=10,
-        hnf_plume=False,
-        varsiwant=["time", "indx", "long", "lati", "zagl", "foot"],
-        siguverr=1.0,
-        tluverr=60.0,
-        zcoruverr=500.0,
-        horcoruverr=40.0,
-    )
-    return HYSPLITDriver(
-        directory=tmp_path,
-        receptor=point_receptor,
-        params=params,
-        met_files=[],
-        exe_dir=tmp_path,
-    )
+def test_inputs_hold_control_setup_and_the_binary(tmp_path, point_receptor):
+    workdir = _inputs(tmp_path, point_receptor)
+
+    assert (workdir / "CONTROL").exists()
+    assert (workdir / "SETUP.CFG").exists()
+    assert (workdir / "hycs_std").is_symlink()
+    for name in ("WINDERR", "ZIERR", "ZICONTROL"):
+        assert not (workdir / name).exists()
 
 
-def _make_runner_with_zierr(tmp_path, point_receptor) -> HYSPLITDriver:
-    params = HysplitConfig(
-        n_hours=-24,
-        numpar=10,
-        hnf_plume=False,
-        varsiwant=["time", "indx", "long", "lati", "zagl", "foot"],
-        sigzierr=0.6,
-        tlzierr=60.0,
-        horcorzierr=40.0,
-    )
-    return HYSPLITDriver(
-        directory=tmp_path,
-        receptor=point_receptor,
-        params=params,
-        met_files=[],
-        exe_dir=tmp_path,
-    )
+def test_winderr_lines_follow_the_settings_order(tmp_path, point_receptor):
+    config = _config(siguverr=1.0, tluverr=60.0, zcoruverr=500.0, horcoruverr=40.0)
+    lines = (_inputs(tmp_path, point_receptor, config) / "WINDERR").read_text()
+    assert lines.split() == ["1.0", "60.0", "500.0", "40.0"]
 
 
-def test_write_winderr_creates_file(tmp_path, point_receptor):
-    runner = _make_runner_with_xyerr(tmp_path, point_receptor)
-    runner._write_winderr()
-    winderr = tmp_path / "WINDERR"
-    assert winderr.exists()
-    lines = winderr.read_text().strip().splitlines()
-    assert len(lines) == 4  # siguverr, tluverr, zcoruverr, horcoruverr
+def test_zierr_lines_follow_the_settings_order(tmp_path, point_receptor):
+    config = _config(sigzierr=0.6, tlzierr=60.0, horcorzierr=40.0)
+    lines = (_inputs(tmp_path, point_receptor, config) / "ZIERR").read_text()
+    assert lines.split() == ["0.6", "60.0", "40.0"]
 
 
-def test_write_winderr_no_op_without_xyerr(tmp_path, point_receptor):
-    """No WINDERR file when XY params are None."""
-    runner = _make_runner(tmp_path, point_receptor)
-    runner._write_winderr()
-    assert not (tmp_path / "WINDERR").exists()
-
-
-def test_write_zierr_creates_file(tmp_path, point_receptor):
-    runner = _make_runner_with_zierr(tmp_path, point_receptor)
-    runner._write_zierr()
-    zierr = tmp_path / "ZIERR"
-    assert zierr.exists()
-    lines = zierr.read_text().strip().splitlines()
-    assert len(lines) == 3  # sigzierr, tlzierr, horcorzierr
-
-
-def test_write_zierr_no_op_without_zierr(tmp_path, point_receptor):
-    """No ZIERR file when ZI params are None."""
-    runner = _make_runner(tmp_path, point_receptor)
-    runner._write_zierr()
-    assert not (tmp_path / "ZIERR").exists()
-
-
-def test_write_zicontrol_creates_file_from_shared_vector(tmp_path, point_receptor):
-    params = HysplitConfig(
-        n_hours=-24,
-        numpar=10,
-        hnf_plume=False,
-        varsiwant=["time", "indx", "long", "lati", "zagl", "foot"],
-        ziscale=[0.8, 0.8, 0.9],
-    )
-    runner = HYSPLITDriver(
-        directory=tmp_path,
-        receptor=point_receptor,
-        params=params,
-        met_files=[],
-        exe_dir=tmp_path,
-    )
-
-    runner._write_zicontrol()
-
-    zicontrol = tmp_path / "ZICONTROL"
-    assert zicontrol.exists()
+def test_zicontrol_holds_the_hourly_factors(tmp_path, point_receptor):
+    config = _config(ziscale=[0.8, 0.8, 0.9])
+    zicontrol = _inputs(tmp_path, point_receptor, config) / "ZICONTROL"
     assert zicontrol.read_text().strip().splitlines() == ["3", "0.8", "0.8", "0.9"]
 
 
-def test_write_zicontrol_expands_scalar_to_run_length(tmp_path, point_receptor):
-    params = HysplitConfig(
-        n_hours=-4,
-        numpar=10,
-        hnf_plume=False,
-        varsiwant=["time", "indx", "long", "lati", "zagl", "foot"],
-        ziscale=0.8,
-    )
-    runner = HYSPLITDriver(
-        directory=tmp_path,
-        receptor=point_receptor,
-        params=params,
-        met_files=[],
-        exe_dir=tmp_path,
-    )
-
-    runner._write_zicontrol()
-
-    lines = (tmp_path / "ZICONTROL").read_text().strip().splitlines()
-    assert lines == ["4", "0.8", "0.8", "0.8", "0.8"]
+def test_zicontrol_repeats_a_scalar_over_the_run(tmp_path, point_receptor):
+    config = _config(n_hours=-4, ziscale=0.8)
+    lines = (_inputs(tmp_path, point_receptor, config) / "ZICONTROL").read_text()
+    assert lines.strip().splitlines() == ["4", "0.8", "0.8", "0.8", "0.8"]
 
 
 # ---------------------------------------------------------------------------
-# HYSPLITDriver.prepare()
+# write_inputs: the HYSPLIT build and its data tables
 # ---------------------------------------------------------------------------
 
 
-def test_prepare_writes_control_and_setup(tmp_path, point_receptor):
-    """prepare() creates CONTROL and SETUP.CFG in the sim directory."""
-    exe_dir = tmp_path / "exe"
-    exe_dir.mkdir()
-    (exe_dir / "hycs_std").write_text("fake binary")
-
-    sim_dir = tmp_path / "sim"
-    params = HysplitConfig(
-        n_hours=-24,
-        numpar=10,
-        hnf_plume=False,
-        varsiwant=["time", "indx", "long", "lati", "zagl", "foot"],
-    )
-    runner = HYSPLITDriver(
-        directory=sim_dir,
-        receptor=point_receptor,
-        params=params,
-        met_files=[tmp_path / "met" / "dummy"],
-        exe_dir=exe_dir,
-    )
-    runner.prepare()
-
-    assert (sim_dir / "CONTROL").exists()
-    assert (sim_dir / "SETUP.CFG").exists()
-    assert (sim_dir / "hycs_std").is_symlink()
-
-
-def test_prepare_writes_zicontrol_when_enabled(tmp_path, point_receptor):
-    exe_dir = tmp_path / "exe"
-    exe_dir.mkdir()
-    (exe_dir / "hycs_std").write_text("fake binary")
-
-    sim_dir = tmp_path / "sim"
-    params = HysplitConfig(
-        n_hours=-24,
-        numpar=10,
-        hnf_plume=False,
-        varsiwant=["time", "indx", "long", "lati", "zagl", "foot"],
-        ziscale=[0.9] * 24,
-    )
-    runner = HYSPLITDriver(
-        directory=sim_dir,
-        receptor=point_receptor,
-        params=params,
-        met_files=[tmp_path / "met" / "dummy"],
-        exe_dir=exe_dir,
-    )
-
-    runner.prepare()
-
-    zicontrol = sim_dir / "ZICONTROL"
-    assert zicontrol.exists()
-    lines = zicontrol.read_text().strip().splitlines()
-    assert lines[0] == "24"
-
-
-# ---------------------------------------------------------------------------
-# Custom HYSPLIT build (HysplitConfig.exe_dir)
-# ---------------------------------------------------------------------------
-
-
-def _fake_build(path, marker="fake binary"):
-    path.mkdir(parents=True, exist_ok=True)
-    (path / "hycs_std").write_text(marker)
-    return path
-
-
-def _exe_driver(tmp_path, point_receptor, *, params_exe=None, arg_exe=None, sim="sim"):
-    params = HysplitConfig(
-        n_hours=-24,
-        numpar=10,
-        hnf_plume=False,
-        exe_dir=params_exe,
-        varsiwant=["time", "indx", "long", "lati", "zagl", "foot"],
-    )
-    return HYSPLITDriver(
-        directory=tmp_path / sim,
-        receptor=point_receptor,
-        params=params,
-        met_files=[tmp_path / "met" / "dummy"],
-        exe_dir=arg_exe,
-    )
-
-
-def test_exe_dir_from_params_is_used(tmp_path, point_receptor):
+def test_exe_dir_is_used(tmp_path, point_receptor):
     build = _fake_build(tmp_path / "my_build", "patched")
-    runner = _exe_driver(tmp_path, point_receptor, params_exe=build)
-    runner.prepare()
-    assert (tmp_path / "sim" / "hycs_std").read_text() == "patched"
-
-
-def test_explicit_exe_dir_argument_beats_params(tmp_path, point_receptor):
-    from_params = _fake_build(tmp_path / "a", "from params")
-    from_arg = _fake_build(tmp_path / "b", "from argument")
-    runner = _exe_driver(
-        tmp_path, point_receptor, params_exe=from_params, arg_exe=from_arg
-    )
-    runner.prepare()
-    assert (tmp_path / "sim" / "hycs_std").read_text() == "from argument"
+    workdir = _inputs(tmp_path, point_receptor, _config(exe_dir=build))
+    assert (workdir / "hycs_std").read_text() == "patched"
 
 
 def test_default_is_the_bundled_binary(tmp_path, point_receptor):
-    runner = _exe_driver(tmp_path, point_receptor)
-    assert runner.exe_dir.name in {"linux_x64", "macos_x64"}
+    workdir = _inputs(tmp_path, point_receptor)
+    assert (workdir / "hycs_std").resolve().parent.name in {"linux_x64", "macos_x64"}
 
 
 def test_exe_dir_without_hycs_std_raises(tmp_path, point_receptor):
     empty = tmp_path / "empty"
     empty.mkdir()
-    runner = _exe_driver(tmp_path, point_receptor, params_exe=empty)
     with pytest.raises(HYSPLITNotFoundError, match="hycs_std"):
-        runner.prepare()
+        _inputs(tmp_path, point_receptor, _config(exe_dir=empty))
 
 
 def test_only_hycs_std_is_linked_from_a_custom_build_dir(tmp_path, point_receptor):
@@ -649,74 +493,24 @@ def test_only_hycs_std_is_linked_from_a_custom_build_dir(tmp_path, point_recepto
     build = _fake_build(tmp_path / "exec")
     (build / "Makefile").write_text("")
     (build / "concplot").write_text("")
-    runner = _exe_driver(tmp_path, point_receptor, params_exe=build)
-    runner.prepare()
-    sim = tmp_path / "sim"
-    assert (sim / "hycs_std").exists()
-    assert not (sim / "Makefile").exists()
-    assert not (sim / "concplot").exists()
+    workdir = _inputs(tmp_path, point_receptor, _config(exe_dir=build))
+    assert (workdir / "hycs_std").exists()
+    assert not (workdir / "Makefile").exists()
+    assert not (workdir / "concplot").exists()
+    assert "exe_dir" not in (workdir / "SETUP.CFG").read_text().lower()
 
 
-def test_exe_dir_is_not_written_to_setup_cfg(tmp_path, point_receptor):
-    build = _fake_build(tmp_path / "my_build")
-    runner = _exe_driver(tmp_path, point_receptor, params_exe=build)
-    runner.prepare()
-    assert "exe_dir" not in (tmp_path / "sim" / "SETUP.CFG").read_text().lower()
+def test_data_dir_tables_replace_the_bundled_ones(tmp_path, point_receptor):
+    """A table in data_dir is linked in place of the bundled one; the rest are bundled."""
+    data = tmp_path / "tables"
+    data.mkdir()
+    (data / "ROUGLEN.ASC").write_text("custom roughness\n")
 
+    workdir = _inputs(tmp_path, point_receptor, _config(data_dir=data))
 
-# -- error realizations ------------------------------------------------------------
-
-_ERR_VARS = ["time", "indx", "long", "lati", "zagl", "foot"]
-
-
-def _error_runner(tmp_path, point_receptor, **overrides) -> HYSPLITDriver:
-    params = dict(
-        n_hours=-24,
-        numpar=10,
-        hnf_plume=False,  # the six-column particle rows below carry no plume vars
-        siguverr=1.0,
-        tluverr=60.0,
-        zcoruverr=500.0,
-        horcoruverr=40.0,
-        varsiwant=_ERR_VARS,
-    )
-    params.update(overrides)
-    return HYSPLITDriver(
-        directory=tmp_path,
-        receptor=point_receptor,
-        params=HysplitConfig(**params),
-        met_files=[tmp_path / "met" / "dummy"],
-        exe_dir=tmp_path,
-    )
-
-
-def test_perturbed_run_writes_winderr_and_winderrtf_once(
-    tmp_path, point_receptor, monkeypatch
-):
-    """A perturbed variant is one HYSPLIT call with WINDERR and winderrtf set."""
-    runner = _error_runner(tmp_path, point_receptor)
-    monkeypatch.setattr(runner, "_write_zicontrol", lambda: None)
-    calls: list[int | None] = []
-
-    def fake_run(timeout: int | None) -> None:
-        calls.append(timeout)
-        runner.log_path.write_text("")
-        _write_particle_dat(
-            runner.particle_stilt_path, rows=[[-60, 1, -111.9, 40.7, 10.0, 1e-5]]
-        )
-
-    monkeypatch.setattr(runner, "_run", fake_run)
-
-    runner._write_setup()
-    runner._write_winderr()
-    runner._write_zierr()
-    result = runner.execute(timeout=5)
-
-    assert calls == [5]  # one HYSPLIT call
-    assert runner.winderr_path.exists()
-    assert not runner.zierr_path.exists()
-    assert "winderrtf=1" in runner.setup_path.read_text().lower()
-    assert len(result) == 1
+    assert (workdir / "ROUGLEN.ASC").resolve() == (data / "ROUGLEN.ASC").resolve()
+    bundled = driver._bundled_data_dir()
+    assert (workdir / "LANDUSE.ASC").resolve() == (bundled / "LANDUSE.ASC").resolve()
 
 
 # ---------------------------------------------------------------------------
@@ -735,8 +529,6 @@ def test_perturbed_run_writes_winderr_and_winderrtf_once(
 def test_bundled_exe_dir_picks_the_build_for_the_platform(
     monkeypatch, system, machine, subdir
 ):
-    from stilt.transport.hysplit import driver
-
     monkeypatch.setattr(driver.platform, "system", lambda: system)
     monkeypatch.setattr(driver.platform, "machine", lambda: machine)
     assert driver._bundled_exe_dir().name == subdir
@@ -750,8 +542,6 @@ def test_bundled_exe_dir_rejects_platforms_without_a_build(
     monkeypatch, system, machine
 ):
     """An aarch64 Linux machine must not be handed the x86-64 binary (#61)."""
-    from stilt.transport.hysplit import driver
-
     monkeypatch.setattr(driver.platform, "system", lambda: system)
     monkeypatch.setattr(driver.platform, "machine", lambda: machine)
     with pytest.raises(HYSPLITNotFoundError, match="exe_dir"):
@@ -760,46 +550,9 @@ def test_bundled_exe_dir_rejects_platforms_without_a_build(
 
 def test_bundled_exe_dir_rejects_an_install_without_the_binary(monkeypatch, tmp_path):
     """The source archive carries no hycs_std; say so rather than fail later."""
-    from stilt.transport.hysplit import driver
-
     (tmp_path / "bin" / "linux_x64").mkdir(parents=True)
     monkeypatch.setattr(driver.platform, "system", lambda: "Linux")
     monkeypatch.setattr(driver.platform, "machine", lambda: "x86_64")
     monkeypatch.setattr(driver, "pkg_files", lambda _package: tmp_path)
     with pytest.raises(HYSPLITNotFoundError, match="exe_dir"):
         driver._bundled_exe_dir()
-
-
-def test_data_dir_tables_replace_the_bundled_ones(tmp_path, point_receptor):
-    """A table in data_dir is linked in place of the bundled one; the rest are bundled."""
-    from stilt.transport.hysplit.driver import _bundled_data_dir
-
-    data = tmp_path / "tables"
-    data.mkdir()
-    (data / "ROUGLEN.ASC").write_text("custom roughness\n")
-    exe_dir = tmp_path / "exe"
-    exe_dir.mkdir()
-    (exe_dir / "hycs_std").write_text("#!/bin/sh\n")
-    params = HysplitConfig(
-        n_hours=-1,
-        numpar=10,
-        hnf_plume=False,
-        varsiwant=["time", "indx", "long", "lati", "zagl", "foot"],
-        data_dir=data,
-    )
-    runner = HYSPLITDriver(
-        directory=tmp_path / "run",
-        receptor=point_receptor,
-        params=params,
-        met_files=[tmp_path / "met" / "dummy"],
-        exe_dir=exe_dir,
-    )
-    runner.prepare()
-
-    assert (runner.directory / "ROUGLEN.ASC").resolve() == (
-        data / "ROUGLEN.ASC"
-    ).resolve()
-    bundled = _bundled_data_dir()
-    assert (runner.directory / "LANDUSE.ASC").resolve() == (
-        bundled / "LANDUSE.ASC"
-    ).resolve()

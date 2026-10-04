@@ -21,9 +21,7 @@ import pytest
 from stilt.meteorology import Met, MetConfig
 from stilt.receptors import ColumnReceptor
 from stilt.transforms import PressureWeighting, particle_pwf, release_coordinate
-from stilt.transport.hysplit import HysplitConfig
-from stilt.transport.hysplit.driver import HYSPLITDriver
-from stilt.transport.hysplit.model import finish_particles
+from stilt.transport.hysplit import HysplitConfig, HysplitModel
 
 from .conftest import integration
 from .fixtures.r_stilt_reference import (
@@ -51,22 +49,14 @@ def _column_trajectory(
         time=time, longitude=WBB_LON, latitude=WBB_LAT, bottom=0.0, top=top
     )
     params = HysplitConfig(n_hours=-2, numpar=numpar, hnf_plume=False)
-    met_files = Met(
+    met = Met(
         "hrrr",
         MetConfig(
             directory=met_dir, file_format=REFERENCE_MET_FILE_FORMAT, file_tres="6h"
         ),
-    ).required_files(r_time=receptor.time, n_hours=params.n_hours)
-
-    driver = HYSPLITDriver(
-        receptor=receptor,
-        params=params,
-        met_files=met_files,
-        directory=Path(tmp_path) / label,
     )
-    driver.prepare()
-    result = driver.execute(timeout=900)
-    return receptor, finish_particles(result, receptor, params)
+    run = HysplitModel().run(receptor, params, met, Path(tmp_path) / label, timeout=900)
+    return receptor, run.particles
 
 
 @integration
