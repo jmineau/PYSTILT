@@ -86,6 +86,19 @@ def _extent(lons, lats, pad: float) -> tuple[float, float, float, float]:
     )
 
 
+def _bounds_extent(bounds: Bounds, pad: float) -> tuple[float, float, float, float]:
+    """Return the ``(west, east, south, north)`` box of *bounds*, widened by *pad* degrees."""
+    return _extent([bounds.xmin, bounds.xmax], [bounds.ymin, bounds.ymax], pad)
+
+
+def _receptor_points(receptor: Receptor) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Return the longitudes, latitudes, and heights of a receptor's release points."""
+    lats, lons, alts = (
+        np.array(v, dtype=float) for v in zip(*receptor.coords(), strict=True)
+    )
+    return lons, lats, alts
+
+
 def _log10_safe(vals: np.ndarray) -> np.ndarray:
     """Return log10 of ``vals``, with NaN where a value is zero or negative."""
     with np.errstate(divide="ignore", invalid="ignore"):
@@ -396,15 +409,10 @@ class ReceptorPlotAccessor:
         standalone = ax is None
 
         r = self._receptor
-        coords = r.coords()
-        lats = np.array([c[0] for c in coords])
-        lons = np.array([c[1] for c in coords])
-        alts = np.array([c[2] for c in coords])
+        lons, lats, alts = _receptor_points(r)
 
         if domain is not None:
-            extent = _extent(
-                [domain.xmin, domain.xmax], [domain.ymin, domain.ymax], pad=0.5
-            )
+            extent = _bounds_extent(domain, pad=0.5)
         else:
             pad = max(
                 1.0,
@@ -427,7 +435,7 @@ class ReceptorPlotAccessor:
                 **kwargs,
             )
             fig.colorbar(sc, ax=ax, label="Height AGL (m)", shrink=0.7, pad=0.02)
-        elif isinstance(r, ColumnReceptor):
+        else:  # a point, or a column at one location
             ax.scatter(
                 [lons[0]],
                 [lats[0]],
@@ -438,24 +446,14 @@ class ReceptorPlotAccessor:
                 label="Receptor",
                 **kwargs,
             )
-            ax.annotate(
-                f"{r.bottom:.0f}–{r.top:.0f} m AGL",
-                xy=(lons[0], lats[0]),
-                xytext=(6, 4),
-                textcoords="offset points",
-                fontsize=8,
-            )
-        else:
-            ax.scatter(
-                [lons[0]],
-                [lats[0]],
-                marker="*",
-                s=200,
-                color=color,
-                zorder=5,
-                label="Receptor",
-                **kwargs,
-            )
+            if isinstance(r, ColumnReceptor):
+                ax.annotate(
+                    f"{r.bottom:.0f}–{r.top:.0f} m AGL",
+                    xy=(lons[0], lats[0]),
+                    xytext=(6, 4),
+                    textcoords="offset points",
+                    fontsize=8,
+                )
 
         if domain is not None:
             _draw_bounds_box(ax, domain, label="Domain")
@@ -534,15 +532,12 @@ class SimulationPlotAccessor:
 
         # Map extent: the footprint grid, else the particles, else the receptor
         if foot is not None:
-            g = foot.stilt.grid
-            extent = _extent([g.xmin, g.xmax], [g.ymin, g.ymax], pad=0.1)
+            extent = _bounds_extent(foot.stilt.grid, pad=0.1)
         elif particles is not None:
             extent = _extent(particles["long"], particles["lati"], pad=0.5)
         else:
-            coords = sim.receptor.coords()
-            extent = _extent(
-                [lon for _, lon, _ in coords], [lat for lat, _, _ in coords], pad=2.0
-            )
+            lons, lats, _ = _receptor_points(sim.receptor)
+            extent = _extent(lons, lats, pad=2.0)
 
         _, ax = _make_ax(ax, extent=extent)
 
