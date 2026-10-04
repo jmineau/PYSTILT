@@ -93,7 +93,14 @@ Attributes
 {% else %}
 .. class-signature:: {{ fullname }}
 
+{% if objname.endswith('Receptor') or objname == 'Mesh' %}
+Parameters
+----------
+
+.. config-model:: {{ fullname }}
+{% else %}
 .. class-parameters:: {{ fullname }}
+{% endif %}
 
 {% if ns.methods %}
 Methods

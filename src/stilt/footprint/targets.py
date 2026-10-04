@@ -83,25 +83,20 @@ def _grid_boxes(x_centers: np.ndarray, y_centers: np.ndarray, xres: float, yres:
 class Mesh(BaseModel):
     """
     Polygon cells with ids, the most general geometry.
-
-    Parameters
-    ----------
-    ids : sequence of str
-        Unique label for each cell. These become the ``index``.
-    geometries : sequence of shapely Polygon or MultiPolygon
-        One polygon per id, in ``crs`` coordinates.
-    crs : str, default "+proj=longlat"
-        PROJ string or ``"EPSG:xxxx"`` code of the polygon coordinates.
     """
 
     model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
 
-    ids: tuple[str, ...] = Field(..., description="Unique cell labels.")
+    ids: tuple[str, ...] = Field(
+        ..., description="Unique label for each cell. These become the ``index``."
+    )
     geometries: tuple[Any, ...] = Field(
-        ..., description="Shapely polygon per cell, in ``crs`` coordinates."
+        ...,
+        description="One shapely Polygon or MultiPolygon per id, in ``crs`` coordinates.",
     )
     crs: str = Field(
-        "+proj=longlat", description="Coordinate reference system of the polygons."
+        "+proj=longlat",
+        description='PROJ string or ``"EPSG:xxxx"`` code of the polygon coordinates.',
     )
 
     @model_validator(mode="after")
