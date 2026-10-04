@@ -9,6 +9,7 @@ import pytest
 import xarray as xr
 import yaml
 
+from stilt.footprint import jacobian
 from stilt.footprint.config import FootprintConfig
 from stilt.footprint.io import _describe
 from stilt.footprint.targets import Mesh
@@ -404,7 +405,7 @@ def _bins():
 def test_jacobian_matches_footprint_aggregate(written_footprints, target):
     feet, feet_by_id, empty_id = written_footprints
     bins = _bins()
-    H = feet.jacobian(target, bins)
+    H = jacobian(feet.table(), feet.config, target, bins, [*feet_by_id, empty_id])
 
     assert list(H.receptors) == list(feet_by_id)
     assert H.empty == [empty_id]
@@ -431,16 +432,17 @@ def test_table_reads_the_date_folder_as_a_date32_column(written_footprints):
     assert feet.table([]).schema.field("date").type == pa.date32()
 
 
-def test_jacobian_selection_and_missing(written_footprints):
+def test_jacobian_rows_are_the_requested_receptors(written_footprints):
+    """Cells of receptors in the table that were not asked for are left out."""
     feet, feet_by_id, empty_id = written_footprints
     ids = list(feet_by_id)
     target = Grid(xmin=-112.0, xmax=-111.5, ymin=40.5, ymax=41.0, xres=0.25, yres=0.25)
-    H = feet.jacobian(
-        target, _bins(), receptors=[ids[1], "202407151300_-111.85_40.77_5", empty_id]
-    )
+    H = jacobian(feet.table(), feet.config, target, _bins(), [ids[1], empty_id])
+    alone = jacobian(feet.table([ids[1]]), feet.config, target, _bins(), [ids[1]])
     assert list(H.receptors) == [ids[1]]
     assert H.empty == [empty_id]
-    assert H.missing == ["202407151300_-111.85_40.77_5"]
+    assert H.missing == []
+    np.testing.assert_array_equal(H.data.toarray(), alone.data.toarray())
 
 
 @pytest.mark.parametrize("closed", ["right", "both", "neither"])
@@ -450,13 +452,13 @@ def test_jacobian_rejects_bins_not_closed_on_the_left(written_footprints, closed
     left = _bins()
     bins = pd.IntervalIndex.from_arrays(left.left, left.right, closed=closed)
     with pytest.raises(ValueError, match="closed on the left"):
-        feet.jacobian(GRID, bins)
+        jacobian(feet.table(), feet.config, GRID, bins, [])
 
 
 def test_jacobian_with_no_footprints_is_empty(tmp_path):
     run = Output(tmp_path / "output").particles(VARIANT)
     feet = run.footprints(FootprintConfig(grid=GRID))
-    H = feet.jacobian(GRID, _bins())
+    H = jacobian(feet.table(), feet.config, GRID, _bins(), [])
     assert H.data.shape == (0, len(_bins()) * len(GRID.index))
     assert list(H.receptors) == []
 
