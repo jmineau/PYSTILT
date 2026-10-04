@@ -8,6 +8,10 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- `Project.init(path, starter=True)` writes the commented starter
+  `config.yaml` that `stilt init` writes (`stilt.config.STARTER_CONFIG`),
+  and `stilt init` calls it. `stilt run` resolves the local scratch
+  directory once, so the banner shows the directory the run uses (#134).
 - `stilt.transport.TransportConfig` is a pydantic base class, where it was
   a protocol (#134). It holds `n_hours`, `seed`, `UNRECORDED`, and default
   `settings()` and `realizations(n)`; `HysplitConfig` subclasses it, and a

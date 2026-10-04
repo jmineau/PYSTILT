@@ -156,6 +156,20 @@ def test_init_takes_a_config_or_keywords_not_both(tmp_path):
     assert not (tmp_path / "proj").exists()
 
 
+def test_init_writes_the_commented_starter_config(tmp_path):
+    from stilt.config import STARTER_CONFIG
+
+    project = Project.init(tmp_path / "proj", starter=True)
+
+    assert project.config_path.read_text() == STARTER_CONFIG
+    assert list(project.variants) == ["hrrr"]
+    assert project.receptors.empty
+    with pytest.raises(TypeError, match="starter"):
+        Project.init(tmp_path / "other", starter=True, numpar=10)
+    with pytest.raises(FileExistsError):
+        Project.init(tmp_path / "proj", starter=True)
+
+
 def test_init_copies_receptors_from_a_csv(tmp_path):
     csv = tmp_path / "mine.csv"
     csv.write_text(

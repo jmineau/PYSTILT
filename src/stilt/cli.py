@@ -35,61 +35,6 @@ app = typer.Typer(
 logger = logging.getLogger(__name__)
 
 
-def _starter_config_yaml() -> str:
-    """Return the commented starter ``config.yaml`` written by ``stilt init``."""
-    return """# PYSTILT project configuration
-# See docs for details: https://jmineau.github.io/PYSTILT
-
-
-# Meteorology, by name. Edit directory to point to your ARL files, or replace
-# file_format and file_tres with "download: hrrr" to download them from NOAA.
-mets:
-  hrrr:  # Unique name for this met.
-    directory: /path/to/arl/meteorology
-    file_format: "%Y%m%d_%H"
-    file_tres: 6h  # Hours each met file covers; the docs' HRRR files hold six.
-
-
-# Footprint grid. Remove it (or set grid: null) to make particles only.
-grid:
-  xmin: -113.0
-  xmax: -110.5
-  ymin: 40.0
-  ymax: 42.0
-  xres: 0.01
-  yres: 0.01
-
-
-# Variants. Every receptor runs once per variant, with the settings in this
-# file as the defaults. An entry with no overrides runs the defaults as they
-# are; add others to run the same receptors under other settings, e.g. a
-# mixed-layer bracket or a wind-error ensemble (see the docs). Only the
-# variants listed here run.
-variants:
-  hrrr: {}
-#  hrrr-zi08: {ziscale: 0.8}
-
-
-# Common run controls. Negative n_hours means backward in time.
-n_hours: -24
-numpar: 1000
-varsiwant: [time, indx, long, lati, zagl, foot, mlht, pres, dens, samt, sigw, tlgr]
-hnf_plume: true  # rescale footprints via a gaussian plume model in the hyper-near field
-
-
-# Results go to this directory, relative to the project unless absolute.
-# Several projects can name the same directory and share runs.
-output: ./output
-
-
-# Execution is optional. Local execution is the default.
-# execution:
-#   backend: local  # or "slurm"
-#   cpus: 1         # receptors at once (per array task on Slurm)
-#   n_workers: 1    # Slurm array tasks
-"""
-
-
 # ---------------------------------------------------------------------------
 # Shared options / arguments
 # ---------------------------------------------------------------------------
@@ -140,20 +85,14 @@ def init(project: Path = _NEW_PROJECT_ARG) -> None:
     already has a config.yaml.
     """
     project = (project or Path.cwd()).resolve()
-    config_path = Project(project).config_path
-    receptors_path = Project(project).receptors_path
-
-    if config_path.exists():
+    try:
+        Project.init(project, starter=True)
+    except FileExistsError:
         typer.echo(
             f"Error: '{project}' already contains a config.yaml. Aborting.",
             err=True,
         )
-        raise typer.Exit(code=1)
-
-    project.mkdir(parents=True, exist_ok=True)
-    config_path.write_text(_starter_config_yaml())
-    # Header only: every other line of a receptors file is read as a receptor.
-    receptors_path.write_text("time,longitude,latitude,altitude\n")
+        raise typer.Exit(code=1) from None
 
     typer.echo(f"Initialized STILT project at '{project}'")
     typer.echo("  config.yaml   — edit met directory and footprint settings")
@@ -207,6 +146,10 @@ def _start(
     execution = ExecutionConfig.model_validate(
         {**opened.config.execution.model_dump(exclude_unset=True), **overrides}
     )
+    if execution.backend == "local":
+        # Resolved once, here, so the banner shows the directory the run uses.
+        # A Slurm task resolves its own, on its node.
+        compute_root = str(resolve_compute_root(opened, compute_root))
     _print_run_start(
         opened,
         execution,
@@ -349,9 +292,8 @@ def _print_run_start(
         f"cpus={execution.cpus}  skip={mode}"
     )
     typer.echo(f"Output: {project.output.path}")
-    if backend == "local" or compute_root is not None:
-        scratch = resolve_compute_root(project, compute_root)
-        typer.echo(f"Compute root: {scratch}")
+    if compute_root is not None:
+        typer.echo(f"Compute root: {compute_root}")
     else:
         typer.echo("Compute root: each task's own $TMPDIR (or PYSTILT_COMPUTE_ROOT)")
     typer.echo(f"Receptors loaded: {len(project.receptors)}")

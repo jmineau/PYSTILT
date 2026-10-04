@@ -215,7 +215,13 @@ def test_run_runs_the_project_with_its_execution_settings(tmp_path, calls):
     assert verb == "run"
     assert kwargs["execution"] == ExecutionConfig.model_validate({})
     assert kwargs["skip_existing"] is True
-    assert kwargs["compute_root"] is None
+    # Resolved once, so the run uses the directory the banner shows.
+    from stilt.execution import resolve_compute_root
+    from stilt.project import Project
+
+    scratch = resolve_compute_root(Project(tmp_path))
+    assert kwargs["compute_root"] == str(scratch)
+    assert f"Compute root: {scratch}" in result.output
 
 
 def test_run_prints_a_startup_summary_and_the_status(tmp_path, calls):

@@ -29,9 +29,10 @@ A typical config.yaml
    n_hours: -24
    numpar: 500
 
-``stilt init`` writes a starter file with comments. If you make the project
-in Python with :meth:`Project.init <stilt.Project.init>` instead, the
-settings you pass are written to ``config.yaml`` once. The written file
+``stilt init`` writes a starter file with comments, and so does
+``Project.init(path, starter=True)`` in Python. If you pass settings to
+:meth:`Project.init <stilt.Project.init>` instead, they are written to
+``config.yaml`` once. The written file
 includes a ``variants`` section that lists the variants that run (see
 `Variants`_), so it reads the same either way.
 
