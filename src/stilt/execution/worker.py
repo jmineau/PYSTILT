@@ -33,7 +33,6 @@ from stilt.exceptions import EmptyFootprint, SimulationError
 from stilt.footprint import calculate
 from stilt.meteorology import Met
 from stilt.simulation import Simulation
-from stilt.transforms import TransformContext
 from stilt.transport import get_model
 
 if TYPE_CHECKING:
@@ -249,12 +248,13 @@ def make_footprint(
     sim: Simulation,
     particles: pd.DataFrame,
     *,
-    context: TransformContext,
+    directory: Path | None = None,
 ) -> xr.DataArray | None:
     """
     Calculate a simulation's footprint from *particles* and write it to its folder.
 
-    The settings are the variant's own. When no particle reaches the grid,
+    The settings are the variant's own. A relative file name in a
+    transform's settings starts from *directory*, the project's. When no particle reaches the grid,
     an empty footprint is recorded with the reason and ``None`` is returned.
     :meth:`stilt.Simulation.generate_footprint` makes footprints with other
     settings, without writing them.
@@ -271,7 +271,7 @@ def make_footprint(
             sim.receptor,
             feet.config,
             name=sim.variant.name,
-            context=context,
+            directory=directory,
             geometry_hash=sim.variant.geometry_hash,
         )
     except EmptyFootprint as error:
@@ -380,12 +380,7 @@ def _run_group(
         try:
             if particles is None:
                 particles = first.particles  # read once for the group
-            context = TransformContext(
-                receptor=sim.receptor,
-                variant=sim.variant.name,
-                directory=project.directory,
-            )
-            make_footprint(sim, particles, context=context)
+            make_footprint(sim, particles, directory=project.directory)
         except Exception as error:
             results[str(sim.id)] = _failed(sim, "footprint", error)
             continue

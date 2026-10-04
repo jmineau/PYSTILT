@@ -25,7 +25,6 @@ from .receptors import (
 )
 from .simulation import SimID, Simulation
 from .spatial import Bounds, Grid
-from .transforms import ParticleTransform, TransformContext
 from .variants import Variant
 
 try:
@@ -68,6 +67,4 @@ __all__ = [
     # Exceptions (all of them live in stilt.exceptions)
     "StiltError",
     # Transforms (the interface; built-ins live in stilt.transforms)
-    "ParticleTransform",
-    "TransformContext",
 ]

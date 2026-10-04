@@ -58,13 +58,14 @@ The background at a receptor
            sim.particles,
            field,
            transforms=sim.variant.footprint.transforms,
-           context=project.transform_context(sim),
+           receptor=sim.receptor,
+           directory=project.directory,
        )
        enhancement = float(sim.footprint.stilt.enhancement(flux).sum())
        rows.append({"receptor": sim.receptor.id, "background": bg.value,
                     "enhancement": enhancement, "modelled": bg.value + enhancement})
 
-Pass the footprint's transforms and the simulation's context, as for
+Pass the footprint's transforms, the receptor, and the project directory, as for
 :func:`~stilt.observations.transport_error`. The background is then
 weighted the way the footprint is, with the averaging kernel (including one
 from a per-receptor table), pressure weighting, and any lifetime decay, and
@@ -100,7 +101,8 @@ each particle's modelled mole fraction, enhancement plus background:
    err = project.simulation(sim.receptor.id, "hrrr-err")
    result = transport_error(
        sim.particles, err.particles, flux,
-       transforms=sim.variant.footprint.transforms, context=project.transform_context(sim),
+       transforms=sim.variant.footprint.transforms,
+       receptor=sim.receptor, directory=project.directory,
        background=field,
    )
    result.enhancement - result.background   # the enhancement alone

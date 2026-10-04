@@ -9,9 +9,10 @@ transport needs a lifetime.
 
 A transform is any object with an ``apply`` method::
 
-   def apply(self, particles: pd.DataFrame, context: TransformContext) -> pd.DataFrame
+   def apply(self, particles, receptor=None, directory=None) -> pd.DataFrame
 
-It takes the particle table and returns a new one. List transforms in
+It takes the particle table, the receptor the particles were released
+from, and the project directory, and returns a new table. List transforms in
 ``config.yaml``, as a default or per variant, or pass them to
 :meth:`stilt.Simulation.generate_footprint`. They run once, in order,
 starting from the unweighted particles. The transforms listed in the
@@ -165,7 +166,6 @@ unchanged.
    import pandas as pd
    from pydantic import BaseModel
 
-   from stilt import TransformContext
    from stilt.transforms import release_coordinate
 
 
@@ -174,7 +174,7 @@ unchanged.
 
        max_height: float = 1500.0
 
-       def apply(self, particles: pd.DataFrame, context: TransformContext) -> pd.DataFrame:
+       def apply(self, particles, receptor=None, directory=None):
            z = release_coordinate(particles, "xhgt")           # one value per particle
            keep = z.reindex(particles["indx"].to_numpy()) <= self.max_height
            out = particles.copy()
@@ -201,12 +201,13 @@ A few rules keep custom transforms working everywhere:
   import fails to load, with the import error. A stored footprint that
   names one can still be read, with a warning. That entry of
   ``foot.stilt.config.transforms`` is left as its settings mapping.
-- **Get anything outside the table from the context.**
-  ``context.receptor`` is the receptor, and its ``id`` is the key for any
-  per-receptor input file. ``context.variant`` is the variant name.
-  ``context.directory`` is the project directory. Read a file named in
-  your transform's settings relative to it, as the ``averaging_kernel``
-  table is read.
+- **Get anything outside the table from the receptor or the directory.**
+  ``receptor.id`` is the key for any per-receptor input file, and
+  ``receptor.altitude_ref`` says whether heights are above ground or sea
+  level. ``directory`` is the project directory. Read a file named in your
+  transform's settings relative to it, as the ``averaging_kernel`` table
+  is read. Both can be ``None`` when a transform is applied to particles
+  alone, so raise a clear error if yours needs them.
 
 A transform named in ``config.yaml`` must be a pydantic model, because
 PYSTILT writes it back out to the footprint folder's ``_settings.yaml``

@@ -1,8 +1,11 @@
 """
 Particle transforms that reweight ``foot`` before the footprint is computed.
 
-A transform is any object with ``apply(particles, context) -> DataFrame``.
-The built-in ones are pydantic models whose fields are their ``config.yaml``
+A transform is any object with
+``apply(particles, receptor=None, directory=None) -> DataFrame``: the
+particle table, the receptor they were released from, and the directory a
+relative file name in its settings starts from (the project's). The
+built-in ones are pydantic models whose fields are their ``config.yaml``
 keys::
 
     transforms:
@@ -32,17 +35,8 @@ import functools
 import importlib
 import os
 from collections.abc import Iterable, Sequence
-from dataclasses import dataclass
 from pathlib import Path
-from typing import (
-    TYPE_CHECKING,
-    Annotated,
-    Any,
-    Literal,
-    Protocol,
-    Self,
-    runtime_checkable,
-)
+from typing import TYPE_CHECKING, Annotated, Any, Literal, Self
 
 import numpy as np
 import pandas as pd
@@ -51,49 +45,6 @@ from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, model_validator
 
 if TYPE_CHECKING:
     from stilt.receptors import Receptor
-
-
-# -- interface ------------------------------------------------------------------
-
-
-@dataclass(frozen=True, slots=True)
-class TransformContext:
-    """
-    Information about the simulation a transform is applied for.
-
-    Attributes
-    ----------
-    receptor : Receptor
-        Receptor the particles were released from. Its ``id`` selects
-        per-receptor inputs such as a row of an averaging-kernel table.
-    variant : str
-        Variant the footprint is computed for.
-    directory : Path or None
-        Directory that file names in transform settings are relative to,
-        normally the project directory.
-    """
-
-    receptor: Receptor
-    variant: str = ""
-    directory: Path | None = None
-
-
-@runtime_checkable
-class ParticleTransform(Protocol):
-    """
-    Interface for a transform: any object with ``apply(particles, context) -> DataFrame``.
-
-    ``context`` is ``None`` when the caller has none to give, as when a
-    background or transport error is computed from particles alone. A
-    transform that needs it, such as an averaging kernel read from a table,
-    raises then.
-    """
-
-    def apply(
-        self, particles: pd.DataFrame, context: TransformContext | None
-    ) -> pd.DataFrame:
-        """Return a new, reweighted particle table, leaving ``particles`` unchanged."""
-        ...
 
 
 # -- science ----------------------------------------------------------------------
@@ -448,22 +399,27 @@ class AveragingKernel(BaseModel):
         return self
 
     def kernel(
-        self, context: TransformContext | None = None
+        self, receptor: Receptor | None = None, directory: str | Path | None = None
     ) -> tuple[list[float], list[float]]:
-        """Return ``(levels, values)`` of the kernel for the receptor in ``context``."""
+        """
+        Return ``(levels, values)`` of the kernel for *receptor*.
+
+        A ``table`` is looked up by the receptor's id, and a relative
+        ``table`` path starts from *directory*.
+        """
         if self.table is None:
             assert self.levels is not None and self.values is not None
             return self.levels, self.values
-        if context is None:
+        if receptor is None:
             raise ValueError(
-                "averaging_kernel with a table needs a TransformContext to know "
-                "which receptor to look up."
+                "averaging_kernel with a table needs the receptor to know which "
+                "kernel to look up."
             )
         path = self.table
-        if context.directory is not None and not Path(path).is_absolute():
-            path = str(Path(context.directory) / path)
+        if directory is not None and not Path(path).is_absolute():
+            path = str(Path(directory) / path)
         kernels = _read_kernel_table(path, os.stat(path).st_mtime)
-        rid = str(context.receptor.id)
+        rid = str(receptor.id)
         try:
             levels, values = kernels[rid]
         except KeyError:
@@ -474,10 +430,13 @@ class AveragingKernel(BaseModel):
         return levels.tolist(), values.tolist()
 
     def apply(
-        self, particles: pd.DataFrame, context: TransformContext | None = None
+        self,
+        particles: pd.DataFrame,
+        receptor: Receptor | None = None,
+        directory: str | Path | None = None,
     ) -> pd.DataFrame:
         """Return the particles with ``foot`` weighted by the averaging kernel."""
-        levels, values = self.kernel(context)
+        levels, values = self.kernel(receptor, directory)
         weights = ak_weights(particles, levels, values, self.coordinate)
         out = particles.copy()
         out["ak_weight"] = weights
@@ -512,15 +471,18 @@ class PressureWeighting(BaseModel):
     )
 
     def apply(
-        self, particles: pd.DataFrame, context: TransformContext | None = None
+        self,
+        particles: pd.DataFrame,
+        receptor: Receptor | None = None,
+        directory: str | Path | None = None,
     ) -> pd.DataFrame:
         """
         Return the particles with ``foot`` weighted by pressure.
 
-        The receptor's ``altitude_ref`` is read from ``context``. Without a
-        context the release heights are taken to be above ground.
+        The release heights are in the receptor's ``altitude_ref``, and
+        taken to be above ground without a receptor.
         """
-        altitude_ref = context.receptor.altitude_ref if context is not None else "agl"
+        altitude_ref = receptor.altitude_ref if receptor is not None else "agl"
         xpres, pwf = particle_pwf(particles, self.surface_pressure, altitude_ref)
         out = particles.copy()
         indx = out["indx"].to_numpy()
@@ -544,7 +506,10 @@ class FirstOrderLifetime(BaseModel):
     lifetime_hours: float = Field(gt=0, description="E-folding lifetime, in hours.")
 
     def apply(
-        self, particles: pd.DataFrame, context: TransformContext | None = None
+        self,
+        particles: pd.DataFrame,
+        receptor: Receptor | None = None,
+        directory: str | Path | None = None,
     ) -> pd.DataFrame:
         """Return the particles with ``foot`` decayed by age."""
         if "time" not in particles.columns:
@@ -654,21 +619,24 @@ def dump_transform(transform: Any) -> dict[str, Any]:
 
 def apply_transforms(
     particles: pd.DataFrame,
-    transforms: list[Any],
-    context: TransformContext | None = None,
+    transforms: Sequence[Any],
+    receptor: Receptor | None = None,
+    directory: str | Path | None = None,
 ) -> pd.DataFrame:
-    """Apply ``transforms`` in order. Returns ``particles`` itself when there are none."""
+    """
+    Apply *transforms* in order, each with the receptor and the directory.
+
+    Returns ``particles`` itself when there are none.
+    """
     for transform in transforms:
-        particles = transform.apply(particles, context)
+        particles = transform.apply(particles, receptor, directory)
     return particles
 
 
 __all__ = [
     "AveragingKernel",
     "FirstOrderLifetime",
-    "ParticleTransform",
     "PressureWeighting",
-    "TransformContext",
     "ak_weights",
     "apply_transforms",
     "averaging_kernel_table",

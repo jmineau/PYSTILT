@@ -7,6 +7,7 @@ tests before merging any change to this module.
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any, cast
 
 import numpy as np
@@ -18,7 +19,7 @@ from stilt.exceptions import EmptyFootprint
 from stilt.footprint.config import FootprintConfig
 from stilt.receptors import Receptor
 from stilt.spatial import _grid_cell_starts
-from stilt.transforms import TransformContext, apply_transforms
+from stilt.transforms import apply_transforms
 
 from .io import _footprint_array
 
@@ -408,7 +409,7 @@ def calculate(
     receptor: Receptor,
     config: FootprintConfig,
     name: str = "",
-    context: TransformContext | None = None,
+    directory: str | Path | None = None,
     geometry_hash: str | None = None,
 ) -> xr.DataArray:
     """
@@ -439,9 +440,9 @@ def calculate(
         geometry, derive the grid first: ``Mesh.from_spec(config.geometry).to_grid()``.
     name : str, optional
         Name of the footprint, usually the variant name.
-    context : TransformContext, optional
-        Passed to every transform. Defaults to one holding ``receptor``
-        and ``name``, with no project directory.
+    directory : str or Path, optional
+        Where a relative file name in a transform's settings starts, such as
+        an averaging-kernel table: the project directory.
     geometry_hash : str, optional
         Hash of the geometry the grid was derived for, recorded with the
         footprint so aggregating it onto another mesh warns.
@@ -476,9 +477,7 @@ def calculate(
                 f"Transforms {unresolved} could not be rebuilt, so they "
                 "cannot be applied."
             )
-        if context is None:
-            context = TransformContext(receptor=receptor, variant=name)
-        particles = apply_transforms(particles, config.transforms, context)
+        particles = apply_transforms(particles, config.transforms, receptor, directory)
     crs = grid.crs
     xmin, xmax, xres = grid.xmin, grid.xmax, grid.xres
     ymin, ymax, yres = grid.ymin, grid.ymax, grid.yres

@@ -19,14 +19,18 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Any
+from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pandas as pd
 import xarray as xr
 
 from stilt.sampling import sample_field, vertical_dim
-from stilt.transforms import TransformContext, apply_transforms
+from stilt.transforms import apply_transforms
+
+if TYPE_CHECKING:
+    from stilt.receptors import Receptor
 
 
 @dataclass(frozen=True)
@@ -85,7 +89,8 @@ def _particle_background(particles: pd.DataFrame, field: xr.DataArray) -> pd.Ser
 def _endpoint_weights(
     particles: pd.DataFrame,
     transforms: Sequence[Any] = (),
-    context: TransformContext | None = None,
+    receptor: Receptor | None = None,
+    directory: str | Path | None = None,
 ) -> pd.Series:
     """
     Return each particle's transform weight at its endpoint, indexed by ``indx``.
@@ -97,7 +102,9 @@ def _endpoint_weights(
     """
     transforms = list(transforms)
     if transforms:
-        particles = apply_transforms(particles.assign(foot=1.0), transforms, context)
+        particles = apply_transforms(
+            particles.assign(foot=1.0), transforms, receptor, directory
+        )
         ends = particles.stilt.endpoints()
         weights = ends["foot"].to_numpy(dtype=float)
     else:
@@ -133,7 +140,8 @@ def background(
     field: xr.DataArray | pd.Series,
     *,
     transforms: Sequence[Any] = (),
-    context: TransformContext | None = None,
+    receptor: Receptor | None = None,
+    directory: str | Path | None = None,
 ) -> Background:
     """
     Return the background mole fraction at a receptor.
@@ -161,10 +169,12 @@ def background(
         The footprint's particle transforms (``sim.variant.footprint.transforms``), so
         the background is weighted like the footprint and adds to its
         enhancement. A tower receptor has none.
-    context : TransformContext, optional
-        Context to apply the transforms with
-        (``project.transform_context(sim)``). Required by an averaging kernel read
-        from a table.
+    receptor : Receptor, optional
+        The receptor (``sim.receptor``), for the transforms. An averaging
+        kernel read from a table needs it, and pressure weighting reads its
+        ``altitude_ref``.
+    directory : str or Path, optional
+        Where a kernel table's relative path starts (``project.directory``).
 
     Returns
     -------
@@ -182,7 +192,7 @@ def background(
         per_particle = field.rename("background")
     else:
         per_particle = _particle_background(particles, field)
-    weights = _endpoint_weights(particles, transforms, context)
+    weights = _endpoint_weights(particles, transforms, receptor, directory)
     weights = weights / len(weights)
     filled = _fill_missing(per_particle, weights)
     value = float((weights * filled).sum()) if np.isfinite(filled).any() else np.nan

@@ -43,7 +43,6 @@ from stilt.receptors import (
 )
 from stilt.receptors.table import COLUMNS, ROW_COLUMNS
 from stilt.simulation import SimID, Simulation
-from stilt.transforms import TransformContext
 from stilt.variants import Variant, resolve
 
 if TYPE_CHECKING:
@@ -412,12 +411,6 @@ class Project:
                 f.key for f in self.output.footprint_sets() if f.hash not in feet
             ],
         }
-
-    def transform_context(self, sim: Simulation) -> TransformContext:
-        """Return the context a simulation's transforms run with: its receptor, variant, and this project's directory."""
-        return TransformContext(
-            receptor=sim.receptor, variant=sim.variant.name, directory=self.directory
-        )
 
     @cached_property
     def plot(self) -> ProjectPlotAccessor:

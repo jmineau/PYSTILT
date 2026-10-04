@@ -8,6 +8,13 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Transforms take the receptor and the project directory (breaking). A
+  transform's method is `apply(particles, receptor=None, directory=None)`;
+  `TransformContext`, the `ParticleTransform` protocol, and
+  `Project.transform_context` are gone. `calculate`,
+  `Simulation.generate_footprint`, `background` and `transport_error` take
+  `receptor=` (where they do not already) and `directory=` in place of
+  `context=` (#134).
 - Receptors are checked once (#134). A receptor built from the rows of a
   checked table (`receptors.csv`, `receptors_from_frame`) no longer runs
   the same checks again. `receptors_from_rows(rows)` builds every receptor
