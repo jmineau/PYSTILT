@@ -199,7 +199,7 @@ HYSPLIT_SETUP_TYPES = {
         [
             "cmass", "conage", "cpack", "ichem", "idsp", "initd", "k10m",
             "kagl", "kbls", "kblt", "kdef", "khinp", "khmax", "kmix0", "kmixd",
-            "kmsl", "kpuff", "krand", "krnd", "kspl", "kwet", "kzmix", "maxdim",
+            "kpuff", "krand", "krnd", "kspl", "kwet", "kzmix", "maxdim",
             "maxpar", "mgmin", "mhrs", "nbptyp", "ncycl", "ndump", "ninit",
             "nstr", "numpar", "nturb", "nver", "outdt", "rhb", "rht", "seed",
             "tout", "zicontroltf",
@@ -212,7 +212,7 @@ HYSPLIT_SETUP_TYPES = {
 
 
 def test_hysplit_setup_types_cover_every_setup_entry():
-    entries = setup_entries(HysplitConfig(seed=1, krand=2, kmsl=0))
+    entries = setup_entries(HysplitConfig(seed=1, krand=2))
     assert set(entries) == set(HYSPLIT_SETUP_TYPES)
 
 
@@ -264,17 +264,18 @@ def test_krand_rejects_undocumented_values(krand):
         HysplitConfig(krand=krand)
 
 
-def test_each_setting_records_the_file_it_goes_to():
-    from stilt.transport.hysplit.config import fields_in
+def test_the_driver_names_only_real_settings_outside_setup_cfg():
+    """
+    Every setting the driver keeps out of SETUP.CFG exists.
 
-    assert fields_in("CONTROL") == ["n_hours", "emisshrs", "w_option", "z_top"]
-    assert fields_in("ZICONTROL") == ["ziscale"]
-    assert fields_in("WINDERR") == ["siguverr", "tluverr", "zcoruverr", "horcoruverr"]
-    assert fields_in("ZIERR") == ["sigzierr", "tlzierr", "horcorzierr"]
-    assert fields_in("PYSTILT") == ["hnf_plume", "exe_dir", "data_dir"]
-    files = {"SETUP.CFG", "CONTROL", "ZICONTROL", "WINDERR", "ZIERR", "PYSTILT"}
-    assert sum(len(fields_in(f)) for f in files) == len(HysplitConfig.model_fields)
-    assert fields_in("SETUP.CFG")[:2] == ["numpar", "varsiwant"]
+    A setting left off that list goes to SETUP.CFG, where
+    test_hysplit_setup_types_cover_every_setup_entry catches one HYSPLIT
+    does not know.
+    """
+    from stilt.transport.hysplit.driver import NOT_IN_SETUP
+
+    assert set(HysplitConfig.model_fields) >= NOT_IN_SETUP
+    assert list(setup_entries(HysplitConfig()))[:2] == ["numpar", "varsiwant"]
 
 
 def test_met_config_construction(tmp_path):

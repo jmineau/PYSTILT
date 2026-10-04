@@ -1,12 +1,9 @@
 """
 HYSPLIT's config: every setting that shapes the particles HYSPLIT makes.
 
-:class:`HysplitConfig` holds them. Most are HYSPLIT's own (written to its
-``SETUP.CFG``, ``CONTROL``, ``ZICONTROL``, ``WINDERR``, and ``ZIERR`` files,
-under the same names); a few are used by PYSTILT itself. Each field records
-which, as ``json_schema_extra={"file": ...}``, and :func:`fields_in` lists
-them. The HYSPLIT driver writes the files from that, so adding a setting is
-one field.
+:class:`HysplitConfig` holds them. Most are HYSPLIT's own, under HYSPLIT's
+names; a few are used by PYSTILT itself. Which input file each goes to is
+the HYSPLIT driver's business (:mod:`stilt.transport.hysplit.driver`).
 """
 
 from __future__ import annotations
@@ -18,17 +15,15 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 from stilt.particles import HNF_PLUME_COLUMNS
 
-#: Where a setting goes: one of HYSPLIT's input files, or PYSTILT itself.
-SETUP: dict[str, Any] = {"file": "SETUP.CFG"}
-CONTROL: dict[str, Any] = {"file": "CONTROL"}
-ZICONTROL: dict[str, Any] = {"file": "ZICONTROL"}
-WINDERR: dict[str, Any] = {"file": "WINDERR"}
-ZIERR: dict[str, Any] = {"file": "ZIERR"}
-PYSTILT: dict[str, Any] = {"file": "PYSTILT"}
-
 #: Most hourly ZICONTROL factors HYSPLIT can hold (``ZIPRESC(150)`` in
 #: hymodelc.F); it reads more without a bounds check.
 MAX_ZISCALE_HOURS = 150
+
+#: The wind-error settings, in the order of the lines of HYSPLIT's WINDERR file.
+WIND_ERROR_SETTINGS = ("siguverr", "tluverr", "zcoruverr", "horcoruverr")
+
+#: The mixed-layer error settings, in the order of the lines of HYSPLIT's ZIERR file.
+ZI_ERROR_SETTINGS = ("sigzierr", "tlzierr", "horcorzierr")
 
 
 class HysplitConfig(BaseModel):
@@ -56,7 +51,6 @@ class HysplitConfig(BaseModel):
     n_hours: int = Field(
         -24,
         description="Length of each simulation, in hours. Negative runs backward in time.",
-        json_schema_extra=CONTROL,
     )
     numpar: int = Field(
         200,
@@ -64,7 +58,6 @@ class HysplitConfig(BaseModel):
             "Number of particles released per simulation. More particles give a "
             "less noisy footprint and take longer to run."
         ),
-        json_schema_extra=SETUP,
     )
     hnf_plume: bool = Field(
         True,
@@ -75,7 +68,6 @@ class HysplitConfig(BaseModel):
             "``varsiwant`` to include ``dens``, ``tlgr``, ``sigw``, ``foot``, "
             "``mlht``, and ``samt``."
         ),
-        json_schema_extra=PYSTILT,
     )
     exe_dir: Path | None = Field(
         None,
@@ -86,7 +78,6 @@ class HysplitConfig(BaseModel):
             "``PARTICLE_STILT.DAT`` gives exact release heights for multipoint "
             "and slant receptors."
         ),
-        json_schema_extra=PYSTILT,
     )
     data_dir: Path | None = Field(
         None,
@@ -97,7 +88,6 @@ class HysplitConfig(BaseModel):
             "tables change the particles, so each table that differs from the "
             "bundled one is recorded with the run by its checksum."
         ),
-        json_schema_extra=PYSTILT,
     )
     varsiwant: list[
         Literal[
@@ -151,7 +141,6 @@ class HysplitConfig(BaseModel):
             "The default is the set footprints need, plus ``pres`` for "
             "pressure weighting."
         ),
-        json_schema_extra=SETUP,
     )
     capemin: float = Field(
         -1.0,
@@ -160,22 +149,18 @@ class HysplitConfig(BaseModel):
             "scheme, and a positive value mixes vertically when CAPE exceeds "
             "it, in J/kg."
         ),
-        json_schema_extra=SETUP,
     )
     cmass: int = Field(
         0,
         description="Compute grid concentrations (0) or grid mass (1).",
-        json_schema_extra=SETUP,
     )
     conage: int = Field(
         48,
         description="Particle age at which particles and puffs convert, in hours.",
-        json_schema_extra=SETUP,
     )
     cpack: int = Field(
         1,
         description="Packing of the binary concentration grid.",
-        json_schema_extra=SETUP,
     )
     delt: float = Field(
         1.0,
@@ -183,78 +168,60 @@ class HysplitConfig(BaseModel):
             "Integration time step, in minutes. 0 lets HYSPLIT choose; a "
             "negative value sets the minimum step."
         ),
-        json_schema_extra=SETUP,
     )
     dxf: float = Field(
         1.0,
         description="Horizontal x-grid offset factor for ensemble runs.",
-        json_schema_extra=SETUP,
     )
     dyf: float = Field(
         1.0,
         description="Horizontal y-grid offset factor for ensemble runs.",
-        json_schema_extra=SETUP,
     )
     dzf: float = Field(
         0.01,
         description="Vertical offset factor for ensemble runs (0.01 is about 250 m).",
-        json_schema_extra=SETUP,
     )
     efile: str = Field(
         "",
         description="Name of a time-varying emissions file. Blank uses none.",
-        json_schema_extra=SETUP,
     )
     emisshrs: float = Field(
         0.01,
         description="Duration of the particle release, in hours.",
-        json_schema_extra=CONTROL,
     )
     frhmax: float = Field(
         3.0,
         description="Maximum horizontal puff-rounding parameter.",
-        json_schema_extra=SETUP,
     )
     frhs: float = Field(
         1.0,
         description="Horizontal puff-rounding fraction for merging.",
-        json_schema_extra=SETUP,
     )
     frme: float = Field(
         0.1,
         description="Mass-rounding fraction for enhanced merging.",
-        json_schema_extra=SETUP,
     )
     frmr: float = Field(
         0.0,
         description="Mass-removal fraction for enhanced merging.",
-        json_schema_extra=SETUP,
     )
-    frts: float = Field(
-        0.1, description="Temporal puff-rounding fraction.", json_schema_extra=SETUP
-    )
-    frvs: float = Field(
-        0.01, description="Vertical puff-rounding fraction.", json_schema_extra=SETUP
-    )
+    frts: float = Field(0.1, description="Temporal puff-rounding fraction.")
+    frvs: float = Field(0.01, description="Vertical puff-rounding fraction.")
     hscale: float = Field(
         10800.0,
         description="Horizontal Lagrangian timescale, in seconds.",
-        json_schema_extra=SETUP,
     )
     ichem: int = Field(
         8,
         description="HYSPLIT chemistry and output mode. 8 is the STILT emulation mode.",
-        json_schema_extra=SETUP,
     )
     idsp: int = Field(
         2,
         description="Particle dispersion scheme: 1 for HYSPLIT, 2 for STILT.",
-        json_schema_extra=SETUP,
     )
     initd: int = Field(
         0,
         description="Initial distribution as particles, puffs, or a mix. 0 is 3D particles.",
-        json_schema_extra=SETUP,
     )
     k10m: int = Field(
         1,
@@ -262,12 +229,10 @@ class HysplitConfig(BaseModel):
             "Use the 10 m winds and 2 m temperature as the lowest meteorology "
             "level (1) or skip them (0)."
         ),
-        json_schema_extra=SETUP,
     )
     kagl: int = Field(
         1,
         description="Write trajectory heights above ground (1) or above sea level (0).",
-        json_schema_extra=SETUP,
     )
     kbls: int = Field(
         1,
@@ -275,7 +240,6 @@ class HysplitConfig(BaseModel):
             "Derive boundary-layer stability from surface fluxes (1) or from "
             "wind and temperature profiles (2)."
         ),
-        json_schema_extra=SETUP,
     )
     kblt: int = Field(
         5,
@@ -283,27 +247,22 @@ class HysplitConfig(BaseModel):
             "Boundary-layer turbulence scheme: 1 Beljaars, 2 Kantha-Clayson, "
             "3 TKE, 4 measured variances, 5 Hanna."
         ),
-        json_schema_extra=SETUP,
     )
     kdef: int = Field(
         0,
         description="Horizontal turbulence from vertical mixing (0) or wind deformation (1).",
-        json_schema_extra=SETUP,
     )
     khinp: int = Field(
         0,
         description="Age, in hours, given to particles read from ``pinpf``. 0 keeps their own age.",
-        json_schema_extra=SETUP,
     )
     khmax: int = Field(
         9999,
         description="Maximum particle or trajectory age, in hours.",
-        json_schema_extra=SETUP,
     )
     kmix0: int = Field(
         150,
         description="Minimum mixed-layer depth, in meters.",
-        json_schema_extra=SETUP,
     )
     kmixd: int = Field(
         3,
@@ -312,21 +271,10 @@ class HysplitConfig(BaseModel):
             "temperature profile, 2 from the TKE profile, 3 from a modified "
             "Richardson number."
         ),
-        json_schema_extra=SETUP,
-    )
-    kmsl: Literal[0, 1] | None = Field(
-        None,
-        description=(
-            "Read release heights as above ground (0) or above sea level (1). "
-            "Unset takes it from each receptor's ``altitude_ref``, and a value "
-            "that disagrees with a receptor is an error."
-        ),
-        json_schema_extra=SETUP,
     )
     kpuff: int = Field(
         0,
         description="Horizontal puff growth: linear (0) or empirical (1).",
-        json_schema_extra=SETUP,
     )
     krand: Literal[0, 1, 2, 3, 4, 10, 11, 12, 13] = Field(
         4,
@@ -341,7 +289,6 @@ class HysplitConfig(BaseModel):
             "check this value and other values silently break the turbulence, "
             "so PYSTILT rejects them."
         ),
-        json_schema_extra=SETUP,
     )
     seed: int | None = Field(
         None,
@@ -356,20 +303,15 @@ class HysplitConfig(BaseModel):
             "with ``seed + k``, so realization 0 shares the unperturbed run's "
             "seed, as STILT-R's error run does."
         ),
-        json_schema_extra=SETUP,
     )
-    krnd: int = Field(
-        6, description="Enhanced-merging interval, in hours.", json_schema_extra=SETUP
-    )
+    krnd: int = Field(6, description="Enhanced-merging interval, in hours.")
     kspl: int = Field(
         1,
         description="Standard puff-splitting interval, in hours.",
-        json_schema_extra=SETUP,
     )
     kwet: int = Field(
         1,
         description="Precipitation from the meteorology (1) or from an external ARL file (2).",
-        json_schema_extra=SETUP,
     )
     kzmix: int = Field(
         0,
@@ -377,42 +319,34 @@ class HysplitConfig(BaseModel):
             "Vertical mixing adjustment: 0 none, 1 a single PBL-average value, "
             "2 scale by ``tvmix``."
         ),
-        json_schema_extra=SETUP,
     )
     maxdim: int = Field(
         1,
         description="Maximum number of pollutant species carried on one particle.",
-        json_schema_extra=SETUP,
     )
     maxpar: int | None = Field(
         None,
         description="Maximum number of particles in a simulation. Unset uses ``numpar``.",
-        json_schema_extra=SETUP,
     )
     mgmin: int = Field(
         10,
         description="Minimum meteorological subgrid size, in grid points.",
-        json_schema_extra=SETUP,
     )
     mhrs: int = Field(
         9999,
         description="Trajectory restart duration limit, in hours.",
-        json_schema_extra=SETUP,
     )
     nbptyp: int = Field(
         1,
         description="Number of particle-size bins per pollutant type.",
-        json_schema_extra=SETUP,
     )
     ncycl: int = Field(
         0,
         description="Cycle time of the particle dump file, in hours.",
-        json_schema_extra=SETUP,
     )
     ndump: int = Field(
         0,
         description="Interval between particle dumps, in hours. 0 writes none.",
-        json_schema_extra=SETUP,
     )
     ninit: int = Field(
         1,
@@ -420,61 +354,47 @@ class HysplitConfig(BaseModel):
             "Particle initialization from ``pinpf``: 0 none, 1 once at the "
             "start, 2 add every hour, 3 replace every hour."
         ),
-        json_schema_extra=SETUP,
     )
-    nstr: int = Field(
-        0, description="Trajectory restart interval, in hours.", json_schema_extra=SETUP
-    )
+    nstr: int = Field(0, description="Trajectory restart interval, in hours.")
     nturb: int = Field(
         0,
         description="Turbulence on (0) or off (1).",
-        json_schema_extra=SETUP,
     )
-    nver: int = Field(
-        0, description="Trajectory vertical split number.", json_schema_extra=SETUP
-    )
+    nver: int = Field(0, description="Trajectory vertical split number.")
     outdt: int = Field(
         0,
         description=(
             "Interval between particle outputs in ``PARTICLE_STILT.DAT``, in "
             "minutes. 0 writes every time step and a negative value writes none."
         ),
-        json_schema_extra=SETUP,
     )
     p10f: float = Field(
         1.0,
         description="Dust threshold velocity sensitivity factor.",
-        json_schema_extra=SETUP,
     )
     pinbc: str = Field(
         "",
         description="Particle input file for time-varying boundary conditions.",
-        json_schema_extra=SETUP,
     )
     pinpf: str = Field(
         "",
         description="Particle input file for initialization or boundary-condition runs.",
-        json_schema_extra=SETUP,
     )
     poutf: str = Field(
         "",
         description="Particle output file name.",
-        json_schema_extra=SETUP,
     )
     qcycle: float = Field(
         0.0,
         description="Emission cycling period, in hours. 0 turns cycling off.",
-        json_schema_extra=SETUP,
     )
     rhb: int = Field(
         80,
         description="Relative humidity that defines a cloud base, in percent.",
-        json_schema_extra=SETUP,
     )
     rht: int = Field(
         60,
         description="Relative humidity that defines a cloud top, in percent.",
-        json_schema_extra=SETUP,
     )
     splitf: float = Field(
         1.0,
@@ -482,17 +402,14 @@ class HysplitConfig(BaseModel):
             "Factor for the automatic horizontal splitting size. A negative "
             "value turns the automatic sizing off."
         ),
-        json_schema_extra=SETUP,
     )
     tkerd: float = Field(
         0.18,
         description="Ratio w'²/(u'²+v'²) of TKE components when unstable.",
-        json_schema_extra=SETUP,
     )
     tkern: float = Field(
         0.18,
         description="Ratio w'²/(u'²+v'²) of TKE components when stable.",
-        json_schema_extra=SETUP,
     )
     tlfrac: float = Field(
         0.1,
@@ -500,22 +417,18 @@ class HysplitConfig(BaseModel):
             "Fraction of the vertical Lagrangian timescale used as the time "
             "step of the STILT dispersion scheme."
         ),
-        json_schema_extra=SETUP,
     )
     tout: int = Field(
         0,
         description="Trajectory output interval, in minutes.",
-        json_schema_extra=SETUP,
     )
     tratio: float = Field(
         0.75,
         description="Advection stability ratio (fraction of a grid cell per time step).",
-        json_schema_extra=SETUP,
     )
     tvmix: float = Field(
         1.0,
         description="Vertical mixing scale factor, used by the ``kzmix`` scaling modes.",
-        json_schema_extra=SETUP,
     )
     veght: float = Field(
         0.5,
@@ -524,17 +437,14 @@ class HysplitConfig(BaseModel):
             "A value of 1 or less is a fraction of the mixed-layer height; a "
             "larger value is meters above ground."
         ),
-        json_schema_extra=SETUP,
     )
     vscale: float = Field(
         200.0,
         description="Vertical Lagrangian timescale, in seconds.",
-        json_schema_extra=SETUP,
     )
     vscaleu: float = Field(
         200.0,
         description="Vertical Lagrangian timescale in an unstable boundary layer, in seconds.",
-        json_schema_extra=SETUP,
     )
     vscales: float = Field(
         -1.0,
@@ -543,7 +453,6 @@ class HysplitConfig(BaseModel):
             "seconds. -1 uses the Hanna timescale, which varies with the "
             "turbulence, and then ``vscaleu`` is not used."
         ),
-        json_schema_extra=SETUP,
     )
     w_option: int = Field(
         0,
@@ -551,7 +460,6 @@ class HysplitConfig(BaseModel):
             "Vertical motion method: 0 the meteorology's vertical velocity, "
             "1 isobaric, 2 isentropic, 3 constant density, 4 constant sigma."
         ),
-        json_schema_extra=CONTROL,
     )
     wbbh: float = Field(
         0.0,
@@ -559,27 +467,22 @@ class HysplitConfig(BaseModel):
             "Height at which the fixed vertical velocity switches from rise to "
             "fall, in meters. Used by vertical motion option 9."
         ),
-        json_schema_extra=SETUP,
     )
     wbwf: float = Field(
         0.0,
         description="Fixed fall velocity, in m/s. Used by vertical motion options 9 and 10.",
-        json_schema_extra=SETUP,
     )
     wbwr: float = Field(
         0.0,
         description="Fixed rise velocity, in m/s. Used by vertical motion option 9.",
-        json_schema_extra=SETUP,
     )
     wvert: bool = Field(
         False,
         description="Interpolate WRF fields vertically with the WRF scheme instead of HYSPLIT's.",
-        json_schema_extra=SETUP,
     )
     z_top: float = Field(
         25000.0,
         description="Top of the model domain, in meters above ground.",
-        json_schema_extra=CONTROL,
     )
     ziscale: float | list[float] = Field(
         1.0,
@@ -592,42 +495,34 @@ class HysplitConfig(BaseModel):
             "below ``kmix0``. A negative value uses the meteorology's own PBL "
             "height where the met files carry one."
         ),
-        json_schema_extra=ZICONTROL,
     )
     siguverr: float | None = Field(
         None,
         description="Standard deviation of the horizontal wind error, in m/s.",
-        json_schema_extra=WINDERR,
     )
     tluverr: float | None = Field(
         None,
         description="Correlation timescale of the horizontal wind error, in minutes.",
-        json_schema_extra=WINDERR,
     )
     zcoruverr: float | None = Field(
         None,
         description="Vertical correlation length of the horizontal wind error, in meters.",
-        json_schema_extra=WINDERR,
     )
     horcoruverr: float | None = Field(
         None,
         description="Horizontal correlation length of the horizontal wind error, in km.",
-        json_schema_extra=WINDERR,
     )
     sigzierr: float | None = Field(
         None,
         description="Standard deviation of the mixed-layer height error, in percent.",
-        json_schema_extra=ZIERR,
     )
     tlzierr: float | None = Field(
         None,
         description="Correlation timescale of the mixed-layer height error, in minutes.",
-        json_schema_extra=ZIERR,
     )
     horcorzierr: float | None = Field(
         None,
         description="Horizontal correlation length of the mixed-layer height error, in km.",
-        json_schema_extra=ZIERR,
     )
 
     @field_validator("ziscale", mode="before")
@@ -650,7 +545,7 @@ class HysplitConfig(BaseModel):
     @model_validator(mode="after")
     def _validate_error_params(self) -> Self:
         """Require each error group to be set in full or not at all."""
-        for name, fields in (("XY", fields_in("WINDERR")), ("ZI", fields_in("ZIERR"))):
+        for name, fields in (("XY", WIND_ERROR_SETTINGS), ("ZI", ZI_ERROR_SETTINGS)):
             unset = [getattr(self, f) is None for f in fields]
             if any(unset) and not all(unset):
                 raise ValueError(
@@ -758,19 +653,9 @@ class HysplitConfig(BaseModel):
         ]
 
 
-def fields_in(file: str) -> list[str]:
-    """
-    Return the names of the settings that go to *file*, in declaration order.
-
-    *file* is ``"SETUP.CFG"``, ``"CONTROL"``, ``"ZICONTROL"``, ``"WINDERR"``,
-    ``"ZIERR"``, or ``"PYSTILT"`` for the settings PYSTILT uses itself.
-    """
-    return [
-        name
-        for name, info in HysplitConfig.model_fields.items()
-        if isinstance(info.json_schema_extra, dict)
-        and info.json_schema_extra.get("file") == file
-    ]
-
-
-__all__ = ["MAX_ZISCALE_HOURS", "HysplitConfig", "fields_in"]
+__all__ = [
+    "MAX_ZISCALE_HOURS",
+    "WIND_ERROR_SETTINGS",
+    "ZI_ERROR_SETTINGS",
+    "HysplitConfig",
+]

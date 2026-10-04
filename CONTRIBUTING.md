@@ -52,14 +52,16 @@ parameter objects to the public API.
 
 Each HYSPLIT setting is a field of `HysplitConfig`
 (`src/stilt/transport/hysplit/config.py`): a plain pydantic
-`Field(default, description=..., json_schema_extra=SETUP)`. The last
-argument says where the setting goes: `SETUP` (HYSPLIT's `SETUP.CFG`),
-`CONTROL`, `ZICONTROL`, `WINDERR`, `ZIERR`, or `PYSTILT` for a setting
-PYSTILT uses itself. The HYSPLIT driver writes each file from
-`fields_in(...)`, so a new `SETUP.CFG` entry needs only the field. A
-`CONTROL` setting also needs a line in the driver's `ControlFile` call, and
-the routing test in `tests/test_config.py` lists the fields of every file
-but `SETUP.CFG`.
+`Field(default, description=...)`. Which input file it goes to is the
+HYSPLIT driver's business (`src/stilt/transport/hysplit/driver.py`). A
+setting is a `SETUP.CFG` entry unless the driver lists it in
+`NOT_IN_SETUP`: the `CONTROL` settings (which `ControlFile` writes),
+`ziscale` (`ZICONTROL`), the wind- and mixed-layer-error groups (`WINDERR`
+and `ZIERR`, in the order of `WIND_ERROR_SETTINGS` and
+`ZI_ERROR_SETTINGS`), and the settings PYSTILT uses itself. So a new
+`SETUP.CFG` entry needs only the field, and its HYSPLIT type in the table in
+`tests/test_config.py`. Any other new setting also needs a line in the
+driver; a test fails if it would land in `SETUP.CFG` unknown to HYSPLIT.
 
 ## Adding a transport model
 
