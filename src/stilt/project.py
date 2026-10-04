@@ -27,7 +27,7 @@ import xarray as xr
 
 from stilt.config import ProjectConfig
 from stilt.execution.config import ExecutionConfig
-from stilt.footprint import Geometry, Jacobian
+from stilt.footprint import Geometry, Jacobian, jacobian
 from stilt.meteorology import Met
 from stilt.output import Output
 from stilt.particles import particles_from_table
@@ -774,15 +774,28 @@ class Simulations:
         """
         Sum the selected footprints onto a target, per time bin, as one sparse matrix.
 
-        The selection must hold one variant. Its rows are the matrix rows.
-        See :meth:`stilt.output.Footprints.jacobian`.
+        The same operation as ``foot.stilt.aggregate``, for every selected
+        footprint at once. Each footprint cell is split among the target
+        cells it overlaps in proportion to area, time layers are summed
+        within each of *time_bins*, and cells or layers outside the target
+        or the bins are dropped. The selection must hold one variant.
 
         Parameters
         ----------
         target : Geometry
             Where the fluxes are: a grid, mesh, or set of zones.
         time_bins : pandas.IntervalIndex
-            Flux time bins, closed on the left.
+            Flux time bins, such as a flux inventory's steps. They must be
+            closed on the left (``closed="left"``): each bin holds the
+            footprint hours that start in it.
+
+        Returns
+        -------
+        Jacobian
+            Rows are the selected receptors with a non-empty footprint, in
+            selection order; columns are ``(time bin, target cell)``.
+            Receptors with an empty footprint are listed in ``empty``, and
+            those not run yet in ``missing``.
 
         Raises
         ------
@@ -804,7 +817,18 @@ class Simulations:
         feet = self.project.output.find_footprints(settings)
         if feet is None:
             raise ValueError(f"Variant {name!r} has no footprints yet.")
-        return feet.jacobian(target, time_bins, receptors=list(self.frame["receptor"]))
+        requested = list(dict.fromkeys(self.frame["receptor"]))
+        found = set(feet.receptors(requested))
+        present = [r for r in requested if r in found]
+        return jacobian(
+            feet.table(present),
+            feet.config,
+            target,
+            time_bins,
+            receptors=present,
+            missing=[r for r in requested if r not in found],
+            geometry_hash=feet.geometry_hash,
+        )
 
 
 __all__ = ["Project", "Simulations"]

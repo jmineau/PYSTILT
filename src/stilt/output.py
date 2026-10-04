@@ -34,7 +34,7 @@ Start from :class:`Output` and a resolved variant (``project.variants``)::
     particles.write(receptor, frame, met_files)
     feet = out.footprints(variant)
     feet.write(footprint)
-    H = feet.jacobian(target, time_bins)
+    table = feet.table()  # many footprints as one table
 """
 
 from __future__ import annotations
@@ -56,9 +56,6 @@ import yaml
 from stilt._atomic import atomic_path
 from stilt.footprint import (
     FOOTPRINT_SCHEMA,
-    Geometry,
-    Jacobian,
-    jacobian,
     read_footprint,
     write_empty_footprint,
     write_footprint,
@@ -662,61 +659,6 @@ class Footprints(_Folder):
         Returns ``None`` for an empty footprint (see :meth:`empty_reason`).
         """
         return read_footprint(self.file(receptor_id))
-
-    def jacobian(
-        self,
-        target: Geometry,
-        time_bins: pd.IntervalIndex,
-        receptors: Iterable[str] | None = None,
-    ) -> Jacobian:
-        """
-        Sum many footprints onto a target, per time bin, as one sparse matrix.
-
-        The same operation as ``foot.stilt.aggregate``, for every
-        receptor in the folder (or *receptors*) at once. Each footprint cell
-        is split among the target cells it overlaps in proportion to area,
-        time layers are summed within each of *time_bins*, and cells or
-        layers outside the target or the bins are dropped.
-
-        Parameters
-        ----------
-        target : Grid, Mesh, or Zones
-            Cells to sum onto.
-        time_bins : pandas.IntervalIndex
-            Time intervals, such as a flux inventory's steps. They must be
-            closed on the left (``closed="left"``): each bin holds the
-            footprint hours that start in it.
-        receptors : iterable of str, optional
-            Receptor ids to include. All by default.
-
-        Returns
-        -------
-        Jacobian
-            Rows are receptors with a non-empty footprint; columns are
-            ``(time bin, target cell)``.
-
-        Raises
-        ------
-        ValueError
-            If ``time_bins`` is not closed on the left.
-        """
-        if receptors is None:
-            files = _list_receptor_files(self.path, ".parquet")
-            requested = list(files)
-        else:
-            requested = list(dict.fromkeys(receptors))
-            files = _list_receptor_files(self.path, ".parquet", requested)
-        present = [r for r in requested if r in files]
-        table = _read_files(self.path, {r: files[r] for r in present}, self._empty)
-        return jacobian(
-            table,
-            self.config,
-            target,
-            time_bins,
-            receptors=present,
-            missing=[r for r in requested if r not in files],
-            geometry_hash=self.geometry_hash,
-        )
 
 
 __all__ = [

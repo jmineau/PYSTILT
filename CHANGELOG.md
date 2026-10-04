@@ -8,6 +8,11 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- `aggregate` and `jacobian` sum footprint cells through one function, so
+  binning hours and applying the overlap weights is written once.
+  `Footprints.jacobian` is gone (breaking): a selection's `jacobian` reads
+  the folder's table and calls `stilt.footprint.jacobian` itself, which
+  takes any table of footprint cells (#134).
 - Transforms take the receptor and the project directory (breaking). A
   transform's method is `apply(particles, receptor=None, directory=None)`;
   `TransformContext`, the `ParticleTransform` protocol, and
