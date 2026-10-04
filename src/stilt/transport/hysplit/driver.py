@@ -1,4 +1,12 @@
-"""Set up and run one HYSPLIT simulation."""
+"""
+Write HYSPLIT's input files, run ``hycs_std``, and read the particles it writes.
+
+:func:`write_inputs` fills a working directory with everything
+``hycs_std`` reads, and :func:`read_particle_dat` reads the particle file
+it writes. :class:`~stilt.transport.hysplit.HysplitModel` runs the two
+around ``hycs_std`` in one directory; call them yourself to look at the
+input files of a run, or to read a ``PARTICLE_STILT.DAT`` from elsewhere.
+"""
 
 import os
 import platform
@@ -32,10 +40,10 @@ CONTROL_FILE = "CONTROL"
 SETUP_FILE = "SETUP.CFG"
 HYCS_STD_FILE = "hycs_std"
 PARTICLE_STILT_FILE = "PARTICLE_STILT.DAT"
-PARTICLE_FILE = "PARTICLE.DAT"
 WINDERR_FILE = "WINDERR"
 ZIERR_FILE = "ZIERR"
 ZICONTROL_FILE = "ZICONTROL"
+LOG_FILE = "stilt.log"
 
 #: The settings ``CONTROL`` takes; :class:`ControlFile` writes them.
 CONTROL_SETTINGS = ("n_hours", "emisshrs", "w_option", "z_top")
@@ -87,13 +95,33 @@ def _bundled_data_dir() -> Path:
     return Path(str(pkg_files("stilt.transport.hysplit") / "data"))
 
 
-def _read_particle_dat(path: Path, names: Sequence[str]) -> pd.DataFrame:
+def read_particle_dat(path: str | Path, columns: Sequence[str]) -> pd.DataFrame:
     """
-    Read a ``PARTICLE_STILT.DAT`` file, with ``names`` as its columns.
+    Read a ``PARTICLE_STILT.DAT`` file as a particle table.
 
-    ``numpy.loadtxt`` reads large files much faster than pandas and handles
-    HYSPLIT's variable-width spacing.
+    Parameters
+    ----------
+    path : str or Path
+        The file HYSPLIT wrote.
+    columns : sequence of str
+        Its columns, the ``varsiwant`` of the run, in order.
+
+    Returns
+    -------
+    pandas.DataFrame
+        One row per particle per output step, as HYSPLIT wrote them. The
+        release heights and the near-field correction are not added
+        (:func:`~stilt.transport.hysplit.finish_particles` adds them).
+
+    Raises
+    ------
+    ValueError
+        If the file has a different number of columns.
     """
+    path = Path(path)
+    names = list(columns)
+    # numpy.loadtxt reads large files much faster than pandas and handles
+    # HYSPLIT's variable-width spacing.
     with warnings.catch_warnings():
         warnings.filterwarnings(
             "ignore",
@@ -191,250 +219,167 @@ def _write_values(path: Path, values: list[float] | None) -> None:
         path.write_text("\n".join(str(v) for v in values) + "\n", encoding="utf-8")
 
 
-class HYSPLITDriver:
+def write_inputs(
+    workdir: str | Path,
+    receptor: Receptor,
+    config: HysplitConfig,
+    met_files: Sequence[Path],
+) -> None:
     """
-    Run HYSPLIT's ``hycs_std`` once, for one receptor in one directory.
+    Write everything ``hycs_std`` reads for one receptor into *workdir*.
 
-    :meth:`prepare` writes the input files (``CONTROL``, ``SETUP.CFG``, and
-    the error files) and :meth:`execute` runs the binary and reads the
-    particles it writes. :class:`~stilt.transport.hysplit.HysplitModel` makes one per
-    run. Use it directly only to run HYSPLIT outside a project.
+    Links ``hycs_std`` (from ``config.exe_dir``, or the bundled build) and
+    HYSPLIT's data tables (the bundled ones, replaced by any in
+    ``config.data_dir``), and writes ``CONTROL`` and ``SETUP.CFG``, plus
+    ``ZICONTROL``, ``WINDERR``, and ``ZIERR`` when the settings call for
+    them. *workdir* is created if needed, and should be empty.
 
     Parameters
     ----------
+    workdir : str or Path
+        Directory to write into.
     receptor : Receptor
-        Receptor to release particles from.
-    params : HysplitConfig
+        Where and when particles are released. Its ``altitude_ref`` sets
+        HYSPLIT's ``KMSL``.
+    config : HysplitConfig
         Transport and error settings.
-    met_files : list of Path
+    met_files : sequence of Path
         Meteorology files, in the order HYSPLIT should read them.
-    directory : Path
-        Directory to run in. It is created if needed.
-    exe_dir : Path, optional
-        Directory holding ``hycs_std``. Defaults to ``params.exe_dir``, then
-        to the bundled build.
-    data_dir : Path, optional
-        Directory of HYSPLIT data tables that replace the bundled ones.
-        Defaults to ``params.data_dir``; without either, the bundled tables
-        are used.
+
+    Raises
+    ------
+    HYSPLITNotFoundError
+        If there is no ``hycs_std`` to link.
     """
+    workdir = Path(workdir)
+    workdir.mkdir(parents=True, exist_ok=True)
 
-    def __init__(
-        self,
-        receptor: Receptor,
-        params: HysplitConfig,
-        met_files: list[Path],
-        directory: Path,
-        exe_dir: Path | None = None,
-        data_dir: Path | None = None,
-    ):
-        self.directory = Path(directory).expanduser().resolve()
-        self.control_path = self.directory / CONTROL_FILE
-        self.setup_path = self.directory / SETUP_FILE
-        self.hycs_std_path = self.directory / HYCS_STD_FILE
-        self.log_path = self.directory / "stilt.log"
-        self.particle_stilt_path = self.directory / PARTICLE_STILT_FILE
-        self.particle_path = self.directory / PARTICLE_FILE
-        self.winderr_path = self.directory / WINDERR_FILE
-        self.zierr_path = self.directory / ZIERR_FILE
-        self.zicontrol_path = self.directory / ZICONTROL_FILE
-        self.receptor = receptor
-        self.params = params
-        self.met_files = met_files
-        # explicit argument > HysplitConfig.exe_dir > binary bundled with the package
-        chosen = exe_dir if exe_dir is not None else params.exe_dir
-        self.exe_dir = Path(chosen) if chosen is not None else _bundled_exe_dir()
-        chosen = data_dir if data_dir is not None else params.data_dir
-        self.data_dir = Path(chosen) if chosen is not None else None
-
-    def prepare(self) -> None:
-        """
-        Create the simulation directory and write HYSPLIT's input files.
-
-        Links ``hycs_std`` and the data tables into the directory and writes
-        ``CONTROL`` and ``SETUP.CFG``, plus ``ZICONTROL``, ``WINDERR``, and
-        ``ZIERR`` when the settings call for them.
-        """
-        self.directory.mkdir(parents=True, exist_ok=True)
-
-        # Symlink the binary from exe_dir and the data tables (mirrors STILT-R):
-        # the bundled tables, replaced by any in data_dir. Only hycs_std is
-        # taken from exe_dir: a custom build directory usually holds a whole
-        # HYSPLIT exec/ tree we have no business linking.
-        exe = self.exe_dir / HYCS_STD_FILE
-        if not exe.is_file():
-            raise HYSPLITNotFoundError(
-                f"No {HYCS_STD_FILE!r} executable in {self.exe_dir}. "
-                "Check HysplitConfig.exe_dir."
-            )
-        links = {HYCS_STD_FILE: exe}
-        links.update({f.name: f for f in _bundled_data_dir().iterdir()})
-        if self.data_dir is not None:  # its tables replace the bundled ones
-            links.update({f.name: f for f in self.data_dir.iterdir() if f.is_file()})
-        for name, target in links.items():
-            (self.directory / name).symlink_to(target.resolve())
-
-        # Write HYSPLIT CONTROL
-        ControlFile(
-            receptor=self.receptor,
-            n_hours=self.params.n_hours,
-            emisshrs=self.params.emisshrs,
-            w_option=self.params.w_option,
-            z_top=self.params.z_top,
-            met_files=self.met_files,
-        ).write(self.control_path)
-
-        # SETUP.CFG carries winderrtf; WINDERR / ZIERR are written only when
-        # perturbed. The directory is empty, so nothing stale needs removing.
-        self._write_setup()
-        self._write_zicontrol()
-        self._write_winderr()
-        self._write_zierr()
-
-    def execute(self, timeout: int | None = None) -> pd.DataFrame:
-        """
-        Run HYSPLIT once and read its particle output.
-
-        Parameters
-        ----------
-        timeout : int or None
-            Time limit for the run, in seconds. ``None`` waits indefinitely.
-
-        Returns
-        -------
-        pandas.DataFrame
-            The particles read from ``PARTICLE_STILT.DAT``, one column per
-            ``varsiwant`` variable. The run's log is at :attr:`log_path`.
-
-        Raises
-        ------
-        SimulationError
-            With ``reason`` ``TIMEOUT`` when the run exceeded ``timeout``;
-            the :class:`FailureReason` of a known failure message in the
-            log, or ``MET_TRUNCATED`` when a met file was cut short and the
-            particles stop before the end of the run; ``NO_PARTICLE_DATA``
-            when HYSPLIT wrote no ``PARTICLE_STILT.DAT``.
-        """
-        self._run(timeout)
-        particles = self._read_particles()
-        self._check_met_reached_end(particles)
-        return particles
-
-    # -- Private helpers -------------------------------------------------------
-
-    def _run(self, timeout: int | None) -> None:
-        """Run ``hycs_std``, writing its output to the log."""
-        with (
-            self.log_path.open("w", encoding="utf-8") as handle,
-            subprocess.Popen(
-                [str(self.hycs_std_path)],
-                cwd=self.directory,
-                stdout=handle,
-                stderr=subprocess.STDOUT,
-                start_new_session=True,
-            ) as proc,
-        ):
-            try:
-                proc.wait(timeout=timeout)
-            except subprocess.TimeoutExpired as e:
-                self._terminate_process(proc)
-                raise SimulationError(
-                    f"HYSPLIT ran longer than the {timeout} s timeout.",
-                    reason=FailureReason.TIMEOUT,
-                ) from e
-        self._check_log_for_failure()
-
-    def _terminate_process(self, proc: subprocess.Popen[Any]) -> None:
-        """Stop a HYSPLIT process group with SIGTERM, then SIGKILL if it does not exit."""
-        try:
-            os.killpg(proc.pid, signal.SIGTERM)
-        except ProcessLookupError:
-            return
-        try:
-            proc.wait(timeout=3)
-            return
-        except subprocess.TimeoutExpired:
-            pass
-        try:
-            os.killpg(proc.pid, signal.SIGKILL)
-        except ProcessLookupError:
-            return
-        try:
-            proc.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            proc.wait()
-
-    def _check_log_for_failure(self) -> None:
-        """Raise if the log shows a known HYSPLIT failure."""
-        reason = failure_in(self.log_path.read_text(encoding="utf-8", errors="replace"))
-        if reason is not None:
-            raise SimulationError(f"HYSPLIT failed ({reason}).", reason=reason)
-
-    def _check_met_reached_end(self, particles: pd.DataFrame) -> None:
-        """
-        Raise if a met file was cut short and no particle reaches the end of the run.
-
-        HYSPLIT only warns when a met file holds one time period, and its
-        particles stop where the met runs out. The warning alone is not a
-        failure, since the damaged file may cover hours the particles never
-        reach. Particles that leave the met domain do not trigger this
-        either, unless the warning is also in the log.
-        """
-        if particles.empty:
-            return
-        log = self.log_path.read_text(encoding="utf-8", errors="replace")
-        if MET_TRUNCATED_WARNING not in log:
-            return
-        end = abs(self.params.n_hours) * 60
-        reach = float(np.abs(particles["time"].to_numpy()).max())
-        if reach >= end - max(self.params.outdt, 0):
-            return
-        with self.log_path.open("a", encoding="utf-8") as handle:
-            handle.write(
-                f"Meteorology ends early: the particles stop {reach / 60:g} h "
-                f"into a {end / 60:g} h run.\n"
-            )
-        raise SimulationError(
-            f"Meteorology ends early: the particles stop {reach / 60:g} h into a "
-            f"{end / 60:g} h run.",
-            reason=FailureReason.MET_TRUNCATED,
+    # Link the binary and the data tables, as STILT-R does. Only hycs_std is
+    # taken from exe_dir: a custom build directory usually holds a whole
+    # HYSPLIT exec/ tree.
+    exe_dir = Path(config.exe_dir) if config.exe_dir is not None else _bundled_exe_dir()
+    exe = exe_dir / HYCS_STD_FILE
+    if not exe.is_file():
+        raise HYSPLITNotFoundError(
+            f"No {HYCS_STD_FILE!r} executable in {exe_dir}. Check exe_dir."
         )
+    links = {HYCS_STD_FILE: exe}
+    links.update({f.name: f for f in _bundled_data_dir().iterdir()})
+    if config.data_dir is not None:  # its tables replace the bundled ones
+        links.update(
+            {f.name: f for f in Path(config.data_dir).iterdir() if f.is_file()}
+        )
+    for name, target in links.items():
+        (workdir / name).symlink_to(target.resolve())
 
-    def _read_particles(self) -> pd.DataFrame:
-        """Read ``PARTICLE_STILT.DAT``."""
-        particle_path = self.particle_stilt_path
-        if not particle_path.exists():
+    ControlFile(
+        receptor=receptor,
+        n_hours=config.n_hours,
+        emisshrs=config.emisshrs,
+        w_option=config.w_option,
+        z_top=config.z_top,
+        met_files=list(met_files),
+    ).write(workdir / CONTROL_FILE)
+
+    entries = setup_entries(config)
+    # HYSPLIT's KMSL: 0 for heights above ground, 1 above sea level.
+    entries["kmsl"] = 1 if receptor.altitude_ref == "msl" else 0
+    entries["ivmax"] = len(config.varsiwant)  # number of output variables
+    entries["winderrtf"] = winderrtf(config)
+    setup = NameList("SETUP")
+    setup.update(entries)
+    setup.write(workdir / SETUP_FILE)
+
+    factors = ziscale_factors(config)
+    if factors is not None:
+        (workdir / ZICONTROL_FILE).write_text(
+            "\n".join([str(len(factors)), *(str(v) for v in factors)]) + "\n"
+        )
+    _write_values(workdir / WINDERR_FILE, winderr(config))
+    _write_values(workdir / ZIERR_FILE, zierr(config))
+
+
+def _run_hycs_std(workdir: Path, timeout: int | None) -> None:
+    """
+    Run the ``hycs_std`` in *workdir*, writing its output to ``stilt.log``.
+
+    Raises
+    ------
+    SimulationError
+        With ``reason`` ``TIMEOUT`` when the run exceeded *timeout*
+        seconds, or the :class:`FailureReason` of a known failure message in
+        the log.
+    """
+    log_path = workdir / LOG_FILE
+    with (
+        log_path.open("w", encoding="utf-8") as handle,
+        subprocess.Popen(
+            [str(workdir / HYCS_STD_FILE)],
+            cwd=workdir,
+            stdout=handle,
+            stderr=subprocess.STDOUT,
+            start_new_session=True,
+        ) as proc,
+    ):
+        try:
+            proc.wait(timeout=timeout)
+        except subprocess.TimeoutExpired as e:
+            _terminate(proc)
             raise SimulationError(
-                f"HYSPLIT wrote no {particle_path.name}.",
-                reason=FailureReason.NO_PARTICLE_DATA,
-            )
+                f"HYSPLIT ran longer than the {timeout} s timeout.",
+                reason=FailureReason.TIMEOUT,
+            ) from e
+    reason = failure_in(log_path.read_text(encoding="utf-8", errors="replace"))
+    if reason is not None:
+        raise SimulationError(f"HYSPLIT failed ({reason}).", reason=reason)
 
-        return _read_particle_dat(particle_path, self.params.varsiwant)
 
-    def _write_setup(self) -> None:
-        """Write ``SETUP.CFG``."""
-        entries = setup_entries(self.params)
-        # HYSPLIT's KMSL: 0 for heights above ground, 1 above sea level.
-        entries["kmsl"] = 1 if self.receptor.altitude_ref == "msl" else 0
-        entries["ivmax"] = len(self.params.varsiwant)  # number of output variables
-        entries["winderrtf"] = winderrtf(self.params)
+def _terminate(proc: subprocess.Popen[Any]) -> None:
+    """Stop a HYSPLIT process group with SIGTERM, then SIGKILL if it does not exit."""
+    try:
+        os.killpg(proc.pid, signal.SIGTERM)
+    except ProcessLookupError:
+        return
+    try:
+        proc.wait(timeout=3)
+        return
+    except subprocess.TimeoutExpired:
+        pass
+    try:
+        os.killpg(proc.pid, signal.SIGKILL)
+    except ProcessLookupError:
+        return
+    try:
+        proc.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        proc.wait()
 
-        nl = NameList("SETUP")
-        nl.update(entries)
-        nl.write(self.setup_path)
 
-    def _write_winderr(self) -> None:
-        """Write ``WINDERR`` when wind perturbations are enabled."""
-        _write_values(self.winderr_path, winderr(self.params))
+def _check_met_reached_end(
+    particles: pd.DataFrame, log_path: Path, config: HysplitConfig
+) -> None:
+    """
+    Raise if a met file was cut short and no particle reaches the end of the run.
 
-    def _write_zierr(self) -> None:
-        """Write ``ZIERR`` when mixed-layer perturbations are enabled."""
-        _write_values(self.zierr_path, zierr(self.params))
-
-    def _write_zicontrol(self) -> None:
-        """Write ``ZICONTROL`` when ``ziscale`` scales the mixed layer."""
-        values = ziscale_factors(self.params)
-        if values is None:
-            return
-        text = "\n".join([str(len(values)), *(str(v) for v in values)]) + "\n"
-        self.zicontrol_path.write_text(text)
+    HYSPLIT only warns when a met file holds one time period, and its
+    particles stop where the met runs out. The warning alone is not a
+    failure, since the damaged file may cover hours the particles never
+    reach. Particles that leave the met domain do not trigger this either,
+    unless the warning is also in the log.
+    """
+    if particles.empty:
+        return
+    log = log_path.read_text(encoding="utf-8", errors="replace")
+    if MET_TRUNCATED_WARNING not in log:
+        return
+    end = abs(config.n_hours) * 60
+    reach = float(np.abs(particles["time"].to_numpy()).max())
+    if reach >= end - max(config.outdt, 0):
+        return
+    message = (
+        f"Meteorology ends early: the particles stop {reach / 60:g} h into a "
+        f"{end / 60:g} h run."
+    )
+    with log_path.open("a", encoding="utf-8") as handle:
+        handle.write(message + "\n")
+    raise SimulationError(message, reason=FailureReason.MET_TRUNCATED)

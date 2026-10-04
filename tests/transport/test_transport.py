@@ -46,20 +46,29 @@ def test_the_settings_record_the_model_that_makes_the_particles(tmp_path):
     assert variant.model.version == model.version(variant.transport)
 
 
-class _FakeDriver:
-    """Stands in for HYSPLITDriver: records what it was built with."""
+def _fake_hysplit(monkeypatch) -> dict:
+    """Stand in for writing the inputs, running hycs_std, and reading its particles; return what they were given."""
+    from stilt.transport.hysplit import model as model_module
 
-    built: dict = {}
+    seen: dict = {}
 
-    def __init__(self, **kwargs):
-        _FakeDriver.built = kwargs
+    def write_inputs(workdir, receptor, config, met_files):
+        workdir.mkdir(parents=True)
+        seen.update(workdir=workdir, met_files=met_files)
 
-    def prepare(self):
-        _FakeDriver.built["prepared"] = True
+    def run_hycs_std(workdir, timeout):
+        seen["timeout"] = timeout
+        (workdir / "stilt.log").write_text("")
+        (workdir / "PARTICLE_STILT.DAT").write_text("")
 
-    def execute(self, timeout=None):
-        _FakeDriver.built.update(timeout=timeout)
-        return pd.DataFrame({"indx": [1]})
+    monkeypatch.setattr(model_module, "write_inputs", write_inputs)
+    monkeypatch.setattr(model_module, "_run_hycs_std", run_hycs_std)
+    monkeypatch.setattr(
+        model_module,
+        "read_particle_dat",
+        lambda path, columns: pd.DataFrame({"indx": [1]}),
+    )
+    return seen
 
 
 class _FakeMet:
@@ -77,9 +86,7 @@ class _FakeMet:
 def test_hysplit_model_reads_the_met_in_place_and_records_the_source(
     tmp_path, point_receptor, monkeypatch
 ):
-    from stilt.transport.hysplit import model as model_module
-
-    monkeypatch.setattr(model_module, "HYSPLITDriver", _FakeDriver)
+    seen = _fake_hysplit(monkeypatch)
     source = [tmp_path / "archive" / "20230101_12"]
     cropped = [tmp_path / "crops" / "20230101_12"]
     params = HysplitConfig(n_hours=-1, hnf_plume=False)
@@ -94,10 +101,9 @@ def test_hysplit_model_reads_the_met_in_place_and_records_the_source(
 
     assert isinstance(result, ModelRun)
     assert result.met_files == source  # the record names the source files
-    assert _FakeDriver.built["met_files"] == cropped  # HYSPLIT reads the crops
-    assert _FakeDriver.built["directory"] == tmp_path / "work"
-    assert _FakeDriver.built["prepared"]
-    assert _FakeDriver.built["timeout"] == 30
+    assert seen["met_files"] == cropped  # HYSPLIT reads the crops
+    assert seen["workdir"] == tmp_path / "work"
+    assert seen["timeout"] == 30
 
 
 def test_run_particles_goes_through_the_model_the_settings_name(

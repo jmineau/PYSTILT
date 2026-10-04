@@ -9,12 +9,22 @@ from typing import TYPE_CHECKING
 
 import pandas as pd
 
+from stilt.exceptions import SimulationError
 from stilt.particles import calc_plume_dilution
 from stilt.receptors import PointReceptor
 from stilt.transport import ModelRun
 
 from .config import HysplitConfig
-from .driver import HYSPLITDriver, _bundled_data_dir
+from .driver import (
+    LOG_FILE,
+    PARTICLE_STILT_FILE,
+    _bundled_data_dir,
+    _check_met_reached_end,
+    _run_hycs_std,
+    read_particle_dat,
+    write_inputs,
+)
+from .failures import FailureReason
 from .release import add_release_heights
 
 if TYPE_CHECKING:
@@ -76,11 +86,12 @@ class HysplitModel:
     """
     HYSPLIT as a transport model, the object ``get_model("hysplit")`` returns.
 
-    :meth:`run` picks the met files a receptor needs and runs HYSPLIT
-    through a :class:`~stilt.transport.hysplit.HYSPLITDriver`, which writes the input
-    files, runs ``hycs_std``, and reads the particles. HYSPLIT reads the met
-    where it is (the cropped copies when the met is cropped), so nothing is
-    staged per run.
+    :meth:`run` picks the met files a receptor needs, writes HYSPLIT's input
+    files (:func:`~stilt.transport.hysplit.write_inputs`), runs ``hycs_std``,
+    and reads the particles it writes
+    (:func:`~stilt.transport.hysplit.read_particle_dat`). HYSPLIT reads the
+    met where it is (the cropped copies when the met is cropped), so nothing
+    is staged per run.
     """
 
     name = "hysplit"
@@ -118,16 +129,33 @@ class HysplitModel:
         workdir: Path,
         timeout: int | None = None,
     ) -> ModelRun:
-        """Write the input files, run ``hycs_std``, and return the finished particles (:func:`finish_particles`)."""
+        """
+        Run HYSPLIT for one receptor in *workdir* and return the finished particles.
+
+        The particles get their release heights and the near-field
+        correction (:func:`finish_particles`). HYSPLIT's output goes to
+        ``stilt.log`` in *workdir*.
+
+        Raises
+        ------
+        SimulationError
+            With ``reason`` ``TIMEOUT`` when the run exceeded *timeout*
+            seconds; the :class:`FailureReason` of a known failure message
+            in the log; ``MET_TRUNCATED`` when a met file was cut short and
+            the particles stop before the end of the run; or
+            ``NO_PARTICLE_DATA`` when HYSPLIT wrote no particle file.
+        """
         source = met.required_files(r_time=receptor.time, n_hours=config.n_hours)
-        driver = HYSPLITDriver(
-            directory=workdir,
-            receptor=receptor,
-            params=config,
-            met_files=met.readable(source),
-        )
-        driver.prepare()
-        particles = driver.execute(timeout=timeout)
+        write_inputs(workdir, receptor, config, met.readable(source))
+        _run_hycs_std(workdir, timeout)
+        path = workdir / PARTICLE_STILT_FILE
+        if not path.exists():
+            raise SimulationError(
+                f"HYSPLIT wrote no {PARTICLE_STILT_FILE}.",
+                reason=FailureReason.NO_PARTICLE_DATA,
+            )
+        particles = read_particle_dat(path, config.varsiwant)
+        _check_met_reached_end(particles, workdir / LOG_FILE, config)
         # The record names the source files; the crop settings are in the
         # run's settings.
         return ModelRun(

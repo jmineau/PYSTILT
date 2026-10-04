@@ -11,21 +11,13 @@ import pytest
 from stilt.execution.config import ExecutionConfig
 from stilt.transport.hysplit.config import HysplitConfig
 
+SEEN: dict = {}
 
-class _StopDriver:
-    """Stands in for HYSPLITDriver and records the timeout it was handed."""
 
-    seen: dict = {}
-
-    def __init__(self, **kwargs):
-        pass
-
-    def prepare(self):
-        pass
-
-    def execute(self, timeout=None):
-        _StopDriver.seen["timeout"] = timeout
-        raise RuntimeError("stop before running HYSPLIT")
+def _stop(workdir, timeout=None):
+    """Stands in for running hycs_std and records the timeout it was handed."""
+    SEEN["timeout"] = timeout
+    raise RuntimeError("stop before running HYSPLIT")
 
 
 class _FakeMet:
@@ -38,7 +30,7 @@ class _FakeMet:
 
 @pytest.fixture
 def sim(monkeypatch, tmp_path, point_receptor):
-    """A Simulation with the HYSPLIT driver stubbed out, and a runner for it."""
+    """A Simulation with HYSPLIT stubbed out, and a runner for it."""
     from stilt.meteorology import MetConfig
     from stilt.output import Output
     from stilt.simulation import Simulation
@@ -46,8 +38,9 @@ def sim(monkeypatch, tmp_path, point_receptor):
     from stilt.transport.hysplit import model
     from stilt.variants import Variant
 
-    monkeypatch.setattr(model, "HYSPLITDriver", _StopDriver)
-    _StopDriver.seen.clear()
+    monkeypatch.setattr(model, "write_inputs", lambda *args: None)
+    monkeypatch.setattr(model, "_run_hycs_std", _stop)
+    SEEN.clear()
     met_config = MetConfig(
         directory=tmp_path / "met", file_format="%Y%m%d_%H", file_tres="1h"
     )
@@ -82,10 +75,10 @@ def test_timeout_is_an_execution_setting():
 def test_run_particles_hands_the_model_its_timeout(sim, tmp_path):
     with pytest.raises(RuntimeError):
         _run(sim(), tmp_path, timeout=30)
-    assert _StopDriver.seen["timeout"] == 30
+    assert SEEN["timeout"] == 30
 
 
 def test_no_timeout_waits_indefinitely(sim, tmp_path):
     with pytest.raises(RuntimeError):
         _run(sim(), tmp_path)
-    assert _StopDriver.seen["timeout"] is None
+    assert SEEN["timeout"] is None

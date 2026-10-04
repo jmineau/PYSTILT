@@ -173,8 +173,9 @@ src/stilt/
                      and get_model with its MODELS table (__init__.py); one
                      subpackage per transport model, which owns its config
     hysplit/         HYSPLIT, the one model today: HysplitConfig (config.py, its
-                     parameters and where each goes), HysplitModel, the driver
-                     (CONTROL / SETUP.CFG writers), failure reasons read from
+                     parameters), HysplitModel, the driver (driver.py:
+                     write_inputs, which knows which file each setting goes
+                     to, and read_particle_dat), failure reasons read from
                      its log (failures.py), and the bundled binaries (bin/)
                      and data tables (data/)
 
