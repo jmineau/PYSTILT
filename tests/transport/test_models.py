@@ -2,36 +2,26 @@
 
 from __future__ import annotations
 
-from typing import Any, ClassVar, Self
+from typing import Any, ClassVar
 
 import pytest
-from pydantic import BaseModel, ConfigDict
 
 from stilt import transport
 from stilt.config import ProjectConfig
 from stilt.identity import read_run_settings, settings_hash
-from stilt.transport import ModelInfo
+from stilt.transport import ModelInfo, TransportConfig
 from stilt.variants import resolve
 
 GRID = {"xmin": -112, "xmax": -111, "ymin": 40, "ymax": 41, "xres": 0.1, "yres": 0.1}
 
 
-class ToyConfig(BaseModel):
-    """A second model's config, with parameters of its own."""
-
-    model_config = ConfigDict(extra="forbid")
+class ToyConfig(TransportConfig):
+    """A second model's config: its own parameters, and the base class for the rest."""
 
     UNRECORDED: ClassVar[frozenset[str]] = frozenset({"build_dir"})
 
-    n_hours: int = -24
     nparticles: int = 100
     build_dir: str | None = None
-
-    def settings(self) -> dict[str, Any]:
-        return self.model_dump(mode="json", exclude=set(self.UNRECORDED))
-
-    def realizations(self, n: int) -> list[Self]:
-        return [self.model_copy() for _ in range(n)]
 
 
 class ToyModel:
@@ -120,3 +110,13 @@ def _write(tmp_path, text):
     path = tmp_path / "config.yaml"
     path.write_text(text)
     return path
+
+
+def test_a_model_config_inherits_the_recorded_settings_and_realizations():
+    config = ToyConfig(n_hours=-6, seed=5, nparticles=10, build_dir="/opt/toy")
+
+    assert config.settings() == {"n_hours": -6, "seed": 5, "nparticles": 10}
+    assert [r.seed for r in config.realizations(3)] == [5, 6, 7]
+    assert [r.seed for r in ToyConfig().realizations(2)] == [None, None]
+    with pytest.raises(ValueError, match="extra"):
+        ToyConfig(unknown=1)

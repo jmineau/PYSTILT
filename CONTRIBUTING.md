@@ -65,10 +65,12 @@ driver; a test fails if it would land in `SETUP.CFG` unknown to HYSPLIT.
 
 ## Adding a transport model
 
-A transport model owns its config: a pydantic class of its own parameters
-that provides `n_hours`, an `UNRECORDED` set of the fields that change no
-particle, `settings()` (what a run records), and `realizations(n)`
-(`stilt.transport.TransportConfig`). The model itself names that class as
+A transport model owns its config: a subclass of
+`stilt.transport.TransportConfig` with the model's own parameters. The base
+gives `n_hours`, `seed`, an `UNRECORDED` set of the fields that change no
+particle (empty unless the subclass names some), `settings()` (what a run
+records), and `realizations(n)` (realization `k` with `seed + k`); override
+those two only where the model differs. The model itself names that class as
 `config_class` and gives `version`, `data_files`, and `run`
 (`stilt.transport.TransportModel`); `run` returns the particle table PYSTILT
 keeps (`indx`, `time` in minutes, `long`, `lati`, `zagl`, `foot`, and what the
