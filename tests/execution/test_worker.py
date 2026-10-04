@@ -22,7 +22,6 @@ from stilt.project import Project
 from stilt.receptors import PointReceptor, Receptor
 from stilt.simulation import Simulation
 from stilt.spatial import Grid
-from stilt.transforms import TransformContext
 from stilt.transport import ModelInfo, ModelRun
 from stilt.transport.hysplit import FailureReason, HysplitConfig
 from stilt.variants import Variant
@@ -148,11 +147,7 @@ def _write_footprint(sim: Simulation, *, empty: bool = False) -> None:
         feet = run.footprints(sim.variant.footprint, name=sim.variant.name)
         feet.write_empty(sim.receptor, "outside_domain", name=sim.variant.name)
     else:
-        make_footprint(
-            sim,
-            _particles(sim.receptor),
-            context=TransformContext(receptor=sim.receptor, variant=sim.variant.name),
-        )
+        make_footprint(sim, _particles(sim.receptor))
 
 
 def _model_config(tmp_path, **kwargs) -> ProjectConfig:
@@ -266,7 +261,7 @@ def _fake_run_particles(monkeypatch, calls: list[str]):
 def _fake_make_footprint(monkeypatch, calls: list[tuple[str, int]]):
     """Replace make_footprint with one that records the variant and which particle table it got."""
 
-    def fake(sim, particles, *, context):
+    def fake(sim, particles, *, directory=None):
         calls.append((sim.variant.name, id(particles)))
         _write_footprint(sim)
 
@@ -495,7 +490,7 @@ def test_a_failed_footprint_is_the_variants_own_and_the_others_still_run(
     _fake_run_particles(monkeypatch, [])
     made: list[str] = []
 
-    def fake(sim, particles, *, context):
+    def fake(sim, particles, *, directory=None):
         if sim.variant.name == "hrrr":
             raise ValueError("bad grid")
         made.append(sim.variant.name)

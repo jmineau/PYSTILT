@@ -180,7 +180,8 @@ and perturbed particle tables and the flux field:
            err.particles,
            flux,
            transforms=sim.variant.footprint.transforms,
-           context=project.transform_context(sim),
+           receptor=sim.receptor,
+           directory=project.directory,
        )
        rows.append({"receptor": sim.receptor.id, "enhancement": result.enhancement,
                     "variance": result.variance, "noise": result.noise})
@@ -188,8 +189,8 @@ and perturbed particle tables and the flux field:
 
 ``result.variance`` is the transport-error variance of the modelled
 enhancement, in the enhancement's units squared. ``result.sd`` is its
-square root. Pass the footprint's transforms and the simulation's context
-so the particles are weighted the way the footprint weights them. That
+square root. Pass the footprint's transforms, the receptor, and the
+project directory so the particles are weighted the way the footprint weights them. That
 covers the averaging kernel (including one from a per-receptor table),
 pressure weighting, and lifetime decay. For a tower receptor there is
 nothing to pass.

@@ -30,7 +30,7 @@ class ScaleFoot(BaseModel):
 
     factor: float = 1.0
 
-    def apply(self, particles, context=None):
+    def apply(self, particles, receptor=None, directory=None):
         out = particles.copy()
         out["foot"] = out["foot"] * self.factor
         return out

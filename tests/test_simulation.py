@@ -14,7 +14,7 @@ from stilt.output import Output
 from stilt.particles import particles_metadata
 from stilt.simulation import SimID, Simulation
 from stilt.spatial import Grid
-from stilt.transforms import FirstOrderLifetime, TransformContext, transform_kind
+from stilt.transforms import FirstOrderLifetime, transform_kind
 from stilt.transport import ModelInfo
 from stilt.transport.hysplit import HysplitConfig
 from stilt.transport.hysplit.model import finish_particles
@@ -79,12 +79,6 @@ def _write_particles(sim: Simulation) -> pd.DataFrame:
     folder = sim.output.particles(sim.variant)
     folder.write(sim.receptor, particles, [])
     return particles
-
-
-def _context(sim: Simulation, directory=None) -> TransformContext:
-    return TransformContext(
-        receptor=sim.receptor, variant=sim.variant.name, directory=directory
-    )
 
 
 # ---------------------------------------------------------------------------
@@ -212,7 +206,7 @@ def test_results_read_before_the_run_are_read_again_after_it(point_receptor, tmp
     with pytest.raises(FileNotFoundError):
         _ = sim.footprint
 
-    make_footprint(sim, traj, context=_context(sim))
+    make_footprint(sim, traj)
     assert sim.footprint is not None
     assert sim.footprint is sim.footprint  # kept once read
 
@@ -247,7 +241,7 @@ def test_completion_needs_particles_and_the_footprint_when_configured(
     sim = _sim(tmp_path, point_receptor, footprint=FOOT)
     traj = _write_particles(sim)
     assert sim.has_particles and not sim.is_complete()
-    make_footprint(sim, traj, context=_context(sim))
+    make_footprint(sim, traj)
     assert sim.is_complete()
     assert sim._footprint_set is not None and sim._footprint_set.name == "hrrr"
 
@@ -262,7 +256,7 @@ def test_particles_only_variant_is_complete_with_particles(point_receptor, tmp_p
 def test_written_footprint_reads_back(point_receptor, tmp_path):
     sim = _sim(tmp_path, point_receptor, footprint=FOOT)
     traj = _write_particles(sim)
-    foot = make_footprint(sim, traj, context=_context(sim))
+    foot = make_footprint(sim, traj)
     assert foot is not None and foot.stilt.name == "hrrr"
 
     again = _sim(tmp_path, point_receptor, footprint=FOOT)
@@ -280,7 +274,7 @@ def test_empty_footprint_is_recorded_with_its_reason(point_receptor, tmp_path):
     sim = _sim(tmp_path, point_receptor, footprint=far)
     traj = _write_particles(sim)
 
-    assert make_footprint(sim, traj, context=_context(sim)) is None
+    assert make_footprint(sim, traj) is None
 
     assert sim.footprint is None
     assert sim.has_footprint and sim.is_complete()
@@ -351,7 +345,7 @@ def test_generate_footprint_takes_other_settings_and_extra_transforms(
     _write_particles(sim)
 
     class Halve:
-        def apply(self, particles, context):
+        def apply(self, particles, receptor=None, directory=None):
             return particles.assign(foot=particles["foot"] * 0.5)
 
     base = sim.generate_footprint()
@@ -403,7 +397,7 @@ def test_generate_footprint_uses_the_receptor_kernel_from_a_project_table(
         plain._particle_set == sim._particle_set
     )  # same transport settings: the particles are shared
 
-    weighted = sim.generate_footprint(context=_context(sim, directory=tmp_path))
+    weighted = sim.generate_footprint(directory=tmp_path)
     base = plain.generate_footprint()
     assert float(weighted.sum()) == pytest.approx(0.5 * float(base.sum()))
 

@@ -10,9 +10,7 @@ from pydantic import BaseModel, ConfigDict, ValidationError
 from stilt.transforms import (
     AveragingKernel,
     FirstOrderLifetime,
-    ParticleTransform,
     PressureWeighting,
-    TransformContext,
     apply_transforms,
     averaging_kernel_table,
     dump_transform,
@@ -33,7 +31,7 @@ class ScaleFoot(BaseModel):
 
     factor: float = 1.0
 
-    def apply(self, particles, context=None):
+    def apply(self, particles, receptor=None, directory=None):
         out = particles.copy()
         out["foot"] = out["foot"] * self.factor
         return out
@@ -45,7 +43,7 @@ class PlainScale:
     def __init__(self, factor=1.0):
         self.factor = factor
 
-    def apply(self, particles, context=None):
+    def apply(self, particles, receptor=None, directory=None):
         out = particles.copy()
         out["foot"] = out["foot"] * self.factor
         return out
@@ -91,27 +89,6 @@ def _aged_particles() -> pd.DataFrame:
             "foot": [1.0, 1.0, 1.0],
         }
     )
-
-
-# ---------------------------------------------------------------------------
-# TransformContext / ParticleTransform protocol
-# ---------------------------------------------------------------------------
-
-
-def test_transform_context_defaults(point_receptor):
-    ctx = TransformContext(receptor=point_receptor)
-    assert ctx.receptor is point_receptor
-    assert ctx.variant == ""
-    assert ctx.directory is None
-
-
-def test_builtins_satisfy_particle_transform_protocol():
-    assert isinstance(AveragingKernel(levels=[0.0], values=[1.0]), ParticleTransform)
-    assert isinstance(PressureWeighting(), ParticleTransform)
-    assert isinstance(FirstOrderLifetime(lifetime_hours=1.0), ParticleTransform)
-    assert isinstance(ScaleFoot(), ParticleTransform)
-    assert isinstance(PlainScale(), ParticleTransform)
-    assert not isinstance(NotATransform(), ParticleTransform)
 
 
 # ---------------------------------------------------------------------------
@@ -492,7 +469,7 @@ def test_pwf_msl_slant_across_terrain_closes_at_ground_under_lowest_point():
     )
 
 
-def test_pwf_reads_altitude_ref_from_the_context():
+def test_pwf_reads_altitude_ref_from_the_receptor():
     from stilt.receptors import ColumnReceptor
 
     _, msl = _msl_column_particles(10, station=1300.0)
@@ -504,9 +481,8 @@ def test_pwf_reads_altitude_ref_from_the_context():
         top=4300.0,
         altitude_ref="msl",
     )
-    context = TransformContext(receptor=receptor)
     _, expected = particle_pwf(msl, altitude_ref="msl")
-    result = PressureWeighting().apply(msl, context)
+    result = PressureWeighting().apply(msl, receptor)
     assert result["pwf"].to_numpy() == pytest.approx(expected.to_numpy(), rel=1e-9)
 
 
@@ -648,16 +624,14 @@ def test_first_order_lifetime_rejects_nonpositive_lifetime():
 
 def test_apply_transforms_with_no_transforms_returns_same_object(point_receptor):
     p = _make_particles()
-    ctx = TransformContext(receptor=point_receptor)
-    assert apply_transforms(p, [], ctx) is p
+    assert apply_transforms(p, [], point_receptor) is p
 
 
 def test_apply_transforms_runs_in_order(point_receptor):
     p = _column_particles(20)
-    ctx = TransformContext(receptor=point_receptor)
     kernel = AveragingKernel(levels=[0.0, 3000.0], values=[1.0, 0.0])
     result = apply_transforms(
-        p, [kernel, PressureWeighting(), ScaleFoot(factor=2.0)], ctx
+        p, [kernel, PressureWeighting(), ScaleFoot(factor=2.0)], point_receptor
     )
     expected = PressureWeighting().apply(kernel.apply(p))["foot"].to_numpy() * 2.0
     assert result["foot"].to_numpy() == pytest.approx(expected)
@@ -665,17 +639,16 @@ def test_apply_transforms_runs_in_order(point_receptor):
     assert "pwf" in result.columns
 
 
-def test_apply_transforms_passes_context_through(point_receptor):
+def test_apply_transforms_passes_the_receptor_and_directory(point_receptor, tmp_path):
     seen = []
 
     class Recorder:
-        def apply(self, particles, context):
-            seen.append(context)
+        def apply(self, particles, receptor=None, directory=None):
+            seen.append((receptor, directory))
             return particles
 
-    ctx = TransformContext(receptor=point_receptor, variant="column")
-    apply_transforms(_make_particles(), [Recorder()], ctx)
-    assert seen == [ctx]
+    apply_transforms(_make_particles(), [Recorder()], point_receptor, tmp_path)
+    assert seen == [(point_receptor, tmp_path)]
 
 
 # ---------------------------------------------------------------------------
@@ -924,13 +897,13 @@ def test_ak_table_picks_the_receptor_kernel_relative_to_the_directory(
     kernel = AveragingKernel(table=filename)
     p = _make_particles(4)
 
-    out_a = kernel.apply(p, TransformContext(receptor=a, directory=tmp_path))
-    out_b = kernel.apply(p, TransformContext(receptor=b, directory=tmp_path))
+    out_a = kernel.apply(p, a, tmp_path)
+    out_b = kernel.apply(p, b, tmp_path)
 
     assert out_a["foot"].tolist() == [1.0] * 4
     assert out_b["foot"].tolist() == [0.5] * 4
     assert out_b["ak_weight"].tolist() == [0.5] * 4
-    assert kernel.kernel(TransformContext(receptor=b, directory=tmp_path)) == (
+    assert kernel.kernel(b, tmp_path) == (
         [0.0, 3000.0],
         [0.5, 0.5],
     )
@@ -941,9 +914,7 @@ def test_ak_table_absolute_path_needs_no_directory(tmp_path):
     path = tmp_path / "kernels.parquet"
     _write_table(path, a, b)
 
-    out = AveragingKernel(table=str(path)).apply(
-        _make_particles(2), TransformContext(receptor=b)
-    )
+    out = AveragingKernel(table=str(path)).apply(_make_particles(2), b)
 
     assert out["foot"].tolist() == [0.5, 0.5]
 
@@ -953,9 +924,7 @@ def test_ak_table_relative_path_without_store_is_relative_to_cwd(tmp_path, monke
     _write_table(tmp_path / "kernels.csv", a, b)
     monkeypatch.chdir(tmp_path)
 
-    out = AveragingKernel(table="kernels.csv").apply(
-        _make_particles(2), TransformContext(receptor=b)
-    )
+    out = AveragingKernel(table="kernels.csv").apply(_make_particles(2), b)
 
     assert out["foot"].tolist() == [0.5, 0.5]
 
@@ -971,27 +940,23 @@ def test_ak_table_missing_receptor_raises(tmp_path):
     )
 
     with pytest.raises(KeyError, match="no kernel for receptor"):
-        AveragingKernel(table=str(path)).apply(
-            _make_particles(2), TransformContext(receptor=other)
-        )
+        AveragingKernel(table=str(path)).apply(_make_particles(2), other)
 
 
-def test_ak_table_requires_context_and_known_columns(tmp_path):
-    with pytest.raises(ValueError, match="TransformContext"):
+def test_ak_table_requires_the_receptor_and_known_columns(tmp_path):
+    with pytest.raises(ValueError, match="needs the receptor"):
         AveragingKernel(table="kernels.parquet").apply(_make_particles(2))
 
     bad = tmp_path / "bad.csv"
     pd.DataFrame({"receptor": ["x"], "z": [0.0], "ak": [1.0]}).to_csv(bad, index=False)
     a, _ = _two_receptors()
     with pytest.raises(ValueError, match="lacks columns"):
-        AveragingKernel(table=str(bad)).apply(
-            _make_particles(2), TransformContext(receptor=a)
-        )
+        AveragingKernel(table=str(bad)).apply(_make_particles(2), a)
 
     (tmp_path / "kernels.json").write_text("{}")
     with pytest.raises(ValueError, match=".parquet or .csv"):
         AveragingKernel(table=str(tmp_path / "kernels.json")).apply(
-            _make_particles(2), TransformContext(receptor=a)
+            _make_particles(2), a
         )
 
 
@@ -1002,15 +967,14 @@ def test_ak_table_rereads_when_the_file_changes(tmp_path):
     path = tmp_path / "kernels.csv"
     _write_table(path, a, b)
     kernel = AveragingKernel(table=str(path))
-    ctx = TransformContext(receptor=b)
-    assert kernel.apply(_make_particles(1), ctx)["foot"].tolist() == [0.5]
+    assert kernel.apply(_make_particles(1), b)["foot"].tolist() == [0.5]
 
     averaging_kernel_table(
         [a, b], levels=[0.0, 3000.0], values=[[1.0, 1.0], [0.25, 0.25]]
     ).to_csv(path, index=False)
     os.utime(path, (path.stat().st_atime, path.stat().st_mtime + 10))
 
-    assert kernel.apply(_make_particles(1), ctx)["foot"].tolist() == [0.25]
+    assert kernel.apply(_make_particles(1), b)["foot"].tolist() == [0.25]
 
 
 def test_ak_table_round_trips_through_config():

@@ -19,7 +19,6 @@ from stilt.footprint.config import FootprintConfig
 from stilt.output import Footprints, Output, Particles
 from stilt.particles import particles_metadata
 from stilt.receptors import Receptor, parse_receptor_id
-from stilt.transforms import ParticleTransform, TransformContext
 
 if TYPE_CHECKING:
     from stilt.variants import Variant
@@ -356,8 +355,8 @@ class Simulation:
     def generate_footprint(
         self,
         config: FootprintConfig | None = None,
-        transforms: Sequence[ParticleTransform] | None = None,
-        context: TransformContext | None = None,
+        transforms: Sequence[Any] | None = None,
+        directory: str | Path | None = None,
     ) -> xr.DataArray | None:
         """
         Calculate a footprint from the stored particles, without writing it.
@@ -370,13 +369,12 @@ class Simulation:
         ----------
         config : FootprintConfig, optional
             Footprint settings. Defaults to the variant's own.
-        transforms : sequence of ParticleTransform, optional
+        transforms : sequence, optional
             Extra particle transforms, applied after ``config.transforms``
             and recorded with them.
-        context : TransformContext, optional
-            Passed to every transform. Defaults to one with the receptor and
-            variant and no directory; pass ``project.transform_context(sim)``
-            when a transform names a file relative to the project.
+        directory : str or Path, optional
+            Where a relative file name in a transform's settings starts,
+            such as an averaging-kernel table. Pass ``project.directory``.
 
         Returns
         -------
@@ -403,17 +401,13 @@ class Simulation:
             config = config.model_copy(
                 update={"transforms": [*config.transforms, *transforms]}
             )
-        if context is None:
-            context = TransformContext(
-                receptor=self.receptor, variant=self.variant.name
-            )
         try:
             return calculate(
                 particles,
                 self.receptor,
                 config,
                 name=self.variant.name,
-                context=context,
+                directory=directory,
                 geometry_hash=geometry_hash,
             )
         except EmptyFootprint:

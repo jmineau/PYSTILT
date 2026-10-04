@@ -537,8 +537,7 @@ Feature status lives in the roadmap tables in [README.md](README.md) and
   the receptor's own datum: for `altitude_ref="msl"` it uses `zagl + zsfc`
   (so `zsfc` must be in `varsiwant`) and the ground closing the bottom slab
   is the terrain under the lowest point. `PressureWeighting.apply` reads
-  `altitude_ref` from the `TransformContext`; with no context it assumes
-  AGL. `AveragingKernel` holds only the kernel.
+  `altitude_ref` from the receptor it is given; with none it assumes AGL. `AveragingKernel` holds only the kernel.
   `footprint.calculate` divides by the particle count, so weights are scaled by
   `N`. Weights sum to the column's mass fraction (< 1) by design; the rest of
   the atmosphere is above the column top. This deliberately differs from

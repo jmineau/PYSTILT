@@ -107,10 +107,11 @@ field: users put them under `slurm:`.
 
 ## Adding particle transforms
 
-Particle transforms run on the particles before the footprint is made. They
-implement the `ParticleTransform` protocol in `src/stilt/transforms.py`: a
-transform takes a particle `DataFrame` and a `TransformContext` and returns a
-new `DataFrame`, leaving the input unchanged.
+Particle transforms run on the particles before the footprint is made. A
+transform is any object with `apply(particles, receptor=None,
+directory=None)`: it takes a particle `DataFrame`, the receptor, and the
+project directory, and returns a new `DataFrame`, leaving the input
+unchanged.
 
 A built-in transform is one pydantic class in `transforms.py`. Its fields
 are the YAML keys, `kind` is a `Literal` that names it, and `apply()` does

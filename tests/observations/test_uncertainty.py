@@ -6,7 +6,7 @@ import pytest
 import xarray as xr
 
 from stilt.observations import TransportError, transport_error
-from stilt.transforms import AveragingKernel, TransformContext
+from stilt.transforms import AveragingKernel
 
 FLUX = xr.DataArray(
     np.ones((3, 3)),
@@ -151,12 +151,12 @@ def test_transforms_are_applied_to_both_tables():
     assert weighted.sd < plain.sd
 
 
-def test_context_receptor_reaches_transforms(point_receptor):
+def test_the_receptor_reaches_the_transforms(point_receptor):
     seen = []
 
     class Recorder:
-        def apply(self, particles, context):
-            seen.append(context.receptor)
+        def apply(self, particles, receptor=None, directory=None):
+            seen.append(receptor)
             return particles
 
     p = _column(n_levels=1, per_level=10)
@@ -165,7 +165,7 @@ def test_context_receptor_reaches_transforms(point_receptor):
         p.copy(),
         FLUX,
         transforms=[Recorder()],
-        context=TransformContext(receptor=point_receptor),
+        receptor=point_receptor,
     )
 
     assert seen == [point_receptor, point_receptor]

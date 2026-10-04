@@ -24,14 +24,18 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Any
+from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pandas as pd
 import xarray as xr
 
 from stilt.observations import backgrounds
-from stilt.transforms import TransformContext, apply_transforms, release_coordinate
+from stilt.transforms import apply_transforms, release_coordinate
+
+if TYPE_CHECKING:
+    from stilt.receptors import Receptor
 
 #: X-STILT's empirical mean vertical correlation length of transport errors, m.
 DEFAULT_LENGTH_SCALE = 356.0
@@ -279,7 +283,8 @@ def transport_error(
     flux: xr.DataArray,
     *,
     transforms: Sequence[Any] = (),
-    context: TransformContext | None = None,
+    receptor: Receptor | None = None,
+    directory: str | Path | None = None,
     levels: int | Sequence[float] = 20,
     length_scale: float | None = DEFAULT_LENGTH_SCALE,
     percentile: float = 1.0,
@@ -302,8 +307,10 @@ def transport_error(
     transforms : sequence, optional
         The footprint's particle transforms (``sim.variant.footprint.transforms``),
         applied to both tables so the error is weighted like the footprint.
-    context : TransformContext, optional
-        Context to apply the transforms with (``project.transform_context(sim)``).
+    receptor : Receptor, optional
+        The receptor (``sim.receptor``), for the transforms.
+    directory : str or Path, optional
+        Where a kernel table's relative path starts (``project.directory``).
     levels : int or sequence of float, default 20
         Release-height levels to compute statistics on: a number of
         equal-width bins between the lowest and highest release height, or
@@ -380,12 +387,20 @@ def transport_error(
         table: pd.DataFrame,
     ) -> tuple[pd.Series, pd.Series, float]:
         """Return the modeled value and release height per particle, and the background."""
-        weighted = apply_transforms(table, transforms, context) if transforms else table
+        weighted = (
+            apply_transforms(table, transforms, receptor, directory)
+            if transforms
+            else table
+        )
         x = weighted.stilt.enhancement(flux)
         if background is None:
             return x, _release_heights(weighted), 0.0
         bg = backgrounds.background(
-            table, background, transforms=transforms, context=context
+            table,
+            background,
+            transforms=transforms,
+            receptor=receptor,
+            directory=directory,
         )
         # Each particle's background, weighted like its enhancement. A
         # particle's enhancement is N times its share of the footprint's.
