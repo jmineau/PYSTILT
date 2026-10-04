@@ -59,44 +59,52 @@ class ModelInfo(BaseModel):
     )
 
 
-class TransportConfig(Protocol):
+class TransportConfig(BaseModel):
     """
-    What PYSTILT needs from any transport model's config.
+    The base of every transport model's config.
 
-    A model's config is a pydantic model of its own parameters, which the
-    model names as its ``config_class``. In ``config.yaml`` they are flat,
+    A model's config subclasses it with its own parameters and is the
+    model's ``config_class``. In ``config.yaml`` the parameters are flat,
     top-level keys for the project's model, and a variant that names another
-    model gives that model's parameters itself.
-
-    Attributes
-    ----------
-    n_hours : int
-        Length of each simulation, in hours. Negative runs backward in time.
-    UNRECORDED : frozenset of str
-        Fields that change no particle, such as where the build is, left
-        out of a run's recorded settings.
+    model gives that model's parameters itself. A subclass overrides
+    :meth:`settings` or :meth:`realizations` only where its model differs.
     """
 
-    n_hours: int
-    UNRECORDED: ClassVar[frozenset[str]]
+    model_config = ConfigDict(extra="forbid")
+
+    #: Fields that change no particle, such as where the build is, left out
+    #: of a run's recorded settings.
+    UNRECORDED: ClassVar[frozenset[str]] = frozenset()
+
+    n_hours: int = Field(
+        -24,
+        description="Length of each simulation, in hours. Negative runs backward in time.",
+    )
+    seed: int | None = Field(
+        None,
+        description=(
+            "Seed of the model's random numbers, for a reproducible run. "
+            "Realization ``k`` of a variant runs with ``seed + k``."
+        ),
+    )
 
     def settings(self) -> dict[str, Any]:
-        """Return what a run records of this config: the fields that change its particles."""
-        ...
+        """Return what a run records of this config: every field but the :attr:`UNRECORDED` ones."""
+        return self.model_dump(mode="json", exclude=set(self.UNRECORDED))
 
     def realizations(self, n: int) -> list[Self]:
-        """Return *n* realizations of this config, for an ensemble, raising if they would repeat."""
-        ...
+        """
+        Return *n* realizations of this config, realization ``k`` with ``seed + k``.
 
-    # Every model's config is a pydantic model; the core uses these two of its methods.
-
-    def model_dump(self, **kwargs: Any) -> dict[str, Any]:
-        """Return the config as a dict (pydantic's ``model_dump``)."""
-        ...
-
-    def model_dump_json(self, **kwargs: Any) -> str:
-        """Return the config as JSON (pydantic's ``model_dump_json``)."""
-        ...
+        Realization 0 uses the configured seed. Without a seed every
+        realization is the same config, and the model must draw its own
+        random numbers for them to differ.
+        """
+        seed = self.seed
+        return [
+            self.model_copy(update={"seed": None if seed is None else seed + k})
+            for k in range(n)
+        ]
 
 
 class TransportModel(Protocol):
@@ -108,13 +116,14 @@ class TransportModel(Protocol):
     name : str
         Name recorded in a run's settings, such as ``"hysplit"``, and
         written as ``model:`` in ``config.yaml``.
-    config_class : type
-        The model's config (a :class:`TransportConfig`), which validates its
-        parameters.
     """
 
     name: str
-    config_class: type[Any]
+
+    @property
+    def config_class(self) -> type[TransportConfig]:
+        """The model's config, a :class:`TransportConfig`, which validates its parameters."""
+        ...
 
     def version(self, config: Any) -> str:
         """Return the version of the build *config* would run, recorded with the run."""

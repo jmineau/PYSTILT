@@ -8,6 +8,12 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- `stilt.transport.TransportConfig` is a pydantic base class, where it was
+  a protocol (#134). It holds `n_hours`, `seed`, `UNRECORDED`, and default
+  `settings()` and `realizations(n)`; `HysplitConfig` subclasses it, and a
+  second model's config inherits what it does not change. A seeded run's
+  `SETUP.CFG` now lists `SEED` before the other entries; the values are
+  unchanged.
 - `HYSPLITDriver` is gone (breaking). `write_inputs(workdir, receptor,
   config, met_files)` writes the files `hycs_std` reads, and
   `read_particle_dat(path, columns)` reads a `PARTICLE_STILT.DAT` as a

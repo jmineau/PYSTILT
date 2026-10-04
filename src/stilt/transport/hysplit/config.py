@@ -11,9 +11,10 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, ClassVar, Literal, Self
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import ConfigDict, Field, field_validator, model_validator
 
 from stilt.particles import HNF_PLUME_COLUMNS
+from stilt.transport import TransportConfig
 
 #: Most hourly ZICONTROL factors HYSPLIT can hold (``ZIPRESC(150)`` in
 #: hymodelc.F); it reads more without a bounds check.
@@ -26,7 +27,7 @@ WIND_ERROR_SETTINGS = ("siguverr", "tluverr", "zcoruverr", "horcoruverr")
 ZI_ERROR_SETTINGS = ("sigzierr", "tlzierr", "horcorzierr")
 
 
-class HysplitConfig(BaseModel):
+class HysplitConfig(TransportConfig):
     """
     HYSPLIT's config: every setting that shapes the particles it makes.
 
@@ -41,17 +42,13 @@ class HysplitConfig(BaseModel):
     or not at all.
     """
 
-    model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     #: Fields left out of a run's recorded settings. What they point at is
     #: recorded instead: the build's version and the checksums of data files
     #: that differ from the bundled ones.
     UNRECORDED: ClassVar[frozenset[str]] = frozenset({"exe_dir", "data_dir"})
 
-    n_hours: int = Field(
-        -24,
-        description="Length of each simulation, in hours. Negative runs backward in time.",
-    )
     numpar: int = Field(
         200,
         description=(
@@ -618,7 +615,7 @@ class HysplitConfig(BaseModel):
         are recorded with the model instead. ``maxpar`` is given as HYSPLIT
         receives it, so an unset ``maxpar`` equals ``numpar``.
         """
-        data = self.model_dump(mode="json", exclude=set(self.UNRECORDED))
+        data = super().settings()
         data["maxpar"] = self.effective_maxpar
         return data
 
@@ -646,11 +643,7 @@ class HysplitConfig(BaseModel):
                 "realization its own seed. Any other mode would repeat the same "
                 "perturbation."
             )
-        seed = self.seed
-        return [
-            self.model_copy(update={"seed": None if seed is None else seed + k})
-            for k in range(n)
-        ]
+        return super().realizations(n)
 
 
 __all__ = [
