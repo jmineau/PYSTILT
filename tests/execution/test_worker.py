@@ -260,7 +260,7 @@ def _fake_run_particles(monkeypatch, calls: list[str]):
 def _fake_make_footprint(monkeypatch, calls: list[tuple[str, int]]):
     """Replace make_footprint with one that records the variant and which particle table it got."""
 
-    def fake(sim, particles, *, directory=None):
+    def fake(sim, particles):
         calls.append((sim.variant.name, id(particles)))
         _write_footprint(sim)
 
@@ -507,7 +507,7 @@ def test_a_failed_footprint_is_the_variants_own_and_the_others_still_run(
     _fake_run_particles(monkeypatch, [])
     made: list[str] = []
 
-    def fake(sim, particles, *, directory=None):
+    def fake(sim, particles):
         if sim.variant.name == "hrrr":
             raise ValueError("bad grid")
         made.append(sim.variant.name)

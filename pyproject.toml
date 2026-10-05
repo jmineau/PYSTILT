@@ -118,6 +118,7 @@ name = "The transport core does not import the observation layer"
 type = "forbidden"
 source_modules = [
     "stilt._atomic",
+    "stilt._paths",
     "stilt.cli",
     "stilt.config",
     "stilt.exceptions",
@@ -147,6 +148,7 @@ name = "The core does not import HYSPLIT's package"
 type = "forbidden"
 source_modules = [
     "stilt._atomic",
+    "stilt._paths",
     "stilt.cli",
     "stilt.config",
     "stilt.exceptions",
@@ -180,6 +182,7 @@ name = "Nothing below the project imports the project config"
 type = "forbidden"
 source_modules = [
     "stilt._atomic",
+    "stilt._paths",
     "stilt.exceptions",
     "stilt.execution",
     "stilt.footprint",

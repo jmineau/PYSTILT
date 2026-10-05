@@ -15,7 +15,6 @@ the only code that writes results.
 
 from __future__ import annotations
 
-import os
 from collections.abc import Iterable, Iterator
 from functools import cached_property
 from pathlib import Path
@@ -26,6 +25,7 @@ import pandas as pd
 import xarray as xr
 import yaml
 
+from stilt._paths import absolute
 from stilt.config import STARTER_CONFIG, ProjectConfig
 from stilt.execution.config import ExecutionConfig
 from stilt.footprint import Geometry, Jacobian, jacobian
@@ -60,17 +60,12 @@ RECEPTOR_COLUMNS = ("receptor", "time", "kind", "location")
 STATES = ("complete", "failed", "pending")
 
 
-def _absolute(path: str | Path) -> Path:
-    """Return *path* absolute, with ``~`` and variables expanded, so a worker started elsewhere finds the same place."""
-    return Path(os.path.expandvars(os.path.expanduser(str(path)))).resolve()
-
-
 def _as_receptors(
     receptors: Receptor | Iterable[Receptor] | str | Path,
 ) -> list[Receptor]:
     """Return receptors given as one, several, or the path of a receptors CSV."""
     if isinstance(receptors, (str, Path)):
-        return read_receptors(_absolute(receptors))
+        return read_receptors(absolute(receptors))
     if isinstance(receptors, Receptor):
         return [receptors]
     items = list(receptors)
@@ -139,7 +134,7 @@ class Project:
     """
 
     def __init__(self, path: str | Path) -> None:
-        self.directory = _absolute(path)
+        self.directory = absolute(path)
 
     @classmethod
     def init(
@@ -256,9 +251,8 @@ class Project:
 
     @cached_property
     def output(self) -> Output:
-        """The output directory, from ``config.output`` (``./output`` by default)."""
-        raw = Path(os.path.expandvars(os.path.expanduser(self.config.output)))
-        return Output(raw if raw.is_absolute() else (self.directory / raw).resolve())
+        """The output directory, from ``config.output`` (``./output`` by default), relative to the project."""
+        return Output(absolute(self.config.output, self.directory))
 
     @cached_property
     def variants(self) -> dict[str, Variant]:
@@ -273,8 +267,22 @@ class Project:
 
     @cached_property
     def mets(self) -> dict[str, Met]:
-        """The mets declared in the config, by name."""
-        return {name: Met(name, cfg) for name, cfg in self.config.mets.items()}
+        """
+        The mets declared in the config, by name.
+
+        A relative ``directory`` or ``subgrid_dir`` starts from the project
+        directory, whatever the working directory, and ``~`` and
+        ``$VARIABLES`` are expanded.
+        """
+        mets = {}
+        for name, cfg in self.config.mets.items():
+            paths = {
+                field: absolute(value, self.directory)
+                for field in ("directory", "subgrid_dir")
+                if (value := getattr(cfg, field)) is not None
+            }
+            mets[name] = Met(name, cfg.model_copy(update=paths))
+        return mets
 
     @cached_property
     def _rows(self) -> pd.DataFrame:
@@ -430,7 +438,10 @@ class Project:
                 f"No variant {variant!r}; the variants are {list(self.variants)}."
             )
         return Simulation(
-            self.receptor(receptor_id), self.variants[variant], self.output
+            self.receptor(receptor_id),
+            self.variants[variant],
+            self.output,
+            self.directory,
         )
 
     def unreferenced(self) -> dict[str, list[str]]:
@@ -589,7 +600,10 @@ class Simulations:
         receptors = self.project._receptors(rid for rid, _ in pairs)
         for rid, variant in pairs:
             yield Simulation(
-                receptors[rid], self.project.variants[variant], self.project.output
+                receptors[rid],
+                self.project.variants[variant],
+                self.project.output,
+                self.project.directory,
             )
 
     def __repr__(self) -> str:

@@ -654,6 +654,16 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Relative paths depended on the working directory: a relative met
+  `directory` or `subgrid_dir` was found from wherever Python started, and
+  a relative averaging-kernel `table` too unless `directory=` was passed.
+  They now start from the project directory, and met directories expand
+  `$VARIABLES` like the other paths (a behaviour change for a relative met
+  directory that worked only from the right working directory).
+  `Simulation` holds its project directory, so `sim.generate_footprint()`
+  and `make_footprint` find a kernel table without a `directory=`
+  argument, which they no longer take. An absolute `output` is resolved,
+  so one directory reached through a link is one `Output` (#148).
 - `project.run(execution=...)` and `project.submit(execution=...)` passed
   only `cpus` to the workers, which read `timeout` and `keep_scratch` back
   from `config.yaml`, so an override of either was ignored. `Batch` and

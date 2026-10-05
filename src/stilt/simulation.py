@@ -100,11 +100,16 @@ class Simulation:
         particles and footprint folders.
     output : Output
         The output directory.
+    directory : Path, optional
+        The project directory, where a relative file name in the settings
+        starts, such as an averaging-kernel table. ``None`` starts it from
+        the working directory.
     """
 
     receptor: Receptor
     variant: Variant
     output: Output
+    directory: Path | None = None
 
     def __repr__(self) -> str:
         return f"Simulation(id={str(self.id)!r})"
@@ -358,7 +363,6 @@ class Simulation:
         self,
         config: FootprintConfig | None = None,
         transforms: Sequence[Any] | None = None,
-        directory: str | Path | None = None,
     ) -> xr.DataArray | None:
         """
         Calculate a footprint from the stored particles, without writing it.
@@ -373,10 +377,8 @@ class Simulation:
             Footprint settings. Defaults to the variant's own.
         transforms : sequence, optional
             Extra particle transforms, applied after ``config.transforms``
-            and recorded with them.
-        directory : str or Path, optional
-            Where a relative file name in a transform's settings starts,
-            such as an averaging-kernel table. Pass ``project.directory``.
+            and recorded with them. A relative file name in a transform's
+            settings starts from the project directory.
 
         Returns
         -------
@@ -409,7 +411,7 @@ class Simulation:
                 self.receptor,
                 config,
                 name=self.variant.name,
-                directory=directory,
+                directory=self.directory,
                 geometry_hash=geometry_hash,
             )
         except EmptyFootprint:

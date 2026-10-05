@@ -1048,6 +1048,35 @@ def test_a_selection_builds_the_same_receptors_as_one_at_a_time(
         project.receptor("202301011200_-1_1_1")
 
 
+def test_relative_paths_start_from_the_project_not_the_working_directory(
+    tmp_path, monkeypatch, point_receptor
+):
+    monkeypatch.setenv("MET_ROOT", str(tmp_path / "archive"))
+    (tmp_path / "real_output").mkdir()
+    (tmp_path / "output_link").symlink_to(tmp_path / "real_output")
+    hrrr = {"file_format": "%Y%m%d_%H", "file_tres": "1h"}
+    Project.init(
+        tmp_path / "proj",
+        receptors=[point_receptor],
+        mets={
+            "local": {**hrrr, "directory": "met"},
+            "shared": {**hrrr, "directory": "$MET_ROOT/hrrr"},
+        },
+        output=str(tmp_path / "output_link"),
+    )
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    monkeypatch.chdir(elsewhere)
+
+    project = Project(tmp_path / "proj")
+    assert project.mets["local"].directory == project.directory / "met"
+    assert project.mets["shared"].directory == (tmp_path / "archive/hrrr").resolve()
+    # Reached through a link, the output is the directory it points to.
+    assert project.output == Output((tmp_path / "real_output").resolve())
+    # A simulation finds relative file names in its settings from the project.
+    assert project.simulation(point_receptor.id, "local").directory == project.directory
+
+
 def test_init_refuses_a_variant_with_bad_settings_and_writes_nothing(tmp_path):
     """A variant's transport settings are checked before config.yaml is written."""
     met = {

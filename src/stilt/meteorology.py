@@ -50,7 +50,8 @@ class MetConfig(BaseModel):
         None,
         description=(
             "Directory holding the ARL meteorology files. Downloads are saved "
-            "here. A project requires it."
+            "here. A project requires it. In a project, a relative path starts "
+            "from the project directory; ``~`` and ``$VARIABLES`` are expanded."
         ),
     )
     subgrid_dir: Path | None = Field(
@@ -59,7 +60,8 @@ class MetConfig(BaseModel):
             "Directory for the cropped files, shared by every simulation that "
             "uses this meteorology. Each crop box gets its own folder inside "
             "it. Required when cropping your own files; not used with "
-            "``download``, which crops files as it downloads them."
+            "``download``, which crops files as it downloads them. A relative "
+            "path starts from the project directory."
         ),
     )
 

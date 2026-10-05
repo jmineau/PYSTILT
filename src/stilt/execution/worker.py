@@ -244,17 +244,13 @@ def _finish_scratch(workdir: Path, kept: Path, *, keep: bool) -> None:
     shutil.rmtree(workdir, ignore_errors=True)
 
 
-def make_footprint(
-    sim: Simulation,
-    particles: pd.DataFrame,
-    *,
-    directory: Path | None = None,
-) -> xr.DataArray | None:
+def make_footprint(sim: Simulation, particles: pd.DataFrame) -> xr.DataArray | None:
     """
     Calculate a simulation's footprint from *particles* and write it to its folder.
 
     The settings are the variant's own. A relative file name in a
-    transform's settings starts from *directory*, the project's. When no particle reaches the grid,
+    transform's settings starts from the project directory
+    (``sim.directory``). When no particle reaches the grid,
     an empty footprint is recorded with the reason and ``None`` is returned.
     :meth:`stilt.Simulation.generate_footprint` makes footprints with other
     settings, without writing them.
@@ -271,7 +267,7 @@ def make_footprint(
             sim.receptor,
             feet.config,
             name=sim.variant.name,
-            directory=directory,
+            directory=sim.directory,
             geometry_hash=sim.variant.geometry_hash,
         )
     except EmptyFootprint as error:
@@ -387,7 +383,7 @@ def _run_group(
         try:
             if particles is None:
                 particles = first.particles  # read once for the group
-            make_footprint(sim, particles, directory=project.directory)
+            make_footprint(sim, particles)
         except Exception as error:
             results[str(sim.id)] = _failed(sim, "footprint", error)
             continue
