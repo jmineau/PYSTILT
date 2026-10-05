@@ -32,6 +32,7 @@ import xarray as xr
 from stilt.exceptions import EmptyFootprint, SimulationError
 from stilt.footprint import calculate
 from stilt.meteorology import Met
+from stilt.output import Footprints, Particles
 from stilt.simulation import Simulation
 from stilt.transport import get_model
 
@@ -77,6 +78,8 @@ def _sigterm_as_interrupt():
 
 
 Status = Literal["complete", "failed", "error", "interrupted"]
+#: The step of a simulation that failed: its particles or its footprint.
+Step = Literal["particles", "footprint"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -105,57 +108,53 @@ class SimulationResult:
 # -- failure records ---------------------------------------------------------
 
 
-def _failed(sim: Simulation, step: str, error: Exception) -> SimulationResult:
+def _failed(sim: Simulation, step: Step, error: Exception) -> SimulationResult:
     """
     Record why *sim* failed at *step* and return its result.
 
-    The record goes beside the receptor's log
-    (:meth:`stilt.output.Particles.write_failure`). For the ``particles``
-    step it covers every variant on these particles; for the ``footprint``
-    step it is the variant's own.
+    The record goes in the logs of the folder whose result failed
+    (:meth:`stilt.output.Particles.record_failure`): a particles failure
+    covers every variant on those particles, a footprint failure is the
+    variant's own. ``reason`` is the error's short cause, or its class
+    for an error without one. An expected failure (a
+    :class:`~stilt.exceptions.SimulationError`) logs one line; any other
+    error logs, and records, its traceback.
     """
-    logger.exception("simulation %s failed during %s: %s", sim.id, step, error)
-    entry: dict[str, Any] = {
-        "error": type(error).__name__,
-        "reason": getattr(error, "reason", None),
+    expected = isinstance(error, SimulationError)
+    reason = getattr(error, "reason", None) or type(error).__name__
+    if expected:
+        logger.warning(
+            "simulation %s failed during %s (%s): %s", sim.id, step, reason, error
+        )
+    else:
+        logger.exception("simulation %s failed during %s: %s", sim.id, step, error)
+    record: dict[str, Any] = {
+        "step": step,
+        "reason": str(reason),
         "message": str(error),
         "time": dt.datetime.now(dt.UTC).replace(microsecond=0).isoformat(),
     }
-    if not isinstance(error, SimulationError):
-        entry["traceback"] = traceback.format_exc()
+    if not expected:
+        record["traceback"] = traceback.format_exc()
     try:
-        folder = sim.output.particles(sim.variant)
-        rid = sim.receptor.id
-        if step == "particles":
-            log, kept = folder.log_path(rid), folder.scratch_path(rid)
-            entry["log"] = str(log) if log.exists() else None
-            entry["scratch"] = str(kept) if kept.exists() else None
-        record = folder.failure(rid)
-        if step == "particles":
-            record["particles"] = entry
-        else:
-            record.setdefault("footprints", {})[sim.variant.name] = entry
-        folder.write_failure(rid, record)
+        _folder(sim, step).record_failure(sim.receptor.id, record)
     except Exception:
         logger.exception("simulation %s: could not record the failure", sim.id)
-    status: Status = "failed" if isinstance(error, SimulationError) else "error"
+    status: Status = "failed" if expected else "error"
     return SimulationResult(str(sim.id), status, error=str(error))
 
 
-def _succeeded(sim: Simulation, step: str) -> SimulationResult:
-    """Remove *sim*'s failure record for *step*, which has now succeeded, and return its result."""
-    folder = sim.output.find_particles(sim.variant)
-    rid = sim.receptor.id
-    if folder is not None and folder.failure_path(rid).exists():
-        record = folder.failure(rid)
-        if step == "particles":
-            record.pop("particles", None)
-        else:
-            record.get("footprints", {}).pop(sim.variant.name, None)
-            if not record.get("footprints"):
-                record.pop("footprints", None)
-        folder.write_failure(rid, record)
+def _succeeded(sim: Simulation, step: Step) -> SimulationResult:
+    """Remove *sim*'s failure record for *step*, whose result is now written, and return its result."""
+    _folder(sim, step).clear_failure(sim.receptor.id)
     return SimulationResult(str(sim.id), "complete")
+
+
+def _folder(sim: Simulation, step: Step) -> Particles | Footprints:
+    """Return the output folder of *sim*'s result for *step*."""
+    if step == "particles":
+        return sim.output.particles(sim.variant)
+    return sim.output.footprints(sim.variant)
 
 
 def run_particles(

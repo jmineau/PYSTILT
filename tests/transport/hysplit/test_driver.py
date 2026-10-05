@@ -243,6 +243,10 @@ def test_run_keeps_fortran_runtime_output_on_failure(tmp_path):
         driver._run_hycs_std(tmp_path, timeout=5)
     assert caught.value.reason == FailureReason.FORTRAN_RUNTIME_ERROR
     assert "Fortran runtime error" in (tmp_path / "stilt.log").read_text()
+    # The message is HYSPLIT's own line, so a record says what went wrong.
+    assert str(caught.value) == (
+        "HYSPLIT: Fortran runtime error: File already opened in another unit"
+    )
 
 
 def test_run_times_out_and_keeps_log_output(tmp_path):

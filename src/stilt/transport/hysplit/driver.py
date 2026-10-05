@@ -329,9 +329,10 @@ def _run_hycs_std(workdir: Path, timeout: int | None) -> None:
                 f"HYSPLIT ran longer than the {timeout} s timeout.",
                 reason=FailureReason.TIMEOUT,
             ) from e
-    reason = failure_in(log_path.read_text(encoding="utf-8", errors="replace"))
-    if reason is not None:
-        raise SimulationError(f"HYSPLIT failed ({reason}).", reason=reason)
+    found = failure_in(log_path.read_text(encoding="utf-8", errors="replace"))
+    if found is not None:
+        reason, line = found
+        raise SimulationError(f"HYSPLIT: {line}", reason=reason)
 
 
 def _terminate(proc: subprocess.Popen[Any]) -> None:

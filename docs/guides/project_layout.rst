@@ -46,7 +46,8 @@ directory share it.
          date=2023-07-15/<receptor id>.parquet
      logs/
        settings=hrrr-a3f9c2/date=2023-07-15/<receptor id>.log
-       settings=hrrr-a3f9c2/date=2023-07-15/<receptor id>.failure.yaml   # why it failed, while it has
+       settings=hrrr-a3f9c2/date=2023-07-15/<receptor id>.failure.yaml   # why HYSPLIT failed, while it has
+       settings=hrrr-93278c/date=2023-07-15/<receptor id>.failure.yaml   # why a footprint failed
      scratch/                                # HYSPLIT working directories of failed runs
 
 A folder is named after the variant that made it, plus a short hash of the
@@ -182,8 +183,10 @@ HYSPLIT runs in a scratch directory (``compute_root``,
 ``PYSTILT_COMPUTE_ROOT``, or ``$TMPDIR/pystilt/<project>``), which is
 removed when a run succeeds. When a run fails, its working directory is
 copied to ``scratch/`` in the output directory, with CONTROL, SETUP.CFG,
-and MESSAGE. Beside the receptor's log, ``<receptor id>.failure.yaml``
-records why its simulations on those particles failed, and is removed when
-they succeed. ``sim.failure`` reads it and ``sim.log`` the log. Set
-``keep_scratch: true`` under ``execution:`` to keep every run's working
-directory.
+and MESSAGE. A ``<receptor id>.failure.yaml`` under ``logs/`` records why
+it failed. It sits in the logs folder of the result that failed: the
+particles' folder when HYSPLIT failed, the footprint's when a footprint
+did. It is removed when the result is written. ``sim.failure`` reads it,
+``sim.log`` reads the log, and ``sim.scratch_path`` is the kept working
+directory. Set ``keep_scratch: true`` under ``execution:`` to keep every
+run's working directory.

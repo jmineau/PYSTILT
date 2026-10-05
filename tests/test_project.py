@@ -1031,15 +1031,8 @@ def test_failures_lists_the_incomplete_simulations_that_failed_and_why(
         tmp_path, [point_receptor, other], variants={"traj": {"grid": None}}
     )
     sim = project.simulation(str(point_receptor.id), "traj")
-    sim.output.particles(sim.variant).write_failure(
-        sim.receptor.id,
-        {
-            "particles": {
-                "error": "SimulationError",
-                "reason": "MET_COVERAGE",
-                "message": "m",
-            }
-        },
+    sim.output.particles(sim.variant).record_failure(
+        sim.receptor.id, {"step": "particles", "reason": "MET_COVERAGE", "message": "m"}
     )
 
     failed = project.simulations.failures()

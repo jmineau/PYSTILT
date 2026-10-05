@@ -153,6 +153,18 @@ class Simulation:
         return None if folder is None else folder.log_path(self.receptor.id)
 
     @property
+    def scratch_path(self) -> Path | None:
+        """
+        Where a failed HYSPLIT run's working directory is kept, or ``None`` before its folder exists.
+
+        The directory, under ``scratch/`` in the output directory, holds
+        CONTROL, SETUP.CFG, and HYSPLIT's own output. It exists only after a
+        failed run, or after any run with ``keep_scratch`` set.
+        """
+        folder = self._particle_set
+        return None if folder is None else folder.scratch_path(self.receptor.id)
+
+    @property
     def settings(self) -> dict[str, Any]:
         """
         What this simulation's results are made with, as the output folders record them.
@@ -236,33 +248,23 @@ class Simulation:
 
         ``None`` when it is complete, or has not run, or the step that
         failed has since succeeded. Otherwise a dict with ``step``
-        (``"particles"`` or ``"footprint"``), ``error`` (the exception's
-        class), ``reason`` (a short cause such as ``"MET_COVERAGE"``, or
-        ``None``), ``message``, and ``time``. A particles failure also has
-        ``log`` and ``scratch``, the HYSPLIT log and the working directory
-        kept in the output directory; an unexpected error has a
-        ``traceback``. A failed HYSPLIT run fails every variant that shares
-        its particles.
+        (``"particles"`` or ``"footprint"``), ``reason`` (a short cause
+        such as ``"MET_COVERAGE"``, or the error's class when it has
+        none), ``message``, and ``time``. An unexpected error also has a
+        ``traceback``. A failed HYSPLIT run fails every variant that
+        shares its particles. :attr:`log` reads HYSPLIT's log and
+        :attr:`scratch_path` is where its working directory was kept.
 
         Examples
         --------
         >>> sim.failure
-        {'step': 'particles', 'error': 'MeteorologyError', 'reason': 'MISSING_MET_FILES', ...}
+        {'step': 'particles', 'reason': 'MET_COVERAGE',
+         'message': 'HYSPLIT: start point not within (x,y,t) any data file', ...}
         """
         if self.is_complete():
             return None
-        folder = self._particle_set
-        if folder is None:
-            return None
-        record = folder.failure(self.receptor.id)
-        if not self.has_particles:
-            entry, step = record.get("particles"), "particles"
-        else:
-            entry, step = (
-                record.get("footprints", {}).get(self.variant.name),
-                "footprint",
-            )
-        return None if entry is None else {"step": step, **entry}
+        folder = self._footprint_set if self.has_particles else self._particle_set
+        return None if folder is None else folder.failure(self.receptor.id)
 
     # -- reading the results -----------------------------------------------
 

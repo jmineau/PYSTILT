@@ -41,8 +41,8 @@ def test_all_failure_reasons_exist():
         ("start point not within (x,y,t) any data file", "MET_COVERAGE"),
     ],
 )
-def test_failure_in_names_the_reason_for_a_known_message(line, reason):
-    assert failure_in(f"some output\n{line}\nmore output\n") == reason
+def test_failure_in_names_the_reason_and_the_line_for_a_known_message(line, reason):
+    assert failure_in(f"some output\n  {line}\nmore output\n") == (reason, line)
 
 
 def test_failure_in_returns_none_for_an_unknown_log():

@@ -644,17 +644,8 @@ class Simulations:
             else f and self.project.simulation(r, v).empty_reason is not None
             for (r, v), f in zip(pairs, feet, strict=True)
         ]
-        failed = self.failures()
-        reasons = {
-            (r, v): reason if reason is not None else error
-            for r, v, reason, error in zip(
-                failed["receptor"],
-                failed["variant"],
-                failed["reason"],
-                failed["error"],
-                strict=True,
-            )
-        }
+        records = self._failure_records(present)
+        reasons = {pair: record.get("reason") for pair, record in records.items()}
         return self.frame.assign(
             particles=pd.array(particles, dtype="boolean"),
             footprint=pd.array(feet, dtype="boolean"),
@@ -663,31 +654,54 @@ class Simulations:
             reason=pd.array([reasons.get(pair) for pair in pairs], dtype="string"),
         )
 
+    def _failure_records(
+        self, present: dict[str, tuple[frozenset[str], frozenset[str] | None]]
+    ) -> dict[tuple[str, str], dict[str, Any]]:
+        """
+        Return the failure record of each selected simulation missing a result, by ``(receptor, variant)``.
+
+        A simulation without particles is explained by its particles'
+        record, one with particles but no footprint by its footprint's
+        (:attr:`stilt.Simulation.failure`). Only those receptors' date
+        folders are listed, and only the records found are read.
+        """
+        output = self.project.output
+        found: dict[tuple[str, str], dict[str, Any]] = {}
+        for name, rows in self.frame.groupby("variant", sort=False):
+            v = str(name)
+            variant = self.project.variants[v]
+            particles, feet = present[v]
+            receptors = set(rows["receptor"])
+            no_particles = receptors - particles
+            no_footprint = set() if feet is None else (receptors & particles) - feet
+            for folder, among in (
+                (output.find_particles(variant), no_particles),
+                (output.find_footprints(variant), no_footprint),
+            ):
+                if folder is not None and among:
+                    for rid, record in folder.failures(among).items():
+                        found[(rid, v)] = record
+        return found
+
     def failures(self) -> pd.DataFrame:
         """
         Return the selected simulations that failed, and why.
 
         One row per incomplete simulation whose last run failed, with the
-        selection's columns and ``step``, ``error``, ``reason``, and
-        ``message`` from :attr:`stilt.Simulation.failure`. Only the
-        receptors with a failure record are read, found by listing their
-        date folders.
+        selection's columns and ``step``, ``reason``, and ``message`` from
+        :attr:`stilt.Simulation.failure`. Only the receptors with a failure
+        record are read, found by listing their date folders.
         """
-        columns = ["step", "error", "reason", "message"]
-        incomplete = self.incomplete()
-        rows = []
-        for name, frame in incomplete.frame.groupby("variant", sort=False):
-            folder = self.project.output.find_particles(
-                self.project.variants[str(name)]
-            )
-            if folder is None:
-                continue
-            for rid in folder.failed(set(frame["receptor"])):
-                failure = self.project.simulation(rid, str(name)).failure
-                if failure is not None:
-                    rows.append({"receptor": rid, "variant": str(name), **failure})
-        found = pd.DataFrame(rows, columns=pd.Index(["receptor", "variant", *columns]))
-        return incomplete.frame.merge(found[["receptor", "variant", *columns]])
+        columns = ["step", "reason", "message"]
+        records = self._failure_records(self._present())
+        found = pd.DataFrame(
+            [
+                {"receptor": r, "variant": v, **{c: record.get(c) for c in columns}}
+                for (r, v), record in records.items()
+            ],
+            columns=pd.Index(["receptor", "variant", *columns]),
+        )
+        return self.frame.merge(found)
 
     def incomplete(self) -> Simulations:
         """

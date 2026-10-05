@@ -8,6 +8,20 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- A failure record is one flat file per failed result, in the logs folder
+  of the folder that failed: `logs/settings=<particles key>/` for HYSPLIT,
+  `logs/settings=<footprint key>/` for a footprint (breaking). A footprint
+  failure is found by its folder's settings hash, so a project that names
+  the variant differently finds it. A record holds `step`, `reason`,
+  `message`, and `time`, and a `traceback` for an unexpected error.
+  `reason` is always set (the cause, or the error's class), so `error` is
+  gone; `log` and `scratch` are gone too, since `sim.log` and the new
+  `sim.scratch_path` give them. For a HYSPLIT failure the message is the
+  line of its log that matched. An expected failure logs one line instead
+  of a traceback. `Particles.write_failure` and `failed` are replaced by
+  `record_failure`, `clear_failure`, and `failures` on both folder kinds
+  (#148).
+
 - Docs: a receptor's and a `Mesh`'s fields are described once, in their
   field descriptions, and the reference pages list them from there.
   `Project.run` and `Project.submit` point to `stilt.execution.run` and

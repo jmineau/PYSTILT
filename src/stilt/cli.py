@@ -258,10 +258,7 @@ def _print_status(project: Project) -> None:
             typer.echo(f"  {variant}: {_counts(total[variant], waiting[variant])}")
     failed = pending.failures()
     if len(failed):
-        causes = Counter(
-            reason if isinstance(reason, str) else error
-            for reason, error in zip(failed["reason"], failed["error"], strict=True)
-        )
+        causes = Counter(failed["reason"])
         listed = ", ".join(f"{cause} {n}" for cause, n in causes.most_common())
         typer.echo(f"failed: {listed}  (sim.failure says why)")
     unreferenced = project.unreferenced()
