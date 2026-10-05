@@ -56,6 +56,9 @@ if TYPE_CHECKING:
 #: The columns of :attr:`Project.receptors` before the label columns.
 RECEPTOR_COLUMNS = ("receptor", "time", "kind", "location")
 
+#: Where a simulation stands, the ``state`` column of :meth:`Simulations.status`.
+STATES = ("complete", "failed", "pending")
+
 
 def _absolute(path: str | Path) -> Path:
     """Return *path* absolute, with ``~`` and variables expanded, so a worker started elsewhere finds the same place."""
@@ -643,19 +646,36 @@ class Simulations:
 
     def status(self) -> pd.DataFrame:
         """
-        Return the table with columns saying which results exist.
+        Return the table with what each simulation has, and where it stands.
+
+        Whether a result exists comes from a listing of the date folders, so
+        no result file is opened; only the failure records of failed
+        simulations are read.
 
         Returns
         -------
         pandas.DataFrame
-            The selection's table with five more columns. ``particles`` and
-            ``footprint`` are ``True`` when the result exists, ``False`` when
-            it is missing, and ``NA`` when the simulation does not make it.
-            ``empty`` is ``True`` when the footprint is empty (no particle
-            reached the grid), which needs each footprint file opened.
-            ``complete`` is :meth:`~stilt.Simulation.is_complete`, and
-            ``reason`` why an incomplete simulation failed (:meth:`failures`),
-            ``NA`` when it has not failed.
+            The selection's table with six more columns. ``particles`` and
+            ``footprint`` are ``True`` when the result exists, ``False``
+            when it is missing, and ``NA`` when the variant does not make
+            it. ``state`` is ``complete`` when every expected result exists
+            (:meth:`stilt.Simulation.is_complete`), ``failed`` when the last
+            run failed, and ``pending`` otherwise: not run yet, or stopped
+            before it finished. ``step``, ``reason``, and ``message`` say
+            why a failed simulation failed (:attr:`stilt.Simulation.failure`),
+            and are ``NA`` for the others.
+
+        Notes
+        -----
+        An empty footprint (no particle reached the grid) is complete.
+        :attr:`stilt.Simulation.empty_reason` says why one is empty, and a
+        :meth:`jacobian` lists the empty ones.
+
+        Examples
+        --------
+        >>> st = project.simulations.status()
+        >>> st.state.value_counts()
+        >>> st[st.state == "failed"][["receptor", "variant", "reason"]]
         """
         present = self._present()
         pairs = self._pairs()
@@ -663,20 +683,21 @@ class Simulations:
         feet = [
             None if (have := present[v][1]) is None else r in have for r, v in pairs
         ]
-        empty = [
-            None
-            if f is None
-            else f and self.project.simulation(r, v).empty_reason is not None
-            for (r, v), f in zip(pairs, feet, strict=True)
+        complete = self._complete(present)
+        found = self._failure_records(present)
+        records = [found.get(pair, {}) for pair in pairs]
+        state = [
+            "complete" if done else "failed" if record else "pending"
+            for done, record in zip(complete, records, strict=True)
         ]
-        records = self._failure_records(present)
-        reasons = {pair: record.get("reason") for pair, record in records.items()}
         return self.frame.assign(
             particles=pd.array(particles, dtype="boolean"),
             footprint=pd.array(feet, dtype="boolean"),
-            empty=pd.array(empty, dtype="boolean"),
-            complete=self._complete(present),
-            reason=pd.array([reasons.get(pair) for pair in pairs], dtype="string"),
+            state=pd.Categorical(state, categories=STATES),
+            **{
+                column: pd.array([r.get(column) for r in records], dtype="string")
+                for column in ("step", "reason", "message")
+            },
         )
 
     def _failure_records(
@@ -708,32 +729,12 @@ class Simulations:
                         found[(rid, v)] = record
         return found
 
-    def failures(self) -> pd.DataFrame:
-        """
-        Return the selected simulations that failed, and why.
-
-        One row per incomplete simulation whose last run failed, with the
-        selection's columns and ``step``, ``reason``, and ``message`` from
-        :attr:`stilt.Simulation.failure`. Only the receptors with a failure
-        record are read, found by listing their date folders.
-        """
-        columns = ["step", "reason", "message"]
-        records = self._failure_records(self._present())
-        found = pd.DataFrame(
-            [
-                {"receptor": r, "variant": v, **{c: record.get(c) for c in columns}}
-                for (r, v), record in records.items()
-            ],
-            columns=pd.Index(["receptor", "variant", *columns]),
-        )
-        return self.frame.merge(found)
-
     def incomplete(self) -> Simulations:
         """
         Return the simulations that are missing an expected result.
 
-        The same rows as :meth:`status` marks not ``complete``, found without
-        opening any footprint file, so it is quick on a large project.
+        The rows :meth:`status` does not mark ``complete``. It reads no
+        failure record, so it is the quickest way to see what is left.
         """
         return Simulations(
             self.project, self.frame.loc[~self._complete(self._present())]

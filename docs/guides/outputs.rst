@@ -167,17 +167,20 @@ To see what is left to do:
 .. code-block:: python
 
    sims.incomplete()   # the simulations that are not complete
-   sims.status()       # every row, with five more columns
-   sims.failures()     # the failed simulations, and why
+   st = sims.status()  # every row, with six more columns
+   st.state.value_counts()
+   st[st.state == "failed"]   # the failed simulations, and why
    july.status()       # the same, for a selection
 
 ``status()`` adds a ``particles`` and a ``footprint`` column that say
 whether each output exists. They are blank where the variant does not make
-that output. The ``empty`` column marks footprints that are empty (`Empty
-footprints`_), and the ``complete`` column says whether the simulation is
-done. Finding empty footprints opens each footprint file, so ``status()``
-is slower than ``incomplete()`` on a large project. From the command line,
-``stilt status`` prints the totals, per variant when there are several.
+that output. The ``state`` column is ``complete``, ``failed``, or
+``pending`` (not run yet, or stopped before it finished). For a failed
+simulation, ``step``, ``reason``, and ``message`` say why. ``status()``
+reads folder listings and the failure records of failed simulations, and
+opens no result file, so it is quick on a large project. From the command
+line, ``stilt status`` prints the totals, per variant when there are
+several.
 
 Particles
 ---------
@@ -249,9 +252,8 @@ grid. Usually the grid is too small or is not upwind. PYSTILT then writes a
 footprint file with no cells and the reason inside. The simulation counts
 as finished, so reruns skip it. ``sim.footprint`` is ``None``,
 ``sim.empty_reason`` says why, and ``load_footprints()`` leaves the
-simulation out because there is nothing to load. The ``empty`` column of
-``status()`` lists them. If you see many, make your
-footprint grid bigger.
+simulation out because there is nothing to load. A Jacobian lists them in
+``H.empty``. If you see many, make your footprint grid bigger.
 
 An empty footprint is not a footprint of zeros. It means the transport never
 connected the receptor to your grid, so treating it as "the model says zero"

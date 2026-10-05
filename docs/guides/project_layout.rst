@@ -111,7 +111,7 @@ project is made. After that, the folder is all you need:
    import stilt
 
    project = stilt.Project("./my_project")
-   project.simulations.status()   # one row per simulation, with a "complete" column
+   project.simulations.status()   # one row per simulation, with a "state" column
 
 Opening a project only reads it. To change a setting, edit ``config.yaml``.
 

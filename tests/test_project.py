@@ -548,36 +548,56 @@ def test_status_marks_outputs_a_variant_does_not_produce(tmp_path, point_recepto
 
     status = project.simulations.status()
 
-    assert list(status.columns[-5:]) == [
+    assert list(status.columns[-6:]) == [
         "particles",
         "footprint",
-        "empty",
-        "complete",
+        "state",
+        "step",
         "reason",
+        "message",
     ]
     assert status["reason"].isna().all()
     by_variant = status.set_index("variant")
     assert by_variant.loc["hrrr", "particles"] == True  # noqa: E712
     assert by_variant.loc["hrrr", "footprint"] == False  # noqa: E712
-    assert by_variant.loc["hrrr", "empty"] == False  # noqa: E712
     assert pd.isna(by_variant.loc["traj", "footprint"])
-    assert pd.isna(by_variant.loc["traj", "empty"])
-    assert by_variant.loc["traj", "complete"] == True  # noqa: E712
-    assert by_variant.loc["hrrr", "complete"] == False  # noqa: E712
+    assert by_variant.loc["traj", "state"] == "complete"
+    assert by_variant.loc["hrrr", "state"] == "pending"
 
 
 def test_status_counts_an_empty_footprint_as_complete(tmp_path):
     a, b = _receptor(12), _receptor(13)
     project = _project(tmp_path, [a, b])
-    assert project.simulations.status()["complete"].tolist() == [False, False]
+    assert project.simulations.status()["state"].tolist() == ["pending", "pending"]
 
     _write_trajectory(project, a)
     _write_footprint(project, a)
     _write_trajectory(project, b)
     _write_footprint(project, b, empty=True)
     status = project.simulations.status()
-    assert status["complete"].tolist() == [True, True]
-    assert status["empty"].tolist() == [False, True]
+    assert status["state"].tolist() == ["complete", "complete"]
+    assert project.simulation(b.id, "hrrr").empty_reason == "outside_domain"
+
+
+def test_status_opens_no_result_file_and_builds_no_receptor(tmp_path, monkeypatch):
+    """#141: on a large project, opening files or building receptors per row took minutes."""
+    import pyarrow.parquet as pq
+
+    a, b = _receptor(12), _receptor(13)
+    project = _project(tmp_path, [a, b])
+    _write_trajectory(project, a)
+    _write_footprint(project, a)
+    _write_footprint(project, b, empty=True)
+    sims = project.simulations
+
+    def refuse(*args, **kwargs):
+        raise AssertionError("status() opened a result file")
+
+    for name in ("read_schema", "read_metadata", "read_table", "ParquetFile"):
+        monkeypatch.setattr(pq, name, refuse)
+    monkeypatch.setattr(Project, "_receptors", None)
+
+    assert sims.status()["state"].tolist() == ["complete", "pending"]
 
 
 def _mixed_state_project(tmp_path):
@@ -620,14 +640,15 @@ def test_incomplete_and_status_agree_with_is_complete(tmp_path):
     ] == expected
 
     status = project.simulations.status()
-    assert status["complete"].tolist() == [sim.is_complete() for sim in handles]
+    assert (status["state"] == "complete").tolist() == [
+        sim.is_complete() for sim in handles
+    ]
     assert status["particles"].tolist() == [sim.has_particles for sim in handles]
     for row, sim in zip(status.itertuples(), handles, strict=True):
         if sim.makes_footprint:
             assert row.footprint == sim.has_footprint
-            assert row.empty == (sim.empty_reason is not None)
         else:
-            assert pd.isna(row.footprint) and pd.isna(row.empty)
+            assert pd.isna(row.footprint)
 
     smooth = sims[sims.variant == "smooth"]
     assert _pairs(smooth.incomplete()) == [
@@ -1038,9 +1059,7 @@ def test_init_refuses_a_variant_with_bad_settings_and_writes_nothing(tmp_path):
     assert not (tmp_path / "proj" / "config.yaml").exists()
 
 
-def test_failures_lists_the_incomplete_simulations_that_failed_and_why(
-    tmp_path, point_receptor
-):
+def test_status_says_why_the_failed_simulations_failed(tmp_path, point_receptor):
     other = PointReceptor(
         time="2023-07-15 19:00", longitude=-111.848, latitude=40.766, altitude=10
     )
@@ -1052,7 +1071,8 @@ def test_failures_lists_the_incomplete_simulations_that_failed_and_why(
         sim.receptor.id, {"step": "particles", "reason": "MET_COVERAGE", "message": "m"}
     )
 
-    failed = project.simulations.failures()
+    status = project.simulations.status()
+    failed = status[status.state == "failed"]
 
     assert failed[["receptor", "variant", "step", "reason"]].to_dict("records") == [
         {
@@ -1062,6 +1082,6 @@ def test_failures_lists_the_incomplete_simulations_that_failed_and_why(
             "reason": "MET_COVERAGE",
         }
     ]
-    status = project.simulations.status().set_index("receptor")
-    assert status.loc[str(point_receptor.id), "reason"] == "MET_COVERAGE"
-    assert pd.isna(status.loc[str(other.id), "reason"])
+    by_receptor = status.set_index("receptor")
+    assert by_receptor.loc[str(other.id), "state"] == "pending"
+    assert pd.isna(by_receptor.loc[str(other.id), "reason"])

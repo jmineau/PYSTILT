@@ -72,7 +72,7 @@ loses its failure record.
    failed: MISSING_MET_FILES 42, MET_TRUNCATED 8  (sim.failure says why)
 
 In Python, ``sim.failure`` says why one simulation failed, and
-``sims.failures()`` lists every failed simulation in a selection:
+``status()`` lists every failed simulation in a selection:
 
 .. code-block:: python
 
@@ -80,7 +80,8 @@ In Python, ``sim.failure`` says why one simulation failed, and
    {'step': 'particles', 'reason': 'MET_COVERAGE',
     'message': 'HYSPLIT: start point not within (x,y,t) any data file',
     'time': '2026-10-03T21:14:05+00:00'}
-   >>> project.simulations.failures()[["receptor", "variant", "reason"]]
+   >>> st = project.simulations.status()
+   >>> st[st.state == "failed"][["receptor", "variant", "reason"]]
 
 ``step`` is ``particles`` when HYSPLIT failed, which fails every variant that
 shares those particles, and ``footprint`` when only that variant's footprint
