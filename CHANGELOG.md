@@ -8,6 +8,14 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- `Simulations.jacobian` reads and sums footprints in batches of 64
+  receptors, `execution.cpus` batches at a time, and stacks the rows, so
+  its memory no longer grows with the selection. On 2,000 footprints of
+  about 350,000 cells each it peaked at 105 GB and took 188 s; it now
+  takes 4 GB and 112 s on one thread, 32 s on eight, with the same matrix.
+  The time bin is found once per receptor-hour, and the sum onto the
+  target is one sparse product per batch (#148).
+
 - Multipoint receptor ids are computed for a whole table at once, and
   the ids are byte for byte the same (checked on every receptor of two
   large projects). Reading a `receptors.csv` of 63,000 multipoint

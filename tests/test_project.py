@@ -774,6 +774,42 @@ def test_jacobian_of_a_variant(tmp_path):
         sims.jacobian(target, bins)
 
 
+def test_jacobian_in_batches_and_threads_is_the_same_matrix(tmp_path, monkeypatch):
+    import stilt.project as project_module
+
+    receptors = [_receptor(h) for h in range(8, 16)]
+    project = _project(tmp_path, receptors, execution={"cpus": 3})
+    for r in receptors[:-1]:
+        _write_footprint(project, r)
+    _write_footprint(project, receptors[-1], empty=True)
+    target = Grid(xmin=-114.0, xmax=-113.0, ymin=39.0, ymax=40.0, xres=0.5, yres=0.5)
+    bins = pd.IntervalIndex.from_breaks(
+        pd.date_range("2023-01-01 00:00", "2023-01-02 00:00", freq="3h"),
+        closed="left",
+    )
+    whole = project.simulations.jacobian(target, bins)
+
+    monkeypatch.setattr(project_module, "JACOBIAN_BATCH", 2)
+    batched = project.simulations.jacobian(target, bins)
+
+    assert (
+        list(batched.receptors)
+        == list(whole.receptors)
+        == [r.id for r in receptors[:-1]]
+    )
+    assert batched.empty == whole.empty == [receptors[-1].id]
+    assert (batched.data != whole.data).nnz == 0
+    expected = [
+        project.simulation(r.id, "hrrr").footprint.stilt.aggregate(target, bins)
+        for r in receptors[:-1]
+    ]
+    np.testing.assert_allclose(
+        batched.data.toarray(),
+        np.stack([e.to_numpy().T.ravel() for e in expected]),
+        rtol=1e-6,
+    )
+
+
 def test_jacobian_lists_each_date_folder_once(tmp_path, monkeypatch):
     import stilt.output as output_module
 
