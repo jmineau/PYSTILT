@@ -33,6 +33,7 @@ from __future__ import annotations
 import hashlib
 import warnings
 from collections.abc import Sequence
+from functools import cached_property
 from typing import Any
 
 import numpy as np
@@ -259,7 +260,7 @@ class Mesh(BaseModel):
         widths = np.minimum(b[:, 2] - b[:, 0], b[:, 3] - b[:, 1])
         return float(widths.min())
 
-    @property
+    @cached_property
     def hash(self) -> str:
         """First 10 characters of a SHA-256 hash of the ids, polygons, and CRS."""
         h = hashlib.sha256()
@@ -464,7 +465,7 @@ class Zones(BaseModel):
             shape=(len(self.index), n_base),
         )
 
-    @property
+    @cached_property
     def hash(self) -> str:
         """First 10 characters of a SHA-256 hash of the base geometry and labels."""
         h = hashlib.sha256()
