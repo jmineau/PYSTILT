@@ -750,6 +750,31 @@ def test_jacobian_of_a_variant(tmp_path):
         sims.jacobian(target, bins)
 
 
+def test_jacobian_lists_each_date_folder_once(tmp_path, monkeypatch):
+    import stilt.output as output_module
+
+    a = _receptor(12)
+    project = _project(tmp_path, [a])
+    _write_footprint(project, a)
+    target = Grid(xmin=-114.0, xmax=-113.0, ymin=39.0, ymax=40.0, xres=0.5, yres=0.5)
+    bins = pd.IntervalIndex.from_breaks(
+        pd.date_range("2023-01-01 00:00", "2023-01-02 00:00", freq="12h"),
+        closed="left",
+    )
+    listed: list[str] = []
+    real_scandir = output_module.os.scandir
+
+    def scandir(path):
+        listed.append(Path(path).name)
+        return real_scandir(path)
+
+    monkeypatch.setattr(output_module.os, "scandir", scandir)
+    H = project.simulations.jacobian(target, bins)
+
+    assert list(H.receptors) == [a.id]
+    assert listed.count("date=2023-01-01") == 1
+
+
 def test_plot_availability_returns_axes(tmp_path, point_receptor):
     import matplotlib.pyplot as plt
 

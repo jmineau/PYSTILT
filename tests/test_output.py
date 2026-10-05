@@ -186,7 +186,7 @@ def test_particles_round_trip_in_date_folders(tmp_path):
     path = run.write(receptor, traj, [])
     assert path == run.path / "date=2024-07-15" / f"{receptor.id}.parquet"
     assert run.has(str(receptor.id))
-    assert run.receptors() == [str(receptor.id)]
+    assert list(run.files()) == [str(receptor.id)]
 
     back = run.read(str(receptor.id))
     meta = particles_metadata(path)
@@ -264,7 +264,7 @@ def test_receptors_listed_in_date_order(tmp_path):
             _trajectories(_receptor(hour=hour, day=day)),
             [],
         )
-    ids = run.receptors()
+    ids = list(run.files())
     assert ids == sorted(ids)
     assert [i[:10] for i in ids] == ["2024071506", "2024071518", "2024071600"]
 
@@ -349,7 +349,7 @@ def test_empty_footprint_is_a_file_with_no_rows_and_a_reason(tmp_path):
     assert feet.has(str(receptor.id))
     assert feet.read(str(receptor.id)) is None
     assert feet.empty_reason(str(receptor.id)) == "outside_domain"
-    assert feet.receptors() == [str(receptor.id)]
+    assert list(feet.files()) == [str(receptor.id)]
 
 
 def test_footprint_coordinates_off_by_rounding_still_match(tmp_path):
@@ -433,8 +433,8 @@ def test_table_reads_the_date_folder_as_a_date32_column(written_footprints):
     assert table.schema.field("date").type == pa.date32()
     assert set(table.column("date").to_pylist()) == {dt.date(2024, 7, 15)}
     assert set(table.column("receptor").to_pylist()) == set(feet_by_id)
-    assert feet.table([]).num_rows == 0
-    assert feet.table([]).schema.field("date").type == pa.date32()
+    assert feet.table({}).num_rows == 0
+    assert feet.table({}).schema.field("date").type == pa.date32()
 
 
 def test_jacobian_rows_are_the_requested_receptors(written_footprints):
@@ -443,7 +443,9 @@ def test_jacobian_rows_are_the_requested_receptors(written_footprints):
     ids = list(feet_by_id)
     target = Grid(xmin=-112.0, xmax=-111.5, ymin=40.5, ymax=41.0, xres=0.25, yres=0.25)
     H = jacobian(feet.table(), feet.config, target, _bins(), [ids[1], empty_id])
-    alone = jacobian(feet.table([ids[1]]), feet.config, target, _bins(), [ids[1]])
+    alone = jacobian(
+        feet.table(feet.files([ids[1]])), feet.config, target, _bins(), [ids[1]]
+    )
     assert list(H.receptors) == [ids[1]]
     assert H.empty == [empty_id]
     assert H.missing == []
@@ -538,11 +540,11 @@ def test_receptors_among_lists_only_the_date_folders_asked_for(tmp_path, monkeyp
         return real_scandir(path)
 
     monkeypatch.setattr(output_module.os, "scandir", scandir)
-    found = run.receptors(among=[day15.id, never_run.id])
+    found = list(run.files(among=[day15.id, never_run.id]))
 
     assert found == [day15.id]
     assert sorted(listed) == ["date=2024-07-15", "date=2024-07-20"]
-    assert run.receptors() == [day15.id, day16.id]
+    assert list(run.files()) == [day15.id, day16.id]
 
 
 # ---------------------------------------------------------------------------

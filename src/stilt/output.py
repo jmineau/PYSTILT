@@ -41,7 +41,7 @@ from __future__ import annotations
 
 import logging
 import os
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, TypeVar
@@ -131,24 +131,6 @@ def _list_receptor_files(
     if wanted is not None:
         found = {rid: path for rid, path in found.items() if rid in wanted}
     return found
-
-
-def _read_files(root: Path, files: dict[str, Path], empty: pa.Table) -> pa.Table:
-    """
-    Return the files of a results folder as one table, or *empty* when there are none.
-
-    *files* is what :func:`_list_receptor_files` returns for *root*. The
-    ``date`` column comes from the files' ``date=`` folders.
-    """
-    if not files:
-        return empty
-    dataset = pads.dataset(
-        [str(p) for p in files.values()],
-        format="parquet",
-        partitioning=_DATE_PARTITIONING,
-        partition_base_dir=str(root),
-    )
-    return dataset.to_table()
 
 
 def _read_yaml(path: Path) -> dict[str, Any]:
@@ -437,25 +419,40 @@ class _Folder:
         """Return whether a receptor's file exists."""
         return self.file(receptor_id).exists()
 
-    def receptors(self, among: Iterable[str] | None = None) -> list[str]:
+    def files(self, among: Iterable[str] | None = None) -> dict[str, Path]:
         """
-        Return the ids of the receptors that have a file here, in date order.
+        Return ``{receptor_id: path}`` for the receptors that have a file here, in date order.
 
         With *among*, only those receptors are checked, by listing their
-        date folders alone.
+        date folders alone. Pass the result to :meth:`table` to read the
+        files without listing the folders again.
         """
-        return list(_list_receptor_files(self.path, ".parquet", among))
+        return _list_receptor_files(self.path, ".parquet", among)
 
-    def table(self, receptors: Iterable[str] | None = None) -> pa.Table:
+    def table(self, files: Mapping[str, Path] | None = None) -> pa.Table:
         """
         Return the files of many receptors as one table.
 
         Columns are ``receptor``, the stored columns, and ``date`` (the
-        receptor date, from the folder, as ``date32``). With *receptors*,
-        only those files are read, and only their date folders are listed.
+        receptor date, from the folder, as ``date32``).
+
+        Parameters
+        ----------
+        files : mapping, optional
+            The files to read, as :meth:`files` lists them. Without it,
+            every file in the folder is read.
         """
-        files = _list_receptor_files(self.path, ".parquet", receptors)
-        return _read_files(self.path, files, self._empty)
+        if files is None:
+            files = self.files()
+        if not files:
+            return self._empty
+        dataset = pads.dataset(
+            [str(p) for p in files.values()],
+            format="parquet",
+            partitioning=_DATE_PARTITIONING,
+            partition_base_dir=str(self.path),
+        )
+        return dataset.to_table()
 
 
 class Particles(_Folder):
