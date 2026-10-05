@@ -282,7 +282,7 @@ def test_footprint_folder_is_variant_name_and_combined_hash(tmp_path):
         }
     )
     assert feet.key == f"hrrr-{digest[:6]}"
-    assert feet.path == out.footprints_dir / f"settings=hrrr-{digest[:6]}"
+    assert feet.path == out.path / "footprints" / f"settings=hrrr-{digest[:6]}"
     assert feet.config == config
     assert feet.grid == GRID
     assert feet.particles == run
@@ -310,7 +310,7 @@ def test_footprint_round_trip_is_exact_in_float32(tmp_path):
     foot = _footprint(receptor, hours=(-3, -2, -1, 0), seed=1)
     path = feet.write(foot)
     assert path == feet.path / "date=2024-07-15" / f"{receptor.id}.parquet"
-    assert feet.path.parent == Output(tmp_path / "output").footprints_dir
+    assert feet.path.parent == tmp_path / "output" / "footprints"
 
     back = feet.read(str(receptor.id))
     assert back is not None

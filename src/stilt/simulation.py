@@ -173,8 +173,8 @@ class Simulation:
     @property
     def has_particles(self) -> bool:
         """Whether the particle file exists."""
-        path = self.particles_path
-        return path is not None and path.exists()
+        folder = self._particle_set
+        return folder is not None and folder.has(self.receptor.id)
 
     @property
     def has_footprint(self) -> bool:
@@ -183,8 +183,8 @@ class Simulation:
 
         An empty footprint (no particles over the grid) is a finished result.
         """
-        path = self.footprint_path
-        return path is not None and path.exists()
+        feet = self._footprint_set
+        return feet is not None and feet.has(self.receptor.id)
 
     @property
     def makes_footprint(self) -> bool:
