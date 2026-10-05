@@ -16,7 +16,7 @@ from stilt._atomic import atomic_path
 from stilt.footprint.config import FootprintConfig
 from stilt.identity import read_footprint_settings
 from stilt.receptors import Receptor
-from stilt.spatial import Grid
+from stilt.spatial import Grid, horizontal_dims
 
 from .aggregation import aggregate
 from .io import _naive_utc, _with_cf_metadata
@@ -154,16 +154,28 @@ class FootprintAccessor:
         -------
         xarray.DataArray
             Enhancement for each footprint time step. ``.sum()`` gives the
-            total.
+            total. A footprint already summed over time gives the total
+            alone.
+
+        Raises
+        ------
+        ValueError
+            If the flux has a ``time`` dimension and the footprint has none,
+            since a time-summed footprint cannot say which flux step each
+            hour meets.
         """
         from stilt.sampling import sample_field
 
         foot = self._foot
-        y_dim, x_dim = foot.dims[-2], foot.dims[-1]
+        y_dim, x_dim = horizontal_dims(foot)
+        if "time" in flux.dims and "time" not in foot.dims:
+            raise ValueError(
+                "The flux varies in time and the footprint has no time "
+                "dimension. Use the footprint before summing it over time."
+            )
         yy, xx = np.meshgrid(
             foot[y_dim].to_numpy(), foot[x_dim].to_numpy(), indexing="ij"
         )
-        shape = yy.shape
         if "time" in flux.dims:
             layers = [
                 sample_field(
@@ -172,21 +184,19 @@ class FootprintAccessor:
                     yy.ravel(),
                     times=np.full(xx.size, t),
                     fill_value=0.0,
-                ).reshape(shape)
+                ).reshape(yy.shape)
                 for t in foot["time"].to_numpy()
             ]
-            sampled = np.stack(layers)
+            sampled = xr.DataArray(
+                np.stack(layers),
+                dims=["time", y_dim, x_dim],
+                coords={"time": foot["time"]},
+            )
         else:
-            sampled = sample_field(
-                flux, xx.ravel(), yy.ravel(), fill_value=0.0
-            ).reshape(shape)[None]
-        values = (foot.to_numpy() * sampled).sum(axis=(1, 2))
-        return xr.DataArray(
-            values,
-            dims=["time"],
-            coords={"time": foot["time"]},
-            name="enhancement",
-        )
+            values = sample_field(flux, xx.ravel(), yy.ravel(), fill_value=0.0)
+            sampled = xr.DataArray(values.reshape(yy.shape), dims=[y_dim, x_dim])
+        # By dimension name, so any dimension order gives the same answer.
+        return (foot * sampled).sum([y_dim, x_dim]).rename("enhancement")
 
     def aggregate(
         self,

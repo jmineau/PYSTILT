@@ -150,6 +150,28 @@ def test_footprint_enhancement_is_foot_times_flux_per_time_step(point_receptor):
     assert float(enhancement.sum()) == 45.0
 
 
+def test_footprint_enhancement_does_not_depend_on_dimension_order(point_receptor):
+    foot = _footprint(point_receptor, [np.ones((2, 3)), 2 * np.ones((2, 3))])
+    flux = _flux()
+    expected = foot.stilt.enhancement(flux)
+
+    swapped = foot.transpose("time", "lon", "lat")
+    assert swapped.stilt.enhancement(flux).to_numpy().tolist() == [15.0, 30.0]
+    xr.testing.assert_equal(swapped.stilt.enhancement(flux), expected)
+
+
+def test_footprint_enhancement_of_a_time_summed_footprint_is_the_total(
+    point_receptor,
+):
+    foot = _footprint(point_receptor, [np.ones((2, 3)), 2 * np.ones((2, 3))])
+    total = foot.sum("time", keep_attrs=True)
+
+    assert float(total.stilt.enhancement(_flux())) == 45.0
+    flux_in_time = _flux().expand_dims(time=pd.to_datetime(["2023-01-01 11:00"]))
+    with pytest.raises(ValueError, match="no time dimension"):
+        total.stilt.enhancement(flux_in_time)
+
+
 def test_footprint_enhancement_samples_flux_on_its_own_grid(point_receptor):
     foot = _footprint(point_receptor, [np.ones((2, 3)), np.zeros((2, 3))])
     # a single-cell axis has no spacing to bound, so it covers every point
