@@ -229,14 +229,6 @@ class Output:
         return hash(str(self.path))
 
     @property
-    def particles_dir(self) -> Path:
-        return self.path / Particles.tree
-
-    @property
-    def footprints_dir(self) -> Path:
-        return self.path / Footprints.tree
-
-    @property
     def logs_dir(self) -> Path:
         return self.path / "logs"
 
