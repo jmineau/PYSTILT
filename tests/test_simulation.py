@@ -49,13 +49,14 @@ def _variant(
 
 
 def _sim(
-    tmp_path, receptor, *, footprint=None, variant="hrrr", **overrides
+    tmp_path, receptor, *, footprint=None, variant="hrrr", directory=None, **overrides
 ) -> Simulation:
     """A simulation whose results live in ``tmp_path/output``."""
     return Simulation(
         receptor,
         _variant(tmp_path, variant, footprint=footprint, **overrides),
         Output(tmp_path / "output"),
+        directory,
     )
 
 
@@ -379,7 +380,7 @@ def test_generate_footprint_uses_the_receptor_kernel_from_a_project_table(
     config = FOOT.model_copy(
         update={"transforms": [AveragingKernel(table="kernels.parquet")]}
     )
-    sim = _sim(tmp_path, point_receptor, footprint=config)
+    sim = _sim(tmp_path, point_receptor, footprint=config, directory=tmp_path)
     with_height = _trajectories(point_receptor, sim.variant.transport)
     with_height["xhgt"] = 10.0  # the kernel weights particles by release height
     folder = sim.output.particles(sim.variant)
@@ -389,7 +390,7 @@ def test_generate_footprint_uses_the_receptor_kernel_from_a_project_table(
         plain._particle_set == sim._particle_set
     )  # same transport settings: the particles are shared
 
-    weighted = sim.generate_footprint(directory=tmp_path)
+    weighted = sim.generate_footprint()  # the table is found in sim.directory
     base = plain.generate_footprint()
     assert float(weighted.sum()) == pytest.approx(0.5 * float(base.sum()))
 

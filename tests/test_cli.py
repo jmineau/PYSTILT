@@ -167,7 +167,7 @@ def test_status_counts_full_simulation_completion(tmp_path):
     from stilt.execution import make_footprint
 
     sim = project.simulation(receptor.id, "hrrr")  # a fresh value
-    make_footprint(sim, sim.particles, directory=project.directory)
+    make_footprint(sim, sim.particles)
 
     result = runner.invoke(app, ["status", str(tmp_path)])
 

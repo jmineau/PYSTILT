@@ -13,6 +13,7 @@ from uuid import uuid4
 
 import submitit
 
+from stilt._paths import absolute
 from stilt.execution.config import ExecutionConfig
 
 if TYPE_CHECKING:
@@ -152,10 +153,9 @@ def resolve_compute_root(
     if compute_root is None:
         compute_root = os.environ.get("PYSTILT_COMPUTE_ROOT") or None
     if compute_root is not None:
-        raw = os.path.expandvars(os.path.expanduser(str(compute_root)))
-        return Path(raw).resolve()
+        return absolute(compute_root)
     tmp_root = os.environ.get("TMPDIR") or tempfile.gettempdir()
-    return (Path(tmp_root) / "pystilt" / project.name).resolve()
+    return absolute(Path(tmp_root) / "pystilt" / project.name)
 
 
 def _pending(project: Project, skip_existing: bool) -> list[str]:
