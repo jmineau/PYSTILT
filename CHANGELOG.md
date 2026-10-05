@@ -8,6 +8,16 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- `Simulations.status()` opens no result file (breaking). It took about
+  25 minutes on a project of 64,000 footprints, reading every footprint's
+  metadata for its `empty` column and building a simulation per row; it
+  now takes seconds (#141). Its columns are `particles`, `footprint`, and
+  `state` (`complete`, `failed`, or `pending`), plus `step`, `reason`, and
+  `message` for failed simulations. The `empty` and `complete` columns are
+  gone: an empty footprint is complete, `sim.empty_reason` says why it is
+  empty, and a Jacobian lists the empty ones. `failures()` is gone too;
+  use `st[st.state == "failed"]`.
+
 - A failure record is one flat file per failed result, in the logs folder
   of the folder that failed: `logs/settings=<particles key>/` for HYSPLIT,
   `logs/settings=<footprint key>/` for a footprint (breaking). A footprint

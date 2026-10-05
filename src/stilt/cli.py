@@ -256,7 +256,8 @@ def _print_status(project: Project) -> None:
         waiting = Counter(pending["variant"])
         for variant in project.variants:
             typer.echo(f"  {variant}: {_counts(total[variant], waiting[variant])}")
-    failed = pending.failures()
+    states = pending.status()
+    failed = states[states.state == "failed"]
     if len(failed):
         causes = Counter(failed["reason"])
         listed = ", ".join(f"{cause} {n}" for cause, n in causes.most_common())
