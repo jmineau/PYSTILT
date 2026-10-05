@@ -8,6 +8,11 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Multipoint receptor ids are computed for a whole table at once, and
+  the ids are byte for byte the same (checked on every receptor of two
+  large projects). Reading a `receptors.csv` of 63,000 multipoint
+  receptors (2.6 million rows) takes 9 s, where it took 12.5 s (#148).
+
 - `Simulations.status()` opens no result file (breaking). It took about
   25 minutes on a project of 64,000 footprints, reading every footprint's
   metadata for its `empty` column and building a simulation per row; it

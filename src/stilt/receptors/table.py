@@ -22,7 +22,7 @@ from .models import (
     PointReceptor,
     Receptor,
     _column_location,
-    _multipoint_location,
+    _multipoint_locations,
     _point_location,
 )
 from .validation import column_errors, multipoint_errors, point_errors
@@ -215,16 +215,11 @@ def receptor_rows(frame: pd.DataFrame) -> pd.DataFrame:
             dup = np.zeros(n, dtype=bool)
             dup[multi] = bad
             fail(dup, message)
-        members: dict[int, list[int]] = {}
-        for i, code in zip(multi.tolist(), codes[multi].tolist(), strict=True):
-            members.setdefault(code, []).append(i)
-        for code, idx in members.items():
-            group_location[code] = _multipoint_location(
-                [lon_f[i] for i in idx],
-                [lat_f[i] for i in idx],
-                [alt_f[i] for i in idx],
-                group_ref[code],
-            )
+        found = _multipoint_locations(
+            codes[multi], lon[multi], lat[multi], alt[multi], group_ref
+        )
+        for code, location in found.items():
+            group_location[code] = location
     stamps = time.iloc[first_rows].dt.strftime("%Y%m%d%H%M").to_numpy(dtype=object)
     group_ids = stamps + "_" + group_location
     location = group_location[codes]

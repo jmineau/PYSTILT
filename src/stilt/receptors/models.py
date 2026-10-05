@@ -12,7 +12,7 @@ import datetime as dt
 import hashlib
 import json
 import re
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Mapping, Sequence
 from functools import cached_property
 from typing import (
     TYPE_CHECKING,
@@ -149,16 +149,66 @@ def _multipoint_location(
     to 5 decimals and altitudes to 0.01 m. A whole-metre altitude hashes as
     its integer, so ids made before heights were kept to 0.01 m still match.
     """
-    points = sorted(zip(lons, lats, alts, strict=True))
-    canonical = json.dumps(
-        [
-            [round(float(lon), 5), round(float(lat), 5), _hash_altitude(float(alt))]
-            for lon, lat, alt in points
-        ],
-        separators=(",", ":"),
-    )
-    digest = hashlib.sha256(canonical.encode()).hexdigest()[:10]
-    return f"multi_{digest}{_ref_suffix(altitude_ref)}"
+    lon = np.asarray(list(lons), dtype=float)
+    group = np.zeros(len(lon), dtype=np.int64)
+    return _multipoint_locations(group, lon, lats, alts, [altitude_ref])[0]
+
+
+def _rounded(values: np.ndarray, decimals: int) -> np.ndarray:
+    """
+    Return each value as Python's ``round(value, decimals)`` gives it, for a whole array at once.
+
+    ``rint(v * 10**d) / 10**d`` is the same double as ``round(v, d)``,
+    except where ``v * 10**d`` lies within its rounding error of a half and
+    the product can round to the other side. Those few values go through
+    ``round`` itself, so the result is exact.
+    """
+    scale = 10.0**decimals
+    scaled = values * scale
+    out = np.rint(scaled) / scale
+    for i in np.flatnonzero(np.abs(scaled - np.floor(scaled) - 0.5) < 1e-6):
+        out[i] = round(float(values[i]), decimals)
+    return out
+
+
+def _multipoint_locations(
+    groups: np.ndarray,
+    lons: Iterable[float],
+    lats: Iterable[float],
+    alts: Iterable[float],
+    refs: Sequence[str],
+) -> dict[int, str]:
+    """
+    Return the location id of each multipoint receptor in a table of points, by group.
+
+    *groups* numbers the receptor each point belongs to, and ``refs[g]`` is
+    group ``g``'s vertical reference. The ids are :func:`_multipoint_location`'s:
+    the JSON text of the sorted, rounded points, hashed. It is written out
+    directly, with the floats as ``repr`` gives them as ``json`` does, and
+    the rounding is done for all points at once.
+    """
+    lon = np.asarray(lons, dtype=float)
+    lat = np.asarray(lats, dtype=float)
+    alt = np.asarray(alts, dtype=float)
+    order = np.lexsort((alt, lat, lon, groups))
+    groups = np.asarray(groups)[order]
+    rlon = _rounded(lon[order], 5).tolist()
+    rlat = _rounded(lat[order], 5).tolist()
+    ralt = _rounded(alt[order], 2)
+    whole = (ralt == np.trunc(ralt)).tolist()
+    points = [
+        f"[{x!r},{y!r},{int(z) if w else repr(z)}]"
+        for x, y, z, w in zip(rlon, rlat, ralt.tolist(), whole, strict=True)
+    ]
+    starts = np.flatnonzero(np.r_[True, groups[1:] != groups[:-1]]).tolist()
+    ends = [*starts[1:], len(points)]
+    locations = {}
+    for start, end in zip(starts, ends, strict=True):
+        canonical = "[" + ",".join(points[start:end]) + "]"
+        digest = hashlib.sha256(canonical.encode()).hexdigest()[:10]
+        group = int(groups[start])
+        locations[group] = f"multi_{digest}{_ref_suffix(refs[group])}"
+    return locations
 
 
 # ---------------------------------------------------------------------------
@@ -558,12 +608,6 @@ class MultiPointReceptor(Receptor):
         return MultiPoint(
             list(zip(self.longitudes, self.latitudes, self.altitudes, strict=True))
         )
-
-
-def _hash_altitude(alt: float) -> int | float:
-    """Altitude as hashed in a multipoint id: an int when whole, else to 0.01 m."""
-    rounded = round(alt, 2)
-    return int(rounded) if rounded == int(rounded) else rounded
 
 
 #: Any receptor, for validating a dict of unknown kind.

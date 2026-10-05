@@ -5,6 +5,7 @@ import hashlib
 import io
 import json
 
+import numpy as np
 import pandas as pd
 import pytest
 
@@ -1155,3 +1156,58 @@ def test_receptors_from_checked_rows_are_not_checked_again(
         "LineString",
         "MultiPoint",
     ]
+
+
+def _multipoint_location_as_first_written(lons, lats, alts, altitude_ref):
+    """The multipoint id as it was written before #148, kept to check the faster one."""
+
+    def hash_altitude(alt):
+        rounded = round(alt, 2)
+        return int(rounded) if rounded == int(rounded) else rounded
+
+    points = sorted(zip(lons, lats, alts, strict=True))
+    canonical = json.dumps(
+        [
+            [round(float(lon), 5), round(float(lat), 5), hash_altitude(float(alt))]
+            for lon, lat, alt in points
+        ],
+        separators=(",", ":"),
+    )
+    digest = hashlib.sha256(canonical.encode()).hexdigest()[:10]
+    return f"multi_{digest}{'msl' if altitude_ref == 'msl' else ''}"
+
+
+def test_multipoint_ids_are_the_same_as_first_written():
+    """Ids name result files, so the faster id must give the same bytes."""
+    from stilt.receptors.models import _multipoint_location, _multipoint_locations
+
+    rng = np.random.default_rng(148)
+    groups, lons, lats, alts, refs = [], [], [], [], []
+    for g in range(300):
+        n = int(rng.integers(2, 40))
+        lon = -112 + rng.uniform(-1, 1, n)
+        lat = 40.7 + rng.uniform(-1, 1, n)
+        alt = rng.choice([rng.uniform(0, 3000, n), np.round(rng.uniform(0, 3000, n))])
+        if g % 3 == 0:
+            # Values on and next to the rounding halves, and repeated points.
+            lon = np.round(lon, 5) + 0.000005 * rng.choice([-1, 1], n)
+            alt = np.round(alt, 2) + 0.005
+            lon[1:] = np.where(rng.random(n - 1) < 0.2, lon[0], lon[1:])
+        groups += [g] * n
+        lons += lon.tolist()
+        lats += lat.tolist()
+        alts += alt.tolist()
+        refs.append("msl" if g % 2 else "agl")
+
+    found = _multipoint_locations(np.array(groups), lons, lats, alts, refs)
+    g = np.array(groups)
+    for group, location in found.items():
+        mine = g == group
+        args = (
+            np.array(lons)[mine].tolist(),
+            np.array(lats)[mine].tolist(),
+            np.array(alts)[mine].tolist(),
+            refs[group],
+        )
+        assert location == _multipoint_location_as_first_written(*args)
+        assert location == _multipoint_location(*args)
