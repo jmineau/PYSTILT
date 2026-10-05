@@ -654,6 +654,13 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- `foot.stilt.enhancement` took the grid axes by position, so a footprint
+  with its dimensions in another order gave a wrong enhancement (zero in
+  a test), and a footprint summed over time raised a `KeyError`. It now
+  works by dimension name, gives the total for a time-summed footprint,
+  and raises when the flux varies in time and the footprint does not.
+  `foot.stilt.aggregate` returned zeros for a footprint without a `time`
+  dimension; it now raises (#148).
 - `Simulation.outcome` reported `failed:UNKNOWN` for a variant whose
   footprint was never made when another variant on the same particles had
   run. Its replacement, `sim.failure`, reads the variant's own record

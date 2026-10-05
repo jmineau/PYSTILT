@@ -272,8 +272,13 @@ def aggregate(
     _bin_edges(time_bins)  # raises for bins not closed on the left
     y_dim, x_dim = horizontal_dims(foot)
     _require_geometry(target)
+    if "time" not in foot.dims:
+        raise ValueError(
+            "The footprint has no time dimension, so its hours cannot be put "
+            "in time bins. Aggregate the footprint before summing it over time."
+        )
     columns = _naive_utc(time_bins.left)
-    if foot.size == 0 or int(foot.sizes.get("time", 0)) == 0:
+    if foot.size == 0:
         return pd.DataFrame(0.0, index=target.index, columns=columns)
     x = np.asarray(foot[x_dim].values, dtype=float)
     y = np.asarray(foot[y_dim].values, dtype=float)

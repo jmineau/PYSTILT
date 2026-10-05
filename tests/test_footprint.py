@@ -1477,6 +1477,17 @@ def test_aggregate_grid_in_other_crs_is_reprojected():
     assert result.to_numpy().sum() == pytest.approx(2.0, rel=1e-6)
 
 
+def test_aggregate_of_a_time_summed_footprint_raises():
+    """Summed over time, a footprint's hours are gone; zeros would be wrong."""
+    foot = _make_footprint(n_times=2)
+    total = foot.sum("time", keep_attrs=True)
+    t0 = pd.Timestamp("2023-01-01 12:00")
+    bins = pd.interval_range(start=t0, periods=1, freq="1h", closed="left")
+    mesh = Mesh.from_windows([(-113.95, 39.05)], 0.1)
+    with pytest.raises(ValueError, match="no time dimension"):
+        total.stilt.aggregate(mesh, bins)
+
+
 def test_aggregate_mesh_empty_footprint_returns_zeros():
     foot = _make_footprint(n_times=1)
     foot = foot.isel(time=slice(0, 0))
