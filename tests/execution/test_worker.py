@@ -141,10 +141,9 @@ def _write_particles(sim: Simulation) -> pd.DataFrame:
 
 def _write_footprint(sim: Simulation, *, empty: bool = False) -> None:
     """Record a footprint (or an empty one) for *sim* in the output directory."""
-    run = sim.output.particles(sim.variant)
     assert sim.variant.footprint is not None
     if empty:
-        feet = run.footprints(sim.variant.footprint, name=sim.variant.name)
+        feet = sim.output.footprints(sim.variant)
         feet.write_empty(sim.receptor, "outside_domain", name=sim.variant.name)
     else:
         make_footprint(sim, _particles(sim.receptor))

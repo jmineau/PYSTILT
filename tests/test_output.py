@@ -31,7 +31,9 @@ GRID = Grid(xmin=-112.0, xmax=-111.5, ymin=40.5, ymax=41.0, xres=0.1, yres=0.1)
 MET = MetConfig(directory="/data/hrrr", file_format="%Y%m%d_%H", file_tres="6h")
 
 
-def _variant(name: str = "hrrr", **overrides) -> Variant:
+def _variant(
+    name: str = "hrrr", footprint: FootprintConfig | None = None, **overrides
+) -> Variant:
     """A resolved variant for the tests; *overrides* change the transport fields."""
     return Variant(
         name=name,
@@ -40,10 +42,13 @@ def _variant(name: str = "hrrr", **overrides) -> Variant:
         met_config=MET,
         transport=HysplitConfig(**{"n_hours": -24, "numpar": 100, **overrides}),
         model=ModelInfo(version="v5.1.0"),
+        footprint=footprint,
     )
 
 
 VARIANT = _variant()
+#: VARIANT with footprints on GRID.
+FEET = _variant(footprint=FootprintConfig(grid=GRID))
 
 
 def _receptor(hour: int = 12, day: int = 15) -> PointReceptor:
@@ -273,7 +278,7 @@ def test_footprint_folder_is_variant_name_and_combined_hash(tmp_path):
     out = Output(tmp_path / "output")
     run = out.particles(VARIANT)
     config = FootprintConfig(grid=GRID, smooth_factor=1.0)
-    feet = run.footprints(config)
+    feet = out.footprints(_variant(footprint=config))
     digest = footprint_hash(run.hash, footprint_settings(config, None))
     assert digest == settings_hash(
         {
@@ -289,23 +294,23 @@ def test_footprint_folder_is_variant_name_and_combined_hash(tmp_path):
     record = yaml.safe_load((feet.path / "_settings.yaml").read_text())
     assert record["particles"] == run.key
 
-    other = run.footprints(
-        config.model_copy(update={"smooth_factor": 0.5}), name="hrrr-smooth"
-    )
+    smooth = config.model_copy(update={"smooth_factor": 0.5})
+    other = out.footprints(_variant("hrrr-smooth", footprint=smooth))
     assert other.path != feet.path
     assert other.key.startswith("hrrr-smooth-")
     assert set(out.footprint_sets()) == {feet, other}
     assert {f.particles_key for f in out.footprint_sets()} == {run.key}
-    assert run.footprints(config) == feet
+    # The same settings under another variant name reuse the folder.
+    assert out.footprints(_variant("renamed", footprint=config)) == feet
 
     # The same footprint settings on other particles are another folder.
-    other_run = out.particles(_variant(numpar=200))
-    assert other_run.footprints(config).path != feet.path
+    other_run = out.footprints(_variant(footprint=config, numpar=200))
+    assert other_run.path != feet.path
 
 
 def test_footprint_round_trip_is_exact_in_float32(tmp_path):
     run = Output(tmp_path / "output").particles(VARIANT)
-    feet = run.footprints(FootprintConfig(grid=GRID))
+    feet = run.output.footprints(FEET)
     receptor = _receptor()
     foot = _footprint(receptor, hours=(-3, -2, -1, 0), seed=1)
     path = feet.write(foot)
@@ -327,7 +332,7 @@ def test_footprint_round_trip_is_exact_in_float32(tmp_path):
 
 def test_footprint_all_zero_layer_keeps_its_shape(tmp_path):
     run = Output(tmp_path / "output").particles(VARIANT)
-    feet = run.footprints(FootprintConfig(grid=GRID))
+    feet = run.output.footprints(FEET)
     foot = _footprint(_receptor(), hours=(-2, -1, 0))
     foot[1] = 0.0
     feet.write(foot)
@@ -338,7 +343,7 @@ def test_footprint_all_zero_layer_keeps_its_shape(tmp_path):
 
 def test_empty_footprint_is_a_file_with_no_rows_and_a_reason(tmp_path):
     run = Output(tmp_path / "output").particles(VARIANT)
-    feet = run.footprints(FootprintConfig(grid=GRID))
+    feet = run.output.footprints(FEET)
     receptor = _receptor()
     feet.write_empty(receptor, "outside_domain")
     assert feet.has(str(receptor.id))
@@ -350,7 +355,7 @@ def test_empty_footprint_is_a_file_with_no_rows_and_a_reason(tmp_path):
 def test_footprint_coordinates_off_by_rounding_still_match(tmp_path):
     """A stored footprint's axis can differ from the grid's by 1e-14, as real files do."""
     run = Output(tmp_path / "output").particles(VARIANT)
-    feet = run.footprints(FootprintConfig(grid=GRID))
+    feet = run.output.footprints(FEET)
     foot = _footprint(_receptor(), seed=5)
     nudged = foot.assign_coords(
         lat=foot["lat"].values + 5e-15, lon=foot["lon"].values - 5e-15
@@ -362,7 +367,7 @@ def test_footprint_coordinates_off_by_rounding_still_match(tmp_path):
 
 def test_footprint_on_another_grid_is_rejected(tmp_path):
     run = Output(tmp_path / "output").particles(VARIANT)
-    feet = run.footprints(FootprintConfig(grid=GRID))
+    feet = run.output.footprints(FEET)
     foot = _footprint(_receptor())
     shifted = foot.assign_coords(lon=foot["lon"].values + 0.03)
     with pytest.raises(ValueError, match="not cells of the grid"):
@@ -377,7 +382,7 @@ def test_footprint_on_another_grid_is_rejected(tmp_path):
 @pytest.fixture
 def written_footprints(tmp_path):
     run = Output(tmp_path / "output").particles(VARIANT)
-    feet = run.footprints(FootprintConfig(grid=GRID))
+    feet = run.output.footprints(FEET)
     feet_by_id = {}
     for k, hour in enumerate([6, 12, 18]):
         receptor = _receptor(hour=hour)
@@ -457,7 +462,7 @@ def test_jacobian_rejects_bins_not_closed_on_the_left(written_footprints, closed
 
 def test_jacobian_with_no_footprints_is_empty(tmp_path):
     run = Output(tmp_path / "output").particles(VARIANT)
-    feet = run.footprints(FootprintConfig(grid=GRID))
+    feet = run.output.footprints(FEET)
     H = jacobian(feet.table(), feet.config, GRID, _bins(), [])
     assert H.data.shape == (0, len(_bins()) * len(GRID.index))
     assert list(H.receptors) == []
@@ -554,7 +559,7 @@ def test_each_result_file_names_its_settings_and_the_version_that_wrote_it(tmp_p
     receptor = _receptor()
     run = Output(tmp_path / "output").particles(VARIANT)
     particles = run.write(receptor, _trajectories(receptor), [])
-    feet = run.footprints(FootprintConfig(grid=GRID))
+    feet = run.output.footprints(FEET)
     footprint = feet.write(_footprint(receptor))
     empty = feet.write_empty(_receptor(13), "outside_domain")
 
@@ -574,7 +579,7 @@ def test_a_stored_footprint_file_opens_on_its_own(tmp_path):
     from stilt.footprint import read_footprint
 
     run = Output(tmp_path / "output").particles(VARIANT)
-    feet = run.footprints(FootprintConfig(grid=GRID))
+    feet = run.output.footprints(FEET)
     receptor = _receptor()
     path = feet.write(_footprint(receptor, seed=3))
 
@@ -592,7 +597,7 @@ def test_a_footprint_file_without_its_settings_is_refused(tmp_path):
     import pyarrow.parquet as pq
 
     run = Output(tmp_path / "output").particles(VARIANT)
-    feet = run.footprints(FootprintConfig(grid=GRID))
+    feet = run.output.footprints(FEET)
     receptor = _receptor()
     path = feet.write(_footprint(receptor, seed=3))
     table = pq.ParquetFile(path).read()
@@ -606,14 +611,14 @@ def test_a_footprint_file_without_its_settings_is_refused(tmp_path):
 def test_a_footprint_folder_stored_with_projection_is_found_by_crs(tmp_path):
     """Folders written when the grid said ``projection`` are found by a ``crs`` config."""
     config = FootprintConfig(grid=GRID)
-    feet = Output(tmp_path / "output").particles(VARIANT).footprints(config)
+    feet = Output(tmp_path / "output").footprints(_variant(footprint=config))
     record_path = feet.path / "_settings.yaml"
     record = yaml.safe_load(record_path.read_text())
     grid = record["settings"]["grid"]
     grid["projection"] = grid.pop("crs")
     record_path.write_text(yaml.safe_dump(record))
 
-    again = Output(tmp_path / "output").particles(VARIANT).footprints(config)
+    again = Output(tmp_path / "output").footprints(_variant(footprint=config))
     assert again.key == feet.key
 
 
@@ -649,7 +654,7 @@ def test_a_lookup_reads_each_folder_once(tmp_path, monkeypatch):
 def test_a_footprint_folder_finds_its_particles_folder_in_the_cache(tmp_path):
     out = Output(tmp_path / "output")
     run = out.particles(VARIANT)
-    feet = run.footprints(FootprintConfig(grid=GRID))
+    feet = run.output.footprints(FEET)
     fresh = Output(tmp_path / "output")
     found = fresh.footprint_sets()[0]
     assert found == feet

@@ -100,8 +100,7 @@ def _write_footprint(
     """Write a footprint (or an empty one) for one simulation into the output directory."""
     sim = project.simulation(receptor.id, variant)
     assert sim.variant.footprint is not None
-    folder = sim.output.particles(sim.variant)
-    feet = folder.footprints(sim.variant.footprint, name=sim.variant.name)
+    feet = sim.output.footprints(sim.variant)
     if empty:
         return feet.write_empty(sim.receptor, "outside_domain", name=sim.variant.name)
     grid = sim.variant.footprint.grid
