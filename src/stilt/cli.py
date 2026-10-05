@@ -248,18 +248,16 @@ def _counts(total: int, pending: int) -> str:
 
 def _print_status(project: Project) -> None:
     """Print a project status summary, per variant when there are several."""
-    sims = project.simulations
-    pending = sims.incomplete()
-    typer.echo(f"Project: {project.directory}  {_counts(len(sims), len(pending))}")
+    table = project.simulations.status()
+    pending = table[table.state != "complete"]
+    typer.echo(f"Project: {project.directory}  {_counts(len(table), len(pending))}")
     if len(project.variants) > 1:
-        total = Counter(sims["variant"])
+        total = Counter(table["variant"])
         waiting = Counter(pending["variant"])
         for variant in project.variants:
             typer.echo(f"  {variant}: {_counts(total[variant], waiting[variant])}")
-    states = pending.status()
-    failed = states[states.state == "failed"]
-    if len(failed):
-        causes = Counter(failed["reason"])
+    causes = Counter(table.loc[table.state == "failed", "reason"])
+    if causes:
         listed = ", ".join(f"{cause} {n}" for cause, n in causes.most_common())
         typer.echo(f"failed: {listed}  (sim.failure says why)")
     unreferenced = project.unreferenced()
