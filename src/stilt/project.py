@@ -316,10 +316,31 @@ class Project:
         KeyError
             If the project has no receptor with that id.
         """
-        positions = self._positions.get(receptor_id)
-        if positions is None:
-            raise KeyError(f"No receptor {receptor_id!r} in {self.directory}.")
-        return receptors_from_rows(self._rows.iloc[positions])[0]
+        return self._receptors([receptor_id])[receptor_id]
+
+    def _receptors(self, receptor_ids: Iterable[str]) -> dict[str, Receptor]:
+        """
+        Return receptors by id, built together from their rows.
+
+        Selecting a receptor's rows from a large table is most of the cost
+        of building it, so a selection builds all of its receptors in one
+        pass: on a project of millions of rows that is about 0.05 ms a
+        receptor, against several ms one at a time.
+
+        Raises
+        ------
+        KeyError
+            If the project has no receptor with one of the ids.
+        """
+        ids = list(dict.fromkeys(receptor_ids))
+        for rid in ids:
+            if rid not in self._positions:
+                raise KeyError(f"No receptor {rid!r} in {self.directory}.")
+        if not ids:
+            return {}
+        rows = self._rows.iloc[np.concatenate([self._positions[r] for r in ids])]
+        # receptors_from_rows builds them in the order the ids first appear.
+        return dict(zip(ids, receptors_from_rows(rows), strict=True))
 
     def add_receptors(
         self, receptors: Receptor | Iterable[Receptor] | str | Path
@@ -561,8 +582,12 @@ class Simulations:
 
     def __iter__(self) -> Iterator[Simulation]:
         """Yield the :class:`~stilt.Simulation` of each row."""
-        for rid, variant in self._pairs():
-            yield self.project.simulation(rid, variant)
+        pairs = self._pairs()
+        receptors = self.project._receptors(rid for rid, _ in pairs)
+        for rid, variant in pairs:
+            yield Simulation(
+                receptors[rid], self.project.variants[variant], self.project.output
+            )
 
     def __repr__(self) -> str:
         return repr(self.frame)
@@ -730,10 +755,10 @@ class Simulations:
 
         Notes
         -----
-        A simulation's particles take about 10 to 20 MB, so this suits a
-        selection of hundreds. For a whole large project, read the
-        ``particles/`` tree of the output directory with pyarrow, DuckDB, or
-        polars instead.
+        A run of 1,000 particles over 24 hours is about 1.4 million rows,
+        some 250 MB in memory, so this suits a selection of tens. For a
+        whole large project, read the ``particles/`` tree of the output
+        directory with pyarrow, DuckDB, or polars instead.
         """
         output = self.project.output
         parts = []
@@ -761,17 +786,28 @@ class Simulations:
         Returns
         -------
         dict
-            Footprints by :class:`~stilt.SimID`. ``xr.concat(list(feet.values()),
-            dim="receptor")`` stacks footprints of one variant.
+            Footprints by :class:`~stilt.SimID`, in selection order.
+            ``xr.concat(list(feet.values()), dim="receptor")`` stacks
+            footprints of one variant.
+
+        Notes
+        -----
+        Each footprint is a dense array, hours by grid cells: on a 300 by
+        300 grid over 24 hours that is about 16 MB, so this suits a
+        selection of hundreds. :meth:`jacobian` sums any number of
+        footprints onto a target without holding them all.
         """
-        present = self._present()
-        return {
-            sim.id: foot
-            for sim in self
-            if (written := present[sim.variant.name][1]) is not None
-            and sim.receptor.id in written
-            and (foot := sim.footprint) is not None
-        }
+        found: dict[SimID, xr.DataArray] = {}
+        for name, rows in self.frame.groupby("variant", sort=False):
+            feet = self.project.output.find_footprints(self.project.variants[str(name)])
+            if feet is None:  # no grid, or none written yet
+                continue
+            for rid in feet.files(rows["receptor"]):
+                foot = feet.read(rid)
+                if foot is not None:
+                    found[SimID(rid, str(name))] = foot
+        pairs = (SimID(r, v) for r, v in self._pairs())
+        return {sid: found[sid] for sid in pairs if sid in found}
 
     def jacobian(self, target: Geometry, time_bins: pd.IntervalIndex) -> Jacobian:
         """
