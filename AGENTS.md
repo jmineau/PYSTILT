@@ -306,6 +306,13 @@ as complete.
   holds the two together). Never add a second
   "does this output exist" check, a completion registry, or a manifest; call
   the `Simulation` method.
+- **Bulk methods work from listings.** A method on `Simulations` works
+  from folder listings and receptor ids, and never builds a `Simulation`
+  per row: on a large project one receptor costs milliseconds, and
+  `status()` once took 25 minutes on 64k footprints (#141). It opens a file
+  per row only when the file's contents are the answer (`load_footprints`,
+  `jacobian`), and builds receptors together (`Project._receptors`) when it
+  needs them.
 - **Identity is content.** A results folder is its settings hash; a changed setting is
   a new folder, never an overwrite, and PYSTILT never deletes a folder.
 - **State lives in the project directory and the output directory.**
@@ -504,12 +511,13 @@ Feature status lives in the roadmap tables in [README.md](README.md) and
   simulation out. Never synthesize a zero-valued footprint for it: a zero
   enhancement would flow into a comparison or an inversion unnoticed.
 - **A failure record is a note, not a result.** When a step fails the
-  worker writes `<receptor id>.failure.yaml` beside the receptor's log
-  (particles failures for the group, footprint failures by variant) and
-  removes the entry when the step later succeeds. Completion never reads it:
-  a simulation is done by its result files alone. `sim.failure`,
-  `sims.failures()`, the `reason` column of `status()`, and `stilt status`
-  read it.
+  worker writes `<receptor id>.failure.yaml` in the logs of the folder
+  whose result failed (`logs/settings=<key>/date=.../`: the particles'
+  folder for the group, the footprint's for one variant), and removes it
+  when that result is written. Completion never reads it: a simulation is
+  done by its result files alone. `sim.failure`, the `state`, `step`,
+  `reason`, and `message` columns of `status()`, and `stilt status` read
+  it, only for simulations missing a result.
 - **A result that is not written yet raises.** `sim.particles` and
   `sim.footprint` are `cached_property` on a frozen value; a missing file
   raises `FileNotFoundError` (never cached, so the next read tries again)
