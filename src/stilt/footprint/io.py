@@ -25,15 +25,14 @@ from stilt.receptors import Receptor
 from stilt.spatial import Grid, _with_cf_grid, horizontal_dims
 
 
-def _utc_index(values: Any) -> pd.DatetimeIndex:
-    """Return *values* as a UTC DatetimeIndex."""
-    return pd.DatetimeIndex(pd.to_datetime(values, utc=True))
+def _naive_utc(values: Any) -> pd.DatetimeIndex:
+    """Return times as a naive DatetimeIndex in UTC; naive input is taken as UTC."""
+    return pd.DatetimeIndex(pd.to_datetime(values, utc=True)).tz_localize(None)
 
 
 def _naive_utc_ns(values: Any) -> np.ndarray:
     """Return times as nanoseconds since the epoch, in UTC; naive times are taken as UTC."""
-    index = _utc_index(values).tz_localize(None)
-    return np.asarray(index, dtype="datetime64[ns]").astype(np.int64)
+    return np.asarray(_naive_utc(values), dtype="datetime64[ns]").astype(np.int64)
 
 
 def _footprint_array(
@@ -57,9 +56,7 @@ def _footprint_array(
     """
     if config.grid is None:
         raise ValueError("Footprint settings need a grid.")
-    times = _utc_index(
-        [receptor.time + pd.Timedelta(hours=int(h)) for h in hours]
-    ).tz_localize(None)
+    times = _naive_utc([receptor.time + pd.Timedelta(hours=int(h)) for h in hours])
     y_dim, x_dim = config.grid.dims
     data = xr.DataArray(
         values,
@@ -295,7 +292,7 @@ def write_footprint(
     xi = _cell_indices(np.asarray(foot[x_dim].values, dtype=float), x_axis, x_dim)
     yi = _cell_indices(np.asarray(foot[y_dim].values, dtype=float), y_axis, y_dim)
 
-    times = _utc_index(foot["time"].values).tz_convert(None)
+    times = _naive_utc(foot["time"].values)
     hours_f = (times - pd.Timestamp(receptor.time)) / pd.Timedelta(hours=1)
     hours = np.asarray(hours_f, dtype=float)
     if not np.allclose(hours, np.round(hours)):
