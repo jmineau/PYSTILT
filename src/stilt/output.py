@@ -60,7 +60,6 @@ from stilt.footprint import (
     write_empty_footprint,
     write_footprint,
 )
-from stilt.footprint.config import FootprintConfig
 from stilt.identity import (
     footprint_hash,
     footprint_settings,
@@ -335,6 +334,12 @@ class Output:
         """
         Return the footprint folder of *variant*, creating it, and its particles folder, on first use.
 
+        The folder is ``footprints/settings=<name>-<hash>``, hashed over the
+        particles and the footprint settings together, so two footprint
+        configs on the same particles get different folders and the same
+        config on different particles does too. An existing folder with the
+        same settings is reused even if it was created under another name.
+
         Raises
         ------
         ValueError
@@ -345,8 +350,21 @@ class Output:
         existing = self.find_footprints(variant)
         if existing is not None:
             return existing
-        return self.particles(variant).footprints(
-            variant.footprint, name=variant.name, geometry_hash=variant.geometry_hash
+        particles = self.particles(variant)
+        settings = footprint_settings(variant.footprint, variant.geometry_hash)
+        digest = footprint_hash(particles.hash, settings)
+        return self._create(
+            Footprints,
+            self._footprints,
+            f"{variant.name}-{digest[:HASH_CHARS]}",
+            {
+                "name": variant.name,
+                "hash": digest,
+                "particles": particles.key,
+                "particles_hash": particles.hash,
+                "pystilt": _pystilt_version(),
+                "settings": settings,
+            },
         )
 
 
@@ -539,52 +557,12 @@ class Particles(_Folder):
         """Return ``{receptor_id: failure record}`` for the receptors with one, by listing their date folders."""
         return _list_receptor_files(self.logs_dir, FAILURE_SUFFIX, among)
 
-    # -- footprints --------------------------------------------------------
-
-    def footprints(
-        self,
-        config: FootprintConfig,
-        name: str | None = None,
-        geometry_hash: str | None = None,
-    ) -> Footprints:
-        """
-        Return the footprint folder for *config* on these particles, creating it on first use.
-
-        The folder is ``footprints/settings=<name>-<hash>``, hashed over the
-        particles and the footprint settings together, so two footprint
-        configs on the same particles get different folders and the same
-        config on different particles does too. *name* is the variant the
-        footprints belong to; it defaults to the particles folder's name.
-        *geometry_hash* is the hash of the geometry the grid was derived for.
-        """
-        if config.grid is None:
-            raise ValueError("Footprint settings need a grid.")
-        settings = footprint_settings(config, geometry_hash)
-        digest = footprint_hash(self.hash, settings)
-        existing = self.output._find(Footprints, self.output._footprints, digest)
-        if existing is not None:
-            return existing
-        name = name or self.name
-        return self.output._create(
-            Footprints,
-            self.output._footprints,
-            f"{name}-{digest[:HASH_CHARS]}",
-            {
-                "name": name,
-                "hash": digest,
-                "particles": self.key,
-                "particles_hash": self.hash,
-                "pystilt": _pystilt_version(),
-                "settings": settings,
-            },
-        )
-
 
 class Footprints(_Folder):
     """
     One footprint folder: the footprints of many receptors, one set of footprint settings, one set of particles.
 
-    Get one from :meth:`Output.footprints` or :meth:`Particles.footprints`.
+    Get one from :meth:`Output.footprints`.
     ``key`` is the ``settings=`` value of its folder under ``footprints/``.
     """
 

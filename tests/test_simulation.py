@@ -149,7 +149,7 @@ def test_paths_are_none_until_the_run_exists(point_receptor, tmp_path):
     assert sim.particles_path == run.file(rid)
     assert sim.log_path == run.log_path(rid)
     assert sim.footprint_path is None  # no footprint folder yet
-    feet = run.footprints(FOOT, name="hrrr")
+    feet = sim.output.footprints(sim.variant)
     assert sim._footprint_set == feet
     assert sim.footprint_path == feet.file(rid)
 
