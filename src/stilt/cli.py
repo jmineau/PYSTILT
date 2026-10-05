@@ -41,7 +41,7 @@ logger = logging.getLogger(__name__)
 
 _PROJECT_ARG = typer.Argument(
     None,
-    help="Path or URI of the STILT project. Defaults to the current directory.",
+    help="Path of the STILT project. Defaults to the current directory.",
 )
 _NEW_PROJECT_ARG = typer.Argument(
     None,
