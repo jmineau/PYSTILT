@@ -28,13 +28,6 @@ if TYPE_CHECKING:
     from stilt.visualization import ParticlesPlotAccessor
 
 
-# Below this horizontal spacing, release points cannot be told apart from a
-# particle's first output row. In a test with HRRR at WBB, particles moved
-# 200-600 m in the first minute, by an amount that varied with height. At
-# 1000 m spacing the release height was recovered to about 15 m, and at 300 m
-# it was off by about 190 m.
-
-
 #: Particle columns stored as int32 rather than float64.
 _INT_COLUMNS = ("time", "indx")
 
