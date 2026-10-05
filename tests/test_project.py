@@ -674,7 +674,7 @@ def test_load_particles_of_a_selection_is_one_table(tmp_path):
 
 
 def test_load_footprints_skips_empty_footprints_and_trajectory_only_variants(
-    tmp_path,
+    tmp_path, monkeypatch
 ):
     done, empty, missing = _receptor(12), _receptor(13), _receptor(14)
     project = _project(
@@ -686,7 +686,10 @@ def test_load_footprints_skips_empty_footprints_and_trajectory_only_variants(
     _write_footprint(project, empty, empty=True)
     _write_trajectory(project, done, "traj")
 
-    loaded = project.simulations.load_footprints()
+    # Footprints are read from the folder listing; no receptor is built.
+    sims = project.simulations
+    monkeypatch.setattr(Project, "_receptors", None)
+    loaded = sims.load_footprints()
 
     assert list(loaded) == [SimID(done.id, "hrrr")]
     assert isinstance(loaded[SimID(done.id, "hrrr")], xr.DataArray)
@@ -1005,6 +1008,20 @@ def test_a_selection_from_a_table_made_with_pandas(tmp_path):
     assert back.obs.tolist() == [1.9]
     with pytest.raises(ValueError, match="'receptor' and 'variant'"):
         Simulations(project, project.receptors)
+
+
+def test_a_selection_builds_the_same_receptors_as_one_at_a_time(
+    tmp_path, point_receptor, column_receptor, multipoint_receptor
+):
+    receptors = [point_receptor, column_receptor, multipoint_receptor]
+    project = _project(tmp_path, receptors, variants={"hrrr": {}, "traj": {}})
+    sims = project.simulations
+    # In the file's order, and in another, with each receptor under two variants.
+    for frame in (sims.frame, sims.frame.iloc[::-1]):
+        selection = Simulations(project, frame)
+        assert list(selection) == [project.simulation(r, v) for r, v in _pairs(frame)]
+    with pytest.raises(KeyError, match="No receptor"):
+        project.receptor("202301011200_-1_1_1")
 
 
 def test_init_refuses_a_variant_with_bad_settings_and_writes_nothing(tmp_path):
