@@ -841,7 +841,8 @@ def test_run_hands_the_incomplete_receptors_to_the_workers(tmp_path, ran):
     [call] = ran
     assert call["ids"] == [todo.id]
     assert call["project"] is project
-    assert call["n_cores"] == 3
+    assert call["execution"] == project.config.execution
+    assert call["execution"].cpus == 3
     # The runner works out the scratch directory before handing it over.
     assert call["compute_root"] == resolve_compute_root(project)
     assert call["skip_existing"] is True
@@ -868,9 +869,11 @@ def test_run_without_skip_runs_every_receptor_once(tmp_path, ran):
 def test_run_takes_execution_settings_in_place_of_the_configs(tmp_path, ran):
     project = _project(tmp_path, [_receptor(12)], execution={"cpus": 3})
 
-    project.run(execution=ExecutionConfig(cpus=8))
+    override = ExecutionConfig(cpus=8, timeout=600, keep_scratch=True)
+    project.run(execution=override)
 
-    assert ran[0]["n_cores"] == 8
+    # The whole override reaches the workers, not only its cpus.
+    assert ran[0]["execution"] == override
 
 
 def test_run_with_nothing_to_do_starts_nothing(tmp_path, ran, point_receptor):

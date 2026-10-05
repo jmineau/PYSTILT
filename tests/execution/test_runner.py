@@ -119,11 +119,12 @@ def test_batch_opens_the_project_and_runs_its_receptors(monkeypatch, tmp_path):
     monkeypatch.setattr("stilt.project.Project", lambda path: f"Project({path})")
     monkeypatch.setattr("stilt.execution.worker.run_receptors", fake_run_receptors)
 
+    execution = ExecutionConfig(cpus=2, timeout=60, keep_scratch=True)
     batch = Batch(
         str(tmp_path),
         ["a", "b"],
+        execution=execution,
         compute_root="/scratch/x",
-        cpus=2,
         skip_existing=False,
     )
     assert batch() == ["results"]
@@ -132,7 +133,7 @@ def test_batch_opens_the_project_and_runs_its_receptors(monkeypatch, tmp_path):
             "project": f"Project({tmp_path})",
             "ids": ["a", "b"],
             "compute_root": Path("/scratch/x").resolve(),
-            "n_cores": 2,
+            "execution": execution,
             "skip_existing": False,
         }
     ]
@@ -140,24 +141,30 @@ def test_batch_opens_the_project_and_runs_its_receptors(monkeypatch, tmp_path):
 
 def test_batch_checkpoint_resubmits_itself_keeping_what_finished(tmp_path):
     """A preempted or timed-out task runs again and skips its finished receptors."""
+    execution = ExecutionConfig(cpus=2)
     batch = Batch(
-        str(tmp_path), ["a", "b"], compute_root="/s", cpus=2, skip_existing=False
+        str(tmp_path),
+        ["a", "b"],
+        execution=execution,
+        compute_root="/s",
+        skip_existing=False,
     )
 
     again = batch.checkpoint().function
 
     assert isinstance(again, Batch)
     assert (again.project, again.receptor_ids) == (str(tmp_path), ["a", "b"])
-    assert (again.compute_root, again.cpus) == ("/s", 2)
+    assert (again.compute_root, again.execution) == ("/s", execution)
     assert again.skip_existing is True
 
 
 def test_batch_survives_pickling(tmp_path):
     import pickle
 
-    batch = Batch(str(tmp_path), ["a"], cpus=3)
+    batch = Batch(str(tmp_path), ["a"], execution=ExecutionConfig(cpus=3, timeout=9))
     back = pickle.loads(pickle.dumps(batch))
-    assert (back.project, back.receptor_ids, back.cpus) == (str(tmp_path), ["a"], 3)
+    assert (back.project, back.receptor_ids) == (str(tmp_path), ["a"])
+    assert back.execution == ExecutionConfig(cpus=3, timeout=9)
 
 
 # ---------------------------------------------------------------------------
@@ -249,7 +256,7 @@ def test_submit_sends_one_array_of_batches(fake_submitit, pending, tmp_path):
     assert [b.receptor_ids for b in executor.submitted] == [["a", "c"], ["b"]]
     for batch in executor.submitted:
         assert batch.project == str(project.directory)
-        assert batch.cpus == 4
+        assert batch.execution == execution
         assert batch.skip_existing is False
         assert batch.compute_root is None  # each node resolves its own scratch
     assert [job.job_id for job in jobs] == ["777_0", "777_1"]

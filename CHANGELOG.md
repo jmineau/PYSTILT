@@ -654,6 +654,11 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- `project.run(execution=...)` and `project.submit(execution=...)` passed
+  only `cpus` to the workers, which read `timeout` and `keep_scratch` back
+  from `config.yaml`, so an override of either was ignored. `Batch` and
+  `run_receptors` now take the `ExecutionConfig` in place of `cpus` and
+  `n_cores` (breaking for code that calls them directly) (#148).
 - `foot.stilt.enhancement` took the grid axes by position, so a footprint
   with its dimensions in another order gave a wrong enhancement (zero in
   a test), and a footprint summed over time raised a `KeyError`. It now

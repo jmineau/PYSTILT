@@ -32,8 +32,8 @@ class Batch(submitit.helpers.Checkpointable):
     """
     A batch of receptors of one project, run by one worker.
 
-    Calling it opens the project and runs the receptors,
-    ``cpus`` at a time. On Slurm it is one array task. When the task is
+    Calling it opens the project and runs the receptors with *execution*'s
+    settings, ``cpus`` at a time. On Slurm it is one array task. When the task is
     preempted or runs out of time, submitit submits it again
     (:meth:`checkpoint`), and the second run skips the receptors the first
     one finished.
@@ -45,10 +45,11 @@ class Batch(submitit.helpers.Checkpointable):
         already hold the settings and receptors.
     receptor_ids : list of str
         Receptors to run.
+    execution : ExecutionConfig
+        The run's execution settings, which may differ from the project's
+        ``config.yaml``: ``cpus``, ``timeout``, and ``keep_scratch``.
     compute_root : str, optional
         Scratch directory under which HYSPLIT runs.
-    cpus : int, default 1
-        Number of receptors to run at once.
     skip_existing : bool, default True
         Keep particles and footprints that already exist.
     """
@@ -58,14 +59,14 @@ class Batch(submitit.helpers.Checkpointable):
         project: str,
         receptor_ids: list[str],
         *,
+        execution: ExecutionConfig,
         compute_root: str | None = None,
-        cpus: int = 1,
         skip_existing: bool = True,
     ) -> None:
         self.project = project
         self.receptor_ids = list(receptor_ids)
+        self.execution = execution
         self.compute_root = compute_root
-        self.cpus = cpus
         self.skip_existing = skip_existing
 
     def __call__(self) -> list[SimulationResult]:
@@ -82,7 +83,7 @@ class Batch(submitit.helpers.Checkpointable):
             self.receptor_ids,
             # Worked out here, in the task, so it is this node's scratch.
             compute_root=resolve_compute_root(project, self.compute_root),
-            n_cores=self.cpus,
+            execution=self.execution,
             skip_existing=self.skip_existing,
         )
 
@@ -229,7 +230,7 @@ def run(
         project,
         pending,
         compute_root=resolve_compute_root(project, compute_root),
-        n_cores=execution.cpus,
+        execution=execution,
         skip_existing=skip_existing,
     )
 
@@ -299,8 +300,8 @@ def submit(
         Batch(
             str(project.directory),
             ids,
+            execution=execution,
             compute_root=scratch,
-            cpus=execution.cpus,
             skip_existing=skip_existing,
         )
         for ids in split(pending, execution.n_workers)
