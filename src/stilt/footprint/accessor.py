@@ -19,7 +19,7 @@ from stilt.receptors import Receptor
 from stilt.spatial import Grid
 
 from .aggregation import aggregate
-from .io import _utc_index, _with_cf_metadata
+from .io import _naive_utc, _with_cf_metadata
 from .targets import Geometry
 
 if TYPE_CHECKING:
@@ -125,7 +125,7 @@ class FootprintAccessor:
         path.parent.mkdir(parents=True, exist_ok=True)
         ds = xr.Dataset({"foot": self._foot})
         # NetCDF stores naive times; footprint times are UTC.
-        ds = ds.assign_coords(time=_utc_index(ds["time"].values).tz_convert(None))
+        ds = ds.assign_coords(time=_naive_utc(ds["time"].values))
         ds = _with_cf_metadata(ds, grid=self.grid)
         ds.attrs["time_created"] = (
             dt.datetime.now(dt.UTC).replace(tzinfo=None).isoformat()

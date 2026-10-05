@@ -21,7 +21,7 @@ from stilt.footprint.config import FootprintConfig
 from stilt.receptors import parse_receptor_id
 from stilt.spatial import Grid, horizontal_dims
 
-from .io import _naive_utc_ns, _utc_index
+from .io import _naive_utc, _naive_utc_ns
 from .targets import Geometry, Mesh, Zones, check_resolution, overlap_weights
 
 
@@ -253,7 +253,7 @@ def jacobian(
 
     # A grid target's cells are (x, y) tuples; keep them as one label each.
     cells = pd.Index(list(target.index), tupleize_cols=False)
-    bin_left = _utc_index(time_bins.left).tz_localize(None)
+    bin_left = _naive_utc(time_bins.left)
     columns = pd.MultiIndex.from_product([bin_left, cells], names=["time", "cell"])
     return Jacobian(
         data, pd.Index(rows, name="receptor"), columns, empty, list(missing or [])
@@ -272,7 +272,7 @@ def aggregate(
     _bin_edges(time_bins)  # raises for bins not closed on the left
     y_dim, x_dim = horizontal_dims(foot)
     _require_geometry(target)
-    columns = _utc_index(time_bins.left).tz_localize(None)
+    columns = _naive_utc(time_bins.left)
     if foot.size == 0 or int(foot.sizes.get("time", 0)) == 0:
         return pd.DataFrame(0.0, index=target.index, columns=columns)
     x = np.asarray(foot[x_dim].values, dtype=float)
