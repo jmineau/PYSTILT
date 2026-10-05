@@ -1,7 +1,6 @@
 """Tests for the worker-side execution functions in ``stilt.execution.worker``."""
 
 import datetime as dt
-from pathlib import Path
 
 import pandas as pd
 import pytest
@@ -471,8 +470,8 @@ def test_a_failed_hysplit_run_fails_its_whole_group_once_and_is_recorded(
         failure = project.simulation(str(receptor.id), name).failure
         assert failure is not None
         assert failure["step"] == "particles"
-        assert failure["error"] == "SimulationError"
         assert failure["reason"] == "MET_COVERAGE"
+        assert failure["message"] == "HYSPLIT failed (MET_COVERAGE)."
         assert "traceback" not in failure
     assert project.simulation(str(receptor.id), "zi08").failure is None
 
@@ -506,10 +505,14 @@ def test_a_failed_footprint_is_the_variants_own_and_the_others_still_run(
     assert made == ["hrrr-s2"]
     failure = project.simulation(str(receptor.id), "hrrr").failure
     assert failure is not None
-    assert failure["step"] == "footprint" and failure["error"] == "ValueError"
-    assert failure["reason"] is None
+    assert failure["step"] == "footprint" and failure["reason"] == "ValueError"
+    assert failure["message"] == "bad grid"
     assert "ValueError: bad grid" in failure["traceback"]
     assert project.simulation(str(receptor.id), "hrrr-s2").failure is None
+    # The record belongs to the footprint folder, found by its settings hash.
+    sim = project.simulation(str(receptor.id), "hrrr")
+    feet = project.output.find_footprints(sim.variant)
+    assert feet is not None and feet.failure(sim.receptor.id) == failure
 
 
 def test_a_success_clears_the_failure_it_replaces(tmp_path, receptor, monkeypatch):
@@ -533,7 +536,7 @@ def test_a_success_clears_the_failure_it_replaces(tmp_path, receptor, monkeypatc
     assert not folder.failure_path(sim.receptor.id).exists()
 
 
-def test_the_failure_record_names_the_kept_log_and_scratch(
+def test_a_failed_run_keeps_its_log_and_working_directory(
     tmp_path, receptor, monkeypatch
 ):
     project = _model(tmp_path, [receptor])
@@ -554,10 +557,11 @@ def test_the_failure_record_names_the_kept_log_and_scratch(
     _run_receptor(project, receptor)
 
     failure = sim.failure
-    assert failure is not None
-    assert failure["log"] == str(sim.log_path) and "hycs_std said" in sim.log
-    assert failure["scratch"] is not None
-    assert (Path(failure["scratch"]) / "CONTROL").exists()
+    assert failure is not None and failure["reason"] == "FORTRAN_RUNTIME_ERROR"
+    assert set(failure) == {"step", "reason", "message", "time"}
+    assert "hycs_std said" in sim.log
+    assert sim.scratch_path is not None
+    assert (sim.scratch_path / "CONTROL").exists()
 
 
 # ---------------------------------------------------------------------------

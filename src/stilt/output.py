@@ -78,7 +78,7 @@ logger = logging.getLogger(__name__)
 
 #: Underscore-prefixed, so dataset readers skip it.
 SETTINGS_FILE = "_settings.yaml"
-#: A receptor's failure record, beside its log: ``<receptor_id>.failure.yaml``.
+#: A receptor's failure record, under its folder's logs: ``<receptor_id>.failure.yaml``.
 FAILURE_SUFFIX = ".failure.yaml"
 HASH_CHARS = 6
 
@@ -419,6 +419,48 @@ class _Folder:
         """Return whether a receptor's file exists."""
         return self.file(receptor_id).exists()
 
+    # -- failure records -----------------------------------------------------
+
+    @property
+    def logs_dir(self) -> Path:
+        """Where this folder's notes on its runs go, ``logs/settings=<key>``: HYSPLIT logs and failure records."""
+        return self.output.logs_dir / f"settings={self.key}"
+
+    def failure_path(self, receptor_id: str) -> Path:
+        """Return where a receptor's failure record for this folder is kept."""
+        return self.logs_dir / _date_dir(receptor_id) / f"{receptor_id}{FAILURE_SUFFIX}"
+
+    def failure(self, receptor_id: str) -> dict[str, Any] | None:
+        """
+        Return why the receptor's result here failed, as the worker recorded it, or ``None``.
+
+        A record holds ``step``, ``reason``, ``message``, and ``time``, and a
+        ``traceback`` for an unexpected error. It is removed when the result
+        is written.
+        """
+        path = self.failure_path(receptor_id)
+        return _read_yaml(path) if path.exists() else None
+
+    def failures(self, among: Iterable[str] | None = None) -> dict[str, dict[str, Any]]:
+        """
+        Return ``{receptor_id: record}`` for the receptors with a failure record here.
+
+        With *among*, only those receptors' date folders are listed. The
+        records found are read in a few threads.
+        """
+        paths = _list_receptor_files(self.logs_dir, FAILURE_SUFFIX, among)
+        with ThreadPoolExecutor(max_workers=16) as pool:
+            records = list(pool.map(_read_yaml, paths.values()))
+        return dict(zip(paths, records, strict=True))
+
+    def record_failure(self, receptor_id: str, record: dict[str, Any]) -> None:
+        """Write why a receptor's result here failed, replacing an earlier record."""
+        _write_yaml(self.failure_path(receptor_id), record)
+
+    def clear_failure(self, receptor_id: str) -> None:
+        """Remove a receptor's failure record, once its result is written."""
+        self.failure_path(receptor_id).unlink(missing_ok=True)
+
     def files(self, among: Iterable[str] | None = None) -> dict[str, Path]:
         """
         Return ``{receptor_id: path}`` for the receptors that have a file here, in date order.
@@ -502,11 +544,6 @@ class Particles(_Folder):
     # -- logs and scratch --------------------------------------------------
 
     @property
-    def logs_dir(self) -> Path:
-        """The folder of this folder's HYSPLIT logs, ``logs/settings=<key>``."""
-        return self.output.logs_dir / f"settings={self.key}"
-
-    @property
     def scratch_dir(self) -> Path:
         """The folder kept HYSPLIT working directories go in, ``scratch/settings=<key>``."""
         return self.output.scratch_dir / f"settings={self.key}"
@@ -525,38 +562,6 @@ class Particles(_Folder):
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(text)
         return path
-
-    # -- failures ------------------------------------------------------------
-
-    def failure_path(self, receptor_id: str) -> Path:
-        """Return where a receptor's failure record is kept, beside its log."""
-        return self.logs_dir / _date_dir(receptor_id) / f"{receptor_id}{FAILURE_SUFFIX}"
-
-    def failure(self, receptor_id: str) -> dict[str, Any]:
-        """
-        Return why a receptor's simulations on these particles failed, as the worker recorded it.
-
-        ``particles`` is the failure of the HYSPLIT run every variant on
-        these particles shares, and ``footprints`` maps a variant name to the
-        failure of its footprint. ``{}`` when nothing failed, or everything
-        that failed has since succeeded.
-        """
-        path = self.failure_path(receptor_id)
-        if not path.exists():
-            return {}
-        return _read_yaml(path)
-
-    def write_failure(self, receptor_id: str, record: dict[str, Any]) -> None:
-        """Write a receptor's failure record, or remove it when *record* is empty."""
-        path = self.failure_path(receptor_id)
-        if not record:
-            path.unlink(missing_ok=True)
-            return
-        _write_yaml(path, record)
-
-    def failed(self, among: Iterable[str] | None = None) -> dict[str, Path]:
-        """Return ``{receptor_id: failure record}`` for the receptors with one, by listing their date folders."""
-        return _list_receptor_files(self.logs_dir, FAILURE_SUFFIX, among)
 
 
 class Footprints(_Folder):

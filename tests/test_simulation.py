@@ -285,23 +285,15 @@ def test_empty_footprint_is_recorded_with_its_reason(point_receptor, tmp_path):
 def test_failure_reads_the_record_for_the_missing_step(point_receptor, tmp_path):
     grid = Grid(xmin=-112.0, xmax=-111.5, ymin=40.5, ymax=41.0, xres=0.1, yres=0.1)
     sim = _sim(tmp_path, point_receptor, footprint=FootprintConfig(grid=grid))
-    run = sim.output.particles(sim.variant)
-    run.write_failure(
-        sim.receptor.id,
-        {
-            "particles": {"error": "MeteorologyError", "reason": "MISSING_MET_FILES"},
-            "footprints": {"hrrr": {"error": "ValueError", "reason": None}},
-        },
-    )
+    particles = {"step": "particles", "reason": "MISSING_MET_FILES"}
+    footprint = {"step": "footprint", "reason": "ValueError"}
+    sim.output.particles(sim.variant).record_failure(sim.receptor.id, particles)
+    sim.output.footprints(sim.variant).record_failure(sim.receptor.id, footprint)
     # The particles are missing, so the particles step is why.
-    assert sim.failure == {
-        "step": "particles",
-        "error": "MeteorologyError",
-        "reason": "MISSING_MET_FILES",
-    }
-    # Once they exist, a stale particles entry does not count; the footprint's does.
+    assert sim.failure == particles
+    # Once they exist, a stale particles record does not count; the footprint's does.
     _write_particles(sim)
-    assert sim.failure == {"step": "footprint", "error": "ValueError", "reason": None}
+    assert sim.failure == footprint
 
 
 def test_a_log_alone_is_not_a_failure(point_receptor, tmp_path):

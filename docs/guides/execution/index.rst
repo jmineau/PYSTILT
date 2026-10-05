@@ -77,16 +77,18 @@ In Python, ``sim.failure`` says why one simulation failed, and
 .. code-block:: python
 
    >>> sim.failure
-   {'step': 'particles', 'error': 'MeteorologyError', 'reason': 'MISSING_MET_FILES',
-    'message': 'Insufficient number of meteorological files found. ...',
-    'time': '2026-10-03T21:14:05+00:00', 'log': None, 'scratch': None}
+   {'step': 'particles', 'reason': 'MET_COVERAGE',
+    'message': 'HYSPLIT: start point not within (x,y,t) any data file',
+    'time': '2026-10-03T21:14:05+00:00'}
    >>> project.simulations.failures()[["receptor", "variant", "reason"]]
 
 ``step`` is ``particles`` when HYSPLIT failed, which fails every variant that
 shares those particles, and ``footprint`` when only that variant's footprint
-did. ``log`` and ``scratch`` point at HYSPLIT's log and working folder in
-the output directory, and ``sim.log`` reads the log. An unexpected error,
-such as a bug, also has a ``traceback``.
+did. ``reason`` is a short name for the cause, or the error's class when it
+has none. For a HYSPLIT failure, ``message`` is the line of HYSPLIT's log
+that says what went wrong. ``sim.log`` reads the whole log, and
+``sim.scratch_path`` is HYSPLIT's working folder, kept in the output
+directory. An unexpected error, such as a bug, also has a ``traceback``.
 
 A footprint can be empty because no particle reached the grid. That is not a
 failure. PYSTILT records it with the reason, and the simulation counts as

@@ -41,9 +41,15 @@ FAILURE_PHRASES: dict[str, FailureReason] = {
 MET_TRUNCATED_WARNING = "Only one time period of meteo data"
 
 
-def failure_in(text: str) -> FailureReason | None:
-    """Return the reason for the first known failure message in *text*, in the order of :data:`FAILURE_PHRASES`, or ``None``."""
+def failure_in(text: str) -> tuple[FailureReason, str] | None:
+    """
+    Return the first known failure in a HYSPLIT log, as its reason and the log line that says it.
+
+    Phrases are tried in the order of :data:`FAILURE_PHRASES`. ``None``
+    when the log holds none of them.
+    """
     for phrase, reason in FAILURE_PHRASES.items():
         if phrase in text:
-            return reason
+            line = next(line for line in text.splitlines() if phrase in line)
+            return reason, line.strip()
     return None

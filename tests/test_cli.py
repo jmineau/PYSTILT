@@ -444,10 +444,9 @@ def test_status_counts_failures_by_reason(tmp_path):
     reasons = ["MISSING_MET_FILES", "MISSING_MET_FILES", None]
     for receptor, reason in zip(receptors, reasons, strict=True):
         sim = project.simulation(str(receptor.id), "hrrr")
-        error = "MeteorologyError" if reason else "ValueError"
-        sim.output.particles(sim.variant).write_failure(
+        sim.output.particles(sim.variant).record_failure(
             sim.receptor.id,
-            {"particles": {"error": error, "reason": reason, "message": "m"}},
+            {"step": "particles", "reason": reason or "ValueError", "message": "m"},
         )
 
     result = runner.invoke(app, ["status", str(tmp_path)])
