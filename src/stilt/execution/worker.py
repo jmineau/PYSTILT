@@ -30,6 +30,7 @@ import pandas as pd
 import xarray as xr
 
 from stilt.exceptions import EmptyFootprint, SimulationError
+from stilt.execution.config import ExecutionConfig
 from stilt.footprint import calculate
 from stilt.meteorology import Met
 from stilt.output import Footprints, Particles
@@ -285,6 +286,7 @@ def run_receptor(
     receptor_id: str,
     *,
     compute_root: Path,
+    execution: ExecutionConfig | None = None,
     skip_existing: bool = True,
 ) -> list[SimulationResult]:
     """
@@ -309,6 +311,9 @@ def run_receptor(
     compute_root : Path
         Scratch directory under which HYSPLIT runs, as
         :func:`~stilt.execution.resolve_compute_root` returns it.
+    execution : ExecutionConfig, optional
+        Execution settings, for ``timeout`` and ``keep_scratch``. Defaults
+        to the project's.
     skip_existing : bool, default True
         Keep particles and footprints that already exist.
 
@@ -318,6 +323,7 @@ def run_receptor(
         One per variant, in config order. After an interruption, the
         finished ones and then one ``interrupted``.
     """
+    execution = execution if execution is not None else project.config.execution
     sims = [project.simulation(receptor_id, variant) for variant in project.variants]
     groups: dict[str, list[Simulation]] = {}
     for sim in sims:
@@ -330,6 +336,7 @@ def run_receptor(
                     project,
                     group,
                     compute_root=compute_root,
+                    execution=execution,
                     skip_existing=skip_existing,
                 )
             )
@@ -346,6 +353,7 @@ def _run_group(
     sims: list[Simulation],
     *,
     compute_root: Path,
+    execution: ExecutionConfig,
     skip_existing: bool,
 ) -> dict[str, SimulationResult]:
     """Run the simulations of one receptor that share particles: HYSPLIT at most once, then each footprint."""
@@ -358,8 +366,8 @@ def _run_group(
                 first,
                 met=project.mets[first.variant.met],
                 workdir=compute_root / first.id,
-                keep_scratch=project.config.execution.keep_scratch,
-                timeout=project.config.execution.timeout,
+                keep_scratch=execution.keep_scratch,
+                timeout=execution.timeout,
             )
         except Exception as error:
             failed = _failed(first, "particles", error)
@@ -409,17 +417,21 @@ def _interrupted(results: list[SimulationResult]) -> bool:
 
 _POOL_PROJECT: Project | None = None
 _POOL_COMPUTE_ROOT: Path | None = None
+_POOL_EXECUTION: ExecutionConfig | None = None
 _POOL_SKIP: bool = True
 
 
-def _init_pool_worker(project: str, compute_root: str, skip_existing: bool) -> None:
+def _init_pool_worker(
+    project: str, compute_root: str, execution: ExecutionConfig, skip_existing: bool
+) -> None:
     """Open the worker process's Project and make SIGTERM raise KeyboardInterrupt."""
     from stilt.project import Project
 
-    global _POOL_PROJECT, _POOL_COMPUTE_ROOT, _POOL_SKIP
+    global _POOL_PROJECT, _POOL_COMPUTE_ROOT, _POOL_EXECUTION, _POOL_SKIP
     signal.signal(signal.SIGTERM, _raise_interrupt)
     _POOL_PROJECT = Project(project)
     _POOL_COMPUTE_ROOT = Path(compute_root)
+    _POOL_EXECUTION = execution
     _POOL_SKIP = skip_existing
 
 
@@ -431,6 +443,7 @@ def _pool_run(item: tuple[int, str]) -> tuple[int, list[SimulationResult]]:
         _POOL_PROJECT,
         receptor_id,
         compute_root=_POOL_COMPUTE_ROOT,
+        execution=_POOL_EXECUTION,
         skip_existing=_POOL_SKIP,
     )
 
@@ -440,7 +453,7 @@ def run_receptors(
     receptor_ids: list[str],
     *,
     compute_root: Path,
-    n_cores: int = 1,
+    execution: ExecutionConfig | None = None,
     skip_existing: bool = True,
 ) -> list[SimulationResult]:
     """
@@ -459,8 +472,10 @@ def run_receptors(
     compute_root : Path
         Scratch directory under which HYSPLIT runs, as
         :func:`~stilt.execution.resolve_compute_root` returns it.
-    n_cores : int, default 1
-        Number of worker processes. 1 runs in this process.
+    execution : ExecutionConfig, optional
+        Execution settings: ``cpus`` is the number of worker processes (1
+        runs in this process), and ``timeout`` and ``keep_scratch`` apply
+        to each run. Defaults to the project's.
     skip_existing : bool, default True
         Keep particles and footprints that already exist.
 
@@ -472,8 +487,9 @@ def run_receptors(
     """
     if not receptor_ids:
         return []
+    execution = execution if execution is not None else project.config.execution
 
-    if n_cores <= 1:
+    if execution.cpus <= 1:
         results: list[SimulationResult] = []
         with _sigterm_as_interrupt():
             for i, receptor_id in enumerate(receptor_ids, 1):
@@ -481,6 +497,7 @@ def run_receptors(
                     project,
                     receptor_id,
                     compute_root=compute_root,
+                    execution=execution,
                     skip_existing=skip_existing,
                 )
                 results.extend(done)
@@ -491,9 +508,9 @@ def run_receptors(
 
     ordered: dict[int, list[SimulationResult]] = {}
     pool = multiprocessing.Pool(
-        n_cores,
+        execution.cpus,
         initializer=_init_pool_worker,
-        initargs=(str(project.directory), str(compute_root), skip_existing),
+        initargs=(str(project.directory), str(compute_root), execution, skip_existing),
     )
     with _sigterm_as_interrupt():
         try:
