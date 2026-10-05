@@ -592,13 +592,11 @@ class Simulations:
             variant = self.project.variants[str(name)]
             among = set(rows["receptor"])
             folder = output.find_particles(variant)
-            particles = frozenset(folder.receptors(among) if folder is not None else ())
+            particles = frozenset(folder.files(among) if folder is not None else ())
             footprints: frozenset[str] | None = None
             if variant.footprint is not None:
                 feet = output.find_footprints(variant)
-                footprints = frozenset(
-                    feet.receptors(among) if feet is not None else ()
-                )
+                footprints = frozenset(feet.files(among) if feet is not None else ())
             present[str(name)] = (particles, footprints)
         return present
 
@@ -730,7 +728,7 @@ class Simulations:
             folder = output.find_particles(variant)
             if folder is None:
                 continue
-            table = folder.table(list(dict.fromkeys(rows["receptor"])))
+            table = folder.table(folder.files(rows["receptor"]))
             if table.num_rows:
                 parts.append(particles_from_table(table).assign(variant=str(name)))
         if not parts:
@@ -809,15 +807,14 @@ class Simulations:
         if feet is None:
             raise ValueError(f"Variant {name!r} has no footprints yet.")
         requested = list(dict.fromkeys(self.frame["receptor"]))
-        found = set(feet.receptors(requested))
-        present = [r for r in requested if r in found]
+        files = feet.files(requested)
         return jacobian(
-            feet.table(present),
+            feet.table(files),
             feet.config,
             target,
             time_bins,
-            receptors=present,
-            missing=[r for r in requested if r not in found],
+            receptors=[r for r in requested if r in files],
+            missing=[r for r in requested if r not in files],
             geometry_hash=feet.geometry_hash,
         )
 
