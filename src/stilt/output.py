@@ -151,23 +151,33 @@ def _read_files(root: Path, files: dict[str, Path], empty: pa.Table) -> pa.Table
     return dataset.to_table()
 
 
+def _read_yaml(path: Path) -> dict[str, Any]:
+    """Return a YAML file of one mapping as a dict; an empty file is ``{}``."""
+    return yaml.safe_load(path.read_text()) or {}
+
+
+def _write_yaml(path: Path, record: dict[str, Any]) -> None:
+    """Write *record* to *path* as YAML in one step, making its folder as needed."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with atomic_path(path) as tmp:
+        tmp.write_text(
+            yaml.safe_dump(record, default_flow_style=False, sort_keys=False)
+        )
+
+
 def _write_settings(path: Path, record: dict[str, Any]) -> None:
     """Write a ``settings.yaml`` once. An existing file with the same hash is left alone."""
     if path.exists():
-        existing = yaml.safe_load(path.read_text()) or {}
+        existing = _read_yaml(path)
         if existing.get("hash") != record["hash"]:
             raise FileExistsError(
                 f"{path} holds settings with hash {existing.get('hash')}, "
                 f"not {record['hash']}."
             )
         return
-    path.parent.mkdir(parents=True, exist_ok=True)
     # Another worker may write the same settings meanwhile; both files say
     # the same thing, so whichever rename lands last is fine.
-    with atomic_path(path) as tmp:
-        tmp.write_text(
-            yaml.safe_dump(record, default_flow_style=False, sort_keys=False)
-        )
+    _write_yaml(path, record)
 
 
 def _pystilt_version() -> str:
@@ -397,9 +407,7 @@ class _Folder:
         self.output = output
         self.key = key
         #: The folder's ``_settings.yaml``, as written.
-        self.record: dict[str, Any] = (
-            yaml.safe_load((self.path / SETTINGS_FILE).read_text()) or {}
-        )
+        self.record: dict[str, Any] = _read_yaml(self.path / SETTINGS_FILE)
         self.name: str = self.record["name"]
 
     def __repr__(self) -> str:
@@ -539,7 +547,7 @@ class Particles(_Folder):
         path = self.failure_path(receptor_id)
         if not path.exists():
             return {}
-        return yaml.safe_load(path.read_text()) or {}
+        return _read_yaml(path)
 
     def write_failure(self, receptor_id: str, record: dict[str, Any]) -> None:
         """Write a receptor's failure record, or remove it when *record* is empty."""
@@ -547,11 +555,7 @@ class Particles(_Folder):
         if not record:
             path.unlink(missing_ok=True)
             return
-        path.parent.mkdir(parents=True, exist_ok=True)
-        with atomic_path(path) as tmp:
-            tmp.write_text(
-                yaml.safe_dump(record, default_flow_style=False, sort_keys=False)
-            )
+        _write_yaml(path, record)
 
     def failed(self, among: Iterable[str] | None = None) -> dict[str, Path]:
         """Return ``{receptor_id: failure record}`` for the receptors with one, by listing their date folders."""
