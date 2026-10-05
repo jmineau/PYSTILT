@@ -28,7 +28,8 @@ import yaml
 from stilt._paths import absolute
 from stilt.config import STARTER_CONFIG, ProjectConfig
 from stilt.execution.config import ExecutionConfig
-from stilt.footprint import Geometry, Jacobian, jacobian
+from stilt.footprint import Geometry, Jacobian
+from stilt.footprint.aggregation import _jacobian
 from stilt.meteorology import Met
 from stilt.output import Output
 from stilt.particles import particles_from_table
@@ -55,6 +56,10 @@ if TYPE_CHECKING:
 
 #: The columns of :attr:`Project.receptors` before the label columns.
 RECEPTOR_COLUMNS = ("receptor", "time", "kind", "location")
+
+#: Receptors whose footprints :meth:`Simulations.jacobian` reads and sums
+#: together: at about 350,000 cells a footprint, some 2 GB at its peak.
+JACOBIAN_BATCH = 64
 
 #: Where a simulation stands, the ``state`` column of :meth:`Simulations.status`.
 STATES = ("complete", "failed", "pending")
@@ -834,6 +839,10 @@ class Simulations:
         within each of *time_bins*, and cells or layers outside the target
         or the bins are dropped. The selection must hold one variant.
 
+        Footprints are read and summed in batches, ``execution.cpus`` batches
+        at a time, so memory stays at a few batches of footprints whatever
+        the selection's size; the result itself is sparse.
+
         Parameters
         ----------
         target : Geometry
@@ -873,14 +882,20 @@ class Simulations:
             raise ValueError(f"Variant {name!r} has no footprints yet.")
         requested = list(dict.fromkeys(self.frame["receptor"]))
         files = feet.files(requested)
-        return jacobian(
-            feet.table(files),
+        present = [r for r in requested if r in files]
+        batches = [
+            present[i : i + JACOBIAN_BATCH]
+            for i in range(0, len(present), JACOBIAN_BATCH)
+        ]
+        return _jacobian(
+            lambda batch: feet.table({r: files[r] for r in batch}),
+            batches,
             feet.config,
             target,
             time_bins,
-            receptors=[r for r in requested if r in files],
             missing=[r for r in requested if r not in files],
             geometry_hash=feet.geometry_hash,
+            workers=self.project.config.execution.cpus,
         )
 
 
