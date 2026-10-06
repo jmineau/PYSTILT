@@ -129,8 +129,8 @@ def test_empty_footprint(tmp_path, wbb_receptor, wbb_config):
     assert sim.empty_reason == "outside_domain"
     assert sim.footprint is None
     assert model.simulations.load_footprints() == {}
-    status = model.simulations.status()
-    assert bool(status["empty"].iloc[0]) and bool(status["complete"].iloc[0])
+    # An empty footprint is complete; sim.empty_reason says why it is empty.
+    assert model.simulations.status()["state"].tolist() == ["complete"]
 
     # A rerun has nothing to do and does not touch the empty record.
     before = sim.footprint_path.stat().st_mtime_ns
@@ -173,7 +173,9 @@ def test_failure_missing_met(tmp_path, wbb_receptor, traj_only_config):
     assert not sim.has_particles
     assert sim.failure is not None
     assert sim.failure["reason"] == "MISSING_MET_FILES"
-    assert model.simulations.status()["reason"].tolist() == ["MISSING_MET_FILES"]
+    status = model.simulations.status()
+    assert status["state"].tolist() == ["failed"]
+    assert status["reason"].tolist() == ["MISSING_MET_FILES"]
 
 
 @integration
