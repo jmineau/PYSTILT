@@ -25,7 +25,7 @@ variant into a :class:`stilt.variants.Variant`: its transport settings checked b
 model's config class, its realizations expanded, and what the file alone
 does not say, the grid of a footprint given by a geometry and the transport
 model build.
-The ``PYSTILT_COMPUTE_ROOT`` environment variable sets the scratch
+The ``PYSTILT_WORKDIR`` environment variable sets the workdir, the
 directory HYSPLIT runs in. It never changes a result.
 
 .. autosummary::

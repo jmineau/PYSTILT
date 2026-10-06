@@ -16,7 +16,7 @@ import numpy as np
 import pandas as pd
 
 from stilt.config import ProjectConfig
-from stilt.execution import resolve_compute_root
+from stilt.execution import resolve_workdir
 from stilt.footprint.targets import Mesh
 from stilt.identity import transport_from_settings
 from stilt.meteorology import MetConfig
@@ -73,7 +73,7 @@ def test_particles(tmp_path, wbb_receptor, traj_only_config):
     assert sim.particles_path.parent.parent.name.startswith("settings=hrrr-")
     assert len(pd.read_parquet(sim.particles_path)) > 0, "Particle file is empty"
     assert sim.particles is not None and len(sim.particles) > 0
-    assert not (resolve_compute_root(model) / sim.id).exists(), (
+    assert not (resolve_workdir(model) / sim.id).exists(), (
         "the scratch working directory is removed"
     )
 

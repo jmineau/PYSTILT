@@ -36,7 +36,7 @@ Worker functions
 
    stilt.execution.run
    stilt.execution.submit
-   stilt.execution.resolve_compute_root
+   stilt.execution.resolve_workdir
    stilt.execution.run_particles
    stilt.execution.make_footprint
    stilt.execution.run_receptor

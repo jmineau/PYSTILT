@@ -485,7 +485,7 @@ class Project:
     def run(
         self,
         skip_existing: bool = True,
-        compute_root: str | Path | None = None,
+        workdir: str | Path | None = None,
         execution: ExecutionConfig | None = None,
     ) -> list[SimulationResult]:
         """
@@ -500,13 +500,13 @@ class Project:
             self,
             execution=execution,
             skip_existing=skip_existing,
-            compute_root=compute_root,
+            workdir=workdir,
         )
 
     def submit(
         self,
         skip_existing: bool = True,
-        compute_root: str | Path | None = None,
+        workdir: str | Path | None = None,
         execution: ExecutionConfig | None = None,
     ) -> list[submitit.Job[Any]]:
         """
@@ -521,7 +521,7 @@ class Project:
             self,
             execution=execution,
             skip_existing=skip_existing,
-            compute_root=compute_root,
+            workdir=workdir,
         )
 
 

@@ -49,8 +49,8 @@ class Batch(submitit.helpers.Checkpointable):
     execution : ExecutionConfig
         The run's execution settings, which may differ from the project's
         ``config.yaml``: ``cpus``, ``timeout``, and ``keep_scratch``.
-    compute_root : str, optional
-        Scratch directory under which HYSPLIT runs.
+    workdir : str, optional
+        Directory the simulations run in, one folder each.
     skip_existing : bool, default True
         Keep particles and footprints that already exist.
     """
@@ -61,13 +61,13 @@ class Batch(submitit.helpers.Checkpointable):
         receptor_ids: list[str],
         *,
         execution: ExecutionConfig,
-        compute_root: str | None = None,
+        workdir: str | None = None,
         skip_existing: bool = True,
     ) -> None:
         self.project = project
         self.receptor_ids = list(receptor_ids)
         self.execution = execution
-        self.compute_root = compute_root
+        self.workdir = workdir
         self.skip_existing = skip_existing
 
     def __call__(self) -> list[SimulationResult]:
@@ -82,8 +82,8 @@ class Batch(submitit.helpers.Checkpointable):
         return run_receptors(
             project,
             self.receptor_ids,
-            # Worked out here, in the task, so it is this node's scratch.
-            compute_root=resolve_compute_root(project, self.compute_root),
+            # Worked out here, in the task, so it is this node's $TMPDIR.
+            workdir=resolve_workdir(project, self.workdir),
             execution=self.execution,
             skip_existing=self.skip_existing,
         )
@@ -139,21 +139,19 @@ def _project_slug(directory: str | Path) -> str:
     return re.sub(r"-{2,}", "-", slug).strip("-") or "project"
 
 
-def resolve_compute_root(
-    project: Project, compute_root: str | Path | None = None
-) -> Path:
+def resolve_workdir(project: Project, workdir: str | Path | None = None) -> Path:
     """
-    Return the scratch directory under which HYSPLIT runs for *project*.
+    Return the directory *project*'s simulations run in, one folder each.
 
-    That is *compute_root* when given, else the ``PYSTILT_COMPUTE_ROOT``
+    That is *workdir* when given, else the ``PYSTILT_WORKDIR``
     environment variable when it is set and not empty, else
     ``$TMPDIR/pystilt/<project name>``. The path is absolute and resolved, so
     a worker handed it gets the same directory.
     """
-    if compute_root is None:
-        compute_root = os.environ.get("PYSTILT_COMPUTE_ROOT") or None
-    if compute_root is not None:
-        return absolute(compute_root)
+    if workdir is None:
+        workdir = os.environ.get("PYSTILT_WORKDIR") or None
+    if workdir is not None:
+        return absolute(workdir)
     tmp_root = os.environ.get("TMPDIR") or tempfile.gettempdir()
     return absolute(Path(tmp_root) / "pystilt" / project.name)
 
@@ -171,7 +169,7 @@ def run(
     *,
     execution: ExecutionConfig | None = None,
     skip_existing: bool = True,
-    compute_root: str | Path | None = None,
+    workdir: str | Path | None = None,
 ) -> list[SimulationResult]:
     """
     Run every simulation of a project that has not finished, and wait for it.
@@ -193,9 +191,9 @@ def run(
     skip_existing : bool, default True
         Skip simulations whose results all exist. ``False`` runs every
         simulation again.
-    compute_root : str or Path, optional
-        Scratch directory under which HYSPLIT runs
-        (:func:`resolve_compute_root`). On Slurm it is resolved on the
+    workdir : str or Path, optional
+        Directory the simulations run in, one folder each
+        (:func:`resolve_workdir`). On Slurm it is resolved on the
         compute node unless given here.
 
     Returns
@@ -214,7 +212,7 @@ def run(
             project,
             execution=execution,
             skip_existing=skip_existing,
-            compute_root=compute_root,
+            workdir=workdir,
         )
         return _wait(jobs)
     pending = _pending(project, skip_existing)
@@ -229,7 +227,7 @@ def run(
     return run_receptors(
         project,
         pending,
-        compute_root=resolve_compute_root(project, compute_root),
+        workdir=resolve_workdir(project, workdir),
         execution=execution,
         skip_existing=skip_existing,
     )
@@ -240,7 +238,7 @@ def submit(
     *,
     execution: ExecutionConfig | None = None,
     skip_existing: bool = True,
-    compute_root: str | Path | None = None,
+    workdir: str | Path | None = None,
 ) -> list[submitit.Job[Any]]:
     """
     Submit every simulation of a project that has not finished to Slurm.
@@ -253,7 +251,7 @@ def submit(
 
     Parameters
     ----------
-    project, execution, skip_existing, compute_root
+    project, execution, skip_existing, workdir
         As for :func:`run`.
 
     Returns
@@ -288,20 +286,16 @@ def submit(
             execution, job_name=f"pystilt-{_project_slug(project.directory)}"
         )
     )
-    # A compute root that was not asked for is left to each compute node,
+    # A workdir that was not asked for is left to each compute node,
     # whose TMPDIR is its own. One that was is made absolute here, since the
     # task may start in another directory.
-    scratch = (
-        None
-        if compute_root is None
-        else str(resolve_compute_root(project, compute_root))
-    )
+    task_workdir = None if workdir is None else str(resolve_workdir(project, workdir))
     batches = [
         Batch(
             str(project.directory),
             ids,
             execution=execution,
-            compute_root=scratch,
+            workdir=task_workdir,
             skip_existing=skip_existing,
         )
         for ids in split(pending, execution.n_workers)
@@ -343,7 +337,7 @@ def _wait(jobs: list[submitit.Job[Any]]) -> list[SimulationResult]:
 
 __all__ = [
     "Batch",
-    "resolve_compute_root",
+    "resolve_workdir",
     "run",
     "slurm_parameters",
     "split",

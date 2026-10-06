@@ -22,7 +22,7 @@ from typing import Any
 
 import typer
 
-from stilt.execution import resolve_compute_root
+from stilt.execution import resolve_workdir
 from stilt.execution.config import ExecutionConfig
 from stilt.project import Project
 
@@ -50,10 +50,10 @@ _NEW_PROJECT_ARG = typer.Argument(
 _NO_SKIP = typer.Option(
     False, "--no-skip", help="Run simulations again even if their outputs exist."
 )
-_COMPUTE_ROOT = typer.Option(
+_WORKDIR = typer.Option(
     None,
-    "--compute-root",
-    help="Scratch directory HYSPLIT runs under. Defaults to PYSTILT_COMPUTE_ROOT, then $TMPDIR/pystilt/<project>.",
+    "--workdir",
+    help="Directory the simulations run in, one folder each. Defaults to PYSTILT_WORKDIR, then $TMPDIR/pystilt/<project>.",
 )
 
 
@@ -127,7 +127,7 @@ def _start(
     n_workers: int | None,
     cpus: int | None,
     no_skip: bool,
-    compute_root: str | None,
+    workdir: str | None,
     waits: bool,
 ) -> tuple[Project, dict[str, Any]]:
     """Open the project, print what is about to run, and return the run's options."""
@@ -149,17 +149,17 @@ def _start(
     if execution.backend == "local":
         # Resolved once, here, so the banner shows the directory the run uses.
         # A Slurm task resolves its own, on its node.
-        compute_root = str(resolve_compute_root(opened, compute_root))
+        workdir = str(resolve_workdir(opened, workdir))
     _print_run_start(
         opened,
         execution,
-        compute_root=compute_root,
+        workdir=workdir,
         skip_existing=not no_skip,
         waits=waits,
     )
     options = {
         "skip_existing": not no_skip,
-        "compute_root": compute_root,
+        "workdir": workdir,
         "execution": execution,
     }
     return opened, options
@@ -172,7 +172,7 @@ def run(
     backend: str | None = _BACKEND,
     n_workers: int | None = _N_WORKERS,
     cpus: int | None = _CPUS,
-    compute_root: str | None = _COMPUTE_ROOT,
+    workdir: str | None = _WORKDIR,
 ) -> None:
     """
     Run every unfinished simulation in a project, and wait until they are done.
@@ -188,7 +188,7 @@ def run(
         n_workers=n_workers,
         cpus=cpus,
         no_skip=no_skip,
-        compute_root=compute_root,
+        workdir=workdir,
         waits=True,
     )
     if options["execution"].backend == "slurm":
@@ -205,7 +205,7 @@ def submit(
     no_skip: bool = _NO_SKIP,
     n_workers: int | None = _N_WORKERS,
     cpus: int | None = _CPUS,
-    compute_root: str | None = _COMPUTE_ROOT,
+    workdir: str | None = _WORKDIR,
 ) -> None:
     """
     Submit every unfinished simulation in a project to Slurm, and return.
@@ -220,7 +220,7 @@ def submit(
         n_workers=n_workers,
         cpus=cpus,
         no_skip=no_skip,
-        compute_root=compute_root,
+        workdir=workdir,
         waits=False,
     )
     jobs = opened.submit(**options)
@@ -274,7 +274,7 @@ def _print_run_start(
     project: Project,
     execution: ExecutionConfig,
     *,
-    compute_root: str | None,
+    workdir: str | None,
     skip_existing: bool,
     waits: bool,
 ) -> None:
@@ -288,10 +288,10 @@ def _print_run_start(
         f"cpus={execution.cpus}  skip={mode}"
     )
     typer.echo(f"Output: {project.output.path}")
-    if compute_root is not None:
-        typer.echo(f"Compute root: {compute_root}")
+    if workdir is not None:
+        typer.echo(f"Workdir: {workdir}")
     else:
-        typer.echo("Compute root: each task's own $TMPDIR (or PYSTILT_COMPUTE_ROOT)")
+        typer.echo("Workdir: each task's own $TMPDIR (or PYSTILT_WORKDIR)")
     typer.echo(f"Receptors loaded: {len(project.receptors)}")
     typer.echo(f"Variants: {', '.join(project.variants)}")
     typer.echo(

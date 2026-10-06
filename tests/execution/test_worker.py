@@ -94,7 +94,7 @@ def _make_sim(receptor, met_config, params, output, *, footprint=None, name="hrr
 
 
 @pytest.fixture
-def compute_root(tmp_path):
+def workdir(tmp_path):
     return tmp_path / "compute"
 
 
@@ -187,11 +187,9 @@ def test_simulation_result_is_frozen_with_optional_error():
 # ---------------------------------------------------------------------------
 
 
-def test_run_particles_starts_in_an_empty_directory(
-    sim, met, compute_root, monkeypatch
-):
+def test_run_particles_starts_in_an_empty_directory(sim, met, workdir, monkeypatch):
     """A directory left by a stopped job is cleared before the model runs."""
-    workdir = compute_root / sim.id
+    workdir = workdir / sim.id
     workdir.mkdir(parents=True)
     (workdir / "PARTICLE_STILT.DAT").write_text("left over\n")
     seen: list[list[str]] = []
@@ -209,7 +207,7 @@ def test_run_particles_starts_in_an_empty_directory(
     assert seen == [[]]
 
 
-def test_run_particles_keeps_no_empty_scratch_copy(sim, met, compute_root, monkeypatch):
+def test_run_particles_keeps_no_empty_scratch_copy(sim, met, workdir, monkeypatch):
     """A run that fails before writing anything, such as on missing met, leaves no scratch copy."""
 
     class _Model:
@@ -220,15 +218,15 @@ def test_run_particles_keeps_no_empty_scratch_copy(sim, met, compute_root, monke
 
     monkeypatch.setattr(worker, "get_model", lambda name: _Model())
     with pytest.raises(MeteorologyError):
-        worker.run_particles(sim, met=met, workdir=compute_root / sim.id)
+        worker.run_particles(sim, met=met, workdir=workdir / sim.id)
 
     kept = sim.output.particles(sim.variant).scratch_path(sim.receptor.id)
     assert not kept.exists()
-    assert not (compute_root / sim.id).exists()
+    assert not (workdir / sim.id).exists()
 
 
 def test_run_particles_without_particles_is_a_simulation_error(
-    sim, met, compute_root, monkeypatch
+    sim, met, workdir, monkeypatch
 ):
     class _Model:
         name = "hysplit"
@@ -238,7 +236,7 @@ def test_run_particles_without_particles_is_a_simulation_error(
 
     monkeypatch.setattr(worker, "get_model", lambda name: _Model())
     with pytest.raises(SimulationError) as caught:
-        worker.run_particles(sim, met=met, workdir=compute_root / sim.id)
+        worker.run_particles(sim, met=met, workdir=workdir / sim.id)
     assert caught.value.reason == "NO_PARTICLE_DATA"
 
 
@@ -269,7 +267,7 @@ def _fake_make_footprint(monkeypatch, calls: list[tuple[str, int]]):
 
 def _run_receptor(project, receptor, **kwargs):
     return run_receptor(
-        project, str(receptor.id), compute_root=project.directory / "scratch", **kwargs
+        project, str(receptor.id), workdir=project.directory / "scratch", **kwargs
     )
 
 
@@ -591,7 +589,7 @@ def test_a_failed_run_keeps_its_log_and_working_directory(
 def _fake_run_receptor(calls: list[dict], status=None):
     """A stand-in for run_receptor: one complete hrrr result per receptor, unless *status* says otherwise."""
 
-    def fake(project, receptor_id, *, compute_root, execution=None, skip_existing=True):
+    def fake(project, receptor_id, *, workdir, execution=None, skip_existing=True):
         calls.append(
             {
                 "receptor": receptor_id,
@@ -616,7 +614,7 @@ def test_run_receptors_inline_returns_results_in_order(
     results = run_receptors(
         model,
         ids,
-        compute_root=tmp_path / "scratch",
+        workdir=tmp_path / "scratch",
         execution=ExecutionConfig(cpus=1),
         skip_existing=True,
     )
@@ -636,7 +634,7 @@ def test_run_receptors_empty_ids_returns_empty(tmp_path, receptor, monkeypatch):
         run_receptors(
             model,
             [],
-            compute_root=tmp_path / "scratch",
+            workdir=tmp_path / "scratch",
             execution=ExecutionConfig(cpus=1),
         )
         == []
@@ -653,13 +651,13 @@ def test_run_receptors_inline_skips_existing_by_default(
     run_receptors(
         model,
         [str(receptor.id)],
-        compute_root=tmp_path / "scratch",
+        workdir=tmp_path / "scratch",
         execution=ExecutionConfig(cpus=1),
     )
     run_receptors(
         model,
         [str(receptor.id)],
-        compute_root=tmp_path / "scratch",
+        workdir=tmp_path / "scratch",
         execution=ExecutionConfig(cpus=1),
         skip_existing=False,
     )
@@ -680,7 +678,7 @@ def test_run_receptors_inline_stops_after_interrupt(
     )
 
     results = run_receptors(
-        model, ids, compute_root=tmp_path / "scratch", execution=ExecutionConfig(cpus=1)
+        model, ids, workdir=tmp_path / "scratch", execution=ExecutionConfig(cpus=1)
     )
 
     assert [(r.sim_id.split("/")[0], r.status, r.error) for r in results] == [
@@ -699,7 +697,7 @@ def test_run_receptors_inline_continues_after_failed_result(
     )
 
     results = run_receptors(
-        model, ids, compute_root=tmp_path / "scratch", execution=ExecutionConfig(cpus=1)
+        model, ids, workdir=tmp_path / "scratch", execution=ExecutionConfig(cpus=1)
     )
 
     assert [r.status for r in results] == ["failed", "complete"]
@@ -759,7 +757,7 @@ def fake_pool(monkeypatch):
     # The initializer installs a SIGTERM handler; keep it out of the test process.
     monkeypatch.setattr(worker.signal, "signal", lambda *a, **k: None)
     monkeypatch.setattr(worker, "_POOL_PROJECT", None)
-    monkeypatch.setattr(worker, "_POOL_COMPUTE_ROOT", None)
+    monkeypatch.setattr(worker, "_POOL_WORKDIR", None)
     monkeypatch.setattr(worker, "_POOL_SKIP", True)
     return _FakePool
 
@@ -775,7 +773,7 @@ def test_run_receptors_pool_rebuilds_model_and_orders_results(
     results = run_receptors(
         model,
         ids,
-        compute_root=tmp_path / "scratch",
+        workdir=tmp_path / "scratch",
         execution=ExecutionConfig(cpus=2),
         skip_existing=False,
     )
@@ -788,7 +786,7 @@ def test_run_receptors_pool_rebuilds_model_and_orders_results(
     assert worker._POOL_PROJECT is not None
     assert worker._POOL_PROJECT is not model
     assert worker._POOL_PROJECT.directory == model.directory
-    assert tmp_path / "scratch" == worker._POOL_COMPUTE_ROOT
+    assert tmp_path / "scratch" == worker._POOL_WORKDIR
     assert worker._POOL_SKIP is False
     assert ExecutionConfig(cpus=2) == worker._POOL_EXECUTION
     # Results come back in input order even though the pool yielded reversed.
@@ -810,7 +808,7 @@ def test_run_receptors_pool_terminates_on_interrupted_result(
     )
 
     results = run_receptors(
-        model, ids, compute_root=tmp_path / "scratch", execution=ExecutionConfig(cpus=2)
+        model, ids, workdir=tmp_path / "scratch", execution=ExecutionConfig(cpus=2)
     )
 
     [pool] = fake_pool.instances
@@ -837,7 +835,7 @@ def test_run_receptors_pool_keyboard_interrupt_terminates_and_returns(
     monkeypatch.setattr(worker, "run_receptor", _fake_run_receptor([]))
 
     results = run_receptors(
-        model, ids, compute_root=tmp_path / "scratch", execution=ExecutionConfig(cpus=2)
+        model, ids, workdir=tmp_path / "scratch", execution=ExecutionConfig(cpus=2)
     )
 
     [pool] = fake_pool.instances

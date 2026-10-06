@@ -169,7 +169,7 @@ def run_particles(
     """
     Run the transport model for a simulation and write its particles to the output directory.
 
-    The model the settings name (HYSPLIT) runs in *workdir*, on scratch.
+    The model the settings name (HYSPLIT) runs in *workdir*.
     The log is copied into the output directory whether the run succeeds or
     fails. The working directory is then removed, unless the run failed or
     *keep_scratch* is set, in which case it is copied under the output
@@ -182,7 +182,7 @@ def run_particles(
     met : Met
         Meteorology for the run.
     workdir : Path
-        Scratch directory to run in. Created here.
+        Directory to run in. Created here.
     keep_scratch : bool, default False
         Keep the working directory of a successful run too.
     timeout : int, optional
@@ -285,7 +285,7 @@ def run_receptor(
     project: Project,
     receptor_id: str,
     *,
-    compute_root: Path,
+    workdir: Path,
     execution: ExecutionConfig | None = None,
     skip_existing: bool = True,
 ) -> list[SimulationResult]:
@@ -308,9 +308,9 @@ def run_receptor(
         Project the receptor belongs to.
     receptor_id : str
         Receptor to run.
-    compute_root : Path
-        Scratch directory under which HYSPLIT runs, as
-        :func:`~stilt.execution.resolve_compute_root` returns it.
+    workdir : Path
+        Directory the simulations run in, one folder each, as
+        :func:`~stilt.execution.resolve_workdir` returns it.
     execution : ExecutionConfig, optional
         Execution settings, for ``timeout`` and ``keep_scratch``. Defaults
         to the project's.
@@ -335,7 +335,7 @@ def run_receptor(
                 _run_group(
                     project,
                     group,
-                    compute_root=compute_root,
+                    workdir=workdir,
                     execution=execution,
                     skip_existing=skip_existing,
                 )
@@ -352,7 +352,7 @@ def _run_group(
     project: Project,
     sims: list[Simulation],
     *,
-    compute_root: Path,
+    workdir: Path,
     execution: ExecutionConfig,
     skip_existing: bool,
 ) -> dict[str, SimulationResult]:
@@ -365,7 +365,7 @@ def _run_group(
             particles = run_particles(
                 first,
                 met=project.mets[first.variant.met],
-                workdir=compute_root / first.id,
+                workdir=workdir / first.id,
                 keep_scratch=execution.keep_scratch,
                 timeout=execution.timeout,
             )
@@ -416,21 +416,21 @@ def _interrupted(results: list[SimulationResult]) -> bool:
 # -- process pool -------------------------------------------------------------
 
 _POOL_PROJECT: Project | None = None
-_POOL_COMPUTE_ROOT: Path | None = None
+_POOL_WORKDIR: Path | None = None
 _POOL_EXECUTION: ExecutionConfig | None = None
 _POOL_SKIP: bool = True
 
 
 def _init_pool_worker(
-    project: str, compute_root: str, execution: ExecutionConfig, skip_existing: bool
+    project: str, workdir: str, execution: ExecutionConfig, skip_existing: bool
 ) -> None:
     """Open the worker process's Project and make SIGTERM raise KeyboardInterrupt."""
     from stilt.project import Project
 
-    global _POOL_PROJECT, _POOL_COMPUTE_ROOT, _POOL_EXECUTION, _POOL_SKIP
+    global _POOL_PROJECT, _POOL_WORKDIR, _POOL_EXECUTION, _POOL_SKIP
     signal.signal(signal.SIGTERM, _raise_interrupt)
     _POOL_PROJECT = Project(project)
-    _POOL_COMPUTE_ROOT = Path(compute_root)
+    _POOL_WORKDIR = Path(workdir)
     _POOL_EXECUTION = execution
     _POOL_SKIP = skip_existing
 
@@ -438,11 +438,11 @@ def _init_pool_worker(
 def _pool_run(item: tuple[int, str]) -> tuple[int, list[SimulationResult]]:
     """Run one receptor in a pool worker, returning its index and result."""
     idx, receptor_id = item
-    assert _POOL_PROJECT is not None and _POOL_COMPUTE_ROOT is not None
+    assert _POOL_PROJECT is not None and _POOL_WORKDIR is not None
     return idx, run_receptor(
         _POOL_PROJECT,
         receptor_id,
-        compute_root=_POOL_COMPUTE_ROOT,
+        workdir=_POOL_WORKDIR,
         execution=_POOL_EXECUTION,
         skip_existing=_POOL_SKIP,
     )
@@ -452,7 +452,7 @@ def run_receptors(
     project: Project,
     receptor_ids: list[str],
     *,
-    compute_root: Path,
+    workdir: Path,
     execution: ExecutionConfig | None = None,
     skip_existing: bool = True,
 ) -> list[SimulationResult]:
@@ -469,9 +469,9 @@ def run_receptors(
         Project the receptors belong to.
     receptor_ids : list of str
         Receptors to run.
-    compute_root : Path
-        Scratch directory under which HYSPLIT runs, as
-        :func:`~stilt.execution.resolve_compute_root` returns it.
+    workdir : Path
+        Directory the simulations run in, one folder each, as
+        :func:`~stilt.execution.resolve_workdir` returns it.
     execution : ExecutionConfig, optional
         Execution settings: ``cpus`` is the number of worker processes (1
         runs in this process), and ``timeout`` and ``keep_scratch`` apply
@@ -496,7 +496,7 @@ def run_receptors(
                 done = run_receptor(
                     project,
                     receptor_id,
-                    compute_root=compute_root,
+                    workdir=workdir,
                     execution=execution,
                     skip_existing=skip_existing,
                 )
@@ -510,7 +510,7 @@ def run_receptors(
     pool = multiprocessing.Pool(
         execution.cpus,
         initializer=_init_pool_worker,
-        initargs=(str(project.directory), str(compute_root), execution, skip_existing),
+        initargs=(str(project.directory), str(workdir), execution, skip_existing),
     )
     with _sigterm_as_interrupt():
         try:

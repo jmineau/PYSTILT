@@ -86,7 +86,7 @@ and a view of their results. Its only write is `add_receptors`, which
 appends to `receptors.csv`. It knows no scheduler or scratch directory.
 `stilt.execution.run` and `submit` (which `Project.run()` and
 `Project.submit()` call) find the receptors with missing results, resolve
-the compute root, and start the workers, which are the only code that
+the workdir, and start the workers, which are the only code that
 writes results.
 
 **Plurals are handles that hand you a table; singles are values or data.**
@@ -249,9 +249,9 @@ output directory, never only in memory.
   public config stays flat (`ProjectConfig(numpar=..., seed=...)`). CONTRIBUTING
   explains how a field is routed to `SETUP.CFG`, `CONTROL`, `WINDERR`, or
   `ZIERR`.
-- The scratch directory comes from the `PYSTILT_COMPUTE_ROOT` environment
-  variable, which `resolve_compute_root` in the runner reads; `Project`
-  does not.
+- The workdir (where HYSPLIT runs) comes from `--workdir` or the
+  `PYSTILT_WORKDIR` environment variable, which `resolve_workdir` in the
+  runner reads; `Project` does not.
 - `ExecutionConfig` (`execution:` in `config.yaml`) says where receptors run
   and with what Slurm resources. It forbids unknown keys; other `sbatch`
   options go under its `slurm:` mapping.
@@ -288,8 +288,8 @@ footprint settings together. "Particles" is the one word for the particle table 
 "trajectory" means one particle's path. Lookup
 reads the stored `_settings.yaml` back through the current config classes
 (`stilt.identity`) and re-hashes, so a field added later with a default
-still matches. `compute_root`
-is scratch: HYSPLIT runs there and the directory is discarded after success.
+still matches. The workdir
+is where HYSPLIT runs and the directory is discarded after success.
 Footprints are sparse tables (`hour, y, x, foot`, float32); an empty
 footprint is a file with no rows and the reason in its metadata, and counts
 as complete.

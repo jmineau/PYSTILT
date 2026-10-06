@@ -10,7 +10,7 @@ import pytest
 import xarray as xr
 
 from stilt.config import ProjectConfig
-from stilt.execution import resolve_compute_root
+from stilt.execution import resolve_workdir
 from stilt.execution.config import ExecutionConfig
 from stilt.footprint.io import _describe
 from stilt.meteorology import MetConfig
@@ -245,44 +245,44 @@ def test_output_can_be_shared_between_projects(tmp_path, point_receptor):
     )
 
 
-def test_compute_root_defaults_under_tmpdir(tmp_path, monkeypatch):
+def test_workdir_defaults_under_tmpdir(tmp_path, monkeypatch):
     monkeypatch.setenv("TMPDIR", str(tmp_path / "tmp"))
-    monkeypatch.delenv("PYSTILT_COMPUTE_ROOT", raising=False)
+    monkeypatch.delenv("PYSTILT_WORKDIR", raising=False)
 
     expected = (tmp_path / "tmp" / "pystilt" / "proj").resolve()
-    assert resolve_compute_root(_project(tmp_path)) == expected
+    assert resolve_workdir(_project(tmp_path)) == expected
 
 
-def test_default_compute_root_is_resolved_like_an_explicit_one(tmp_path, monkeypatch):
+def test_default_workdir_is_resolved_like_an_explicit_one(tmp_path, monkeypatch):
     """A TMPDIR behind a symlink (as on macOS) gives the path a pool worker gets."""
     real = tmp_path / "real"
     real.mkdir()
     (tmp_path / "link").symlink_to(real)
     monkeypatch.setenv("TMPDIR", str(tmp_path / "link"))
-    monkeypatch.delenv("PYSTILT_COMPUTE_ROOT", raising=False)
+    monkeypatch.delenv("PYSTILT_WORKDIR", raising=False)
     project = _project(tmp_path)
 
-    default = resolve_compute_root(project)
+    default = resolve_workdir(project)
     assert default == real.resolve() / "pystilt" / "proj"
-    assert resolve_compute_root(project, str(default)) == default
+    assert resolve_workdir(project, str(default)) == default
 
 
-def test_compute_root_from_the_environment_and_explicit_wins(tmp_path, monkeypatch):
-    monkeypatch.setenv("PYSTILT_COMPUTE_ROOT", str(tmp_path / "scratch"))
+def test_workdir_from_the_environment_and_explicit_wins(tmp_path, monkeypatch):
+    monkeypatch.setenv("PYSTILT_WORKDIR", str(tmp_path / "scratch"))
     project = _project(tmp_path)
 
-    assert resolve_compute_root(project) == (tmp_path / "scratch").resolve()
-    explicit = resolve_compute_root(project, tmp_path / "explicit")
+    assert resolve_workdir(project) == (tmp_path / "scratch").resolve()
+    explicit = resolve_workdir(project, tmp_path / "explicit")
     assert explicit == (tmp_path / "explicit").resolve()
 
 
-def test_an_empty_compute_root_variable_is_unset(tmp_path, monkeypatch):
-    """PYSTILT_COMPUTE_ROOT= means the default, not the current directory."""
+def test_an_empty_workdir_variable_is_unset(tmp_path, monkeypatch):
+    """PYSTILT_WORKDIR= means the default, not the current directory."""
     monkeypatch.setenv("TMPDIR", str(tmp_path / "tmp"))
-    monkeypatch.setenv("PYSTILT_COMPUTE_ROOT", "")
+    monkeypatch.setenv("PYSTILT_WORKDIR", "")
 
     expected = (tmp_path / "tmp" / "pystilt" / "proj").resolve()
-    assert resolve_compute_root(_project(tmp_path)) == expected
+    assert resolve_workdir(_project(tmp_path)) == expected
 
 
 # ---------------------------------------------------------------------------
@@ -880,7 +880,7 @@ def test_run_hands_the_incomplete_receptors_to_the_workers(tmp_path, ran):
     assert call["execution"] == project.config.execution
     assert call["execution"].cpus == 3
     # The runner works out the scratch directory before handing it over.
-    assert call["compute_root"] == resolve_compute_root(project)
+    assert call["workdir"] == resolve_workdir(project)
     assert call["skip_existing"] is True
 
 
@@ -891,7 +891,7 @@ def test_run_without_skip_runs_every_receptor_once(tmp_path, ran):
     )
     _write_trajectory(project, done)
 
-    project.run(skip_existing=False, compute_root=tmp_path / "scratch")
+    project.run(skip_existing=False, workdir=tmp_path / "scratch")
 
     [call] = ran
     assert call["ids"] == [
@@ -899,7 +899,7 @@ def test_run_without_skip_runs_every_receptor_once(tmp_path, ran):
         todo.id,
     ]  # each receptor once, whatever its variants
     assert call["skip_existing"] is False
-    assert call["compute_root"] == tmp_path / "scratch"
+    assert call["workdir"] == tmp_path / "scratch"
 
 
 def test_run_takes_execution_settings_in_place_of_the_configs(tmp_path, ran):
@@ -986,8 +986,8 @@ def test_run_on_slurm_submits_and_waits(tmp_path, monkeypatch, point_receptor):
 
     monkeypatch.setattr("stilt.execution.runner.submit", submit)
 
-    assert project.run(compute_root="/s") == ["done", "done"]
-    assert submitted[0]["compute_root"] == "/s"
+    assert project.run(workdir="/s") == ["done", "done"]
+    assert submitted[0]["workdir"] == "/s"
     assert submitted[0]["execution"].backend == "slurm"
 
 

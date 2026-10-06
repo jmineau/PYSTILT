@@ -1,7 +1,7 @@
 """Running simulations: the runner that starts the work and the workers that do it."""
 
 from .config import ExecutionConfig
-from .runner import Batch, resolve_compute_root, run, submit
+from .runner import Batch, resolve_workdir, run, submit
 from .worker import (
     SimulationResult,
     make_footprint,
@@ -14,7 +14,7 @@ __all__ = [
     "Batch",
     "ExecutionConfig",
     "SimulationResult",
-    "resolve_compute_root",
+    "resolve_workdir",
     "run",
     "run_receptor",
     "run_receptors",

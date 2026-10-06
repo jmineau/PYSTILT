@@ -179,8 +179,8 @@ When you are sure, delete a folder by hand.
 Failed runs
 -----------
 
-HYSPLIT runs in a scratch directory (``compute_root``,
-``PYSTILT_COMPUTE_ROOT``, or ``$TMPDIR/pystilt/<project>``), which is
+HYSPLIT runs in a workdir (``--workdir``,
+``PYSTILT_WORKDIR``, or ``$TMPDIR/pystilt/<project>``), which is
 removed when a run succeeds. When a run fails, its working directory is
 copied to ``scratch/`` in the output directory, with CONTROL, SETUP.CFG,
 and MESSAGE. A ``<receptor id>.failure.yaml`` under ``logs/`` records why

@@ -8,6 +8,12 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- The directory runs work in is the workdir (breaking): `stilt run
+  --workdir`, the `PYSTILT_WORKDIR` environment variable,
+  `project.run(workdir=...)`, and `stilt.execution.resolve_workdir`
+  replace `--compute-root`, `PYSTILT_COMPUTE_ROOT`, `compute_root`, and
+  `resolve_compute_root` (#150).
+
 - `stilt.__all__` lists what a user calls (breaking): the project and its
   configs, the receptors, `Simulation`, `Grid`, `Bounds`, `Mesh`, `Zones`,
   `run_trajectories`, `calc_footprint`, `read_particles`,

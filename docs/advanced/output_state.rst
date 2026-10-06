@@ -80,8 +80,8 @@ Slurm task is handed a batch of receptor IDs.
 Where HYSPLIT runs
 ------------------
 
-HYSPLIT has to run in a local folder that holds its input files. That
-folder is scratch: ``compute_root`` if given, else ``PYSTILT_COMPUTE_ROOT``,
+HYSPLIT has to run in a local folder that holds its input files, the
+workdir: ``workdir`` if given, else ``PYSTILT_WORKDIR``,
 else ``$TMPDIR/pystilt/<project name>``. After a successful run the particle
 file and the log are written to the output directory and the folder is
 removed. After a failure the folder is copied to ``scratch/`` in the output
@@ -100,4 +100,4 @@ Environment variables
 This controls where PYSTILT runs. It never changes what it calculates, so it
 lives outside ``config.yaml``.
 
-- ``PYSTILT_COMPUTE_ROOT``: the scratch folder where workers run HYSPLIT
+- ``PYSTILT_WORKDIR``: the workdir, where workers run HYSPLIT

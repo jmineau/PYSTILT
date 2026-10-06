@@ -51,8 +51,8 @@ Options for ``stilt run``:
 
 - ``--backend`` and ``--n-workers`` override ``config.yaml`` for this run.
 - ``--no-skip`` reruns every simulation, finished or not.
-- ``--compute-root DIR`` runs HYSPLIT in ``DIR``, a scratch folder that is
-  emptied after each successful run.
+- ``--workdir DIR`` runs HYSPLIT in ``DIR``, one folder per simulation,
+  each removed after a successful run.
 
 When a simulation fails
 -----------------------

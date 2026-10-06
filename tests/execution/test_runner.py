@@ -124,7 +124,7 @@ def test_batch_opens_the_project_and_runs_its_receptors(monkeypatch, tmp_path):
         str(tmp_path),
         ["a", "b"],
         execution=execution,
-        compute_root="/scratch/x",
+        workdir="/scratch/x",
         skip_existing=False,
     )
     assert batch() == ["results"]
@@ -132,7 +132,7 @@ def test_batch_opens_the_project_and_runs_its_receptors(monkeypatch, tmp_path):
         {
             "project": f"Project({tmp_path})",
             "ids": ["a", "b"],
-            "compute_root": Path("/scratch/x").resolve(),
+            "workdir": Path("/scratch/x").resolve(),
             "execution": execution,
             "skip_existing": False,
         }
@@ -146,7 +146,7 @@ def test_batch_checkpoint_resubmits_itself_keeping_what_finished(tmp_path):
         str(tmp_path),
         ["a", "b"],
         execution=execution,
-        compute_root="/s",
+        workdir="/s",
         skip_existing=False,
     )
 
@@ -154,7 +154,7 @@ def test_batch_checkpoint_resubmits_itself_keeping_what_finished(tmp_path):
 
     assert isinstance(again, Batch)
     assert (again.project, again.receptor_ids) == (str(tmp_path), ["a", "b"])
-    assert (again.compute_root, again.execution) == ("/s", execution)
+    assert (again.workdir, again.execution) == ("/s", execution)
     assert again.skip_existing is True
 
 
@@ -258,19 +258,19 @@ def test_submit_sends_one_array_of_batches(fake_submitit, pending, tmp_path):
         assert batch.project == str(project.directory)
         assert batch.execution == execution
         assert batch.skip_existing is False
-        assert batch.compute_root is None  # each node resolves its own scratch
+        assert batch.workdir is None  # each node resolves its own scratch
     assert [job.job_id for job in jobs] == ["777_0", "777_1"]
 
 
-def test_submit_passes_an_explicit_compute_root(fake_submitit, pending, tmp_path):
+def test_submit_passes_an_explicit_workdir(fake_submitit, pending, tmp_path):
     pending.append("a")
     runner.submit(
         Project(tmp_path),
         execution=ExecutionConfig(backend="slurm"),
-        compute_root=tmp_path / "scratch",
+        workdir=tmp_path / "scratch",
     )
     [batch] = fake_submitit.instances[0].submitted
-    assert batch.compute_root == str((tmp_path / "scratch").resolve())
+    assert batch.workdir == str((tmp_path / "scratch").resolve())
 
 
 def test_submit_with_nothing_to_do_submits_nothing(fake_submitit, pending, tmp_path):

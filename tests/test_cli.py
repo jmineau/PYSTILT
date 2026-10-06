@@ -216,12 +216,12 @@ def test_run_runs_the_project_with_its_execution_settings(tmp_path, calls):
     assert kwargs["execution"] == ExecutionConfig.model_validate({})
     assert kwargs["skip_existing"] is True
     # Resolved once, so the run uses the directory the banner shows.
-    from stilt.execution import resolve_compute_root
+    from stilt.execution import resolve_workdir
     from stilt.project import Project
 
-    scratch = resolve_compute_root(Project(tmp_path))
-    assert kwargs["compute_root"] == str(scratch)
-    assert f"Compute root: {scratch}" in result.output
+    scratch = resolve_workdir(Project(tmp_path))
+    assert kwargs["workdir"] == str(scratch)
+    assert f"Workdir: {scratch}" in result.output
 
 
 def test_run_prints_a_startup_summary_and_the_status(tmp_path, calls):
@@ -234,24 +234,22 @@ def test_run_prints_a_startup_summary_and_the_status(tmp_path, calls):
         f"Starting run: project={tmp_path.resolve()}  backend=local  "
         "tasks=1  cpus=1  skip=existing"
     ) in result.output
-    assert "Compute root:" in result.output
+    assert "Workdir:" in result.output
     assert f"Output: {tmp_path.resolve() / 'output'}" in result.output
     assert "Receptors loaded: 1" in result.output
     assert "Execution mode: local, one line per receptor" in result.output
     assert f"Project: {tmp_path.resolve()}  total=" in result.output
 
 
-def test_run_forwards_compute_root_and_shows_it(tmp_path, calls):
+def test_run_forwards_workdir_and_shows_it(tmp_path, calls):
     _write_minimal_config(tmp_path)
-    compute_root = tmp_path / "scratch"
+    workdir = tmp_path / "scratch"
 
-    result = runner.invoke(
-        app, ["run", str(tmp_path), "--compute-root", str(compute_root)]
-    )
+    result = runner.invoke(app, ["run", str(tmp_path), "--workdir", str(workdir)])
 
     assert result.exit_code == 0
-    assert f"Compute root: {compute_root.resolve()}" in result.output
-    assert calls[0][1]["compute_root"] == str(compute_root)
+    assert f"Workdir: {workdir.resolve()}" in result.output
+    assert calls[0][1]["workdir"] == str(workdir)
 
 
 def test_run_no_skip_passes_false(tmp_path, calls):
