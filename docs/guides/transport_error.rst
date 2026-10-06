@@ -113,8 +113,9 @@ The enhancement a footprint predicts for a surface flux field is the
 footprint times the flux, summed over the grid. ``flux`` is an
 :class:`xarray.DataArray` on ``lat`` and ``lon``, with an optional ``time``
 dimension. It is sampled at the footprint's cell centres, and footprint
-cells outside the flux field add nothing. If the flux cells are much
-smaller than the footprint cells, regrid the flux first.
+cells outside the flux field add nothing. A flux with finer cells than the
+footprint's must be put on the footprint grid first
+(:doc:`../tutorials/flux_inversion` says how).
 
 .. code-block:: python
 

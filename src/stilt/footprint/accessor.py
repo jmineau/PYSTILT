@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+import warnings
 from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -24,6 +25,52 @@ from .targets import Geometry
 
 if TYPE_CHECKING:
     from stilt.visualization import FootprintPlotAccessor
+
+
+def _spacing(values: np.ndarray) -> float | None:
+    """Return the cell size of a regular axis, or ``None`` with fewer than two cells."""
+    values = np.asarray(values, dtype=float)
+    return float(np.median(np.abs(np.diff(values)))) if values.size > 1 else None
+
+
+def _check_flux_grid(
+    flux: xr.DataArray, foot: xr.DataArray, y_dim: str, x_dim: str
+) -> None:
+    """
+    Raise when the flux cells are finer than the footprint's; warn when cells of the same size are offset.
+
+    Nearest-cell sampling is right for flux cells as large as the
+    footprint's or larger. A finer flux would give each footprint cell one
+    small flux cell, and grids of one size offset by a fraction of a cell
+    give each footprint cell one of the two flux cells it straddles.
+    """
+    if y_dim not in flux.dims or x_dim not in flux.dims:
+        return  # sample_field says what is wrong with the flux's dimensions
+    for dim in (x_dim, y_dim):
+        flux_axis, foot_axis = flux[dim].to_numpy(), foot[dim].to_numpy()
+        flux_size, foot_size = _spacing(flux_axis), _spacing(foot_axis)
+        if flux_size is None or foot_size is None or foot_size == 0:
+            continue
+        if flux_size < 0.99 * foot_size:
+            raise ValueError(
+                f"The flux cells ({flux_size:g} in {dim}) are finer than the "
+                f"footprint's ({foot_size:g}), so each footprint cell would take "
+                "one small flux cell in place of the mean over its area. Put the "
+                "flux on the footprint grid first, as an area-weighted mean "
+                "(xESMF's conservative regridding), or make the footprints on the "
+                "flux's grid (sim.calc_footprint(grid=...))."
+            )
+        if flux_size <= 1.01 * foot_size:
+            shift = (float(foot_axis[0]) - float(flux_axis[0])) / flux_size
+            offset = abs(shift - round(shift))
+            if offset > 0.1:
+                warnings.warn(
+                    f"The flux cell centres are {offset:.2f} of a cell from the "
+                    f"footprint's in {dim}, so each footprint cell takes one of "
+                    "the two flux cells it straddles. Put the flux on the "
+                    "footprint grid first for an exact sum.",
+                    stacklevel=3,
+                )
 
 
 @xr.register_dataarray_accessor("stilt")
@@ -139,8 +186,16 @@ class FootprintAccessor:
         Return the modelled enhancement at the receptor, footprint times flux summed over the grid.
 
         The flux is taken at each footprint cell centre from the nearest
-        flux cell (:func:`stilt.sampling.sample_field`). Regrid a flux with much
-        smaller cells than the footprint's before calling this.
+        flux cell (:func:`stilt.sampling.sample_field`). That is right for
+        flux cells as large as the footprint's or larger. A finer flux is
+        an error, since each footprint cell would take one small flux cell
+        in place of the mean over its area: put the flux on the footprint
+        grid first, as an area-weighted mean (xESMF's conservative
+        regridding), or make the footprints on the flux's grid
+        (``sim.calc_footprint(grid=...)``). A flux on cells of the
+        footprint's size whose centres are offset from the footprint's by
+        more than a tenth of a cell gets a warning, since each footprint
+        cell then straddles two flux cells.
 
         Parameters
         ----------
@@ -162,12 +217,13 @@ class FootprintAccessor:
         ValueError
             If the flux has a ``time`` dimension and the footprint has none,
             since a time-summed footprint cannot say which flux step each
-            hour meets.
+            hour meets, or if the flux cells are finer than the footprint's.
         """
         from stilt.sampling import sample_field
 
         foot = self._foot
         y_dim, x_dim = horizontal_dims(foot)
+        _check_flux_grid(flux, foot, y_dim, x_dim)
         if "time" in flux.dims and "time" not in foot.dims:
             raise ValueError(
                 "The flux varies in time and the footprint has no time "
