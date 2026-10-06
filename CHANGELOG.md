@@ -8,6 +8,11 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- `project.plot.availability()` draws one row per location with a bar
+  for each day that has receptors, shaded by how many, where it drew a
+  bar per receptor; it stays quick on projects of tens of thousands of
+  receptors (#150).
+
 - `stilt.transforms` is a package with one module per transform
   (`averaging_kernel`, `pressure_weighting`, `lifetime`); every name
   imports from `stilt.transforms` as before. The transforms guide states

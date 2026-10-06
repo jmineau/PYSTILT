@@ -577,22 +577,29 @@ class ProjectPlotAccessor:
 
     def availability(self, ax: Axes | None = None, **kwargs) -> Axes:
         """
-        Plot the project's receptors by location and time.
+        Plot how many receptors each location has on each day.
 
-        Each receptor is a one-hour bar at its time, in the row of its
-        location. Whether its simulations have run is not shown.
+        Each location is a row, and each day with receptors there a one-day
+        bar shaded by their number, so the plot stays quick for projects of
+        tens of thousands of receptors. Whether their simulations have run
+        is not shown; ``project.status()`` says that.
 
         Parameters
         ----------
         ax : Axes, optional
             Axes to plot on. By default a new figure is made.
         **kwargs
-            Passed to :meth:`matplotlib.axes.Axes.barh`.
+            Passed to :meth:`matplotlib.axes.Axes.broken_barh`, except
+            ``cmap``, the colormap of the counts (``viridis``).
 
         Returns
         -------
         Axes
         """
+        import matplotlib.dates as mdates
+        from matplotlib.cm import ScalarMappable
+        from matplotlib.colors import Normalize
+
         if ax is None:
             _, ax = plt.subplots()
         assert ax is not None
@@ -601,20 +608,25 @@ class ProjectPlotAccessor:
         if receptors.empty:
             return ax
 
-        for location, time in zip(
-            receptors["location"], receptors["time"], strict=True
-        ):
-            ax.barh(  # type: ignore[arg-type]
-                y=location,
-                width=pd.Timedelta(hours=1),  # type: ignore[arg-type]
-                left=time,  # type: ignore[arg-type]
-                height=0.6,
-                align="center",
-                edgecolor="black",
-                alpha=0.6,
+        cmap = plt.get_cmap(kwargs.pop("cmap", "viridis"))
+        days = pd.to_datetime(receptors["time"]).dt.floor("D")
+        counts = receptors.assign(day=days).groupby(["location", "day"]).size()
+        norm = Normalize(vmin=1, vmax=max(int(counts.to_numpy().max()), 2))
+        locations = list(dict.fromkeys(receptors["location"]))
+        for row, location in enumerate(locations):
+            per_day = counts.loc[location]
+            starts = mdates.date2num(per_day.index.to_pydatetime())
+            ax.broken_barh(
+                [(float(start), 1.0) for start in starts],
+                (row - 0.3, 0.6),
+                facecolors=[cmap(norm(int(n))) for n in per_day.to_numpy()],
                 **kwargs,
             )
-
+        ax.set_yticks(range(len(locations)), labels=locations)
+        ax.xaxis_date()
+        ax.figure.colorbar(
+            ScalarMappable(norm=norm, cmap=cmap), ax=ax, label="Receptors per day"
+        )
         ax.figure.autofmt_xdate()
-        ax.set(title="Simulation Availability", xlabel="Time", ylabel="Location ID")
+        ax.set(title="Receptors", xlabel="Day", ylabel="Location")
         return ax
