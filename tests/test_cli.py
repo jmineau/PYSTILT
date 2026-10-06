@@ -155,8 +155,7 @@ def test_status_counts_full_simulation_completion(tmp_path):
             "foot": [1e-5],
         }
     )
-    folder = sim.output.particles(sim.variant)
-    folder.write(receptor, particles, [])
+    sim.output.write_particles(sim.variant, receptor, particles, [])
 
     result = runner.invoke(app, ["status", str(tmp_path)])
 
@@ -410,7 +409,7 @@ def test_status_lists_output_folders_no_variant_uses(tmp_path):
         name="old",
         transport=variant.transport.model_copy(update={"numpar": 7}),
     )
-    project.output.particles(stale)
+    project.output.write_log(stale, str(project.receptors["receptor"].iloc[0]), "")
 
     result = runner.invoke(app, ["status", str(tmp_path)])
 
@@ -444,7 +443,9 @@ def test_status_counts_failures_by_reason(tmp_path):
     reasons = ["MISSING_MET_FILES", "MISSING_MET_FILES", None]
     for receptor, reason in zip(receptors, reasons, strict=True):
         sim = project.simulation(str(receptor.id), "hrrr")
-        sim.output.particles(sim.variant).record_failure(
+        sim.output.record_failure(
+            "particles",
+            sim.variant,
             sim.receptor.id,
             {"step": "particles", "reason": reason or "ValueError", "message": "m"},
         )

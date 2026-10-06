@@ -91,8 +91,7 @@ def _write_trajectory(project: Project, receptor, variant="hrrr") -> Path:
     """Write a small particle file for one simulation into the output directory."""
     sim = project.simulation(receptor.id, variant)
     particles = finish_particles(_particles(), sim.receptor, sim.variant.transport)
-    folder = sim.output.particles(sim.variant)
-    return folder.write(sim.receptor, particles, [])
+    return sim.output.write_particles(sim.variant, sim.receptor, particles, [])
 
 
 def _write_footprint(
@@ -101,9 +100,10 @@ def _write_footprint(
     """Write a footprint (or an empty one) for one simulation into the output directory."""
     sim = project.simulation(receptor.id, variant)
     assert sim.variant.footprint is not None
-    feet = sim.output.footprints(sim.variant)
     if empty:
-        return feet.write_empty(sim.receptor, "outside_domain", name=sim.variant.name)
+        return sim.output.write_empty_footprint(
+            sim.variant, sim.receptor, "outside_domain"
+        )
     grid = sim.variant.footprint.grid
     assert grid is not None
     x_axis, y_axis = grid.axes
@@ -113,7 +113,7 @@ def _write_footprint(
         coords={"time": [sim.receptor.time], "lat": y_axis, "lon": x_axis},
     )
     foot = as_footprint(data, sim.receptor, sim.variant.footprint, sim.variant.name)
-    return feet.write(foot)
+    return sim.output.write_footprint(sim.variant, foot)
 
 
 def _pairs(frame: pd.DataFrame) -> list[tuple[str, str]]:
@@ -218,16 +218,16 @@ def test_output_defaults_to_the_projects_output_directory(tmp_path):
     project = _project(tmp_path)
 
     assert isinstance(project.output, Output)
-    assert project.output.path == tmp_path / "proj" / "output"
-    assert not project.output.path.exists()  # nothing is made by looking
+    assert project.output.directory == tmp_path / "proj" / "output"
+    assert not project.output.directory.exists()  # nothing is made by looking
 
 
 def test_output_is_relative_to_the_project_unless_absolute(tmp_path):
     relative = _project(tmp_path, name="a", output="../results")
     absolute = _project(tmp_path, name="b", output=str(tmp_path / "abs"))
 
-    assert relative.output.path == (tmp_path / "results").resolve()
-    assert absolute.output.path == tmp_path / "abs"
+    assert relative.output.directory == (tmp_path / "results").resolve()
+    assert absolute.output.directory == tmp_path / "abs"
 
 
 def test_output_can_be_shared_between_projects(tmp_path, point_receptor):
@@ -238,11 +238,11 @@ def test_output_can_be_shared_between_projects(tmp_path, point_receptor):
     _write_trajectory(a, point_receptor)
 
     rid = point_receptor.id
-    assert a.output.path == b.output.path
+    assert a.output.directory == b.output.directory
     assert b.simulation(rid, "hrrr").has_particles
     assert (
-        a.simulation(rid, "hrrr")._particle_set
-        == b.simulation(rid, "hrrr")._particle_set
+        a.simulation(rid, "hrrr").particles_path
+        == b.simulation(rid, "hrrr").particles_path
     )
 
 
@@ -490,7 +490,7 @@ def test_variants_with_equal_transport_settings_share_a_run(tmp_path, point_rece
     _write_trajectory(project, point_receptor)
     assert project.simulation(point_receptor.id, "s2").has_particles
     assert not project.simulation(point_receptor.id, "zi08").has_particles
-    assert len(project.output.particle_sets()) == 1
+    assert len(project.output.folders("particles")) == 1
 
 
 def test_unreferenced_lists_output_folders_the_config_no_longer_uses(
@@ -628,41 +628,74 @@ def _mixed_state_project(tmp_path):
     return project
 
 
-def test_incomplete_and_status_agree_with_is_complete(tmp_path):
-    """The folder listing must give `Simulation.is_complete()`'s answer."""
+def test_status_and_incomplete_in_every_state(tmp_path):
+    """Each simulation's results and state, read from the folder listings."""
     project = _mixed_state_project(tmp_path)
-    sims = project.simulations
-    handles = [project.simulation(r, v) for r, v in _pairs(sims)]
-
-    expected = [sim.id for sim in handles if not sim.is_complete()]
-    assert 0 < len(expected) < len(handles)
-    assert [
-        SimID(r, v) for r, v in _pairs(project.simulations.incomplete())
-    ] == expected
-
     status = project.simulations.status()
-    assert (status["state"] == "complete").tolist() == [
-        sim.is_complete() for sim in handles
-    ]
-    assert status["particles"].tolist() == [sim.has_particles for sim in handles]
-    for row, sim in zip(status.itertuples(), handles, strict=True):
-        if sim.makes_footprint:
-            assert row.footprint == sim.has_footprint
-        else:
-            assert pd.isna(row.footprint)
+    by_pair = {
+        (f"{t.hour}", v): (state, particles, footprint)
+        for t, v, state, particles, footprint in zip(
+            status.time,
+            status.variant,
+            status.state,
+            status.particles,
+            status.footprint,
+            strict=True,
+        )
+    }
+    na = pd.NA
+    # By receptor hour: 10 is a, 11 b, ..., 15 f.
+    expected = {
+        "10": [
+            ("pending", True, False),
+            ("pending", True, False),
+            ("pending", False, na),
+        ],
+        "11": [
+            ("complete", True, True),
+            ("pending", True, False),
+            ("pending", False, na),
+        ],
+        "12": [
+            ("complete", True, True),
+            ("complete", True, True),
+            ("pending", False, na),
+        ],
+        "13": [
+            ("pending", False, False),
+            ("pending", False, False),
+            ("complete", True, na),
+        ],
+        "14": [
+            ("complete", True, True),
+            ("complete", True, True),
+            ("complete", True, na),
+        ],
+        "15": [
+            ("pending", False, False),
+            ("pending", False, False),
+            ("pending", False, na),
+        ],
+    }
+    for hour, rows in expected.items():
+        for variant, want in zip(("hrrr", "smooth", "zi08"), rows, strict=True):
+            state, particles, footprint = by_pair[(hour, variant)]
+            got = (state, particles, footprint if footprint is not na else na)
+            assert got[:2] == want[:2], (hour, variant)
+            assert (got[2] is na) == (want[2] is na) and (
+                got[2] is na or got[2] == want[2]
+            ), (hour, variant)
 
-    smooth = sims[sims.variant == "smooth"]
-    assert _pairs(smooth.incomplete()) == [
-        (sim.receptor.id, "smooth")
-        for sim in handles
-        if sim.variant.name == "smooth" and not sim.is_complete()
-    ]
+    incomplete = project.simulations.incomplete()
+    assert len(incomplete) == int((status.state != "complete").sum())
+    smooth = project.simulations[project.simulations.variant == "smooth"]
+    assert [t.hour for t in smooth.incomplete()["time"]] == [10, 11, 13, 15]
 
 
 def test_incomplete_of_a_project_with_no_results_is_everything(tmp_path):
     project = _project(tmp_path, [_receptor(12)])
     assert _pairs(project.simulations.incomplete()) == _pairs(project.simulations)
-    assert not project.output.path.exists()  # looking creates nothing
+    assert not project.output.directory.exists()  # looking creates nothing
 
 
 # ---------------------------------------------------------------------------
@@ -677,7 +710,8 @@ def test_load_particles_of_a_selection_is_one_table(tmp_path):
 
     path = _write_trajectory(project, a)
 
-    assert path.parent == project.output.particle_sets()[0].path / "date=2023-01-01"
+    folder = project.output.folder("particles", project.variants["hrrr"])
+    assert path.parent == folder / "date=2023-01-01"
     particles = project.simulations.load_particles()
     assert list(particles.columns[:2]) == ["receptor", "variant"]
     one = project.simulation(a.id, "hrrr").particles
@@ -1136,8 +1170,11 @@ def test_status_says_why_the_failed_simulations_failed(tmp_path, point_receptor)
         tmp_path, [point_receptor, other], variants={"traj": {"grid": None}}
     )
     sim = project.simulation(str(point_receptor.id), "traj")
-    sim.output.particles(sim.variant).record_failure(
-        sim.receptor.id, {"step": "particles", "reason": "MET_COVERAGE", "message": "m"}
+    sim.output.record_failure(
+        "particles",
+        sim.variant,
+        sim.receptor.id,
+        {"step": "particles", "reason": "MET_COVERAGE", "message": "m"},
     )
 
     status = project.simulations.status()

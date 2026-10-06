@@ -134,8 +134,7 @@ def _particles(receptor) -> pd.DataFrame:
 def _write_particles(sim: Simulation) -> pd.DataFrame:
     """Put a small particle file for *sim* in the output directory."""
     particles = _particles(sim.receptor)
-    folder = sim.output.particles(sim.variant)
-    folder.write(sim.receptor, particles, [])
+    sim.output.write_particles(sim.variant, sim.receptor, particles, [])
     return particles
 
 
@@ -143,8 +142,7 @@ def _write_footprint(sim: Simulation, *, empty: bool = False) -> None:
     """Record a footprint (or an empty one) for *sim* in the output directory."""
     assert sim.variant.footprint is not None
     if empty:
-        feet = sim.output.footprints(sim.variant)
-        feet.write_empty(sim.receptor, "outside_domain", name=sim.variant.name)
+        sim.output.write_empty_footprint(sim.variant, sim.receptor, "outside_domain")
     else:
         make_footprint(sim, _particles(sim.receptor))
 
@@ -222,8 +220,8 @@ def test_run_particles_keeps_no_empty_scratch_copy(sim, met, compute_root, monke
     with pytest.raises(MeteorologyError):
         worker.run_particles(sim, met=met, workdir=compute_root / sim.id)
 
-    kept = sim.output.particles(sim.variant).scratch_path(sim.receptor.id)
-    assert not kept.exists()
+    kept = sim.output.scratch_path(sim.variant, sim.receptor.id)
+    assert kept is None or not kept.exists()
     assert not (compute_root / sim.id).exists()
 
 
@@ -530,8 +528,7 @@ def test_a_failed_footprint_is_the_variants_own_and_the_others_still_run(
     assert project.simulation(str(receptor.id), "hrrr-s2").failure is None
     # The record belongs to the footprint folder, found by its settings hash.
     sim = project.simulation(str(receptor.id), "hrrr")
-    feet = project.output.find_footprints(sim.variant)
-    assert feet is not None and feet.failure(sim.receptor.id) == failure
+    assert project.output.failure("footprints", sim.variant, sim.receptor.id) == failure
 
 
 def test_a_success_clears_the_failure_it_replaces(tmp_path, receptor, monkeypatch):
@@ -544,15 +541,14 @@ def test_a_success_clears_the_failure_it_replaces(tmp_path, receptor, monkeypatc
     monkeypatch.setattr(worker, "run_particles", fail)
     _run_receptor(project, receptor)
     assert sim.failure is not None and sim.failure["reason"] == "MISSING_MET_FILES"
-    folder = project.output.find_particles(sim.variant)
-    assert folder is not None and folder.failure_path(sim.receptor.id).exists()
+    assert project.output.failure("particles", sim.variant, sim.receptor.id)
 
     _fake_run_particles(monkeypatch, [])
     _fake_make_footprint(monkeypatch, [])
     _run_receptor(project, receptor)
 
     assert sim.is_complete() and sim.failure is None
-    assert not folder.failure_path(sim.receptor.id).exists()
+    assert project.output.failure("particles", sim.variant, sim.receptor.id) is None
 
 
 def test_a_failed_run_keeps_its_log_and_working_directory(

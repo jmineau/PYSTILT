@@ -33,7 +33,7 @@ from stilt.exceptions import EmptyFootprint, SimulationError
 from stilt.execution.config import ExecutionConfig
 from stilt.footprint import calc_footprint
 from stilt.meteorology import Met
-from stilt.output import Footprints, Particles
+from stilt.output import Kind
 from stilt.simulation import Simulation
 from stilt.transport import get_model
 
@@ -82,6 +82,9 @@ Status = Literal["complete", "failed", "error", "interrupted"]
 #: The step of a simulation that failed: its particles or its footprint.
 Step = Literal["particles", "footprint"]
 
+#: The output folder each step writes to.
+_KIND: dict[Step, Kind] = {"particles": "particles", "footprint": "footprints"}
+
 
 @dataclass(frozen=True, slots=True)
 class SimulationResult:
@@ -114,7 +117,7 @@ def _failed(sim: Simulation, step: Step, error: Exception) -> SimulationResult:
     Record why *sim* failed at *step* and return its result.
 
     The record goes in the logs of the folder whose result failed
-    (:meth:`stilt.output.Particles.record_failure`): a particles failure
+    (:meth:`stilt.output.Output.record_failure`): a particles failure
     covers every variant on those particles, a footprint failure is the
     variant's own. ``reason`` is the error's short cause, or its class
     for an error without one. An expected failure (a
@@ -138,7 +141,7 @@ def _failed(sim: Simulation, step: Step, error: Exception) -> SimulationResult:
     if not expected:
         record["traceback"] = traceback.format_exc()
     try:
-        _folder(sim, step).record_failure(sim.receptor.id, record)
+        sim.output.record_failure(_KIND[step], sim.variant, sim.receptor.id, record)
     except Exception:
         logger.exception("simulation %s: could not record the failure", sim.id)
     status: Status = "failed" if expected else "error"
@@ -147,15 +150,8 @@ def _failed(sim: Simulation, step: Step, error: Exception) -> SimulationResult:
 
 def _succeeded(sim: Simulation, step: Step) -> SimulationResult:
     """Remove *sim*'s failure record for *step*, whose result is now written, and return its result."""
-    _folder(sim, step).clear_failure(sim.receptor.id)
+    sim.output.clear_failure(_KIND[step], sim.variant, sim.receptor.id)
     return SimulationResult(str(sim.id), "complete")
-
-
-def _folder(sim: Simulation, step: Step) -> Particles | Footprints:
-    """Return the output folder of *sim*'s result for *step*."""
-    if step == "particles":
-        return sim.output.particles(sim.variant)
-    return sim.output.footprints(sim.variant)
 
 
 def run_particles(
@@ -203,13 +199,12 @@ def run_particles(
     """
     params = sim.variant.transport
     model = get_model(sim.variant.model.name)
-    folder = sim.output.particles(sim.variant)
-    rid = sim.receptor.id
+    output, rid = sim.output, sim.receptor.id
     # The model runs in an empty directory. A job stopped partway can leave
     # this simulation's directory behind; it is PYSTILT's own, so clear it.
     shutil.rmtree(workdir, ignore_errors=True)
     workdir.mkdir(parents=True)
-    scratch_log = workdir / "stilt.log"
+    log = workdir / "stilt.log"
     succeeded = False
     try:
         result = model.run(sim.receptor, params, met, workdir, timeout=timeout)
@@ -217,31 +212,19 @@ def run_particles(
             raise SimulationError(
                 "The transport model wrote no particles.", reason="NO_PARTICLE_DATA"
             )
-        folder.write(sim.receptor, result.particles, result.met_files)
+        output.write_particles(
+            sim.variant, sim.receptor, result.particles, result.met_files
+        )
         succeeded = True
         return result.particles
     finally:
-        if scratch_log.exists():
-            folder.write_log(rid, scratch_log.read_text())
-        _finish_scratch(
-            workdir, folder.scratch_path(rid), keep=keep_scratch or not succeeded
-        )
-
-
-def _finish_scratch(workdir: Path, kept: Path, *, keep: bool) -> None:
-    """
-    Copy *workdir* to *kept* when *keep*, then remove it.
-
-    An empty directory is not kept: a run that failed before writing
-    anything, such as on missing meteorology, has nothing to look at.
-    """
-    if not workdir.exists():
-        return
-    if keep and any(workdir.iterdir()):
-        shutil.rmtree(kept, ignore_errors=True)
-        kept.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copytree(workdir, kept, symlinks=True)
-    shutil.rmtree(workdir, ignore_errors=True)
+        if log.exists():
+            output.write_log(sim.variant, rid, log.read_text())
+        # An empty directory is not kept: a run that failed before writing
+        # anything, such as on missing meteorology, has nothing to look at.
+        if (keep_scratch or not succeeded) and any(workdir.iterdir()):
+            output.keep_workdir(sim.variant, rid, workdir)
+        shutil.rmtree(workdir, ignore_errors=True)
 
 
 def make_footprint(sim: Simulation, particles: pd.DataFrame) -> xr.DataArray | None:
@@ -260,13 +243,14 @@ def make_footprint(sim: Simulation, particles: pd.DataFrame) -> xr.DataArray | N
     ValueError
         If the variant has no grid.
     """
-    feet = sim.output.footprints(sim.variant)
-    config = feet.config
+    config = sim.variant.footprint
+    if config is None or config.grid is None:
+        raise ValueError(f"Variant {sim.variant.name!r} makes no footprints (no grid).")
     try:
         foot = calc_footprint(
             particles,
             sim.receptor,
-            feet.grid,
+            config.grid,
             smooth_factor=config.smooth_factor,
             time_integrate=config.time_integrate,
             transforms=config.transforms,
@@ -275,9 +259,9 @@ def make_footprint(sim: Simulation, particles: pd.DataFrame) -> xr.DataArray | N
             geometry_hash=sim.variant.geometry_hash,
         )
     except EmptyFootprint as error:
-        feet.write_empty(sim.receptor, error.reason, name=sim.variant.name)
+        sim.output.write_empty_footprint(sim.variant, sim.receptor, error.reason)
         return None
-    feet.write(foot)
+    sim.output.write_footprint(sim.variant, foot)
     return foot
 
 

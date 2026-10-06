@@ -8,6 +8,22 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- `Output` has no folder classes (breaking). `stilt.output.Particles` and
+  `Footprints` are gone, with `Output.particles()`, `footprints()`,
+  `find_particles()`, `find_footprints()`, `particle_sets()`, and
+  `footprint_sets()`. Each method takes the kind of result
+  (`"particles"` or `"footprints"`) and the variant:
+  `output.path(kind, variant, receptor_id)`, `present(kind, variant,
+  receptor_ids)`, `complete(variant, receptor_ids)`, `table(kind,
+  variant, receptor_ids)`, `folder(kind, variant)`, `folders(kind)`,
+  `failure`, `failures`, `record_failure`, `clear_failure`, and the
+  writers `write_particles`, `write_footprint`, `write_empty_footprint`,
+  `write_log`, and `keep_workdir`. The output directory is
+  `output.directory`, where it was `output.path` (#150).
+- One rule says a simulation is complete, `stilt.output.completed`:
+  `Output.complete`, `Simulation.is_complete()`, and `status()` apply it,
+  so the test that held two copies together is gone (#150).
+
 - Docs: the quickstart and the README make one footprint with
   `run_trajectories` and `calc_footprint` before they make a project
   (#150).

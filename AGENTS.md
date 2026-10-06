@@ -73,8 +73,9 @@ names its particles folder, and optional footprint settings. Variants with
 equal run settings share one run per receptor and differ only in the
 footprint made from it. Whether
 a simulation is complete is decided **by the files in the output
-directory**, by `Simulation.is_complete()`: that method is the single
-definition of "done". `config.yaml` and `receptors.csv` are the user's
+directory**, by `stilt.output.completed`: the particles exist, and the
+footprint when the variant has a grid. `Output.complete`,
+`Simulation.is_complete()`, and `status()` all apply it. `config.yaml` and `receptors.csv` are the user's
 inputs: `Project.init` (or `stilt init`) writes `config.yaml` once, PYSTILT
 never rewrites it, and `Project.add_receptors` only appends to
 `receptors.csv`. Changing a setting never overwrites a result: it hashes to
@@ -97,8 +98,10 @@ table), `load_footprints()`, `jacobian()`. A selection forwards only column
 access and row masks; everything else is `sims.frame`, and
 `Simulations(project, frame)` turns a table back into a selection. Do not
 give it query methods of its own (`sel`, `where`): that is how the old
-collection classes grew. `Particles` and `Footprints` are the folder
-handles of the output directory. `project.receptors` stays a plain
+collection classes grew. `Output` has no folder classes: its methods take
+the kind of result (`"particles"` or `"footprints"`), the variant, and
+receptor ids (`path`, `present`, `complete`, `table`, the failure
+records, and the writers). `project.receptors` stays a plain
 DataFrame. `project.receptor(id)` and `project.simulation(id, variant)`
 return the values; `sim.particles` and `sim.footprint` are data.
 
@@ -113,9 +116,10 @@ src/stilt/
   project.py         Project: the project directory, its receptors (a
                      DataFrame), run/submit; Simulations: a selection's
                      status, loading, and Jacobian
-  output.py          Output: the output directory. Particles and Footprints are
-                     its folders, one per settings hash: finding, listing,
-                     and reading many files at once; Jacobian assembly
+  output.py          Output: the output directory, a folder per kind and
+                     settings hash; finding a variant's folder, which
+                     receptors have results (present, complete), reading
+                     many files at once (table), failure records, writing
   simulation.py      Simulation, SimID: a frozen value (receptor, variant, output)
                      that knows where its results are and whether they exist
   config.py          ProjectConfig: reads config.yaml, splits the flat keys into
@@ -300,12 +304,10 @@ as complete.
   `fidelity` suite before merging any change to trajectory or footprint math.
   NetCDF output is CF-1.8 and deliberately not byte-compatible with STILT-R.
 - **Completion is by file.** A simulation is complete iff its files exist
-  in the output directory. `Simulation.is_complete()` says so for one
-  simulation, and `Simulations._complete()` applies the same rule to
-  many, from the listing of date folders that `_present()` reads (a test
-  holds the two together). Never add a second
-  "does this output exist" check, a completion registry, or a manifest; call
-  the `Simulation` method.
+  in the output directory. `stilt.output.completed` is the rule, written
+  once; `Output.complete` applies it to a listing of the date folders, and
+  `Simulation.is_complete()` and `status()` call it. Never add a second
+  "does this output exist" check, a completion registry, or a manifest.
 - **Bulk methods work from listings.** A method on `Simulations` works
   from folder listings and receptor ids, and never builds a `Simulation`
   per row: on a large project one receptor costs milliseconds, and

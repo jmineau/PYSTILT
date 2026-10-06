@@ -264,7 +264,7 @@ def _print_status(project: Project) -> None:
     for kind, keys in unreferenced.items():
         if keys:
             typer.echo(
-                f"{kind} folders in {project.output.path} that no variant here uses: "
+                f"{kind} folders in {project.output.directory} that no variant here uses: "
                 f"{', '.join('settings=' + k for k in keys)}  (from changed settings, "
                 "dropped variants, or another project; PYSTILT never deletes them)"
             )
@@ -287,7 +287,7 @@ def _print_run_start(
         f"tasks={1 if backend == 'local' else execution.n_workers}  "
         f"cpus={execution.cpus}  skip={mode}"
     )
-    typer.echo(f"Output: {project.output.path}")
+    typer.echo(f"Output: {project.output.directory}")
     if compute_root is not None:
         typer.echo(f"Compute root: {compute_root}")
     else:

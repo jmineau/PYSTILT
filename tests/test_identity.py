@@ -154,8 +154,15 @@ def test_stored_settings_read_back_to_the_same_hash(tmp_path):
     assert settings_hash(read_run_settings(stored)) != variant.particles_hash
 
 
+def _make_folder(directory, variant):
+    """Make *variant*'s particles folder in the output *directory*, and return it."""
+    out = Output(directory)
+    out.write_log(variant, "202301011200_-111.85_40.77_5", "")
+    return out.folder("particles", variant)
+
+
 def _rewrite_record(folder, change) -> None:
-    path = folder.path / "_settings.yaml"
+    path = folder / "_settings.yaml"
     record = yaml.safe_load(path.read_text())
     change(record["settings"])
     path.write_text(yaml.safe_dump(record))
@@ -164,37 +171,34 @@ def _rewrite_record(folder, change) -> None:
 def test_a_folder_stored_with_download_settings_is_still_found(tmp_path):
     """Folders written while download_from and n_min were hashed are found by re-hashing."""
     variant = _variant(tmp_path, numpar=100)
-    folder = Output(tmp_path / "out").particles(variant)
+    folder = _make_folder(tmp_path / "out", variant)
     _rewrite_record(folder, lambda s: s["met"].update(download_from="ftp", n_min=3))
 
-    found = Output(tmp_path / "out").find_particles(variant)
-    assert found is not None and found.key == folder.key
+    assert Output(tmp_path / "out").folder("particles", variant) == folder
 
 
 def test_a_folder_with_a_setting_this_version_lacks_still_loads(tmp_path):
     """A setting removed after a folder was written is ignored, so the folder is found."""
     variant = _variant(tmp_path, numpar=100)
-    folder = Output(tmp_path / "out").particles(variant)
+    folder = _make_folder(tmp_path / "out", variant)
 
     def add_removed(settings):
         settings["removed_setting"] = 3
         settings["model"]["removed_too"] = "x"
 
     _rewrite_record(folder, add_removed)
-    found = Output(tmp_path / "out").find_particles(variant)
-    assert found is not None and found.key == folder.key
+    assert Output(tmp_path / "out").folder("particles", variant) == folder
 
 
 def test_output_finds_a_run_whose_stored_settings_predate_a_field(tmp_path):
-    out = Output(tmp_path / "output")
     variant = _variant(tmp_path, numpar=100)
-    run = out.particles(variant)
+    run = _make_folder(tmp_path / "output", variant)
     _rewrite_record(run, lambda s: s.pop("capemin"))  # as if written before the field
 
-    found = out.find_particles(variant)
-    assert found is not None and found.path == run.path
+    out = Output(tmp_path / "output")
+    assert out.folder("particles", variant) == run
     renamed = replace(variant, name="hrrr-renamed")
-    assert out.particles(renamed).path == run.path
+    assert out.folder("particles", renamed) == run
 
 
 # ---------------------------------------------------------------------------

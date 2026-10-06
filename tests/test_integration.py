@@ -336,14 +336,9 @@ def test_footprint_only_variant_rasterizes_the_same_particles(
     coarse = model.simulation(*_sim_id(wbb_receptor, "coarse"))
 
     assert fine.has_footprint and coarse.has_footprint
-    assert coarse._particle_set == fine._particle_set  # one set of particles
-    assert len(model.output.particle_sets()) == 1
-    made_from_fine = [
-        f
-        for f in model.output.footprint_sets()
-        if f.particles_key == fine._particle_set.key
-    ]
-    assert {f.name for f in made_from_fine} == {"hrrr", "coarse"}
+    assert coarse.particles_path == fine.particles_path  # one set of particles
+    assert len(model.output.folders("particles")) == 1
+    assert len(model.output.folders("footprints")) == 2
     assert coarse.footprint is not None and fine.footprint is not None
     assert coarse.footprint.stilt.grid.xres == 0.05
     assert fine.footprint.stilt.grid.xres == 0.01
@@ -428,9 +423,8 @@ def test_error_variant(tmp_path, wbb_receptor, traj_only_config):
 
     main = model.simulation(*_sim_id(wbb_receptor))
     err = model.simulation(*_sim_id(wbb_receptor, "hrrr-err"))
-    rid = str(wbb_receptor.id)
-    err_scratch = err._particle_set.scratch_path(rid)
-    main_scratch = main._particle_set.scratch_path(rid)
+    err_scratch = err.scratch_path
+    main_scratch = main.scratch_path
 
     assert (err_scratch / "WINDERR").exists()
     assert not (main_scratch / "WINDERR").exists()

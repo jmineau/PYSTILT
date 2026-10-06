@@ -86,11 +86,12 @@ A project is a local directory of inputs (`stilt.project.Project`):
 can share. Each results folder is named by the hash of its settings, so a
 changed setting writes a new folder and never overwrites a result.
 
-`Simulation` knows where its files are and holds the one definition of a
-finished simulation, `Simulation.is_complete()`. `Simulations` applies the
-same rule to many simulations from one listing of their date folders, and a
-test keeps the two in agreement. Don't add another "does this output exist"
-check, a registry, or a manifest. Call these instead.
+`Output` knows where each result's file is (`path`), which receptors have
+one (`present`, from a listing of their date folders), and the one
+definition of a finished simulation (`complete`, which applies
+`stilt.output.completed`). `Simulation.is_complete()` and `status()` use
+it. Don't add another "does this output exist" check, a registry, or a
+manifest. Call these instead.
 
 ## Changing how work is run
 

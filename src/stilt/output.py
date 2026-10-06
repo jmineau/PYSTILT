@@ -27,36 +27,37 @@ tree. Particles are one Parquet file per receptor. Footprints are sparse
 tables of the non-zero cells, in float32 as STILT-R writes them; an empty
 footprint is a file with no rows and its reason in the metadata.
 
-Start from :class:`Output` and a resolved variant (``project.variants``)::
+Start from :class:`Output` and a resolved variant (``project.variants``).
+Every function takes the kind of result, ``"particles"`` or
+``"footprints"``, and the variant::
 
     out = Output("output")
-    particles = out.particles(variant)
-    particles.write(receptor, frame, met_files)
-    feet = out.footprints(variant)
-    feet.write(footprint)
-    table = feet.table()  # many footprints as one table
+    out.write_particles(variant, receptor, frame, met_files)
+    out.path("particles", variant, receptor.id)  # one receptor's file
+    out.present("footprints", variant, receptor_ids)  # which have a footprint
+    out.table("footprints", variant)  # many footprints as one table
 """
 
 from __future__ import annotations
 
 import logging
 import os
-from collections.abc import Iterable, Mapping
+import shutil
+from collections.abc import Iterable
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, TypeVar
+from typing import TYPE_CHECKING, Any, Literal
 
 import pandas as pd
 import pyarrow as pa
 import pyarrow.dataset as pads
-import pyarrow.parquet as pq
 import xarray as xr
 import yaml
 
 from stilt._atomic import atomic_path
 from stilt.footprint import (
     FOOTPRINT_SCHEMA,
-    read_footprint,
+    FootprintConfig,
     write_empty_footprint,
     write_footprint,
 )
@@ -67,9 +68,8 @@ from stilt.identity import (
     read_run_settings,
     settings_hash,
 )
-from stilt.particles import read_particles, write_particles
+from stilt.particles import write_particles
 from stilt.receptors import Receptor, parse_receptor_id
-from stilt.spatial import Grid
 
 if TYPE_CHECKING:
     from stilt.variants import Variant
@@ -178,6 +178,21 @@ def _stamp(digest: str) -> dict[bytes, bytes]:
 
 # -- the output directory -----------------------------------------------------
 
+#: A kind of result, and the tree it is kept in.
+Kind = Literal["particles", "footprints"]
+KINDS: tuple[Kind, ...] = ("particles", "footprints")
+
+#: What :meth:`Output.table` returns when no file is read, by kind.
+_EMPTY: dict[str, pa.Table] = {
+    "particles": pa.table({"receptor": pa.array([], pa.string())}),
+    "footprints": FOOTPRINT_SCHEMA.append(pa.field("date", pa.date32())).empty_table(),
+}
+
+#: The ``date=YYYY-MM-DD`` folders, read as a ``date32`` column.
+_DATE_PARTITIONING = pads.partitioning(
+    pa.schema([("date", pa.date32())]), flavor="hive"
+)
+
 
 def _settings_folders(tree: Path) -> list[str]:
     """Return the ``settings=`` values under *tree* that hold a settings file, in name order."""
@@ -192,9 +207,39 @@ def _settings_folders(tree: Path) -> list[str]:
     ]
 
 
+def _receptor_file(folder: Path, receptor_id: str, suffix: str = ".parquet") -> Path:
+    """Return a receptor's file in *folder*: ``date=YYYY-MM-DD/<receptor_id><suffix>``."""
+    return folder / _date_dir(receptor_id) / f"{receptor_id}{suffix}"
+
+
+def completed(
+    particles: frozenset[str], footprints: frozenset[str] | None
+) -> frozenset[str]:
+    """
+    Return the receptors that are complete, from the ones with particles and with a footprint.
+
+    The one definition of done: the particles exist, and the footprint
+    too when the variant makes one (*footprints* is ``None`` when it does
+    not). An empty footprint is complete.
+    """
+    return particles if footprints is None else particles & footprints
+
+
+def _check_kind(kind: str) -> None:
+    if kind not in KINDS:
+        raise ValueError(f"kind is 'particles' or 'footprints', not {kind!r}.")
+
+
 class Output:
     """
     An output directory: particles and footprints, by their settings.
+
+    Each kind of result has a tree, and in it a folder per set of settings,
+    named ``settings=<variant>-<hash>``. A variant's folder is found by the
+    hash of its settings, whatever name it was created under, so projects
+    that run the same settings share it. Every method takes the kind of
+    result (``"particles"`` or ``"footprints"``) and the variant, resolved
+    (``project.variants``).
 
     Parameters
     ----------
@@ -203,275 +248,182 @@ class Output:
     """
 
     def __init__(self, path: str | Path) -> None:
-        self.path = Path(path)
-        # Every folder read so far, by key. Reading a folder means reading its
-        # _settings.yaml and hashing it again, so each is read once; a lookup
-        # that misses lists the tree again and reads only the new folders.
-        self._particles: dict[str, Particles] = {}
-        self._footprints: dict[str, Footprints] = {}
+        #: The output directory.
+        self.directory = Path(path)
+        # Each folder's settings hash, by kind and folder name. Reading one
+        # means reading its _settings.yaml and hashing it again, so each is
+        # read once; a lookup that misses lists the tree again.
+        self._hashes: dict[str, dict[str, str]] = {"particles": {}, "footprints": {}}
 
     def __repr__(self) -> str:
-        return f"Output({str(self.path)!r})"
+        return f"Output({str(self.directory)!r})"
 
     def __eq__(self, other: object) -> bool:
-        return isinstance(other, Output) and other.path == self.path
+        return isinstance(other, Output) and other.directory == self.directory
 
     def __hash__(self) -> int:
-        return hash(str(self.path))
+        return hash(str(self.directory))
 
-    @property
-    def logs_dir(self) -> Path:
-        return self.path / "logs"
+    # -- folders -----------------------------------------------------------
 
-    @property
-    def scratch_dir(self) -> Path:
-        return self.path / "scratch"
+    def folders(self, kind: Kind) -> dict[str, str]:
+        """
+        Return every folder of *kind*, as ``{name: settings hash}`` in name order.
 
-    # -- finding folders ----------------------------------------------------
+        The name is the ``settings=`` value. The hash is of the folder's
+        stored settings read back through the current config classes
+        (:mod:`stilt.identity`), so a setting added since the folder was
+        written, with a default, still matches.
+        """
+        _check_kind(kind)
+        known = self._hashes[kind]
+        names = _settings_folders(self.directory / kind)
+        for name in names:
+            if name not in known:
+                known[name] = self._read_hash(kind, name)
+        return {name: known[name] for name in names}
 
-    def _list(self, kind: type[F], known: dict[str, F]) -> dict[str, F]:
-        """List *kind*'s tree and add the folders not in *known*, reading only those."""
-        for key in _settings_folders(self.path / kind.tree):
-            if key not in known:
-                known[key] = kind(self, key)
-        return known
+    def _read_hash(self, kind: Kind, name: str) -> str:
+        """Return the settings hash of one folder, from its ``_settings.yaml``."""
+        path = self._dir(kind, name) / SETTINGS_FILE
+        record = _read_yaml(path)
+        if kind == "particles":
+            return settings_hash(read_run_settings(record["settings"]))
+        config, geometry_hash = read_footprint_settings(record["settings"], str(path))
+        particles = record["particles"]
+        if particles not in self._hashes["particles"]:
+            self._hashes["particles"][particles] = self._read_hash(
+                "particles", particles
+            )
+        return footprint_hash(
+            self._hashes["particles"][particles],
+            footprint_settings(config, geometry_hash),
+        )
 
-    def _find(self, kind: type[F], known: dict[str, F], digest: str) -> F | None:
-        """Return the folder whose settings hash to *digest*, listing the tree again only on a miss."""
-        for folders in (known, self._list(kind, known)):
-            for folder in folders.values():
-                if folder.hash == digest:
-                    return folder
+    @staticmethod
+    def _variant_hash(kind: Kind, variant: Variant) -> str | None:
+        """Return the hash that names *variant*'s folder of *kind*, ``None`` for footprints without a grid."""
+        _check_kind(kind)
+        return variant.particles_hash if kind == "particles" else variant.footprint_hash
+
+    def _name(self, kind: Kind, variant: Variant) -> str | None:
+        """Return the name of *variant*'s folder of *kind*, or ``None`` when it does not exist."""
+        digest = self._variant_hash(kind, variant)
+        if digest is None:
+            return None
+        for name, folder_hash in self._hashes[kind].items():
+            if folder_hash == digest:
+                return name
+        # A miss lists the tree again: another worker may have made the folder.
+        for name, folder_hash in self.folders(kind).items():
+            if folder_hash == digest:
+                return name
         return None
 
-    def _particles_folder(self, key: str) -> Particles:
-        """Return the particles folder named *key*, reading it on first use."""
-        if key not in self._particles:
-            self._particles[key] = Particles(self, key)
-        return self._particles[key]
-
-    def particle_sets(self) -> list[Particles]:
-        """Return every particles folder in the directory, in folder-name order."""
-        return sorted(
-            self._list(Particles, self._particles).values(), key=lambda f: f.key
-        )
-
-    def footprint_sets(self) -> list[Footprints]:
-        """Return every footprint folder in the directory, in folder-name order."""
-        return sorted(
-            self._list(Footprints, self._footprints).values(), key=lambda f: f.key
-        )
-
-    def find_particles(self, variant: Variant) -> Particles | None:
+    def folder(self, kind: Kind, variant: Variant) -> Path | None:
         """
-        Return the particles folder of *variant*, whatever name it carries, or ``None``.
+        Return *variant*'s folder of *kind*, or ``None`` before it exists.
 
-        The folder is found by ``variant.particles_hash``. Each folder's
-        stored settings are read back through the current config classes
-        and hashed again (:func:`stilt.identity.read_run_settings`), so a
-        setting added since the folder was written, with a default, still
-        matches.
+        ``None`` too for the footprints of a variant without a grid.
         """
-        return self._find(Particles, self._particles, variant.particles_hash)
+        name = self._name(kind, variant)
+        return None if name is None else self._dir(kind, name)
 
-    def find_footprints(self, variant: Variant) -> Footprints | None:
-        """
-        Return the footprint folder of *variant*, or ``None``.
+    def _dir(self, tree: str, name: str) -> Path:
+        """Return the folder *name* of a tree: ``<tree>/settings=<name>``."""
+        return self.directory / tree / f"settings={name}"
 
-        ``None`` when the variant makes no footprints (it has no grid) or
-        none have been written yet. The folder is found by
-        ``variant.footprint_hash``, whatever name it carries.
-        """
-        if variant.footprint_hash is None:
-            return None
-        return self._find(Footprints, self._footprints, variant.footprint_hash)
-
-    # -- making folders ---------------------------------------------------------
-
-    def _create(
-        self, kind: type[F], known: dict[str, F], key: str, record: dict[str, Any]
-    ) -> F:
-        """Write a folder's settings file and return the folder."""
-        _write_settings(
-            self.path / kind.tree / f"settings={key}" / SETTINGS_FILE, record
-        )
-        known[key] = kind(self, key)
-        return known[key]
-
-    def particles(self, variant: Variant) -> Particles:
-        """
-        Return the particles folder of *variant*, creating it on first use.
-
-        The folder is ``particles/settings=<name>-<hash>``. An existing
-        folder with the same settings is reused even if it was created under
-        another name.
-        """
-        existing = self.find_particles(variant)
-        if existing is not None:
-            return existing
-        digest = variant.particles_hash
-        return self._create(
-            Particles,
-            self._particles,
-            f"{variant.name}-{digest[:HASH_CHARS]}",
-            {
+    def _create(self, kind: Kind, variant: Variant) -> str:
+        """Return the name of *variant*'s folder of *kind*, writing its settings file on first use."""
+        name = self._name(kind, variant)
+        if name is not None:
+            return name
+        if kind == "particles":
+            digest = variant.particles_hash
+            record: dict[str, Any] = {
                 "name": variant.name,
                 "hash": digest,
                 "pystilt": _pystilt_version(),
                 "settings": variant.run_settings,
-            },
-        )
-
-    def footprints(self, variant: Variant) -> Footprints:
-        """
-        Return the footprint folder of *variant*, creating it, and its particles folder, on first use.
-
-        The folder is ``footprints/settings=<name>-<hash>``, hashed over the
-        particles and the footprint settings together, so two footprint
-        configs on the same particles get different folders and the same
-        config on different particles does too. An existing folder with the
-        same settings is reused even if it was created under another name.
-
-        Raises
-        ------
-        ValueError
-            If the variant makes no footprints (it has no grid).
-        """
-        if variant.footprint is None:
-            raise ValueError(f"Variant {variant.name!r} makes no footprints (no grid).")
-        existing = self.find_footprints(variant)
-        if existing is not None:
-            return existing
-        particles = self.particles(variant)
-        settings = footprint_settings(variant.footprint, variant.geometry_hash)
-        digest = footprint_hash(particles.hash, settings)
-        return self._create(
-            Footprints,
-            self._footprints,
-            f"{variant.name}-{digest[:HASH_CHARS]}",
-            {
+            }
+        else:
+            if variant.footprint is None:
+                raise ValueError(
+                    f"Variant {variant.name!r} makes no footprints (no grid)."
+                )
+            particles = self._create("particles", variant)
+            settings = footprint_settings(variant.footprint, variant.geometry_hash)
+            digest = footprint_hash(variant.particles_hash, settings)
+            record = {
                 "name": variant.name,
                 "hash": digest,
-                "particles": particles.key,
-                "particles_hash": particles.hash,
+                "particles": particles,
+                "particles_hash": variant.particles_hash,
                 "pystilt": _pystilt_version(),
                 "settings": settings,
-            },
-        )
+            }
+        name = f"{variant.name}-{digest[:HASH_CHARS]}"
+        _write_settings(self._dir(kind, name) / SETTINGS_FILE, record)
+        self._hashes[kind][name] = digest
+        return name
 
+    # -- one receptor's files ------------------------------------------------
 
-F = TypeVar("F", bound="_Folder")
-
-#: The ``date=YYYY-MM-DD`` folders, read as a ``date32`` column.
-_DATE_PARTITIONING = pads.partitioning(
-    pa.schema([("date", pa.date32())]), flavor="hive"
-)
-
-
-class _Folder:
-    """
-    What a particles folder and a footprint folder share.
-
-    A folder is ``<output>/<tree>/settings=<key>/``: a ``_settings.yaml``
-    and one Parquet file per receptor in ``date=YYYY-MM-DD`` folders.
-    Get one from :class:`Output`.
-    """
-
-    #: The tree under the output directory: ``particles`` or ``footprints``.
-    tree: ClassVar[str]
-    #: What :meth:`table` returns when no file is read.
-    _empty: ClassVar[pa.Table]
-    #: Hash of the folder's settings, read through the current config classes;
-    #: it is what finds the folder.
-    hash: str
-
-    def __init__(self, output: Output, key: str) -> None:
-        self.output = output
-        self.key = key
-        #: The folder's ``_settings.yaml``, as written.
-        self.record: dict[str, Any] = _read_yaml(self.path / SETTINGS_FILE)
-        self.name: str = self.record["name"]
-
-    def __repr__(self) -> str:
-        return f"{type(self).__name__}({self.key!r})"
-
-    def __eq__(self, other: object) -> bool:
-        return (
-            isinstance(other, _Folder)
-            and type(other) is type(self)
-            and other.output.path == self.output.path
-            and other.key == self.key
-        )
-
-    def __hash__(self) -> int:
-        return hash((self.tree, str(self.output.path), self.key))
-
-    @property
-    def path(self) -> Path:
-        """The folder, ``<tree>/settings=<key>``."""
-        return self.output.path / self.tree / f"settings={self.key}"
-
-    def file(self, receptor_id: str) -> Path:
-        """Return a receptor's file, whether or not it exists."""
-        return self.path / _date_dir(receptor_id) / f"{receptor_id}.parquet"
-
-    def has(self, receptor_id: str) -> bool:
-        """Return whether a receptor's file exists."""
-        return self.file(receptor_id).exists()
-
-    # -- failure records -----------------------------------------------------
-
-    @property
-    def logs_dir(self) -> Path:
-        """Where this folder's notes on its runs go, ``logs/settings=<key>``: HYSPLIT logs and failure records."""
-        return self.output.logs_dir / f"settings={self.key}"
-
-    def failure_path(self, receptor_id: str) -> Path:
-        """Return where a receptor's failure record for this folder is kept."""
-        return self.logs_dir / _date_dir(receptor_id) / f"{receptor_id}{FAILURE_SUFFIX}"
-
-    def failure(self, receptor_id: str) -> dict[str, Any] | None:
+    def path(self, kind: Kind, variant: Variant, receptor_id: str) -> Path | None:
         """
-        Return why the receptor's result here failed, as the worker recorded it, or ``None``.
+        Return the file of one receptor's result, whether or not it exists.
 
-        A record holds ``step``, ``reason``, ``message``, and ``time``, and a
-        ``traceback`` for an unexpected error. It is removed when the result
-        is written.
+        ``None`` before the variant's folder of *kind* exists.
         """
-        path = self.failure_path(receptor_id)
-        return _read_yaml(path) if path.exists() else None
+        folder = self.folder(kind, variant)
+        return None if folder is None else _receptor_file(folder, receptor_id)
 
-    def failures(self, among: Iterable[str] | None = None) -> dict[str, dict[str, Any]]:
+    def log_path(self, variant: Variant, receptor_id: str) -> Path | None:
+        """Return where the log of a receptor's transport model run is kept, or ``None`` before its folder exists."""
+        name = self._name("particles", variant)
+        if name is None:
+            return None
+        return _receptor_file(self._dir("logs", name), receptor_id, ".log")
+
+    def scratch_path(self, variant: Variant, receptor_id: str) -> Path | None:
+        """Return where a receptor's failed run's working directory is kept, or ``None`` before its folder exists."""
+        name = self._name("particles", variant)
+        if name is None:
+            return None
+        return self._dir("scratch", name) / _date_dir(receptor_id) / receptor_id
+
+    # -- many receptors' files ----------------------------------------------
+
+    def present(
+        self, kind: Kind, variant: Variant, receptor_ids: Iterable[str] | None = None
+    ) -> frozenset[str]:
         """
-        Return ``{receptor_id: record}`` for the receptors with a failure record here.
+        Return the receptors that have a file of *kind* for *variant*.
 
-        With *among*, only those receptors' date folders are listed. The
-        records found are read in a few threads.
+        Only the date folders of *receptor_ids* are listed; without them,
+        every date folder is. No file is opened.
         """
-        paths = _list_receptor_files(self.logs_dir, FAILURE_SUFFIX, among)
-        with ThreadPoolExecutor(max_workers=16) as pool:
-            records = list(pool.map(_read_yaml, paths.values()))
-        return dict(zip(paths, records, strict=True))
+        folder = self.folder(kind, variant)
+        if folder is None:
+            return frozenset()
+        return frozenset(_list_receptor_files(folder, ".parquet", receptor_ids))
 
-    def record_failure(self, receptor_id: str, record: dict[str, Any]) -> None:
-        """Write why a receptor's result here failed, replacing an earlier record."""
-        _write_yaml(self.failure_path(receptor_id), record)
-
-    def clear_failure(self, receptor_id: str) -> None:
-        """Remove a receptor's failure record, once its result is written."""
-        self.failure_path(receptor_id).unlink(missing_ok=True)
-
-    def files(self, among: Iterable[str] | None = None) -> dict[str, Path]:
+    def complete(
+        self, variant: Variant, receptor_ids: Iterable[str] | None = None
+    ) -> frozenset[str]:
         """
-        Return ``{receptor_id: path}`` for the receptors that have a file here, in date order.
+        Return the receptors whose simulations under *variant* are complete (:func:`completed`).
 
-        With *among*, only those receptors are checked, by listing their
-        date folders alone. Pass the result to :meth:`table` to read the
-        files without listing the folders again.
+        Only the receptors with particles are looked for in the footprints.
         """
-        return _list_receptor_files(self.path, ".parquet", among)
+        particles = self.present("particles", variant, receptor_ids)
+        if variant.footprint is None:
+            return completed(particles, None)
+        return completed(particles, self.present("footprints", variant, particles))
 
-    def table(self, files: Mapping[str, Path] | None = None) -> pa.Table:
+    def table(
+        self, kind: Kind, variant: Variant, receptor_ids: Iterable[str] | None = None
+    ) -> pa.Table:
         """
         Return the files of many receptors as one table.
 
@@ -480,44 +432,99 @@ class _Folder:
 
         Parameters
         ----------
-        files : mapping, optional
-            The files to read, as :meth:`files` lists them. Without it,
-            every file in the folder is read.
+        kind : {"particles", "footprints"}
+            Which results.
+        variant : Variant
+            Whose results.
+        receptor_ids : iterable of str, optional
+            The receptors to read, each of which must have a file
+            (:meth:`present`). Without it, every file in the folder is read.
         """
-        if files is None:
-            files = self.files()
-        if not files:
-            return self._empty
+        _check_kind(kind)
+        folder = self.folder(kind, variant)
+        if folder is None:
+            return _EMPTY[kind]
+        if receptor_ids is None:
+            paths = list(_list_receptor_files(folder, ".parquet").values())
+        else:
+            paths = [_receptor_file(folder, r) for r in dict.fromkeys(receptor_ids)]
+        if not paths:
+            return _EMPTY[kind]
         dataset = pads.dataset(
-            [str(p) for p in files.values()],
+            [str(p) for p in paths],
             format="parquet",
             partitioning=_DATE_PARTITIONING,
-            partition_base_dir=str(self.path),
+            partition_base_dir=str(folder),
         )
         return dataset.to_table()
 
+    # -- failure records ---------------------------------------------------
 
-class Particles(_Folder):
-    """
-    One particles folder: the particles of many receptors, one set of transport settings.
+    def _failure_path(
+        self, kind: Kind, variant: Variant, receptor_id: str
+    ) -> Path | None:
+        """Return where a receptor's failure record of *kind* is kept, in the logs of the folder that failed."""
+        name = self._name(kind, variant)
+        if name is None:
+            return None
+        return _receptor_file(self._dir("logs", name), receptor_id, FAILURE_SUFFIX)
 
-    Get one from :meth:`Output.particles`. ``key`` is the ``settings=`` value
-    its folders share across the ``particles/``, ``logs/``, and ``scratch/``
-    trees, so the logs of the HYSPLIT runs that made the particles are here
-    too.
-    """
+    def failure(
+        self, kind: Kind, variant: Variant, receptor_id: str
+    ) -> dict[str, Any] | None:
+        """
+        Return why a receptor's result of *kind* failed, as the worker recorded it, or ``None``.
 
-    tree = "particles"
-    _empty = pa.table({"receptor": pa.array([], pa.string())})
+        A record holds ``step``, ``reason``, ``message``, and ``time``, and a
+        ``traceback`` for an unexpected error. It is removed when the result
+        is written.
+        """
+        path = self._failure_path(kind, variant, receptor_id)
+        return _read_yaml(path) if path is not None and path.exists() else None
 
-    def __init__(self, output: Output, key: str) -> None:
-        super().__init__(output, key)
-        #: The settings the particles were made with, read through the current config classes.
-        self.settings: dict[str, Any] = read_run_settings(self.record["settings"])
-        self.hash = settings_hash(self.settings)
+    def failures(
+        self, kind: Kind, variant: Variant, receptor_ids: Iterable[str] | None = None
+    ) -> dict[str, dict[str, Any]]:
+        """
+        Return ``{receptor_id: record}`` for the receptors with a failure record of *kind*.
 
-    def write(
+        With *receptor_ids*, only their date folders are listed. The records
+        found are read in a few threads.
+        """
+        name = self._name(kind, variant)
+        if name is None:
+            return {}
+        paths = _list_receptor_files(
+            self._dir("logs", name), FAILURE_SUFFIX, receptor_ids
+        )
+        with ThreadPoolExecutor(max_workers=16) as pool:
+            records = list(pool.map(_read_yaml, paths.values()))
+        return dict(zip(paths, records, strict=True))
+
+    def record_failure(
+        self, kind: Kind, variant: Variant, receptor_id: str, record: dict[str, Any]
+    ) -> None:
+        """
+        Write why a receptor's result of *kind* failed, replacing an earlier record.
+
+        It goes in the logs of the folder whose result failed: a particles
+        failure covers every variant on those particles, a footprint failure
+        is the variant's own.
+        """
+        logs = self._dir("logs", self._create(kind, variant))
+        _write_yaml(_receptor_file(logs, receptor_id, FAILURE_SUFFIX), record)
+
+    def clear_failure(self, kind: Kind, variant: Variant, receptor_id: str) -> None:
+        """Remove a receptor's failure record of *kind*, once its result is written."""
+        path = self._failure_path(kind, variant, receptor_id)
+        if path is not None:
+            path.unlink(missing_ok=True)
+
+    # -- writing -----------------------------------------------------------
+
+    def write_particles(
         self,
+        variant: Variant,
         receptor: Receptor,
         particles: pd.DataFrame,
         met_files: list[Path],
@@ -525,120 +532,79 @@ class Particles(_Folder):
         """
         Write a receptor's particles (:func:`stilt.particles.write_particles`).
 
-        The file records this folder's settings, so it reads alone, and the
+        The file records the run's settings, so it reads alone, and the
         folder's settings hash and the PYSTILT version.
         """
+        name = self._create("particles", variant)
         return write_particles(
-            self.file(str(receptor.id)),
+            _receptor_file(self._dir("particles", name), str(receptor.id)),
             particles,
             receptor,
-            self.settings,
+            variant.run_settings,
             met_files,
-            metadata=_stamp(self.hash),
+            metadata=_stamp(variant.particles_hash),
         )
 
-    def read(self, receptor_id: str, columns: list[str] | None = None) -> pd.DataFrame:
-        """Read a receptor's particles (:func:`stilt.read_particles`)."""
-        return read_particles(self.file(receptor_id), columns=columns)
-
-    # -- logs and scratch --------------------------------------------------
-
-    @property
-    def scratch_dir(self) -> Path:
-        """The folder kept HYSPLIT working directories go in, ``scratch/settings=<key>``."""
-        return self.output.scratch_dir / f"settings={self.key}"
-
-    def scratch_path(self, receptor_id: str) -> Path:
-        """Return where a receptor's HYSPLIT working directory is kept when HYSPLIT fails."""
-        return self.scratch_dir / _date_dir(receptor_id) / receptor_id
-
-    def log_path(self, receptor_id: str) -> Path:
-        """Return where a receptor's HYSPLIT log is kept."""
-        return self.logs_dir / _date_dir(receptor_id) / f"{receptor_id}.log"
-
-    def write_log(self, receptor_id: str, text: str) -> Path:
-        """Write a receptor's HYSPLIT log."""
-        path = self.log_path(receptor_id)
+    def write_log(self, variant: Variant, receptor_id: str, text: str) -> Path:
+        """Write the log of a receptor's transport model run."""
+        name = self._create("particles", variant)
+        path = _receptor_file(self._dir("logs", name), receptor_id, ".log")
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(text)
         return path
 
+    def keep_workdir(self, variant: Variant, receptor_id: str, workdir: Path) -> Path:
+        """
+        Copy a run's working directory to :meth:`scratch_path`, replacing an earlier copy.
 
-class Footprints(_Folder):
-    """
-    One footprint folder: the footprints of many receptors, one set of footprint settings, one set of particles.
+        A failed run's is kept, so CONTROL, SETUP.CFG, and the model's own
+        output can be read after the job ends.
+        """
+        name = self._create("particles", variant)
+        kept = self._dir("scratch", name) / _date_dir(receptor_id) / receptor_id
+        shutil.rmtree(kept, ignore_errors=True)
+        kept.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copytree(workdir, kept, symlinks=True)
+        return kept
 
-    Get one from :meth:`Output.footprints`.
-    ``key`` is the ``settings=`` value of its folder under ``footprints/``.
-    """
-
-    tree = "footprints"
-    _empty = FOOTPRINT_SCHEMA.append(pa.field("date", pa.date32())).empty_table()
-
-    def __init__(self, output: Output, key: str) -> None:
-        super().__init__(output, key)
-        #: ``settings=`` value of the particles folder these were made from.
-        self.particles_key: str = self.record["particles"]
-        #: The footprint config the footprints were made with, and the hash of
-        #: the geometry its grid was derived for, read through the current classes.
-        self.config, self.geometry_hash = read_footprint_settings(
-            self.record["settings"], str(self.path / SETTINGS_FILE)
-        )
-        if self.config.grid is None:
-            raise ValueError(f"{self.path / SETTINGS_FILE} has no grid.")
-        #: Grid the stored ``x`` and ``y`` index (``config.grid``).
-        self.grid: Grid = self.config.grid
-        # Over the particles' hash and the footprint settings together.
-        self.hash = footprint_hash(
-            self.particles.hash, footprint_settings(self.config, self.geometry_hash)
-        )
-
-    @property
-    def particles(self) -> Particles:
-        """The particles folder these footprints were made from."""
-        return self.output._particles_folder(self.particles_key)
-
-    def write(self, foot: xr.DataArray) -> Path:
+    def write_footprint(self, variant: Variant, foot: xr.DataArray) -> Path:
         """
         Write one receptor's footprint (:func:`stilt.footprint.write_footprint`).
 
-        The footprint must be on this folder's grid. The file records this
-        folder's settings and hash, so it reads alone.
+        The footprint must be on the variant's grid. The file records the
+        footprint settings and the folder's hash, so it reads alone.
         """
-        path = self.file(str(foot.stilt.receptor.id))
+        path, config, digest = self._footprint_file(
+            variant, str(foot.stilt.receptor.id)
+        )
         return write_footprint(
-            path, foot, self.config, _stamp(self.hash), geometry_hash=self.geometry_hash
+            path, foot, config, _stamp(digest), geometry_hash=variant.geometry_hash
         )
 
-    def write_empty(self, receptor: Receptor, reason: str, name: str = "") -> Path:
+    def write_empty_footprint(
+        self, variant: Variant, receptor: Receptor, reason: str
+    ) -> Path:
         """Record that a receptor's footprint is empty (no particle over the grid), with the reason."""
+        path, config, digest = self._footprint_file(variant, str(receptor.id))
         return write_empty_footprint(
-            self.file(str(receptor.id)),
+            path,
             receptor,
             reason,
-            self.config,
-            name,
-            _stamp(self.hash),
-            geometry_hash=self.geometry_hash,
+            config,
+            variant.name,
+            _stamp(digest),
+            geometry_hash=variant.geometry_hash,
         )
 
-    def empty_reason(self, receptor_id: str) -> str | None:
-        """Return why the receptor's footprint is empty, or ``None`` when it is not empty."""
-        meta = pq.read_schema(self.file(receptor_id)).metadata or {}
-        reason = meta.get(b"stilt:empty_reason", b"").decode()
-        return reason or None
-
-    def read(self, receptor_id: str) -> xr.DataArray | None:
-        """
-        Read one receptor's footprint as a dense array (:func:`stilt.read_footprint`).
-
-        Returns ``None`` for an empty footprint (see :meth:`empty_reason`).
-        """
-        return read_footprint(self.file(receptor_id))
+    def _footprint_file(
+        self, variant: Variant, receptor_id: str
+    ) -> tuple[Path, FootprintConfig, str]:
+        """Return a receptor's footprint file, the settings, and the folder's hash, making the folder on first use."""
+        name = self._create("footprints", variant)
+        if variant.footprint is None:  # _create has raised already
+            raise ValueError(f"Variant {variant.name!r} makes no footprints.")
+        path = _receptor_file(self._dir("footprints", name), receptor_id)
+        return path, variant.footprint, self._hashes["footprints"][name]
 
 
-__all__ = [
-    "Footprints",
-    "Output",
-    "Particles",
-]
+__all__ = ["KINDS", "Kind", "Output", "completed"]
