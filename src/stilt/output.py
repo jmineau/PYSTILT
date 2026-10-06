@@ -201,6 +201,16 @@ def _stamp(digest: str, realization: int | None = None) -> dict[bytes, bytes]:
     return stamp
 
 
+def _footprint_stamp(
+    digest: str, variant: Variant, realization: int | None = None
+) -> dict[bytes, bytes]:
+    """Return what a footprint file records besides its contents: :func:`_stamp`, and its particles' hash."""
+    return {
+        **_stamp(digest, realization),
+        b"stilt:particles_hash": variant.particles_hash.encode(),
+    }
+
+
 # -- the output directory -----------------------------------------------------
 
 #: A kind of result, and the tree it is kept in.
@@ -809,7 +819,8 @@ class Output:
         Write one receptor's footprint (:func:`stilt.footprint.write_footprint`).
 
         The footprint must be on the variant's grid. The file records the
-        footprint settings and the folder's hash, so it reads alone.
+        footprint settings, the folder's hash, and the hash of the particles
+        it was made from, so it reads alone.
         """
         path, config, digest = self._footprint_file(
             variant, str(foot.stilt.receptor.id), realization
@@ -818,7 +829,7 @@ class Output:
             path,
             foot,
             config,
-            _stamp(digest, realization),
+            _footprint_stamp(digest, variant, realization),
             geometry_hash=variant.geometry_hash,
         )
 
@@ -839,7 +850,7 @@ class Output:
             reason,
             config,
             variant.name,
-            _stamp(digest, realization),
+            _footprint_stamp(digest, variant, realization),
             geometry_hash=variant.geometry_hash,
         )
 

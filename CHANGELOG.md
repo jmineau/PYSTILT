@@ -952,6 +952,11 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- A footprint read from an output directory says what made it:
+  `attrs["stilt_version"]` (the PYSTILT version) and
+  `attrs["stilt_particles_hash"]` (the settings hash of its particles,
+  which footprint files now record), kept by `foot.stilt.to_netcdf` (#150).
+
 - The outputs guide shows how to query the output directory with DuckDB,
   without PYSTILT (#150).
 
