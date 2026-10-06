@@ -50,7 +50,7 @@ def test_sigterm_as_interrupt_is_noop_outside_main_thread():
 
 
 def test_sigterm_as_interrupt_leaves_an_existing_handler_alone():
-    """Inside a submitit task the scheduler's signals are submitit's to handle."""
+    """A SIGTERM handler the caller set stays in charge."""
     seen: list[int] = []
     previous = signal.signal(signal.SIGTERM, lambda signum, frame: seen.append(signum))
     try:

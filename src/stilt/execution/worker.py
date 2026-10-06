@@ -56,9 +56,8 @@ def _sigterm_as_interrupt():
     Python's default action ends the process without running ``finally``
     blocks, so pool workers would be left running.
 
-    It does nothing when SIGTERM is already handled, as it is inside a task
-    submitit started: there the scheduler's signals belong to submitit, which
-    requeues a preempted task. Signal handlers can only be set from the main
+    It does nothing when SIGTERM is already handled: a handler the caller
+    set stays in charge. Signal handlers can only be set from the main
     thread, so in any other thread this does nothing either.
     """
     if threading.current_thread() is not threading.main_thread():

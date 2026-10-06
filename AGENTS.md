@@ -169,7 +169,8 @@ src/stilt/
   visualization.py   matplotlib helpers (optional dependency)
 
   execution/         ExecutionConfig (config.py), the runner (saves a model's inputs, plans what is missing,
-                     runs it here or submits batches to Slurm through submitit)
+                     runs it here or writes and submits a Slurm job array script
+                     whose tasks run `stilt run --task`)
                      and the worker (runs HYSPLIT on scratch and writes results
                      for one or many simulations)
   observations/      the X-STILT port, all before or after the transport run:
@@ -201,8 +202,17 @@ docs/                Sphinx (pydata-sphinx-theme)
 1. **A run** (`Project.run()`, `Project.submit()`, or `stilt run`):
    `stilt.execution.run` finds the receptors with missing results and
    either runs them in this process (`backend: local`) or submits them as
-   one Slurm job array through submitit (`backend: slurm`), one `Batch` of
-   receptors per task, and waits. `submit` returns the jobs at once. The unit of work is a receptor: `run_receptor` runs
+   one Slurm job array (`backend: slurm`): `submit` writes
+   `slurm/<stamp>/{receptors.txt,execution.yaml,job.sh}` and calls
+   `sbatch`, each task runs `stilt run --receptors receptors.txt --task
+   $SLURM_ARRAY_TASK_ID/N --execution execution.yaml`, and `run` waits by
+   polling `sacct`. `submit` returns the job id at once. A task that stops
+   with work left requeues itself (`scontrol requeue`) when it got SIGUSR1,
+   which the script asks for two minutes before the time limit
+   (`--signal=B:USR1@120`), or was preempted (`PreemptTime` set; this
+   cluster preempts with SIGTERM, 30 s grace, and CANCEL, and Slurm checks
+   `--signal` times only about once a minute, so USR1 may not come). A
+   `scancel` only stops it. The unit of work is a receptor: `run_receptor` runs
    HYSPLIT once per distinct transport hash, then writes the footprint of
    every variant that shares those particles. `run(task=(i, n))` (`stilt
    run --task i/n`) runs one share here whatever the backend; the share is
@@ -290,8 +300,8 @@ folder below a kind is hive-style, so each tree reads as one dataset:
 <project>/
   config.yaml                 ProjectConfig (written once by Project.init or stilt init; never rewritten)
   receptors.csv               receptor list; add_receptors() appends new receptors
-  slurm/<stamp>/              one folder per Slurm submission: script, task logs,
-                              and submitit's pickles
+  slurm/<stamp>/              one folder per Slurm submission: job.sh,
+                              receptors.txt, execution.yaml, <task>.log
 
 <output>/
   particles/settings=<variant>-<hash>/_settings.yaml

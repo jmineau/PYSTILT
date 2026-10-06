@@ -1,233 +1,128 @@
-"""Tests for stilt.execution.runner: batching, the Slurm settings, and submission."""
+"""Tests for stilt.execution.runner: shares of the receptors, the job array script, and submission."""
 
 from __future__ import annotations
 
+import signal
+import subprocess
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
+import yaml
 
-from stilt.execution import Batch, runner
+from stilt.execution import runner
 from stilt.execution.config import ExecutionConfig
-from stilt.execution.runner import _project_slug, slurm_parameters, split, task_share
+from stilt.execution.runner import _project_slug, job_script, task_share
 from stilt.project import Project
 
 # ---------------------------------------------------------------------------
-# split
+# The job array script
 # ---------------------------------------------------------------------------
 
 
-def test_split_is_round_robin_and_never_makes_an_empty_batch():
-    assert split(list("abcdefg"), 3) == [["a", "d", "g"], ["b", "e"], ["c", "f"]]
-    assert split(["a", "b"], 5) == [["a"], ["b"]]
-    assert split(["a", "b"], 1) == [["a", "b"]]
+def _sbatch(script: str) -> dict[str, str | bool]:
+    """The #SBATCH options of a script, a bare flag as True."""
+    options: dict[str, str | bool] = {}
+    for line in script.splitlines():
+        if line.startswith("#SBATCH --"):
+            key, _, value = line[len("#SBATCH --") :].partition("=")
+            options[key] = value if value else True
+    return options
 
 
-# ---------------------------------------------------------------------------
-# slurm_parameters
-# ---------------------------------------------------------------------------
-
-
-def test_slurm_parameters_pass_only_what_was_set():
-    params = slurm_parameters(
-        ExecutionConfig(backend="slurm", n_workers=4), job_name="pystilt-x"
-    )
-    assert params == {
-        "slurm_job_name": "pystilt-x",
-        "slurm_cpus_per_task": 1,
-        "slurm_additional_parameters": {"requeue": True},
-    }
-
-
-def test_slurm_parameters_map_every_setting():
+def test_job_script_asks_for_what_the_execution_settings_say(tmp_path):
+    project = Project(tmp_path / "My_Project")
+    folder = tmp_path / "My_Project" / "slurm" / "stamp"
     execution = ExecutionConfig(
         backend="slurm",
-        n_workers=100,
+        n_workers=50,
         cpus=4,
         time="02:00:00",
         mem="8G",
-        partition="compute",
-        account="lab",
-        qos="normal",
-        array_parallelism=25,
-        setup=["module load hysplit"],
-        slurm={"exclude": "node1", "no_kill": True, "requeue": False},
+        partition="lin-np",
+        account="lin-np",
+        qos="lin-np",
+        array_parallelism=10,
+        setup=["module load gcc", "export OMP_NUM_THREADS=1"],
+        slurm={"exclude": "notch345", "signal": "B:USR1@300", "exclusive": True},
     )
-    assert slurm_parameters(execution, job_name="pystilt-x") == {
-        "slurm_job_name": "pystilt-x",
-        "slurm_cpus_per_task": 4,
-        "slurm_time": 120,
-        "slurm_mem": "8G",
-        "slurm_partition": "compute",
-        "slurm_account": "lab",
-        "slurm_qos": "normal",
-        "slurm_array_parallelism": 25,
-        "slurm_setup": ["module load hysplit"],
-        # Underscores become the hyphens sbatch spells, and an explicit
-        # requeue setting wins over the default.
-        "slurm_additional_parameters": {
-            "exclude": "node1",
-            "no-kill": True,
-            "requeue": False,
-        },
+
+    script = job_script(project, execution, folder, 7)
+
+    assert script.startswith("#!/bin/bash\n")
+    assert _sbatch(script) == {
+        "job-name": "pystilt-my-project",
+        "array": "0-6%10",
+        "cpus-per-task": "4",
+        "time": "120",
+        "mem": "8G",
+        "partition": "lin-np",
+        "account": "lin-np",
+        "qos": "lin-np",
+        "output": str(folder / "%a.log"),
+        "open-mode": "append",
+        "requeue": True,
+        "signal": "B:USR1@300",  # the slurm options replace the defaults
+        "exclude": "notch345",
+        "exclusive": True,
     }
+    lines = script.splitlines()
+    assert lines.index("module load gcc") < lines.index("export OMP_NUM_THREADS=1")
+    last = lines[-1]
+    assert last.startswith("exec ")
+    assert f"-m stilt run {project.directory} " in last
+    assert f"--receptors {folder / 'receptors.txt'}" in last
+    assert '--task "$SLURM_ARRAY_TASK_ID/7"' in last
+    assert f"--execution {folder / 'execution.yaml'}" in last
+    assert "--no-skip" not in script
+    assert "--compute-root" not in script  # each node uses its own scratch
 
 
-def test_slurm_parameters_render_as_a_submission_script(tmp_path, monkeypatch):
-    """submitit accepts the parameters and writes the sbatch lines they stand for."""
-    import submitit
-
-    # submitit refuses to build a Slurm executor where it cannot find srun.
-    monkeypatch.setattr(submitit.SlurmExecutor, "affinity", classmethod(lambda cls: 1))
-
-    execution = ExecutionConfig(
-        backend="slurm",
-        cpus=2,
-        time="00:10:00",
-        mem="4G",
-        partition="compute",
-        array_parallelism=2,
-        slurm={"exclude": "node1"},
+def test_job_script_leaves_out_what_was_not_set(tmp_path):
+    script = job_script(
+        Project(tmp_path), ExecutionConfig(backend="slurm"), tmp_path, 1
     )
-    executor = submitit.AutoExecutor(folder=tmp_path, cluster="slurm")
-    executor.update_parameters(**slurm_parameters(execution, job_name="pystilt-x"))
-    script = executor._executor._make_submission_file_text("CMD", "uid")  # type: ignore[attr-defined]
-
-    for line in (
-        "#SBATCH --job-name=pystilt-x",
-        "#SBATCH --cpus-per-task=2",
-        "#SBATCH --time=10",
-        "#SBATCH --mem=4G",
-        "#SBATCH --partition=compute",
-        "#SBATCH --exclude=node1",
-        "#SBATCH --requeue",
-    ):
-        assert line in script
+    options = _sbatch(script)
+    assert options["array"] == "0-0"
+    assert options["signal"] == f"B:USR1@{runner.NOTICE_SECONDS}"
+    for unset in ("time", "mem", "partition", "account", "qos"):
+        assert unset not in options
 
 
-# ---------------------------------------------------------------------------
-# Batch
-# ---------------------------------------------------------------------------
-
-
-def test_batch_opens_the_project_and_runs_its_receptors(monkeypatch, tmp_path):
-    calls: list[dict] = []
-
-    def fake_run_receptors(project, receptor_ids, **kwargs):
-        calls.append({"project": project, "ids": receptor_ids, **kwargs})
-
-    monkeypatch.setattr("stilt.project.Project", lambda path: f"Project({path})")
-    monkeypatch.setattr("stilt.execution.worker.run_receptors", fake_run_receptors)
-
-    execution = ExecutionConfig(cpus=2, timeout=60, keep_scratch=True)
-    batch = Batch(
-        str(tmp_path),
-        ["a", "b"],
-        execution=execution,
-        compute_root="/scratch/x",
+def test_job_script_runs_again_only_on_the_first_start_and_names_a_compute_root(
+    tmp_path,
+):
+    script = job_script(
+        Project(tmp_path),
+        ExecutionConfig(backend="slurm"),
+        tmp_path,
+        2,
         skip_existing=False,
+        compute_root=tmp_path / "scratch",
     )
-    batch()
-    assert calls == [
-        {
-            "project": f"Project({tmp_path})",
-            "ids": ["a", "b"],
-            "compute_root": Path("/scratch/x").resolve(),
-            "execution": execution,
-            "skip_existing": False,
-        }
-    ]
-
-
-def test_batch_checkpoint_resubmits_itself_keeping_what_finished(tmp_path):
-    """A preempted or timed-out task runs again and skips its finished receptors."""
-    execution = ExecutionConfig(cpus=2)
-    batch = Batch(
-        str(tmp_path),
-        ["a", "b"],
-        execution=execution,
-        compute_root="/s",
-        skip_existing=False,
+    assert '[ "${SLURM_RESTART_COUNT:-0}" -gt 0 ] && skip=""' in script
+    assert script.splitlines()[-1].endswith(
+        f"--compute-root {(tmp_path / 'scratch').resolve()} $skip"
     )
 
-    again = batch.checkpoint().function
 
-    assert isinstance(again, Batch)
-    assert (again.project, again.receptor_ids) == (str(tmp_path), ["a", "b"])
-    assert (again.compute_root, again.execution) == ("/s", execution)
-    assert again.skip_existing is True
-
-
-def test_batch_survives_pickling(tmp_path):
-    import pickle
-
-    batch = Batch(str(tmp_path), ["a"], execution=ExecutionConfig(cpus=3, timeout=9))
-    back = pickle.loads(pickle.dumps(batch))
-    assert (back.project, back.receptor_ids) == (str(tmp_path), ["a"])
-    assert back.execution == ExecutionConfig(cpus=3, timeout=9)
+def test_job_script_is_valid_bash(tmp_path):
+    script = tmp_path / "job.sh"
+    script.write_text(
+        job_script(
+            Project(tmp_path / "with space"),
+            ExecutionConfig(backend="slurm", setup=["echo ready"]),
+            tmp_path / "with space" / "slurm",
+            3,
+            skip_existing=False,
+        )
+    )
+    subprocess.run(["bash", "-n", str(script)], check=True)
 
 
 # ---------------------------------------------------------------------------
 # Submitting to Slurm
 # ---------------------------------------------------------------------------
-
-
-class _FakeJob:
-    def __init__(self, job_id: str, error: Exception | None = None) -> None:
-        self.job_id = job_id
-        self.error = error
-        self.waited = False
-        self.paths = type("Paths", (), {"folder": Path("/logs")})()
-
-    def wait(self) -> None:
-        self.waited = True
-
-    def exception(self) -> Exception | None:
-        return self.error
-
-    def result(self) -> list[str]:
-        return [f"result of {self.job_id}"]
-
-
-class _FakeExecutor:
-    """Stands in for submitit.AutoExecutor: records what would be submitted."""
-
-    instances: list[_FakeExecutor] = []
-
-    def __init__(self, folder, cluster=None):
-        self.folder, self.cluster = Path(folder), cluster
-        self.parameters: dict = {}
-        self.submitted: list[Batch] = []
-        self.in_batch = False
-        _FakeExecutor.instances.append(self)
-
-    def update_parameters(self, **kwargs):
-        self.parameters.update(kwargs)
-
-    def batch(self):
-        executor = self
-
-        class _Context:
-            def __enter__(self):
-                executor.in_batch = True
-
-            def __exit__(self, *exc):
-                executor.in_batch = False
-
-        return _Context()
-
-    def submit(self, fn):
-        assert self.in_batch, "tasks must be submitted as one array"
-        self.submitted.append(fn)
-        return _FakeJob(f"777_{len(self.submitted) - 1}")
-
-
-@pytest.fixture
-def fake_submitit(monkeypatch):
-    import submitit
-
-    _FakeExecutor.instances = []
-    monkeypatch.setattr(submitit, "AutoExecutor", _FakeExecutor)
-    return _FakeExecutor
 
 
 @pytest.fixture
@@ -240,57 +135,192 @@ def pending(monkeypatch):
     return ids
 
 
-def test_submit_sends_one_array_of_batches(fake_submitit, pending, tmp_path):
+@pytest.fixture
+def commands(monkeypatch):
+    """Record the commands the runner runs; ``answers`` maps a program to its outputs in turn."""
+    ran: list[list[str]] = []
+    answers: dict[str, list[SimpleNamespace]] = {}
+
+    def fake_run(args, **kwargs):
+        ran.append(list(args))
+        queue = answers.get(args[0], [])
+        return (
+            queue.pop(0)
+            if queue
+            else SimpleNamespace(returncode=0, stdout="", stderr="")
+        )
+
+    monkeypatch.setattr(runner.subprocess, "run", fake_run)
+    return SimpleNamespace(ran=ran, answers=answers)
+
+
+def _out(stdout: str = "", returncode: int = 0, stderr: str = "") -> SimpleNamespace:
+    return SimpleNamespace(returncode=returncode, stdout=stdout, stderr=stderr)
+
+
+def test_submit_writes_a_submission_and_hands_it_to_sbatch(pending, commands, tmp_path):
     pending.extend(["a", "b", "c"])
     project = Project(tmp_path / "my_project")
-    execution = ExecutionConfig(
-        backend="slurm", n_workers=2, cpus=4, partition="compute"
-    )
+    execution = ExecutionConfig(backend="slurm", n_workers=2, cpus=4, timeout=600)
+    commands.answers["sbatch"] = [_out("777;cluster\n")]
 
-    jobs = runner.submit(project, execution=execution, skip_existing=False)
+    job_id = runner.submit(project, execution=execution, skip_existing=False)
 
-    [executor] = fake_submitit.instances
-    assert executor.cluster == "slurm"
-    assert executor.folder.parent == project.directory / "slurm"
-    assert executor.parameters["slurm_job_name"] == "pystilt-my-project"
-    assert executor.parameters["slurm_partition"] == "compute"
-    assert [b.receptor_ids for b in executor.submitted] == [["a", "c"], ["b"]]
-    for batch in executor.submitted:
-        assert batch.project == str(project.directory)
-        assert batch.execution == execution
-        assert batch.skip_existing is False
-        assert batch.compute_root is None  # each node resolves its own scratch
-    assert [job.job_id for job in jobs] == ["777_0", "777_1"]
+    assert job_id == "777"
+    [(sbatch, parsable, script)] = commands.ran
+    assert (sbatch, parsable) == ("sbatch", "--parsable")
+    folder = Path(script).parent
+    assert folder.parent == project.directory / "slurm"
+    assert (folder / "receptors.txt").read_text().split() == ["a", "b", "c"]
+    stored = yaml.safe_load((folder / "execution.yaml").read_text())
+    assert ExecutionConfig.model_validate(stored) == execution
+    text = Path(script).read_text()
+    assert _sbatch(text)["array"] == "0-1"
+    assert "--no-skip" in text
 
 
-def test_submit_passes_an_explicit_compute_root(fake_submitit, pending, tmp_path):
+def test_submit_uses_no_more_tasks_than_receptors(pending, commands, tmp_path):
     pending.append("a")
+    commands.answers["sbatch"] = [_out("5\n")]
     runner.submit(
-        Project(tmp_path),
-        execution=ExecutionConfig(backend="slurm"),
-        compute_root=tmp_path / "scratch",
+        Project(tmp_path), execution=ExecutionConfig(backend="slurm", n_workers=8)
     )
-    [batch] = fake_submitit.instances[0].submitted
-    assert batch.compute_root == str((tmp_path / "scratch").resolve())
+    assert _sbatch(Path(commands.ran[0][2]).read_text())["array"] == "0-0"
 
 
-def test_submit_with_nothing_to_do_submits_nothing(fake_submitit, pending, tmp_path):
-    jobs = runner.submit(Project(tmp_path), execution=ExecutionConfig(backend="slurm"))
-    assert jobs == []
-    assert fake_submitit.instances == []
+def test_submit_with_nothing_to_do_submits_nothing(pending, commands, tmp_path):
+    assert (
+        runner.submit(Project(tmp_path), execution=ExecutionConfig(backend="slurm"))
+        is None
+    )
+    assert commands.ran == []
 
 
-def test_waiting_raises_when_a_task_did_not_complete():
-    good, bad = _FakeJob("9_0"), _FakeJob("9_1", error=RuntimeError("timed out"))
+def test_submit_says_why_sbatch_refused(pending, commands, tmp_path):
+    pending.append("a")
+    commands.answers["sbatch"] = [_out(returncode=1, stderr="Invalid account")]
+    with pytest.raises(RuntimeError, match="Invalid account"):
+        runner.submit(Project(tmp_path), execution=ExecutionConfig(backend="slurm"))
 
-    runner._wait([good])  # type: ignore[list-item]
-    assert good.waited
 
-    with pytest.raises(
-        RuntimeError, match=r"1 of 2 Slurm tasks did not complete. Task 9_1: timed out"
-    ):
-        runner._wait([good, bad])  # type: ignore[list-item]
-    assert bad.waited
+def test_waiting_polls_sacct_until_every_task_ends(commands, caplog):
+    commands.answers["sacct"] = [
+        _out(returncode=1),  # the accounting database has not heard of it yet
+        _out("9_0|RUNNING|0:0\n9_[1-3]|PENDING|0:0\n"),
+        _out("9_0|COMPLETED|0:0\n9_1|REQUEUED|0:0\n9_2|RUNNING|0:0\n9_3|RUNNING|0:0\n"),
+        _out(
+            "9_0|COMPLETED|0:0\n9_1|FAILED|1:0\n9_2|OUT_OF_MEMORY|0:125\n"
+            "9_3|CANCELLED by 123|0:15\n"
+        ),
+    ]
+    with caplog.at_level("WARNING", logger="stilt.execution.runner"):
+        runner._wait("9", poll=0)
+
+    assert [c[0] for c in commands.ran] == ["sacct"] * 4
+    warned = caplog.text
+    assert "9_2 ended OUT_OF_MEMORY" in warned
+    assert "9_3 ended CANCELLED" in warned
+    assert "9_1" not in warned  # failed simulations are the status table's to report
+    assert "9_0" not in warned
+
+
+# ---------------------------------------------------------------------------
+# A task that is told to stop
+# ---------------------------------------------------------------------------
+
+
+def test_a_task_told_to_stop_requeues_itself(tmp_path, monkeypatch, commands):
+    from stilt.execution import worker
+
+    project = _hourly_project(tmp_path, 1)
+    monkeypatch.setenv("SLURM_JOB_ID", "4321")
+    monkeypatch.delenv("SLURM_RESTART_COUNT", raising=False)
+
+    def stopped(*args, **kwargs):
+        signal.raise_signal(signal.SIGUSR1)
+
+    def told_twice(*args, **kwargs):
+        try:
+            stopped()
+        finally:
+            signal.raise_signal(signal.SIGUSR1)  # a second one only adds to the record
+
+    monkeypatch.setattr(worker, "run_receptors", told_twice)
+    table = runner.run(project, task=(0, 1))
+
+    assert commands.ran == [["scontrol", "requeue", "4321"]]
+    assert set(table["state"]) == {"pending"}
+    assert signal.getsignal(signal.SIGUSR1) is signal.SIG_DFL
+
+
+def test_a_task_requeues_itself_only_so_many_times(tmp_path, monkeypatch, commands):
+    from stilt.execution import worker
+
+    project = _hourly_project(tmp_path, 1)
+    monkeypatch.setenv("SLURM_JOB_ID", "4321")
+    monkeypatch.setenv("SLURM_RESTART_COUNT", str(runner.MAX_REQUEUES))
+    monkeypatch.setattr(
+        worker, "run_receptors", lambda *a, **k: signal.raise_signal(signal.SIGUSR1)
+    )
+    runner.run(project, task=(0, 1))
+    assert commands.ran == []
+
+
+def test_a_preempted_task_requeues_itself_and_a_cancelled_one_does_not(
+    tmp_path, monkeypatch, commands
+):
+    """A preempted task gets SIGTERM, and maybe no SIGUSR1 before its grace time ends."""
+    from stilt.execution import worker
+
+    project = _hourly_project(tmp_path, 1)
+    monkeypatch.setenv("SLURM_JOB_ID", "4321")
+    monkeypatch.delenv("SLURM_RESTART_COUNT", raising=False)
+    # run_receptors stops on SIGTERM and returns with the receptor unfinished.
+    monkeypatch.setattr(worker, "run_receptors", lambda *a, **k: None)
+
+    commands.answers["scontrol"] = [
+        _out("JobId=4321 PreemptTime=2026-10-06T12:00:00 Requeue=1")
+    ]
+    runner.run(project, task=(0, 1))
+    assert commands.ran == [
+        ["scontrol", "show", "job", "4321"],
+        ["scontrol", "requeue", "4321"],
+    ]
+
+    commands.ran.clear()
+    commands.answers["scontrol"] = [_out("JobId=4321 PreemptTime=None Requeue=1")]
+    runner.run(project, task=(0, 1))  # scancel: not preempted
+    assert commands.ran == [["scontrol", "show", "job", "4321"]]
+
+
+def test_a_task_that_finished_is_not_requeued(tmp_path, monkeypatch, commands):
+    import pandas as pd
+
+    from stilt.execution import worker
+
+    monkeypatch.setenv("SLURM_JOB_ID", "4321")
+    monkeypatch.setattr(
+        worker, "run_receptors", lambda *a, **k: signal.raise_signal(signal.SIGUSR1)
+    )
+    monkeypatch.setattr(
+        runner, "_status", lambda project, ids: pd.DataFrame({"state": ["complete"]})
+    )
+    runner.run(_hourly_project(tmp_path, 1), task=(0, 1))
+    assert commands.ran == []
+
+
+def test_an_interrupt_that_is_not_the_notice_is_not_swallowed(
+    tmp_path, monkeypatch, commands
+):
+    from stilt.execution import worker
+
+    def interrupted(*args, **kwargs):
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(worker, "run_receptors", interrupted)
+    with pytest.raises(KeyboardInterrupt):
+        runner.run(_hourly_project(tmp_path, 1), task=(0, 1))
+    assert commands.ran == []
 
 
 # ---------------------------------------------------------------------------
@@ -323,7 +353,6 @@ def test_a_time_limit_sbatch_would_not_take_is_an_error(time):
 
 def test_no_time_limit_is_left_to_the_partition():
     assert ExecutionConfig().time_minutes is None
-    assert "slurm_time" not in slurm_parameters(ExecutionConfig(), job_name="x")
 
 
 @pytest.mark.parametrize(
@@ -422,8 +451,10 @@ def test_a_receptor_list_limits_the_run_and_keeps_its_order(tmp_path, monkeypatc
         runner._pending(project, True, ["nope", every[0]])
 
 
-def test_a_task_runs_here_whatever_the_backend(tmp_path, monkeypatch, fake_submitit):
+def test_a_task_runs_here_whatever_the_backend(tmp_path, monkeypatch, commands):
     from stilt.execution import worker
+
+    monkeypatch.delenv("SLURM_JOB_ID", raising=False)
 
     project = _hourly_project(tmp_path, 4)
     every = list(dict.fromkeys(project.simulations["receptor"]))
@@ -434,7 +465,7 @@ def test_a_task_runs_here_whatever_the_backend(tmp_path, monkeypatch, fake_submi
 
     table = runner.run(project, task=(1, 2), execution=ExecutionConfig(backend="slurm"))
 
-    assert fake_submitit.instances == []
+    assert commands.ran == []  # no sbatch
     assert ran == [[every[1], every[3]]]
     assert list(table["receptor"]) == [every[1], every[3]]
     assert set(table["state"]) == {"pending"}  # nothing was written

@@ -82,10 +82,13 @@ Preempted and timed-out tasks
 -----------------------------
 
 A task that is preempted, or reaches its time limit, is put back in the
-queue and picks up where it stopped: receptors it already finished are
-skipped. The cluster may hold a requeued task in the queue for some minutes
-before it starts again. A task that keeps running out of time is given up
-on after a few tries, so give ``time`` some room.
+queue and picks up where it stopped. Receptors it already finished are
+skipped. Slurm warns each task two minutes before its time limit with the
+signal ``USR1``, and stops a preempted task with ``SIGTERM``. Either way
+the task stops its runs and requeues itself with ``scontrol requeue``. The
+cluster may hold a requeued task in the queue for some minutes before it
+starts again. A task requeues itself at most 10 times, so give ``time``
+some room. ``scancel`` stops a task without requeuing it.
 
 Watch progress and rerun
 ------------------------
@@ -106,21 +109,17 @@ Only unfinished receptors are submitted. Don't resubmit while the first job
 is still running. The receptors it hasn't finished yet would be submitted a
 second time. Use ``--no-skip`` to force everything to run again.
 
-From Python, ``project.run()`` submits the job array and waits for it. It
-raises if a task did not complete. ``project.submit()`` submits and returns
-at once, with the `submitit <https://github.com/facebookincubator/submitit>`_
-jobs, one per task:
+From Python, ``project.run()`` submits the job array, waits until every
+task has ended (it asks ``sacct``), and returns the status table of the
+simulations it submitted. ``project.submit()`` submits and returns the
+Slurm job id at once:
 
 .. code-block:: python
 
-   jobs = project.submit()
-   jobs[0].stdout()       # what the first task has printed so far
-   for job in jobs:
-       job.wait()         # block until the task leaves the queue
-   results = [r for job in jobs for r in job.result()]
+   job_id = project.submit()    # None when nothing needs to run
 
-``job.cancel()`` cancels a task. ``submit()`` raises a ``ValueError`` when
-the backend is ``local``.
+Follow it with ``squeue -j <job_id>`` and stop it with ``scancel <job_id>``.
+``submit()`` raises a ``ValueError`` when the backend is ``local``.
 
 What PYSTILT writes
 -------------------
@@ -132,13 +131,23 @@ earlier one's logs:
 
    my_project/
      slurm/<date_time>_<id>/
-       <job>_submission.sh          # the script given to sbatch
-       <job>_<task>_0_log.out       # output from each task
-       <job>_<task>_0_log.err       # progress lines and errors
-       <job>_<task>_submitted.pkl   # the task's receptors, read by the task
-       <job>_<task>_0_result.pkl    # what it returned
+       job.sh            # the script given to sbatch
+       receptors.txt     # the receptors submitted, one per line
+       execution.yaml    # the execution settings of this submission
+       <task>.log        # each task's progress lines and errors
 
-If a task fails, look in its ``_log.err`` for problems with the task
+``job.sh`` is a plain ``sbatch`` script. Task ``i`` of ``N`` runs
+
+.. code-block:: bash
+
+   python -m stilt run my_project --receptors .../receptors.txt \
+       --task $SLURM_ARRAY_TASK_ID/N --execution .../execution.yaml
+
+with the Python that submitted it. To rerun one task by hand, on a compute
+node, run that line with the task's number in place of
+``$SLURM_ARRAY_TASK_ID``.
+
+If a task fails, look in its ``<task>.log`` for problems with the task
 itself. Look in each simulation's log in the output directory for HYSPLIT
 problems (see :doc:`index`). The folders are safe to delete once a job has
 left the queue.

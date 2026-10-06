@@ -49,8 +49,6 @@ from stilt.receptors.table import COLUMNS, ROW_COLUMNS
 from stilt.simulation import Simulation
 
 if TYPE_CHECKING:
-    import submitit
-
     from stilt.visualization import ProjectPlotAccessor
 
 
@@ -964,12 +962,13 @@ class Project:
         execution: ExecutionConfig | None = None,
         *,
         receptors: Iterable[str] | None = None,
-    ) -> list[submitit.Job[Any]]:
+    ) -> str | None:
         """
         Submit every simulation that has not finished to Slurm, and return at once.
 
         Shorthand for :func:`stilt.execution.submit`, which documents the
-        parameters and the jobs it returns.
+        parameters. Returns the Slurm job id, or ``None`` when nothing needs
+        to run.
         """
         from stilt.execution import submit
 
