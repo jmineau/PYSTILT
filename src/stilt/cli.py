@@ -63,7 +63,7 @@ _NO_SKIP = typer.Option(
 _COMPUTE_ROOT = typer.Option(
     None,
     "--compute-root",
-    help="Scratch directory HYSPLIT runs under. Defaults to PYSTILT_COMPUTE_ROOT, then $TMPDIR/pystilt/<project>.",
+    help="Directory the transport model runs under, one workdir per simulation. Defaults to PYSTILT_COMPUTE_ROOT, then $TMPDIR/pystilt/<project>.",
 )
 
 
@@ -266,7 +266,7 @@ def run(
     """
     Run every unfinished simulation in a project, and wait until they are done.
 
-    Runs HYSPLIT for each receptor and variant, then the footprint when the
+    Runs the transport model for each receptor and variant, then the footprint when the
     variant has a grid. Simulations whose outputs exist are skipped unless
     --no-skip is given. With the Slurm backend this submits a job array and
     waits for it; use stilt submit to return as soon as it is submitted.
@@ -290,10 +290,6 @@ def run(
         task=share,
         execution_file=execution,
     )
-    if options["execution"].backend == "slurm":
-        typer.echo(
-            "Submitted; waiting for the job to finish (squeue shows its tasks)..."
-        )
     try:
         table = opened.run(receptors=receptor_ids, task=share, **options)
     except ValueError as error:
@@ -431,10 +427,15 @@ def _print_run_start(
     """Print the settings ``stilt run`` is about to use."""
     backend = execution.backend
     mode = "existing" if skip_existing else "no-skip"
+    if task is not None:
+        # A task of a job array runs here; "backend=local" would read as if
+        # the array had not been used.
+        where = f"task {task[0]} of {task[1]}"
+    else:
+        tasks = 1 if backend == "local" else execution.n_workers
+        where = f"backend={backend}  tasks={tasks}"
     typer.echo(
-        "Starting run: "
-        f"project={project.directory}  backend={backend}  "
-        f"tasks={1 if backend == 'local' else execution.n_workers}  "
+        f"Starting run: project={project.directory}  {where}  "
         f"cpus={execution.cpus}  skip={mode}"
     )
     typer.echo(f"Output: {project.output.directory}")
@@ -447,10 +448,13 @@ def _print_run_start(
         typer.echo(f"Receptors listed: {len(receptor_ids)}")
     if task is not None:
         i, n = task
-        typer.echo(f"Task: {i} of {n} (receptors {i}, {i + n}, {i + 2 * n}, ...)")
+        typer.echo(f"Receptors of this task: {i}, {i + n}, {i + 2 * n}, ...")
     typer.echo(f"Variants: {', '.join(project.variants)}")
-    typer.echo(
-        "Execution mode: " + ("submit-and-wait" if waits else "submit-and-return")
-        if backend != "local"
-        else "Execution mode: local, one line per receptor as it finishes"
-    )
+    if task is not None or backend == "local":
+        typer.echo("Running here, one line per receptor as it finishes")
+    elif waits:
+        typer.echo(
+            "Submitting to Slurm and waiting for the job to finish (squeue shows its tasks)"
+        )
+    else:
+        typer.echo("Submitting to Slurm and returning")

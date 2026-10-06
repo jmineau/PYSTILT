@@ -62,18 +62,18 @@ class ExecutionConfig(BaseModel):
         None,
         ge=1,
         description=(
-            "Time limit for one HYSPLIT run, in seconds. A run that exceeds it "
-            "is stopped and recorded as a failed simulation, and the worker "
-            "moves on. Unset waits indefinitely, so a hung HYSPLIT process can "
-            "hold a worker until its job ends."
+            "Time limit for one transport model run, in seconds. A run that "
+            "exceeds it is stopped and recorded as a failed simulation, and the "
+            "worker moves on. Unset waits indefinitely, so a hung run can hold "
+            "a worker until its job ends."
         ),
     )
     keep_scratch: bool = Field(
         False,
         description=(
-            "Keep every run's HYSPLIT working directory, as HYSPLIT left it, "
-            "under ``scratch/`` in the output directory. A failed run's is "
-            "always kept."
+            "Keep every run's workdir, as the transport model left it, under "
+            "``scratch/`` in the output directory. A failed run's is always "
+            "kept."
         ),
     )
     array_parallelism: int | None = Field(

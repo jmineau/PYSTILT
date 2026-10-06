@@ -104,7 +104,7 @@ def resolve_compute_root(
     project: Project, compute_root: str | Path | None = None
 ) -> Path:
     """
-    Return the scratch directory under which HYSPLIT runs for *project*.
+    Return the compute root of *project*: the directory its workdirs are made in.
 
     That is *compute_root* when given, else the ``PYSTILT_COMPUTE_ROOT``
     environment variable when it is set and not empty, else
@@ -172,7 +172,7 @@ def run(
     """
     Run every simulation of a project that has not finished, and wait for it.
 
-    Each receptor with missing results runs once: HYSPLIT once for each
+    Each receptor with missing results runs once: the transport model once for each
     distinct set of transport settings whose particles are missing, then the
     footprint of every variant that has a grid. With ``backend: local`` the
     receptors run in this process (``cpus`` at a time). With
@@ -200,7 +200,7 @@ def run(
         Skip simulations whose results all exist. ``False`` runs every
         simulation again.
     compute_root : str or Path, optional
-        Scratch directory under which HYSPLIT runs
+        Directory the workdirs are made in, one per simulation
         (:func:`resolve_compute_root`). On Slurm it is resolved on the
         compute node unless given here.
 

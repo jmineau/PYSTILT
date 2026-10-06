@@ -46,7 +46,7 @@ class Simulation:
     directory its results are in. From those it knows where its particles,
     footprint, and log are, whether they exist (:meth:`is_complete`), and how
     to read them. It runs nothing itself; the workers in
-    :mod:`stilt.execution` run HYSPLIT and write the results.
+    :mod:`stilt.execution` run the transport model and write the results.
 
     You rarely build one yourself. Get it from a project instead, as in
     ``project.simulation(receptor_id, "hrrr")``.
@@ -133,7 +133,7 @@ class Simulation:
 
     @property
     def log_path(self) -> Location | None:
-        """Path of the HYSPLIT log in the output directory, or ``None`` before its folder exists."""
+        """Path of the transport model's log in the output directory, or ``None`` before its folder exists."""
         return self.output.log_path(self.variant, self.receptor.id, self.realization)
 
     @property
@@ -239,9 +239,9 @@ class Simulation:
         (``"particles"`` or ``"footprint"``), ``reason`` (a short cause
         such as ``"MET_COVERAGE"``, or the error's class when it has
         none), ``message``, and ``time``. An unexpected error also has a
-        ``traceback``. A failed HYSPLIT run fails every variant that
-        shares its particles. :attr:`log` reads HYSPLIT's log and
-        :attr:`kept_workdir` is where its working directory was kept.
+        ``traceback``. A failed transport model run fails every variant
+        that shares its particles. :attr:`log` reads the model's log and
+        :attr:`kept_workdir` is where its workdir was kept.
 
         Examples
         --------
@@ -261,7 +261,7 @@ class Simulation:
     @property
     def log(self) -> str:
         """
-        Text of the HYSPLIT log.
+        Text of the transport model's log.
 
         Raises
         ------
@@ -276,7 +276,7 @@ class Simulation:
     @property
     def met_files(self) -> list[Path]:
         """
-        The meteorology files HYSPLIT read for these particles.
+        The meteorology files the transport model read for these particles.
 
         Raises
         ------

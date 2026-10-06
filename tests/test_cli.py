@@ -252,7 +252,7 @@ def test_run_prints_a_startup_summary_and_the_status(tmp_path, calls):
     assert "Compute root:" in result.output
     assert f"Output: {tmp_path.resolve() / 'output'}" in result.output
     assert "Receptors loaded: 1" in result.output
-    assert "Execution mode: local, one line per receptor" in result.output
+    assert "Running here, one line per receptor" in result.output
     assert f"Project: {tmp_path.resolve()}  total=" in result.output
 
 
@@ -302,8 +302,7 @@ def test_run_on_slurm_waits_for_the_job(tmp_path, calls):
     assert result.exit_code == 0, result.output
     assert [verb for verb, _ in calls] == ["run"]
     assert calls[0][1]["execution"].n_workers == 2
-    assert "Execution mode: submit-and-wait" in result.output
-    assert "waiting for the job" in result.output
+    assert "Submitting to Slurm and waiting for the job to finish" in result.output
 
 
 def test_run_reads_execution_settings_from_a_file(tmp_path, calls):
@@ -364,7 +363,10 @@ def test_run_task_runs_its_share_here(tmp_path, calls):
     assert kwargs["task"] == (1, 3)
     assert kwargs["receptors"] is None
     assert kwargs["execution"].backend == "local"
-    assert "Task: 1 of 3" in result.output
+    # The banner names the task, not the local backend the task runs on.
+    assert "task 1 of 3  cpus=1" in result.output
+    assert "backend=" not in result.output
+    assert "Receptors of this task: 1, 4, 7, ..." in result.output
     # A task sums up what it ran, not the whole project.
     assert "This run:  total=2  completed=1  pending=1" in result.output
     assert "failed: met_missing 1" in result.output
@@ -422,7 +424,7 @@ def test_submit_submits_to_slurm_and_returns(tmp_path, calls):
     assert [verb for verb, _ in calls] == ["submit"]
     execution = calls[0][1]["execution"]
     assert (execution.backend, execution.n_workers) == ("slurm", 2)
-    assert "Execution mode: submit-and-return" in result.output
+    assert "Submitting to Slurm and returning" in result.output
     assert "Submitted job: 12345" in result.output
 
 

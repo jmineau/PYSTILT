@@ -8,6 +8,9 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- A Slurm task's log starts with `task i of n`, not `backend=local`.
+  Help and settings descriptions say "the transport model" where any
+  model runs.
 - `project.plot.availability()` draws one row per location with a bar
   for each day that has receptors, shaded by how many, where it drew a
   bar per receptor; it stays quick on projects of tens of thousands of
