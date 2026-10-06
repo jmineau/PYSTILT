@@ -202,9 +202,9 @@ class Project:
     def init(
         cls,
         path: str | Path,
-        config: ProjectConfig | None = None,
         receptors: Receptor | Iterable[Receptor] | str | Path | None = None,
         *,
+        config: ProjectConfig | None = None,
         starter: bool = False,
         **settings: Any,
     ) -> Project:
@@ -220,10 +220,10 @@ class Project:
         ----------
         path : str or Path
             Project directory. It is created if needed.
-        config : ProjectConfig, optional
-            The settings. Or give them as keywords instead.
         receptors : Receptor, iterable of Receptor, str or Path, optional
             Receptors, or the path of a receptors CSV to copy them from.
+        config : ProjectConfig, optional
+            The settings. Or give them as keywords instead.
         starter : bool, default False
             Write the commented starter ``config.yaml``
             (:data:`stilt.config.STARTER_CONFIG`) in place of a config.

@@ -142,6 +142,18 @@ def test_init_writes_the_settings_given_and_the_receptors(tmp_path, point_recept
     assert Project(tmp_path / "proj").config == project.config
 
 
+def test_init_takes_the_receptors_second(tmp_path, point_receptor):
+    # The quickstart's order: a project directory, then its receptors.
+    project = Project.init(
+        tmp_path / "proj",
+        [point_receptor],
+        mets={"hrrr": _met(tmp_path)},
+        variants={"hrrr": {}},
+    )
+
+    assert list(project.receptors["receptor"]) == [point_receptor.id]
+
+
 def test_init_refuses_a_project_that_has_a_config(tmp_path):
     _project(tmp_path)
     text = (tmp_path / "proj" / "config.yaml").read_text()
