@@ -21,6 +21,10 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `str(sim)` is `receptor/variant`, and `project.footprints()` is keyed by
   the tuple. A run's working directory is
   `<compute root>/<receptor>/<variant>` as before (#150).
+- `project.jacobian` reads and sums footprints in `workers` threads, the
+  number of CPUs by default, where it used `execution.cpus`; `batch` sets
+  how many receptors are read together (64) (#150).
+
 - `project.run()` and `stilt.execution.run` return the status table of
   the simulations they ran, the rows of `project.simulations.status()`
   (breaking). `SimulationResult` is gone: a worker records each failure in
