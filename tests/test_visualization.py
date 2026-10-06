@@ -432,7 +432,27 @@ def test_project_availability_with_sims(tmp_path, receptor):
 
     ax = project.plot.availability()
     assert ax is not None
-    assert len(ax.patches) == 1
+    [bars] = ax.collections
+    assert len(bars.get_paths()) == 1
+
+
+def test_project_availability_bins_receptors_by_day_and_location(receptor):
+    from unittest.mock import MagicMock
+
+    t = pd.Timestamp(receptor.time)
+    project = MagicMock()
+    project.receptors = pd.DataFrame(
+        {
+            "location": ["a", "a", "a", "b"],
+            "time": [t, t + pd.Timedelta("2h"), t + pd.Timedelta("1D"), t],
+        }
+    )
+
+    ax = ProjectPlotAccessor(project).availability()
+
+    a, b = ax.collections[:2]
+    assert [len(a.get_paths()), len(b.get_paths())] == [2, 1]  # days with receptors
+    assert [label.get_text() for label in ax.get_yticklabels()] == ["a", "b"]
 
 
 def test_project_availability_reuses_ax():
