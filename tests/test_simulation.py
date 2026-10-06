@@ -368,3 +368,54 @@ def test_settings_are_the_records_that_name_the_folders(point_receptor, tmp_path
     assert settings_hash(settings["particles"]) == sim.variant.particles_hash
 
     assert _sim(tmp_path, point_receptor).settings["footprint"] is None
+
+
+# ---------------------------------------------------------------------------
+# What the particles give beyond the footprint
+# ---------------------------------------------------------------------------
+
+
+def test_background_and_transport_error_weight_the_particles_like_the_footprint(
+    point_receptor, tmp_path
+):
+    import numpy as np
+
+    from stilt.particles import background, transport_error
+
+    lifetime = [FirstOrderLifetime(lifetime_hours=1.0)]
+    footprint = FOOT.model_copy(update={"transforms": lifetime})
+    sim = _sim(tmp_path, point_receptor, footprint=footprint)
+    # A second run of the receptor stands in for a wind-error variant.
+    err = _sim(
+        tmp_path, point_receptor, footprint=footprint, variant="err", ziscale=0.8
+    )
+    _write_particles(sim)
+    _write_particles(err)
+    particles = sim.particles  # as read back from the file
+
+    field = pd.Series([400.0], index=pd.Index([1], name="particle"))
+    got = sim.background(field)
+    direct = background(particles, field, transforms=lifetime, receptor=point_receptor)
+    assert got.value == direct.value
+    pd.testing.assert_series_equal(got.weights, direct.weights)
+    assert got.value < 400.0  # the lifetime decay weights the endpoint
+
+    flux = xr.DataArray(
+        np.ones((3, 3)),
+        dims=("lat", "lon"),
+        coords={"lat": [40.6, 40.7, 40.8], "lon": [-112.0, -111.9, -111.8]},
+    )
+    one = sim.transport_error(err, flux, noise_splits=0)
+    many = sim.transport_error([err, err], flux, noise_splits=0)
+    error = transport_error(
+        particles,
+        [err.particles],
+        flux,
+        transforms=lifetime,
+        receptor=point_receptor,
+        noise_splits=0,
+    )
+    np.testing.assert_equal(
+        (one.variance, one.enhancement), (error.variance, error.enhancement)
+    )
+    assert many.realizations == 2

@@ -144,7 +144,9 @@ src/stilt/
                      points and shared by the models and the table
   particles.py       the particle table (a DataFrame): prepare, read, and write
                      particle files; the `.stilt` pandas accessor (endpoints,
-                     enhancement from a flux field)
+                     enhancement from a flux field); what particles give
+                     beyond the footprint, `background` and `transport_error`
+                     (`sim.background`, `sim.transport_error`)
   footprint/         the footprint (a DataArray)
     config.py        FootprintConfig and the geometry specs
     gridding.py      `calc_footprint`, as STILT-R's (fidelity-guarded)
@@ -159,10 +161,12 @@ src/stilt/
                      field, aggregation)
   sampling.py        sampling a gridded field (a flux, a mole fraction) at points
   spatial.py         rasters and CRS, no shapely: Bounds, Grid (with its cell
-                     and CF helpers), horizontal_dims, is_longlat, same_crs
+                     and CF helpers), horizontal_dims, is_longlat, same_crs,
+                     haversine_km
   meteorology.py     MetConfig, run_window, and Met: ARL file discovery
                      (files_for a window), download, and
-                     cropping (via arlmet)
+                     cropping (via arlmet); the wind-error statistics
+                     (`variogram`, `fit_variogram`)
   transforms.py      pre-footprint particle transforms (averaging kernel,
                      pressure weighting, lifetime decay) and their YAML I/O
   exceptions.py      every exception class, all under StiltError
@@ -173,10 +177,9 @@ src/stilt/
                      whose tasks run `stilt run --task`)
                      and the worker (runs HYSPLIT on scratch and writes results
                      for one or many simulations)
-  observations/      the X-STILT port, all before or after the transport run:
+  observations/      the X-STILT port, before or after the transport run:
                      product readers, overpass grouping and sounding
-                     selection, slant geometry, transport error, wind-error
-                     statistics, backgrounds, plume backgrounds. Arrays in,
+                     selection, slant geometry, plume backgrounds. Arrays in,
                      plain values out; there is no observation object.
   transport/         the TransportModel and TransportConfig protocols, ModelRun
                      (particles, log, met_files), ModelInfo, get_model with

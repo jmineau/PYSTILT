@@ -8,6 +8,17 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Background and transport error are the simulation's (breaking):
+  `sim.background(field)` and `sim.transport_error(error, flux)`, where
+  `error` is the receptor under a wind-error variant or a list of its
+  realizations. Both weight the particles with the variant's transforms,
+  receptor, and project directory, which were passed by hand. Without a
+  project they are `stilt.particles.background` and
+  `stilt.particles.transport_error` (with `Background`, `TransportError`,
+  and `DEFAULT_LENGTH_SCALE`); `stilt.observations` no longer has them.
+  `variogram`, `fit_variogram`, and `VariogramFit` are in
+  `stilt.meteorology`, and `haversine_km` in `stilt.spatial` (#150).
+
 - Slurm runs no longer go through submitit (breaking), which is no longer
   a dependency. `stilt submit` and `project.submit()` write a submission
   folder, `_slurm/<stamp>/` with `job.sh`, `receptors.txt`, and

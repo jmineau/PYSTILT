@@ -35,33 +35,6 @@ Each reader returns a table of soundings with the columns listed in
    stilt.observations.read_ggg_oof
    stilt.observations.read_ggg_netcdf
 
-Transport error
----------------
-
-The transport error of the modelled enhancement, from wind-perturbed
-trajectories (:doc:`/guides/transport_error`).
-
-.. autosummary::
-   :toctree: _api
-   :nosignatures:
-
-   stilt.observations.transport_error
-   stilt.observations.TransportError
-
-Background
-----------
-
-The background mole fraction at a receptor. A field is sampled at the
-trajectory endpoints and weighted like the footprint
-(:doc:`/guides/background`).
-
-.. autosummary::
-   :toctree: _api
-   :nosignatures:
-
-   stilt.observations.background
-   stilt.observations.Background
-
 Plume background
 ----------------
 
@@ -78,17 +51,3 @@ background from the soundings beside it (:doc:`/guides/plume_background`).
    stilt.observations.PlumeBackground
    stilt.observations.plumes.kernel_density
    stilt.observations.plumes.density_polygon
-
-Wind-error statistics
----------------------
-
-Variograms of analysis-minus-observation winds. Fit them to get the
-wind-error settings for a transport-error run (:doc:`/guides/wind_errors`).
-
-.. autosummary::
-   :toctree: _api
-   :nosignatures:
-
-   stilt.observations.variogram
-   stilt.observations.fit_variogram
-   stilt.observations.VariogramFit

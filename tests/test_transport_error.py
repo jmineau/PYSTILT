@@ -1,11 +1,11 @@
-"""Tests for stilt.observations.transport_error."""
+"""Tests for stilt.particles.transport_error and sim.transport_error."""
 
 import numpy as np
 import pandas as pd
 import pytest
 import xarray as xr
 
-from stilt.observations import TransportError, transport_error
+from stilt.particles import TransportError, transport_error
 from stilt.transforms import AveragingKernel
 
 FLUX = xr.DataArray(
@@ -226,7 +226,7 @@ def test_noise_is_reproducible_and_optional():
 
 
 def test_background_field_adds_the_endpoint_spread_to_the_error():
-    from stilt.observations import background
+    from stilt.particles import background
 
     field = xr.DataArray(
         np.tile([0.0, 1.0, 2.0], (3, 1)),

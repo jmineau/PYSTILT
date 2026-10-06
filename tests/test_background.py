@@ -1,11 +1,11 @@
-"""Tests for stilt.observations.backgrounds."""
+"""Tests for stilt.particles.background and sim.background."""
 
 import numpy as np
 import pandas as pd
 import pytest
 import xarray as xr
 
-from stilt.observations import Background, background
+from stilt.particles import Background, background
 from stilt.sampling import sample_field, vertical_dim
 from stilt.transforms import FirstOrderLifetime, PressureWeighting
 

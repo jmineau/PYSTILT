@@ -111,6 +111,25 @@ write particle and footprint files without a project.
    particles.ParticlesAccessor
    footprint.FootprintAccessor
 
+What the particles give beyond the footprint
+--------------------------------------------
+
+The background mole fraction at a receptor, from a field sampled where
+the particles end (:doc:`/guides/background`), and the transport error of
+the modelled enhancement, from a wind-error variant
+(:doc:`/guides/transport_error`). With a project they are
+``sim.background(field)`` and ``sim.transport_error(error_sim, flux)``.
+Both weight the particles the way the footprint does.
+
+.. autosummary::
+   :toctree: _api
+   :nosignatures:
+
+   particles.background
+   particles.Background
+   particles.transport_error
+   particles.TransportError
+
 Simulation tables
 -----------------
 
@@ -164,7 +183,7 @@ Sampling fields
 :mod:`stilt.sampling` looks up a gridded field at points: a surface flux
 under a footprint or along particle paths (``foot.stilt.enhancement``,
 ``particles.stilt.enhancement``), or a mole-fraction field at particle
-endpoints (:func:`stilt.observations.background`).
+endpoints (:func:`stilt.particles.background`).
 
 .. autosummary::
    :toctree: _api

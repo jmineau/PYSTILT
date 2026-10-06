@@ -89,19 +89,14 @@ realization would get the same draw. Each realization is its own
 simulation, so a rerun only does the missing ones. You can raise
 ``realizations`` later and only the new realizations run.
 
-Pass all the realizations to :func:`~stilt.observations.transport_error`
-as a list. It averages them before taking the difference:
+Pass all the realizations to ``sim.transport_error`` as a list. It averages
+them before taking the difference:
 
 .. code-block:: python
 
-   sims = project.simulations
-   ensemble = sims[(sims.receptor == rid) & (sims.variant == "hrrr-err")]
-   errors = project.particles(ensemble)
-   err = transport_error(
-       project.simulation(rid, "hrrr").particles,
-       [rows for _, rows in errors.groupby("realization")],   # one table each
-       flux,
-   )
+   sim = project.simulation(rid, "hrrr")
+   ensemble = [project.simulation(rid, "hrrr-err", k) for k in range(4)]
+   err = sim.transport_error(ensemble, flux)
    err.realizations  # 4
 
 More realizations help less than you might expect. They reduce the noise
@@ -163,37 +158,29 @@ the total error of a modelled value.
 The transport error
 -------------------
 
-:func:`~stilt.observations.transport_error` takes a receptor's unperturbed
-and perturbed particle tables and the flux field:
+``sim.transport_error`` takes the same receptor under the wind-error
+variant and the flux field:
 
 .. code-block:: python
 
    import pandas as pd
-   from stilt.observations import transport_error
 
    rows = []
    for rid in project.receptors.receptor:
        sim = project.simulation(rid, "hrrr")
        err = project.simulation(rid, "hrrr-err")
-       result = transport_error(
-           sim.particles,
-           err.particles,
-           flux,
-           transforms=sim.variant.footprint.transforms,
-           receptor=sim.receptor,
-           directory=project.directory,
-       )
+       result = sim.transport_error(err, flux)
        rows.append({"receptor": sim.receptor.id, "enhancement": result.enhancement,
                     "variance": result.variance, "noise": result.noise})
    errors = pd.DataFrame(rows).set_index("receptor")
 
 ``result.variance`` is the transport-error variance of the modelled
 enhancement, in the enhancement's units squared. ``result.sd`` is its
-square root. Pass the footprint's transforms, the receptor, and the
-project directory so the particles are weighted the way the footprint weights them. That
-covers the averaging kernel (including one from a per-receptor table),
-pressure weighting, and lifetime decay. For a tower receptor there is
-nothing to pass.
+square root. The particles are weighted the way the footprint weights
+them, with the variant's transforms: the averaging kernel (including one
+from a per-receptor table), pressure weighting, and lifetime decay.
+:func:`stilt.particles.transport_error` does the same for particle tables
+you have without a project.
 
 Is the estimate meaningful?
 ---------------------------
