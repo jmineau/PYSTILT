@@ -648,3 +648,26 @@ def test_stored_settings_this_version_does_not_have_are_dropped(
 
     rebuilt = transport_from_settings(particles_metadata(path).settings)
     assert rebuilt.settings() == params.settings()
+
+
+def test_check_particles_names_the_missing_columns():
+    from stilt.particles import PARTICLE_SCHEMA, check_particles
+
+    table = pd.DataFrame({name: [1.0] for name in PARTICLE_SCHEMA.names})
+    check_particles(table)
+    with pytest.raises(ValueError, match="no 'foot' column"):
+        check_particles(table, need=("foot",))
+    with pytest.raises(ValueError, match="no 'long', 'lati' columns"):
+        check_particles(table.drop(columns=["long", "lati"]))
+
+
+def test_a_footprint_needs_the_particle_columns(point_receptor):
+    from stilt.footprint import calc_footprint
+    from stilt.spatial import Grid
+
+    grid = Grid(xmin=-113.0, xmax=-111.0, ymin=40.0, ymax=41.0, xres=0.1, yres=0.1)
+    particles = pd.DataFrame(
+        {"indx": [1], "time": [-1], "long": [-112.0], "lati": [40.5], "zagl": [5.0]}
+    )
+    with pytest.raises(ValueError, match="no 'foot' column"):
+        calc_footprint(particles, point_receptor, grid)

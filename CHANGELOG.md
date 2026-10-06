@@ -823,6 +823,14 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- `stilt.particles.PARTICLE_SCHEMA` and `check_particles`: the columns
+  every particle table has (`indx`, `time`, `long`, `lati`, `zagl`), which
+  a transport model's run must return. The worker checks a model's
+  particles and `calc_footprint` checks for `foot`, naming the missing
+  columns. A new reference page, the particle table, says what each column
+  is, its units, the sign of `time`, what `foot` is, and that a model
+  should write a release row at `time = 0` (#150).
+
 - `stilt.run_trajectories(receptor, met, **params)` runs the transport
   model for one receptor without a project and returns its particles, as
   STILT-R's `calc_trajectory` does. With `stilt.calc_footprint`, a

@@ -33,6 +33,7 @@ from stilt.execution.config import ExecutionConfig
 from stilt.footprint import calc_footprint
 from stilt.meteorology import Met
 from stilt.output import Kind
+from stilt.particles import check_particles
 from stilt.simulation import Simulation
 from stilt.transport import get_model
 
@@ -185,6 +186,7 @@ def run_particles(
             raise SimulationError(
                 "The transport model wrote no particles.", reason="NO_PARTICLE_DATA"
             )
+        check_particles(result.particles)
         output.write_particles(
             sim.variant, sim.receptor, result.particles, result.met_files
         )

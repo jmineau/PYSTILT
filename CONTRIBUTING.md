@@ -72,9 +72,10 @@ particle (empty unless the subclass names some), `settings()` (what a run
 records), and `realizations(n)` (realization `k` with `seed + k`); override
 those two only where the model differs. The model itself names that class as
 `config_class` and gives `version`, `data_files`, and `run`
-(`stilt.transport.TransportModel`); `run` returns the particle table PYSTILT
-keeps (`indx`, `time` in minutes, `long`, `lati`, `zagl`, `foot`, and what the
-transforms read). Add it to `stilt.transport.MODELS` under the name
+(`stilt.transport.TransportModel`); `run` returns the particle table:
+the columns of `stilt.particles.PARTICLE_SCHEMA`, `foot`, and what the
+transforms read, with a release row at `time = 0` when the model can write
+one (the particle table reference page in `docs/reference/particles.rst`). Add it to `stilt.transport.MODELS` under the name
 `model:` takes in `config.yaml`. Keep its package out of the core: the
 import contracts in `pyproject.toml` say how.
 
