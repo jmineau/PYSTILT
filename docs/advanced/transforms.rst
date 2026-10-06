@@ -189,6 +189,18 @@ are the model's fields:
      - kind: mypkg.transforms.BoundaryLayerOnly
        max_height: 1200
 
+What a transform may do
+~~~~~~~~~~~~~~~~~~~~~~~
+
+The footprint is gridded from ``foot``, so a transform changes the
+footprint through ``foot`` alone. It may add columns as well, such as a
+chemistry step's per-particle concentrations, and leave ``foot`` as it was.
+The built-in transforms only scale ``foot``. ``sim.background`` and
+``sim.transport_error`` rely on that: they apply the transforms to
+particles whose ``foot`` is 1 and read each particle's weight from the
+result. A transform that does more than scale ``foot`` makes those weights
+something other than a weight.
+
 A few rules keep custom transforms working everywhere:
 
 - **Return a copy.** ``sim.particles`` must still hold the unweighted
