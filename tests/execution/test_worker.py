@@ -9,12 +9,7 @@ from stilt.config import ProjectConfig
 from stilt.exceptions import MeteorologyError, SimulationError
 from stilt.execution import worker
 from stilt.execution.config import ExecutionConfig
-from stilt.execution.worker import (
-    SimulationResult,
-    make_footprint,
-    run_receptor,
-    run_receptors,
-)
+from stilt.execution.worker import make_footprint, run_receptor, run_receptors
 from stilt.footprint.config import FootprintConfig
 from stilt.meteorology import Met, MetConfig
 from stilt.output import Output
@@ -169,18 +164,6 @@ def _model(tmp_path, receptors, **config_kwargs) -> Project:
 
 
 # ---------------------------------------------------------------------------
-# Results
-# ---------------------------------------------------------------------------
-
-
-def test_simulation_result_is_frozen_with_optional_error():
-    result = SimulationResult("sim/hrrr", "complete")
-    assert result.error is None
-    with pytest.raises(AttributeError):
-        result.status = "failed"  # type: ignore[misc]
-
-
-# ---------------------------------------------------------------------------
 # run_particles
 # ---------------------------------------------------------------------------
 
@@ -302,9 +285,7 @@ def test_a_particles_only_variant_runs_hysplit_and_completes(
         worker, "make_footprint", lambda *a, **k: pytest.fail("no footprint")
     )
 
-    [result] = _run_receptor(project, receptor)
-
-    assert result == SimulationResult(f"{receptor.id}/hrrr", "complete")
+    assert _run_receptor(project, receptor) == []
     assert hysplit == ["hrrr"]
     assert project.simulation(str(receptor.id), "hrrr").has_particles
 
@@ -318,10 +299,7 @@ def test_variants_that_share_particles_run_hysplit_once_and_reuse_the_table(
     _fake_run_particles(monkeypatch, hysplit)
     _fake_make_footprint(monkeypatch, feet)
 
-    results = _run_receptor(project, receptor)
-
-    assert [r.status for r in results] == ["complete"] * 3
-    assert [r.sim_id.split("/")[1] for r in results] == ["hrrr", "hrrr-s2", "zi08"]
+    assert _run_receptor(project, receptor) == []
     assert hysplit == ["hrrr", "zi08"]  # hrrr-s2 shares hrrr's particles
     assert [name for name, _ in feet] == ["hrrr", "hrrr-s2", "zi08"]
     # hrrr-s2's footprint is made from the table HYSPLIT just returned for hrrr.
@@ -368,9 +346,8 @@ def test_existing_footprints_are_kept_and_empty_ones_count_as_done(
     )
     monkeypatch.setattr(worker, "make_footprint", lambda *a, **k: pytest.fail("kept"))
 
-    results = _run_receptor(project, receptor)
-
-    assert [r.status for r in results] == ["complete", "complete"]
+    assert _run_receptor(project, receptor) == []
+    assert project.simulations.incomplete().frame.empty
 
 
 def test_without_skip_existing_hysplit_runs_once_per_group_and_every_footprint_is_remade(
@@ -429,7 +406,9 @@ def test_run_receptor_takes_timeout_and_keep_scratch_from_execution(
     assert seen and all(k["timeout"] == 120 and k["keep_scratch"] for k in seen)
 
 
-def test_run_receptor_normalises_preemption(tmp_path, receptor, monkeypatch):
+def test_run_receptor_stops_on_preemption_with_what_finished_written(
+    tmp_path, receptor, monkeypatch
+):
     project = _model(tmp_path, [receptor], grid=GRID, variants=SHARED)
     hysplit: list[str] = []
 
@@ -442,14 +421,15 @@ def test_run_receptor_normalises_preemption(tmp_path, receptor, monkeypatch):
     monkeypatch.setattr(worker, "run_particles", fake)
     _fake_make_footprint(monkeypatch, [])
 
-    results = _run_receptor(project, receptor)
+    with pytest.raises(KeyboardInterrupt):
+        _run_receptor(project, receptor)
 
-    assert [(r.sim_id.split("/")[1], r.status) for r in results] == [
-        ("hrrr", "complete"),
-        ("hrrr-s2", "complete"),
-        ("zi08", "interrupted"),
-    ]
-    assert results[-1].error == "Worker preempted"
+    st = project.simulations.status()
+    assert dict(zip(st.variant, st.state, strict=True)) == {
+        "hrrr": "complete",
+        "hrrr-s2": "complete",
+        "zi08": "pending",
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -475,13 +455,12 @@ def test_a_failed_hysplit_run_fails_its_whole_group_once_and_is_recorded(
     monkeypatch.setattr(worker, "run_particles", fake)
     _fake_make_footprint(monkeypatch, [])
 
-    results = _run_receptor(project, receptor)
+    problems = _run_receptor(project, receptor)
 
     assert hysplit == ["hrrr", "zi08"]
-    assert [(r.status, r.error) for r in results] == [
-        ("failed", "HYSPLIT failed (MET_COVERAGE)."),
-        ("failed", "HYSPLIT failed (MET_COVERAGE)."),
-        ("complete", None),
+    # One line for the group whose run failed.
+    assert problems == [
+        "hrrr failed during particles (MET_COVERAGE): HYSPLIT failed (MET_COVERAGE)."
     ]
     for name in ("hrrr", "hrrr-s2"):
         failure = project.simulation(str(receptor.id), name).failure
@@ -513,12 +492,9 @@ def test_a_failed_footprint_is_the_variants_own_and_the_others_still_run(
 
     monkeypatch.setattr(worker, "make_footprint", fake)
 
-    results = _run_receptor(project, receptor)
+    problems = _run_receptor(project, receptor)
 
-    assert [(r.status, r.error) for r in results] == [
-        ("error", "bad grid"),
-        ("complete", None),
-    ]
+    assert problems == ["hrrr failed during footprint (ValueError): bad grid"]
     assert made == ["hrrr-s2"]
     failure = project.simulation(str(receptor.id), "hrrr").failure
     assert failure is not None
@@ -585,7 +561,13 @@ def test_a_failed_run_keeps_its_log_and_working_directory(
 
 
 def _fake_run_receptor(calls: list[dict], status=None):
-    """A stand-in for run_receptor: one complete hrrr result per receptor, unless *status* says otherwise."""
+    """
+    A stand-in for run_receptor that records its calls.
+
+    *status* maps a receptor to ``"interrupted"`` (it raises
+    KeyboardInterrupt, as a preempted run does) or ``"failed"`` (it reports
+    one problem); the others complete.
+    """
 
     def fake(project, receptor_id, *, compute_root, execution=None, skip_existing=True):
         calls.append(
@@ -595,47 +577,47 @@ def _fake_run_receptor(calls: list[dict], status=None):
                 "skip_existing": skip_existing,
             }
         )
-        state = (status or {}).get(receptor_id, ("complete", None))
-        return [SimulationResult(f"{receptor_id}/hrrr", state[0], error=state[1])]
+        state = (status or {}).get(receptor_id)
+        if state == "interrupted":
+            raise KeyboardInterrupt
+        return ["hrrr failed during particles (X): boom"] if state == "failed" else []
 
     return fake
 
 
-def test_run_receptors_inline_returns_results_in_order(
-    tmp_path, receptor, other_receptor, monkeypatch
+def test_run_receptors_inline_runs_in_order_and_logs_progress(
+    tmp_path, receptor, other_receptor, monkeypatch, caplog
 ):
     model = _model(tmp_path, [receptor, other_receptor])
     ids = [str(r.id) for r in (receptor, other_receptor)]
     calls: list[dict] = []
-    monkeypatch.setattr(worker, "run_receptor", _fake_run_receptor(calls))
-
-    results = run_receptors(
-        model,
-        ids,
-        compute_root=tmp_path / "scratch",
-        execution=ExecutionConfig(cpus=1),
-        skip_existing=True,
+    monkeypatch.setattr(
+        worker, "run_receptor", _fake_run_receptor(calls, {ids[0]: "failed"})
     )
 
-    assert [r.sim_id.split("/")[0] for r in results] == ids
-    assert [r.status for r in results] == ["complete", "complete"]
+    with caplog.at_level("INFO", logger="stilt.execution.worker"):
+        run_receptors(
+            model,
+            ids,
+            compute_root=tmp_path / "scratch",
+            execution=ExecutionConfig(cpus=1),
+            skip_existing=True,
+        )
+
     assert [c["receptor"] for c in calls] == ids
+    assert caplog.messages == [
+        f"[1/2] {ids[0]}: hrrr failed during particles (X): boom",
+        f"[2/2] {ids[1]} complete",
+    ]
 
 
-def test_run_receptors_empty_ids_returns_empty(tmp_path, receptor, monkeypatch):
+def test_run_receptors_empty_ids_runs_nothing(tmp_path, receptor, monkeypatch):
     model = _model(tmp_path, [receptor])
     monkeypatch.setattr(
         worker, "run_receptor", lambda *a, **k: pytest.fail("must not run")
     )
-
-    assert (
-        run_receptors(
-            model,
-            [],
-            compute_root=tmp_path / "scratch",
-            execution=ExecutionConfig(cpus=1),
-        )
-        == []
+    run_receptors(
+        model, [], compute_root=tmp_path / "scratch", execution=ExecutionConfig(cpus=1)
     )
 
 
@@ -670,36 +652,14 @@ def test_run_receptors_inline_stops_after_interrupt(
     ids = [str(r.id) for r in (receptor, other_receptor)]
     calls: list[dict] = []
     monkeypatch.setattr(
-        worker,
-        "run_receptor",
-        _fake_run_receptor(calls, {ids[0]: ("interrupted", "Worker preempted")}),
+        worker, "run_receptor", _fake_run_receptor(calls, {ids[0]: "interrupted"})
     )
 
-    results = run_receptors(
+    run_receptors(
         model, ids, compute_root=tmp_path / "scratch", execution=ExecutionConfig(cpus=1)
     )
 
-    assert [(r.sim_id.split("/")[0], r.status, r.error) for r in results] == [
-        (ids[0], "interrupted", "Worker preempted")
-    ]
     assert [c["receptor"] for c in calls] == [ids[0]]
-
-
-def test_run_receptors_inline_continues_after_failed_result(
-    tmp_path, receptor, other_receptor, monkeypatch
-):
-    model = _model(tmp_path, [receptor, other_receptor])
-    ids = [str(r.id) for r in (receptor, other_receptor)]
-    monkeypatch.setattr(
-        worker, "run_receptor", _fake_run_receptor([], {ids[0]: ("failed", "boom")})
-    )
-
-    results = run_receptors(
-        model, ids, compute_root=tmp_path / "scratch", execution=ExecutionConfig(cpus=1)
-    )
-
-    assert [r.status for r in results] == ["failed", "complete"]
-    assert results[0].error == "boom"
 
 
 # ---------------------------------------------------------------------------
@@ -760,7 +720,7 @@ def fake_pool(monkeypatch):
     return _FakePool
 
 
-def test_run_receptors_pool_rebuilds_model_and_orders_results(
+def test_run_receptors_pool_rebuilds_the_project_in_each_worker(
     tmp_path, receptor, other_receptor, monkeypatch, fake_pool
 ):
     model = _model(tmp_path, [receptor, other_receptor])
@@ -768,7 +728,7 @@ def test_run_receptors_pool_rebuilds_model_and_orders_results(
     calls: list[dict] = []
     monkeypatch.setattr(worker, "run_receptor", _fake_run_receptor(calls))
 
-    results = run_receptors(
+    run_receptors(
         model,
         ids,
         compute_root=tmp_path / "scratch",
@@ -787,42 +747,37 @@ def test_run_receptors_pool_rebuilds_model_and_orders_results(
     assert tmp_path / "scratch" == worker._POOL_COMPUTE_ROOT
     assert worker._POOL_SKIP is False
     assert ExecutionConfig(cpus=2) == worker._POOL_EXECUTION
-    # Results come back in input order even though the pool yielded reversed.
-    assert [r.sim_id.split("/")[0] for r in results] == ids
+    assert sorted(c["receptor"] for c in calls) == sorted(ids)
     assert [c["skip_existing"] for c in calls] == [False, False]
 
 
-def test_run_receptors_pool_terminates_on_interrupted_result(
+def test_run_receptors_pool_terminates_when_a_worker_is_stopped(
     tmp_path, receptor, other_receptor, monkeypatch, fake_pool
 ):
     model = _model(tmp_path, [receptor, other_receptor])
     ids = list(model.receptors["receptor"])
-
-    # The fake pool yields the *last* id first, so interrupt on the first id.
+    calls: list[dict] = []
+    # The fake pool yields the *last* id first, so it is stopped on the second.
     monkeypatch.setattr(
-        worker,
-        "run_receptor",
-        _fake_run_receptor([], {ids[0]: ("interrupted", "Worker preempted")}),
+        worker, "run_receptor", _fake_run_receptor(calls, {ids[0]: "interrupted"})
     )
 
-    results = run_receptors(
+    run_receptors(
         model, ids, compute_root=tmp_path / "scratch", execution=ExecutionConfig(cpus=2)
     )
 
     [pool] = fake_pool.instances
-    assert pool.terminated
-    assert [(r.sim_id.split("/")[0], r.status) for r in results] == [
-        (ids[0], "interrupted"),
-        (ids[1], "complete"),
-    ]
+    assert pool.terminated and not pool.closed
+    assert [c["receptor"] for c in calls] == [ids[1], ids[0]]
 
 
-def test_run_receptors_pool_keyboard_interrupt_terminates_and_returns(
+def test_run_receptors_pool_keyboard_interrupt_terminates(
     tmp_path, receptor, other_receptor, monkeypatch, fake_pool
 ):
-    """A KeyboardInterrupt in the parent loop terminates the pool, keeping results."""
+    """A KeyboardInterrupt in the parent loop terminates the pool."""
     model = _model(tmp_path, [receptor, other_receptor])
     ids = list(model.receptors["receptor"])
+    calls: list[dict] = []
 
     def imap_then_interrupt(self, func, iterable):
         items = list(iterable)
@@ -830,12 +785,12 @@ def test_run_receptors_pool_keyboard_interrupt_terminates_and_returns(
         raise KeyboardInterrupt
 
     monkeypatch.setattr(fake_pool, "imap_unordered", imap_then_interrupt)
-    monkeypatch.setattr(worker, "run_receptor", _fake_run_receptor([]))
+    monkeypatch.setattr(worker, "run_receptor", _fake_run_receptor(calls))
 
-    results = run_receptors(
+    run_receptors(
         model, ids, compute_root=tmp_path / "scratch", execution=ExecutionConfig(cpus=2)
     )
 
     [pool] = fake_pool.instances
     assert pool.terminated
-    assert [r.sim_id.split("/")[0] for r in results] == [ids[0]]
+    assert [c["receptor"] for c in calls] == [ids[0]]

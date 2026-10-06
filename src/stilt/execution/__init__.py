@@ -3,7 +3,6 @@
 from .config import ExecutionConfig
 from .runner import Batch, resolve_compute_root, run, submit
 from .worker import (
-    SimulationResult,
     make_footprint,
     run_particles,
     run_receptor,
@@ -13,7 +12,6 @@ from .worker import (
 __all__ = [
     "Batch",
     "ExecutionConfig",
-    "SimulationResult",
     "resolve_compute_root",
     "run",
     "run_receptor",

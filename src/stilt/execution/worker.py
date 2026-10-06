@@ -22,7 +22,6 @@ import shutil
 import signal
 import threading
 import traceback
-from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -78,7 +77,6 @@ def _sigterm_as_interrupt():
         signal.signal(signal.SIGTERM, previous)
 
 
-Status = Literal["complete", "failed", "error", "interrupted"]
 #: The step of a simulation that failed: its particles or its footprint.
 Step = Literal["particles", "footprint"]
 
@@ -86,35 +84,12 @@ Step = Literal["particles", "footprint"]
 _KIND: dict[Step, Kind] = {"particles": "particles", "footprint": "footprints"}
 
 
-@dataclass(frozen=True, slots=True)
-class SimulationResult:
-    """
-    Outcome of one simulation run by a worker.
-
-    Attributes
-    ----------
-    sim_id : str
-        Simulation id.
-    status : {"complete", "failed", "error", "interrupted"}
-        ``failed`` is a HYSPLIT or STILT failure (a :class:`SimulationError`),
-        ``error`` any other exception, and ``interrupted`` a stopped worker.
-        A failure is also recorded with the simulation
-        (:attr:`stilt.Simulation.failure`).
-    error : str or None
-        Error message, when the simulation did not complete.
-    """
-
-    sim_id: str
-    status: Status
-    error: str | None = None
-
-
 # -- failure records ---------------------------------------------------------
 
 
-def _failed(sim: Simulation, step: Step, error: Exception) -> SimulationResult:
+def _failed(sim: Simulation, step: Step, error: Exception) -> str:
     """
-    Record why *sim* failed at *step* and return its result.
+    Record why *sim* failed at *step*, and return one line saying so.
 
     The record goes in the logs of the folder whose result failed
     (:meth:`stilt.output.Output.record_failure`): a particles failure
@@ -144,14 +119,12 @@ def _failed(sim: Simulation, step: Step, error: Exception) -> SimulationResult:
         sim.output.record_failure(_KIND[step], sim.variant, sim.receptor.id, record)
     except Exception:
         logger.exception("simulation %s: could not record the failure", sim.id)
-    status: Status = "failed" if expected else "error"
-    return SimulationResult(str(sim.id), status, error=str(error))
+    return f"{sim.variant.name} failed during {step} ({reason}): {error}"
 
 
-def _succeeded(sim: Simulation, step: Step) -> SimulationResult:
-    """Remove *sim*'s failure record for *step*, whose result is now written, and return its result."""
+def _succeeded(sim: Simulation, step: Step) -> None:
+    """Remove *sim*'s failure record for *step*, whose result is now written."""
     sim.output.clear_failure(_KIND[step], sim.variant, sim.receptor.id)
-    return SimulationResult(str(sim.id), "complete")
 
 
 def run_particles(
@@ -165,7 +138,7 @@ def run_particles(
     """
     Run the transport model for a simulation and write its particles to the output directory.
 
-    The model the settings name (HYSPLIT) runs in *workdir*, on scratch.
+    The model the settings name (HYSPLIT) runs in *workdir*.
     The log is copied into the output directory whether the run succeeds or
     fails. The working directory is then removed, unless the run failed or
     *keep_scratch* is set, in which case it is copied under the output
@@ -178,7 +151,7 @@ def run_particles(
     met : Met
         Meteorology for the run.
     workdir : Path
-        Scratch directory to run in. Created here.
+        Directory to run in. Created here.
     keep_scratch : bool, default False
         Keep the working directory of a successful run too.
     timeout : int, optional
@@ -272,9 +245,9 @@ def run_receptor(
     compute_root: Path,
     execution: ExecutionConfig | None = None,
     skip_existing: bool = True,
-) -> list[SimulationResult]:
+) -> list[str]:
     """
-    Run every simulation of one receptor, and return their results.
+    Run every simulation of one receptor, and return what did not complete.
 
     Variants with the same transport settings share one set of particles,
     so they run as a group: HYSPLIT runs once for the group when the
@@ -283,8 +256,8 @@ def run_receptor(
     is made again whenever its particles were, so it always matches them.
     A failure is recorded with the simulation (:attr:`stilt.Simulation.failure`)
     and does not stop the others; a failed HYSPLIT run fails every variant
-    of its group. A ``KeyboardInterrupt``, such as a preempted job, gives an
-    ``interrupted`` result.
+    of its group. A ``KeyboardInterrupt``, such as a preempted job, stops
+    the receptor and is raised again.
 
     Parameters
     ----------
@@ -303,33 +276,26 @@ def run_receptor(
 
     Returns
     -------
-    list of SimulationResult
-        One per variant, in config order. After an interruption, the
-        finished ones and then one ``interrupted``.
+    list of str
+        One line per failure, empty when every simulation is complete. The
+        failures are also recorded in the output directory, which is where
+        ``project.simulations.status()`` reads them.
     """
     execution = execution if execution is not None else project.config.execution
-    sims = [project.simulation(receptor_id, variant) for variant in project.variants]
     groups: dict[str, list[Simulation]] = {}
-    for sim in sims:
+    for variant in project.variants:
+        sim = project.simulation(receptor_id, variant)
         groups.setdefault(sim.variant.particles_hash, []).append(sim)
-    results: dict[str, SimulationResult] = {}
-    try:
-        for group in groups.values():
-            results.update(
-                _run_group(
-                    project,
-                    group,
-                    compute_root=compute_root,
-                    execution=execution,
-                    skip_existing=skip_existing,
-                )
-            )
-    except KeyboardInterrupt:
-        stopped = next((s for s in sims if str(s.id) not in results), None)
-        label = str(stopped.id) if stopped is not None else receptor_id
-        done = [results[str(s.id)] for s in sims if str(s.id) in results]
-        return [*done, SimulationResult(label, "interrupted", error="Worker preempted")]
-    return [results[str(s.id)] for s in sims]
+    problems: list[str] = []
+    for group in groups.values():
+        problems += _run_group(
+            project,
+            group,
+            compute_root=compute_root,
+            execution=execution,
+            skip_existing=skip_existing,
+        )
+    return problems
 
 
 def _run_group(
@@ -339,7 +305,7 @@ def _run_group(
     compute_root: Path,
     execution: ExecutionConfig,
     skip_existing: bool,
-) -> dict[str, SimulationResult]:
+) -> list[str]:
     """Run the simulations of one receptor that share particles: HYSPLIT at most once, then each footprint."""
     first = sims[0]
     particles: pd.DataFrame | None = None
@@ -354,47 +320,32 @@ def _run_group(
                 timeout=execution.timeout,
             )
         except Exception as error:
-            failed = _failed(first, "particles", error)
-            return {
-                str(sim.id): SimulationResult(str(sim.id), failed.status, failed.error)
-                for sim in sims
-            }
+            return [_failed(first, "particles", error)]
         _succeeded(first, "particles")
 
-    results: dict[str, SimulationResult] = {}
+    problems: list[str] = []
     for sim in sims:
         if not sim.makes_footprint or (
             not rerun and skip_existing and sim.has_footprint
         ):
-            results[str(sim.id)] = SimulationResult(str(sim.id), "complete")
             continue
         try:
             if particles is None:
                 particles = first.particles  # read once for the group
             make_footprint(sim, particles)
         except Exception as error:
-            results[str(sim.id)] = _failed(sim, "footprint", error)
+            problems.append(_failed(sim, "footprint", error))
             continue
-        results[str(sim.id)] = _succeeded(sim, "footprint")
-    return results
+        _succeeded(sim, "footprint")
+    return problems
 
 
-def _log_result(
-    receptor_id: str, results: list[SimulationResult], done: int, total: int
-) -> None:
+def _log_progress(receptor_id: str, problems: list[str], done: int, total: int) -> None:
     """Log one progress line for a finished receptor: complete, or its first problem."""
-    problem = next((r for r in results if r.status != "complete"), None)
-    if problem is None:
-        logger.info("[%d/%d] %s complete", done, total, receptor_id)
+    if problems:
+        logger.info("[%d/%d] %s: %s", done, total, receptor_id, problems[0])
     else:
-        logger.info(
-            "[%d/%d] %s %s: %s", done, total, receptor_id, problem.status, problem.error
-        )
-
-
-def _interrupted(results: list[SimulationResult]) -> bool:
-    """Return whether a receptor's run was stopped."""
-    return any(r.status == "interrupted" for r in results)
+        logger.info("[%d/%d] %s complete", done, total, receptor_id)
 
 
 # -- process pool -------------------------------------------------------------
@@ -419,17 +370,21 @@ def _init_pool_worker(
     _POOL_SKIP = skip_existing
 
 
-def _pool_run(item: tuple[int, str]) -> tuple[int, list[SimulationResult]]:
-    """Run one receptor in a pool worker, returning its index and result."""
+def _pool_run(item: tuple[int, str]) -> tuple[int, list[str] | None]:
+    """Run one receptor in a pool worker, returning its index and problems, or ``None`` when it was stopped."""
     idx, receptor_id = item
     assert _POOL_PROJECT is not None and _POOL_COMPUTE_ROOT is not None
-    return idx, run_receptor(
-        _POOL_PROJECT,
-        receptor_id,
-        compute_root=_POOL_COMPUTE_ROOT,
-        execution=_POOL_EXECUTION,
-        skip_existing=_POOL_SKIP,
-    )
+    try:
+        return idx, run_receptor(
+            _POOL_PROJECT,
+            receptor_id,
+            compute_root=_POOL_COMPUTE_ROOT,
+            execution=_POOL_EXECUTION,
+            skip_existing=_POOL_SKIP,
+        )
+    except KeyboardInterrupt:
+        # A pool task must return; the parent stops the pool when it sees this.
+        return idx, None
 
 
 def run_receptors(
@@ -439,13 +394,14 @@ def run_receptors(
     compute_root: Path,
     execution: ExecutionConfig | None = None,
     skip_existing: bool = True,
-) -> list[SimulationResult]:
+) -> None:
     """
     Run a list of receptors, in this process or in a process pool.
 
     Pool workers open the project again from its directory. A SIGTERM,
-    such as Slurm preemption or the end of the job's time limit, stops the batch with an ``interrupted``
-    result.
+    such as Slurm preemption or the end of the job's time limit, stops the
+    batch. What finished is in the output directory, with a failure record
+    for each simulation that failed.
 
     Parameters
     ----------
@@ -462,56 +418,52 @@ def run_receptors(
         to each run. Defaults to the project's.
     skip_existing : bool, default True
         Keep particles and footprints that already exist.
-
-    Returns
-    -------
-    list of SimulationResult
-        The results of every simulation, receptor by receptor in input
-        order. After an interruption, only the receptors that finished.
     """
     if not receptor_ids:
-        return []
+        return
     execution = execution if execution is not None else project.config.execution
+    total = len(receptor_ids)
 
     if execution.cpus <= 1:
-        results: list[SimulationResult] = []
         with _sigterm_as_interrupt():
             for i, receptor_id in enumerate(receptor_ids, 1):
-                done = run_receptor(
-                    project,
-                    receptor_id,
-                    compute_root=compute_root,
-                    execution=execution,
-                    skip_existing=skip_existing,
-                )
-                results.extend(done)
-                _log_result(receptor_id, done, i, len(receptor_ids))
-                if _interrupted(done):
-                    break
-        return results
+                try:
+                    problems = run_receptor(
+                        project,
+                        receptor_id,
+                        compute_root=compute_root,
+                        execution=execution,
+                        skip_existing=skip_existing,
+                    )
+                except KeyboardInterrupt:
+                    logger.info("stopped at %s; the rest did not run", receptor_id)
+                    return
+                _log_progress(receptor_id, problems, i, total)
+        return
 
-    ordered: dict[int, list[SimulationResult]] = {}
     pool = multiprocessing.Pool(
         execution.cpus,
         initializer=_init_pool_worker,
         initargs=(str(project.directory), str(compute_root), execution, skip_existing),
     )
+    done = 0
     with _sigterm_as_interrupt():
         try:
-            for idx, done in pool.imap_unordered(
+            for idx, problems in pool.imap_unordered(
                 _pool_run, list(enumerate(receptor_ids))
             ):
-                ordered[idx] = done
-                _log_result(receptor_ids[idx], done, len(ordered), len(receptor_ids))
-                if _interrupted(done):
+                if problems is None:
+                    logger.info("stopped at %s", receptor_ids[idx])
                     pool.terminate()
                     break
+                done += 1
+                _log_progress(receptor_ids[idx], problems, done, total)
             else:
                 # Normal completion: let workers exit cleanly. terminate() would
                 # SIGTERM idle workers, whose handler raises KeyboardInterrupt.
                 pool.close()
         except KeyboardInterrupt:
-            # Preempted or Ctrl-C: stop the workers and hand back what finished.
+            # Preempted or Ctrl-C: stop the workers; what finished is written.
             pool.terminate()
         except SystemExit:
             # A requeued Slurm task exits here; its workers must not outlive it.
@@ -519,11 +471,9 @@ def run_receptors(
             raise
         finally:
             pool.join()
-    return [result for i in sorted(ordered) for result in ordered[i]]
 
 
 __all__ = [
-    "SimulationResult",
     "make_footprint",
     "run_particles",
     "run_receptor",

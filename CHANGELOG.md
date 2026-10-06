@@ -8,6 +8,14 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- `project.run()` and `stilt.execution.run` return the status table of
+  the simulations they ran, the rows of `project.simulations.status()`
+  (breaking). `SimulationResult` is gone: a worker records each failure in
+  the output directory, and the table reads them. `run_receptor` returns
+  one line per failure for the progress log, `run_receptors` and
+  `Batch` return nothing, and a stopped receptor raises
+  `KeyboardInterrupt` (#150).
+
 - `Output` has no folder classes (breaking). `stilt.output.Particles` and
   `Footprints` are gone, with `Output.particles()`, `footprints()`,
   `find_particles()`, `find_footprints()`, `particle_sets()`, and

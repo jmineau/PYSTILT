@@ -315,7 +315,7 @@ def test_a_project_without_receptors_is_empty(tmp_path):
     assert list(project.receptors.columns) == ["receptor", "time", "kind", "location"]
     assert len(project.simulations) == 0
     assert project.simulations.status().empty
-    assert project.run() == []
+    assert project.run().empty
 
 
 def test_add_receptors_appends_only_new_ones_and_refreshes_the_views(
@@ -893,7 +893,6 @@ def ran(monkeypatch):
 
     def run_receptors(project, receptor_ids, **kwargs):
         calls.append({"project": project, "ids": list(receptor_ids), **kwargs})
-        return [f"result-{rid}" for rid in receptor_ids]
 
     monkeypatch.setattr("stilt.execution.worker.run_receptors", run_receptors)
     return calls
@@ -906,9 +905,10 @@ def test_run_hands_the_incomplete_receptors_to_the_workers(tmp_path, ran):
     )
     _write_trajectory(project, done)
 
-    results = project.run()
+    status = project.run()
 
-    assert results == [f"result-{todo.id}"]
+    assert list(status["receptor"]) == [todo.id]  # what ran, and where it stands
+    assert list(status["state"]) == ["pending"]  # the fake ran nothing
     [call] = ran
     assert call["ids"] == [todo.id]
     assert call["project"] is project
@@ -952,7 +952,7 @@ def test_run_with_nothing_to_do_starts_nothing(tmp_path, ran, point_receptor):
     _write_trajectory(project, point_receptor)
     _write_footprint(project, point_receptor, empty=True)
 
-    assert project.run() == []
+    assert project.run().empty
     assert ran == []
 
 
@@ -963,7 +963,7 @@ def test_run_after_adding_a_variant_runs_the_receptor_again(
     project = _project(tmp_path, [point_receptor])
     _write_trajectory(project, point_receptor)
     _write_footprint(project, point_receptor)
-    assert project.run() == []
+    assert project.run().empty
 
     # The user adds a variant to config.yaml.
     _config(tmp_path, variants={"hrrr": {}, "zi08": {"ziscale": 0.8}}).to_yaml(
@@ -1002,28 +1002,33 @@ def test_submit_needs_slurm(tmp_path, point_receptor):
 
 def test_run_on_slurm_submits_and_waits(tmp_path, monkeypatch, point_receptor):
     project = _project(tmp_path, [point_receptor], execution={"backend": "slurm"})
+    waited = []
 
     class _Job:
         def wait(self):
-            pass
+            waited.append(self)
 
         def exception(self):
             return None
 
-        def result(self):
-            return ["done"]
-
     submitted = []
 
-    def submit(project, **kwargs):
-        submitted.append(kwargs)
+    def submit(project, pending, execution, skip_existing, compute_root):
+        submitted.append(
+            {"pending": pending, "execution": execution, "compute_root": compute_root}
+        )
         return [_Job(), _Job()]
 
-    monkeypatch.setattr("stilt.execution.runner.submit", submit)
+    monkeypatch.setattr("stilt.execution.runner._submit", submit)
 
-    assert project.run(compute_root="/s") == ["done", "done"]
+    status = project.run(compute_root="/s")
+    assert len(waited) == 2
+    assert submitted[0]["pending"] == [point_receptor.id]
     assert submitted[0]["compute_root"] == "/s"
     assert submitted[0]["execution"].backend == "slurm"
+    # The status of what was submitted; nothing ran here.
+    assert list(status["receptor"]) == [point_receptor.id]
+    assert list(status["state"]) == ["pending"]
 
 
 def test_receptors_are_built_only_when_asked_for(tmp_path, monkeypatch):
