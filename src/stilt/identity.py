@@ -73,7 +73,7 @@ def run_settings(
     level, beside ``met``, ``model``, and ``realization``.
     """
     data = dict(transport.settings())
-    data["met"] = met.model_dump(mode="json", exclude=set(MetConfig.UNRECORDED))
+    data["met"] = met.settings()
     record = model.model_dump(mode="json")
     if record.get("data_files") is None:
         # Runs with the model's own data files keep the hash they had

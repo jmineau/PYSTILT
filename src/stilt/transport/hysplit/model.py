@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import datetime as dt
 import hashlib
+import tempfile
 from importlib.resources import files as pkg_files
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from stilt.exceptions import SimulationError
+from stilt.meteorology import Met, MetConfig
 from stilt.transport import ModelRun
 
 from .config import HysplitConfig
@@ -23,7 +26,6 @@ from .driver import (
 from .failures import FailureReason
 
 if TYPE_CHECKING:
-    from stilt.meteorology import Met
     from stilt.receptors import Receptor
 
 
@@ -102,40 +104,60 @@ class HysplitModel:
         self,
         receptor: Receptor,
         config: HysplitConfig,
-        met: Met,
-        workdir: Path,
+        met: MetConfig,
+        window: tuple[dt.datetime, dt.datetime],
+        workdir: Path | None = None,
         timeout: int | None = None,
     ) -> ModelRun:
         """
         Run HYSPLIT for one receptor in *workdir* and return its particles.
 
-        HYSPLIT's output goes to ``stilt.log`` in *workdir*. The release
-        heights and the near-field correction are added by the caller, as
-        for any model (:func:`stilt.transport.run_model`).
+        HYSPLIT finds the met files that cover *window* (and, for a backward
+        run, the hour after the release, which it interpolates), cropped
+        when the met is. Its output is ``stilt.log`` in *workdir*, returned
+        as the run's log. Without *workdir* it runs in a temporary
+        directory. The release heights and the near-field correction are
+        added by the caller, as for any model
+        (:func:`stilt.transport.run_model`).
 
         Raises
         ------
         SimulationError
-            With ``reason`` ``TIMEOUT`` when the run exceeded *timeout*
-            seconds; the :class:`FailureReason` of a known failure message
-            in the log; ``MET_TRUNCATED`` when a met file was cut short and
-            the particles stop before the end of the run; or
-            ``NO_PARTICLE_DATA`` when HYSPLIT wrote no particle file.
+            With HYSPLIT's log in ``log``, and ``reason`` ``TIMEOUT`` when
+            the run exceeded *timeout* seconds; the :class:`FailureReason`
+            of a known failure message in the log; ``MET_TRUNCATED`` when a
+            met file was cut short and the particles stop before the end of
+            the run; or ``NO_PARTICLE_DATA`` when HYSPLIT wrote no particle
+            file.
         """
-        source = met.required_files(r_time=receptor.time, n_hours=config.n_hours)
-        write_inputs(workdir, receptor, config, met.readable(source))
-        _run_hycs_std(workdir, timeout)
-        path = workdir / PARTICLE_STILT_FILE
-        if not path.exists():
-            raise SimulationError(
-                f"HYSPLIT wrote no {PARTICLE_STILT_FILE}.",
-                reason=FailureReason.NO_PARTICLE_DATA,
-            )
-        particles = read_particle_dat(path, config.varsiwant)
-        _check_met_reached_end(particles, workdir / LOG_FILE, config)
+        if workdir is None:
+            with tempfile.TemporaryDirectory(prefix="stilt-") as tmp:
+                return self.run(receptor, config, met, window, Path(tmp), timeout)
+        files = Met("met", met)
+        source = files.files_for(window, hour_after=config.n_hours < 0)
+        write_inputs(workdir, receptor, config, files.readable(source))
+        try:
+            _run_hycs_std(workdir, timeout)
+            path = workdir / PARTICLE_STILT_FILE
+            if not path.exists():
+                raise SimulationError(
+                    f"HYSPLIT wrote no {PARTICLE_STILT_FILE}.",
+                    reason=FailureReason.NO_PARTICLE_DATA,
+                )
+            particles = read_particle_dat(path, config.varsiwant)
+            _check_met_reached_end(particles, workdir / LOG_FILE, config)
+        except SimulationError as error:
+            error.log = _read_log(workdir)
+            raise
         # The record names the source files; the crop settings are in the
         # run's settings.
-        return ModelRun(particles=particles, met_files=source)
+        return ModelRun(particles=particles, log=_read_log(workdir), met_files=source)
+
+
+def _read_log(workdir: Path) -> str:
+    """Return HYSPLIT's log in *workdir*, or an empty string when it wrote none."""
+    path = workdir / LOG_FILE
+    return path.read_text(encoding="utf-8", errors="replace") if path.exists() else ""
 
 
 __all__ = ["HysplitModel", "hysplit_version"]

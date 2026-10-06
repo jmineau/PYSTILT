@@ -8,6 +8,21 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- The transport model boundary is `run(receptor, config, met, window,
+  workdir=None, timeout=None) -> ModelRun(particles, log, met_files)`
+  (breaking). A model gets the `MetConfig` and the `(start, end)` the run
+  covers (`stilt.meteorology.run_window`), and finds its own met: HYSPLIT
+  builds its `Met` and asks `Met.files_for(window, hour_after=...)`, of
+  which `required_files(r_time, n_hours)` is now a shorthand. The run
+  returns its log as text, and a failed run raises `SimulationError` with
+  `log`, so the worker no longer reads `stilt.log` from the working
+  directory. `stilt.transport.run_model` runs a model and applies the core
+  steps, for the worker and `run_trajectories` alike. `project.mets` holds
+  `MetConfig`s with absolute directories, where it held `Met`s (#150).
+- `MetConfig` has `kind: files`, how the meteorology is stored, so another
+  kind can be added later. It is left out of a run's record while it is
+  `files`, so no hash changes (#150).
+
 - The release heights and the near-field correction are PYSTILT's steps,
   applied by the worker to any transport model's particles (breaking):
   `stilt.particles.add_release_heights(particles, receptor)` and

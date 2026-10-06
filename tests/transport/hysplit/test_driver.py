@@ -174,7 +174,10 @@ def _write_particle_dat(path: Path, rows: list[list[float]]) -> None:
 class _FakeMet:
     """A met that needs no files."""
 
-    def required_files(self, **kwargs):
+    def __init__(self, *args):
+        pass
+
+    def files_for(self, window, hour_after=False):
         return []
 
     def readable(self, files):
@@ -302,6 +305,7 @@ def _fake_hysplit(monkeypatch, *, log: str, rows: list[list[float]] | None) -> l
             _write_particle_dat(workdir / "PARTICLE_STILT.DAT", rows)
 
     monkeypatch.setattr(model, "_run_hycs_std", fake_run)
+    monkeypatch.setattr(model, "Met", _FakeMet)
     return calls
 
 
@@ -311,8 +315,14 @@ def _ending_at(minute: int) -> list[list[float]]:
 
 
 def _run(tmp_path, receptor, config=None):
+    from stilt.meteorology import MetConfig, run_window
+
+    config = config or _config()
+    met = MetConfig(directory=tmp_path, file_format="%Y%m%d_%H", file_tres="1h")
+    window = run_window(receptor.time, config.n_hours)
+    (tmp_path / "run").mkdir(exist_ok=True)
     return HysplitModel().run(
-        receptor, config or _config(), _FakeMet(), tmp_path / "run", timeout=5
+        receptor, config, met, window, tmp_path / "run", timeout=5
     )
 
 

@@ -31,7 +31,7 @@ import xarray as xr
 from stilt.exceptions import EmptyFootprint, SimulationError
 from stilt.execution.config import ExecutionConfig
 from stilt.footprint import calc_footprint
-from stilt.meteorology import Met
+from stilt.meteorology import MetConfig
 from stilt.output import Kind
 from stilt.simulation import Simulation
 from stilt.transport import run_model
@@ -130,7 +130,7 @@ def _succeeded(sim: Simulation, step: Step) -> None:
 def run_particles(
     sim: Simulation,
     *,
-    met: Met,
+    met: MetConfig,
     workdir: Path,
     keep_scratch: bool = False,
     timeout: int | None = None,
@@ -138,18 +138,18 @@ def run_particles(
     """
     Run the transport model for a simulation and write its particles to the output directory.
 
-    The model the settings name (HYSPLIT) runs in *workdir*.
-    The log is copied into the output directory whether the run succeeds or
-    fails. The working directory is then removed, unless the run failed or
-    *keep_scratch* is set, in which case it is copied under the output
-    directory's ``scratch/`` first.
+    The model the settings name (HYSPLIT) runs in *workdir*
+    (:func:`stilt.transport.run_model`). Its log is written to the output
+    directory whether the run succeeds or fails. The working directory is
+    then removed, unless the run failed or *keep_scratch* is set, in which
+    case it is copied under the output directory's ``scratch/`` first.
 
     Parameters
     ----------
     sim : Simulation
         What to run.
-    met : Met
-        Meteorology for the run.
+    met : MetConfig
+        Meteorology for the run, with absolute directories.
     workdir : Path
         Directory to run in. Created here.
     keep_scratch : bool, default False
@@ -175,7 +175,7 @@ def run_particles(
     # this simulation's directory behind; it is PYSTILT's own, so clear it.
     shutil.rmtree(workdir, ignore_errors=True)
     workdir.mkdir(parents=True)
-    log = workdir / "stilt.log"
+    log = ""
     succeeded = False
     try:
         result = run_model(
@@ -186,14 +186,18 @@ def run_particles(
             workdir,
             timeout=timeout,
         )
+        log = result.log
         output.write_particles(
             sim.variant, sim.receptor, result.particles, result.met_files
         )
         succeeded = True
         return result.particles
+    except SimulationError as error:
+        log = error.log
+        raise
     finally:
-        if log.exists():
-            output.write_log(sim.variant, rid, log.read_text())
+        if log:
+            output.write_log(sim.variant, rid, log)
         # An empty directory is not kept: a run that failed before writing
         # anything, such as on missing meteorology, has nothing to look at.
         if (keep_scratch or not succeeded) and any(workdir.iterdir()):

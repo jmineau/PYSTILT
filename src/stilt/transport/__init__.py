@@ -10,10 +10,10 @@ record, so a second model needs no change to the worker.
 
 from __future__ import annotations
 
+import datetime as dt
 import logging
-import tempfile
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Protocol, Self
 
@@ -21,7 +21,7 @@ import pandas as pd
 from pydantic import BaseModel, ConfigDict, Field
 
 from stilt.exceptions import SimulationError
-from stilt.meteorology import Met, MetConfig
+from stilt.meteorology import MetConfig, run_window
 from stilt.particles import (
     HNF_PLUME_COLUMNS,
     add_release_heights,
@@ -43,14 +43,20 @@ class ModelRun:
     Attributes
     ----------
     particles : pandas.DataFrame
-        The particle table, one row per particle per time step.
+        The particle table, one row per particle per time step
+        (:data:`stilt.particles.PARTICLE_SCHEMA`).
+    log : str
+        The model's log of the run, kept with the particles
+        (:attr:`stilt.Simulation.log`). Empty for a model that writes none.
     met_files : list of Path
-        The meteorology files the run read, for the record kept with the
-        particles.
+        The meteorology files the run read, recorded in the particle file
+        (:attr:`stilt.Simulation.met_files`). Empty for a model that reads
+        no files.
     """
 
     particles: pd.DataFrame
-    met_files: list[Path]
+    log: str = ""
+    met_files: list[Path] = field(default_factory=list)
 
 
 class ModelInfo(BaseModel):
@@ -182,12 +188,17 @@ class TransportModel(Protocol):
         self,
         receptor: Receptor,
         config: Any,
-        met: Met,
-        workdir: Path,
+        met: MetConfig,
+        window: tuple[dt.datetime, dt.datetime],
+        workdir: Path | None = None,
         timeout: int | None = None,
     ) -> ModelRun:
         """
         Run one receptor and return its particles.
+
+        The particles are the model's own: PYSTILT checks them and adds the
+        release heights and the near-field correction afterwards
+        (:func:`run_model`).
 
         Parameters
         ----------
@@ -195,14 +206,22 @@ class TransportModel(Protocol):
             Where and when particles are released.
         config : TransportConfig
             The model's config, of its ``config_class``.
-        met : Met
-            The meteorology to read.
-        workdir : Path
-            Scratch directory for the run's files. It exists and is empty.
-            The caller discards it afterwards and keeps ``stilt.log`` from it
-            when the model writes one.
+        met : MetConfig
+            The meteorology. Its directories are absolute.
+        window : tuple of datetime
+            The time the run covers, ``(start, end)`` in time order
+            (:func:`stilt.meteorology.run_window`).
+        workdir : Path, optional
+            An empty directory for the run's files, kept when the run fails.
+            ``None`` for a model that needs one to make its own.
         timeout : int, optional
-            Time limit in seconds. ``None`` waits indefinitely.
+            Time limit in seconds, for a model that runs a program.
+            ``None`` waits indefinitely.
+
+        Raises
+        ------
+        SimulationError
+            When the run fails, with the model's log in ``log``.
         """
         ...
 
@@ -240,8 +259,8 @@ def run_model(
     name: str,
     receptor: Receptor,
     config: TransportConfig,
-    met: Met,
-    workdir: Path,
+    met: MetConfig,
+    workdir: Path | None = None,
     timeout: int | None = None,
 ) -> ModelRun:
     """
@@ -255,12 +274,29 @@ def run_model(
     the same for any model. A model whose particles lack the columns the
     correction reads gets none, and the run's log says so.
 
+    Parameters
+    ----------
+    name : str
+        The transport model (:data:`MODELS`).
+    receptor : Receptor
+        Where and when particles are released.
+    config : TransportConfig
+        The model's config.
+    met : MetConfig
+        The meteorology, with absolute directories.
+    workdir : Path, optional
+        An empty directory for the run's files. ``None`` lets the model make
+        its own.
+    timeout : int, optional
+        Time limit in seconds.
+
     Raises
     ------
     SimulationError
         If the run fails, or the model wrote no particles.
     """
-    run = get_model(name).run(receptor, config, met, workdir, timeout=timeout)
+    window = run_window(receptor.time, config.n_hours)
+    run = get_model(name).run(receptor, config, met, window, workdir, timeout=timeout)
     if run.particles.empty:
         raise SimulationError(
             "The transport model wrote no particles.", reason="NO_PARTICLE_DATA"
@@ -270,13 +306,10 @@ def run_model(
     if config.hnf_plume:
         missing = sorted(set(HNF_PLUME_COLUMNS) - set(particles.columns))
         if missing:
-            logger.warning(
-                "%s: near-field correction skipped, no %s columns",
-                receptor.id,
-                ", ".join(missing),
-            )
-        else:
-            particles = correct_near_field(particles, receptor, config.veght)
+            note = f"near-field correction skipped: no {', '.join(missing)} columns"
+            logger.warning("%s: %s", receptor.id, note)
+            return replace(run, particles=particles, log=f"{run.log}{note}\n")
+        particles = correct_near_field(particles, receptor, config.veght)
     return replace(run, particles=particles)
 
 
@@ -340,20 +373,26 @@ def run_trajectories(
     >>> particles = stilt.run_trajectories(receptor, met, n_hours=-24, numpar=200)
     """
     config = get_model(model).config_class(**params)
-    meteorology = Met("met", MetConfig.model_validate(met))
-    if workdir is None:
-        with tempfile.TemporaryDirectory(prefix="stilt-") as tmp:
-            return run_model(
-                model, receptor, config, meteorology, Path(tmp), timeout
-            ).particles
-    workdir = Path(workdir)
-    if workdir.exists() and any(workdir.iterdir()):
-        raise ValueError(
-            f"{workdir} is not empty. The model would read files left from "
-            "another run; give an empty or new directory."
-        )
-    workdir.mkdir(parents=True, exist_ok=True)
-    return run_model(model, receptor, config, meteorology, workdir, timeout).particles
+    met_config = _absolute_dirs(MetConfig.model_validate(met))
+    if workdir is not None:
+        workdir = Path(workdir)
+        if workdir.exists() and any(workdir.iterdir()):
+            raise ValueError(
+                f"{workdir} is not empty. The model would read files left from "
+                "another run; give an empty or new directory."
+            )
+        workdir.mkdir(parents=True, exist_ok=True)
+    return run_model(model, receptor, config, met_config, workdir, timeout).particles
+
+
+def _absolute_dirs(met: MetConfig) -> MetConfig:
+    """Return *met* with its directories absolute, starting from the working directory."""
+    paths = {
+        name: value.expanduser().resolve()
+        for name in ("directory", "subgrid_dir")
+        if (value := getattr(met, name)) is not None
+    }
+    return met.model_copy(update=paths)
 
 
 __all__ = [

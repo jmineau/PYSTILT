@@ -18,10 +18,11 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from stilt.meteorology import Met, MetConfig
+from stilt.meteorology import MetConfig
 from stilt.receptors import ColumnReceptor
 from stilt.transforms import PressureWeighting, particle_pwf, release_coordinate
-from stilt.transport.hysplit import HysplitConfig, HysplitModel
+from stilt.transport import run_model
+from stilt.transport.hysplit import HysplitConfig
 
 from .conftest import integration
 from .fixtures.r_stilt_reference import (
@@ -49,13 +50,11 @@ def _column_trajectory(
         time=time, longitude=WBB_LON, latitude=WBB_LAT, bottom=0.0, top=top
     )
     params = HysplitConfig(n_hours=-2, numpar=numpar, hnf_plume=False)
-    met = Met(
-        "hrrr",
-        MetConfig(
-            directory=met_dir, file_format=REFERENCE_MET_FILE_FORMAT, file_tres="6h"
-        ),
+    met = MetConfig(
+        directory=met_dir, file_format=REFERENCE_MET_FILE_FORMAT, file_tres="6h"
     )
-    run = HysplitModel().run(receptor, params, met, Path(tmp_path) / label, timeout=900)
+    # run_model adds the release heights that the pressure weighting reads.
+    run = run_model("hysplit", receptor, params, met, Path(tmp_path) / label, 900)
     return receptor, run.particles
 
 

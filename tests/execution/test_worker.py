@@ -179,7 +179,7 @@ def test_run_particles_starts_in_an_empty_directory(
     class _Model:
         name = "hysplit"
 
-        def run(self, receptor, params, met, workdir, timeout=None):
+        def run(self, receptor, params, met, window, workdir=None, timeout=None):
             seen.append(sorted(p.name for p in workdir.iterdir()))
             raise RuntimeError("stop here")
 
@@ -195,7 +195,7 @@ def test_run_particles_keeps_no_empty_scratch_copy(sim, met, compute_root, monke
     class _Model:
         name = "hysplit"
 
-        def run(self, receptor, params, met, workdir, timeout=None):
+        def run(self, receptor, params, met, window, workdir=None, timeout=None):
             raise MeteorologyError("Insufficient number of meteorological files found.")
 
     monkeypatch.setattr("stilt.transport.get_model", lambda name: _Model())
@@ -215,7 +215,7 @@ def test_run_particles_without_particles_is_a_simulation_error(
     class _Model:
         name = "hysplit"
 
-        def run(self, receptor, params, met, workdir, timeout=None):
+        def run(self, receptor, params, met, window, workdir=None, timeout=None):
             return ModelRun(particles=pd.DataFrame(), met_files=[])
 
     monkeypatch.setattr("stilt.transport.get_model", lambda name: _Model())
@@ -539,12 +539,12 @@ def test_a_failed_run_keeps_its_log_and_working_directory(
     class _Model:
         name = "hysplit"
 
-        def run(self, receptor, params, met, workdir, timeout=None):
-            (workdir / "stilt.log").write_text("hycs_std said something\n")
+        def run(self, receptor, params, met, window, workdir=None, timeout=None):
             (workdir / "CONTROL").write_text("...")
             raise SimulationError(
                 "HYSPLIT failed (FORTRAN_RUNTIME_ERROR).",
                 reason="FORTRAN_RUNTIME_ERROR",
+                log="hycs_std said something\n",
             )
 
     monkeypatch.setattr("stilt.transport.get_model", lambda name: _Model())
