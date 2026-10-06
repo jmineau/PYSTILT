@@ -16,9 +16,8 @@ from stilt.particles import particles_metadata
 from stilt.simulation import Simulation
 from stilt.spatial import Grid
 from stilt.transforms import FirstOrderLifetime, transform_kind
-from stilt.transport import ModelInfo
-from stilt.transport.hysplit import HysplitConfig
 
+from .fixtures.factories import make_variant
 from .fixtures.particles import finished
 
 GRID = Grid(xmin=-114.0, xmax=-111.0, ymin=39.0, ymax=42.0, xres=0.1, yres=0.1)
@@ -35,16 +34,11 @@ def _variant(
     tmp_path, name="hrrr", footprint: FootprintConfig | None = None, **overrides
 ) -> Variant:
     """A resolved variant with the test transport defaults and an optional footprint."""
-    params = HysplitConfig(
-        **{"n_hours": -24, "numpar": 10, "hnf_plume": False, **overrides}
-    )
-    return Variant(
-        name=name,
-        met="hrrr",
+    return make_variant(
+        name,
         met_config=_met_config(tmp_path),
-        transport=params,
-        model=ModelInfo(version="v5.1.0"),
         footprint=footprint,
+        **{"numpar": 10, "hnf_plume": False, **overrides},
     )
 
 

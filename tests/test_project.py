@@ -19,6 +19,7 @@ from stilt.receptors import PointReceptor
 from stilt.spatial import Grid
 from stilt.transport.hysplit.driver import winderrtf
 
+from .fixtures.factories import make_receptor
 from .fixtures.footprints import as_footprint
 from .fixtures.particles import finished
 
@@ -61,13 +62,7 @@ def _project(tmp_path, receptors=None, name="proj", **overrides) -> Project:
 
 
 def _receptor(hour: int, longitude: float = -111.85, **attrs) -> PointReceptor:
-    return PointReceptor(
-        time=dt.datetime(2023, 1, 1, hour),
-        longitude=longitude,
-        latitude=40.77,
-        altitude=5.0,
-        attrs=attrs,
-    )
+    return make_receptor(dt.datetime(2023, 1, 1, hour), longitude, **attrs)
 
 
 def _particles() -> pd.DataFrame:

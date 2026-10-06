@@ -358,6 +358,7 @@ def test_forward_hnf_foot_intentionally_differs_from_r(
     assert py_foot[first.to_numpy()].mean() > r_foot[first.to_numpy()].mean()
 
 
+@integration
 def test_trajectory_matches_r(
     scenario_outputs: dict,
     r_stilt_dir: Path,

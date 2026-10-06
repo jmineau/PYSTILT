@@ -17,8 +17,10 @@ from stilt.project import Project
 from stilt.receptors import PointReceptor, Receptor
 from stilt.simulation import Simulation
 from stilt.spatial import Grid
-from stilt.transport import ModelInfo, ModelRun
+from stilt.transport import ModelRun
 from stilt.transport.hysplit import FailureReason, HysplitConfig
+
+from ..fixtures.factories import make_variant
 
 # ---------------------------------------------------------------------------
 # Fixtures and helpers
@@ -70,13 +72,8 @@ def output(tmp_path) -> Output:
 
 
 def _variant(params, met_config, *, name="hrrr", footprint=None) -> Variant:
-    return Variant(
-        name=name,
-        met="hrrr",
-        met_config=met_config,
-        transport=params,
-        model=ModelInfo(version="v5.1.0"),
-        footprint=footprint,
+    return make_variant(
+        name, transport=params, met_config=met_config, footprint=footprint
     )
 
 

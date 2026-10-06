@@ -197,7 +197,7 @@ src/stilt/
                      its log (failures.py), and the bundled binaries (bin/)
                      and data tables (data/)
 
-tests/               pytest; markers `integration` and `fidelity`. Folders
+tests/               pytest; markers `integration`, `fidelity`, and `r_only`. Folders
                      follow src/stilt (execution/, observations/,
                      transport/hysplit/); r_stilt/ holds the STILT-R comparisons
 docs/                Sphinx (pydata-sphinx-theme)
@@ -415,6 +415,9 @@ Plain `pytest` runs the unit tests. Two opt-in markers:
   blocks it needs into the ignored `tests/met_cache/`. Once downloaded, set
   `STILT_TEST_MET_DIR=tests/met_cache`; without either variable every
   integration test is skipped.
+- `-m r_only`: the STILT-R comparisons that need R but no met files or
+  HYSPLIT (the synthetic footprint tests). Fast; needs `STILT_R_DIR` and
+  `Rscript`. They are part of `fidelity` too.
 - `-m fidelity`: live comparison against STILT-R. Slow; needs `STILT_R_DIR`
   pointing at a STILT-R checkout and `Rscript` on `PATH`.
 

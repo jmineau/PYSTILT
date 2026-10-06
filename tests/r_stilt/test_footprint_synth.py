@@ -53,7 +53,9 @@ from stilt.spatial import Grid, _grid_cell_starts
 
 from ..fixtures.particles import point_at
 
-pytestmark = [pytest.mark.fidelity]
+# The fast half of fidelity: hand-built particles, no met and no HYSPLIT, so
+# `-m r_only` runs it anywhere R is installed.
+pytestmark = [pytest.mark.fidelity, pytest.mark.r_only]
 
 # ---------------------------------------------------------------------------
 # Shared constants

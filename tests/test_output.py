@@ -19,9 +19,8 @@ from stilt.output import Output
 from stilt.particles import particles_metadata, write_particles
 from stilt.receptors import PointReceptor
 from stilt.spatial import Grid
-from stilt.transport import ModelInfo
-from stilt.transport.hysplit import HysplitConfig
 
+from .fixtures.factories import make_receptor, make_variant
 from .fixtures.footprints import as_footprint
 
 # ---------------------------------------------------------------------------
@@ -36,14 +35,7 @@ def _variant(
     name: str = "hrrr", footprint: FootprintConfig | None = None, **overrides
 ) -> Variant:
     """A resolved variant for the tests; *overrides* change the transport fields."""
-    return Variant(
-        name=name,
-        met="hrrr",
-        met_config=MET,
-        transport=HysplitConfig(**{"n_hours": -24, "numpar": 100, **overrides}),
-        model=ModelInfo(version="v5.1.0"),
-        footprint=footprint,
-    )
+    return make_variant(name, met_config=MET, footprint=footprint, **overrides)
 
 
 VARIANT = _variant()
@@ -52,12 +44,7 @@ FEET = _variant(footprint=FootprintConfig(grid=GRID))
 
 
 def _receptor(hour: int = 12, day: int = 15) -> PointReceptor:
-    return PointReceptor(
-        time=dt.datetime(2024, 7, day, hour),
-        longitude=-111.85,
-        latitude=40.77,
-        altitude=5.0,
-    )
+    return make_receptor(dt.datetime(2024, 7, day, hour))
 
 
 def _trajectories(receptor: PointReceptor, n: int = 50) -> pd.DataFrame:
