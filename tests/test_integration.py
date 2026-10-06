@@ -433,9 +433,9 @@ def test_error_variant(tmp_path, wbb_receptor, traj_only_config):
     assert len(main_traj) > 0 and len(error_traj) > 0
     assert set(main_traj.columns) == set(error_traj.columns)
     assert (
-        not main_traj["long"]
+        not main_traj["lon"]
         .reset_index(drop=True)
-        .equals(error_traj["long"].reset_index(drop=True))
+        .equals(error_traj["lon"].reset_index(drop=True))
     ), "Error trajectory identical to main — wind perturbation had no effect"
     settings = particles_metadata(err.particles_path).settings
     assert winderrtf(transport_from_settings(settings)) == 1
@@ -461,8 +461,8 @@ def test_error_realizations(tmp_path, wbb_receptor, traj_only_config):
 
     particles = model.particles(sims)
     e0, e1 = (particles[particles.realization == k] for k in (0, 1))
-    s0 = e0.groupby("indx")["foot"].sum()
-    s1 = e1.groupby("indx")["foot"].sum().reindex(s0.index)
+    s0 = e0.groupby("particle")["foot"].sum()
+    s1 = e1.groupby("particle")["foot"].sum().reindex(s0.index)
     assert not np.allclose(s0.to_numpy(), s1.to_numpy())
 
     # Resume: drop one realization; only it reruns.
@@ -503,11 +503,11 @@ def test_seeded_error_realizations_differ_and_reproduce(
     sims = a.simulations
     particles = a.particles(sims[sims.variant == "err"])
     e0, e1 = (particles[particles.realization == k] for k in (0, 1))
-    s0 = e0.groupby("indx")["foot"].sum()
-    s1 = e1.groupby("indx")["foot"].sum().reindex(s0.index)
+    s0 = e0.groupby("particle")["foot"].sum()
+    s1 = e1.groupby("particle")["foot"].sum().reindex(s0.index)
     assert not np.allclose(s0.to_numpy(), s1.to_numpy())
     main = a.simulation(*_sim_id(wbb_receptor)).particles
-    s_main = main.groupby("indx")["foot"].sum().reindex(s0.index)
+    s_main = main.groupby("particle")["foot"].sum().reindex(s0.index)
     assert not np.allclose(s_main.to_numpy(), s0.to_numpy())
 
     b = run(tmp_path / "b")

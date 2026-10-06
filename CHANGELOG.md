@@ -8,6 +8,14 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- The particle table's `indx`, `long`, and `lati` are `particle`, `lon`,
+  and `lat` (breaking), in memory and in the stored files, so a
+  simulation's particles and its footprint spell longitude the same way.
+  HYSPLIT's `varsiwant` codes are unchanged and are mapped when its output
+  is read (`stilt.transport.hysplit.driver.PARTICLE_COLUMNS`); the other
+  columns keep STILT-R's names. Particle files written before are rewritten
+  by the upgrade script (#150).
+
 - Realizations are an axis, not numbered variants (breaking). A variant
   with `realizations: N` is one variant, `hrrr-err`, whose simulations
   are realizations `0` to `N - 1`: the `realization` column of
@@ -53,7 +61,7 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the columns the correction reads gets none, with a warning (#150).
 - A release row at `time = 0` gives a column receptor's `xhgt` too: the
   centre of the slab the particle was released in, where it was taken from
-  `indx` order. The bundled HYSPLIT writes no such row, so its results are
+  `particle` order. The bundled HYSPLIT writes no such row, so its results are
   unchanged (#150).
 
 - A config must declare its variants (breaking). Without a `variants:`
@@ -872,7 +880,7 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 
 - `stilt.particles.PARTICLE_SCHEMA` and `check_particles`: the columns
-  every particle table has (`indx`, `time`, `long`, `lati`, `zagl`), which
+  every particle table has (`particle`, `time`, `lon`, `lat`, `zagl`), which
   a transport model's run must return. The worker checks a model's
   particles and `calc_footprint` checks for `foot`, naming the missing
   columns. A new reference page, the particle table, says what each column

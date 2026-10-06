@@ -106,9 +106,9 @@ def _particles():
     # two particles; particle 2's second row is outside the flux field
     return pd.DataFrame(
         {
-            "indx": [1, 1, 2, 2, 3],
-            "long": [-112.0, -111.0, -110.0, -100.0, -111.0],
-            "lati": [40.0, 40.0, 41.0, 41.0, 41.0],
+            "particle": [1, 1, 2, 2, 3],
+            "lon": [-112.0, -111.0, -110.0, -100.0, -111.0],
+            "lat": [40.0, 40.0, 41.0, 41.0, 41.0],
             "foot": [2.0, 3.0, 1.0, 5.0, 0.0],
             "datetime": pd.to_datetime(["2023-01-01"] * 5),
         }

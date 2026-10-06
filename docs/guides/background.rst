@@ -40,7 +40,7 @@ average. Longitudes from 0 to 360, as in many global models, are handled.
 
 PYSTILT does not read model files. If your model's levels vary in space, as
 CarbonTracker's do, sample it yourself and pass one value per particle
-instead of a field, as a Series indexed by particle number (``indx``).
+instead of a field, as a Series indexed by particle number (``particle``).
 ``sim.particles.stilt.endpoints()`` gives the endpoints as a table for this,
 and lair's ``CarbonTracker.sample`` takes that table directly.
 

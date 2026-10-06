@@ -13,6 +13,7 @@ from stilt.project import Project
 
 from ..fixtures.r_stilt_reference import (
     ALL_SCENARIOS,
+    PYSTILT_NAMES,
     ReferenceScenario,
 )
 
@@ -140,7 +141,8 @@ def scenario_outputs(request, met_dir, rscript, r_stilt_dir, tmp_path_factory) -
             f"(exit {result.returncode}):\nSTDERR:\n{result.stderr}\n"
             f"STDOUT:\n{result.stdout}"
         )
-    r_traj = pd.read_parquet(r_traj_path)
+    # STILT-R's trajectories, in PYSTILT's column names.
+    r_traj = pd.read_parquet(r_traj_path).rename(columns=PYSTILT_NAMES)
 
     # Load the R error trajectory if WINDERR produced one.
     r_error_traj = None
@@ -149,7 +151,7 @@ def scenario_outputs(request, met_dir, rscript, r_stilt_dir, tmp_path_factory) -
             r_traj_path.stem + "_error" + r_traj_path.suffix
         )
         if r_error_path.exists():
-            r_error_traj = pd.read_parquet(r_error_path)
+            r_error_traj = pd.read_parquet(r_error_path).rename(columns=PYSTILT_NAMES)
 
     return {
         "scenario": scenario,

@@ -45,10 +45,10 @@ class Background:
         ``Σ weights × per_particle``. Particles with no value count as the
         weighted mean of the others.
     per_particle : pandas.Series
-        Field value at each particle's endpoint, indexed by ``indx``. ``NaN``
+        Field value at each particle's endpoint, indexed by ``particle``. ``NaN``
         where the endpoint is outside the field.
     weights : pandas.Series
-        Each particle's weight, indexed by ``indx``. Without transforms each
+        Each particle's weight, indexed by ``particle``. Without transforms each
         is ``1 / N`` and they sum to one. With pressure weighting they sum to
         the fraction of the atmosphere's mass inside the column.
     """
@@ -59,7 +59,7 @@ class Background:
 
 
 def _particle_background(particles: pd.DataFrame, field: xr.DataArray) -> pd.Series:
-    """Return the field at each particle's endpoint, indexed by ``indx``."""
+    """Return the field at each particle's endpoint, indexed by ``particle``."""
     ends = particles.stilt.endpoints()
     zdim = vertical_dim(field)
     z = None
@@ -79,10 +79,12 @@ def _particle_background(particles: pd.DataFrame, field: xr.DataArray) -> pd.Ser
             )
         times = ends["datetime"].to_numpy()
     values = sample_field(
-        field, ends["long"].to_numpy(), ends["lati"].to_numpy(), z=z, times=times
+        field, ends["lon"].to_numpy(), ends["lat"].to_numpy(), z=z, times=times
     )
     return pd.Series(
-        values, index=pd.Index(ends["indx"].to_numpy(), name="indx"), name="background"
+        values,
+        index=pd.Index(ends["particle"].to_numpy(), name="particle"),
+        name="background",
     )
 
 
@@ -93,7 +95,7 @@ def _endpoint_weights(
     directory: str | Path | None = None,
 ) -> pd.Series:
     """
-    Return each particle's transform weight at its endpoint, indexed by ``indx``.
+    Return each particle's transform weight at its endpoint, indexed by ``particle``.
 
     Transforms multiply ``foot``, so applying them to particles whose
     ``foot`` is 1 leaves each particle's weight: its averaging kernel and
@@ -111,7 +113,9 @@ def _endpoint_weights(
         ends = particles.stilt.endpoints()
         weights = np.ones(len(ends))
     return pd.Series(
-        weights, index=pd.Index(ends["indx"].to_numpy(), name="indx"), name="weight"
+        weights,
+        index=pd.Index(ends["particle"].to_numpy(), name="particle"),
+        name="weight",
     )
 
 
@@ -155,7 +159,7 @@ def background(
         The simulation's particle table (``sim.particles``).
     field : xarray.DataArray or pandas.Series
         The background field, or one value per particle that you sampled
-        yourself, as a Series indexed by ``indx``. For example, lair's
+        yourself, as a Series indexed by ``particle``. For example, lair's
         ``CarbonTracker.sample`` on ``sim.particles.stilt.endpoints()``. A
         field is sampled at each particle's endpoint, the row farthest in
         time from release (``particles.stilt.endpoints()``). Its vertical

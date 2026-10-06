@@ -32,6 +32,7 @@ v1.0**, so prefer the clean design over a compatibility shim.
 |---|---|
 | PyPI distribution | `pystilt` |
 | Import name | `stilt` (`import stilt`, never `import pystilt`) |
+| Particle columns | `particle`, `lon`, `lat` for HYSPLIT's and STILT-R's `indx`, `long`, `lati` (mapped in `read_particle_dat`); the rest keep STILT-R's names (`time`, `zagl`, `foot`, `mlht`, ...) |
 | Source directory | `src/stilt/` |
 | CLI entry point | `stilt` (Typer; see `[project.scripts]`) |
 | Config | What the user writes: always a class (`ProjectConfig`, `MetConfig`, `FootprintConfig`, `ExecutionConfig`, a model's `HysplitConfig`), each next to the code that uses it |
@@ -551,7 +552,7 @@ Feature status lives in the roadmap tables in [README.md](README.md) and
   only the last pair is released. That is how `ColumnReceptor` works (two
   lines: bottom and top), and why a `MultiPointReceptor` may not repeat a
   horizontal location (the constructor raises). The bundled build releases
-  column particles bottom-to-top in `indx` order, which
+  column particles bottom-to-top in `indx` order (the table's `particle`), which
   `add_release_heights` (`particles.py`) falls back to for `xhgt` when a
   model writes no `t = 0` release row.
 - **Pressure weighting is derived from the particles.**

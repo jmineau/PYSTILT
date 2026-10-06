@@ -83,6 +83,22 @@ _VEGHT = 0.5  # default STILT veght
 # ---------------------------------------------------------------------------
 
 
+#: PYSTILT's particle columns, by STILT-R's names. The tables here are built
+#: with STILT-R's names, which its helpers read; PYSTILT gets them renamed.
+_PY_NAMES = {"indx": "particle", "long": "lon", "lati": "lat"}
+_R_NAMES = {py: r for r, py in _PY_NAMES.items()}
+
+
+def _as_py(particles: pd.DataFrame) -> pd.DataFrame:
+    """Return a STILT-R particle table with PYSTILT's column names."""
+    return particles.rename(columns=_PY_NAMES)
+
+
+def _as_r(particles: pd.DataFrame) -> pd.DataFrame:
+    """Return a PYSTILT particle table with STILT-R's column names."""
+    return particles.rename(columns=_R_NAMES)
+
+
 def _r_footprint(
     tmp_path: Path,
     rscript: str,
@@ -214,7 +230,7 @@ def _py_footprint(
     """Call PYSTILT's calc_footprint on *particles*, return xr.Dataset."""
     tmp_path.mkdir(parents=True, exist_ok=True)
     foot = calc_footprint(
-        particles,
+        _as_py(particles),
         receptor,
         grid,
         smooth_factor=smooth_factor,
@@ -241,7 +257,7 @@ def _py_footprint_stages(
     ymin, ymax, yres = grid.ymin, grid.ymax, grid.yres
     is_longlat = "+proj=longlat" in projection
 
-    p = particles.copy(deep=False)
+    p = _as_py(particles).copy(deep=False)
     time_sign = int(np.sign(p["time"].median()))
     if is_longlat:
         p, xmin, xmax, _ = _wrap_antimeridian_longitudes(p, xmin=xmin, xmax=xmax)
@@ -253,7 +269,7 @@ def _py_footprint_stages(
     min_abs_time = (
         p_with_rtime["time"]
         .abs()
-        .groupby(p_with_rtime["indx"], sort=False)
+        .groupby(p_with_rtime["particle"], sort=False)
         .transform("min")
     )
     p_with_rtime["rtime"] = p_with_rtime["time"] - time_sign * min_abs_time
@@ -311,8 +327,8 @@ def _py_footprint_stages(
     kernel_out["w"] = w
 
     return {
-        "p_after_interp": p_after_interp.reset_index(drop=True),
-        "p_with_rtime": p_with_rtime.reset_index(drop=True),
+        "p_after_interp": _as_r(p_after_interp).reset_index(drop=True),
+        "p_with_rtime": _as_r(p_with_rtime).reset_index(drop=True),
         "grid_x": pd.DataFrame({"axis": "x", "value": glong}),
         "grid_y": pd.DataFrame({"axis": "y", "value": glati}),
         "kernel": kernel_out[["rtime", "varsum", "lati", "w"]].reset_index(drop=True),
@@ -795,7 +811,7 @@ def test_hnf_dilution_active(rscript, r_stilt_dir, tmp_path):
         tlgr=[50.0],
     )
 
-    py_result = correct_near_field(p.copy(), point_at(r_zagl), _VEGHT)
+    py_result = correct_near_field(_as_py(p), point_at(r_zagl), _VEGHT)
     r_result = _r_plume_dilution(tmp_path, rscript, r_stilt_dir, p, r_zagl=r_zagl)
 
     # Correction should have changed foot
@@ -835,7 +851,7 @@ def test_hnf_dilution_inactive(rscript, r_stilt_dir, tmp_path):
         tlgr=[200.0],
     )
 
-    py_result = correct_near_field(p.copy(), point_at(r_zagl), _VEGHT)
+    py_result = correct_near_field(_as_py(p), point_at(r_zagl), _VEGHT)
     r_result = _r_plume_dilution(tmp_path, rscript, r_stilt_dir, p, r_zagl=r_zagl)
 
     # Correction should NOT have changed foot

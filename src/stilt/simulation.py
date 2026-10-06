@@ -285,8 +285,8 @@ class Simulation:
         """
         The particle table, one row per particle per output step.
 
-        The columns are the variables in ``varsiwant`` (``indx``, ``time`` in
-        minutes since release, ``long``, ``lati``, ``zagl``, ``foot``, ...),
+        The columns are the variables in ``varsiwant`` (``particle``, ``time`` in
+        minutes since release, ``lon``, ``lat``, ``zagl``, ``foot``, ...),
         plus ``datetime`` (UTC) and ``xhgt`` (release height, for column and
         multipoint receptors). Read from the output directory on first
         access and kept. Check

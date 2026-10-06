@@ -201,8 +201,9 @@ def test_read_particle_dat_parses_the_columns(tmp_path):
 
     df = read_particle_dat(dat, VARS)
     assert len(df) == 2
-    assert list(df.columns) == VARS
-    assert df["indx"].iloc[0] == 1
+    # HYSPLIT's codes indx, long, lati are the table's particle, lon, lat.
+    assert list(df.columns) == ["time", "particle", "lon", "lat", "zagl", "foot"]
+    assert df["particle"].iloc[0] == 1
     assert dat.exists()  # the worker removes the working directory, or keeps it
 
 
@@ -220,7 +221,7 @@ def test_read_particle_dat_of_an_empty_file_is_an_empty_table(tmp_path):
 
     df = read_particle_dat(dat, VARS)
     assert df.empty
-    assert list(df.columns) == VARS
+    assert list(df.columns) == ["time", "particle", "lon", "lat", "zagl", "foot"]
 
 
 # ---------------------------------------------------------------------------

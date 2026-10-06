@@ -80,7 +80,7 @@ across all the forward runs, and outline them:
    particles = forward.particles()
    particles = particles[particles["datetime"].between(*window)]
 
-   plume = plume_polygon(particles["long"], particles["lati"])
+   plume = plume_polygon(particles["lon"], particles["lat"])
    plume.polygon      # shapely Polygon in longitude and latitude
    plume.density      # the kernel density it was cut from, (lat, lon), max 1
 

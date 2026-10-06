@@ -646,9 +646,9 @@ def _particles_in_domain(n: int = 30, seed: int = 42) -> pd.DataFrame:
     return pd.DataFrame(
         {
             "time": times,
-            "indx": indx,
-            "long": rng.uniform(-113.9, -113.1, n * 2),
-            "lati": rng.uniform(39.1, 39.9, n * 2),
+            "particle": indx,
+            "lon": rng.uniform(-113.9, -113.1, n * 2),
+            "lat": rng.uniform(39.1, 39.9, n * 2),
             "zagl": rng.uniform(5, 100, n * 2),
             "foot": rng.uniform(1e-6, 1e-4, n * 2),
         }
@@ -678,8 +678,8 @@ def test_calc_footprint_raises_when_particles_outside_domain(
 ):
     """All particles outside the domain is an EmptyFootprint, not zeros."""
     particles = _particles_in_domain()
-    particles["long"] = 0.0  # far outside [-114, -113]
-    particles["lati"] = 0.0
+    particles["lon"] = 0.0  # far outside [-114, -113]
+    particles["lat"] = 0.0
     with pytest.raises(EmptyFootprint) as info:
         calc_footprint(particles, point_receptor, _grid())
     assert info.value.reason == "outside_domain"
@@ -796,9 +796,9 @@ def test_interpolate_early_timesteps_preserves_window_foot_sums():
     particles = pd.DataFrame(
         {
             "time": [-5.0, -50.0, -120.0, -5.0, -50.0, -120.0],
-            "indx": [1, 1, 1, 2, 2, 2],
-            "long": [-113.0, -114.0, -115.0, -112.0, -113.5, -115.0],
-            "lati": [39.0, 40.0, 41.0, 39.5, 40.5, 41.5],
+            "particle": [1, 1, 1, 2, 2, 2],
+            "lon": [-113.0, -114.0, -115.0, -112.0, -113.5, -115.0],
+            "lat": [39.0, 40.0, 41.0, 39.5, 40.5, 41.5],
             "foot": [1.0, 2.0, 4.0, 3.0, 5.0, 7.0],
         }
     )
@@ -821,16 +821,16 @@ def test_interpolate_early_timesteps_preserves_window_foot_sums():
         interpolated.loc[(atime > 20) & (atime <= 100), "foot"].sum(),
     ]
     assert interpolated_sums == pytest.approx(original_sums)
-    assert interpolated[["long", "lati", "foot"]].isna().sum().sum() == 0
+    assert interpolated[["lon", "lat", "foot"]].isna().sum().sum() == 0
 
 
 def test_interpolate_early_timesteps_matches_r_na_omit_with_extra_columns():
     particles = pd.DataFrame(
         {
             "time": [-5.0, -50.0, -120.0, -5.0, -50.0, -120.0],
-            "indx": [1, 1, 1, 2, 2, 2],
-            "long": [-113.0, -114.0, -115.0, -112.0, -113.5, -115.0],
-            "lati": [39.0, 40.0, 41.0, 39.5, 40.5, 41.5],
+            "particle": [1, 1, 1, 2, 2, 2],
+            "lon": [-113.0, -114.0, -115.0, -112.0, -113.5, -115.0],
+            "lat": [39.0, 40.0, 41.0, 39.5, 40.5, 41.5],
             "zagl": [5.0, 6.0, 7.0, 5.0, 6.0, 7.0],
             "foot": [1.0, 2.0, 4.0, 3.0, 5.0, 7.0],
         }
@@ -841,7 +841,7 @@ def test_interpolate_early_timesteps_matches_r_na_omit_with_extra_columns():
     )
 
     expected = particles.sort_values(
-        ["indx", "time"], ascending=[True, False], kind="stable"
+        ["particle", "time"], ascending=[True, False], kind="stable"
     ).reset_index(drop=True)
     pd.testing.assert_frame_equal(interpolated, expected, check_dtype=False)
 
@@ -863,9 +863,9 @@ def _interior_particles(n: int = 40, seed: int = 55) -> pd.DataFrame:
     return pd.DataFrame(
         {
             "time": [-60.0] * n,
-            "indx": [float(i + 1) for i in range(n)],
-            "long": rng.uniform(-113.8, -113.2, n),
-            "lati": rng.uniform(39.2, 39.8, n),
+            "particle": [float(i + 1) for i in range(n)],
+            "lon": rng.uniform(-113.8, -113.2, n),
+            "lat": rng.uniform(39.2, 39.8, n),
             "zagl": [5.0] * n,
             "foot": rng.uniform(1e-5, 1e-4, n),
         }
@@ -914,7 +914,7 @@ def test_calc_footprint_total_equals_normalized_input_sum_at_zero_smooth(
     divided by the ensemble size.
     """
     particles = _interior_particles()
-    n = particles["indx"].nunique()
+    n = particles["particle"].nunique()
     foot = _interior_footprint(particles, point_receptor, smooth_factor=0.0)
 
     expected = float(particles["foot"].sum()) / n
@@ -1001,9 +1001,9 @@ def test_calc_footprint_smooth_zero_assigns_exact_cells(point_receptor):
     particles = pd.DataFrame(
         {
             "time": [-60.0] * n,
-            "indx": [float(i + 1) for i in range(n)],
-            "long": [-113.85] * n,
-            "lati": [39.05] * n,
+            "particle": [float(i + 1) for i in range(n)],
+            "lon": [-113.85] * n,
+            "lat": [39.05] * n,
             "zagl": [5.0] * n,
             "foot": [foot_val] * n,
         }
@@ -1056,9 +1056,9 @@ def test_concentration_reconstruction_from_known_footprint(point_receptor):
     particles = pd.DataFrame(
         {
             "time": [-60.0] * n_total,
-            "indx": [float(i + 1) for i in range(n_total)],
-            "long": [-113.85] * n_a + [-113.35] * n_b,
-            "lati": [39.05] * n_a + [39.55] * n_b,
+            "particle": [float(i + 1) for i in range(n_total)],
+            "lon": [-113.85] * n_a + [-113.35] * n_b,
+            "lat": [39.05] * n_a + [39.55] * n_b,
             "zagl": [5.0] * n_total,
             "foot": [foot_a] * n_a + [foot_b] * n_b,
         }
@@ -1136,9 +1136,9 @@ def test_hnf_correction_invariants():
                     rng.uniform(-6.0, -5.0, n // 2),  # long time → large plume
                 ]
             ),
-            "indx": [float(i + 1) for i in range(n)],
-            "long": [-112.0] * n,
-            "lati": [40.5] * n,
+            "particle": [float(i + 1) for i in range(n)],
+            "lon": [-112.0] * n,
+            "lat": [40.5] * n,
             "zagl": [5.0] * n,
             "foot": raw_foot,
             "mlht": [500.0] * n,  # pbl_mixing = 0.5 * 500 = 250 m
@@ -1194,47 +1194,47 @@ def test_hnf_correction_invariants():
 
 def test_wrap_antimeridian_longitudes_global_branch():
     """xdist == 0 (global 360° grid) anchors to [-180, 180] without wrapping."""
-    p = pd.DataFrame({"long": [-179.0, 0.0, 179.0]})
+    p = pd.DataFrame({"lon": [-179.0, 0.0, 179.0]})
     out, xmin, xmax, wrapped = _wrap_antimeridian_longitudes(p, xmin=-180.0, xmax=180.0)
     assert xmin == -180.0
     assert xmax == 180.0
     assert wrapped is False
     # Particle longitudes must be unchanged in the global branch.
-    np.testing.assert_array_equal(out["long"].values, p["long"].values)
+    np.testing.assert_array_equal(out["lon"].values, p["lon"].values)
 
 
 def test_wrap_antimeridian_longitudes_crossing_branch():
     """xmax < xmin (dateline crossing) rotates longitudes into [0, 360)."""
-    p = pd.DataFrame({"long": [179.0, -179.0, 170.0, -170.0]})
+    p = pd.DataFrame({"lon": [179.0, -179.0, 170.0, -170.0]})
     out, xmin, xmax, wrapped = _wrap_antimeridian_longitudes(p, xmin=170.0, xmax=-170.0)
     assert wrapped is True
     # Bounds wrap to 170, 190 in [0, 360) space.
     assert xmin == pytest.approx(170.0)
     assert xmax == pytest.approx(190.0)
     expected = np.array([179.0, 181.0, 170.0, 190.0])
-    np.testing.assert_allclose(out["long"].values, expected)
+    np.testing.assert_allclose(out["lon"].values, expected)
 
 
 def test_wrap_antimeridian_longitudes_partial_wrap_branch():
     """xmax > 180 (partial wrap, e.g. xmin=170, xmax=200) also rotates."""
-    p = pd.DataFrame({"long": [175.0, -175.0]})
+    p = pd.DataFrame({"lon": [175.0, -175.0]})
     out, xmin, xmax, wrapped = _wrap_antimeridian_longitudes(p, xmin=170.0, xmax=200.0)
     assert wrapped is True
     assert xmin == pytest.approx(170.0)
     assert xmax == pytest.approx(200.0)
-    np.testing.assert_allclose(out["long"].values, np.array([175.0, 185.0]))
+    np.testing.assert_allclose(out["lon"].values, np.array([175.0, 185.0]))
 
 
 def test_wrap_antimeridian_longitudes_no_wrap_branch():
     """Standard CONUS domain (xmin=-113, xmax=-111) returns particles unchanged."""
-    p = pd.DataFrame({"long": [-112.5, -111.5]})
+    p = pd.DataFrame({"lon": [-112.5, -111.5]})
     out, xmin, xmax, wrapped = _wrap_antimeridian_longitudes(
         p, xmin=-113.0, xmax=-111.0
     )
     assert wrapped is False
     assert xmin == -113.0
     assert xmax == -111.0
-    np.testing.assert_array_equal(out["long"].values, p["long"].values)
+    np.testing.assert_array_equal(out["lon"].values, p["lon"].values)
 
 
 def test_project_particles_to_crs_raises_on_missing_pyproj(monkeypatch):
@@ -1247,7 +1247,7 @@ def test_project_particles_to_crs_raises_on_missing_pyproj(monkeypatch):
         return real_import(name, *args, **kwargs)
 
     monkeypatch.setattr(builtins, "__import__", fake_import)
-    p = pd.DataFrame({"long": [-112.0], "lati": [40.0]})
+    p = pd.DataFrame({"lon": [-112.0], "lat": [40.0]})
     with pytest.raises(ImportError, match="pyproj"):
         _project_particles_to_crs(
             p,
@@ -1263,7 +1263,7 @@ def test_project_particles_to_crs_rejects_invalid_proj_string():
     """An unparseable proj4 string surfaces from pyproj as a parse error."""
     from pyproj.exceptions import CRSError
 
-    p = pd.DataFrame({"long": [-112.0], "lati": [40.0]})
+    p = pd.DataFrame({"lon": [-112.0], "lat": [40.0]})
     with pytest.raises(CRSError):
         _project_particles_to_crs(
             p,
@@ -1284,11 +1284,11 @@ def test_compute_kernel_bandwidths_single_particle_returns_zero_sigma():
     """
     p = pd.DataFrame(
         {
-            "indx": [1.0, 1.0],
+            "particle": [1.0, 1.0],
             "rtime": [-1.0, -2.0],
             "time": [-1.0, -2.0],
-            "long": [-112.0, -112.0],
-            "lati": [40.5, 40.5],
+            "lon": [-112.0, -112.0],
+            "lat": [40.5, 40.5],
             "foot": [1e-3, 1e-3],
         }
     )
@@ -1301,11 +1301,11 @@ def test_compute_kernel_bandwidths_two_coincident_particles_returns_zero_sigma()
     """Two particles at identical positions have varsum=0 ⇒ w=0."""
     p = pd.DataFrame(
         {
-            "indx": [1.0, 1.0, 2.0, 2.0],
+            "particle": [1.0, 1.0, 2.0, 2.0],
             "rtime": [-1.0, -2.0, -1.0, -2.0],
             "time": [-1.0, -2.0, -1.0, -2.0],
-            "long": [-112.0] * 4,
-            "lati": [40.5] * 4,
+            "lon": [-112.0] * 4,
+            "lat": [40.5] * 4,
             "foot": [1e-3] * 4,
         }
     )
@@ -1566,9 +1566,9 @@ def _first_hour_particles(n: int = 20, seed: int = 0) -> pd.DataFrame:
     return pd.DataFrame(
         {
             "time": np.repeat([-20.0, -40.0, -59.0], n),
-            "indx": np.tile(np.arange(1, n + 1), 3),
-            "long": rng.uniform(-112.2, -111.7, 3 * n),
-            "lati": rng.uniform(40.6, 40.9, 3 * n),
+            "particle": np.tile(np.arange(1, n + 1), 3),
+            "lon": rng.uniform(-112.2, -111.7, 3 * n),
+            "lat": rng.uniform(40.6, 40.9, 3 * n),
             "zagl": rng.uniform(5, 100, 3 * n),
             "foot": rng.uniform(0.0, 1e-3, 3 * n),
         }

@@ -64,9 +64,9 @@ def _trajectories(receptor, params, foot: float = 1e-5) -> pd.DataFrame:
     particles = pd.DataFrame(
         {
             "time": [-60],
-            "indx": [1],
-            "long": [-111.9],
-            "lati": [40.7],
+            "particle": [1],
+            "lon": [-111.9],
+            "lat": [40.7],
             "zagl": [10.0],
             "foot": [foot],
         }

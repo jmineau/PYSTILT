@@ -68,9 +68,9 @@ def _trajectories(receptor: PointReceptor, n: int = 50) -> pd.DataFrame:
     data = pd.DataFrame(
         {
             "time": time,
-            "indx": indx,
-            "long": -111.85 + rng.normal(0, 0.1, len(time)),
-            "lati": 40.77 + rng.normal(0, 0.1, len(time)),
+            "particle": indx,
+            "lon": -111.85 + rng.normal(0, 0.1, len(time)),
+            "lat": 40.77 + rng.normal(0, 0.1, len(time)),
             "zagl": rng.uniform(0, 500, len(time)),
             "foot": rng.uniform(0, 0.1, len(time)),
         }
@@ -218,9 +218,9 @@ def test_particles_store_time_and_index_as_int32(tmp_path):
     path = _write(Output(tmp_path / "output"))
     schema = pq.read_schema(path)
     assert str(schema.field("time").type) == "int32"
-    assert str(schema.field("indx").type) == "int32"
+    assert str(schema.field("particle").type) == "int32"
     assert "datetime" not in schema.names
-    assert str(schema.field("long").type) == "double"
+    assert str(schema.field("lon").type) == "double"
 
 
 def test_particle_files_name_their_receptor_in_a_column(tmp_path):

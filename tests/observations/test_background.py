@@ -39,10 +39,10 @@ def _particles():
     """Three backward particles; endpoints at 1000, 650 and 820 hPa."""
     return pd.DataFrame(
         {
-            "indx": [1, 1, 2, 2, 3, 3],
+            "particle": [1, 1, 2, 2, 3, 3],
             "time": [0.0, -60.0, 0.0, -60.0, -30.0, -120.0],
-            "long": [-111.0, -112.0, -111.0, -110.0, -111.0, -111.0],
-            "lati": [40.0, 40.0, 40.0, 41.0, 40.0, 41.0],
+            "lon": [-111.0, -112.0, -111.0, -110.0, -111.0, -111.0],
+            "lat": [40.0, 40.0, 40.0, 41.0, 40.0, 41.0],
             "pres": [900.0, 1000.0, 900.0, 650.0, 900.0, 820.0],
             "foot": [1.0, 0.5, 1.0, 0.5, 1.0, 0.5],
             "datetime": pd.to_datetime(["2023-01-01 12:00", "2023-01-01 11:00"] * 3),
@@ -61,7 +61,7 @@ ENDPOINT_VALUES = [0.0, 205.0, 104.0]
 def test_endpoints_pick_the_largest_abs_time_per_particle():
     ends = _particles().stilt.endpoints()
 
-    assert ends["indx"].tolist() == [1, 2, 3]
+    assert ends["particle"].tolist() == [1, 2, 3]
     assert ends["time"].tolist() == [-60.0, -60.0, -120.0]
 
 
@@ -130,7 +130,7 @@ def test_sample_field_requires_z_and_times_when_the_field_has_them():
 def test_background_samples_each_endpoint():
     per = background(_particles(), _field_3d()).per_particle
 
-    assert per.index.name == "indx"
+    assert per.index.name == "particle"
     assert per.index.tolist() == [1, 2, 3]
     assert per.tolist() == ENDPOINT_VALUES
     assert per.name == "background"
@@ -167,7 +167,7 @@ def test_background_without_transforms_is_the_mean_over_particles():
 
 
 def test_background_accepts_values_sampled_elsewhere():
-    sampled = pd.Series(ENDPOINT_VALUES, index=pd.Index([1, 2, 3], name="indx"))
+    sampled = pd.Series(ENDPOINT_VALUES, index=pd.Index([1, 2, 3], name="particle"))
     assert background(_particles(), sampled).value == pytest.approx(
         np.mean(ENDPOINT_VALUES)
     )
@@ -184,14 +184,14 @@ def test_background_lifetime_decays_at_the_endpoint_age():
 
 def test_background_leaves_out_particles_outside_the_field():
     p = _particles()
-    p.loc[p["indx"] == 2, "long"] = -100.0  # particle 2 ends off the field
+    p.loc[p["particle"] == 2, "lon"] = -100.0  # particle 2 ends off the field
 
     result = background(p, _field_3d())
 
     assert np.isnan(result.per_particle.loc[2])
     assert result.weights.sum() == pytest.approx(1.0)
     assert result.value == pytest.approx((0.0 + 104.0) / 2)
-    p["long"] = -100.0
+    p["lon"] = -100.0
     assert np.isnan(background(p, _field_3d()).value)
 
 
@@ -200,10 +200,10 @@ def _column(n=60, p_sfc=1000.0):
     z = np.linspace(0.0, 3000.0, n)
     return pd.DataFrame(
         {
-            "indx": np.arange(1, n + 1),
+            "particle": np.arange(1, n + 1),
             "time": np.full(n, -60.0),
-            "long": np.full(n, -111.0),
-            "lati": np.full(n, 40.0),
+            "lon": np.full(n, -111.0),
+            "lat": np.full(n, 40.0),
             "zagl": z,
             "xhgt": z,
             "pres": p_sfc * np.exp(-z / 8000.0),
@@ -213,7 +213,7 @@ def _column(n=60, p_sfc=1000.0):
 
 
 def test_background_fills_missing_particles_with_the_weighted_mean_of_the_others():
-    sampled = pd.Series([1.0, np.nan, 3.0], index=pd.Index([1, 2, 3], name="indx"))
+    sampled = pd.Series([1.0, np.nan, 3.0], index=pd.Index([1, 2, 3], name="particle"))
     w = np.exp(-np.array([1.0, 1.0, 2.0])) / 3.0
 
     result = background(

@@ -32,9 +32,9 @@ def _particles_basic() -> pd.DataFrame:
     return pd.DataFrame(
         {
             "time": [-60, -120],
-            "indx": [1, 1],
-            "long": [-111.9, -112.0],
-            "lati": [40.7, 40.6],
+            "particle": [1, 1],
+            "lon": [-111.9, -112.0],
+            "lat": [40.7, 40.6],
             "zagl": [10.0, 20.0],
             "foot": [1e-5, 2e-5],
             "dens": [1.2, 1.2],
@@ -56,9 +56,9 @@ def _particles_release_rows(
     return pd.DataFrame(
         {
             "time": [time] * len(indices),
-            "indx": indices,
-            "long": longs,
-            "lati": lats,
+            "particle": indices,
+            "lon": longs,
+            "lat": lats,
             "zagl": zagl if zagl is not None else [10.0] * len(indices),
             "foot": [1e-5] * len(indices),
             "dens": [1.2] * len(indices),
@@ -173,7 +173,7 @@ def test_write_particles_is_atomic_on_failure(point_receptor, tmp_path, monkeypa
 
 
 def test_correct_near_field_requires_columns():
-    p = pd.DataFrame({"time": [-60], "indx": [1], "foot": [1e-5]})
+    p = pd.DataFrame({"time": [-60], "particle": [1], "foot": [1e-5]})
     with pytest.raises(ValueError, match="needs the particle columns"):
         correct_near_field(p, point_at(5.0), 0.5)
 
@@ -203,7 +203,7 @@ def test_correct_near_field_grows_outward_from_release_when_forward():
 
 
 def test_finished_particles_column_receptor_assigns_xhgt(column_receptor, tmp_path):
-    particles = _particles_basic().assign(indx=[1, 2])
+    particles = _particles_basic().assign(particle=[1, 2])
     traj = finished(particles, column_receptor, _params(tmp_path, hnf_plume=False))
     assert "xhgt" in traj.columns
     assert traj["xhgt"].tolist() == pytest.approx([16.25, 38.75])
@@ -438,7 +438,7 @@ def test_multipoint_release_time_rows_are_used_when_present():
         time=-1,
     )
     data = _finish(pd.concat([later, t0], ignore_index=True), receptor)
-    by_particle = data.drop_duplicates("indx").set_index("indx")["xhgt"]
+    by_particle = data.drop_duplicates("particle").set_index("particle")["xhgt"]
     assert by_particle.loc[[1, 2, 3, 4]].tolist() == [300.0, 600.0, 900.0, 1200.0]
 
 
@@ -455,8 +455,8 @@ def test_multipoint_xhgt_is_constant_along_each_trajectory():
         for step in range(3)
     ]
     data = _finish(pd.concat(rows, ignore_index=True), receptor)
-    assert (data.groupby("indx")["xhgt"].nunique() == 1).all()
-    assert data.drop_duplicates("indx").set_index("indx")["xhgt"].to_dict() == {
+    assert (data.groupby("particle")["xhgt"].nunique() == 1).all()
+    assert data.drop_duplicates("particle").set_index("particle")["xhgt"].to_dict() == {
         1: 300.0,
         2: 600.0,
     }
@@ -556,9 +556,9 @@ def _particles_two_lengths() -> pd.DataFrame:
     return pd.DataFrame(
         {
             "time": [-60, -120, -30],
-            "indx": [1, 1, 2],
-            "long": [-111.9, -112.0, -111.8],
-            "lati": [40.7, 40.6, 40.75],
+            "particle": [1, 1, 2],
+            "lon": [-111.9, -112.0, -111.8],
+            "lat": [40.7, 40.6, 40.75],
             "zagl": [10.0, 20.0, 15.0],
             "foot": [1e-5, 2e-5, 1e-5],
             "dens": [1.2, 1.2, 1.2],
@@ -580,13 +580,13 @@ def test_endpoints_returns_far_end_per_particle(point_receptor, tmp_path):
         particles["time"], unit="min"
     )
 
-    ep = particles.stilt.endpoints().sort_values("indx").reset_index(drop=True)
+    ep = particles.stilt.endpoints().sort_values("particle").reset_index(drop=True)
     assert list(ep.columns) == list(particles.columns)
     # Both particles kept, each at its far end (largest |time|): p1 at -120, p2 at -30.
-    assert ep["indx"].tolist() == [1, 2]
+    assert ep["particle"].tolist() == [1, 2]
     assert ep["time"].tolist() == [-120, -30]
-    assert ep.loc[0, ["long", "lati", "zagl"]].tolist() == [-112.0, 40.6, 20.0]
-    assert ep.loc[1, ["long", "lati", "zagl"]].tolist() == [-111.8, 40.75, 15.0]
+    assert ep.loc[0, ["lon", "lat", "zagl"]].tolist() == [-112.0, 40.6, 20.0]
+    assert ep.loc[1, ["lon", "lat", "zagl"]].tolist() == [-111.8, 40.75, 15.0]
     assert ep["datetime"].tolist() == [
         point_receptor.time + pd.Timedelta(minutes=-120),
         point_receptor.time + pd.Timedelta(minutes=-30),
@@ -603,9 +603,9 @@ def test_calc_footprint_regenerates_a_footprint_on_a_new_grid(tmp_path):
     particles = pd.DataFrame(
         {
             "time": [-60] * n + [-120] * n,
-            "indx": list(range(1, n + 1)) * 2,
-            "long": rng.uniform(-113.9, -113.1, n * 2),
-            "lati": rng.uniform(39.1, 39.9, n * 2),
+            "particle": list(range(1, n + 1)) * 2,
+            "lon": rng.uniform(-113.9, -113.1, n * 2),
+            "lat": rng.uniform(39.1, 39.9, n * 2),
             "zagl": rng.uniform(5, 100, n * 2),
             "foot": rng.uniform(0.0, 1e-3, n * 2),
         }
@@ -658,8 +658,8 @@ def test_check_particles_names_the_missing_columns():
     check_particles(table)
     with pytest.raises(ValueError, match="no 'foot' column"):
         check_particles(table, need=("foot",))
-    with pytest.raises(ValueError, match="no 'long', 'lati' columns"):
-        check_particles(table.drop(columns=["long", "lati"]))
+    with pytest.raises(ValueError, match="no 'lon', 'lat' columns"):
+        check_particles(table.drop(columns=["lon", "lat"]))
 
 
 def test_a_footprint_needs_the_particle_columns(point_receptor):
@@ -668,7 +668,7 @@ def test_a_footprint_needs_the_particle_columns(point_receptor):
 
     grid = Grid(xmin=-113.0, xmax=-111.0, ymin=40.0, ymax=41.0, xres=0.1, yres=0.1)
     particles = pd.DataFrame(
-        {"indx": [1], "time": [-1], "long": [-112.0], "lati": [40.5], "zagl": [5.0]}
+        {"particle": [1], "time": [-1], "lon": [-112.0], "lat": [40.5], "zagl": [5.0]}
     )
     with pytest.raises(ValueError, match="no 'foot' column"):
         calc_footprint(particles, point_receptor, grid)
@@ -684,15 +684,15 @@ def test_a_column_release_row_says_which_slab_a_particle_stands_for():
     released = [900.0, 10.0, 600.0, 300.0]  # four slabs of 250 m, out of indx order
     rows = pd.DataFrame(
         {
-            "indx": [1, 2, 3, 4] * 2,
+            "particle": [1, 2, 3, 4] * 2,
             "time": [0] * 4 + [-1] * 4,
-            "long": [-111.85] * 8,
-            "lati": [40.77] * 8,
+            "lon": [-111.85] * 8,
+            "lat": [40.77] * 8,
             "zagl": released + [z + 3.0 for z in released],
         }
     )
     with_release = add_release_heights(rows, column)
-    by_particle = with_release.drop_duplicates("indx").set_index("indx")["xhgt"]
+    by_particle = with_release.drop_duplicates("particle").set_index("particle")["xhgt"]
     assert by_particle.to_dict() == {1: 875.0, 2: 125.0, 3: 625.0, 4: 375.0}
 
     # Without the release rows, particle indx is in slab indx.
