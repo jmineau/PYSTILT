@@ -31,12 +31,12 @@ class _FakeMet:
 @pytest.fixture
 def sim(monkeypatch, tmp_path, point_receptor):
     """A Simulation with HYSPLIT stubbed out, and a runner for it."""
+    from stilt.config import Variant
     from stilt.meteorology import MetConfig
     from stilt.output import Output
     from stilt.simulation import Simulation
     from stilt.transport import ModelInfo
     from stilt.transport.hysplit import model
-    from stilt.variants import Variant
 
     monkeypatch.setattr(model, "write_inputs", lambda *args: None)
     monkeypatch.setattr(model, "_run_hycs_std", _stop)

@@ -23,7 +23,6 @@ from stilt.meteorology import MetConfig
 from stilt.particles import particles_metadata
 from stilt.project import Project
 from stilt.transport.hysplit.driver import winderrtf
-from stilt.variants import resolve
 
 from .conftest import integration
 
@@ -555,8 +554,9 @@ def test_geometry_footprint(tmp_path, wbb_receptor, met_dir):
         seed=REFERENCE_SEED,
         geometry=spec,
         cells_per_target=10,
+        variants={"hrrr": {}},
     )
-    variant = next(iter(resolve(config).values()))
+    variant = next(iter(config.resolve().values()))
     fc = variant.footprint
     assert fc is not None
     assert fc.grid.xres == fc.grid.yres == 0.05  # 0.5 / 10
@@ -630,6 +630,7 @@ def test_forward_run(tmp_path, met_dir, wbb_grid):
         seed=REFERENCE_SEED,
         hnf_plume=True,  # exercises calc_plume_dilution on a forward track
         grid=wbb_grid,
+        variants={"hrrr": {}},
     )
 
     model = Project.init(tmp_path / "forward", config=config, receptors=[receptor])

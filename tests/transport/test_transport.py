@@ -5,14 +5,13 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
-from stilt.config import ProjectConfig
+from stilt.config import ProjectConfig, Variant
 from stilt.execution import run_particles, worker
 from stilt.meteorology import MetConfig
 from stilt.output import Output
 from stilt.simulation import Simulation
 from stilt.transport import ModelInfo, ModelRun, get_model
 from stilt.transport.hysplit import HysplitConfig, HysplitModel
-from stilt.variants import Variant, resolve
 
 
 def test_get_model_returns_hysplit_by_default_and_by_name():
@@ -41,7 +40,9 @@ def test_hysplit_model_version_is_the_bundled_build_or_exe_dirs(tmp_path):
 
 def test_the_settings_record_the_model_that_makes_the_particles(tmp_path):
     met = MetConfig(directory=tmp_path, file_format="%Y%m%d_%H", file_tres="1h")
-    variant = resolve(ProjectConfig(mets={"hrrr": met}, n_hours=-1))["hrrr"]
+    variant = (
+        ProjectConfig(mets={"hrrr": met}, n_hours=-1, variants={"hrrr": {}})
+    ).resolve()["hrrr"]
     model = get_model(variant.model.name)
     assert variant.model.version == model.version(variant.transport)
 

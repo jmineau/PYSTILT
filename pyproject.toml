@@ -135,7 +135,6 @@ source_modules = [
     "stilt.particles",
     "stilt.transforms",
     "stilt.transport",
-    "stilt.variants",
     "stilt.visualization",
 ]
 forbidden_modules = ["stilt.observations"]
@@ -164,7 +163,6 @@ source_modules = [
     "stilt.simulation",
     "stilt.particles",
     "stilt.transforms",
-    "stilt.variants",
     "stilt.visualization",
 ]
 forbidden_modules = ["stilt.transport.hysplit"]
@@ -201,10 +199,11 @@ source_modules = [
 forbidden_modules = ["stilt.config"]
 allow_indirect_imports = true
 
-# What the user writes (config.yaml, receptors.csv) is plain data. Resolving
-# it, reading geometries or asking a transport model its version, happens
-# above, in stilt.variants. Imports inside functions count too. Config may
-# look up a model's config class through the stilt.transport registry, which
+# Config classes do no I/O when they validate, so a config.yaml loads
+# offline. Reading a footprint geometry or asking a transport model its
+# build happens on request, in ProjectConfig.resolve. The config never reads
+# results or runs anything. Imports inside functions count too. It may look
+# up a model's config class through the stilt.transport registry, which
 # imports a model's package only when asked for it.
 [[tool.importlinter.contracts]]
 name = "The project config reads no results and runs nothing"
@@ -217,7 +216,6 @@ forbidden_modules = [
     "stilt.project",
     "stilt.simulation",
     "stilt.transport.hysplit",
-    "stilt.variants",
 ]
 allow_indirect_imports = true
 
@@ -236,7 +234,6 @@ forbidden_modules = [
     "stilt.project",
     "stilt.simulation",
     "stilt.transport",
-    "stilt.variants",
 ]
 
 # A transport model owns its config. The core reaches it through
@@ -245,7 +242,7 @@ forbidden_modules = [
 name = "HYSPLIT's package does not import the project config"
 type = "forbidden"
 source_modules = ["stilt.transport.hysplit"]
-forbidden_modules = ["stilt.config", "stilt.project", "stilt.variants"]
+forbidden_modules = ["stilt.config", "stilt.project"]
 
 [tool.pyright]
 include = ["src"]

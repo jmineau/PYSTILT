@@ -9,6 +9,7 @@ import pytest
 import xarray as xr
 import yaml
 
+from stilt.config import Variant
 from stilt.footprint import jacobian
 from stilt.footprint.config import FootprintConfig
 from stilt.footprint.targets import Mesh
@@ -20,7 +21,6 @@ from stilt.receptors import PointReceptor
 from stilt.spatial import Grid
 from stilt.transport import ModelInfo
 from stilt.transport.hysplit import HysplitConfig
-from stilt.variants import Variant
 
 from .fixtures.footprints import as_footprint
 

@@ -10,7 +10,6 @@ from stilt import transport
 from stilt.config import ProjectConfig
 from stilt.identity import read_run_settings, settings_hash
 from stilt.transport import ModelInfo, TransportConfig
-from stilt.variants import resolve
 
 GRID = {"xmin": -112, "xmax": -111, "ymin": 40, "ymax": 41, "xres": 0.1, "yres": 0.1}
 
@@ -60,7 +59,7 @@ def test_a_variant_may_run_another_model(tmp_path, toy):
         numpar=500,
         variants={"hrrr": {}, "toy": {"model": "toy", "nparticles": 10}},
     )
-    variants = resolve(config)
+    variants = config.resolve()
     hrrr, toy_variant = variants["hrrr"], variants["toy"]
     assert hrrr.model.name == "hysplit" and hrrr.transport.numpar == 500
     # Another model's variant gives its own parameters and inherits the footprint.
@@ -74,31 +73,52 @@ def test_a_variant_may_run_another_model(tmp_path, toy):
     assert settings_hash(read_run_settings(recorded)) == variants["toy"].particles_hash
 
 
-def test_another_models_variant_takes_only_its_own_parameters(tmp_path, toy):
+def test_another_models_variant_inherits_the_shared_parameters_only(tmp_path, toy):
+    """numpar, n_hours, seed, hnf_plume, and veght are every model's; krand is HYSPLIT's."""
     config = ProjectConfig(
-        mets=_mets(tmp_path), variants={"toy": {"model": "toy", "numpar": 5}}
+        mets=_mets(tmp_path),
+        numpar=300,
+        krand=2,
+        variants={"hrrr": {}, "toy": {"model": "toy", "hnf_plume": False}},
     )
-    with pytest.raises(ValueError, match="numpar"):
-        resolve(config)
+    toy_variant = config.resolve()["toy"]
+    assert toy_variant.transport.numpar == 300  # inherited from the defaults
+    assert toy_variant.transport.hnf_plume is False
+    with pytest.raises(ValueError, match="'krand' is not a setting"):
+        ProjectConfig(
+            mets=_mets(tmp_path), variants={"toy": {"model": "toy", "krand": 2}}
+        )
 
 
 def test_the_projects_model_takes_its_parameters_at_the_top(tmp_path, toy):
-    config = ProjectConfig(mets=_mets(tmp_path), model="toy", nparticles=7)
+    config = ProjectConfig(
+        mets=_mets(tmp_path), model="toy", nparticles=7, variants={"hrrr": {}}
+    )
     assert config.transport.nparticles == 7
-    assert resolve(config)["hrrr"].model.name == "toy"
-    with pytest.raises(ValueError, match="numpar"):
-        ProjectConfig(mets=_mets(tmp_path), model="toy", numpar=7)
+    assert config.resolve()["hrrr"].model.name == "toy"
+    assert (
+        ProjectConfig(
+            mets=_mets(tmp_path), model="toy", numpar=7, variants={"hrrr": {}}
+        ).transport.numpar
+        == 7
+    )  # a shared parameter
+    with pytest.raises(ValueError, match="'varsiwant' is not a setting"):
+        ProjectConfig(
+            mets=_mets(tmp_path), model="toy", varsiwant=["time"], variants={"hrrr": {}}
+        )
 
 
 def test_an_unknown_model_is_an_error(tmp_path):
     with pytest.raises(ValueError, match="Unknown transport model 'nope'"):
-        ProjectConfig(mets=_mets(tmp_path), model="nope")
+        ProjectConfig(mets=_mets(tmp_path), model="nope", variants={"hrrr": {}})
     with pytest.raises(ValueError, match="Unknown transport model 'nope'"):
         ProjectConfig(mets=_mets(tmp_path), variants={"hrrr": {"model": "nope"}})
 
 
 def test_hysplit_is_the_default_model_and_its_parameters_are_flat(tmp_path):
-    config = ProjectConfig(mets=_mets(tmp_path), numpar=300, seed=4, krand=2)
+    config = ProjectConfig(
+        mets=_mets(tmp_path), numpar=300, seed=4, krand=2, variants={"hrrr": {}}
+    )
     assert config.model == "hysplit"
     assert config.transport.numpar == 300
     text = config.to_yaml()
@@ -115,7 +135,14 @@ def _write(tmp_path, text):
 def test_a_model_config_inherits_the_recorded_settings_and_realizations():
     config = ToyConfig(n_hours=-6, seed=5, nparticles=10, build_dir="/opt/toy")
 
-    assert config.settings() == {"n_hours": -6, "seed": 5, "nparticles": 10}
+    assert config.settings() == {
+        "n_hours": -6,
+        "numpar": 200,
+        "hnf_plume": True,
+        "veght": 0.5,
+        "seed": 5,
+        "nparticles": 10,
+    }
     assert [r.seed for r in config.realizations(3)] == [5, 6, 7]
     assert [r.seed for r in ToyConfig().realizations(2)] == [None, None]
     with pytest.raises(ValueError, match="extra"):

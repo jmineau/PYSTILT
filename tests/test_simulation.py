@@ -6,6 +6,7 @@ import pandas as pd
 import pytest
 import xarray as xr
 
+from stilt.config import Variant
 from stilt.execution import make_footprint
 from stilt.footprint.config import FootprintConfig
 from stilt.identity import settings_hash
@@ -18,7 +19,6 @@ from stilt.transforms import FirstOrderLifetime, transform_kind
 from stilt.transport import ModelInfo
 from stilt.transport.hysplit import HysplitConfig
 from stilt.transport.hysplit.model import finish_particles
-from stilt.variants import Variant
 
 GRID = Grid(xmin=-114.0, xmax=-111.0, ymin=39.0, ymax=42.0, xres=0.1, yres=0.1)
 FOOT = FootprintConfig(grid=GRID, time_integrate=True, smooth_factor=0.0)

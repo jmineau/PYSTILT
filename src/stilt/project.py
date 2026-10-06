@@ -27,7 +27,7 @@ import xarray as xr
 import yaml
 
 from stilt._paths import absolute
-from stilt.config import STARTER_CONFIG, ProjectConfig
+from stilt.config import STARTER_CONFIG, ProjectConfig, Variant
 from stilt.execution.config import ExecutionConfig
 from stilt.footprint import Geometry, Jacobian
 from stilt.footprint.aggregation import _jacobian
@@ -47,7 +47,6 @@ from stilt.receptors import (
 )
 from stilt.receptors.table import COLUMNS, ROW_COLUMNS
 from stilt.simulation import Simulation
-from stilt.variants import Variant, resolve
 
 if TYPE_CHECKING:
     import submitit
@@ -131,6 +130,7 @@ class Project:
     ...     "./my_project",
     ...     receptors=[receptor],
     ...     mets={"hrrr": met},
+    ...     variants={"hrrr": {}},
     ...     n_hours=-24,
     ...     grid={
     ...         "xmin": -113,
@@ -185,7 +185,7 @@ class Project:
             (:data:`stilt.config.STARTER_CONFIG`) in place of a config.
             Without receptors, ``receptors.csv`` gets only its header.
         **settings
-            Settings for :class:`~stilt.ProjectConfig`, such as ``mets``,
+            Settings for :class:`~stilt.ProjectConfig`, such as ``mets``, ``variants``,
             ``n_hours``, ``numpar``, and ``grid``.
 
         Raises
@@ -209,10 +209,10 @@ class Project:
             config = ProjectConfig.model_validate(yaml.safe_load(STARTER_CONFIG))
         elif config is None:
             config = ProjectConfig(**settings)
+        project = cls(path)
         # The config checks a variant's transport settings only when it is
         # resolved; do it now, so a bad config is never written.
-        resolve(config)
-        project = cls(path)
+        config.resolve(project.directory)
         if project.config_path.exists():
             raise FileExistsError(
                 f"{project.directory} already has a config.yaml. Open it with "
@@ -279,9 +279,10 @@ class Project:
 
         A realization group appears once per realization (``hrrr-err-0``,
         ``hrrr-err-1``, ...). A footprint given by a geometry gets its grid
-        here, so the geometry is read on first use (:func:`stilt.variants.resolve`).
+        here, so the geometry is read on first use (:meth:`stilt.ProjectConfig.resolve`),
+        and a relative geometry file starts from the project directory.
         """
-        return resolve(self.config)
+        return self.config.resolve(self.directory)
 
     @cached_property
     def mets(self) -> dict[str, Met]:

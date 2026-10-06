@@ -39,6 +39,7 @@ From Python or a notebook
        receptors=receptors,
        mets={"hrrr": {"directory": "/data/hrrr", "file_format": "%Y%m%d_%H", "file_tres": "6h"}},
        grid={"xmin": -114, "xmax": -111, "ymin": 39, "ymax": 42, "xres": 0.01, "yres": 0.01},
+       variants={"hrrr": {}},
        execution={"backend": "local", "cpus": 4},
    )
 

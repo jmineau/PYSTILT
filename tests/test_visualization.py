@@ -425,6 +425,7 @@ def test_project_availability_with_sims(tmp_path, receptor):
                 "file_tres": "1h",
             }
         },
+        variants={"hrrr": {}},
     )
     project = Project.init(tmp_path, config=config, receptors=[receptor])
     assert len(project.simulations) == 1

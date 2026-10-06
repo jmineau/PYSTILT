@@ -21,7 +21,7 @@ Config objects
 --------------
 
 A config is what you write. ``project.variants`` resolves each declared
-variant into a :class:`stilt.variants.Variant`: its transport settings checked by the
+variant into a :class:`stilt.config.Variant`: its transport settings checked by the
 model's config class, its realizations expanded, and what the file alone
 does not say, the grid of a footprint given by a geometry and the transport
 model build.

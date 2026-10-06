@@ -8,7 +8,7 @@ from the geometry (:meth:`stilt.Mesh.from_spec`, then
 :meth:`stilt.Mesh.to_grid`).
 
 Loading a config does not read the geometry. ``project.variants`` reads it
-(:func:`stilt.variants.resolve`), and the grid and the geometry's hash are
+(:meth:`stilt.ProjectConfig.resolve`), and the grid and the geometry's hash are
 recorded with the footprints.
 
 .. code-block:: yaml

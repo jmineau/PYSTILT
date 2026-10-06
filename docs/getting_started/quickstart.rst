@@ -150,6 +150,7 @@ settings are the ones above:
        "./my_first_project",
        receptors=[receptor],
        mets={"hrrr": met},          # "hrrr" is a name you choose
+       variants={"hrrr": {}},       # run the settings below with met hrrr
        n_hours=-24,
        numpar=200,
        grid=grid,
@@ -228,6 +229,9 @@ above:
        directory: /path/to/arl/hrrr
        file_format: "%Y%m%d_%H"
        file_tres: 6h
+
+   variants:
+     hrrr: {}
 
    grid:
      xmin: -113.0

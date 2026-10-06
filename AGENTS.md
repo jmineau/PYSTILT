@@ -66,8 +66,8 @@ inputs (`stilt.project.Project`: `config.yaml` and `receptors.csv`) and an
 output directory (`stilt.output.Output`) that `config.yaml` names and that
 several projects can share. The simulations a project defines are
 **receptors × variants**: `receptors.csv` crossed with the named variants in
-`config.yaml` (one per met when none are declared). Each variant resolves
-into a `Variant` (`stilt.variants`) with two records of settings
+`config.yaml`, which must declare at least one. Each variant resolves
+into a `Variant` (`stilt.config`) with two records of settings
 (`stilt.identity`): its run settings, whose hash identifies a *run* and
 names its particles folder, and optional footprint settings. Variants with
 equal run settings share one run per receptor and differ only in the
@@ -124,12 +124,11 @@ src/stilt/
   simulation.py      Simulation: a frozen value (receptor, variant, output)
                      that knows where its results are and whether they exist
   config.py          ProjectConfig: reads config.yaml, splits the flat keys into
-                     the model's config and the footprint's, checks each
-                     declared variant (`config.variant(name)`)
-  variants.py        Variant: one variant resolved (its configs, the model build,
-                     its two hashes); resolve() validates each variant's
-                     transport settings, expands realizations, and reads
-                     geometries and the model version once each
+                     the model's config and the footprint's, rejects unknown
+                     keys naming the nearest setting, checks each declared
+                     variant; resolve() makes each a Variant (its configs,
+                     the model build, its two hashes), reading geometries
+                     and the model version once each
   identity.py        settings records and their hashes: what a run and a footprint
                      were made with, written to and read back from _settings.yaml
   receptors/         receptors and receptors.csv
@@ -222,18 +221,22 @@ output directory, never only in memory.
   defaults). The model's parameters are checked by its own config class
   (`stilt.transport.hysplit.HysplitConfig`; `config.transport`), reached
   through `stilt.transport.get_model`. A model is a variant axis, like a
-  met: a variant that names another `model` gives that model's parameters
-  itself and inherits only the met and the footprint fields. The top-level
-  footprint fields are `config.footprint`, as the model's are
-  `config.transport`. When it loads, `ProjectConfig` checks each declared
-  variant against the defaults (`config.variant(name)`: names, met, model,
-  `realizations`, grid merging), reading no other file.
-  `stilt.variants.resolve` (behind `project.variants`) turns each into
-  `Variant`s: it validates the variant's transport settings with its
-  model's config class (once), expands `realizations: N` into
-  `<name>-0..N-1` with `seed + k`, reads each geometry once to derive the
-  grid, and asks the transport model its version once per build.
-  `Project.init` resolves before it writes `config.yaml`. Variants whose run settings
+  met: a variant that names another `model` gives that model's own
+  parameters itself and inherits the met, the footprint fields, and the
+  parameters every model shares (the base `TransportConfig`: `n_hours`,
+  `numpar`, `seed`, `hnf_plume`, `veght`). The top-level footprint fields
+  are `config.footprint`, as the model's are `config.transport`. When it
+  loads, `ProjectConfig` checks each declared variant against the defaults
+  (names, met, model, `realizations`, grid merging), and rejects an unknown
+  key with the nearest known one (`difflib`), reading no other file.
+  `ProjectConfig.resolve(directory)` (behind `project.variants`) turns
+  each into `Variant`s: it validates the variant's transport settings with
+  its model's config class (once), expands `realizations: N` into
+  `<name>-0..N-1` with `seed + k`, reads each geometry once (a relative
+  file from the project directory) to derive the grid, and asks the
+  transport model its version once per build. `Project.init` resolves
+  before it writes `config.yaml`. Stored `_settings.yaml` records keep
+  ignoring keys this version does not know. Variants whose run settings
   match share the particles; `from:` is rejected. `grid: null` means
   particles only, and footprint settings without a grid are an error. There is no
   named-footprints dict.
@@ -243,8 +246,9 @@ output directory, never only in memory.
   the raster and CRS layer that needs no shapely, since more than footprints
   use rasters (a flux put on the footprint grid). `stilt.config` composes them, so nothing
   below the project imports `stilt.config` (an import-linter contract).
-  Config classes read no file; anything that reads one or asks a model goes
-  in `stilt.variants`.
+  Config classes do no I/O when they validate, so a `config.yaml` loads
+  offline; reading a geometry or asking a model its build happens in
+  `ProjectConfig.resolve`, on request.
 - A config's fields that change no result are listed in its `UNRECORDED`
   class variable (`exe_dir` and `data_dir`; a met's directories,
   `download_from`, and `n_min`), and left out of the settings records. A
@@ -532,9 +536,6 @@ Feature status lives in the roadmap tables in [README.md](README.md) and
 - **Declaring `realizations` makes a numbered group, even at 1.** `hrrr-err`
   with `realizations: 1` is `hrrr-err-0`, so raising the count later only
   adds simulations. Realization 0 is never aliased to the unsuffixed name.
-- **Declared variants replace the per-met defaults.** With a `variants`
-  section only its entries run; the starter config writes `hrrr: {}` so the
-  unchanged run stays visible.
 - **HYSPLIT line-source chaining.** In `emspnt.f`, consecutive CONTROL
   starting locations at the same lat/lon become one vertical line source and
   only the last pair is released. That is how `ColumnReceptor` works (two

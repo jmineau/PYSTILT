@@ -1,5 +1,6 @@
 """Tests for stilt.config - models and YAML roundtrip."""
 
+import re
 import textwrap
 
 import pytest
@@ -20,7 +21,6 @@ from stilt.transport.hysplit.driver import (
     zicontroltf,
     ziscale_factors,
 )
-from stilt.variants import resolve
 
 
 class ScaleFoot(BaseModel):
@@ -275,7 +275,7 @@ def test_the_driver_names_only_real_settings_outside_setup_cfg():
     from stilt.transport.hysplit.driver import NOT_IN_SETUP
 
     assert set(HysplitConfig.model_fields) >= NOT_IN_SETUP
-    assert list(setup_entries(HysplitConfig()))[:2] == ["numpar", "varsiwant"]
+    assert next(iter(setup_entries(HysplitConfig()))) == "numpar"
 
 
 def test_met_config_construction(tmp_path):
@@ -307,6 +307,7 @@ def test_model_config_flat_construction(tmp_path):
                 file_tres="1h",
             )
         },
+        variants={"hrrr": {}},
     )
     assert cfg.n_hours == -24
     assert cfg.numpar == 100
@@ -316,40 +317,45 @@ def test_model_config_flat_construction(tmp_path):
 def test_model_config_requires_nonempty_mets():
     """ProjectConfig must have at least one met entry."""
     with pytest.raises(Exception, match="at least one"):
-        ProjectConfig(mets={})
+        ProjectConfig(mets={}, variants={"hrrr": {}})
 
 
 def test_model_config_rejects_met_keys_that_cannot_name_a_variant(tmp_path):
     mc = MetConfig(directory=tmp_path / "met", file_format="%Y%m%d_%H", file_tres="1h")
     with pytest.raises(Exception, match="must match"):
-        ProjectConfig(mets={"hrrr_v2": mc})
+        ProjectConfig(mets={"hrrr_v2": mc}, variants={"hrrr_v2": {}})
 
 
 def test_a_config_loads_without_its_hysplit_build(tmp_path):
     """Loading checks the variants but builds none, so exe_dir is not needed yet."""
     mc = MetConfig(directory=tmp_path / "met", file_format="%Y%m%d_%H", file_tres="1h")
     elsewhere = tmp_path / "not-mounted"
-    cfg = ProjectConfig(mets={"hrrr": mc}, exe_dir=elsewhere)
+    cfg = ProjectConfig(mets={"hrrr": mc}, exe_dir=elsewhere, variants={"hrrr": {}})
     with pytest.raises(FileNotFoundError, match="version"):
-        resolve(cfg)
+        cfg.resolve()
     with pytest.raises(ValueError, match="realizations must be >= 1"):
         ProjectConfig(mets={"hrrr": mc}, variants={"e": {"realizations": 0}})
 
 
 def _default_footprint(cfg):
     """The footprint settings of the first variant, which inherits the defaults."""
-    return next(iter(resolve(cfg).values())).footprint
+    return next(iter(cfg.resolve().values())).footprint
 
 
 def test_model_config_footprint_fields_are_flat(tmp_path, grid):
     """The footprint settings sit beside the transport ones and form the footprint."""
     mc = MetConfig(directory=tmp_path / "met", file_format="%Y%m%d_%H", file_tres="1h")
-    cfg = ProjectConfig(mets={"hrrr": mc}, grid=grid, smooth_factor=0.5)
+    cfg = ProjectConfig(
+        mets={"hrrr": mc}, grid=grid, smooth_factor=0.5, variants={"hrrr": {}}
+    )
     foot = _default_footprint(cfg)
     assert foot is not None
     assert foot.grid == grid
     assert foot.smooth_factor == 0.5
-    assert _default_footprint(ProjectConfig(mets={"hrrr": mc})) is None
+    assert (
+        _default_footprint(ProjectConfig(mets={"hrrr": mc}, variants={"hrrr": {}}))
+        is None
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -368,6 +374,7 @@ def test_model_config_yaml_roundtrip_basic(tmp_path):
                 file_tres="1h",
             )
         },
+        variants={"hrrr": {}},
     )
     path = tmp_path / "config.yaml"
     cfg.to_yaml(path)
@@ -393,6 +400,7 @@ def test_model_config_yaml_roundtrip_with_execution(tmp_path):
             "account": "lin-group",
             "slurm": {"exclude": "node1"},
         },
+        variants={"hrrr": {}},
     )
     path = tmp_path / "config.yaml"
     text = cfg.to_yaml(path)
@@ -405,23 +413,50 @@ def test_model_config_yaml_roundtrip_with_execution(tmp_path):
 
 
 def test_execution_defaults_to_one_local_process(tmp_path):
-    execution = ProjectConfig(mets=_met_config(tmp_path)).execution
+    execution = ProjectConfig(
+        mets=_met_config(tmp_path), variants={"hrrr": {}}
+    ).execution
     assert (execution.backend, execution.n_workers, execution.cpus) == ("local", 1, 1)
-    assert "execution:" not in ProjectConfig(mets=_met_config(tmp_path)).to_yaml()
+    assert (
+        "execution:"
+        not in ProjectConfig(
+            mets=_met_config(tmp_path), variants={"hrrr": {}}
+        ).to_yaml()
+    )
 
 
 def test_unknown_execution_setting_is_an_error(tmp_path):
     """A typo, or an sbatch option outside `slurm:`, used to be ignored or passed on (#63)."""
     with pytest.raises(ValueError, match=r"execution\.partion\s+Extra inputs"):
-        ProjectConfig(mets=_met_config(tmp_path), execution={"partion": "compute"})
+        ProjectConfig(
+            mets=_met_config(tmp_path),
+            execution={"partion": "compute"},
+            variants={"hrrr": {}},
+        )
     with pytest.raises(ValueError, match=r"execution\.requeue\s+Extra inputs"):
-        ProjectConfig(mets=_met_config(tmp_path), execution={"requeue": True})
+        ProjectConfig(
+            mets=_met_config(tmp_path),
+            execution={"requeue": True},
+            variants={"hrrr": {}},
+        )
     with pytest.raises(ValueError, match=r"execution\.cpus_per_task\s+Extra inputs"):
-        ProjectConfig(mets=_met_config(tmp_path), execution={"cpus_per_task": 4})
+        ProjectConfig(
+            mets=_met_config(tmp_path),
+            execution={"cpus_per_task": 4},
+            variants={"hrrr": {}},
+        )
     with pytest.raises(ValueError, match="backend"):
-        ProjectConfig(mets=_met_config(tmp_path), execution={"backend": "kubernetes"})
+        ProjectConfig(
+            mets=_met_config(tmp_path),
+            execution={"backend": "kubernetes"},
+            variants={"hrrr": {}},
+        )
     with pytest.raises(ValueError, match="n_workers"):
-        ProjectConfig(mets=_met_config(tmp_path), execution={"n_workers": 0})
+        ProjectConfig(
+            mets=_met_config(tmp_path),
+            execution={"n_workers": 0},
+            variants={"hrrr": {}},
+        )
 
 
 def test_execution_accepts_one_setup_line():
@@ -443,6 +478,7 @@ def test_model_config_yaml_roundtrip_with_footprint(tmp_path, grid):
         },
         grid=grid,
         time_integrate=True,
+        variants={"hrrr": {}},
     )
     path = tmp_path / "config.yaml"
     cfg.to_yaml(path)
@@ -469,7 +505,9 @@ def test_model_config_yaml_roundtrip_with_footprint_transforms(tmp_path, grid):
         PressureWeighting(),
         FirstOrderLifetime(lifetime_hours=4.0),
     ]
-    cfg = ProjectConfig(mets=_met_config(tmp_path), grid=grid, transforms=given)
+    cfg = ProjectConfig(
+        mets=_met_config(tmp_path), grid=grid, transforms=given, variants={"hrrr": {}}
+    )
     path = tmp_path / "config.yaml"
     cfg.to_yaml(path)
     loaded = ProjectConfig.from_yaml(path)
@@ -479,12 +517,15 @@ def test_model_config_yaml_roundtrip_with_footprint_transforms(tmp_path, grid):
     assert isinstance(transforms[0], AveragingKernel)
     assert isinstance(transforms[1], PressureWeighting)
     assert isinstance(transforms[2], FirstOrderLifetime)
-    assert resolve(loaded)["hrrr"].footprint.transforms == given
+    assert loaded.resolve()["hrrr"].footprint.transforms == given
 
 
 def test_model_config_yaml_roundtrip_with_user_transform(tmp_path, grid):
     cfg = ProjectConfig(
-        mets=_met_config(tmp_path), grid=grid, transforms=[ScaleFoot(factor=2.5)]
+        mets=_met_config(tmp_path),
+        grid=grid,
+        transforms=[ScaleFoot(factor=2.5)],
+        variants={"hrrr": {}},
     )
     path = tmp_path / "config.yaml"
     cfg.to_yaml(path)
@@ -531,7 +572,7 @@ def test_model_config_variant_grid_in_yaml(tmp_path):
     """)
     path = tmp_path / "config.yaml"
     path.write_text(yaml_text)
-    variants = resolve(ProjectConfig.from_yaml(path))
+    variants = ProjectConfig.from_yaml(path).resolve()
     assert variants["hrrr"].footprint.grid.xres == 0.01
     assert variants["coarse"].footprint.grid.xres == 0.05
     assert variants["coarse"].footprint.grid.xmin == -114.0
@@ -555,6 +596,8 @@ def test_model_config_inline_grid_in_yaml(tmp_path):
           xres: 0.05
           yres: 0.05
         smooth_factor: 0.75
+        variants:
+          hrrr: {{}}
     """)
     path = tmp_path / "config.yaml"
     path.write_text(yaml_text)
@@ -588,7 +631,7 @@ def test_model_config_null_grid_means_trajectory_only(tmp_path):
     """)
     path = tmp_path / "config.yaml"
     path.write_text(yaml_text)
-    variants = resolve(ProjectConfig.from_yaml(path))
+    variants = ProjectConfig.from_yaml(path).resolve()
     assert variants["hrrr"].footprint is not None
     assert variants["traj"].footprint is None
 
@@ -619,6 +662,8 @@ def test_model_config_loads_footprint_transforms_from_yaml(tmp_path):
             lifetime_hours: 3.0
           - kind: {SCALE_FOOT_KIND}
             factor: 0.5
+        variants:
+          hrrr: {{}}
     """)
     path = tmp_path / "config.yaml"
     path.write_text(yaml_text)
@@ -658,6 +703,8 @@ def test_model_config_rejects_unimportable_transform_from_yaml(tmp_path):
         transforms:
           - kind: no_such_pkg_for_stilt_tests.transforms.MyKernel
             levels: [0.0, 1000.0]
+        variants:
+          hrrr: {{}}
     """)
     path = tmp_path / "config.yaml"
     path.write_text(yaml_text)
@@ -677,6 +724,8 @@ def test_model_config_unknown_keys_raise(tmp_path):
             file_format: "%Y%m%d_%H"
             file_tres: 1h
         mystery_param: 99
+        variants:
+          hrrr: {{}}
     """)
     path = tmp_path / "config.yaml"
     path.write_text(yaml_text)
@@ -692,7 +741,11 @@ def test_model_config_unknown_keys_raise(tmp_path):
 
 def _resolved_footprint(tmp_path, **footprint) -> FootprintConfig:
     """The resolved footprint of a one-met project with these footprint fields."""
-    variant = resolve(ProjectConfig(mets=_met_config(tmp_path), **footprint))["hrrr"]
+    variant = (
+        ProjectConfig(
+            mets=_met_config(tmp_path), **{"variants": {"hrrr": {}}, **footprint}
+        )
+    ).resolve()["hrrr"]
     assert variant.footprint is not None
     return variant.footprint
 
@@ -771,8 +824,9 @@ def test_model_config_yaml_roundtrip_with_geometry(tmp_path):
         n_hours=-6,
         numpar=100,
         geometry={"kind": "file", "path": str(shp), "ids": "NAME"},
+        variants={"hrrr": {}},
     )
-    fc = next(iter(resolve(config).values())).footprint
+    fc = next(iter(config.resolve().values())).footprint
     assert fc is not None
     assert fc.grid.xres == pytest.approx(0.02)  # 0.1 / 4 -> 0.025 -> 0.02
     assert fc.geometry is not None and fc.geometry.kind == "file"
@@ -780,7 +834,7 @@ def test_model_config_yaml_roundtrip_with_geometry(tmp_path):
     path = tmp_path / "config.yaml"
     config.to_yaml(path)
     loaded = ProjectConfig.from_yaml(path)
-    lfc = next(iter(resolve(loaded).values())).footprint
+    lfc = next(iter(loaded.resolve().values())).footprint
     assert lfc is not None
     assert lfc.grid == fc.grid
     assert lfc.geometry == fc.geometry
@@ -811,7 +865,9 @@ def test_file_geometry_spec_layer_and_where(tmp_path):
 
 
 def _variant_config(tmp_path, **kwargs):
-    return ProjectConfig(mets=_met_config(tmp_path), **kwargs)
+    return ProjectConfig(
+        mets=_met_config(tmp_path), **{"variants": {"hrrr": {}}, **kwargs}
+    )
 
 
 def test_footprint_settings_without_a_grid_are_an_error(tmp_path):
@@ -833,8 +889,10 @@ def test_footprint_settings_without_a_grid_are_an_error(tmp_path):
 
 def test_variants_default_to_one_per_met(tmp_path):
     mc = _met_config(tmp_path)["hrrr"]
-    cfg = ProjectConfig(mets={"hrrr": mc, "gfs": mc}, ziscale=0.9)
-    variants = resolve(cfg)
+    cfg = ProjectConfig(
+        mets={"hrrr": mc, "gfs": mc}, ziscale=0.9, variants={"hrrr": {}, "gfs": {}}
+    )
+    variants = cfg.resolve()
     assert list(variants) == ["hrrr", "gfs"]
     assert variants["gfs"].met == "gfs"
     assert variants["gfs"].transport.ziscale == 0.9
@@ -845,7 +903,7 @@ def test_variant_overrides_merge_onto_the_defaults(tmp_path):
     cfg = _variant_config(
         tmp_path, numpar=50, variants={"hrrr": {}, "zi08": {"ziscale": 0.8}}
     )
-    variants = resolve(cfg)
+    variants = cfg.resolve()
     assert variants["zi08"].transport.numpar == 50
     assert variants["zi08"].transport.ziscale == 0.8
     assert variants["hrrr"].transport.ziscale == 1.0
@@ -873,7 +931,7 @@ def test_variant_grid_override_merges_field_by_field(tmp_path):
             "none": {"grid": None},
         },
     )
-    variants = resolve(cfg)
+    variants = cfg.resolve()
     assert variants["coarse"].footprint is not None
     assert variants["coarse"].footprint.grid.xres == 0.1
     assert variants["coarse"].footprint.grid.xmin == -114
@@ -903,7 +961,7 @@ def test_to_yaml_writes_only_what_was_set(tmp_path, grid):
     assert "maxpar" not in text and "n_min" not in text  # at every level
     assert text.startswith("mets:")  # inputs first, then the settings
     assert "kind: first_order_lifetime" in text  # nested objects are written in full
-    loaded = resolve(ProjectConfig.from_yaml(path))
+    loaded = ProjectConfig.from_yaml(path).resolve()
     assert loaded["zi08"].transport.ziscale == 0.8
     assert loaded["decay"].footprint.transforms[0].lifetime_hours == 1.0
 
@@ -938,7 +996,7 @@ def test_realizations_expand_into_numbered_variants_with_their_own_seed(tmp_path
             },
         },
     )
-    variants = resolve(cfg)
+    variants = cfg.resolve()
     assert list(variants) == ["hrrr", "err-0", "err-1", "err-2"]
     assert [variants[f"err-{k}"].transport.seed for k in range(3)] == [42, 43, 44]
     assert all(variants[f"err-{k}"].group == "err" for k in range(3))
@@ -951,14 +1009,14 @@ def test_realizations_expand_into_numbered_variants_with_their_own_seed(tmp_path
 def test_several_realizations_require_krand_4_or_a_seed(tmp_path, krand):
     config = _variant_config(tmp_path, krand=krand, variants={"e": {"realizations": 3}})
     with pytest.raises(ValueError, match="requires krand=4 or krand=2 with a seed"):
-        resolve(config)
+        config.resolve()
 
 
 def test_several_realizations_accept_krand_4_or_seeded_krand_2(tmp_path):
     a = _variant_config(tmp_path, krand=4, variants={"e": {"realizations": 3}})
-    assert len(resolve(a)) == 3
+    assert len(a.resolve()) == 3
     b = _variant_config(tmp_path, krand=2, seed=7, variants={"e": {"realizations": 2}})
-    assert len(resolve(b)) == 2
+    assert len(b.resolve()) == 2
     with pytest.raises(ValueError, match="realizations must be >= 1"):
         _variant_config(tmp_path, variants={"e": {"realizations": 0}})
 
@@ -966,9 +1024,9 @@ def test_several_realizations_accept_krand_4_or_seeded_krand_2(tmp_path):
 def test_declaring_realizations_always_makes_a_group(tmp_path):
     """A group of one is ``e-0``, so raising the count later only adds runs."""
     cfg = _variant_config(tmp_path, variants={"e": {"realizations": 1}, "single": {}})
-    assert list(resolve(cfg)) == ["e-0", "single"]
-    assert resolve(cfg)["e-0"].group == "e"
-    assert resolve(cfg)["single"].realization is None
+    assert list(cfg.resolve()) == ["e-0", "single"]
+    assert cfg.resolve()["e-0"].group == "e"
+    assert cfg.resolve()["single"].realization is None
 
 
 def test_realization_names_may_not_collide_with_declared_variants(tmp_path):
@@ -986,7 +1044,7 @@ def test_variants_that_differ_only_in_footprint_fields_keep_the_transport(
         grid=grid,
         variants={"hrrr": {"ziscale": 0.8}, "s2": {"ziscale": 0.8, "smooth_factor": 2}},
     )
-    variants = resolve(cfg)
+    variants = cfg.resolve()
     s2 = variants["s2"]
     assert s2.met == "hrrr"
     assert s2.transport.ziscale == 0.8
@@ -1011,23 +1069,25 @@ def test_variants_survive_a_yaml_roundtrip_as_written(tmp_path, grid):
     cfg.to_yaml(path)
     loaded = ProjectConfig.from_yaml(path)
     assert loaded.variants == declared
-    assert list(resolve(loaded)) == ["hrrr", "zi08", "s2"]
+    assert list(loaded.resolve()) == ["hrrr", "zi08", "s2"]
 
 
 def test_to_yaml_always_writes_the_variants_that_run(tmp_path):
     mc = _met_config(tmp_path)["hrrr"]
-    cfg = ProjectConfig(mets={"hrrr": mc, "gfs": mc}, numpar=50)
+    cfg = ProjectConfig(
+        mets={"hrrr": mc, "gfs": mc}, numpar=50, variants={"hrrr": {}, "gfs": {}}
+    )
     text = cfg.to_yaml()
     assert "variants:\n  hrrr: {}\n  gfs: {}\n" in text
     loaded = ProjectConfig.model_validate(__import__("yaml").safe_load(text))
-    assert list(resolve(loaded)) == ["hrrr", "gfs"]
-    assert resolve(loaded)["gfs"].met == "gfs"
+    assert list(loaded.resolve()) == ["hrrr", "gfs"]
+    assert loaded.resolve()["gfs"].met == "gfs"
 
 
 def test_variant_named_after_a_met_uses_it(tmp_path):
     mc = _met_config(tmp_path)["hrrr"]
     cfg = ProjectConfig(mets={"hrrr": mc, "gfs": mc}, variants={"gfs": {}, "hrrr": {}})
-    assert {n: v.met for n, v in resolve(cfg).items()} == {
+    assert {n: v.met for n, v in cfg.resolve().items()} == {
         "gfs": "gfs",
         "hrrr": "hrrr",
     }
@@ -1055,7 +1115,7 @@ def test_variant_geometry_derives_its_own_grid_and_hash(tmp_path, grid, defaults
             "src-run": {"geometry": _WINDOWS},
         },
     )
-    variants = resolve(cfg)
+    variants = cfg.resolve()
     mesh = Mesh.from_spec(variants["src"].footprint.geometry)
     expected = mesh.to_grid()
     for name in ("src", "src-run"):
@@ -1096,7 +1156,7 @@ def test_each_geometry_is_built_once_and_not_on_load(tmp_path, monkeypatch):
     cfg = ProjectConfig.from_yaml(tmp_path / "config.yaml")
     assert calls == []
 
-    variants = resolve(cfg)
+    variants = cfg.resolve()
     assert len(calls) == 2  # the default geometry and the one of "src"
     inherited = [variants[n].footprint for n in ("hrrr", "np50", "err-0", "err-1")]
     assert all(f is not None and f.grid == inherited[0].grid for f in inherited)
@@ -1110,7 +1170,7 @@ def test_config_loads_without_its_geometry_file(tmp_path):
     )
     assert cfg.footprint.geometry is not None and cfg.footprint.grid is None
     with pytest.raises(Exception, match="missing.shp"):
-        resolve(cfg)
+        cfg.resolve()
 
 
 def test_stored_footprint_settings_never_read_the_geometry(monkeypatch):
@@ -1149,10 +1209,75 @@ def test_maxpar_follows_each_variants_numpar(tmp_path):
     cfg = _variant_config(
         tmp_path, numpar=1000, variants={"hrrr": {}, "np3k": {"numpar": 3000}}
     )
-    variants = resolve(cfg)
+    variants = cfg.resolve()
     assert setup_entries(variants["hrrr"].transport)["maxpar"] == 1000
     assert setup_entries(variants["np3k"].transport)["maxpar"] == 3000
     # A run's identity holds the value HYSPLIT got, so an unset maxpar equals
     # numpar and a variant that raises numpar is a different run.
     assert variants["hrrr"].run_settings["maxpar"] == 1000
     assert variants["np3k"].run_settings["maxpar"] == 3000
+
+
+# ---------------------------------------------------------------------------
+# Variants are declared; unknown keys name the nearest setting (#150)
+# ---------------------------------------------------------------------------
+
+
+def test_a_config_without_variants_says_what_to_write(tmp_path):
+    with pytest.raises(
+        ValueError, match=r"no variants. Add\n  variants:\n    hrrr: \{\}"
+    ):
+        ProjectConfig(mets=_met_config(tmp_path))
+
+
+@pytest.mark.parametrize(
+    ("settings", "message"),
+    [
+        (
+            {"smooth_factr": 0.5},
+            "config: 'smooth_factr' is not a setting. Did you mean 'smooth_factor', a footprint setting?",
+        ),
+        (
+            {"numpr": 10},
+            "config: 'numpr' is not a setting. Did you mean 'numpar', a hysplit setting?",
+        ),
+        ({"varients": {}}, "Did you mean 'variants', a config key?"),
+        (
+            {"variants": {"hrrr": {"zisacle": 0.8}}},
+            "Variant 'hrrr': 'zisacle' is not a setting. Did you mean 'ziscale', a hysplit setting?",
+        ),
+        (
+            {"variants": {"hrrr": {"realisations": 2}}},
+            "Did you mean 'realizations', a variant key?",
+        ),
+    ],
+)
+def test_an_unknown_key_names_the_nearest_setting(tmp_path, settings, message):
+    settings = {"variants": {"hrrr": {}}, **settings}
+    with pytest.raises(ValueError, match=re.escape(message)):
+        ProjectConfig(mets=_met_config(tmp_path), **settings)
+
+
+def test_a_relative_geometry_file_starts_from_the_project_directory(
+    tmp_path, monkeypatch
+):
+    gpd = pytest.importorskip("geopandas")
+    import shapely
+
+    project = tmp_path / "proj"
+    project.mkdir()
+    gpd.GeoDataFrame(
+        {"NAME": ["a"]},
+        geometry=[shapely.box(-112.0, 40.5, -111.9, 40.6)],
+        crs="EPSG:4326",
+    ).to_file(project / "cells.geojson", driver="GeoJSON")
+    config = ProjectConfig(
+        mets=_met_config(tmp_path),
+        geometry={"kind": "file", "path": "cells.geojson", "ids": "NAME"},
+        variants={"hrrr": {}},
+    )
+    monkeypatch.chdir(tmp_path)  # not the project
+    variant = config.resolve(project)["hrrr"]
+    assert variant.footprint is not None and variant.geometry_hash is not None
+    # The settings keep the path as written, so moving the project changes no hash.
+    assert variant.footprint.geometry.path == "cells.geojson"

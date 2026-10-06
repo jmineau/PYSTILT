@@ -6,14 +6,13 @@ from dataclasses import replace
 import pytest
 import yaml
 
-from stilt.config import ProjectConfig
+from stilt.config import ProjectConfig, Variant
 from stilt.identity import read_run_settings, run_settings, settings_hash
 from stilt.meteorology import MetConfig
 from stilt.output import Output
 from stilt.transport import ModelInfo
 from stilt.transport.hysplit import HysplitConfig
 from stilt.transport.hysplit.model import hysplit_version
-from stilt.variants import Variant, resolve
 
 GRID = {"xmin": -112, "xmax": -111, "ymin": 40, "ymax": 41, "xres": 0.1, "yres": 0.1}
 
@@ -29,8 +28,10 @@ def _met(tmp_path, **overrides) -> MetConfig:
 
 def _variant(tmp_path, met: MetConfig | None = None, **transport) -> Variant:
     """The resolved ``hrrr`` variant of a one-met project with these transport fields."""
-    config = ProjectConfig(mets={"hrrr": met or _met(tmp_path)}, **transport)
-    return resolve(config)["hrrr"]
+    config = ProjectConfig(
+        mets={"hrrr": met or _met(tmp_path)}, **{"variants": {"hrrr": {}}, **transport}
+    )
+    return config.resolve()["hrrr"]
 
 
 # ---------------------------------------------------------------------------
@@ -127,7 +128,7 @@ def test_variants_that_differ_only_in_footprint_fields_share_particles(tmp_path)
             },
         },
     )
-    variants = resolve(config)
+    variants = config.resolve()
     runs = {name: v.particles_hash for name, v in variants.items()}
     assert runs["hrrr"] == runs["hrrr-smooth"] == runs["hrrr-coarse"]
     assert runs["hrrr-err"] != runs["hrrr"]
