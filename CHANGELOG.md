@@ -10,7 +10,7 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Slurm runs no longer go through submitit (breaking), which is no longer
   a dependency. `stilt submit` and `project.submit()` write a submission
-  folder, `slurm/<stamp>/` with `job.sh`, `receptors.txt`, and
+  folder, `_slurm/<stamp>/` with `job.sh`, `receptors.txt`, and
   `execution.yaml`, and submit `job.sh` with `sbatch`. Task `i` of the
   array runs `stilt run <project> --receptors receptors.txt --task i/N
   --execution execution.yaml`, so a task is a command line that can be read

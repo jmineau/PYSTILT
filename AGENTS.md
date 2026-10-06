@@ -203,7 +203,7 @@ docs/                Sphinx (pydata-sphinx-theme)
    `stilt.execution.run` finds the receptors with missing results and
    either runs them in this process (`backend: local`) or submits them as
    one Slurm job array (`backend: slurm`): `submit` writes
-   `slurm/<stamp>/{receptors.txt,execution.yaml,job.sh}` and calls
+   `_slurm/<stamp>/{receptors.txt,execution.yaml,job.sh}` and calls
    `sbatch`, each task runs `stilt run --receptors receptors.txt --task
    $SLURM_ARRAY_TASK_ID/N --execution execution.yaml`, and `run` waits by
    polling `sacct`. `submit` returns the job id at once. A task that stops
@@ -300,7 +300,7 @@ folder below a kind is hive-style, so each tree reads as one dataset:
 <project>/
   config.yaml                 ProjectConfig (written once by Project.init or stilt init; never rewritten)
   receptors.csv               receptor list; add_receptors() appends new receptors
-  slurm/<stamp>/              one folder per Slurm submission: job.sh,
+  _slurm/<stamp>/             one folder per Slurm submission: job.sh,
                               receptors.txt, execution.yaml, <task>.log
 
 <output>/

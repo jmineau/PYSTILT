@@ -106,7 +106,7 @@ manifest. Call these instead.
 `stilt.execution.run` (`execution/runner.py`) finds the receptors with
 missing results. A local run calls `run_receptors` in this process. A Slurm
 run goes through `submit`, which writes `receptors.txt`, `execution.yaml`,
-and `job.sh` (`job_script`) into `slurm/<stamp>/` and calls `sbatch`.
+and `job.sh` (`job_script`) into `_slurm/<stamp>/` and calls `sbatch`.
 
 The unit of work is a command line: `stilt run <project> --receptors FILE
 --task I/N`. Any scheduler that can start it with an index can run a

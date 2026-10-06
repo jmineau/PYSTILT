@@ -23,7 +23,7 @@ already has one. ``stilt init`` writes a commented starter ``config.yaml``
 instead. Receptors you add are appended to ``receptors.csv``, or start it if
 there is none.
 
-A Slurm run also creates a ``slurm/`` folder with the job
+A Slurm run also creates a ``_slurm/`` folder with the job
 scripts and logs (see :doc:`execution/slurm`).
 
 What's in the output directory

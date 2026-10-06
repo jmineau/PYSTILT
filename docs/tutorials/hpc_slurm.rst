@@ -71,9 +71,9 @@ Step 4: Monitor
    squeue -u "$USER"                         # Slurm's view of the array
    stilt status /path/to/shared/slv_2023     # finished vs remaining simulations
 
-Task output is in ``slurm/<date_time>_<id>/`` inside the project, with one
+Task output is in ``_slurm/<date_time>_<id>/`` inside the project, with one
 folder per submission. If every task fails immediately, look in the
-``_log.err`` files there first.
+``<task>.log`` files there first.
 
 Step 5: Resubmit what's left
 ----------------------------

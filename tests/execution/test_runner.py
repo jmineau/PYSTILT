@@ -32,7 +32,7 @@ def _sbatch(script: str) -> dict[str, str | bool]:
 
 def test_job_script_asks_for_what_the_execution_settings_say(tmp_path):
     project = Project(tmp_path / "My_Project")
-    folder = tmp_path / "My_Project" / "slurm" / "stamp"
+    folder = tmp_path / "My_Project" / "_slurm" / "stamp"
     execution = ExecutionConfig(
         backend="slurm",
         n_workers=50,
@@ -112,7 +112,7 @@ def test_job_script_is_valid_bash(tmp_path):
         job_script(
             Project(tmp_path / "with space"),
             ExecutionConfig(backend="slurm", setup=["echo ready"]),
-            tmp_path / "with space" / "slurm",
+            tmp_path / "with space" / "_slurm",
             3,
             skip_existing=False,
         )
@@ -170,7 +170,7 @@ def test_submit_writes_a_submission_and_hands_it_to_sbatch(pending, commands, tm
     [(sbatch, parsable, script)] = commands.ran
     assert (sbatch, parsable) == ("sbatch", "--parsable")
     folder = Path(script).parent
-    assert folder.parent == project.directory / "slurm"
+    assert folder.parent == project.directory / "_slurm"
     assert (folder / "receptors.txt").read_text().split() == ["a", "b", "c"]
     stored = yaml.safe_load((folder / "execution.yaml").read_text())
     assert ExecutionConfig.model_validate(stored) == execution
