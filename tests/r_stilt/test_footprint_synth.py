@@ -47,9 +47,11 @@ from stilt.footprint.gridding import (
     _project_particles_to_crs,
     _wrap_antimeridian_longitudes,
 )
-from stilt.particles import calc_plume_dilution
+from stilt.particles import correct_near_field
 from stilt.receptors import PointReceptor
 from stilt.spatial import Grid, _grid_cell_starts
+
+from ..fixtures.particles import point_at
 
 pytestmark = [pytest.mark.fidelity]
 
@@ -793,7 +795,7 @@ def test_hnf_dilution_active(rscript, r_stilt_dir, tmp_path):
         tlgr=[50.0],
     )
 
-    py_result = calc_plume_dilution(p.copy(), r_zagl=r_zagl, veght=_VEGHT)
+    py_result = correct_near_field(p.copy(), point_at(r_zagl), _VEGHT)
     r_result = _r_plume_dilution(tmp_path, rscript, r_stilt_dir, p, r_zagl=r_zagl)
 
     # Correction should have changed foot
@@ -833,7 +835,7 @@ def test_hnf_dilution_inactive(rscript, r_stilt_dir, tmp_path):
         tlgr=[200.0],
     )
 
-    py_result = calc_plume_dilution(p.copy(), r_zagl=r_zagl, veght=_VEGHT)
+    py_result = correct_near_field(p.copy(), point_at(r_zagl), _VEGHT)
     r_result = _r_plume_dilution(tmp_path, rscript, r_stilt_dir, p, r_zagl=r_zagl)
 
     # Correction should NOT have changed foot

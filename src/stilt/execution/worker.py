@@ -33,9 +33,8 @@ from stilt.execution.config import ExecutionConfig
 from stilt.footprint import calc_footprint
 from stilt.meteorology import Met
 from stilt.output import Kind
-from stilt.particles import check_particles
 from stilt.simulation import Simulation
-from stilt.transport import get_model
+from stilt.transport import run_model
 
 if TYPE_CHECKING:
     from stilt.project import Project
@@ -171,8 +170,6 @@ def run_particles(
         :class:`~stilt.exceptions.MeteorologyError` when the met files are
         missing.
     """
-    params = sim.variant.transport
-    model = get_model(sim.variant.model.name)
     output, rid = sim.output, sim.receptor.id
     # The model runs in an empty directory. A job stopped partway can leave
     # this simulation's directory behind; it is PYSTILT's own, so clear it.
@@ -181,12 +178,14 @@ def run_particles(
     log = workdir / "stilt.log"
     succeeded = False
     try:
-        result = model.run(sim.receptor, params, met, workdir, timeout=timeout)
-        if result.particles.empty:
-            raise SimulationError(
-                "The transport model wrote no particles.", reason="NO_PARTICLE_DATA"
-            )
-        check_particles(result.particles)
+        result = run_model(
+            sim.variant.model.name,
+            sim.receptor,
+            sim.variant.transport,
+            met,
+            workdir,
+            timeout=timeout,
+        )
         output.write_particles(
             sim.variant, sim.receptor, result.particles, result.met_files
         )

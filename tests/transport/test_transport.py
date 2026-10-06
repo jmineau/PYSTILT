@@ -6,7 +6,7 @@ import pandas as pd
 import pytest
 
 from stilt.config import ProjectConfig, Variant
-from stilt.execution import run_particles, worker
+from stilt.execution import run_particles
 from stilt.meteorology import MetConfig
 from stilt.output import Output
 from stilt.simulation import Simulation
@@ -131,7 +131,7 @@ def test_run_particles_goes_through_the_model_the_settings_name(
 
     asked: list[str] = []
     monkeypatch.setattr(
-        worker, "get_model", lambda name: asked.append(name) or _Model()
+        "stilt.transport.get_model", lambda name: asked.append(name) or _Model()
     )
     met_config = MetConfig(directory=tmp_path, file_format="%Y%m%d_%H", file_tres="1h")
     variant = Variant(
@@ -175,7 +175,16 @@ class _EchoModel:
             "workdir": workdir,
             "timeout": timeout,
         }
-        return ModelRun(pd.DataFrame({"indx": [1], "time": [-1.0]}), met_files=[])
+        particles = pd.DataFrame(
+            {
+                "indx": [1],
+                "time": [-1.0],
+                "long": [-111.9],
+                "lati": [40.7],
+                "zagl": [5.0],
+            }
+        )
+        return ModelRun(particles, met_files=[])
 
 
 @pytest.fixture
@@ -191,13 +200,17 @@ def _met(tmp_path) -> dict:
 
 
 def test_run_trajectories_returns_the_particles_and_removes_its_workdir(
-    tmp_path, point_receptor, echo
+    tmp_path, point_receptor, echo, caplog
 ):
     from stilt import run_trajectories
 
-    particles = run_trajectories(
-        point_receptor, _met(tmp_path), model="echo", numpar=50, timeout=9
-    )
+    with caplog.at_level("WARNING", logger="stilt.transport"):
+        particles = run_trajectories(
+            point_receptor, _met(tmp_path), model="echo", numpar=50, timeout=9
+        )
+    # The echo model writes none of the columns the near-field correction reads.
+    assert "near-field correction skipped" in caplog.text
+    assert "foot_no_hnf_dilution" not in particles.columns
 
     assert particles["indx"].tolist() == [1]
     assert echo.seen["config"].numpar == 50

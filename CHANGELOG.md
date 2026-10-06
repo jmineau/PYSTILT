@@ -8,6 +8,19 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- The release heights and the near-field correction are PYSTILT's steps,
+  applied by the worker to any transport model's particles (breaking):
+  `stilt.particles.add_release_heights(particles, receptor)` and
+  `correct_near_field(particles, receptor, veght)` (was
+  `calc_plume_dilution(particles, r_zagl, veght)`). HYSPLIT's model
+  returns the particles it wrote, and `finish_particles` and
+  `stilt.transport.hysplit.release` are gone. A model whose particles lack
+  the columns the correction reads gets none, with a warning (#150).
+- A release row at `time = 0` gives a column receptor's `xhgt` too: the
+  centre of the slab the particle was released in, where it was taken from
+  `indx` order. The bundled HYSPLIT writes no such row, so its results are
+  unchanged (#150).
+
 - A config must declare its variants (breaking). Without a `variants:`
   section the config no longer runs one variant per met; it fails with a
   message that says what to write (`variants: {hrrr: {}}`). Files PYSTILT

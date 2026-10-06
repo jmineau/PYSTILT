@@ -19,7 +19,6 @@ top-level keys.
    :nosignatures:
 
    stilt.transport.hysplit.HysplitConfig
-   stilt.transport.hysplit.finish_particles
 
 Running HYSPLIT
 ---------------
@@ -29,16 +28,18 @@ Running HYSPLIT
 ``SETUP.CFG``, and the error and mixed-layer files when the settings call
 for them. Use it to look at the input files of a run.
 :func:`~stilt.transport.hysplit.read_particle_dat` reads a
-``PARTICLE_STILT.DAT`` as a particle table, and
-:func:`~stilt.transport.hysplit.finish_particles` adds the release heights
-and the near-field correction, as a run does.
+``PARTICLE_STILT.DAT`` as a particle table. The release heights and the
+near-field correction are PYSTILT's steps, the same for any model
+(:doc:`particles`):
 
 .. code-block:: python
 
-   from stilt.transport.hysplit import finish_particles, read_particle_dat
+   from stilt.particles import add_release_heights, correct_near_field
+   from stilt.transport.hysplit import read_particle_dat
 
    particles = read_particle_dat("PARTICLE_STILT.DAT", config.varsiwant)
-   particles = finish_particles(particles, receptor, config)
+   particles = add_release_heights(particles, receptor)
+   particles = correct_near_field(particles, receptor, config.veght)
 
 .. autosummary::
    :toctree: _api

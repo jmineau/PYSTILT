@@ -18,7 +18,8 @@ from stilt.spatial import Grid
 from stilt.transforms import FirstOrderLifetime, transform_kind
 from stilt.transport import ModelInfo
 from stilt.transport.hysplit import HysplitConfig
-from stilt.transport.hysplit.model import finish_particles
+
+from .fixtures.particles import finished
 
 GRID = Grid(xmin=-114.0, xmax=-111.0, ymin=39.0, ymax=42.0, xres=0.1, yres=0.1)
 FOOT = FootprintConfig(grid=GRID, time_integrate=True, smooth_factor=0.0)
@@ -71,7 +72,7 @@ def _trajectories(receptor, params, foot: float = 1e-5) -> pd.DataFrame:
             "foot": [foot],
         }
     )
-    return finish_particles(particles, receptor, params)
+    return finished(particles, receptor, params)
 
 
 def _write_particles(sim: Simulation) -> pd.DataFrame:

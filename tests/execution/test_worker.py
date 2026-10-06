@@ -183,7 +183,7 @@ def test_run_particles_starts_in_an_empty_directory(
             seen.append(sorted(p.name for p in workdir.iterdir()))
             raise RuntimeError("stop here")
 
-    monkeypatch.setattr(worker, "get_model", lambda name: _Model())
+    monkeypatch.setattr("stilt.transport.get_model", lambda name: _Model())
     with pytest.raises(RuntimeError):
         worker.run_particles(sim, met=met, workdir=workdir)
     assert seen == [[]]
@@ -198,7 +198,7 @@ def test_run_particles_keeps_no_empty_scratch_copy(sim, met, compute_root, monke
         def run(self, receptor, params, met, workdir, timeout=None):
             raise MeteorologyError("Insufficient number of meteorological files found.")
 
-    monkeypatch.setattr(worker, "get_model", lambda name: _Model())
+    monkeypatch.setattr("stilt.transport.get_model", lambda name: _Model())
     with pytest.raises(MeteorologyError):
         worker.run_particles(
             sim, met=met, workdir=compute_root / sim.receptor.id / sim.variant.name
@@ -218,7 +218,7 @@ def test_run_particles_without_particles_is_a_simulation_error(
         def run(self, receptor, params, met, workdir, timeout=None):
             return ModelRun(particles=pd.DataFrame(), met_files=[])
 
-    monkeypatch.setattr(worker, "get_model", lambda name: _Model())
+    monkeypatch.setattr("stilt.transport.get_model", lambda name: _Model())
     with pytest.raises(SimulationError) as caught:
         worker.run_particles(
             sim, met=met, workdir=compute_root / sim.receptor.id / sim.variant.name
@@ -547,7 +547,7 @@ def test_a_failed_run_keeps_its_log_and_working_directory(
                 reason="FORTRAN_RUNTIME_ERROR",
             )
 
-    monkeypatch.setattr(worker, "get_model", lambda name: _Model())
+    monkeypatch.setattr("stilt.transport.get_model", lambda name: _Model())
     _run_receptor(project, receptor)
 
     failure = sim.failure

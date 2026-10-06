@@ -18,9 +18,9 @@ from stilt.project import Project
 from stilt.receptors import PointReceptor
 from stilt.spatial import Grid
 from stilt.transport.hysplit.driver import winderrtf
-from stilt.transport.hysplit.model import finish_particles
 
 from .fixtures.footprints import as_footprint
+from .fixtures.particles import finished
 
 matplotlib.use("Agg")
 
@@ -91,7 +91,7 @@ def _particles() -> pd.DataFrame:
 def _write_trajectory(project: Project, receptor, variant="hrrr") -> Path:
     """Write a small particle file for one simulation into the output directory."""
     sim = project.simulation(receptor.id, variant)
-    particles = finish_particles(_particles(), sim.receptor, sim.variant.transport)
+    particles = finished(_particles(), sim.receptor, sim.variant.transport)
     return sim.output.write_particles(sim.variant, sim.receptor, particles, [])
 
 
