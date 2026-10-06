@@ -13,6 +13,7 @@ prints a short summary. Examples::
     stilt run --receptors ids.txt     # run only the receptors listed in ids.txt
     stilt submit                      # submit a Slurm job array and return
     stilt status                      # count finished simulations
+    stilt output ls                   # list the output directory's settings folders
 
 ``stilt run`` exits with 0 when every simulation it ran is complete, 1 when
 some failed, and 2 when some did not finish because the run was
@@ -339,6 +340,40 @@ def submit(
 def status(project: str | None = _PROJECT_ARG) -> None:
     """Count finished and pending simulations, per variant when there are several."""
     _print_status(Project(_resolve_project(project)))
+
+
+output_app = typer.Typer(
+    help="Look at a project's output directory.", no_args_is_help=True
+)
+app.add_typer(output_app, name="output")
+
+
+@output_app.command("ls")
+def output_ls(project: str | None = _PROJECT_ARG) -> None:
+    """
+    List the settings folders in the output directory.
+
+    Each folder holds the results of one set of settings. The list says
+    which of the project's variants use each folder, how many result files
+    it holds, and, for a folder no variant uses, how its settings differ
+    from the variant of its name.
+    """
+    opened = Project(_resolve_project(project))
+    table = opened.output.folders(opened.variants)
+    typer.echo(f"Output: {opened.output.directory}")
+    if table.empty:
+        typer.echo("No settings folders yet.")
+        return
+    shown = table.assign(
+        folder="settings=" + table["folder"],
+        variant=table["variant"].replace("", "(none)"),
+        files=table["files"].map("{:,}".format),
+    )
+    typer.echo(shown[["kind", "folder", "files", "variant"]].to_string(index=False))
+    for row in table.loc[table["differs"] != ""].to_dict("records"):
+        typer.echo(
+            f"settings={row['folder']} differs from {row['name']}: {row['differs']}"
+        )
 
 
 # ---------------------------------------------------------------------------

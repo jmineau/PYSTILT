@@ -501,7 +501,7 @@ def test_variants_with_equal_transport_settings_share_a_run(tmp_path, point_rece
     _write_trajectory(project, point_receptor)
     assert project.simulation(point_receptor.id, "s2").has_particles
     assert not project.simulation(point_receptor.id, "zi08").has_particles
-    assert len(project.output.folders("particles")) == 1
+    assert len(project.output.hashes("particles")) == 1
 
 
 def test_unreferenced_lists_output_folders_the_config_no_longer_uses(

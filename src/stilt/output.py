@@ -43,7 +43,7 @@ from __future__ import annotations
 import logging
 import os
 import shutil
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
@@ -248,6 +248,54 @@ def completed(
     return particles if footprints is None else particles & footprints
 
 
+def _count_files(folder: Location) -> int:
+    """Return how many result files a settings folder holds, in every ``realization=k`` partition."""
+    parts = [n for n in _names(folder) if n.startswith("realization=")]
+    roots = [folder / n for n in parts] if parts else [folder]
+    return sum(len(_list_receptor_files(root, ".parquet")) for root in roots)
+
+
+def _short(value: Any) -> str:
+    """Return a setting's value in a few characters."""
+    text = str(value)
+    return text if len(text) <= 40 else text[:37] + "..."
+
+
+def _diff(
+    stored: Mapping[str, Any], current: Mapping[str, Any], prefix: str = ""
+) -> list[str]:
+    """Return ``key: stored (config: current)`` for each setting that differs, nested blocks by dotted key."""
+    found = []
+    for key in sorted(set(stored) | set(current)):
+        a, b = stored.get(key, "-"), current.get(key, "-")
+        if isinstance(a, Mapping) and isinstance(b, Mapping):
+            found += _diff(a, b, f"{prefix}{key}.")
+        elif a != b:
+            found.append(f"{prefix}{key}: {_short(a)} (config: {_short(b)})")
+    return found
+
+
+def _differences(
+    kind: Kind, record: Mapping[str, Any], variant: Variant, path: Location
+) -> str:
+    """Return how a folder's stored settings differ from *variant*'s, the first four, ``; ``-joined."""
+    if kind == "particles":
+        stored = read_run_settings(record["settings"])
+        current: Mapping[str, Any] | None = variant.run_settings
+    else:
+        config, geometry_hash = read_footprint_settings(record["settings"], str(path))
+        stored = footprint_settings(config, geometry_hash)
+        current = variant.footprint_settings
+    if current is None:
+        return "the variant makes no footprints"
+    found = _diff(stored, current)
+    if kind == "footprints" and not found:
+        return "made from other particles"
+    if len(found) > 4:
+        found = [*found[:4], f"and {len(found) - 4} more"]
+    return "; ".join(found)
+
+
 def _check_realization(variant: Variant, realization: int | None) -> None:
     """Raise unless *realization* is one *variant* runs as."""
     if realization not in variant.realization_numbers:
@@ -300,7 +348,7 @@ class Output:
 
     # -- folders -----------------------------------------------------------
 
-    def folders(self, kind: Kind) -> dict[str, str]:
+    def hashes(self, kind: Kind) -> dict[str, str]:
         """
         Return every folder of *kind*, as ``{name: settings hash}`` in name order.
 
@@ -316,6 +364,65 @@ class Output:
             if name not in known:
                 known[name] = self._read_hash(kind, name)
         return {name: known[name] for name in names}
+
+    def folders(self, variants: Mapping[str, Variant] | None = None) -> pd.DataFrame:
+        """
+        Return every settings folder in the output directory, one row each.
+
+        A settings folder holds the results of one set of settings, named
+        after the variant that first made them and a short hash of the
+        settings (``settings=hrrr-b2399e``).
+
+        Parameters
+        ----------
+        variants : mapping of str to Variant, optional
+            A project's variants (``project.variants``), to say which use
+            each folder and how the others differ from them.
+
+        Returns
+        -------
+        pandas.DataFrame
+            ``kind`` (``particles`` or ``footprints``), ``folder`` (the
+            ``settings=`` value), ``name`` (the variant that made it), and
+            ``files`` (the result files it holds, every realization of an
+            ensemble counted). With *variants*, also ``variant``, the
+            variants that use the folder (empty when none does), and
+            ``differs``, how an unused folder's settings differ from those
+            of the variant of its name.
+
+        Examples
+        --------
+        >>> project.output.folders(project.variants)
+        """
+        rows = []
+        for kind in KINDS:
+            for folder, digest in self.hashes(kind).items():
+                path = self._dir(kind, folder)
+                record = _read_yaml(path / SETTINGS_FILE)
+                row: dict[str, Any] = {
+                    "kind": kind,
+                    "folder": folder,
+                    "name": record.get("name", ""),
+                    "files": _count_files(path),
+                }
+                if variants is not None:
+                    using = [
+                        name
+                        for name, v in variants.items()
+                        if self._variant_hash(kind, v) == digest
+                    ]
+                    row["variant"] = ", ".join(using)
+                    same = variants.get(row["name"])
+                    row["differs"] = (
+                        ""
+                        if using or same is None
+                        else _differences(kind, record, same, path)
+                    )
+                rows.append(row)
+        columns = ["kind", "folder", "name", "files"]
+        if variants is not None:
+            columns += ["variant", "differs"]
+        return pd.DataFrame(rows, columns=columns)
 
     def _read_hash(self, kind: Kind, name: str) -> str:
         """Return the settings hash of one folder, from its ``_settings.yaml``."""
@@ -349,7 +456,7 @@ class Output:
             if folder_hash == digest:
                 return name
         # A miss lists the tree again: another worker may have made the folder.
-        for name, folder_hash in self.folders(kind).items():
+        for name, folder_hash in self.hashes(kind).items():
             if folder_hash == digest:
                 return name
         return None

@@ -578,3 +578,67 @@ def test_status_counts_failures_by_reason(tmp_path):
 
     assert result.exit_code == 0, result.output
     assert "failed: MISSING_MET_FILES 2, ValueError 1" in result.output
+
+
+def test_output_ls_lists_folders_and_what_differs(tmp_path):
+    import datetime as dt
+
+    from stilt.config import ProjectConfig
+    from stilt.project import Project
+    from stilt.receptors import PointReceptor
+
+    from .fixtures.particles import finished
+
+    receptor = PointReceptor(
+        time=dt.datetime(2023, 1, 1, 12),
+        longitude=-111.85,
+        latitude=40.77,
+        altitude=5.0,
+    )
+    met = {"directory": tmp_path / "met", "file_format": "%Y%m%d_%H", "file_tres": "1h"}
+    old = Project.init(
+        tmp_path / "old",
+        config=ProjectConfig(
+            mets={"hrrr": met},
+            variants={"hrrr": {}},
+            numpar=500,
+            hnf_plume=False,
+            output=str(tmp_path / "out"),
+        ),
+        receptors=[receptor],
+    )
+    sim = old.simulation(receptor.id, "hrrr")
+    particles = pd.DataFrame(
+        {
+            "time": [-60.0],
+            "particle": [1.0],
+            "lon": [-111.9],
+            "lat": [40.7],
+            "zagl": [10.0],
+            "foot": [1e-5],
+        }
+    )
+    sim.output.write_particles(
+        sim.variant, receptor, finished(particles, receptor, sim.transport), []
+    )
+    new = Project.init(
+        tmp_path / "new",
+        config=ProjectConfig(
+            mets={"hrrr": met},
+            variants={"hrrr": {}},
+            numpar=1000,
+            hnf_plume=False,
+            output=str(tmp_path / "out"),
+        ),
+        receptors=[receptor],
+    )
+
+    result = runner.invoke(app, ["output", "ls", str(new.directory)])
+
+    assert result.exit_code == 0, result.output
+    assert "(none)" in result.output
+    assert "numpar: 500 (config: 1000)" in result.output
+    table = old.output.folders(old.variants)
+    assert table[["kind", "name", "files", "variant", "differs"]].values.tolist() == [
+        ["particles", "hrrr", 1, "hrrr", ""]
+    ]
