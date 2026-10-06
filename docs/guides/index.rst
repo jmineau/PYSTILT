@@ -34,8 +34,8 @@ you are new to PYSTILT, start with :doc:`../getting_started/quickstart`.
 
 - :doc:`readers`: read TROPOMI, OCO-2 or TCCON files into a table of
   soundings, or add your own instrument
-- :doc:`../advanced/observations`: turn satellite soundings or column
-  retrievals into receptors
+- :doc:`../tutorials/satellite_column`: from satellite soundings to
+  receptors, kernels, and modelled enhancements
 - :doc:`slant_columns`: instruments that look along a tilted path
   (EM27/SUN, TCCON, off-nadir satellites)
 - :doc:`../advanced/transforms`: averaging kernels, pressure weighting, and
@@ -81,7 +81,6 @@ you are new to PYSTILT, start with :doc:`../getting_started/quickstart`.
    :caption: Column and satellite measurements
 
    readers
-   ../advanced/observations
    slant_columns
    ../advanced/transforms
 

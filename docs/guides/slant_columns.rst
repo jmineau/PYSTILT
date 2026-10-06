@@ -230,7 +230,7 @@ below 11 km. If the retrieval or its prior gives a temperature profile,
 pass it as ``temperature=`` with one value per level, in kelvin.
 
 HYSPLIT still sees these points as heights. The weighting in `Weighting`_
-applies unchanged. :doc:`../advanced/observations` shows how to choose
+applies unchanged. :doc:`../tutorials/satellite_column` shows how to choose
 which soundings to run.
 
 How the release heights come back

@@ -4,7 +4,7 @@ Observations
 Functions for column and satellite workflows. They group soundings into
 overpasses, choose which soundings to run, spread receptors across a pixel,
 lay out slant lines of sight, and turn a retrieval's pressure levels into
-altitudes (:doc:`/advanced/observations`,
+altitudes (:doc:`/tutorials/satellite_column`,
 :doc:`/guides/slant_columns`). They take plain arrays and tables and return
 the inputs for :class:`~stilt.Receptor` objects. Particle weighting,
 including per-receptor averaging-kernel tables, is in :doc:`transforms`.
@@ -26,11 +26,13 @@ Product readers
 Each reader returns a table of soundings with the columns in
 ``SOUNDING_SCHEMA``, which :doc:`/guides/readers` describes.
 
+.. autodata:: stilt.observations.readers.schema.SOUNDING_SCHEMA
+   :no-value:
+
 .. autosummary::
    :toctree: _api
    :nosignatures:
 
-   stilt.observations.SOUNDING_SCHEMA
    stilt.observations.check_soundings
 
    stilt.observations.read_tropomi_ch4

@@ -89,7 +89,7 @@ Moving a workflow over
 ----------------------
 
 1. Write a reader that turns your product into a DataFrame with one row per
-   sounding (see *Adding your own instrument* in :doc:`/advanced/observations`).
+   sounding (see *Your own instrument* in :doc:`/tutorials/satellite_column`).
 2. Group the soundings by overpass and select the ones to run with the
    helpers above.
 3. Build one receptor per row. For slant columns, use ``slant_points``.
