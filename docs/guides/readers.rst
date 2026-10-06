@@ -4,8 +4,9 @@ Reading Retrieval Products
 A column retrieval comes as a product file, such as a TROPOMI orbit, an
 OCO-2 Lite file, a TCCON site file, or a day of EM27/SUN spectra from GGG.
 The readers in :mod:`stilt.observations` turn each of these into a table
-with one row per sounding. The columns are the same for every instrument,
-so the rest of the workflow (:doc:`../advanced/observations`) is too.
+with one row per sounding. The columns are the same for every instrument
+(:data:`~stilt.observations.SOUNDING_SCHEMA`), so the rest of the workflow
+(:doc:`../advanced/observations`) is too.
 
 .. code-block:: python
 
@@ -173,56 +174,42 @@ outside GGG's kernel table.
 From a file to receptors
 ------------------------
 
-Here is the recipe from :doc:`../advanced/observations` with a real
-reader. Each TROPOMI sounding becomes a slant receptor on the retrieval's
-own levels, up to 3 km above the surface:
+:func:`~stilt.observations.receptors_from_soundings` makes a receptor for
+each sounding and the table of their averaging kernels. Here each TROPOMI
+sounding becomes a slant receptor on the retrieval's own levels, up to
+3 km above the surface:
 
 .. code-block:: python
 
    import stilt
-   from stilt.observations import read_tropomi_ch4, slant_points
-   from stilt.transforms import averaging_kernel_table
+   from stilt.observations import read_tropomi_ch4, receptors_from_soundings
 
    project = stilt.Project("./xch4")      # made with stilt init or Project.init
 
    df = read_tropomi_ch4(path, lon_range=(-113.5, -110.5), lat_range=(39.5, 42.0))
-   df = df[df.good]
-
-   receptors = [
-       stilt.Receptor.from_points(
-           r.time,
-           slant_points(
-               r.longitude, r.latitude,
-               r.altitude_levels[r.altitude_levels < r.surface_altitude + 3000],
-               zenith=r.zenith, azimuth=r.azimuth,
-           ),
-           altitude_ref="msl",
-       )
-       for r in df.itertuples()
-   ]
+   receptors, kernels = receptors_from_soundings(df[df.good], "slant", top=3000)
    project.add_receptors(receptors)
-
-   averaging_kernel_table(receptors, levels=df.ak_pressure, values=df.ak).to_parquet(
-       project.directory / "kernels.parquet"
-   )
+   project.add_table("kernels", kernels)    # tables/kernels.parquet
    project.run()
 
-The footprint config then lists two transforms:
+Each receptor keeps its ``sounding_id`` as a column of ``receptors.csv``,
+so the results join back to the soundings. The footprint config lists two
+transforms, the first reading the kernels by the table's name:
 
 .. code-block:: yaml
 
    transforms:
      - kind: averaging_kernel
-       table: kernels.parquet
+       table: kernels
        coordinate: pres
      - kind: pressure_weighting
 
 A few products need a change to this recipe:
 
-- For a nadir column, use a :class:`~stilt.ColumnReceptor` from
-  ``surface_altitude`` in place of the slant points.
-- OCO-2 files give pressures but no heights. Turn ``pressure_levels`` into
-  altitudes with :func:`~stilt.observations.pressure_altitudes`.
+- For a nadir column, pass ``"column"``: a :class:`~stilt.ColumnReceptor`
+  from the ground up to ``top``.
+- OCO-2 files give pressures but no heights. Add ``altitude_levels`` from
+  :func:`~stilt.observations.pressure_altitudes` before a slant receptor.
 - A TCCON prior grid starts at sea level, below the station. Drop the
   levels below ``surface_altitude`` and put ``surface_altitude`` first, so
   the path starts at the instrument.
@@ -232,13 +219,15 @@ Adding an instrument
 
 Copy the reader module closest to your product from
 ``stilt/observations/readers/``. Use ``tropomi.py`` for a swath product and
-``tccon.py`` or ``ggg.py`` for a ground station. The reader holds all of the
-product's conventions, and its output must have the columns above. Keep it a
-plain function that returns the table.
+``ggg.py`` for a ground station. The reader holds all of the product's
+conventions, and its output must have the columns above, which
+:data:`~stilt.observations.SOUNDING_SCHEMA` lists in code. Keep it a plain
+function that returns the table.
 
-Add a small slice of a real file under ``tests/observations/data/products``, and a test
-that checks the columns, the units, and that the vertical arrays start at
-the surface. ``tests/observations/data/products/make_samples.py`` shows how the existing
+Add a small slice of a real file under ``tests/observations/data/products``,
+and a test that calls :func:`~stilt.observations.check_soundings` on the
+table and checks the units and that the vertical arrays start at the
+surface. ``tests/observations/data/products/make_samples.py`` shows how the existing
 slices were cut. Readers for PROFFAST EM27/SUN output, MethaneAIR, and
 MethaneSAT are welcome. The maintainers have no files to write them
 against.

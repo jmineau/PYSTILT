@@ -986,3 +986,11 @@ def test_ak_table_round_trips_through_config():
     assert kernel.table == "kernels.parquet"
     assert kernel.levels is None
     assert load_transform(dump_transform(kernel)) == kernel
+
+
+def test_ak_table_by_name_is_the_projects_table(tmp_path):
+    a, b = _two_receptors()
+    (tmp_path / "tables").mkdir()
+    _write_table(tmp_path / "tables" / "kernels.parquet", a, b)
+    kernel = AveragingKernel(table="kernels")
+    assert kernel.kernel(b, tmp_path) == ([0.0, 3000.0], [0.5, 0.5])

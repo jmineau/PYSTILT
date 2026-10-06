@@ -129,9 +129,10 @@ changes with the solar zenith angle. A ``.oof`` file does not have the
 kernels. Take them from the run's ``*.private.nc`` with
 :func:`~stilt.observations.read_ggg_netcdf`, which expands GGG's kernel
 table for each spectrum. You can also use a site table keyed by solar
-zenith angle, as PROFFAST provides. Write the kernels into the project with
-:func:`~stilt.transforms.averaging_kernel_table`. The ``averaging_kernel``
-transform then looks up each receptor's kernel:
+zenith angle, as PROFFAST provides. Make the table with
+:func:`~stilt.transforms.averaging_kernel_table` and add it to the project
+with ``project.add_table``. The ``averaging_kernel`` transform then looks
+up each receptor's kernel:
 
 .. code-block:: python
 
@@ -143,13 +144,13 @@ transform then looks up each receptor's kernel:
    nearest = ak.index.get_indexer(windows.index + pd.Timedelta("5min"), method="nearest")
    kernels = [ak.ak.iloc[i] for i in nearest]
    table = averaging_kernel_table(receptors, levels=ak.ak_pressure.iloc[0], values=kernels)
-   table.to_parquet(project.directory / "kernels.parquet")
+   project.add_table("kernels", table)
 
 .. code-block:: yaml
 
    transforms:
      - kind: averaging_kernel
-       table: kernels.parquet
+       table: kernels
        coordinate: pres
      - kind: pressure_weighting
 

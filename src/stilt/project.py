@@ -16,6 +16,7 @@ the only code that writes results.
 from __future__ import annotations
 
 import os
+import re
 from collections.abc import Iterable, Iterator
 from functools import cached_property
 from pathlib import Path
@@ -23,9 +24,11 @@ from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pandas as pd
+import pyarrow as pa
 import xarray as xr
 import yaml
 
+from stilt._atomic import write_parquet
 from stilt._paths import absolute, location
 from stilt.config import STARTER_CONFIG, ProjectConfig, Variant
 from stilt.execution.config import ExecutionConfig
@@ -449,6 +452,58 @@ class Project:
             for name in ("_rows", "_positions", "receptors", "_simulations"):
                 vars(self).pop(name, None)
         return [r.id for r in new]
+
+    def table_path(self, name: str) -> Path:
+        """Return where the project's table *name* is kept: ``tables/<name>.parquet``."""
+        if not re.fullmatch(r"[A-Za-z0-9_-]+", name):
+            raise ValueError(
+                f"A table name is letters, digits, '_', and '-'; got {name!r}."
+            )
+        return self.directory / "tables" / f"{name}.parquet"
+
+    def add_table(self, name: str, table: pd.DataFrame) -> Path:
+        """
+        Add rows to one of the project's input tables, and return its path.
+
+        A table is an input, like ``receptors.csv``: the averaging kernels of
+        satellite soundings, for one, which a transform names as ``table:
+        kernels``. It is kept as ``tables/<name>.parquet``, created if
+        needed and otherwise added to. When the table has a ``receptor``
+        column, rows of a receptor it already holds are left out, so adding
+        the same kernels again changes nothing.
+
+        Parameters
+        ----------
+        name : str
+            The table's name: letters, digits, ``_``, and ``-``.
+        table : pandas.DataFrame
+            Rows to add, in the columns of the table.
+
+        Raises
+        ------
+        ValueError
+            If *table* has other columns than the table it adds to.
+
+        Examples
+        --------
+        >>> receptors, kernels = receptors_from_soundings(df, "slant", top=3000)
+        >>> project.add_receptors(receptors)
+        >>> project.add_table("kernels", kernels)
+        """
+        path = self.table_path(name)
+        rows = table.reset_index(drop=True)
+        if path.exists():
+            held = pd.read_parquet(path)
+            if list(held.columns) != list(rows.columns):
+                raise ValueError(
+                    f"Table {name!r} has the columns {list(held.columns)}, "
+                    f"not {list(rows.columns)}."
+                )
+            if "receptor" in rows.columns:
+                rows = rows[~rows["receptor"].isin(held["receptor"])]
+            rows = pd.concat([held, rows], ignore_index=True)
+        write_parquet(pa.Table.from_pandas(rows, preserve_index=False), path)
+        return path
 
     # -- simulations -----------------------------------------------------------
 

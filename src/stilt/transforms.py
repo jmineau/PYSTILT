@@ -34,6 +34,7 @@ from __future__ import annotations
 import functools
 import importlib
 import os
+import re
 from collections.abc import Iterable, Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Any, Literal, Self
@@ -367,9 +368,10 @@ class AveragingKernel(BaseModel):
     table: str | None = Field(
         default=None,
         description=(
-            "Table of kernels, one per receptor: a .parquet or .csv file with "
-            "``receptor``, ``level``, and ``value`` columns. A relative path is "
-            "relative to the project root."
+            "Table of kernels, one per receptor, with ``receptor``, ``level``, "
+            "and ``value`` columns: the name of a project table "
+            "(``project.add_table``), such as ``kernels``, or a .parquet or .csv "
+            "file. A relative path is relative to the project root."
         ),
     )
     coordinate: str = Field(
@@ -418,6 +420,8 @@ class AveragingKernel(BaseModel):
                 "kernel to look up."
             )
         path = self.table
+        if re.fullmatch(r"[A-Za-z0-9_-]+", path):  # a project table's name
+            path = f"tables/{path}.parquet"
         if directory is not None and not Path(path).is_absolute():
             path = str(Path(directory) / path)
         kernels = _read_kernel_table(path, os.stat(path).st_mtime)

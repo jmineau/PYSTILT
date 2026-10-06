@@ -178,9 +178,11 @@ src/stilt/
                      and the worker (runs HYSPLIT on scratch and writes results
                      for one or many simulations)
   observations/      the X-STILT port, before or after the transport run:
-                     product readers, overpass grouping and sounding
-                     selection, slant geometry, plume backgrounds. Arrays in,
-                     plain values out; there is no observation object.
+                     product readers and SOUNDING_SCHEMA, overpass grouping
+                     and sounding selection, slant geometry and
+                     receptors_from_soundings, modelled_column, plume
+                     backgrounds. Arrays in, plain values out; there is no
+                     observation object.
   transport/         the TransportModel and TransportConfig protocols, ModelRun
                      (particles, log, met_files), ModelInfo, get_model with
                      its MODELS table, and run_model / run_trajectories, which
@@ -303,6 +305,7 @@ folder below a kind is hive-style, so each tree reads as one dataset:
 <project>/
   config.yaml                 ProjectConfig (written once by Project.init or stilt init; never rewritten)
   receptors.csv               receptor list; add_receptors() appends new receptors
+  tables/<name>.parquet       other inputs, such as kernels; add_table() appends
   _slurm/<stamp>/             one folder per Slurm submission: job.sh,
                               receptors.txt, execution.yaml, <task>.log
 

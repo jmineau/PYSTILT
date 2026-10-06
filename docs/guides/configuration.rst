@@ -155,7 +155,7 @@ from them:
      hrrr-regional:
        grid: {xmin: -125.0, xmax: -100.0, ymin: 30.0, ymax: 50.0, xres: 0.1, yres: 0.1}
      hrrr-ak:
-       transforms: [{kind: averaging_kernel, table: kernels.parquet}]
+       transforms: [{kind: averaging_kernel, table: kernels}]
 
 ``hrrr-regional`` and ``hrrr-ak`` have the same transport settings as
 ``hrrr``, so HYSPLIT runs once per receptor for the three of them. There is

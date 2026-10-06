@@ -14,6 +14,7 @@ What's in a project folder
    my_project/
      config.yaml        # your settings: meteorology, variants, run options, and output:
      receptors.csv      # your receptors: where and when to release particles
+     tables/            # other inputs, such as averaging kernels (project.add_table)
 
 Both files are yours to edit. PYSTILT never rewrites a ``config.yaml`` it
 loaded from the folder, and it only appends new receptors to
@@ -21,7 +22,9 @@ loaded from the folder, and it only appends new receptors to
 ``config.yaml`` once, from the settings you pass it, and stops if the folder
 already has one. ``stilt init`` writes a commented starter ``config.yaml``
 instead. Receptors you add are appended to ``receptors.csv``, or start it if
-there is none.
+there is none. ``project.add_table("kernels", table)`` adds rows to
+``tables/kernels.parquet`` the same way, and a transform names it as
+``table: kernels``.
 
 A Slurm run also creates a ``_slurm/`` folder with the job
 scripts and logs (see :doc:`execution/slurm`).
