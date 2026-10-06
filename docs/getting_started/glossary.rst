@@ -43,9 +43,9 @@ Glossary
 
    met
       One named set of meteorology files in your settings, such as
-      ``hrrr``, written under ``mets`` in ``config.yaml``. With no
-      :term:`variants <variant>` declared, each met is a variant of the same
-      name, so the same receptor can be run with several mets side by side.
+      ``hrrr``, written under ``mets`` in ``config.yaml``. Each
+      :term:`variant` names the met it runs on, so the same receptor can run
+      with several mets side by side.
 
    defaults
       The settings written at the top level of ``config.yaml``. Every
@@ -68,9 +68,28 @@ Glossary
 
    output directory
       Where a project's results go, named by ``output:`` in ``config.yaml``
-      (``./output`` by default). It holds one folder per set of settings
-      under ``particles/``, ``footprints/``, and ``logs/``, and several
-      projects can share it. See :doc:`../guides/project_layout`.
+      (``./output`` by default, or a URL such as ``s3://bucket/output``). It
+      holds one :term:`settings folder` per set of settings under
+      ``particles/``, ``footprints/``, and ``logs/``, and several projects
+      can share it. See :doc:`../guides/project_layout`.
+
+   settings folder
+      One folder of results in the :term:`output directory`: everything made
+      with one set of settings, named after the variant that first made it
+      and a short hash of the settings, such as ``settings=hrrr-b2399e``. A
+      changed setting makes a new folder and never overwrites one, and
+      projects with the same settings share a folder. ``stilt output ls``
+      lists them.
+
+   workdir
+      The folder one simulation's transport model runs in. It is removed
+      after a successful run and kept under ``scratch/`` in the output
+      directory when the run fails (``sim.kept_workdir``).
+
+   compute root
+      The folder the workdirs are made in, usually fast local disk: the
+      ``--compute-root`` option, else ``PYSTILT_COMPUTE_ROOT``, else
+      ``$TMPDIR/pystilt/<project>``.
 
    HYSPLIT
       NOAA's particle transport program, written in Fortran. PYSTILT runs it
@@ -81,20 +100,22 @@ Glossary
       at most one footprint. A project with 100 receptors and 3 variants has
       300 simulations.
 
-   simulation ID
-      The name of a simulation and of its output folder, such as
-      ``202307151800_-111.848_40.766_10/hrrr``. It is the receptor id, a
-      slash, and the variant name. The receptor id is the receptor time as
+   receptor id
+      The name of a receptor and of its result files, such as
+      ``202307151800_-111.848_40.766_10``: the receptor time as
       ``YYYYMMDDHHMM``, then the longitude, latitude, and altitude. Column
       receptors end in ``X`` and the bottom and top (``_X0-3000``) instead
       of an altitude. Multipoint receptors use ``multi_`` and a short hash
       instead of coordinates. Heights above mean sea level add ``msl`` at
-      the end.
+      the end. A :term:`simulation` is named by its receptor id and
+      variant, ``202307151800_-111.848_40.766_10/hrrr``, and a
+      :term:`realization` adds its number.
 
    project
       A folder holding your settings (``config.yaml``), your receptors
-      (``receptors.csv``), and all outputs (``simulations/``). See
-      :doc:`../guides/project_layout`.
+      (``receptors.csv``), and any other inputs (``tables/``, such as
+      averaging kernels). The results go to the :term:`output directory` it
+      names. See :doc:`../guides/project_layout`.
 
    numpar
       The number of particles released per simulation. More particles give

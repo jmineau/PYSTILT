@@ -187,10 +187,10 @@ folder.
        footprints/settings=hrrr-93278c/date=2023-07-15/202307151800_-111.848_40.766_10.parquet
        logs/settings=hrrr-a3f9c2/date=2023-07-15/202307151800_-111.848_40.766_10.log
 
-The folders are named after the variant, ``hrrr``, plus a short hash of the
-settings it ran with. The file name is the receptor (time, longitude,
-latitude, and altitude); receptor and variant together are the
-:term:`simulation ID`. HYSPLIT's own input files, such as ``CONTROL`` and
+The folders are :term:`settings folders <settings folder>`, named after
+the variant, ``hrrr``, plus a short hash of the settings it ran with. The
+file name is the :term:`receptor id` (time, longitude, latitude, and
+altitude), and a receptor under a variant is a :term:`simulation`. HYSPLIT's own input files, such as ``CONTROL`` and
 ``SETUP.CFG``, are written to a working directory (the workdir) and
 removed when a run succeeds.
 

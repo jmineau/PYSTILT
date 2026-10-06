@@ -67,7 +67,8 @@ The settings most people change
      - ``-24`` to ``-72``
    * - ``numpar``
      - Particles released per simulation. More particles give a smoother
-       footprint and take longer. The default is 200.
+       footprint and take longer. The default is 200; the config
+       ``stilt init`` writes sets 1000.
      - ``200`` to ``1000``
    * - ``execution``
      - Where to run. Leave it out to run on your own computer. See

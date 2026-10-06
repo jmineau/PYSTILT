@@ -92,13 +92,17 @@ feature.
      - Implemented
    * - Per-sounding averaging kernels in batch runs (``averaging_kernel`` with ``table:``)
      - Implemented
+   * - A receptor and a kernel for each sounding (``receptors_from_soundings``, ``project.add_table``)
+     - Implemented
    * - Product readers (OCO-2/3, TROPOMI, TCCON)
      - Implemented (see *Reading Retrieval Products*); other instruments as one module each
-   * - Transport error on the modelled enhancement (``transport_error``)
+   * - Transport error on the modelled enhancement (``sim.transport_error``)
      - Implemented
    * - Modelled enhancement from a flux field (``foot.stilt.enhancement``)
      - Implemented
-   * - Background from a mole-fraction field at the trajectory endpoints (``background``)
+   * - Background from a mole-fraction field at the trajectory endpoints (``sim.background``)
+     - Implemented
+   * - The retrieval's prior term in a modelled column (``modelled_column``)
      - Implemented
    * - Satellite-derived plume background (forward trajectories)
      - Implemented (see the *Plume Background* guide)

@@ -25,11 +25,12 @@ to do something, start with the :doc:`../guides/index` instead.
    decay.
 
 :doc:`observations`
-   Column and satellite work: product readers, sounding selection, slant
-   geometry, transport error, and backgrounds.
+   Column and satellite work: product readers and their columns, sounding
+   selection, receptors from soundings, slant geometry, the modelled
+   column, and plume backgrounds.
 
 :doc:`project`
-   Project folders and storage backends.
+   The project, its simulations, and the output directory.
 
 :doc:`hysplit`
    The low-level HYSPLIT driver.
