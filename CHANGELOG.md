@@ -8,6 +8,20 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Realizations are an axis, not numbered variants (breaking). A variant
+  with `realizations: N` is one variant, `hrrr-err`, whose simulations
+  are realizations `0` to `N - 1`: the `realization` column of
+  `project.simulations`, `project.simulation(rid, "hrrr-err", k)`, and a
+  `realization=k/` partition of the variant's folder for its particles,
+  footprints, logs, and kept working directories. The run record says
+  `ensemble: true` with the base seed in place of the realization number,
+  so raising N only adds partitions. The `group` column and
+  `Variant.group` are gone, `Variant.realization` is `realizations` (the
+  count) with `transport_for(k)`, and `sim.id` is
+  `(receptor, variant, realization)`. A single run records
+  `realization: null` as before, so its hash and folder are unchanged; a
+  folder of numbered realizations from before is no longer found (#150).
+
 - `sim.scratch_path` is `sim.kept_workdir`, and `Output.scratch_path` is
   `Output.kept_workdir` (breaking): the working directory a failed run (or
   any run with `keep_scratch`) left, kept under `scratch/` in the output

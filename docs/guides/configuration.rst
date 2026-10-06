@@ -125,13 +125,12 @@ variant may set:
    Otherwise you need ``met`` when ``mets`` has more than one entry.
 
 ``realizations``
-   Run the variant ``N`` times, as ``<name>-0`` to ``<name>-(N-1)``. This is
-   how you declare a transport-error ensemble (see :doc:`transport_error`).
-   The default ``krand: 4`` gives each realization different turbulence.
-   For ensembles you can reproduce, set ``krand: 2`` and a ``seed``.
-   Realization ``k`` then uses ``seed + k``. The names are numbered even
-   with ``realizations: 1``, so raising the count later only adds
-   realizations.
+   Run the variant ``N`` times, as realizations ``0`` to ``N - 1`` of one
+   ensemble. This is how you declare a transport-error ensemble (see
+   :doc:`transport_error`). The default ``krand: 4`` gives each realization
+   different turbulence. For ensembles you can reproduce, set ``krand: 2``
+   and a ``seed``. Realization ``k`` then uses ``seed + k``. Raising the
+   count later only adds realizations.
 
 Any other setting
    Transport settings (``numpar``, ``ziscale``, turbulence, wind errors)

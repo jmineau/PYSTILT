@@ -144,7 +144,6 @@ def test_run_particles_goes_through_the_model_the_settings_name(
     met_config = MetConfig(directory=tmp_path, file_format="%Y%m%d_%H", file_tres="1h")
     variant = Variant(
         name="hrrr",
-        group="hrrr",
         met="hrrr",
         met_config=met_config,
         transport=HysplitConfig(n_hours=-1, numpar=1, hnf_plume=False),

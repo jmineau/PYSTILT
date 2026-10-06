@@ -77,11 +77,15 @@ class ParticleMetadata(NamedTuple):
         rebuilds the transport model's config from it.
     met_files : list of Path
         Meteorology files the run read.
+    realization : int or None
+        Which realization of an ensemble the particles are, which ran with
+        ``seed + realization``; ``None`` for a single run.
     """
 
     receptor: Receptor
     settings: dict[str, Any]
     met_files: list[Path]
+    realization: int | None = None
 
 
 def check_particles(particles: pd.DataFrame, need: Iterable[str] = ()) -> None:
@@ -135,10 +139,12 @@ def particles_metadata(path: str | Path) -> ParticleMetadata:
             f"{path} records no run settings. It was written before particle "
             "files recorded them; rewrite its output directory (see #132)."
         )
+    realization = meta.get(b"stilt:realization")
     return ParticleMetadata(
         receptor=Receptor.from_json(meta[b"stilt:receptor"]),
         settings=json.loads(meta[b"stilt:settings"]),
         met_files=[Path(p) for p in json.loads(meta[b"stilt:met_files"])],
+        realization=None if realization is None else int(realization),
     )
 
 

@@ -97,8 +97,8 @@ variant. Its columns are:
 
 - ``receptor``, the receptor id
 - ``variant``, the variant name
-- ``group``, the variant's name in ``config.yaml``. The realizations
-  ``hrrr-err-0`` and ``hrrr-err-1`` share the group ``hrrr-err``.
+- ``realization``, ``0`` to ``N - 1`` for a variant declared with
+  ``realizations: N``, and empty for one that runs once.
 - ``time``, ``kind``, and ``location`` of the receptor
 - one column for each extra column of ``receptors.csv``
 
@@ -153,7 +153,7 @@ site:
 .. code-block:: python
 
    scene = sims[(sims.variant == "hrrr") & (sims.scene == "A")]
-   ensemble = sims[sims.group == "hrrr-err"]          # every realization
+   ensemble = sims[sims.variant == "hrrr-err"]        # every realization
 
 To see what is left to do:
 
@@ -236,8 +236,10 @@ To open a particle file without a project:
 
 The file holds the receptor, the meteorology files it was made with, and
 the run's settings, the same ones its folder's ``_settings.yaml`` holds:
-the transport model's settings, the met's, the model build, and the
-realization number. ``stilt.identity.transport_from_settings(settings)``
+the transport model's settings, the met's, the model build, and whether
+it is an ensemble (``ensemble: true``, with the base seed; the file's
+realization is ``particles_metadata(path).realization``).
+``stilt.identity.transport_from_settings(settings)``
 rebuilds the transport model's config from them.
 
 Empty footprints

@@ -40,7 +40,6 @@ def _variant(
     )
     return Variant(
         name=name,
-        group=name,
         met="hrrr",
         met_config=_met_config(tmp_path),
         transport=params,
@@ -94,7 +93,7 @@ def test_simulation_is_a_frozen_value(point_receptor, tmp_path):
     assert a != _sim(tmp_path, point_receptor, footprint=FOOT, variant="other")
     with pytest.raises(AttributeError):
         a.receptor = point_receptor  # type: ignore[misc]
-    assert a.id == (point_receptor.id, "hrrr")
+    assert a.id == (point_receptor.id, "hrrr", None)
     assert str(a) == f"{point_receptor.id}/hrrr"
     assert a.variant.transport.numpar == 10
     assert a.variant.footprint == FOOT

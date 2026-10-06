@@ -5,7 +5,9 @@ Every folder in an output directory holds the results of one set of
 settings, recorded in its ``_settings.yaml``. This module writes those
 records and hashes them. A run's settings are its transport config without
 the fields that change no particle (``exe_dir``, ``data_dir``), its met
-without the directories, the model build, and the realization number. A
+without the directories, the model build, and whether it is an ensemble
+(the realizations of one share a folder, a ``realization=k`` partition
+each, so the number is not in the hash). A
 footprint's settings are its footprint config, with the grid it is
 computed on, and the hash of the geometry the grid was derived for.
 
@@ -64,13 +66,17 @@ def run_settings(
     transport: TransportConfig,
     met: MetConfig,
     model: ModelInfo,
-    realization: int | None,
+    ensemble: bool = False,
 ) -> dict[str, Any]:
     """
     Return the settings that identify a run, in canonical form.
 
     The transport model's settings (``transport.settings()``) sit at the top
-    level, beside ``met``, ``model``, and ``realization``.
+    level, beside ``met`` and ``model``. An ensemble records
+    ``ensemble: true`` and its base seed; its realization ``k`` runs with
+    ``seed + k`` in the folder's ``realization=k`` partition. A single run
+    records ``realization: null``, as every run did before ensembles were
+    partitions, so its folder keeps its hash.
     """
     data = dict(transport.settings())
     data["met"] = met.settings()
@@ -80,7 +86,10 @@ def run_settings(
         # before data files were recorded.
         record.pop("data_files", None)
     data["model"] = record
-    data["realization"] = realization
+    if ensemble:
+        data["ensemble"] = True
+    else:
+        data["realization"] = None
     return canonical(data)
 
 
@@ -109,14 +118,19 @@ def read_run_settings(stored: Mapping[str, Any]) -> dict[str, Any]:
     Return the run settings a ``_settings.yaml`` records, read through the current classes.
 
     Settings this version does not have are dropped, so a folder written
-    before a setting was removed still loads.
+    before a setting was removed still loads. A folder of one realization,
+    as realizations were written before they were partitions, keeps its
+    number, so it hashes as it did and no current variant finds it.
     """
-    return run_settings(
+    record = run_settings(
         transport_from_settings(stored),
         MetConfig.model_validate(stored["met"]),
         _model_info(stored),
-        stored.get("realization"),
+        ensemble=bool(stored.get("ensemble", False)),
     )
+    if stored.get("realization") is not None:
+        record["realization"] = stored["realization"]
+    return record
 
 
 # -- footprints ---------------------------------------------------------------

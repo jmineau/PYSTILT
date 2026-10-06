@@ -60,8 +60,9 @@ Glossary
 
    realization
       One member of a variant declared with ``realizations: N``. The same
-      settings run ``N`` times, named ``<variant>-0`` to
-      ``<variant>-(N-1)``, and each run gets its own random draws.
+      settings run ``N`` times, as realizations ``0`` to ``N - 1``, and
+      each run gets its own random draws. Their results share the
+      variant's folder, a ``realization=k`` partition each.
       Realizations are used for transport-error ensembles
       (:doc:`../guides/transport_error`).
 

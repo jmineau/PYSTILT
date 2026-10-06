@@ -38,7 +38,6 @@ def _variant(
     """A resolved variant for the tests; *overrides* change the transport fields."""
     return Variant(
         name=name,
-        group=name,
         met="hrrr",
         met_config=MET,
         transport=HysplitConfig(**{"n_hours": -24, "numpar": 100, **overrides}),
@@ -767,3 +766,32 @@ def test_a_footprint_folder_reads_its_particles_folder_once(tmp_path, monkeypatc
     assert fresh.folder("footprints", FEET) == out.folder("footprints", FEET)
     assert fresh.folder("particles", FEET) == out.folder("particles", FEET)
     assert len(reads) == 1
+
+
+def test_an_ensembles_realizations_are_partitions_of_one_folder(tmp_path):
+    from dataclasses import replace
+
+    out = Output(tmp_path / "output")
+    ensemble = replace(_variant("err", krand=4), realizations=2)
+    receptor = _receptor()
+    paths = [
+        out.write_particles(ensemble, receptor, _trajectories(receptor), [], k)
+        for k in (0, 1)
+    ]
+    folder = out.folder("particles", ensemble)
+    assert [p.parent.parent for p in paths] == [
+        folder / "realization=0",
+        folder / "realization=1",
+    ]
+    assert particles_metadata(paths[1]).realization == 1
+    assert out.present("particles", ensemble, realization=1) == {receptor.id}
+    assert out.present("particles", ensemble, [receptor.id], 0) == {receptor.id}
+    out.record_failure("particles", ensemble, receptor.id, {"reason": "X"}, 1)
+    assert out.failure("particles", ensemble, receptor.id, 1) == {"reason": "X"}
+    assert out.failure("particles", ensemble, receptor.id, 0) is None
+    with pytest.raises(ValueError, match="realizations"):
+        out.path("particles", ensemble, receptor.id)  # an ensemble needs its number
+    with pytest.raises(ValueError, match="realizations"):
+        out.path("particles", VARIANT, receptor.id, 0)
+    table = out.table("particles", ensemble, realization=0)
+    assert set(table.column("receptor").to_pylist()) == {receptor.id}

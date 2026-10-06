@@ -72,7 +72,6 @@ def output(tmp_path) -> Output:
 def _variant(params, met_config, *, name="hrrr", footprint=None) -> Variant:
     return Variant(
         name=name,
-        group=name,
         met="hrrr",
         met_config=met_config,
         transport=params,

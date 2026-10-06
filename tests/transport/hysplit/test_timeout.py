@@ -53,7 +53,6 @@ def sim(monkeypatch, tmp_path, point_receptor):
         params = HysplitConfig(n_hours=-24, numpar=10)
         config = Variant(
             name="hrrr",
-            group="hrrr",
             met="hrrr",
             met_config=met_config,
             transport=params,
