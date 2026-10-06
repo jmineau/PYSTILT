@@ -5,13 +5,15 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
-from stilt.config import ProjectConfig, Variant
+from stilt.config import ProjectConfig
 from stilt.execution import run_particles
 from stilt.meteorology import MetConfig
 from stilt.output import Output
 from stilt.simulation import Simulation
-from stilt.transport import ModelInfo, ModelRun, get_model
+from stilt.transport import ModelRun, get_model
 from stilt.transport.hysplit import HysplitConfig, HysplitModel
+
+from ..fixtures.factories import make_variant
 
 
 def test_get_model_returns_hysplit_by_default_and_by_name():
@@ -142,13 +144,7 @@ def test_run_particles_goes_through_the_model_the_settings_name(
         "stilt.transport.get_model", lambda name: asked.append(name) or _Model()
     )
     met_config = MetConfig(directory=tmp_path, file_format="%Y%m%d_%H", file_tres="1h")
-    variant = Variant(
-        name="hrrr",
-        met="hrrr",
-        met_config=met_config,
-        transport=HysplitConfig(n_hours=-1, numpar=1, hnf_plume=False),
-        model=ModelInfo(version="v5.1.0"),
-    )
+    variant = make_variant(met_config=met_config, n_hours=-1, numpar=1, hnf_plume=False)
     sim = Simulation(point_receptor, variant, Output(tmp_path / "output"))
 
     traj = run_particles(sim, met=met_config, workdir=tmp_path / "work", timeout=45)

@@ -150,7 +150,7 @@ jobs:
       env:
         STILT_R_DIR: ${{ github.workspace }}/stilt-r-src
         STILT_TEST_MET_DIR: ${{ github.workspace }}/tests/met_cache
-      run: uv run pytest tests/r_stilt/test_footprint_synth.py -v
+      run: uv run pytest tests/r_stilt -v -m r_only
 
   package:
     name: Package smoke test

@@ -109,7 +109,12 @@ The synthetic tests in
 `tests/r_stilt/test_footprint_synth.py <https://github.com/jmineau/PYSTILT/blob/main/tests/r_stilt/test_footprint_synth.py>`_
 feed hand-made particle tables to both implementations to test single code
 paths: one Gaussian particle, cells on the grid boundary, the dateline, a
-global grid, and the latitude scaling of the kernel width.
+global grid, and the latitude scaling of the kernel width. They need R but
+no meteorology or HYSPLIT, so they run anywhere R is installed:
+
+.. code-block:: bash
+
+   STILT_R_DIR=$PWD/stilt-r-src uv run pytest tests/r_stilt -m r_only
 
 What does not match
 ^^^^^^^^^^^^^^^^^^^

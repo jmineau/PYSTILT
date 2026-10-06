@@ -128,25 +128,25 @@ class ReferenceScenario:
 
     name: str
     description: str
-    receptor_type: Literal["point", "column", "multipoint"]
-    longitude: float | tuple[float, ...]
-    latitude: float | tuple[float, ...]
-    altitude: float | tuple[float, ...]
-    n_hours: int
-    numpar: int
-    krand: int
-    seed: int
-    hnf_plume: bool
-    smooth_factor: float
-    time_integrate: bool
-    xmin: float
-    xmax: float
-    ymin: float
-    ymax: float
-    xres: float
-    yres: float
-    compare_columns: tuple[str, ...]
-    # Optional — override per-scenario; defaults match the shared reference constants
+    # The rest default to the reference point case; a scenario sets what differs.
+    receptor_type: Literal["point", "column", "multipoint"] = "point"
+    longitude: float | tuple[float, ...] = REFERENCE_LONGITUDE
+    latitude: float | tuple[float, ...] = REFERENCE_LATITUDE
+    altitude: float | tuple[float, ...] = REFERENCE_ALTITUDE
+    n_hours: int = REFERENCE_N_HOURS
+    numpar: int = REFERENCE_NUMPAR
+    krand: int = REFERENCE_KRAND
+    seed: int = REFERENCE_SEED
+    hnf_plume: bool = True
+    smooth_factor: float = 1.0
+    time_integrate: bool = False
+    xmin: float = REFERENCE_XMIN
+    xmax: float = REFERENCE_XMAX
+    ymin: float = REFERENCE_YMIN
+    ymax: float = REFERENCE_YMAX
+    xres: float = REFERENCE_XRES
+    yres: float = REFERENCE_YRES
+    compare_columns: tuple[str, ...] = _TRAJ_COLS_WITH_HNF
     time: dt.datetime = field(default_factory=lambda: REFERENCE_TIME)
     met_file_format: str = field(default_factory=lambda: REFERENCE_MET_FILE_FORMAT)
     met_file_tres: str = "6h"
@@ -282,24 +282,6 @@ class ReferenceScenario:
 POINT = ReferenceScenario(
     name="point",
     description="Single WBB point receptor, 6 h backward, default smooth_factor, hnf_plume=True",
-    receptor_type="point",
-    longitude=REFERENCE_LONGITUDE,
-    latitude=REFERENCE_LATITUDE,
-    altitude=REFERENCE_ALTITUDE,
-    n_hours=REFERENCE_N_HOURS,
-    numpar=REFERENCE_NUMPAR,
-    krand=REFERENCE_KRAND,
-    seed=REFERENCE_SEED,
-    hnf_plume=True,
-    smooth_factor=1.0,
-    time_integrate=False,
-    xmin=REFERENCE_XMIN,
-    xmax=REFERENCE_XMAX,
-    ymin=REFERENCE_YMIN,
-    ymax=REFERENCE_YMAX,
-    xres=REFERENCE_XRES,
-    yres=REFERENCE_YRES,
-    compare_columns=_TRAJ_COLS_WITH_HNF,
 )
 
 #: Column receptor spanning 0–1000 m AGL at the WBB location.
@@ -307,23 +289,7 @@ COLUMN = ReferenceScenario(
     name="column",
     description="Column receptor (0–1000 m AGL), 6 h backward, hnf_plume=True",
     receptor_type="column",
-    longitude=-112.0,
-    latitude=40.5,
     altitude=(0.0, 1000.0),  # (bottom, top)
-    n_hours=REFERENCE_N_HOURS,
-    numpar=REFERENCE_NUMPAR,
-    krand=REFERENCE_KRAND,
-    seed=REFERENCE_SEED,
-    hnf_plume=True,
-    smooth_factor=1.0,
-    time_integrate=False,
-    xmin=REFERENCE_XMIN,
-    xmax=REFERENCE_XMAX,
-    ymin=REFERENCE_YMIN,
-    ymax=REFERENCE_YMAX,
-    xres=REFERENCE_XRES,
-    yres=REFERENCE_YRES,
-    compare_columns=_TRAJ_COLS_WITH_HNF,
 )
 
 #: Three-location multipoint receptor spread across the SLV.
@@ -334,43 +300,15 @@ MULTIPOINT = ReferenceScenario(
     longitude=(-112.0, -111.5, -111.0),
     latitude=(40.5, 41.0, 41.5),
     altitude=(0.0, 500.0, 1000.0),
-    n_hours=REFERENCE_N_HOURS,
-    numpar=REFERENCE_NUMPAR,
-    krand=REFERENCE_KRAND,
-    seed=REFERENCE_SEED,
-    hnf_plume=True,
-    smooth_factor=1.0,
-    time_integrate=False,
-    xmin=-113.0,
     xmax=-110.5,
-    ymin=39.5,
     ymax=42.0,
-    xres=REFERENCE_XRES,
-    yres=REFERENCE_YRES,
-    compare_columns=_TRAJ_COLS_WITH_HNF,
 )
 
 #: Point receptor with hyper-near-field plume dilution disabled.
 NO_HNF = ReferenceScenario(
     name="no_hnf",
     description="Point receptor, hnf_plume=False — no near-field plume dilution correction",
-    receptor_type="point",
-    longitude=REFERENCE_LONGITUDE,
-    latitude=REFERENCE_LATITUDE,
-    altitude=REFERENCE_ALTITUDE,
-    n_hours=REFERENCE_N_HOURS,
-    numpar=REFERENCE_NUMPAR,
-    krand=REFERENCE_KRAND,
-    seed=REFERENCE_SEED,
     hnf_plume=False,
-    smooth_factor=1.0,
-    time_integrate=False,
-    xmin=REFERENCE_XMIN,
-    xmax=REFERENCE_XMAX,
-    ymin=REFERENCE_YMIN,
-    ymax=REFERENCE_YMAX,
-    xres=REFERENCE_XRES,
-    yres=REFERENCE_YRES,
     compare_columns=_TRAJ_COLS_NO_HNF,
 )
 
@@ -378,24 +316,7 @@ NO_HNF = ReferenceScenario(
 SMOOTH = ReferenceScenario(
     name="smooth",
     description="Point receptor, smooth_factor=0.5 — reduced Gaussian kernel smoothing",
-    receptor_type="point",
-    longitude=REFERENCE_LONGITUDE,
-    latitude=REFERENCE_LATITUDE,
-    altitude=REFERENCE_ALTITUDE,
-    n_hours=REFERENCE_N_HOURS,
-    numpar=REFERENCE_NUMPAR,
-    krand=REFERENCE_KRAND,
-    seed=REFERENCE_SEED,
-    hnf_plume=True,
     smooth_factor=0.5,
-    time_integrate=False,
-    xmin=REFERENCE_XMIN,
-    xmax=REFERENCE_XMAX,
-    ymin=REFERENCE_YMIN,
-    ymax=REFERENCE_YMAX,
-    xres=REFERENCE_XRES,
-    yres=REFERENCE_YRES,
-    compare_columns=_TRAJ_COLS_WITH_HNF,
     shares_trajectory_with="point",
 )
 
@@ -403,24 +324,7 @@ SMOOTH = ReferenceScenario(
 TIME_INTEGRATE = ReferenceScenario(
     name="time_integrate",
     description="Point receptor, time_integrate=True — single 2-D footprint layer",
-    receptor_type="point",
-    longitude=REFERENCE_LONGITUDE,
-    latitude=REFERENCE_LATITUDE,
-    altitude=REFERENCE_ALTITUDE,
-    n_hours=REFERENCE_N_HOURS,
-    numpar=REFERENCE_NUMPAR,
-    krand=REFERENCE_KRAND,
-    seed=REFERENCE_SEED,
-    hnf_plume=True,
-    smooth_factor=1.0,
     time_integrate=True,
-    xmin=REFERENCE_XMIN,
-    xmax=REFERENCE_XMAX,
-    ymin=REFERENCE_YMIN,
-    ymax=REFERENCE_YMAX,
-    xres=REFERENCE_XRES,
-    yres=REFERENCE_YRES,
-    compare_columns=_TRAJ_COLS_WITH_HNF,
     shares_trajectory_with="point",
 )
 
@@ -433,24 +337,7 @@ TIME_INTEGRATE = ReferenceScenario(
 SMOOTH_ZERO = ReferenceScenario(
     name="smooth_zero",
     description="Point receptor, smooth_factor=0.0 — 1×1 identity kernel, no Gaussian spread",
-    receptor_type="point",
-    longitude=REFERENCE_LONGITUDE,
-    latitude=REFERENCE_LATITUDE,
-    altitude=REFERENCE_ALTITUDE,
-    n_hours=REFERENCE_N_HOURS,
-    numpar=REFERENCE_NUMPAR,
-    krand=REFERENCE_KRAND,
-    seed=REFERENCE_SEED,
-    hnf_plume=True,
     smooth_factor=0.0,
-    time_integrate=False,
-    xmin=REFERENCE_XMIN,
-    xmax=REFERENCE_XMAX,
-    ymin=REFERENCE_YMIN,
-    ymax=REFERENCE_YMAX,
-    xres=REFERENCE_XRES,
-    yres=REFERENCE_YRES,
-    compare_columns=_TRAJ_COLS_WITH_HNF,
     shares_trajectory_with="point",
 )
 
@@ -463,24 +350,8 @@ SMOOTH_ZERO = ReferenceScenario(
 COARSE_GRID = ReferenceScenario(
     name="coarse_grid",
     description="Point receptor, xres=yres=0.05° — 5× coarser than reference grid",
-    receptor_type="point",
-    longitude=REFERENCE_LONGITUDE,
-    latitude=REFERENCE_LATITUDE,
-    altitude=REFERENCE_ALTITUDE,
-    n_hours=REFERENCE_N_HOURS,
-    numpar=REFERENCE_NUMPAR,
-    krand=REFERENCE_KRAND,
-    seed=REFERENCE_SEED,
-    hnf_plume=True,
-    smooth_factor=1.0,
-    time_integrate=False,
-    xmin=REFERENCE_XMIN,
-    xmax=REFERENCE_XMAX,
-    ymin=REFERENCE_YMIN,
-    ymax=REFERENCE_YMAX,
     xres=0.05,
     yres=0.05,
-    compare_columns=_TRAJ_COLS_WITH_HNF,
     shares_trajectory_with="point",
 )
 
@@ -494,24 +365,7 @@ COARSE_GRID = ReferenceScenario(
 DAY_BACKWARD = ReferenceScenario(
     name="day_backward",
     description="Point receptor, n_hours=-24 — full day backward, four met files",
-    receptor_type="point",
-    longitude=REFERENCE_LONGITUDE,
-    latitude=REFERENCE_LATITUDE,
-    altitude=REFERENCE_ALTITUDE,
     n_hours=-24,
-    numpar=REFERENCE_NUMPAR,
-    krand=REFERENCE_KRAND,
-    seed=REFERENCE_SEED,
-    hnf_plume=True,
-    smooth_factor=1.0,
-    time_integrate=False,
-    xmin=REFERENCE_XMIN,
-    xmax=REFERENCE_XMAX,
-    ymin=REFERENCE_YMIN,
-    ymax=REFERENCE_YMAX,
-    xres=REFERENCE_XRES,
-    yres=REFERENCE_YRES,
-    compare_columns=_TRAJ_COLS_WITH_HNF,
 )
 
 #: Summer convective PBL — boundary layer depth drives HNF dilution very differently
@@ -519,24 +373,6 @@ DAY_BACKWARD = ReferenceScenario(
 HRRR_SUMMER = ReferenceScenario(
     name="hrrr_summer",
     description="Point receptor, 2021-07-15 06Z — summer convective PBL, hnf_plume=True",
-    receptor_type="point",
-    longitude=REFERENCE_LONGITUDE,
-    latitude=REFERENCE_LATITUDE,
-    altitude=REFERENCE_ALTITUDE,
-    n_hours=REFERENCE_N_HOURS,
-    numpar=REFERENCE_NUMPAR,
-    krand=REFERENCE_KRAND,
-    seed=REFERENCE_SEED,
-    hnf_plume=True,
-    smooth_factor=1.0,
-    time_integrate=False,
-    xmin=REFERENCE_XMIN,
-    xmax=REFERENCE_XMAX,
-    ymin=REFERENCE_YMIN,
-    ymax=REFERENCE_YMAX,
-    xres=REFERENCE_XRES,
-    yres=REFERENCE_YRES,
-    compare_columns=_TRAJ_COLS_WITH_HNF,
     time=REFERENCE_SUMMER_TIME,
 )
 
@@ -546,24 +382,8 @@ HRRR_SUMMER = ReferenceScenario(
 EDGE_RECEPTOR = ReferenceScenario(
     name="edge_receptor",
     description="Receptor at SW domain corner (-112.95°, 39.55°) — particle binning near grid boundary",
-    receptor_type="point",
     longitude=-112.95,
     latitude=39.55,
-    altitude=REFERENCE_ALTITUDE,
-    n_hours=REFERENCE_N_HOURS,
-    numpar=REFERENCE_NUMPAR,
-    krand=REFERENCE_KRAND,
-    seed=REFERENCE_SEED,
-    hnf_plume=True,
-    smooth_factor=1.0,
-    time_integrate=False,
-    xmin=REFERENCE_XMIN,
-    xmax=REFERENCE_XMAX,
-    ymin=REFERENCE_YMIN,
-    ymax=REFERENCE_YMAX,
-    xres=REFERENCE_XRES,
-    yres=REFERENCE_YRES,
-    compare_columns=_TRAJ_COLS_WITH_HNF,
 )
 
 #: Three-location multipoint receptor in summer — highest-risk combination for
@@ -575,20 +395,8 @@ SUMMER_MULTIPOINT = ReferenceScenario(
     longitude=(-112.0, -111.5, -111.0),
     latitude=(40.5, 41.0, 41.5),
     altitude=(0.0, 500.0, 1000.0),
-    n_hours=REFERENCE_N_HOURS,
-    numpar=REFERENCE_NUMPAR,
-    krand=REFERENCE_KRAND,
-    seed=REFERENCE_SEED,
-    hnf_plume=True,
-    smooth_factor=1.0,
-    time_integrate=False,
-    xmin=-113.0,
     xmax=-110.5,
-    ymin=39.5,
     ymax=42.0,
-    xres=REFERENCE_XRES,
-    yres=REFERENCE_YRES,
-    compare_columns=_TRAJ_COLS_WITH_HNF,
     time=REFERENCE_SUMMER_TIME,
 )
 
@@ -598,24 +406,7 @@ SUMMER_MULTIPOINT = ReferenceScenario(
 LOW_AGL = ReferenceScenario(
     name="low_agl",
     description="Point receptor at zagl=0.5 m — near-surface HNF stress",
-    receptor_type="point",
-    longitude=REFERENCE_LONGITUDE,
-    latitude=REFERENCE_LATITUDE,
     altitude=0.5,
-    n_hours=REFERENCE_N_HOURS,
-    numpar=REFERENCE_NUMPAR,
-    krand=REFERENCE_KRAND,
-    seed=REFERENCE_SEED,
-    hnf_plume=True,
-    smooth_factor=1.0,
-    time_integrate=False,
-    xmin=REFERENCE_XMIN,
-    xmax=REFERENCE_XMAX,
-    ymin=REFERENCE_YMIN,
-    ymax=REFERENCE_YMAX,
-    xres=REFERENCE_XRES,
-    yres=REFERENCE_YRES,
-    compare_columns=_TRAJ_COLS_WITH_HNF,
 )
 
 #: Receptor 0.2° from western and 0.1° from southern edge of the bbox-cropped
@@ -632,24 +423,12 @@ MET_GRID_EDGE = ReferenceScenario(
     description=(
         "Receptor at (-113.8°, 39.1°) near SW edge of cropped HRRR met domain"
     ),
-    receptor_type="point",
     longitude=-113.8,
     latitude=39.1,
-    altitude=REFERENCE_ALTITUDE,
-    n_hours=REFERENCE_N_HOURS,
-    numpar=REFERENCE_NUMPAR,
-    krand=REFERENCE_KRAND,
-    seed=REFERENCE_SEED,
-    hnf_plume=True,
-    smooth_factor=1.0,
-    time_integrate=False,
     xmin=-114.0,
     xmax=-112.0,
     ymin=38.5,
     ymax=40.5,
-    xres=REFERENCE_XRES,
-    yres=REFERENCE_YRES,
-    compare_columns=_TRAJ_COLS_WITH_HNF,
 )
 
 #: smooth_factor=2.0 — kernel spans many grid cells and the buffer extent
@@ -658,24 +437,7 @@ MET_GRID_EDGE = ReferenceScenario(
 HIGH_SMOOTH = ReferenceScenario(
     name="high_smooth",
     description="Point receptor with smooth_factor=2.0 — large kernel buffer stress",
-    receptor_type="point",
-    longitude=REFERENCE_LONGITUDE,
-    latitude=REFERENCE_LATITUDE,
-    altitude=REFERENCE_ALTITUDE,
-    n_hours=REFERENCE_N_HOURS,
-    numpar=REFERENCE_NUMPAR,
-    krand=REFERENCE_KRAND,
-    seed=REFERENCE_SEED,
-    hnf_plume=True,
     smooth_factor=2.0,
-    time_integrate=False,
-    xmin=REFERENCE_XMIN,
-    xmax=REFERENCE_XMAX,
-    ymin=REFERENCE_YMIN,
-    ymax=REFERENCE_YMAX,
-    xres=REFERENCE_XRES,
-    yres=REFERENCE_YRES,
-    compare_columns=_TRAJ_COLS_WITH_HNF,
     shares_trajectory_with="point",
 )
 
@@ -685,24 +447,7 @@ HIGH_SMOOTH = ReferenceScenario(
 FORWARD = ReferenceScenario(
     name="forward",
     description="Point receptor, n_hours=+6 — forward trajectory; time_sign=+1 in footprint",
-    receptor_type="point",
-    longitude=REFERENCE_LONGITUDE,
-    latitude=REFERENCE_LATITUDE,
-    altitude=REFERENCE_ALTITUDE,
     n_hours=6,
-    numpar=REFERENCE_NUMPAR,
-    krand=REFERENCE_KRAND,
-    seed=REFERENCE_SEED,
-    hnf_plume=True,
-    smooth_factor=1.0,
-    time_integrate=False,
-    xmin=REFERENCE_XMIN,
-    xmax=REFERENCE_XMAX,
-    ymin=REFERENCE_YMIN,
-    ymax=REFERENCE_YMAX,
-    xres=REFERENCE_XRES,
-    yres=REFERENCE_YRES,
-    compare_columns=_TRAJ_COLS_WITH_HNF,
     time=dt.datetime(2021, 1, 14, 12, 0),
 )
 
@@ -714,24 +459,8 @@ PROJECTED_CRS = ReferenceScenario(
     description=(
         "Point receptor, UTM Zone 12N grid (xres=yres=2000 m) — projected CRS footprint"
     ),
-    receptor_type="point",
-    longitude=REFERENCE_LONGITUDE,
-    latitude=REFERENCE_LATITUDE,
-    altitude=REFERENCE_ALTITUDE,
-    n_hours=REFERENCE_N_HOURS,
-    numpar=REFERENCE_NUMPAR,
-    krand=REFERENCE_KRAND,
-    seed=REFERENCE_SEED,
-    hnf_plume=True,
-    smooth_factor=1.0,
-    time_integrate=False,
-    xmin=REFERENCE_XMIN,
-    xmax=REFERENCE_XMAX,
-    ymin=REFERENCE_YMIN,
-    ymax=REFERENCE_YMAX,
     xres=2000.0,
     yres=2000.0,
-    compare_columns=_TRAJ_COLS_WITH_HNF,
     projection="+proj=utm +zone=12 +datum=WGS84 +units=m +no_defs",
     shares_trajectory_with="point",
 )
@@ -743,24 +472,7 @@ PROJECTED_CRS = ReferenceScenario(
 MSL_ALTITUDE = ReferenceScenario(
     name="msl_altitude",
     description="Point receptor at 1335 m MSL (altitude_ref='msl', kmsl=1) — tests kmsl pathway",
-    receptor_type="point",
-    longitude=REFERENCE_LONGITUDE,
-    latitude=REFERENCE_LATITUDE,
     altitude=1335.0,
-    n_hours=REFERENCE_N_HOURS,
-    numpar=REFERENCE_NUMPAR,
-    krand=REFERENCE_KRAND,
-    seed=REFERENCE_SEED,
-    hnf_plume=True,
-    smooth_factor=1.0,
-    time_integrate=False,
-    xmin=REFERENCE_XMIN,
-    xmax=REFERENCE_XMAX,
-    ymin=REFERENCE_YMIN,
-    ymax=REFERENCE_YMAX,
-    xres=REFERENCE_XRES,
-    yres=REFERENCE_YRES,
-    compare_columns=_TRAJ_COLS_WITH_HNF,
     altitude_ref="msl",
 )
 
@@ -774,24 +486,6 @@ WINDERR = ReferenceScenario(
         "Point receptor with XY wind-error params (siguverr=1 m/s) — "
         "second HYSPLIT run with WINDERR"
     ),
-    receptor_type="point",
-    longitude=REFERENCE_LONGITUDE,
-    latitude=REFERENCE_LATITUDE,
-    altitude=REFERENCE_ALTITUDE,
-    n_hours=REFERENCE_N_HOURS,
-    numpar=REFERENCE_NUMPAR,
-    krand=REFERENCE_KRAND,
-    seed=REFERENCE_SEED,
-    hnf_plume=True,
-    smooth_factor=1.0,
-    time_integrate=False,
-    xmin=REFERENCE_XMIN,
-    xmax=REFERENCE_XMAX,
-    ymin=REFERENCE_YMIN,
-    ymax=REFERENCE_YMAX,
-    xres=REFERENCE_XRES,
-    yres=REFERENCE_YRES,
-    compare_columns=_TRAJ_COLS_WITH_HNF,
     siguverr=1.0,
     tluverr=60.0,
     zcoruverr=500.0,
@@ -824,24 +518,10 @@ SPARSE_TIGHT_DOMAIN = ReferenceScenario(
         "Point receptor in tight 0.2° domain — most particles exit early; "
         "tests filter + n_particles denominator on dropped-particle branch"
     ),
-    receptor_type="point",
-    longitude=REFERENCE_LONGITUDE,
-    latitude=REFERENCE_LATITUDE,
-    altitude=REFERENCE_ALTITUDE,
-    n_hours=REFERENCE_N_HOURS,
-    numpar=REFERENCE_NUMPAR,
-    krand=REFERENCE_KRAND,
-    seed=REFERENCE_SEED,
-    hnf_plume=True,
-    smooth_factor=1.0,
-    time_integrate=False,
     xmin=-112.0,
     xmax=-111.8,
     ymin=40.4,
     ymax=40.6,
-    xres=REFERENCE_XRES,
-    yres=REFERENCE_YRES,
-    compare_columns=_TRAJ_COLS_WITH_HNF,
     shares_trajectory_with="point",
 )
 

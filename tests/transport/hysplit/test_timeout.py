@@ -11,6 +11,8 @@ import pytest
 from stilt.execution.config import ExecutionConfig
 from stilt.transport.hysplit.config import HysplitConfig
 
+from ...fixtures.factories import make_variant
+
 SEEN: dict = {}
 
 
@@ -34,11 +36,9 @@ class _FakeMet:
 @pytest.fixture
 def sim(monkeypatch, tmp_path, point_receptor):
     """A Simulation with HYSPLIT stubbed out, and a runner for it."""
-    from stilt.config import Variant
     from stilt.meteorology import MetConfig
     from stilt.output import Output
     from stilt.simulation import Simulation
-    from stilt.transport import ModelInfo
     from stilt.transport.hysplit import model
 
     monkeypatch.setattr(model, "write_inputs", lambda *args: None)
@@ -50,14 +50,7 @@ def sim(monkeypatch, tmp_path, point_receptor):
     )
 
     def _make():
-        params = HysplitConfig(n_hours=-24, numpar=10)
-        config = Variant(
-            name="hrrr",
-            met="hrrr",
-            met_config=met_config,
-            transport=params,
-            model=ModelInfo(version="v5.1.0"),
-        )
+        config = make_variant(met_config=met_config, numpar=10)
         return Simulation(point_receptor, config, Output(tmp_path / "output"))
 
     return _make

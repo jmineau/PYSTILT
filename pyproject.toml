@@ -191,6 +191,7 @@ testpaths = ["tests"]
 markers = [
     "integration: end-to-end tests requiring real met files and HYSPLIT execution",
     "fidelity: STILT-R live comparison tests (slow; require STILT_R_DIR and Rscript)",
+    "r_only: STILT-R comparisons that need R but no met files or HYSPLIT (fast; require STILT_R_DIR and Rscript)",
 ]
 env_files = [".env"]
 
