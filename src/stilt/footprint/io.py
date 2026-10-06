@@ -179,7 +179,10 @@ def read_footprint(
     -------
     xarray.DataArray or None
         The footprint, or ``None`` for an empty one (no particle reached the
-        grid).
+        grid). A footprint from an output directory also says which PYSTILT
+        version made it (``attrs["stilt_version"]``) and the settings hash of
+        the particles it was made from (``attrs["stilt_particles_hash"]``),
+        which ``foot.stilt.to_netcdf`` keeps.
 
     Examples
     --------
@@ -210,7 +213,15 @@ def read_footprint(
     if stored is None:
         raise ValueError(f"{path} does not record its footprint settings.")
     config, geometry_hash = read_footprint_settings(json.loads(stored), path.name)
-    return _from_sparse_table(table, config, geometry_hash)
+    foot = _from_sparse_table(table, config, geometry_hash)
+    if foot is not None:
+        meta = table.schema.metadata or {}
+        made = {
+            "stilt_version": meta.get(b"stilt:pystilt", b"").decode(),
+            "stilt_particles_hash": meta.get(b"stilt:particles_hash", b"").decode(),
+        }
+        foot.attrs.update({key: value for key, value in made.items() if value})
+    return foot
 
 
 def _empty_reason(path: str | Path | UPath) -> str | None:

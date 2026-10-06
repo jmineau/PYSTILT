@@ -894,3 +894,21 @@ def test_an_ensembles_realizations_are_partitions_of_one_folder(tmp_path):
         out.path("particles", VARIANT, receptor.id, 0)
     table = out.table("particles", ensemble, realization=0)
     assert set(table.column("receptor").to_pylist()) == {receptor.id}
+
+
+def test_a_stored_footprint_says_what_made_it(tmp_path):
+    from stilt.footprint import read_footprint
+
+    out = Output(tmp_path / "output")
+    receptor = _receptor()
+    path = out.write_footprint(FEET, _footprint(receptor))
+
+    foot = read_footprint(path)
+
+    assert foot is not None
+    assert foot.attrs["stilt_particles_hash"] == FEET.particles_hash
+    assert foot.attrs["stilt_version"]
+    nc = foot.stilt.to_netcdf(tmp_path / "foot.nc")
+    back = read_footprint(nc)
+    assert back is not None
+    assert back.attrs["stilt_particles_hash"] == FEET.particles_hash
