@@ -82,6 +82,32 @@ def test_particles(tmp_path, wbb_receptor, traj_only_config):
         assert phrase not in log_text, f"Fatal phrase in log: {phrase!r}"
 
 
+@integration
+def test_the_functions_make_what_a_project_stores(tmp_path, wbb_receptor, wbb_config):
+    """run_trajectories and calc_footprint give a seeded project run's particles and footprint."""
+    import stilt
+
+    config = _with(wbb_config, krand=2, seed=7)
+    project = Project.init(tmp_path / "p", config=config, receptors=[wbb_receptor])
+    project.run()
+    sim = project.simulation(*_sim_id(wbb_receptor))
+
+    particles = stilt.run_trajectories(
+        wbb_receptor, config.mets["hrrr"], n_hours=-6, numpar=100, krand=2, seed=7
+    )
+    stored = sim.particles
+    columns = [c for c in particles.columns if c in stored.columns]
+    pd.testing.assert_frame_equal(
+        particles[columns].reset_index(drop=True),
+        stored[columns].reset_index(drop=True),
+        check_dtype=False,
+    )
+    assert config.footprint.grid is not None
+    foot = stilt.calc_footprint(particles, wbb_receptor, config.footprint.grid)
+    assert sim.footprint is not None
+    np.testing.assert_allclose(foot.values, sim.footprint.values, rtol=1e-6)
+
+
 # ---------------------------------------------------------------------------
 # Point receptor - trajectory + footprint
 # ---------------------------------------------------------------------------

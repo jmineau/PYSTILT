@@ -742,6 +742,11 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- `stilt.run_trajectories(receptor, met, **params)` runs the transport
+  model for one receptor without a project and returns its particles, as
+  STILT-R's `calc_trajectory` does. With `stilt.calc_footprint`, a
+  footprint takes two calls (#150).
+
 - `Simulation.settings`: the run and footprint settings a simulation's
   results are made with, as the output folders record them (#134).
 
