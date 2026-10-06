@@ -51,7 +51,6 @@ from stilt.variants import Variant, resolve
 if TYPE_CHECKING:
     import submitit
 
-    from stilt.execution import SimulationResult
     from stilt.visualization import ProjectPlotAccessor
 
 
@@ -490,7 +489,7 @@ class Project:
         skip_existing: bool = True,
         compute_root: str | Path | None = None,
         execution: ExecutionConfig | None = None,
-    ) -> list[SimulationResult]:
+    ) -> pd.DataFrame:
         """
         Run every simulation that has not finished, and wait for it.
 

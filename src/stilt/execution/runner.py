@@ -17,9 +17,9 @@ from stilt._paths import absolute
 from stilt.execution.config import ExecutionConfig
 
 if TYPE_CHECKING:
-    from stilt.project import Project
+    import pandas as pd
 
-    from .worker import SimulationResult
+    from stilt.project import Project
 
 logger = logging.getLogger(__name__)
 
@@ -70,8 +70,8 @@ class Batch(submitit.helpers.Checkpointable):
         self.compute_root = compute_root
         self.skip_existing = skip_existing
 
-    def __call__(self) -> list[SimulationResult]:
-        """Run the batch and return the result of every simulation."""
+    def __call__(self) -> None:
+        """Run the batch. The results and failure records are in the output directory."""
         from stilt.project import Project
 
         from .worker import run_receptors
@@ -79,7 +79,7 @@ class Batch(submitit.helpers.Checkpointable):
         logging.basicConfig(level=logging.WARNING, format="%(message)s")
         logging.getLogger("stilt.execution.worker").setLevel(logging.INFO)
         project = Project(self.project)
-        return run_receptors(
+        run_receptors(
             project,
             self.receptor_ids,
             # Worked out here, in the task, so it is this node's scratch.
@@ -166,13 +166,19 @@ def _pending(project: Project, skip_existing: bool) -> list[str]:
     return list(dict.fromkeys(sims["receptor"]))
 
 
+def _status(project: Project, receptor_ids: list[str]) -> pd.DataFrame:
+    """Return the status table of the simulations of *receptor_ids*."""
+    sims = project.simulations
+    return sims[sims["receptor"].isin(receptor_ids)].status()
+
+
 def run(
     project: Project,
     *,
     execution: ExecutionConfig | None = None,
     skip_existing: bool = True,
     compute_root: str | Path | None = None,
-) -> list[SimulationResult]:
+) -> pd.DataFrame:
     """
     Run every simulation of a project that has not finished, and wait for it.
 
@@ -200,8 +206,10 @@ def run(
 
     Returns
     -------
-    list of SimulationResult
-        One per simulation that ran, receptor by receptor.
+    pandas.DataFrame
+        The status table (``project.simulations.status()``) of the
+        simulations that ran: ``state`` says which are complete, which
+        failed and why, and which did not finish.
 
     Raises
     ------
@@ -209,30 +217,25 @@ def run(
         If a Slurm task failed, was cancelled, or ran out of requeues.
     """
     execution = execution if execution is not None else project.config.execution
-    if execution.backend == "slurm":
-        jobs = submit(
-            project,
-            execution=execution,
-            skip_existing=skip_existing,
-            compute_root=compute_root,
-        )
-        return _wait(jobs)
     pending = _pending(project, skip_existing)
     if not pending:
         logger.info("run: every simulation is complete; nothing to do")
-        return []
-    logger.info("run(%s): %d receptors", ", ".join(project.variants), len(pending))
-    # In this process, so Ctrl-C and SIGTERM stop the workers cleanly and
-    # progress prints as it happens.
-    from .worker import run_receptors
+    elif execution.backend == "slurm":
+        _wait(_submit(project, pending, execution, skip_existing, compute_root))
+    else:
+        logger.info("run(%s): %d receptors", ", ".join(project.variants), len(pending))
+        # In this process, so Ctrl-C and SIGTERM stop the workers cleanly
+        # and progress prints as it happens.
+        from .worker import run_receptors
 
-    return run_receptors(
-        project,
-        pending,
-        compute_root=resolve_compute_root(project, compute_root),
-        execution=execution,
-        skip_existing=skip_existing,
-    )
+        run_receptors(
+            project,
+            pending,
+            compute_root=resolve_compute_root(project, compute_root),
+            execution=execution,
+            skip_existing=skip_existing,
+        )
+    return _status(project, pending)
 
 
 def submit(
@@ -278,6 +281,17 @@ def submit(
     if not pending:
         logger.info("submit: every simulation is complete; nothing to do")
         return []
+    return _submit(project, pending, execution, skip_existing, compute_root)
+
+
+def _submit(
+    project: Project,
+    pending: list[str],
+    execution: ExecutionConfig,
+    skip_existing: bool,
+    compute_root: str | Path | None,
+) -> list[submitit.Job[Any]]:
+    """Submit *pending* receptors as one job array and return its tasks."""
     # One folder per submission, so a later array never overwrites these.
     stamp = f"{datetime.now():%Y%m%d_%H%M%S}_{uuid4().hex[:6]}"
     executor = submitit.AutoExecutor(
@@ -291,7 +305,7 @@ def submit(
     # A compute root that was not asked for is left to each compute node,
     # whose TMPDIR is its own. One that was is made absolute here, since the
     # task may start in another directory.
-    scratch = (
+    task_root = (
         None
         if compute_root is None
         else str(resolve_compute_root(project, compute_root))
@@ -301,7 +315,7 @@ def submit(
             str(project.directory),
             ids,
             execution=execution,
-            compute_root=scratch,
+            compute_root=task_root,
             skip_existing=skip_existing,
         )
         for ids in split(pending, execution.n_workers)
@@ -314,9 +328,9 @@ def submit(
     return jobs
 
 
-def _wait(jobs: list[submitit.Job[Any]]) -> list[SimulationResult]:
+def _wait(jobs: list[submitit.Job[Any]]) -> None:
     """
-    Wait until every task has left the queue and return their simulation results.
+    Wait until every task has left the queue.
 
     Raises
     ------
@@ -338,7 +352,6 @@ def _wait(jobs: list[submitit.Job[Any]]) -> list[SimulationResult]:
             f"{len(failed)} of {len(jobs)} Slurm tasks did not complete. Task "
             f"{first_id}: {first_error}\nLogs are in {jobs[0].paths.folder}."
         )
-    return [result for job in jobs for result in job.result()]
 
 
 __all__ = [

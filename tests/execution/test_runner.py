@@ -114,7 +114,6 @@ def test_batch_opens_the_project_and_runs_its_receptors(monkeypatch, tmp_path):
 
     def fake_run_receptors(project, receptor_ids, **kwargs):
         calls.append({"project": project, "ids": receptor_ids, **kwargs})
-        return ["results"]
 
     monkeypatch.setattr("stilt.project.Project", lambda path: f"Project({path})")
     monkeypatch.setattr("stilt.execution.worker.run_receptors", fake_run_receptors)
@@ -127,7 +126,7 @@ def test_batch_opens_the_project_and_runs_its_receptors(monkeypatch, tmp_path):
         compute_root="/scratch/x",
         skip_existing=False,
     )
-    assert batch() == ["results"]
+    batch()
     assert calls == [
         {
             "project": f"Project({tmp_path})",
@@ -282,7 +281,7 @@ def test_submit_with_nothing_to_do_submits_nothing(fake_submitit, pending, tmp_p
 def test_waiting_raises_when_a_task_did_not_complete():
     good, bad = _FakeJob("9_0"), _FakeJob("9_1", error=RuntimeError("timed out"))
 
-    assert runner._wait([good]) == ["result of 9_0"]  # type: ignore[list-item]
+    runner._wait([good])  # type: ignore[list-item]
     assert good.waited
 
     with pytest.raises(
