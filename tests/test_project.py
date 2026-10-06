@@ -48,7 +48,9 @@ def _met(tmp_path) -> MetConfig:
 def _config(tmp_path, include_footprint=True, **overrides) -> ProjectConfig:
     """Minimal ProjectConfig with one met and (optionally) a footprint grid."""
     overrides.setdefault("grid", _GRID if include_footprint else None)
-    return ProjectConfig(mets={"hrrr": _met(tmp_path)}, **overrides)
+    return ProjectConfig(
+        mets={"hrrr": _met(tmp_path)}, **{"variants": {"hrrr": {}}, **overrides}
+    )
 
 
 def _project(tmp_path, receptors=None, name="proj", **overrides) -> Project:
@@ -130,6 +132,7 @@ def test_init_writes_the_settings_given_and_the_receptors(tmp_path, point_recept
         receptors=[point_receptor],
         mets={"hrrr": _met(tmp_path)},
         n_hours=-6,
+        variants={"hrrr": {}},
     )
 
     text = (tmp_path / "proj" / "config.yaml").read_text()
@@ -1135,6 +1138,7 @@ def test_relative_paths_start_from_the_project_not_the_working_directory(
             "shared": {**hrrr, "directory": "$MET_ROOT/hrrr"},
         },
         output=str(tmp_path / "output_link"),
+        variants={"local": {}, "shared": {}},
     )
     elsewhere = tmp_path / "elsewhere"
     elsewhere.mkdir()

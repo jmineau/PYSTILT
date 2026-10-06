@@ -241,6 +241,7 @@ class ReferenceScenario:
             "varsiwant": REFERENCE_VARSIWANT,
             # The fidelity tests read SETUP.CFG afterwards.
             "execution": {"keep_scratch": True},
+            "variants": {REFERENCE_MET: {}},
             **self.make_footprint_config().model_dump(),
         }
         if self.error_variant is not None:

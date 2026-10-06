@@ -49,23 +49,6 @@ class HysplitConfig(TransportConfig):
     #: that differ from the bundled ones.
     UNRECORDED: ClassVar[frozenset[str]] = frozenset({"exe_dir", "data_dir"})
 
-    numpar: int = Field(
-        200,
-        description=(
-            "Number of particles released per simulation. More particles give a "
-            "less noisy footprint and take longer to run."
-        ),
-    )
-    hnf_plume: bool = Field(
-        True,
-        description=(
-            "Apply a vertical Gaussian plume model to particles in the hyper "
-            "near-field. This shrinks their effective dilution depth and raises "
-            "the influence of fluxes close to the receptor. Requires "
-            "``varsiwant`` to include ``dens``, ``tlgr``, ``sigw``, ``foot``, "
-            "``mlht``, and ``samt``."
-        ),
-    )
     exe_dir: Path | None = Field(
         None,
         description=(
@@ -426,14 +409,6 @@ class HysplitConfig(TransportConfig):
     tvmix: float = Field(
         1.0,
         description="Vertical mixing scale factor, used by the ``kzmix`` scaling modes.",
-    )
-    veght: float = Field(
-        0.5,
-        description=(
-            "Height below which a particle's time counts toward the footprint. "
-            "A value of 1 or less is a fraction of the mixed-layer height; a "
-            "larger value is meters above ground."
-        ),
     )
     vscale: float = Field(
         200.0,

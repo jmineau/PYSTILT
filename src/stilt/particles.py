@@ -191,7 +191,7 @@ def write_particles(
         Receptor the particles were released from.
     settings : mapping
         The run's settings, as its folder records them
-        (:attr:`stilt.variants.Variant.run_settings`).
+        (:attr:`stilt.config.Variant.run_settings`).
     met_files : list of Path
         Meteorology files the run used.
     metadata : dict, optional

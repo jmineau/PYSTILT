@@ -18,6 +18,9 @@ A typical config.yaml
        file_format: "%Y%m%d_%H"
        file_tres: 6h
 
+   variants:
+     hrrr: {}            # every receptor runs once, with these settings
+
    grid:
      xmin: -114.0
      xmax: -111.0
@@ -32,9 +35,10 @@ A typical config.yaml
 ``stilt init`` writes a starter file with comments, and so does
 ``Project.init(path, starter=True)`` in Python. If you pass settings to
 :meth:`Project.init <stilt.Project.init>` instead, they are written to
-``config.yaml`` once. The written file
-includes a ``variants`` section that lists the variants that run (see
-`Variants`_), so it reads the same either way.
+``config.yaml`` once, so it reads the same either way. A config needs a
+``variants`` section, which lists the variants that run (see `Variants`_).
+A key PYSTILT does not know is an error that names the nearest setting, so
+a typo such as ``smooth_factr`` is caught when the file loads.
 
 The settings most people change
 -------------------------------
@@ -94,14 +98,9 @@ Every receptor is run once per variant. A variant has a name, a
 met, and any settings that differ from the top level of
 ``config.yaml``. The top-level settings are the defaults.
 
-With no ``variants`` section there is one variant per met,
-named after it. The typical config above runs each receptor once, as
-``hrrr``.
-
-Once you write a ``variants`` section, only the variants in it run. Keep an
-entry with no overrides (``hrrr: {}`` below) to run the defaults unchanged.
-You can give it any name. Add more entries to run the same receptors under
-other settings:
+Every config lists its variants, and only those run. An entry with no
+overrides (``hrrr: {}`` below) runs the defaults unchanged. You can give it
+any name. Add more entries to run the same receptors under other settings:
 
 .. code-block:: yaml
 
@@ -330,6 +329,7 @@ check:
        ),
        n_hours=-24,
        numpar=500,
+       variants={"hrrr": {}},
    )
    project = stilt.Project.init("./my_project", config=config)
    project.variants        # {"hrrr": Variant(...)}, each with its full settings

@@ -366,7 +366,7 @@ def test_a_project_needs_subgrid_dir_to_crop_local_files(tmp_path):
         subgrid_bounds=BOUNDS,
     )
     with pytest.raises(ValueError, match="subgrid_dir is required"):
-        ProjectConfig(mets={"hrrr": met})
+        ProjectConfig(mets={"hrrr": met}, variants={"hrrr": {}})
 
 
 def test_a_project_needs_each_met_directory(tmp_path):
@@ -376,7 +376,7 @@ def test_a_project_needs_each_met_directory(tmp_path):
     met = MetConfig(file_format="%Y%m%d_%H", file_tres="1h")
     assert met.directory is None
     with pytest.raises(ValueError, match="'hrrr' needs a directory"):
-        ProjectConfig(mets={"hrrr": met})
+        ProjectConfig(mets={"hrrr": met}, variants={"hrrr": {}})
     with pytest.raises(ValueError, match="has no directory"):
         Met("hrrr", met)
 

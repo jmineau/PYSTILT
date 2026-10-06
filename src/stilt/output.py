@@ -72,7 +72,7 @@ from stilt.particles import write_particles
 from stilt.receptors import Receptor, parse_receptor_id
 
 if TYPE_CHECKING:
-    from stilt.variants import Variant
+    from stilt.config import Variant
 
 logger = logging.getLogger(__name__)
 

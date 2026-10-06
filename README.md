@@ -67,6 +67,7 @@ project = stilt.Project.init(
     "./my_project",
     receptors=[receptor],
     mets={"hrrr": met},
+    variants={"hrrr": {}},
     n_hours=-24,
     numpar=100,
     grid=grid,

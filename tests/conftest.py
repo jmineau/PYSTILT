@@ -166,9 +166,7 @@ def stilt_params(tmp_path):
 def model_config(tmp_path, met_config):
     """Minimal ProjectConfig with one met entry."""
     return ProjectConfig(
-        n_hours=-24,
-        numpar=100,
-        mets={"hrrr": met_config},
+        n_hours=-24, numpar=100, mets={"hrrr": met_config}, variants={"hrrr": {}}
     )
 
 
@@ -264,6 +262,7 @@ def wbb_config(met_dir, wbb_grid) -> ProjectConfig:
         n_hours=-6,
         numpar=100,
         grid=wbb_grid,
+        variants={"hrrr": {}},
     )
 
 
@@ -280,6 +279,7 @@ def traj_only_config(met_dir) -> ProjectConfig:
         },
         n_hours=-6,
         numpar=100,
+        variants={"hrrr": {}},
     )
 
 
@@ -322,4 +322,5 @@ def multipoint_config(met_dir) -> ProjectConfig:
         n_hours=-6,
         numpar=100,
         grid=grid,
+        variants={"hrrr": {}},
     )

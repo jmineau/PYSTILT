@@ -8,6 +8,26 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- A config must declare its variants (breaking). Without a `variants:`
+  section the config no longer runs one variant per met; it fails with a
+  message that says what to write (`variants: {hrrr: {}}`). Files PYSTILT
+  writes always had the section; a hand-written `config.yaml` without it
+  needs two lines (#150).
+- An unknown key in `config.yaml`, at the top or in a variant, is an error
+  that names the nearest setting and what it belongs to: `'smooth_factr'
+  is not a setting. Did you mean 'smooth_factor', a footprint setting?`
+  It used to reach HYSPLIT's config and be reported as one of its fields
+  (#150).
+- `numpar`, `hnf_plume`, and `veght` are on the base `TransportConfig`,
+  with `n_hours` and `seed`, so a variant that runs another transport
+  model inherits them. No hash changes (#150).
+- `stilt.variants` is gone (breaking): `Variant` is in `stilt.config`,
+  `stilt.variants.resolve(config)` is `config.resolve(directory)`, and
+  `ProjectConfig.variant(name)` and `Declared` are private. A relative
+  geometry file in a footprint's settings starts from the project
+  directory, where it started from the working directory; the recorded
+  path and the hashes are unchanged (#150).
+
 - `project.simulations` is a plain pandas DataFrame, and the verbs are on
   `Project` (breaking): `project.status(sel)`, `incomplete(sel)`,
   `particles(sel)` (was `load_particles`), `footprints(sel)` (was

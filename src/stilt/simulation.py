@@ -23,7 +23,7 @@ from stilt.receptors import Receptor
 from stilt.spatial import Grid
 
 if TYPE_CHECKING:
-    from stilt.variants import Variant
+    from stilt.config import Variant
     from stilt.visualization import SimulationPlotAccessor
 
 logger = logging.getLogger(__name__)

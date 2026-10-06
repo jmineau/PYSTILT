@@ -5,7 +5,7 @@ import datetime as dt
 import pandas as pd
 import pytest
 
-from stilt.config import ProjectConfig
+from stilt.config import ProjectConfig, Variant
 from stilt.exceptions import MeteorologyError, SimulationError
 from stilt.execution import worker
 from stilt.execution.config import ExecutionConfig
@@ -19,7 +19,6 @@ from stilt.simulation import Simulation
 from stilt.spatial import Grid
 from stilt.transport import ModelInfo, ModelRun
 from stilt.transport.hysplit import FailureReason, HysplitConfig
-from stilt.variants import Variant
 
 # ---------------------------------------------------------------------------
 # Fixtures and helpers
@@ -151,7 +150,7 @@ def _model_config(tmp_path, **kwargs) -> ProjectConfig:
                 file_tres="1h",
             )
         },
-        **kwargs,
+        **{"variants": {"hrrr": {}}, **kwargs},
     )
 
 

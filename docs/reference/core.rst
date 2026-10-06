@@ -57,9 +57,9 @@ Receptor objects
 Simulation objects
 ------------------
 
-A :class:`~stilt.variants.Variant` is one variant of a project, resolved: its configs, its
+A :class:`~stilt.config.Variant` is one variant of a project, resolved: its configs, its
 met, the transport model build, and the hashes that find its results.
-``project.variants`` holds them, and :func:`stilt.variants.resolve` makes
+``project.variants`` holds them, and :meth:`ProjectConfig.resolve` makes
 them from a config.
 
 .. autosummary::
@@ -67,8 +67,7 @@ them from a config.
    :nosignatures:
 
    Simulation
-   variants.Variant
-   variants.resolve
+   config.Variant
 
 Settings and their hashes
 -------------------------

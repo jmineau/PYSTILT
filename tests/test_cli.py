@@ -13,7 +13,6 @@ from stilt.cli import _resolve_project, app
 from stilt.config import ProjectConfig
 from stilt.execution.config import ExecutionConfig
 from stilt.spatial import Grid
-from stilt.variants import resolve
 
 runner = CliRunner()
 
@@ -33,6 +32,7 @@ def _write_minimal_config(tmp_path):
                 "file_tres": "1h",
             }
         },
+        variants={"hrrr": {}},
     )
     cfg.to_yaml(tmp_path / "config.yaml")
     (tmp_path / "receptors.csv").write_text(
@@ -133,6 +133,7 @@ def test_status_counts_full_simulation_completion(tmp_path):
             xres=0.1,
             yres=0.1,
         ),
+        variants={"hrrr": {}},
     )
 
     receptor = PointReceptor(
@@ -370,7 +371,7 @@ def test_init_writes_science_first_commented_config(tmp_path):
     assert parsed["grid"]["xmin"] == -113.0
     loaded = ProjectConfig.from_yaml(project / "config.yaml")
     assert loaded.footprint.grid is not None and loaded.footprint.grid.xmin == -113.0
-    assert list(resolve(loaded)) == ["hrrr"]
+    assert list(loaded.resolve()) == ["hrrr"]
     assert parsed["variants"] == {"hrrr": {}}
     assert text.index("mets:") < text.index("grid:")
     assert text.index("grid:") < text.index("n_hours:")
@@ -439,6 +440,7 @@ def test_status_counts_failures_by_reason(tmp_path):
             }
         },
         receptors=receptors,
+        variants={"hrrr": {}},
     )
     reasons = ["MISSING_MET_FILES", "MISSING_MET_FILES", None]
     for receptor, reason in zip(receptors, reasons, strict=True):

@@ -56,6 +56,7 @@ forward with 1000 particles. In PYSTILT each release is a
        "./forward_12h",             # keep forward runs in a project of their own
        receptors=receptors,
        mets={"hrrr": met},          # as in the quickstart
+       variants={"hrrr": {}},
        n_hours=12,                  # positive: forward in time
        numpar=1000,
    )
