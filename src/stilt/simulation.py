@@ -8,7 +8,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, NamedTuple
+from typing import TYPE_CHECKING, Any
 
 import pandas as pd
 import xarray as xr
@@ -19,7 +19,7 @@ from stilt.footprint.config import FootprintConfig
 from stilt.footprint.io import _empty_reason, read_footprint
 from stilt.output import Output
 from stilt.particles import particles_metadata, read_particles
-from stilt.receptors import Receptor, parse_receptor_id
+from stilt.receptors import Receptor
 from stilt.spatial import Grid
 
 if TYPE_CHECKING:
@@ -27,56 +27,6 @@ if TYPE_CHECKING:
     from stilt.visualization import SimulationPlotAccessor
 
 logger = logging.getLogger(__name__)
-
-
-class SimID(NamedTuple):
-    """
-    Id of one simulation, a ``(receptor, variant)`` pair.
-
-    Its string form is ``"<receptor_id>/<variant>"``.
-
-    Examples
-    --------
-    >>> sid = SimID.parse("202307151800_-111.848_40.766_10/hrrr")
-    >>> sid.variant
-    'hrrr'
-    >>> str(sid)
-    '202307151800_-111.848_40.766_10/hrrr'
-    """
-
-    receptor: str
-    variant: str
-
-    def __str__(self) -> str:
-        return f"{self.receptor}/{self.variant}"
-
-    def __fspath__(self) -> str:
-        """Return the string form, so ``root / sim_id`` gives a working directory."""
-        return str(self)
-
-    @classmethod
-    def parse(cls, value: str | SimID | tuple[str, str]) -> SimID:
-        """
-        Build a :class:`SimID` from its string form or a ``(receptor, variant)`` pair.
-
-        Raises
-        ------
-        ValueError
-            If a string is not of the form ``"<receptor_id>/<variant>"``, or
-            the receptor id is malformed.
-        """
-        if isinstance(value, SimID):
-            return value
-        if isinstance(value, tuple):
-            receptor, variant = value
-        else:
-            receptor, sep, variant = str(value).partition("/")
-            if not sep or not variant:
-                raise ValueError(
-                    f"Invalid sim id {value!r}; expected '{{receptor_id}}/{{variant}}'."
-                )
-        parse_receptor_id(receptor)  # raises on a malformed id
-        return cls(str(receptor), variant)
 
 
 @dataclass(frozen=True)
@@ -114,7 +64,12 @@ class Simulation:
     directory: Path | None = None
 
     def __repr__(self) -> str:
-        return f"Simulation(id={str(self.id)!r})"
+        return (
+            f"Simulation(receptor={self.receptor.id!r}, variant={self.variant.name!r})"
+        )
+
+    def __str__(self) -> str:
+        return f"{self.receptor.id}/{self.variant.name}"
 
     def __hash__(self) -> int:
         return hash((self.id, self.output))
@@ -122,9 +77,9 @@ class Simulation:
     # -- identity ----------------------------------------------------------
 
     @property
-    def id(self) -> SimID:
-        """``(receptor.id, variant.name)``."""
-        return SimID(self.receptor.id, self.variant.name)
+    def id(self) -> tuple[str, str]:
+        """``(receptor.id, variant.name)``, the row of ``project.simulations`` it is."""
+        return (self.receptor.id, self.variant.name)
 
     # -- where the results are ---------------------------------------------
 
@@ -272,7 +227,7 @@ class Simulation:
         """
         log_path = self.log_path
         if log_path is None or not log_path.exists():
-            raise FileNotFoundError(f"No log for {self.id} yet.")
+            raise FileNotFoundError(f"No log for {self} yet.")
         return log_path.read_text()
 
     @property
@@ -287,7 +242,7 @@ class Simulation:
         """
         path = self.particles_path
         if path is None or not path.exists():
-            raise FileNotFoundError(f"{self.id} has no particles yet.")
+            raise FileNotFoundError(f"{self} has no particles yet.")
         return particles_metadata(path).met_files
 
     @cached_property
@@ -310,7 +265,7 @@ class Simulation:
         """
         path = self.particles_path
         if path is None or not path.exists():
-            raise FileNotFoundError(f"{self.id} has no particles yet.")
+            raise FileNotFoundError(f"{self} has no particles yet.")
         return read_particles(path)
 
     @cached_property
@@ -336,7 +291,7 @@ class Simulation:
             return None
         path = self.footprint_path
         if path is None or not path.exists():
-            raise FileNotFoundError(f"{self.id} has no footprint yet.")
+            raise FileNotFoundError(f"{self} has no footprint yet.")
         return read_footprint(path)
 
     @cached_property
@@ -387,7 +342,7 @@ class Simulation:
         geometry_hash = self.variant.geometry_hash if grid is None else None
         grid = grid if grid is not None else own.grid
         if grid is None:
-            raise TypeError(f"{self.id} has no footprint settings; give a grid.")
+            raise TypeError(f"{self} has no footprint settings; give a grid.")
         particles = self.particles
         try:
             return gridding.calc_footprint(
@@ -409,4 +364,4 @@ class Simulation:
             return None
 
 
-__all__ = ["SimID", "Simulation"]
+__all__ = ["Simulation"]

@@ -49,8 +49,8 @@ def test_declarative_transform_config_changes_real_footprint(
     project.run()
 
     sims = project.simulations
-    [baseline] = sims[sims.variant == "hrrr"].load_footprints().values()
-    [lifetime] = sims[sims.variant == "lifetime"].load_footprints().values()
+    [baseline] = project.footprints(sims[sims.variant == "hrrr"]).values()
+    [lifetime] = project.footprints(sims[sims.variant == "lifetime"]).values()
 
     assert len(lifetime.stilt.config.transforms) == 1
 

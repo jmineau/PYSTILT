@@ -1,4 +1,4 @@
-"""Tests for stilt.simulation: SimID and the Simulation value object."""
+"""Tests for stilt.simulation: the Simulation value object."""
 
 import datetime as dt
 
@@ -12,7 +12,7 @@ from stilt.identity import settings_hash
 from stilt.meteorology import MetConfig
 from stilt.output import Output
 from stilt.particles import particles_metadata
-from stilt.simulation import SimID, Simulation
+from stilt.simulation import Simulation
 from stilt.spatial import Grid
 from stilt.transforms import FirstOrderLifetime, transform_kind
 from stilt.transport import ModelInfo
@@ -82,36 +82,6 @@ def _write_particles(sim: Simulation) -> pd.DataFrame:
 
 
 # ---------------------------------------------------------------------------
-# SimID
-# ---------------------------------------------------------------------------
-
-
-def test_simid_is_a_receptor_and_a_variant(point_receptor):
-    sid = SimID(point_receptor.id, "hrrr")
-    assert sid.receptor == point_receptor.id
-    assert sid.variant == "hrrr"
-    assert str(sid) == f"{point_receptor.id}/hrrr"
-
-
-def test_simid_parses_its_string_and_tuple_forms(point_receptor):
-    sid = SimID(point_receptor.id, "hrrr")
-    assert SimID.parse(str(sid)) == sid
-    assert SimID.parse((str(point_receptor.id), "hrrr")) == sid
-    assert SimID.parse(sid) is sid
-
-
-@pytest.mark.parametrize("bad", ["nohash", "id/", "/hrrr"])
-def test_simid_parse_rejects_malformed_ids(bad):
-    with pytest.raises(ValueError):
-        SimID.parse(bad)
-
-
-def test_simid_is_pathlike(point_receptor, tmp_path):
-    sid = SimID(point_receptor.id, "hrrr")
-    assert tmp_path / sid == tmp_path / str(point_receptor.id) / "hrrr"
-
-
-# ---------------------------------------------------------------------------
 # A value
 # ---------------------------------------------------------------------------
 
@@ -123,7 +93,8 @@ def test_simulation_is_a_frozen_value(point_receptor, tmp_path):
     assert a != _sim(tmp_path, point_receptor, footprint=FOOT, variant="other")
     with pytest.raises(AttributeError):
         a.receptor = point_receptor  # type: ignore[misc]
-    assert a.id == SimID(point_receptor.id, "hrrr")
+    assert a.id == (point_receptor.id, "hrrr")
+    assert str(a) == f"{point_receptor.id}/hrrr"
     assert a.variant.transport.numpar == 10
     assert a.variant.footprint == FOOT
     assert not (tmp_path / "output").exists()  # building one creates nothing

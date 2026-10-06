@@ -301,7 +301,7 @@ def transport_error(
     error_particles : pandas.DataFrame or sequence of pandas.DataFrame
         Particle table of a wind-error variant of the same receptor, or a
         list of them for a variant with ``realizations: N``, such as
-        ``[rows for _, rows in ensemble.load_particles().groupby("variant")]``.
+        ``[rows for _, rows in project.particles(ensemble).groupby("variant")]``.
     flux : xarray.DataArray
         Surface flux field (see ``particles.stilt.enhancement``).
     transforms : sequence, optional

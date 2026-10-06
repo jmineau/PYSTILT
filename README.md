@@ -225,8 +225,8 @@ import pandas as pd
 sims = project.simulations                       # one row per receptor and variant
 january = sims[(sims.variant == "hrrr") & sims.time.between("2023-01-01", "2023-01-31")]
 
-january.status()                                 # which results exist
-footprints = january.load_footprints()           # keyed by (receptor, variant)
+project.status(january)                          # which results exist
+footprints = project.footprints(january)         # keyed by (receptor, variant)
 
 coords = [(-111.9, 40.7), (-111.8, 40.8)]
 time_bins = pd.interval_range(
@@ -236,12 +236,12 @@ time_bins = pd.interval_range(
     closed="left",
 )
 
-for sim_id, footprint in footprints.items():       # keyed by (receptor, variant)
+for (receptor, variant), footprint in footprints.items():
     hourly = footprint.stilt.aggregate(target=coords, time_bins=time_bins)
 ```
 
 If a simulation's particles never reach the grid, PYSTILT writes a footprint file with no cells
-and the reason. The simulation counts as finished, and `load_footprints()` leaves it out.
+and the reason. The simulation counts as finished, and `project.footprints()` leaves it out.
 
 ## STILT-R parity
 

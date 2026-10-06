@@ -14,9 +14,8 @@ from stilt.execution import resolve_compute_root
 from stilt.execution.config import ExecutionConfig
 from stilt.meteorology import MetConfig
 from stilt.output import Output
-from stilt.project import Project, Simulations
+from stilt.project import Project
 from stilt.receptors import PointReceptor
-from stilt.simulation import SimID
 from stilt.spatial import Grid
 from stilt.transport.hysplit.driver import winderrtf
 from stilt.transport.hysplit.model import finish_particles
@@ -204,7 +203,7 @@ def test_views_are_cached(tmp_path):
 
     assert project.config is project.config
     assert project.receptors is project.receptors
-    assert project.simulations is project.simulations
+    assert project._simulations is project._simulations
     assert project.variants is project.variants
     assert project.plot is project.plot
 
@@ -314,7 +313,7 @@ def test_a_project_without_receptors_is_empty(tmp_path):
     assert project.receptors.empty
     assert list(project.receptors.columns) == ["receptor", "time", "kind", "location"]
     assert len(project.simulations) == 0
-    assert project.simulations.status().empty
+    assert project.status().empty
     assert project.run().empty
 
 
@@ -416,7 +415,7 @@ def test_simulations_are_receptors_times_variants(tmp_path):
 
     sims = project.simulations
 
-    assert list(sims.frame.columns[:4]) == ["receptor", "variant", "group", "model"]
+    assert list(sims.columns[:4]) == ["receptor", "variant", "group", "model"]
     assert set(sims["model"]) == {"hysplit"}
     assert _pairs(sims) == [
         (a.id, "hrrr"),
@@ -427,7 +426,7 @@ def test_simulations_are_receptors_times_variants(tmp_path):
         (b.id, "err-1"),
     ]
     assert sims["group"].tolist()[:3] == ["hrrr", "err", "err"]
-    assert set(sims.frame.columns) >= {"time", "kind", "location", "site"}
+    assert set(sims.columns) >= {"time", "kind", "location", "site"}
 
 
 def test_simulations_select_with_pandas(tmp_path):
@@ -443,7 +442,7 @@ def test_simulations_select_with_pandas(tmp_path):
     assert _pairs(wbb) == [(a.id, "zi08"), (c.id, "zi08")]
     later = sims[sims.time.between("2023-01-01 13:00", "2023-01-01 14:00")]
     assert sorted(set(later["receptor"])) == sorted([b.id, c.id])
-    assert len(wbb.status()) == 2
+    assert len(project.status(wbb)) == 2
 
 
 def test_simulation_handles_carry_the_variant_settings(tmp_path, point_receptor):
@@ -527,18 +526,18 @@ def test_incomplete_follows_each_variant_outputs(tmp_path, point_receptor):
         variants={"hrrr": {}, "traj": {"grid": None}, "s2": {"smooth_factor": 2}},
     )
 
-    assert project.simulations.incomplete()["variant"].tolist() == [
+    assert project.incomplete()["variant"].tolist() == [
         "hrrr",
         "traj",
         "s2",
     ]
 
     _write_trajectory(project, point_receptor)  # shared by hrrr, traj, and s2
-    assert project.simulations.incomplete()["variant"].tolist() == ["hrrr", "s2"]
+    assert project.incomplete()["variant"].tolist() == ["hrrr", "s2"]
 
     _write_footprint(project, point_receptor)
     _write_footprint(project, point_receptor, "s2", empty=True)
-    assert project.simulations.incomplete().frame.empty
+    assert project.incomplete().empty
 
 
 def test_status_marks_outputs_a_variant_does_not_produce(tmp_path, point_receptor):
@@ -547,7 +546,7 @@ def test_status_marks_outputs_a_variant_does_not_produce(tmp_path, point_recepto
     )
     _write_trajectory(project, point_receptor)
 
-    status = project.simulations.status()
+    status = project.status()
 
     assert list(status.columns[-6:]) == [
         "particles",
@@ -569,13 +568,13 @@ def test_status_marks_outputs_a_variant_does_not_produce(tmp_path, point_recepto
 def test_status_counts_an_empty_footprint_as_complete(tmp_path):
     a, b = _receptor(12), _receptor(13)
     project = _project(tmp_path, [a, b])
-    assert project.simulations.status()["state"].tolist() == ["pending", "pending"]
+    assert project.status()["state"].tolist() == ["pending", "pending"]
 
     _write_trajectory(project, a)
     _write_footprint(project, a)
     _write_trajectory(project, b)
     _write_footprint(project, b, empty=True)
-    status = project.simulations.status()
+    status = project.status()
     assert status["state"].tolist() == ["complete", "complete"]
     assert project.simulation(b.id, "hrrr").empty_reason == "outside_domain"
 
@@ -598,7 +597,7 @@ def test_status_opens_no_result_file_and_builds_no_receptor(tmp_path, monkeypatc
         monkeypatch.setattr(pq, name, refuse)
     monkeypatch.setattr(Project, "_receptors", None)
 
-    assert sims.status()["state"].tolist() == ["complete", "pending"]
+    assert project.status(sims)["state"].tolist() == ["complete", "pending"]
 
 
 def _mixed_state_project(tmp_path):
@@ -631,7 +630,7 @@ def _mixed_state_project(tmp_path):
 def test_status_and_incomplete_in_every_state(tmp_path):
     """Each simulation's results and state, read from the folder listings."""
     project = _mixed_state_project(tmp_path)
-    status = project.simulations.status()
+    status = project.status()
     by_pair = {
         (f"{t.hour}", v): (state, particles, footprint)
         for t, v, state, particles, footprint in zip(
@@ -686,15 +685,15 @@ def test_status_and_incomplete_in_every_state(tmp_path):
                 got[2] is na or got[2] == want[2]
             ), (hour, variant)
 
-    incomplete = project.simulations.incomplete()
+    incomplete = project.incomplete()
     assert len(incomplete) == int((status.state != "complete").sum())
     smooth = project.simulations[project.simulations.variant == "smooth"]
-    assert [t.hour for t in smooth.incomplete()["time"]] == [10, 11, 13, 15]
+    assert [t.hour for t in project.incomplete(smooth)["time"]] == [10, 11, 13, 15]
 
 
 def test_incomplete_of_a_project_with_no_results_is_everything(tmp_path):
     project = _project(tmp_path, [_receptor(12)])
-    assert _pairs(project.simulations.incomplete()) == _pairs(project.simulations)
+    assert _pairs(project.incomplete()) == _pairs(project.simulations)
     assert not project.output.directory.exists()  # looking creates nothing
 
 
@@ -703,16 +702,16 @@ def test_incomplete_of_a_project_with_no_results_is_everything(tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_load_particles_of_a_selection_is_one_table(tmp_path):
+def test_particles_of_a_selection_is_one_table(tmp_path):
     a, b = _receptor(12), _receptor(13)
     project = _project(tmp_path, [a, b], variants={"hrrr": {}, "fine": {"grid": None}})
-    assert project.simulations.load_particles().empty
+    assert project.particles().empty
 
     path = _write_trajectory(project, a)
 
     folder = project.output.folder("particles", project.variants["hrrr"])
     assert path.parent == folder / "date=2023-01-01"
-    particles = project.simulations.load_particles()
+    particles = project.particles()
     assert list(particles.columns[:2]) == ["receptor", "variant"]
     one = project.simulation(a.id, "hrrr").particles
     # Both variants share the run, so each gets its own copy of its rows.
@@ -726,10 +725,10 @@ def test_load_particles_of_a_selection_is_one_table(tmp_path):
         hrrr.reset_index(drop=True)[one.columns], one, check_dtype=False
     )
     sims = project.simulations
-    assert sims[sims.receptor == b.id].load_particles().empty
+    assert project.particles(sims[sims.receptor == b.id]).empty
 
 
-def test_load_footprints_skips_empty_footprints_and_trajectory_only_variants(
+def test_footprints_skip_empty_footprints_and_trajectory_only_variants(
     tmp_path, monkeypatch
 ):
     done, empty, missing = _receptor(12), _receptor(13), _receptor(14)
@@ -745,13 +744,13 @@ def test_load_footprints_skips_empty_footprints_and_trajectory_only_variants(
     # Footprints are read from the folder listing; no receptor is built.
     sims = project.simulations
     monkeypatch.setattr(Project, "_receptors", None)
-    loaded = sims.load_footprints()
+    loaded = project.footprints(sims)
 
-    assert list(loaded) == [SimID(done.id, "hrrr")]
-    assert isinstance(loaded[SimID(done.id, "hrrr")], xr.DataArray)
+    assert list(loaded) == [(done.id, "hrrr")]
+    assert isinstance(loaded[(done.id, "hrrr")], xr.DataArray)
 
 
-def test_load_footprints_by_variant(tmp_path, point_receptor):
+def test_footprints_by_variant(tmp_path, point_receptor):
     project = _project(
         tmp_path, [point_receptor], variants={"hrrr": {}, "zi08": {"ziscale": 0.8}}
     )
@@ -759,9 +758,9 @@ def test_load_footprints_by_variant(tmp_path, point_receptor):
         _write_footprint(project, point_receptor, variant)
     sims = project.simulations
 
-    assert len(project.simulations.load_footprints()) == 2
-    [(sid, foot)] = sims[sims.variant == "zi08"].load_footprints().items()
-    assert sid == SimID(point_receptor.id, "zi08")
+    assert len(project.footprints()) == 2
+    [(sid, foot)] = project.footprints(sims[sims.variant == "zi08"]).items()
+    assert sid == (point_receptor.id, "zi08")
     assert foot.stilt.name == "zi08"
 
 
@@ -782,7 +781,7 @@ def test_jacobian_of_a_variant(tmp_path):
 
     sims = project.simulations
     hrrr = sims[sims.variant == "hrrr"]
-    H = hrrr.jacobian(target, bins)
+    H = project.jacobian(hrrr, target, bins)
 
     assert list(H.receptors) == [a.id]
     assert H.empty == [b.id]
@@ -794,19 +793,19 @@ def test_jacobian_of_a_variant(tmp_path):
         expected.to_numpy(),
         rtol=1e-6,
     )
-    some = hrrr[hrrr.receptor.isin([b.id, a.id])].jacobian(target, bins)
+    some = project.jacobian(hrrr[hrrr.receptor.isin([b.id, a.id])], target, bins)
     assert list(some.receptors) == [a.id]
     right_closed = pd.IntervalIndex.from_breaks(
         bins.left.append(bins.right[-1:]), closed="right"
     )
     with pytest.raises(ValueError, match="closed on the left"):
-        hrrr.jacobian(target, right_closed)
+        project.jacobian(hrrr, target, right_closed)
     with pytest.raises(ValueError, match="no footprints yet"):
-        sims[sims.variant == "zi08"].jacobian(target, bins)
+        project.jacobian(sims[sims.variant == "zi08"], target, bins)
     with pytest.raises(ValueError, match="no grid"):
-        sims[sims.variant == "traj"].jacobian(target, bins)
+        project.jacobian(sims[sims.variant == "traj"], target, bins)
     with pytest.raises(ValueError, match="one variant"):
-        sims.jacobian(target, bins)
+        project.jacobian(sims, target, bins)
 
 
 def test_jacobian_in_batches_and_threads_is_the_same_matrix(tmp_path, monkeypatch):
@@ -822,10 +821,10 @@ def test_jacobian_in_batches_and_threads_is_the_same_matrix(tmp_path, monkeypatc
         pd.date_range("2023-01-01 00:00", "2023-01-02 00:00", freq="3h"),
         closed="left",
     )
-    whole = project.simulations.jacobian(target, bins)
+    whole = project.jacobian(project.simulations, target, bins)
 
     monkeypatch.setattr(project_module, "JACOBIAN_BATCH", 2)
-    batched = project.simulations.jacobian(target, bins)
+    batched = project.jacobian(project.simulations, target, bins)
 
     assert (
         list(batched.receptors)
@@ -864,7 +863,7 @@ def test_jacobian_lists_each_date_folder_once(tmp_path, monkeypatch):
         return real_scandir(path)
 
     monkeypatch.setattr(output_module.os, "scandir", scandir)
-    H = project.simulations.jacobian(target, bins)
+    H = project.jacobian(project.simulations, target, bins)
 
     assert list(H.receptors) == [a.id]
     assert listed.count("date=2023-01-01") == 1
@@ -970,7 +969,7 @@ def test_run_after_adding_a_variant_runs_the_receptor_again(
         project.config_path
     )
     grown = Project(project.directory)
-    assert _pairs(grown.simulations.incomplete()) == [(point_receptor.id, "zi08")]
+    assert _pairs(grown.incomplete()) == [(point_receptor.id, "zi08")]
 
     grown.run()
 
@@ -991,7 +990,7 @@ def test_run_finds_a_missing_realization(tmp_path, ran, point_receptor):
     project.run()
 
     assert ran[0]["ids"] == [point_receptor.id]
-    assert _pairs(project.simulations.incomplete()) == [(point_receptor.id, "err-1")]
+    assert _pairs(project.incomplete()) == [(point_receptor.id, "err-1")]
 
 
 def test_submit_needs_slurm(tmp_path, point_receptor):
@@ -1048,7 +1047,7 @@ def test_receptors_are_built_only_when_asked_for(tmp_path, monkeypatch):
     monkeypatch.setattr(stilt.project, "receptors_from_rows", counting)
 
     assert len(project.receptors) == 2
-    project.simulations.status()
+    project.status()
     assert built == []  # listing, selecting, and status build nothing
 
     assert project.receptor(b.id) == b
@@ -1070,56 +1069,57 @@ def test_a_bad_receptors_file_fails_when_the_project_is_read(tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_a_selection_takes_columns_and_masks_and_yields_simulations(tmp_path):
+def test_simulations_is_a_dataframe_and_a_copy(tmp_path):
+    project = _project(tmp_path, [_receptor(12)])
+    sims = project.simulations
+    assert isinstance(sims, pd.DataFrame)
+    sims["mine"] = 1  # the user's copy
+    assert "mine" not in project.simulations.columns
+
+
+def test_a_selection_may_be_a_frame_a_mask_or_another_table(tmp_path):
+    import pyarrow as pa
+
     a, b = _receptor(12, site="WBB"), _receptor(13, site="UOU")
     project = _project(
         tmp_path, [a, b], variants={"hrrr": {}, "zi08": {"ziscale": 0.8}}
     )
+    _write_trajectory(project, a, "zi08")
     sims = project.simulations
-
-    assert isinstance(sims, Simulations)
-    assert len(sims) == 4
-    pd.testing.assert_series_equal(sims.variant, sims.frame["variant"])
-    pd.testing.assert_series_equal(sims["site"], sims.frame["site"])
+    expected = [(a.id, "zi08")]
 
     wbb = sims[(sims.site == "WBB") & (sims.variant == "zi08")]
-    assert isinstance(wbb, Simulations)
-    [sim] = list(wbb)
-    assert sim == project.simulation(a.id, "zi08")
-    assert [s.id for s in sims] == [SimID(r, v) for r, v in _pairs(sims)]
+    mask = (sims.site == "WBB") & (sims.variant == "zi08")
+    table = pa.table({"receptor": [a.id], "variant": ["zi08"]})
+    for sel in (wbb, mask, mask.to_numpy(), table):
+        st = project.status(sel)
+        assert _pairs(st) == expected
+        assert st["particles"].tolist() == [True]
+        assert st["site"].tolist() == ["WBB"]  # the rest of the row, from the project
+        assert _pairs(project.incomplete(sel)) == expected  # no footprint yet
+    polars = pytest.importorskip("polars")
+    st = project.status(polars.DataFrame({"receptor": [a.id], "variant": ["zi08"]}))
+    assert _pairs(st) == expected
 
 
-def test_a_selection_points_to_frame_for_other_pandas(tmp_path):
-    project = _project(tmp_path, [_receptor(12)])
-    sims = project.simulations
-    with pytest.raises(AttributeError, match="sims.frame"):
-        sims.groupby("variant")
-    assert sims.frame.groupby("variant").size().to_dict() == {"hrrr": 1}
-
-
-def test_a_selection_from_a_table_made_with_pandas(tmp_path):
+def test_a_pandas_selection_keeps_its_own_columns(tmp_path):
     a, b = _receptor(12), _receptor(13)
     project = _project(tmp_path, [a, b])
     mine = pd.DataFrame({"receptor": [b.id], "obs": [1.9]})
-    merged = project.simulations.frame.merge(mine, on="receptor")
+    merged = project.simulations.merge(mine, on="receptor")
 
-    back = Simulations(project, merged)
-    assert [s.id for s in back] == [SimID(b.id, "hrrr")]
-    assert back.obs.tolist() == [1.9]
+    st = project.status(merged)
+    assert _pairs(st) == [(b.id, "hrrr")]
+    assert st.obs.tolist() == [1.9]
+
+
+def test_a_selection_needs_receptor_and_variant_columns(tmp_path):
+    project = _project(tmp_path, [_receptor(12)])
     with pytest.raises(ValueError, match="'receptor' and 'variant'"):
-        Simulations(project, project.receptors)
-
-
-def test_a_selection_builds_the_same_receptors_as_one_at_a_time(
-    tmp_path, point_receptor, column_receptor, multipoint_receptor
-):
-    receptors = [point_receptor, column_receptor, multipoint_receptor]
-    project = _project(tmp_path, receptors, variants={"hrrr": {}, "traj": {}})
-    sims = project.simulations
-    # In the file's order, and in another, with each receptor under two variants.
-    for frame in (sims.frame, sims.frame.iloc[::-1]):
-        selection = Simulations(project, frame)
-        assert list(selection) == [project.simulation(r, v) for r, v in _pairs(frame)]
+        project.status(project.receptors)
+    unknown = pd.DataFrame({"receptor": [_receptor(12).id], "variant": ["nope"]})
+    with pytest.raises(KeyError, match="nope"):
+        project.status(unknown)
     with pytest.raises(KeyError, match="No receptor"):
         project.receptor("202301011200_-1_1_1")
 
@@ -1182,7 +1182,7 @@ def test_status_says_why_the_failed_simulations_failed(tmp_path, point_receptor)
         {"step": "particles", "reason": "MET_COVERAGE", "message": "m"},
     )
 
-    status = project.simulations.status()
+    status = project.status()
     failed = status[status.state == "failed"]
 
     assert failed[["receptor", "variant", "step", "reason"]].to_dict("records") == [

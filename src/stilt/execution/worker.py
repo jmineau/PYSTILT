@@ -103,10 +103,10 @@ def _failed(sim: Simulation, step: Step, error: Exception) -> str:
     reason = getattr(error, "reason", None) or type(error).__name__
     if expected:
         logger.warning(
-            "simulation %s failed during %s (%s): %s", sim.id, step, reason, error
+            "simulation %s failed during %s (%s): %s", sim, step, reason, error
         )
     else:
-        logger.exception("simulation %s failed during %s: %s", sim.id, step, error)
+        logger.exception("simulation %s failed during %s: %s", sim, step, error)
     record: dict[str, Any] = {
         "step": step,
         "reason": str(reason),
@@ -118,7 +118,7 @@ def _failed(sim: Simulation, step: Step, error: Exception) -> str:
     try:
         sim.output.record_failure(_KIND[step], sim.variant, sim.receptor.id, record)
     except Exception:
-        logger.exception("simulation %s: could not record the failure", sim.id)
+        logger.exception("simulation %s: could not record the failure", sim)
     return f"{sim.variant.name} failed during {step} ({reason}): {error}"
 
 
@@ -279,7 +279,7 @@ def run_receptor(
     list of str
         One line per failure, empty when every simulation is complete. The
         failures are also recorded in the output directory, which is where
-        ``project.simulations.status()`` reads them.
+        :meth:`stilt.Project.status` reads them.
     """
     execution = execution if execution is not None else project.config.execution
     groups: dict[str, list[Simulation]] = {}
@@ -315,7 +315,7 @@ def _run_group(
             particles = run_particles(
                 first,
                 met=project.mets[first.variant.met],
-                workdir=compute_root / first.id,
+                workdir=compute_root / first.receptor.id / first.variant.name,
                 keep_scratch=execution.keep_scratch,
                 timeout=execution.timeout,
             )

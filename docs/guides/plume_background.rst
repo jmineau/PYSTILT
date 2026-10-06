@@ -76,7 +76,7 @@ across all the forward runs, and outline them:
    from stilt.observations import plume_polygon
 
    window = (overpass - pd.Timedelta(minutes=3), overpass + pd.Timedelta(minutes=3))
-   particles = forward.simulations.load_particles()
+   particles = forward.particles()
    particles = particles[particles["datetime"].between(*window)]
 
    plume = plume_polygon(particles["long"], particles["lati"])

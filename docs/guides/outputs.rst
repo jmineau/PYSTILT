@@ -102,8 +102,8 @@ variant. Its columns are:
 - ``time``, ``kind``, and ``location`` of the receptor
 - one column for each extra column of ``receptors.csv``
 
-Select rows the way you would in pandas, then load the results of the
-selection:
+Select rows the way you would in pandas, then hand the selection to the
+project to load its results:
 
 .. code-block:: python
 
@@ -112,16 +112,21 @@ selection:
        (sims.variant == "hrrr")
        & sims.time.between("2023-07-01", "2023-07-31 23:00")   # both ends included
    ]
-   footprints = july.load_footprints()   # {simulation id: DataArray}
-   particles = july.load_particles()     # one table, with receptor and variant columns
+   footprints = project.footprints(july)   # {(receptor, variant): DataArray}
+   particles = project.particles(july)     # one table, with receptor and variant columns
 
-The footprints come back in a dictionary keyed by simulation id, so you
-always know which receptor a footprint belongs to:
+Leave the selection out to load every simulation. Any table with
+``receptor`` and ``variant`` columns works as a selection, such as your
+observations merged with ``sims``, or a polars or pyarrow table, and so
+does a boolean mask over ``project.simulations``.
+
+The footprints come back in a dictionary keyed by ``(receptor, variant)``,
+so you always know which receptor a footprint belongs to:
 
 .. code-block:: python
 
-   for sid, foot in footprints.items():
-       print(sid.receptor, float(foot.sum()))
+   for (receptor, variant), foot in footprints.items():
+       print(receptor, float(foot.sum()))
 
 The particles come back as one table, so pandas can group them:
 
@@ -129,30 +134,18 @@ The particles come back as one table, so pandas can group them:
 
    particles.groupby("receptor")["foot"].sum()
 
-``project.simulations.load_footprints()`` loads every simulation. A
-simulation whose result does not exist yet is left out. Loading particles
-takes 10 to 20 MB per simulation. For thousands of simulations, read the
-``particles/`` folder of the output directory with pyarrow, DuckDB, or
-polars instead. To find a single file, use ``sim.footprint_path`` or
-``sim.particles_path``.
+A simulation whose result does not exist yet is left out. Loading
+particles takes 10 to 20 MB per simulation. For thousands of simulations,
+read the ``particles/`` folder of the output directory with pyarrow,
+DuckDB, or polars instead. To find a single file, use
+``sim.footprint_path`` or ``sim.particles_path``.
 
-A selection also gives you each simulation in turn:
-
-.. code-block:: python
-
-   for sim in july:
-       print(sim.id, sim.is_complete())
-
-A selection only understands columns (``sims.variant`` or
-``sims["site"]``) and picking rows with a condition. For anything else,
-use its table, ``sims.frame``. To turn a table back into a selection, for
-example after a merge with your own data, give it to
-``stilt.project.Simulations`` with the project:
+To work with one simulation of a selection, look it up by its row:
 
 .. code-block:: python
 
-   matched = sims.frame.merge(observations, on="receptor")
-   stilt.project.Simulations(project, matched).load_footprints()
+   for receptor, variant in july[["receptor", "variant"]].itertuples(index=False):
+       sim = project.simulation(receptor, variant)
 
 The extra columns of ``receptors.csv`` select one satellite scene or one
 site:
@@ -166,11 +159,11 @@ To see what is left to do:
 
 .. code-block:: python
 
-   sims.incomplete()   # the simulations that are not complete
-   st = sims.status()  # every row, with six more columns
+   project.incomplete()       # the simulations that are not complete
+   st = project.status()      # every simulation, with six more columns
    st.state.value_counts()
    st[st.state == "failed"]   # the failed simulations, and why
-   july.status()       # the same, for a selection
+   project.status(july)       # the same, for a selection
 
 ``status()`` adds a ``particles`` and a ``footprint`` column that say
 whether each output exists. They are blank where the variant does not make
@@ -251,7 +244,7 @@ Sometimes a simulation runs fine but no particle ever reaches the footprint
 grid. Usually the grid is too small or is not upwind. PYSTILT then writes a
 footprint file with no cells and the reason inside. The simulation counts
 as finished, so reruns skip it. ``sim.footprint`` is ``None``,
-``sim.empty_reason`` says why, and ``load_footprints()`` leaves the
+``sim.empty_reason`` says why, and ``project.footprints()`` leaves the
 simulation out because there is nothing to load. A Jacobian lists them in
 ``H.empty``. If you see many, make your footprint grid bigger.
 

@@ -90,15 +90,16 @@ appends to `receptors.csv`. It knows no scheduler or scratch directory.
 the compute root, and start the workers, which are the only code that
 writes results.
 
-**Plurals are handles that hand you a table; singles are values or data.**
-`project.simulations` is a `Simulations`: a pandas table plus the project
-it came from. Select it as in pandas (`sims[sims.variant == "hrrr"]`), then
-ask the selection: `status()`, `incomplete()`, `load_particles()` (one long
-table), `load_footprints()`, `jacobian()`. A selection forwards only column
-access and row masks; everything else is `sims.frame`, and
-`Simulations(project, frame)` turns a table back into a selection. Do not
-give it query methods of its own (`sel`, `where`): that is how the old
-collection classes grew. `Output` has no folder classes: its methods take
+**Tables are plain DataFrames; the verbs are on `Project`.**
+`project.simulations` is a pandas DataFrame, one row per simulation.
+Select it as in pandas (`sims[sims.variant == "hrrr"]`) and pass the
+selection to the project: `project.status(sel)`, `incomplete(sel)`,
+`particles(sel)` (one long table), `footprints(sel)`, `jacobian(sel, ...)`.
+A selection is any table with `receptor` and `variant` columns (pandas,
+polars, pyarrow) or a boolean mask over `project.simulations`; the
+methods read only those two columns from it. Do not wrap the table in a
+class again: that is how the old collection classes grew. `Output` has no
+folder classes: its methods take
 the kind of result (`"particles"` or `"footprints"`), the variant, and
 receptor ids (`path`, `present`, `complete`, `table`, the failure
 records, and the writers). `project.receptors` stays a plain
@@ -113,14 +114,14 @@ everything else is internal and can change.
 ```
 src/stilt/
   cli.py             Typer CLI; a thin adapter over Project and execution
-  project.py         Project: the project directory, its receptors (a
-                     DataFrame), run/submit; Simulations: a selection's
-                     status, loading, and Jacobian
+  project.py         Project: the project directory, its receptors and
+                     simulations (DataFrames), run/submit, and a
+                     selection's status, particles, footprints, Jacobian
   output.py          Output: the output directory, a folder per kind and
                      settings hash; finding a variant's folder, which
                      receptors have results (present, complete), reading
                      many files at once (table), failure records, writing
-  simulation.py      Simulation, SimID: a frozen value (receptor, variant, output)
+  simulation.py      Simulation: a frozen value (receptor, variant, output)
                      that knows where its results are and whether they exist
   config.py          ProjectConfig: reads config.yaml, splits the flat keys into
                      the model's config and the footprint's, checks each
@@ -308,11 +309,11 @@ as complete.
   once; `Output.complete` applies it to a listing of the date folders, and
   `Simulation.is_complete()` and `status()` call it. Never add a second
   "does this output exist" check, a completion registry, or a manifest.
-- **Bulk methods work from listings.** A method on `Simulations` works
-  from folder listings and receptor ids, and never builds a `Simulation`
-  per row: on a large project one receptor costs milliseconds, and
+- **Bulk methods work from listings.** A method of `Project` that takes a
+  selection works from folder listings and receptor ids, and never builds
+  a `Simulation` per row: on a large project one receptor costs milliseconds, and
   `status()` once took 25 minutes on 64k footprints (#141). It opens a file
-  per row only when the file's contents are the answer (`load_footprints`,
+  per row only when the file's contents are the answer (`footprints`,
   `jacobian`), and builds receptors together (`Project._receptors`) when it
   needs them.
 - **Identity is content.** A results folder is its settings hash; a changed setting is
@@ -503,13 +504,14 @@ Feature status lives in the roadmap tables in [README.md](README.md) and
   as attributes (`stilt_receptor`, `stilt_footprint`), which the accessor
   reads. Do not add wrapper classes back. Every result file records what
   it needs to be read alone (`read_particles`, `read_footprint`).
-- **`project.simulations` is cached.** `add_receptors` drops the
+- **`project.simulations` is built once and copied.** Each access returns
+  a copy, so a user's new column stays theirs. `add_receptors` drops the
   cache; a `config.yaml` edited by hand needs a new `Project(path)`.
 - **Empty footprints are successes, and not footprints.** When no particle
   reaches the grid, `calc_footprint` raises `EmptyFootprint` and
   the worker's `make_footprint` writes a footprint file with no rows and
   the reason in its metadata. `sim.is_complete()` is true, `sim.footprint` is
-  `None`, `sim.empty_reason` says why, and `load_footprints()` leaves the
+  `None`, `sim.empty_reason` says why, and `project.footprints()` leaves the
   simulation out. Never synthesize a zero-valued footprint for it: a zero
   enhancement would flow into a comparison or an inversion unnoticed.
 - **A failure record is a note, not a result.** When a step fails the

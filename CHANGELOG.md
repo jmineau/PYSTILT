@@ -8,6 +8,19 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- `project.simulations` is a plain pandas DataFrame, and the verbs are on
+  `Project` (breaking): `project.status(sel)`, `incomplete(sel)`,
+  `particles(sel)` (was `load_particles`), `footprints(sel)` (was
+  `load_footprints`), and `jacobian(sel, target, time_bins)`. A selection
+  is any table with `receptor` and `variant` columns (pandas, polars,
+  pyarrow) or a boolean mask over `project.simulations`; leave it out for
+  every simulation. A pandas selection keeps its own columns in
+  `status()`. `Simulations`, its `.frame`, and its iteration are gone;
+  look a row up with `project.simulation(receptor, variant)` (#150).
+- `SimID` is gone (breaking). `sim.id` is the tuple `(receptor, variant)`,
+  `str(sim)` is `receptor/variant`, and `project.footprints()` is keyed by
+  the tuple. A run's working directory is
+  `<compute root>/<receptor>/<variant>` as before (#150).
 - `project.run()` and `stilt.execution.run` return the status table of
   the simulations they ran, the rows of `project.simulations.status()`
   (breaking). `SimulationResult` is gone: a worker records each failure in
