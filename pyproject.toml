@@ -121,101 +121,50 @@ root_package = "stilt"
 # An import used only for type hints is not a dependency at run time.
 exclude_type_checking_imports = true
 
-# The observation layer (product readers, selection, backgrounds) sits above
-# the transport core: it builds receptors and reads results. The core must
-# run without it.
+# The package in layers, top to bottom: a module may import the layers
+# below it, never those above. Modules that import each other share a layer
+# (joined by ":"); "|" joins modules that must not. The observation layer
+# sits above the transport core, which runs without it; receptors and the
+# raster layer import nothing above them; a transport model's package, in
+# the transport layer, does not import the project config. Exhaustive, so
+# a new module has to be placed. Imports inside functions count.
 [[tool.importlinter.contracts]]
-name = "The transport core does not import the observation layer"
-type = "forbidden"
-source_modules = [
-    "stilt._atomic",
-    "stilt._paths",
-    "stilt.cli",
-    "stilt.config",
-    "stilt.exceptions",
-    "stilt.execution",
-    "stilt.sampling",
-    "stilt.footprint",
-    "stilt.identity",
-    "stilt.spatial",
-    "stilt.meteorology",
-    "stilt.output",
-    "stilt.project",
-    "stilt.receptors",
-    "stilt.simulation",
-    "stilt.particles",
-    "stilt.transforms",
-    "stilt.transport",
-    "stilt.visualization",
+name = "The package's layers"
+type = "layers"
+containers = ["stilt"]
+exhaustive = true
+layers = [
+    "__main__",
+    "cli",
+    "observations",
+    "project : execution : config",
+    "simulation",
+    "output",
+    "footprint : identity : meteorology : transport",
+    "particles",
+    "receptors : visualization",
+    "transforms | sampling",
+    "spatial",
+    "_atomic | _paths | exceptions",
 ]
-forbidden_modules = ["stilt.observations"]
 
 # HYSPLIT is one transport model, reached through stilt.transport.get_model.
 # Its package is the only place that knows HYSPLIT's files and behaviour, so
 # a second model would not have to touch the core.
 [[tool.importlinter.contracts]]
-name = "The core does not import HYSPLIT's package"
+name = "Only the transport registry imports HYSPLIT's package"
 type = "forbidden"
-source_modules = [
-    "stilt._atomic",
-    "stilt._paths",
-    "stilt.cli",
-    "stilt.config",
-    "stilt.exceptions",
-    "stilt.execution",
-    "stilt.sampling",
-    "stilt.footprint",
-    "stilt.identity",
-    "stilt.spatial",
-    "stilt.meteorology",
-    "stilt.output",
-    "stilt.project",
-    "stilt.receptors",
-    "stilt.simulation",
-    "stilt.particles",
-    "stilt.transforms",
-    "stilt.visualization",
-]
+source_modules = ["stilt.*"]
 forbidden_modules = ["stilt.transport.hysplit"]
+ignore_imports = ["stilt.transport -> stilt.transport.hysplit"]
 # get_model imports a model's package when asked for it; that is the boundary.
-allow_indirect_imports = true
-
-# Each part owns its config class, next to the code that uses it
-# (footprint/config.py, meteorology.py, execution/config.py, a transport
-# model's package). stilt.config reads config.yaml and composes them, so it
-# sits above those parts, and nothing below the project imports it: that
-# would be an import cycle. Direct imports only, since the runner opens a
-# Project inside a function.
-[[tool.importlinter.contracts]]
-name = "Nothing below the project imports the project config"
-type = "forbidden"
-source_modules = [
-    "stilt._atomic",
-    "stilt._paths",
-    "stilt.exceptions",
-    "stilt.execution",
-    "stilt.footprint",
-    "stilt.identity",
-    "stilt.meteorology",
-    "stilt.output",
-    "stilt.particles",
-    "stilt.receptors",
-    "stilt.sampling",
-    "stilt.simulation",
-    "stilt.spatial",
-    "stilt.transforms",
-    "stilt.transport",
-    "stilt.visualization",
-]
-forbidden_modules = ["stilt.config"]
 allow_indirect_imports = true
 
 # Config classes do no I/O when they validate, so a config.yaml loads
 # offline. Reading a footprint geometry or asking a transport model its
 # build happens on request, in ProjectConfig.resolve. The config never reads
-# results or runs anything. Imports inside functions count too. It may look
-# up a model's config class through the stilt.transport registry, which
-# imports a model's package only when asked for it.
+# results or runs anything. It shares a layer with the project and the
+# execution package, which import each other, so this is its own contract.
 [[tool.importlinter.contracts]]
 name = "The project config reads no results and runs nothing"
 type = "forbidden"
@@ -229,31 +178,6 @@ forbidden_modules = [
     "stilt.transport.hysplit",
 ]
 allow_indirect_imports = true
-
-[[tool.importlinter.contracts]]
-name = "Receptors import nothing above them"
-type = "forbidden"
-source_modules = ["stilt.receptors"]
-forbidden_modules = [
-    "stilt.config",
-    "stilt.execution",
-    "stilt.footprint",
-    "stilt.identity",
-    "stilt.meteorology",
-    "stilt.output",
-    "stilt.particles",
-    "stilt.project",
-    "stilt.simulation",
-    "stilt.transport",
-]
-
-# A transport model owns its config. The core reaches it through
-# stilt.transport.get_model, so a second model has its own parameters.
-[[tool.importlinter.contracts]]
-name = "HYSPLIT's package does not import the project config"
-type = "forbidden"
-source_modules = ["stilt.transport.hysplit"]
-forbidden_modules = ["stilt.config", "stilt.project"]
 
 [tool.pyright]
 include = ["src"]

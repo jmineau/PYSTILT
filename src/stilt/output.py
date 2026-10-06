@@ -176,9 +176,13 @@ def _write_settings(path: Location, record: dict[str, Any]) -> None:
 
 
 def _pystilt_version() -> str:
-    from stilt import __version__
+    """Return the installed PYSTILT version, as ``stilt.__version__`` does."""
+    from importlib.metadata import PackageNotFoundError, version
 
-    return __version__
+    try:
+        return version("pystilt")
+    except PackageNotFoundError:
+        return "0+unknown"
 
 
 def _stamp(digest: str, realization: int | None = None) -> dict[bytes, bytes]:
