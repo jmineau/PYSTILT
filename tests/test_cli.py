@@ -40,14 +40,30 @@ def _write_minimal_config(tmp_path):
     )
 
 
+class _Calls(list):
+    """What `stilt run` asked of the project; ``states`` is the status the fake run returns."""
+
+    states: list[str] = []
+
+
 @pytest.fixture
 def calls(monkeypatch):
     """Record what `stilt run` asks of the project, and run nothing."""
-    recorded: list[tuple[str, dict]] = []
+    recorded = _Calls()
 
     def run(self, **kwargs):
         recorded.append(("run", kwargs))
-        return []
+        n = len(recorded.states)
+        return pd.DataFrame(
+            {
+                "receptor": [f"r{i}" for i in range(n)],
+                "variant": ["hrrr"] * n,
+                "state": recorded.states,
+                "reason": [
+                    "met_missing" if s == "failed" else None for s in recorded.states
+                ],
+            }
+        )
 
     def submit(self, **kwargs):
         recorded.append(("submit", kwargs))
@@ -289,6 +305,87 @@ def test_run_on_slurm_waits_for_the_job(tmp_path, calls):
     assert calls[0][1]["execution"].n_workers == 2
     assert "Execution mode: submit-and-wait" in result.output
     assert "waiting for the job" in result.output
+
+
+@pytest.mark.parametrize(
+    ("states", "code"),
+    [
+        ([], 0),
+        (["complete", "complete"], 0),
+        (["complete", "failed"], 1),
+        (["failed", "pending"], 2),
+    ],
+)
+def test_run_exit_code_says_how_the_run_ended(tmp_path, calls, states, code):
+    _write_minimal_config(tmp_path)
+    calls.states = states
+
+    result = runner.invoke(app, ["run", str(tmp_path)])
+
+    assert result.exit_code == code, result.output
+
+
+def test_run_task_runs_its_share_here(tmp_path, calls):
+    _write_minimal_config(tmp_path)
+    config = yaml.safe_load((tmp_path / "config.yaml").read_text())
+    config["execution"] = {"backend": "slurm", "n_workers": 8}
+    (tmp_path / "config.yaml").write_text(yaml.safe_dump(config))
+    calls.states = ["complete", "failed"]
+
+    result = runner.invoke(app, ["run", str(tmp_path), "--task", "1/3"])
+
+    assert result.exit_code == 1, result.output
+    [(verb, kwargs)] = calls
+    assert kwargs["task"] == (1, 3)
+    assert kwargs["receptors"] is None
+    assert kwargs["execution"].backend == "local"
+    assert "Task: 1 of 3" in result.output
+    # A task sums up what it ran, not the whole project.
+    assert "This run:  total=2  completed=1  pending=1" in result.output
+    assert "failed: met_missing 1" in result.output
+    assert "Project:" not in result.output
+
+
+@pytest.mark.parametrize(
+    ("args", "message"),
+    [
+        (["--task", "3/3"], "0 <= I < N"),
+        (["--task", "two/3"], "takes I/N"),
+        (["--task", "0/2", "--backend", "slurm"], "drop --backend slurm"),
+        (["--receptors", "missing.txt"], "cannot read"),
+    ],
+)
+def test_run_task_and_receptors_refuse_bad_values(tmp_path, calls, args, message):
+    _write_minimal_config(tmp_path)
+
+    result = runner.invoke(app, ["run", str(tmp_path), *args])
+
+    assert result.exit_code == 1
+    assert message in result.output
+    assert calls == []
+
+
+def test_run_receptors_reads_ids_from_a_file(tmp_path, calls):
+    _write_minimal_config(tmp_path)
+    listed = tmp_path / "ids.txt"
+    listed.write_text("# failed last time\nr1\n\n  r2  \n")
+
+    result = runner.invoke(app, ["run", str(tmp_path), "--receptors", str(listed)])
+
+    assert result.exit_code == 0, result.output
+    assert calls[0][1]["receptors"] == ["r1", "r2"]
+    assert "Receptors listed: 2" in result.output
+
+
+def test_run_reports_receptors_not_in_the_project(tmp_path, monkeypatch):
+    _write_minimal_config(tmp_path)
+    listed = tmp_path / "ids.txt"
+    listed.write_text("nope\n")
+
+    result = runner.invoke(app, ["run", str(tmp_path), "--receptors", str(listed)])
+
+    assert result.exit_code == 1
+    assert "not in this project" in result.output
 
 
 def test_submit_submits_to_slurm_and_returns(tmp_path, calls):

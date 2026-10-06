@@ -270,6 +270,7 @@ submitted to Slurm through [submitit](https://github.com/facebookincubator/submi
 | Thin CLI → Project → worker call path | Implemented |
 | Local runs, in one process or a process pool | Implemented |
 | Slurm job arrays, with preempted tasks resubmitted | Implemented |
+| One task of a job array or a Kubernetes indexed Job (`stilt run --task I/N`) | Implemented |
 | Queue-backed workers (PostgreSQL), Kubernetes deployment | Removed |
 | Cloud object store outputs (GCS, S3) | Not planned |
 

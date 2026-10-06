@@ -936,6 +936,9 @@ class Project:
         skip_existing: bool = True,
         compute_root: str | Path | None = None,
         execution: ExecutionConfig | None = None,
+        *,
+        receptors: Iterable[str] | None = None,
+        task: tuple[int, int] | None = None,
     ) -> pd.DataFrame:
         """
         Run every simulation that has not finished, and wait for it.
@@ -947,6 +950,8 @@ class Project:
 
         return run(
             self,
+            receptors=receptors,
+            task=task,
             execution=execution,
             skip_existing=skip_existing,
             compute_root=compute_root,
@@ -957,6 +962,8 @@ class Project:
         skip_existing: bool = True,
         compute_root: str | Path | None = None,
         execution: ExecutionConfig | None = None,
+        *,
+        receptors: Iterable[str] | None = None,
     ) -> list[submitit.Job[Any]]:
         """
         Submit every simulation that has not finished to Slurm, and return at once.
@@ -968,6 +975,7 @@ class Project:
 
         return submit(
             self,
+            receptors=receptors,
             execution=execution,
             skip_existing=skip_existing,
             compute_root=compute_root,
