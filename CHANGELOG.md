@@ -8,6 +8,14 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- `foot.stilt.enhancement(flux)` raises when the flux cells are finer than
+  the footprint's, where it took one small flux cell per footprint cell,
+  and warns when cells of one size are offset by more than a tenth of a
+  cell. The flux tutorial says how to choose a footprint grid for an
+  inventory, and to put a finer inventory on it as an area-weighted mean
+  (xESMF) or make the footprints on the inventory's grid; PYSTILT has no
+  flux regridder (#139, #150).
+
 - Background and transport error are the simulation's (breaking):
   `sim.background(field)` and `sim.transport_error(error, flux)`, where
   `error` is the receptor under a wind-error variant or a list of its

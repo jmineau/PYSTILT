@@ -95,9 +95,32 @@ dimension, each footprint hour uses the nearest inventory time.
 
    modeled = pd.DataFrame(rows).set_index("time").sort_index()
 
-If the inventory cells are much smaller than the footprint cells, regrid it
-to the footprint grid first. Otherwise each footprint cell picks up one small
-inventory cell instead of the average over its area.
+Inventory and footprint grids
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Each footprint cell takes the flux of the inventory cell nearest its
+centre. That is right when the inventory's cells are as large as the
+footprint's or larger. Choose the footprint grid with your inventories in
+mind:
+
+- Match the footprint grid to the finest inventory you will use. Every
+  inventory is then as coarse as the footprint, or coarser.
+- For a coarser inventory, or to solve for fluxes on coarse cells, sum the
+  footprints onto its cells with ``project.jacobian`` or
+  ``foot.stilt.aggregate``.
+- For a finer inventory, put it on the footprint grid as an area-weighted
+  mean, such as with `xESMF <https://xesmf.readthedocs.io>`_'s conservative
+  regridding, or make the footprints on the inventory's grid with
+  ``sim.calc_footprint(grid=...)``.
+
+``foot.stilt.enhancement`` refuses an inventory with finer cells than the
+footprint's, and warns when cells of one size are offset by more than a
+tenth of a cell.
+
+A flux is averaged onto larger cells, because it is per unit area. A
+footprint is summed, because each value belongs to its whole cell. Never
+put a footprint through a conservative (averaging) regridder: it would come
+out too small by the ratio of the cell areas.
 
 Comparing with observations
 ---------------------------

@@ -203,3 +203,27 @@ def test_footprint_enhancement_time_varying_flux(point_receptor):
     )
 
     assert foot.stilt.enhancement(flux).to_numpy().tolist() == [60.0, 6.0]
+
+
+def test_footprint_enhancement_refuses_a_finer_flux(point_receptor):
+    foot = _footprint(point_receptor, [np.ones((2, 3)), np.ones((2, 3))])
+    lons = np.arange(-112.0, -109.9, 0.25)
+    fine = _flux(np.ones((2, lons.size)), lons=tuple(lons))
+    with pytest.raises(ValueError, match="finer than the footprint's"):
+        foot.stilt.enhancement(fine)
+
+
+def test_footprint_enhancement_warns_when_cells_of_one_size_are_offset(
+    point_receptor, recwarn
+):
+    import warnings
+
+    foot = _footprint(point_receptor, [np.ones((2, 3)), np.ones((2, 3))])
+    with pytest.warns(UserWarning, match="0.50 of a cell"):
+        foot.stilt.enhancement(_flux(lons=(-112.5, -111.5, -110.5, -109.5)))
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        foot.stilt.enhancement(_flux())  # aligned
+        foot.stilt.enhancement(
+            _flux(np.ones((1, 2)), lons=(-112.3, -110.3), lats=(40.0,))
+        )  # coarser
