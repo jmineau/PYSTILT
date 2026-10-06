@@ -31,7 +31,7 @@ import xarray as xr
 
 from stilt.exceptions import EmptyFootprint, SimulationError
 from stilt.execution.config import ExecutionConfig
-from stilt.footprint import calculate
+from stilt.footprint import calc_footprint
 from stilt.meteorology import Met
 from stilt.output import Footprints, Particles
 from stilt.simulation import Simulation
@@ -261,11 +261,15 @@ def make_footprint(sim: Simulation, particles: pd.DataFrame) -> xr.DataArray | N
         If the variant has no grid.
     """
     feet = sim.output.footprints(sim.variant)
+    config = feet.config
     try:
-        foot = calculate(
+        foot = calc_footprint(
             particles,
             sim.receptor,
-            feet.config,
+            feet.grid,
+            smooth_factor=config.smooth_factor,
+            time_integrate=config.time_integrate,
+            transforms=config.transforms,
             name=sim.variant.name,
             directory=sim.directory,
             geometry_hash=sim.variant.geometry_hash,

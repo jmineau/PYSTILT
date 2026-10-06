@@ -724,11 +724,11 @@ def test_cells_per_target_and_an_explicit_grid_wins(tmp_path):
 def test_footprint_needs_a_grid(point_receptor):
     import pandas as pd
 
-    from stilt.footprint import calculate
+    from stilt.footprint import calc_footprint
 
     assert FootprintConfig().grid is None
     with pytest.raises(ValueError, match="grid"):
-        calculate(pd.DataFrame(), point_receptor, FootprintConfig())
+        calc_footprint(pd.DataFrame(), point_receptor, None)
 
 
 def test_footprint_h3_geometry(tmp_path):

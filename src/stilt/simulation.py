@@ -14,7 +14,7 @@ import pandas as pd
 import xarray as xr
 
 from stilt.exceptions import EmptyFootprint
-from stilt.footprint import calculate
+from stilt.footprint import calc_footprint
 from stilt.footprint.config import FootprintConfig
 from stilt.output import Footprints, Output, Particles
 from stilt.particles import particles_metadata
@@ -405,11 +405,16 @@ class Simulation:
             config = config.model_copy(
                 update={"transforms": [*config.transforms, *transforms]}
             )
+        if config.grid is None:
+            raise TypeError(f"{self.id}'s footprint settings have no grid.")
         try:
-            return calculate(
+            return calc_footprint(
                 particles,
                 self.receptor,
-                config,
+                config.grid,
+                smooth_factor=config.smooth_factor,
+                time_integrate=config.time_integrate,
+                transforms=config.transforms,
                 name=self.variant.name,
                 directory=self.directory,
                 geometry_hash=geometry_hash,

@@ -449,7 +449,7 @@ class PressureWeighting(BaseModel):
     Transform that weights each particle by its share of the column's air mass.
 
     The weights come from the particles' own first-step heights and
-    pressures (see :func:`particle_pwf`). :func:`stilt.footprint.calculate`
+    pressures (see :func:`particle_pwf`). :func:`stilt.calc_footprint`
     divides by the particle count, so the weights are multiplied by the
     number of particles and the weighted footprint does not change with
     ``numpar``. The particles of a multipoint receptor share their point's

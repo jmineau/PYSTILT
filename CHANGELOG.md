@@ -8,6 +8,12 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- `stilt.footprint.calculate` is `stilt.calc_footprint`, STILT-R's name,
+  and takes its settings as keywords (breaking):
+  `calc_footprint(particles, receptor, grid, smooth_factor=1.0,
+  time_integrate=False, transforms=())`. It no longer takes a
+  `FootprintConfig` (#150).
+
 - `Simulations.jacobian` reads and sums footprints in batches of 64
   receptors, `execution.cpus` batches at a time, and stacks the rows, so
   its memory no longer grows with the selection. On 2,000 footprints of

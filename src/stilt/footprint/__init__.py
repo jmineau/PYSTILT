@@ -4,7 +4,7 @@ Footprints of receptors, calculated from particles and applied to surface fluxes
 ``config``
     :class:`FootprintConfig`, the footprint settings.
 ``gridding``
-    :func:`calculate`, the footprint from particles, as in STILT-R.
+    :func:`calc_footprint`, the footprint from particles, as in STILT-R.
 ``aggregation``
     Summing footprints onto other grids or polygons (:func:`jacobian`).
 ``io``
@@ -19,7 +19,7 @@ Footprints of receptors, calculated from particles and applied to surface fluxes
 from .accessor import FootprintAccessor
 from .aggregation import Jacobian, jacobian
 from .config import FootprintConfig
-from .gridding import calculate
+from .gridding import calc_footprint
 from .io import (
     FOOTPRINT_SCHEMA,
     UNITS,
@@ -38,7 +38,7 @@ __all__ = [
     "Jacobian",
     "Mesh",
     "Zones",
-    "calculate",
+    "calc_footprint",
     "check_resolution",
     "jacobian",
     "overlap_weights",

@@ -11,7 +11,7 @@ import pytest
 import xarray as xr
 
 from stilt.exceptions import EmptyFootprint
-from stilt.footprint import calculate, read_footprint
+from stilt.footprint import calc_footprint, read_footprint
 from stilt.footprint.config import FootprintConfig
 from stilt.footprint.gridding import (
     _compute_kernel_bandwidths,
@@ -632,7 +632,7 @@ def test_aggregate_onto_own_grid_is_identity():
 
 
 # ---------------------------------------------------------------------------
-# calculate()
+# calc_footprint()
 # ---------------------------------------------------------------------------
 
 
@@ -653,120 +653,88 @@ def _particles_in_domain(n: int = 30, seed: int = 42) -> pd.DataFrame:
     )
 
 
-def _foot_config(xres=0.1, yres=0.1):
-    return FootprintConfig(
-        grid=Grid(xmin=-114.0, xmax=-113.0, ymin=39.0, ymax=40.0, xres=xres, yres=yres)
-    )
+def _grid(xres=0.1, yres=0.1):
+    return Grid(xmin=-114.0, xmax=-113.0, ymin=39.0, ymax=40.0, xres=xres, yres=yres)
 
 
-def test_calculate_returns_footprint_instance(point_receptor):
+def test_calc_footprint_returns_footprint_instance(point_receptor):
     particles = _particles_in_domain()
-    foot = calculate(particles, receptor=point_receptor, config=_foot_config())
+    foot = calc_footprint(particles, point_receptor, _grid())
     assert foot is not None
     assert isinstance(foot, xr.DataArray)
 
 
-def test_calculate_dims_are_time_lat_lon(point_receptor):
+def test_calc_footprint_dims_are_time_lat_lon(point_receptor):
     particles = _particles_in_domain()
-    foot = calculate(particles, receptor=point_receptor, config=_foot_config())
+    foot = calc_footprint(particles, point_receptor, _grid())
     assert foot is not None
     assert tuple(foot.dims) == ("time", "lat", "lon")
 
 
-def test_calculate_raises_when_particles_outside_domain(
+def test_calc_footprint_raises_when_particles_outside_domain(
     point_receptor,
 ):
     """All particles outside the domain is an EmptyFootprint, not zeros."""
     particles = _particles_in_domain()
     particles["long"] = 0.0  # far outside [-114, -113]
     particles["lati"] = 0.0
-    config = _foot_config()
     with pytest.raises(EmptyFootprint) as info:
-        calculate(particles, receptor=point_receptor, config=config)
+        calc_footprint(particles, point_receptor, _grid())
     assert info.value.reason == "outside_domain"
 
 
-def test_calculate_raises_when_there_are_no_particles(point_receptor):
+def test_calc_footprint_raises_when_there_are_no_particles(point_receptor):
     particles = _particles_in_domain().iloc[0:0]
     with pytest.raises(EmptyFootprint) as info:
-        calculate(particles, receptor=point_receptor, config=_foot_config())
+        calc_footprint(particles, point_receptor, _grid())
     assert info.value.reason == "no_particles"
 
 
-def test_calculate_assigns_name(point_receptor):
+def test_calc_footprint_assigns_name(point_receptor):
     particles = _particles_in_domain()
-    foot = calculate(
-        particles, receptor=point_receptor, config=_foot_config(), name="test"
-    )
+    foot = calc_footprint(particles, point_receptor, _grid(), name="test")
     assert foot is not None
     assert foot.stilt.name == "test"
 
 
-def test_calculate_time_integrate_collapses_to_single_timestep(point_receptor):
-    config = FootprintConfig(
-        grid=Grid(xmin=-114.0, xmax=-113.0, ymin=39.0, ymax=40.0, xres=0.1, yres=0.1),
-        time_integrate=True,
-    )
+def test_calc_footprint_time_integrate_collapses_to_single_timestep(point_receptor):
     particles = _particles_in_domain()
-    foot = calculate(particles, receptor=point_receptor, config=config)
+    foot = calc_footprint(particles, point_receptor, _grid(), time_integrate=True)
     assert foot is not None
     assert len(foot.time) == 1
 
 
-def test_calculate_nonnegative_foot_values(point_receptor):
+def test_calc_footprint_nonnegative_foot_values(point_receptor):
     """Footprint values should be non-negative."""
     particles = _particles_in_domain()
-    foot = calculate(particles, receptor=point_receptor, config=_foot_config())
+    foot = calc_footprint(particles, point_receptor, _grid())
     assert foot is not None
     assert float(foot.values.min()) >= 0.0
 
 
-def test_calculate_smooth_factor_zero(point_receptor):
+def test_calc_footprint_smooth_factor_zero(point_receptor):
     """smooth_factor=0 is equivalent to no smoothing (identity kernel)."""
-    config = FootprintConfig(
-        grid=Grid(xmin=-114.0, xmax=-113.0, ymin=39.0, ymax=40.0, xres=0.1, yres=0.1),
-        smooth_factor=0.0,
-    )
     particles = _particles_in_domain()
-    foot = calculate(particles, receptor=point_receptor, config=config)
+    foot = calc_footprint(particles, point_receptor, _grid(), smooth_factor=0.0)
     assert foot is not None
 
 
-def test_calculate_irregular_grid_uses_complete_cells(point_receptor):
-    config = FootprintConfig(
-        grid=Grid(
-            xmin=-114.0,
-            xmax=-113.0,
-            ymin=39.0,
-            ymax=40.0,
-            xres=0.3,
-            yres=0.4,
-        ),
-        smooth_factor=0.0,
-    )
+def test_calc_footprint_irregular_grid_uses_complete_cells(point_receptor):
     particles = _particles_in_domain()
 
-    foot = calculate(particles, receptor=point_receptor, config=config)
+    foot = calc_footprint(
+        particles, point_receptor, _grid(xres=0.3, yres=0.4), smooth_factor=0.0
+    )
 
     np.testing.assert_allclose(foot.lon.values, [-113.85, -113.55, -113.25])
     np.testing.assert_allclose(foot.lat.values, [39.2, 39.6])
     assert foot.shape == (2, 2, 3)
 
 
-def test_calculate_non_square_resolution_is_finite(point_receptor):
-    config = FootprintConfig(
-        grid=Grid(
-            xmin=-114.0,
-            xmax=-113.0,
-            ymin=39.0,
-            ymax=40.0,
-            xres=0.01,
-            yres=0.05,
-        )
-    )
+def test_calc_footprint_non_square_resolution_is_finite(point_receptor):
     particles = _particles_in_domain()
 
-    foot = calculate(particles, receptor=point_receptor, config=config)
+    foot = calc_footprint(particles, point_receptor, _grid(xres=0.01, yres=0.05))
 
     assert foot.sizes["lon"] == 100
     assert foot.sizes["lat"] == 20
@@ -774,10 +742,9 @@ def test_calculate_non_square_resolution_is_finite(point_receptor):
     assert float(foot.values.min()) >= 0.0
 
 
-def test_calculate_grid_property(point_receptor):
+def test_calc_footprint_grid_property(point_receptor):
     particles = _particles_in_domain()
-    config = _foot_config()
-    foot = calculate(particles, receptor=point_receptor, config=config)
+    foot = calc_footprint(particles, point_receptor, _grid())
     assert foot is not None
     assert foot.stilt.grid.xres == pytest.approx(0.1)
 
@@ -903,32 +870,27 @@ def _interior_particles(n: int = 40, seed: int = 55) -> pd.DataFrame:
     )
 
 
-def _interior_config(smooth_factor: float = 0.0) -> FootprintConfig:
-    return FootprintConfig(
-        grid=Grid(xmin=-114.0, xmax=-113.0, ymin=39.0, ymax=40.0, xres=0.1, yres=0.1),
-        smooth_factor=smooth_factor,
-    )
+def _interior_footprint(particles, receptor, smooth_factor: float = 0.0):
+    return calc_footprint(particles, receptor, _grid(), smooth_factor=smooth_factor)
 
 
-def test_calculate_linearity_in_foot_values(point_receptor):
+def test_calc_footprint_linearity_in_foot_values(point_receptor):
     """
     Scaling all particle foot values by a constant scales the output by the same
     factor.
 
     This is the foundational property of Bayesian inversion: concentration =
     integral(footprint * flux). If the footprint is not linear in the particle
-    foot values, that integral is invalid.  All operations in Footprint.calculate
+    foot values, that integral is invalid.  All operations in calc_footprint
     are linear in foot (bincount, Gaussian convolution, division by n_particles),
     so the output must scale exactly.
     """
     particles = _interior_particles()
-    config = _interior_config(smooth_factor=1.0)
-
-    foot_1x = calculate(particles, receptor=point_receptor, config=config)
+    foot_1x = _interior_footprint(particles, point_receptor, smooth_factor=1.0)
 
     particles_2x = particles.copy()
     particles_2x["foot"] = particles_2x["foot"] * 2.0
-    foot_2x = calculate(particles_2x, receptor=point_receptor, config=config)
+    foot_2x = _interior_footprint(particles_2x, point_receptor, smooth_factor=1.0)
 
     np.testing.assert_allclose(
         foot_2x.values,
@@ -938,7 +900,9 @@ def test_calculate_linearity_in_foot_values(point_receptor):
     )
 
 
-def test_calculate_total_equals_normalized_input_sum_at_zero_smooth(point_receptor):
+def test_calc_footprint_total_equals_normalized_input_sum_at_zero_smooth(
+    point_receptor,
+):
     """
     With smooth_factor=0, total footprint = sum(in-domain foot) / n_particles.
 
@@ -949,15 +913,13 @@ def test_calculate_total_equals_normalized_input_sum_at_zero_smooth(point_recept
     """
     particles = _interior_particles()
     n = particles["indx"].nunique()
-    config = _interior_config(smooth_factor=0.0)
-
-    foot = calculate(particles, receptor=point_receptor, config=config)
+    foot = _interior_footprint(particles, point_receptor, smooth_factor=0.0)
 
     expected = float(particles["foot"].sum()) / n
     assert float(foot.values.sum()) == pytest.approx(expected, rel=1e-10)
 
 
-def test_calculate_gaussian_smoothing_preserves_total_sensitivity(point_receptor):
+def test_calc_footprint_gaussian_smoothing_preserves_total_sensitivity(point_receptor):
     """
     Gaussian smoothing does not create or destroy total footprint sensitivity.
 
@@ -967,11 +929,8 @@ def test_calculate_gaussian_smoothing_preserves_total_sensitivity(point_receptor
     would silently bias flux inversion toward underestimating emissions.
     """
     particles = _interior_particles()
-    config_0 = _interior_config(smooth_factor=0.0)
-    config_s = _interior_config(smooth_factor=1.0)
-
-    foot_0 = calculate(particles, receptor=point_receptor, config=config_0)
-    foot_s = calculate(particles, receptor=point_receptor, config=config_s)
+    foot_0 = _interior_footprint(particles, point_receptor, smooth_factor=0.0)
+    foot_s = _interior_footprint(particles, point_receptor, smooth_factor=1.0)
 
     total_0 = float(foot_0.values.sum())
     total_s = float(foot_s.values.sum())
@@ -982,27 +941,25 @@ def test_calculate_gaussian_smoothing_preserves_total_sensitivity(point_receptor
     )
 
 
-def test_calculate_reproducible(point_receptor):
+def test_calc_footprint_reproducible(point_receptor):
     """
-    Calling Footprint.calculate twice with identical inputs returns identical arrays.
+    Calling calc_footprint twice with identical inputs returns identical arrays.
 
     Statefulness bugs (e.g. a mutable module-level cache that accumulates across
     calls) would cause different runs of the same simulation to diverge silently.
     """
     particles = _interior_particles()
-    config = _interior_config(smooth_factor=1.0)
-
-    foot1 = calculate(particles, receptor=point_receptor, config=config)
-    foot2 = calculate(particles, receptor=point_receptor, config=config)
+    foot1 = _interior_footprint(particles, point_receptor, smooth_factor=1.0)
+    foot2 = _interior_footprint(particles, point_receptor, smooth_factor=1.0)
 
     np.testing.assert_array_equal(
         foot1.values,
         foot2.values,
-        err_msg="Footprint.calculate must be deterministic — identical inputs must produce identical outputs",
+        err_msg="calc_footprint must be deterministic — identical inputs must produce identical outputs",
     )
 
 
-def test_calculate_time_integrate_equals_sum_of_time_slices(point_receptor):
+def test_calc_footprint_time_integrate_equals_sum_of_time_slices(point_receptor):
     """
     time_integrate=True must equal summing the per-time-step footprint.
 
@@ -1013,16 +970,8 @@ def test_calculate_time_integrate_equals_sum_of_time_slices(point_receptor):
     particles = _particles_in_domain()
     grid = Grid(xmin=-114.0, xmax=-113.0, ymin=39.0, ymax=40.0, xres=0.1, yres=0.1)
 
-    foot_ti = calculate(
-        particles,
-        receptor=point_receptor,
-        config=FootprintConfig(grid=grid, time_integrate=True),
-    )
-    foot_no = calculate(
-        particles,
-        receptor=point_receptor,
-        config=FootprintConfig(grid=grid, time_integrate=False),
-    )
+    foot_ti = calc_footprint(particles, point_receptor, grid, time_integrate=True)
+    foot_no = calc_footprint(particles, point_receptor, grid, time_integrate=False)
 
     np.testing.assert_allclose(
         foot_ti.values.squeeze(),
@@ -1032,7 +981,7 @@ def test_calculate_time_integrate_equals_sum_of_time_slices(point_receptor):
     )
 
 
-def test_calculate_smooth_zero_assigns_exact_cells(point_receptor):
+def test_calc_footprint_smooth_zero_assigns_exact_cells(point_receptor):
     """
     With smooth_factor=0, each particle's foot goes entirely into the one cell it
     falls in — no neighbouring cells receive any spillover.
@@ -1043,7 +992,6 @@ def test_calculate_smooth_zero_assigns_exact_cells(point_receptor):
     of all no-smooth footprints.
     """
     grid = Grid(xmin=-114.0, xmax=-113.0, ymin=39.0, ymax=40.0, xres=0.1, yres=0.1)
-    config = FootprintConfig(grid=grid, smooth_factor=0.0)
 
     # 10 identical particles exactly at the centre of cell (start=-113.9, centre=-113.85)
     n = 10
@@ -1059,7 +1007,7 @@ def test_calculate_smooth_zero_assigns_exact_cells(point_receptor):
         }
     )
 
-    foot = calculate(particles, receptor=point_receptor, config=config)
+    foot = calc_footprint(particles, point_receptor, grid, smooth_factor=0.0)
 
     # total = sum(foot) / n_particles = (n * foot_val) / n = foot_val
     assert float(foot.values.sum()) == pytest.approx(foot_val, rel=1e-10)
@@ -1098,7 +1046,6 @@ def test_concentration_reconstruction_from_known_footprint(point_receptor):
       c = F_A * q_A + F_B * q_B = 1e-4 * 5 + 1.5e-4 * 8 = 1.7e-3 ppm ≈ 1.7 ppb
     """
     grid = Grid(xmin=-114.0, xmax=-113.0, ymin=39.0, ymax=40.0, xres=0.1, yres=0.1)
-    config = FootprintConfig(grid=grid, smooth_factor=0.0)
 
     n_a, n_b = 10, 10
     n_total = n_a + n_b
@@ -1115,7 +1062,7 @@ def test_concentration_reconstruction_from_known_footprint(point_receptor):
         }
     )
 
-    foot = calculate(particles, receptor=point_receptor, config=config)
+    foot = calc_footprint(particles, point_receptor, grid, smooth_factor=0.0)
 
     # Verify the footprint cell values are exactly what the formula predicts.
     expected_fa = n_a * foot_a / n_total  # 1e-4
@@ -1600,9 +1547,9 @@ def test_footprints_stack_along_the_receptor_coordinate():
     assert stack.sizes["receptor"] == 2
 
 
-def test_calculate_returns_a_named_dataarray_with_its_receptor(point_receptor):
+def test_calc_footprint_returns_a_named_dataarray_with_its_receptor(point_receptor):
     particles = _particles_in_domain()
-    foot = calculate(particles, point_receptor, _foot_config(), name="hrrr")
+    foot = calc_footprint(particles, point_receptor, _grid(), name="hrrr")
     assert isinstance(foot, xr.DataArray)
     assert foot.name == "foot"
     assert foot["receptor"].item() == str(point_receptor.id)
@@ -1633,11 +1580,9 @@ def test_one_layer_footprint_is_stamped_at_its_hour():
     )
     grid = Grid(xmin=-112.3, xmax=-111.6, ymin=40.5, ymax=41.0, xres=0.01, yres=0.01)
 
-    foot = calculate(_first_hour_particles(), receptor, FootprintConfig(grid=grid))
-    integrated = calculate(
-        _first_hour_particles(),
-        receptor,
-        FootprintConfig(grid=grid, time_integrate=True),
+    foot = calc_footprint(_first_hour_particles(), receptor, grid)
+    integrated = calc_footprint(
+        _first_hour_particles(), receptor, grid, time_integrate=True
     )
 
     assert list(pd.DatetimeIndex(foot["time"].values)) == [
@@ -1655,7 +1600,7 @@ def test_calculated_coordinates_match_the_grid_axes():
     )
     grid = Grid(xmin=-112.3, xmax=-111.6, ymin=40.5, ymax=41.0, xres=0.01, yres=0.01)
 
-    foot = calculate(_first_hour_particles(), receptor, FootprintConfig(grid=grid))
+    foot = calc_footprint(_first_hour_particles(), receptor, grid)
 
     x, y = grid.axes
     np.testing.assert_array_equal(foot["lon"].values, x)

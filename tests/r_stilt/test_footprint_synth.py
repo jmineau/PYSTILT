@@ -37,8 +37,7 @@ import pytest
 import xarray as xr
 
 from stilt.exceptions import EmptyFootprint
-from stilt.footprint import calculate
-from stilt.footprint.config import FootprintConfig
+from stilt.footprint import calc_footprint
 from stilt.footprint.gridding import (
     _compute_kernel_bandwidths,
     _filter_and_rasterize_particles,
@@ -210,12 +209,16 @@ def _py_footprint(
     smooth_factor: float = 1.0,
     time_integrate: bool = False,
 ) -> xr.Dataset:
-    """Call PYSTILT's calculate on *particles*, return xr.Dataset."""
+    """Call PYSTILT's calc_footprint on *particles*, return xr.Dataset."""
     tmp_path.mkdir(parents=True, exist_ok=True)
-    config = FootprintConfig(
-        grid=grid, smooth_factor=smooth_factor, time_integrate=time_integrate
+    foot = calc_footprint(
+        particles,
+        receptor,
+        grid,
+        smooth_factor=smooth_factor,
+        time_integrate=time_integrate,
+        name="test",
     )
-    foot = calculate(particles, receptor=receptor, config=config, name="test")
     nc_path = tmp_path / "py_foot.nc"
     foot.stilt.to_netcdf(nc_path)
     ds = xr.open_dataset(nc_path)

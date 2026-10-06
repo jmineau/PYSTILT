@@ -141,7 +141,7 @@ src/stilt/
                      enhancement from a flux field)
   footprint/         the footprint (a DataArray)
     config.py        FootprintConfig and the geometry specs
-    gridding.py      `calculate`, STILT-R's calc_footprint (fidelity-guarded)
+    gridding.py      `calc_footprint`, as STILT-R's (fidelity-guarded)
     aggregation.py   summing footprints onto other geometries: `aggregate`,
                      `jacobian`, their time binning and target weights
     io.py            the footprint array and its attributes; footprint files
@@ -504,7 +504,7 @@ Feature status lives in the roadmap tables in [README.md](README.md) and
 - **`project.simulations` is cached.** `add_receptors` drops the
   cache; a `config.yaml` edited by hand needs a new `Project(path)`.
 - **Empty footprints are successes, and not footprints.** When no particle
-  reaches the grid, `footprint.calculate` raises `EmptyFootprint` and
+  reaches the grid, `calc_footprint` raises `EmptyFootprint` and
   the worker's `make_footprint` writes a footprint file with no rows and
   the reason in its metadata. `sim.is_complete()` is true, `sim.footprint` is
   `None`, `sim.empty_reason` says why, and `load_footprints()` leaves the
@@ -547,7 +547,7 @@ Feature status lives in the roadmap tables in [README.md](README.md) and
   (so `zsfc` must be in `varsiwant`) and the ground closing the bottom slab
   is the terrain under the lowest point. `PressureWeighting.apply` reads
   `altitude_ref` from the receptor it is given; with none it assumes AGL. `AveragingKernel` holds only the kernel.
-  `footprint.calculate` divides by the particle count, so weights are scaled by
+  `calc_footprint` divides by the particle count, so weights are scaled by
   `N`. Weights sum to the column's mass fraction (< 1) by design; the rest of
   the atmosphere is above the column top. This deliberately differs from
   X-STILT's "layer below each particle" convention, which gives a

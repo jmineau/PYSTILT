@@ -142,8 +142,8 @@ These run after the transforms in the variant's own footprint config, and
 the footprint records all of them. To try other footprint settings without
 changing the project, pass
 ``config=sim.variant.footprint.model_copy(update={...})``. Without a
-simulation, :func:`stilt.footprint.calculate` applies
-``config.transforms`` the same way.
+simulation, :func:`stilt.calc_footprint` takes
+``transforms`` the same way.
 
 To see what a transform did, apply it to the particle table yourself:
 
