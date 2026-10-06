@@ -148,9 +148,10 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   is not a setting. Did you mean 'smooth_factor', a footprint setting?`
   It used to reach HYSPLIT's config and be reported as one of its fields
   (#150).
-- `numpar`, `hnf_plume`, and `veght` are on the base `TransportConfig`,
-  with `n_hours` and `seed`, so a variant that runs another transport
-  model inherits them. No hash changes (#150).
+- `hnf_plume` and `veght` are on the base `TransportConfig`, with
+  `n_hours` and `seed`: the parameters PYSTILT's own code reads, which a
+  variant that runs another transport model inherits. `numpar` is
+  HYSPLIT's, since nothing in the core reads it. No hash changes (#150).
 - `stilt.variants` is gone (breaking): `Variant` is in `stilt.config`,
   `stilt.variants.resolve(config)` is `config.resolve(directory)`, and
   `ProjectConfig.variant(name)` and `Declared` are private. A relative

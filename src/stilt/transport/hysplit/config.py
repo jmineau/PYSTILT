@@ -49,6 +49,13 @@ class HysplitConfig(TransportConfig):
     #: that differ from the bundled ones.
     UNRECORDED: ClassVar[frozenset[str]] = frozenset({"exe_dir", "data_dir"})
 
+    numpar: int = Field(
+        200,
+        description=(
+            "Number of particles released per simulation. More particles give a "
+            "less noisy footprint and take longer to run."
+        ),
+    )
     exe_dir: Path | None = Field(
         None,
         description=(
