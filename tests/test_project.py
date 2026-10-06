@@ -808,9 +808,7 @@ def test_jacobian_of_a_variant(tmp_path):
         project.jacobian(sims, target, bins)
 
 
-def test_jacobian_in_batches_and_threads_is_the_same_matrix(tmp_path, monkeypatch):
-    import stilt.project as project_module
-
+def test_jacobian_in_batches_and_threads_is_the_same_matrix(tmp_path):
     receptors = [_receptor(h) for h in range(8, 16)]
     project = _project(tmp_path, receptors, execution={"cpus": 3})
     for r in receptors[:-1]:
@@ -821,10 +819,8 @@ def test_jacobian_in_batches_and_threads_is_the_same_matrix(tmp_path, monkeypatc
         pd.date_range("2023-01-01 00:00", "2023-01-02 00:00", freq="3h"),
         closed="left",
     )
-    whole = project.jacobian(project.simulations, target, bins)
-
-    monkeypatch.setattr(project_module, "JACOBIAN_BATCH", 2)
-    batched = project.jacobian(project.simulations, target, bins)
+    whole = project.jacobian(project.simulations, target, bins, workers=1)
+    batched = project.jacobian(project.simulations, target, bins, workers=3, batch=2)
 
     assert (
         list(batched.receptors)

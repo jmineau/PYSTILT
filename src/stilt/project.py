@@ -15,6 +15,7 @@ the only code that writes results.
 
 from __future__ import annotations
 
+import os
 from collections.abc import Iterable
 from functools import cached_property
 from pathlib import Path
@@ -56,10 +57,6 @@ if TYPE_CHECKING:
 
 #: The columns of :attr:`Project.receptors` before the label columns.
 RECEPTOR_COLUMNS = ("receptor", "time", "kind", "location")
-
-#: Receptors whose footprints :meth:`Project.jacobian` reads and sums
-#: together: at about 350,000 cells a footprint, some 2 GB at its peak.
-JACOBIAN_BATCH = 64
 
 #: Where a simulation stands, the ``state`` column of :meth:`Project.status`.
 STATES = ("complete", "failed", "pending")
@@ -782,6 +779,9 @@ class Project:
         sel: Any,
         target: Geometry,
         time_bins: pd.IntervalIndex,
+        *,
+        workers: int | None = None,
+        batch: int = 64,
     ) -> Jacobian:
         """
         Sum the selected footprints onto a target, per time bin, as one sparse matrix.
@@ -792,9 +792,9 @@ class Project:
         within each of *time_bins*, and cells or layers outside the target
         or the bins are dropped. The selection must hold one variant.
 
-        Footprints are read and summed in batches, ``execution.cpus`` batches
-        at a time, so memory stays at a few batches of footprints whatever
-        the selection's size; the result itself is sparse.
+        Footprints are read and summed *batch* receptors at a time, in
+        *workers* threads, so memory stays at a few batches of footprints
+        whatever the selection's size; the result itself is sparse.
 
         Parameters
         ----------
@@ -806,6 +806,12 @@ class Project:
             Flux time bins, such as a flux inventory's steps. They must be
             closed on the left (``closed="left"``): each bin holds the
             footprint hours that start in it.
+        workers : int, optional
+            Threads that read and sum batches. Defaults to the number of
+            CPUs.
+        batch : int, default 64
+            Receptors read and summed together. At about 350,000 cells a
+            footprint, 64 take some 2 GB at their peak.
 
         Returns
         -------
@@ -838,10 +844,7 @@ class Project:
         requested = list(dict.fromkeys(frame["receptor"]))
         found = self.output.present("footprints", variant, requested)
         present = [r for r in requested if r in found]
-        batches = [
-            present[i : i + JACOBIAN_BATCH]
-            for i in range(0, len(present), JACOBIAN_BATCH)
-        ]
+        batches = [present[i : i + batch] for i in range(0, len(present), batch)]
         return _jacobian(
             lambda rows: self.output.table("footprints", variant, rows),
             batches,
@@ -850,7 +853,7 @@ class Project:
             time_bins,
             missing=[r for r in requested if r not in found],
             geometry_hash=variant.geometry_hash,
-            workers=self.config.execution.cpus,
+            workers=workers if workers is not None else (os.cpu_count() or 1),
         )
 
     # -- running ---------------------------------------------------------------
