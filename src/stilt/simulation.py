@@ -14,11 +14,12 @@ import pandas as pd
 import xarray as xr
 
 from stilt.exceptions import EmptyFootprint
-from stilt.footprint import calc_footprint
+from stilt.footprint import gridding
 from stilt.footprint.config import FootprintConfig
 from stilt.output import Footprints, Output, Particles
 from stilt.particles import particles_metadata
 from stilt.receptors import Receptor, parse_receptor_id
+from stilt.spatial import Grid
 
 if TYPE_CHECKING:
     from stilt.variants import Variant
@@ -359,26 +360,22 @@ class Simulation:
 
         return SimulationPlotAccessor(self)
 
-    def generate_footprint(
+    def calc_footprint(
         self,
-        config: FootprintConfig | None = None,
+        *,
+        grid: Grid | None = None,
+        smooth_factor: float | None = None,
+        time_integrate: bool | None = None,
         transforms: Sequence[Any] | None = None,
     ) -> xr.DataArray | None:
         """
         Calculate a footprint from the stored particles, without writing it.
 
-        Use it to try other settings than the variant's, for example
-        ``sim.variant.footprint.model_copy(update={"smooth_factor": 0.5})``.
-        Nothing is written; the workers write the variant's own footprint.
-
-        Parameters
-        ----------
-        config : FootprintConfig, optional
-            Footprint settings. Defaults to the variant's own.
-        transforms : sequence, optional
-            Extra particle transforms, applied after ``config.transforms``
-            and recorded with them. A relative file name in a transform's
-            settings starts from the project directory.
+        This is :func:`stilt.calc_footprint` with this simulation's
+        particles, receptor, and settings filled in. Each setting given
+        replaces the variant's own. Use it to try other settings; the
+        workers write the variant's own footprint. A relative file name in
+        a transform's settings starts from the project directory.
 
         Returns
         -------
@@ -388,33 +385,36 @@ class Simulation:
         Raises
         ------
         TypeError
-            If the variant has no grid and no *config* is given.
+            If the variant has no grid and none is given.
         FileNotFoundError
             If the particles have not been written yet.
+
+        Examples
+        --------
+        >>> smoother = sim.calc_footprint(smooth_factor=2.0)
+        >>> fine = sim.calc_footprint(grid=hexes.to_grid(cells_per_target=4))
         """
-        geometry_hash = None
-        if config is None:
-            config = self.variant.footprint
-            geometry_hash = self.variant.geometry_hash
-        if config is None:
-            raise TypeError(
-                f"{self.id} has no footprint settings; pass a FootprintConfig."
-            )
+        own = self.variant.footprint
+        if own is None:
+            own = FootprintConfig.model_validate({})
+        # The variant's geometry names its own grid, not another one.
+        geometry_hash = self.variant.geometry_hash if grid is None else None
+        grid = grid if grid is not None else own.grid
+        if grid is None:
+            raise TypeError(f"{self.id} has no footprint settings; give a grid.")
         particles = self.particles
-        if transforms:
-            config = config.model_copy(
-                update={"transforms": [*config.transforms, *transforms]}
-            )
-        if config.grid is None:
-            raise TypeError(f"{self.id}'s footprint settings have no grid.")
         try:
-            return calc_footprint(
+            return gridding.calc_footprint(
                 particles,
                 self.receptor,
-                config.grid,
-                smooth_factor=config.smooth_factor,
-                time_integrate=config.time_integrate,
-                transforms=config.transforms,
+                grid,
+                smooth_factor=own.smooth_factor
+                if smooth_factor is None
+                else smooth_factor,
+                time_integrate=own.time_integrate
+                if time_integrate is None
+                else time_integrate,
+                transforms=own.transforms if transforms is None else transforms,
                 name=self.variant.name,
                 directory=self.directory,
                 geometry_hash=geometry_hash,

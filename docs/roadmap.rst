@@ -25,7 +25,7 @@ on a rectangular grid and then summed onto a :class:`stilt.Grid`, a
 :class:`stilt.Mesh` (from shapefiles, H3 hexagons, or windows around points),
 or :class:`stilt.Zones` (groups of cells), using cached overlap weights.
 ``Mesh.to_grid`` picks a grid for a geometry, the ``geometry``
-footprint setting names one in YAML, and ``sim.generate_footprint`` makes
+footprint setting names one in YAML, and ``sim.calc_footprint`` makes
 new footprints from saved particles.
 
 Most new work is on column and slant-column workflows for satellite and

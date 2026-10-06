@@ -712,7 +712,7 @@ def check_resolution(geometry: Geometry, xres: float, yres: float, crs: str) -> 
         warnings.warn(
             f"Smallest target cell ({width:g}) spans fewer than two native raster "
             f"cells ({xres:g} x {yres:g}); the aggregate is under-resolved. "
-            "Regenerate the footprint on a finer grid (sim.generate_footprint "
+            "Calculate the footprint again on a finer grid (sim.calc_footprint "
             "with a grid from mesh.to_grid()) for boundary accuracy.",
             stacklevel=3,
         )
