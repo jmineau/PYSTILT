@@ -6,6 +6,8 @@ import numpy as np
 import pandas as pd
 from numpy.typing import ArrayLike
 
+from stilt.spatial import haversine_km
+
 # -- overpasses -----------------------------------------------------------------
 
 
@@ -58,22 +60,6 @@ def group_by_overpass(
 
 
 # -- spatial selection ------------------------------------------------------------
-
-
-def haversine_km(
-    lon1: np.ndarray | float,
-    lat1: np.ndarray | float,
-    lon2: np.ndarray | float,
-    lat2: np.ndarray | float,
-) -> np.ndarray:
-    """Return the great-circle distance in km, broadcasting over the inputs."""
-    d_lat = np.radians(lat2 - lat1)
-    d_lon = np.radians(lon2 - lon1)
-    a = (
-        np.sin(d_lat / 2) ** 2
-        + np.cos(np.radians(lat1)) * np.cos(np.radians(lat2)) * np.sin(d_lon / 2) ** 2
-    )
-    return 6371.0 * 2 * np.arcsin(np.sqrt(a))
 
 
 def _linspace(start: float, stop: float, n: int) -> list[float]:

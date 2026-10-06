@@ -18,7 +18,14 @@ from stilt.footprint import gridding
 from stilt.footprint.config import FootprintConfig
 from stilt.footprint.io import _empty_reason, read_footprint
 from stilt.output import Output
-from stilt.particles import particles_metadata, read_particles
+from stilt.particles import (
+    Background,
+    TransportError,
+    background,
+    particles_metadata,
+    read_particles,
+    transport_error,
+)
 from stilt.receptors import Receptor
 from stilt.spatial import Grid
 
@@ -398,6 +405,82 @@ class Simulation:
             )
         except EmptyFootprint:
             return None
+
+    @property
+    def _transforms(self) -> Sequence[Any]:
+        """The footprint's particle transforms, which weight the particles; none without a footprint."""
+        return (
+            () if self.variant.footprint is None else self.variant.footprint.transforms
+        )
+
+    def background(self, field: xr.DataArray | pd.Series) -> Background:
+        """
+        Return the background mole fraction at the receptor.
+
+        The background is the field where each particle ends, averaged over
+        the particles with the footprint's weights (its transforms), so it
+        adds to the enhancement. See :func:`stilt.particles.background`.
+
+        Parameters
+        ----------
+        field : xarray.DataArray or pandas.Series
+            A mole-fraction field such as CarbonTracker, whose vertical
+            dimension is named after a particle column (``pres`` or
+            ``zagl``), or one value per particle, indexed by ``particle``.
+
+        Examples
+        --------
+        >>> ct = xr.open_dataarray("ct_ch4.nc").rename(level="pres")
+        >>> sim.background(ct).value
+        """
+        return background(
+            self.particles,
+            field,
+            transforms=self._transforms,
+            receptor=self.receptor,
+            directory=self.directory,
+        )
+
+    def transport_error(
+        self,
+        error: Simulation | Sequence[Simulation],
+        flux: xr.DataArray,
+        **options: Any,
+    ) -> TransportError:
+        """
+        Return the transport error of this simulation's modeled enhancement.
+
+        It is the extra spread in the per-particle enhancement that a
+        wind-error variant of the same receptor adds (Lin and Gerbig, 2005).
+        See :func:`stilt.particles.transport_error`, which documents the
+        options (``levels``, ``length_scale``, ``percentile``,
+        ``noise_splits``, ``background``).
+
+        Parameters
+        ----------
+        error : Simulation or sequence of Simulation
+            The same receptor under a wind-error variant, or every
+            realization of one.
+        flux : xarray.DataArray
+            Surface flux field, in µmol m⁻² s⁻¹.
+
+        Examples
+        --------
+        >>> err = project.simulation(sim.receptor.id, "hrrr-err")
+        >>> sim.transport_error(err, flux).variance
+        >>> ensemble = [project.simulation(rid, "hrrr-err", k) for k in range(10)]
+        >>> sim.transport_error(ensemble, flux)
+        """
+        sims = [error] if isinstance(error, Simulation) else list(error)
+        return transport_error(
+            self.particles,
+            [e.particles for e in sims],
+            flux,
+            transforms=self._transforms,
+            receptor=self.receptor,
+            directory=self.directory,
+            **options,
+        )
 
 
 __all__ = ["Simulation"]

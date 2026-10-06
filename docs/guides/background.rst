@@ -9,8 +9,9 @@ background from observations for an inversion, you need both.
 
 Each back-trajectory ends where its air came from. Sample a mole-fraction
 field at every particle's endpoint, average over the particles, and you
-have the background the receptor saw. :func:`~stilt.observations.background`
-does this with any field you give it. X-STILT does the same with
+have the background the receptor saw. ``sim.background(field)`` does this
+with any field you give it (:func:`stilt.particles.background` without a
+project). X-STILT does the same with
 CarbonTracker in ``endpts.trajfoot``. For a satellite swath you can also
 take the background from the soundings that a city's plume did not reach
 (:doc:`plume_background`).
@@ -49,28 +50,19 @@ The background at a receptor
 
 .. code-block:: python
 
-   from stilt.observations import background
-
    rows = []
    for rid in project.receptors.receptor:
        sim = project.simulation(rid, "hrrr")
-       bg = background(
-           sim.particles,
-           field,
-           transforms=sim.variant.footprint.transforms,
-           receptor=sim.receptor,
-           directory=project.directory,
-       )
+       bg = sim.background(field)
        enhancement = float(sim.footprint.stilt.enhancement(flux).sum())
        rows.append({"receptor": sim.receptor.id, "background": bg.value,
                     "enhancement": enhancement, "modelled": bg.value + enhancement})
 
-Pass the footprint's transforms, the receptor, and the project directory, as for
-:func:`~stilt.observations.transport_error`. The background is then
-weighted the way the footprint is, with the averaging kernel (including one
-from a per-receptor table), pressure weighting, and any lifetime decay, and
-the background and the enhancement add. For a tower receptor there is
-nothing to pass, and the value is the plain mean over the particles.
+The background is weighted the way the footprint is, with the variant's
+transforms: the averaging kernel (including one from a per-receptor
+table), pressure weighting, and any lifetime decay. So the background and
+the enhancement add. For a tower receptor there are no transforms, and the
+value is the plain mean over the particles.
 
 ``bg.per_particle`` is the field at each endpoint, and ``bg.weights`` is
 each particle's share of the average. Both are indexed by particle. The
@@ -93,18 +85,13 @@ With transport error
 
 Wind errors move the endpoints as well as the path near the surface. Where
 the background field has gradients, this adds to the transport error. Pass
-the field to :func:`~stilt.observations.transport_error`, and it works with
-each particle's modelled mole fraction, enhancement plus background:
+the field to ``sim.transport_error``, and it works with each particle's
+modelled mole fraction, enhancement plus background:
 
 .. code-block:: python
 
    err = project.simulation(sim.receptor.id, "hrrr-err")
-   result = transport_error(
-       sim.particles, err.particles, flux,
-       transforms=sim.variant.footprint.transforms,
-       receptor=sim.receptor, directory=project.directory,
-       background=field,
-   )
+   result = sim.transport_error(err, flux, background=field)
    result.enhancement - result.background   # the enhancement alone
 
 Choices made here

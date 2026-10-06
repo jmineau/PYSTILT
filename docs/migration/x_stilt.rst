@@ -49,7 +49,7 @@ the ones that have an equivalent.
        products, write a reader that returns the same table.
    * - Transport error on the modelled column (``cal.trajfoot.stat``, ``cal.trans.err``)
      - ``error_functions/``
-     - :func:`stilt.observations.transport_error` on the particles of an
+     - :meth:`sim.transport_error <stilt.Simulation.transport_error>` on the particles of an
        unperturbed variant and a wind-error variant
        (:doc:`/guides/transport_error`). X-STILT's separate ``outerr_`` tree
        becomes one more variant.
@@ -58,8 +58,8 @@ the ones that have an equivalent.
      - ``foot.stilt.enhancement``, ``particles.stilt.enhancement``
    * - Wind error statistics from radiosondes and surface stations
      - ``get.uverr``, ``get.siguverr``, ``cal.wind.err``, ``grab.raob``
-     - :func:`~stilt.observations.variogram` and
-       :func:`~stilt.observations.fit_variogram` estimate all four error
+     - :func:`~stilt.meteorology.variogram` and
+       :func:`~stilt.meteorology.fit_variogram` estimate all four error
        settings. X-STILT estimates only ``siguverr`` and fixes the others.
        The met is sampled at the observations with ``arlmet.sample_points``
        instead of one HYSPLIT run per sonde, and sondes come from IGRA2
@@ -72,7 +72,7 @@ the ones that have an equivalent.
        unset. PYSTILT supports both.
    * - Background from trajectory endpoints (``endpts.trajfoot``, CarbonTracker)
      - ``background/``
-     - :func:`stilt.observations.background` with any xarray field
+     - :meth:`sim.background <stilt.Simulation.background>` with any xarray field
        (:doc:`/guides/background`)
    * - Emission-error propagation (``cal.emiss.err``, footprint × inventory spread)
      - ``error_functions/``

@@ -1,11 +1,11 @@
-"""Tests for stilt.observations.variograms: variograms and wind-error scales."""
+"""Tests for the wind-error statistics in stilt.meteorology: variograms and their fits."""
 
 import numpy as np
 import pandas as pd
 import pytest
 
-from stilt.observations import VariogramFit, fit_variogram, variogram
-from stilt.observations.selection import haversine_km
+from stilt.meteorology import VariogramFit, fit_variogram, variogram
+from stilt.spatial import haversine_km
 from stilt.transport.hysplit import HysplitConfig
 from stilt.transport.hysplit.driver import winderrtf
 

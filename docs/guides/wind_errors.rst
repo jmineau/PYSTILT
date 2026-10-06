@@ -120,18 +120,18 @@ since their heights above ground are unknown.
 Step 2: the scales
 ------------------
 
-:func:`~stilt.observations.variogram` builds the empirical variogram. It
+:func:`~stilt.meteorology.variogram` builds the empirical variogram. It
 takes the errors, the coordinate the separation is measured in, and a
 ``group`` label. Only points with the same label are paired. The coordinate
 can also be two columns of longitude and latitude, and the separation is
 then the great-circle distance in kilometres.
-:func:`~stilt.observations.fit_variogram` fits the exponential model with
+:func:`~stilt.meteorology.fit_variogram` fits the exponential model with
 σ fixed.
 
 .. code-block:: python
 
    import numpy as np
-   from stilt.observations import fit_variogram, variogram
+   from stilt.meteorology import fit_variogram, variogram
 
    def scale(errors, lag, group, bins):
        table = variogram(errors, lag, group=group, bins=bins)

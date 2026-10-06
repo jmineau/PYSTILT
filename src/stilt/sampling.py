@@ -6,7 +6,7 @@ A field is an :class:`xarray.DataArray` on a regular ``lat``/``lon`` grid
 dimension and an optional ``time`` dimension. Each point takes the value of
 the cell it falls in. ``foot.stilt.enhancement`` and
 ``particles.stilt.enhancement`` sample a surface flux this way, and
-:func:`stilt.observations.background` a mole-fraction field. PYSTILT does
+:func:`stilt.particles.background` a mole-fraction field. PYSTILT does
 not convert units. A flux in µmol m⁻² s⁻¹ times a footprint in ppm per
 (µmol m⁻² s⁻¹) gives ppm.
 """

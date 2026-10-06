@@ -15,22 +15,20 @@ Before a run:
   a slant line of sight (:func:`slant_points`) at the retrieval's pressure
   levels (:func:`pressure_altitudes`). The points become
   :class:`~stilt.Receptor` objects.
-- Derive wind-error settings from analysis-minus-observation winds
-  (:func:`variogram`, :func:`fit_variogram`).
 
 After a run:
 
-- :func:`transport_error` gives the transport error of the modeled
-  enhancement from the unperturbed and wind-perturbed particles.
-- :func:`background` samples a mole-fraction field where the particles end.
 - :func:`plume_polygon` and :func:`plume_background` outline a plume from a
   forward run and take the background from soundings outside it.
 
-Particle weighting (averaging kernel, pressure weighting, lifetime decay)
-is in :mod:`stilt.transforms`.
+What a simulation's particles give is on the simulation:
+``sim.background(field)`` and ``sim.transport_error(error_sim, flux)``
+(:mod:`stilt.particles`). The wind-error statistics are in
+:mod:`stilt.meteorology` (``variogram``, ``fit_variogram``), and particle
+weighting (averaging kernel, pressure weighting, lifetime decay) is in
+:mod:`stilt.transforms`.
 """
 
-from .backgrounds import Background, background
 from .placement import jitter_points, pressure_altitudes, slant_points
 from .plumes import Plume, PlumeBackground, plume_background, plume_polygon
 from .readers import (
@@ -41,17 +39,10 @@ from .readers import (
     read_tropomi_ch4,
 )
 from .selection import group_by_overpass, select_observations_spatial
-from .uncertainty import TransportError, transport_error
-from .variograms import VariogramFit, fit_variogram, variogram
 
 __all__ = [
-    "Background",
     "Plume",
     "PlumeBackground",
-    "TransportError",
-    "background",
-    "VariogramFit",
-    "fit_variogram",
     "group_by_overpass",
     "jitter_points",
     "plume_background",
@@ -64,6 +55,4 @@ __all__ = [
     "read_tropomi_ch4",
     "select_observations_spatial",
     "slant_points",
-    "transport_error",
-    "variogram",
 ]
