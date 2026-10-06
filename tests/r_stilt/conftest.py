@@ -10,7 +10,6 @@ import pandas as pd
 import pytest
 
 from stilt.project import Project
-from stilt.simulation import SimID
 
 from ..fixtures.r_stilt_reference import (
     ALL_SCENARIOS,
@@ -53,7 +52,7 @@ def scenario_outputs(request, met_dir, rscript, r_stilt_dir, tmp_path_factory) -
     project.run()
     print(f"\n[PROFILE] {scenario.name} PYSTILT sim: {time.perf_counter() - t0:.1f}s")
 
-    sim = project.simulation(*SimID.parse(scenario.py_sim_id()))
+    sim = project.simulation(*scenario.py_sim_id())
     if not sim.has_particles:
         pytest.fail(f"[{scenario.name}] No particles written for {sim.id}")
     if not sim.has_footprint:
@@ -71,9 +70,7 @@ def scenario_outputs(request, met_dir, rscript, r_stilt_dir, tmp_path_factory) -
 
     error_traj_path = None
     if scenario.error_variant is not None:
-        err = project.simulation(
-            *SimID.parse(scenario.py_sim_id(scenario.error_variant))
-        )
+        err = project.simulation(*scenario.py_sim_id(scenario.error_variant))
         error_traj_path = err.particles_path if err.has_particles else None
 
     # Skip R trajectory run for scenarios whose transport is identical to another.

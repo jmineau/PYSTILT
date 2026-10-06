@@ -172,7 +172,7 @@ def test_run_particles_starts_in_an_empty_directory(
     sim, met, compute_root, monkeypatch
 ):
     """A directory left by a stopped job is cleared before the model runs."""
-    workdir = compute_root / sim.id
+    workdir = compute_root / sim.receptor.id / sim.variant.name
     workdir.mkdir(parents=True)
     (workdir / "PARTICLE_STILT.DAT").write_text("left over\n")
     seen: list[list[str]] = []
@@ -201,11 +201,13 @@ def test_run_particles_keeps_no_empty_scratch_copy(sim, met, compute_root, monke
 
     monkeypatch.setattr(worker, "get_model", lambda name: _Model())
     with pytest.raises(MeteorologyError):
-        worker.run_particles(sim, met=met, workdir=compute_root / sim.id)
+        worker.run_particles(
+            sim, met=met, workdir=compute_root / sim.receptor.id / sim.variant.name
+        )
 
     kept = sim.output.scratch_path(sim.variant, sim.receptor.id)
     assert kept is None or not kept.exists()
-    assert not (compute_root / sim.id).exists()
+    assert not (compute_root / sim.receptor.id / sim.variant.name).exists()
 
 
 def test_run_particles_without_particles_is_a_simulation_error(
@@ -219,7 +221,9 @@ def test_run_particles_without_particles_is_a_simulation_error(
 
     monkeypatch.setattr(worker, "get_model", lambda name: _Model())
     with pytest.raises(SimulationError) as caught:
-        worker.run_particles(sim, met=met, workdir=compute_root / sim.id)
+        worker.run_particles(
+            sim, met=met, workdir=compute_root / sim.receptor.id / sim.variant.name
+        )
     assert caught.value.reason == "NO_PARTICLE_DATA"
 
 
@@ -347,7 +351,7 @@ def test_existing_footprints_are_kept_and_empty_ones_count_as_done(
     monkeypatch.setattr(worker, "make_footprint", lambda *a, **k: pytest.fail("kept"))
 
     assert _run_receptor(project, receptor) == []
-    assert project.simulations.incomplete().frame.empty
+    assert project.incomplete().empty
 
 
 def test_without_skip_existing_hysplit_runs_once_per_group_and_every_footprint_is_remade(
@@ -424,7 +428,7 @@ def test_run_receptor_stops_on_preemption_with_what_finished_written(
     with pytest.raises(KeyboardInterrupt):
         _run_receptor(project, receptor)
 
-    st = project.simulations.status()
+    st = project.status()
     assert dict(zip(st.variant, st.state, strict=True)) == {
         "hrrr": "complete",
         "hrrr-s2": "complete",

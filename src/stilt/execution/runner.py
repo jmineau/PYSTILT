@@ -160,16 +160,14 @@ def resolve_compute_root(
 
 def _pending(project: Project, skip_existing: bool) -> list[str]:
     """Return the ids of the receptors to run, each once, in project order."""
-    sims = project.simulations
-    if skip_existing:
-        sims = sims.incomplete()
+    sims = project.incomplete() if skip_existing else project.simulations
     return list(dict.fromkeys(sims["receptor"]))
 
 
 def _status(project: Project, receptor_ids: list[str]) -> pd.DataFrame:
     """Return the status table of the simulations of *receptor_ids*."""
     sims = project.simulations
-    return sims[sims["receptor"].isin(receptor_ids)].status()
+    return project.status(sims[sims["receptor"].isin(receptor_ids)])
 
 
 def run(
@@ -207,7 +205,7 @@ def run(
     Returns
     -------
     pandas.DataFrame
-        The status table (``project.simulations.status()``) of the
+        The status table (:meth:`stilt.Project.status`) of the
         simulations that ran: ``state`` says which are complete, which
         failed and why, and which did not finish.
 

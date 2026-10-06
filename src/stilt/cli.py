@@ -248,7 +248,7 @@ def _counts(total: int, pending: int) -> str:
 
 def _print_status(project: Project) -> None:
     """Print a project status summary, per variant when there are several."""
-    table = project.simulations.status()
+    table = project.status()
     pending = table[table.state != "complete"]
     typer.echo(f"Project: {project.directory}  {_counts(len(table), len(pending))}")
     if len(project.variants) > 1:

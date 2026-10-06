@@ -22,7 +22,6 @@ from stilt.identity import transport_from_settings
 from stilt.meteorology import MetConfig
 from stilt.particles import particles_metadata
 from stilt.project import Project
-from stilt.simulation import SimID
 from stilt.transport.hysplit.driver import winderrtf
 from stilt.variants import resolve
 
@@ -35,13 +34,13 @@ _XYERR = {"siguverr": 2.0, "tluverr": 60.0, "zcoruverr": 500.0, "horcoruverr": 4
 # ---------------------------------------------------------------------------
 
 
-def _sim_id(receptor, variant: str = "hrrr") -> SimID:
-    return SimID(receptor.id, variant)
+def _sim_id(receptor, variant: str = "hrrr") -> tuple[str, str]:
+    return (receptor.id, variant)
 
 
-def _incomplete(project: Project) -> list[SimID]:
-    rows = project.simulations.incomplete()
-    return [SimID(r, v) for r, v in zip(rows["receptor"], rows["variant"], strict=True)]
+def _incomplete(project: Project) -> list[tuple[str, str]]:
+    rows = project.incomplete()
+    return list(zip(rows["receptor"], rows["variant"], strict=True))
 
 
 def _with(config: ProjectConfig, **updates) -> ProjectConfig:
@@ -65,7 +64,7 @@ def test_particles(tmp_path, wbb_receptor, traj_only_config):
     model.run()
 
     sid = _sim_id(wbb_receptor)
-    assert list(model.simulations["receptor"]) == [sid.receptor]
+    assert list(model.simulations["receptor"]) == [sid[0]]
     sim = model.simulation(*sid)
     assert sim.has_particles
     assert sim.particles_path is not None
@@ -73,7 +72,7 @@ def test_particles(tmp_path, wbb_receptor, traj_only_config):
     assert sim.particles_path.parent.parent.name.startswith("settings=hrrr-")
     assert len(pd.read_parquet(sim.particles_path)) > 0, "Particle file is empty"
     assert sim.particles is not None and len(sim.particles) > 0
-    assert not (resolve_compute_root(model) / sim.id).exists(), (
+    assert not (resolve_compute_root(model) / sid[0] / sid[1]).exists(), (
         "the scratch working directory is removed"
     )
 
@@ -154,9 +153,9 @@ def test_empty_footprint(tmp_path, wbb_receptor, wbb_config):
     assert sim.has_particles
     assert sim.empty_reason == "outside_domain"
     assert sim.footprint is None
-    assert model.simulations.load_footprints() == {}
+    assert model.footprints() == {}
     # An empty footprint is complete; sim.empty_reason says why it is empty.
-    assert model.simulations.status()["state"].tolist() == ["complete"]
+    assert model.status()["state"].tolist() == ["complete"]
 
     # A rerun has nothing to do and does not touch the empty record.
     before = sim.footprint_path.stat().st_mtime_ns
@@ -199,7 +198,7 @@ def test_failure_missing_met(tmp_path, wbb_receptor, traj_only_config):
     assert not sim.has_particles
     assert sim.failure is not None
     assert sim.failure["reason"] == "MISSING_MET_FILES"
-    status = model.simulations.status()
+    status = model.status()
     assert status["state"].tolist() == ["failed"]
     assert status["reason"].tolist() == ["MISSING_MET_FILES"]
 
@@ -288,7 +287,7 @@ def test_column(tmp_path, wbb_column_receptor, wbb_config):
 
     sid = _sim_id(wbb_column_receptor)
     r = wbb_column_receptor
-    assert sid.receptor.endswith(f"_X{r.bottom:g}-{r.top:g}"), (
+    assert sid[0].endswith(f"_X{r.bottom:g}-{r.top:g}"), (
         f"Expected a column receptor id, got {sid}"
     )
 
@@ -308,7 +307,7 @@ def test_multipoint(tmp_path, wbb_multipoint_receptor, multipoint_config):
     model.run()
 
     sid = _sim_id(wbb_multipoint_receptor)
-    assert "multi_" in sid.receptor, f"Expected a multipoint receptor id, got {sid}"
+    assert "multi_" in sid[0], f"Expected a multipoint receptor id, got {sid}"
 
     sim = model.simulation(*sid)
     assert sim.has_particles
@@ -368,7 +367,7 @@ def test_adding_a_footprint_only_variant_runs_no_hysplit(
 
     assert base.particles_path.stat().st_mtime == traj_mtime
     assert base.log_path.read_text() == log_before
-    assert grown.simulations.incomplete().frame.empty
+    assert grown.incomplete().empty
 
 
 # ---------------------------------------------------------------------------
@@ -456,11 +455,12 @@ def test_error_realizations(tmp_path, wbb_receptor, traj_only_config):
     )
     model.run()
 
-    sims = model.simulations[model.simulations.group == "err"]
+    sims = model.simulations
+    sims = sims[sims.group == "err"]
     assert sims["variant"].tolist() == ["err-0", "err-1"]
-    assert sims.incomplete().frame.empty
+    assert model.incomplete(sims).empty
 
-    particles = sims.load_particles()
+    particles = model.particles(sims)
     e0, e1 = (particles[particles.variant == v] for v in ("err-0", "err-1"))
     s0 = e0.groupby("indx")["foot"].sum()
     s1 = e1.groupby("indx")["foot"].sum().reindex(s0.index)
@@ -497,12 +497,12 @@ def test_seeded_error_realizations_differ_and_reproduce(
     def run(project):
         model = Project.init(project, config=config, receptors=[wbb_receptor])
         model.run()
-        assert model.simulations.incomplete().frame.empty
+        assert model.incomplete().empty
         return model
 
     a = run(tmp_path / "a")
-    errs = a.simulations[a.simulations.group == "err"]
-    particles = errs.load_particles()
+    sims = a.simulations
+    particles = a.particles(sims[sims.group == "err"])
     e0, e1 = (particles[particles.variant == v] for v in ("err-0", "err-1"))
     s0 = e0.groupby("indx")["foot"].sum()
     s1 = e1.groupby("indx")["foot"].sum().reindex(s0.index)

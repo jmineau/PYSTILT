@@ -560,7 +560,7 @@ class SimulationPlotAccessor:
             _draw_met_box(ax, met_bounds)
             ax.legend(fontsize=8)
 
-        ax.set_title(f"Simulation {sim.id}")
+        ax.set_title(f"Simulation {sim}")
         return ax
 
 

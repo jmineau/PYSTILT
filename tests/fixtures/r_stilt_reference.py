@@ -259,11 +259,9 @@ class ReferenceScenario:
             }
         return ProjectConfig.model_validate(config)
 
-    def py_sim_id(self, variant: str = REFERENCE_MET) -> str:
-        """Return the PYSTILT simulation id (``{receptor_id}/{variant}``)."""
-        from stilt.simulation import SimID
-
-        return str(SimID(self.make_receptor().id, variant))
+    def py_sim_id(self, variant: str = REFERENCE_MET) -> tuple[str, str]:
+        """Return the PYSTILT simulation, ``(receptor_id, variant)``."""
+        return (self.make_receptor().id, variant)
 
     def r_sim_id(self) -> str:
         """Return the STILT-R simulation ID (the receptor id)."""

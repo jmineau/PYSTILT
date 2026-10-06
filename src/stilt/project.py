@@ -15,7 +15,7 @@ the only code that writes results.
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterable
 from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -45,7 +45,7 @@ from stilt.receptors import (
     receptors_to_csv,
 )
 from stilt.receptors.table import COLUMNS, ROW_COLUMNS
-from stilt.simulation import SimID, Simulation
+from stilt.simulation import Simulation
 from stilt.variants import Variant, resolve
 
 if TYPE_CHECKING:
@@ -57,11 +57,11 @@ if TYPE_CHECKING:
 #: The columns of :attr:`Project.receptors` before the label columns.
 RECEPTOR_COLUMNS = ("receptor", "time", "kind", "location")
 
-#: Receptors whose footprints :meth:`Simulations.jacobian` reads and sums
+#: Receptors whose footprints :meth:`Project.jacobian` reads and sums
 #: together: at about 350,000 cells a footprint, some 2 GB at its peak.
 JACOBIAN_BATCH = 64
 
-#: Where a simulation stands, the ``state`` column of :meth:`Simulations.status`.
+#: Where a simulation stands, the ``state`` column of :meth:`Project.status`.
 STATES = ("complete", "failed", "pending")
 
 
@@ -80,6 +80,22 @@ def _as_receptors(
             "of a receptors CSV."
         )
     return items
+
+
+def _is_mask(sel: Any) -> bool:
+    """Return whether *sel* is a boolean mask (a Series, an array, or a list of booleans)."""
+    if isinstance(sel, (pd.Series, np.ndarray)):
+        return sel.dtype == bool or str(sel.dtype) == "boolean"
+    return isinstance(sel, list) and bool(sel) and all(isinstance(v, bool) for v in sel)
+
+
+def _column(table: Any, name: str) -> list[str]:
+    """Return one column of a pandas, polars, or pyarrow table as a list of strings."""
+    column = table[name]
+    for convert in ("to_pylist", "to_list", "tolist"):  # pyarrow, polars, pandas
+        if hasattr(column, convert):
+            return [str(v) for v in getattr(column, convert)()]
+    return [str(v) for v in column]
 
 
 class Project:
@@ -135,7 +151,7 @@ class Project:
 
     >>> project = stilt.Project("./my_project")
     >>> sims = project.simulations
-    >>> sims[sims.variant == "hrrr"].status()
+    >>> project.status(sims[sims.variant == "hrrr"])
     """
 
     def __init__(self, path: str | Path) -> None:
@@ -391,39 +407,44 @@ class Project:
             else:
                 self.receptors_path.write_text(receptors_to_csv(new))
             # These were read from the file that just changed.
-            for name in ("_rows", "_positions", "receptors", "simulations"):
+            for name in ("_rows", "_positions", "receptors", "_simulations"):
                 vars(self).pop(name, None)
         return [r.id for r in new]
 
     # -- simulations -----------------------------------------------------------
 
     @cached_property
-    def simulations(self) -> Simulations:
-        """
-        Every receptor under every variant, one row per simulation.
-
-        A :class:`Simulations`: a table with the columns ``receptor``,
-        ``variant``, ``group`` (the variant's name in ``config.yaml``,
-        shared by the realizations of one variant), ``model`` (its
-        transport model), then the other columns of :attr:`receptors`. Rows run receptor by receptor, with variants in
-        config order. Select rows as with pandas, then ask the selection for
-        its status or results.
-
-        Examples
-        --------
-        >>> sims = project.simulations
-        >>> july = sims[(sims.variant == "hrrr") & (sims.site == "WBB")]
-        >>> july.status()
-        >>> july.load_footprints()
-        """
+    def _simulations(self) -> pd.DataFrame:
+        """The table :attr:`simulations` copies, built once."""
         variants = pd.DataFrame(
             [(name, v.group, v.model.name) for name, v in self.variants.items()],
             columns=["variant", "group", "model"],
         )
         frame = self.receptors.merge(variants, how="cross")
         first = ["receptor", "variant", "group", "model"]
-        frame = frame.loc[:, first + [c for c in frame.columns if c not in first]]
-        return Simulations(self, frame)
+        return frame.loc[:, first + [c for c in frame.columns if c not in first]]
+
+    @property
+    def simulations(self) -> pd.DataFrame:
+        """
+        Every receptor under every variant, one row per simulation.
+
+        A pandas DataFrame with the columns ``receptor``, ``variant``,
+        ``group`` (the variant's name in ``config.yaml``, shared by the
+        realizations of one variant), ``model`` (its transport model), then
+        the other columns of :attr:`receptors`. Rows run receptor by
+        receptor, with variants in config order. Select rows as in pandas
+        and pass the selection to :meth:`status`, :meth:`incomplete`,
+        :meth:`particles`, :meth:`footprints`, or :meth:`jacobian`.
+
+        Examples
+        --------
+        >>> sims = project.simulations
+        >>> july = sims[(sims.variant == "hrrr") & (sims.site == "WBB")]
+        >>> project.status(july)
+        >>> project.footprints(july)
+        """
+        return self._simulations.copy()
 
     def simulation(self, receptor_id: str, variant: str) -> Simulation:
         """
@@ -482,6 +503,356 @@ class Project:
 
         return ProjectPlotAccessor(self)
 
+    # -- the simulations' results ----------------------------------------------
+
+    def _selected(self, sel: Any = None) -> pd.DataFrame:
+        """
+        Return the rows of :attr:`simulations` that *sel* selects.
+
+        *sel* is ``None`` (every simulation), a pandas table with
+        ``receptor`` and ``variant`` columns (returned as it is, extra
+        columns and all), a boolean mask over :attr:`simulations`, or a
+        polars or pyarrow table with those two columns.
+
+        Raises
+        ------
+        ValueError
+            If the table lacks the ``receptor`` or ``variant`` column.
+        KeyError
+            If it names a variant the project does not have.
+        """
+        if sel is None:
+            return self.simulations
+        if isinstance(sel, pd.DataFrame):
+            frame = sel
+        elif _is_mask(sel):
+            frame = self.simulations.loc[np.asarray(sel, dtype=bool)]
+        else:
+            try:
+                pairs = pd.DataFrame(
+                    {name: _column(sel, name) for name in ("receptor", "variant")}
+                )
+            except (KeyError, TypeError, ValueError, IndexError):
+                pairs = pd.DataFrame()
+            frame = pairs
+            if not pairs.empty:
+                frame = pairs.merge(
+                    self.simulations, on=["receptor", "variant"], how="left"
+                )
+        missing = [c for c in ("receptor", "variant") if c not in frame.columns]
+        if missing:
+            raise ValueError(
+                "A selection of simulations is a table with 'receptor' and "
+                f"'variant' columns, or a mask over project.simulations; this "
+                f"one has no {missing}."
+            )
+        unknown = sorted(set(frame["variant"]) - set(self.variants))
+        if unknown:
+            raise KeyError(
+                f"No variant {unknown}; the variants are {list(self.variants)}."
+            )
+        return frame
+
+    def _present(
+        self, frame: pd.DataFrame
+    ) -> dict[str, tuple[frozenset[str], frozenset[str] | None]]:
+        """
+        Return, per variant, the selected receptors with particles and with a footprint.
+
+        Read from a listing of the date folders the selection falls in
+        (:meth:`stilt.output.Output.present`), in place of a file check per
+        simulation: on a large project the checks are the slow part. The
+        footprint set is ``None`` for a variant that makes no footprint.
+        """
+        present: dict[str, tuple[frozenset[str], frozenset[str] | None]] = {}
+        for name, rows in frame.groupby("variant", sort=False):
+            variant = self.variants[str(name)]
+            among = set(rows["receptor"])
+            particles = self.output.present("particles", variant, among)
+            footprints = None
+            if variant.footprint is not None:
+                footprints = self.output.present("footprints", variant, among)
+            present[str(name)] = (particles, footprints)
+        return present
+
+    @staticmethod
+    def _complete(
+        frame: pd.DataFrame,
+        present: dict[str, tuple[frozenset[str], frozenset[str] | None]],
+    ) -> np.ndarray:
+        """Return whether each row is complete (:func:`stilt.output.completed`), from :meth:`_present`."""
+        done = {v: completed(*sets) for v, sets in present.items()}
+        return np.array(
+            [
+                r in done[v]
+                for r, v in zip(frame["receptor"], frame["variant"], strict=True)
+            ],
+            dtype=bool,
+        )
+
+    def status(self, sel: Any = None) -> pd.DataFrame:
+        """
+        Return the selected simulations with what each has, and where it stands.
+
+        Whether a result exists comes from a listing of the date folders, so
+        no result file is opened; only the failure records of failed
+        simulations are read.
+
+        Parameters
+        ----------
+        sel : DataFrame or mask, optional
+            The simulations: rows of :attr:`simulations`, any table with
+            ``receptor`` and ``variant`` columns (pandas, polars, pyarrow),
+            or a boolean mask over :attr:`simulations`. All of them by
+            default.
+
+        Returns
+        -------
+        pandas.DataFrame
+            The selection with six more columns. ``particles`` and
+            ``footprint`` are ``True`` when the result exists, ``False``
+            when it is missing, and ``NA`` when the variant does not make
+            it. ``state`` is ``complete`` when every expected result exists
+            (:meth:`stilt.Simulation.is_complete`), ``failed`` when the last
+            run failed, and ``pending`` otherwise: not run yet, or stopped
+            before it finished. ``step``, ``reason``, and ``message`` say
+            why a failed simulation failed (:attr:`stilt.Simulation.failure`),
+            and are ``NA`` for the others.
+
+        Notes
+        -----
+        An empty footprint (no particle reached the grid) is complete.
+        :attr:`stilt.Simulation.empty_reason` says why one is empty, and a
+        :meth:`jacobian` lists the empty ones.
+
+        Examples
+        --------
+        >>> st = project.status()
+        >>> st.state.value_counts()
+        >>> st[st.state == "failed"][["receptor", "variant", "reason"]]
+        """
+        frame = self._selected(sel)
+        present = self._present(frame)
+        pairs = list(zip(frame["receptor"], frame["variant"], strict=True))
+        particles = [r in present[v][0] for r, v in pairs]
+        feet = [
+            None if (have := present[v][1]) is None else r in have for r, v in pairs
+        ]
+        complete = self._complete(frame, present)
+        found = self._failure_records(frame, present)
+        records = [found.get(pair, {}) for pair in pairs]
+        state = [
+            "complete" if done else "failed" if record else "pending"
+            for done, record in zip(complete, records, strict=True)
+        ]
+        return frame.assign(
+            particles=pd.array(particles, dtype="boolean"),
+            footprint=pd.array(feet, dtype="boolean"),
+            state=pd.Categorical(state, categories=STATES),
+            **{
+                column: pd.array([r.get(column) for r in records], dtype="string")
+                for column in ("step", "reason", "message")
+            },
+        )
+
+    def _failure_records(
+        self,
+        frame: pd.DataFrame,
+        present: dict[str, tuple[frozenset[str], frozenset[str] | None]],
+    ) -> dict[tuple[str, str], dict[str, Any]]:
+        """
+        Return the failure record of each selected simulation missing a result, by ``(receptor, variant)``.
+
+        A simulation without particles is explained by its particles'
+        record, one with particles but no footprint by its footprint's
+        (:attr:`stilt.Simulation.failure`). Only those receptors' date
+        folders are listed, and only the records found are read.
+        """
+        found: dict[tuple[str, str], dict[str, Any]] = {}
+        for name, rows in frame.groupby("variant", sort=False):
+            v = str(name)
+            variant = self.variants[v]
+            particles, feet = present[v]
+            receptors = set(rows["receptor"])
+            no_particles = receptors - particles
+            no_footprint = set() if feet is None else (receptors & particles) - feet
+            missing: list[tuple[Kind, set[str]]] = [
+                ("particles", no_particles),
+                ("footprints", no_footprint),
+            ]
+            for kind, among in missing:
+                if among:
+                    for rid, record in self.output.failures(
+                        kind, variant, among
+                    ).items():
+                        found[(rid, v)] = record
+        return found
+
+    def incomplete(self, sel: Any = None) -> pd.DataFrame:
+        """
+        Return the selected simulations that are missing an expected result.
+
+        The rows :meth:`status` does not mark ``complete``. It reads no
+        failure record, so it is the quickest way to see what is left.
+        *sel* is as for :meth:`status`.
+        """
+        frame = self._selected(sel)
+        return frame.loc[~self._complete(frame, self._present(frame))]
+
+    def particles(self, sel: Any = None) -> pd.DataFrame:
+        """
+        Load the particles of every selected simulation that has them, as one table.
+
+        Parameters
+        ----------
+        sel : DataFrame or mask, optional
+            The simulations, as for :meth:`status`. All of them by default.
+
+        Returns
+        -------
+        pandas.DataFrame
+            One row per particle per output step per simulation, with
+            ``receptor`` and ``variant`` columns first. Simulations without
+            particles are left out. Variants that share a run each get their
+            own copy of its rows.
+
+        Notes
+        -----
+        A run of 1,000 particles over 24 hours is about 1.4 million rows,
+        some 250 MB in memory, so this suits a selection of tens. For a
+        whole large project, read the ``particles/`` tree of the output
+        directory with pyarrow, DuckDB, or polars instead.
+        """
+        frame = self._selected(sel)
+        parts = []
+        for name, rows in frame.groupby("variant", sort=False):
+            variant = self.variants[str(name)]
+            present = self.output.present("particles", variant, rows["receptor"])
+            table = self.output.table("particles", variant, present)
+            if table.num_rows:
+                parts.append(particles_from_table(table).assign(variant=str(name)))
+        if not parts:
+            return pd.DataFrame(columns=pd.Index(["receptor", "variant"]))
+        particles = pd.concat(parts, ignore_index=True)
+        first = ["receptor", "variant"]
+        return particles.loc[
+            :, first + [c for c in particles.columns if c not in first]
+        ]
+
+    def footprints(self, sel: Any = None) -> dict[tuple[str, str], xr.DataArray]:
+        """
+        Load the footprint of every selected simulation that has one.
+
+        An empty footprint is left out, as :attr:`stilt.Simulation.footprint`
+        is ``None`` for it.
+
+        Parameters
+        ----------
+        sel : DataFrame or mask, optional
+            The simulations, as for :meth:`status`. All of them by default.
+
+        Returns
+        -------
+        dict
+            Footprints by ``(receptor, variant)``, in selection order.
+            ``xr.concat(list(feet.values()), dim="receptor")`` stacks
+            footprints of one variant.
+
+        Notes
+        -----
+        Each footprint is a dense array, hours by grid cells: on a 300 by
+        300 grid over 24 hours that is about 16 MB, so this suits a
+        selection of hundreds. :meth:`jacobian` sums any number of
+        footprints onto a target without holding them all.
+        """
+        frame = self._selected(sel)
+        found: dict[tuple[str, str], xr.DataArray] = {}
+        for name, rows in frame.groupby("variant", sort=False):
+            variant = self.variants[str(name)]
+            for rid in self.output.present("footprints", variant, rows["receptor"]):
+                path = self.output.path("footprints", variant, rid)
+                foot = None if path is None else read_footprint(path)
+                if foot is not None:
+                    found[(rid, str(name))] = foot
+        pairs = zip(frame["receptor"], frame["variant"], strict=True)
+        return {pair: found[pair] for pair in pairs if pair in found}
+
+    def jacobian(
+        self,
+        sel: Any,
+        target: Geometry,
+        time_bins: pd.IntervalIndex,
+    ) -> Jacobian:
+        """
+        Sum the selected footprints onto a target, per time bin, as one sparse matrix.
+
+        The same operation as ``foot.stilt.aggregate``, for every selected
+        footprint at once. Each footprint cell is split among the target
+        cells it overlaps in proportion to area, time layers are summed
+        within each of *time_bins*, and cells or layers outside the target
+        or the bins are dropped. The selection must hold one variant.
+
+        Footprints are read and summed in batches, ``execution.cpus`` batches
+        at a time, so memory stays at a few batches of footprints whatever
+        the selection's size; the result itself is sparse.
+
+        Parameters
+        ----------
+        sel : DataFrame or mask
+            The simulations, as for :meth:`status`, all of one variant.
+        target : Geometry
+            Where the fluxes are: a grid, mesh, or set of zones.
+        time_bins : pandas.IntervalIndex
+            Flux time bins, such as a flux inventory's steps. They must be
+            closed on the left (``closed="left"``): each bin holds the
+            footprint hours that start in it.
+
+        Returns
+        -------
+        Jacobian
+            Rows are the selected receptors with a non-empty footprint, in
+            selection order; columns are ``(time bin, target cell)``.
+            Receptors with an empty footprint are listed in ``empty``, and
+            those not run yet in ``missing``.
+
+        Raises
+        ------
+        ValueError
+            If the selection holds more or fewer than one variant, the
+            variant has no grid or no footprints yet, or ``time_bins`` is not
+            closed on the left.
+        """
+        frame = self._selected(sel)
+        names = list(dict.fromkeys(frame["variant"]))
+        if len(names) != 1:
+            raise ValueError(
+                f"A Jacobian is made from one variant; this selection has {names}. "
+                "Select one first, as in sims[sims.variant == 'hrrr']."
+            )
+        name = str(names[0])
+        variant = self.variants[name]
+        if variant.footprint is None:
+            raise ValueError(f"Variant {name!r} makes no footprints (no grid).")
+        if self.output.folder("footprints", variant) is None:
+            raise ValueError(f"Variant {name!r} has no footprints yet.")
+        requested = list(dict.fromkeys(frame["receptor"]))
+        found = self.output.present("footprints", variant, requested)
+        present = [r for r in requested if r in found]
+        batches = [
+            present[i : i + JACOBIAN_BATCH]
+            for i in range(0, len(present), JACOBIAN_BATCH)
+        ]
+        return _jacobian(
+            lambda rows: self.output.table("footprints", variant, rows),
+            batches,
+            variant.footprint,
+            target,
+            time_bins,
+            missing=[r for r in requested if r not in found],
+            geometry_hash=variant.geometry_hash,
+            workers=self.config.execution.cpus,
+        )
+
     # -- running ---------------------------------------------------------------
 
     def run(
@@ -527,365 +898,4 @@ class Project:
         )
 
 
-class Simulations:
-    """
-    A selection of a project's simulations: a table and the project it came from.
-
-    ``project.simulations`` is one. Select rows as with a pandas DataFrame,
-    then ask the selection for its status or its results. Iterating gives
-    the :class:`~stilt.Simulation` of each row.
-
-    Only two pandas idioms work on a selection itself: a column
-    (``sims.variant`` or ``sims["site"]``) and rows by a mask
-    (``sims[sims.variant == "hrrr"]``). For anything else, use the table,
-    ``sims.frame``, and turn the result back into a selection with
-    ``Simulations(project, frame)``.
-
-    Parameters
-    ----------
-    project : Project
-        The project the simulations belong to.
-    frame : pandas.DataFrame
-        One row per simulation, with ``receptor`` and ``variant`` columns.
-
-    Raises
-    ------
-    ValueError
-        If *frame* lacks the ``receptor`` or ``variant`` column.
-
-    Examples
-    --------
-    >>> sims = project.simulations
-    >>> july = sims[
-    ...     (sims.variant == "hrrr") & sims.time.between("2023-07-01", "2023-07-31")
-    ... ]
-    >>> july.status()
-    >>> footprints = july.load_footprints()
-    >>> for sim in july:
-    ...     print(sim.id, sim.is_complete())
-    """
-
-    def __init__(self, project: Project, frame: pd.DataFrame) -> None:
-        missing = [c for c in ("receptor", "variant") if c not in frame.columns]
-        if missing:
-            raise ValueError(
-                f"A selection of simulations needs the columns 'receptor' and "
-                f"'variant'; this table has no {missing}."
-            )
-        self.project = project
-        self.frame = frame
-
-    # -- the two pandas idioms ---------------------------------------------
-
-    def __getitem__(self, key: Any) -> Any:
-        """Return a column for a name, or the selected rows for a mask."""
-        if isinstance(key, str):
-            return self.frame[key]
-        rows = self.frame[key]
-        if not isinstance(rows, pd.DataFrame):
-            raise TypeError(
-                "Select rows with a mask, as in sims[sims.variant == 'hrrr']."
-            )
-        return Simulations(self.project, rows)
-
-    def __getattr__(self, name: str) -> pd.Series:
-        """Return a column, as ``sims.variant``."""
-        frame = self.__dict__.get("frame")
-        if frame is not None and name in frame.columns:
-            return frame[name]
-        raise AttributeError(
-            f"'Simulations' has no attribute {name!r}. For other pandas "
-            "operations use sims.frame."
-        )
-
-    def __len__(self) -> int:
-        return len(self.frame)
-
-    def __iter__(self) -> Iterator[Simulation]:
-        """Yield the :class:`~stilt.Simulation` of each row."""
-        pairs = self._pairs()
-        receptors = self.project._receptors(rid for rid, _ in pairs)
-        for rid, variant in pairs:
-            yield Simulation(
-                receptors[rid],
-                self.project.variants[variant],
-                self.project.output,
-                self.project.directory,
-            )
-
-    def __repr__(self) -> str:
-        return repr(self.frame)
-
-    def _repr_html_(self) -> str | None:
-        return self.frame._repr_html_()
-
-    def _pairs(self) -> list[tuple[str, str]]:
-        """Return the ``(receptor, variant)`` of each row."""
-        return list(zip(self.frame["receptor"], self.frame["variant"], strict=True))
-
-    # -- what has run -------------------------------------------------------
-
-    def _present(self) -> dict[str, tuple[frozenset[str], frozenset[str] | None]]:
-        """
-        Return, per variant, the selected receptors with particles and with a footprint.
-
-        Read from a listing of the date folders the selection falls in
-        (:meth:`stilt.output.Output.present`), in place of a file check per
-        simulation: on a large project the checks are the slow part. The
-        footprint set is ``None`` for a variant that makes no footprint.
-        """
-        output = self.project.output
-        present: dict[str, tuple[frozenset[str], frozenset[str] | None]] = {}
-        for name, rows in self.frame.groupby("variant", sort=False):
-            variant = self.project.variants[str(name)]
-            among = set(rows["receptor"])
-            particles = output.present("particles", variant, among)
-            footprints = None
-            if variant.footprint is not None:
-                footprints = output.present("footprints", variant, among)
-            present[str(name)] = (particles, footprints)
-        return present
-
-    def _complete(
-        self, present: dict[str, tuple[frozenset[str], frozenset[str] | None]]
-    ) -> np.ndarray:
-        """Return whether each row is complete (:func:`stilt.output.completed`), from :meth:`_present`."""
-        done = {v: completed(*sets) for v, sets in present.items()}
-        return np.array([r in done[v] for r, v in self._pairs()], dtype=bool)
-
-    def status(self) -> pd.DataFrame:
-        """
-        Return the table with what each simulation has, and where it stands.
-
-        Whether a result exists comes from a listing of the date folders, so
-        no result file is opened; only the failure records of failed
-        simulations are read.
-
-        Returns
-        -------
-        pandas.DataFrame
-            The selection's table with six more columns. ``particles`` and
-            ``footprint`` are ``True`` when the result exists, ``False``
-            when it is missing, and ``NA`` when the variant does not make
-            it. ``state`` is ``complete`` when every expected result exists
-            (:meth:`stilt.Simulation.is_complete`), ``failed`` when the last
-            run failed, and ``pending`` otherwise: not run yet, or stopped
-            before it finished. ``step``, ``reason``, and ``message`` say
-            why a failed simulation failed (:attr:`stilt.Simulation.failure`),
-            and are ``NA`` for the others.
-
-        Notes
-        -----
-        An empty footprint (no particle reached the grid) is complete.
-        :attr:`stilt.Simulation.empty_reason` says why one is empty, and a
-        :meth:`jacobian` lists the empty ones.
-
-        Examples
-        --------
-        >>> st = project.simulations.status()
-        >>> st.state.value_counts()
-        >>> st[st.state == "failed"][["receptor", "variant", "reason"]]
-        """
-        present = self._present()
-        pairs = self._pairs()
-        particles = [r in present[v][0] for r, v in pairs]
-        feet = [
-            None if (have := present[v][1]) is None else r in have for r, v in pairs
-        ]
-        complete = self._complete(present)
-        found = self._failure_records(present)
-        records = [found.get(pair, {}) for pair in pairs]
-        state = [
-            "complete" if done else "failed" if record else "pending"
-            for done, record in zip(complete, records, strict=True)
-        ]
-        return self.frame.assign(
-            particles=pd.array(particles, dtype="boolean"),
-            footprint=pd.array(feet, dtype="boolean"),
-            state=pd.Categorical(state, categories=STATES),
-            **{
-                column: pd.array([r.get(column) for r in records], dtype="string")
-                for column in ("step", "reason", "message")
-            },
-        )
-
-    def _failure_records(
-        self, present: dict[str, tuple[frozenset[str], frozenset[str] | None]]
-    ) -> dict[tuple[str, str], dict[str, Any]]:
-        """
-        Return the failure record of each selected simulation missing a result, by ``(receptor, variant)``.
-
-        A simulation without particles is explained by its particles'
-        record, one with particles but no footprint by its footprint's
-        (:attr:`stilt.Simulation.failure`). Only those receptors' date
-        folders are listed, and only the records found are read.
-        """
-        output = self.project.output
-        found: dict[tuple[str, str], dict[str, Any]] = {}
-        for name, rows in self.frame.groupby("variant", sort=False):
-            v = str(name)
-            variant = self.project.variants[v]
-            particles, feet = present[v]
-            receptors = set(rows["receptor"])
-            no_particles = receptors - particles
-            no_footprint = set() if feet is None else (receptors & particles) - feet
-            missing: list[tuple[Kind, set[str]]] = [
-                ("particles", no_particles),
-                ("footprints", no_footprint),
-            ]
-            for kind, among in missing:
-                if among:
-                    for rid, record in output.failures(kind, variant, among).items():
-                        found[(rid, v)] = record
-        return found
-
-    def incomplete(self) -> Simulations:
-        """
-        Return the simulations that are missing an expected result.
-
-        The rows :meth:`status` does not mark ``complete``. It reads no
-        failure record, so it is the quickest way to see what is left.
-        """
-        return Simulations(
-            self.project, self.frame.loc[~self._complete(self._present())]
-        )
-
-    # -- results ------------------------------------------------------------
-
-    def load_particles(self) -> pd.DataFrame:
-        """
-        Load the particles of every selected simulation that has them, as one table.
-
-        Returns
-        -------
-        pandas.DataFrame
-            One row per particle per output step per simulation, with
-            ``receptor`` and ``variant`` columns first. Simulations without
-            particles are left out. Variants that share a run each get their
-            own copy of its rows.
-
-        Notes
-        -----
-        A run of 1,000 particles over 24 hours is about 1.4 million rows,
-        some 250 MB in memory, so this suits a selection of tens. For a
-        whole large project, read the ``particles/`` tree of the output
-        directory with pyarrow, DuckDB, or polars instead.
-        """
-        output = self.project.output
-        parts = []
-        for name, rows in self.frame.groupby("variant", sort=False):
-            variant = self.project.variants[str(name)]
-            present = output.present("particles", variant, rows["receptor"])
-            table = output.table("particles", variant, present)
-            if table.num_rows:
-                parts.append(particles_from_table(table).assign(variant=str(name)))
-        if not parts:
-            return pd.DataFrame(columns=pd.Index(["receptor", "variant"]))
-        frame = pd.concat(parts, ignore_index=True)
-        first = ["receptor", "variant"]
-        return frame.loc[:, first + [c for c in frame.columns if c not in first]]
-
-    def load_footprints(self) -> dict[SimID, xr.DataArray]:
-        """
-        Load the footprint of every selected simulation that has one.
-
-        An empty footprint is left out, as :attr:`stilt.Simulation.footprint`
-        is ``None`` for it.
-
-        Returns
-        -------
-        dict
-            Footprints by :class:`~stilt.simulation.SimID`, in selection order.
-            ``xr.concat(list(feet.values()), dim="receptor")`` stacks
-            footprints of one variant.
-
-        Notes
-        -----
-        Each footprint is a dense array, hours by grid cells: on a 300 by
-        300 grid over 24 hours that is about 16 MB, so this suits a
-        selection of hundreds. :meth:`jacobian` sums any number of
-        footprints onto a target without holding them all.
-        """
-        output = self.project.output
-        found: dict[SimID, xr.DataArray] = {}
-        for name, rows in self.frame.groupby("variant", sort=False):
-            variant = self.project.variants[str(name)]
-            for rid in output.present("footprints", variant, rows["receptor"]):
-                path = output.path("footprints", variant, rid)
-                foot = None if path is None else read_footprint(path)
-                if foot is not None:
-                    found[SimID(rid, str(name))] = foot
-        pairs = (SimID(r, v) for r, v in self._pairs())
-        return {sid: found[sid] for sid in pairs if sid in found}
-
-    def jacobian(self, target: Geometry, time_bins: pd.IntervalIndex) -> Jacobian:
-        """
-        Sum the selected footprints onto a target, per time bin, as one sparse matrix.
-
-        The same operation as ``foot.stilt.aggregate``, for every selected
-        footprint at once. Each footprint cell is split among the target
-        cells it overlaps in proportion to area, time layers are summed
-        within each of *time_bins*, and cells or layers outside the target
-        or the bins are dropped. The selection must hold one variant.
-
-        Footprints are read and summed in batches, ``execution.cpus`` batches
-        at a time, so memory stays at a few batches of footprints whatever
-        the selection's size; the result itself is sparse.
-
-        Parameters
-        ----------
-        target : Geometry
-            Where the fluxes are: a grid, mesh, or set of zones.
-        time_bins : pandas.IntervalIndex
-            Flux time bins, such as a flux inventory's steps. They must be
-            closed on the left (``closed="left"``): each bin holds the
-            footprint hours that start in it.
-
-        Returns
-        -------
-        Jacobian
-            Rows are the selected receptors with a non-empty footprint, in
-            selection order; columns are ``(time bin, target cell)``.
-            Receptors with an empty footprint are listed in ``empty``, and
-            those not run yet in ``missing``.
-
-        Raises
-        ------
-        ValueError
-            If the selection holds more or fewer than one variant, the
-            variant has no grid or no footprints yet, or ``time_bins`` is not
-            closed on the left.
-        """
-        names = list(dict.fromkeys(self.frame["variant"]))
-        if len(names) != 1:
-            raise ValueError(
-                f"A Jacobian is made from one variant; this selection has {names}. "
-                "Select one first, as in sims[sims.variant == 'hrrr']."
-            )
-        name = str(names[0])
-        settings = self.project.variants[name]
-        if settings.footprint is None:
-            raise ValueError(f"Variant {name!r} makes no footprints (no grid).")
-        output = self.project.output
-        if output.folder("footprints", settings) is None:
-            raise ValueError(f"Variant {name!r} has no footprints yet.")
-        requested = list(dict.fromkeys(self.frame["receptor"]))
-        found = output.present("footprints", settings, requested)
-        present = [r for r in requested if r in found]
-        batches = [
-            present[i : i + JACOBIAN_BATCH]
-            for i in range(0, len(present), JACOBIAN_BATCH)
-        ]
-        return _jacobian(
-            lambda batch: output.table("footprints", settings, batch),
-            batches,
-            settings.footprint,
-            target,
-            time_bins,
-            missing=[r for r in requested if r not in found],
-            geometry_hash=settings.geometry_hash,
-            workers=self.project.config.execution.cpus,
-        )
-
-
-__all__ = ["Project", "Simulations"]
+__all__ = ["Project"]

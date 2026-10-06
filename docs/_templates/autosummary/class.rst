@@ -66,25 +66,6 @@ Methods
    ~{{ objname }}.{{ item }}
 {%- endfor %}
 {% endif %}
-{% elif fullname == 'stilt.simulation.SimID' %}
-.. class-signature:: {{ fullname }}
-
-.. class-parameters:: {{ fullname }}
-
-Methods
--------
-
-.. autosummary::
-   :toctree:
-
-   ~{{ objname }}.parse
-
-Attributes
-----------
-
-.. autosummary::
-   ~{{ objname }}.receptor
-   ~{{ objname }}.variant
 {% elif fullname == 'stilt.transport.hysplit.FailureReason' %}
 .. autoclass:: {{ fullname }}
    :members:

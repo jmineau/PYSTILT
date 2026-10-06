@@ -39,7 +39,7 @@ add them up.
 
    project = stilt.Project("./wbb_project")
    sims = project.simulations
-   footprints = sims[sims.variant == "hrrr"].load_footprints()
+   footprints = project.footprints(sims[sims.variant == "hrrr"])
 
    # longitude, latitude, flux (µmol m⁻² s⁻¹, averaged over the window)
    sources = {

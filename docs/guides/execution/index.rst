@@ -81,7 +81,7 @@ In Python, ``sim.failure`` says why one simulation failed, and
    {'step': 'particles', 'reason': 'MET_COVERAGE',
     'message': 'HYSPLIT: start point not within (x,y,t) any data file',
     'time': '2026-10-03T21:14:05+00:00'}
-   >>> st = project.simulations.status()
+   >>> st = project.status()
    >>> st[st.state == "failed"][["receptor", "variant", "reason"]]
 
 ``step`` is ``particles`` when HYSPLIT failed, which fails every variant that

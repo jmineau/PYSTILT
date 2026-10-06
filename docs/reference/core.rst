@@ -67,7 +67,6 @@ them from a config.
    :nosignatures:
 
    Simulation
-   simulation.SimID
    variants.Variant
    variants.resolve
 
@@ -115,22 +114,17 @@ write particle and footprint files without a project.
 Simulation tables
 -----------------
 
-``project.receptors`` is a pandas DataFrame with one row per receptor.
-``project.simulations`` is a :class:`~stilt.project.Simulations`, one row per simulation.
-Select its rows as in pandas, then ask the selection for its status or
-results.
+``project.receptors`` is a pandas DataFrame with one row per receptor, and
+``project.simulations`` one with one row per simulation. Select rows as in
+pandas, then pass the selection to the project's :meth:`~Project.status`,
+:meth:`~Project.incomplete`, :meth:`~Project.particles`,
+:meth:`~Project.footprints`, or :meth:`~Project.jacobian`.
 
 .. code-block:: python
 
    sims = project.simulations
    wbb = sims[(sims.variant == "hrrr") & (sims.site == "WBB")]
-   feet = wbb.load_footprints()
-
-.. autosummary::
-   :toctree: _api
-   :nosignatures:
-
-   project.Simulations
+   feet = project.footprints(wbb)
 
 .. currentmodule:: stilt
 
