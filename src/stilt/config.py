@@ -241,7 +241,8 @@ class ProjectConfig(BaseModel):
         "output",
         description=(
             "Directory the results go to, relative to the project directory "
-            "unless absolute. Several projects can name the same directory and "
+            "unless absolute. A URL such as ``s3://bucket/output`` puts it on "
+            "an object store. Several projects can name the same directory and "
             "share runs."
         ),
     )

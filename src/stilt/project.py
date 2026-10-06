@@ -26,7 +26,7 @@ import pandas as pd
 import xarray as xr
 import yaml
 
-from stilt._paths import absolute
+from stilt._paths import absolute, location
 from stilt.config import STARTER_CONFIG, ProjectConfig, Variant
 from stilt.execution.config import ExecutionConfig
 from stilt.footprint import Geometry, Jacobian
@@ -311,7 +311,7 @@ class Project:
     @cached_property
     def output(self) -> Output:
         """The output directory, from ``config.output`` (``./output`` by default), relative to the project."""
-        return Output(absolute(self.config.output, self.directory))
+        return Output(location(self.config.output, self.directory))
 
     @cached_property
     def variants(self) -> dict[str, Variant]:

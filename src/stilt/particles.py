@@ -15,6 +15,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 
 from stilt._atomic import write_parquet
+from stilt._paths import location, readable
 from stilt.receptors import (
     ColumnReceptor,
     MultiPointReceptor,
@@ -28,7 +29,9 @@ logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     import xarray as xr
+    from upath import UPath
 
+    from stilt._paths import Location
     from stilt.visualization import ParticlesPlotAccessor
 
 
@@ -115,7 +118,7 @@ def check_particles(particles: pd.DataFrame, need: Iterable[str] = ()) -> None:
         )
 
 
-def particles_metadata(path: str | Path) -> ParticleMetadata:
+def particles_metadata(path: str | Path | UPath) -> ParticleMetadata:
     """
     Return the receptor, run settings, and met files a particle file records.
 
@@ -133,7 +136,8 @@ def particles_metadata(path: str | Path) -> ParticleMetadata:
     >>> settings["model"]
     {'name': 'hysplit', 'version': 'v5.1.0'}
     """
-    meta = pq.read_schema(path).metadata or {}
+    with readable(path) as source:
+        meta = pq.read_schema(source).metadata or {}
     if b"stilt:settings" not in meta:
         raise ValueError(
             f"{path} records no run settings. It was written before particle "
@@ -148,7 +152,9 @@ def particles_metadata(path: str | Path) -> ParticleMetadata:
     )
 
 
-def read_particles(path: str | Path, columns: list[str] | None = None) -> pd.DataFrame:
+def read_particles(
+    path: str | Path | UPath, columns: list[str] | None = None
+) -> pd.DataFrame:
     """
     Read a particle file.
 
@@ -160,7 +166,7 @@ def read_particles(path: str | Path, columns: list[str] | None = None) -> pd.Dat
     Parameters
     ----------
     path : str or Path
-        Particle file.
+        Particle file, or its URL on an object store.
     columns : list of str, optional
         Columns to read. All columns by default.
 
@@ -174,13 +180,16 @@ def read_particles(path: str | Path, columns: list[str] | None = None) -> pd.Dat
     >>> particles = stilt.read_particles(sim.particles_path)
     >>> particles.stilt.endpoints()
     """
-    pf = pq.ParquetFile(path)
-    stored = pf.schema_arrow.names
-    # The output directory adds a ``receptor`` column for scans of the whole
-    # tree. One file is one receptor, so it is not read here.
-    wanted = [c for c in (stored if columns is None else columns) if c != "receptor"]
-    want_datetime = "datetime" in wanted or columns is None
-    data = pf.read(columns=[c for c in wanted if c in stored]).to_pandas()
+    with readable(path) as source:
+        pf = pq.ParquetFile(source)
+        stored = pf.schema_arrow.names
+        # The output directory adds a ``receptor`` column for scans of the
+        # whole tree. One file is one receptor, so it is not read here.
+        wanted = [
+            c for c in (stored if columns is None else columns) if c != "receptor"
+        ]
+        want_datetime = "datetime" in wanted or columns is None
+        data = pf.read(columns=[c for c in wanted if c in stored]).to_pandas()
     for name in _INT_COLUMNS:
         if name in data.columns:
             data[name] = data[name].astype("float64")
@@ -222,13 +231,13 @@ def particles_from_table(table: pa.Table) -> pd.DataFrame:
 
 
 def write_particles(
-    path: str | Path,
+    path: str | Path | UPath,
     particles: pd.DataFrame,
     receptor: Receptor,
     settings: Mapping[str, Any],
     met_files: list[Path],
     metadata: dict[bytes, bytes] | None = None,
-) -> Path:
+) -> Location:
     """
     Write a particle table to a Parquet file that :func:`read_particles` reads alone.
 
@@ -287,7 +296,7 @@ def write_particles(
         **(metadata or {}),
     }
     table = table.replace_schema_metadata(meta)
-    return write_parquet(table, Path(path))
+    return write_parquet(table, location(path))
 
 
 # -- after a model run: release heights ------------------------------------

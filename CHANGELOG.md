@@ -913,6 +913,18 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- The output directory can be on an object store: `output:
+  s3://bucket/path` (or `gs://`, or any fsspec URL) in `config.yaml`, read
+  and written through fsspec with its package installed (`s3fs`,
+  `gcsfs`). Three things change and nothing else: the output's paths are
+  universal paths (`universal-pathlib`, a new dependency) when the output
+  is a URL; folders are listed through the store's filesystem; and a
+  result is put directly, since a single put is already atomic there, where
+  a filesystem write goes through a temporary file and a rename. A local
+  output takes the same paths as before. `read_particles`,
+  `read_footprint`, and `open_footprints` take URLs. A kept working
+  directory on a store leaves out the links to met files (#135, #150).
+
 - `stilt run --task I/N` runs task `I` of `N` in this process, whatever the
   backend: every `N`-th receptor of the project from `I`, skipping the
   complete ones. Each task of a job array or a Kubernetes indexed Job runs

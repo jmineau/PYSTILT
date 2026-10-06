@@ -55,6 +55,7 @@ import xarray as xr
 import yaml
 
 from stilt._atomic import atomic_path
+from stilt._paths import location
 from stilt.footprint import (
     FOOTPRINT_SCHEMA,
     FootprintConfig,
@@ -72,6 +73,9 @@ from stilt.particles import write_particles
 from stilt.receptors import Receptor, parse_receptor_id
 
 if TYPE_CHECKING:
+    from upath import UPath
+
+    from stilt._paths import Location
     from stilt.config import Variant
 
 logger = logging.getLogger(__name__)
@@ -91,41 +95,50 @@ def _date_dir(receptor_id: str) -> str:
     return f"date={time:%Y-%m-%d}"
 
 
+def _names(folder: Location) -> list[str]:
+    """
+    Return the names in *folder*, or none when it does not exist.
+
+    A filesystem is listed with ``os.scandir``, the fast path. An object
+    store is listed through its fsspec filesystem, with its cache of
+    listings cleared first, since workers elsewhere add files to it.
+    """
+    try:
+        if isinstance(folder, Path):
+            return [entry.name for entry in os.scandir(folder)]
+        folder.fs.invalidate_cache(folder.path)
+        listed = folder.fs.ls(folder.path, detail=False)
+    except FileNotFoundError:
+        return []
+    return [str(item).rstrip("/").rsplit("/", 1)[-1] for item in listed]
+
+
 def _list_receptor_files(
-    root: Path, suffix: str, among: Iterable[str] | None = None
-) -> dict[str, Path]:
+    root: Location, suffix: str, among: Iterable[str] | None = None
+) -> dict[str, Location]:
     """
     Return ``{receptor_id: path}`` for every ``date=*/<id><suffix>`` under *root*, in date order.
 
     With *among*, only those receptors are returned, and only their date
     folders are listed. The date folders are listed in a few threads: on a
-    network filesystem the listing waits on the server, and a project can
-    have thousands of date folders.
+    network filesystem or an object store the listing waits on the server,
+    and a project can have thousands of date folders.
     """
-    if not root.exists():
-        return {}
     if among is None:
         wanted = None
-        days = sorted(
-            entry.path
-            for entry in os.scandir(root)
-            if entry.name.startswith("date=") and entry.is_dir()
-        )
+        days = sorted(name for name in _names(root) if name.startswith("date="))
     else:
         wanted = set(among)
-        days = [str(root / day) for day in sorted({_date_dir(r) for r in wanted})]
+        days = sorted({_date_dir(r) for r in wanted})
 
     def names(day: str) -> list[str]:
-        try:
-            return sorted(e.name for e in os.scandir(day) if e.name.endswith(suffix))
-        except FileNotFoundError:  # no receptor of that day has finished
-            return []
+        return sorted(name for name in _names(root / day) if name.endswith(suffix))
 
     with ThreadPoolExecutor(max_workers=16) as pool:
         listed = list(pool.map(names, days))
     found = {
-        name[: -len(suffix)]: Path(day, name)
-        for day, per_day in zip(days, listed, strict=True)
+        name[: -len(suffix)]: folder / name
+        for folder, per_day in zip((root / d for d in days), listed, strict=True)
         for name in per_day
     }
     if wanted is not None:
@@ -133,12 +146,12 @@ def _list_receptor_files(
     return found
 
 
-def _read_yaml(path: Path) -> dict[str, Any]:
+def _read_yaml(path: Location) -> dict[str, Any]:
     """Return a YAML file of one mapping as a dict; an empty file is ``{}``."""
     return yaml.safe_load(path.read_text()) or {}
 
 
-def _write_yaml(path: Path, record: dict[str, Any]) -> None:
+def _write_yaml(path: Location, record: dict[str, Any]) -> None:
     """Write *record* to *path* as YAML in one step, making its folder as needed."""
     path.parent.mkdir(parents=True, exist_ok=True)
     with atomic_path(path) as tmp:
@@ -147,7 +160,7 @@ def _write_yaml(path: Path, record: dict[str, Any]) -> None:
         )
 
 
-def _write_settings(path: Path, record: dict[str, Any]) -> None:
+def _write_settings(path: Location, record: dict[str, Any]) -> None:
     """Write a ``settings.yaml`` once. An existing file with the same hash is left alone."""
     if path.exists():
         existing = _read_yaml(path)
@@ -202,20 +215,18 @@ _DATE_PARTITIONING = pads.partitioning(
 )
 
 
-def _settings_folders(tree: Path) -> list[str]:
+def _settings_folders(tree: Location) -> list[str]:
     """Return the ``settings=`` values under *tree* that hold a settings file, in name order."""
-    if not tree.exists():
-        return []
     return [
-        e.name[len("settings=") :]
-        for e in sorted(os.scandir(tree), key=lambda e: e.name)
-        if e.is_dir()
-        and e.name.startswith("settings=")
-        and (Path(e.path) / SETTINGS_FILE).exists()
+        name[len("settings=") :]
+        for name in sorted(_names(tree))
+        if name.startswith("settings=") and (tree / name / SETTINGS_FILE).exists()
     ]
 
 
-def _receptor_file(folder: Path, receptor_id: str, suffix: str = ".parquet") -> Path:
+def _receptor_file(
+    folder: Location, receptor_id: str, suffix: str = ".parquet"
+) -> Location:
     """Return a receptor's file in *folder*: ``date=YYYY-MM-DD/<receptor_id><suffix>``."""
     return folder / _date_dir(receptor_id) / f"{receptor_id}{suffix}"
 
@@ -261,12 +272,14 @@ class Output:
     Parameters
     ----------
     path : str or Path
-        The directory. Created on first write.
+        The directory, created on first write. A URL such as
+        ``s3://bucket/output`` puts it on an object store, read and written
+        through fsspec (install its package, such as ``s3fs``).
     """
 
-    def __init__(self, path: str | Path) -> None:
-        #: The output directory.
-        self.directory = Path(path)
+    def __init__(self, path: str | Path | UPath) -> None:
+        #: The output directory: a Path, or a universal path on an object store.
+        self.directory: Location = location(path)
         # Each folder's settings hash, by kind and folder name. Reading one
         # means reading its _settings.yaml and hashing it again, so each is
         # read once; a lookup that misses lists the tree again.
@@ -337,7 +350,7 @@ class Output:
                 return name
         return None
 
-    def folder(self, kind: Kind, variant: Variant) -> Path | None:
+    def folder(self, kind: Kind, variant: Variant) -> Location | None:
         """
         Return *variant*'s folder of *kind*, or ``None`` before it exists.
 
@@ -346,7 +359,7 @@ class Output:
         name = self._name(kind, variant)
         return None if name is None else self._dir(kind, name)
 
-    def _dir(self, tree: str, name: str) -> Path:
+    def _dir(self, tree: str, name: str) -> Location:
         """Return the folder *name* of a tree: ``<tree>/settings=<name>``."""
         return self.directory / tree / f"settings={name}"
 
@@ -386,7 +399,7 @@ class Output:
 
     def _part(
         self, tree: str, name: str, variant: Variant, realization: int | None
-    ) -> Path:
+    ) -> Location:
         """
         Return the folder *name* of a tree, inside its ``realization=k`` partition for an ensemble.
 
@@ -401,7 +414,7 @@ class Output:
 
     def _found(
         self, kind: Kind, tree: str, variant: Variant, realization: int | None
-    ) -> Path | None:
+    ) -> Location | None:
         """Return the existing folder of *variant*'s results of *kind* in *tree*, or ``None``."""
         _check_realization(variant, realization)
         name = self._name(kind, variant)
@@ -409,7 +422,7 @@ class Output:
 
     def _made(
         self, kind: Kind, tree: str, variant: Variant, realization: int | None
-    ) -> Path:
+    ) -> Location:
         """Return the folder of *variant*'s results of *kind* in *tree*, making the settings folder on first use."""
         return self._part(tree, self._create(kind, variant), variant, realization)
 
@@ -421,7 +434,7 @@ class Output:
         variant: Variant,
         receptor_id: str,
         realization: int | None = None,
-    ) -> Path | None:
+    ) -> Location | None:
         """
         Return the file of one receptor's result, whether or not it exists.
 
@@ -433,14 +446,14 @@ class Output:
 
     def log_path(
         self, variant: Variant, receptor_id: str, realization: int | None = None
-    ) -> Path | None:
+    ) -> Location | None:
         """Return where the log of a receptor's transport model run is kept, or ``None`` before its folder exists."""
         logs = self._found("particles", "logs", variant, realization)
         return None if logs is None else _receptor_file(logs, receptor_id, ".log")
 
     def kept_workdir(
         self, variant: Variant, receptor_id: str, realization: int | None = None
-    ) -> Path | None:
+    ) -> Location | None:
         """Return where a receptor's failed run's working directory is kept, or ``None`` before its folder exists."""
         kept = self._found("particles", "scratch", variant, realization)
         return None if kept is None else kept / _date_dir(receptor_id) / receptor_id
@@ -517,12 +530,21 @@ class Output:
             paths = [_receptor_file(folder, r) for r in dict.fromkeys(receptor_ids)]
         if not paths:
             return _EMPTY[kind]
-        dataset = pads.dataset(
-            [str(p) for p in paths],
-            format="parquet",
-            partitioning=_DATE_PARTITIONING,
-            partition_base_dir=str(folder),
-        )
+        if isinstance(folder, Path):
+            dataset = pads.dataset(
+                [str(p) for p in paths],
+                format="parquet",
+                partitioning=_DATE_PARTITIONING,
+                partition_base_dir=str(folder),
+            )
+        else:  # an object store, read through its fsspec filesystem
+            dataset = pads.dataset(
+                [p.path for p in paths if not isinstance(p, Path)],
+                filesystem=folder.fs,
+                format="parquet",
+                partitioning=_DATE_PARTITIONING,
+                partition_base_dir=folder.path,
+            )
         return dataset.to_table()
 
     # -- failure records ---------------------------------------------------
@@ -607,7 +629,7 @@ class Output:
         particles: pd.DataFrame,
         met_files: list[Path],
         realization: int | None = None,
-    ) -> Path:
+    ) -> Location:
         """
         Write a receptor's particles (:func:`stilt.particles.write_particles`).
 
@@ -630,7 +652,7 @@ class Output:
         receptor_id: str,
         text: str,
         realization: int | None = None,
-    ) -> Path:
+    ) -> Location:
         """Write the log of a receptor's transport model run."""
         logs = self._made("particles", "logs", variant, realization)
         path = _receptor_file(logs, receptor_id, ".log")
@@ -644,7 +666,7 @@ class Output:
         receptor_id: str,
         workdir: Path,
         realization: int | None = None,
-    ) -> Path:
+    ) -> Location:
         """
         Copy a run's working directory to :meth:`kept_workdir`, replacing an earlier copy.
 
@@ -653,14 +675,25 @@ class Output:
         """
         scratch = self._made("particles", "scratch", variant, realization)
         kept = scratch / _date_dir(receptor_id) / receptor_id
-        shutil.rmtree(kept, ignore_errors=True)
-        kept.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copytree(workdir, kept, symlinks=True)
+        if isinstance(kept, Path):
+            shutil.rmtree(kept, ignore_errors=True)
+            kept.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copytree(workdir, kept, symlinks=True)
+            return kept
+        # An object store keeps no links, so the met files the working
+        # directory links to are left out.
+        if kept.exists():
+            kept.fs.rm(kept.path, recursive=True)
+        for file in sorted(workdir.rglob("*")):
+            if file.is_file() and not file.is_symlink():
+                (kept / file.relative_to(workdir).as_posix()).write_bytes(
+                    file.read_bytes()
+                )
         return kept
 
     def write_footprint(
         self, variant: Variant, foot: xr.DataArray, realization: int | None = None
-    ) -> Path:
+    ) -> Location:
         """
         Write one receptor's footprint (:func:`stilt.footprint.write_footprint`).
 
@@ -684,7 +717,7 @@ class Output:
         receptor: Receptor,
         reason: str,
         realization: int | None = None,
-    ) -> Path:
+    ) -> Location:
         """Record that a receptor's footprint is empty (no particle over the grid), with the reason."""
         path, config, digest = self._footprint_file(
             variant, str(receptor.id), realization
@@ -701,7 +734,7 @@ class Output:
 
     def _footprint_file(
         self, variant: Variant, receptor_id: str, realization: int | None
-    ) -> tuple[Path, FootprintConfig, str]:
+    ) -> tuple[Location, FootprintConfig, str]:
         """Return a receptor's footprint file, the settings, and the folder's hash, making the folder on first use."""
         name = self._create("footprints", variant)
         if variant.footprint is None:  # _create has raised already
