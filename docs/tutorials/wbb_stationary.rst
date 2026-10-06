@@ -104,14 +104,10 @@ Load all 168 footprints, sum each one over time, and average them:
 
    import matplotlib.colors as mcolors
    import matplotlib.pyplot as plt
-   import xarray as xr
 
-   footprints = project.footprints()   # {(receptor, variant): DataArray}
+   footprints = project.footprints()   # one dataset: receptor, hour, lat, lon
 
-   mean_foot = xr.concat(
-       [foot.sum("time") for foot in footprints.values()],
-       dim="receptor",
-   ).mean("receptor")
+   mean_foot = footprints.foot.sum("hour").mean("receptor")
 
    fig, ax = plt.subplots(figsize=(10, 6))
    mean_foot.plot(

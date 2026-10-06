@@ -223,26 +223,28 @@ covers the column-weighting science and how to write your own.
 ```python
 import pandas as pd
 
+import stilt
+
 sims = project.simulations                       # one row per receptor and variant
 january = sims[(sims.variant == "hrrr") & sims.time.between("2023-01-01", "2023-01-31")]
 
 project.status(january)                          # which results exist
-footprints = project.footprints(january)         # keyed by (receptor, variant)
+footprints = project.footprints(january)         # one dataset: receptor, hour, lat, lon
+mean = footprints.foot.sum("hour").mean("receptor")
 
-coords = [(-111.9, 40.7), (-111.8, 40.8)]
+windows = stilt.Mesh.from_windows([(-111.9, 40.7), (-111.8, 40.8)], size=0.05)
 time_bins = pd.interval_range(
-    start=pd.Timestamp("2023-01-01 00:00"),
-    end=pd.Timestamp("2023-01-02 00:00"),
+    start=pd.Timestamp("2022-12-31 00:00"),  # backward footprints reach a day back
+    end=pd.Timestamp("2023-02-01 00:00"),
     freq="1h",
     closed="left",
 )
-
-for (receptor, variant), footprint in footprints.items():
-    hourly = footprint.stilt.aggregate(target=coords, time_bins=time_bins)
+H = project.jacobian(january, windows, time_bins)  # sparse: receptors by (hour, window)
 ```
 
 If a simulation's particles never reach the grid, PYSTILT writes a footprint file with no cells
-and the reason. The simulation counts as finished, and `project.footprints()` leaves it out.
+and the reason. The simulation counts as finished, and `project.footprints()` lists it in
+`attrs["empty"]`.
 
 ## STILT-R parity
 

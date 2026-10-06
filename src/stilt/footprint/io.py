@@ -4,12 +4,17 @@ A footprint as an array, and as a file.
 A footprint is an :class:`xarray.DataArray` that carries its receptor and
 settings in its attributes. This module builds that array, records the
 settings as JSON, and reads and writes footprint files: the sparse Parquet
-files of an output directory, and CF-1.8 NetCDF.
+files of an output directory, and CF-1.8 NetCDF. :func:`open_footprints`
+opens many stored footprints as one dataset.
 """
 
 from __future__ import annotations
 
+import itertools
 import json
+import os
+from collections.abc import Iterable
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any
 
@@ -202,6 +207,162 @@ def _empty_reason(path: str | Path) -> str | None:
 
     meta = pq.read_schema(path).metadata or {}
     return meta.get(b"stilt:empty_reason", b"").decode() or None
+
+
+#: About how many bytes of footprint values one chunk of :func:`open_footprints` holds.
+_CHUNK_BYTES = 128 * 2**20
+
+
+def _footer(path: Path) -> dict[bytes, bytes]:
+    """Return the metadata of a stored footprint, reading only its footer."""
+    import pyarrow.parquet as pq
+
+    return dict(pq.read_schema(path).metadata or {})
+
+
+def _dense_block(paths: list[Path], hours: np.ndarray, ny: int, nx: int) -> np.ndarray:
+    """Read stored footprints into one ``(receptor, hour, y, x)`` block of ``float32``."""
+    import pyarrow.parquet as pq
+
+    block = np.zeros((len(paths), len(hours), ny, nx), dtype=np.float32)
+    for i, path in enumerate(paths):
+        table = pq.ParquetFile(path).read(columns=["hour", "y", "x", "foot"])
+        layer = table["hour"].to_numpy().astype(np.intp) - int(hours[0])
+        if layer.size and (layer.min() < 0 or layer.max() >= len(hours)):
+            raise ValueError(f"{path} has cells outside the hours it records.")
+        block[i, layer, table["y"].to_numpy(), table["x"].to_numpy()] = table[
+            "foot"
+        ].to_numpy()
+    return block
+
+
+def open_footprints(
+    paths: Iterable[str | Path], *, workers: int | None = None
+) -> xr.Dataset:
+    """
+    Open stored footprints as one dataset, stacked on the hour from each receptor's time.
+
+    Footprints of many receptors are stacked by their hour offset rather
+    than by absolute time, so receptors at different times share one
+    ``hour`` axis. Only the files' metadata is read here. The values are
+    read with dask when they are used, a block of receptors from one date
+    folder at a time. :meth:`stilt.Project.footprints` opens a selection
+    of a project's footprints this way.
+
+    Parameters
+    ----------
+    paths : iterable of str or Path
+        Footprint files from an output directory, all made with the same
+        settings (one variant's).
+    workers : int, optional
+        Threads that read the files' metadata. Defaults to the number of
+        CPUs.
+
+    Returns
+    -------
+    xarray.Dataset
+        ``foot`` with dims ``(receptor, hour, lat, lon)`` (``y`` and ``x``
+        on a projected grid), as ``float32`` like the stored values. ``hour``
+        is the start of each layer, in hours after the receptor time, so a
+        backward run's first hour is -1. The ``time`` coordinate, with dims
+        ``(receptor, hour)``, is that start as a date and time. A receptor
+        whose footprint is empty has no row; ``attrs["empty"]`` lists them.
+
+    Raises
+    ------
+    ValueError
+        If there are no files, or they were made with different settings.
+
+    Examples
+    --------
+    >>> ds = open_footprints(sorted(folder.glob("date=2024-07-*/*.parquet")))
+    >>> ds.foot.sum("hour").mean("receptor").plot()
+    """
+    import dask.array as da
+    from dask.delayed import delayed
+
+    paths = [Path(p) for p in paths]
+    if not paths:
+        raise ValueError("No footprint files to open.")
+    threads = workers if workers is not None else (os.cpu_count() or 1)
+    if threads > 1 and len(paths) > 1:
+        with ThreadPoolExecutor(max_workers=threads) as pool:
+            footers = list(pool.map(_footer, paths))
+    else:
+        footers = [_footer(p) for p in paths]
+
+    stored = {meta.get(b"stilt:footprint") for meta in footers}
+    if None in stored:
+        raise ValueError("A footprint file does not record its settings.")
+    if len(stored) > 1:
+        raise ValueError(
+            "These footprints were made with different settings. Open one "
+            "variant's footprints at a time."
+        )
+    config, geometry_hash = read_footprint_settings(
+        json.loads(stored.pop() or b"{}"), paths[0].name
+    )
+    grid = config.grid
+    if grid is None:
+        raise ValueError("Stored footprints need settings with a grid.")
+
+    receptors = [Receptor.from_json(meta[b"stilt:receptor"]) for meta in footers]
+    is_empty = [bool(meta.get(b"stilt:empty_reason", b"")) for meta in footers]
+    kept = [i for i, empty in enumerate(is_empty) if not empty]
+    recorded = [h for i in kept for h in json.loads(footers[i][b"stilt:hours"])]
+    hours = (
+        np.arange(min(recorded), max(recorded) + 1)
+        if recorded
+        else np.zeros(0, dtype=int)
+    )
+
+    x_axis, y_axis = grid.axes
+    y_dim, x_dim = grid.dims
+    ny, nx = len(y_axis), len(x_axis)
+    per_block = max(1, _CHUNK_BYTES // max(1, len(hours) * ny * nx * 4))
+    blocks = []
+    for _, run in itertools.groupby(kept, key=lambda i: paths[i].parent):
+        ids = list(run)
+        for start in range(0, len(ids), per_block):
+            files = [paths[i] for i in ids[start : start + per_block]]
+            read = delayed(_dense_block, pure=True)(files, hours, ny, nx)
+            shape = (len(files), len(hours), ny, nx)
+            blocks.append(da.from_delayed(read, shape=shape, dtype=np.float32))
+    values = (
+        da.concatenate(blocks, axis=0)
+        if blocks
+        else np.zeros((0, len(hours), ny, nx), dtype=np.float32)
+    )
+
+    start_times = _naive_utc([receptors[i].time for i in kept])
+    times = start_times.to_numpy()[:, None] + hours.astype("timedelta64[h]")[None, :]
+    foot = xr.DataArray(
+        values,
+        dims=("receptor", "hour", y_dim, x_dim),
+        coords={
+            "receptor": [str(receptors[i].id) for i in kept],
+            "hour": hours,
+            y_dim: y_axis,
+            x_dim: x_axis,
+            "time": (("receptor", "hour"), times),
+        },
+        name="foot",
+        attrs={"units": UNITS, "long_name": "footprint"},
+    )
+    ds = foot.to_dataset()
+    ds.attrs.update(
+        {
+            "stilt_name": footers[0].get(b"stilt:name", b"").decode(),
+            "stilt_footprint": _settings_json(config, geometry_hash),
+            "empty": [
+                str(r.id) for r, empty in zip(receptors, is_empty, strict=True) if empty
+            ],
+        }
+    )
+    realization = footers[0].get(b"stilt:realization")
+    if realization is not None:
+        ds.attrs["realization"] = int(realization)
+    return _with_cf_metadata(ds, grid=grid)
 
 
 #: The columns of a stored footprint: its non-zero cells, indexed into its grid.

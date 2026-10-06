@@ -10,7 +10,7 @@ import xarray as xr
 import yaml
 
 from stilt.config import Variant
-from stilt.footprint import jacobian
+from stilt.footprint import jacobian, open_footprints
 from stilt.footprint.config import FootprintConfig
 from stilt.footprint.targets import Mesh
 from stilt.identity import footprint_hash, footprint_settings, settings_hash
@@ -558,6 +558,105 @@ def test_jacobian_with_no_footprints_is_empty(tmp_path):
     H = jacobian(table, FEET.footprint, GRID, _bins(), [])
     assert H.data.shape == (0, len(_bins()) * len(GRID.index))
     assert list(H.receptors) == []
+
+
+def test_jacobian_to_xarray_holds_the_matrix(written_footprints):
+    out, feet_by_id, empty_id = written_footprints
+    target = Mesh.from_windows([(-111.85, 40.75), (-111.65, 40.9)], (0.3, 0.3))
+    bins = _bins()
+    H = jacobian(
+        out.table("footprints", FEET),
+        FEET.footprint,
+        target,
+        bins,
+        [*feet_by_id, empty_id],
+        missing=["not-run"],
+    )
+
+    dense = H.to_xarray(dense=True)
+    assert dense.dims == ("receptor", "time", "cell")
+    assert list(dense.receptor.values) == list(H.receptors)
+    assert list(dense.cell.values) == list(target.index)
+    np.testing.assert_array_equal(dense.time.values, bins.left.values)
+    np.testing.assert_array_equal(
+        dense.values.reshape(len(H.receptors), -1), H.to_frame().to_numpy()
+    )
+    assert dense.attrs["empty"] == [empty_id]
+    assert dense.attrs["missing"] == ["not-run"]
+
+    pytest.importorskip("sparse")
+    lazy = H.to_xarray()
+    assert lazy.data.fill_value == 0
+    np.testing.assert_array_equal(lazy.data.todense(), dense.values)
+
+
+def test_jacobian_to_xarray_keeps_grid_cells_as_tuples(written_footprints):
+    out, feet_by_id, _ = written_footprints
+    target = Grid(xmin=-112.0, xmax=-111.5, ymin=40.5, ymax=41.0, xres=0.25, yres=0.25)
+    H = jacobian(
+        out.table("footprints", FEET), FEET.footprint, target, _bins(), list(feet_by_id)
+    )
+    cells = H.to_xarray(dense=True).cell.values
+    assert list(cells) == list(target.index)
+
+
+# ---------------------------------------------------------------------------
+# Footprints as one dataset
+# ---------------------------------------------------------------------------
+
+
+def test_open_footprints_stacks_receptors_on_the_hour(tmp_path):
+    out = Output(tmp_path / "output")
+    early, late, empty = _receptor(hour=6), _receptor(hour=18), _receptor(hour=23)
+    hours = {early.id: [-3, -1], late.id: [-2, -1, 0]}
+    feet = {
+        r.id: _footprint(r, hours=hours[r.id], seed=k)
+        for k, r in enumerate((early, late))
+    }
+    for foot in feet.values():
+        out.write_footprint(FEET, foot)
+    out.write_empty_footprint(FEET, empty, "outside_domain")
+    paths = [out.path("footprints", FEET, r.id) for r in (late, empty, early)]
+
+    ds = open_footprints(paths)
+
+    assert list(ds.receptor.values) == [late.id, early.id]
+    assert ds.attrs["empty"] == [empty.id]
+    assert ds.attrs["stilt_name"] == "hrrr"
+    assert ds.foot.dims == ("receptor", "hour", "lat", "lon")
+    assert list(ds.hour.values) == [-3, -2, -1, 0]
+    assert ds.foot.dtype == np.float32
+    assert ds.foot.chunks is not None
+    for rid, foot in feet.items():
+        one = ds.sel(receptor=rid, hour=hours[rid])
+        np.testing.assert_array_equal(one.time.values, foot.time.values)
+        np.testing.assert_allclose(one.foot.values, foot.values, rtol=1e-6)
+    # Hours a receptor has no layer for are zero, and still have a time.
+    assert float(ds.foot.sel(receptor=early.id, hour=-2).sum()) == 0
+    assert ds.time.sel(receptor=early.id, hour=0).values == np.datetime64(early.time)
+
+
+def test_open_footprints_reads_in_blocks_by_date_folder(tmp_path):
+    out = Output(tmp_path / "output")
+    receptors = [_receptor(6, day=15), _receptor(12, day=15), _receptor(6, day=16)]
+    for k, r in enumerate(receptors):
+        out.write_footprint(FEET, _footprint(r, seed=k))
+    ds = open_footprints(out.path("footprints", FEET, r.id) for r in receptors)
+    assert ds.foot.chunks[0] == (2, 1)
+    assert float(ds.foot.sum()) > 0
+
+
+def test_open_footprints_refuses_mixed_settings(tmp_path):
+    out = Output(tmp_path / "output")
+    other = _variant("fine", FootprintConfig(grid=GRID, smooth_factor=0.5))
+    r = _receptor()
+    out.write_footprint(FEET, _footprint(r))
+    out.write_footprint(other, _footprint(r, name="fine"))
+    paths = [out.path("footprints", v, r.id) for v in (FEET, other)]
+    with pytest.raises(ValueError, match="different settings"):
+        open_footprints(paths)
+    with pytest.raises(ValueError, match="No footprint files"):
+        open_footprints([])
 
 
 # ---------------------------------------------------------------------------

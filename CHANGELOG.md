@@ -8,6 +8,16 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- `project.footprints(sel)` returns one `xarray.Dataset` of a variant's
+  footprints (breaking), where it returned a dictionary of arrays. The
+  footprints are stacked on `hour`, the hours after each receptor's time,
+  so receptors at any time share one axis; a `time(receptor, hour)`
+  coordinate says when each hour starts. Only the files' metadata is read
+  when it opens, and the values load with dask, a day's receptors at a
+  time. Empty footprints have no row and are listed in `attrs["empty"]`,
+  receptors not run yet in `attrs["missing"]`. `dask` is a dependency
+  (#150).
+
 - The particle table's `indx`, `long`, and `lati` are `particle`, `lon`,
   and `lat` (breaking), in memory and in the stored files, so a
   simulation's particles and its footprint spell longitude the same way.
@@ -94,8 +104,7 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `status()`. `Simulations`, its `.frame`, and its iteration are gone;
   look a row up with `project.simulation(receptor, variant)` (#150).
 - `SimID` is gone (breaking). `sim.id` is the tuple `(receptor, variant)`,
-  `str(sim)` is `receptor/variant`, and `project.footprints()` is keyed by
-  the tuple. A run's working directory is
+  and `str(sim)` is `receptor/variant`. A run's working directory is
   `<compute root>/<receptor>/<variant>` as before (#150).
 - `project.jacobian` reads and sums footprints in `workers` threads, the
   number of CPUs by default, where it used `execution.cpus`; `batch` sets
@@ -878,6 +887,14 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   hash. Existing output is still found.
 
 ### Added
+
+- `stilt.footprint.open_footprints(paths)` opens stored footprint files of
+  one settings folder as the dataset `project.footprints` returns, for
+  footprints read without a project (#150).
+- `Jacobian.to_xarray(dense=False)`: the matrix as a DataArray with dims
+  `(receptor, time, cell)`, its values a `sparse.COO` array or, with
+  `dense=True`, a NumPy array, and the empty and missing receptors as
+  attributes. `sparse` is the optional extra `pystilt[sparse]` (#150).
 
 - `stilt.particles.PARTICLE_SCHEMA` and `check_particles`: the columns
   every particle table has (`particle`, `time`, `lon`, `lat`, `zagl`), which

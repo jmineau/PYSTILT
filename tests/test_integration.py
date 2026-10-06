@@ -152,7 +152,9 @@ def test_empty_footprint(tmp_path, wbb_receptor, wbb_config):
     assert sim.has_particles
     assert sim.empty_reason == "outside_domain"
     assert sim.footprint is None
-    assert model.footprints() == {}
+    ds = model.footprints()
+    assert ds.sizes["receptor"] == 0
+    assert ds.attrs["empty"] == [wbb_receptor.id]
     # An empty footprint is complete; sim.empty_reason says why it is empty.
     assert model.status()["state"].tolist() == ["complete"]
 

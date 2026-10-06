@@ -24,7 +24,7 @@ from stilt.footprint.config import FootprintConfig
 from stilt.receptors import parse_receptor_id
 from stilt.spatial import Grid, horizontal_dims
 
-from .io import _naive_utc, _naive_utc_ns
+from .io import UNITS, _naive_utc, _naive_utc_ns
 from .targets import Geometry, Mesh, Zones, check_resolution, overlap_weights
 
 
@@ -213,6 +213,55 @@ class Jacobian(NamedTuple):
         """Return the matrix as a dense DataFrame (receptors × columns)."""
         return pd.DataFrame(
             self.data.toarray(), index=self.receptors, columns=self.columns
+        )
+
+    def to_xarray(self, dense: bool = False) -> xr.DataArray:
+        """
+        Return the matrix as a DataArray with dims ``(receptor, time, cell)``.
+
+        ``time`` is the left edge of each time bin and ``cell`` the target
+        cell's label, as in ``columns``. The receptors with an empty
+        footprint and those not run yet are the attributes ``empty`` and
+        ``missing``.
+
+        Parameters
+        ----------
+        dense : bool, default False
+            Hold the values in a NumPy array. By default they are a
+            ``sparse.COO`` array from the optional ``sparse`` package
+            (``pip install pystilt[sparse]``), whose entries not stored are
+            zeros.
+
+        Examples
+        --------
+        >>> H = project.jacobian(july, zones, bins).to_xarray()
+        >>> (H * flux).sum(["time", "cell"])  # ppm at each receptor
+        """
+        times = pd.unique(self.columns.get_level_values("time"))
+        n_cells = len(self.columns) // len(times) if len(times) else 0
+        cells = self.columns.get_level_values("cell")[:n_cells]
+        shape = (len(self.receptors), len(times), n_cells)
+        if dense:
+            values = self.data.toarray().reshape(shape)
+        else:
+            try:
+                import sparse as pydata_sparse
+            except ImportError as error:
+                raise ImportError(
+                    "Jacobian.to_xarray() needs the sparse package: pip install "
+                    "pystilt[sparse]. dense=True returns a NumPy array instead."
+                ) from error
+            values = pydata_sparse.COO.from_scipy_sparse(self.data).reshape(shape)
+        return xr.DataArray(
+            values,
+            dims=("receptor", "time", "cell"),
+            coords={"receptor": self.receptors, "time": times, "cell": cells},
+            name="jacobian",
+            attrs={
+                "units": UNITS,
+                "empty": list(self.empty),
+                "missing": list(self.missing),
+            },
         )
 
 

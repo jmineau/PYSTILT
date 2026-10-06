@@ -31,7 +31,7 @@ from stilt.config import STARTER_CONFIG, ProjectConfig, Variant
 from stilt.execution.config import ExecutionConfig
 from stilt.footprint import Geometry, Jacobian
 from stilt.footprint.aggregation import _jacobian
-from stilt.footprint.io import read_footprint
+from stilt.footprint.io import open_footprints
 from stilt.meteorology import MetConfig
 from stilt.output import KINDS, Kind, Output, completed
 from stilt.particles import particles_from_table
@@ -107,6 +107,18 @@ def _groups(frame: pd.DataFrame) -> Iterator[tuple[str, int | None, pd.DataFrame
         assert isinstance(key, tuple)  # grouped by two columns
         name, k = key
         yield str(name), _realization(k), rows
+
+
+def _one_group(frame: pd.DataFrame, what: str) -> tuple[str, int | None]:
+    """Return the one ``(variant, realization)`` of a selection, or raise."""
+    groups = list(dict.fromkeys((v, k) for _, v, k in _rows(frame)))
+    if len(groups) != 1:
+        raise ValueError(
+            f"{what} is made from one variant (and one realization of an "
+            f"ensemble); this selection has {groups}. Select one first, as in "
+            "sims[sims.variant == 'hrrr']."
+        )
+    return groups[0]
 
 
 def _is_mask(sel: Any) -> bool:
@@ -774,45 +786,72 @@ class Project:
             :, first + [c for c in particles.columns if c not in first]
         ]
 
-    def footprints(
-        self, sel: Any = None
-    ) -> dict[tuple[str, str, int | None], xr.DataArray]:
+    def footprints(self, sel: Any = None) -> xr.Dataset:
         """
-        Load the footprint of every selected simulation that has one.
+        Open the footprints of the selected simulations as one dataset.
 
-        An empty footprint is left out, as :attr:`stilt.Simulation.footprint`
-        is ``None`` for it.
+        Footprints are stacked by their hour from the receptor time, so
+        receptors at any time share one ``hour`` axis; the ``time``
+        coordinate says when each layer starts. Only the files' metadata is
+        read here. The values load with dask when they are used, in blocks
+        of receptors from one date folder. The selection must hold one
+        variant, as for :meth:`jacobian`.
 
         Parameters
         ----------
         sel : DataFrame or mask, optional
-            The simulations, as for :meth:`status`. All of them by default.
+            The simulations, as for :meth:`status`, all of one variant (and
+            one realization of an ensemble). All of them by default.
 
         Returns
         -------
-        dict
-            Footprints by ``(receptor, variant, realization)``, in selection
-            order; ``realization`` is ``None`` for a variant that runs once.
-            ``xr.concat(list(feet.values()), dim="receptor")`` stacks
-            footprints of one variant.
+        xarray.Dataset
+            ``foot`` with dims ``(receptor, hour, lat, lon)`` (``y`` and
+            ``x`` on a projected grid), in selection order. A receptor with
+            an empty footprint has no row and is listed in
+            ``attrs["empty"]``; one not run yet is listed in
+            ``attrs["missing"]``.
+
+        Raises
+        ------
+        ValueError
+            If the selection holds more or fewer than one variant, the
+            variant has no grid, or no selected simulation has a footprint
+            file yet.
 
         Notes
         -----
-        Each footprint is a dense array, hours by grid cells: on a 300 by
-        300 grid over 24 hours that is about 16 MB, so this suits a
-        selection of hundreds. :meth:`jacobian` sums any number of
-        footprints onto a target without holding them all.
+        A footprint is about 35 MB of values on a 350,000-cell grid over 24
+        hours, so a computation that loads every receptor at once suits a
+        selection of hundreds. Sums over ``hour`` or the grid run block by
+        block. :meth:`jacobian` sums any number of footprints onto a target.
+
+        Examples
+        --------
+        >>> ds = project.footprints(sims[sims.variant == "hrrr"])
+        >>> ds.foot.sum("hour").mean("receptor").plot()
         """
         frame = self._selected(sel)
-        found: dict[tuple[str, str, int | None], xr.DataArray] = {}
-        for name, k, rows in _groups(frame):
-            variant = self.variants[name]
-            for rid in self.output.present("footprints", variant, rows["receptor"], k):
-                path = self.output.path("footprints", variant, rid, k)
-                foot = None if path is None else read_footprint(path)
-                if foot is not None:
-                    found[(rid, name, k)] = foot
-        return {row: found[row] for row in _rows(frame) if row in found}
+        name, k = _one_group(frame, "A footprint dataset")
+        variant = self.variants[name]
+        if variant.footprint is None:
+            raise ValueError(f"Variant {name!r} makes no footprints (no grid).")
+        requested = list(dict.fromkeys(frame["receptor"]))
+        found = self.output.present("footprints", variant, requested, k)
+        paths = [
+            path
+            for r in requested
+            if r in found
+            and (path := self.output.path("footprints", variant, r, k)) is not None
+        ]
+        if not paths:
+            raise ValueError(
+                f"None of the {len(requested)} selected simulations of {name!r} "
+                "has a footprint yet."
+            )
+        ds = open_footprints(paths)
+        ds.attrs["missing"] = [r for r in requested if r not in found]
+        return ds
 
     def jacobian(
         self,
@@ -869,14 +908,7 @@ class Project:
             closed on the left.
         """
         frame = self._selected(sel)
-        groups = list(dict.fromkeys((v, k) for _, v, k in _rows(frame)))
-        if len(groups) != 1:
-            raise ValueError(
-                "A Jacobian is made from one variant (and one realization of an "
-                f"ensemble); this selection has {groups}. Select one first, as in "
-                "sims[sims.variant == 'hrrr']."
-            )
-        name, k = groups[0]
+        name, k = _one_group(frame, "A Jacobian")
         variant = self.variants[name]
         if variant.footprint is None:
             raise ValueError(f"Variant {name!r} makes no footprints (no grid).")

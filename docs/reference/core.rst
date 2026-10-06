@@ -107,6 +107,7 @@ write particle and footprint files without a project.
    particles.particles_metadata
    particles.write_particles
    read_footprint
+   footprint.open_footprints
    particles.ParticlesAccessor
    footprint.FootprintAccessor
 

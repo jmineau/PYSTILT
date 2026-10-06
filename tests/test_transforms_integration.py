@@ -48,9 +48,9 @@ def test_declarative_transform_config_changes_real_footprint(
     )
     project.run()
 
-    sims = project.simulations
-    [baseline] = project.footprints(sims[sims.variant == "hrrr"]).values()
-    [lifetime] = project.footprints(sims[sims.variant == "lifetime"]).values()
+    baseline = project.simulation(wbb_receptor.id, "hrrr").footprint
+    lifetime = project.simulation(wbb_receptor.id, "lifetime").footprint
+    assert baseline is not None and lifetime is not None
 
     assert len(lifetime.stilt.config.transforms) == 1
 
