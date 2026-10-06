@@ -147,12 +147,12 @@ A selection only understands columns (``sims.variant`` or
 ``sims["site"]``) and picking rows with a condition. For anything else,
 use its table, ``sims.frame``. To turn a table back into a selection, for
 example after a merge with your own data, give it to
-``stilt.Simulations`` with the project:
+``stilt.project.Simulations`` with the project:
 
 .. code-block:: python
 
    matched = sims.frame.merge(observations, on="receptor")
-   stilt.Simulations(project, matched).load_footprints()
+   stilt.project.Simulations(project, matched).load_footprints()
 
 The extra columns of ``receptors.csv`` select one satellite scene or one
 site:
@@ -236,7 +236,7 @@ To open a particle file without a project:
        "202307151800_-111.848_40.766_10.parquet"
    )
    particles = stilt.read_particles(path)
-   receptor, settings, met_files = stilt.particles_metadata(path)
+   receptor, settings, met_files = stilt.particles.particles_metadata(path)
 
 The file holds the receptor, the meteorology files it was made with, and
 the run's settings, the same ones its folder's ``_settings.yaml`` holds:

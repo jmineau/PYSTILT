@@ -57,7 +57,7 @@ Receptor objects
 Simulation objects
 ------------------
 
-A :class:`Variant` is one variant of a project, resolved: its configs, its
+A :class:`~stilt.variants.Variant` is one variant of a project, resolved: its configs, its
 met, the transport model build, and the hashes that find its results.
 ``project.variants`` holds them, and :func:`stilt.variants.resolve` makes
 them from a config.
@@ -67,8 +67,8 @@ them from a config.
    :nosignatures:
 
    Simulation
-   SimID
-   Variant
+   simulation.SimID
+   variants.Variant
    variants.resolve
 
 Settings and their hashes
@@ -106,8 +106,8 @@ write particle and footprint files without a project.
    :nosignatures:
 
    read_particles
-   particles_metadata
-   write_particles
+   particles.particles_metadata
+   particles.write_particles
    read_footprint
    particles.ParticlesAccessor
    footprint.FootprintAccessor
@@ -116,7 +116,7 @@ Simulation tables
 -----------------
 
 ``project.receptors`` is a pandas DataFrame with one row per receptor.
-``project.simulations`` is a :class:`Simulations`, one row per simulation.
+``project.simulations`` is a :class:`~stilt.project.Simulations`, one row per simulation.
 Select its rows as in pandas, then ask the selection for its status or
 results.
 
@@ -130,7 +130,7 @@ results.
    :toctree: _api
    :nosignatures:
 
-   Simulations
+   project.Simulations
 
 .. currentmodule:: stilt
 
@@ -147,7 +147,7 @@ A :class:`Grid` works as well. It is documented under :doc:`configuration`.
 
    Mesh
    Zones
-   Geometry
+   footprint.Geometry
 
 :mod:`stilt.footprint` also has the helpers that compute how much of each
 footprint cell falls in each target cell. These overlap weights are cached,

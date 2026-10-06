@@ -806,7 +806,7 @@ class Simulations:
         Returns
         -------
         dict
-            Footprints by :class:`~stilt.SimID`, in selection order.
+            Footprints by :class:`~stilt.simulation.SimID`, in selection order.
             ``xr.concat(list(feet.values()), dim="receptor")`` stacks
             footprints of one variant.
 

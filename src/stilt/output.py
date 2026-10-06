@@ -523,7 +523,7 @@ class Particles(_Folder):
         met_files: list[Path],
     ) -> Path:
         """
-        Write a receptor's particles (:func:`stilt.write_particles`).
+        Write a receptor's particles (:func:`stilt.particles.write_particles`).
 
         The file records this folder's settings, so it reads alone, and the
         folder's settings hash and the PYSTILT version.
