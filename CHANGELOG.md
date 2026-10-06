@@ -8,6 +8,14 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- `sim.generate_footprint` is `sim.calc_footprint`, `stilt.calc_footprint`
+  with the simulation's particles, receptor, and settings filled in
+  (breaking). It takes the settings to change as keywords
+  (`sim.calc_footprint(smooth_factor=2.0)`, `grid=`, `time_integrate=`,
+  `transforms=`), each replacing the variant's own; it no longer takes a
+  `FootprintConfig`, and `transforms` replaces the variant's transforms
+  rather than adding to them (#150).
+
 - `stilt.__all__` lists what a user calls (breaking): the project and its
   configs, the receptors, `Simulation`, `Grid`, `Bounds`, `Mesh`, `Zones`,
   `run_trajectories`, `calc_footprint`, `read_particles`,

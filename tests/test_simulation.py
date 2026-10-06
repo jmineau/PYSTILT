@@ -306,34 +306,32 @@ def test_a_log_alone_is_not_a_failure(point_receptor, tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# Calculating a footprint without writing
+# Calculating a footprint without writing it
 # ---------------------------------------------------------------------------
 
 
-def test_generate_footprint_uses_the_variant_settings_and_writes_nothing(
+def test_calc_footprint_uses_the_variant_settings_and_writes_nothing(
     point_receptor, tmp_path
 ):
     sim = _sim(tmp_path, point_receptor, footprint=FOOT)
     _write_particles(sim)
-    foot = sim.generate_footprint()
+    foot = sim.calc_footprint()
     assert foot is not None and foot.stilt.config == FOOT and foot.stilt.name == "hrrr"
     assert not sim.has_footprint
     with pytest.raises(FileNotFoundError):
         _ = sim.footprint
 
 
-def test_generate_footprint_requires_settings_and_particles(point_receptor, tmp_path):
+def test_calc_footprint_requires_a_grid_and_particles(point_receptor, tmp_path):
     sim = _sim(tmp_path, point_receptor)
     with pytest.raises(FileNotFoundError, match="no particles"):
-        sim.generate_footprint(FOOT)
+        sim.calc_footprint(grid=GRID)
     _write_particles(sim)
     with pytest.raises(TypeError, match="no footprint settings"):
-        sim.generate_footprint()
+        sim.calc_footprint()
 
 
-def test_generate_footprint_takes_other_settings_and_extra_transforms(
-    point_receptor, tmp_path
-):
+def test_calc_footprint_replaces_the_settings_given(point_receptor, tmp_path):
     sim = _sim(tmp_path, point_receptor, footprint=FOOT)
     _write_particles(sim)
 
@@ -341,22 +339,22 @@ def test_generate_footprint_takes_other_settings_and_extra_transforms(
         def apply(self, particles, receptor=None, directory=None):
             return particles.assign(foot=particles["foot"] * 0.5)
 
-    base = sim.generate_footprint()
-    halved = sim.generate_footprint(transforms=[Halve()])
+    base = sim.calc_footprint()
+    halved = sim.calc_footprint(transforms=[Halve()])
     assert float(halved.sum()) == pytest.approx(0.5 * float(base.sum()))
-    coarse = sim.generate_footprint(
-        FOOT.model_copy(
-            update={"grid": GRID.model_copy(update={"xres": 0.5, "yres": 0.5})}
-        )
-    )
+    coarse = sim.calc_footprint(grid=GRID.model_copy(update={"xres": 0.5, "yres": 0.5}))
     assert coarse.stilt.grid.xres == 0.5
-    decay = sim.generate_footprint(transforms=[FirstOrderLifetime(lifetime_hours=1.0)])
+    assert coarse.stilt.config.smooth_factor == FOOT.smooth_factor
+    smooth = sim.calc_footprint(smooth_factor=0.0)
+    assert smooth.stilt.config.smooth_factor == 0.0
+    assert smooth.stilt.grid == GRID
+    decay = sim.calc_footprint(transforms=[FirstOrderLifetime(lifetime_hours=1.0)])
     assert [transform_kind(t) for t in decay.stilt.config.transforms] == [
         "first_order_lifetime"
     ]
 
 
-def test_generate_footprint_returns_none_when_nothing_reaches_the_grid(
+def test_calc_footprint_returns_none_when_nothing_reaches_the_grid(
     point_receptor, tmp_path
 ):
     far = FOOT.model_copy(
@@ -364,10 +362,10 @@ def test_generate_footprint_returns_none_when_nothing_reaches_the_grid(
     )
     sim = _sim(tmp_path, point_receptor, footprint=far)
     _write_particles(sim)
-    assert sim.generate_footprint() is None
+    assert sim.calc_footprint() is None
 
 
-def test_generate_footprint_uses_the_receptor_kernel_from_a_project_table(
+def test_calc_footprint_uses_the_receptor_kernel_from_a_project_table(
     point_receptor, tmp_path
 ):
     from stilt.transforms import AveragingKernel
@@ -390,8 +388,8 @@ def test_generate_footprint_uses_the_receptor_kernel_from_a_project_table(
         plain._particle_set == sim._particle_set
     )  # same transport settings: the particles are shared
 
-    weighted = sim.generate_footprint()  # the table is found in sim.directory
-    base = plain.generate_footprint()
+    weighted = sim.calc_footprint()  # the table is found in sim.directory
+    base = plain.calc_footprint()
     assert float(weighted.sum()) == pytest.approx(0.5 * float(base.sum()))
 
 
