@@ -77,8 +77,7 @@ def _trajectories(receptor, params, foot: float = 1e-5) -> pd.DataFrame:
 def _write_particles(sim: Simulation) -> pd.DataFrame:
     """Put particles for *sim* in the output directory and return them."""
     particles = _trajectories(sim.receptor, sim.variant.transport)
-    folder = sim.output.particles(sim.variant)
-    folder.write(sim.receptor, particles, [])
+    sim.output.write_particles(sim.variant, sim.receptor, particles, [])
     return particles
 
 
@@ -132,7 +131,6 @@ def test_simulation_is_a_frozen_value(point_receptor, tmp_path):
 
 def test_paths_are_none_until_the_run_exists(point_receptor, tmp_path):
     sim = _sim(tmp_path, point_receptor, footprint=FOOT)
-    assert sim._particle_set is None and sim._footprint_set is None
     assert sim.particles_path is None
     assert sim.footprint_path is None
     assert sim.log_path is None
@@ -144,15 +142,14 @@ def test_paths_are_none_until_the_run_exists(point_receptor, tmp_path):
     with pytest.raises(FileNotFoundError):
         _ = sim.footprint
 
-    run = sim.output.particles(sim.variant)
     rid = str(point_receptor.id)
-    assert sim._particle_set == run
-    assert sim.particles_path == run.file(rid)
-    assert sim.log_path == run.log_path(rid)
+    sim.output.write_log(sim.variant, rid, "")  # makes the particles folder
+    assert sim.particles_path == sim.output.path("particles", sim.variant, rid)
+    assert sim.particles_path is not None and not sim.particles_path.exists()
+    assert sim.log_path == sim.output.log_path(sim.variant, rid)
     assert sim.footprint_path is None  # no footprint folder yet
-    feet = sim.output.footprints(sim.variant)
-    assert sim._footprint_set == feet
-    assert sim.footprint_path == feet.file(rid)
+    sim.output.record_failure("footprints", sim.variant, rid, {})
+    assert sim.footprint_path == sim.output.path("footprints", sim.variant, rid)
 
 
 def test_simulation_time_range_backward(point_receptor, tmp_path):
@@ -229,11 +226,9 @@ def test_variants_with_equal_transport_share_particles(point_receptor, tmp_path)
         ),
     )
     _write_particles(fine)
-    assert coarse._particle_set == fine._particle_set
+    assert coarse.particles_path == fine.particles_path
     assert coarse.has_particles  # written under fine's variant
-    assert (
-        fine._footprint_set is None and coarse._footprint_set is None
-    )  # no footprints yet
+    assert fine.footprint_path is None and coarse.footprint_path is None
 
 
 def test_completion_needs_particles_and_the_footprint_when_configured(
@@ -244,7 +239,8 @@ def test_completion_needs_particles_and_the_footprint_when_configured(
     assert sim.has_particles and not sim.is_complete()
     make_footprint(sim, traj)
     assert sim.is_complete()
-    assert sim._footprint_set is not None and sim._footprint_set.name == "hrrr"
+    assert sim.footprint_path is not None
+    assert sim.footprint_path.parent.parent.name.startswith("settings=hrrr-")
 
 
 def test_particles_only_variant_is_complete_with_particles(point_receptor, tmp_path):
@@ -288,8 +284,8 @@ def test_failure_reads_the_record_for_the_missing_step(point_receptor, tmp_path)
     sim = _sim(tmp_path, point_receptor, footprint=FootprintConfig(grid=grid))
     particles = {"step": "particles", "reason": "MISSING_MET_FILES"}
     footprint = {"step": "footprint", "reason": "ValueError"}
-    sim.output.particles(sim.variant).record_failure(sim.receptor.id, particles)
-    sim.output.footprints(sim.variant).record_failure(sim.receptor.id, footprint)
+    sim.output.record_failure("particles", sim.variant, sim.receptor.id, particles)
+    sim.output.record_failure("footprints", sim.variant, sim.receptor.id, footprint)
     # The particles are missing, so the particles step is why.
     assert sim.failure == particles
     # Once they exist, a stale particles record does not count; the footprint's does.
@@ -300,7 +296,7 @@ def test_failure_reads_the_record_for_the_missing_step(point_receptor, tmp_path)
 def test_a_log_alone_is_not_a_failure(point_receptor, tmp_path):
     """A simulation that shares a log with one that ran is not failed for it."""
     sim = _sim(tmp_path, point_receptor)
-    sim.output.particles(sim.variant).write_log(sim.receptor.id, "hycs_std ran\n")
+    sim.output.write_log(sim.variant, sim.receptor.id, "hycs_std ran\n")
     assert sim.failure is None
     assert sim.log.startswith("hycs_std")
 
@@ -381,12 +377,10 @@ def test_calc_footprint_uses_the_receptor_kernel_from_a_project_table(
     sim = _sim(tmp_path, point_receptor, footprint=config, directory=tmp_path)
     with_height = _trajectories(point_receptor, sim.variant.transport)
     with_height["xhgt"] = 10.0  # the kernel weights particles by release height
-    folder = sim.output.particles(sim.variant)
-    folder.write(point_receptor, with_height, [])
+    sim.output.write_particles(sim.variant, point_receptor, with_height, [])
     plain = _sim(tmp_path, point_receptor, footprint=FOOT, variant="plain")
-    assert (
-        plain._particle_set == sim._particle_set
-    )  # same transport settings: the particles are shared
+    # Same transport settings: the particles are shared.
+    assert plain.particles_path == sim.particles_path
 
     weighted = sim.calc_footprint()  # the table is found in sim.directory
     base = plain.calc_footprint()

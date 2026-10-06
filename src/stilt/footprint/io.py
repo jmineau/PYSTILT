@@ -196,6 +196,14 @@ def read_footprint(
     return _from_sparse_table(table, config, geometry_hash)
 
 
+def _empty_reason(path: str | Path) -> str | None:
+    """Return why a stored footprint is empty, or ``None`` when it is not, from its metadata alone."""
+    import pyarrow.parquet as pq
+
+    meta = pq.read_schema(path).metadata or {}
+    return meta.get(b"stilt:empty_reason", b"").decode() or None
+
+
 #: The columns of a stored footprint: its non-zero cells, indexed into its grid.
 FOOTPRINT_SCHEMA = pa.schema(
     [

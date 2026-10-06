@@ -16,8 +16,9 @@ import xarray as xr
 from stilt.exceptions import EmptyFootprint
 from stilt.footprint import gridding
 from stilt.footprint.config import FootprintConfig
-from stilt.output import Footprints, Output, Particles
-from stilt.particles import particles_metadata
+from stilt.footprint.io import _empty_reason, read_footprint
+from stilt.output import Output
+from stilt.particles import particles_metadata, read_particles
 from stilt.receptors import Receptor, parse_receptor_id
 from stilt.spatial import Grid
 
@@ -127,36 +128,20 @@ class Simulation:
 
     # -- where the results are ---------------------------------------------
 
-    # The folders hold many receptors' results; a simulation is one receptor,
-    # so they stay private and only this simulation's own paths are public.
-
-    @property
-    def _particle_set(self) -> Particles | None:
-        """The folder holding this simulation's particles, or ``None`` until it exists."""
-        return self.output.find_particles(self.variant)
-
-    @property
-    def _footprint_set(self) -> Footprints | None:
-        """The folder holding this variant's footprints, or ``None`` until it exists."""
-        return self.output.find_footprints(self.variant)
-
     @property
     def particles_path(self) -> Path | None:
         """Path of the particle file in the output directory, or ``None`` before its folder exists."""
-        folder = self._particle_set
-        return None if folder is None else folder.file(self.receptor.id)
+        return self.output.path("particles", self.variant, self.receptor.id)
 
     @property
     def footprint_path(self) -> Path | None:
         """Path of the footprint file in the output directory, or ``None`` before its folder exists."""
-        feet = self._footprint_set
-        return None if feet is None else feet.file(self.receptor.id)
+        return self.output.path("footprints", self.variant, self.receptor.id)
 
     @property
     def log_path(self) -> Path | None:
         """Path of the HYSPLIT log in the output directory, or ``None`` before its folder exists."""
-        folder = self._particle_set
-        return None if folder is None else folder.log_path(self.receptor.id)
+        return self.output.log_path(self.variant, self.receptor.id)
 
     @property
     def scratch_path(self) -> Path | None:
@@ -167,8 +152,7 @@ class Simulation:
         CONTROL, SETUP.CFG, and HYSPLIT's own output. It exists only after a
         failed run, or after any run with ``keep_scratch`` set.
         """
-        folder = self._particle_set
-        return None if folder is None else folder.scratch_path(self.receptor.id)
+        return self.output.scratch_path(self.variant, self.receptor.id)
 
     @property
     def settings(self) -> dict[str, Any]:
@@ -191,8 +175,8 @@ class Simulation:
     @property
     def has_particles(self) -> bool:
         """Whether the particle file exists."""
-        folder = self._particle_set
-        return folder is not None and folder.has(self.receptor.id)
+        path = self.particles_path
+        return path is not None and path.exists()
 
     @property
     def has_footprint(self) -> bool:
@@ -201,8 +185,8 @@ class Simulation:
 
         An empty footprint (no particles over the grid) is a finished result.
         """
-        feet = self._footprint_set
-        return feet is not None and feet.has(self.receptor.id)
+        path = self.footprint_path
+        return path is not None and path.exists()
 
     @property
     def makes_footprint(self) -> bool:
@@ -213,9 +197,11 @@ class Simulation:
         """
         Return whether every expected result exists.
 
-        That is the particles, and the footprint when the variant has a grid.
+        That is the particles, and the footprint when the variant has a grid
+        (:meth:`stilt.output.Output.complete`, the one definition of done).
         """
-        return self.has_particles and (not self.makes_footprint or self.has_footprint)
+        rid = self.receptor.id
+        return rid in self.output.complete(self.variant, [rid])
 
     # -- status ------------------------------------------------------------
 
@@ -242,10 +228,10 @@ class Simulation:
         ``"outside_domain"`` means no particle reached the grid and
         ``"no_particles"`` that there were none.
         """
-        feet = self._footprint_set
-        if feet is None or not self.has_footprint:
+        path = self.footprint_path
+        if path is None or not path.exists():
             return None
-        return feet.empty_reason(self.receptor.id)
+        return _empty_reason(path)
 
     @property
     def failure(self) -> dict[str, Any] | None:
@@ -269,8 +255,8 @@ class Simulation:
         """
         if self.is_complete():
             return None
-        folder = self._footprint_set if self.has_particles else self._particle_set
-        return None if folder is None else folder.failure(self.receptor.id)
+        kind = "footprints" if self.has_particles else "particles"
+        return self.output.failure(kind, self.variant, self.receptor.id)
 
     # -- reading the results -----------------------------------------------
 
@@ -322,10 +308,10 @@ class Simulation:
             If the particles have not been written yet. Nothing is kept, so
             a read after the run finishes loads them.
         """
-        folder = self._particle_set
-        if folder is None or not self.has_particles:
+        path = self.particles_path
+        if path is None or not path.exists():
             raise FileNotFoundError(f"{self.id} has no particles yet.")
-        return folder.read(self.receptor.id)
+        return read_particles(path)
 
     @cached_property
     def footprint(self) -> xr.DataArray | None:
@@ -348,10 +334,10 @@ class Simulation:
         """
         if not self.makes_footprint:
             return None
-        feet = self._footprint_set
-        if feet is None or not self.has_footprint:
+        path = self.footprint_path
+        if path is None or not path.exists():
             raise FileNotFoundError(f"{self.id} has no footprint yet.")
-        return feet.read(self.receptor.id)
+        return read_footprint(path)
 
     @cached_property
     def plot(self) -> SimulationPlotAccessor:

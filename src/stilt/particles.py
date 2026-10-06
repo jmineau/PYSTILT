@@ -142,7 +142,7 @@ def particles_from_table(table: pa.Table) -> pd.DataFrame:
     """
     Return a table of many receptors' particles as one DataFrame.
 
-    The table is what :meth:`stilt.output.Particles.table` reads: a
+    The table is what :meth:`stilt.output.Output.table` reads: a
     ``receptor`` column, the stored particle columns, and ``date``. The
     result has ``receptor`` first, ``time`` and ``indx`` as float64, and
     ``datetime`` rebuilt from each receptor's time; ``date`` is dropped.

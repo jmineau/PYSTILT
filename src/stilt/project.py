@@ -30,8 +30,9 @@ from stilt.config import STARTER_CONFIG, ProjectConfig
 from stilt.execution.config import ExecutionConfig
 from stilt.footprint import Geometry, Jacobian
 from stilt.footprint.aggregation import _jacobian
+from stilt.footprint.io import read_footprint
 from stilt.meteorology import Met
-from stilt.output import Output
+from stilt.output import KINDS, Kind, Output, completed
 from stilt.particles import particles_from_table
 from stilt.receptors import (
     Receptor,
@@ -462,15 +463,17 @@ class Project:
             that were changed or variants that were dropped, or from another
             project sharing the directory. PYSTILT never deletes them.
         """
-        runs = {v.particles_hash for v in self.variants.values()}
-        feet = {v.footprint_hash for v in self.variants.values()}
+        used = {
+            "particles": {v.particles_hash for v in self.variants.values()},
+            "footprints": {v.footprint_hash for v in self.variants.values()},
+        }
         return {
-            "particles": [
-                r.key for r in self.output.particle_sets() if r.hash not in runs
-            ],
-            "footprints": [
-                f.key for f in self.output.footprint_sets() if f.hash not in feet
-            ],
+            kind: [
+                name
+                for name, digest in self.output.folders(kind).items()
+                if digest not in used[kind]
+            ]
+            for kind in KINDS
         }
 
     @cached_property
@@ -627,41 +630,29 @@ class Simulations:
         """
         Return, per variant, the selected receptors with particles and with a footprint.
 
-        This is :meth:`stilt.Simulation.is_complete`'s rule read from a
-        listing of the date folders the selection falls in, in place of a
-        file check per simulation: on a large project the checks are the
-        slow part. The footprint set is ``None`` for a variant that makes no
-        footprint.
+        Read from a listing of the date folders the selection falls in
+        (:meth:`stilt.output.Output.present`), in place of a file check per
+        simulation: on a large project the checks are the slow part. The
+        footprint set is ``None`` for a variant that makes no footprint.
         """
         output = self.project.output
         present: dict[str, tuple[frozenset[str], frozenset[str] | None]] = {}
         for name, rows in self.frame.groupby("variant", sort=False):
             variant = self.project.variants[str(name)]
             among = set(rows["receptor"])
-            folder = output.find_particles(variant)
-            particles = frozenset(folder.files(among) if folder is not None else ())
-            footprints: frozenset[str] | None = None
+            particles = output.present("particles", variant, among)
+            footprints = None
             if variant.footprint is not None:
-                feet = output.find_footprints(variant)
-                footprints = frozenset(feet.files(among) if feet is not None else ())
+                footprints = output.present("footprints", variant, among)
             present[str(name)] = (particles, footprints)
         return present
 
     def _complete(
         self, present: dict[str, tuple[frozenset[str], frozenset[str] | None]]
     ) -> np.ndarray:
-        """
-        Return whether each row is complete, from :meth:`_present`.
-
-        The one place the selection decides "done": the particles exist, and
-        the footprint too when the variant makes one. It is the rule of
-        :meth:`stilt.Simulation.is_complete`.
-        """
-        done = []
-        for r, v in self._pairs():
-            particles, feet = present[v]
-            done.append(r in particles and (feet is None or r in feet))
-        return np.array(done, dtype=bool)
+        """Return whether each row is complete (:func:`stilt.output.completed`), from :meth:`_present`."""
+        done = {v: completed(*sets) for v, sets in present.items()}
+        return np.array([r in done[v] for r, v in self._pairs()], dtype=bool)
 
     def status(self) -> pd.DataFrame:
         """
@@ -739,12 +730,13 @@ class Simulations:
             receptors = set(rows["receptor"])
             no_particles = receptors - particles
             no_footprint = set() if feet is None else (receptors & particles) - feet
-            for folder, among in (
-                (output.find_particles(variant), no_particles),
-                (output.find_footprints(variant), no_footprint),
-            ):
-                if folder is not None and among:
-                    for rid, record in folder.failures(among).items():
+            missing: list[tuple[Kind, set[str]]] = [
+                ("particles", no_particles),
+                ("footprints", no_footprint),
+            ]
+            for kind, among in missing:
+                if among:
+                    for rid, record in output.failures(kind, variant, among).items():
                         found[(rid, v)] = record
         return found
 
@@ -784,10 +776,8 @@ class Simulations:
         parts = []
         for name, rows in self.frame.groupby("variant", sort=False):
             variant = self.project.variants[str(name)]
-            folder = output.find_particles(variant)
-            if folder is None:
-                continue
-            table = folder.table(folder.files(rows["receptor"]))
+            present = output.present("particles", variant, rows["receptor"])
+            table = output.table("particles", variant, present)
             if table.num_rows:
                 parts.append(particles_from_table(table).assign(variant=str(name)))
         if not parts:
@@ -817,13 +807,13 @@ class Simulations:
         selection of hundreds. :meth:`jacobian` sums any number of
         footprints onto a target without holding them all.
         """
+        output = self.project.output
         found: dict[SimID, xr.DataArray] = {}
         for name, rows in self.frame.groupby("variant", sort=False):
-            feet = self.project.output.find_footprints(self.project.variants[str(name)])
-            if feet is None:  # no grid, or none written yet
-                continue
-            for rid in feet.files(rows["receptor"]):
-                foot = feet.read(rid)
+            variant = self.project.variants[str(name)]
+            for rid in output.present("footprints", variant, rows["receptor"]):
+                path = output.path("footprints", variant, rid)
+                foot = None if path is None else read_footprint(path)
                 if foot is not None:
                     found[SimID(rid, str(name))] = foot
         pairs = (SimID(r, v) for r, v in self._pairs())
@@ -877,24 +867,24 @@ class Simulations:
         settings = self.project.variants[name]
         if settings.footprint is None:
             raise ValueError(f"Variant {name!r} makes no footprints (no grid).")
-        feet = self.project.output.find_footprints(settings)
-        if feet is None:
+        output = self.project.output
+        if output.folder("footprints", settings) is None:
             raise ValueError(f"Variant {name!r} has no footprints yet.")
         requested = list(dict.fromkeys(self.frame["receptor"]))
-        files = feet.files(requested)
-        present = [r for r in requested if r in files]
+        found = output.present("footprints", settings, requested)
+        present = [r for r in requested if r in found]
         batches = [
             present[i : i + JACOBIAN_BATCH]
             for i in range(0, len(present), JACOBIAN_BATCH)
         ]
         return _jacobian(
-            lambda batch: feet.table({r: files[r] for r in batch}),
+            lambda batch: output.table("footprints", settings, batch),
             batches,
-            feet.config,
+            settings.footprint,
             target,
             time_bins,
-            missing=[r for r in requested if r not in files],
-            geometry_hash=feet.geometry_hash,
+            missing=[r for r in requested if r not in found],
+            geometry_hash=settings.geometry_hash,
             workers=self.project.config.execution.cpus,
         )
 

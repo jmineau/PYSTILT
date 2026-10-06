@@ -26,6 +26,5 @@ Output directory
    :nosignatures:
 
    stilt.output.Output
-   stilt.output.Particles
-   stilt.output.Footprints
+   stilt.output.completed
    stilt.footprint.Jacobian
