@@ -65,8 +65,8 @@ def scenario_outputs(request, met_dir, rscript, r_stilt_dir, tmp_path_factory) -
     assert foot is not None, f"[{scenario.name}] footprint is empty"
     foot_file = project_dir / "py_foot.nc"
     foot.stilt.to_netcdf(foot_file)
-    assert sim.scratch_path is not None
-    setup_file = sim.scratch_path / "SETUP.CFG"
+    assert sim.kept_workdir is not None
+    setup_file = sim.kept_workdir / "SETUP.CFG"
 
     error_traj_path = None
     if scenario.error_variant is not None:

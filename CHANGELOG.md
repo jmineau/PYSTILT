@@ -8,6 +8,12 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- `sim.scratch_path` is `sim.kept_workdir`, and `Output.scratch_path` is
+  `Output.kept_workdir` (breaking): the working directory a failed run (or
+  any run with `keep_scratch`) left, kept under `scratch/` in the output
+  directory. `sim.log` and `sim.met_files` stay, empty for a model that
+  has none (#150).
+
 - The transport model boundary is `run(receptor, config, met, window,
   workdir=None, timeout=None) -> ModelRun(particles, log, met_files)`
   (breaking). A model gets the `MetConfig` and the `(start, end)` the run

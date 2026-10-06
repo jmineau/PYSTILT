@@ -421,8 +421,8 @@ def test_error_variant(tmp_path, wbb_receptor, traj_only_config):
 
     main = model.simulation(*_sim_id(wbb_receptor))
     err = model.simulation(*_sim_id(wbb_receptor, "hrrr-err"))
-    err_scratch = err.scratch_path
-    main_scratch = main.scratch_path
+    err_scratch = err.kept_workdir
+    main_scratch = main.kept_workdir
 
     assert (err_scratch / "WINDERR").exists()
     assert not (main_scratch / "WINDERR").exists()

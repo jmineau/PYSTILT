@@ -187,6 +187,6 @@ and MESSAGE. A ``<receptor id>.failure.yaml`` under ``logs/`` records why
 it failed. It sits in the logs folder of the result that failed: the
 particles' folder when HYSPLIT failed, the footprint's when a footprint
 did. It is removed when the result is written. ``sim.failure`` reads it,
-``sim.log`` reads the log, and ``sim.scratch_path`` is the kept working
+``sim.log`` reads the log, and ``sim.kept_workdir`` is the kept working
 directory. Set ``keep_scratch: true`` under ``execution:`` to keep every
 run's working directory.
