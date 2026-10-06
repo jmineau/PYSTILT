@@ -38,7 +38,8 @@ pip install "pystilt[complete]"
 
 ## Quickstart
 
-Describe a measurement, point PYSTILT at meteorology and a footprint grid, and run:
+Describe a measurement, follow particles back from it through the
+meteorology, and calculate its footprint:
 
 ```python
 import stilt
@@ -49,31 +50,31 @@ receptor = stilt.PointReceptor(
     latitude=40.766,
     altitude=10,               # metres above ground
 )
+met = {"directory": "/data/hrrr", "file_format": "%Y%m%d_%H", "file_tres": "6h"}
+grid = stilt.Grid(xmin=-113.0, xmax=-110.5, ymin=40.0, ymax=42.0, xres=0.01, yres=0.01)
 
+particles = stilt.run_trajectories(receptor, met, n_hours=-24, numpar=100)
+foot = stilt.calc_footprint(particles, receptor, grid)
+```
+
+`particles` is a pandas DataFrame, one row per particle per step, and
+`foot` an xarray DataArray, one map per hour.
+
+For many receptors, a project runs each one and keeps the results:
+
+```python
 project = stilt.Project.init(
     "./my_project",
     receptors=[receptor],
+    mets={"hrrr": met},
     n_hours=-24,
     numpar=100,
-    mets={
-        "hrrr": {
-            "directory": "/data/hrrr",
-            "file_format": "%Y%m%d_%H",
-            "file_tres": "6h",
-        }
-    },
-    grid={
-        "xmin": -113.0, "xmax": -110.5,
-        "ymin": 40.0, "ymax": 42.0,
-        "xres": 0.01, "yres": 0.01,
-    },
+    grid=grid,
 )
-
 project.run()   # returns when the run is done
 
 sim = project.simulation(receptor.id, "hrrr")
-particles = sim.particles   # a pandas DataFrame, one row per particle per step
-foot = sim.footprint        # an xarray DataArray, one map per hour
+sim.particles, sim.footprint
 ```
 
 Everything is saved in `./my_project`. Later, open it again with
