@@ -275,7 +275,9 @@ def test_the_driver_names_only_real_settings_outside_setup_cfg():
     from stilt.transport.hysplit.driver import NOT_IN_SETUP
 
     assert set(HysplitConfig.model_fields) >= NOT_IN_SETUP
-    assert next(iter(setup_entries(HysplitConfig()))) == "numpar"
+    entries = setup_entries(HysplitConfig())
+    assert "numpar" in entries
+    assert not NOT_IN_SETUP & set(entries)
 
 
 def test_met_config_construction(tmp_path):

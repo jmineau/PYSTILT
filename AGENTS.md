@@ -256,8 +256,10 @@ output directory, never only in memory.
   through `stilt.transport.get_model`. A model is a variant axis, like a
   met: a variant that names another `model` gives that model's own
   parameters itself and inherits the met, the footprint fields, and the
-  parameters every model shares (the base `TransportConfig`: `n_hours`,
-  `numpar`, `seed`, `hnf_plume`, `veght`). The top-level footprint fields
+  parameters PYSTILT's own code reads (the base `TransportConfig`:
+  `n_hours`, `seed`, `hnf_plume`, `veght`). A parameter goes on the base
+  only when the core reads it; `numpar` and every `SETUP.CFG` setting are
+  HYSPLIT's. The top-level footprint fields
   are `config.footprint`, as the model's are `config.transport`. When it
   loads, `ProjectConfig` checks each declared variant against the defaults
   (names, met, model, `realizations`, grid merging), and rejects an unknown

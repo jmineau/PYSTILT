@@ -81,9 +81,11 @@ class TransportConfig(BaseModel):
     """
     The base of every transport model's config.
 
-    It holds the parameters every model shares: the run length, the
-    particle count, the seed, and the near-field settings PYSTILT applies to
-    any model's particles. A model's config subclasses it with its own
+    It holds the parameters PYSTILT's own code reads, whatever the model:
+    the run length and the seed, which set the run window and the
+    realizations, and the near-field settings PYSTILT applies to any
+    model's particles. Everything else, the particle count included, is the
+    model's own. A model's config subclasses it with its own
     parameters and is the model's ``config_class``. In ``config.yaml`` the
     parameters are flat, top-level keys for the project's model, and a
     variant that names another model inherits the shared ones and gives
@@ -100,13 +102,6 @@ class TransportConfig(BaseModel):
     n_hours: int = Field(
         -24,
         description="Length of each simulation, in hours. Negative runs backward in time.",
-    )
-    numpar: int = Field(
-        200,
-        description=(
-            "Number of particles released per simulation. More particles give a "
-            "less noisy footprint and take longer to run."
-        ),
     )
     hnf_plume: bool = Field(
         True,

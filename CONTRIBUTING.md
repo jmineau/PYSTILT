@@ -67,8 +67,10 @@ driver; a test fails if it would land in `SETUP.CFG` unknown to HYSPLIT.
 
 A transport model owns its config: a subclass of
 `stilt.transport.TransportConfig` with the model's own parameters. The base
-gives the parameters every model shares (`n_hours`, `numpar`, `seed`,
-`hnf_plume`, `veght`), an `UNRECORDED` set of the fields that change no
+gives the parameters PYSTILT's own code reads whatever the model
+(`n_hours`, `seed`, `hnf_plume`, `veght`); a parameter goes there only
+when the core reads it, so another model is never handed a setting it
+would ignore. It also gives an `UNRECORDED` set of the fields that change no
 particle (empty unless the subclass names some), `settings()` (what a run
 records), and `realizations(n)` (realization `k` with `seed + k`); override
 those two only where the model differs. The model itself names that class as

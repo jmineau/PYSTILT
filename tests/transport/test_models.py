@@ -74,20 +74,24 @@ def test_a_variant_may_run_another_model(tmp_path, toy):
 
 
 def test_another_models_variant_inherits_the_shared_parameters_only(tmp_path, toy):
-    """numpar, n_hours, seed, hnf_plume, and veght are every model's; krand is HYSPLIT's."""
+    """n_hours, seed, hnf_plume, and veght are every model's; numpar and krand are HYSPLIT's."""
     config = ProjectConfig(
         mets=_mets(tmp_path),
+        n_hours=-6,
         numpar=300,
         krand=2,
         variants={"hrrr": {}, "toy": {"model": "toy", "hnf_plume": False}},
     )
     toy_variant = config.resolve()["toy"]
-    assert toy_variant.transport.numpar == 300  # inherited from the defaults
+    assert toy_variant.transport.n_hours == -6  # inherited from the defaults
     assert toy_variant.transport.hnf_plume is False
-    with pytest.raises(ValueError, match="'krand' is not a setting"):
-        ProjectConfig(
-            mets=_mets(tmp_path), variants={"toy": {"model": "toy", "krand": 2}}
-        )
+    assert "numpar" not in type(toy_variant.transport).model_fields
+    for hysplits_own in ("krand", "numpar"):
+        with pytest.raises(ValueError, match=f"'{hysplits_own}' is not a setting"):
+            ProjectConfig(
+                mets=_mets(tmp_path),
+                variants={"toy": {"model": "toy", hysplits_own: 2}},
+            )
 
 
 def test_the_projects_model_takes_its_parameters_at_the_top(tmp_path, toy):
@@ -98,8 +102,8 @@ def test_the_projects_model_takes_its_parameters_at_the_top(tmp_path, toy):
     assert config.resolve()["hrrr"].model.name == "toy"
     assert (
         ProjectConfig(
-            mets=_mets(tmp_path), model="toy", numpar=7, variants={"hrrr": {}}
-        ).transport.numpar
+            mets=_mets(tmp_path), model="toy", seed=7, variants={"hrrr": {}}
+        ).transport.seed
         == 7
     )  # a shared parameter
     with pytest.raises(ValueError, match="'varsiwant' is not a setting"):
@@ -137,7 +141,6 @@ def test_a_model_config_inherits_the_recorded_settings_and_realizations():
 
     assert config.settings() == {
         "n_hours": -6,
-        "numpar": 200,
         "hnf_plume": True,
         "veght": 0.5,
         "seed": 5,
