@@ -204,7 +204,7 @@ def test_run_particles_keeps_no_empty_scratch_copy(sim, met, compute_root, monke
             sim, met=met, workdir=compute_root / sim.receptor.id / sim.variant.name
         )
 
-    kept = sim.output.scratch_path(sim.variant, sim.receptor.id)
+    kept = sim.output.kept_workdir(sim.variant, sim.receptor.id)
     assert kept is None or not kept.exists()
     assert not (compute_root / sim.receptor.id / sim.variant.name).exists()
 
@@ -554,8 +554,8 @@ def test_a_failed_run_keeps_its_log_and_working_directory(
     assert failure is not None and failure["reason"] == "FORTRAN_RUNTIME_ERROR"
     assert set(failure) == {"step", "reason", "message", "time"}
     assert "hycs_std said" in sim.log
-    assert sim.scratch_path is not None
-    assert (sim.scratch_path / "CONTROL").exists()
+    assert sim.kept_workdir is not None
+    assert (sim.kept_workdir / "CONTROL").exists()
 
 
 # ---------------------------------------------------------------------------

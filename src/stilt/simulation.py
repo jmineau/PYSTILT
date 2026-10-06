@@ -99,15 +99,16 @@ class Simulation:
         return self.output.log_path(self.variant, self.receptor.id)
 
     @property
-    def scratch_path(self) -> Path | None:
+    def kept_workdir(self) -> Path | None:
         """
-        Where a failed HYSPLIT run's working directory is kept, or ``None`` before its folder exists.
+        Where a failed run's working directory is kept, or ``None`` before its folder exists.
 
         The directory, under ``scratch/`` in the output directory, holds
-        CONTROL, SETUP.CFG, and HYSPLIT's own output. It exists only after a
+        the transport model's files as the run left them: for HYSPLIT,
+        CONTROL, SETUP.CFG, and its own output. It exists only after a
         failed run, or after any run with ``keep_scratch`` set.
         """
-        return self.output.scratch_path(self.variant, self.receptor.id)
+        return self.output.kept_workdir(self.variant, self.receptor.id)
 
     @property
     def settings(self) -> dict[str, Any]:
@@ -200,7 +201,7 @@ class Simulation:
         none), ``message``, and ``time``. An unexpected error also has a
         ``traceback``. A failed HYSPLIT run fails every variant that
         shares its particles. :attr:`log` reads HYSPLIT's log and
-        :attr:`scratch_path` is where its working directory was kept.
+        :attr:`kept_workdir` is where its working directory was kept.
 
         Examples
         --------

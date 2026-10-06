@@ -89,7 +89,7 @@ shares those particles, and ``footprint`` when only that variant's footprint
 did. ``reason`` is a short name for the cause, or the error's class when it
 has none. For a HYSPLIT failure, ``message`` is the line of HYSPLIT's log
 that says what went wrong. ``sim.log`` reads the whole log, and
-``sim.scratch_path`` is HYSPLIT's working folder, kept in the output
+``sim.kept_workdir`` is HYSPLIT's working folder, kept in the output
 directory. An unexpected error, such as a bug, also has a ``traceback``.
 
 A footprint can be empty because no particle reached the grid. That is not a

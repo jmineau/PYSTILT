@@ -445,7 +445,7 @@ def test_failure_records_live_in_the_logs_of_the_folder_that_failed(tmp_path):
 def test_logs_and_kept_workdirs_sit_beside_the_particles(tmp_path):
     out = Output(tmp_path / "output")
     rid = _receptor().id
-    assert out.log_path(VARIANT, rid) is None and out.scratch_path(VARIANT, rid) is None
+    assert out.log_path(VARIANT, rid) is None and out.kept_workdir(VARIANT, rid) is None
     log = out.write_log(VARIANT, rid, "hycs_std ran\n")
     name = out.folder("particles", VARIANT).name
     assert log == tmp_path / "output" / "logs" / name / "date=2024-07-15" / f"{rid}.log"
@@ -453,7 +453,7 @@ def test_logs_and_kept_workdirs_sit_beside_the_particles(tmp_path):
     workdir.mkdir()
     (workdir / "CONTROL").write_text("x")
     kept = out.keep_workdir(VARIANT, rid, workdir)
-    assert kept == out.scratch_path(VARIANT, rid)
+    assert kept == out.kept_workdir(VARIANT, rid)
     assert (kept / "CONTROL").read_text() == "x"
 
 

@@ -385,7 +385,7 @@ class Output:
             return None
         return _receptor_file(self._dir("logs", name), receptor_id, ".log")
 
-    def scratch_path(self, variant: Variant, receptor_id: str) -> Path | None:
+    def kept_workdir(self, variant: Variant, receptor_id: str) -> Path | None:
         """Return where a receptor's failed run's working directory is kept, or ``None`` before its folder exists."""
         name = self._name("particles", variant)
         if name is None:
@@ -555,7 +555,7 @@ class Output:
 
     def keep_workdir(self, variant: Variant, receptor_id: str, workdir: Path) -> Path:
         """
-        Copy a run's working directory to :meth:`scratch_path`, replacing an earlier copy.
+        Copy a run's working directory to :meth:`kept_workdir`, replacing an earlier copy.
 
         A failed run's is kept, so CONTROL, SETUP.CFG, and the model's own
         output can be read after the job ends.
