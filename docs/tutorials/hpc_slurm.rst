@@ -58,10 +58,11 @@ Step 3: Submit
 
 .. code-block:: bash
 
-   stilt run /path/to/shared/slv_2023
+   stilt submit /path/to/shared/slv_2023
 
 This prints the Slurm job ID and returns. You can log out while the job
-runs.
+runs. ``stilt run`` submits the same job array and then waits for it to
+finish, printing the status at the end.
 
 Step 4: Monitor
 ---------------
@@ -84,7 +85,7 @@ be missing. Once the job has left the queue, run the same command again:
 
 .. code-block:: bash
 
-   stilt run /path/to/shared/slv_2023
+   stilt submit /path/to/shared/slv_2023
 
 Only the unfinished simulations are submitted. Repeat until
 ``stilt status`` shows none remaining. If a simulation keeps failing, read

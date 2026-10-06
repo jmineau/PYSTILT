@@ -86,9 +86,9 @@ def averaging_kernel_table(
     Return a table of averaging kernels, one per receptor, for :class:`AveragingKernel`.
 
     The table is in long form, with ``receptor``, ``level``, and ``value``
-    columns and one row per kernel level. Save it in the project with
-    ``.to_parquet()`` or ``.to_csv(index=False)`` and give the file name as
-    ``table`` in the ``averaging_kernel`` transform.
+    columns and one row per kernel level. Add it to the project with
+    ``project.add_table("kernels", table)`` and name it as ``table:
+    kernels`` in the ``averaging_kernel`` transform.
 
     Parameters
     ----------
@@ -175,9 +175,10 @@ class AveragingKernel(BaseModel):
     Transform that weights each particle's ``foot`` by an averaging kernel.
 
     Give the kernel as ``levels`` and ``values``, or name a ``table`` with
-    one kernel per receptor (see :func:`averaging_kernel_table`). A relative
-    ``table`` path is relative to the project root. A receptor missing from
-    the table is an error.
+    one kernel per receptor (see :func:`averaging_kernel_table`): a project
+    table added with ``project.add_table``, or a file, whose relative path
+    is relative to the project root. A receptor missing from the table is
+    an error.
 
     ``levels`` are release heights above ground in meters by default. Set
     ``coordinate: pres`` for a kernel on pressure levels in hPa. Fold any

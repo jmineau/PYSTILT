@@ -321,8 +321,8 @@ class Project:
         """
         Each variant, resolved, by name, in config order.
 
-        A realization group appears once per realization (``hrrr-err-0``,
-        ``hrrr-err-1``, ...). A footprint given by a geometry gets its grid
+        An ensemble (``realizations: N``) is one variant; its realizations
+        are the ``realization`` column of :attr:`simulations`. A footprint given by a geometry gets its grid
         here, so the geometry is read on first use (:meth:`stilt.ProjectConfig.resolve`),
         and a relative geometry file starts from the project directory.
         """

@@ -84,5 +84,12 @@ receptors to the project folder without running anything.
    receptor_ids = project.add_receptors(receptors)
 
 Any machine that can see the folder can then run the project with
-``stilt run``. From Python, :func:`stilt.execution.run_receptors` runs every
-variant of the receptors you give it.
+``stilt run``. To run only the new receptors, every variant of each, give
+their ids:
+
+.. code-block:: python
+
+   project.run(receptors=receptor_ids)
+
+``stilt run --receptors ids.txt`` does the same from a file with one id
+per line.

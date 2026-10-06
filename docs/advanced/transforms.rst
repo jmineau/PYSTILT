@@ -98,29 +98,30 @@ table in the project in place of inline ``levels`` and ``values``:
 
    transforms:
      - kind: averaging_kernel
-       table: kernels.parquet
+       table: kernels
        coordinate: pres
      - kind: pressure_weighting
 
 The table has a ``receptor`` column with the receptor id, and one row per
-kernel point with its ``level`` and ``value``. It can be Parquet or CSV.
-Build it with :func:`~stilt.transforms.averaging_kernel_table` from the
-receptors you added and the kernels in your product, and write it next
-to ``receptors.csv``:
+kernel point with its ``level`` and ``value``. Build it with
+:func:`~stilt.transforms.averaging_kernel_table` from the receptors you
+added and the kernels in your product, and add it to the project:
 
 .. code-block:: python
 
    from stilt.transforms import averaging_kernel_table
 
    table = averaging_kernel_table(receptors, levels=df.ak_pressure, values=df.ak)
-   table.to_parquet(project.directory / "kernels.parquet")
+   project.add_table("kernels", table)     # tables/kernels.parquet
 
-Pass ``levels`` as one array per receptor, or as a single array when all
-kernels share one grid. When the footprint is made, the transform looks up
-the receptor's id in the table. The ``table`` path is relative to the
-project root, so this works the same in a notebook, with ``stilt run``, and
-on Slurm workers. A receptor with no rows in the table
-raises an error.
+:func:`~stilt.observations.receptors_from_soundings` returns this table
+for you. Pass ``levels`` as one array per receptor, or as a single array
+when all kernels share one grid. When the footprint is made, the
+transform looks up the receptor's id in the table. The table is part of
+the project, so this works the same in a notebook, with ``stilt run``, and
+on Slurm workers. A receptor with no rows in the table raises an error.
+``table`` also takes the path of a Parquet or CSV file, relative to the
+project root.
 
 In Python
 ---------

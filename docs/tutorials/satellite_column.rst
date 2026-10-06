@@ -141,12 +141,17 @@ the soundings outside the plume of a forward run
 (:doc:`../guides/plume_background`); a mole-fraction field also works
 (:doc:`../guides/background`).
 
+``plume`` is the outline of the forward run's particles at the overpass
+(:func:`~stilt.observations.plume_polygon`, as in that guide).
+
 .. code-block:: python
 
    import xarray as xr
+   from stilt.observations import plume_background
 
    flux = xr.open_dataarray("ch4_flux.nc")     # µmol m⁻² s⁻¹, on the footprint grid or coarser
-   background = plume.value                    # ppb, the PlumeBackground of the overpass
+   bg = plume_background(df["longitude"], df["latitude"], df["value"], plume)
+   background = bg.value                       # ppb
 
    soundings = df.set_index("sounding_id")
    rows = []
@@ -177,22 +182,30 @@ field, add the prior the retrieval carries where it is not sensitive.
    import numpy as np
    from stilt.observations import modelled_column
 
-   cams = xr.open_dataarray("cams_ch4.nc").rename(level="pres")   # ppb on hPa levels
+   cams = xr.open_dataarray("cams_ch4.nc").rename(level="pres")   # (time, pres, lat, lon), ppb
+
+   sounding_id = compare.index[0]              # any sounding with a footprint
+   rec = project.receptors.set_index("sounding_id").loc[sounding_id]
    sim = project.simulation(rec.receptor, "hrrr")
-   row = soundings.loc[rec.sounding_id]
-   p = row.pressure_levels
+   row = soundings.loc[sounding_id]
+
+   p = row.pressure_levels                     # layer boundaries, hPa, surface first
+   w = -np.diff(p) / (p[0] - p[-1])            # each layer's share of the column
+   up = row.altitude_levels[:-1] >= row.surface_altitude + 3000   # layers above the receptor's top
+   profile = cams.sel(time=row.time, lat=row.latitude, lon=row.longitude, method="nearest")
+   above = float(np.sum((w * row.ak * profile.interp(pres=row.ak_pressure).values)[up]))
+
    column = modelled_column(
        1000 * float(sim.footprint.stilt.enhancement(flux).sum()),
        sim.background(cams).value + above,
-       ak=row.ak, prior=row.apriori,
-       pressure_weight=-np.diff(p) / (p[0] - p[-1]),
+       ak=row.ak, prior=row.apriori, pressure_weight=w,
    )
 
 ``sim.background(cams)`` covers the receptor's levels only, up to 3 km.
-``above`` is the rest of the column: the field above the receptor's top,
-weighted by the kernel and the pressure weights. That air saw no fluxes in
-the domain, so the field alone gives it. Work it out from the same field
-on the retrieval's layers above the top (:doc:`../guides/background`).
+``above`` is the rest of the column: the field on the retrieval's layers
+above the receptor's top, weighted by the kernel and the pressure weights.
+That air saw no fluxes in the domain, so the field alone gives it
+(:doc:`../guides/background`).
 
 Your own instrument
 -------------------

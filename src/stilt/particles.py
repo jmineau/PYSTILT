@@ -87,8 +87,8 @@ class ParticleMetadata(NamedTuple):
         Receptor the particles were released from.
     settings : dict
         The run's settings, as its folder's ``_settings.yaml`` records them:
-        the transport model's settings, the met's, the model build, and the
-        realization number. :func:`stilt.identity.transport_from_settings`
+        the transport model's settings, the met's, the model build, and
+        whether it is an ensemble. :func:`stilt.identity.transport_from_settings`
         rebuilds the transport model's config from it.
     met_files : list of Path
         Meteorology files the run read.
@@ -142,10 +142,8 @@ def particles_metadata(path: str | Path | UPath) -> ParticleMetadata:
 
     Examples
     --------
-    >>> receptor, settings, met_files = stilt.particles.particles_metadata(
-    ...     sim.particles_path
-    ... )
-    >>> settings["model"]
+    >>> meta = stilt.particles.particles_metadata(sim.particles_path)
+    >>> meta.settings["model"]
     {'name': 'hysplit', 'version': 'v5.1.0'}
     """
     with readable(path) as source:
