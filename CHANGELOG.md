@@ -8,6 +8,10 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Extras (breaking): `cloud` is `download` (downloading meteorology);
+  `geometry` adds `exactextract`, which PYSTILT already used when it was
+  installed, and `visualization` adds `cartopy` for map features (#150).
+
 - The satellite and column page is a tutorial, *A Satellite Column, Start
   To Finish* (was the advanced page *Satellite And Column Observations*),
   from a TROPOMI orbit to modelled and observed enhancements with

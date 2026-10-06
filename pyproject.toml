@@ -42,13 +42,15 @@ dependencies = [
 
 [project.optional-dependencies]
 geometry = [
+    "exactextract>=0.2",
     "geopandas>=1.0",
     "h3>=4.0",
 ]
 visualization = [
+    "cartopy>=0.23",
     "matplotlib>=3.7",
 ]
-cloud = [
+download = [
     "arlmet[archives]>=0.1.0b1",
 ]
 sparse = [
@@ -57,7 +59,7 @@ sparse = [
 complete = [
     "pystilt[geometry]",
     "pystilt[visualization]",
-    "pystilt[cloud]",
+    "pystilt[download]",
     "pystilt[sparse]",
 ]
 

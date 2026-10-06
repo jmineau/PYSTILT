@@ -326,8 +326,8 @@ class Met:
         except ImportError as exc:
             raise ImportError(
                 f"{exc}\n\n"
-                "Downloading meteorology requires the cloud extra. "
-                "Install with: pip install pystilt[cloud]"
+                "Downloading meteorology requires the download extra. "
+                "Install with: pip install pystilt[download]"
             ) from exc
 
         n_files = len(files)

@@ -345,10 +345,10 @@ need from the result.
 Polygons in another coordinate system are reprojected onto the footprint
 grid. The overlaps between the footprint grid and your areas are worked out
 once and reused, so adding up thousands of footprints is fast. Polygon
-overlaps use shapely. If the optional
-`exactextract <https://github.com/isciences/exactextract>`_ package is
-installed (``pip install exactextract``), PYSTILT uses it instead. It gives
-the same result and is about a hundred times faster on large grids.
+overlaps use shapely. If
+`exactextract <https://github.com/isciences/exactextract>`_ is installed,
+as with the ``geometry`` extra, PYSTILT uses it instead. It gives the same
+result and is about a hundred times faster on large grids.
 
 The footprint grid must be fine enough to resolve your areas.
 ``aggregate`` warns when the smallest area spans fewer than two footprint

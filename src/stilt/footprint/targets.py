@@ -585,6 +585,8 @@ def _mesh_weights_exactextract(
     out = exact_extract(
         raster, features, ["cell_id", "coverage"], include_cols=["fid"], output="pandas"
     )
+    if not isinstance(out, pd.DataFrame):  # it returns None only when writing a file
+        raise TypeError(f"exactextract returned {type(out).__name__}, not a table.")
     rows: list[np.ndarray] = []
     cols: list[np.ndarray] = []
     vals: list[np.ndarray] = []
