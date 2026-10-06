@@ -167,8 +167,9 @@ src/stilt/
                      (files_for a window), download, and
                      cropping (via arlmet); the wind-error statistics
                      (`variogram`, `fit_variogram`)
-  transforms.py      pre-footprint particle transforms (averaging kernel,
-                     pressure weighting, lifetime decay) and their YAML I/O
+  transforms/        pre-footprint particle transforms, one module each
+                     (averaging_kernel, pressure_weighting, lifetime); the
+                     loader, YAML I/O, and apply_transforms in __init__.py
   exceptions.py      every exception class, all under StiltError
   visualization.py   matplotlib helpers (optional dependency)
 

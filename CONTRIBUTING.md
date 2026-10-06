@@ -125,10 +125,14 @@ directory=None)`: it takes a particle `DataFrame`, the receptor, and the
 project directory, and returns a new `DataFrame`, leaving the input
 unchanged.
 
-A built-in transform is one pydantic class in `transforms.py`. Its fields
-are the YAML keys, `kind` is a `Literal` that names it, and `apply()` does
-the work. Add the class to the `BuiltinTransform` union and it is ready to
-use. Users can also point `kind` at their own class by import path
+A built-in transform is one new file in `src/stilt/transforms/`, such as
+`lifetime.py`: one pydantic class whose fields are the YAML keys, whose
+`kind` is a `Literal` that names it, and whose `apply()` does the work.
+Import it in `transforms/__init__.py` and add it to the `BuiltinTransform`
+union, and it is ready to use. A transform changes the footprint through
+`foot` and may add columns; the built-ins only scale `foot`, which
+`sim.background` and `sim.transport_error` rely on (see the transforms
+guide). Users can also point `kind` at their own class by import path
 (`kind: my.module.Class`), so only transforms that many users need belong in
 PYSTILT.
 

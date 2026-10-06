@@ -8,6 +8,12 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- `stilt.transforms` is a package with one module per transform
+  (`averaging_kernel`, `pressure_weighting`, `lifetime`); every name
+  imports from `stilt.transforms` as before. The transforms guide states
+  the contract: a transform changes the footprint through `foot` and may
+  add columns, and the built-ins only scale `foot` (#150).
+
 - Extras (breaking): `cloud` is `download` (downloading meteorology);
   `geometry` adds `exactextract`, which PYSTILT already used when it was
   installed, and `visualization` adds `cartopy` for map features (#150).
