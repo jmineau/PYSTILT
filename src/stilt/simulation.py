@@ -23,6 +23,7 @@ from stilt.receptors import Receptor
 from stilt.spatial import Grid
 
 if TYPE_CHECKING:
+    from stilt._paths import Location
     from stilt.config import Variant
     from stilt.visualization import SimulationPlotAccessor
 
@@ -110,26 +111,26 @@ class Simulation:
     # -- where the results are ---------------------------------------------
 
     @property
-    def particles_path(self) -> Path | None:
+    def particles_path(self) -> Location | None:
         """Path of the particle file in the output directory, or ``None`` before its folder exists."""
         return self.output.path(
             "particles", self.variant, self.receptor.id, self.realization
         )
 
     @property
-    def footprint_path(self) -> Path | None:
+    def footprint_path(self) -> Location | None:
         """Path of the footprint file in the output directory, or ``None`` before its folder exists."""
         return self.output.path(
             "footprints", self.variant, self.receptor.id, self.realization
         )
 
     @property
-    def log_path(self) -> Path | None:
+    def log_path(self) -> Location | None:
         """Path of the HYSPLIT log in the output directory, or ``None`` before its folder exists."""
         return self.output.log_path(self.variant, self.receptor.id, self.realization)
 
     @property
-    def kept_workdir(self) -> Path | None:
+    def kept_workdir(self) -> Location | None:
         """
         Where a failed run's working directory is kept, or ``None`` before its folder exists.
 

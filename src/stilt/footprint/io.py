@@ -16,7 +16,7 @@ import os
 from collections.abc import Iterable
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pandas as pd
@@ -24,10 +24,16 @@ import pyarrow as pa
 import xarray as xr
 
 from stilt._atomic import write_parquet
+from stilt._paths import location, readable
 from stilt.footprint.config import FootprintConfig
 from stilt.identity import footprint_settings, read_footprint_settings
 from stilt.receptors import Receptor
 from stilt.spatial import Grid, _with_cf_grid, horizontal_dims
+
+if TYPE_CHECKING:
+    from upath import UPath
+
+    from stilt._paths import Location
 
 
 def _naive_utc(values: Any) -> pd.DatetimeIndex:
@@ -151,7 +157,7 @@ def _from_sparse_table(
 
 
 def read_footprint(
-    path: str | Path,
+    path: str | Path | UPath,
     *,
     chunks: Any | None = None,
 ) -> xr.DataArray | None:
@@ -182,8 +188,13 @@ def read_footprint(
     """
     import pyarrow.parquet as pq
 
-    path = Path(path)
+    path = location(path)
     if path.suffix == ".nc":
+        if not isinstance(path, Path):
+            raise ValueError(
+                f"{path}: a NetCDF footprint is read from this filesystem. "
+                "Copy it here first."
+            )
         if chunks is not None:
             foot = xr.open_dataset(path, chunks=chunks)["foot"]
         else:
@@ -193,7 +204,8 @@ def read_footprint(
         return foot
     # One file alone: pq.read_table would add the settings= and date=
     # folder names of an output directory as columns.
-    table = pq.ParquetFile(path).read()
+    with readable(path) as source:
+        table = pq.ParquetFile(source).read()
     stored = (table.schema.metadata or {}).get(b"stilt:footprint")
     if stored is None:
         raise ValueError(f"{path} does not record its footprint settings.")
@@ -201,11 +213,12 @@ def read_footprint(
     return _from_sparse_table(table, config, geometry_hash)
 
 
-def _empty_reason(path: str | Path) -> str | None:
+def _empty_reason(path: str | Path | UPath) -> str | None:
     """Return why a stored footprint is empty, or ``None`` when it is not, from its metadata alone."""
     import pyarrow.parquet as pq
 
-    meta = pq.read_schema(path).metadata or {}
+    with readable(path) as source:
+        meta = pq.read_schema(source).metadata or {}
     return meta.get(b"stilt:empty_reason", b"").decode() or None
 
 
@@ -213,20 +226,24 @@ def _empty_reason(path: str | Path) -> str | None:
 _CHUNK_BYTES = 128 * 2**20
 
 
-def _footer(path: Path) -> dict[bytes, bytes]:
+def _footer(path: Location) -> dict[bytes, bytes]:
     """Return the metadata of a stored footprint, reading only its footer."""
     import pyarrow.parquet as pq
 
-    return dict(pq.read_schema(path).metadata or {})
+    with readable(path) as source:
+        return dict(pq.read_schema(source).metadata or {})
 
 
-def _dense_block(paths: list[Path], hours: np.ndarray, ny: int, nx: int) -> np.ndarray:
+def _dense_block(
+    paths: list[Location], hours: np.ndarray, ny: int, nx: int
+) -> np.ndarray:
     """Read stored footprints into one ``(receptor, hour, y, x)`` block of ``float32``."""
     import pyarrow.parquet as pq
 
     block = np.zeros((len(paths), len(hours), ny, nx), dtype=np.float32)
     for i, path in enumerate(paths):
-        table = pq.ParquetFile(path).read(columns=["hour", "y", "x", "foot"])
+        with readable(path) as source:
+            table = pq.ParquetFile(source).read(columns=["hour", "y", "x", "foot"])
         layer = table["hour"].to_numpy().astype(np.intp) - int(hours[0])
         if layer.size and (layer.min() < 0 or layer.max() >= len(hours)):
             raise ValueError(f"{path} has cells outside the hours it records.")
@@ -237,7 +254,7 @@ def _dense_block(paths: list[Path], hours: np.ndarray, ny: int, nx: int) -> np.n
 
 
 def open_footprints(
-    paths: Iterable[str | Path], *, workers: int | None = None
+    paths: Iterable[str | Path | UPath], *, workers: int | None = None
 ) -> xr.Dataset:
     """
     Open stored footprints as one dataset, stacked on the hour from each receptor's time.
@@ -253,7 +270,7 @@ def open_footprints(
     ----------
     paths : iterable of str or Path
         Footprint files from an output directory, all made with the same
-        settings (one variant's).
+        settings (one variant's). URLs read from an object store.
     workers : int, optional
         Threads that read the files' metadata. Defaults to the number of
         CPUs.
@@ -281,7 +298,7 @@ def open_footprints(
     import dask.array as da
     from dask.delayed import delayed
 
-    paths = [Path(p) for p in paths]
+    paths = [location(p) for p in paths]
     if not paths:
         raise ValueError("No footprint files to open.")
     threads = workers if workers is not None else (os.cpu_count() or 1)
@@ -411,12 +428,12 @@ def _file_metadata(
 
 
 def write_footprint(
-    path: str | Path,
+    path: str | Path | UPath,
     foot: xr.DataArray,
     config: FootprintConfig | None = None,
     metadata: dict[bytes, bytes] | None = None,
     geometry_hash: str | None = None,
-) -> Path:
+) -> Location:
     """
     Write a footprint to a Parquet file that :func:`read_footprint` reads alone.
 
@@ -491,18 +508,18 @@ def write_footprint(
         metadata,
         foot.stilt.geometry_hash if geometry_hash is None else geometry_hash,
     )
-    return write_parquet(table.replace_schema_metadata(meta), Path(path))
+    return write_parquet(table.replace_schema_metadata(meta), location(path))
 
 
 def write_empty_footprint(
-    path: str | Path,
+    path: str | Path | UPath,
     receptor: Receptor,
     reason: str,
     config: FootprintConfig,
     name: str = "",
     metadata: dict[bytes, bytes] | None = None,
     geometry_hash: str | None = None,
-) -> Path:
+) -> Location:
     """
     Record in a footprint file that a receptor's footprint is empty, and why.
 
@@ -511,4 +528,4 @@ def write_empty_footprint(
     """
     meta = _file_metadata(receptor, config, name, [], reason, metadata, geometry_hash)
     table = FOOTPRINT_SCHEMA.empty_table().replace_schema_metadata(meta)
-    return write_parquet(table, Path(path))
+    return write_parquet(table, location(path))

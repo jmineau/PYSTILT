@@ -58,7 +58,7 @@ each a ``stilt run --task`` command line.
    * - Queue-backed workers (PostgreSQL), Kubernetes deployment
      - Removed
    * - Cloud object store outputs (GCS, S3)
-     - Not planned
+     - Implemented
 
 Column and satellite science (from X-STILT)
 --------------------------------------------

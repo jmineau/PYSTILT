@@ -343,6 +343,15 @@ as complete.
   per row only when the file's contents are the answer (`footprints`,
   `jacobian`), and builds receptors together (`Project._receptors`) when it
   needs them.
+- **One code path for a disk and an object store, and no store class**
+  (#135). `Output.directory` is a `Path` on a filesystem and a universal
+  path (`UPath`) for a URL (`stilt._paths.location`). Code that touches
+  the output checks `isinstance(path, Path)` for the local fast path
+  (`os.scandir`, temporary file and rename, pyarrow on the path) and
+  otherwise uses the store's fsspec filesystem (`path.fs`), putting a file
+  directly. Parquet is read through `stilt._paths.readable`. A local
+  output must stay exactly as fast; time a listing of a large folder when
+  changing it.
 - **Identity is content.** A results folder is its settings hash; a changed setting is
   a new folder, never an overwrite, and PYSTILT never deletes a folder.
 - **State lives in the project directory and the output directory.**

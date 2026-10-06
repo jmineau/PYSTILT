@@ -65,6 +65,30 @@ The folder names are what tools like pyarrow, DuckDB, polars, and R's
 ``arrow`` package read as columns, so ``output/footprints`` opens as one
 table with ``settings`` and ``date`` columns and no PYSTILT needed.
 
+On an object store
+~~~~~~~~~~~~~~~~~~
+
+The output directory can be on an object store such as Amazon S3 or Google
+Cloud Storage. Write it as a URL:
+
+.. code-block:: yaml
+
+   output: s3://my-bucket/slv-2023
+
+PYSTILT reads and writes it through `fsspec
+<https://filesystem-spec.readthedocs.io>`_, so install the package for your
+store: ``pip install s3fs`` for ``s3://``, ``gcsfs`` for ``gs://``.
+Credentials come from where those packages look for them, such as
+``~/.aws/credentials`` or ``AWS_ACCESS_KEY_ID``. For another store that
+speaks the S3 protocol, set ``AWS_ENDPOINT_URL``.
+
+Everything else is the same: the folder layout, reruns that skip finished
+simulations, ``stilt status``, and loading results. Runs, local or on
+Slurm or Kubernetes, write each result straight to the store. HYSPLIT
+itself still runs in a scratch folder on local disk (``--compute-root`` or
+``PYSTILT_COMPUTE_ROOT``). Listing an object store takes longer than
+listing a disk, so ``stilt status`` on a large project is slower.
+
 Simulation IDs
 --------------
 
