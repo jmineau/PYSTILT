@@ -225,9 +225,9 @@ class ProjectConfig(BaseModel):
             "variant may also set ``met`` (needed with several mets unless the "
             "variant has a met's name) and ``realizations`` (run N times, "
             "realization k with ``seed + k``, as one ensemble). Variants with "
-            "the same transport "
-            "settings share one run of HYSPLIT and differ in the footprint made "
-            "from it. At least one is required: ``hrrr: {}`` runs the defaults."
+            "the same transport settings share one transport model run and "
+            "differ in the footprint made from it. At least one is required: "
+            "``hrrr: {}`` runs the defaults."
         ),
     )
     execution: ExecutionConfig = Field(

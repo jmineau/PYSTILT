@@ -3,7 +3,7 @@ Worker functions that run one receptor, or many receptors.
 
 Workers are handed receptors. :func:`run_receptor` runs every variant of
 one receptor. Variants with the same transport settings share one set of
-particles, so it groups them: HYSPLIT runs once per group where the
+particles, so it groups them: the transport model runs once per group where the
 particles are missing (:func:`run_particles`), then each variant's
 footprint is made from the particles in memory (:func:`make_footprint`).
 A failure is recorded with the simulation and the worker goes on.
@@ -139,7 +139,7 @@ def run_particles(
     """
     Run the transport model for a simulation and write its particles to the output directory.
 
-    The model the settings name (HYSPLIT) runs in *workdir*
+    The transport model the variant names runs in *workdir*
     (:func:`stilt.transport.run_model`). Its log is written to the output
     directory whether the run succeeds or fails. The working directory is
     then removed, unless the run failed or *keep_scratch* is set, in which
@@ -263,13 +263,13 @@ def run_receptor(
 
     Each realization of an ensemble variant is a simulation of its own.
     Variants with the same transport settings share one set of particles
-    (per realization), so they run as a group: HYSPLIT runs once for the
-    group when the
+    (per realization), so they run as a group: the transport model runs
+    once for the group when the
     particles are missing (or always, without ``skip_existing``), and each
     variant's footprint is made from those particles in memory. A footprint
     is made again whenever its particles were, so it always matches them.
     A failure is recorded with the simulation (:attr:`stilt.Simulation.failure`)
-    and does not stop the others; a failed HYSPLIT run fails every variant
+    and does not stop the others; a failed transport model run fails every variant
     of its group. A ``KeyboardInterrupt``, such as a preempted job, stops
     the receptor and is raised again.
 
@@ -280,7 +280,7 @@ def run_receptor(
     receptor_id : str
         Receptor to run.
     compute_root : Path
-        Scratch directory under which HYSPLIT runs, as
+        Directory the workdirs are made in, one per simulation, as
         :func:`~stilt.execution.resolve_compute_root` returns it.
     execution : ExecutionConfig, optional
         Execution settings, for ``timeout`` and ``keep_scratch``. Defaults
@@ -321,7 +321,7 @@ def _run_group(
     execution: ExecutionConfig,
     skip_existing: bool,
 ) -> list[str]:
-    """Run the simulations of one receptor that share particles: HYSPLIT at most once, then each footprint."""
+    """Run the simulations of one receptor that share particles: the transport model at most once, then each footprint."""
     first = sims[0]
     particles: pd.DataFrame | None = None
     rerun = not (skip_existing and first.has_particles)
@@ -425,7 +425,7 @@ def run_receptors(
     receptor_ids : list of str
         Receptors to run.
     compute_root : Path
-        Scratch directory under which HYSPLIT runs, as
+        Directory the workdirs are made in, one per simulation, as
         :func:`~stilt.execution.resolve_compute_root` returns it.
     execution : ExecutionConfig, optional
         Execution settings: ``cpus`` is the number of worker processes (1
