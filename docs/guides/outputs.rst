@@ -366,3 +366,36 @@ finer grid:
 cells across the smallest one. ``sim.calc_footprint`` applies the
 variant's particle transforms, as the stored footprint did, and does not
 overwrite the stored file.
+
+Without PYSTILT
+---------------
+
+The output directory is a set of Parquet files in folders named
+``settings=...`` and ``date=...``, which many tools read as columns. With
+`DuckDB <https://duckdb.org>`_, from Python, R, or its own shell, a
+question about thousands of simulations is one query:
+
+.. code-block:: sql
+
+   -- footprints per settings folder and day
+   SELECT settings, date, count(DISTINCT receptor) AS footprints
+   FROM read_parquet('output/footprints/*/*/*.parquet', hive_partitioning = true)
+   GROUP BY settings, date
+   ORDER BY settings, date;
+
+   -- the total influence of each receptor's footprint
+   SELECT receptor, sum(foot) AS total
+   FROM read_parquet('output/footprints/settings=hrrr-93278c/*/*.parquet', hive_partitioning = true)
+   GROUP BY receptor;
+
+   -- where each particle of one day's receptors ended up
+   SELECT receptor, particle, arg_min(lon, time) AS lon, arg_min(lat, time) AS lat
+   FROM read_parquet('output/particles/settings=hrrr-a3f9c2/date=2023-07-15/*.parquet', hive_partitioning = true)
+   GROUP BY receptor, particle;
+
+A footprint file holds the cells the particles reached, as ``hour``,
+``y``, and ``x`` (the cell's row and column in the grid that the folder's
+``_settings.yaml`` gives) and ``foot``. An empty footprint is a file with
+no rows, so a count of rows leaves it out. An ensemble's folders have a
+``realization=k`` level as well, so its files are one folder deeper
+(``*/*/*/*.parquet``) and ``realization`` is a column.

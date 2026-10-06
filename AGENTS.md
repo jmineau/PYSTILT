@@ -485,6 +485,19 @@ MetPy user guides.
 - **Say it plainly.** No metaphors ("a dial worth turning"), no selling
   ("powerful", "seamless"), no filler ("note that", "it's worth noting").
 
+Use these words in user-facing text, and keep the internal ones on pages
+about internals:
+
+| Say | Not |
+|---|---|
+| settings folder | key, hash, identity |
+| transport model (in full) | model, when the weather model or a modelled value is near |
+| particles (the table); run (the verb); trajectory (one particle's path) | run as a noun for the result |
+| workdir (one simulation's folder); compute root (where workdirs are made) | scratch, except the output's `scratch/` folder |
+| log, met files | provenance |
+| receptor id; simulation (a receptor under a variant) | simulation ID as a folder |
+| the settings of a variant | resolve, record, `model_copy`, frame, handle |
+
 Some habits make text read as machine-written. Avoid them:
 
 - Colon reveals: "PYSTILT does one thing: it follows the air." Write
@@ -518,8 +531,9 @@ when you write it.
 
 Open work is tracked in
 [GitHub issues](https://github.com/jmineau/PYSTILT/issues), not in this file.
-Feature status lives in the roadmap tables in [README.md](README.md) and
-[docs/roadmap.rst](docs/roadmap.rst); when a feature lands, update both.
+Feature status lives in one place, the roadmap tables in
+[docs/roadmap.rst](docs/roadmap.rst); when a feature lands, update its row.
+The README links to it and keeps no table of its own.
 
 - Code that looks over-engineered goes on the running list in
   [#48](https://github.com/jmineau/PYSTILT/issues/48) (label `simplify`),

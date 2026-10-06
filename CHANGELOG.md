@@ -952,6 +952,9 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- The outputs guide shows how to query the output directory with DuckDB,
+  without PYSTILT (#150).
+
 - `stilt output ls` lists the output directory's settings folders: which
   of the project's variants use each, how many result files it holds, and
   how an unused folder's settings differ from the variant of its name.

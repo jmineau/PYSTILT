@@ -12,7 +12,7 @@ install:
 # Build HTML documentation using Sphinx
 build-docs:
 	@echo "Building HTML documentation..."
-	rm -rf docs/_build/
+	rm -rf docs/_build/ docs/reference/_api/
 	MPLCONFIGDIR=/tmp/pystilt-mplconfig uv run sphinx-build -M html docs docs/_build
 
 # Clean up build artifacts and cache files

@@ -87,27 +87,19 @@ setting, edit `config.yaml`.
 ```bash
 stilt init ./my_project          # write a starter config.yaml and receptors.csv
 stilt run ./my_project           # run every receptor that is not done yet
-stilt run ./my_project --n-workers 8   # the same, in 8 parallel processes
+stilt run ./my_project --cpus 8  # the same, eight receptors at a time
 stilt status ./my_project        # what has finished
+stilt output ls ./my_project     # the settings folders in the output directory
 ```
 
-To run on a Slurm cluster, add an `execution` section to `config.yaml`. `stilt run` then submits
-a job array and returns. No database is needed.
-
-```yaml
-execution:
-  backend: slurm
-  n_workers: 200          # array tasks
-  account: my-account     # other keys become #SBATCH options
-  partition: my-partition
-  time: "02:00:00"
-```
+`stilt run` exits with 0 when every simulation it ran is complete, 1 when some failed, and 2
+when it was stopped before they finished.
 
 ## Variants
 
 A variant is a named set of settings. Every receptor runs once under each variant. The top-level
-settings in `config.yaml` are the defaults, and a variant lists only what it changes. With no
-`variants` section there is one variant per met, named after it.
+settings in `config.yaml` are the defaults, and a variant lists only what it changes. The
+`variants` section declares them all; `hrrr: {}` runs the defaults.
 
 ```yaml
 variants:
@@ -118,10 +110,10 @@ variants:
     tluverr: 260
     zcoruverr: 450
     horcoruverr: 14
-    realizations: 4                         # hrrr-err-0 .. hrrr-err-3
+    realizations: 4                         # realizations 0 to 3 of hrrr-err
     grid: null                              # particles only, no footprint
   hrrr-ak:                                  # another footprint from the hrrr particles
-    transforms: [{kind: averaging_kernel, table: kernels.parquet}]
+    transforms: [{kind: averaging_kernel, table: kernels}]
 ```
 
 Each receptor under each variant is one simulation. Results go to the output directory
@@ -150,34 +142,26 @@ stilt submit ./my_project       # submits and returns; stilt run waits
 stilt status ./my_project
 ```
 
-A task that is preempted or runs out of time is submitted again and skips the receptors it
+Each task runs `stilt run --task I/N`, so a task is a command line you can read and rerun. A
+task that is preempted or nears its time limit requeues itself and skips the receptors it
 finished. Whether a simulation is finished is always decided by its files in the output
-directory.
+directory. The same `--task` runs a project as a Kubernetes indexed Job.
 
 ## Column and satellite soundings
 
-Read the soundings into a table with one row per sounding. Group and thin the rows with
-`stilt.observations`, then make one receptor per row. Each sounding has its own averaging kernel,
-so write the kernels to a table in the project:
+Read the soundings into a table with one row per sounding, then make a receptor for each.
+Each sounding has its own averaging kernel, which goes into the project as a table:
 
 ```python
 import stilt
-from stilt.observations import group_by_overpass, read_tropomi_ch4
-from stilt.transforms import averaging_kernel_table
+from stilt.observations import read_tropomi_ch4, receptors_from_soundings
 
 df = read_tropomi_ch4(path)                      # or read_oco2, read_tccon, or your own reader
-df["overpass"] = group_by_overpass(df["time"])   # label rows by overpass
+receptors, kernels = receptors_from_soundings(df[df.good], "slant", top=3000)
 
 project = stilt.Project("./my_project")         # a project with a config.yaml
-receptors = [
-    stilt.ColumnReceptor(time=r.time, longitude=r.longitude, latitude=r.latitude, bottom=0, top=3000)
-    for r in df.itertuples()
-]
 project.add_receptors(receptors)
-
-averaging_kernel_table(receptors, levels=df.ak_pressure, values=df.ak).to_parquet(
-    project.directory / "kernels.parquet"
-)
+project.add_table("kernels", kernels)
 project.run()
 ```
 
@@ -187,15 +171,14 @@ Then name the table in `config.yaml`:
 grid: {xmin: -114.0, xmax: -111.0, ymin: 39.0, ymax: 42.0, xres: 0.01, yres: 0.01}
 transforms:
   - kind: averaging_kernel
-    table: kernels.parquet
+    table: kernels
     coordinate: pres
   - kind: pressure_weighting
 ```
 
-For slanted lines of sight, use `slant_points` and `Receptor.from_points`.
-`pressure_altitudes` converts a retrieval's pressure levels to altitudes. See the
-[observations guide](https://jmineau.github.io/PYSTILT/advanced/observations.html)
-and the [slant columns guide](https://jmineau.github.io/PYSTILT/guides/slant_columns.html).
+`"column"` makes vertical columns in place of slant lines of sight. The
+[satellite tutorial](https://jmineau.github.io/PYSTILT/tutorials/satellite_column.html) goes from
+an orbit to modelled and observed enhancements.
 
 ## Particle transforms
 
@@ -214,7 +197,7 @@ transforms:
     some_field: 3
 ```
 
-A transform is any object with an `apply(particles, context)` method. The
+A transform is any object with an `apply(particles, receptor=None, directory=None)` method. The
 [transforms guide](https://jmineau.github.io/PYSTILT/advanced/transforms.html)
 covers the column-weighting science and how to write your own.
 
@@ -256,48 +239,8 @@ of the development docs has the details.
 
 ## Roadmap
 
-PYSTILT borrows from two sister projects. [X-STILT](https://github.com/uataq/X-STILT) is the
-source of its column and satellite science. [stiltctl](https://github.com/uataq/stiltctl)
-showed the thin call path from the CLI through the project to workers handed receptors. Its
-queue-backed and Kubernetes execution was tried and removed in favour of array tasks that each
-run `stilt run --task`, on Slurm or in a Kubernetes indexed Job. The full
-[roadmap](https://jmineau.github.io/PYSTILT/roadmap.html) has more detail.
-
-### Execution
-
-| Feature | Status |
-|---|---|
-| Thin CLI → Project → worker call path | Implemented |
-| Local runs, in one process or a process pool | Implemented |
-| Slurm job arrays, with preempted tasks resubmitted | Implemented |
-| One task of a job array or a Kubernetes indexed Job (`stilt run --task I/N`) | Implemented |
-| Queue-backed workers (PostgreSQL), Kubernetes deployment | Removed |
-| Cloud object store outputs (GCS, S3) | Implemented |
-
-### Column and satellite science (from X-STILT)
-
-PYSTILT does not try to match every X-STILT feature. It takes over X-STILT's approach to
-observations and column weighting, and leaves the rest.
-
-| Feature | Status |
-|---|---|
-| `stilt.observations` helpers (overpass grouping, sounding selection, jitter, slant geometry) | Implemented |
-| Column receptor support | Implemented |
-| Averaging-kernel and pressure-weighting particle transforms | Implemented |
-| First-order lifetime decay transform | Implemented |
-| Declarative transforms in config (default or per variant) | Implemented |
-| Slant-column receptor support | Implemented |
-| Slant altitudes from a retrieval's pressure levels (`pressure_altitudes`) | Implemented |
-| User-defined transforms (`kind: my.module.Class`) | Implemented |
-| Per-sounding averaging kernels in batch runs (`averaging_kernel` with `table:`) | Implemented |
-| Product readers (OCO-2/3, TROPOMI, TCCON) | Implemented: `read_tropomi_ch4`, `read_oco2`, `read_tccon`; other instruments as one module each |
-| Transport error on the modelled enhancement (`transport_error`) | Implemented |
-| Modelled enhancement from a flux field (`foot.stilt.enhancement`) | Implemented |
-| Background from a mole-fraction field at the trajectory endpoints (`background`) | Implemented |
-| Satellite-derived plume background (forward trajectories) | Implemented |
-| Forward runs (positive `n_hours`) for plume and dispersion studies | Implemented; see the plume-background guide |
-| Emission-error propagation to the modelled enhancement | Recipe on `foot.stilt.enhancement`; correlated case in fips |
-| Inventory readers | Out of scope: a flux field is an xarray array |
+What is implemented and what is planned is on the
+[roadmap](https://jmineau.github.io/PYSTILT/roadmap.html) page of the documentation.
 
 ## Use of AI coding agents
 

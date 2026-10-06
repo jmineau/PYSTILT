@@ -157,18 +157,21 @@ Outputs
 Particles are saved as Parquet files instead of R ``.rds`` files. Open them
 in Python with pandas or :func:`stilt.read_particles`, and in R with
 ``arrow::read_parquet``. Footprints are saved as Parquet too, holding only
-the cells the particles reached. ``foot.to_netcdf()`` writes one as NetCDF
-with dimensions ``(time, lat, lon)``, as STILT-R does.
+the cells the particles reached. ``foot.stilt.to_netcdf(path)`` writes one
+as CF NetCDF with dimensions ``(time, lat, lon)``, as STILT-R does, and
+keeps the receptor and the settings in it.
 
-A point or column receptor's ID has the same form as STILT-R's simulation
-ID. Each variant is a folder below it, for example
-``201507050000_-111.8472_40.7665_21/hrrr``.
+A point or column receptor's id has the same form as STILT-R's simulation
+ID, and names its files: ``date=2015-07-05/201507050000_-111.8472_40.7665_21.parquet``
+in each variant's settings folder (see :doc:`../guides/project_layout`). A
+simulation is that id under a variant, ``201507050000_-111.8472_40.7665_21/hrrr``.
 
 Moving a project over
 ---------------------
 
 1. Copy your ``run_stilt.r`` settings into ``config.yaml`` using the table
-   above. Start with one met and no ``variants``.
+   above. Start with one met and one variant that runs the defaults
+   (``variants: {hrrr: {}}``).
 2. Write your receptors to ``receptors.csv``.
 3. Run a few receptors that you already have STILT-R results for, and
    compare the footprints.
