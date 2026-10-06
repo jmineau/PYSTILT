@@ -35,7 +35,7 @@ file covers. For files named like ``20230715_18``, each holding six hours:
    }
 
 If you don't have ARL files, PYSTILT can download them from NOAA's archive
-into a folder you choose. This needs ``pip install "pystilt[cloud]"``.
+into a folder you choose. This needs ``pip install "pystilt[download]"``.
 
 .. code-block:: python
 

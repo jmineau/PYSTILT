@@ -8,8 +8,8 @@ Install PYSTILT
 
    pip install "pystilt[visualization]"
 
-This installs PYSTILT, the ``stilt`` command-line tool, and matplotlib for
-plotting. Check that it worked:
+This installs PYSTILT, the ``stilt`` command-line tool, and matplotlib and
+cartopy for plotting maps. Check that it worked:
 
 .. code-block:: bash
 
@@ -28,18 +28,19 @@ Extras add optional features. List them in the brackets, for example
    * - Extra
      - Adds
    * - ``visualization``
-     - Plotting (``.stilt.plot.map()`` on footprints and particles, ``.plot.map()`` on receptors).
+     - Plotting (``.stilt.plot.map()`` on footprints and particles, ``.plot.map()`` on receptors), with coastlines and state borders from cartopy.
    * - ``geometry``
-     - Adding footprints up over shapefiles, counties, or H3 hexagons.
-   * - ``cloud``
+     - Adding footprints up over shapefiles, counties, or H3 hexagons, with exactextract for fast overlaps.
+   * - ``download``
      - Downloading meteorology from NOAA.
+   * - ``sparse``
+     - The Jacobian as a sparse xarray array (``H.to_xarray()``).
    * - ``complete``
      - Everything above.
 
-For maps with coastlines and state borders, also install
-`cartopy <https://scitools.org.uk/cartopy/>`_. It is easiest to install with
-``conda install -c conda-forge cartopy``. PYSTILT uses it when it is
-available.
+An output directory on an object store needs the fsspec package for it,
+such as ``s3fs`` for ``s3://`` or ``gcsfs`` for ``gs://``
+(:doc:`../guides/project_layout`).
 
 HYSPLIT is included
 -------------------

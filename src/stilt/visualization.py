@@ -11,8 +11,8 @@ from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
 if TYPE_CHECKING:
-    import cartopy  # type: ignore[import-untyped]
     import xarray as xr
+    from cartopy.io.img_tiles import GoogleTiles
 
     from stilt.project import Project
     from stilt.receptors import Receptor
@@ -30,7 +30,7 @@ from stilt.spatial import horizontal_dims
 def _make_ax(
     ax: Axes | None = None,
     extent: tuple[float, float, float, float] | None = None,
-    tiler: cartopy.io.img_tiles.GoogleTiles | None = None,
+    tiler: GoogleTiles | None = None,
     tiler_zoom: int = 8,
 ) -> tuple[Figure, Axes]:
     """Return ``(fig, ax)``, making a cartopy map when cartopy is installed."""
@@ -160,7 +160,7 @@ class ParticlesPlotAccessor:
         cmap: str = "viridis_r",
         s: float = 1.0,
         alpha: float = 0.3,
-        tiler: cartopy.io.img_tiles.GoogleTiles | None = None,
+        tiler: GoogleTiles | None = None,
         tiler_zoom: int = 8,
         **kwargs,
     ) -> Axes:
@@ -240,7 +240,7 @@ class FootprintPlotAccessor:
         cmap: str = "cool",
         show_grid: bool = False,
         met_bounds: Bounds | None = None,
-        tiler: cartopy.io.img_tiles.GoogleTiles | None = None,
+        tiler: GoogleTiles | None = None,
         tiler_zoom: int = 8,
         **kwargs,
     ) -> Axes:
@@ -374,7 +374,7 @@ class ReceptorPlotAccessor:
         domain: Bounds | None = None,
         met_bounds: Bounds | None = None,
         color: str = "red",
-        tiler: cartopy.io.img_tiles.GoogleTiles | None = None,
+        tiler: GoogleTiles | None = None,
         tiler_zoom: int = 8,
         **kwargs,
     ) -> Axes:

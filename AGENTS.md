@@ -447,7 +447,7 @@ quirks.
   `StiltError` and the builtin that describes it; a failed run is a
   `SimulationError`. Plain input checks raise builtins such as `ValueError`.
 - Runtime dependencies live in `[project]`; optional extras are `geometry`,
-  `visualization`, `cloud`, and `complete`. The `dev` dependency group pulls
+  `visualization`, `download`, `sparse`, and `complete`. The `dev` dependency group pulls
   in `pystilt[complete]` plus the test, lint, type, and docs tooling.
 
 ### Documentation

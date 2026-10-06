@@ -96,7 +96,7 @@ Set ``download`` to the name of one of NOAA's ARL archives and
        download: hrrr
        directory: /data/met/hrrr     # downloads are kept here
 
-Downloading needs the ``cloud`` extra (``pip install "pystilt[cloud]"``).
+Downloading needs the ``download`` extra (``pip install "pystilt[download]"``).
 The `arl-met <https://github.com/jmineau/arl-met>`_ package does the
 downloading.
 
