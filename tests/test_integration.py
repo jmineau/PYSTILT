@@ -455,24 +455,24 @@ def test_error_realizations(tmp_path, wbb_receptor, traj_only_config):
     model.run()
 
     sims = model.simulations
-    sims = sims[sims.group == "err"]
-    assert sims["variant"].tolist() == ["err-0", "err-1"]
+    sims = sims[sims.variant == "err"]
+    assert sims["realization"].tolist() == [0, 1]
     assert model.incomplete(sims).empty
 
     particles = model.particles(sims)
-    e0, e1 = (particles[particles.variant == v] for v in ("err-0", "err-1"))
+    e0, e1 = (particles[particles.realization == k] for k in (0, 1))
     s0 = e0.groupby("indx")["foot"].sum()
     s1 = e1.groupby("indx")["foot"].sum().reindex(s0.index)
     assert not np.allclose(s0.to_numpy(), s1.to_numpy())
 
     # Resume: drop one realization; only it reruns.
     main = model.simulation(*_sim_id(wbb_receptor))
-    err0 = model.simulation(*_sim_id(wbb_receptor, "err-0"))
-    err1 = model.simulation(*_sim_id(wbb_receptor, "err-1"))
+    err0 = model.simulation(*_sim_id(wbb_receptor, "err"), 0)
+    err1 = model.simulation(*_sim_id(wbb_receptor, "err"), 1)
     main_bytes = main.particles_path.read_bytes()
     err0_bytes = err0.particles_path.read_bytes()
     err1.particles_path.unlink()
-    assert _incomplete(model) == [err1.id]
+    assert _incomplete(model) == [err1.id[:2]]
 
     model.run(skip_existing=True)
 
@@ -501,8 +501,8 @@ def test_seeded_error_realizations_differ_and_reproduce(
 
     a = run(tmp_path / "a")
     sims = a.simulations
-    particles = a.particles(sims[sims.group == "err"])
-    e0, e1 = (particles[particles.variant == v] for v in ("err-0", "err-1"))
+    particles = a.particles(sims[sims.variant == "err"])
+    e0, e1 = (particles[particles.realization == k] for k in (0, 1))
     s0 = e0.groupby("indx")["foot"].sum()
     s1 = e1.groupby("indx")["foot"].sum().reindex(s0.index)
     assert not np.allclose(s0.to_numpy(), s1.to_numpy())
@@ -511,10 +511,10 @@ def test_seeded_error_realizations_differ_and_reproduce(
     assert not np.allclose(s_main.to_numpy(), s0.to_numpy())
 
     b = run(tmp_path / "b")
-    for variant in ("hrrr", "err-0", "err-1"):
+    for variant, k in (("hrrr", None), ("err", 0), ("err", 1)):
         pd.testing.assert_frame_equal(
-            a.simulation(*_sim_id(wbb_receptor, variant)).particles,
-            b.simulation(*_sim_id(wbb_receptor, variant)).particles,
+            a.simulation(*_sim_id(wbb_receptor, variant), k).particles,
+            b.simulation(*_sim_id(wbb_receptor, variant), k).particles,
         )
 
 

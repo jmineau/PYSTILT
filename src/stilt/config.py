@@ -91,21 +91,19 @@ class Variant:
     """
     One variant, resolved: its configs, its met, the model build, and its hashes.
 
-    Get one from ``project.variants`` or ``sim.variant``. ``name`` is the
-    name its simulations run under and ``group`` the name declared in
-    ``config.yaml``. They differ only for realizations: ``hrrr-err`` with
-    ``realizations: 3`` gives ``hrrr-err-0`` to ``hrrr-err-2``.
+    Get one from ``project.variants`` or ``sim.variant``. A variant with
+    ``realizations: N`` is an ensemble: its simulations run N times,
+    realization ``k`` with ``seed + k`` (:meth:`transport_for`), and its
+    results share one folder, a ``realization=k`` partition each.
 
     Variants with equal :attr:`particles_hash` share one run of the
-    transport model per receptor and differ only in their footprints. The
-    hashes are computed once. Change a variant with
+    transport model per receptor (and realization) and differ only in their
+    footprints. The hashes are computed once. Change a variant with
     :func:`dataclasses.replace`, which computes them again.
 
     Attributes
     ----------
     name : str
-        Name its simulations run under.
-    group : str
         Name as declared in ``config.yaml``.
     met : str
         Name of the met it runs with.
@@ -113,11 +111,11 @@ class Variant:
         That met's config.
     transport : TransportConfig
         The transport model's config, such as a
-        :class:`~stilt.transport.hysplit.HysplitConfig`.
+        :class:`~stilt.transport.hysplit.HysplitConfig`, with the base seed.
     model : ModelInfo
         The transport model build that runs it.
-    realization : int or None
-        Realization number within an ensemble, or ``None`` for a single run.
+    realizations : int or None
+        Number of realizations of an ensemble, or ``None`` for a single run.
     footprint : FootprintConfig or None
         Footprint config, with its grid, or ``None`` for particles only.
     geometry_hash : str or None
@@ -126,20 +124,50 @@ class Variant:
     """
 
     name: str
-    group: str
     met: str
     met_config: MetConfig
     transport: TransportConfig
     model: ModelInfo
-    realization: int | None = None
+    realizations: int | None = None
     footprint: FootprintConfig | None = None
     geometry_hash: str | None = None
+
+    @property
+    def realization_numbers(self) -> list[int | None]:
+        """The realizations its simulations run as: ``0`` to ``N - 1``, or ``[None]`` for a single run."""
+        if self.realizations is None:
+            return [None]
+        return list(range(self.realizations))
+
+    def transport_for(self, realization: int | None) -> TransportConfig:
+        """
+        Return the transport config realization *realization* runs with.
+
+        Realization ``k`` of an ensemble has ``seed + k``; a single run
+        (``None``) has the variant's own.
+
+        Raises
+        ------
+        ValueError
+            If *realization* is not one of :attr:`realization_numbers`.
+        """
+        if realization not in self.realization_numbers:
+            raise ValueError(
+                f"Variant {self.name!r} runs as realizations "
+                f"{self.realization_numbers}, not {realization!r}."
+            )
+        if realization is None:
+            return self.transport
+        return self.transport.realizations(realization + 1)[realization]
 
     @cached_property
     def run_settings(self) -> dict[str, Any]:
         """The settings that identify this variant's particles, as ``_settings.yaml`` records them."""
         return run_settings(
-            self.transport, self.met_config, self.model, self.realization
+            self.transport,
+            self.met_config,
+            self.model,
+            ensemble=self.realizations is not None,
         )
 
     @cached_property
@@ -196,7 +224,8 @@ class ProjectConfig(BaseModel):
             "Variants by name, each a set of overrides of the defaults. A "
             "variant may also set ``met`` (needed with several mets unless the "
             "variant has a met's name) and ``realizations`` (run N times, "
-            "realization k with ``seed + k``). Variants with the same transport "
+            "realization k with ``seed + k``, as one ensemble). Variants with "
+            "the same transport "
             "settings share one run of HYSPLIT and differ in the footprint made "
             "from it. At least one is required: ``hrrr: {}`` runs the defaults."
         ),
@@ -274,13 +303,8 @@ class ProjectConfig(BaseModel):
         except ValidationError as error:
             raise ValueError(f"config footprint settings: {error}") from None
         self._transport = transport_config(self.model, extra, f"config ({self.model})")
-        declared = self.declared()
-        for group in declared:
-            for k in range(self._declared(group).realizations or 0):
-                if f"{group}-{k}" in declared:
-                    raise ValueError(
-                        f"Variant '{group}-{k}' collides with realization {k} of {group!r}"
-                    )
+        for group in self.declared():
+            self._declared(group)
         return self
 
     @property
@@ -355,16 +379,17 @@ class ProjectConfig(BaseModel):
 
     def resolve(self, directory: str | Path | None = None) -> dict[str, Variant]:
         """
-        Return one :class:`Variant` per simulation name, in declared order.
+        Return one :class:`Variant` per declared variant, in declared order.
 
         Each variant's transport settings are validated by its model's config
-        class, and a ``realizations`` group becomes ``<name>-0`` to
-        ``<name>-<N-1>``, realization ``k`` with ``seed + k``. Each geometry is
-        read once, however many variants use it, and the grid of a footprint
-        given only by a geometry is derived from it (:meth:`stilt.Mesh.to_grid`).
-        The transport model's version and data files are read once for each
-        distinct build: the fields of its config that change no particle, such
-        as ``exe_dir``. ``project.variants`` holds the result.
+        class, as are its realizations (``realizations: N`` runs it N
+        times, realization ``k`` with ``seed + k``). Each geometry is read
+        once, however many variants use it, and the grid of a footprint
+        given only by a geometry is derived from it
+        (:meth:`stilt.Mesh.to_grid`). The transport model's version and
+        data files are read once for each distinct build: the fields of its
+        config that change no particle, such as ``exe_dir``.
+        ``project.variants`` holds the result.
 
         Parameters
         ----------
@@ -404,28 +429,21 @@ class ProjectConfig(BaseModel):
                     version=model.version(transport),
                     data_files=model.data_files(transport),
                 )
-            if declared.realizations is None:
-                runs = [(group, None, transport)]
-            else:
+            if declared.realizations is not None:
                 try:
-                    copies = transport.realizations(declared.realizations)
+                    transport.realizations(declared.realizations)
                 except ValueError as error:
                     raise ValueError(f"Variant {group!r}: {error}") from None
-                # A group of one is still <group>-0, so raising realizations
-                # later only adds simulations.
-                runs = [(f"{group}-{k}", k, copy) for k, copy in enumerate(copies)]
-            for name, realization, run_transport in runs:
-                variants[name] = Variant(
-                    name=name,
-                    group=group,
-                    met=declared.met,
-                    met_config=self.mets[declared.met],
-                    transport=run_transport,
-                    model=builds[build],
-                    realization=realization,
-                    footprint=footprint,
-                    geometry_hash=geometry_hash,
-                )
+            variants[group] = Variant(
+                name=group,
+                met=declared.met,
+                met_config=self.mets[declared.met],
+                transport=transport,
+                model=builds[build],
+                realizations=declared.realizations,
+                footprint=footprint,
+                geometry_hash=geometry_hash,
+            )
         return variants
 
     def to_yaml(self, path: str | Path | None = None) -> str:

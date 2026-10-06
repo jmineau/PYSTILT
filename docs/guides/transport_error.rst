@@ -71,13 +71,13 @@ several draws, set ``realizations`` on the error variant:
    hrrr-err:
      siguverr: 2.6
      # ...
-     realizations: 4          # hrrr-err-0 .. hrrr-err-3
+     realizations: 4          # realizations 0 to 3
 
-The variant then runs four times per receptor, as the simulations
-``hrrr-err-0`` to ``hrrr-err-3``. The unperturbed ``hrrr`` run is not
-repeated. A variant with ``realizations`` always gets numbered names, even
-with ``realizations: 1``. Each realization needs a different random draw,
-and there are two ways to get one:
+The variant then runs four times per receptor, as realizations ``0`` to
+``3`` of ``hrrr-err``: the ``realization`` column of
+``project.simulations``. The unperturbed ``hrrr`` run is not repeated.
+Each realization needs a different random draw, and there are two ways to
+get one:
 
 - ``krand: 4``, the default. HYSPLIT seeds each run from the clock. The
   realizations differ, but a rerun gives different ones.
@@ -95,11 +95,11 @@ as a list. It averages them before taking the difference:
 .. code-block:: python
 
    sims = project.simulations
-   ensemble = sims[(sims.receptor == rid) & (sims.group == "hrrr-err")]
+   ensemble = sims[(sims.receptor == rid) & (sims.variant == "hrrr-err")]
    errors = project.particles(ensemble)
    err = transport_error(
        project.simulation(rid, "hrrr").particles,
-       [rows for _, rows in errors.groupby("variant")],   # one table per realization
+       [rows for _, rows in errors.groupby("realization")],   # one table each
        flux,
    )
    err.realizations  # 4

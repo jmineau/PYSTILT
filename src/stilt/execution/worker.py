@@ -116,7 +116,9 @@ def _failed(sim: Simulation, step: Step, error: Exception) -> str:
     if not expected:
         record["traceback"] = traceback.format_exc()
     try:
-        sim.output.record_failure(_KIND[step], sim.variant, sim.receptor.id, record)
+        sim.output.record_failure(
+            _KIND[step], sim.variant, sim.receptor.id, record, sim.realization
+        )
     except Exception:
         logger.exception("simulation %s: could not record the failure", sim)
     return f"{sim.variant.name} failed during {step} ({reason}): {error}"
@@ -124,7 +126,7 @@ def _failed(sim: Simulation, step: Step, error: Exception) -> str:
 
 def _succeeded(sim: Simulation, step: Step) -> None:
     """Remove *sim*'s failure record for *step*, whose result is now written."""
-    sim.output.clear_failure(_KIND[step], sim.variant, sim.receptor.id)
+    sim.output.clear_failure(_KIND[step], sim.variant, sim.receptor.id, sim.realization)
 
 
 def run_particles(
@@ -181,14 +183,18 @@ def run_particles(
         result = run_model(
             sim.variant.model.name,
             sim.receptor,
-            sim.variant.transport,
+            sim.transport,
             met,
             workdir,
             timeout=timeout,
         )
         log = result.log
         output.write_particles(
-            sim.variant, sim.receptor, result.particles, result.met_files
+            sim.variant,
+            sim.receptor,
+            result.particles,
+            result.met_files,
+            sim.realization,
         )
         succeeded = True
         return result.particles
@@ -197,11 +203,11 @@ def run_particles(
         raise
     finally:
         if log:
-            output.write_log(sim.variant, rid, log)
+            output.write_log(sim.variant, rid, log, sim.realization)
         # An empty directory is not kept: a run that failed before writing
         # anything, such as on missing meteorology, has nothing to look at.
         if (keep_scratch or not succeeded) and any(workdir.iterdir()):
-            output.keep_workdir(sim.variant, rid, workdir)
+            output.keep_workdir(sim.variant, rid, workdir, sim.realization)
         shutil.rmtree(workdir, ignore_errors=True)
 
 
@@ -237,9 +243,11 @@ def make_footprint(sim: Simulation, particles: pd.DataFrame) -> xr.DataArray | N
             geometry_hash=sim.variant.geometry_hash,
         )
     except EmptyFootprint as error:
-        sim.output.write_empty_footprint(sim.variant, sim.receptor, error.reason)
+        sim.output.write_empty_footprint(
+            sim.variant, sim.receptor, error.reason, sim.realization
+        )
         return None
-    sim.output.write_footprint(sim.variant, foot)
+    sim.output.write_footprint(sim.variant, foot, sim.realization)
     return foot
 
 
@@ -254,8 +262,10 @@ def run_receptor(
     """
     Run every simulation of one receptor, and return what did not complete.
 
-    Variants with the same transport settings share one set of particles,
-    so they run as a group: HYSPLIT runs once for the group when the
+    Each realization of an ensemble variant is a simulation of its own.
+    Variants with the same transport settings share one set of particles
+    (per realization), so they run as a group: HYSPLIT runs once for the
+    group when the
     particles are missing (or always, without ``skip_existing``), and each
     variant's footprint is made from those particles in memory. A footprint
     is made again whenever its particles were, so it always matches them.
@@ -287,10 +297,11 @@ def run_receptor(
         :meth:`stilt.Project.status` reads them.
     """
     execution = execution if execution is not None else project.config.execution
-    groups: dict[str, list[Simulation]] = {}
-    for variant in project.variants:
-        sim = project.simulation(receptor_id, variant)
-        groups.setdefault(sim.variant.particles_hash, []).append(sim)
+    groups: dict[tuple[str, int | None], list[Simulation]] = {}
+    for name, variant in project.variants.items():
+        for k in variant.realization_numbers:
+            sim = project.simulation(receptor_id, name, k)
+            groups.setdefault((variant.particles_hash, k), []).append(sim)
     problems: list[str] = []
     for group in groups.values():
         problems += _run_group(
@@ -320,7 +331,7 @@ def _run_group(
             particles = run_particles(
                 first,
                 met=project.mets[first.variant.met],
-                workdir=compute_root / first.receptor.id / first.variant.name,
+                workdir=compute_root / str(first),
                 keep_scratch=execution.keep_scratch,
                 timeout=execution.timeout,
             )

@@ -16,7 +16,7 @@ the only code that writes results.
 from __future__ import annotations
 
 import os
-from collections.abc import Iterable
+from collections.abc import Iterable, Iterator
 from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -76,6 +76,37 @@ def _as_receptors(
             "of a receptors CSV."
         )
     return items
+
+
+#: A variant and a realization, how the bulk methods group a selection.
+_Key = tuple[str, int | None]
+#: The receptors with particles, and with a footprint (``None`` when the variant makes none).
+_Present = tuple[frozenset[str], frozenset[str] | None]
+
+
+def _realization(value: Any) -> int | None:
+    """Return a ``realization`` cell as an int, or ``None`` for a single run."""
+    return None if pd.isna(value) else int(value)
+
+
+def _rows(frame: pd.DataFrame) -> list[tuple[str, str, int | None]]:
+    """Return each row's ``(receptor, variant, realization)``."""
+    return [
+        (str(r), str(v), _realization(k))
+        for r, v, k in zip(
+            frame["receptor"], frame["variant"], frame["realization"], strict=True
+        )
+    ]
+
+
+def _groups(frame: pd.DataFrame) -> Iterator[tuple[str, int | None, pd.DataFrame]]:
+    """Yield the rows of each variant and realization in *frame*."""
+    for key, rows in frame.groupby(
+        ["variant", "realization"], sort=False, dropna=False
+    ):
+        assert isinstance(key, tuple)  # grouped by two columns
+        name, k = key
+        yield str(name), _realization(k), rows
 
 
 def _is_mask(sel: Any) -> bool:
@@ -415,11 +446,15 @@ class Project:
     def _simulations(self) -> pd.DataFrame:
         """The table :attr:`simulations` copies, built once."""
         variants = pd.DataFrame(
-            [(name, v.group, v.model.name) for name, v in self.variants.items()],
-            columns=["variant", "group", "model"],
-        )
+            [
+                (name, k, v.model.name)
+                for name, v in self.variants.items()
+                for k in v.realization_numbers
+            ],
+            columns=["variant", "realization", "model"],
+        ).astype({"realization": "Int64"})
         frame = self.receptors.merge(variants, how="cross")
-        first = ["receptor", "variant", "group", "model"]
+        first = ["receptor", "variant", "realization", "model"]
         return frame.loc[:, first + [c for c in frame.columns if c not in first]]
 
     @property
@@ -428,10 +463,10 @@ class Project:
         Every receptor under every variant, one row per simulation.
 
         A pandas DataFrame with the columns ``receptor``, ``variant``,
-        ``group`` (the variant's name in ``config.yaml``, shared by the
-        realizations of one variant), ``model`` (its transport model), then
-        the other columns of :attr:`receptors`. Rows run receptor by
-        receptor, with variants in config order. Select rows as in pandas
+        ``realization`` (``0`` to ``N - 1`` for a variant with
+        ``realizations: N``, empty for one that runs once), ``model`` (its
+        transport model), then the other columns of :attr:`receptors`. Rows
+        run receptor by receptor, with variants in config order. Select rows as in pandas
         and pass the selection to :meth:`status`, :meth:`incomplete`,
         :meth:`particles`, :meth:`footprints`, or :meth:`jacobian`.
 
@@ -444,9 +479,11 @@ class Project:
         """
         return self._simulations.copy()
 
-    def simulation(self, receptor_id: str, variant: str) -> Simulation:
+    def simulation(
+        self, receptor_id: str, variant: str, realization: int | None = None
+    ) -> Simulation:
         """
-        Return one simulation: a receptor under a variant.
+        Return one simulation: a receptor under a variant, and a realization of an ensemble.
 
         A simulation is a value built from its receptor, its variant, and the
         output directory, so it is cheap. It knows where its results are and
@@ -456,6 +493,9 @@ class Project:
         ------
         KeyError
             If the project has no such receptor or variant.
+        ValueError
+            If *realization* is not one the variant runs as: ``0`` to
+            ``N - 1`` for ``realizations: N``, ``None`` otherwise.
         """
         if variant not in self.variants:
             raise KeyError(
@@ -466,6 +506,7 @@ class Project:
             self.variants[variant],
             self.output,
             self.directory,
+            realization,
         )
 
     def unreferenced(self) -> dict[str, list[str]]:
@@ -510,7 +551,8 @@ class Project:
         *sel* is ``None`` (every simulation), a pandas table with
         ``receptor`` and ``variant`` columns (returned as it is, extra
         columns and all), a boolean mask over :attr:`simulations`, or a
-        polars or pyarrow table with those two columns.
+        polars or pyarrow table with those two columns. A table without a
+        ``realization`` column selects every realization of an ensemble.
 
         Raises
         ------
@@ -527,16 +569,11 @@ class Project:
             frame = self.simulations.loc[np.asarray(sel, dtype=bool)]
         else:
             try:
-                pairs = pd.DataFrame(
+                frame = pd.DataFrame(
                     {name: _column(sel, name) for name in ("receptor", "variant")}
                 )
             except (KeyError, TypeError, ValueError, IndexError):
-                pairs = pd.DataFrame()
-            frame = pairs
-            if not pairs.empty:
-                frame = pairs.merge(
-                    self.simulations, on=["receptor", "variant"], how="left"
-                )
+                frame = pd.DataFrame()
         missing = [c for c in ("receptor", "variant") if c not in frame.columns]
         if missing:
             raise ValueError(
@@ -549,44 +586,42 @@ class Project:
             raise KeyError(
                 f"No variant {unknown}; the variants are {list(self.variants)}."
             )
+        if "realization" not in frame.columns:
+            # Every realization of an ensemble, and the rest of each row.
+            sims = self.simulations
+            keep = [c for c in sims.columns if c not in frame.columns]
+            frame = frame.merge(
+                sims[["receptor", "variant", *keep]],
+                on=["receptor", "variant"],
+                how="left",
+            )
         return frame
 
-    def _present(
-        self, frame: pd.DataFrame
-    ) -> dict[str, tuple[frozenset[str], frozenset[str] | None]]:
+    def _present(self, frame: pd.DataFrame) -> dict[_Key, _Present]:
         """
-        Return, per variant, the selected receptors with particles and with a footprint.
+        Return, per variant and realization, the selected receptors with particles and with a footprint.
 
         Read from a listing of the date folders the selection falls in
         (:meth:`stilt.output.Output.present`), in place of a file check per
         simulation: on a large project the checks are the slow part. The
         footprint set is ``None`` for a variant that makes no footprint.
         """
-        present: dict[str, tuple[frozenset[str], frozenset[str] | None]] = {}
-        for name, rows in frame.groupby("variant", sort=False):
-            variant = self.variants[str(name)]
+        present: dict[_Key, _Present] = {}
+        for name, k, rows in _groups(frame):
+            variant = self.variants[name]
             among = set(rows["receptor"])
-            particles = self.output.present("particles", variant, among)
+            particles = self.output.present("particles", variant, among, k)
             footprints = None
             if variant.footprint is not None:
-                footprints = self.output.present("footprints", variant, among)
-            present[str(name)] = (particles, footprints)
+                footprints = self.output.present("footprints", variant, among, k)
+            present[(name, k)] = (particles, footprints)
         return present
 
     @staticmethod
-    def _complete(
-        frame: pd.DataFrame,
-        present: dict[str, tuple[frozenset[str], frozenset[str] | None]],
-    ) -> np.ndarray:
+    def _complete(frame: pd.DataFrame, present: dict[_Key, _Present]) -> np.ndarray:
         """Return whether each row is complete (:func:`stilt.output.completed`), from :meth:`_present`."""
-        done = {v: completed(*sets) for v, sets in present.items()}
-        return np.array(
-            [
-                r in done[v]
-                for r, v in zip(frame["receptor"], frame["variant"], strict=True)
-            ],
-            dtype=bool,
-        )
+        done = {key: completed(*sets) for key, sets in present.items()}
+        return np.array([r in done[(v, k)] for r, v, k in _rows(frame)], dtype=bool)
 
     def status(self, sel: Any = None) -> pd.DataFrame:
         """
@@ -631,14 +666,15 @@ class Project:
         """
         frame = self._selected(sel)
         present = self._present(frame)
-        pairs = list(zip(frame["receptor"], frame["variant"], strict=True))
-        particles = [r in present[v][0] for r, v in pairs]
+        rows = _rows(frame)
+        particles = [r in present[(v, k)][0] for r, v, k in rows]
         feet = [
-            None if (have := present[v][1]) is None else r in have for r, v in pairs
+            None if (have := present[(v, k)][1]) is None else r in have
+            for r, v, k in rows
         ]
         complete = self._complete(frame, present)
         found = self._failure_records(frame, present)
-        records = [found.get(pair, {}) for pair in pairs]
+        records = [found.get(row, {}) for row in rows]
         state = [
             "complete" if done else "failed" if record else "pending"
             for done, record in zip(complete, records, strict=True)
@@ -654,23 +690,20 @@ class Project:
         )
 
     def _failure_records(
-        self,
-        frame: pd.DataFrame,
-        present: dict[str, tuple[frozenset[str], frozenset[str] | None]],
-    ) -> dict[tuple[str, str], dict[str, Any]]:
+        self, frame: pd.DataFrame, present: dict[_Key, _Present]
+    ) -> dict[tuple[str, str, int | None], dict[str, Any]]:
         """
-        Return the failure record of each selected simulation missing a result, by ``(receptor, variant)``.
+        Return the failure record of each selected simulation missing a result, by ``(receptor, variant, realization)``.
 
         A simulation without particles is explained by its particles'
         record, one with particles but no footprint by its footprint's
         (:attr:`stilt.Simulation.failure`). Only those receptors' date
         folders are listed, and only the records found are read.
         """
-        found: dict[tuple[str, str], dict[str, Any]] = {}
-        for name, rows in frame.groupby("variant", sort=False):
-            v = str(name)
-            variant = self.variants[v]
-            particles, feet = present[v]
+        found: dict[tuple[str, str, int | None], dict[str, Any]] = {}
+        for name, k, rows in _groups(frame):
+            variant = self.variants[name]
+            particles, feet = present[(name, k)]
             receptors = set(rows["receptor"])
             no_particles = receptors - particles
             no_footprint = set() if feet is None else (receptors & particles) - feet
@@ -680,10 +713,9 @@ class Project:
             ]
             for kind, among in missing:
                 if among:
-                    for rid, record in self.output.failures(
-                        kind, variant, among
-                    ).items():
-                        found[(rid, v)] = record
+                    failures = self.output.failures(kind, variant, among, k)
+                    for rid, record in failures.items():
+                        found[(rid, name, k)] = record
         return found
 
     def incomplete(self, sel: Any = None) -> pd.DataFrame:
@@ -710,7 +742,7 @@ class Project:
         -------
         pandas.DataFrame
             One row per particle per output step per simulation, with
-            ``receptor`` and ``variant`` columns first. Simulations without
+            ``receptor``, ``variant``, and ``realization`` columns first. Simulations without
             particles are left out. Variants that share a run each get their
             own copy of its rows.
 
@@ -723,21 +755,28 @@ class Project:
         """
         frame = self._selected(sel)
         parts = []
-        for name, rows in frame.groupby("variant", sort=False):
-            variant = self.variants[str(name)]
-            present = self.output.present("particles", variant, rows["receptor"])
-            table = self.output.table("particles", variant, present)
+        for name, k, rows in _groups(frame):
+            variant = self.variants[name]
+            present = self.output.present("particles", variant, rows["receptor"], k)
+            table = self.output.table("particles", variant, present, k)
             if table.num_rows:
-                parts.append(particles_from_table(table).assign(variant=str(name)))
+                part = particles_from_table(table).assign(variant=name)
+                parts.append(
+                    part.assign(realization=pd.array([k] * len(part), "Int64"))
+                )
         if not parts:
-            return pd.DataFrame(columns=pd.Index(["receptor", "variant"]))
+            return pd.DataFrame(
+                columns=pd.Index(["receptor", "variant", "realization"])
+            )
         particles = pd.concat(parts, ignore_index=True)
-        first = ["receptor", "variant"]
+        first = ["receptor", "variant", "realization"]
         return particles.loc[
             :, first + [c for c in particles.columns if c not in first]
         ]
 
-    def footprints(self, sel: Any = None) -> dict[tuple[str, str], xr.DataArray]:
+    def footprints(
+        self, sel: Any = None
+    ) -> dict[tuple[str, str, int | None], xr.DataArray]:
         """
         Load the footprint of every selected simulation that has one.
 
@@ -752,7 +791,8 @@ class Project:
         Returns
         -------
         dict
-            Footprints by ``(receptor, variant)``, in selection order.
+            Footprints by ``(receptor, variant, realization)``, in selection
+            order; ``realization`` is ``None`` for a variant that runs once.
             ``xr.concat(list(feet.values()), dim="receptor")`` stacks
             footprints of one variant.
 
@@ -764,16 +804,15 @@ class Project:
         footprints onto a target without holding them all.
         """
         frame = self._selected(sel)
-        found: dict[tuple[str, str], xr.DataArray] = {}
-        for name, rows in frame.groupby("variant", sort=False):
-            variant = self.variants[str(name)]
-            for rid in self.output.present("footprints", variant, rows["receptor"]):
-                path = self.output.path("footprints", variant, rid)
+        found: dict[tuple[str, str, int | None], xr.DataArray] = {}
+        for name, k, rows in _groups(frame):
+            variant = self.variants[name]
+            for rid in self.output.present("footprints", variant, rows["receptor"], k):
+                path = self.output.path("footprints", variant, rid, k)
                 foot = None if path is None else read_footprint(path)
                 if foot is not None:
-                    found[(rid, str(name))] = foot
-        pairs = zip(frame["receptor"], frame["variant"], strict=True)
-        return {pair: found[pair] for pair in pairs if pair in found}
+                    found[(rid, name, k)] = foot
+        return {row: found[row] for row in _rows(frame) if row in found}
 
     def jacobian(
         self,
@@ -830,24 +869,25 @@ class Project:
             closed on the left.
         """
         frame = self._selected(sel)
-        names = list(dict.fromkeys(frame["variant"]))
-        if len(names) != 1:
+        groups = list(dict.fromkeys((v, k) for _, v, k in _rows(frame)))
+        if len(groups) != 1:
             raise ValueError(
-                f"A Jacobian is made from one variant; this selection has {names}. "
-                "Select one first, as in sims[sims.variant == 'hrrr']."
+                "A Jacobian is made from one variant (and one realization of an "
+                f"ensemble); this selection has {groups}. Select one first, as in "
+                "sims[sims.variant == 'hrrr']."
             )
-        name = str(names[0])
+        name, k = groups[0]
         variant = self.variants[name]
         if variant.footprint is None:
             raise ValueError(f"Variant {name!r} makes no footprints (no grid).")
         if self.output.folder("footprints", variant) is None:
             raise ValueError(f"Variant {name!r} has no footprints yet.")
         requested = list(dict.fromkeys(frame["receptor"]))
-        found = self.output.present("footprints", variant, requested)
+        found = self.output.present("footprints", variant, requested, k)
         present = [r for r in requested if r in found]
         batches = [present[i : i + batch] for i in range(0, len(present), batch)]
         return _jacobian(
-            lambda rows: self.output.table("footprints", variant, rows),
+            lambda rows: self.output.table("footprints", variant, rows, k),
             batches,
             variant.footprint,
             target,

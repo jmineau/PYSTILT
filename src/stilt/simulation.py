@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 @dataclass(frozen=True)
 class Simulation:
     """
-    One receptor run under one variant.
+    One receptor run under one variant, as one realization of an ensemble or alone.
 
     A simulation is a value: its receptor, its variant, and the output
     directory its results are in. From those it knows where its particles,
@@ -56,20 +56,41 @@ class Simulation:
         The project directory, where a relative file name in the settings
         starts, such as an averaging-kernel table. ``None`` starts it from
         the working directory.
+    realization : int, optional
+        Which realization of an ensemble variant (``realizations: N``),
+        ``0`` to ``N - 1``. ``None`` for a variant that runs once.
+
+    Raises
+    ------
+    ValueError
+        If *realization* is not one the variant runs as.
     """
 
     receptor: Receptor
     variant: Variant
     output: Output
     directory: Path | None = None
+    realization: int | None = None
+
+    def __post_init__(self) -> None:
+        if self.realization not in self.variant.realization_numbers:
+            raise ValueError(
+                f"Variant {self.variant.name!r} runs as realizations "
+                f"{self.variant.realization_numbers}, not {self.realization!r}."
+            )
 
     def __repr__(self) -> str:
+        realization = (
+            "" if self.realization is None else f", realization={self.realization}"
+        )
         return (
-            f"Simulation(receptor={self.receptor.id!r}, variant={self.variant.name!r})"
+            f"Simulation(receptor={self.receptor.id!r}, "
+            f"variant={self.variant.name!r}{realization})"
         )
 
     def __str__(self) -> str:
-        return f"{self.receptor.id}/{self.variant.name}"
+        name = f"{self.receptor.id}/{self.variant.name}"
+        return name if self.realization is None else f"{name}/{self.realization}"
 
     def __hash__(self) -> int:
         return hash((self.id, self.output))
@@ -77,26 +98,35 @@ class Simulation:
     # -- identity ----------------------------------------------------------
 
     @property
-    def id(self) -> tuple[str, str]:
-        """``(receptor.id, variant.name)``, the row of ``project.simulations`` it is."""
-        return (self.receptor.id, self.variant.name)
+    def id(self) -> tuple[str, str, int | None]:
+        """``(receptor.id, variant.name, realization)``, the row of ``project.simulations`` it is."""
+        return (self.receptor.id, self.variant.name, self.realization)
+
+    @property
+    def transport(self) -> Any:
+        """The transport config this simulation runs with: the variant's, with ``seed + realization`` for an ensemble."""
+        return self.variant.transport_for(self.realization)
 
     # -- where the results are ---------------------------------------------
 
     @property
     def particles_path(self) -> Path | None:
         """Path of the particle file in the output directory, or ``None`` before its folder exists."""
-        return self.output.path("particles", self.variant, self.receptor.id)
+        return self.output.path(
+            "particles", self.variant, self.receptor.id, self.realization
+        )
 
     @property
     def footprint_path(self) -> Path | None:
         """Path of the footprint file in the output directory, or ``None`` before its folder exists."""
-        return self.output.path("footprints", self.variant, self.receptor.id)
+        return self.output.path(
+            "footprints", self.variant, self.receptor.id, self.realization
+        )
 
     @property
     def log_path(self) -> Path | None:
         """Path of the HYSPLIT log in the output directory, or ``None`` before its folder exists."""
-        return self.output.log_path(self.variant, self.receptor.id)
+        return self.output.log_path(self.variant, self.receptor.id, self.realization)
 
     @property
     def kept_workdir(self) -> Path | None:
@@ -108,7 +138,9 @@ class Simulation:
         CONTROL, SETUP.CFG, and its own output. It exists only after a
         failed run, or after any run with ``keep_scratch`` set.
         """
-        return self.output.kept_workdir(self.variant, self.receptor.id)
+        return self.output.kept_workdir(
+            self.variant, self.receptor.id, self.realization
+        )
 
     @property
     def settings(self) -> dict[str, Any]:
@@ -116,7 +148,7 @@ class Simulation:
         What this simulation's results are made with, as the output folders record them.
 
         ``{"particles": ..., "footprint": ...}``: the run settings (the
-        transport model's, the met's, the model build, the realization) and
+        transport model's, the met's, the model build, whether it is an ensemble) and
         the footprint settings, ``None`` for a variant without a grid. These
         are the records the folders' ``_settings.yaml`` hold, and their
         hashes name the folders.
@@ -157,7 +189,7 @@ class Simulation:
         (:meth:`stilt.output.Output.complete`, the one definition of done).
         """
         rid = self.receptor.id
-        return rid in self.output.complete(self.variant, [rid])
+        return rid in self.output.complete(self.variant, [rid], self.realization)
 
     # -- status ------------------------------------------------------------
 
@@ -212,7 +244,9 @@ class Simulation:
         if self.is_complete():
             return None
         kind = "footprints" if self.has_particles else "particles"
-        return self.output.failure(kind, self.variant, self.receptor.id)
+        return self.output.failure(
+            kind, self.variant, self.receptor.id, self.realization
+        )
 
     # -- reading the results -----------------------------------------------
 

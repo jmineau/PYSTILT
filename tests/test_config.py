@@ -980,7 +980,7 @@ def test_variant_names_are_plain(tmp_path, name):
         _variant_config(tmp_path, variants={name: {}})
 
 
-def test_realizations_expand_into_numbered_variants_with_their_own_seed(tmp_path):
+def test_an_ensemble_is_one_variant_whose_realizations_have_their_own_seed(tmp_path):
     cfg = _variant_config(
         tmp_path,
         krand=2,
@@ -997,12 +997,16 @@ def test_realizations_expand_into_numbered_variants_with_their_own_seed(tmp_path
         },
     )
     variants = cfg.resolve()
-    assert list(variants) == ["hrrr", "err-0", "err-1", "err-2"]
-    assert [variants[f"err-{k}"].transport.seed for k in range(3)] == [42, 43, 44]
-    assert all(variants[f"err-{k}"].group == "err" for k in range(3))
-    assert [variants[f"err-{k}"].realization for k in range(3)] == [0, 1, 2]
-    assert winderrtf(variants["err-1"].transport) == 1
+    assert list(variants) == ["hrrr", "err"]
+    err = variants["err"]
+    assert err.realizations == 3 and err.realization_numbers == [0, 1, 2]
+    assert err.transport.seed == 42  # the base seed
+    assert [err.transport_for(k).seed for k in range(3)] == [42, 43, 44]
+    assert winderrtf(err.transport_for(1)) == 1
     assert winderrtf(variants["hrrr"].transport) == 0
+    assert variants["hrrr"].realization_numbers == [None]
+    with pytest.raises(ValueError, match="realizations"):
+        err.transport_for(3)
 
 
 @pytest.mark.parametrize("krand", [0, 1, 2, 3, 12])
@@ -1014,26 +1018,30 @@ def test_several_realizations_require_krand_4_or_a_seed(tmp_path, krand):
 
 def test_several_realizations_accept_krand_4_or_seeded_krand_2(tmp_path):
     a = _variant_config(tmp_path, krand=4, variants={"e": {"realizations": 3}})
-    assert len(a.resolve()) == 3
+    assert a.resolve()["e"].realizations == 3
     b = _variant_config(tmp_path, krand=2, seed=7, variants={"e": {"realizations": 2}})
-    assert len(b.resolve()) == 2
+    assert b.resolve()["e"].realizations == 2
     with pytest.raises(ValueError, match="realizations must be >= 1"):
         _variant_config(tmp_path, variants={"e": {"realizations": 0}})
 
 
-def test_declaring_realizations_always_makes_a_group(tmp_path):
-    """A group of one is ``e-0``, so raising the count later only adds runs."""
+def test_an_ensemble_keeps_its_folder_when_its_realizations_grow(tmp_path):
+    """An ensemble of one is an ensemble, so raising the count later only adds runs."""
     cfg = _variant_config(tmp_path, variants={"e": {"realizations": 1}, "single": {}})
-    assert list(cfg.resolve()) == ["e-0", "single"]
-    assert cfg.resolve()["e-0"].group == "e"
-    assert cfg.resolve()["single"].realization is None
-
-
-def test_realization_names_may_not_collide_with_declared_variants(tmp_path):
-    with pytest.raises(ValueError, match="collides"):
-        _variant_config(
-            tmp_path, krand=4, variants={"e": {"realizations": 2}, "e-1": {}}
-        )
+    variants = cfg.resolve()
+    assert variants["e"].realization_numbers == [0]
+    assert variants["single"].realization_numbers == [None]
+    # An ensemble records that it is one, so it is not the single run.
+    assert variants["e"].particles_hash != variants["single"].particles_hash
+    more = _variant_config(
+        tmp_path, krand=4, variants={"e": {"realizations": 3}, "single": {}}
+    ).resolve()
+    one = _variant_config(
+        tmp_path, krand=4, variants={"e": {"realizations": 1}, "single": {}}
+    ).resolve()
+    assert more["e"].particles_hash == one["e"].particles_hash
+    assert variants["single"].run_settings["realization"] is None
+    assert variants["e"].run_settings["ensemble"] is True
 
 
 def test_variants_that_differ_only_in_footprint_fields_keep_the_transport(
@@ -1158,7 +1166,7 @@ def test_each_geometry_is_built_once_and_not_on_load(tmp_path, monkeypatch):
 
     variants = cfg.resolve()
     assert len(calls) == 2  # the default geometry and the one of "src"
-    inherited = [variants[n].footprint for n in ("hrrr", "np50", "err-0", "err-1")]
+    inherited = [variants[n].footprint for n in ("hrrr", "np50", "err")]
     assert all(f is not None and f.grid == inherited[0].grid for f in inherited)
     assert len(calls) == 2
 

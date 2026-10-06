@@ -292,6 +292,7 @@ folder below a kind is hive-style, so each tree reads as one dataset:
   footprints/settings=<variant>-<hash>/date=YYYY-MM-DD/<receptor_id>.parquet
   logs/settings=<variant>-<hash>/date=YYYY-MM-DD/<receptor_id>.log
   scratch/settings=<variant>-<hash>/date=YYYY-MM-DD/<receptor_id>/   failed runs' working dirs
+  particles/settings=<ensemble>-<hash>/realization=k/date=YYYY-MM-DD/...  an ensemble's realization k
 ```
 
 A particles folder's hash is `Variant.particles_hash`; a footprint
@@ -537,9 +538,14 @@ Feature status lives in the roadmap tables in [README.md](README.md) and
   is only for final states (no grid, empty footprint). Do not write to a
   simulation's `__dict__` by hand; use `has_particles` / `has_footprint` to
   test presence.
-- **Declaring `realizations` makes a numbered group, even at 1.** `hrrr-err`
-  with `realizations: 1` is `hrrr-err-0`, so raising the count later only
-  adds simulations. Realization 0 is never aliased to the unsuffixed name.
+- **Realizations are an axis, not names.** `realizations: N` makes one
+  variant whose simulations are `(receptor, variant, k)`, `k` in `0..N-1`,
+  the `realization` column of `project.simulations`. They share one
+  settings folder, a `realization=k/` partition each; the run record says
+  `ensemble: true` with the base seed, and realization `k` runs with
+  `seed + k` (`Variant.transport_for(k)`). An ensemble of one is still an
+  ensemble, so raising N only adds partitions. A single run records
+  `realization: null`, as before, so its hash did not change.
 - **HYSPLIT line-source chaining.** In `emspnt.f`, consecutive CONTROL
   starting locations at the same lat/lon become one vertical line source and
   only the last pair is released. That is how `ColumnReceptor` works (two

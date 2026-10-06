@@ -88,11 +88,15 @@ def _particles() -> pd.DataFrame:
     )
 
 
-def _write_trajectory(project: Project, receptor, variant="hrrr") -> Path:
+def _write_trajectory(
+    project: Project, receptor, variant="hrrr", realization=None
+) -> Path:
     """Write a small particle file for one simulation into the output directory."""
-    sim = project.simulation(receptor.id, variant)
-    particles = finished(_particles(), sim.receptor, sim.variant.transport)
-    return sim.output.write_particles(sim.variant, sim.receptor, particles, [])
+    sim = project.simulation(receptor.id, variant, realization)
+    particles = finished(_particles(), sim.receptor, sim.transport)
+    return sim.output.write_particles(
+        sim.variant, sim.receptor, particles, [], realization
+    )
 
 
 def _write_footprint(
@@ -418,17 +422,17 @@ def test_simulations_are_receptors_times_variants(tmp_path):
 
     sims = project.simulations
 
-    assert list(sims.columns[:4]) == ["receptor", "variant", "group", "model"]
+    assert list(sims.columns[:4]) == ["receptor", "variant", "realization", "model"]
     assert set(sims["model"]) == {"hysplit"}
     assert _pairs(sims) == [
         (a.id, "hrrr"),
-        (a.id, "err-0"),
-        (a.id, "err-1"),
+        (a.id, "err"),
+        (a.id, "err"),
         (b.id, "hrrr"),
-        (b.id, "err-0"),
-        (b.id, "err-1"),
+        (b.id, "err"),
+        (b.id, "err"),
     ]
-    assert sims["group"].tolist()[:3] == ["hrrr", "err", "err"]
+    assert sims["realization"].tolist()[:3] == [pd.NA, 0, 1]
     assert set(sims.columns) >= {"time", "kind", "location", "site"}
 
 
@@ -463,12 +467,17 @@ def test_simulation_handles_carry_the_variant_settings(tmp_path, point_receptor)
     rid = point_receptor.id
 
     base = project.simulation(rid, "hrrr")
-    err = project.simulation(rid, "err-1")
+    err = project.simulation(rid, "err", 1)
     zi = project.simulation(rid, "zi08")
     s2 = project.simulation(rid, "s2")
 
     assert winderrtf(base.variant.transport) == 0
-    assert winderrtf(err.variant.transport) == 1
+    assert winderrtf(err.transport) == 1
+    assert err.transport.seed == err.variant.transport.seed  # krand 4: no seed
+    with pytest.raises(ValueError, match="realizations"):
+        project.simulation(rid, "err")
+    with pytest.raises(ValueError, match="realizations"):
+        project.simulation(rid, "hrrr", 0)
     assert err.variant.footprint is None
     assert zi.variant.transport.ziscale == 0.8
     assert zi.variant.footprint == base.variant.footprint
@@ -749,8 +758,8 @@ def test_footprints_skip_empty_footprints_and_trajectory_only_variants(
     monkeypatch.setattr(Project, "_receptors", None)
     loaded = project.footprints(sims)
 
-    assert list(loaded) == [(done.id, "hrrr")]
-    assert isinstance(loaded[(done.id, "hrrr")], xr.DataArray)
+    assert list(loaded) == [(done.id, "hrrr", None)]
+    assert isinstance(loaded[(done.id, "hrrr", None)], xr.DataArray)
 
 
 def test_footprints_by_variant(tmp_path, point_receptor):
@@ -763,7 +772,7 @@ def test_footprints_by_variant(tmp_path, point_receptor):
 
     assert len(project.footprints()) == 2
     [(sid, foot)] = project.footprints(sims[sims.variant == "zi08"]).items()
-    assert sid == (point_receptor.id, "zi08")
+    assert sid == (point_receptor.id, "zi08", None)
     assert foot.stilt.name == "zi08"
 
 
@@ -984,12 +993,14 @@ def test_run_finds_a_missing_realization(tmp_path, ran, point_receptor):
         variants={"hrrr": {}, "err": {**_XYERR, "realizations": 2}},
     )
     _write_trajectory(project, point_receptor)
-    _write_trajectory(project, point_receptor, "err-0")
+    _write_trajectory(project, point_receptor, "err", 0)
 
     project.run()
 
     assert ran[0]["ids"] == [point_receptor.id]
-    assert _pairs(project.incomplete()) == [(point_receptor.id, "err-1")]
+    missing = project.incomplete()
+    assert _pairs(missing) == [(point_receptor.id, "err")]
+    assert missing["realization"].tolist() == [1]
 
 
 def test_submit_needs_slurm(tmp_path, point_receptor):

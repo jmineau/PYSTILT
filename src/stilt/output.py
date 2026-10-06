@@ -168,12 +168,20 @@ def _pystilt_version() -> str:
     return __version__
 
 
-def _stamp(digest: str) -> dict[bytes, bytes]:
-    """Return what every result file records besides its contents: its folder's settings hash and the PYSTILT version."""
-    return {
+def _stamp(digest: str, realization: int | None = None) -> dict[bytes, bytes]:
+    """
+    Return what every result file records besides its contents.
+
+    Its folder's settings hash, the PYSTILT version, and, for an ensemble,
+    its realization number.
+    """
+    stamp = {
         b"stilt:hash": digest.encode(),
         b"stilt:pystilt": _pystilt_version().encode(),
     }
+    if realization is not None:
+        stamp[b"stilt:realization"] = str(realization).encode()
+    return stamp
 
 
 # -- the output directory -----------------------------------------------------
@@ -223,6 +231,15 @@ def completed(
     not). An empty footprint is complete.
     """
     return particles if footprints is None else particles & footprints
+
+
+def _check_realization(variant: Variant, realization: int | None) -> None:
+    """Raise unless *realization* is one *variant* runs as."""
+    if realization not in variant.realization_numbers:
+        raise ValueError(
+            f"Variant {variant.name!r} runs as realizations "
+            f"{variant.realization_numbers}, not {realization!r}."
+        )
 
 
 def _check_kind(kind: str) -> None:
@@ -367,35 +384,75 @@ class Output:
         self._hashes[kind][name] = digest
         return name
 
+    def _part(
+        self, tree: str, name: str, variant: Variant, realization: int | None
+    ) -> Path:
+        """
+        Return the folder *name* of a tree, inside its ``realization=k`` partition for an ensemble.
+
+        Raises
+        ------
+        ValueError
+            If *realization* is not one the variant runs as.
+        """
+        _check_realization(variant, realization)
+        folder = self._dir(tree, name)
+        return folder if realization is None else folder / f"realization={realization}"
+
+    def _found(
+        self, kind: Kind, tree: str, variant: Variant, realization: int | None
+    ) -> Path | None:
+        """Return the existing folder of *variant*'s results of *kind* in *tree*, or ``None``."""
+        _check_realization(variant, realization)
+        name = self._name(kind, variant)
+        return None if name is None else self._part(tree, name, variant, realization)
+
+    def _made(
+        self, kind: Kind, tree: str, variant: Variant, realization: int | None
+    ) -> Path:
+        """Return the folder of *variant*'s results of *kind* in *tree*, making the settings folder on first use."""
+        return self._part(tree, self._create(kind, variant), variant, realization)
+
     # -- one receptor's files ------------------------------------------------
 
-    def path(self, kind: Kind, variant: Variant, receptor_id: str) -> Path | None:
+    def path(
+        self,
+        kind: Kind,
+        variant: Variant,
+        receptor_id: str,
+        realization: int | None = None,
+    ) -> Path | None:
         """
         Return the file of one receptor's result, whether or not it exists.
 
-        ``None`` before the variant's folder of *kind* exists.
+        ``None`` before the variant's folder of *kind* exists. An ensemble's
+        results are in a ``realization=k`` partition of its folder.
         """
-        folder = self.folder(kind, variant)
+        folder = self._found(kind, kind, variant, realization)
         return None if folder is None else _receptor_file(folder, receptor_id)
 
-    def log_path(self, variant: Variant, receptor_id: str) -> Path | None:
+    def log_path(
+        self, variant: Variant, receptor_id: str, realization: int | None = None
+    ) -> Path | None:
         """Return where the log of a receptor's transport model run is kept, or ``None`` before its folder exists."""
-        name = self._name("particles", variant)
-        if name is None:
-            return None
-        return _receptor_file(self._dir("logs", name), receptor_id, ".log")
+        logs = self._found("particles", "logs", variant, realization)
+        return None if logs is None else _receptor_file(logs, receptor_id, ".log")
 
-    def kept_workdir(self, variant: Variant, receptor_id: str) -> Path | None:
+    def kept_workdir(
+        self, variant: Variant, receptor_id: str, realization: int | None = None
+    ) -> Path | None:
         """Return where a receptor's failed run's working directory is kept, or ``None`` before its folder exists."""
-        name = self._name("particles", variant)
-        if name is None:
-            return None
-        return self._dir("scratch", name) / _date_dir(receptor_id) / receptor_id
+        kept = self._found("particles", "scratch", variant, realization)
+        return None if kept is None else kept / _date_dir(receptor_id) / receptor_id
 
     # -- many receptors' files ----------------------------------------------
 
     def present(
-        self, kind: Kind, variant: Variant, receptor_ids: Iterable[str] | None = None
+        self,
+        kind: Kind,
+        variant: Variant,
+        receptor_ids: Iterable[str] | None = None,
+        realization: int | None = None,
     ) -> frozenset[str]:
         """
         Return the receptors that have a file of *kind* for *variant*.
@@ -403,26 +460,34 @@ class Output:
         Only the date folders of *receptor_ids* are listed; without them,
         every date folder is. No file is opened.
         """
-        folder = self.folder(kind, variant)
+        folder = self._found(kind, kind, variant, realization)
         if folder is None:
             return frozenset()
         return frozenset(_list_receptor_files(folder, ".parquet", receptor_ids))
 
     def complete(
-        self, variant: Variant, receptor_ids: Iterable[str] | None = None
+        self,
+        variant: Variant,
+        receptor_ids: Iterable[str] | None = None,
+        realization: int | None = None,
     ) -> frozenset[str]:
         """
         Return the receptors whose simulations under *variant* are complete (:func:`completed`).
 
         Only the receptors with particles are looked for in the footprints.
         """
-        particles = self.present("particles", variant, receptor_ids)
+        particles = self.present("particles", variant, receptor_ids, realization)
         if variant.footprint is None:
             return completed(particles, None)
-        return completed(particles, self.present("footprints", variant, particles))
+        footprints = self.present("footprints", variant, particles, realization)
+        return completed(particles, footprints)
 
     def table(
-        self, kind: Kind, variant: Variant, receptor_ids: Iterable[str] | None = None
+        self,
+        kind: Kind,
+        variant: Variant,
+        receptor_ids: Iterable[str] | None = None,
+        realization: int | None = None,
     ) -> pa.Table:
         """
         Return the files of many receptors as one table.
@@ -439,9 +504,11 @@ class Output:
         receptor_ids : iterable of str, optional
             The receptors to read, each of which must have a file
             (:meth:`present`). Without it, every file in the folder is read.
+        realization : int, optional
+            Which realization of an ensemble.
         """
         _check_kind(kind)
-        folder = self.folder(kind, variant)
+        folder = self._found(kind, kind, variant, realization)
         if folder is None:
             return _EMPTY[kind]
         if receptor_ids is None:
@@ -460,17 +527,12 @@ class Output:
 
     # -- failure records ---------------------------------------------------
 
-    def _failure_path(
-        self, kind: Kind, variant: Variant, receptor_id: str
-    ) -> Path | None:
-        """Return where a receptor's failure record of *kind* is kept, in the logs of the folder that failed."""
-        name = self._name(kind, variant)
-        if name is None:
-            return None
-        return _receptor_file(self._dir("logs", name), receptor_id, FAILURE_SUFFIX)
-
     def failure(
-        self, kind: Kind, variant: Variant, receptor_id: str
+        self,
+        kind: Kind,
+        variant: Variant,
+        receptor_id: str,
+        realization: int | None = None,
     ) -> dict[str, Any] | None:
         """
         Return why a receptor's result of *kind* failed, as the worker recorded it, or ``None``.
@@ -479,11 +541,18 @@ class Output:
         ``traceback`` for an unexpected error. It is removed when the result
         is written.
         """
-        path = self._failure_path(kind, variant, receptor_id)
-        return _read_yaml(path) if path is not None and path.exists() else None
+        logs = self._found(kind, "logs", variant, realization)
+        if logs is None:
+            return None
+        path = _receptor_file(logs, receptor_id, FAILURE_SUFFIX)
+        return _read_yaml(path) if path.exists() else None
 
     def failures(
-        self, kind: Kind, variant: Variant, receptor_ids: Iterable[str] | None = None
+        self,
+        kind: Kind,
+        variant: Variant,
+        receptor_ids: Iterable[str] | None = None,
+        realization: int | None = None,
     ) -> dict[str, dict[str, Any]]:
         """
         Return ``{receptor_id: record}`` for the receptors with a failure record of *kind*.
@@ -491,18 +560,21 @@ class Output:
         With *receptor_ids*, only their date folders are listed. The records
         found are read in a few threads.
         """
-        name = self._name(kind, variant)
-        if name is None:
+        logs = self._found(kind, "logs", variant, realization)
+        if logs is None:
             return {}
-        paths = _list_receptor_files(
-            self._dir("logs", name), FAILURE_SUFFIX, receptor_ids
-        )
+        paths = _list_receptor_files(logs, FAILURE_SUFFIX, receptor_ids)
         with ThreadPoolExecutor(max_workers=16) as pool:
             records = list(pool.map(_read_yaml, paths.values()))
         return dict(zip(paths, records, strict=True))
 
     def record_failure(
-        self, kind: Kind, variant: Variant, receptor_id: str, record: dict[str, Any]
+        self,
+        kind: Kind,
+        variant: Variant,
+        receptor_id: str,
+        record: dict[str, Any],
+        realization: int | None = None,
     ) -> None:
         """
         Write why a receptor's result of *kind* failed, replacing an earlier record.
@@ -511,14 +583,20 @@ class Output:
         failure covers every variant on those particles, a footprint failure
         is the variant's own.
         """
-        logs = self._dir("logs", self._create(kind, variant))
+        logs = self._made(kind, "logs", variant, realization)
         _write_yaml(_receptor_file(logs, receptor_id, FAILURE_SUFFIX), record)
 
-    def clear_failure(self, kind: Kind, variant: Variant, receptor_id: str) -> None:
+    def clear_failure(
+        self,
+        kind: Kind,
+        variant: Variant,
+        receptor_id: str,
+        realization: int | None = None,
+    ) -> None:
         """Remove a receptor's failure record of *kind*, once its result is written."""
-        path = self._failure_path(kind, variant, receptor_id)
-        if path is not None:
-            path.unlink(missing_ok=True)
+        logs = self._found(kind, "logs", variant, realization)
+        if logs is not None:
+            _receptor_file(logs, receptor_id, FAILURE_SUFFIX).unlink(missing_ok=True)
 
     # -- writing -----------------------------------------------------------
 
@@ -528,46 +606,61 @@ class Output:
         receptor: Receptor,
         particles: pd.DataFrame,
         met_files: list[Path],
+        realization: int | None = None,
     ) -> Path:
         """
         Write a receptor's particles (:func:`stilt.particles.write_particles`).
 
         The file records the run's settings, so it reads alone, and the
-        folder's settings hash and the PYSTILT version.
+        folder's settings hash, the PYSTILT version, and the realization.
         """
-        name = self._create("particles", variant)
+        folder = self._made("particles", "particles", variant, realization)
         return write_particles(
-            _receptor_file(self._dir("particles", name), str(receptor.id)),
+            _receptor_file(folder, str(receptor.id)),
             particles,
             receptor,
             variant.run_settings,
             met_files,
-            metadata=_stamp(variant.particles_hash),
+            metadata=_stamp(variant.particles_hash, realization),
         )
 
-    def write_log(self, variant: Variant, receptor_id: str, text: str) -> Path:
+    def write_log(
+        self,
+        variant: Variant,
+        receptor_id: str,
+        text: str,
+        realization: int | None = None,
+    ) -> Path:
         """Write the log of a receptor's transport model run."""
-        name = self._create("particles", variant)
-        path = _receptor_file(self._dir("logs", name), receptor_id, ".log")
+        logs = self._made("particles", "logs", variant, realization)
+        path = _receptor_file(logs, receptor_id, ".log")
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(text)
         return path
 
-    def keep_workdir(self, variant: Variant, receptor_id: str, workdir: Path) -> Path:
+    def keep_workdir(
+        self,
+        variant: Variant,
+        receptor_id: str,
+        workdir: Path,
+        realization: int | None = None,
+    ) -> Path:
         """
         Copy a run's working directory to :meth:`kept_workdir`, replacing an earlier copy.
 
         A failed run's is kept, so CONTROL, SETUP.CFG, and the model's own
         output can be read after the job ends.
         """
-        name = self._create("particles", variant)
-        kept = self._dir("scratch", name) / _date_dir(receptor_id) / receptor_id
+        scratch = self._made("particles", "scratch", variant, realization)
+        kept = scratch / _date_dir(receptor_id) / receptor_id
         shutil.rmtree(kept, ignore_errors=True)
         kept.parent.mkdir(parents=True, exist_ok=True)
         shutil.copytree(workdir, kept, symlinks=True)
         return kept
 
-    def write_footprint(self, variant: Variant, foot: xr.DataArray) -> Path:
+    def write_footprint(
+        self, variant: Variant, foot: xr.DataArray, realization: int | None = None
+    ) -> Path:
         """
         Write one receptor's footprint (:func:`stilt.footprint.write_footprint`).
 
@@ -575,35 +668,46 @@ class Output:
         footprint settings and the folder's hash, so it reads alone.
         """
         path, config, digest = self._footprint_file(
-            variant, str(foot.stilt.receptor.id)
+            variant, str(foot.stilt.receptor.id), realization
         )
         return write_footprint(
-            path, foot, config, _stamp(digest), geometry_hash=variant.geometry_hash
+            path,
+            foot,
+            config,
+            _stamp(digest, realization),
+            geometry_hash=variant.geometry_hash,
         )
 
     def write_empty_footprint(
-        self, variant: Variant, receptor: Receptor, reason: str
+        self,
+        variant: Variant,
+        receptor: Receptor,
+        reason: str,
+        realization: int | None = None,
     ) -> Path:
         """Record that a receptor's footprint is empty (no particle over the grid), with the reason."""
-        path, config, digest = self._footprint_file(variant, str(receptor.id))
+        path, config, digest = self._footprint_file(
+            variant, str(receptor.id), realization
+        )
         return write_empty_footprint(
             path,
             receptor,
             reason,
             config,
             variant.name,
-            _stamp(digest),
+            _stamp(digest, realization),
             geometry_hash=variant.geometry_hash,
         )
 
     def _footprint_file(
-        self, variant: Variant, receptor_id: str
+        self, variant: Variant, receptor_id: str, realization: int | None
     ) -> tuple[Path, FootprintConfig, str]:
         """Return a receptor's footprint file, the settings, and the folder's hash, making the folder on first use."""
         name = self._create("footprints", variant)
         if variant.footprint is None:  # _create has raised already
             raise ValueError(f"Variant {variant.name!r} makes no footprints.")
-        path = _receptor_file(self._dir("footprints", name), receptor_id)
+        folder = self._part("footprints", name, variant, realization)
+        path = _receptor_file(folder, receptor_id)
         return path, variant.footprint, self._hashes["footprints"][name]
 
 
