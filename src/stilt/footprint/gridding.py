@@ -18,6 +18,7 @@ from scipy.ndimage import convolve as _convolve
 
 from stilt.exceptions import EmptyFootprint
 from stilt.footprint.config import FootprintConfig
+from stilt.particles import FOOTPRINT_COLUMNS, check_particles
 from stilt.receptors import Receptor
 from stilt.spatial import Grid, _grid_cell_starts
 from stilt.transforms import apply_transforms
@@ -497,6 +498,8 @@ def calc_footprint(
             "transforms": list(transforms),
         }
     )
+    if not particles.empty:
+        check_particles(particles, need=FOOTPRINT_COLUMNS)
     if config.transforms:
         particles = apply_transforms(particles, config.transforms, receptor, directory)
     crs = grid.crs

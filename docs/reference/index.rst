@@ -8,6 +8,9 @@ to do something, start with the :doc:`../guides/index` instead.
    ``Project``, receptors, simulations, particles, footprints, spatial
    geometries, and flux sampling.
 
+:doc:`particles`
+   The particle table a transport model run gives: its columns and units.
+
 :doc:`configuration`
    Every ``config.yaml`` option.
 
@@ -38,6 +41,7 @@ to do something, start with the :doc:`../guides/index` instead.
    :maxdepth: 2
 
    core
+   particles
    configuration
    meteorology
    execution

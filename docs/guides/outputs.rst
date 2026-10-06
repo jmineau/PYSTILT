@@ -213,6 +213,9 @@ The columns you are most likely to use:
      - Mixed-layer height, vertical velocity spread, Lagrangian time scale,
        and pressure
 
+:doc:`../reference/particles` says what each column is, its units, and
+what a transport model must write.
+
 PYSTILT's methods for the particle table are under ``particles.stilt``:
 
 .. code-block:: python

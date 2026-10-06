@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, NamedTuple
 
@@ -28,8 +28,28 @@ if TYPE_CHECKING:
     from stilt.visualization import ParticlesPlotAccessor
 
 
+#: The columns every particle table has, as a particle file stores them:
+#: what a transport model's run must return. ``indx`` is the particle number
+#: (1 to ``numpar``), ``time`` the minutes since release (negative for a
+#: backward run), ``long`` and ``lati`` the position in degrees, and ``zagl``
+#: the height above ground in metres. The reference page on the particle
+#: table says what the other columns are.
+PARTICLE_SCHEMA = pa.schema(
+    [
+        ("indx", pa.int32()),
+        ("time", pa.int32()),
+        ("long", pa.float64()),
+        ("lati", pa.float64()),
+        ("zagl", pa.float64()),
+    ]
+)
+
 #: Particle columns stored as int32 rather than float64.
 _INT_COLUMNS = ("time", "indx")
+
+#: The column a footprint is made from: each particle's sensitivity to
+#: surface fluxes over one output step.
+FOOTPRINT_COLUMNS: tuple[str, ...] = ("foot",)
 
 #: Particle columns the near-field plume correction reads (``varsiwant`` must include them).
 HNF_PLUME_COLUMNS: tuple[str, ...] = ("dens", "samt", "sigw", "tlgr", "foot", "mlht")
@@ -58,6 +78,33 @@ class ParticleMetadata(NamedTuple):
     receptor: Receptor
     settings: dict[str, Any]
     met_files: list[Path]
+
+
+def check_particles(particles: pd.DataFrame, need: Iterable[str] = ()) -> None:
+    """
+    Check that a particle table has the columns of :data:`PARTICLE_SCHEMA`, and *need*.
+
+    Parameters
+    ----------
+    particles : pandas.DataFrame
+        A particle table, such as a transport model returns.
+    need : iterable of str, optional
+        Other columns the next step reads, such as ``("foot",)`` for a
+        footprint.
+
+    Raises
+    ------
+    ValueError
+        Naming the missing columns.
+    """
+    wanted = dict.fromkeys([*PARTICLE_SCHEMA.names, *need])
+    missing = [name for name in wanted if name not in particles.columns]
+    if missing:
+        raise ValueError(
+            f"The particle table has no {', '.join(repr(m) for m in missing)} "
+            f"column{'s' if len(missing) > 1 else ''}. Every particle table has "
+            f"{', '.join(PARTICLE_SCHEMA.names)} (stilt.particles.PARTICLE_SCHEMA)."
+        )
 
 
 def particles_metadata(path: str | Path) -> ParticleMetadata:
