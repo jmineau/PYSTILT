@@ -76,7 +76,7 @@ class _FakeMet:
     def __init__(self, source, read):
         self.source, self.read = source, read
 
-    def required_files(self, r_time, n_hours):
+    def files_for(self, window, hour_after=False):
         return self.source
 
     def readable(self, files):
@@ -92,10 +92,18 @@ def test_hysplit_model_reads_the_met_in_place_and_records_the_source(
     cropped = [tmp_path / "crops" / "20230101_12"]
     params = HysplitConfig(n_hours=-1, hnf_plume=False)
 
+    from stilt.meteorology import run_window
+    from stilt.transport.hysplit import model as model_module
+
+    monkeypatch.setattr(
+        model_module, "Met", lambda name, config: _FakeMet(source, cropped)
+    )
+    met = MetConfig(directory=tmp_path, file_format="%Y%m%d_%H", file_tres="1h")
     result = HysplitModel().run(
         point_receptor,
         params,
-        _FakeMet(source, cropped),  # type: ignore[arg-type]
+        met,
+        run_window(point_receptor.time, params.n_hours),
         tmp_path / "work",
         timeout=30,
     )
@@ -115,7 +123,7 @@ def test_run_particles_goes_through_the_model_the_settings_name(
     class _Model:
         name = "hysplit"
 
-        def run(self, receptor, params, met, workdir, timeout=None):
+        def run(self, receptor, params, met, window, workdir=None, timeout=None):
             calls.append({"receptor": receptor, "timeout": timeout, "workdir": workdir})
             particles = pd.DataFrame(
                 {
@@ -144,7 +152,7 @@ def test_run_particles_goes_through_the_model_the_settings_name(
     )
     sim = Simulation(point_receptor, variant, Output(tmp_path / "output"))
 
-    traj = run_particles(sim, met=object(), workdir=tmp_path / "work", timeout=45)  # type: ignore[arg-type]
+    traj = run_particles(sim, met=met_config, workdir=tmp_path / "work", timeout=45)
 
     assert asked == ["hysplit"]
     assert calls[0]["receptor"] == point_receptor
@@ -167,12 +175,14 @@ class _EchoModel:
     def data_files(self, config):
         return None
 
-    def run(self, receptor, config, met, workdir, timeout=None):
-        (workdir / "CONTROL").write_text("")
+    def run(self, receptor, config, met, window, workdir=None, timeout=None):
+        if workdir is not None:
+            (workdir / "CONTROL").write_text("")
         type(self).seen = {
             "config": config,
             "met": met,
             "workdir": workdir,
+            "window": window,
             "timeout": timeout,
         }
         particles = pd.DataFrame(
@@ -216,7 +226,9 @@ def test_run_trajectories_returns_the_particles_and_removes_its_workdir(
     assert echo.seen["config"].numpar == 50
     assert echo.seen["timeout"] == 9
     assert echo.seen["met"].directory == tmp_path.resolve()
-    assert not echo.seen["workdir"].exists()
+    assert echo.seen["workdir"] is None  # the model makes its own when it needs one
+    start, end = echo.seen["window"]
+    assert end == point_receptor.time and (end - start).total_seconds() == 24 * 3600
 
 
 def test_run_trajectories_keeps_a_workdir_it_was_given(tmp_path, point_receptor, echo):

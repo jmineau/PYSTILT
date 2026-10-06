@@ -29,6 +29,9 @@ class SimulationError(StiltError, RuntimeError):
         A short name for the cause, such as ``"MET_COVERAGE"`` or
         ``"TIMEOUT"`` (:class:`stilt.transport.hysplit.FailureReason` lists
         HYSPLIT's). ``stilt status`` counts failures by it.
+    log : str, optional
+        The transport model's log of the failed run, kept with the
+        simulation (:attr:`stilt.Simulation.log`).
 
     Attributes
     ----------
@@ -36,14 +39,18 @@ class SimulationError(StiltError, RuntimeError):
         The cause as a plain string (an enum member such as a
         ``FailureReason`` is stored by its value), or ``None`` when it has no
         short name.
+    log : str
+        The model's log, empty when it wrote none.
     """
 
     reason: str | None = None
+    log: str = ""
 
-    def __init__(self, message: str, reason: str | None = None):
+    def __init__(self, message: str, reason: str | None = None, log: str = ""):
         super().__init__(message)
         if reason is not None:
             self.reason = str(reason)  # a plain string, as the failure record stores it
+        self.log = log
 
 
 class MeteorologyError(SimulationError):

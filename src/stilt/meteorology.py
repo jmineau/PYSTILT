@@ -7,7 +7,7 @@ from __future__ import annotations
 import inspect
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, Self, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, Self
 
 import pandas as pd
 from pandas.tseries.frequencies import to_offset
@@ -46,6 +46,13 @@ class MetConfig(BaseModel):
         {"directory", "subgrid_dir", "download_from", "n_min"}
     )
 
+    kind: Literal["files"] = Field(
+        "files",
+        description=(
+            "How the meteorology is stored: ``files``, ARL files in "
+            "``directory`` or downloaded into it. The one kind today."
+        ),
+    )
     directory: Path | None = Field(
         None,
         description=(
@@ -151,33 +158,60 @@ class MetConfig(BaseModel):
             raise ValueError("subgrid_bounds is required when subgrid_enable=True.")
         return self
 
+    def settings(self) -> dict[str, Any]:
+        """
+        Return what a run records of this met: every field but the :attr:`UNRECORDED` ones.
+
+        ``kind`` is left out while it is ``files``, the kind every met was
+        before it existed, so the records written then still match.
+        """
+        exclude = set(self.UNRECORDED) | ({"kind"} if self.kind == "files" else set())
+        return self.model_dump(mode="json", exclude=exclude)
+
     @property
     def download_options(self) -> dict[str, Any]:
         """Extra fields, passed as keyword arguments to the arlmet archive."""
         return dict(self.model_extra) if self.model_extra else {}
 
 
-def _met_window(
-    r_time: pd.Timestamp, n_hours: int, file_tres: str | None = None
+def _time(value: Any) -> pd.Timestamp:
+    """Return *value* as a Timestamp, raising for a missing time."""
+    time = pd.Timestamp(value)
+    if not isinstance(time, pd.Timestamp):  # NaT
+        raise ValueError(f"Not a time: {value!r}")
+    return time
+
+
+def run_window(r_time: Any, n_hours: int) -> tuple[pd.Timestamp, pd.Timestamp]:
+    """
+    Return the time a run covers, ``(start, end)`` in time order.
+
+    From the receptor time *r_time* to *n_hours* later, or earlier for a
+    backward run. This is what a transport model's meteorology must cover.
+    """
+    start = _time(r_time)
+    other = _time(start + pd.Timedelta(hours=n_hours))
+    return min(start, other), max(start, other)
+
+
+def _cover(
+    window: tuple[Any, Any], hour_after: bool, file_tres: str | None = None
 ) -> tuple[pd.Timestamp, pd.Timestamp]:
     """
-    Return the first and last time a run needs meteorology for, in time order.
+    Return the first and last time files must cover for *window*.
 
-    A backward run released after the start of a met file also needs the
-    hour after its release, because HYSPLIT interpolates the release time
-    between two hours. For a release in the last hour of a file that hour is
-    in the next file, which STILT-R also reads. *file_tres* is the period of
-    one file; without it (downloads, whose archive files are 6 hours or
-    longer) the next hour is always added, which never adds a file a release
-    on a file boundary does not need.
+    With *hour_after*, the hour after the window's end is added, unless the
+    end is on a file boundary. HYSPLIT needs it for a backward run, because
+    it interpolates the release time between two hours: for a release in
+    the last hour of a file that hour is in the next file, which STILT-R
+    also reads. *file_tres* is the period of one file; without it
+    (downloads, whose archive files are 6 hours or longer) the next hour is
+    always added, which never adds a file a release on a file boundary does
+    not need.
     """
-    sim_end = r_time + pd.Timedelta(hours=n_hours)
-    assert isinstance(sim_end, pd.Timestamp)  # not NaT: r_time is a time
-    earlier, later = min(r_time, sim_end), max(r_time, sim_end)
-    if n_hours < 0 and (file_tres is None or later != later.floor(file_tres)):
-        next_hour = later.floor("h") + pd.Timedelta(hours=1)
-        assert isinstance(next_hour, pd.Timestamp)  # not NaT: later is a time
-        later = next_hour
+    earlier, later = (_time(t) for t in window)
+    if hour_after and (file_tres is None or later != later.floor(file_tres)):
+        later = _time(later.floor("h") + pd.Timedelta(hours=1))
     return earlier, later
 
 
@@ -269,9 +303,9 @@ class Met:
     # File resolution
     # ------------------------------------------------------------------
 
-    def _download(self, r_time: pd.Timestamp, n_hours: int) -> list[Path]:
-        """Return the files for a run from the ARL archive, downloading any not yet in ``directory``."""
-        t_start, t_end = _met_window(r_time, n_hours)
+    def _download(self, window: tuple[Any, Any], hour_after: bool) -> list[Path]:
+        """Return the files that cover *window* from the ARL archive, downloading any not yet in ``directory``."""
+        t_start, t_end = _cover(window, hour_after)
 
         bbox = self._effective_bbox() if self.config.subgrid_enable else None
         levels = self._level_indices() if self.config.subgrid_enable else None
@@ -301,9 +335,13 @@ class Met:
             )
         return files
 
-    def required_files(self, r_time, n_hours: int) -> list[Path]:
+    def required_files(self, r_time: Any, n_hours: int) -> list[Path]:
         """
-        Return the met files that cover one simulation.
+        Return the met files that cover one simulation, as HYSPLIT reads them.
+
+        Shorthand for :meth:`files_for` the run's window
+        (:func:`run_window`), with the hour after the release for a
+        backward run.
 
         Parameters
         ----------
@@ -311,6 +349,29 @@ class Met:
             Receptor time.
         n_hours : int
             Simulation length in hours, negative for backward runs.
+
+        Raises
+        ------
+        MeteorologyError
+            Fewer than ``n_min`` files were found.
+        """
+        return self.files_for(run_window(r_time, n_hours), hour_after=n_hours < 0)
+
+    def files_for(
+        self, window: tuple[Any, Any], *, hour_after: bool = False
+    ) -> list[Path]:
+        """
+        Return the met files that cover *window*, ``(start, end)`` in time order.
+
+        Downloads them first when ``download`` is set.
+
+        Parameters
+        ----------
+        window : tuple of datetime-like
+            The time to cover (:func:`run_window`).
+        hour_after : bool, default False
+            Also cover the hour after the window's end, unless the end is on
+            a file boundary. HYSPLIT needs it for a backward run.
 
         Returns
         -------
@@ -321,17 +382,15 @@ class Met:
         MeteorologyError
             Fewer than ``n_min`` files were found.
         """
-        _r_time = cast(pd.Timestamp, pd.Timestamp(r_time))
-
         if self.config.download is not None:
-            return self._download(_r_time, n_hours)
+            return self._download(window, hour_after)
 
         # Local files
         file_format, file_tres = self.config.file_format, self.config.file_tres
         # MetConfig requires both when there is no download.
         assert file_format is not None and file_tres is not None
         tres = to_offset(pd.to_timedelta(file_tres)).freqstr
-        earlier, later = _met_window(_r_time, n_hours, tres)
+        earlier, later = _cover(window, hour_after, tres)
         met_times = pd.date_range(earlier.floor(tres), later, freq=tres)
         patterns = list(dict.fromkeys(t.strftime(file_format) for t in met_times))
 
@@ -422,4 +481,4 @@ class Met:
         return subsetted
 
 
-__all__ = ["Met", "MetConfig"]
+__all__ = ["Met", "MetConfig", "run_window"]

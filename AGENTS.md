@@ -157,7 +157,8 @@ src/stilt/
   sampling.py        sampling a gridded field (a flux, a mole fraction) at points
   spatial.py         rasters and CRS, no shapely: Bounds, Grid (with its cell
                      and CF helpers), horizontal_dims, is_longlat, same_crs
-  meteorology.py     MetConfig, and Met: ARL file discovery, download, and
+  meteorology.py     MetConfig, run_window, and Met: ARL file discovery
+                     (files_for a window), download, and
                      cropping (via arlmet)
   transforms.py      pre-footprint particle transforms (averaging kernel,
                      pressure weighting, lifetime decay) and their YAML I/O
@@ -173,11 +174,14 @@ src/stilt/
                      selection, slant geometry, transport error, wind-error
                      statistics, backgrounds, plume backgrounds. Arrays in,
                      plain values out; there is no observation object.
-  transport/         the TransportModel and TransportConfig protocols, ModelInfo,
-                     and get_model with its MODELS table (__init__.py); one
+  transport/         the TransportModel and TransportConfig protocols, ModelRun
+                     (particles, log, met_files), ModelInfo, get_model with
+                     its MODELS table, and run_model / run_trajectories, which
+                     run a model and apply the core steps (__init__.py); one
                      subpackage per transport model, which owns its config
     hysplit/         HYSPLIT, the one model today: HysplitConfig (config.py, its
-                     parameters), HysplitModel, the driver (driver.py:
+                     parameters), HysplitModel (finds its met files from the
+                     MetConfig and window), the driver (driver.py:
                      write_inputs, which knows which file each setting goes
                      to, and read_particle_dat), failure reasons read from
                      its log (failures.py), and the bundled binaries (bin/)

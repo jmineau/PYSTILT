@@ -21,7 +21,10 @@ def _stop(workdir, timeout=None):
 
 
 class _FakeMet:
-    def required_files(self, **kwargs):
+    def __init__(self, *args):
+        pass
+
+    def files_for(self, window, hour_after=False):
         return []
 
     def readable(self, files):
@@ -40,6 +43,7 @@ def sim(monkeypatch, tmp_path, point_receptor):
 
     monkeypatch.setattr(model, "write_inputs", lambda *args: None)
     monkeypatch.setattr(model, "_run_hycs_std", _stop)
+    monkeypatch.setattr(model, "Met", _FakeMet)
     SEEN.clear()
     met_config = MetConfig(
         directory=tmp_path / "met", file_format="%Y%m%d_%H", file_tres="1h"
@@ -63,7 +67,9 @@ def sim(monkeypatch, tmp_path, point_receptor):
 def _run(sim, tmp_path, **kwargs):
     from stilt.execution import run_particles
 
-    return run_particles(sim, met=_FakeMet(), workdir=tmp_path / "scratch", **kwargs)
+    return run_particles(
+        sim, met=sim.variant.met_config, workdir=tmp_path / "scratch", **kwargs
+    )
 
 
 def test_timeout_is_an_execution_setting():
