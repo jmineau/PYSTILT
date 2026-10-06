@@ -5,6 +5,26 @@ Core Objects
 
 The project, its receptors, the simulations it runs, and their outputs.
 
+One receptor, without a project
+-------------------------------
+
+:func:`run_trajectories` runs the transport model for one receptor and
+returns its particles, and :func:`calc_footprint` makes a footprint from
+them. A project runs the same two steps for each of its receptors and
+stores the results.
+
+.. code-block:: python
+
+   particles = stilt.run_trajectories(receptor, met, n_hours=-24, numpar=200)
+   foot = stilt.calc_footprint(particles, receptor, grid)
+
+.. autosummary::
+   :toctree: _api
+   :nosignatures:
+
+   run_trajectories
+   calc_footprint
+
 Project interface
 -----------------
 
@@ -90,7 +110,6 @@ write particle and footprint files without a project.
    write_particles
    read_footprint
    particles.ParticlesAccessor
-   calc_footprint
    footprint.FootprintAccessor
 
 Simulation tables

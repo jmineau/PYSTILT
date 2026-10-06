@@ -32,6 +32,7 @@ from .receptors import (
 )
 from .simulation import SimID, Simulation
 from .spatial import Bounds, Grid
+from .transport import run_trajectories
 from .variants import Variant
 
 try:
@@ -60,6 +61,7 @@ __all__ = [
     "write_particles",
     "read_footprint",
     "calc_footprint",
+    "run_trajectories",
     # Receptors
     "Receptor",
     "ColumnReceptor",

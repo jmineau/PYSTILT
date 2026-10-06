@@ -10,7 +10,8 @@ record, so a second model needs no change to the worker.
 
 from __future__ import annotations
 
-from collections.abc import Callable
+import tempfile
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Protocol, Self
@@ -18,8 +19,9 @@ from typing import TYPE_CHECKING, Any, ClassVar, Protocol, Self
 import pandas as pd
 from pydantic import BaseModel, ConfigDict, Field
 
+from stilt.meteorology import Met, MetConfig
+
 if TYPE_CHECKING:
-    from stilt.meteorology import Met
     from stilt.receptors import Receptor
 
 
@@ -196,6 +198,82 @@ def get_model(name: str = "hysplit") -> TransportModel:
     return factory()
 
 
+def run_trajectories(
+    receptor: Receptor,
+    met: MetConfig | Mapping[str, Any],
+    *,
+    model: str = "hysplit",
+    workdir: str | Path | None = None,
+    timeout: int | None = None,
+    **params: Any,
+) -> pd.DataFrame:
+    """
+    Run the transport model for one receptor and return its particles.
+
+    This is what a project runs for each receptor, without a project: the
+    particles are returned, not stored. STILT-R calls it
+    ``calc_trajectory``.
+
+    Parameters
+    ----------
+    receptor : Receptor
+        Where and when particles are released.
+    met : MetConfig or dict
+        The meteorology, as one entry under ``mets:`` in ``config.yaml``
+        (:class:`stilt.MetConfig`). A relative ``directory`` starts from
+        the working directory.
+    model : str, default "hysplit"
+        The transport model.
+    workdir : str or Path, optional
+        Directory the model runs in, kept afterwards for a look at its
+        files. It must be empty or not exist yet. Without it the model runs
+        in a temporary directory that is removed.
+    timeout : int, optional
+        Time limit in seconds. ``None`` waits indefinitely.
+    **params
+        The transport model's parameters, such as ``n_hours`` and
+        ``numpar`` (:class:`stilt.transport.hysplit.HysplitConfig`).
+
+    Returns
+    -------
+    pandas.DataFrame
+        The particle table, one row per particle per output step.
+
+    Raises
+    ------
+    ValueError
+        If *workdir* is not empty, or a parameter is not one of the
+        model's.
+    SimulationError
+        If the run fails; ``reason`` says why.
+    MeteorologyError
+        If the met files the run needs are missing.
+
+    Examples
+    --------
+    >>> receptor = stilt.PointReceptor(
+    ...     time="2023-07-15 18:00", longitude=-111.848, latitude=40.766, altitude=10
+    ... )
+    >>> met = {"directory": "/data/hrrr", "file_format": "%Y%m%d_%H", "file_tres": "6h"}
+    >>> particles = stilt.run_trajectories(receptor, met, n_hours=-24, numpar=200)
+    """
+    transport = get_model(model)
+    config = transport.config_class(**params)
+    meteorology = Met("met", MetConfig.model_validate(met))
+    if workdir is None:
+        with tempfile.TemporaryDirectory(prefix="stilt-") as tmp:
+            run = transport.run(receptor, config, meteorology, Path(tmp), timeout)
+            return run.particles
+    workdir = Path(workdir)
+    if workdir.exists() and any(workdir.iterdir()):
+        raise ValueError(
+            f"{workdir} is not empty. The model would read files left from "
+            "another run; give an empty or new directory."
+        )
+    workdir.mkdir(parents=True, exist_ok=True)
+    return transport.run(receptor, config, meteorology, workdir, timeout).particles
+
+
 __all__ = [
     "MODELS",
     "ModelInfo",
@@ -203,4 +281,5 @@ __all__ = [
     "TransportConfig",
     "TransportModel",
     "get_model",
+    "run_trajectories",
 ]

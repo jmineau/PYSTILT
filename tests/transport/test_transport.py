@@ -151,3 +151,75 @@ def test_run_particles_goes_through_the_model_the_settings_name(
     assert len(traj) == 1
     assert sim.has_particles
     assert sim.met_files == [tmp_path / "met_file"]
+
+
+class _EchoModel:
+    """A transport model that records what it was given and returns one particle."""
+
+    name = "echo"
+    config_class = HysplitConfig
+    seen: dict = {}
+
+    def version(self, config):
+        return "1"
+
+    def data_files(self, config):
+        return None
+
+    def run(self, receptor, config, met, workdir, timeout=None):
+        (workdir / "CONTROL").write_text("")
+        type(self).seen = {
+            "config": config,
+            "met": met,
+            "workdir": workdir,
+            "timeout": timeout,
+        }
+        return ModelRun(pd.DataFrame({"indx": [1], "time": [-1.0]}), met_files=[])
+
+
+@pytest.fixture
+def echo(monkeypatch):
+    from stilt import transport
+
+    monkeypatch.setitem(transport.MODELS, "echo", _EchoModel)
+    return _EchoModel
+
+
+def _met(tmp_path) -> dict:
+    return {"directory": tmp_path, "file_format": "%Y%m%d_%H", "file_tres": "6h"}
+
+
+def test_run_trajectories_returns_the_particles_and_removes_its_workdir(
+    tmp_path, point_receptor, echo
+):
+    from stilt import run_trajectories
+
+    particles = run_trajectories(
+        point_receptor, _met(tmp_path), model="echo", numpar=50, timeout=9
+    )
+
+    assert particles["indx"].tolist() == [1]
+    assert echo.seen["config"].numpar == 50
+    assert echo.seen["timeout"] == 9
+    assert echo.seen["met"].directory == tmp_path.resolve()
+    assert not echo.seen["workdir"].exists()
+
+
+def test_run_trajectories_keeps_a_workdir_it_was_given(tmp_path, point_receptor, echo):
+    from stilt import run_trajectories
+
+    run_trajectories(
+        point_receptor, _met(tmp_path), model="echo", workdir=tmp_path / "w"
+    )
+    assert (tmp_path / "w" / "CONTROL").exists()
+    with pytest.raises(ValueError, match="not empty"):
+        run_trajectories(
+            point_receptor, _met(tmp_path), model="echo", workdir=tmp_path / "w"
+        )
+
+
+def test_run_trajectories_checks_the_models_parameters(tmp_path, point_receptor, echo):
+    from stilt import run_trajectories
+
+    with pytest.raises(ValueError, match="nparticles"):
+        run_trajectories(point_receptor, _met(tmp_path), model="echo", nparticles=5)
