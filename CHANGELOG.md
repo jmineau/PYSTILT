@@ -8,6 +8,27 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Slurm runs no longer go through submitit (breaking), which is no longer
+  a dependency. `stilt submit` and `project.submit()` write a submission
+  folder, `slurm/<stamp>/` with `job.sh`, `receptors.txt`, and
+  `execution.yaml`, and submit `job.sh` with `sbatch`. Task `i` of the
+  array runs `stilt run <project> --receptors receptors.txt --task i/N
+  --execution execution.yaml`, so a task is a command line that can be read
+  and rerun by hand, and the whole execution override reaches it.
+  `project.submit()` returns the Slurm job id (was submitit jobs), and
+  `project.run()` on Slurm waits by polling `sacct` and returns the status
+  table without raising when a task ended badly; such tasks are logged and
+  their simulations stay pending. A task that stops with work left
+  requeues itself with `scontrol requeue`, at most 10 times, when it got
+  SIGUSR1 (`--signal=B:USR1@120`, two minutes before the time limit) or
+  was preempted (`scontrol show job` gives a `PreemptTime`); `scancel`
+  stops it without a requeue. Each task logs to `<task>.log`, appended
+  across requeues. `stilt run --execution FILE` reads the execution
+  settings from a file. `stilt.execution.Batch`, `split`, and
+  `slurm_parameters` are gone; `job_script` writes the script. This
+  reverses #100: submitit was there to run a pickled callable, and the
+  unit of work is now a command line (#150).
+
 - `stilt run` exits with 1 when a simulation it ran failed and 2 when some
   did not finish because the run was stopped (Ctrl-C or SIGTERM), where it
   exited with 0. A container or a driver can act on it (#136, #150).

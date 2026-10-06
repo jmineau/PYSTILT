@@ -10,8 +10,9 @@ work underneath.
   ``task=(i, n)`` runs share ``i`` of ``n`` here (:func:`~stilt.execution.task_share`),
   which is what ``stilt run --task i/n`` does.
 - :func:`~stilt.execution.submit` is what ``project.submit()`` calls. It
-  submits those receptors to Slurm as one job array and returns the
-  submitit jobs at once.
+  writes a job array script (:func:`~stilt.execution.job_script`) whose
+  tasks each run ``stilt run --task``, submits it with ``sbatch``, and
+  returns the job id at once.
 - :func:`~stilt.execution.run_particles` runs HYSPLIT for one
   :class:`~stilt.Simulation` and writes its particles and log.
 - :func:`~stilt.execution.make_footprint` makes the footprint from those
@@ -24,9 +25,8 @@ work underneath.
 - :func:`~stilt.execution.run_receptors` runs a list of receptors, in this
   process or in a process pool.
 
-On Slurm the receptors are split into batches
-(:class:`~stilt.execution.Batch`), one per task of a job array submitted
-with `submitit <https://github.com/facebookincubator/submitit>`_. A local
+On Slurm each task of the job array runs one share of the receptors
+(:func:`~stilt.execution.task_share`) with ``stilt run --task``. A local
 run happens in this process.
 
 Worker functions
@@ -45,14 +45,14 @@ Worker functions
    stilt.execution.run_receptor
    stilt.execution.run_receptors
 
-Batches
--------
+Slurm job arrays
+----------------
 
 .. autosummary::
    :toctree: _api
    :nosignatures:
 
-   stilt.execution.Batch
+   stilt.execution.job_script
 
 Transport model
 ----------------

@@ -259,8 +259,8 @@ of the development docs has the details.
 PYSTILT borrows from two sister projects. [X-STILT](https://github.com/uataq/X-STILT) is the
 source of its column and satellite science. [stiltctl](https://github.com/uataq/stiltctl)
 showed the thin call path from the CLI through the project to workers handed receptors. Its
-queue-backed and Kubernetes execution was tried and removed in favour of batches of receptors
-submitted to Slurm through [submitit](https://github.com/facebookincubator/submitit). The full
+queue-backed and Kubernetes execution was tried and removed in favour of array tasks that each
+run `stilt run --task`, on Slurm or in a Kubernetes indexed Job. The full
 [roadmap](https://jmineau.github.io/PYSTILT/roadmap.html) has more detail.
 
 ### Execution

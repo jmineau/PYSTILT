@@ -29,6 +29,7 @@ from typing import Any, NoReturn
 
 import pandas as pd
 import typer
+import yaml
 
 from stilt.execution import resolve_compute_root
 from stilt.execution.config import ExecutionConfig
@@ -141,6 +142,14 @@ _RECEPTORS = typer.Option(
     "--receptors",
     help="File of receptor ids, one per line. Only those receptors run.",
 )
+_EXECUTION = typer.Option(
+    None,
+    "--execution",
+    help=(
+        "YAML file of execution settings, used in place of the execution "
+        "section of config.yaml. Each Slurm task reads its submission's."
+    ),
+)
 _TASK = typer.Option(
     None,
     "--task",
@@ -193,16 +202,24 @@ def _start(
     waits: bool,
     receptor_ids: list[str] | None = None,
     task: tuple[int, int] | None = None,
+    execution_file: Path | None = None,
 ) -> tuple[Project, dict[str, Any]]:
     """Open the project, print what is about to run, and return the run's options."""
     opened = Project(_resolve_project(project))
+    if execution_file is None:
+        settings = opened.config.execution.model_dump(exclude_unset=True)
+    else:
+        try:
+            settings = yaml.safe_load(execution_file.read_text()) or {}
+        except (OSError, yaml.YAMLError) as error:
+            _fail(f"cannot read {execution_file}: {error}")
     if task is not None:
         if backend == "slurm":
             _fail("--task runs here, as one task of a job array; drop --backend slurm.")
         backend = "local"
     # Progress is the worker's one line per finished receptor.
     logging.basicConfig(level=logging.WARNING, format="%(message)s")
-    logging.getLogger("stilt.execution.worker").setLevel(logging.INFO)
+    logging.getLogger("stilt.execution").setLevel(logging.INFO)
 
     overrides: dict[str, Any] = {}
     if backend is not None:
@@ -211,9 +228,7 @@ def _start(
         overrides["n_workers"] = n_workers
     if cpus is not None:
         overrides["cpus"] = cpus
-    execution = ExecutionConfig.model_validate(
-        {**opened.config.execution.model_dump(exclude_unset=True), **overrides}
-    )
+    execution = ExecutionConfig.model_validate({**settings, **overrides})
     if execution.backend == "local":
         # Resolved once, here, so the banner shows the directory the run uses.
         # A Slurm task resolves its own, on its node.
@@ -245,6 +260,7 @@ def run(
     compute_root: str | None = _COMPUTE_ROOT,
     receptors: Path | None = _RECEPTORS,
     task: str | None = _TASK,
+    execution: Path | None = _EXECUTION,
 ) -> None:
     """
     Run every unfinished simulation in a project, and wait until they are done.
@@ -271,6 +287,7 @@ def run(
         waits=True,
         receptor_ids=receptor_ids,
         task=share,
+        execution_file=execution,
     )
     if options["execution"].backend == "slurm":
         typer.echo(
@@ -311,9 +328,9 @@ def submit(
         compute_root=compute_root,
         waits=False,
     )
-    jobs = opened.submit(**options)
-    if jobs:
-        typer.echo(f"Submitted job: {str(jobs[0].job_id).split('_')[0]}")
+    job_id = opened.submit(**options)
+    if job_id is not None:
+        typer.echo(f"Submitted job: {job_id}")
     else:
         _print_status(opened)
 

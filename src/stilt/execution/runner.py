@@ -1,18 +1,32 @@
-"""Running a project: finding the receptors with missing results and handing them to workers."""
+"""
+Running a project: finding the receptors with missing results and handing them to workers.
+
+With ``backend: slurm``, :func:`submit` writes a job array script into
+``slurm/<stamp>/`` in the project and submits it with ``sbatch``. Each task
+of the array runs ``stilt run --task``, so a task is a command line that can
+be read, and run again, by hand.
+"""
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import os
 import re
+import shlex
+import signal
+import subprocess
+import sys
 import tempfile
-from collections.abc import Iterable
+import threading
+import time
+from collections.abc import Callable, Iterable, Iterator
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
-import submitit
+import yaml
 
 from stilt._paths import absolute
 from stilt.execution.config import ExecutionConfig
@@ -25,82 +39,34 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+#: Seconds before a Slurm task's time limit that Slurm sends it SIGUSR1,
+#: which stops the task and requeues it (``--signal=B:USR1@120``).
+NOTICE_SECONDS = 120
+
+#: Times a Slurm task requeues itself before it stops for good.
+MAX_REQUEUES = 10
+
+#: Slurm job states of a task that has not ended.
+_ACTIVE = frozenset(
+    {
+        "PENDING",
+        "RUNNING",
+        "REQUEUED",
+        "REQUEUE_HOLD",
+        "REQUEUE_FED",
+        "RESIZING",
+        "SUSPENDED",
+        "CONFIGURING",
+        "COMPLETING",
+        "SIGNALING",
+        "STAGE_OUT",
+    }
+)
+
+
 # ---------------------------------------------------------------------------
-# The unit of work
+# Shares of the receptors
 # ---------------------------------------------------------------------------
-
-
-class Batch(submitit.helpers.Checkpointable):
-    """
-    A batch of receptors of one project, run by one worker.
-
-    Calling it opens the project and runs the receptors with *execution*'s
-    settings, ``cpus`` at a time. On Slurm it is one array task. When the task is
-    preempted or runs out of time, submitit submits it again
-    (:meth:`checkpoint`), and the second run skips the receptors the first
-    one finished.
-
-    Parameters
-    ----------
-    project : str
-        Project directory. Its ``config.yaml`` and ``receptors.csv`` must
-        already hold the settings and receptors.
-    receptor_ids : list of str
-        Receptors to run.
-    execution : ExecutionConfig
-        The run's execution settings, which may differ from the project's
-        ``config.yaml``: ``cpus``, ``timeout``, and ``keep_scratch``.
-    compute_root : str, optional
-        Scratch directory under which HYSPLIT runs.
-    skip_existing : bool, default True
-        Keep particles and footprints that already exist.
-    """
-
-    def __init__(
-        self,
-        project: str,
-        receptor_ids: list[str],
-        *,
-        execution: ExecutionConfig,
-        compute_root: str | None = None,
-        skip_existing: bool = True,
-    ) -> None:
-        self.project = project
-        self.receptor_ids = list(receptor_ids)
-        self.execution = execution
-        self.compute_root = compute_root
-        self.skip_existing = skip_existing
-
-    def __call__(self) -> None:
-        """Run the batch. The results and failure records are in the output directory."""
-        from stilt.project import Project
-
-        from .worker import run_receptors
-
-        logging.basicConfig(level=logging.WARNING, format="%(message)s")
-        logging.getLogger("stilt.execution.worker").setLevel(logging.INFO)
-        project = Project(self.project)
-        run_receptors(
-            project,
-            self.receptor_ids,
-            # Worked out here, in the task, so it is this node's scratch.
-            compute_root=resolve_compute_root(project, self.compute_root),
-            execution=self.execution,
-            skip_existing=self.skip_existing,
-        )
-
-    def checkpoint(
-        self, *args: Any, **kwargs: Any
-    ) -> submitit.helpers.DelayedSubmission:
-        """Return this batch to submit again, keeping what finished before the interruption."""
-        self.skip_existing = True
-        return super().checkpoint(*args, **kwargs)
-
-
-def split(receptor_ids: list[str], n: int) -> list[list[str]]:
-    """Split receptor ids round-robin into at most *n* batches, none empty."""
-    n = max(1, min(n, len(receptor_ids)))
-    return [receptor_ids[i::n] for i in range(n)]
 
 
 def task_share(receptor_ids: list[str], task: int, n_tasks: int) -> list[str]:
@@ -120,31 +86,6 @@ def task_share(receptor_ids: list[str], task: int, n_tasks: int) -> list[str]:
             f"A task runs from 0 to n_tasks - 1; got task {task} of {n_tasks}."
         )
     return receptor_ids[task::n_tasks]
-
-
-def slurm_parameters(execution: ExecutionConfig, *, job_name: str) -> dict[str, Any]:
-    """Return *execution* as the keyword arguments of submitit's Slurm executor."""
-    additional = {str(k).replace("_", "-"): v for k, v in execution.slurm.items()}
-    # Without this, scontrol cannot requeue a preempted or timed-out task.
-    additional.setdefault("requeue", True)
-    params: dict[str, Any] = {
-        "slurm_job_name": job_name,
-        "slurm_cpus_per_task": execution.cpus,
-        "slurm_additional_parameters": additional,
-    }
-    optional = {
-        # Minutes, which is the form submitit needs to tell a timeout from a
-        # preemption when it decides whether to requeue.
-        "slurm_time": execution.time_minutes,
-        "slurm_mem": execution.mem,
-        "slurm_partition": execution.partition,
-        "slurm_account": execution.account,
-        "slurm_qos": execution.qos,
-        "slurm_array_parallelism": execution.array_parallelism,
-        "slurm_setup": execution.setup or None,
-    }
-    params.update({k: v for k, v in optional.items() if v is not None})
-    return params
 
 
 # ---------------------------------------------------------------------------
@@ -275,8 +216,15 @@ def run(
     ValueError
         If a receptor id is not in the project, or *task* is not from 0 to
         ``n - 1``.
-    RuntimeError
-        If a Slurm task failed, was cancelled, or ran out of requeues.
+
+    Notes
+    -----
+    In a Slurm job, a task (``task`` given) that stops with work left
+    requeues itself with ``scontrol requeue`` when it was preempted (Slurm
+    set the job's ``PreemptTime``) or got SIGUSR1, which the job array
+    script asks Slurm to send :data:`NOTICE_SECONDS` before the time
+    limit. It starts again later and skips what it finished. A task
+    stopped by ``scancel`` is not requeued.
     """
     execution = execution if execution is not None else project.config.execution
     pending = _pending(project, skip_existing, receptors, task)
@@ -290,13 +238,19 @@ def run(
         # and progress prints as it happens.
         from .worker import run_receptors
 
-        run_receptors(
-            project,
-            pending,
-            compute_root=resolve_compute_root(project, compute_root),
-            execution=execution,
-            skip_existing=skip_existing,
-        )
+        def work() -> None:
+            run_receptors(
+                project,
+                pending,
+                compute_root=resolve_compute_root(project, compute_root),
+                execution=execution,
+                skip_existing=skip_existing,
+            )
+
+        if task is None:
+            work()
+        else:
+            return _run_task(project, pending, work)
     return _status(project, pending)
 
 
@@ -307,15 +261,19 @@ def submit(
     execution: ExecutionConfig | None = None,
     skip_existing: bool = True,
     compute_root: str | Path | None = None,
-) -> list[submitit.Job[Any]]:
+) -> str | None:
     """
     Submit every simulation of a project that has not finished to Slurm.
 
-    The receptors with missing results are split among ``n_workers`` tasks
-    of one job array, and this returns once it is submitted. A task that is
-    preempted or runs out of time is submitted again and skips what it
-    finished. Logs and submitit's files are in ``slurm/<date_time>_<id>/`` in
-    the project.
+    The receptors with missing results are split among up to ``n_workers``
+    tasks of one job array, and this returns once it is submitted. The
+    submission is a folder ``slurm/<date_time>_<id>/`` in the project:
+    ``receptors.txt`` lists the receptors to run, ``execution.yaml`` holds
+    the execution settings, ``job.sh`` is the script given to ``sbatch``,
+    and ``<task>.log`` is each task's log. Task ``i`` runs
+    ``stilt run <project> --receptors receptors.txt --task i/N``. A task
+    that is preempted or nears its time limit requeues itself and skips
+    what it finished (see :func:`run`).
 
     Parameters
     ----------
@@ -324,10 +282,9 @@ def submit(
 
     Returns
     -------
-    list of submitit.Job
-        One per array task, empty when nothing needs to run.
-        ``job.wait()``, ``job.result()``, ``job.stdout()``, and
-        ``job.cancel()`` follow and control them.
+    str or None
+        The Slurm job id of the array, or ``None`` when nothing needs to
+        run. ``squeue -j <id>`` follows it and ``scancel <id>`` stops it.
 
     Raises
     ------
@@ -343,8 +300,87 @@ def submit(
     pending = _pending(project, skip_existing, receptors)
     if not pending:
         logger.info("submit: every simulation is complete; nothing to do")
-        return []
+        return None
     return _submit(project, pending, execution, skip_existing, compute_root)
+
+
+def _sbatch_lines(options: dict[str, Any]) -> list[str]:
+    """Return ``#SBATCH`` lines; ``True`` is a bare flag, and ``None`` and ``False`` are left out."""
+    lines = []
+    for key, value in options.items():
+        if value is None or value is False:
+            continue
+        flag = "--" + str(key).replace("_", "-")
+        lines.append(f"#SBATCH {flag}" if value is True else f"#SBATCH {flag}={value}")
+    return lines
+
+
+def job_script(
+    project: Project,
+    execution: ExecutionConfig,
+    folder: Path,
+    n_tasks: int,
+    *,
+    skip_existing: bool = True,
+    compute_root: str | Path | None = None,
+) -> str:
+    """
+    Return the ``sbatch`` script of a job array whose tasks each run a share of the receptors.
+
+    Task ``i`` runs ``stilt run <project> --receptors <folder>/receptors.txt
+    --task i/n_tasks --execution <folder>/execution.yaml`` with the Python
+    that called this. The ``#SBATCH`` lines come from *execution*: its
+    resources, ``--requeue``, ``--signal=B:USR1@120`` (see :func:`run`),
+    and its ``slurm`` options, which can replace any of them. Its ``setup``
+    commands run before the task.
+    """
+    options: dict[str, Any] = {
+        "job-name": f"pystilt-{_project_slug(project.directory)}",
+        "array": f"0-{n_tasks - 1}"
+        + (f"%{execution.array_parallelism}" if execution.array_parallelism else ""),
+        "cpus-per-task": execution.cpus,
+        "time": execution.time_minutes,
+        "mem": execution.mem,
+        "partition": execution.partition,
+        "account": execution.account,
+        "qos": execution.qos,
+        "output": folder / "%a.log",
+        # A requeued task writes on at the end of its log.
+        "open-mode": "append",
+        "requeue": True,
+        "signal": f"B:USR1@{NOTICE_SECONDS}",
+    }
+    for key, value in execution.slurm.items():
+        options[str(key).replace("_", "-")] = value
+
+    command = [
+        sys.executable,
+        "-m",
+        "stilt",
+        "run",
+        str(project.directory),
+        "--receptors",
+        str(folder / "receptors.txt"),
+        "--task",
+        f"$SLURM_ARRAY_TASK_ID/{n_tasks}",
+        "--execution",
+        str(folder / "execution.yaml"),
+    ]
+    if compute_root is not None:
+        command += ["--compute-root", str(resolve_compute_root(project, compute_root))]
+    # $SLURM_ARRAY_TASK_ID must expand, so that word is quoted with "".
+    words = [f'"{w}"' if w.startswith("$") else shlex.quote(w) for w in command]
+    lines = ["#!/bin/bash", *_sbatch_lines(options), "", *execution.setup]
+    if not skip_existing:
+        # A requeued task keeps what it finished before.
+        lines += [
+            'skip="--no-skip"',
+            '[ "${SLURM_RESTART_COUNT:-0}" -gt 0 ] && skip=""',
+        ]
+        words.append("$skip")
+    # exec, so this process is the one Slurm signals.
+    lines.append("exec " + " ".join(words))
+    return "\n".join(lines) + "\n"
 
 
 def _submit(
@@ -353,75 +389,198 @@ def _submit(
     execution: ExecutionConfig,
     skip_existing: bool,
     compute_root: str | Path | None,
-) -> list[submitit.Job[Any]]:
-    """Submit *pending* receptors as one job array and return its tasks."""
+) -> str:
+    """Write a submission folder for *pending* receptors, submit its job array, and return the job id."""
     # One folder per submission, so a later array never overwrites these.
     stamp = f"{datetime.now():%Y%m%d_%H%M%S}_{uuid4().hex[:6]}"
-    executor = submitit.AutoExecutor(
-        folder=project.directory / "slurm" / stamp, cluster="slurm"
+    folder = project.directory / "slurm" / stamp
+    folder.mkdir(parents=True)
+    (folder / "receptors.txt").write_text("\n".join(pending) + "\n")
+    (folder / "execution.yaml").write_text(
+        yaml.safe_dump(execution.model_dump(exclude_unset=True), sort_keys=False)
     )
-    executor.update_parameters(
-        **slurm_parameters(
-            execution, job_name=f"pystilt-{_project_slug(project.directory)}"
-        )
-    )
-    # A compute root that was not asked for is left to each compute node,
-    # whose TMPDIR is its own. One that was is made absolute here, since the
-    # task may start in another directory.
-    task_root = (
-        None
-        if compute_root is None
-        else str(resolve_compute_root(project, compute_root))
-    )
-    batches = [
-        Batch(
-            str(project.directory),
-            ids,
-            execution=execution,
-            compute_root=task_root,
+    n_tasks = max(1, min(execution.n_workers, len(pending)))
+    script = folder / "job.sh"
+    script.write_text(
+        job_script(
+            project,
+            execution,
+            folder,
+            n_tasks,
             skip_existing=skip_existing,
+            compute_root=compute_root,
         )
-        for ids in split(pending, execution.n_workers)
-    ]
-    with executor.batch():
-        jobs = [executor.submit(batch) for batch in batches]
-    logger.info(
-        "Submitted job: %s (%d tasks)", str(jobs[0].job_id).split("_")[0], len(jobs)
     )
-    return jobs
-
-
-def _wait(jobs: list[submitit.Job[Any]]) -> None:
-    """
-    Wait until every task has left the queue.
-
-    Raises
-    ------
-    RuntimeError
-        If any task failed, was cancelled, or ran out of requeues. A task
-        that was preempted or ran out of time is requeued and counts only by
-        how it ends.
-    """
-    for job in jobs:
-        job.wait()
-    # Ask each task how it ended. Its state from the scheduler can lag
-    # behind a task that has just finished.
-    failed = {
-        str(job.job_id): error for job in jobs if (error := job.exception()) is not None
-    }
-    if failed:
-        first_id, first_error = next(iter(failed.items()))
+    result = subprocess.run(
+        ["sbatch", "--parsable", str(script)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
         raise RuntimeError(
-            f"{len(failed)} of {len(jobs)} Slurm tasks did not complete. Task "
-            f"{first_id}: {first_error}\nLogs are in {jobs[0].paths.folder}."
+            f"sbatch refused {script}: {result.stderr.strip() or result.stdout.strip()}"
         )
+    job_id = result.stdout.strip().split(";")[0]
+    logger.info("Submitted job: %s (%d tasks); logs in %s", job_id, n_tasks, folder)
+    return job_id
+
+
+def _task_states(job_id: str) -> dict[str, tuple[str, str]] | None:
+    """
+    Return ``{task: (state, exit code)}`` for the tasks of a job array, from ``sacct``.
+
+    ``None`` when ``sacct`` cannot answer, as when the accounting database
+    is slow to hear of a new job.
+    """
+    result = subprocess.run(
+        ["sacct", "-j", job_id, "-X", "-n", "-P", "--format=JobID,State,ExitCode"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        return None
+    states = {}
+    for line in result.stdout.splitlines():
+        parts = line.split("|")
+        if len(parts) == 3:
+            task, state, code = parts
+            states[task] = (state.split()[0] if state else "", code)
+    return states or None
+
+
+def _wait(job_id: str, poll: float = 30.0) -> None:
+    """
+    Wait until every task of a job array has ended, polling ``sacct``.
+
+    A task that ended other than complete, or with failed simulations
+    (exit 1) or interrupted ones (exit 2), is logged with its state; its
+    simulations stay pending in the status table.
+    """
+    states = _task_states(job_id)
+    while states is None or any(s in _ACTIVE for s, _ in states.values()):
+        time.sleep(poll)
+        states = _task_states(job_id)
+    for task, (state, code) in sorted(states.items()):
+        if state == "COMPLETED" or (state == "FAILED" and code in ("1:0", "2:0")):
+            continue
+        logger.warning(
+            "Slurm task %s ended %s (exit %s); see its log", task, state, code
+        )
+
+
+# ---------------------------------------------------------------------------
+# A task that is told to stop
+# ---------------------------------------------------------------------------
+
+
+class _Notice:
+    """
+    Whether SIGUSR1 has arrived.
+
+    While ``armed``, its first arrival raises ``KeyboardInterrupt`` to stop
+    the work. Later ones, and any after the work, are only recorded, so
+    they cannot cut a cleanup short or end the process.
+    """
+
+    def __init__(self) -> None:
+        self.received = False
+        self.armed = True
+
+    def __bool__(self) -> bool:
+        return self.received
+
+    def handle(self, signum: int, frame: object) -> None:
+        first = not self.received
+        self.received = True
+        if first and self.armed:
+            raise KeyboardInterrupt
+
+
+@contextlib.contextmanager
+def _usr1_noticed() -> Iterator[_Notice]:
+    """Record SIGUSR1 inside the block (:class:`_Notice`); outside the main thread, where handlers cannot be set, nothing is."""
+    notice = _Notice()
+    if threading.current_thread() is not threading.main_thread():
+        yield notice
+        return
+    previous = signal.signal(signal.SIGUSR1, notice.handle)
+    try:
+        yield notice
+    finally:
+        signal.signal(signal.SIGUSR1, previous)
+
+
+def _run_task(
+    project: Project, pending: list[str], work: Callable[[], None]
+) -> pd.DataFrame:
+    """
+    Run a task's receptors and return their status table; requeue the task when Slurm stopped it.
+
+    A task that stops with simulations left is requeued when it got
+    SIGUSR1 (the time limit is near) or was preempted.
+    """
+    with _usr1_noticed() as notice:
+        try:
+            work()
+        except KeyboardInterrupt:
+            if not notice:
+                raise
+        finally:
+            notice.armed = False
+        table = _status(project, pending)
+        unfinished = bool((table["state"] == "pending").any())
+        if unfinished and (notice or _preempted()):
+            _requeue()
+    return table
+
+
+def _preempted() -> bool:
+    """Whether Slurm has selected this job for preemption (``scontrol show job`` gives a ``PreemptTime``)."""
+    job_id = os.environ.get("SLURM_JOB_ID")
+    if not job_id:
+        return False
+    result = subprocess.run(
+        ["scontrol", "show", "job", job_id], capture_output=True, text=True, check=False
+    )
+    match = re.search(r"PreemptTime=(\S+)", result.stdout)
+    return match is not None and match.group(1) not in ("None", "Unknown")
+
+
+def _requeue() -> bool:
+    """Put this Slurm task back in the queue with ``scontrol requeue``; return whether it was."""
+    job_id = os.environ.get("SLURM_JOB_ID")
+    if not job_id:
+        logger.warning("Told to stop outside a Slurm job; not requeued.")
+        return False
+    restarts = int(os.environ.get("SLURM_RESTART_COUNT") or 0)
+    if restarts >= MAX_REQUEUES:
+        logger.warning(
+            "Slurm task %s has been requeued %d times; not again. Run the "
+            "project again, or raise execution.time.",
+            job_id,
+            restarts,
+        )
+        return False
+    result = subprocess.run(
+        ["scontrol", "requeue", job_id], capture_output=True, text=True, check=False
+    )
+    if result.returncode != 0:
+        logger.warning("scontrol requeue %s failed: %s", job_id, result.stderr.strip())
+        return False
+    logger.info(
+        "Requeued Slurm task %s; it starts again and skips what finished.", job_id
+    )
+    return True
 
 
 __all__ = [
-    "Batch",
+    "MAX_REQUEUES",
+    "NOTICE_SECONDS",
+    "job_script",
     "resolve_compute_root",
     "run",
-    "slurm_parameters",
-    "split",
     "submit",
+    "task_share",
 ]

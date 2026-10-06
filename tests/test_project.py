@@ -1025,26 +1025,19 @@ def test_submit_needs_slurm(tmp_path, point_receptor):
 def test_run_on_slurm_submits_and_waits(tmp_path, monkeypatch, point_receptor):
     project = _project(tmp_path, [point_receptor], execution={"backend": "slurm"})
     waited = []
-
-    class _Job:
-        def wait(self):
-            waited.append(self)
-
-        def exception(self):
-            return None
-
     submitted = []
 
     def submit(project, pending, execution, skip_existing, compute_root):
         submitted.append(
             {"pending": pending, "execution": execution, "compute_root": compute_root}
         )
-        return [_Job(), _Job()]
+        return "777"
 
     monkeypatch.setattr("stilt.execution.runner._submit", submit)
+    monkeypatch.setattr("stilt.execution.runner._wait", waited.append)
 
     status = project.run(compute_root="/s")
-    assert len(waited) == 2
+    assert waited == ["777"]
     assert submitted[0]["pending"] == [point_receptor.id]
     assert submitted[0]["compute_root"] == "/s"
     assert submitted[0]["execution"].backend == "slurm"

@@ -1,7 +1,6 @@
 """Tests for stilt.cli - Typer command-line interface."""
 
 from dataclasses import replace
-from types import SimpleNamespace
 
 import pandas as pd
 import pytest
@@ -67,7 +66,7 @@ def calls(monkeypatch):
 
     def submit(self, **kwargs):
         recorded.append(("submit", kwargs))
-        return [SimpleNamespace(job_id="12345_0"), SimpleNamespace(job_id="12345_1")]
+        return "12345"
 
     monkeypatch.setattr("stilt.cli.Project.run", run)
     monkeypatch.setattr("stilt.cli.Project.submit", submit)
@@ -305,6 +304,32 @@ def test_run_on_slurm_waits_for_the_job(tmp_path, calls):
     assert calls[0][1]["execution"].n_workers == 2
     assert "Execution mode: submit-and-wait" in result.output
     assert "waiting for the job" in result.output
+
+
+def test_run_reads_execution_settings_from_a_file(tmp_path, calls):
+    _write_minimal_config(tmp_path)
+    settings = tmp_path / "execution.yaml"
+    settings.write_text("backend: slurm\ncpus: 3\ntimeout: 900\nkeep_scratch: true\n")
+
+    result = runner.invoke(
+        app,
+        [
+            "run",
+            str(tmp_path),
+            "--execution",
+            str(settings),
+            "--task",
+            "0/2",
+            "--cpus",
+            "2",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    execution = calls[0][1]["execution"]
+    # The file's settings, then the options, and a task runs here.
+    assert (execution.backend, execution.cpus, execution.timeout) == ("local", 2, 900)
+    assert execution.keep_scratch is True
 
 
 @pytest.mark.parametrize(

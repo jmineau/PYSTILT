@@ -105,14 +105,13 @@ manifest. Call these instead.
 
 `stilt.execution.run` (`execution/runner.py`) finds the receptors with
 missing results. A local run calls `run_receptors` in this process. A Slurm
-run goes through `submit`, which splits the receptors into `Batch` objects
-and submits them as one job array with submitit.
+run goes through `submit`, which writes `receptors.txt`, `execution.yaml`,
+and `job.sh` (`job_script`) into `slurm/<stamp>/` and calls `sbatch`.
 
-A `Batch` is the unit to build on: a project path and a list of receptor
-ids, picklable, that any worker with the project's filesystem can call. Its
-`checkpoint()` is what lets a preempted or timed-out task be submitted again.
-Another scheduler means another branch in `run` and `submit` that calls
-the same batches.
+The unit of work is a command line: `stilt run <project> --receptors FILE
+--task I/N`. Any scheduler that can start it with an index can run a
+project; the task requeues itself on `SIGUSR1` inside a Slurm job. Another
+scheduler means another script writer, not another worker.
 
 New `execution:` settings go on `ExecutionConfig` (`execution/config.py`)
 with a description. Settings that only `sbatch` understands do not need a
