@@ -66,7 +66,7 @@ Methods
    ~{{ objname }}.{{ item }}
 {%- endfor %}
 {% endif %}
-{% elif fullname == 'stilt.SimID' %}
+{% elif fullname == 'stilt.simulation.SimID' %}
 .. class-signature:: {{ fullname }}
 
 .. class-parameters:: {{ fullname }}

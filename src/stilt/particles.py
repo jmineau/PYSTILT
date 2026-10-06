@@ -72,7 +72,9 @@ def particles_metadata(path: str | Path) -> ParticleMetadata:
 
     Examples
     --------
-    >>> receptor, settings, met_files = stilt.particles_metadata(sim.particles_path)
+    >>> receptor, settings, met_files = stilt.particles.particles_metadata(
+    ...     sim.particles_path
+    ... )
     >>> settings["model"]
     {'name': 'hysplit', 'version': 'v5.1.0'}
     """
@@ -189,7 +191,7 @@ def write_particles(
         Receptor the particles were released from.
     settings : mapping
         The run's settings, as its folder records them
-        (:attr:`stilt.Variant.run_settings`).
+        (:attr:`stilt.variants.Variant.run_settings`).
     met_files : list of Path
         Meteorology files the run used.
     metadata : dict, optional

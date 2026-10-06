@@ -6,7 +6,7 @@ results go to the output directory that ``config.yaml`` names, one tree per
 kind of result with a folder per set of settings (see
 :doc:`../guides/project_layout` and :doc:`../advanced/output_state`). Most
 users only need :class:`stilt.Project`. ``project.output`` is the
-:class:`~stilt.Output`.
+:class:`~stilt.output.Output`.
 
 Project
 -------

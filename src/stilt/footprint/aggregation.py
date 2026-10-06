@@ -231,7 +231,7 @@ def jacobian(
     The same operation as ``foot.stilt.aggregate``, for many footprints at
     once. *table* is what :meth:`stilt.output.Footprints.table` reads: the
     stored non-zero cells of each receptor, all on the grid of *config*.
-    :meth:`stilt.Simulations.jacobian` reads and sums a project's
+    :meth:`stilt.project.Simulations.jacobian` reads and sums a project's
     footprints in batches, so a selection of any size fits in memory.
 
     Parameters

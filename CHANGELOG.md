@@ -8,6 +8,14 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- `stilt.__all__` lists what a user calls (breaking): the project and its
+  configs, the receptors, `Simulation`, `Grid`, `Bounds`, `Mesh`, `Zones`,
+  `run_trajectories`, `calc_footprint`, `read_particles`,
+  `read_footprint`, `averaging_kernel_table`, and `StiltError`. `Output`,
+  `Simulations`, `Variant`, `SimID`, `Met`, `Geometry`,
+  `particles_metadata`, and `write_particles` are imported from their
+  modules (`stilt.output.Output`, `stilt.meteorology.Met`, ...) (#150).
+
 - `stilt.footprint.calculate` is `stilt.calc_footprint`, STILT-R's name,
   and takes its settings as keywords (breaking):
   `calc_footprint(particles, receptor, grid, smooth_factor=1.0,
