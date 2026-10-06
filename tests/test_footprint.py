@@ -21,12 +21,13 @@ from stilt.footprint.gridding import (
     _project_particles_to_crs,
     _wrap_antimeridian_longitudes,
 )
-from stilt.footprint.io import _describe
 from stilt.footprint.targets import Mesh, Zones
 from stilt.particles import calc_plume_dilution
 from stilt.receptors import PointReceptor
 from stilt.spatial import Grid, _grid_cell_starts
 from stilt.transforms import AveragingKernel
+
+from .fixtures.footprints import as_footprint
 
 
 def _make_footprint(
@@ -59,7 +60,7 @@ def _make_footprint(
         coords={"time": times, "lat": lats, "lon": lons},
         attrs={"units": "ppm (umol-1 m2 s)"},
     )
-    return _describe(data, receptor, config, "slv")
+    return as_footprint(data, receptor, config, "slv")
 
 
 def test_grid_cell_starts_use_complete_half_open_cells():
@@ -232,7 +233,7 @@ def test_netcdf_roundtrip_preserves_transforms(tmp_path):
     foot = _make_footprint(n_times=1)
     kernel = AveragingKernel(levels=[0.0, 1000.0], values=[0.1, 0.9], coordinate="xhgt")
     config = FootprintConfig(grid=foot.stilt.grid, transforms=[kernel])
-    foot = _describe(foot, foot.stilt.receptor, config, "slv")
+    foot = as_footprint(foot, foot.stilt.receptor, config, "slv")
     sim_dir = tmp_path / "202301011200_-111.85_40.77_5"
     sim_dir.mkdir()
     path = sim_dir / "202301011200_-111.85_40.77_5_slv_foot.nc"
@@ -255,7 +256,7 @@ def test_netcdf_with_unimportable_transform_still_loads(tmp_path):
         grid=foot.stilt.grid,
         transforms=[AveragingKernel(levels=[0.0, 1000.0], values=[0.1, 0.9])],
     )
-    foot = _describe(foot, foot.stilt.receptor, config, "slv")
+    foot = as_footprint(foot, foot.stilt.receptor, config, "slv")
     sim_dir = tmp_path / "202301011200_-111.85_40.77_5"
     sim_dir.mkdir()
     original = sim_dir / "202301011200_-111.85_40.77_5_slv_foot.nc"
@@ -320,7 +321,7 @@ def test_netcdf_roundtrip_with_timezone_aware_time(tmp_path):
         },
         attrs={"units": "ppm (umol-1 m2 s)"},
     )
-    foot = _describe(data, receptor, config, "slv")
+    foot = as_footprint(data, receptor, config, "slv")
 
     path = tmp_path / "timezone_aware_foot.nc"
     foot.stilt.to_netcdf(path)
@@ -391,7 +392,7 @@ def _foot_on_grid(
         coords={"time": times, "lat": lats, "lon": lons},
         attrs={"units": "ppm (umol-1 m2 s)"},
     )
-    return _describe(data, receptor, FootprintConfig(grid=grid), "")
+    return as_footprint(data, receptor, FootprintConfig(grid=grid), "")
 
 
 def _block_centers(n_blocks: int, res: float, origin: float = 0.0) -> np.ndarray:
@@ -1466,7 +1467,7 @@ def _geometry_footprint() -> tuple[xr.DataArray, FootprintConfig, Mesh]:
     fc = FootprintConfig(grid=base.stilt.grid, geometry=_windows_spec())
     assert fc.geometry is not None
     mesh = Mesh.from_spec(fc.geometry)
-    return _describe(base, base.stilt.receptor, fc, "geo", mesh.hash), fc, mesh
+    return as_footprint(base, base.stilt.receptor, fc, "geo", mesh.hash), fc, mesh
 
 
 def test_a_footprint_records_its_geometry_and_hash():
@@ -1538,7 +1539,7 @@ def test_footprints_stack_along_the_receptor_coordinate():
     other = PointReceptor(
         time=a.stilt.receptor.time, longitude=-112.0, latitude=40.0, altitude=5.0
     )
-    b = _describe(a * 2, other, a.stilt.config, "slv")
+    b = as_footprint(a * 2, other, a.stilt.config, "slv")
     stack = xr.concat([a, b], dim="receptor")
     assert stack["receptor"].values.tolist() == [
         str(a.stilt.receptor.id),

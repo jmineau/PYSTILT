@@ -11,7 +11,6 @@ import yaml
 
 from stilt.footprint import jacobian
 from stilt.footprint.config import FootprintConfig
-from stilt.footprint.io import _describe
 from stilt.footprint.targets import Mesh
 from stilt.identity import footprint_hash, footprint_settings, settings_hash
 from stilt.meteorology import MetConfig
@@ -22,6 +21,8 @@ from stilt.spatial import Grid
 from stilt.transport import ModelInfo
 from stilt.transport.hysplit import HysplitConfig
 from stilt.variants import Variant
+
+from .fixtures.footprints import as_footprint
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -99,7 +100,7 @@ def _footprint(
         dims=["time", "lat", "lon"],
         coords={"time": times, "lat": y_axis, "lon": x_axis},
     )
-    return _describe(data, receptor, FootprintConfig(grid=GRID), name)
+    return as_footprint(data, receptor, FootprintConfig(grid=GRID), name)
 
 
 # ---------------------------------------------------------------------------

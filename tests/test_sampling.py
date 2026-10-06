@@ -6,9 +6,10 @@ import pytest
 import xarray as xr
 
 from stilt.footprint.config import FootprintConfig
-from stilt.footprint.io import _describe
 from stilt.sampling import sample_field
 from stilt.spatial import Grid, horizontal_dims
+
+from .fixtures.footprints import as_footprint
 
 
 def _flux(values=None, lons=(-112.0, -111.0, -110.0), lats=(40.0, 41.0)):
@@ -137,7 +138,7 @@ def _footprint(point_receptor, values):
         dims=["time", "lat", "lon"],
         coords={"time": times, "lat": [40.0, 41.0], "lon": [-112.0, -111.0, -110.0]},
     )
-    return _describe(data, point_receptor, FootprintConfig(grid=grid), "test")
+    return as_footprint(data, point_receptor, FootprintConfig(grid=grid), "test")
 
 
 def test_footprint_enhancement_is_foot_times_flux_per_time_step(point_receptor):
