@@ -10,7 +10,8 @@ of settings, in hive form so every tree reads as one dataset::
         settings=hrrr-a3f9c2/            variant name + short hash of the transport settings
           _settings.yaml
           date=2024-07-01/<receptor>.parquet
-        settings=hrrr-err-0-7be104/
+        settings=hrrr-err-7be104/        an ensemble: one folder, a partition per realization
+          realization=0/date=2024-07-01/<receptor>.parquet
       footprints/
         settings=hrrr-93278c/            variant name + short hash of transport + footprint settings
           _settings.yaml                 names the particles folder it was made from

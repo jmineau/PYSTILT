@@ -123,8 +123,8 @@ column. That way a scan of the whole ``particles/`` tree with pyarrow,
 DuckDB, or R can tell the receptors apart.
 
 A project runs every receptor under every variant, so 100 receptors and
-three variants make 300 simulations. With no ``variants`` in
-``config.yaml``, there is one variant per met (see
+three variants make 300 simulations. ``config.yaml`` must name at least
+one variant; ``hrrr: {}`` runs the defaults on the ``hrrr`` met (see
 :doc:`configuration`).
 
 Opening a project again

@@ -98,8 +98,8 @@ The workflow side by side
        footprint settings; it shares the particles
        (:doc:`../guides/configuration`).
    * - ``simulation_id`` (run a subset)
-     - a smaller ``receptors.csv``, or :func:`stilt.execution.run_receptors`
-       with the receptor IDs you want
+     - ``project.run(receptors=[...])`` with the receptor ids you want,
+       or ``stilt run --receptors ids.txt``
    * - ``ziscale`` as one list per receptor
      - ``ziscale`` per variant, as one factor or one factor per hour. It is
        the same for every receptor. Per-receptor factors are not supported
