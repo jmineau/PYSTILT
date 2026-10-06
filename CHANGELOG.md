@@ -8,6 +8,10 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Docs: the quickstart and the README make one footprint with
+  `run_trajectories` and `calc_footprint` before they make a project
+  (#150).
+
 - `sim.generate_footprint` is `sim.calc_footprint`, `stilt.calc_footprint`
   with the simulation's particles, receptor, and settings filled in
   (breaking). It takes the settings to change as keywords

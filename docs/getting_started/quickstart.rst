@@ -2,14 +2,18 @@ Your First Footprint
 ====================
 
 This page takes you from one measurement to a footprint map. It uses Python.
-The same run from the command line is at the end.
+The first part makes one footprint with two function calls. The second
+part runs the same thing as a project, which is how you run many
+receptors and keep the results. The same project from the command line is
+at the end.
 
 You will:
 
 1. describe one measurement (a :term:`receptor`)
 2. point PYSTILT at :term:`meteorology`
-3. run the simulation
-4. plot the footprint
+3. follow particles back in time from the receptor
+4. calculate and plot the footprint
+5. run the same receptor as a project
 
 Before you start
 ----------------
@@ -66,29 +70,20 @@ the ground on the University of Utah campus, at 18:00 UTC on 15 July 2023:
        altitude=10,               # metres above ground level
    )
 
-Step 2: Make a project
-----------------------
+Step 2: Follow the particles
+----------------------------
 
-A :class:`~stilt.Project` is a folder that holds your receptors and the
-settings for the run. :meth:`Project.init <stilt.Project.init>` creates the
-folder and writes both to it.
+:func:`stilt.run_trajectories` releases particles at the receptor and
+follows them back in time through the meteorology:
 
 .. code-block:: python
 
-   project = stilt.Project.init(
-       "./my_first_project",
-       receptors=[receptor],
-       mets={"hrrr": met},          # "hrrr" is a name you choose
-       n_hours=-24,                 # follow the air 24 hours back in time
-       numpar=200,                  # number of particles to release
-       grid={                       # the footprint grid
-           "xmin": -113.0, "xmax": -110.5,   # longitude range
-           "ymin": 40.0,   "ymax": 42.0,     # latitude range
-           "xres": 0.01,   "yres": 0.01,     # grid cell size in degrees
-       },
+   particles = stilt.run_trajectories(
+       receptor,
+       met,
+       n_hours=-24,     # follow the air 24 hours back in time
+       numpar=200,      # number of particles to release
    )
-
-What these settings mean:
 
 ``n_hours``
    How far back in time to follow the air. Negative means backward, which is
@@ -99,34 +94,29 @@ What these settings mean:
    but take longer. 200 is fine for a first try. Research runs often use
    500 to 1000.
 
-``grid``
-   The map grid the footprint is calculated on. Make it big enough to
-   include the areas upwind of your site. The resolution here, 0.01°, is
-   about 1 km.
-
-Step 3: Run
------------
+This runs HYSPLIT, the transport model, and usually takes a minute or two.
+The particles are a :class:`pandas.DataFrame`, one row per particle per
+time step:
 
 .. code-block:: python
 
-   project.run()
+   particles.head()
+   particles.stilt.plot.map()
 
-This runs HYSPLIT to move the particles, then calculates the footprint. A
-single simulation like this usually takes a minute or two. ``run()`` returns
-when it is done.
+Step 3: Calculate the footprint
+-------------------------------
 
-Step 4: Look at the footprint
------------------------------
-
-PYSTILT runs each receptor once per :term:`variant`. With the settings above
-there is one variant, named ``hrrr`` after the met. One receptor under
-one variant is a :term:`simulation`. Look yours up by the receptor's id and
-the variant name, and plot its footprint:
+The footprint is calculated on a grid. Make it big enough to include the
+areas upwind of your site. Here the cells are 0.01°, about 1 km:
 
 .. code-block:: python
 
-   sim = project.simulation(receptor.id, "hrrr")
-   foot = sim.footprint
+   grid = stilt.Grid(
+       xmin=-113.0, xmax=-110.5,   # longitude range
+       ymin=40.0,   ymax=42.0,     # latitude range
+       xres=0.01,   yres=0.01,     # grid cell size in degrees
+   )
+   foot = stilt.calc_footprint(particles, receptor, grid)
 
    foot.stilt.plot.map()
 
@@ -142,15 +132,43 @@ hour. Sum it over time with xarray:
 
    foot.sum("time")
 
-The particles are a :class:`pandas.DataFrame`, one row per particle per
-time step:
+PYSTILT's own methods on the particles and the footprint are under
+``.stilt``.
+
+Step 4: Run it as a project
+---------------------------
+
+Two calls are enough for one receptor. For many receptors, make a
+:class:`~stilt.Project`: a folder that holds your receptors and settings,
+runs every receptor, and keeps the results. :meth:`Project.init
+<stilt.Project.init>` creates the folder and writes both to it. The
+settings are the ones above:
 
 .. code-block:: python
 
-   sim.particles.head()
-   sim.particles.stilt.plot.map()
+   project = stilt.Project.init(
+       "./my_first_project",
+       receptors=[receptor],
+       mets={"hrrr": met},          # "hrrr" is a name you choose
+       n_hours=-24,
+       numpar=200,
+       grid=grid,
+   )
+   project.run()
 
-PYSTILT's own methods on both are under ``.stilt``.
+``run()`` runs the particles and the footprint of every receptor, and
+returns when they are done.
+
+PYSTILT runs each receptor once per :term:`variant`. With the settings above
+there is one variant, named ``hrrr`` after the met. One receptor under
+one variant is a :term:`simulation`. Look yours up by the receptor's id and
+the variant name:
+
+.. code-block:: python
+
+   sim = project.simulation(receptor.id, "hrrr")
+   sim.footprint.stilt.plot.map()
+   sim.particles.head()
 
 What PYSTILT wrote
 ------------------
@@ -172,7 +190,8 @@ The folders are named after the variant, ``hrrr``, plus a short hash of the
 settings it ran with. The file name is the receptor (time, longitude,
 latitude, and altitude); receptor and variant together are the
 :term:`simulation ID`. HYSPLIT's own input files, such as ``CONTROL`` and
-``SETUP.CFG``, are written to scratch and removed when a run succeeds.
+``SETUP.CFG``, are written to a working directory (the workdir) and
+removed when a run succeeds.
 
 Your settings and receptors are saved in the folder, so you can open the
 project again later without repeating them:
