@@ -130,7 +130,7 @@ earlier one's logs:
 .. code-block:: text
 
    my_project/
-     slurm/<date_time>_<id>/
+     _slurm/<date_time>_<id>/
        job.sh            # the script given to sbatch
        receptors.txt     # the receptors submitted, one per line
        execution.yaml    # the execution settings of this submission

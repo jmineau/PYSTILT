@@ -2,7 +2,7 @@
 Running a project: finding the receptors with missing results and handing them to workers.
 
 With ``backend: slurm``, :func:`submit` writes a job array script into
-``slurm/<stamp>/`` in the project and submits it with ``sbatch``. Each task
+``_slurm/<stamp>/`` in the project and submits it with ``sbatch``. Each task
 of the array runs ``stilt run --task``, so a task is a command line that can
 be read, and run again, by hand.
 """
@@ -267,7 +267,7 @@ def submit(
 
     The receptors with missing results are split among up to ``n_workers``
     tasks of one job array, and this returns once it is submitted. The
-    submission is a folder ``slurm/<date_time>_<id>/`` in the project:
+    submission is a folder ``_slurm/<date_time>_<id>/`` in the project:
     ``receptors.txt`` lists the receptors to run, ``execution.yaml`` holds
     the execution settings, ``job.sh`` is the script given to ``sbatch``,
     and ``<task>.log`` is each task's log. Task ``i`` runs
@@ -393,7 +393,7 @@ def _submit(
     """Write a submission folder for *pending* receptors, submit its job array, and return the job id."""
     # One folder per submission, so a later array never overwrites these.
     stamp = f"{datetime.now():%Y%m%d_%H%M%S}_{uuid4().hex[:6]}"
-    folder = project.directory / "slurm" / stamp
+    folder = project.directory / "_slurm" / stamp
     folder.mkdir(parents=True)
     (folder / "receptors.txt").write_text("\n".join(pending) + "\n")
     (folder / "execution.yaml").write_text(
