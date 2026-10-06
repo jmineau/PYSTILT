@@ -51,7 +51,7 @@ def _footprint_array(
     Layer ``k`` is the hour from ``hours[k]`` hours after the receptor time,
     and is stamped there, as in STILT-R; a backward run's first hour is
     layer -1, and a time-integrated footprint is the one layer 0. This is
-    the one place a footprint array is made, for :func:`calculate` and for
+    the one place a footprint array is made, for :func:`calc_footprint` and for
     :func:`read_footprint` alike.
     """
     if config.grid is None:
@@ -262,7 +262,7 @@ def write_footprint(
     path : str or Path
         File to write.
     foot : xarray.DataArray
-        The footprint, as :func:`calculate` returns it.
+        The footprint, as :func:`calc_footprint` returns it.
     config : FootprintConfig, optional
         Settings to record, whose grid the footprint must be on. Defaults to
         the footprint's own, ``foot.stilt.config``.

@@ -11,7 +11,14 @@ from importlib.metadata import version as _version
 from .config import ProjectConfig
 from .exceptions import StiltError
 from .execution import ExecutionConfig
-from .footprint import FootprintConfig, Geometry, Mesh, Zones, read_footprint
+from .footprint import (
+    FootprintConfig,
+    Geometry,
+    Mesh,
+    Zones,
+    calc_footprint,
+    read_footprint,
+)
 from .meteorology import Met, MetConfig
 from .output import Output
 from .particles import particles_metadata, read_particles, write_particles
@@ -52,6 +59,7 @@ __all__ = [
     "particles_metadata",
     "write_particles",
     "read_footprint",
+    "calc_footprint",
     # Receptors
     "Receptor",
     "ColumnReceptor",

@@ -7,6 +7,7 @@ tests before merging any change to this module.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any, cast
 
@@ -18,7 +19,7 @@ from scipy.ndimage import convolve as _convolve
 from stilt.exceptions import EmptyFootprint
 from stilt.footprint.config import FootprintConfig
 from stilt.receptors import Receptor
-from stilt.spatial import _grid_cell_starts
+from stilt.spatial import Grid, _grid_cell_starts
 from stilt.transforms import apply_transforms
 
 from .io import _footprint_array
@@ -404,48 +405,59 @@ def _accumulate_smoothed_footprint(
     return foot_arr
 
 
-def calculate(
+def calc_footprint(
     particles: pd.DataFrame,
     receptor: Receptor,
-    config: FootprintConfig,
+    grid: Grid,
+    *,
+    smooth_factor: float = 1.0,
+    time_integrate: bool = False,
+    transforms: Sequence[Any] = (),
     name: str = "",
     directory: str | Path | None = None,
     geometry_hash: str | None = None,
 ) -> xr.DataArray:
     """
-    Calculate a footprint from particles.
+    Calculate a footprint from particles, as STILT-R's ``calc_footprint`` does.
 
-    The particle transforms in ``config.transforms`` are applied first, in
-    order, so the footprint records exactly the transforms it was made
-    with. The rest follows STILT-R's ``calc_footprint``. Near the receptor,
+    The particle *transforms* are applied first, in order, so the footprint
+    records exactly the transforms it was made with. Near the receptor,
     particle tracks are interpolated to finer times when particles cross
     more than a grid cell per step. Each particle's ``foot`` is added to the
     cell it is in, and each time step is smoothed with a Gaussian kernel
     that widens with the particles' spread and age. The sum is divided by
-    the number of particles and binned by hour, unless
-    ``config.time_integrate`` is set.
-
-    :meth:`stilt.Simulation.generate_footprint` calls this with a
-    simulation's own particles and receptor.
+    the number of particles and binned by hour, unless *time_integrate* is
+    set.
 
     Parameters
     ----------
     particles : pandas.DataFrame
-        Particle table, such as ``sim.particles``, with columns ``indx``,
-        ``time`` (minutes since release), ``long``, ``lati``, and ``foot``.
+        Particle table, such as :func:`stilt.run_trajectories` returns or
+        ``sim.particles``, with columns ``indx``, ``time`` (minutes since
+        release), ``long``, ``lati``, and ``foot``.
     receptor : Receptor
         Receptor the particles were released from.
-    config : FootprintConfig
-        Grid, smoothing, and particle transforms. For a footprint given by a
-        geometry, derive the grid first: ``Mesh.from_spec(config.geometry).to_grid()``.
+    grid : Grid
+        Domain and resolution of the footprint. For a footprint given by a
+        geometry, derive it first: ``stilt.Mesh.from_spec(geometry).to_grid()``.
+    smooth_factor : float, default 1.0
+        Factor on the width of the Gaussian smoothing kernel. 0 turns
+        smoothing off.
+    time_integrate : bool, default False
+        Sum the footprint over time into one layer instead of hourly layers.
+    transforms : sequence, optional
+        Particle transforms applied before the footprint is calculated, as
+        objects or as the mappings ``config.yaml`` takes
+        (``{"kind": "pressure_weighting"}``).
     name : str, optional
         Name of the footprint, usually the variant name.
     directory : str or Path, optional
         Where a relative file name in a transform's settings starts, such as
         an averaging-kernel table: the project directory.
     geometry_hash : str, optional
-        Hash of the geometry the grid was derived for, recorded with the
-        footprint so aggregating it onto another mesh warns.
+        Hash of the geometry the grid was derived for
+        (``sim.variant.geometry_hash``), recorded with the footprint so
+        aggregating it onto another mesh warns.
 
     Returns
     -------
@@ -458,25 +470,34 @@ def calculate(
     Raises
     ------
     ImportError
-        If a transform in ``config`` is a settings mapping that could not
-        be imported.
+        If a transform is a mapping whose ``kind`` cannot be imported.
     EmptyFootprint
         If no particle is over the grid. ``reason`` is ``"no_particles"``
         when the table is empty and ``"outside_domain"`` otherwise.
+
+    Examples
+    --------
+    >>> grid = stilt.Grid(
+    ...     xmin=-113, xmax=-110.5, ymin=40, ymax=42, xres=0.01, yres=0.01
+    ... )
+    >>> foot = stilt.calc_footprint(particles, receptor, grid, smooth_factor=0.5)
     """
-    grid = config.grid
     if grid is None:
         raise ValueError(
-            "The footprint config has no grid. Give one, or derive it from the "
-            "geometry with stilt.Mesh.from_spec(config.geometry).to_grid()."
+            "A footprint needs a grid. Give one, or derive it from a geometry "
+            "with stilt.Mesh.from_spec(geometry).to_grid()."
         )
+    grid = Grid.model_validate(grid)
+    # Checks the settings, and builds the transforms given as mappings.
+    config = FootprintConfig.model_validate(
+        {
+            "grid": grid,
+            "smooth_factor": smooth_factor,
+            "time_integrate": time_integrate,
+            "transforms": list(transforms),
+        }
+    )
     if config.transforms:
-        unresolved = [t["kind"] for t in config.transforms if isinstance(t, dict)]
-        if unresolved:
-            raise ImportError(
-                f"Transforms {unresolved} could not be rebuilt, so they "
-                "cannot be applied."
-            )
         particles = apply_transforms(particles, config.transforms, receptor, directory)
     crs = grid.crs
     xmin, xmax, xres = grid.xmin, grid.xmax, grid.xres

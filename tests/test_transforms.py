@@ -239,7 +239,7 @@ def test_pwf_weights_match_cell_edges():
     assert result["pwf"].to_numpy() == pytest.approx(expected, rel=1e-6)
     # Every particle carries real weight, including the one at the surface.
     assert (result["pwf"].to_numpy() > 0).all()
-    # weight = pwf x n_particles, cancelling Footprint.calculate's mean.
+    # weight = pwf x n_particles, cancelling calc_footprint's mean.
     assert result["foot"].to_numpy() == pytest.approx(expected * n, rel=1e-6)
 
 
@@ -276,7 +276,7 @@ def test_pwf_footprint_magnitude_independent_of_numpar():
     # The bug Jacob Bushey hit: weighted footprints scaled with numpar.
     small = PressureWeighting().apply(_column_particles(100))
     large = PressureWeighting().apply(_column_particles(1000))
-    # Footprint.calculate divides by the particle count, so compare sum / N.
+    # calc_footprint divides by the particle count, so compare sum / N.
     # A 10x change in numpar moves the result by well under a percent; the
     # residual is the top cell's half-width, not a scaling with numpar.
     assert small["foot"].sum() / 100 == pytest.approx(
@@ -411,7 +411,7 @@ def test_pwf_multipoint_matches_column_with_one_particle_per_point():
     many = PressureWeighting().apply(_multipoint_particles(heights, per_point=5))
     one = PressureWeighting().apply(_multipoint_particles(heights, per_point=1))
     assert many["pwf"].sum() == pytest.approx(one["pwf"].sum(), rel=1e-9)
-    # Footprint.calculate averages over particles, so the weighted footprint
+    # calc_footprint averages over particles, so the weighted footprint
     # must not depend on how many particles each point released.
     assert many["foot"].sum() / len(many) == pytest.approx(
         one["foot"].sum() / len(one), rel=1e-9

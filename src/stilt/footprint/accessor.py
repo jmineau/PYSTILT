@@ -88,7 +88,7 @@ class FootprintAccessor:
     def grid(self) -> Grid:
         """The grid the footprint is on."""
         grid = self.config.grid
-        if grid is None:  # calculate() never makes a footprint without one
+        if grid is None:  # calc_footprint() never makes a footprint without one
             raise ValueError("The footprint settings have no grid.")
         return grid
 

@@ -535,19 +535,16 @@ def test_calc_plume_dilution_raises_when_no_xhgt_and_no_rzagl():
 
 
 def test_footprint_calculate_from_trajectory(point_receptor, tmp_path):
-    """calculate works directly on a particle table and its receptor."""
-    from stilt.footprint import calculate
-    from stilt.footprint.config import FootprintConfig
+    """calc_footprint works directly on a particle table and its receptor."""
+    from stilt.footprint import calc_footprint
     from stilt.spatial import Grid
 
     traj = finish_particles(
         _particles_basic(), point_receptor, _params(tmp_path, hnf_plume=False)
     )
-    config = FootprintConfig(
-        grid=Grid(xmin=-115.0, xmax=-110.0, ymin=38.0, ymax=43.0, xres=0.1, yres=0.1)
-    )
+    grid = Grid(xmin=-115.0, xmax=-110.0, ymin=38.0, ymax=43.0, xres=0.1, yres=0.1)
     # particles are at [-111.9, -112.0] x [40.7, 40.6] - inside the grid
-    result = calculate(traj, receptor=point_receptor, config=config)
+    result = calc_footprint(traj, point_receptor, grid)
     assert float(result.sum()) > 0
 
 
@@ -595,10 +592,9 @@ def test_endpoints_returns_far_end_per_particle(point_receptor, tmp_path):
     ]
 
 
-def test_calculate_regenerates_a_footprint_on_a_new_grid(tmp_path):
-    """calculate makes a footprint on any grid from stored particles."""
-    from stilt.footprint import calculate
-    from stilt.footprint.config import FootprintConfig
+def test_calc_footprint_regenerates_a_footprint_on_a_new_grid(tmp_path):
+    """calc_footprint makes a footprint on any grid from stored particles."""
+    from stilt.footprint import calc_footprint
     from stilt.spatial import Grid
 
     rng = np.random.default_rng(0)
@@ -619,23 +615,17 @@ def test_calculate_regenerates_a_footprint_on_a_new_grid(tmp_path):
     traj = finish_particles(
         particles, receptor, HysplitConfig(n_hours=-2, numpar=n, hnf_plume=False)
     )
-    config = FootprintConfig(
-        grid=Grid(xmin=-114.0, xmax=-113.0, ymin=39.0, ymax=40.0, xres=0.1, yres=0.1)
-    )
+    grid = Grid(xmin=-114.0, xmax=-113.0, ymin=39.0, ymax=40.0, xres=0.1, yres=0.1)
     from stilt.transforms import FirstOrderLifetime
 
-    fp = calculate(traj, receptor, config, name="coarse")
+    fp = calc_footprint(traj, receptor, grid, name="coarse")
     assert fp.stilt.name == "coarse"
     assert fp.stilt.receptor == receptor
-    assert fp.stilt.grid == config.grid
+    assert fp.stilt.grid == grid
     assert float(fp.sum()) > 0
 
-    decayed = calculate(
-        traj,
-        receptor,
-        config.model_copy(
-            update={"transforms": [FirstOrderLifetime(lifetime_hours=0.5)]}
-        ),
+    decayed = calc_footprint(
+        traj, receptor, grid, transforms=[FirstOrderLifetime(lifetime_hours=0.5)]
     )
     assert float(decayed.sum()) < float(fp.sum())
     assert decayed.stilt.config.transforms == [FirstOrderLifetime(lifetime_hours=0.5)]

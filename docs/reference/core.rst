@@ -90,7 +90,7 @@ write particle and footprint files without a project.
    write_particles
    read_footprint
    particles.ParticlesAccessor
-   footprint.calculate
+   calc_footprint
    footprint.FootprintAccessor
 
 Simulation tables
