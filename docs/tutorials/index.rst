@@ -15,8 +15,9 @@ Complete worked examples, each building on :doc:`../getting_started/quickstart`.
    Take a project from your computer to a Slurm cluster to run thousands of
    simulations.
 
-There is no tutorial for satellite or column measurements yet. For now, see
-:doc:`../advanced/observations`.
+:doc:`satellite_column`
+   Turn a TROPOMI methane orbit into receptors with their own averaging
+   kernels, run them, and compare modelled and observed enhancements.
 
 .. toctree::
    :maxdepth: 1
@@ -25,3 +26,4 @@ There is no tutorial for satellite or column measurements yet. For now, see
    wbb_stationary
    flux_inversion
    hpc_slurm
+   satellite_column

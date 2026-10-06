@@ -8,6 +8,11 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- The satellite and column page is a tutorial, *A Satellite Column, Start
+  To Finish* (was the advanced page *Satellite And Column Observations*),
+  from a TROPOMI orbit to modelled and observed enhancements with
+  `receptors_from_soundings`, `add_table`, and `modelled_column` (#150).
+
 - `foot.stilt.enhancement(flux)` raises when the flux cells are finer than
   the footprint's, where it took one small flux cell per footprint cell,
   and warns when cells of one size are offset by more than a tenth of a
