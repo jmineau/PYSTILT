@@ -74,7 +74,7 @@ def test_output_on_an_object_store_writes_lists_and_reads(store):
     path = _write(out, VARIANT, receptor)
     assert str(path).startswith("s3://")
     assert out.present("particles", VARIANT) == {rid}
-    assert out.folders("particles") == {
+    assert out.hashes("particles") == {
         out.folder("particles", VARIANT).name[
             len("settings=") :
         ]: VARIANT.particles_hash  # type: ignore[union-attr]

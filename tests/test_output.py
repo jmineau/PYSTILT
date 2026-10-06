@@ -153,8 +153,8 @@ def test_run_folder_is_name_and_hash_with_settings_file(tmp_path):
         "exe_dir" not in record["settings"]
         and "directory" not in record["settings"]["met"]
     )
-    assert out.folders("particles") == {f"hrrr-{digest[:6]}": digest}
-    assert out.folders("footprints") == {}
+    assert out.hashes("particles") == {f"hrrr-{digest[:6]}": digest}
+    assert out.hashes("footprints") == {}
 
 
 def test_same_settings_under_another_name_share_the_folder(tmp_path):
@@ -163,7 +163,7 @@ def test_same_settings_under_another_name_share_the_folder(tmp_path):
     renamed = _variant("hrrr-main")
     assert out.folder("particles", renamed) == out.folder("particles", VARIANT)
     _write(out, renamed, _receptor(hour=13))
-    assert len(out.folders("particles")) == 1
+    assert len(out.hashes("particles")) == 1
 
 
 def test_changed_settings_make_a_new_folder_beside_the_old(tmp_path):
@@ -174,7 +174,7 @@ def test_changed_settings_make_a_new_folder_beside_the_old(tmp_path):
     first, second = out.folder("particles", VARIANT), out.folder("particles", changed)
     assert second != first
     assert second is not None and second.name.startswith("settings=hrrr-")
-    assert set(out.folders("particles")) == {
+    assert set(out.hashes("particles")) == {
         first.name.removeprefix("settings="),
         second.name.removeprefix("settings="),
     }
@@ -305,7 +305,7 @@ def test_footprint_folder_is_variant_name_and_combined_hash(tmp_path):
     assert particles is not None  # made with the footprint folder
     record = yaml.safe_load((folder / "_settings.yaml").read_text())
     assert record["particles"] == particles.name.removeprefix("settings=")
-    assert out.folders("footprints") == {f"hrrr-{digest[:6]}": digest}
+    assert out.hashes("footprints") == {f"hrrr-{digest[:6]}": digest}
 
     smooth = _variant(
         "hrrr-smooth", footprint=config.model_copy(update={"smooth_factor": 0.5})
@@ -313,7 +313,7 @@ def test_footprint_folder_is_variant_name_and_combined_hash(tmp_path):
     out.write_footprint(smooth, _footprint(receptor))
     other = out.folder("footprints", smooth)
     assert other != folder and other.name.startswith("settings=hrrr-smooth-")
-    assert len(out.folders("footprints")) == 2
+    assert len(out.hashes("footprints")) == 2
     # The same settings under another variant name reuse the folder.
     assert out.folder("footprints", _variant("renamed", footprint=config)) == folder
     # The same footprint settings on other particles are another folder.

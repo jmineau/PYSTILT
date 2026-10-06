@@ -200,8 +200,22 @@ variant in the config uses any more:
 
    particles folders in /data/output that no variant here uses: settings=hrrr-a3f9c2 ...
 
-PYSTILT never deletes them, since another project may share the directory.
-When you are sure, delete a folder by hand.
+``stilt output ls`` lists every settings folder, which variants use it,
+how many result files it holds, and how an unused folder's settings differ
+from the variant of its name:
+
+.. code-block:: text
+
+   $ stilt output ls
+   Output: /data/output
+         kind               folder   files  variant
+    particles settings=hrrr-a3f9c2   8,760   (none)
+    particles settings=hrrr-5d01e7   8,760     hrrr
+   settings=hrrr-a3f9c2 differs from hrrr: ziscale: 1 (config: 0.8)
+
+In Python the same table is ``project.output.folders(project.variants)``.
+PYSTILT never deletes a folder, since another project may share the
+directory. When you are sure, delete a folder by hand.
 
 Failed runs
 -----------

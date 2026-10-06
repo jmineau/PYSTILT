@@ -947,6 +947,13 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- `stilt output ls` lists the output directory's settings folders: which
+  of the project's variants use each, how many result files it holds, and
+  how an unused folder's settings differ from the variant of its name.
+  `project.output.folders(project.variants)` is the same table;
+  `Output.folders(kind)`, the folder-to-hash mapping, is `Output.hashes(kind)`
+  (#150).
+
 - Satellite and ground-based column workflows in fewer steps:
   `stilt.observations.receptors_from_soundings(df, "column" | "slant",
   top=...)` returns a receptor for each sounding of a reader's table (its

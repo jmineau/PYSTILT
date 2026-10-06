@@ -594,7 +594,7 @@ class Project:
         return {
             kind: [
                 name
-                for name, digest in self.output.folders(kind).items()
+                for name, digest in self.output.hashes(kind).items()
                 if digest not in used[kind]
             ]
             for kind in KINDS
