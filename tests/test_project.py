@@ -12,7 +12,6 @@ import xarray as xr
 from stilt.config import ProjectConfig
 from stilt.execution import resolve_compute_root
 from stilt.execution.config import ExecutionConfig
-from stilt.footprint.io import _describe
 from stilt.meteorology import MetConfig
 from stilt.output import Output
 from stilt.project import Project, Simulations
@@ -21,6 +20,8 @@ from stilt.simulation import SimID
 from stilt.spatial import Grid
 from stilt.transport.hysplit.driver import winderrtf
 from stilt.transport.hysplit.model import finish_particles
+
+from .fixtures.footprints import as_footprint
 
 matplotlib.use("Agg")
 
@@ -111,7 +112,7 @@ def _write_footprint(
         dims=("time", "lat", "lon"),
         coords={"time": [sim.receptor.time], "lat": y_axis, "lon": x_axis},
     )
-    foot = _describe(data, sim.receptor, sim.variant.footprint, sim.variant.name)
+    foot = as_footprint(data, sim.receptor, sim.variant.footprint, sim.variant.name)
     return feet.write(foot)
 
 

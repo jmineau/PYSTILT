@@ -14,7 +14,6 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402 — must come after use("Agg")
 
 from stilt.footprint.config import FootprintConfig
-from stilt.footprint.io import _describe
 from stilt.receptors import ColumnReceptor, MultiPointReceptor, PointReceptor
 from stilt.spatial import Grid
 from stilt.visualization import (
@@ -24,6 +23,8 @@ from stilt.visualization import (
     _log10_safe,
     _make_ax,
 )
+
+from .fixtures.footprints import as_footprint
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -98,7 +99,7 @@ def minimal_footprint(receptor, grid):
         coords={"time": times, "lat": lats, "lon": lons},
     )
     config = FootprintConfig(grid=grid)
-    return _describe(data, receptor, config, "")
+    return as_footprint(data, receptor, config, "")
 
 
 # ---------------------------------------------------------------------------
@@ -271,7 +272,7 @@ def test_footprint_facet_single_time(receptor, grid):
         coords={"time": times, "lat": lats, "lon": lons},
     )
     config = FootprintConfig(grid=grid)
-    foot = _describe(data, receptor, config, "")
+    foot = as_footprint(data, receptor, config, "")
     fig, axes = foot.stilt.plot.facet(ncols=3)
     assert fig is not None
 
@@ -298,7 +299,7 @@ def projected_footprint(receptor):
             "x": x,
         },
     )
-    return _describe(data, receptor, FootprintConfig(grid=grid), "")
+    return as_footprint(data, receptor, FootprintConfig(grid=grid), "")
 
 
 def test_footprint_map_on_a_projected_grid(projected_footprint):
