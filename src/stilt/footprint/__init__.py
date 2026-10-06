@@ -8,7 +8,8 @@ Footprints of receptors, calculated from particles and applied to surface fluxes
 ``aggregation``
     Summing footprints onto other grids or polygons (:func:`jacobian`).
 ``io``
-    The footprint array and its attributes, and footprint files.
+    The footprint array and its attributes, footprint files, and
+    :func:`open_footprints`, many stored footprints as one dataset.
 ``targets``
     The geometries a footprint is summed onto (:class:`Mesh`, :class:`Zones`)
     and the overlap weights.
@@ -23,6 +24,7 @@ from .gridding import calc_footprint
 from .io import (
     FOOTPRINT_SCHEMA,
     UNITS,
+    open_footprints,
     read_footprint,
     write_empty_footprint,
     write_footprint,
@@ -41,6 +43,7 @@ __all__ = [
     "calc_footprint",
     "check_resolution",
     "jacobian",
+    "open_footprints",
     "overlap_weights",
     "read_footprint",
     "write_empty_footprint",

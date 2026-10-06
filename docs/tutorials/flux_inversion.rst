@@ -39,7 +39,9 @@ add them up.
 
    project = stilt.Project("./wbb_project")
    sims = project.simulations
-   footprints = project.footprints(sims[sims.variant == "hrrr"])
+   hrrr = sims[sims.variant == "hrrr"]
+   feet = [project.simulation(rid, "hrrr").footprint for rid in hrrr.receptor]
+   feet = [foot for foot in feet if foot is not None]   # skip empty footprints
 
    # longitude, latitude, flux (µmol m⁻² s⁻¹, averaged over the window)
    sources = {
@@ -55,7 +57,7 @@ add them up.
    flux = pd.Series({name: f for name, (_, _, f) in sources.items()})
 
    rows = []
-   for foot in footprints.values():
+   for foot in feet:
        hours = foot.indexes["time"]
        whole_run = pd.IntervalIndex.from_tuples(
            [(hours.min(), hours.max() + pd.Timedelta("1h"))], closed="left"
@@ -87,7 +89,7 @@ dimension, each footprint hour uses the nearest inventory time.
    inventory = xr.open_dataarray("inventory.nc")
 
    rows = []
-   for foot in footprints.values():
+   for foot in feet:
        enhancement = float(foot.stilt.enhancement(inventory).sum())   # sum over hours
        rows.append({"time": foot.stilt.receptor.time, "enhancement_ppm": enhancement})
 

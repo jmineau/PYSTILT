@@ -25,6 +25,7 @@ classifiers = [
 ]
 dependencies = [
     "arlmet>=0.1.0b1",
+    "dask[array]>=2023.6",
     "netcdf4>=1.6.5",
     "numpy>=1.24",
     "pandas>=2.0",
@@ -50,10 +51,14 @@ visualization = [
 cloud = [
     "arlmet[archives]>=0.1.0b1",
 ]
+sparse = [
+    "sparse>=0.15",
+]
 complete = [
     "pystilt[geometry]",
     "pystilt[visualization]",
     "pystilt[cloud]",
+    "pystilt[sparse]",
 ]
 
 [dependency-groups]

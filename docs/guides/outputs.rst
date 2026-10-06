@@ -112,7 +112,7 @@ project to load its results:
        (sims.variant == "hrrr")
        & sims.time.between("2023-07-01", "2023-07-31 23:00")   # both ends included
    ]
-   footprints = project.footprints(july)   # {(receptor, variant): DataArray}
+   footprints = project.footprints(july)   # one dataset: receptor, hour, lat, lon
    particles = project.particles(july)     # one table, with receptor and variant columns
 
 Leave the selection out to load every simulation. Any table with
@@ -120,13 +120,41 @@ Leave the selection out to load every simulation. Any table with
 observations merged with ``sims``, or a polars or pyarrow table, and so
 does a boolean mask over ``project.simulations``.
 
-The footprints come back in a dictionary keyed by ``(receptor, variant)``,
-so you always know which receptor a footprint belongs to:
+The footprints of one variant come back as one :class:`xarray.Dataset`.
+Receptors at different times line up on ``hour``, the hours after each
+receptor's time, so a backward run's first hour is -1. The ``time``
+coordinate says when each of a receptor's hours starts:
 
 .. code-block:: python
 
-   for (receptor, variant), foot in footprints.items():
-       print(receptor, float(foot.sum()))
+   footprints.foot.sum("hour").mean("receptor").plot()   # the mean footprint
+   footprints.foot.sel(receptor=rid)                     # one receptor's hours
+   footprints.time.sel(receptor=rid)                     # and when they start
+
+The values are read from the files only when a computation needs them, a
+day's receptors at a time, so opening a month of footprints is quick.
+Loading them all at once takes about 35 MB per footprint on a 300 by 300
+grid over 24 hours. Select one variant first, as above; a selection of
+several raises an error. Receptors whose footprint
+is empty are listed in ``footprints.attrs["empty"]``, and those not run yet
+in ``footprints.attrs["missing"]``.
+
+For one receptor, ``project.simulation(rid, "hrrr").footprint`` is its
+footprint as a :class:`xarray.DataArray` with absolute times, which the
+``foot.stilt`` methods work on.
+
+To sum a whole project's footprints onto your flux cells, use
+:meth:`~stilt.Project.jacobian`. It reads the footprints in batches and
+returns a sparse matrix with one row per receptor, so its size does not
+depend on the grid. ``H.to_xarray()`` returns the same values as a
+DataArray with dims ``(receptor, time, cell)``. Its values are a sparse
+array from the optional ``sparse`` package (``pip install
+pystilt[sparse]``), or a NumPy array with ``dense=True``:
+
+.. code-block:: python
+
+   H = project.jacobian(july, zones, time_bins)
+   H.to_xarray()   # receptor, time, cell
 
 The particles come back as one table, so pandas can group them:
 
@@ -249,8 +277,8 @@ Sometimes a simulation runs fine but no particle ever reaches the footprint
 grid. Usually the grid is too small or is not upwind. PYSTILT then writes a
 footprint file with no cells and the reason inside. The simulation counts
 as finished, so reruns skip it. ``sim.footprint`` is ``None``,
-``sim.empty_reason`` says why, and ``project.footprints()`` leaves the
-simulation out because there is nothing to load. A Jacobian lists them in
+``sim.empty_reason`` says why, and ``project.footprints()`` gives it no
+row and lists it in ``attrs["empty"]``. A Jacobian lists them in
 ``H.empty``. If you see many, make your footprint grid bigger.
 
 An empty footprint is not a footprint of zeros. It means the transport never

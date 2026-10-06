@@ -95,7 +95,8 @@ writes results.
 `project.simulations` is a pandas DataFrame, one row per simulation.
 Select it as in pandas (`sims[sims.variant == "hrrr"]`) and pass the
 selection to the project: `project.status(sel)`, `incomplete(sel)`,
-`particles(sel)` (one long table), `footprints(sel)`, `jacobian(sel, ...)`.
+`particles(sel)` (one long table), `footprints(sel)` (one lazy dataset
+stacked on the hour, `open_footprints`), `jacobian(sel, ...)`.
 A selection is any table with `receptor` and `variant` columns (pandas,
 polars, pyarrow) or a boolean mask over `project.simulations`; the
 methods read only those two columns from it. Do not wrap the table in a
@@ -150,7 +151,8 @@ src/stilt/
     aggregation.py   summing footprints onto other geometries: `aggregate`,
                      `jacobian`, their time binning and target weights
     io.py            the footprint array and its attributes; footprint files
-                     (`read_footprint`, `write_footprint`) and CF-1.8 NetCDF
+                     (`read_footprint`, `write_footprint`) and CF-1.8 NetCDF;
+                     `open_footprints`, many as one dataset on the hour
     targets.py       the geometries footprints are summed onto (Mesh, Zones),
                      the overlap weights, and `to_grid`
     accessor.py      the `.stilt` xarray accessor (enhancement from a flux
@@ -521,8 +523,8 @@ Feature status lives in the roadmap tables in [README.md](README.md) and
   reaches the grid, `calc_footprint` raises `EmptyFootprint` and
   the worker's `make_footprint` writes a footprint file with no rows and
   the reason in its metadata. `sim.is_complete()` is true, `sim.footprint` is
-  `None`, `sim.empty_reason` says why, and `project.footprints()` leaves the
-  simulation out. Never synthesize a zero-valued footprint for it: a zero
+  `None`, `sim.empty_reason` says why, and `project.footprints()` gives it
+  no row and lists it in `attrs["empty"]`. Never synthesize a zero-valued footprint for it: a zero
   enhancement would flow into a comparison or an inversion unnoticed.
 - **A failure record is a note, not a result.** When a step fails the
   worker writes `<receptor id>.failure.yaml` in the logs of the folder

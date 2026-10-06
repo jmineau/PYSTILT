@@ -56,7 +56,7 @@ Then check on the results:
 .. code-block:: python
 
    project.status()                  # one row per simulation, with a "state" column
-   footprints = project.footprints()   # {(receptor, variant): DataArray}
+   footprints = project.footprints()   # one dataset of every footprint
 
 Python or the command line?
 ---------------------------

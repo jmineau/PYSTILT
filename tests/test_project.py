@@ -740,9 +740,7 @@ def test_particles_of_a_selection_is_one_table(tmp_path):
     assert project.particles(sims[sims.receptor == b.id]).empty
 
 
-def test_footprints_skip_empty_footprints_and_trajectory_only_variants(
-    tmp_path, monkeypatch
-):
+def test_footprints_open_one_variant_as_a_dataset(tmp_path, monkeypatch):
     done, empty, missing = _receptor(12), _receptor(13), _receptor(14)
     project = _project(
         tmp_path,
@@ -753,16 +751,30 @@ def test_footprints_skip_empty_footprints_and_trajectory_only_variants(
     _write_footprint(project, empty, empty=True)
     _write_trajectory(project, done, "traj")
 
+    foot = project.simulation(done.id, "hrrr").footprint
     # Footprints are read from the folder listing; no receptor is built.
     sims = project.simulations
     monkeypatch.setattr(Project, "_receptors", None)
-    loaded = project.footprints(sims)
+    ds = project.footprints(sims[sims.variant == "hrrr"])
 
-    assert list(loaded) == [(done.id, "hrrr", None)]
-    assert isinstance(loaded[(done.id, "hrrr", None)], xr.DataArray)
+    assert isinstance(ds, xr.Dataset)
+    assert list(ds.receptor.values) == [done.id]
+    assert ds.attrs["empty"] == [empty.id]
+    assert ds.attrs["missing"] == [missing.id]
+    np.testing.assert_allclose(
+        ds.foot.sel(receptor=done.id, hour=0).values,
+        foot.isel(time=0).values,
+        rtol=1e-6,
+    )
+    with pytest.raises(ValueError, match="no grid"):
+        project.footprints(sims[sims.variant == "traj"])
+    with pytest.raises(ValueError, match="has a footprint yet"):
+        project.footprints(
+            sims[(sims.receptor == missing.id) & (sims.variant == "hrrr")]
+        )
 
 
-def test_footprints_by_variant(tmp_path, point_receptor):
+def test_footprints_take_one_variant(tmp_path, point_receptor):
     project = _project(
         tmp_path, [point_receptor], variants={"hrrr": {}, "zi08": {"ziscale": 0.8}}
     )
@@ -770,10 +782,11 @@ def test_footprints_by_variant(tmp_path, point_receptor):
         _write_footprint(project, point_receptor, variant)
     sims = project.simulations
 
-    assert len(project.footprints()) == 2
-    [(sid, foot)] = project.footprints(sims[sims.variant == "zi08"]).items()
-    assert sid == (point_receptor.id, "zi08", None)
-    assert foot.stilt.name == "zi08"
+    with pytest.raises(ValueError, match="one variant"):
+        project.footprints()
+    ds = project.footprints(sims[sims.variant == "zi08"])
+    assert ds.attrs["stilt_name"] == "zi08"
+    assert list(ds.receptor.values) == [point_receptor.id]
 
 
 def test_jacobian_of_a_variant(tmp_path):
