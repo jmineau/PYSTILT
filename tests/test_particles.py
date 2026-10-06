@@ -11,7 +11,7 @@ import pytest
 from stilt.identity import run_settings, transport_from_settings
 from stilt.meteorology import MetConfig
 from stilt.particles import (
-    calc_plume_dilution,
+    correct_near_field,
     particles_metadata,
     read_particles,
     write_particles,
@@ -19,7 +19,13 @@ from stilt.particles import (
 from stilt.receptors import ColumnReceptor, MultiPointReceptor, PointReceptor
 from stilt.transport import ModelInfo
 from stilt.transport.hysplit import HysplitConfig
-from stilt.transport.hysplit.model import finish_particles
+
+from .fixtures.particles import finished, point_at
+
+#: A receptor that gives no release height of its own: a column.
+_NO_POINT = ColumnReceptor(
+    time="2023-01-01 12:00", longitude=-111.85, latitude=40.77, bottom=0, top=1000
+)
 
 
 def _particles_basic() -> pd.DataFrame:
@@ -92,7 +98,7 @@ def test_parquet_roundtrip_preserves_naive_utc_from_tz_aware_receptor(tmp_path):
     # Receptor normalizes tz-aware input to naive UTC.
     assert aware_receptor.time.tzinfo is None
 
-    traj = finish_particles(
+    traj = finished(
         _particles_basic(), aware_receptor, _params(tmp_path, hnf_plume=False)
     )
 
@@ -114,7 +120,7 @@ def test_parquet_roundtrip_preserves_naive_utc_from_tz_aware_receptor(tmp_path):
 def test_write_and_read_particles_round_trip(point_receptor, tmp_path):
     """A particle file holds everything needed to read it back."""
     params = _params(tmp_path, hnf_plume=False)
-    traj = finish_particles(_particles_basic(), point_receptor, params)
+    traj = finished(_particles_basic(), point_receptor, params)
     path = tmp_path / "traj.parquet"
     write_particles(path, traj, point_receptor, _settings(params), [Path("/tmp/met1")])
 
@@ -133,7 +139,7 @@ def test_write_and_read_particles_round_trip(point_receptor, tmp_path):
 def test_a_file_without_settings_is_refused_for_its_metadata(point_receptor, tmp_path):
     """A particle file written before files recorded settings still reads, but has no metadata."""
     params = _params(tmp_path, hnf_plume=False)
-    traj = finish_particles(_particles_basic(), point_receptor, params)
+    traj = finished(_particles_basic(), point_receptor, params)
     path = tmp_path / "traj.parquet"
     write_particles(path, traj, point_receptor, _settings(params), [])
     table = pq.ParquetFile(path).read()
@@ -148,7 +154,7 @@ def test_a_file_without_settings_is_refused_for_its_metadata(point_receptor, tmp
 
 def test_write_particles_is_atomic_on_failure(point_receptor, tmp_path, monkeypatch):
     params = _params(tmp_path, hnf_plume=False)
-    traj = finish_particles(_particles_basic(), point_receptor, params)
+    traj = finished(_particles_basic(), point_receptor, params)
     path = tmp_path / "traj.parquet"
     tmp = path.with_suffix(".parquet.tmp")
 
@@ -166,29 +172,29 @@ def test_write_particles_is_atomic_on_failure(point_receptor, tmp_path, monkeypa
     assert not tmp.exists()
 
 
-def test_calc_plume_dilution_requires_columns():
+def test_correct_near_field_requires_columns():
     p = pd.DataFrame({"time": [-60], "indx": [1], "foot": [1e-5]})
-    with pytest.raises(ValueError, match="hnf_plume requires"):
-        calc_plume_dilution(particles=p, r_zagl=5.0, veght=0.5)
+    with pytest.raises(ValueError, match="needs the particle columns"):
+        correct_near_field(p, point_at(5.0), 0.5)
 
 
-def test_calc_plume_dilution_adds_reference_column():
-    out = calc_plume_dilution(
-        particles=_particles_basic().drop(columns=["zagl"]).assign(xhgt=[5.0, 5.0]),
-        r_zagl=None,
-        veght=0.5,
+def test_correct_near_field_adds_reference_column():
+    out = correct_near_field(
+        _particles_basic().drop(columns=["zagl"]).assign(xhgt=[5.0, 5.0]),
+        _NO_POINT,
+        0.5,
     )
     assert "foot_no_hnf_dilution" in out.columns
     assert out["foot_no_hnf_dilution"].iloc[0] == pytest.approx(1e-5)
 
 
-def test_calc_plume_dilution_grows_outward_from_release_when_forward():
+def test_correct_near_field_grows_outward_from_release_when_forward():
     """A forward run accumulates sigma from the release point, not the far end."""
     backward = _particles_basic().drop(columns=["zagl"]).assign(xhgt=[5.0, 5.0])
     forward = backward.assign(time=-backward["time"])
 
-    back_out = calc_plume_dilution(particles=backward, r_zagl=None, veght=0.5)
-    fwd_out = calc_plume_dilution(particles=forward, r_zagl=None, veght=0.5)
+    back_out = correct_near_field(backward, _NO_POINT, 0.5)
+    fwd_out = correct_near_field(forward, _NO_POINT, 0.5)
 
     # sigma depends on |time| only, so mirroring the track must not change foot
     assert fwd_out["foot"].to_numpy() == pytest.approx(back_out["foot"].to_numpy())
@@ -196,16 +202,14 @@ def test_calc_plume_dilution_grows_outward_from_release_when_forward():
     assert fwd_out["foot"].iloc[0] > fwd_out["foot"].iloc[1]
 
 
-def test_finish_particles_column_receptor_assigns_xhgt(column_receptor, tmp_path):
+def test_finished_particles_column_receptor_assigns_xhgt(column_receptor, tmp_path):
     particles = _particles_basic().assign(indx=[1, 2])
-    traj = finish_particles(
-        particles, column_receptor, _params(tmp_path, hnf_plume=False)
-    )
+    traj = finished(particles, column_receptor, _params(tmp_path, hnf_plume=False))
     assert "xhgt" in traj.columns
     assert traj["xhgt"].tolist() == pytest.approx([16.25, 38.75])
 
 
-def test_finish_particles_column_receptor_spans_column_monotonically(tmp_path):
+def test_finished_particles_column_receptor_spans_column_monotonically(tmp_path):
     receptor = ColumnReceptor(
         time="2023-01-01 12:00:00",
         longitude=-111.85,
@@ -218,7 +222,7 @@ def test_finish_particles_column_receptor_spans_column_monotonically(tmp_path):
         longs=[-111.85] * 12,
         lats=[40.77] * 12,
     )
-    traj = finish_particles(
+    traj = finished(
         particles, receptor, HysplitConfig(n_hours=-24, numpar=12, hnf_plume=False)
     )
 
@@ -230,7 +234,7 @@ def test_finish_particles_column_receptor_spans_column_monotonically(tmp_path):
     assert traj["xhgt"].is_monotonic_increasing
 
 
-def test_finish_particles_multipoint_receptor_assigns_xhgt_from_release_locations(
+def test_finished_particles_multipoint_receptor_assigns_xhgt_from_release_locations(
     tmp_path,
 ):
     receptor = MultiPointReceptor(
@@ -284,7 +288,7 @@ def test_finish_particles_multipoint_receptor_assigns_xhgt_from_release_location
             893.0,
         ],
     )
-    traj = finish_particles(
+    traj = finished(
         particles, receptor, HysplitConfig(n_hours=-24, numpar=12, hnf_plume=False)
     )
 
@@ -307,7 +311,7 @@ def test_finish_particles_multipoint_receptor_assigns_xhgt_from_release_location
     )
 
 
-def test_finish_particles_multipoint_nondivisible_particle_blocks_follow_release_locations(
+def test_finished_particles_multipoint_nondivisible_particle_blocks_follow_release_locations(
     tmp_path,
 ):
     receptor = MultiPointReceptor(
@@ -344,7 +348,7 @@ def test_finish_particles_multipoint_nondivisible_particle_blocks_follow_release
         ],
         zagl=[98.0, 104.0, 91.0, 110.0, 512.0, 489.0, 503.0, 497.0, 880.0, 905.0],
     )
-    traj = finish_particles(
+    traj = finished(
         particles, receptor, HysplitConfig(n_hours=-24, numpar=10, hnf_plume=False)
     )
 
@@ -377,7 +381,7 @@ def _slant(spacing_deg: float = 0.002, n: int = 4, **kwargs) -> MultiPointRecept
 
 def _finish(particles, receptor):
     config = HysplitConfig(n_hours=-24, numpar=len(particles), hnf_plume=False)
-    return finish_particles(particles, receptor, config)
+    return finished(particles, receptor, config)
 
 
 def test_multipoint_close_points_are_matched_on_height_not_position():
@@ -517,21 +521,20 @@ def test_multipoint_release_time_rows_silence_the_warning(recwarn):
     assert not [w for w in recwarn if "reliably matched" in str(w.message)]
 
 
-def test_finish_particles_with_hnf_plume(point_receptor, tmp_path):
+def test_finished_particles_with_hnf_plume(point_receptor, tmp_path):
     """hnf_plume=True runs plume-dilution correction and adds reference column."""
-    traj = finish_particles(
+    traj = finished(
         _particles_basic(), point_receptor, _params(tmp_path, hnf_plume=True)
     )
     assert "foot_no_hnf_dilution" in traj.columns
 
 
-def test_calc_plume_dilution_raises_when_no_xhgt_and_no_rzagl():
-    """r_zagl=None with no xhgt column raises ValueError."""
+def test_correct_near_field_raises_without_a_release_height():
+    """A receptor other than a point, and no xhgt column, raises ValueError."""
     p = _particles_basic()
-    from stilt.particles import calc_plume_dilution
 
-    with pytest.raises(ValueError, match="r_zagl must be provided"):
-        calc_plume_dilution(particles=p, r_zagl=None, veght=0.5)
+    with pytest.raises(ValueError, match="release height"):
+        correct_near_field(p, _NO_POINT, 0.5)
 
 
 def test_footprint_calculate_from_trajectory(point_receptor, tmp_path):
@@ -539,7 +542,7 @@ def test_footprint_calculate_from_trajectory(point_receptor, tmp_path):
     from stilt.footprint import calc_footprint
     from stilt.spatial import Grid
 
-    traj = finish_particles(
+    traj = finished(
         _particles_basic(), point_receptor, _params(tmp_path, hnf_plume=False)
     )
     grid = Grid(xmin=-115.0, xmax=-110.0, ymin=38.0, ymax=43.0, xres=0.1, yres=0.1)
@@ -571,9 +574,7 @@ def test_endpoints_returns_far_end_per_particle(point_receptor, tmp_path):
     """
     endpoints() returns one row per particle at its largest-|time| row, with no
     duration filtering: a particle that left the domain early is a real endpoint."""
-    particles = finish_particles(
-        _particles_two_lengths(), point_receptor, _params(tmp_path)
-    )
+    particles = finished(_particles_two_lengths(), point_receptor, _params(tmp_path))
     # As read_particles gives them.
     particles["datetime"] = point_receptor.time + pd.to_timedelta(
         particles["time"], unit="min"
@@ -612,7 +613,7 @@ def test_calc_footprint_regenerates_a_footprint_on_a_new_grid(tmp_path):
     receptor = PointReceptor(
         time="2023-01-01 12:00:00", longitude=-113.5, latitude=39.5, altitude=5.0
     )
-    traj = finish_particles(
+    traj = finished(
         particles, receptor, HysplitConfig(n_hours=-2, numpar=n, hnf_plume=False)
     )
     grid = Grid(xmin=-114.0, xmax=-113.0, ymin=39.0, ymax=40.0, xres=0.1, yres=0.1)
@@ -636,7 +637,7 @@ def test_stored_settings_this_version_does_not_have_are_dropped(
 ):
     """Files written before a setting was removed still load (#44)."""
     params = _params(tmp_path)
-    traj = finish_particles(_particles_basic(), point_receptor, params)
+    traj = finished(_particles_basic(), point_receptor, params)
     path = tmp_path / "traj.parquet"
     write_particles(path, traj, point_receptor, _settings(params), [])
     table = pq.ParquetFile(path).read()
@@ -671,3 +672,29 @@ def test_a_footprint_needs_the_particle_columns(point_receptor):
     )
     with pytest.raises(ValueError, match="no 'foot' column"):
         calc_footprint(particles, point_receptor, grid)
+
+
+def test_a_column_release_row_says_which_slab_a_particle_stands_for():
+    """With t = 0 rows, xhgt is the centre of the slab the release falls in, not the indx order."""
+    from stilt.particles import add_release_heights
+
+    column = ColumnReceptor(
+        time="2023-01-01 12:00", longitude=-111.85, latitude=40.77, bottom=0, top=1000
+    )
+    released = [900.0, 10.0, 600.0, 300.0]  # four slabs of 250 m, out of indx order
+    rows = pd.DataFrame(
+        {
+            "indx": [1, 2, 3, 4] * 2,
+            "time": [0] * 4 + [-1] * 4,
+            "long": [-111.85] * 8,
+            "lati": [40.77] * 8,
+            "zagl": released + [z + 3.0 for z in released],
+        }
+    )
+    with_release = add_release_heights(rows, column)
+    by_particle = with_release.drop_duplicates("indx").set_index("indx")["xhgt"]
+    assert by_particle.to_dict() == {1: 875.0, 2: 125.0, 3: 625.0, 4: 375.0}
+
+    # Without the release rows, particle indx is in slab indx.
+    first_step = add_release_heights(rows[rows.time == -1], column)
+    assert first_step["xhgt"].tolist() == [125.0, 375.0, 625.0, 875.0]

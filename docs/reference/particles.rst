@@ -126,3 +126,17 @@ Checking a table
    FOOTPRINT_COLUMNS
    HNF_PLUME_COLUMNS
    check_particles
+
+After a run
+-----------
+
+PYSTILT adds the release heights to any model's particles, and applies the
+near-field correction when ``hnf_plume`` is set. A model whose particles
+lack the columns the correction reads gets none, and a warning says so.
+
+.. autosummary::
+   :toctree: _api
+   :nosignatures:
+
+   add_release_heights
+   correct_near_field

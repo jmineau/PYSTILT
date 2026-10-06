@@ -22,12 +22,13 @@ from stilt.footprint.gridding import (
     _wrap_antimeridian_longitudes,
 )
 from stilt.footprint.targets import Mesh, Zones
-from stilt.particles import calc_plume_dilution
+from stilt.particles import correct_near_field
 from stilt.receptors import PointReceptor
 from stilt.spatial import Grid, _grid_cell_starts
 from stilt.transforms import AveragingKernel
 
 from .fixtures.footprints import as_footprint
+from .fixtures.particles import point_at
 
 
 def _make_footprint(
@@ -1148,7 +1149,7 @@ def test_hnf_correction_invariants():
         }
     )
 
-    result = calc_plume_dilution(particles.copy(), r_zagl=5.0, veght=0.5)
+    result = correct_near_field(particles.copy(), point_at(5.0), 0.5)
 
     # Invariant 1: corrected foot is always positive.
     assert np.all(result["foot"].values > 0), (

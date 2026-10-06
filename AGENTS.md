@@ -542,7 +542,8 @@ Feature status lives in the roadmap tables in [README.md](README.md) and
   lines: bottom and top), and why a `MultiPointReceptor` may not repeat a
   horizontal location (the constructor raises). The bundled build releases
   column particles bottom-to-top in `indx` order, which
-  `add_release_heights` (`transport/hysplit/release.py`) relies on for `xhgt`.
+  `add_release_heights` (`particles.py`) falls back to for `xhgt` when a
+  model writes no `t = 0` release row.
 - **Pressure weighting is derived from the particles.**
   `PressureWeighting` fits `ln p = b + a·z` to the particles' first-step
   `(zagl, pres)` and gives each distinct release height the pressure slab
@@ -570,8 +571,15 @@ Feature status lives in the roadmap tables in [README.md](README.md) and
   `1/numpar` slab. The air a particle represents is its slab, known
   analytically from `numpar` and the column, which is what `xhgt` is. Particle
   data is needed only for the two-parameter `p(z)` fit.
+- **Release heights come from the `t = 0` row.** The particle table's
+  contract asks a model to write each particle's release at `time = 0`. From
+  it `add_release_heights` (`particles.py`, a core step the worker applies
+  to any model's particles, as is `correct_near_field`) finds which point of
+  a multipoint receptor a particle left from, or which slab of a column;
+  `xhgt` is that point's altitude or that slab's centre, never the random
+  height inside the slab.
 - **Multipoint and slant `xhgt` recovery** (`_multipoint_release_heights` in
-  `transport/hysplit/release.py`) prefers, in order: `t = 0` rows if present (exact), a match
+  `particles.py`) prefers, in order: `t = 0` rows if present (exact), a match
   on height when release altitudes are distinct (about 20 m apart), then
   horizontal position with a warning under 1 km. The bundled HYSPLIT v5.1.0
   writes no `t = 0` row; until a published build does, `exe_dir`

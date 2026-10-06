@@ -10,19 +10,29 @@ record, so a second model needs no change to the worker.
 
 from __future__ import annotations
 
+import logging
 import tempfile
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Protocol, Self
 
 import pandas as pd
 from pydantic import BaseModel, ConfigDict, Field
 
+from stilt.exceptions import SimulationError
 from stilt.meteorology import Met, MetConfig
+from stilt.particles import (
+    HNF_PLUME_COLUMNS,
+    add_release_heights,
+    check_particles,
+    correct_near_field,
+)
 
 if TYPE_CHECKING:
     from stilt.receptors import Receptor
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -226,6 +236,50 @@ def get_model(name: str = "hysplit") -> TransportModel:
     return factory()
 
 
+def run_model(
+    name: str,
+    receptor: Receptor,
+    config: TransportConfig,
+    met: Met,
+    workdir: Path,
+    timeout: int | None = None,
+) -> ModelRun:
+    """
+    Run the transport model called *name* for one receptor, and finish its particles.
+
+    The particles are checked against the particle table
+    (:func:`stilt.particles.check_particles`), get their release heights
+    (:func:`stilt.particles.add_release_heights`), and, when
+    ``config.hnf_plume`` is set, the near-field correction
+    (:func:`stilt.particles.correct_near_field`). These steps are PYSTILT's,
+    the same for any model. A model whose particles lack the columns the
+    correction reads gets none, and the run's log says so.
+
+    Raises
+    ------
+    SimulationError
+        If the run fails, or the model wrote no particles.
+    """
+    run = get_model(name).run(receptor, config, met, workdir, timeout=timeout)
+    if run.particles.empty:
+        raise SimulationError(
+            "The transport model wrote no particles.", reason="NO_PARTICLE_DATA"
+        )
+    check_particles(run.particles)
+    particles = add_release_heights(run.particles, receptor)
+    if config.hnf_plume:
+        missing = sorted(set(HNF_PLUME_COLUMNS) - set(particles.columns))
+        if missing:
+            logger.warning(
+                "%s: near-field correction skipped, no %s columns",
+                receptor.id,
+                ", ".join(missing),
+            )
+        else:
+            particles = correct_near_field(particles, receptor, config.veght)
+    return replace(run, particles=particles)
+
+
 def run_trajectories(
     receptor: Receptor,
     met: MetConfig | Mapping[str, Any],
@@ -285,13 +339,13 @@ def run_trajectories(
     >>> met = {"directory": "/data/hrrr", "file_format": "%Y%m%d_%H", "file_tres": "6h"}
     >>> particles = stilt.run_trajectories(receptor, met, n_hours=-24, numpar=200)
     """
-    transport = get_model(model)
-    config = transport.config_class(**params)
+    config = get_model(model).config_class(**params)
     meteorology = Met("met", MetConfig.model_validate(met))
     if workdir is None:
         with tempfile.TemporaryDirectory(prefix="stilt-") as tmp:
-            run = transport.run(receptor, config, meteorology, Path(tmp), timeout)
-            return run.particles
+            return run_model(
+                model, receptor, config, meteorology, Path(tmp), timeout
+            ).particles
     workdir = Path(workdir)
     if workdir.exists() and any(workdir.iterdir()):
         raise ValueError(
@@ -299,7 +353,7 @@ def run_trajectories(
             "another run; give an empty or new directory."
         )
     workdir.mkdir(parents=True, exist_ok=True)
-    return transport.run(receptor, config, meteorology, workdir, timeout).particles
+    return run_model(model, receptor, config, meteorology, workdir, timeout).particles
 
 
 __all__ = [
@@ -309,5 +363,6 @@ __all__ = [
     "TransportConfig",
     "TransportModel",
     "get_model",
+    "run_model",
     "run_trajectories",
 ]

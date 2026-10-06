@@ -11,9 +11,9 @@ from stilt.meteorology import Met, MetConfig
 from stilt.receptors import ColumnReceptor, MultiPointReceptor
 from stilt.transport.hysplit import HysplitConfig, read_particle_dat, write_inputs
 from stilt.transport.hysplit.driver import _run_hycs_std
-from stilt.transport.hysplit.model import finish_particles
 
 from ...conftest import integration
+from ...fixtures.particles import finished
 
 
 def _raw_particles(receptor, config, met, workdir, timeout):
@@ -229,7 +229,7 @@ def test_close_spaced_slant_release_heights_are_recovered(tmp_path, met_dir):
     particles = _raw_particles(
         receptor, params, met, Path(tmp_path) / "close_slant", timeout=300
     )
-    data = finish_particles(particles, receptor, params)
+    data = finished(particles, receptor, params)
 
     release = _release_time_rows(data).drop_duplicates("indx")
     # Each group's actual height should sit at the altitude it was assigned.

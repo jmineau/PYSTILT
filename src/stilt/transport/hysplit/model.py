@@ -7,11 +7,7 @@ from importlib.resources import files as pkg_files
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import pandas as pd
-
 from stilt.exceptions import SimulationError
-from stilt.particles import calc_plume_dilution
-from stilt.receptors import PointReceptor
 from stilt.transport import ModelRun
 
 from .config import HysplitConfig
@@ -25,7 +21,6 @@ from .driver import (
     write_inputs,
 )
 from .failures import FailureReason
-from .release import add_release_heights
 
 if TYPE_CHECKING:
     from stilt.meteorology import Met
@@ -62,24 +57,6 @@ def hysplit_version(exe_dir: str | Path | None = None) -> str:
 def _sha256(path: Path) -> str:
     """Return the SHA-256 hex digest of a file."""
     return hashlib.sha256(path.read_bytes()).hexdigest()
-
-
-def finish_particles(
-    particles: pd.DataFrame, receptor: Receptor, config: HysplitConfig
-) -> pd.DataFrame:
-    """
-    Return HYSPLIT's particles with what the config asks added.
-
-    Each particle gets its release height (``xhgt``) for a column or
-    multipoint receptor, and ``foot`` is corrected for plume dilution near
-    the receptor when ``hnf_plume`` is set
-    (:func:`stilt.particles.calc_plume_dilution`).
-    """
-    particles = add_release_heights(particles, receptor)
-    if config.hnf_plume:
-        r_zagl = receptor.altitude if isinstance(receptor, PointReceptor) else None
-        particles = calc_plume_dilution(particles, r_zagl, config.veght)
-    return particles
 
 
 class HysplitModel:
@@ -130,11 +107,11 @@ class HysplitModel:
         timeout: int | None = None,
     ) -> ModelRun:
         """
-        Run HYSPLIT for one receptor in *workdir* and return the finished particles.
+        Run HYSPLIT for one receptor in *workdir* and return its particles.
 
-        The particles get their release heights and the near-field
-        correction (:func:`finish_particles`). HYSPLIT's output goes to
-        ``stilt.log`` in *workdir*.
+        HYSPLIT's output goes to ``stilt.log`` in *workdir*. The release
+        heights and the near-field correction are added by the caller, as
+        for any model (:func:`stilt.transport.run_model`).
 
         Raises
         ------
@@ -158,9 +135,7 @@ class HysplitModel:
         _check_met_reached_end(particles, workdir / LOG_FILE, config)
         # The record names the source files; the crop settings are in the
         # run's settings.
-        return ModelRun(
-            particles=finish_particles(particles, receptor, config), met_files=source
-        )
+        return ModelRun(particles=particles, met_files=source)
 
 
-__all__ = ["HysplitModel", "finish_particles", "hysplit_version"]
+__all__ = ["HysplitModel", "hysplit_version"]
