@@ -62,7 +62,7 @@ def scenario_outputs(request, met_dir, rscript, r_stilt_dir, tmp_path_factory) -
     assert traj_file is not None
     # The footprint is stored sparse in float32; compare the footprint as
     # computed, in float64, by remaking it from the stored particles.
-    foot = sim.generate_footprint()
+    foot = sim.calc_footprint()
     assert foot is not None, f"[{scenario.name}] footprint is empty"
     foot_file = project_dir / "py_foot.nc"
     foot.stilt.to_netcdf(foot_file)

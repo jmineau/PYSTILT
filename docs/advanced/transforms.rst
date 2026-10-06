@@ -14,7 +14,7 @@ A transform is any object with an ``apply`` method::
 It takes the particle table, the receptor the particles were released
 from, and the project directory, and returns a new table. List transforms in
 ``config.yaml``, as a default or per variant, or pass them to
-:meth:`stilt.Simulation.generate_footprint`. They run once, in order,
+:meth:`stilt.Simulation.calc_footprint`. They run once, in order,
 starting from the unweighted particles. The transforms listed in the
 footprint config are recorded in the footprint's netCDF file.
 
@@ -131,19 +131,18 @@ The same classes work directly on a simulation:
 
    from stilt.transforms import AveragingKernel, PressureWeighting
 
-   foot = sim.generate_footprint(
+   foot = sim.calc_footprint(
        transforms=[
            AveragingKernel(levels=[0, 1000, 2000, 3000], values=[1.0, 0.95, 0.85, 0.7]),
            PressureWeighting(),
        ],
    )
 
-These run after the transforms in the variant's own footprint config, and
-the footprint records all of them. To try other footprint settings without
-changing the project, pass
-``config=sim.variant.footprint.model_copy(update={...})``. Without a
-simulation, :func:`stilt.calc_footprint` takes
-``transforms`` the same way.
+These replace the transforms in the variant's own footprint settings, and
+the footprint records them. The other settings (``grid``,
+``smooth_factor``, ``time_integrate``) are replaced the same way, and
+nothing in the project changes. Without a simulation,
+:func:`stilt.calc_footprint` takes the same ``transforms``.
 
 To see what a transform did, apply it to the particle table yourself:
 

@@ -333,10 +333,10 @@ finer grid:
 
    hexes = stilt.Mesh.from_h3(8, bounds=state)
    grid = hexes.to_grid(cells_per_target=4)
-   fine = sim.generate_footprint(sim.variant.footprint.model_copy(update={"grid": grid}))
+   fine = sim.calc_footprint(grid=grid)
    by_hex = fine.stilt.aggregate(hexes, time_bins=bins)
 
 ``to_grid`` picks a grid that covers the areas with at least four
-cells across the smallest one. ``generate_footprint`` applies the
+cells across the smallest one. ``sim.calc_footprint`` applies the
 variant's particle transforms, as the stored footprint did, and does not
 overwrite the stored file.

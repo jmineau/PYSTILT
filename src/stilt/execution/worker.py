@@ -252,7 +252,7 @@ def make_footprint(sim: Simulation, particles: pd.DataFrame) -> xr.DataArray | N
     transform's settings starts from the project directory
     (``sim.directory``). When no particle reaches the grid,
     an empty footprint is recorded with the reason and ``None`` is returned.
-    :meth:`stilt.Simulation.generate_footprint` makes footprints with other
+    :meth:`stilt.Simulation.calc_footprint` makes footprints with other
     settings, without writing them.
 
     Raises
