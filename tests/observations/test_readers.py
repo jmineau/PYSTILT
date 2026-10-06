@@ -9,12 +9,14 @@ from netCDF4 import Dataset
 
 import stilt
 from stilt.observations import (
+    check_soundings,
     pressure_altitudes,
     read_ggg_netcdf,
     read_ggg_oof,
     read_oco2,
     read_tccon,
     read_tropomi_ch4,
+    receptors_from_soundings,
     slant_points,
 )
 from stilt.transforms import averaging_kernel_table
@@ -52,6 +54,7 @@ REQUIRED = [
 
 
 def _check_common(df: pd.DataFrame) -> None:
+    check_soundings(df)
     for col in REQUIRED:
         assert col in df.columns, col
     assert df["sounding_id"].is_unique
@@ -135,6 +138,33 @@ def test_tropomi_recipe_to_receptors_and_kernels(tropomi):
     table = averaging_kernel_table(receptors, levels=df.ak_pressure, values=df.ak)
     assert set(table.columns) >= {"receptor", "level", "value"}
     assert len(table) == 3 * 12
+
+    # receptors_from_soundings is that recipe.
+    made, kernels = receptors_from_soundings(df, "slant", top=3000)
+    assert [r.altitudes for r in made] == [r.altitudes for r in receptors]
+    assert [r.attrs["sounding_id"] for r in made] == list(df.sounding_id)
+    pd.testing.assert_frame_equal(
+        kernels.drop(columns="receptor"), table.drop(columns="receptor")
+    )
+    assert list(dict.fromkeys(kernels.receptor)) == [str(r.id) for r in made]
+
+
+def test_column_receptors_from_soundings(tropomi):
+    df = tropomi[tropomi.good].head(2)
+    receptors, kernels = receptors_from_soundings(df, "column", top=2500)
+    assert [type(r).__name__ for r in receptors] == ["ColumnReceptor"] * 2
+    assert [(r.bottom, r.top) for r in receptors] == [(0.0, 2500.0)] * 2
+    assert kernels is not None and kernels.receptor.nunique() == 2
+    with pytest.raises(ValueError, match="'column' or 'slant'"):
+        receptors_from_soundings(df, "nadir", top=2500)  # type: ignore[arg-type]
+    with pytest.raises(ValueError, match="zenith"):
+        receptors_from_soundings(df.drop(columns="zenith"), "slant", top=2500)
+
+
+def test_receptors_from_soundings_without_kernels():
+    df = read_ggg_oof(OOF, "xch4").head(2)
+    receptors, kernels = receptors_from_soundings(df, "column", top=1000)
+    assert len(receptors) == 2 and kernels is None
 
 
 # -- TROPOMI blended -----------------------------------------------------------
@@ -251,6 +281,9 @@ def test_oco2_recipe_with_pressure_altitudes():
 
 def test_ggg_oof_columns_units_and_time():
     df = read_ggg_oof(OOF, "xch4")
+    check_soundings(df, kernel=False)
+    with pytest.raises(ValueError, match="ak_pressure"):
+        check_soundings(df)
     assert len(df) == 12
     assert (
         df.sounding_id.is_unique and df.sounding_id.iloc[0] == "zz20230715s0e00a.0001"

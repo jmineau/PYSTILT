@@ -1213,3 +1213,32 @@ def test_status_says_why_the_failed_simulations_failed(tmp_path, point_receptor)
     by_receptor = status.set_index("receptor")
     assert by_receptor.loc[str(other.id), "state"] == "pending"
     assert pd.isna(by_receptor.loc[str(other.id), "reason"])
+
+
+# ---------------------------------------------------------------------------
+# Input tables
+# ---------------------------------------------------------------------------
+
+
+def test_add_table_keeps_a_receptor_table_and_adds_only_new_receptors(tmp_path):
+    from stilt.transforms import averaging_kernel_table
+
+    a, b = _receptor(12), _receptor(13)
+    project = _project(tmp_path, [a, b])
+    first = averaging_kernel_table([a], levels=[0.0, 3000.0], values=[[1.0, 1.0]])
+    both = averaging_kernel_table(
+        [a, b], levels=[0.0, 3000.0], values=[[0.2, 0.2], [0.5, 0.5]]
+    )
+
+    path = project.add_table("kernels", first)
+    assert path == project.directory / "tables" / "kernels.parquet"
+    project.add_table("kernels", both)  # a's rows are kept as they were
+    project.add_table("kernels", both)  # and adding them again changes nothing
+
+    held = pd.read_parquet(path)
+    assert list(held.receptor) == [a.id, a.id, b.id, b.id]
+    assert list(held.value) == [1.0, 1.0, 0.5, 0.5]
+    with pytest.raises(ValueError, match="columns"):
+        project.add_table("kernels", pd.DataFrame({"receptor": [b.id]}))
+    with pytest.raises(ValueError, match="table name"):
+        project.add_table("../kernels", first)

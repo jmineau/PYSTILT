@@ -924,6 +924,19 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Satellite and ground-based column workflows in fewer steps:
+  `stilt.observations.receptors_from_soundings(df, "column" | "slant",
+  top=...)` returns a receptor for each sounding of a reader's table (its
+  `sounding_id` kept as an attribute) and their averaging-kernel table;
+  `project.add_table("kernels", table)` adds it to the project as
+  `tables/kernels.parquet`, appending and leaving receptors it already
+  holds as they were; and the `averaging_kernel` transform reads it as
+  `table: kernels` (a file name still works). `SOUNDING_SCHEMA` and
+  `check_soundings` put the readers' columns in code, and
+  `modelled_column(enhancement, background, ak=, pressure_weight=,
+  prior=)` adds the retrieval's prior term to give the column a retrieval
+  would report (#150).
+
 - The output directory can be on an object store: `output:
   s3://bucket/path` (or `gs://`, or any fsspec URL) in `config.yaml`, read
   and written through fsspec with its package installed (`s3fs`,

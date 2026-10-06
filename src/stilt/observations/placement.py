@@ -4,6 +4,8 @@ Where to release particles for a sounding.
 Points spread over a pixel (:func:`jitter_points`), points along a slant
 line of sight (:func:`slant_points`), and the altitudes of a retrieval's
 pressure levels to place them at (:func:`pressure_altitudes`).
+:func:`receptors_from_soundings` makes a receptor for each row of a
+reader's table, and their averaging-kernel table.
 """
 
 from __future__ import annotations
@@ -14,8 +16,12 @@ from random import Random
 from typing import Literal
 
 import numpy as np
+import pandas as pd
 from numpy.typing import ArrayLike
 from shapely.geometry import Point, Polygon
+
+from stilt.receptors import ColumnReceptor, Receptor
+from stilt.transforms import averaging_kernel_table
 
 JitterMethod = Literal["regular", "random"]
 
@@ -256,4 +262,106 @@ def jitter_points(
     raise ValueError(f"Unknown jitter method: {method!r}")
 
 
-__all__ = ["jitter_points", "pressure_altitudes", "slant_points"]
+# -- receptors from a table of soundings ----------------------------------------
+
+
+def receptors_from_soundings(
+    soundings: pd.DataFrame, kind: Literal["column", "slant"], *, top: float
+) -> tuple[list[Receptor], pd.DataFrame | None]:
+    """
+    Return a receptor for each sounding, and their averaging-kernel table.
+
+    Parameters
+    ----------
+    soundings : pandas.DataFrame
+        A reader's table (:data:`~stilt.observations.readers.schema.SOUNDING_SCHEMA`),
+        screened as you like, such as ``df[df.good]``.
+    kind : {"column", "slant"}
+        ``column`` releases particles along the vertical from the ground to
+        ``top`` meters above it, at the sounding's location
+        (:class:`~stilt.ColumnReceptor`). ``slant`` releases them at the
+        retrieval's ``altitude_levels`` below ``surface_altitude + top``,
+        along the line of sight given by ``zenith`` and ``azimuth``
+        (:func:`slant_points`), above sea level.
+    top : float
+        Height of the receptor's top above the surface, in meters.
+
+    Returns
+    -------
+    receptors : list of Receptor
+        One per sounding, in table order, each with the ``sounding_id`` as
+        an attribute (a column of ``receptors.csv``).
+    kernels : pandas.DataFrame or None
+        The averaging kernels by receptor
+        (:func:`~stilt.transforms.averaging_kernel_table`), for
+        ``project.add_table("kernels", kernels)``. ``None`` when the
+        soundings have no kernel (GGG ``.oof`` files).
+
+    Raises
+    ------
+    ValueError
+        If a slant receptor's columns (``altitude_levels``, ``zenith``,
+        ``azimuth``) are missing. For OCO-2, which gives pressures only,
+        add ``altitude_levels`` from :func:`pressure_altitudes` first.
+
+    Examples
+    --------
+    >>> df = read_tropomi_ch4(path, lon_range=(-113.5, -110.5), lat_range=(39.5, 42))
+    >>> receptors, kernels = receptors_from_soundings(df[df.good], "slant", top=3000)
+    >>> project.add_receptors(receptors)
+    >>> project.add_table("kernels", kernels)
+    """
+    if kind not in ("column", "slant"):
+        raise ValueError(f"kind is 'column' or 'slant', not {kind!r}.")
+    if kind == "slant":
+        needed = ["altitude_levels", "zenith", "azimuth"]
+        missing = [c for c in needed if c not in soundings.columns]
+        if missing:
+            raise ValueError(
+                f"A slant receptor needs the columns {missing}. For a product "
+                "with pressures only (OCO-2), add altitude_levels from "
+                "pressure_altitudes."
+            )
+    receptors: list[Receptor] = []
+    for row in soundings.to_dict("records"):
+        attrs = {"sounding_id": str(row["sounding_id"])}
+        if kind == "column":
+            receptors.append(
+                ColumnReceptor(
+                    time=row["time"],
+                    longitude=float(row["longitude"]),
+                    latitude=float(row["latitude"]),
+                    bottom=0.0,
+                    top=float(top),
+                    attrs=attrs,
+                )
+            )
+            continue
+        levels = np.asarray(row["altitude_levels"], dtype=float)
+        levels = levels[levels < float(row["surface_altitude"]) + top]
+        points = slant_points(
+            float(row["longitude"]),
+            float(row["latitude"]),
+            levels,
+            zenith=float(row["zenith"]),
+            azimuth=float(row["azimuth"]),
+        )
+        receptors.append(
+            Receptor.from_points(row["time"], points, altitude_ref="msl", attrs=attrs)
+        )
+    kernels = None
+    if "ak" in soundings.columns and "ak_pressure" in soundings.columns:
+        kernels = averaging_kernel_table(
+            receptors,
+            levels=list(soundings["ak_pressure"]),
+            values=list(soundings["ak"]),
+        )
+    return receptors, kernels
+
+
+__all__ = [
+    "jitter_points",
+    "pressure_altitudes",
+    "receptors_from_soundings",
+    "slant_points",
+]

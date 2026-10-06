@@ -13,6 +13,7 @@ including per-receptor averaging-kernel tables, is in :doc:`transforms`.
    :toctree: _api
    :nosignatures:
 
+   stilt.observations.receptors_from_soundings
    stilt.observations.group_by_overpass
    stilt.observations.select_observations_spatial
    stilt.observations.jitter_points
@@ -22,12 +23,15 @@ including per-receptor averaging-kernel tables, is in :doc:`transforms`.
 Product readers
 ---------------
 
-Each reader returns a table of soundings with the columns listed in
-:doc:`/guides/readers`.
+Each reader returns a table of soundings with the columns in
+``SOUNDING_SCHEMA``, which :doc:`/guides/readers` describes.
 
 .. autosummary::
    :toctree: _api
    :nosignatures:
+
+   stilt.observations.SOUNDING_SCHEMA
+   stilt.observations.check_soundings
 
    stilt.observations.read_tropomi_ch4
    stilt.observations.read_oco2
@@ -51,3 +55,15 @@ background from the soundings beside it (:doc:`/guides/plume_background`).
    stilt.observations.PlumeBackground
    stilt.observations.plumes.kernel_density
    stilt.observations.plumes.density_polygon
+
+The modelled column
+-------------------
+
+The column a retrieval would report for the modelled air: the enhancement,
+the background, and the retrieval's prior where it is not sensitive.
+
+.. autosummary::
+   :toctree: _api
+   :nosignatures:
+
+   stilt.observations.modelled_column
