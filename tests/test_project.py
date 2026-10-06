@@ -74,9 +74,9 @@ def _particles() -> pd.DataFrame:
     return pd.DataFrame(
         {
             "time": [-60.0, -120.0],
-            "indx": [1.0, 1.0],
-            "long": [-113.9, -113.5],
-            "lati": [39.7, 39.6],
+            "particle": [1.0, 1.0],
+            "lon": [-113.9, -113.5],
+            "lat": [39.7, 39.6],
             "zagl": [10.0, 20.0],
             "foot": [1e-5, 2e-5],
             "dens": [1.2, 1.2],

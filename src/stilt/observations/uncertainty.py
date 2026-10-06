@@ -457,7 +457,7 @@ def _release_heights(particles: pd.DataFrame) -> pd.Series:
     """Return each particle's release height (``xhgt``), or zeros without ``xhgt``."""
     if "xhgt" in particles.columns:
         return release_coordinate(particles, "xhgt")
-    indx = np.unique(particles["indx"].to_numpy())
+    indx = np.unique(particles["particle"].to_numpy())
     return pd.Series(0.0, index=indx)
 
 

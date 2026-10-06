@@ -149,7 +149,7 @@ To see what a transform did, apply it to the particle table yourself:
 .. code-block:: python
 
    weighted = PressureWeighting().apply(sim.particles)
-   weighted.drop_duplicates("indx")[["xhgt", "xpres", "pwf"]]
+   weighted.drop_duplicates("particle")[["xhgt", "xpres", "pwf"]]
 
 Writing your own transform
 --------------------------
@@ -175,7 +175,7 @@ unchanged.
 
        def apply(self, particles, receptor=None, directory=None):
            z = release_coordinate(particles, "xhgt")           # one value per particle
-           keep = z.reindex(particles["indx"].to_numpy()) <= self.max_height
+           keep = z.reindex(particles["particle"].to_numpy()) <= self.max_height
            out = particles.copy()
            out["foot"] = np.where(keep.to_numpy(), out["foot"], 0.0)
            return out

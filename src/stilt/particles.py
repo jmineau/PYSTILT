@@ -33,23 +33,23 @@ if TYPE_CHECKING:
 
 
 #: The columns every particle table has, as a particle file stores them:
-#: what a transport model's run must return. ``indx`` is the particle number
+#: what a transport model's run must return. ``particle`` is the particle number
 #: (1 to ``numpar``), ``time`` the minutes since release (negative for a
-#: backward run), ``long`` and ``lati`` the position in degrees, and ``zagl``
+#: backward run), ``lon`` and ``lat`` the position in degrees, and ``zagl``
 #: the height above ground in metres. The reference page on the particle
 #: table says what the other columns are.
 PARTICLE_SCHEMA = pa.schema(
     [
-        ("indx", pa.int32()),
+        ("particle", pa.int32()),
         ("time", pa.int32()),
-        ("long", pa.float64()),
-        ("lati", pa.float64()),
+        ("lon", pa.float64()),
+        ("lat", pa.float64()),
         ("zagl", pa.float64()),
     ]
 )
 
 #: Particle columns stored as int32 rather than float64.
-_INT_COLUMNS = ("time", "indx")
+_INT_COLUMNS = ("time", "particle")
 
 #: The column a footprint is made from: each particle's sensitivity to
 #: surface fluxes over one output step.
@@ -153,7 +153,7 @@ def read_particles(path: str | Path, columns: list[str] | None = None) -> pd.Dat
     Read a particle file.
 
     It needs nothing but the file: the receptor time in its metadata gives
-    the ``datetime`` column back. ``time`` and ``indx`` come back as
+    the ``datetime`` column back. ``time`` and ``particle`` come back as
     float64, as HYSPLIT writes them. :func:`particles_metadata` reads the
     receptor and settings.
 
@@ -201,7 +201,7 @@ def particles_from_table(table: pa.Table) -> pd.DataFrame:
 
     The table is what :meth:`stilt.output.Output.table` reads: a
     ``receptor`` column, the stored particle columns, and ``date``. The
-    result has ``receptor`` first, ``time`` and ``indx`` as float64, and
+    result has ``receptor`` first, ``time`` and ``particle`` as float64, and
     ``datetime`` rebuilt from each receptor's time; ``date`` is dropped.
     """
     data = table.unify_dictionaries().to_pandas()
@@ -232,7 +232,7 @@ def write_particles(
     """
     Write a particle table to a Parquet file that :func:`read_particles` reads alone.
 
-    ``time`` and ``indx`` are stored as int32, and ``datetime`` is left out
+    ``time`` and ``particle`` are stored as int32, and ``datetime`` is left out
     since it is the receptor time plus ``time``. A ``receptor`` column holds
     the receptor id, so a scan of many files can tell receptors apart. The
     receptor, the run's settings, and the met files go in the file's
@@ -262,7 +262,7 @@ def write_particles(
     Raises
     ------
     ValueError
-        If ``time`` or ``indx`` holds a value that is not a whole number.
+        If ``time`` or ``particle`` holds a value that is not a whole number.
     """
     data = particles.drop(columns=["datetime", "receptor"], errors="ignore")
     for name in _INT_COLUMNS:
@@ -311,7 +311,7 @@ def add_release_heights(particles: pd.DataFrame, receptor: Receptor) -> pd.DataF
     centre: the slab is what the particle stands for, not the random
     height inside it. A model that writes no release row, such as the
     bundled HYSPLIT, falls back to matching: a column's particles are
-    released bottom to top in ``indx`` order, and a multipoint receptor's
+    released bottom to top in ``particle`` order, and a multipoint receptor's
     are matched to the nearest point from their first row.
 
     A point receptor's particles are returned as they are.
@@ -325,8 +325,8 @@ def add_release_heights(particles: pd.DataFrame, receptor: Receptor) -> pd.DataF
 
 def _release_rows(p: pd.DataFrame) -> pd.DataFrame | None:
     """Return each particle's release row (``time = 0``), or ``None`` when the model wrote none."""
-    released = p.loc[p["time"] == 0].drop_duplicates(subset="indx")
-    if released.empty or len(released) != p["indx"].nunique():
+    released = p.loc[p["time"] == 0].drop_duplicates(subset="particle")
+    if released.empty or len(released) != p["particle"].nunique():
         return None
     return released
 
@@ -348,20 +348,20 @@ def _column_release_heights(p: pd.DataFrame, receptor: ColumnReceptor) -> pd.Ser
 
     The column is split into ``numpar`` slabs of equal depth. With release
     rows, a particle's slab is the one its release height falls in;
-    without them, particle ``indx`` is in slab ``indx``, as the bundled
+    without them, particle ``particle`` is in slab ``particle``, as the bundled
     HYSPLIT releases them.
     """
-    numpar = int(p["indx"].max())  # type: ignore[arg-type]
+    numpar = int(p["particle"].max())  # type: ignore[arg-type]
     step = (receptor.top - receptor.bottom) / numpar
     released = _release_rows(p)
     height = None if released is None else _height(released, receptor)
     if released is None or height is None:
-        return (p["indx"] - 0.5) * step + receptor.bottom
+        return (p["particle"] - 0.5) * step + receptor.bottom
     slab = np.clip(np.floor((height - receptor.bottom) / step), 0, numpar - 1)
     centre = dict(
-        zip(released["indx"], receptor.bottom + (slab + 0.5) * step, strict=True)
+        zip(released["particle"], receptor.bottom + (slab + 0.5) * step, strict=True)
     )
-    return pd.Series(p["indx"].to_numpy(), index=p.index).map(centre.get)
+    return pd.Series(p["particle"].to_numpy(), index=p.index).map(centre.get)
 
 
 def _multipoint_release_heights(
@@ -385,7 +385,7 @@ def _multipoint_release_heights(
     first = (
         p.assign(_age=p["time"].abs())
         .sort_values("_age", kind="stable")
-        .drop_duplicates(subset="indx")
+        .drop_duplicates(subset="particle")
     )
     lons = np.asarray(receptor.longitudes, dtype=float)
     lats = np.asarray(receptor.latitudes, dtype=float)
@@ -398,7 +398,7 @@ def _multipoint_release_heights(
     if not has_t0 and height is not None and len(np.unique(alts)) == len(alts):
         nearest = np.argmin(np.abs(height[:, None] - alts[None, :]), axis=1)
     else:
-        xy = first[["long", "lati"]].to_numpy(dtype=float)
+        xy = first[["lon", "lat"]].to_numpy(dtype=float)
         pts = np.column_stack((lons, lats))
         nearest = np.argmin(
             np.sum((xy[:, None, :] - pts[None, :, :]) ** 2, axis=2), axis=1
@@ -420,8 +420,8 @@ def _multipoint_release_heights(
                     stacklevel=3,
                 )
 
-    mapping = dict(zip(first["indx"].to_numpy(), alts[nearest], strict=True))
-    return pd.Series(p["indx"].to_numpy(), index=p.index).map(mapping.get)
+    mapping = dict(zip(first["particle"].to_numpy(), alts[nearest], strict=True))
+    return pd.Series(p["particle"].to_numpy(), index=p.index).map(mapping.get)
 
 
 @pd.api.extensions.register_dataframe_accessor("stilt")
@@ -459,7 +459,7 @@ class ParticlesAccessor:
         if p.empty:
             return p
         reach = p["time"].abs()
-        last = reach.groupby(p["indx"], sort=False).idxmax().to_numpy(dtype=int)
+        last = reach.groupby(p["particle"], sort=False).idxmax().to_numpy(dtype=int)
         return p.iloc[last]
 
     def enhancement(self, flux: xr.DataArray) -> pd.Series:
@@ -482,7 +482,7 @@ class ParticlesAccessor:
         Returns
         -------
         pandas.Series
-            Enhancement indexed by ``indx``. A particle that never crosses
+            Enhancement indexed by ``particle``. A particle that never crosses
             the flux field gets 0.
 
         Raises
@@ -499,16 +499,18 @@ class ParticlesAccessor:
             )
         sampled = sample_field(
             flux,
-            p["long"].to_numpy(),
-            p["lati"].to_numpy(),
+            p["lon"].to_numpy(),
+            p["lat"].to_numpy(),
             times=times,
             fill_value=0.0,
         )
         contribution = p["foot"].to_numpy(dtype=float) * sampled
-        indx = p["indx"].to_numpy()
-        unique, inverse = np.unique(indx, return_inverse=True)
+        ids = p["particle"].to_numpy()
+        unique, inverse = np.unique(ids, return_inverse=True)
         sums = np.bincount(inverse, weights=contribution, minlength=unique.size)
-        return pd.Series(sums, index=pd.Index(unique, name="indx"), name="enhancement")
+        return pd.Series(
+            sums, index=pd.Index(unique, name="particle"), name="enhancement"
+        )
 
     @property
     def plot(self) -> ParticlesPlotAccessor:
@@ -593,7 +595,7 @@ def correct_near_field(
     p["elapsed"] = abs_time_s
     p["plume"] = start_h + (
         p.sort_values("elapsed")
-        .groupby("indx", sort=False)["sigma"]
+        .groupby("particle", sort=False)["sigma"]
         .cumsum()
         .reindex(p.index)
     )

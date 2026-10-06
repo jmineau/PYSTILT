@@ -194,8 +194,8 @@ class ParticlesPlotAccessor:
         Axes
         """
         p = self._particles
-        lons: np.ndarray = p["long"].to_numpy(dtype=float)
-        lats: np.ndarray = p["lati"].to_numpy(dtype=float)
+        lons: np.ndarray = p["lon"].to_numpy(dtype=float)
+        lats: np.ndarray = p["lat"].to_numpy(dtype=float)
 
         _color_labels = {
             "time": "Time (min)",
@@ -534,7 +534,7 @@ class SimulationPlotAccessor:
         if foot is not None:
             extent = _bounds_extent(foot.stilt.grid, pad=0.1)
         elif particles is not None:
-            extent = _extent(particles["long"], particles["lati"], pad=0.5)
+            extent = _extent(particles["lon"], particles["lat"], pad=0.5)
         else:
             lons, lats, _ = _receptor_points(sim.receptor)
             extent = _extent(lons, lats, pad=2.0)

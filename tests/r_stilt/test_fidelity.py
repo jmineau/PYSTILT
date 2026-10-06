@@ -36,6 +36,7 @@ from stilt.transport.hysplit.driver import _bundled_exe_dir, setup_seed
 
 from ..conftest import integration
 from ..fixtures.r_stilt_reference import (
+    STILT_R_NAMES,
     ReferenceScenario,
 )
 
@@ -180,7 +181,9 @@ def _csv(values: float | tuple[float, ...]) -> str:
 
 def _sorted_trajectory(df: pd.DataFrame, columns: tuple[str, ...]) -> pd.DataFrame:
     return (
-        df.loc[:, list(columns)].sort_values(by=["indx", "time"]).reset_index(drop=True)
+        df.loc[:, list(columns)]
+        .sort_values(by=["particle", "time"])
+        .reset_index(drop=True)
     )
 
 
@@ -223,13 +226,16 @@ def _r_footprint_from_traj(
     """
     tmp_path.mkdir(parents=True, exist_ok=True)
     nc_path = tmp_path / "r_foot.nc"
+    # The R helper reads STILT-R's column names.
+    r_traj_path = tmp_path / "traj_r_names.parquet"
+    pd.read_parquet(traj_path).rename(columns=STILT_R_NAMES).to_parquet(r_traj_path)
 
     t0 = time.perf_counter()
     result = subprocess.run(
         [
             rscript,
             str(_R_HELPERS / "calc_footprint.r"),
-            str(traj_path),
+            str(r_traj_path),
             str(nc_path),
             str(scenario.xmin),
             str(scenario.xmax),
@@ -328,7 +334,7 @@ def test_forward_hnf_foot_intentionally_differs_from_r(
         pytest.skip(f"[{s.name}] trajectory shared with another scenario")
     _assert_hysplit_binary_matches_r(r_stilt_dir)
 
-    cols = ("indx", "time", "foot", "foot_no_hnf_dilution")
+    cols = ("particle", "time", "foot", "foot_no_hnf_dilution")
     py = _sorted_trajectory(pd.read_parquet(scenario_outputs["traj"]), cols)
     r = _sorted_trajectory(scenario_outputs["r_traj"], cols)
 
@@ -395,8 +401,8 @@ def test_trajectory_matches_r(
     r_sorted = _sorted_trajectory(r_traj, compare_columns)
 
     np.testing.assert_array_equal(
-        py_sorted["indx"].to_numpy(),
-        r_sorted["indx"].to_numpy(),
+        py_sorted["particle"].to_numpy(),
+        r_sorted["particle"].to_numpy(),
         err_msg=f"[{s.name}] particle indices differ.",
     )
     np.testing.assert_array_equal(
@@ -405,8 +411,8 @@ def test_trajectory_matches_r(
         err_msg=f"[{s.name}] trajectory times differ.",
     )
     np.testing.assert_allclose(
-        py_sorted.drop(columns=["indx", "time"]).to_numpy(dtype=float),
-        r_sorted.drop(columns=["indx", "time"]).to_numpy(dtype=float),
+        py_sorted.drop(columns=["particle", "time"]).to_numpy(dtype=float),
+        r_sorted.drop(columns=["particle", "time"]).to_numpy(dtype=float),
         rtol=1e-7,
         atol=1e-10,
         err_msg=f"[{s.name}] trajectory values differ from STILT-R live output.",
@@ -488,8 +494,8 @@ def test_error_trajectory_matches_r(
     r_sorted = _sorted_trajectory(r_error, compare_columns)
 
     np.testing.assert_array_equal(
-        py_sorted["indx"].to_numpy(),
-        r_sorted["indx"].to_numpy(),
+        py_sorted["particle"].to_numpy(),
+        r_sorted["particle"].to_numpy(),
         err_msg=f"[{s.name}] error trajectory particle indices differ.",
     )
     np.testing.assert_array_equal(
@@ -498,8 +504,8 @@ def test_error_trajectory_matches_r(
         err_msg=f"[{s.name}] error trajectory times differ.",
     )
     np.testing.assert_allclose(
-        py_sorted.drop(columns=["indx", "time"]).to_numpy(dtype=float),
-        r_sorted.drop(columns=["indx", "time"]).to_numpy(dtype=float),
+        py_sorted.drop(columns=["particle", "time"]).to_numpy(dtype=float),
+        r_sorted.drop(columns=["particle", "time"]).to_numpy(dtype=float),
         rtol=1e-7,
         atol=1e-10,
         err_msg=f"[{s.name}] error trajectory values differ from STILT-R.",

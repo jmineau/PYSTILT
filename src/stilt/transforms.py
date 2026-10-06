@@ -52,7 +52,7 @@ if TYPE_CHECKING:
 
 def release_coordinate(particles: pd.DataFrame, coordinate: str) -> pd.Series:
     """
-    Return each particle's value of ``coordinate`` at release, indexed by ``indx``.
+    Return each particle's value of ``coordinate`` at release, indexed by ``particle``.
 
     Some columns, such as ``xhgt``, are constant along a trajectory. Others,
     such as ``pres``, change at every time step. The release value is taken
@@ -64,9 +64,9 @@ def release_coordinate(particles: pd.DataFrame, coordinate: str) -> pd.Series:
         ordered = p.assign(_age=p["time"].abs()).sort_values("_age", kind="stable")
     else:
         ordered = p
-    first = ordered.drop_duplicates(subset="indx")
+    first = ordered.drop_duplicates(subset="particle")
     return pd.Series(
-        first[coordinate].to_numpy(dtype=float), index=first["indx"].to_numpy()
+        first[coordinate].to_numpy(dtype=float), index=first["particle"].to_numpy()
     )
 
 
@@ -102,7 +102,7 @@ def particle_pwf(
     Parameters
     ----------
     particles : pandas.DataFrame
-        Particle table with ``indx``, ``pres`` (hPa), and ``zagl`` (m), and
+        Particle table with ``particle``, ``pres`` (hPa), and ``zagl`` (m), and
         optionally ``xhgt``, the release height (m). Without ``xhgt`` the
         first-step height is used. An MSL receptor also needs ``zsfc``, the
         terrain height (m above sea level).
@@ -117,9 +117,9 @@ def particle_pwf(
     Returns
     -------
     xpres : pandas.Series
-        Release pressure of each particle in hPa, indexed by ``indx``.
+        Release pressure of each particle in hPa, indexed by ``particle``.
     pwf : pandas.Series
-        Pressure weight of each particle, indexed by ``indx``. The weights
+        Pressure weight of each particle, indexed by ``particle``. The weights
         sum to the fraction of the atmosphere's mass inside the column,
         ``(p_sfc - p_top) / p_sfc``. The rest lies above the column top,
         where surface fluxes do not reach the receptor.
@@ -209,7 +209,7 @@ def ak_weights(
     Parameters
     ----------
     particles : pandas.DataFrame
-        Particle table with ``indx`` and ``coordinate``.
+        Particle table with ``particle`` and ``coordinate``.
     levels : list of float
         Levels the kernel is given on, in the units of ``coordinate``.
     values : list of float
@@ -234,7 +234,9 @@ def ak_weights(
     order = np.argsort(lv)
     lv, va = lv[order], va[order]
     per_particle = release_coordinate(particles, coordinate)
-    coords = per_particle.reindex(particles["indx"].to_numpy()).to_numpy(dtype=float)
+    coords = per_particle.reindex(particles["particle"].to_numpy()).to_numpy(
+        dtype=float
+    )
     return np.interp(coords, lv, va, left=va[0], right=va[-1])
 
 
@@ -485,9 +487,9 @@ class PressureWeighting(BaseModel):
         altitude_ref = receptor.altitude_ref if receptor is not None else "agl"
         xpres, pwf = particle_pwf(particles, self.surface_pressure, altitude_ref)
         out = particles.copy()
-        indx = out["indx"].to_numpy()
-        out["xpres"] = xpres.reindex(indx).to_numpy()
-        out["pwf"] = pwf.reindex(indx).to_numpy()
+        ids = out["particle"].to_numpy()
+        out["xpres"] = xpres.reindex(ids).to_numpy()
+        out["pwf"] = pwf.reindex(ids).to_numpy()
         out["foot"] = out["foot"] * out["pwf"] * len(pwf)
         return out
 

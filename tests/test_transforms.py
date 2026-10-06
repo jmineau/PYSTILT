@@ -70,11 +70,11 @@ def _make_particles(n: int = 10, heights: list[float] | None = None) -> pd.DataF
         heights = [float(i * 200) for i in range(1, n + 1)]
     return pd.DataFrame(
         {
-            "indx": list(range(1, n + 1)),
+            "particle": list(range(1, n + 1)),
             "xhgt": heights,
             "foot": [1.0] * n,
-            "long": [-111.9] * n,
-            "lati": [40.7] * n,
+            "lon": [-111.9] * n,
+            "lat": [40.7] * n,
             "time": [pd.Timestamp("2023-01-01")] * n,
         }
     )
@@ -84,7 +84,7 @@ def _aged_particles() -> pd.DataFrame:
     """Three particles at 0, 1 and 2 hours of transport age (minutes)."""
     return pd.DataFrame(
         {
-            "indx": [1, 2, 3],
+            "particle": [1, 2, 3],
             "time": [0.0, -60.0, -120.0],
             "foot": [1.0, 1.0, 1.0],
         }
@@ -135,7 +135,7 @@ def test_ak_pressure_coordinate_uses_release_row_for_whole_trajectory():
     # release row (smallest |time|) and be constant per particle.
     p = pd.DataFrame(
         {
-            "indx": [1, 1, 1, 2, 2, 2],
+            "particle": [1, 1, 1, 2, 2, 2],
             "time": [-1.0, -2.0, -3.0, -3.0, -1.0, -2.0],
             "pres": [900.0, 850.0, 800.0, 600.0, 700.0, 650.0],
             "foot": [1.0] * 6,
@@ -203,7 +203,7 @@ def _column_particles(
     frames = [
         pd.DataFrame(
             {
-                "indx": np.arange(1, n + 1),
+                "particle": np.arange(1, n + 1),
                 "time": -(step + 1.0),
                 "xhgt": z,
                 "zagl": z + 10.0 * step,
@@ -298,9 +298,9 @@ def test_pwf_uses_release_row_not_drifted_rows():
     result = PressureWeighting().apply(p)
 
     # One weight per particle, broadcast along its whole trajectory.
-    assert (result.groupby("indx")["foot"].nunique() == 1).all()
-    release = p.loc[p["time"] == -1.0].set_index("indx")["pres"]
-    got = result.drop_duplicates("indx").set_index("indx")["xpres"]
+    assert (result.groupby("particle")["foot"].nunique() == 1).all()
+    release = p.loc[p["time"] == -1.0].set_index("particle")["pres"]
+    got = result.drop_duplicates("particle").set_index("particle")["xpres"]
     assert got.to_numpy() == pytest.approx(release.to_numpy(), rel=1e-6)
 
 
@@ -367,7 +367,7 @@ def _multipoint_particles(
     zagl = xhgt - terrain
     frame = pd.DataFrame(
         {
-            "indx": np.arange(1, len(xhgt) + 1),
+            "particle": np.arange(1, len(xhgt) + 1),
             "time": -1.0,
             "xhgt": xhgt,
             "zagl": zagl,

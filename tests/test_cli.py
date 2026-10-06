@@ -149,9 +149,9 @@ def test_status_counts_full_simulation_completion(tmp_path):
     particles = pd.DataFrame(
         {
             "time": [-60.0],
-            "indx": [1.0],
-            "long": [-113.5],
-            "lati": [39.5],
+            "particle": [1.0],
+            "lon": [-113.5],
+            "lat": [39.5],
             "zagl": [10.0],
             "foot": [1e-5],
         }

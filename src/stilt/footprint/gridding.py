@@ -66,7 +66,7 @@ def _wrap_antimeridian_longitudes(
         return p, -180.0, 180.0, False
     if (xmax < xmin) or (xmax > 180):
         p = p.copy()
-        p["long"] = ((p["long"] % 360) + 360) % 360
+        p["lon"] = ((p["lon"] % 360) + 360) % 360
         xmin = ((xmin % 360) + 360) % 360
         xmax = ((xmax % 360) + 360) % 360
         return p, xmin, xmax, True
@@ -89,16 +89,18 @@ def _interpolate_early_timesteps(
     if early.empty:
         return p
 
-    # Match R: per-particle median(abs(diff(long/lati))), then median across particles.
+    # Match R: per-particle median(abs(diff(lon/lat))), then median across particles.
     # should_interpolate = median(dx) > xres OR median(dy) > yres
-    sorted_early = early.sort_values(by=["indx", "time"])
+    sorted_early = early.sort_values(by=["particle", "time"])
     diffs = cast(
         pd.DataFrame,
-        sorted_early.groupby("indx", sort=False)[["long", "lati"]].diff().abs(),
+        sorted_early.groupby("particle", sort=False)[["lon", "lat"]].diff().abs(),
     )
-    per_particle_med = cast(pd.DataFrame, diffs.groupby(sorted_early["indx"]).median())
-    dx_values = per_particle_med["long"].dropna().to_numpy()
-    dy_values = per_particle_med["lati"].dropna().to_numpy()
+    per_particle_med = cast(
+        pd.DataFrame, diffs.groupby(sorted_early["particle"]).median()
+    )
+    dx_values = per_particle_med["lon"].dropna().to_numpy()
+    dy_values = per_particle_med["lat"].dropna().to_numpy()
     dx_med = float(np.median(dx_values)) if dx_values.size else np.nan
     dy_med = float(np.median(dy_values)) if dy_values.size else np.nan
 
@@ -134,30 +136,32 @@ def _interpolate_early_timesteps(
 
 
 def _interpolate_particle_tracks(p: pd.DataFrame, *, t_new: np.ndarray) -> pd.DataFrame:
-    """Interpolate long/lati/foot for each particle on a dense time grid."""
+    """Interpolate lon/lat/foot for each particle on a dense time grid."""
     frames: list[pd.DataFrame] = []
     original_columns = list(p.columns)
-    for indx, group in p.groupby("indx", sort=False):
+    for number, group in p.groupby("particle", sort=False):
         source_time = group["time"].to_numpy(dtype=float)
         target_time = np.unique(np.concatenate([source_time, t_new]))
         order = np.argsort(source_time)
         sorted_time = source_time[order]
         unique_time, unique_idx = np.unique(sorted_time, return_index=True)
 
-        # Mirror STILT-R's full_join(expand.grid(...), by = c("indx", "time")):
+        # Mirror STILT-R's full_join(expand.grid(...), by = c("particle", "time")):
         # original rows keep every column, while inserted rows only receive the
-        # interpolated long/lati/foot values below.  A later dropna() therefore
+        # interpolated lon/lat/foot values below.  A later dropna() therefore
         # matches R's na.omit() across all columns.
         expanded = pd.DataFrame(
             {
-                "indx": np.full(len(target_time), indx),
+                "particle": np.full(len(target_time), number),
                 "time": target_time,
             }
         )
         join_group = group.copy(deep=False)
         join_group["time"] = join_group["time"].astype(float)
-        frame = expanded.merge(join_group, on=["indx", "time"], how="left", sort=False)
-        for col in ["long", "lati", "foot"]:
+        frame = expanded.merge(
+            join_group, on=["particle", "time"], how="left", sort=False
+        )
+        for col in ["lon", "lat", "foot"]:
             values = group[col].to_numpy(dtype=float)[order][unique_idx]
             if len(unique_time) >= 2:
                 # left/right=nan matches R's na_interp: no extrapolation
@@ -175,7 +179,7 @@ def _interpolate_particle_tracks(p: pd.DataFrame, *, t_new: np.ndarray) -> pd.Da
     return (
         pd.concat(frames, ignore_index=True)
         .dropna()
-        .sort_values(["indx", "time"], ascending=[True, False], kind="stable")
+        .sort_values(["particle", "time"], ascending=[True, False], kind="stable")
         .reset_index(drop=True)
     )
 
@@ -199,7 +203,7 @@ def _project_particles_to_crs(
 
     tr = Transformer.from_crs("EPSG:4326", crs, always_xy=True)
     p = p.copy()
-    p["long"], p["lati"] = tr.transform(p["long"].values, p["lati"].values)
+    p["lon"], p["lat"] = tr.transform(p["lon"].values, p["lat"].values)
     corners_x, corners_y = tr.transform([xmin, xmax], [ymin, ymax])
     return (
         p,
@@ -225,9 +229,9 @@ def _compute_kernel_bandwidths(
     kernel_df = (
         p.groupby("rtime")
         .agg(
-            long_var=("long", "var"),
-            lati_var=("lati", "var"),
-            lat_mean=("lati", "mean"),
+            long_var=("lon", "var"),
+            lati_var=("lat", "var"),
+            lat_mean=("lat", "mean"),
         )
         .reset_index()
         .dropna()
@@ -238,7 +242,7 @@ def _compute_kernel_bandwidths(
         kernel_df = pd.DataFrame(
             {
                 "rtime": rtime_vals,
-                "lat_mean": [float(p["lati"].to_numpy().mean())] * len(rtime_vals),
+                "lat_mean": [float(p["lat"].to_numpy().mean())] * len(rtime_vals),
             }
         )
         return kernel_df, np.zeros(len(kernel_df), dtype=float)
@@ -302,10 +306,10 @@ def _filter_and_rasterize_particles(
         pd.DataFrame,
         p[
             (p["foot"] > 0)
-            & (p["long"] >= xmin - xbufh * xres)
-            & (p["long"] < xmax + xbufh * xres)
-            & (p["lati"] >= ymin - ybufh * yres)
-            & (p["lati"] < ymax + ybufh * yres)
+            & (p["lon"] >= xmin - xbufh * xres)
+            & (p["lon"] < xmax + xbufh * xres)
+            & (p["lat"] >= ymin - ybufh * yres)
+            & (p["lat"] < ymax + ybufh * yres)
         ].copy(),
     )
 
@@ -315,7 +319,7 @@ def _filter_and_rasterize_particles(
     filtered["loi"] = (
         np.searchsorted(
             glong_buf,
-            filtered["long"].to_numpy(dtype=float),
+            filtered["lon"].to_numpy(dtype=float),
             side="right",
         )
         - 1
@@ -323,7 +327,7 @@ def _filter_and_rasterize_particles(
     filtered["lai"] = (
         np.searchsorted(
             glati_buf,
-            filtered["lati"].to_numpy(dtype=float),
+            filtered["lat"].to_numpy(dtype=float),
             side="right",
         )
         - 1
@@ -434,8 +438,8 @@ def calc_footprint(
     ----------
     particles : pandas.DataFrame
         Particle table, such as :func:`stilt.run_trajectories` returns or
-        ``sim.particles``, with columns ``indx``, ``time`` (minutes since
-        release), ``long``, ``lati``, and ``foot``.
+        ``sim.particles``, with columns ``particle``, ``time`` (minutes since
+        release), ``lon``, ``lat``, and ``foot``.
     receptor : Receptor
         Receptor the particles were released from.
     grid : Grid
@@ -513,7 +517,7 @@ def calc_footprint(
         raise EmptyFootprint("no_particles")
 
     p = particles.copy(deep=False)
-    n_particles = p["indx"].nunique()
+    n_particles = p["particle"].nunique()
     # time_sign: -1 for backward runs, +1 for forward.
     time_sign = int(np.sign(p["time"].median()))
 
@@ -527,7 +531,7 @@ def calc_footprint(
 
     # rtime = time elapsed since each particle's first output step.
     # Used below to compute kernel bandwidth (particles spread more with time).
-    min_abs_time = p["time"].abs().groupby(p["indx"], sort=False).transform("min")
+    min_abs_time = p["time"].abs().groupby(p["particle"], sort=False).transform("min")
     p["rtime"] = p["time"] - time_sign * min_abs_time
 
     if not is_longlat:

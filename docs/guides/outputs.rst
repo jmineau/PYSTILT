@@ -194,8 +194,8 @@ The columns you are most likely to use:
 
    * - Column
      - Meaning
-   * - ``long`` / ``lati``
-     - Particle longitude and latitude
+   * - ``lon`` / ``lat``
+     - Particle longitude and latitude (STILT-R's ``long`` / ``lati``)
    * - ``zagl``
      - Particle height above ground, m
    * - ``time``
@@ -205,8 +205,8 @@ The columns you are most likely to use:
    * - ``foot``
      - The particle's influence from the surface at this step, in
        ppm per (µmol m⁻² s⁻¹)
-   * - ``indx``
-     - Particle number
+   * - ``particle``
+     - Particle number (STILT-R's ``indx``)
    * - ``xhgt``
      - Release height, for column and multipoint receptors
    * - ``mlht``, ``sigw``, ``tlgr``, ``pres``

@@ -27,13 +27,13 @@ def _raw_particles(receptor, config, met, workdir, timeout):
 def _release_time_rows(particles):
     """Return the rows closest to release time, sorted by particle index."""
     latest_time = particles["time"].max()
-    return particles.loc[particles["time"] == latest_time].sort_values("indx")
+    return particles.loc[particles["time"] == latest_time].sort_values("particle")
 
 
 def _nearest_release_assignments(release_rows, receptor):
     """Return the nearest explicit release-point index for each particle row."""
     release_points = np.column_stack((receptor.longitudes, receptor.latitudes))
-    particle_points = release_rows[["long", "lati"]].to_numpy()
+    particle_points = release_rows[["lon", "lat"]].to_numpy()
     distances = np.sum(
         (particle_points[:, None, :] - release_points[None, :, :]) ** 2,
         axis=2,
@@ -49,7 +49,7 @@ def test_hysplit_multipoint_release_points_follow_control_order(tmp_path, met_di
     This test characterizes the compiled HYSPLIT binary directly rather than
     PYSTILT's later ``xhgt`` reconstruction. It uses a divisible particle count
     so each explicit release point should receive the same-size contiguous
-    ``indx`` block.
+    ``particle`` block.
     """
 
     receptor = MultiPointReceptor(
@@ -72,7 +72,7 @@ def test_hysplit_multipoint_release_points_follow_control_order(tmp_path, met_di
     )
 
     release_rows = _release_time_rows(result)
-    assert release_rows["indx"].tolist() == list(range(1, params.numpar + 1))
+    assert release_rows["particle"].tolist() == list(range(1, params.numpar + 1))
 
     nearest_release = _nearest_release_assignments(release_rows, receptor)
 
@@ -130,7 +130,7 @@ def test_hysplit_multipoint_release_points_follow_control_order_nondivisible(
     )
 
     release_rows = _release_time_rows(result)
-    assert release_rows["indx"].tolist() == list(range(1, params.numpar + 1))
+    assert release_rows["particle"].tolist() == list(range(1, params.numpar + 1))
     assert _nearest_release_assignments(release_rows, receptor) == [
         0,
         0,
@@ -176,7 +176,7 @@ def test_hysplit_column_release_spans_vertical_line_without_endpoint_chunking(
     )
 
     release_rows = _release_time_rows(result)
-    assert release_rows["indx"].tolist() == list(range(1, params.numpar + 1))
+    assert release_rows["particle"].tolist() == list(range(1, params.numpar + 1))
     assert (
         release_rows["zagl"].between(receptor.bottom - 50.0, receptor.top + 50.0).all()
     )
@@ -231,7 +231,7 @@ def test_close_spaced_slant_release_heights_are_recovered(tmp_path, met_dir):
     )
     data = finished(particles, receptor, params)
 
-    release = _release_time_rows(data).drop_duplicates("indx")
+    release = _release_time_rows(data).drop_duplicates("particle")
     # Each group's actual height should sit at the altitude it was assigned.
     errors = release.groupby("xhgt")["zagl"].mean() - sorted(set(release["xhgt"]))
     assert float(np.sqrt((errors**2).mean())) < 60.0

@@ -139,7 +139,8 @@ Receptors
 
 ``receptors.csv`` holds the same information as STILT-R's ``receptors`` data
 frame. STILT-R's column names ``long``, ``lati``, and ``zagl`` work as they
-are. Rename ``run_time`` to ``time``:
+are. Rename ``run_time`` to ``time``. In the particle table, STILT-R's
+``long``, ``lati``, and ``indx`` are ``lon``, ``lat``, and ``particle``.
 
 .. code-block:: text
 

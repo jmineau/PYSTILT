@@ -95,9 +95,18 @@ def _bundled_data_dir() -> Path:
     return Path(str(pkg_files("stilt.transport.hysplit") / "data"))
 
 
+#: HYSPLIT's names for the columns the particle table names otherwise
+#: (:data:`stilt.particles.PARTICLE_SCHEMA`); the rest keep HYSPLIT's.
+PARTICLE_COLUMNS = {"indx": "particle", "long": "lon", "lati": "lat"}
+
+
 def read_particle_dat(path: str | Path, columns: Sequence[str]) -> pd.DataFrame:
     """
     Read a ``PARTICLE_STILT.DAT`` file as a particle table.
+
+    The ``varsiwant`` codes ``indx``, ``long``, and ``lati`` become the
+    particle table's ``particle``, ``lon``, and ``lat``
+    (:data:`PARTICLE_COLUMNS`).
 
     Parameters
     ----------
@@ -110,8 +119,8 @@ def read_particle_dat(path: str | Path, columns: Sequence[str]) -> pd.DataFrame:
     -------
     pandas.DataFrame
         One row per particle per output step, as HYSPLIT wrote them. The
-        release heights and the near-field correction are not added
-        (:func:`~stilt.transport.hysplit.finish_particles` adds them).
+        release heights and the near-field correction are added after the
+        run (:func:`stilt.transport.run_model`).
 
     Raises
     ------
@@ -119,7 +128,7 @@ def read_particle_dat(path: str | Path, columns: Sequence[str]) -> pd.DataFrame:
         If the file has a different number of columns.
     """
     path = Path(path)
-    names = list(columns)
+    names = [PARTICLE_COLUMNS.get(name, name) for name in columns]
     # numpy.loadtxt reads large files much faster than pandas and handles
     # HYSPLIT's variable-width spacing.
     with warnings.catch_warnings():
@@ -135,7 +144,7 @@ def read_particle_dat(path: str | Path, columns: Sequence[str]) -> pd.DataFrame:
     if values.shape[1] != len(names):
         raise ValueError(
             f"{path.name} has {values.shape[1]} columns, expected {len(names)} "
-            f"from varsiwant={list(names)!r}."
+            f"from varsiwant={list(columns)!r}."
         )
     return pd.DataFrame(values, columns=pd.Index(names))
 

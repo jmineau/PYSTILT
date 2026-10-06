@@ -18,20 +18,20 @@ Every table has five columns, :data:`PARTICLE_SCHEMA`:
    * - Column
      - Units
      - Meaning
-   * - ``indx``
+   * - ``particle``
      - none
      - Particle number, from 1 to ``numpar``. A particle keeps its number
-       for the whole run.
+       for the whole run. HYSPLIT and STILT-R call it ``indx``.
    * - ``time``
      - minutes
      - Time since release. Negative for a backward run, positive for a
        forward one. Stored as whole minutes.
-   * - ``long``
+   * - ``lon``
      - degrees east
-     - Longitude of the particle.
-   * - ``lati``
+     - Longitude of the particle (HYSPLIT's ``long``).
+   * - ``lat``
      - degrees north
-     - Latitude of the particle.
+     - Latitude of the particle (HYSPLIT's ``lati``).
    * - ``zagl``
      - m
      - Height of the particle above ground.
@@ -58,14 +58,15 @@ receptor (:func:`add_release_heights`). The HYSPLIT build bundled with
 PYSTILT writes no such row: its first row is one time step after release.
 For it, PYSTILT matches each particle to a release point from its first
 position, and takes a column's particles to be released bottom to top in
-``indx`` order. A HYSPLIT build patched to write the release rows
+``particle`` order. A HYSPLIT build patched to write the release rows
 (``exe_dir``) makes the matching exact.
 
 Columns the model adds
 ----------------------
 
-HYSPLIT writes the variables in ``varsiwant``, under HYSPLIT's names. Some
-that PYSTILT reads:
+HYSPLIT writes the variables in ``varsiwant``, under HYSPLIT's names but
+for the three above (``indx``, ``long``, ``lati``). Some that PYSTILT
+reads:
 
 .. list-table::
    :header-rows: 1

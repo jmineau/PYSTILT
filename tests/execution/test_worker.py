@@ -111,9 +111,9 @@ def _particles(receptor) -> pd.DataFrame:
     data = pd.DataFrame(
         {
             "time": [-60.0],
-            "indx": [1.0],
-            "long": [-111.9],
-            "lati": [40.7],
+            "particle": [1.0],
+            "lon": [-111.9],
+            "lat": [40.7],
             "zagl": [10.0],
             "foot": [1e-5],
         }

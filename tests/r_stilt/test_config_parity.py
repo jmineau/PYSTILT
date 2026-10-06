@@ -19,6 +19,7 @@ import pandas as pd
 import pytest
 
 from ..conftest import integration
+from ..fixtures.r_stilt_reference import STILT_R_NAMES
 
 pytestmark = [pytest.mark.fidelity]
 
@@ -130,7 +131,8 @@ def test_trajectory_contains_all_r_varsiwant_columns(scenario_outputs: dict) -> 
     the R-required columns must all be present so the trajectory comparison
     tests have their expected inputs.
     """
-    traj = pd.read_parquet(scenario_outputs["traj"])
+    # In STILT-R's names, so they read against its varsiwant.
+    traj = pd.read_parquet(scenario_outputs["traj"]).rename(columns=STILT_R_NAMES)
     missing = [c for c in _R_VARSIWANT if c not in traj.columns]
     assert not missing, f"Trajectory parquet missing R-required columns: {missing}"
 

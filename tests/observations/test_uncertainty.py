@@ -22,10 +22,10 @@ def _column(n_levels=4, per_level=200, spread=1.0, seed=0, level_spacing=500.0):
     xhgt = np.repeat(np.arange(n_levels) * level_spacing + 250.0, per_level)
     return pd.DataFrame(
         {
-            "indx": np.arange(1, n + 1),
+            "particle": np.arange(1, n + 1),
             "time": np.zeros(n),
-            "long": np.full(n, -111.0),
-            "lati": np.full(n, 41.0),
+            "lon": np.full(n, -111.0),
+            "lat": np.full(n, 41.0),
             "xhgt": xhgt,
             "foot": 10.0 + spread * rng.standard_normal(n),
             "datetime": pd.to_datetime(["2023-01-01"] * n),
@@ -235,7 +235,7 @@ def test_background_field_adds_the_endpoint_spread_to_the_error():
     )
     main = _column(spread=1.0, seed=7)  # every endpoint at lon -111: background 1
     err = _column(spread=1.0, seed=8)
-    err["long"] = np.where(np.arange(len(err)) % 2 == 0, -112.0, -110.0)  # 0 or 2
+    err["lon"] = np.where(np.arange(len(err)) % 2 == 0, -112.0, -110.0)  # 0 or 2
 
     still = transport_error(main, main.copy(), FLUX, background=field, noise_splits=0)
     moved = transport_error(
