@@ -337,8 +337,8 @@ def test_footprint_only_variant_rasterizes_the_same_particles(
 
     assert fine.has_footprint and coarse.has_footprint
     assert coarse.particles_path == fine.particles_path  # one set of particles
-    assert len(model.output.folders("particles")) == 1
-    assert len(model.output.folders("footprints")) == 2
+    assert len(model.output.hashes("particles")) == 1
+    assert len(model.output.hashes("footprints")) == 2
     assert coarse.footprint is not None and fine.footprint is not None
     assert coarse.footprint.stilt.grid.xres == 0.05
     assert fine.footprint.stilt.grid.xres == 0.01
