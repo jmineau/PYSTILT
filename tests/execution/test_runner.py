@@ -8,7 +8,7 @@ import pytest
 
 from stilt.execution import Batch, runner
 from stilt.execution.config import ExecutionConfig
-from stilt.execution.runner import _project_slug, slurm_parameters, split
+from stilt.execution.runner import _project_slug, slurm_parameters, split, task_share
 from stilt.project import Project
 
 # ---------------------------------------------------------------------------
@@ -234,7 +234,9 @@ def fake_submitit(monkeypatch):
 def pending(monkeypatch):
     """Set which receptors the runner finds incomplete."""
     ids: list[str] = []
-    monkeypatch.setattr(runner, "_pending", lambda project, skip_existing: list(ids))
+    monkeypatch.setattr(
+        runner, "_pending", lambda project, skip_existing, *_: list(ids)
+    )
     return ids
 
 
@@ -335,3 +337,104 @@ def test_no_time_limit_is_left_to_the_partition():
 )
 def test_project_slug_names_the_slurm_job(directory, expected):
     assert _project_slug(directory) == expected
+
+
+# ---------------------------------------------------------------------------
+# A share of the receptors: --receptors and --task
+# ---------------------------------------------------------------------------
+
+
+def _hourly_project(tmp_path, n: int) -> Project:
+    import datetime as dt
+
+    from stilt.config import ProjectConfig
+    from stilt.receptors import PointReceptor
+
+    config = ProjectConfig(
+        mets={
+            "hrrr": {
+                "directory": tmp_path / "met",
+                "file_format": "%Y%m%d_%H",
+                "file_tres": "1h",
+            }
+        },
+        variants={"hrrr": {}},
+    )
+    receptors = [
+        PointReceptor(
+            time=dt.datetime(2023, 1, 1, h),
+            longitude=-111.85,
+            latitude=40.77,
+            altitude=5.0,
+        )
+        for h in range(n)
+    ]
+    return Project.init(tmp_path / "hourly", config=config, receptors=receptors)
+
+
+def test_task_share_is_every_nth_receptor():
+    ids = list("abcdefg")
+    assert [task_share(ids, i, 3) for i in range(3)] == [
+        ["a", "d", "g"],
+        ["b", "e"],
+        ["c", "f"],
+    ]
+    assert task_share(ids[:1], 2, 3) == []
+    for task, n in [(3, 3), (-1, 3), (0, 0)]:
+        with pytest.raises(ValueError, match="0 to n_tasks - 1"):
+            task_share(ids, task, n)
+
+
+def test_tasks_split_the_receptors_the_same_way_whenever_each_starts(
+    tmp_path, monkeypatch
+):
+    """
+    A share is taken before the complete receptors are dropped. Taken after,
+    a task that starts late would shift onto another task's receptors.
+    """
+    project = _hourly_project(tmp_path, 7)
+    every = list(dict.fromkeys(project.simulations["receptor"]))
+    done: set[str] = set()
+    monkeypatch.setattr(
+        Project, "incomplete", lambda self, sel=None: sel[~sel["receptor"].isin(done)]
+    )
+
+    first = runner._pending(project, True, task=(0, 3))
+    done.update(every[:4])  # some finish before tasks 1 and 2 start
+    later = [runner._pending(project, True, task=(i, 3)) for i in (1, 2)]
+
+    shares = [every[i::3] for i in range(3)]
+    assert first == shares[0]
+    assert later == [[r for r in shares[i] if r not in done] for i in (1, 2)]
+
+
+def test_a_receptor_list_limits_the_run_and_keeps_its_order(tmp_path, monkeypatch):
+    project = _hourly_project(tmp_path, 4)
+    every = list(dict.fromkeys(project.simulations["receptor"]))
+    monkeypatch.setattr(
+        Project, "incomplete", lambda self, sel=None: sel[sel["receptor"] != every[3]]
+    )
+    listed = [every[3], every[1], every[1], every[0]]
+    assert runner._pending(project, True, listed) == [every[1], every[0]]
+    assert runner._pending(project, False, listed) == [every[3], every[1], every[0]]
+    assert runner._pending(project, False, listed, (1, 2)) == [every[1]]
+    with pytest.raises(ValueError, match="not in this project"):
+        runner._pending(project, True, ["nope", every[0]])
+
+
+def test_a_task_runs_here_whatever_the_backend(tmp_path, monkeypatch, fake_submitit):
+    from stilt.execution import worker
+
+    project = _hourly_project(tmp_path, 4)
+    every = list(dict.fromkeys(project.simulations["receptor"]))
+    ran: list[list[str]] = []
+    monkeypatch.setattr(
+        worker, "run_receptors", lambda project, ids, **kw: ran.append(ids)
+    )
+
+    table = runner.run(project, task=(1, 2), execution=ExecutionConfig(backend="slurm"))
+
+    assert fake_submitit.instances == []
+    assert ran == [[every[1], every[3]]]
+    assert list(table["receptor"]) == [every[1], every[3]]
+    assert set(table["state"]) == {"pending"}  # nothing was written

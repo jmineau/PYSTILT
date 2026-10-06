@@ -53,6 +53,8 @@ this machine or as a Slurm job array submitted through
      - Implemented
    * - Slurm job arrays, with preempted tasks resubmitted
      - Implemented
+   * - One task of a job array or a Kubernetes indexed Job (``stilt run --task I/N``)
+     - Implemented
    * - Queue-backed workers (PostgreSQL), Kubernetes deployment
      - Removed
    * - Cloud object store outputs (GCS, S3)

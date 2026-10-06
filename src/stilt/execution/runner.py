@@ -6,6 +6,7 @@ import logging
 import os
 import re
 import tempfile
+from collections.abc import Iterable
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -102,6 +103,25 @@ def split(receptor_ids: list[str], n: int) -> list[list[str]]:
     return [receptor_ids[i::n] for i in range(n)]
 
 
+def task_share(receptor_ids: list[str], task: int, n_tasks: int) -> list[str]:
+    """
+    Return task *task*'s share of *receptor_ids*, split *n_tasks* ways.
+
+    The share is every *n_tasks*-th receptor, starting at *task*, which runs
+    from 0 to ``n_tasks - 1`` as the index of a job array does.
+
+    Raises
+    ------
+    ValueError
+        If *task* is not from 0 to ``n_tasks - 1``.
+    """
+    if n_tasks < 1 or not 0 <= task < n_tasks:
+        raise ValueError(
+            f"A task runs from 0 to n_tasks - 1; got task {task} of {n_tasks}."
+        )
+    return receptor_ids[task::n_tasks]
+
+
 def slurm_parameters(execution: ExecutionConfig, *, job_name: str) -> dict[str, Any]:
     """Return *execution* as the keyword arguments of submitit's Slurm executor."""
     additional = {str(k).replace("_", "-"): v for k, v in execution.slurm.items()}
@@ -158,10 +178,39 @@ def resolve_compute_root(
     return absolute(Path(tmp_root) / "pystilt" / project.name)
 
 
-def _pending(project: Project, skip_existing: bool) -> list[str]:
-    """Return the ids of the receptors to run, each once, in project order."""
-    sims = project.incomplete() if skip_existing else project.simulations
-    return list(dict.fromkeys(sims["receptor"]))
+def _pending(
+    project: Project,
+    skip_existing: bool,
+    receptors: Iterable[str] | None = None,
+    task: tuple[int, int] | None = None,
+) -> list[str]:
+    """
+    Return the ids of the receptors to run, each once.
+
+    *receptors* limits them to those, in that order. *task* ``(i, n)``
+    takes share ``i`` of ``n`` of them (of all the project's receptors
+    without *receptors*) before the complete ones are dropped, so the tasks
+    of a job array split the receptors the same way whenever each starts.
+    """
+    sims = project.simulations
+    every = list(dict.fromkeys(sims["receptor"]))
+    if receptors is None:
+        chosen = every
+    else:
+        chosen = list(dict.fromkeys(str(r) for r in receptors))
+        known = set(every)
+        unknown = [r for r in chosen if r not in known]
+        if unknown:
+            raise ValueError(
+                f"{len(unknown)} receptor ids are not in this project, such as "
+                f"{unknown[:3]}."
+            )
+    if task is not None:
+        chosen = task_share(chosen, *task)
+    if skip_existing and chosen:
+        left = set(project.incomplete(sims[sims["receptor"].isin(chosen)])["receptor"])
+        chosen = [r for r in chosen if r in left]
+    return chosen
 
 
 def _status(project: Project, receptor_ids: list[str]) -> pd.DataFrame:
@@ -173,6 +222,8 @@ def _status(project: Project, receptor_ids: list[str]) -> pd.DataFrame:
 def run(
     project: Project,
     *,
+    receptors: Iterable[str] | None = None,
+    task: tuple[int, int] | None = None,
     execution: ExecutionConfig | None = None,
     skip_existing: bool = True,
     compute_root: str | Path | None = None,
@@ -191,6 +242,16 @@ def run(
     ----------
     project : Project
         Project to run.
+    receptors : iterable of str, optional
+        Run only these receptors (their ids), in this order.
+    task : tuple of (int, int), optional
+        ``(i, n)``: run share ``i`` of ``n`` of the receptors here, in this
+        process, whatever the backend. The share is every ``n``-th
+        receptor in project order (or in *receptors* order), starting at
+        ``i`` (:func:`task_share`), whether it is complete or not, and the
+        complete ones are then skipped. Each task of a job array or a
+        Kubernetes indexed Job runs one share, and every task splits the
+        receptors the same way whenever it starts.
     execution : ExecutionConfig, optional
         Where to run and with what resources. Defaults to the ``execution``
         settings of the project's config.
@@ -211,14 +272,17 @@ def run(
 
     Raises
     ------
+    ValueError
+        If a receptor id is not in the project, or *task* is not from 0 to
+        ``n - 1``.
     RuntimeError
         If a Slurm task failed, was cancelled, or ran out of requeues.
     """
     execution = execution if execution is not None else project.config.execution
-    pending = _pending(project, skip_existing)
+    pending = _pending(project, skip_existing, receptors, task)
     if not pending:
         logger.info("run: every simulation is complete; nothing to do")
-    elif execution.backend == "slurm":
+    elif execution.backend == "slurm" and task is None:
         _wait(_submit(project, pending, execution, skip_existing, compute_root))
     else:
         logger.info("run(%s): %d receptors", ", ".join(project.variants), len(pending))
@@ -239,6 +303,7 @@ def run(
 def submit(
     project: Project,
     *,
+    receptors: Iterable[str] | None = None,
     execution: ExecutionConfig | None = None,
     skip_existing: bool = True,
     compute_root: str | Path | None = None,
@@ -254,7 +319,7 @@ def submit(
 
     Parameters
     ----------
-    project, execution, skip_existing, compute_root
+    project, receptors, execution, skip_existing, compute_root
         As for :func:`run`.
 
     Returns
@@ -275,7 +340,7 @@ def submit(
             f"submit sends work to Slurm, and this run's backend is "
             f"{execution.backend!r}. Use run(), or set execution.backend to slurm."
         )
-    pending = _pending(project, skip_existing)
+    pending = _pending(project, skip_existing, receptors)
     if not pending:
         logger.info("submit: every simulation is complete; nothing to do")
         return []

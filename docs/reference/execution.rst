@@ -7,6 +7,8 @@ work underneath.
 
 - :func:`~stilt.execution.run` is what ``project.run()`` calls. It finds the
   receptors with missing results, runs them, and waits until they finish.
+  ``task=(i, n)`` runs share ``i`` of ``n`` here (:func:`~stilt.execution.task_share`),
+  which is what ``stilt run --task i/n`` does.
 - :func:`~stilt.execution.submit` is what ``project.submit()`` calls. It
   submits those receptors to Slurm as one job array and returns the
   submitit jobs at once.
@@ -36,6 +38,7 @@ Worker functions
 
    stilt.execution.run
    stilt.execution.submit
+   stilt.execution.task_share
    stilt.execution.resolve_compute_root
    stilt.execution.run_particles
    stilt.execution.make_footprint

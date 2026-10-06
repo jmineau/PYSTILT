@@ -8,6 +8,10 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- `stilt run` exits with 1 when a simulation it ran failed and 2 when some
+  did not finish because the run was stopped (Ctrl-C or SIGTERM), where it
+  exited with 0. A container or a driver can act on it (#136, #150).
+
 - `project.footprints(sel)` returns one `xarray.Dataset` of a variant's
   footprints (breaking), where it returned a dictionary of arrays. The
   footprints are stacked on `hour`, the hours after each receptor's time,
@@ -887,6 +891,16 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   hash. Existing output is still found.
 
 ### Added
+
+- `stilt run --task I/N` runs task `I` of `N` in this process, whatever the
+  backend: every `N`-th receptor of the project from `I`, skipping the
+  complete ones. Each task of a job array or a Kubernetes indexed Job runs
+  one share, and tasks that start at different times split the receptors
+  the same way. `stilt run --receptors FILE` runs the receptors listed in a
+  file. In Python they are `project.run(task=(i, n), receptors=ids)` and
+  `stilt.execution.task_share`; `project.submit(receptors=ids)` submits a
+  list. A new page of the execution guide runs a project as a Kubernetes
+  indexed Job (#136, #150).
 
 - `stilt.footprint.open_footprints(paths)` opens stored footprint files of
   one settings folder as the dataset `project.footprints` returns, for

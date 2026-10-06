@@ -20,6 +20,9 @@ meteorology, footprints, and outputs stay the same.
      - You have thousands of simulations and access to an HPC cluster that
        uses Slurm.
      - An ``execution`` section with your account and partition
+   * - :doc:`containers`
+     - You run many containers at once, such as a Kubernetes Job.
+     - A volume the containers share, and ``stilt run --task``
 
 .. toctree::
    :maxdepth: 1
@@ -27,6 +30,7 @@ meteorology, footprints, and outputs stay the same.
 
    local
    slurm
+   containers
 
 Commands you'll use
 -------------------
@@ -54,6 +58,13 @@ Options for ``stilt run``:
 - ``--no-skip`` reruns every simulation, finished or not.
 - ``--compute-root DIR`` runs HYSPLIT in ``DIR``, a scratch folder that is
   emptied after each successful run.
+- ``--receptors FILE`` runs only the receptors listed in ``FILE``, one id
+  per line.
+- ``--task I/N`` runs task ``I`` of ``N`` here, as one task of a job array
+  (:doc:`containers`).
+
+``stilt run`` exits with 0 when every simulation it ran is complete, 1 when
+some failed, and 2 when some did not finish because the run was stopped.
 
 When a simulation fails
 -----------------------

@@ -405,6 +405,42 @@ def test_cli_run(tmp_path, wbb_config, wbb_receptor):
     assert (project_dir / "output" / "particles").is_dir()
 
 
+@integration
+def test_cli_tasks_split_the_receptors(tmp_path, traj_only_config):
+    """Two `stilt run --task` shares run every receptor once; a rerun has nothing to do."""
+    from typer.testing import CliRunner
+
+    from stilt.cli import app
+
+    project_dir = tmp_path / "tasks"
+    project_dir.mkdir()
+    traj_only_config.to_yaml(project_dir / "config.yaml")
+    (project_dir / "receptors.csv").write_text(
+        "time,lati,long,zagl\n"
+        "2021-01-15 06:00:00,40.5,-112.0,5.0\n"
+        "2021-01-15 06:00:00,40.6,-111.9,5.0\n"
+        "2021-01-15 06:00:00,40.7,-111.8,5.0\n"
+    )
+    project = Project(project_dir)
+    every = list(dict.fromkeys(project.simulations["receptor"]))
+
+    first = CliRunner().invoke(app, ["run", str(project_dir), "--task", "0/2"])
+    assert first.exit_code == 0, first.output
+    status = project.status()
+    assert set(status.loc[status.state == "complete", "receptor"]) == {
+        every[0],
+        every[2],
+    }
+
+    second = CliRunner().invoke(app, ["run", str(project_dir), "--task", "1/2"])
+    assert second.exit_code == 0, second.output
+    assert set(project.status()["state"]) == {"complete"}
+
+    again = CliRunner().invoke(app, ["run", str(project_dir), "--task", "0/2"])
+    assert again.exit_code == 0, again.output
+    assert "This run:  total=0" in again.output
+
+
 # ---------------------------------------------------------------------------
 # Wind-error variants
 # ---------------------------------------------------------------------------

@@ -9,17 +9,25 @@ prints a short summary. Examples::
     stilt run                         # run, and wait until done
     stilt run ./my_project --no-skip  # run every simulation again
     stilt run --backend slurm         # run as a Slurm job array, and wait
+    stilt run --task 3/10             # run task 3 of 10 here (a job array's task)
+    stilt run --receptors ids.txt     # run only the receptors listed in ids.txt
     stilt submit                      # submit a Slurm job array and return
     stilt status                      # count finished simulations
+
+``stilt run`` exits with 0 when every simulation it ran is complete, 1 when
+some failed, and 2 when some did not finish because the run was
+interrupted (Ctrl-C, or SIGTERM from a scheduler).
 """
 
 from __future__ import annotations
 
 import logging
+import re
 from collections import Counter
 from pathlib import Path
-from typing import Any
+from typing import Any, NoReturn
 
+import pandas as pd
 import typer
 
 from stilt.execution import resolve_compute_root
@@ -55,6 +63,16 @@ _COMPUTE_ROOT = typer.Option(
     "--compute-root",
     help="Scratch directory HYSPLIT runs under. Defaults to PYSTILT_COMPUTE_ROOT, then $TMPDIR/pystilt/<project>.",
 )
+
+
+#: Exit codes of ``stilt run``.
+EXIT_COMPLETE, EXIT_FAILED, EXIT_INTERRUPTED = 0, 1, 2
+
+
+def _fail(message: str) -> NoReturn:
+    """Print an error and exit with 1."""
+    typer.echo(f"Error: {message}", err=True)
+    raise typer.Exit(code=1)
 
 
 def _resolve_project(path: str | Path | None) -> str:
@@ -118,6 +136,50 @@ _CPUS = typer.Option(
         "Slurm task). Overrides execution.cpus in config.yaml."
     ),
 )
+_RECEPTORS = typer.Option(
+    None,
+    "--receptors",
+    help="File of receptor ids, one per line. Only those receptors run.",
+)
+_TASK = typer.Option(
+    None,
+    "--task",
+    help=(
+        "Run task I of N here, as one task of a job array: every Nth "
+        "receptor of the project, starting at I (0 to N-1). Runs in this "
+        "process whatever the backend."
+    ),
+)
+
+
+def _parse_task(task: str) -> tuple[int, int]:
+    """Return ``(i, n)`` from ``--task I/N``, or exit."""
+    match = re.fullmatch(r"\s*(\d+)\s*/\s*(\d+)\s*", task)
+    if match is None:
+        _fail(f"--task takes I/N, such as 3/10; got {task!r}.")
+    i, n = int(match.group(1)), int(match.group(2))
+    if not 0 <= i < n:
+        _fail(f"--task I/N needs 0 <= I < N; got {task!r}.")
+    return i, n
+
+
+def _read_ids(path: Path) -> list[str]:
+    """Return the receptor ids in a file, one per line; blank lines and # comments are skipped."""
+    try:
+        text = path.read_text()
+    except OSError as error:
+        _fail(f"cannot read {path}: {error}")
+    lines = (line.strip() for line in text.splitlines())
+    return [line for line in lines if line and not line.startswith("#")]
+
+
+def _exit_code(table: pd.DataFrame) -> int:
+    """Return the exit code for the status table of the simulations a run ran."""
+    if (table["state"] == "pending").any():
+        return EXIT_INTERRUPTED
+    if (table["state"] == "failed").any():
+        return EXIT_FAILED
+    return EXIT_COMPLETE
 
 
 def _start(
@@ -129,9 +191,15 @@ def _start(
     no_skip: bool,
     compute_root: str | None,
     waits: bool,
+    receptor_ids: list[str] | None = None,
+    task: tuple[int, int] | None = None,
 ) -> tuple[Project, dict[str, Any]]:
     """Open the project, print what is about to run, and return the run's options."""
     opened = Project(_resolve_project(project))
+    if task is not None:
+        if backend == "slurm":
+            _fail("--task runs here, as one task of a job array; drop --backend slurm.")
+        backend = "local"
     # Progress is the worker's one line per finished receptor.
     logging.basicConfig(level=logging.WARNING, format="%(message)s")
     logging.getLogger("stilt.execution.worker").setLevel(logging.INFO)
@@ -156,6 +224,8 @@ def _start(
         compute_root=compute_root,
         skip_existing=not no_skip,
         waits=waits,
+        receptor_ids=receptor_ids,
+        task=task,
     )
     options = {
         "skip_existing": not no_skip,
@@ -173,6 +243,8 @@ def run(
     n_workers: int | None = _N_WORKERS,
     cpus: int | None = _CPUS,
     compute_root: str | None = _COMPUTE_ROOT,
+    receptors: Path | None = _RECEPTORS,
+    task: str | None = _TASK,
 ) -> None:
     """
     Run every unfinished simulation in a project, and wait until they are done.
@@ -181,7 +253,14 @@ def run(
     variant has a grid. Simulations whose outputs exist are skipped unless
     --no-skip is given. With the Slurm backend this submits a job array and
     waits for it; use stilt submit to return as soon as it is submitted.
+
+    --receptors limits the run to the receptors listed in a file. --task
+    I/N runs one share of them here, for each task of a job array or a
+    Kubernetes indexed Job. Exits with 0 when every simulation that ran is
+    complete, 1 when some failed, and 2 when some did not finish.
     """
+    receptor_ids = None if receptors is None else _read_ids(receptors)
+    share = None if task is None else _parse_task(task)
     opened, options = _start(
         project,
         backend=backend,
@@ -190,13 +269,22 @@ def run(
         no_skip=no_skip,
         compute_root=compute_root,
         waits=True,
+        receptor_ids=receptor_ids,
+        task=share,
     )
     if options["execution"].backend == "slurm":
         typer.echo(
             "Submitted; waiting for the job to finish (squeue shows its tasks)..."
         )
-    opened.run(**options)
-    _print_status(opened)
+    try:
+        table = opened.run(receptors=receptor_ids, task=share, **options)
+    except ValueError as error:
+        _fail(str(error))
+    if receptor_ids is None and share is None:
+        _print_status(opened)
+    else:
+        _print_status(opened, table)
+    raise typer.Exit(code=_exit_code(table))
 
 
 @app.command()
@@ -246,11 +334,17 @@ def _counts(total: int, pending: int) -> str:
     return f"total={total}  completed={total - pending}  pending={pending}"
 
 
-def _print_status(project: Project) -> None:
-    """Print a project status summary, per variant when there are several."""
-    table = project.status()
+def _print_status(project: Project, ran: pd.DataFrame | None = None) -> None:
+    """
+    Print a project status summary, per variant when there are several.
+
+    With *ran*, the status table of a run, it sums up those simulations
+    only.
+    """
+    table = project.status() if ran is None else ran
     pending = table[table.state != "complete"]
-    typer.echo(f"Project: {project.directory}  {_counts(len(table), len(pending))}")
+    label = f"Project: {project.directory}" if ran is None else "This run:"
+    typer.echo(f"{label}  {_counts(len(table), len(pending))}")
     if len(project.variants) > 1:
         total = Counter(table["variant"])
         waiting = Counter(pending["variant"])
@@ -260,6 +354,8 @@ def _print_status(project: Project) -> None:
     if causes:
         listed = ", ".join(f"{cause} {n}" for cause, n in causes.most_common())
         typer.echo(f"failed: {listed}  (sim.failure says why)")
+    if ran is not None:
+        return
     unreferenced = project.unreferenced()
     for kind, keys in unreferenced.items():
         if keys:
@@ -277,6 +373,8 @@ def _print_run_start(
     compute_root: str | None,
     skip_existing: bool,
     waits: bool,
+    receptor_ids: list[str] | None = None,
+    task: tuple[int, int] | None = None,
 ) -> None:
     """Print the settings ``stilt run`` is about to use."""
     backend = execution.backend
@@ -293,6 +391,11 @@ def _print_run_start(
     else:
         typer.echo("Compute root: each task's own $TMPDIR (or PYSTILT_COMPUTE_ROOT)")
     typer.echo(f"Receptors loaded: {len(project.receptors)}")
+    if receptor_ids is not None:
+        typer.echo(f"Receptors listed: {len(receptor_ids)}")
+    if task is not None:
+        i, n = task
+        typer.echo(f"Task: {i} of {n} (receptors {i}, {i + n}, {i + 2 * n}, ...)")
     typer.echo(f"Variants: {', '.join(project.variants)}")
     typer.echo(
         "Execution mode: " + ("submit-and-wait" if waits else "submit-and-return")

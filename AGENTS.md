@@ -204,7 +204,12 @@ docs/                Sphinx (pydata-sphinx-theme)
    one Slurm job array through submitit (`backend: slurm`), one `Batch` of
    receptors per task, and waits. `submit` returns the jobs at once. The unit of work is a receptor: `run_receptor` runs
    HYSPLIT once per distinct transport hash, then writes the footprint of
-   every variant that shares those particles.
+   every variant that shares those particles. `run(task=(i, n))` (`stilt
+   run --task i/n`) runs one share here whatever the backend; the share is
+   taken from all the receptors before the complete ones are dropped
+   (`task_share`), so tasks that start at different times never overlap.
+   `stilt run` exits 0 (all complete), 1 (some failed), or 2 (some
+   pending: interrupted).
 2. **Observation-driven**: a reader yields a DataFrame of soundings;
    `stilt.observations` helpers thin and group it; each row becomes a
    `Receptor`; `averaging_kernel_table` writes the kernels into the project;
