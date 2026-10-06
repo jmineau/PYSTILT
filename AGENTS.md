@@ -228,14 +228,19 @@ docs/                Sphinx (pydata-sphinx-theme)
    pending: interrupted).
 2. **Observation-driven**: a reader yields a DataFrame of soundings;
    `stilt.observations` helpers thin and group it; each row becomes a
-   `Receptor`; `averaging_kernel_table` writes the kernels into the project;
-   then `add_receptors` and run as usual. This layer sits *above* the
-   transport core. Keep observation logic out of `project.py`. An import-linter
-   contract in `pyproject.toml` (run by `lint-imports` in CI) fails when a
-   core module imports `stilt.observations`; a new top-level module goes on
-   that contract's list. A second contract keeps HYSPLIT's package
-   (`stilt.transport.hysplit`) out of the core, which reaches it only
-   through `stilt.transport.get_model`, with no exceptions.
+   `Receptor` (`receptors_from_soundings`, which also gives the kernel
+   table, kept with `project.add_table`); then `add_receptors` and run as
+   usual. This layer sits *above* the transport core. Keep observation logic
+   out of `project.py`.
+
+The import contracts in `pyproject.toml` (run by `lint-imports` in CI)
+hold this shape. One `layers` contract lists every top-level module from
+the CLI down to `_atomic`, `_paths`, and `exceptions`; a module imports
+only the layers below it, and modules that import each other share a
+layer. It is exhaustive, so a new top-level module fails until it is
+placed. Two short contracts hold what a layer cannot: only
+`stilt.transport` (its `get_model`) imports HYSPLIT's package, and the
+project config reads no results.
 
 Slurm tasks rebuild the model from the project in another process on
 another node, so anything a worker needs must be in the project or the
@@ -273,7 +278,7 @@ output directory, never only in memory.
   model's config in its package. `Bounds` and `Grid` are in `stilt.spatial`,
   the raster and CRS layer that needs no shapely, since more than footprints
   use rasters (a flux put on the footprint grid). `stilt.config` composes them, so nothing
-  below the project imports `stilt.config` (an import-linter contract).
+  below the project's layer imports `stilt.config` (the layers contract).
   Config classes do no I/O when they validate, so a `config.yaml` loads
   offline; reading a geometry or asking a model its build happens in
   `ProjectConfig.resolve`, on request.
