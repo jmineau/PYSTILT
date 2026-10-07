@@ -17,9 +17,16 @@ from stilt.transport.hysplit import HysplitConfig, HysplitModel
 from ..fixtures.factories import make_met_config, make_met_files, make_variant
 
 
-def test_get_model_returns_hysplit_by_default_and_by_name():
-    assert isinstance(get_model(), HysplitModel)
+def test_get_model_returns_hysplit_by_name():
+    assert isinstance(get_model("hysplit"), HysplitModel)
     assert get_model("hysplit").name == "hysplit"
+
+
+def test_get_model_imports_a_model_by_its_path():
+    model = get_model("stilt.transport.hysplit.HysplitModel")
+    assert isinstance(model, HysplitModel)
+    with pytest.raises(ImportError, match="Install the package"):
+        get_model("nopkg.models.Missing")
 
 
 def test_get_model_names_the_models_it_knows():

@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import subprocess
+import sys
+import textwrap
 from typing import Any, ClassVar
 
 import pytest
@@ -146,3 +149,96 @@ def test_a_model_config_inherits_the_recorded_settings_and_realizations():
     assert [r.seed for r in ToyConfig().realizations(2)] == [None, None]
     with pytest.raises(ValueError, match="extra"):
         ToyConfig(unknown=1)
+
+
+#: The toy model by its import path, as config.yaml names a model in another package.
+TOY_PATH = f"{__name__}.ToyModel"
+
+
+def test_a_model_is_named_by_its_import_path_without_registering_it(tmp_path):
+    config = ProjectConfig(
+        mets=_mets(tmp_path), variants={"toy": {"model": TOY_PATH, "nparticles": 3}}
+    )
+    variant = config.resolve()["toy"]
+    assert variant.transport.nparticles == 3
+    # The record names the import path, so another process imports it again.
+    assert variant.model == ModelInfo(name=TOY_PATH, version="1.0")
+    stored = read_run_settings(variant.run_settings)
+    assert settings_hash(stored) == variant.particles_hash
+
+
+def test_a_record_of_a_model_not_installed_still_reads(tmp_path):
+    """Another project's folder in a shared output must not take status down."""
+    stored = {
+        "n_hours": -6,
+        "nparticles": 3,
+        "model": {"name": "nopkg.models.Missing", "version": "1.0"},
+        "met": {"file_format": "%Y%m%d_%H", "file_tres": "6h"},
+    }
+    with pytest.warns(UserWarning, match="could not be loaded"):
+        assert read_run_settings(stored) == stored
+
+
+def test_a_model_in_its_own_package_runs_from_a_fresh_interpreter(tmp_path):
+    """No registration in the process: the import path alone finds the model."""
+    package = tmp_path / "toypkg"
+    package.mkdir()
+    (package / "__init__.py").write_text(
+        textwrap.dedent(
+            """
+            import pandas as pd
+            from stilt.transport import ModelRun, TransportConfig
+
+            class ToyConfig(TransportConfig):
+                nparticles: int = 2
+
+            class ToyModel:
+                name = "toy"
+                config_class = ToyConfig
+
+                def version(self, config):
+                    return "1.0"
+
+                def data_files(self, config):
+                    return None
+
+                def run(self, receptor, config, met, window, workdir=None, timeout=None):
+                    n = config.nparticles
+                    particles = pd.DataFrame({
+                        "particle": list(range(1, n + 1)) * 2,
+                        "time": [0] * n + [-60] * n,
+                        "lon": [receptor.longitude] * 2 * n,
+                        "lat": [receptor.latitude] * 2 * n,
+                        "zagl": [receptor.altitude] * 2 * n,
+                        "foot": [0.0] * n + [0.01] * n,
+                    })
+                    return ModelRun(particles=particles)
+            """
+        )
+    )
+    script = textwrap.dedent(
+        f"""
+        import stilt
+        receptor = stilt.PointReceptor(
+            time="2023-01-01 12:00", longitude=-111.85, latitude=40.77, altitude=5
+        )
+        met = {{"directory": {str(tmp_path)!r}, "file_format": "%Y%m%d_%H", "file_tres": "1h"}}
+        particles = stilt.run_trajectories(
+            receptor, met, model="toypkg.ToyModel", n_hours=-1, nparticles=4, hnf_plume=False
+        )
+        print(len(particles), sorted(int(p) for p in particles["particle"].unique()))
+        """
+    )
+    done = subprocess.run(
+        [
+            sys.executable,
+            "-I",
+            "-c",
+            f"import sys; sys.path.insert(0, {str(tmp_path)!r})\n{script}",
+        ],
+        capture_output=True,
+        text=True,
+        cwd=tmp_path,
+    )
+    assert done.returncode == 0, done.stderr
+    assert done.stdout.strip() == "8 [1, 2, 3, 4]"

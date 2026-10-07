@@ -211,7 +211,9 @@ class ProjectConfig(BaseModel):
         "hysplit",
         description=(
             "Transport model the variants run with, unless a variant names "
-            "another. Its parameters are top-level keys of the config."
+            "another: ``hysplit``, or the import path of a model class in "
+            "another package, such as ``mypkg.models.MyModel``. Its parameters "
+            "are top-level keys of the config."
         ),
     )
     mets: dict[str, MetConfig] = Field(
@@ -352,9 +354,10 @@ class ProjectConfig(BaseModel):
             )
         met = _met_name(group, spec, self.mets)
         model = spec.pop("model", self.model)
-        if model not in MODELS:
+        if "." not in model and model not in MODELS:
             raise ValueError(
-                f"Unknown transport model {model!r}. The models are {sorted(MODELS)}."
+                f"Unknown transport model {model!r}. The built-in models are "
+                f"{sorted(MODELS)}; another is named by its import path."
             )
         _check_keys(spec, model, f"Variant {group!r}", own={"realizations"})
         realizations = spec.pop("realizations", None)
@@ -426,7 +429,8 @@ class ProjectConfig(BaseModel):
             if build not in builds:
                 model = get_model(declared.model)
                 builds[build] = ModelInfo(
-                    name=model.name,
+                    # As config.yaml names it, so another process imports it again.
+                    name=declared.model,
                     version=model.version(transport),
                     data_files=model.data_files(transport),
                 )

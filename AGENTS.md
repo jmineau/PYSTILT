@@ -190,7 +190,8 @@ src/stilt/
                      observation object.
   transport/         the TransportModel and TransportConfig protocols, ModelRun
                      (particles, log, met_files), ModelInfo, get_model with
-                     its MODELS table, and run_model / run_trajectories, which
+                     its MODELS table of built-in names (another model is named
+                     by import path), and run_model / run_trajectories, which
                      run a model and apply the core steps (__init__.py); one
                      subpackage per transport model, which owns its config
     hysplit/         HYSPLIT, the one model today: HysplitConfig (config.py, its

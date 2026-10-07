@@ -11,6 +11,7 @@ record, so a second model needs no change to the worker.
 from __future__ import annotations
 
 import datetime as dt
+import importlib
 import logging
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field, replace
@@ -64,7 +65,13 @@ class ModelInfo(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    name: str = Field(default="hysplit", description="Model name.")
+    name: str = Field(
+        ...,
+        description=(
+            "The model as ``model:`` names it: a built-in name such as "
+            "``hysplit``, or the import path of a model class."
+        ),
+    )
     version: str = Field(
         ..., description="Version string of the build, such as ``v5.1.0``."
     )
@@ -228,24 +235,46 @@ def _hysplit() -> TransportModel:
     return HysplitModel()
 
 
-#: The transport models PYSTILT can run, by the name ``model:`` takes in
-#: ``config.yaml``. A port of another model adds its entry here.
+#: The transport models built into PYSTILT, by the name ``model:`` takes in
+#: ``config.yaml``. A model in its own package is named by its import path
+#: instead, as a transform's ``kind:`` is.
 MODELS: dict[str, Callable[[], TransportModel]] = {"hysplit": _hysplit}
 
 
-def get_model(name: str = "hysplit") -> TransportModel:
+def get_model(name: str) -> TransportModel:
     """
-    Return the transport model called *name*.
+    Return the transport model *name* names.
+
+    *name* is a built-in model (:data:`MODELS`, such as ``hysplit``) or the
+    import path of a model class, such as ``emulator.stilt.EmulatorModel``,
+    which is imported and made with no arguments. A model in a package of
+    its own needs no registration, so every process that opens the project
+    finds it.
 
     Raises
     ------
     ValueError
-        If no model has that name.
+        If *name* is not a built-in model and not an import path.
+    ImportError
+        If *name* is an import path that cannot be imported on this machine.
     """
+    if "." in name:
+        module_name, _, attr = name.rpartition(".")
+        try:
+            module = importlib.import_module(module_name)
+            cls = getattr(module, attr)
+        except (ImportError, AttributeError) as error:
+            raise ImportError(
+                f"Transport model {name!r} could not be imported ({error}). "
+                "Install the package that defines it on this machine."
+            ) from None
+        return cls()
     factory = MODELS.get(name)
     if factory is None:
         raise ValueError(
-            f"Unknown transport model {name!r}. The models are {sorted(MODELS)}."
+            f"Unknown transport model {name!r}. The built-in models are "
+            f"{sorted(MODELS)}; another is named by its import path, such as "
+            "mypkg.models.MyModel."
         )
     return factory()
 

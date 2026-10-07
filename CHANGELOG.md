@@ -8,6 +8,8 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- `ModelInfo.name` has no default, and `get_model` takes the name
+  (breaking); a run records the model as `config.yaml` names it.
 - `Jacobian.columns` has named levels from the target: `time, lon, lat`
   for a grid (`time, x, y` when projected) and `time, cell` for a mesh or
   zones, where a grid's cells were one level of `(x, y)` tuples (breaking).
@@ -1004,6 +1006,12 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- `model:` takes the import path of a model class in another package
+  (`model: mypkg.models.MyModel`), as a transform's `kind:` does, so a
+  model needs no registration in every process. A settings folder made by
+  a model that is not installed reads as its stored settings, with a
+  warning, instead of stopping `stilt status` for the whole output
+  directory.
 - `--output` on `stilt run`, `stilt submit`, and `stilt status`, and
   `Project(path, output=...)`: use another output directory than
   `config.yaml` names (a path or a URL) without editing it. A Slurm task

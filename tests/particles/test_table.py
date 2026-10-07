@@ -81,7 +81,7 @@ def _params(tmp_path, hnf_plume=False) -> HysplitConfig:
 def _settings(params: HysplitConfig) -> dict:
     """The run settings a particle file records, for *params* and a test met."""
     met = MetConfig(file_format="%Y%m%d_%H", file_tres="1h")
-    return run_settings(params, met, ModelInfo(version="v5.1.0"), None)
+    return run_settings(params, met, ModelInfo(name="hysplit", version="v5.1.0"), None)
 
 
 def test_parquet_roundtrip_preserves_naive_utc_from_tz_aware_receptor(tmp_path):
