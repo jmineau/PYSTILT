@@ -9,95 +9,28 @@ import pytest
 import xarray as xr
 import yaml
 
-from stilt.config import Variant
 from stilt.footprint import jacobian, open_footprints
 from stilt.footprint.config import FootprintConfig
 from stilt.footprint.targets import Mesh
 from stilt.identity import footprint_hash, footprint_settings, settings_hash
-from stilt.meteorology import MetConfig
 from stilt.output import Output
 from stilt.particles import particles_metadata, write_particles
-from stilt.receptors import PointReceptor
 from stilt.spatial import Grid
 
-from .fixtures.factories import make_receptor, make_variant
-from .fixtures.footprints import as_footprint
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-GRID = Grid(xmin=-112.0, xmax=-111.5, ymin=40.5, ymax=41.0, xres=0.1, yres=0.1)
-MET = MetConfig(directory="/data/hrrr", file_format="%Y%m%d_%H", file_tres="6h")
-
-
-def _variant(
-    name: str = "hrrr", footprint: FootprintConfig | None = None, **overrides
-) -> Variant:
-    """A resolved variant for the tests; *overrides* change the transport fields."""
-    return make_variant(name, met_config=MET, footprint=footprint, **overrides)
-
-
-VARIANT = _variant()
-#: VARIANT with footprints on GRID.
-FEET = _variant(footprint=FootprintConfig(grid=GRID))
-
-
-def _receptor(hour: int = 12, day: int = 15) -> PointReceptor:
-    return make_receptor(dt.datetime(2024, 7, day, hour))
-
-
-def _trajectories(receptor: PointReceptor, n: int = 50) -> pd.DataFrame:
-    rng = np.random.default_rng(int(receptor.time.timestamp()) % 1000)
-    steps = np.arange(-1, -11, -1, dtype=float)
-    indx = np.repeat(np.arange(1, n + 1, dtype=float), len(steps))
-    time = np.tile(steps, n)
-    data = pd.DataFrame(
-        {
-            "time": time,
-            "particle": indx,
-            "lon": -111.85 + rng.normal(0, 0.1, len(time)),
-            "lat": 40.77 + rng.normal(0, 0.1, len(time)),
-            "zagl": rng.uniform(0, 500, len(time)),
-            "foot": rng.uniform(0, 0.1, len(time)),
-        }
-    )
-    data["datetime"] = pd.Timestamp(receptor.time) + pd.to_timedelta(
-        data["time"], unit="min"
-    )
-    return data
-
-
-def _footprint(
-    receptor: PointReceptor, hours=(-2, -1, 0), seed: int = 0, name: str = "hrrr"
-) -> xr.DataArray:
-    """A footprint on GRID with a few non-zero cells per layer."""
-    x_axis, y_axis = GRID.axes
-    rng = np.random.default_rng(seed)
-    values = np.zeros((len(hours), len(y_axis), len(x_axis)))
-    for t in range(len(hours)):
-        for _ in range(4):
-            values[t, rng.integers(len(y_axis)), rng.integers(len(x_axis))] = (
-                rng.uniform(0.01, 1.0)
-            )
-    times = [pd.Timestamp(receptor.time) + pd.Timedelta(hours=h) for h in hours]
-    data = xr.DataArray(
-        values,
-        dims=["time", "lat", "lon"],
-        coords={"time": times, "lat": y_axis, "lon": x_axis},
-    )
-    return as_footprint(data, receptor, FootprintConfig(grid=GRID), name)
-
+from .fixtures.output import (
+    FEET,
+    GRID,
+    VARIANT,
+    fake_footprint,
+    fake_particles,
+    output_variant,
+    receptor_at,
+    write_one,
+)
 
 # ---------------------------------------------------------------------------
 # Folders
 # ---------------------------------------------------------------------------
-
-
-def _write(out: Output, variant: Variant = VARIANT, receptor=None) -> Path:
-    """Write one receptor's particles for *variant*, making its folder."""
-    receptor = receptor if receptor is not None else _receptor()
-    return out.write_particles(variant, receptor, _trajectories(receptor), [])
 
 
 def test_footprint_files_record_the_geometry_hash(tmp_path):
@@ -113,9 +46,9 @@ def test_footprint_files_record_the_geometry_hash(tmp_path):
         footprint=FootprintConfig(grid=GRID, geometry=spec),
         geometry_hash="deadbeef00",
     )
-    receptor = _receptor()
-    path = out.write_footprint(variant, _footprint(receptor))
-    out.write_empty_footprint(variant, _receptor(hour=13), "outside_domain")
+    receptor = receptor_at()
+    path = out.write_footprint(variant, fake_footprint(receptor))
+    out.write_empty_footprint(variant, receptor_at(hour=13), "outside_domain")
     assert read_footprint(path).stilt.geometry_hash == "deadbeef00"
     folder = out.folder("footprints", variant)
     record = yaml.safe_load((folder / "_settings.yaml").read_text())
@@ -127,8 +60,8 @@ def test_footprint_files_record_the_geometry_hash(tmp_path):
 def test_run_folder_is_name_and_hash_with_settings_file(tmp_path):
     out = Output(tmp_path / "output")
     assert out.folder("particles", VARIANT) is None
-    assert out.path("particles", VARIANT, _receptor().id) is None
-    _write(out)
+    assert out.path("particles", VARIANT, receptor_at().id) is None
+    write_one(out)
     digest = VARIANT.particles_hash
     folder = out.folder("particles", VARIANT)
     assert folder == tmp_path / "output" / "particles" / f"settings=hrrr-{digest[:6]}"
@@ -146,18 +79,18 @@ def test_run_folder_is_name_and_hash_with_settings_file(tmp_path):
 
 def test_same_settings_under_another_name_share_the_folder(tmp_path):
     out = Output(tmp_path / "output")
-    _write(out)
-    renamed = _variant("hrrr-main")
+    write_one(out)
+    renamed = output_variant("hrrr-main")
     assert out.folder("particles", renamed) == out.folder("particles", VARIANT)
-    _write(out, renamed, _receptor(hour=13))
+    write_one(out, renamed, receptor_at(hour=13))
     assert len(out.hashes("particles")) == 1
 
 
 def test_changed_settings_make_a_new_folder_beside_the_old(tmp_path):
     out = Output(tmp_path / "output")
-    _write(out)
-    changed = _variant(ziscale=0.8)
-    _write(out, changed)
+    write_one(out)
+    changed = output_variant(ziscale=0.8)
+    write_one(out, changed)
     first, second = out.folder("particles", VARIANT), out.folder("particles", changed)
     assert second != first
     assert second is not None and second.name.startswith("settings=hrrr-")
@@ -165,7 +98,7 @@ def test_changed_settings_make_a_new_folder_beside_the_old(tmp_path):
         first.name.removeprefix("settings="),
         second.name.removeprefix("settings="),
     }
-    assert out.folder("particles", _variant(numpar=7)) is None
+    assert out.folder("particles", output_variant(numpar=7)) is None
 
 
 def test_kind_is_particles_or_footprints(tmp_path):
@@ -182,8 +115,8 @@ def test_particles_round_trip_in_date_folders(tmp_path):
     from stilt.particles import read_particles
 
     out = Output(tmp_path / "output")
-    receptor = _receptor()
-    traj = _trajectories(receptor)
+    receptor = receptor_at()
+    traj = fake_particles(receptor)
     path = out.write_particles(VARIANT, receptor, traj, [])
     folder = out.folder("particles", VARIANT)
     assert path == folder / "date=2024-07-15" / f"{receptor.id}.parquet"
@@ -202,7 +135,7 @@ def test_particles_round_trip_in_date_folders(tmp_path):
 def test_particles_store_time_and_index_as_int32(tmp_path):
     import pyarrow.parquet as pq
 
-    path = _write(Output(tmp_path / "output"))
+    path = write_one(Output(tmp_path / "output"))
     schema = pq.read_schema(path)
     assert str(schema.field("time").type) == "int32"
     assert str(schema.field("particle").type) == "int32"
@@ -219,9 +152,9 @@ def test_particle_files_name_their_receptor_in_a_column(tmp_path):
     from stilt.particles import read_particles
 
     out = Output(tmp_path / "output")
-    receptors = [_receptor(hour=6), _receptor(hour=18, day=16)]
+    receptors = [receptor_at(hour=6), receptor_at(hour=18, day=16)]
     for receptor in receptors:
-        out.write_particles(VARIANT, receptor, _trajectories(receptor, n=10), [])
+        out.write_particles(VARIANT, receptor, fake_particles(receptor, n=10), [])
 
     scan = pads.dataset(out.folder("particles", VARIANT), format="parquet").to_table()
     counts = Counter(scan.column("receptor").to_pylist())
@@ -237,8 +170,8 @@ def test_particle_file_without_a_receptor_column_still_reads(tmp_path):
 
     from stilt.particles import read_particles
 
-    receptor = _receptor()
-    traj = _trajectories(receptor)
+    receptor = receptor_at()
+    traj = fake_particles(receptor)
     path = write_particles(
         tmp_path / "p.parquet", traj, receptor, VARIANT.run_settings, []
     )
@@ -252,8 +185,8 @@ def test_particle_file_without_a_receptor_column_still_reads(tmp_path):
 
 
 def test_particles_reject_fractional_time(tmp_path):
-    receptor = _receptor()
-    traj = _trajectories(receptor)
+    receptor = receptor_at()
+    traj = fake_particles(receptor)
     traj.loc[0, "time"] = -1.5
     with pytest.raises(ValueError, match="whole numbers"):
         Output(tmp_path / "output").write_particles(VARIANT, receptor, traj, [])
@@ -262,7 +195,7 @@ def test_particles_reject_fractional_time(tmp_path):
 def test_particles_table_is_every_file_in_date_order(tmp_path):
     out = Output(tmp_path / "output")
     for day, hour in [(16, 0), (15, 18), (15, 6)]:
-        _write(out, receptor=_receptor(hour=hour, day=day))
+        write_one(out, receptor=receptor_at(hour=hour, day=day))
     table = out.table("particles", VARIANT)
     ids = list(dict.fromkeys(table.column("receptor").to_pylist()))
     assert [i[:10] for i in ids] == ["2024071506", "2024071518", "2024071600"]
@@ -276,9 +209,9 @@ def test_particles_table_is_every_file_in_date_order(tmp_path):
 def test_footprint_folder_is_variant_name_and_combined_hash(tmp_path):
     out = Output(tmp_path / "output")
     config = FootprintConfig(grid=GRID, smooth_factor=1.0)
-    variant = _variant(footprint=config)
-    receptor = _receptor()
-    out.write_footprint(variant, _footprint(receptor))
+    variant = output_variant(footprint=config)
+    receptor = receptor_at()
+    out.write_footprint(variant, fake_footprint(receptor))
     digest = footprint_hash(VARIANT.particles_hash, footprint_settings(config, None))
     assert digest == settings_hash(
         {
@@ -294,17 +227,21 @@ def test_footprint_folder_is_variant_name_and_combined_hash(tmp_path):
     assert record["particles"] == particles.name.removeprefix("settings=")
     assert out.hashes("footprints") == {f"hrrr-{digest[:6]}": digest}
 
-    smooth = _variant(
+    smooth = output_variant(
         "hrrr-smooth", footprint=config.model_copy(update={"smooth_factor": 0.5})
     )
-    out.write_footprint(smooth, _footprint(receptor))
+    out.write_footprint(smooth, fake_footprint(receptor))
     other = out.folder("footprints", smooth)
     assert other != folder and other.name.startswith("settings=hrrr-smooth-")
     assert len(out.hashes("footprints")) == 2
     # The same settings under another variant name reuse the folder.
-    assert out.folder("footprints", _variant("renamed", footprint=config)) == folder
+    assert (
+        out.folder("footprints", output_variant("renamed", footprint=config)) == folder
+    )
     # The same footprint settings on other particles are another folder.
-    assert out.folder("footprints", _variant(footprint=config, numpar=200)) is None
+    assert (
+        out.folder("footprints", output_variant(footprint=config, numpar=200)) is None
+    )
 
 
 def test_footprint_round_trip_is_exact_in_float32(tmp_path):
@@ -312,8 +249,8 @@ def test_footprint_round_trip_is_exact_in_float32(tmp_path):
     from stilt.footprint.io import _empty_reason
 
     out = Output(tmp_path / "output")
-    receptor = _receptor()
-    foot = _footprint(receptor, hours=(-3, -2, -1, 0), seed=1)
+    receptor = receptor_at()
+    foot = fake_footprint(receptor, hours=(-3, -2, -1, 0), seed=1)
     path = out.write_footprint(FEET, foot)
     folder = out.folder("footprints", FEET)
     assert path == folder / "date=2024-07-15" / f"{receptor.id}.parquet"
@@ -335,7 +272,7 @@ def test_footprint_round_trip_is_exact_in_float32(tmp_path):
 def test_footprint_all_zero_layer_keeps_its_shape(tmp_path):
     from stilt.footprint import read_footprint
 
-    foot = _footprint(_receptor(), hours=(-2, -1, 0))
+    foot = fake_footprint(receptor_at(), hours=(-2, -1, 0))
     foot[1] = 0.0
     back = read_footprint(Output(tmp_path / "output").write_footprint(FEET, foot))
     assert back.shape == foot.shape
@@ -347,7 +284,7 @@ def test_empty_footprint_is_a_file_with_no_rows_and_a_reason(tmp_path):
     from stilt.footprint.io import _empty_reason
 
     out = Output(tmp_path / "output")
-    receptor = _receptor()
+    receptor = receptor_at()
     path = out.write_empty_footprint(FEET, receptor, "outside_domain")
     assert path.exists()
     assert read_footprint(path) is None
@@ -359,7 +296,7 @@ def test_footprint_coordinates_off_by_rounding_still_match(tmp_path):
     """A stored footprint's axis can differ from the grid's by 1e-14, as real files do."""
     from stilt.footprint import read_footprint
 
-    foot = _footprint(_receptor(), seed=5)
+    foot = fake_footprint(receptor_at(), seed=5)
     nudged = foot.assign_coords(
         lat=foot["lat"].values + 5e-15, lon=foot["lon"].values - 5e-15
     )
@@ -368,7 +305,7 @@ def test_footprint_coordinates_off_by_rounding_still_match(tmp_path):
 
 
 def test_footprint_on_another_grid_is_rejected(tmp_path):
-    foot = _footprint(_receptor())
+    foot = fake_footprint(receptor_at())
     shifted = foot.assign_coords(lon=foot["lon"].values + 0.03)
     with pytest.raises(ValueError, match="not cells of the grid"):
         Output(tmp_path / "output").write_footprint(FEET, shifted)
@@ -379,7 +316,7 @@ def test_a_variant_without_a_grid_has_no_footprint_folder(tmp_path):
     assert out.folder("footprints", VARIANT) is None
     assert out.present("footprints", VARIANT) == frozenset()
     with pytest.raises(ValueError, match="no grid"):
-        out.write_empty_footprint(VARIANT, _receptor(), "outside_domain")
+        out.write_empty_footprint(VARIANT, receptor_at(), "outside_domain")
 
 
 # ---------------------------------------------------------------------------
@@ -389,10 +326,10 @@ def test_a_variant_without_a_grid_has_no_footprint_folder(tmp_path):
 
 def test_complete_is_particles_and_a_footprint_when_the_variant_has_a_grid(tmp_path):
     out = Output(tmp_path / "output")
-    a, b, c = _receptor(6), _receptor(12), _receptor(18)
+    a, b, c = receptor_at(6), receptor_at(12), receptor_at(18)
     for receptor in (a, b):
-        _write(out, FEET, receptor)
-    out.write_footprint(FEET, _footprint(a))
+        write_one(out, FEET, receptor)
+    out.write_footprint(FEET, fake_footprint(a))
     out.write_empty_footprint(FEET, c, "outside_domain")  # a footprint, no particles
     ids = [a.id, b.id, c.id]
     assert out.complete(FEET, ids) == {a.id}
@@ -413,7 +350,7 @@ def test_completed_is_the_one_rule():
 
 def test_failure_records_live_in_the_logs_of_the_folder_that_failed(tmp_path):
     out = Output(tmp_path / "output")
-    rid = _receptor().id
+    rid = receptor_at().id
     assert out.failure("particles", VARIANT, rid) is None
     out.record_failure("particles", VARIANT, rid, {"step": "particles", "reason": "X"})
     name = out.folder("particles", VARIANT).name
@@ -422,7 +359,7 @@ def test_failure_records_live_in_the_logs_of_the_folder_that_failed(tmp_path):
     assert out.failures("particles", VARIANT) == {
         rid: {"step": "particles", "reason": "X"}
     }
-    assert out.failures("particles", VARIANT, [_receptor(day=20).id]) == {}
+    assert out.failures("particles", VARIANT, [receptor_at(day=20).id]) == {}
     assert out.failure("footprints", FEET, rid) is None
     out.clear_failure("particles", VARIANT, rid)
     assert out.failure("particles", VARIANT, rid) is None
@@ -430,7 +367,7 @@ def test_failure_records_live_in_the_logs_of_the_folder_that_failed(tmp_path):
 
 def test_logs_and_kept_workdirs_sit_beside_the_particles(tmp_path):
     out = Output(tmp_path / "output")
-    rid = _receptor().id
+    rid = receptor_at().id
     assert out.log_path(VARIANT, rid) is None and out.kept_workdir(VARIANT, rid) is None
     log = out.write_log(VARIANT, rid, "hycs_std ran\n")
     name = out.folder("particles", VARIANT).name
@@ -453,11 +390,11 @@ def written_footprints(tmp_path):
     out = Output(tmp_path / "output")
     feet_by_id = {}
     for k, hour in enumerate([6, 12, 18]):
-        receptor = _receptor(hour=hour)
-        foot = _footprint(receptor, hours=(-3, -2, -1, 0), seed=10 + k)
+        receptor = receptor_at(hour=hour)
+        foot = fake_footprint(receptor, hours=(-3, -2, -1, 0), seed=10 + k)
         out.write_footprint(FEET, foot)
         feet_by_id[str(receptor.id)] = foot
-    empty = _receptor(hour=23)
+    empty = receptor_at(hour=23)
     out.write_empty_footprint(FEET, empty, "outside_domain")
     return out, feet_by_id, str(empty.id)
 
@@ -594,10 +531,10 @@ def test_jacobian_to_xarray_keeps_grid_cells_as_tuples(written_footprints):
 
 def test_open_footprints_stacks_receptors_on_the_hour(tmp_path):
     out = Output(tmp_path / "output")
-    early, late, empty = _receptor(hour=6), _receptor(hour=18), _receptor(hour=23)
+    early, late, empty = receptor_at(hour=6), receptor_at(hour=18), receptor_at(hour=23)
     hours = {early.id: [-3, -1], late.id: [-2, -1, 0]}
     feet = {
-        r.id: _footprint(r, hours=hours[r.id], seed=k)
+        r.id: fake_footprint(r, hours=hours[r.id], seed=k)
         for k, r in enumerate((early, late))
     }
     for foot in feet.values():
@@ -625,9 +562,13 @@ def test_open_footprints_stacks_receptors_on_the_hour(tmp_path):
 
 def test_open_footprints_reads_in_blocks_by_date_folder(tmp_path):
     out = Output(tmp_path / "output")
-    receptors = [_receptor(6, day=15), _receptor(12, day=15), _receptor(6, day=16)]
+    receptors = [
+        receptor_at(6, day=15),
+        receptor_at(12, day=15),
+        receptor_at(6, day=16),
+    ]
     for k, r in enumerate(receptors):
-        out.write_footprint(FEET, _footprint(r, seed=k))
+        out.write_footprint(FEET, fake_footprint(r, seed=k))
     ds = open_footprints(out.path("footprints", FEET, r.id) for r in receptors)
     assert ds.foot.chunks[0] == (2, 1)
     assert float(ds.foot.sum()) > 0
@@ -635,10 +576,10 @@ def test_open_footprints_reads_in_blocks_by_date_folder(tmp_path):
 
 def test_open_footprints_refuses_mixed_settings(tmp_path):
     out = Output(tmp_path / "output")
-    other = _variant("fine", FootprintConfig(grid=GRID, smooth_factor=0.5))
-    r = _receptor()
-    out.write_footprint(FEET, _footprint(r))
-    out.write_footprint(other, _footprint(r, name="fine"))
+    other = output_variant("fine", FootprintConfig(grid=GRID, smooth_factor=0.5))
+    r = receptor_at()
+    out.write_footprint(FEET, fake_footprint(r))
+    out.write_footprint(other, fake_footprint(r, name="fine"))
     paths = [out.path("footprints", v, r.id) for v in (FEET, other)]
     with pytest.raises(ValueError, match="different settings"):
         open_footprints(paths)
@@ -670,7 +611,7 @@ def _interleave(monkeypatch, competitor):
 def test_two_workers_starting_a_run_at_once_both_succeed(tmp_path, monkeypatch):
     """Both wrote `_settings.tmp`; the second rename found it already moved."""
     path = tmp_path / "output"
-    rid = _receptor().id
+    rid = receptor_at().id
     _interleave(monkeypatch, lambda: Output(path).write_log(VARIANT, rid, ""))
 
     Output(path).write_log(VARIANT, rid, "")
@@ -685,8 +626,8 @@ def test_two_workers_writing_one_receptor_at_once_both_succeed(tmp_path, monkeyp
     """The other worker's cleanup removed the shared temporary file."""
     from stilt.particles import read_particles
 
-    receptor = _receptor()
-    traj = _trajectories(receptor)
+    receptor = receptor_at()
+    traj = fake_particles(receptor)
     out = Output(tmp_path / "output")
     other = Output(tmp_path / "output")
     out.write_log(VARIANT, receptor.id, "")  # both find the folder
@@ -709,10 +650,10 @@ def test_present_lists_only_the_date_folders_asked_for(tmp_path, monkeypatch):
     import stilt.output as output_module
 
     out = Output(tmp_path / "output")
-    day15, day16 = _receptor(12, day=15), _receptor(12, day=16)
+    day15, day16 = receptor_at(12, day=15), receptor_at(12, day=16)
     for receptor in (day15, day16):
-        _write(out, receptor=receptor)
-    never_run = _receptor(12, day=20)
+        write_one(out, receptor=receptor)
+    never_run = receptor_at(12, day=20)
     out.folder("particles", VARIANT)  # the folder is known; only receptors are listed
 
     listed: list[str] = []
@@ -741,11 +682,11 @@ def test_each_result_file_names_its_settings_and_the_version_that_wrote_it(tmp_p
 
     import stilt
 
-    receptor = _receptor()
+    receptor = receptor_at()
     out = Output(tmp_path / "output")
-    particles = out.write_particles(FEET, receptor, _trajectories(receptor), [])
-    footprint = out.write_footprint(FEET, _footprint(receptor))
-    empty = out.write_empty_footprint(FEET, _receptor(13), "outside_domain")
+    particles = out.write_particles(FEET, receptor, fake_particles(receptor), [])
+    footprint = out.write_footprint(FEET, fake_footprint(receptor))
+    empty = out.write_empty_footprint(FEET, receptor_at(13), "outside_domain")
 
     meta = pq.read_schema(particles).metadata
     assert meta[b"stilt:hash"].decode() == FEET.particles_hash
@@ -762,9 +703,9 @@ def test_a_stored_footprint_file_opens_on_its_own(tmp_path):
 
     from stilt.footprint import read_footprint
 
-    receptor = _receptor()
+    receptor = receptor_at()
     path = Output(tmp_path / "output").write_footprint(
-        FEET, _footprint(receptor, seed=3)
+        FEET, fake_footprint(receptor, seed=3)
     )
 
     copied = tmp_path / "elsewhere.parquet"  # away from the folder's _settings.yaml
@@ -783,7 +724,7 @@ def test_a_footprint_file_without_its_settings_is_refused(tmp_path):
     from stilt.footprint import read_footprint
 
     path = Output(tmp_path / "output").write_footprint(
-        FEET, _footprint(_receptor(), seed=3)
+        FEET, fake_footprint(receptor_at(), seed=3)
     )
     table = pq.ParquetFile(path).read()
     meta = {k: v for k, v in table.schema.metadata.items() if k != b"stilt:footprint"}
@@ -795,9 +736,9 @@ def test_a_footprint_file_without_its_settings_is_refused(tmp_path):
 
 def test_a_footprint_folder_stored_with_projection_is_found_by_crs(tmp_path):
     """Folders written when the grid said ``projection`` are found by a ``crs`` config."""
-    variant = _variant(footprint=FootprintConfig(grid=GRID))
+    variant = output_variant(footprint=FootprintConfig(grid=GRID))
     out = Output(tmp_path / "output")
-    out.write_empty_footprint(variant, _receptor(), "outside_domain")
+    out.write_empty_footprint(variant, receptor_at(), "outside_domain")
     folder = out.folder("footprints", variant)
     record_path = folder / "_settings.yaml"
     record = yaml.safe_load(record_path.read_text())
@@ -811,8 +752,8 @@ def test_a_footprint_folder_stored_with_projection_is_found_by_crs(tmp_path):
 def test_a_lookup_reads_each_folder_once(tmp_path, monkeypatch):
     """A lookup that misses lists the tree again but reads only the folders it has not seen."""
     out = Output(tmp_path / "output")
-    _write(out)
-    _write(out, _variant(ziscale=0.8))
+    write_one(out)
+    write_one(out, output_variant(ziscale=0.8))
 
     import stilt.output
 
@@ -826,20 +767,20 @@ def test_a_lookup_reads_each_folder_once(tmp_path, monkeypatch):
     monkeypatch.setattr(stilt.output, "read_run_settings", counting)
     fresh = Output(tmp_path / "output")
     for _ in range(3):  # a variant that has not run misses every time
-        assert fresh.folder("particles", _variant(numpar=7)) is None
+        assert fresh.folder("particles", output_variant(numpar=7)) is None
     assert len(reads) == 2  # each existing folder once
 
     # A folder another worker creates is found on the next lookup, which
     # reads that folder alone.
-    _write(Output(tmp_path / "output"), _variant(numpar=7))
+    write_one(Output(tmp_path / "output"), output_variant(numpar=7))
     before = len(reads)
-    assert fresh.folder("particles", _variant(numpar=7)) is not None
+    assert fresh.folder("particles", output_variant(numpar=7)) is not None
     assert len(reads) == before + 1
 
 
 def test_a_footprint_folder_reads_its_particles_folder_once(tmp_path, monkeypatch):
     out = Output(tmp_path / "output")
-    out.write_empty_footprint(FEET, _receptor(), "outside_domain")
+    out.write_empty_footprint(FEET, receptor_at(), "outside_domain")
 
     import stilt.output
 
@@ -858,10 +799,10 @@ def test_an_ensembles_realizations_are_partitions_of_one_folder(tmp_path):
     from dataclasses import replace
 
     out = Output(tmp_path / "output")
-    ensemble = replace(_variant("err", krand=4), realizations=2)
-    receptor = _receptor()
+    ensemble = replace(output_variant("err", krand=4), realizations=2)
+    receptor = receptor_at()
     paths = [
-        out.write_particles(ensemble, receptor, _trajectories(receptor), [], k)
+        out.write_particles(ensemble, receptor, fake_particles(receptor), [], k)
         for k in (0, 1)
     ]
     folder = out.folder("particles", ensemble)
@@ -887,8 +828,8 @@ def test_a_stored_footprint_says_what_made_it(tmp_path):
     from stilt.footprint import read_footprint
 
     out = Output(tmp_path / "output")
-    receptor = _receptor()
-    path = out.write_footprint(FEET, _footprint(receptor))
+    receptor = receptor_at()
+    path = out.write_footprint(FEET, fake_footprint(receptor))
 
     foot = read_footprint(path)
 

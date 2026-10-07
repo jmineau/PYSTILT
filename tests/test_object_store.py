@@ -21,13 +21,13 @@ from stilt.output import Output  # noqa: E402
 from stilt.particles import read_particles  # noqa: E402
 
 from .conftest import integration  # noqa: E402
-from .test_output import (  # noqa: E402
+from .fixtures.output import (  # noqa: E402
     FEET,
     VARIANT,
-    _footprint,
-    _receptor,
-    _trajectories,
-    _write,
+    fake_footprint,
+    fake_particles,
+    receptor_at,
+    write_one,
 )
 
 BUCKET = "pystilt-test"
@@ -68,10 +68,10 @@ def store(s3_server) -> str:
 def test_output_on_an_object_store_writes_lists_and_reads(store):
     out = Output(f"{store}/output/")
     assert str(out.directory) == f"{store}/output"
-    receptor = _receptor()
+    receptor = receptor_at()
     rid = str(receptor.id)
 
-    path = _write(out, VARIANT, receptor)
+    path = write_one(out, VARIANT, receptor)
     assert str(path).startswith("s3://")
     assert out.present("particles", VARIANT) == {rid}
     assert out.hashes("particles") == {
@@ -80,10 +80,10 @@ def test_output_on_an_object_store_writes_lists_and_reads(store):
         ]: VARIANT.particles_hash  # type: ignore[union-attr]
     }
     particles = read_particles(path)
-    assert len(particles) == len(_trajectories(receptor))
+    assert len(particles) == len(fake_particles(receptor))
     assert out.table("particles", VARIANT).num_rows == len(particles)
 
-    foot = _footprint(receptor)
+    foot = fake_footprint(receptor)
     out.write_footprint(FEET, foot)
     assert out.present("footprints", FEET) == {rid}
     back = read_footprint(out.path("footprints", FEET, rid))  # type: ignore[arg-type]
@@ -92,7 +92,7 @@ def test_output_on_an_object_store_writes_lists_and_reads(store):
     ds = open_footprints([out.path("footprints", FEET, rid)])  # type: ignore[list-item]
     assert float(ds.foot.sum()) == pytest.approx(float(foot.sum()), rel=1e-6)
 
-    later = _receptor(hour=18)
+    later = receptor_at(hour=18)
     out.write_empty_footprint(FEET, later, "outside_domain")
     assert out.present("footprints", FEET) == {rid, str(later.id)}
     assert read_footprint(out.path("footprints", FEET, str(later.id))) is None  # type: ignore[arg-type]
@@ -100,7 +100,7 @@ def test_output_on_an_object_store_writes_lists_and_reads(store):
 
 def test_logs_and_failure_records_on_an_object_store(store):
     out = Output(f"{store}/output")
-    rid = str(_receptor().id)
+    rid = str(receptor_at().id)
     log = out.write_log(VARIANT, rid, "hycs_std ran\n")
     assert log.read_text() == "hycs_std ran\n"
     record = {"step": "particles", "reason": "MET_COVERAGE", "message": "boom"}
@@ -112,7 +112,7 @@ def test_logs_and_failure_records_on_an_object_store(store):
 
 def test_a_kept_workdir_on_an_object_store_leaves_out_links(store, tmp_path):
     out = Output(f"{store}/output")
-    rid = str(_receptor().id)
+    rid = str(receptor_at().id)
     workdir = tmp_path / "work"
     workdir.mkdir()
     (workdir / "CONTROL").write_text("x")
