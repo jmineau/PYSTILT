@@ -7,12 +7,12 @@ import pytest
 
 from stilt.config import ProjectConfig
 from stilt.execution.worker import run_particles
-from stilt.meteorology import Met, run_window
+from stilt.meteorology import run_window
 from stilt.output import Output
 from stilt.particles import particles_metadata
 from stilt.simulation import Simulation
 from stilt.transport import ModelRun, get_model
-from stilt.transport.hysplit import HysplitConfig, HysplitModel
+from stilt.transport.hysplit import HysplitConfig, HysplitModel, Met, MetConfig
 
 from ..fixtures.factories import make_met_config, make_met_files, make_variant
 
@@ -136,7 +136,7 @@ def test_run_particles_goes_through_the_model_the_settings_name(
     variant = make_variant(met_config=met_config, n_hours=-1, numpar=1, hnf_plume=False)
     sim = Simulation(point_receptor, variant, Output(tmp_path / "output"))
 
-    traj = run_particles(sim, met=met_config, workdir=tmp_path / "work", timeout=45)
+    traj = run_particles(sim, workdir=tmp_path / "work", timeout=45)
 
     assert asked == ["hysplit"]
     assert calls[0]["receptor"] == point_receptor
@@ -151,6 +151,7 @@ class _EchoModel:
 
     name = "echo"
     config_class = HysplitConfig
+    met_config_class = MetConfig
     seen: dict = {}
 
     def version(self, config):

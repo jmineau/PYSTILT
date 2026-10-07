@@ -8,6 +8,29 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- A run's settings record its met as the weather product and the crop
+  (breaking: every particles folder gets a new hash). The product is the
+  source id in the ARL file headers (`HRRR`, `NAM`, ...), read from the
+  first file under the met's `directory`, or the archive's for
+  `download` (arlmet 0.1.0b2). Where the files are kept and how they are
+  named (`directory`, `file_format`, `file_tres`, `download`,
+  `download_from`, `n_min`) are no longer recorded: moving the met files
+  keeps every result, and two archives named alike, such as an HRRR and a
+  NAM archive, no longer share a settings folder. A single run no longer
+  records `realization: null`, and the model record always has
+  `data_files`. Folders written before are not found under the new
+  hashes until they are renamed (#170).
+- `MetConfig` is HYSPLIT's met config, `stilt.transport.hysplit.MetConfig`,
+  with `Met` beside it, and `stilt.MetConfig` is gone (breaking). A
+  transport model names its met config as `met_config_class`, and
+  `ProjectConfig.mets` holds each met as written, checked by the met config
+  of the model that reads it. `kind` is gone, and `directory` is required
+  by HYSPLIT's met only: another model's met need not name one.
+  `project.mets` is gone; a variant's met is `variant.met_config`, and
+  `run_particles` takes none.
+- A met's `directory` and `subgrid_dir` are read one way everywhere: `~`
+  and `$VARIABLES` expand in `run_trajectories` and `Met` too, as in a
+  project.
 - `ModelInfo.name` has no default, and `get_model` takes the name
   (breaking); a run records the model as `config.yaml` names it.
 - `Jacobian.columns` has named levels from the target: `time, lon, lat`

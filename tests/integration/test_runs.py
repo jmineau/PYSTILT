@@ -19,9 +19,9 @@ from stilt.config import ProjectConfig
 from stilt.execution.runner import resolve_compute_root
 from stilt.footprint.targets import Mesh
 from stilt.identity import transport_from_settings
-from stilt.meteorology import MetConfig
 from stilt.particles import particles_metadata
 from stilt.project import Project
+from stilt.transport.hysplit import MetConfig
 from stilt.transport.hysplit.driver import winderrtf
 
 from ..conftest import integration

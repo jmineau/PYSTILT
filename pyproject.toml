@@ -24,7 +24,7 @@ classifiers = [
     "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
-    "arlmet>=0.1.0b1",
+    "arlmet>=0.1.0b2",
     "dask[array]>=2023.6",
     "netcdf4>=1.6.5",
     "numpy>=1.24",
@@ -51,7 +51,7 @@ visualization = [
     "matplotlib>=3.7",
 ]
 download = [
-    "arlmet[archives]>=0.1.0b1",
+    "arlmet[archives]>=0.1.0b2",
 ]
 sparse = [
     "sparse>=0.15",

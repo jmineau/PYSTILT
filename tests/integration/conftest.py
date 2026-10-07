@@ -10,9 +10,9 @@ from pathlib import Path
 import pytest
 
 from stilt.config import ProjectConfig
-from stilt.meteorology import MetConfig
 from stilt.receptors import ColumnReceptor, MultiPointReceptor
 from stilt.spatial import Grid
+from stilt.transport.hysplit import MetConfig
 
 from ..fixtures.factories import make_met_config
 from ..fixtures.r_stilt_reference import (

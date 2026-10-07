@@ -12,11 +12,11 @@ import xarray as xr
 from stilt.config import ProjectConfig
 from stilt.execution.config import ExecutionConfig
 from stilt.execution.runner import resolve_compute_root
-from stilt.meteorology import MetConfig
 from stilt.output import Output
 from stilt.project import Project
 from stilt.receptors import PointReceptor
 from stilt.spatial import Grid
+from stilt.transport.hysplit import MetConfig
 from stilt.transport.hysplit.driver import winderrtf
 
 from .fixtures.factories import make_met_config, make_receptor
@@ -1197,8 +1197,11 @@ def test_relative_paths_start_from_the_project_not_the_working_directory(
     monkeypatch.chdir(elsewhere)
 
     project = Project(tmp_path / "proj")
-    assert project.mets["local"].directory == project.directory / "met"
-    assert project.mets["shared"].directory == (tmp_path / "archive/hrrr").resolve()
+    variants = project.variants
+    assert variants["local"].met_config.directory == project.directory / "met"
+    assert variants["shared"].met_config.directory == (
+        (tmp_path / "archive/hrrr").resolve()
+    )
     # Reached through a link, the output is the directory it points to.
     assert project.output == Output((tmp_path / "real_output").resolve())
     # A simulation finds relative file names in its settings from the project.

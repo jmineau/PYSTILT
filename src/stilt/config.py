@@ -4,15 +4,17 @@ The project config: what ``config.yaml`` holds, and the variants it declares.
 ``config.yaml`` names the transport model, the mets, and the variants. The
 model's parameters and the footprint settings are flat, top-level keys: the
 defaults every variant starts from. Each part has its own config class,
-next to the code that uses it: the transport model's (such as
-:class:`~stilt.transport.hysplit.HysplitConfig`),
-:class:`~stilt.footprint.config.FootprintConfig`,
-:class:`~stilt.meteorology.MetConfig`, and
+next to the code that uses it: the transport model's and its met config
+(such as :class:`~stilt.transport.hysplit.HysplitConfig` and
+:class:`~stilt.transport.hysplit.MetConfig`),
+:class:`~stilt.footprint.config.FootprintConfig`, and
 :class:`~stilt.execution.ExecutionConfig`. :class:`ProjectConfig` reads the
 file and checks it without reading any other file, so a ``config.yaml``
 loads offline. :meth:`ProjectConfig.resolve` turns each declared variant
 into a :class:`Variant`, what its simulations run with; that reads each
-footprint geometry and asks the transport model for its build.
+footprint geometry and asks the transport model for its build. Which
+weather each met is, read from its files, is read when a variant's
+hash is first needed.
 """
 
 from __future__ import annotations
@@ -32,6 +34,7 @@ from pydantic import (
     Field,
     PrivateAttr,
     ValidationError,
+    field_validator,
     model_validator,
 )
 
@@ -45,7 +48,6 @@ from stilt.identity import (
     run_settings,
     settings_hash,
 )
-from stilt.meteorology import MetConfig
 from stilt.transport import MODELS, ModelInfo, TransportConfig, get_model
 
 #: Pattern for variant and met names, which become directory names.
@@ -107,8 +109,9 @@ class Variant:
         Name as declared in ``config.yaml``.
     met : str
         Name of the met it runs with.
-    met_config : MetConfig
-        That met's config.
+    met_config : BaseModel
+        That met's config, of the transport model's ``met_config_class``,
+        with absolute directories when resolved for a project.
     transport : TransportConfig
         The transport model's config, such as a
         :class:`~stilt.transport.hysplit.HysplitConfig`, with the base seed.
@@ -125,7 +128,7 @@ class Variant:
 
     name: str
     met: str
-    met_config: MetConfig
+    met_config: Any
     transport: TransportConfig
     model: ModelInfo
     realizations: int | None = None
@@ -161,11 +164,30 @@ class Variant:
         return self.transport.realizations(realization + 1)[realization]
 
     @cached_property
+    def met_settings(self) -> dict[str, Any]:
+        """
+        What a run records of the met, its config's ``settings()``.
+
+        For HYSPLIT, the weather product and the crop. Read on first use,
+        once for all the variants of a met: the product comes from the
+        header of the met's first file.
+
+        Raises
+        ------
+        FileNotFoundError
+            If the met's directory holds no file to read its product from.
+        """
+        try:
+            return self.met_config.settings()
+        except FileNotFoundError as error:
+            raise FileNotFoundError(f"Met {self.met!r}: {error}") from None
+
+    @cached_property
     def run_settings(self) -> dict[str, Any]:
         """The settings that identify this variant's particles, as ``_settings.yaml`` records them."""
         return run_settings(
             self.transport,
-            self.met_config,
+            self.met_settings,
             self.model,
             ensemble=self.realizations is not None,
         )
@@ -216,9 +238,13 @@ class ProjectConfig(BaseModel):
             "are top-level keys of the config."
         ),
     )
-    mets: dict[str, MetConfig] = Field(
+    mets: dict[str, dict[str, Any]] = Field(
         default_factory=dict,
-        description="Meteorology by name, such as ``hrrr``. At least one is required.",
+        description=(
+            "Meteorology by name, such as ``hrrr``. At least one is required. "
+            "Each is checked by the met config of the transport model that "
+            "reads it (:class:`stilt.transport.hysplit.MetConfig` for HYSPLIT)."
+        ),
     )
     variants: dict[str, dict[str, Any]] = Field(
         default_factory=dict,
@@ -253,10 +279,26 @@ class ProjectConfig(BaseModel):
     _footprint: FootprintConfig = PrivateAttr(
         default_factory=lambda: FootprintConfig.model_validate({})
     )
+    # Each met checked by the met config of a model that reads it, by
+    # (met, model).
+    _met_configs: dict[tuple[str, str], Any] = PrivateAttr(default_factory=dict)
+
+    @field_validator("mets", mode="before")
+    @classmethod
+    def _met_mappings(cls, mets: Any) -> Any:
+        """Accept a met config object in Python, kept as the settings it was given."""
+        if isinstance(mets, dict):
+            return {
+                name: met.model_dump(mode="json", exclude_unset=True)
+                if isinstance(met, BaseModel)
+                else met
+                for name, met in mets.items()
+            }
+        return mets
 
     @model_validator(mode="after")
     def _validate_mets(self) -> Self:
-        """Require at least one met, each with a valid name and a directory."""
+        """Require at least one met, each with a valid name."""
         if not self.mets:
             raise ValueError(
                 "ProjectConfig.mets must contain at least one meteorology configuration"
@@ -266,18 +308,6 @@ class ProjectConfig(BaseModel):
             raise ValueError(
                 f"Met names must match {VARIANT_NAME_RE.pattern}, got: {bad}"
             )
-        for name, met in self.mets.items():
-            if met.directory is None:
-                raise ValueError(
-                    f"Met {name!r} needs a directory: where its files are, or "
-                    "where downloaded files are saved."
-                )
-            if met.subgrid_enable and met.download is None and met.subgrid_dir is None:
-                raise ValueError(
-                    f"Met {name!r}: subgrid_dir is required when subgrid_enable=True "
-                    "without download. Set it to a directory for the cropped "
-                    "files, outside the met archive."
-                )
         return self
 
     @model_validator(mode="after")
@@ -306,8 +336,13 @@ class ProjectConfig(BaseModel):
         except ValidationError as error:
             raise ValueError(f"config footprint settings: {error}") from None
         self._transport = transport_config(self.model, extra, f"config ({self.model})")
+        used = set()
         for group in self.declared():
-            self._declared(group)
+            declared = self._declared(group)
+            self.met_config(declared.met, declared.model)
+            used.add(declared.met)
+        for name in self.mets.keys() - used:
+            self.met_config(name)
         return self
 
     @property
@@ -323,6 +358,28 @@ class ProjectConfig(BaseModel):
     def declared(self) -> dict[str, dict[str, Any]]:
         """Return the variants as written."""
         return self.variants
+
+    def met_config(self, name: str, model: str | None = None) -> Any:
+        """
+        Return the met called *name*, checked by the met config of the transport model *model*.
+
+        *model* is the project's model unless given. A relative directory
+        stays as written; :meth:`resolve` makes it absolute.
+
+        Raises
+        ------
+        ValueError
+            If the met is not one the model can read.
+        """
+        model = model or self.model
+        key = (name, model)
+        if key not in self._met_configs:
+            met_class = get_model(model).met_config_class
+            try:
+                self._met_configs[key] = met_class.model_validate(self.mets[name])
+            except ValidationError as error:
+                raise ValueError(f"Met {name!r} ({model}): {error}") from None
+        return self._met_configs[key]
 
     def _declared(self, group: str) -> _Declared:
         """
@@ -387,7 +444,9 @@ class ProjectConfig(BaseModel):
 
         Each variant's transport settings are validated by its model's config
         class, as are its realizations (``realizations: N`` runs it N
-        times, realization ``k`` with ``seed + k``). Each geometry is read
+        times, realization ``k`` with ``seed + k``). Each met's directories
+        are made absolute; what a run records of the met is read on first
+        use (:attr:`Variant.met_settings`). Each geometry is read
         once, however many variants use it, and the grid of a footprint
         given only by a geometry is derived from it
         (:meth:`stilt.Mesh.to_grid`). The transport model's version and
@@ -398,8 +457,8 @@ class ProjectConfig(BaseModel):
         Parameters
         ----------
         directory : str or Path, optional
-            Where a relative geometry file starts: the project directory.
-            Without it, the working directory.
+            Where a relative geometry file or met directory starts: the
+            project directory. Without it, the working directory.
 
         Raises
         ------
@@ -409,6 +468,7 @@ class ProjectConfig(BaseModel):
         """
         meshes: dict[str, Mesh] = {}
         builds: dict[tuple[str, str], ModelInfo] = {}
+        mets: dict[tuple[str, str], Any] = {}
         variants: dict[str, Variant] = {}
         for group in self.declared():
             declared = self._declared(group)
@@ -439,10 +499,13 @@ class ProjectConfig(BaseModel):
                     transport.realizations(declared.realizations)
                 except ValueError as error:
                     raise ValueError(f"Variant {group!r}: {error}") from None
+            met_key = (declared.met, declared.model)
+            if met_key not in mets:
+                mets[met_key] = _located(self.met_config(*met_key), directory)
             variants[group] = Variant(
                 name=group,
                 met=declared.met,
-                met_config=self.mets[declared.met],
+                met_config=mets[met_key],
                 transport=transport,
                 model=builds[build],
                 realizations=declared.realizations,
@@ -466,10 +529,6 @@ class ProjectConfig(BaseModel):
         data.update(
             self._footprint.model_dump(mode="json", include=given & _FOOTPRINT_FIELDS)
         )
-        data["mets"] = {
-            name: met.model_dump(mode="json", exclude_unset=True)
-            for name, met in self.mets.items()
-        }
         if "execution" in data:
             data["execution"] = self.execution.model_dump(
                 mode="json", exclude_unset=True
@@ -548,7 +607,7 @@ output: ./output
 """
 
 
-def _met_name(group: str, spec: dict[str, Any], mets: dict[str, MetConfig]) -> str:
+def _met_name(group: str, spec: dict[str, Any], mets: dict[str, Any]) -> str:
     """Return the met a variant runs with, taking ``met`` out of *spec*."""
     met = spec.pop("met", None)
     if met is None:
@@ -564,6 +623,21 @@ def _met_name(group: str, spec: dict[str, Any], mets: dict[str, MetConfig]) -> s
     if met not in mets:
         raise ValueError(f"Variant {group!r} names unknown met {met!r}")
     return met
+
+
+def _located(met: Any, directory: str | Path | None) -> Any:
+    """
+    Return *met* with its ``directory`` and ``subgrid_dir`` absolute, when it has them.
+
+    A relative path starts from *directory*, or the working directory, and
+    ``~`` and ``$VARIABLES`` are expanded.
+    """
+    paths = {
+        field: absolute(value, directory)
+        for field in ("directory", "subgrid_dir")
+        if (value := getattr(met, field, None)) is not None
+    }
+    return met.model_copy(update=paths)
 
 
 def _override(group: str, base: dict[str, Any], spec: dict[str, Any]) -> dict[str, Any]:

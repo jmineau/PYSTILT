@@ -74,11 +74,18 @@ would ignore. It also gives an `UNRECORDED` set of the fields that change no
 particle (empty unless the subclass names some), `settings()` (what a run
 records), and `realizations(n)` (realization `k` with `seed + k`); override
 those two only where the model differs. The model itself names that class as
-`config_class` and gives `version`, `data_files`, and
+`config_class`, names its met config as `met_config_class`, and gives
+`version`, `data_files`, and
 `run(receptor, config, met, window, workdir=None, timeout=None)`
-(`stilt.transport.TransportModel`). `met` is a `MetConfig` with absolute
-directories and `window` the `(start, end)` the run covers; the model finds
-its own met from them. `run` returns a `ModelRun`: the particle table (the
+(`stilt.transport.TransportModel`). The met config is a pydantic model that
+checks one entry under `mets:`; its `settings()` returns what a run records
+of the met (which weather it is, and anything else that changes the
+particles, never where its files are kept). HYSPLIT's is
+`stilt.transport.hysplit.MetConfig`, whose settings are the source id in
+the ARL headers and the crop. A model that reads no files can take any
+keys, with no directory. `met` is that config, its `directory` and
+`subgrid_dir` absolute when it has them, and `window` the `(start, end)`
+the run covers; the model finds its own met from them. `run` returns a `ModelRun`: the particle table (the
 columns of `stilt.particles.PARTICLE_SCHEMA`, `foot`, and what the
 transforms read, with a release row at `time = 0` when the model can write
 one; see `docs/reference/particles.rst`), its log as text, and the met

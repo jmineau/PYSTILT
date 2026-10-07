@@ -13,7 +13,6 @@ from .config import ProjectConfig
 from .exceptions import StiltError
 from .execution import ExecutionConfig, task_share
 from .footprint import FootprintConfig, Mesh, Zones, calc_footprint, read_footprint
-from .meteorology import MetConfig
 from .particles import read_particles
 from .project import Project
 from .receptors import (
@@ -39,7 +38,6 @@ __all__ = [
     "ProjectConfig",
     "ExecutionConfig",
     "FootprintConfig",
-    "MetConfig",
     # Receptors
     "Receptor",
     "PointReceptor",

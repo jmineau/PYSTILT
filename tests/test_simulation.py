@@ -7,12 +7,12 @@ import xarray as xr
 from stilt.config import Variant
 from stilt.execution.worker import make_footprint
 from stilt.footprint.config import FootprintConfig
-from stilt.meteorology import MetConfig
 from stilt.output import Output
 from stilt.particles import particles_metadata
 from stilt.simulation import Simulation
 from stilt.spatial import Grid
 from stilt.transforms import FirstOrderLifetime, transform_kind
+from stilt.transport.hysplit import MetConfig
 
 from .fixtures.factories import make_met_config, make_variant
 from .fixtures.particles import finished

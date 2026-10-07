@@ -35,7 +35,7 @@ v1.0**, so prefer the clean design over a compatibility shim.
 | Particle columns | `particle`, `lon`, `lat` for HYSPLIT's and STILT-R's `indx`, `long`, `lati` (mapped in `read_particle_dat`); the rest keep STILT-R's names (`time`, `zagl`, `foot`, `mlht`, ...) |
 | Source directory | `src/stilt/` |
 | CLI entry point | `stilt` (Typer; see `[project.scripts]`) |
-| Config | What the user writes: always a class (`ProjectConfig`, `MetConfig`, `FootprintConfig`, `ExecutionConfig`, a model's `HysplitConfig`), each next to the code that uses it |
+| Config | What the user writes: always a class (`ProjectConfig`, `FootprintConfig`, `ExecutionConfig`, a model's `HysplitConfig` and its met config, `MetConfig`), each next to the code that uses it |
 | Settings | What a result was made with, as recorded: `_settings.yaml`, the `settings=` folders, a settings hash. Never a class |
 | Parameters | Plain English for a config's fields; names no class or module |
 
@@ -167,10 +167,8 @@ src/stilt/
   spatial.py         rasters and CRS, no shapely: Bounds, Grid (with its cell
                      and CF helpers), horizontal_dims, is_longlat, same_crs,
                      haversine_km
-  meteorology.py     MetConfig, run_window, and Met: ARL file discovery
-                     (files_for a window), download, and
-                     cropping (via arlmet); the wind-error statistics
-                     (`variogram`, `fit_variogram`)
+  meteorology.py     run_window, the time a run covers, and the
+                     wind-error statistics (`variogram`, `fit_variogram`)
   transforms/        pre-footprint particle transforms, one module each
                      (averaging_kernel, pressure_weighting, lifetime); the
                      loader, YAML I/O, and apply_transforms in __init__.py
@@ -195,7 +193,10 @@ src/stilt/
                      run a model and apply the core steps (__init__.py); one
                      subpackage per transport model, which owns its config
     hysplit/         HYSPLIT, the one model today: HysplitConfig (config.py, its
-                     parameters), HysplitModel (finds its met files from the
+                     parameters), its met config and files (met.py: MetConfig,
+                     what a run records of the met, and Met, ARL file
+                     discovery, download, and cropping via arlmet),
+                     HysplitModel (finds its met files from the
                      MetConfig and window), the driver (driver.py:
                      write_inputs, which knows which file each setting goes
                      to, and read_particle_dat), failure reasons read from
@@ -288,19 +289,29 @@ output directory, never only in memory.
   particles only, and footprint settings without a grid are an error. There is no
   named-footprints dict.
 - **Each part owns its config.** `FootprintConfig` is in
-  `stilt.footprint.config`, `MetConfig` in `stilt.meteorology`, `ExecutionConfig` in `stilt.execution.config`, a
-  model's config in its package. `Bounds` and `Grid` are in `stilt.spatial`,
+  `stilt.footprint.config`, `ExecutionConfig` in `stilt.execution.config`, a
+  model's config and its met config in its package (`met_config_class`;
+  HYSPLIT's `MetConfig` in `stilt.transport.hysplit`). `ProjectConfig.mets`
+  holds each met as written; `ProjectConfig.met_config(name, model)` checks
+  it with the met config of the model that reads it. `Bounds` and `Grid` are in `stilt.spatial`,
   the raster and CRS layer that needs no shapely, since more than footprints
   use rasters (a flux put on the footprint grid). `stilt.config` composes them, so nothing
   below the project's layer imports `stilt.config` (the layers contract).
   Config classes do no I/O when they validate, so a `config.yaml` loads
   offline; reading a geometry or asking a model its build happens in
-  `ProjectConfig.resolve`, on request.
-- A config's fields that change no result are listed in its `UNRECORDED`
-  class variable (`exe_dir` and `data_dir`; a met's directories,
-  `download_from`, and `n_min`), and left out of the settings records. A
-  project requires each met's `directory`, so a met config read back from a
-  record, without one, still validates.
+  `ProjectConfig.resolve`, on request, and reading which weather a met is
+  happens when a variant's hash is first needed (`Variant.met_settings`).
+- A transport config's fields that change no result are listed in its
+  `UNRECORDED` class variable (`exe_dir` and `data_dir`), and left out of
+  the settings records. A met's record is built, not dumped: its config's
+  `settings()`, for HYSPLIT the source id in the ARL headers (the first
+  file under `directory`, or the archive's `source` for `download`) and
+  the crop (`MetConfig.crop()`, the box with its buffer, and the levels).
+  Where the files are and how they are named are never recorded, so
+  moving them keeps every result, and two products named alike hash
+  apart. Grid and levels are not in the record: a product's header
+  changes over its archive's life (nam12, gfs0p25, gdas0p5, nams), and
+  the met files a run read are in its particle file.
 - Every field is a plain pydantic `Field(default, description=...)` and the
   public config stays flat (`ProjectConfig(numpar=..., seed=...)`). CONTRIBUTING
   explains how a field is routed to `SETUP.CFG`, `CONTROL`, `WINDERR`, or
@@ -624,7 +635,7 @@ The README links to it and keeps no table of its own.
   `ensemble: true` with the base seed, and realization `k` runs with
   `seed + k` (`Variant.transport_for(k)`). An ensemble of one is still an
   ensemble, so raising N only adds partitions. A single run records
-  `realization: null`, as before, so its hash did not change.
+  neither key.
 - **HYSPLIT line-source chaining.** In `emspnt.f`, consecutive CONTROL
   starting locations at the same lat/lon become one vertical line source and
   only the last pair is released. That is how `ColumnReceptor` works (two

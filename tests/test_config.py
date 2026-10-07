@@ -10,13 +10,20 @@ from stilt.config import ProjectConfig
 from stilt.footprint.config import FootprintConfig
 from stilt.footprint.targets import Mesh
 from stilt.identity import footprint_settings, read_footprint_settings
-from stilt.meteorology import MetConfig
 from stilt.spatial import Grid
 from stilt.transforms import AveragingKernel, FirstOrderLifetime, PressureWeighting
 from stilt.transport.hysplit.driver import (
     setup_entries,
     winderrtf,
 )
+
+from .fixtures.factories import make_met_config, write_arl_file
+
+
+@pytest.fixture(autouse=True)
+def _met_header(tmp_path):
+    """Put an ARL file in each test's met folder: resolving a project reads its met's source there."""
+    write_arl_file(tmp_path / "met" / "header.arl")
 
 
 class ScaleFoot(BaseModel):
@@ -48,7 +55,7 @@ def test_model_config_flat_construction(tmp_path):
         seed=42,
         krand=2,
         mets={
-            "hrrr": MetConfig(
+            "hrrr": make_met_config(
                 directory=tmp_path / "met",
                 file_format="%Y%m%d_%H",
                 file_tres="1h",
@@ -68,14 +75,18 @@ def test_model_config_requires_nonempty_mets():
 
 
 def test_model_config_rejects_met_keys_that_cannot_name_a_variant(tmp_path):
-    mc = MetConfig(directory=tmp_path / "met", file_format="%Y%m%d_%H", file_tres="1h")
+    mc = make_met_config(
+        directory=tmp_path / "met", file_format="%Y%m%d_%H", file_tres="1h"
+    )
     with pytest.raises(Exception, match="must match"):
         ProjectConfig(mets={"hrrr_v2": mc}, variants={"hrrr_v2": {}})
 
 
 def test_a_config_loads_without_its_hysplit_build(tmp_path):
     """Loading checks the variants but builds none, so exe_dir is not needed yet."""
-    mc = MetConfig(directory=tmp_path / "met", file_format="%Y%m%d_%H", file_tres="1h")
+    mc = make_met_config(
+        directory=tmp_path / "met", file_format="%Y%m%d_%H", file_tres="1h"
+    )
     elsewhere = tmp_path / "not-mounted"
     cfg = ProjectConfig(mets={"hrrr": mc}, exe_dir=elsewhere, variants={"hrrr": {}})
     with pytest.raises(FileNotFoundError, match="version"):
@@ -91,7 +102,9 @@ def _default_footprint(cfg):
 
 def test_model_config_footprint_fields_are_flat(tmp_path, grid):
     """The footprint settings sit beside the transport ones and form the footprint."""
-    mc = MetConfig(directory=tmp_path / "met", file_format="%Y%m%d_%H", file_tres="1h")
+    mc = make_met_config(
+        directory=tmp_path / "met", file_format="%Y%m%d_%H", file_tres="1h"
+    )
     cfg = ProjectConfig(
         mets={"hrrr": mc}, grid=grid, smooth_factor=0.5, variants={"hrrr": {}}
     )
@@ -115,7 +128,7 @@ def test_model_config_yaml_roundtrip_basic(tmp_path):
         n_hours=-24,
         numpar=100,
         mets={
-            "hrrr": MetConfig(
+            "hrrr": make_met_config(
                 directory=tmp_path / "met",
                 file_format="%Y%m%d_%H",
                 file_tres="1h",
@@ -132,8 +145,8 @@ def test_model_config_yaml_roundtrip_basic(tmp_path):
     assert loaded.n_hours == -24
     assert loaded.numpar == 100
     assert "hrrr" in loaded.mets
-    assert loaded.mets["hrrr"].file_format == "%Y%m%d_%H"
-    assert loaded.mets["hrrr"].file_tres == "1h"
+    assert loaded.mets["hrrr"]["file_format"] == "%Y%m%d_%H"
+    assert loaded.mets["hrrr"]["file_tres"] == "1h"
 
 
 def test_model_config_yaml_roundtrip_with_execution(tmp_path):
@@ -217,7 +230,7 @@ def test_model_config_yaml_roundtrip_with_footprint(tmp_path, grid):
     """The footprint settings survive a to_yaml/from_yaml roundtrip."""
     cfg = ProjectConfig(
         mets={
-            "hrrr": MetConfig(
+            "hrrr": make_met_config(
                 directory=tmp_path / "met",
                 file_format="%Y%m%d_%H",
                 file_tres="1h",
@@ -238,7 +251,7 @@ def test_model_config_yaml_roundtrip_with_footprint(tmp_path, grid):
 
 def _met_config(tmp_path):
     return {
-        "hrrr": MetConfig(
+        "hrrr": make_met_config(
             directory=tmp_path / "met",
             file_format="%Y%m%d_%H",
             file_tres="1h",
@@ -563,7 +576,7 @@ def test_model_config_yaml_roundtrip_with_geometry(tmp_path):
     config = ProjectConfig(
         mets={
             "hrrr": {
-                "directory": tmp_path,
+                "directory": tmp_path / "met",
                 "file_format": "%Y%m%d_%H",
                 "file_tres": "6h",
             }
@@ -787,7 +800,8 @@ def test_an_ensemble_keeps_its_folder_when_its_realizations_grow(tmp_path):
         tmp_path, krand=4, variants={"e": {"realizations": 1}, "single": {}}
     ).resolve()
     assert more["e"].particles_hash == one["e"].particles_hash
-    assert variants["single"].run_settings["realization"] is None
+    assert "realization" not in variants["single"].run_settings
+    assert "ensemble" not in variants["single"].run_settings
     assert variants["e"].run_settings["ensemble"] is True
 
 

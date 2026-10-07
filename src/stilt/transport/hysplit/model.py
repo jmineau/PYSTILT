@@ -10,7 +10,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from stilt.exceptions import SimulationError
-from stilt.meteorology import Met, MetConfig
 from stilt.transport import ModelRun
 
 from .config import HysplitConfig
@@ -24,6 +23,7 @@ from .driver import (
     write_inputs,
 )
 from .failures import FailureReason
+from .met import Met, MetConfig
 
 if TYPE_CHECKING:
     from stilt.receptors import Receptor
@@ -75,6 +75,8 @@ class HysplitModel:
 
     name = "hysplit"
     config_class = HysplitConfig
+    #: HYSPLIT reads ARL files, found, downloaded, or cropped as a met says.
+    met_config_class = MetConfig
     #: HYSPLIT writes its inputs and outputs as files in a directory.
     needs_workdir = True
     #: One hycs_std process per receptor.

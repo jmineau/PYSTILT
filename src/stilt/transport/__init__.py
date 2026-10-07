@@ -22,7 +22,7 @@ import pandas as pd
 from pydantic import BaseModel, ConfigDict, Field
 
 from stilt.exceptions import SimulationError
-from stilt.meteorology import MetConfig, run_window
+from stilt.meteorology import run_window
 from stilt.particles import (
     HNF_PLUME_COLUMNS,
     add_release_heights,
@@ -181,6 +181,18 @@ class TransportModel(Protocol):
         """The model's config, a :class:`TransportConfig`, which validates its parameters."""
         ...
 
+    @property
+    def met_config_class(self) -> type[BaseModel]:
+        """
+        The model's met config, which validates an entry under ``mets:``.
+
+        Its ``settings()`` returns what a run records of the met: which
+        weather it is, and anything else that changes the particles, but not
+        where its files are kept. HYSPLIT's is
+        :class:`stilt.transport.hysplit.MetConfig`.
+        """
+        ...
+
     def version(self, config: Any) -> str:
         """Return the version of the build *config* would run, recorded with the run."""
         ...
@@ -198,7 +210,7 @@ class TransportModel(Protocol):
         self,
         receptor: Receptor,
         config: Any,
-        met: MetConfig,
+        met: Any,
         window: tuple[dt.datetime, dt.datetime],
         workdir: Path | None = None,
         timeout: int | None = None,
@@ -216,8 +228,9 @@ class TransportModel(Protocol):
             Where and when particles are released.
         config : TransportConfig
             The model's config, of its ``config_class``.
-        met : MetConfig
-            The meteorology. Its directories are absolute.
+        met : BaseModel
+            The meteorology, of the model's ``met_config_class``. In a
+            project its directories are absolute.
         window : tuple of datetime
             The time the run covers, ``(start, end)`` in time order
             (:func:`stilt.meteorology.run_window`).
@@ -250,7 +263,7 @@ class BatchedTransportModel(TransportModel, Protocol):
         self,
         receptors: list[Receptor],
         config: Any,
-        met: MetConfig,
+        met: Any,
         windows: list[tuple[dt.datetime, dt.datetime]],
         workdir: Path | None = None,
         timeout: int | None = None,
@@ -326,7 +339,7 @@ def run_model(
     name: str,
     receptor: Receptor,
     config: TransportConfig,
-    met: MetConfig,
+    met: Any,
     workdir: Path | None = None,
     timeout: int | None = None,
 ) -> ModelRun:
@@ -349,8 +362,8 @@ def run_model(
         Where and when particles are released.
     config : TransportConfig
         The model's config.
-    met : MetConfig
-        The meteorology, with absolute directories.
+    met : BaseModel
+        The meteorology, of the model's ``met_config_class``.
     workdir : Path, optional
         An empty directory for the run's files. ``None`` lets the model make
         its own.
@@ -371,7 +384,7 @@ def run_model_many(
     name: str,
     receptors: list[Receptor],
     config: TransportConfig,
-    met: MetConfig,
+    met: Any,
     workdir: Path | None = None,
     timeout: int | None = None,
 ) -> dict[str, ModelRun | SimulationError]:
@@ -446,7 +459,7 @@ def _finish(run: ModelRun, receptor: Receptor, config: TransportConfig) -> Model
 
 def run_trajectories(
     receptor: Receptor,
-    met: MetConfig | Mapping[str, Any],
+    met: BaseModel | Mapping[str, Any],
     *,
     model: str = "hysplit",
     workdir: str | Path | None = None,
@@ -464,10 +477,11 @@ def run_trajectories(
     ----------
     receptor : Receptor
         Where and when particles are released.
-    met : MetConfig or dict
-        The meteorology, as one entry under ``mets:`` in ``config.yaml``
-        (:class:`stilt.MetConfig`). A relative ``directory`` starts from
-        the working directory.
+    met : dict or BaseModel
+        The meteorology, as one entry under ``mets:`` in ``config.yaml``,
+        checked by the model's met config
+        (:class:`stilt.transport.hysplit.MetConfig` for HYSPLIT). A relative
+        ``directory`` starts from the working directory.
     model : str, default "hysplit"
         The transport model.
     workdir : str or Path, optional
@@ -503,8 +517,9 @@ def run_trajectories(
     >>> met = {"directory": "/data/hrrr", "file_format": "%Y%m%d_%H", "file_tres": "6h"}
     >>> particles = stilt.run_trajectories(receptor, met, n_hours=-24, numpar=200)
     """
-    config = get_model(model).config_class(**params)
-    met_config = _absolute_dirs(MetConfig.model_validate(met))
+    transport_model = get_model(model)
+    config = transport_model.config_class(**params)
+    met_config = transport_model.met_config_class.model_validate(met)
     if workdir is not None:
         workdir = Path(workdir)
         if workdir.exists() and any(workdir.iterdir()):
@@ -514,16 +529,6 @@ def run_trajectories(
             )
         workdir.mkdir(parents=True, exist_ok=True)
     return run_model(model, receptor, config, met_config, workdir, timeout).particles
-
-
-def _absolute_dirs(met: MetConfig) -> MetConfig:
-    """Return *met* with its directories absolute, starting from the working directory."""
-    paths = {
-        name: value.expanduser().resolve()
-        for name in ("directory", "subgrid_dir")
-        if (value := getattr(met, name)) is not None
-    }
-    return met.model_copy(update=paths)
 
 
 __all__ = [

@@ -45,9 +45,7 @@ def sim(monkeypatch, tmp_path, point_receptor):
 def _run(sim, tmp_path, **kwargs):
     from stilt.execution.worker import run_particles
 
-    return run_particles(
-        sim, met=sim.variant.met_config, workdir=tmp_path / "scratch", **kwargs
-    )
+    return run_particles(sim, workdir=tmp_path / "scratch", **kwargs)
 
 
 def test_timeout_is_an_execution_setting():

@@ -1,4 +1,4 @@
-"""Tests for stilt.meteorology."""
+"""Tests for HYSPLIT's met config and its files (stilt.transport.hysplit.met)."""
 
 import datetime as dt
 import logging
@@ -9,8 +9,11 @@ import pandas as pd
 import pytest
 
 from stilt.exceptions import MeteorologyError
-from stilt.meteorology import Met, MetConfig, run_window
+from stilt.meteorology import run_window
 from stilt.spatial import Bounds
+from stilt.transport.hysplit import Met, MetConfig
+
+from ...fixtures.factories import write_arl_file
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -357,31 +360,21 @@ def test_a_failed_crop_leaves_nothing_behind(tmp_path):
     assert list(met.crop_dir.iterdir()) == []
 
 
-def test_a_project_needs_subgrid_dir_to_crop_local_files(tmp_path):
+def test_cropping_local_files_needs_subgrid_dir(tmp_path):
     """Crops are never written into the met archive by default (#53)."""
-    from stilt.config import ProjectConfig
-
-    met = MetConfig(
-        directory=tmp_path,
-        file_format="%Y%m%d_%H",
-        file_tres="1h",
-        subgrid_enable=True,
-        subgrid_bounds=BOUNDS,
-    )
     with pytest.raises(ValueError, match="subgrid_dir is required"):
-        ProjectConfig(mets={"hrrr": met}, variants={"hrrr": {}})
+        MetConfig(
+            directory=tmp_path,
+            file_format="%Y%m%d_%H",
+            file_tres="1h",
+            subgrid_enable=True,
+            subgrid_bounds=BOUNDS,
+        )
 
 
-def test_a_project_needs_each_met_directory(tmp_path):
-    """A met config without its directory reads back from a stored record, but a project needs it."""
-    from stilt.config import ProjectConfig
-
-    met = MetConfig(file_format="%Y%m%d_%H", file_tres="1h")
-    assert met.directory is None
-    with pytest.raises(ValueError, match="'hrrr' needs a directory"):
-        ProjectConfig(mets={"hrrr": met}, variants={"hrrr": {}})
-    with pytest.raises(ValueError, match="has no directory"):
-        Met("hrrr", met)
+def test_a_met_needs_its_directory():
+    with pytest.raises(ValueError, match="directory"):
+        MetConfig(file_format="%Y%m%d_%H", file_tres="1h")
 
 
 def test_metconfig_download_crop_needs_no_subgrid_dir(tmp_path):
@@ -714,3 +707,104 @@ def test_met_config_construction(tmp_path):
     assert mc.directory == tmp_path / "met"
     assert mc.file_format == "%Y%m%d_%H"
     assert mc.n_min == 1  # default
+
+
+# ---------------------------------------------------------------------------
+# What a run records of the met
+# ---------------------------------------------------------------------------
+
+
+def _local(directory: Path, **fields) -> MetConfig:
+    return MetConfig(
+        directory=directory, file_format="%Y%m%d_%H", file_tres="1h", **fields
+    )
+
+
+def test_settings_are_the_source_in_the_file_header_and_the_crop(tmp_path):
+    write_arl_file(tmp_path / "20240718_00", source="NAM")
+
+    assert _local(tmp_path).settings() == {"source": "NAM", "crop": None}
+
+
+def test_a_downloaded_met_records_its_archive_source_without_reading_a_file(tmp_path):
+    met = MetConfig(directory=tmp_path / "nowhere", download="gfs0p25")
+
+    assert met.settings() == {"source": "GFSQ", "crop": None}
+
+
+def test_the_source_is_read_past_files_that_are_not_arl(tmp_path):
+    (tmp_path / "README").write_text("HRRR files from NOAA")
+    write_arl_file(tmp_path / "2024" / "20240718_00", source="HRRR")
+
+    assert _local(tmp_path).source() == "HRRR"
+
+
+def test_a_met_with_no_arl_file_cannot_say_its_source(tmp_path):
+    (tmp_path / "20240718_00").touch()
+
+    with pytest.raises(FileNotFoundError, match="No ARL file"):
+        _local(tmp_path).source()
+
+
+def test_where_the_files_are_and_how_they_are_named_are_not_recorded(tmp_path):
+    for name in ("a", "b"):
+        write_arl_file(tmp_path / name / "hrrr.20240718.t00z")
+    one = MetConfig(directory=tmp_path / "a", file_format="%Y%m%d_%H", file_tres="6h")
+    other = MetConfig(
+        directory=tmp_path / "b", file_format="hrrr.%Y%m%d.t%Hz", file_tres="1h"
+    )
+
+    assert one.settings() == other.settings()
+
+
+def test_two_products_named_alike_are_told_apart(tmp_path):
+    """Two archives with the same file names record different mets (R2-24)."""
+    write_arl_file(tmp_path / "hrrr" / "20240718_00", source="HRRR")
+    write_arl_file(tmp_path / "nam" / "20240718_00", source="NAM")
+
+    assert _local(tmp_path / "hrrr").settings() != _local(tmp_path / "nam").settings()
+
+
+def test_the_crop_is_the_box_with_its_buffer(tmp_path):
+    padded = _local(
+        tmp_path,
+        subgrid_enable=True,
+        subgrid_bounds=BOUNDS,
+        subgrid_buffer=0.5,
+        subgrid_dir=tmp_path / "crops",
+    )
+    widened = _local(
+        tmp_path,
+        subgrid_enable=True,
+        subgrid_bounds=Bounds(
+            xmin=BOUNDS.xmin - 0.5,
+            xmax=BOUNDS.xmax + 0.5,
+            ymin=BOUNDS.ymin - 0.5,
+            ymax=BOUNDS.ymax + 0.5,
+        ),
+        subgrid_buffer=0,
+        subgrid_dir=tmp_path / "crops",
+    )
+
+    assert padded.crop() == widened.crop()
+    assert padded.crop() == {
+        "bbox": [
+            BOUNDS.xmin - 0.5,
+            BOUNDS.ymin - 0.5,
+            BOUNDS.xmax + 0.5,
+            BOUNDS.ymax + 0.5,
+        ],
+        "levels": None,
+    }
+
+
+def test_a_crop_turned_off_is_no_crop(tmp_path):
+    assert _local(tmp_path, subgrid_bounds=BOUNDS).crop() is None
+
+
+def test_a_relative_directory_with_a_variable_is_expanded(tmp_path, monkeypatch):
+    monkeypatch.setenv("MET_ROOT", str(tmp_path))
+    monkeypatch.chdir(tmp_path)
+
+    assert Met("hrrr", _local(Path("$MET_ROOT/hrrr"))).directory == tmp_path / "hrrr"
+    assert Met("hrrr", _local(Path("hrrr"))).directory == tmp_path / "hrrr"

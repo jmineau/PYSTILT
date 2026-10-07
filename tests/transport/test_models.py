@@ -8,6 +8,7 @@ import textwrap
 from typing import Any, ClassVar
 
 import pytest
+from pydantic import BaseModel, ConfigDict
 
 from stilt import transport
 from stilt.config import ProjectConfig
@@ -28,9 +29,19 @@ class ToyConfig(TransportConfig):
     build_dir: str | None = None
 
 
+class ToyMet(BaseModel):
+    """The toy model's met: it reads no files, and accepts the keys of a HYSPLIT met it shares."""
+
+    model_config = ConfigDict(extra="allow")
+
+    def settings(self) -> dict[str, Any]:
+        return {"source": "toy"}
+
+
 class ToyModel:
     name = "toy"
     config_class = ToyConfig
+    met_config_class = ToyMet
 
     def version(self, config: ToyConfig) -> str:
         return "1.0"
@@ -173,7 +184,7 @@ def test_a_record_of_a_model_not_installed_still_reads(tmp_path):
         "n_hours": -6,
         "nparticles": 3,
         "model": {"name": "nopkg.models.Missing", "version": "1.0"},
-        "met": {"file_format": "%Y%m%d_%H", "file_tres": "6h"},
+        "met": {"source": "toy"},
     }
     with pytest.warns(UserWarning, match="could not be loaded"):
         assert read_run_settings(stored) == stored
@@ -187,14 +198,22 @@ def test_a_model_in_its_own_package_runs_from_a_fresh_interpreter(tmp_path):
         textwrap.dedent(
             """
             import pandas as pd
+            from pydantic import BaseModel
             from stilt.transport import ModelRun, TransportConfig
 
             class ToyConfig(TransportConfig):
                 nparticles: int = 2
 
+            class ToyMet(BaseModel):
+                weather: str
+
+                def settings(self):
+                    return {"weather": self.weather}
+
             class ToyModel:
                 name = "toy"
                 config_class = ToyConfig
+                met_config_class = ToyMet
 
                 def version(self, config):
                     return "1.0"
@@ -217,12 +236,12 @@ def test_a_model_in_its_own_package_runs_from_a_fresh_interpreter(tmp_path):
         )
     )
     script = textwrap.dedent(
-        f"""
+        """
         import stilt
         receptor = stilt.PointReceptor(
             time="2023-01-01 12:00", longitude=-111.85, latitude=40.77, altitude=5
         )
-        met = {{"directory": {str(tmp_path)!r}, "file_format": "%Y%m%d_%H", "file_tres": "1h"}}
+        met = {"weather": "hrrr"}  # no directory: the toy reads no met files
         particles = stilt.run_trajectories(
             receptor, met, model="toypkg.ToyModel", n_hours=-1, nparticles=4, hnf_plume=False
         )

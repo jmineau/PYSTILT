@@ -4,17 +4,18 @@ What a result was made with, and the hash that names its folder.
 Every folder in an output directory holds the results of one set of
 settings, recorded in its ``_settings.yaml``. This module writes those
 records and hashes them. A run's settings are its transport config without
-the fields that change no particle (``exe_dir``, ``data_dir``), its met
-without the directories, the model build, and whether it is an ensemble
-(the realizations of one share a folder, a ``realization=k`` partition
-each, so the number is not in the hash). A
+the fields that change no particle (``exe_dir``, ``data_dir``), its met as
+the met config records it (for HYSPLIT, the weather product and the crop),
+the model build, and whether it is an ensemble (the realizations of one
+share a folder, a ``realization=k`` partition each, so the number is not
+in the hash). A
 footprint's settings are its footprint config, with the grid it is
 computed on, and the hash of the geometry the grid was derived for.
 
 The hash depends on what the settings mean rather than how they were
 written. A stored record is read back through the current config classes,
 so a setting added since, with a default, still matches, and a changed
-default does not.
+default does not. The met's part is plain values and is kept as written.
 """
 
 from __future__ import annotations
@@ -27,7 +28,6 @@ from pathlib import Path
 from typing import Any
 
 from stilt.footprint.config import FootprintConfig
-from stilt.meteorology import MetConfig
 from stilt.transforms import dump_transform, load_transform, transform_kind
 from stilt.transport import ModelInfo, TransportConfig, get_model
 
@@ -64,7 +64,7 @@ def settings_hash(settings: Mapping[str, Any]) -> str:
 
 def run_settings(
     transport: TransportConfig,
-    met: MetConfig,
+    met: Mapping[str, Any],
     model: ModelInfo,
     ensemble: bool = False,
 ) -> dict[str, Any]:
@@ -72,24 +72,16 @@ def run_settings(
     Return the settings that identify a run, in canonical form.
 
     The transport model's settings (``transport.settings()``) sit at the top
-    level, beside ``met`` and ``model``. An ensemble records
-    ``ensemble: true`` and its base seed; its realization ``k`` runs with
-    ``seed + k`` in the folder's ``realization=k`` partition. A single run
-    records ``realization: null``, as every run did before ensembles were
-    partitions, so its folder keeps its hash.
+    level, beside ``met`` (what the met config's ``settings()`` returns)
+    and ``model``. An ensemble records ``ensemble: true`` and its base
+    seed; its realization ``k`` runs with ``seed + k`` in the folder's
+    ``realization=k`` partition.
     """
     data = dict(transport.settings())
-    data["met"] = met.settings()
-    record = model.model_dump(mode="json")
-    if record.get("data_files") is None:
-        # Runs with the model's own data files keep the hash they had
-        # before data files were recorded.
-        record.pop("data_files", None)
-    data["model"] = record
+    data["met"] = dict(met)
+    data["model"] = model.model_dump(mode="json")
     if ensemble:
         data["ensemble"] = True
-    else:
-        data["realization"] = None
     return canonical(data)
 
 
@@ -138,7 +130,7 @@ def read_run_settings(stored: Mapping[str, Any]) -> dict[str, Any]:
         return dict(stored)
     record = run_settings(
         transport_from_settings(stored),
-        MetConfig.model_validate(stored["met"]),
+        stored["met"],
         _model_info(stored),
         ensemble=bool(stored.get("ensemble", False)),
     )
