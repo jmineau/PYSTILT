@@ -8,6 +8,11 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- `execution.time` is required with `backend: slurm` (breaking). Without it
+  each task got the partition's default limit, which can be days. It is
+  written to `--time` as given (`02:00:00`, not `120`), and
+  `ExecutionConfig.time_minutes` is removed. `stilt run` and `stilt submit`
+  print a bad execution setting as one line, not a traceback.
 - A Slurm task's log starts with `task i of n`, not `backend=local`.
   Help and settings descriptions say "the transport model" where any
   model runs.

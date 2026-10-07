@@ -339,7 +339,7 @@ def job_script(
         "array": f"0-{n_tasks - 1}"
         + (f"%{execution.array_parallelism}" if execution.array_parallelism else ""),
         "cpus-per-task": execution.cpus,
-        "time": execution.time_minutes,
+        "time": execution.time,
         "mem": execution.mem,
         "partition": execution.partition,
         "account": execution.account,

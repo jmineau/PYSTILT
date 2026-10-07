@@ -32,6 +32,8 @@ def _write_minimal_config(tmp_path):
             }
         },
         variants={"hrrr": {}},
+        # Local, with the time limit a Slurm run of it needs.
+        execution={"time": "01:00:00"},
     )
     cfg.to_yaml(tmp_path / "config.yaml")
     (tmp_path / "receptors.csv").write_text(
@@ -228,7 +230,7 @@ def test_run_runs_the_project_with_its_execution_settings(tmp_path, calls):
     assert result.exit_code == 0, result.output
     [(verb, kwargs)] = calls
     assert verb == "run"
-    assert kwargs["execution"] == ExecutionConfig.model_validate({})
+    assert kwargs["execution"] == ExecutionConfig(time="01:00:00")  # config.yaml's
     assert kwargs["skip_existing"] is True
     # Resolved once, so the run uses the directory the banner shows.
     from stilt.execution import resolve_compute_root
@@ -352,7 +354,7 @@ def test_run_exit_code_says_how_the_run_ended(tmp_path, calls, states, code):
 def test_run_task_runs_its_share_here(tmp_path, calls):
     _write_minimal_config(tmp_path)
     config = yaml.safe_load((tmp_path / "config.yaml").read_text())
-    config["execution"] = {"backend": "slurm", "n_workers": 8}
+    config["execution"] = {"backend": "slurm", "n_workers": 8, "time": "01:00:00"}
     (tmp_path / "config.yaml").write_text(yaml.safe_dump(config))
     calls.states = ["complete", "failed"]
 
@@ -426,6 +428,20 @@ def test_submit_submits_to_slurm_and_returns(tmp_path, calls):
     assert (execution.backend, execution.n_workers) == ("slurm", 2)
     assert "Submitting to Slurm and returning" in result.output
     assert "Submitted job: 12345" in result.output
+
+
+def test_submit_without_a_time_limit_says_so(tmp_path, calls):
+    _write_minimal_config(tmp_path)
+    config = yaml.safe_load((tmp_path / "config.yaml").read_text())
+    del config["execution"]
+    (tmp_path / "config.yaml").write_text(yaml.safe_dump(config))
+
+    result = runner.invoke(app, ["submit", str(tmp_path)])
+
+    assert result.exit_code == 1
+    assert "execution.time is required with backend: slurm" in result.output
+    assert "Traceback" not in result.output
+    assert calls == []
 
 
 def test_submit_receptors_reads_ids_from_a_file(tmp_path, calls):

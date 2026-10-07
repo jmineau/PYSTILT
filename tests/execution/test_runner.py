@@ -11,7 +11,7 @@ import pytest
 import yaml
 
 from stilt.execution import runner
-from stilt.execution.config import ExecutionConfig
+from stilt.execution.config import ExecutionConfig, slurm_minutes
 from stilt.execution.runner import _project_slug, job_script, task_share
 from stilt.project import Project
 
@@ -54,7 +54,7 @@ def test_job_script_asks_for_what_the_execution_settings_say(tmp_path):
         "job-name": "pystilt-my-project",
         "array": "0-6%10",
         "cpus-per-task": "4",
-        "time": "120",
+        "time": "02:00:00",  # as given
         "mem": "8G",
         "partition": "lin-np",
         "account": "lin-np",
@@ -83,12 +83,15 @@ def test_job_script_asks_for_what_the_execution_settings_say(tmp_path):
 
 def test_job_script_leaves_out_what_was_not_set(tmp_path):
     script = job_script(
-        Project(tmp_path), ExecutionConfig(backend="slurm"), tmp_path, 1
+        Project(tmp_path),
+        ExecutionConfig(backend="slurm", time="01:00:00"),
+        tmp_path,
+        1,
     )
     options = _sbatch(script)
     assert options["array"] == "0-0"
     assert options["signal"] == f"B:USR1@{runner.NOTICE_SECONDS}"
-    for unset in ("time", "mem", "partition", "account", "qos"):
+    for unset in ("mem", "partition", "account", "qos"):
         assert unset not in options
 
 
@@ -97,7 +100,7 @@ def test_job_script_runs_again_only_on_the_first_start_and_names_a_compute_root(
 ):
     script = job_script(
         Project(tmp_path),
-        ExecutionConfig(backend="slurm"),
+        ExecutionConfig(backend="slurm", time="01:00:00"),
         tmp_path,
         2,
         skip_existing=False,
@@ -114,7 +117,7 @@ def test_job_script_is_valid_bash(tmp_path):
     script.write_text(
         job_script(
             Project(tmp_path / "with space"),
-            ExecutionConfig(backend="slurm", setup=["echo ready"]),
+            ExecutionConfig(backend="slurm", time="01:00:00", setup=["echo ready"]),
             tmp_path / "with space" / "_slurm",
             3,
             skip_existing=False,
@@ -164,7 +167,9 @@ def _out(stdout: str = "", returncode: int = 0, stderr: str = "") -> SimpleNames
 def test_submit_writes_a_submission_and_hands_it_to_sbatch(pending, commands, tmp_path):
     pending.extend(["a", "b", "c"])
     project = Project(tmp_path / "my_project")
-    execution = ExecutionConfig(backend="slurm", n_workers=2, cpus=4, timeout=600)
+    execution = ExecutionConfig(
+        backend="slurm", time="01:00:00", n_workers=2, cpus=4, timeout=600
+    )
     commands.answers["sbatch"] = [_out("777;cluster\n")]
 
     job_id = runner.submit(project, execution=execution, skip_existing=False)
@@ -186,14 +191,18 @@ def test_submit_uses_no_more_tasks_than_receptors(pending, commands, tmp_path):
     pending.append("a")
     commands.answers["sbatch"] = [_out("5\n")]
     runner.submit(
-        Project(tmp_path), execution=ExecutionConfig(backend="slurm", n_workers=8)
+        Project(tmp_path),
+        execution=ExecutionConfig(backend="slurm", time="01:00:00", n_workers=8),
     )
     assert _sbatch(Path(commands.ran[0][2]).read_text())["array"] == "0-0"
 
 
 def test_submit_with_nothing_to_do_submits_nothing(pending, commands, tmp_path):
     assert (
-        runner.submit(Project(tmp_path), execution=ExecutionConfig(backend="slurm"))
+        runner.submit(
+            Project(tmp_path),
+            execution=ExecutionConfig(backend="slurm", time="01:00:00"),
+        )
         is None
     )
     assert commands.ran == []
@@ -203,7 +212,10 @@ def test_submit_says_why_sbatch_refused(pending, commands, tmp_path):
     pending.append("a")
     commands.answers["sbatch"] = [_out(returncode=1, stderr="Invalid account")]
     with pytest.raises(RuntimeError, match="Invalid account"):
-        runner.submit(Project(tmp_path), execution=ExecutionConfig(backend="slurm"))
+        runner.submit(
+            Project(tmp_path),
+            execution=ExecutionConfig(backend="slurm", time="01:00:00"),
+        )
 
 
 def test_waiting_polls_sacct_until_every_task_ends(commands, caplog):
@@ -345,7 +357,7 @@ def test_an_interrupt_that_is_not_the_notice_is_not_swallowed(
     ],
 )
 def test_time_limits_are_read_the_way_sbatch_reads_them(time, minutes):
-    assert ExecutionConfig(time=time).time_minutes == minutes
+    assert slurm_minutes(time) == minutes
 
 
 @pytest.mark.parametrize("time", ["soon", "1:2:3:4", "-5", "0", "00:00:00", "1-"])
@@ -354,8 +366,11 @@ def test_a_time_limit_sbatch_would_not_take_is_an_error(time):
         ExecutionConfig(time=time)
 
 
-def test_no_time_limit_is_left_to_the_partition():
-    assert ExecutionConfig().time_minutes is None
+def test_a_slurm_run_needs_a_time_limit():
+    with pytest.raises(ValueError, match="execution.time is required"):
+        ExecutionConfig(backend="slurm")
+    ExecutionConfig()  # a local run has none
+    ExecutionConfig(backend="slurm", slurm={"time": "1-00"})
 
 
 @pytest.mark.parametrize(
@@ -466,7 +481,11 @@ def test_a_task_runs_here_whatever_the_backend(tmp_path, monkeypatch, commands):
         worker, "run_receptors", lambda project, ids, **kw: ran.append(ids)
     )
 
-    table = runner.run(project, task=(1, 2), execution=ExecutionConfig(backend="slurm"))
+    table = runner.run(
+        project,
+        task=(1, 2),
+        execution=ExecutionConfig(backend="slurm", time="01:00:00"),
+    )
 
     assert commands.ran == []  # no sbatch
     assert ran == [[every[1], every[3]]]

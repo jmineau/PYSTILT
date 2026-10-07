@@ -31,6 +31,7 @@ from typing import Any, NoReturn
 import pandas as pd
 import typer
 import yaml
+from pydantic import ValidationError
 
 from stilt.execution import resolve_compute_root
 from stilt.execution.config import ExecutionConfig
@@ -75,6 +76,16 @@ def _fail(message: str) -> NoReturn:
     """Print an error and exit with 1."""
     typer.echo(f"Error: {message}", err=True)
     raise typer.Exit(code=1)
+
+
+def _settings_problems(error: ValidationError) -> str:
+    """Return what was wrong with some execution settings, one problem per clause."""
+    problems = []
+    for e in error.errors():
+        message = e["msg"].removeprefix("Value error, ")
+        where = ".".join(str(part) for part in e["loc"])
+        problems.append(f"execution.{where}: {message}" if where else message)
+    return "; ".join(problems)
 
 
 def _resolve_project(path: str | Path | None) -> str:
@@ -229,7 +240,10 @@ def _start(
         overrides["n_workers"] = n_workers
     if cpus is not None:
         overrides["cpus"] = cpus
-    execution = ExecutionConfig.model_validate({**settings, **overrides})
+    try:
+        execution = ExecutionConfig.model_validate({**settings, **overrides})
+    except ValidationError as error:
+        _fail(_settings_problems(error))
     if execution.backend == "local":
         # Resolved once, here, so the banner shows the directory the run uses.
         # A Slurm task resolves its own, on its node.

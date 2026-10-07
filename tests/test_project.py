@@ -1030,7 +1030,9 @@ def test_submit_needs_slurm(tmp_path, point_receptor):
 
 
 def test_run_on_slurm_submits_and_waits(tmp_path, monkeypatch, point_receptor):
-    project = _project(tmp_path, [point_receptor], execution={"backend": "slurm"})
+    project = _project(
+        tmp_path, [point_receptor], execution={"backend": "slurm", "time": "01:00:00"}
+    )
     waited = []
     submitted = []
 
