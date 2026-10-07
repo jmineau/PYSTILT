@@ -1,4 +1,4 @@
-"""Tests for the particle table: preparing, reading, and writing it, and plume dilution."""
+"""Tests for stilt.particles.table: particle files, release heights, the near-field correction."""
 
 import json
 from pathlib import Path
@@ -20,7 +20,7 @@ from stilt.receptors import ColumnReceptor, MultiPointReceptor, PointReceptor
 from stilt.transport import ModelInfo
 from stilt.transport.hysplit import HysplitConfig
 
-from .fixtures.particles import finished, point_at
+from ..fixtures.particles import finished, point_at
 
 #: A receptor that gives no release height of its own: a column.
 _NO_POINT = ColumnReceptor(
