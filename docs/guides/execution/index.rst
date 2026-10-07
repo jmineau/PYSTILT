@@ -85,7 +85,7 @@ loses its failure record.
 .. code-block:: text
 
    Project: /path/to/my_project  total=1200  completed=1150  pending=50
-   failed: MISSING_MET_FILES 42, MET_TRUNCATED 8  (sim.failure says why)
+   failed: MISSING_MET_FILES 42, MET_TRUNCATED 8  (why: the .failure.yaml beside each log, under /path/to/my_project/output/logs)
 
 In Python, ``sim.failure`` says why one simulation failed, and
 ``status()`` lists every failed simulation in a selection:
