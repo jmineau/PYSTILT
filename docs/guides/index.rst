@@ -17,6 +17,8 @@ you are new to PYSTILT, start with :doc:`../getting_started/quickstart`.
 - :doc:`execution/index`: pick where to run
 - :doc:`execution/local`: on your computer or in a notebook
 - :doc:`execution/slurm`: on an HPC cluster
+- :doc:`checking`: which simulations finished, why some failed, and what
+  to do when a footprint looks wrong
 
 **Working with results**
 
@@ -65,6 +67,7 @@ you are new to PYSTILT, start with :doc:`../getting_started/quickstart`.
    :caption: Running simulations
 
    execution/index
+   checking
 
 .. toctree::
    :hidden:

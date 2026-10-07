@@ -28,6 +28,12 @@ tree. Particles are one Parquet file per receptor. Footprints are sparse
 tables of the non-zero cells, in float32 as STILT-R writes them; an empty
 footprint is a file with no rows, marked ``stilt:empty`` in its metadata.
 
+Logs, failure records, and kept workdirs are in trees of their own
+(``logs/``, ``scratch/``) rather than beside the results, so that each
+results tree holds Parquet files only and reads as one dataset. Whether a
+simulation is complete is read from the results trees alone; the logs only
+explain the ones that are not.
+
 Start from :class:`Output` and a resolved variant (``project.variants``).
 Every function takes the kind of result, ``"particles"`` or
 ``"footprints"``, and the variant::
