@@ -148,6 +148,8 @@ node, run that line with the task's number in place of
 ``$SLURM_ARRAY_TASK_ID``.
 
 If a task fails, look in its ``<task>.log`` for problems with the task
-itself. Look in each simulation's log in the output directory for HYSPLIT
-problems (see :doc:`index`). The folders are safe to delete once a job has
+itself. Its first line says when and on which node it started, and the
+job and task ids; a requeued task adds another such line. Look in each
+simulation's log in the output directory for transport model problems
+(see :doc:`index`). The folders are safe to delete once a job has
 left the queue.

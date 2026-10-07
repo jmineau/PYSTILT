@@ -963,6 +963,8 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Each Slurm task's log starts with a line giving the time, node, job,
+  and task, and adds one after each requeue.
 - `stilt submit --receptors FILE`, as `stilt run` has.
 - A footprint read from an output directory says what made it:
   `attrs["stilt_version"]` (the PYSTILT version) and
