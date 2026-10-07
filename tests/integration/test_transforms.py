@@ -8,8 +8,8 @@ from stilt.config import ProjectConfig
 from stilt.project import Project
 from stilt.transforms import FirstOrderLifetime
 
-from .conftest import integration
-from .fixtures.factories import make_met_config
+from ..conftest import integration
+from .conftest import reference_met
 
 
 def _footprint_total(footprint) -> float:
@@ -26,7 +26,7 @@ def test_declarative_transform_config_changes_real_footprint(
 ):
     """Per-footprint transform specs should affect real footprint output."""
     config = ProjectConfig(
-        mets={"hrrr": make_met_config(met_dir, file_tres="6h")},
+        mets={"hrrr": reference_met(met_dir)},
         n_hours=-6,
         numpar=100,
         grid=wbb_grid,

@@ -20,8 +20,8 @@ from stilt.footprint import open_footprints, read_footprint  # noqa: E402
 from stilt.output import Output  # noqa: E402
 from stilt.particles import read_particles  # noqa: E402
 
-from .conftest import integration  # noqa: E402
-from .fixtures.output import (  # noqa: E402
+from ..conftest import integration  # noqa: E402
+from ..fixtures.output import (  # noqa: E402
     FEET,
     VARIANT,
     fake_footprint,

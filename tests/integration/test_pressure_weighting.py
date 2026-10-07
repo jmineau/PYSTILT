@@ -23,12 +23,11 @@ from stilt.transforms import PressureWeighting, particle_pwf, release_coordinate
 from stilt.transport import run_model
 from stilt.transport.hysplit import HysplitConfig
 
-from .conftest import integration
-from .fixtures.factories import make_met_config
-from .fixtures.r_stilt_reference import (
-    REFERENCE_MET_FILE_FORMAT,
+from ..conftest import integration
+from ..fixtures.r_stilt_reference import (
     REFERENCE_TIME,
 )
+from .conftest import reference_met
 
 # WBB sits at ~1480 m, so surface pressure is ~850 hPa rather than ~1000.
 WBB_LON = -111.8479
@@ -50,9 +49,7 @@ def _column_trajectory(
         time=time, longitude=WBB_LON, latitude=WBB_LAT, bottom=0.0, top=top
     )
     params = HysplitConfig(n_hours=-2, numpar=numpar, hnf_plume=False)
-    met = make_met_config(
-        met_dir, file_format=REFERENCE_MET_FILE_FORMAT, file_tres="6h"
-    )
+    met = reference_met(met_dir)
     # run_model adds the release heights that the pressure weighting reads.
     run = run_model("hysplit", receptor, params, met, Path(tmp_path) / label, 900)
     return receptor, run.particles
