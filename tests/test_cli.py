@@ -120,8 +120,8 @@ def test_status_prints_project_info(tmp_path):
     result = runner.invoke(app, ["status", str(tmp_path)])
     assert result.exit_code == 0
     assert (
-        f"Project: {tmp_path.resolve()}  total=1  completed=0  pending=1"
-        in result.output
+        f"Project: {tmp_path.resolve()}  total=1  complete=0  failed=0  "
+        "interrupted=0  pending=1" in result.output
     )
 
 
@@ -168,7 +168,7 @@ def test_status_counts_full_simulation_completion(tmp_path):
     result = runner.invoke(app, ["status", str(tmp_path)])
 
     assert result.exit_code == 0
-    assert "total=1  completed=0  pending=1" in result.output
+    assert "total=1  complete=0  failed=0  interrupted=0  pending=1" in result.output
 
     # Once the footprint is present too, the simulation counts as complete.
     from stilt.execution.worker import make_footprint
@@ -179,7 +179,37 @@ def test_status_counts_full_simulation_completion(tmp_path):
     result = runner.invoke(app, ["status", str(tmp_path)])
 
     assert result.exit_code == 0
-    assert "total=1  completed=1  pending=0" in result.output
+    assert "total=1  complete=1  failed=0  interrupted=0  pending=0" in result.output
+
+
+def test_status_counts_each_state_per_variant(tmp_path, monkeypatch):
+    """Failed simulations are counted as failed, not pending (#192)."""
+    make_project_config(
+        tmp_path, variants={"hrrr": {}, "fine": {"numpar": 50}}
+    ).to_yaml(tmp_path / "config.yaml")
+    (tmp_path / "receptors.csv").write_text("time,longitude,latitude,altitude\n")
+    table = pd.DataFrame(
+        {
+            "variant": ["hrrr", "hrrr", "hrrr", "fine", "fine", "fine"],
+            "state": ["complete", "failed", "pending"] + ["interrupted"] * 3,
+            "reason": [None, "MET_COVERAGE", None, None, None, None],
+        }
+    )
+    monkeypatch.setattr(Project, "status", lambda self, sel=None: table)
+    monkeypatch.setattr("stilt.cli._print_folders", lambda project: None)
+
+    result = runner.invoke(app, ["status", str(tmp_path)])
+
+    assert result.exit_code == 0, result.output
+    assert "total=6  complete=1  failed=1  interrupted=3  pending=1" in result.output
+    assert (
+        "  hrrr: total=3  complete=1  failed=1  interrupted=0  pending=1"
+        in result.output
+    )
+    assert (
+        "  fine: total=3  complete=0  failed=0  interrupted=3  pending=0"
+        in result.output
+    )
 
 
 def test_cli_help_lists_current_commands():
@@ -391,7 +421,10 @@ def test_run_task_runs_its_share_here(tmp_path, calls):
     assert "backend=" not in result.output
     assert "Receptors of this task: 1, 4, 7, ..." in result.output
     # A task sums up what it ran, not the whole project.
-    assert "This run:  total=2  completed=1  pending=1" in result.output
+    assert (
+        "This run:  total=2  complete=1  failed=1  interrupted=0  pending=0"
+        in result.output
+    )
     assert "failed: met_missing 1" in result.output
     assert "Project:" not in result.output
 

@@ -396,9 +396,9 @@ def status(
 # ---------------------------------------------------------------------------
 
 
-def _counts(total: int, pending: int) -> str:
-    """Return a ``total / completed / pending`` line."""
-    return f"total={total}  completed={total - pending}  pending={pending}"
+def _counts(states: Iterable[str]) -> str:
+    """Return a ``total=  complete=  failed=  interrupted=  pending=`` line."""
+    return "  ".join(f"{name}={n}" for name, n in _state_counts(states).items())
 
 
 def _print_status(project: Project, ran: pd.DataFrame | None = None) -> None:
@@ -409,14 +409,12 @@ def _print_status(project: Project, ran: pd.DataFrame | None = None) -> None:
     only.
     """
     table = project.status() if ran is None else ran
-    pending = table[table.state != "complete"]
     label = f"Project: {project.directory}" if ran is None else "This run:"
-    typer.echo(f"{label}  {_counts(len(table), len(pending))}")
+    typer.echo(f"{label}  {_counts(table['state'])}")
     if len(project.variants) > 1:
-        total = Counter(table["variant"].tolist())
-        waiting = Counter(pending["variant"].tolist())
         for variant in project.variants:
-            typer.echo(f"  {variant}: {_counts(total[variant], waiting[variant])}")
+            states = table.loc[table["variant"] == variant, "state"]
+            typer.echo(f"  {variant}: {_counts(states)}")
     causes = Counter(table.loc[table.state == "failed", "reason"])
     if causes:
         listed = ", ".join(f"{cause} {n}" for cause, n in causes.most_common())
