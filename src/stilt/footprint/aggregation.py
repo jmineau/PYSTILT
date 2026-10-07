@@ -195,8 +195,10 @@ class Jacobian(NamedTuple):
     receptors : pandas.Index
         Receptor ids of the rows.
     columns : pandas.MultiIndex
-        ``(time, cell)`` for each column: the left edge of the time bin and
-        the target cell's label.
+        Each column's time bin and target cell. The first level, ``time``,
+        is the left edge of the time bin; the others are the target's cell
+        index: ``lon`` and ``lat`` (``x`` and ``y`` when projected) for a
+        grid, ``cell`` for a mesh or zones.
     empty : list of str
         Receptors whose footprint is empty. They have no row.
     missing : list of str
@@ -209,8 +211,32 @@ class Jacobian(NamedTuple):
     empty: list[str]
     missing: list[str]
 
-    def to_frame(self) -> pd.DataFrame:
-        """Return the matrix as a dense DataFrame (receptors × columns)."""
+    def to_frame(self, sparse: bool = False) -> pd.DataFrame:
+        """
+        Return the matrix as a DataFrame, receptors by :attr:`columns`.
+
+        Parameters
+        ----------
+        sparse : bool, default False
+            Hold the values in pandas' sparse columns, built from the sparse
+            matrix with no dense copy (``DataFrame.sparse``). By default
+            they are a dense array.
+        """
+        if sparse:
+            stored = pd.DataFrame.sparse.from_spmatrix(self.data)
+            # A cell not stored is zero. pandas 3 fills from_spmatrix's
+            # columns with NaN, so each is rebuilt with a fill of 0.
+            columns = {
+                j: pd.arrays.SparseArray(
+                    stored[j].array.sp_values,
+                    sparse_index=stored[j].array.sp_index,
+                    fill_value=0.0,
+                )
+                for j in stored.columns
+            }
+            frame = pd.DataFrame(columns, index=self.receptors)
+            frame.columns = self.columns
+            return frame
         return pd.DataFrame(
             self.data.toarray(), index=self.receptors, columns=self.columns
         )
@@ -220,9 +246,11 @@ class Jacobian(NamedTuple):
         Return the matrix as a DataArray with dims ``(receptor, time, cell)``.
 
         ``time`` is the left edge of each time bin and ``cell`` the target
-        cell's label, as in ``columns``. The receptors with an empty
-        footprint and those not run yet are the attributes ``empty`` and
-        ``missing``.
+        cell, as in ``columns``. For a grid, ``cell`` has the coordinates
+        ``lon`` and ``lat`` (``x`` and ``y`` when projected), and
+        ``.unstack("cell")`` makes them dimensions. The receptors with an
+        empty footprint and those not run yet are the attributes ``empty``
+        and ``missing``.
 
         Parameters
         ----------
@@ -239,7 +267,7 @@ class Jacobian(NamedTuple):
         """
         times = pd.unique(self.columns.get_level_values("time"))
         n_cells = len(self.columns) // len(times) if len(times) else 0
-        cells = self.columns.get_level_values("cell")[:n_cells]
+        cells = self.columns.droplevel("time")[:n_cells]
         shape = (len(self.receptors), len(times), n_cells)
         if dense:
             values = self.data.toarray().reshape(shape)
@@ -252,10 +280,15 @@ class Jacobian(NamedTuple):
                     "pystilt[sparse]. dense=True returns a NumPy array instead."
                 ) from error
             values = pydata_sparse.COO.from_scipy_sparse(self.data).reshape(shape)
+        if isinstance(cells, pd.MultiIndex):
+            cell_coords = xr.Coordinates.from_pandas_multiindex(cells, "cell")
+        else:
+            cell_coords = xr.Coordinates({"cell": np.asarray(cells)})
+        coords = xr.Coordinates({"receptor": self.receptors, "time": times})
         return xr.DataArray(
             values,
             dims=("receptor", "time", "cell"),
-            coords={"receptor": self.receptors, "time": times, "cell": cells},
+            coords=coords.merge(cell_coords).coords,
             name="jacobian",
             attrs={
                 "units": UNITS,
@@ -361,13 +394,32 @@ def _jacobian(
     found = set(rows)
     empty = [r for batch in batches for r in batch if r not in found]
 
-    # A grid target's cells are (x, y) tuples; keep them as one label each.
-    cells = pd.Index(list(target.index), tupleize_cols=False)
-    bin_left = _naive_utc(time_bins.left)
-    columns = pd.MultiIndex.from_product([bin_left, cells], names=["time", "cell"])
+    columns = _columns(_naive_utc(time_bins.left), target.index)
     return Jacobian(
         data, pd.Index(rows, name="receptor"), columns, empty, list(missing or [])
     )
+
+
+def _columns(times: pd.Index, cells: pd.Index) -> pd.MultiIndex:
+    """
+    Return the Jacobian's columns: each time bin, then each target cell within it.
+
+    The levels are ``time`` and the target's own index levels (``lon`` and
+    ``lat`` for a longitude/latitude grid, ``cell`` for a mesh or zones).
+    Built from arrays, since a grid by its time bins can be millions of
+    columns.
+    """
+    n_times, n_cells = len(times), len(cells)
+    levels = (
+        cells
+        if isinstance(cells, pd.MultiIndex)
+        else pd.MultiIndex.from_arrays([cells])
+    )
+    arrays = [np.repeat(np.asarray(times), n_cells)] + [
+        np.tile(levels.get_level_values(i).to_numpy(), n_times)
+        for i in range(levels.nlevels)
+    ]
+    return pd.MultiIndex.from_arrays(arrays, names=["time", *levels.names])
 
 
 def aggregate(
