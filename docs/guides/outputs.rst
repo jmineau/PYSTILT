@@ -1,5 +1,5 @@
-Load And Plot Results
-=====================
+Footprints And Particles
+========================
 
 Each simulation is one receptor run under one variant
 (:doc:`projects`). It has up to two results in the output directory:
@@ -11,8 +11,9 @@ Each simulation is one receptor run under one variant
 Variants that differ only in footprint settings share one set of
 particles.
 
-This page shows how to plot these outputs, load them for analysis, and add
-footprints up over the areas you care about.
+This page shows how to plot them and load them for analysis.
+:doc:`aggregation` sums footprints over areas, and many at once into a
+Jacobian.
 
 Quick look
 ----------
@@ -88,129 +89,6 @@ back:
 The file records the receptor and the settings used to make it.
 ``stilt.read_footprint`` also opens a footprint file from the output
 directory, such as ``sim.footprint_path``, with nothing else around it.
-
-Many simulations at once
-------------------------
-
-``project.simulations`` is a table with one row per receptor under each
-variant. Its columns are:
-
-- ``receptor``, the receptor id
-- ``variant``, the variant name
-- ``realization``, ``0`` to ``N - 1`` for a variant declared with
-  ``realizations: N``, and empty for one that runs once.
-- ``time``, ``kind``, and ``location`` of the receptor
-- one column for each extra column of ``receptors.csv``
-
-Select rows the way you would in pandas, then hand the selection to the
-project to load its results:
-
-.. code-block:: python
-
-   sims = project.simulations
-   july = sims[
-       (sims.variant == "hrrr")
-       & sims.time.between("2023-07-01", "2023-07-31 23:00")   # both ends included
-   ]
-   footprints = project.footprints(july)   # one dataset: receptor, hour, lat, lon
-   particles = project.particles(july)     # one table, with receptor and variant columns
-
-Leave the selection out to load every simulation. Any table with
-``receptor`` and ``variant`` columns works as a selection, such as your
-observations merged with ``sims``, or a polars or pyarrow table, and so
-does a boolean mask over ``project.simulations``.
-
-The footprints of one variant come back as one :class:`xarray.Dataset`.
-Receptors at different times line up on ``hour``, the hours after each
-receptor's time, so a backward run's first hour is -1. The ``time``
-coordinate says when each of a receptor's hours starts:
-
-.. code-block:: python
-
-   footprints.foot.sum("hour").mean("receptor").plot()   # the mean footprint
-   footprints.foot.sel(receptor=rid)                     # one receptor's hours
-   footprints.time.sel(receptor=rid)                     # and when they start
-
-The values are read from the files only when a computation needs them, a
-day's receptors at a time, so opening a month of footprints is quick.
-Loading them all at once takes about 35 MB per footprint on a 300 by 300
-grid over 24 hours. Select one variant first, as above; a selection of
-several raises an error. Receptors whose footprint
-is empty are listed in ``footprints.attrs["empty"]``, and those not run yet
-in ``footprints.attrs["missing"]``.
-
-For one receptor, ``project.simulation(rid, "hrrr").footprint`` is its
-footprint as a :class:`xarray.DataArray` with absolute times, which the
-``foot.stilt`` methods work on.
-
-To sum a whole project's footprints onto your flux cells, use
-:meth:`~stilt.Project.jacobian`. It reads the footprints in batches and
-returns a sparse matrix with one row per receptor, so its size does not
-depend on the grid. ``H.to_xarray()`` returns the same values as a
-DataArray with dims ``(receptor, time, cell)``. Its values are a sparse
-array from the optional ``sparse`` package (``pip install
-pystilt[sparse]``), or a NumPy array with ``dense=True``:
-
-.. code-block:: python
-
-   H = project.jacobian(july, zones, time_bins)
-   H.to_xarray()             # receptor, time, cell
-   H.to_frame(sparse=True)   # receptors by (time, cell), pandas sparse columns
-
-The columns are the time bin and then the target's cells, as named levels:
-``time, cell`` for zones or a mesh, and ``time, lon, lat`` for a grid
-(``time, x, y`` when it is projected). For a grid,
-``H.to_xarray().unstack("cell")`` has ``lon`` and ``lat`` dimensions.
-
-The particles come back as one table, so pandas can group them:
-
-.. code-block:: python
-
-   particles.groupby("receptor")["foot"].sum()
-
-A simulation whose result does not exist yet is left out. Loading
-particles takes 10 to 20 MB per simulation. For thousands of simulations,
-read the ``particles/`` folder of the output directory with pyarrow,
-DuckDB, or polars instead. To find a single file, use
-``sim.footprint_path`` or ``sim.particles_path``.
-
-To work with one simulation of a selection, look it up by its row:
-
-.. code-block:: python
-
-   for receptor, variant in july[["receptor", "variant"]].itertuples(index=False):
-       sim = project.simulation(receptor, variant)
-
-The extra columns of ``receptors.csv`` select one satellite scene or one
-site:
-
-.. code-block:: python
-
-   scene = sims[(sims.variant == "hrrr") & (sims.scene == "A")]
-   ensemble = sims[sims.variant == "hrrr-err"]        # every realization
-
-To see what is left to do:
-
-.. code-block:: python
-
-   project.incomplete()       # the simulations that are not complete
-   st = project.status()      # every simulation, with six more columns
-   st.state.value_counts()
-   st[st.state == "failed"]   # the failed simulations, and why
-   project.status(july)       # the same, for a selection
-
-``status()`` adds a ``particles`` and a ``footprint`` column that say
-whether each output exists. They are blank where the variant does not make
-that output. The ``state`` column is ``complete``, ``failed``,
-``interrupted`` (the run started and was stopped before it finished, by a
-time limit, preemption, or a killed process), or ``pending`` (not run
-yet). A run that stops partway leaves a log saying when and where it
-started. For a failed
-simulation, ``step``, ``reason``, and ``message`` say why. ``status()``
-reads folder listings and the failure records of failed simulations, and
-opens no result file, so it is quick on a large project. From the command
-line, ``stilt status`` prints the totals, per variant when there are
-several.
 
 Particles
 ---------
@@ -290,86 +168,112 @@ simulation is complete, ``sim.has_footprint`` is true, and
 ``attrs["empty"]``, and a Jacobian in ``H.empty``. It is not a footprint of
 zeros; :doc:`checking` says what it means and what to do.
 
-Adding footprints up over areas
--------------------------------
+Many simulations at once
+------------------------
 
-Footprints are always calculated on the regular grid in your config, as in
-STILT-R. To get the influence of other areas, such as counties, hexagons, or
-small windows around point sources, use ``foot.stilt.aggregate``.
-It adds up the footprint cells in each area, and the hours in each time
-bin:
+``project.simulations`` is a table with one row per receptor under each
+variant. Its columns are:
 
-.. code-block:: python
+- ``receptor``, the receptor id
+- ``variant``, the variant name
+- ``realization``, ``0`` to ``N - 1`` for a variant declared with
+  ``realizations: N``, and empty for one that runs once.
+- ``time``, ``kind``, and ``location`` of the receptor
+- one column for each extra column of ``receptors.csv``
 
-   import pandas as pd
-   import stilt
-
-   hours = foot.indexes["time"]   # the start of each footprint hour
-   bins = pd.interval_range(
-       start=hours.min(), periods=len(hours), freq="1h", closed="left"
-   )
-   state = stilt.Grid(xmin=-112.3, xmax=-111.6, ymin=40.4, ymax=41.0,
-                      xres=0.02, yres=0.02)
-   by_cell = foot.stilt.aggregate(state, time_bins=bins)   # index == state.index
-
-The result is a DataFrame with one row per area and one column per time
-bin, labelled by the start of the bin. Footprint times are the start of
-each hour, so the bins must be closed on the left (``closed="left"``). A footprint cell that straddles two
-areas is split between them by area, so the total influence is kept. This
-is what you want before multiplying by emissions. Influence that falls
-outside every area is dropped.
-
-The target can be:
-
-- a :class:`stilt.Grid`. Rows follow ``grid.index``, one ``(lon, lat)``
-  pair per cell.
-- a :class:`stilt.Mesh` of polygons with ids: a shapefile
-  (``Mesh.from_file``), H3 hexagons (``Mesh.from_h3``), or windows around
-  points (``Mesh.from_windows``). Rows are the polygon ids.
-- a :class:`stilt.Zones`, which merges the cells of a grid or mesh into
-  larger groups by label.
-
-For cells given some other way, such as an xarray grid or a list of cell
-centres, build the :class:`stilt.Grid` they lie on and select the rows you
-need from the result.
+Select rows the way you would in pandas, then hand the selection to the
+project to load its results:
 
 .. code-block:: python
 
-   sources = stilt.Mesh.from_windows(
-       [(-111.97, 40.515), (-112.015, 40.779)], 0.01, ids=["landfill", "wwtp"]
-   )
-   by_source = foot.stilt.aggregate(sources, time_bins=bins)   # index == ["landfill", "wwtp"]
+   sims = project.simulations
+   july = sims[
+       (sims.variant == "hrrr")
+       & sims.time.between("2023-07-01", "2023-07-31 23:00")   # both ends included
+   ]
+   footprints = project.footprints(july)   # one dataset: receptor, hour, lat, lon
+   particles = project.particles(july)     # one table, with receptor and variant columns
 
-   counties = stilt.Mesh.from_file("counties.shp", ids="NAME")
-   by_county = foot.stilt.aggregate(counties, time_bins=bins)
+Leave the selection out to load every simulation. Any table with
+``receptor`` and ``variant`` columns works as a selection, such as your
+observations merged with ``sims``, or a polars or pyarrow table, and so
+does a boolean mask over ``project.simulations``.
 
-   sectors = stilt.Zones.from_labels(state, labels)       # one label per cell of state
-   by_sector = foot.stilt.aggregate(sectors, time_bins=bins)
-
-Polygons in another coordinate system are reprojected onto the footprint
-grid. The overlaps between the footprint grid and your areas are worked out
-once and reused, so adding up thousands of footprints is fast. Polygon
-overlaps use shapely. If
-`exactextract <https://github.com/isciences/exactextract>`_ is installed,
-as with the ``geometry`` extra, PYSTILT uses it instead. It gives the same
-result and is about a hundred times faster on large grids.
-
-The footprint grid must be fine enough to resolve your areas.
-``aggregate`` warns when the smallest area spans fewer than two footprint
-cells. In that case, calculate the footprint again from its particles on a
-finer grid:
+The footprints of one variant come back as one :class:`xarray.Dataset`.
+Receptors at different times line up on ``hour``, the hours after each
+receptor's time, so a backward run's first hour is -1. The ``time``
+coordinate says when each of a receptor's hours starts:
 
 .. code-block:: python
 
-   hexes = stilt.Mesh.from_h3(8, bounds=state)
-   grid = hexes.to_grid(cells_per_target=4)
-   fine = sim.calc_footprint(grid=grid)
-   by_hex = fine.stilt.aggregate(hexes, time_bins=bins)
+   footprints.foot.sum("hour").mean("receptor").plot()   # the mean footprint
+   footprints.foot.sel(receptor=rid)                     # one receptor's hours
+   footprints.time.sel(receptor=rid)                     # and when they start
 
-``to_grid`` picks a grid that covers the areas with at least four
-cells across the smallest one. ``sim.calc_footprint`` applies the
-variant's particle transforms, as the stored footprint did, and does not
-overwrite the stored file.
+The values are read from the files only when a computation needs them, a
+day's receptors at a time, so opening a month of footprints is quick.
+Loading them all at once takes about 35 MB per footprint on a 300 by 300
+grid over 24 hours. Select one variant first, as above; a selection of
+several raises an error. Receptors whose footprint
+is empty are listed in ``footprints.attrs["empty"]``, and those not run yet
+in ``footprints.attrs["missing"]``.
+
+For one receptor, ``project.simulation(rid, "hrrr").footprint`` is its
+footprint as a :class:`xarray.DataArray` with absolute times, which the
+``foot.stilt`` methods work on.
+
+To sum a selection's footprints onto your flux cells, as one matrix, use
+``project.jacobian`` (:doc:`aggregation`).
+
+The particles come back as one table, so pandas can group them:
+
+.. code-block:: python
+
+   particles.groupby("receptor")["foot"].sum()
+
+A simulation whose result does not exist yet is left out. Loading
+particles takes 10 to 20 MB per simulation. For thousands of simulations,
+read the ``particles/`` folder of the output directory with pyarrow,
+DuckDB, or polars instead. To find a single file, use
+``sim.footprint_path`` or ``sim.particles_path``.
+
+To work with one simulation of a selection, look it up by its row:
+
+.. code-block:: python
+
+   for receptor, variant in july[["receptor", "variant"]].itertuples(index=False):
+       sim = project.simulation(receptor, variant)
+
+The extra columns of ``receptors.csv`` select one satellite scene or one
+site:
+
+.. code-block:: python
+
+   scene = sims[(sims.variant == "hrrr") & (sims.scene == "A")]
+   ensemble = sims[sims.variant == "hrrr-err"]        # every realization
+
+To see what is left to do:
+
+.. code-block:: python
+
+   project.incomplete()       # the simulations that are not complete
+   st = project.status()      # every simulation, with six more columns
+   st.state.value_counts()
+   st[st.state == "failed"]   # the failed simulations, and why
+   project.status(july)       # the same, for a selection
+
+``status()`` adds a ``particles`` and a ``footprint`` column that say
+whether each output exists. They are blank where the variant does not make
+that output. The ``state`` column is ``complete``, ``failed``,
+``interrupted`` (the run started and was stopped before it finished, by a
+time limit, preemption, or a killed process), or ``pending`` (not run
+yet). A run that stops partway leaves a log saying when and where it
+started. For a failed
+simulation, ``step``, ``reason``, and ``message`` say why. ``status()``
+reads folder listings and the failure records of failed simulations, and
+opens no result file, so it is quick on a large project. From the command
+line, ``stilt status`` prints the totals, per variant when there are
+several.
 
 Without PYSTILT
 ---------------
