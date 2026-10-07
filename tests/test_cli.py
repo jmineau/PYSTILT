@@ -90,9 +90,9 @@ def test_python_m_entrypoint_invokes_cli(monkeypatch):
 
 
 def test_resolve_project_exits_when_no_config_yaml(tmp_path):
-    """Exits with code 1 when no config.yaml is found."""
+    """Exits with code 2 when no config.yaml is found: the command line named no project."""
     result = runner.invoke(app, ["run", str(tmp_path)])
-    assert result.exit_code == 1
+    assert result.exit_code == 2
 
 
 def test_resolve_project_returns_path_when_config_exists(tmp_path):
@@ -109,7 +109,7 @@ def test_resolve_project_returns_path_when_config_exists(tmp_path):
 
 def test_status_exits_when_no_config(tmp_path):
     result = runner.invoke(app, ["status", str(tmp_path)])
-    assert result.exit_code == 1
+    assert result.exit_code == 2
 
 
 def test_status_prints_project_info(tmp_path):
@@ -208,7 +208,7 @@ def test_cli_help_lists_current_commands():
 
 def test_run_exits_when_no_config(tmp_path):
     result = runner.invoke(app, ["run", str(tmp_path)])
-    assert result.exit_code == 1
+    assert result.exit_code == 2
 
 
 def test_run_runs_the_project_with_its_execution_settings(tmp_path, calls):
@@ -328,7 +328,8 @@ def test_run_reads_execution_settings_from_a_file(tmp_path, calls):
         ([], 0),
         (["complete", "complete"], 0),
         (["complete", "failed"], 1),
-        (["failed", "pending"], 2),
+        (["failed", "pending"], 3),
+        (["complete", "interrupted"], 3),
     ],
 )
 def test_run_exit_code_says_how_the_run_ended(tmp_path, calls, states, code):
@@ -338,6 +339,17 @@ def test_run_exit_code_says_how_the_run_ended(tmp_path, calls, states, code):
     result = runner.invoke(app, ["run", str(tmp_path)])
 
     assert result.exit_code == code, result.output
+
+
+@pytest.mark.parametrize("args", [["run", "--bogus-flag"], ["nosuchcmd"]])
+def test_a_wrong_command_line_exits_2_not_interrupted(tmp_path, calls, args):
+    """Click exits 2 on a typo, so 2 means a wrong command line and never "retry"."""
+    _write_minimal_config(tmp_path)
+
+    result = runner.invoke(app, [*args, str(tmp_path)])
+
+    assert result.exit_code == 2
+    assert calls == []
 
 
 def test_run_task_runs_its_share_here(tmp_path, calls):
@@ -378,7 +390,7 @@ def test_run_task_and_receptors_refuse_bad_values(tmp_path, calls, args, message
 
     result = runner.invoke(app, ["run", str(tmp_path), *args])
 
-    assert result.exit_code == 1
+    assert result.exit_code == 2
     assert message in result.output
     assert calls == []
 
@@ -402,7 +414,7 @@ def test_run_reports_receptors_not_in_the_project(tmp_path, monkeypatch):
 
     result = runner.invoke(app, ["run", str(tmp_path), "--receptors", str(listed)])
 
-    assert result.exit_code == 1
+    assert result.exit_code == 2
     assert "not in this project" in result.output
 
 
@@ -427,7 +439,7 @@ def test_submit_without_a_time_limit_says_so(tmp_path, calls):
 
     result = runner.invoke(app, ["submit", str(tmp_path)])
 
-    assert result.exit_code == 1
+    assert result.exit_code == 2
     assert "execution.time is required with backend: slurm" in result.output
     assert "Traceback" not in result.output
     assert calls == []
@@ -536,7 +548,7 @@ def test_init_aborts_when_config_exists(tmp_path):
     project.mkdir()
     (project / "config.yaml").write_text("n_hours: -24\n")
     result = runner.invoke(app, ["init", str(project)])
-    assert result.exit_code == 1
+    assert result.exit_code == 2
 
 
 def test_status_lists_output_folders_no_variant_uses(tmp_path):

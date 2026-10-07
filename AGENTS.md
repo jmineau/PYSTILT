@@ -230,8 +230,9 @@ docs/                Sphinx (pydata-sphinx-theme)
    run --task i/n`) runs one share here whatever the backend; the share is
    taken from all the receptors before the complete ones are dropped
    (`task_share`), so tasks that start at different times never overlap.
-   `stilt run` exits 0 (all complete), 1 (some failed), or 2 (some
-   pending: interrupted).
+   `stilt run` exits 0 (all complete), 1 (some failed), or 3 (some
+   interrupted); every command exits 2 on a wrong command line, as Click
+   does for an unknown option.
 2. **Observation-driven**: a reader yields a DataFrame of soundings;
    `stilt.observations` helpers thin and group it; each row becomes a
    `Receptor` (`receptors_from_soundings`, which also gives the kernel

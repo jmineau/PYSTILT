@@ -489,7 +489,7 @@ def wait(job_id: str, poll: float = 30.0) -> dict[str, tuple[str, str]]:
 
     Polls ``sacct`` every *poll* seconds. A task that ended other than
     complete, or with failed simulations (exit 1) or interrupted ones
-    (exit 2), is logged with its state; its simulations stay pending in the
+    (exit 3), is logged with its state; its simulations stay pending in the
     status table.
 
     Returns
@@ -503,7 +503,7 @@ def wait(job_id: str, poll: float = 30.0) -> dict[str, tuple[str, str]]:
         time.sleep(poll)
         states = _task_states(job_id)
     for task, (state, code) in sorted(states.items()):
-        if state == "COMPLETED" or (state == "FAILED" and code in ("1:0", "2:0")):
+        if state == "COMPLETED" or (state == "FAILED" and code in ("1:0", "3:0")):
             continue
         logger.warning(
             "Slurm task %s ended %s (exit %s); see its log", task, state, code

@@ -8,6 +8,11 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- `stilt run` exits 3 when some simulations did not finish (was 2), and
+  every command exits 2 when its command line is wrong (was 1), as Click
+  already did for an unknown option (breaking for scripts that read the
+  code). 0 is complete and 1 some failed, as before. A driver can retry 3
+  and never retries a typo.
 - An empty footprint file is marked `stilt:empty: true` in its metadata
   (breaking for stored output: `stilt:empty_reason` is no longer read; the
   upgrade script rewrites it). `EmptyFootprint` has no `reason`, and
