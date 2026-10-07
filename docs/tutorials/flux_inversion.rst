@@ -107,7 +107,7 @@ mind:
   inventory is then as coarse as the footprint, or coarser.
 - For a coarser inventory, or to solve for fluxes on coarse cells, sum the
   footprints onto its cells with ``project.jacobian`` or
-  ``foot.stilt.aggregate``.
+  ``foot.stilt.aggregate`` (:doc:`../guides/aggregation`).
 - For a finer inventory, put it on the footprint grid as an area-weighted
   mean, such as with `xESMF <https://xesmf.readthedocs.io>`_'s conservative
   regridding, or make the footprints on the inventory's grid with
