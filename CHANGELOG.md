@@ -121,7 +121,9 @@ layout; `docs/migration/` covers moving from STILT-R, X-STILT, and stiltctl.
   (`project.folders()`).
 - `project.jacobian(sel, target, time_bins)` sums footprints onto a grid,
   mesh, or zones as a sparse matrix, its columns named levels from the
-  target (`time, lon, lat` or `time, cell`), in bounded memory.
+  target (`time, lon, lat` or `time, cell`), in bounded memory. Its
+  `workers` threads default to the CPUs the process may use (in a Slurm
+  job, the job's), at most 8, as `open_footprints` does.
 - `project.footprints(sel)` and `stilt.footprint.open_footprints(paths)`:
   many footprints as one dataset. Result files read alone:
   `stilt.read_particles`, `stilt.read_footprint`, and

@@ -231,6 +231,26 @@ def _is_empty(meta: dict[bytes, bytes]) -> bool:
 #: About how many bytes of footprint values one chunk of :func:`open_footprints` holds.
 _CHUNK_BYTES = 128 * 2**20
 
+#: The most threads that read or sum footprints when not told how many.
+#: Summing stops getting faster at about 8 (#190).
+MAX_THREADS = 8
+
+
+def _threads(workers: int | None) -> int:
+    """
+    Return *workers*, or by default the CPUs this process may use, at most :data:`MAX_THREADS`.
+
+    In a Slurm job or a container that is what the job was given, not the
+    machine's CPUs (``os.cpu_count``).
+    """
+    if workers is not None:
+        return workers
+    try:
+        cpus = len(os.sched_getaffinity(0))  # Linux
+    except AttributeError:  # macOS and Windows
+        cpus = os.cpu_count() or 1
+    return min(cpus, MAX_THREADS)
+
 
 def _footer(path: Location) -> dict[bytes, bytes]:
     """Return the metadata of a stored footprint, reading only its footer."""
@@ -278,8 +298,8 @@ def open_footprints(
         Footprint files from an output directory, all made with the same
         settings (one variant's). URLs read from an object store.
     workers : int, optional
-        Threads that read the files' metadata. Defaults to the number of
-        CPUs.
+        Threads that read the files' metadata. Defaults to the CPUs this
+        process may use, at most 8.
 
     Returns
     -------
@@ -307,7 +327,7 @@ def open_footprints(
     located = [location(p) for p in paths]
     if not located:
         raise ValueError("No footprint files to open.")
-    threads = workers if workers is not None else (os.cpu_count() or 1)
+    threads = _threads(workers)
     if threads > 1 and len(located) > 1:
         with ThreadPoolExecutor(max_workers=threads) as pool:
             footers = list(pool.map(_footer, located))

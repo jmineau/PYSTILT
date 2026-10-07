@@ -24,7 +24,7 @@ from stilt.footprint.config import FootprintConfig
 from stilt.receptors import parse_receptor_id
 from stilt.spatial import Grid, horizontal_dims
 
-from .io import UNITS, _naive_utc, _naive_utc_ns
+from .io import UNITS, _naive_utc, _naive_utc_ns, _threads
 from .targets import Geometry, Mesh, Zones, check_resolution, overlap_weights
 
 
@@ -361,15 +361,17 @@ def _jacobian(
     *,
     missing: list[str] | None = None,
     geometry_hash: str | None = None,
-    workers: int = 1,
+    workers: int | None = None,
 ) -> Jacobian:
     """
     Sum footprints onto a target batch by batch, and stack the rows into one Jacobian.
 
     ``read(batch)`` returns the footprint cells of a batch of receptors.
-    Batches are read and summed in *workers* threads, so only that many are
-    in memory at once; the rows come back in batch order.
+    Batches are read and summed in *workers* threads (by default the CPUs
+    this process may use, at most 8), so only that many are in memory at
+    once; the rows come back in batch order.
     """
+    workers = _threads(workers)
     edges = _bin_edges(time_bins)  # raises for bins not closed on the left
     grid = config.grid
     if grid is None:
