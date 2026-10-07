@@ -51,12 +51,6 @@ class Plume:
     density: xr.DataArray
     threshold: float
 
-    def contains(self, longitudes: ArrayLike, latitudes: ArrayLike) -> np.ndarray:
-        """Return True for each point inside the plume outline."""
-        lon = np.asarray(longitudes, dtype=float)
-        lat = np.asarray(latitudes, dtype=float)
-        return shapely.contains_xy(self.polygon, lon, lat)
-
 
 def kernel_density(
     longitudes: ArrayLike,

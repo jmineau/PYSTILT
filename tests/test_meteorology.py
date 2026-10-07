@@ -9,12 +9,17 @@ import pandas as pd
 import pytest
 
 from stilt.exceptions import MeteorologyError
-from stilt.meteorology import Met, MetConfig
+from stilt.meteorology import Met, MetConfig, run_window
 from stilt.spatial import Bounds
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+
+def _run_files(met, r_time, n_hours):
+    """Return the met files of one run, as the HYSPLIT model asks for them."""
+    return met.files_for(run_window(r_time, n_hours), hour_after=n_hours < 0)
 
 
 def _make_met(tmp_path: Path, file_format: str, tres: str, n_min: int = 1) -> Met:
@@ -108,7 +113,7 @@ def _make_download_met(tmp_path: Path, download: str = "hrrr", **kwargs) -> Met:
 
 
 def test_met_download_calls_fetch(tmp_path):
-    """With download, required_files delegates to the arlmet archive's fetch()."""
+    """With download, files_for delegates to the arlmet archive's fetch()."""
     mock_archive = MagicMock()
     mock_archive.fetch.return_value = [tmp_path / "file1", tmp_path / "file2"]
     for f in mock_archive.fetch.return_value:
@@ -117,7 +122,7 @@ def test_met_download_calls_fetch(tmp_path):
     met = _make_download_met(tmp_path)
     met._archive = mock_archive  # inject mock
 
-    files = met.required_files(r_time="2024-07-18 12:00", n_hours=-24)
+    files = _run_files(met, "2024-07-18 12:00", -24)
 
     mock_archive.fetch.assert_called_once()
     call_kwargs = mock_archive.fetch.call_args
@@ -135,7 +140,7 @@ def test_met_download_from_is_passed_to_fetch(tmp_path):
 
     met = _make_download_met(tmp_path, download_from="ftp")
     met._archive = mock_archive
-    met.required_files(r_time="2024-07-18 12:00", n_hours=-24)
+    _run_files(met, "2024-07-18 12:00", -24)
 
     assert mock_archive.fetch.call_args.kwargs["mirror"] == "ftp"
 
@@ -159,7 +164,7 @@ def test_met_download_with_subgrid_passes_bbox(tmp_path):
     )
     met._archive = mock_archive
 
-    met.required_files(r_time="2024-07-18 12:00", n_hours=-24)
+    _run_files(met, "2024-07-18 12:00", -24)
 
     bbox = mock_archive.fetch.call_args.kwargs["bbox"]
     assert bbox == (-114.5, 38.5, -109.5, 42.5)
@@ -180,7 +185,7 @@ def test_met_download_passes_subgrid_levels(tmp_path):
     )
     met._archive = mock_archive
 
-    met.required_files(r_time="2024-07-18 12:00", n_hours=-24)
+    _run_files(met, "2024-07-18 12:00", -24)
 
     assert mock_archive.fetch.call_args.kwargs["levels"] == [0, 1, 2]
 
@@ -194,7 +199,7 @@ def test_met_download_n_min_raises(tmp_path):
     met._archive = mock_archive
 
     with pytest.raises(MeteorologyError, match="Insufficient"):
-        met.required_files(r_time="2024-07-18 12:00", n_hours=-24)
+        _run_files(met, "2024-07-18 12:00", -24)
 
 
 # ---------------------------------------------------------------------------
@@ -230,9 +235,7 @@ def _archive_met(tmp_path: Path, **kwargs) -> Met:
 
 def _files(met: Met) -> list[Path]:
     """Return the files one simulation at the test time reads."""
-    return met.readable(
-        met.required_files(r_time=dt.datetime(2023, 1, 1, 12), n_hours=-1)
-    )
+    return met.readable(_run_files(met, dt.datetime(2023, 1, 1, 12), -1))
 
 
 def _fake_extract(text: str = "cropped"):
@@ -412,9 +415,7 @@ def test_readable_returns_local_files_where_they_are(tmp_path):
     met = _make_met(source_dir, "%Y%m%d_%H", "1h")
 
     assert met.readable([src]) == [src]
-    assert met.readable(
-        met.required_files(r_time=dt.datetime(2023, 1, 1, 12), n_hours=-1)
-    ) == [src]
+    assert met.readable(_run_files(met, dt.datetime(2023, 1, 1, 12), -1)) == [src]
     assert sorted(p.name for p in tmp_path.iterdir()) == ["met"]
 
 
@@ -444,42 +445,42 @@ def test_readable_keeps_the_first_of_two_files_with_one_name(tmp_path, caplog):
 # ---------------------------------------------------------------------------
 
 
-def test_required_files_backward_single_file(tmp_path):
+def test_files_for_backward_single_file(tmp_path):
     """Backward 1-h run starting exactly on a 1-h boundary."""
     _touch_files(tmp_path, ["20230101_11", "20230101_12", "20230101_13"])
     met = _make_met(tmp_path, "%Y%m%d_%H", "1h")
-    files = met.required_files(r_time=dt.datetime(2023, 1, 1, 12), n_hours=-1)
+    files = _run_files(met, dt.datetime(2023, 1, 1, 12), -1)
     names = [f.name for f in files]
     assert "20230101_11" in names
     assert "20230101_12" in names
 
 
-def test_required_files_backward_24h(tmp_path):
+def test_files_for_backward_24h(tmp_path):
     """24-h backward run should span from previous day."""
     names_to_touch = [f"20230101_{h:02d}" for h in range(24)] + [
         f"20221231_{h:02d}" for h in range(24)
     ]
     _touch_files(tmp_path, names_to_touch)
     met = _make_met(tmp_path, "%Y%m%d_%H", "1h")
-    files = met.required_files(r_time=dt.datetime(2023, 1, 1, 12), n_hours=-24)
+    files = _run_files(met, dt.datetime(2023, 1, 1, 12), -24)
     names = [f.name for f in files]
     assert "20230101_12" in names
     assert "20221231_12" in names
 
 
-def test_required_files_backward_deduplicates(tmp_path):
+def test_files_for_backward_deduplicates(tmp_path):
     """Files should not repeat in the returned list."""
     _touch_files(tmp_path, ["20230101_12"])
     met = _make_met(tmp_path, "%Y%m%d_%H", "1h")
-    files = met.required_files(r_time=dt.datetime(2023, 1, 1, 12), n_hours=-1)
+    files = _run_files(met, dt.datetime(2023, 1, 1, 12), -1)
     assert len(files) == len(set(f.name for f in files))
 
 
-def test_required_files_forward_run(tmp_path):
+def test_files_for_forward_run(tmp_path):
     """Forward run should include files after the receptor time."""
     _touch_files(tmp_path, ["20230101_12", "20230101_13"])
     met = _make_met(tmp_path, "%Y%m%d_%H", "1h")
-    files = met.required_files(r_time=dt.datetime(2023, 1, 1, 12), n_hours=1)
+    files = _run_files(met, dt.datetime(2023, 1, 1, 12), 1)
     names = [f.name for f in files]
     assert "20230101_12" in names
     assert "20230101_13" in names
@@ -490,24 +491,24 @@ def test_required_files_forward_run(tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_required_files_raises_when_no_files(tmp_path):
+def test_files_for_raises_when_no_files(tmp_path):
     met = _make_met(tmp_path, "%Y%m%d_%H", "1h")
     with pytest.raises(MeteorologyError, match="Insufficient"):
-        met.required_files(r_time=dt.datetime(2023, 1, 1, 12), n_hours=-1)
+        _run_files(met, dt.datetime(2023, 1, 1, 12), -1)
 
 
-def test_required_files_raises_when_below_n_min(tmp_path):
+def test_files_for_raises_when_below_n_min(tmp_path):
     _touch_files(tmp_path, ["20230101_12"])
     met = _make_met(tmp_path, "%Y%m%d_%H", "1h", n_min=5)
     with pytest.raises(MeteorologyError, match="Insufficient"):
-        met.required_files(r_time=dt.datetime(2023, 1, 1, 12), n_hours=-1)
+        _run_files(met, dt.datetime(2023, 1, 1, 12), -1)
 
 
-def test_required_files_error_reports_missing_patterns(tmp_path):
+def test_files_for_error_reports_missing_patterns(tmp_path):
     """Error message names the unmatched pattern and the directory."""
     met = _make_met(tmp_path, "%Y%m%d_%H", "1h")
     with pytest.raises(MeteorologyError, match="Patterns not found"):
-        met.required_files(r_time=dt.datetime(2023, 1, 1, 12), n_hours=-1)
+        _run_files(met, dt.datetime(2023, 1, 1, 12), -1)
 
 
 # ---------------------------------------------------------------------------
@@ -515,10 +516,10 @@ def test_required_files_error_reports_missing_patterns(tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_required_files_ignores_lock_files(tmp_path):
+def test_files_for_ignores_lock_files(tmp_path):
     _touch_files(tmp_path, ["20230101_12", "20230101_12.lock"])
     met = _make_met(tmp_path, "%Y%m%d_%H", "1h")
-    files = met.required_files(r_time=dt.datetime(2023, 1, 1, 12), n_hours=-1)
+    files = _run_files(met, dt.datetime(2023, 1, 1, 12), -1)
     assert all(".lock" not in f.name for f in files)
 
 
@@ -527,18 +528,18 @@ def test_required_files_ignores_lock_files(tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_required_files_6h_resolution(tmp_path):
+def test_files_for_6h_resolution(tmp_path):
     """6-h met files: 12-h backward from 2023-01-01 12Z."""
     _touch_files(tmp_path, ["2023010100", "2023010106", "2023010112"])
     met = _make_met(tmp_path, "%Y%m%d%H", "6h")
-    files = met.required_files(r_time=dt.datetime(2023, 1, 1, 12), n_hours=-12)
+    files = _run_files(met, dt.datetime(2023, 1, 1, 12), -12)
     names = [f.name for f in files]
     assert "2023010100" in names
     assert "2023010106" in names
     assert "2023010112" in names
 
 
-def test_required_files_match_multi_hour_filename_prefixes(tmp_path):
+def test_files_for_match_multi_hour_filename_prefixes(tmp_path):
     _touch_files(
         tmp_path,
         [
@@ -551,7 +552,7 @@ def test_required_files_match_multi_hour_filename_prefixes(tmp_path):
     )
     met = _make_met(tmp_path, "%Y%m%d_%H", "6 hours")
 
-    files = met.required_files(r_time=dt.datetime(2024, 6, 1, 0), n_hours=-24)
+    files = _run_files(met, dt.datetime(2024, 6, 1, 0), -24)
 
     assert [f.name for f in files] == [
         "20240531_00-05_hrrr",
@@ -562,18 +563,18 @@ def test_required_files_match_multi_hour_filename_prefixes(tmp_path):
     ]
 
 
-def test_required_files_searches_recursively(tmp_path):
+def test_files_for_searches_recursively(tmp_path):
     nested = tmp_path / "2024" / "06"
     nested.mkdir(parents=True)
     _touch_files(nested, ["20240601_00-05_hrrr"])
     met = _make_met(tmp_path, "%Y%m%d_%H", "6 hours")
 
-    files = met.required_files(r_time=dt.datetime(2024, 6, 1, 0), n_hours=-1)
+    files = _run_files(met, dt.datetime(2024, 6, 1, 0), -1)
 
     assert [f.name for f in files] == ["20240601_00-05_hrrr"]
 
 
-def test_required_files_deduplicates_root_symlink_and_nested_file(tmp_path):
+def test_files_for_deduplicates_root_symlink_and_nested_file(tmp_path):
     nested = tmp_path / "2021" / "06"
     nested.mkdir(parents=True)
     target = nested / "20210601_00-05_hrrr"
@@ -581,17 +582,17 @@ def test_required_files_deduplicates_root_symlink_and_nested_file(tmp_path):
     (tmp_path / "20210601_00-05_hrrr").symlink_to(target)
     met = _make_met(tmp_path, "%Y%m%d_%H", "6 hours")
 
-    files = met.required_files(r_time=dt.datetime(2021, 6, 1, 0), n_hours=-1)
+    files = _run_files(met, dt.datetime(2021, 6, 1, 0), -1)
 
     assert len(files) == 1
     assert files[0].name == "20210601_00-05_hrrr"
 
 
-def test_required_files_backward_non_boundary_includes_ceil_file(tmp_path):
+def test_files_for_backward_non_boundary_includes_ceil_file(tmp_path):
     _touch_files(tmp_path, ["20230101_11", "20230101_12", "20230101_13"])
     met = _make_met(tmp_path, "%Y%m%d_%H", "1h")
 
-    files = met.required_files(r_time=dt.datetime(2023, 1, 1, 12, 30), n_hours=-1)
+    files = _run_files(met, dt.datetime(2023, 1, 1, 12, 30), -1)
     names = [f.name for f in files]
 
     assert "20230101_11" in names
@@ -614,10 +615,10 @@ def _six_hourly_hrrr(tmp_path):
     return _make_met(tmp_path, "%Y%m%d_%H", "6h")
 
 
-def test_required_files_backward_mid_file_release_skips_next_file(tmp_path):
+def test_files_for_backward_mid_file_release_skips_next_file(tmp_path):
     """A 19:06 release sits inside 18-23, so the next day's 00z file is not needed (#29)."""
     met = _six_hourly_hrrr(tmp_path)
-    files = met.required_files(r_time=dt.datetime(2019, 1, 23, 19, 6), n_hours=-24)
+    files = _run_files(met, dt.datetime(2019, 1, 23, 19, 6), -24)
     assert [f.name for f in files] == [
         "20190122_18-23_hrrr",
         "20190123_00-05_hrrr",
@@ -627,27 +628,27 @@ def test_required_files_backward_mid_file_release_skips_next_file(tmp_path):
     ]
 
 
-def test_required_files_backward_last_hour_release_includes_next_file(tmp_path):
+def test_files_for_backward_last_hour_release_includes_next_file(tmp_path):
     """A 23:06 release interpolates against 00z, which is in the next file."""
     met = _six_hourly_hrrr(tmp_path)
-    files = met.required_files(r_time=dt.datetime(2019, 1, 23, 23, 6), n_hours=-24)
+    files = _run_files(met, dt.datetime(2019, 1, 23, 23, 6), -24)
     assert files[-1].name == "20190124_00-05_hrrr"
 
 
-def test_required_files_backward_boundary_release_adds_nothing_later(tmp_path):
+def test_files_for_backward_boundary_release_adds_nothing_later(tmp_path):
     met = _six_hourly_hrrr(tmp_path)
-    files = met.required_files(r_time=dt.datetime(2019, 1, 23, 18), n_hours=-24)
+    files = _run_files(met, dt.datetime(2019, 1, 23, 18), -24)
     assert files[-1].name == "20190123_18-23_hrrr"
 
 
-def test_required_files_ignores_backup_copies(tmp_path):
+def test_files_for_ignores_backup_copies(tmp_path):
     """Archive backups (name~<timestamp>~) must not be staged beside the real file (#30)."""
     _touch_files(
         tmp_path,
         ["20200107_18-23_hrrr", "20200107_18-23_hrrr~20260403182134~"],
     )
     met = _make_met(tmp_path, "%Y%m%d_%H", "6h")
-    files = met.required_files(r_time=dt.datetime(2020, 1, 7, 20), n_hours=-1)
+    files = _run_files(met, dt.datetime(2020, 1, 7, 20), -1)
     assert [f.name for f in files] == ["20200107_18-23_hrrr"]
 
 
@@ -666,7 +667,7 @@ def test_downloaded_met_gets_the_next_file_in_the_last_hour_of_a_file(tmp_path):
     met = _make_download_met(tmp_path)
     met._archive = mock_archive
 
-    met.required_files(r_time="2024-07-18 17:30", n_hours=-24)
+    _run_files(met, "2024-07-18 17:30", -24)
 
     start, end = mock_archive.fetch.call_args.args[:2]
     assert start == pd.Timestamp("2024-07-17 17:30")
@@ -681,8 +682,8 @@ def test_local_met_gets_the_next_file_in_the_last_hour_of_a_file(tmp_path):
         MetConfig(directory=tmp_path, file_format="%Y%m%d_%H", file_tres="6h", n_min=1),
     )
 
-    in_last_hour = met.required_files(r_time="2024-07-18 17:30", n_hours=-1)
-    earlier = met.required_files(r_time="2024-07-18 16:30", n_hours=-1)
+    in_last_hour = _run_files(met, "2024-07-18 17:30", -1)
+    earlier = _run_files(met, "2024-07-18 16:30", -1)
 
     assert [p.name for p in in_last_hour] == ["20240718_12", "20240718_18"]
     assert [p.name for p in earlier] == ["20240718_12"]
@@ -697,8 +698,8 @@ def test_local_hourly_met_on_the_hour_reads_no_extra_file(tmp_path):
         MetConfig(directory=tmp_path, file_format="%Y%m%d_%H", file_tres="1h", n_min=1),
     )
 
-    on_the_hour = met.required_files(r_time="2024-07-18 18:00", n_hours=-1)
-    past_it = met.required_files(r_time="2024-07-18 18:30", n_hours=-1)
+    on_the_hour = _run_files(met, "2024-07-18 18:00", -1)
+    past_it = _run_files(met, "2024-07-18 18:30", -1)
 
     assert [p.name for p in on_the_hour] == ["20240718_17", "20240718_18"]
     assert [p.name for p in past_it] == ["20240718_17", "20240718_18", "20240718_19"]

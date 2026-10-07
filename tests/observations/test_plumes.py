@@ -3,6 +3,7 @@
 import numpy as np
 import pandas as pd
 import pytest
+import shapely
 from shapely.geometry import Polygon
 
 from stilt.observations import (
@@ -91,12 +92,12 @@ def test_plume_polygon_follows_the_particles():
     assert plume.threshold == 0.1
     assert plume.density.max() == 1.0
     # Downwind axis is inside; well off-axis points are outside.
-    inside = plume.contains([SITE[0] + 0.5], [SITE[1] + 0.15])
-    outside = plume.contains([SITE[0] + 0.5], [SITE[1] + 0.9])
-    upwind = plume.contains([SITE[0] - 0.5], [SITE[1]])
+    inside = shapely.contains_xy(plume.polygon, [SITE[0] + 0.5], [SITE[1] + 0.15])
+    outside = shapely.contains_xy(plume.polygon, [SITE[0] + 0.5], [SITE[1] + 0.9])
+    upwind = shapely.contains_xy(plume.polygon, [SITE[0] - 0.5], [SITE[1]])
     assert inside[0] and not outside[0] and not upwind[0]
     # Most particles are inside the outline at the default threshold.
-    assert plume.contains(lon, lat).mean() > 0.85
+    assert shapely.contains_xy(plume.polygon, lon, lat).mean() > 0.85
     # A tighter threshold gives a smaller plume.
     tight = plume_polygon(lon, lat, threshold=0.5)
     assert tight.polygon.area < plume.polygon.area
@@ -107,7 +108,7 @@ def test_plume_background_takes_the_median_beside_the_plume():
     plon, plat = _plume_particles()
     plume = plume_polygon(plon, plat)
     lon, lat = _swath()
-    in_plume = plume.contains(lon, lat)
+    in_plume = shapely.contains_xy(plume.polygon, lon, lat)
     rng = np.random.default_rng(1)
     value = 1900.0 + rng.normal(0.0, 2.0, lon.size)
     value[in_plume] += 30.0
@@ -144,7 +145,7 @@ def test_plume_background_trim_drops_the_high_tail():
     plon, plat = _plume_particles()
     plume = plume_polygon(plon, plat)
     lon, lat = _swath()
-    in_plume = plume.contains(lon, lat)
+    in_plume = shapely.contains_xy(plume.polygon, lon, lat)
     value = np.full(lon.size, 1900.0)
     value[in_plume] = 1930.0
     # Enhanced air just past the outline that the plume missed.
@@ -218,4 +219,4 @@ def test_plume_recipe_from_particle_tables():
     particles = pd.concat(rows, ignore_index=True)
     assert particles["datetime"].between(*overpass).all()
     plume = plume_polygon(particles["lon"], particles["lat"])
-    assert plume.contains([SITE[0] + 0.5], [SITE[1] + 0.15])[0]
+    assert shapely.contains_xy(plume.polygon, [SITE[0] + 0.5], [SITE[1] + 0.15])[0]
