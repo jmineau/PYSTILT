@@ -75,6 +75,10 @@ class HysplitModel:
 
     name = "hysplit"
     config_class = HysplitConfig
+    #: HYSPLIT writes its inputs and outputs as files in a directory.
+    needs_workdir = True
+    #: One hycs_std process per receptor.
+    batched = False
 
     def version(self, config: HysplitConfig) -> str:
         """Return the version of the bundled build, or of the one in ``config.exe_dir``."""

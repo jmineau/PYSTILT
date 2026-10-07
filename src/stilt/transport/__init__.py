@@ -162,8 +162,16 @@ class TransportModel(Protocol):
     Attributes
     ----------
     name : str
-        Name recorded in a run's settings, such as ``"hysplit"``, and
-        written as ``model:`` in ``config.yaml``.
+        The model's short name, such as ``"hysplit"``.
+    needs_workdir : bool, optional
+        Whether :meth:`run` is handed an empty directory for its files. True
+        when the model does not say; a model that writes no files sets it
+        False, and gets ``None``.
+    batched : bool, optional
+        Whether the model runs many receptors in one call
+        (:meth:`run_many`). False when the model does not say. The worker
+        then hands it every receptor of a variant that needs particles at
+        once, where it otherwise calls :meth:`run` for one at a time.
     """
 
     name: str
@@ -224,6 +232,41 @@ class TransportModel(Protocol):
         ------
         SimulationError
             When the run fails, with the model's log in ``log``.
+        """
+        ...
+
+
+class BatchedTransportModel(TransportModel, Protocol):
+    """
+    A transport model that runs many receptors in one call, such as an emulator on a GPU.
+
+    It sets ``batched = True`` and gives :meth:`run_many` beside
+    :meth:`run`.
+    """
+
+    batched: bool
+
+    def run_many(
+        self,
+        receptors: list[Receptor],
+        config: Any,
+        met: MetConfig,
+        windows: list[tuple[dt.datetime, dt.datetime]],
+        workdir: Path | None = None,
+        timeout: int | None = None,
+    ) -> ModelRun:
+        """
+        Run many receptors with one config, and return their particles as one table.
+
+        The table has a ``receptor`` column holding each row's receptor id,
+        beside the particle columns :meth:`run` returns. ``windows[i]`` is
+        the time ``receptors[i]`` covers. A receptor with no rows failed;
+        the others are written. The log and met files are shared by all.
+
+        Raises
+        ------
+        SimulationError
+            When the whole call fails, with the model's log in ``log``.
         """
         ...
 
@@ -321,6 +364,70 @@ def run_model(
     """
     window = run_window(receptor.time, config.n_hours)
     run = get_model(name).run(receptor, config, met, window, workdir, timeout=timeout)
+    return _finish(run, receptor, config)
+
+
+def run_model_many(
+    name: str,
+    receptors: list[Receptor],
+    config: TransportConfig,
+    met: MetConfig,
+    workdir: Path | None = None,
+    timeout: int | None = None,
+) -> dict[str, ModelRun | SimulationError]:
+    """
+    Run a batched transport model once for many receptors, and finish each one's particles.
+
+    The model's one table is split by its ``receptor`` column, and each
+    receptor's particles get the steps :func:`run_model` applies. A receptor
+    whose particles are missing or fail those steps gets its error, and the
+    others their runs.
+
+    Returns
+    -------
+    dict
+        ``{receptor id: ModelRun}``, or the :class:`SimulationError` of a
+        receptor that failed.
+
+    Raises
+    ------
+    SimulationError
+        If the whole call fails.
+    """
+    windows = [run_window(r.time, config.n_hours) for r in receptors]
+    model = get_model(name)
+    run_many = getattr(model, "run_many", None)
+    if run_many is None:
+        raise TypeError(f"Transport model {name!r} has no run_many.")
+    run = run_many(receptors, config, met, windows, workdir, timeout=timeout)
+    if "receptor" not in run.particles.columns:
+        raise SimulationError(
+            "A batched transport model's particles need a receptor column.",
+            reason="NO_PARTICLE_DATA",
+            log=run.log,
+        )
+    by_receptor = dict(tuple(run.particles.groupby("receptor", sort=False)))
+    results: dict[str, ModelRun | SimulationError] = {}
+    for receptor in receptors:
+        rows = by_receptor.get(str(receptor.id))
+        own = replace(
+            run,
+            particles=(
+                pd.DataFrame()
+                if rows is None
+                else rows.drop(columns="receptor").reset_index(drop=True)
+            ),
+        )
+        try:
+            results[str(receptor.id)] = _finish(own, receptor, config)
+        except SimulationError as error:
+            error.log = run.log
+            results[str(receptor.id)] = error
+    return results
+
+
+def _finish(run: ModelRun, receptor: Receptor, config: TransportConfig) -> ModelRun:
+    """Return *run* with its particles checked, their release heights, and the near-field correction."""
     if run.particles.empty:
         raise SimulationError(
             "The transport model wrote no particles.", reason="NO_PARTICLE_DATA"
@@ -421,11 +528,13 @@ def _absolute_dirs(met: MetConfig) -> MetConfig:
 
 __all__ = [
     "MODELS",
+    "BatchedTransportModel",
     "ModelInfo",
     "ModelRun",
     "TransportConfig",
     "TransportModel",
     "get_model",
     "run_model",
+    "run_model_many",
     "run_trajectories",
 ]

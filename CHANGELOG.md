@@ -1006,6 +1006,11 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- A transport model may run many receptors in one call: it sets
+  `batched = True` and gives `run_many`, and the worker hands it every
+  receptor of a variant that needs particles at once. A model that writes
+  no files sets `needs_workdir = False` and gets no workdir. HYSPLIT runs
+  as before.
 - `model:` takes the import path of a model class in another package
   (`model: mypkg.models.MyModel`), as a transform's `kind:` does, so a
   model needs no registration in every process. A settings folder made by

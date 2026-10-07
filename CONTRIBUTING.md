@@ -84,7 +84,14 @@ transforms read, with a release row at `time = 0` when the model can write
 one; see `docs/reference/particles.rst`), its log as text, and the met
 files it read. A failed run raises `SimulationError` with its log. PYSTILT
 adds the release heights and the near-field correction itself
-(`stilt.transport.run_model`). A model in a package of its own needs no
+(`stilt.transport.run_model`). A model that writes no files sets
+`needs_workdir = False` and is handed `workdir=None`. A model that runs
+many receptors in one call, such as an emulator on a GPU, sets
+`batched = True` and gives `run_many(receptors, config, met, windows,
+workdir=None, timeout=None)`, returning one table with a `receptor` column
+(`stilt.transport.BatchedTransportModel`): the worker then hands it every
+receptor of a variant that needs particles at once, and a receptor it
+returns no rows for fails alone. A model in a package of its own needs no
 registration: `config.yaml` names it by import path
 (`model: mypkg.models.MyModel`), as a transform's `kind:` is, and every
 process that opens the project imports it from there. A model built into
