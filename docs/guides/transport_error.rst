@@ -68,10 +68,11 @@ several draws, set ``realizations`` on the error variant:
 
 .. code-block:: yaml
 
-   hrrr-err:
-     siguverr: 2.6
-     # ...
-     realizations: 4          # realizations 0 to 3
+   variants:
+     hrrr-err:
+       siguverr: 2.6
+       # ...
+       realizations: 4        # realizations 0 to 3
 
 The variant then runs four times per receptor, as realizations ``0`` to
 ``3`` of ``hrrr-err``: the ``realization`` column of

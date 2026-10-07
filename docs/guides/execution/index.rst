@@ -90,7 +90,7 @@ loses its failure record.
 In Python, ``sim.failure`` says why one simulation failed, and
 ``status()`` lists every failed simulation in a selection:
 
-.. code-block:: python
+.. code-block:: pycon
 
    >>> sim.failure
    {'step': 'particles', 'reason': 'MET_COVERAGE',
@@ -99,7 +99,7 @@ In Python, ``sim.failure`` says why one simulation failed, and
    >>> st = project.status()
    >>> st[st.state == "failed"][["receptor", "variant", "reason"]]
 
-``step`` is ``particles`` when HYSPLIT failed, which fails every variant that
+``step`` is ``particles`` when the transport model failed, which fails every variant that
 shares those particles, and ``footprint`` when only that variant's footprint
 did. ``reason`` is a short name for the cause, or the error's class when it
 has none. For a HYSPLIT failure, ``message`` is the line of HYSPLIT's log
