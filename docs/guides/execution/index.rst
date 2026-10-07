@@ -43,7 +43,8 @@ Commands you'll use
    Run every simulation that isn't finished yet, and wait until they are
    done, on your computer or as a Slurm job array. From Python, this is
    ``project.run()``, which returns the status table of the simulations it
-   ran (``state`` is ``complete``, ``failed``, or ``pending``).
+   ran (``state`` is ``complete``, ``failed``, ``interrupted``, or
+   ``pending``).
 
 ``stilt submit <project>``
    Submit the unfinished simulations to Slurm as a job array, and return as

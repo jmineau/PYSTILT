@@ -571,7 +571,7 @@ def _run_task(
         finally:
             notice.armed = False
         table = _status(project, pending)
-        unfinished = bool((table["state"] == "pending").any())
+        unfinished = bool(table["state"].isin(["pending", "interrupted"]).any())
         if unfinished and (notice or _preempted()):
             _requeue()
     return table

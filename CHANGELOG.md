@@ -988,6 +988,11 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- `status()` says `interrupted` for a simulation whose particles run
+  started and stopped before it finished (a time limit, preemption, or a
+  killed process), where it said `pending` as for one never run. The
+  worker writes a one-line log when a run starts, and the model's log
+  replaces it when the run ends.
 - `stilt.execution.pending` (the receptors a run would run, for a driver
   that writes its own `receptors.txt`), `stilt.execution.wait` (wait for a
   Slurm job array and return how each task ended), and

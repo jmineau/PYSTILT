@@ -767,6 +767,24 @@ class Output:
             metadata=_stamp(variant.particles_hash, realization),
         )
 
+    def logged(
+        self,
+        variant: Variant,
+        receptor_ids: Iterable[str] | None = None,
+        realization: int | None = None,
+    ) -> frozenset[str]:
+        """
+        Return the receptors that have a transport model log for *variant*.
+
+        Only the date folders of *receptor_ids* are listed. A log with no
+        particles and no failure record is a run that started and did not
+        finish (``interrupted`` in :meth:`stilt.Project.status`).
+        """
+        logs = self._found("particles", "logs", variant, realization)
+        if logs is None:
+            return frozenset()
+        return frozenset(_list_receptor_files(logs, ".log", receptor_ids))
+
     def write_log(
         self,
         variant: Variant,

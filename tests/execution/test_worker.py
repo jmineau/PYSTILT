@@ -174,6 +174,25 @@ def test_run_particles_starts_in_an_empty_directory(
     assert seen == [[]]
 
 
+def test_a_run_stopped_partway_leaves_its_start_in_the_log(
+    sim, met, compute_root, monkeypatch
+):
+    """The log is written when the run starts, so a cut-off run reads as interrupted."""
+
+    class _Model:
+        name = "hysplit"
+
+        def run(self, receptor, params, met, window, workdir=None, timeout=None):
+            raise KeyboardInterrupt  # SIGTERM from Slurm, mid-run
+
+    monkeypatch.setattr("stilt.transport.get_model", lambda name: _Model())
+    with pytest.raises(KeyboardInterrupt):
+        worker.run_particles(sim, met=met, workdir=compute_root / "w")
+
+    assert "PYSTILT started this run" in sim.log
+    assert not sim.has_particles and sim.failure is None
+
+
 def test_run_particles_keeps_no_empty_scratch_copy(sim, met, compute_root, monkeypatch):
     """A run that fails before writing anything, such as on missing met, leaves no scratch copy."""
 
