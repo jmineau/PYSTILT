@@ -79,9 +79,11 @@ layout; `docs/migration/` covers moving from STILT-R, X-STILT, and stiltctl.
   gone. A submission is a folder `_slurm/<stamp>/` with its `job.sh`;
   `execution.time` is required, other `sbatch` options go under
   `execution.slurm`, and a task at its time limit or preempted requeues
-  itself. `stilt run` exits 0 (complete), 1 (some failed), or 3 (some
-  interrupted); every command exits 2 on a wrong command line. A failed
-  run's workdir is kept under `scratch/` in the output directory.
+  itself. A job sent to another cluster (`clusters:` under
+  `execution.slurm`) is followed there. `stilt run` exits 0 (complete), 1
+  (some failed), or 3 (some interrupted); every command exits 2 on a wrong
+  command line. A failed run's workdir is kept under `scratch/` in the
+  output directory.
 - Receptors are frozen pydantic models, and an id names everything that
   makes a receptor distinct (a multipoint's heights to 0.01 m), so some ids
   differ from 0.1.0a22's (breaking).

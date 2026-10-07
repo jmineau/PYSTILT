@@ -84,6 +84,10 @@ Options
           constraint: skl
           exclusive: true      # a bare flag, --exclusive
 
+   ``clusters: kingspeak`` sends the job to another cluster of a site that
+   has several. PYSTILT follows the job there. Give ``squeue`` and
+   ``scancel`` the cluster too: ``squeue -M kingspeak -j <job_id>``.
+
 A setting PYSTILT does not know is an error, so a misspelled ``partition``
 is caught before anything is submitted.
 

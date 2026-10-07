@@ -159,6 +159,8 @@ def commands(monkeypatch):
         )
 
     monkeypatch.setattr(runner.subprocess, "run", fake_run)
+    # Run inside a Slurm job, the tests would see that job's cluster.
+    monkeypatch.delenv("SLURM_CLUSTER_NAME", raising=False)
     return SimpleNamespace(ran=ran, answers=answers)
 
 
@@ -242,6 +244,39 @@ def test_waiting_polls_sacct_until_every_task_ends(commands, caplog):
     assert "9_0" not in warned
 
 
+def test_a_job_on_another_cluster_is_followed_there(
+    pending, commands, tmp_path, monkeypatch
+):
+    """``sbatch --parsable`` names the cluster when it is not the default (#187)."""
+    import pandas as pd
+
+    pending.extend(["a", "b"])
+    monkeypatch.setattr(
+        runner, "_status", lambda project, ids: pd.DataFrame({"state": ["complete"]})
+    )
+    commands.answers["sbatch"] = [_out("777;kingspeak\n")]
+    commands.answers["sacct"] = [
+        _out("777_0|RUNNING|0:0\n"),
+        _out("777_0|COMPLETED|0:0\n"),
+    ]
+    monkeypatch.setattr(runner.time, "sleep", lambda seconds: None)
+    execution = ExecutionConfig(
+        backend="slurm", time="01:00:00", slurm={"clusters": "kingspeak"}
+    )
+
+    runner.run(Project(tmp_path, output=tmp_path / "out"), execution=execution)
+
+    sacct = [c for c in commands.ran if c[0] == "sacct"]
+    assert len(sacct) == 2
+    assert all(c[1:5] == ["-M", "kingspeak", "-j", "777"] for c in sacct)
+
+
+def test_a_job_on_the_default_cluster_names_none(commands):
+    commands.answers["sacct"] = [_out("9_0|COMPLETED|0:0\n")]
+    runner.wait("9", poll=0)
+    assert commands.ran[0][:3] == ["sacct", "-j", "9"]
+
+
 # ---------------------------------------------------------------------------
 # A task that is told to stop
 # ---------------------------------------------------------------------------
@@ -309,6 +344,28 @@ def test_a_preempted_task_requeues_itself_and_a_cancelled_one_does_not(
     commands.answers["scontrol"] = [_out("JobId=4321 PreemptTime=None Requeue=1")]
     runner.run(project, task=(0, 1))  # scancel: not preempted
     assert commands.ran == [["scontrol", "show", "job", "4321"]]
+
+
+def test_a_task_on_another_cluster_asks_and_requeues_there(
+    tmp_path, monkeypatch, commands
+):
+    from stilt.execution import worker
+
+    project = _hourly_project(tmp_path, 1)
+    monkeypatch.setenv("SLURM_JOB_ID", "4321")
+    monkeypatch.setenv("SLURM_CLUSTER_NAME", "kingspeak")
+    monkeypatch.delenv("SLURM_RESTART_COUNT", raising=False)
+    monkeypatch.setattr(worker, "run_receptors", lambda *a, **k: None)
+    commands.answers["scontrol"] = [
+        _out("JobId=4321 PreemptTime=2026-10-06T12:00:00 Requeue=1")
+    ]
+
+    runner.run(project, task=(0, 1))
+
+    assert commands.ran == [
+        ["scontrol", "-M", "kingspeak", "show", "job", "4321"],
+        ["scontrol", "-M", "kingspeak", "requeue", "4321"],
+    ]
 
 
 def test_a_task_that_finished_is_not_requeued(tmp_path, monkeypatch, commands):

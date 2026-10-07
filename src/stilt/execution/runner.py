@@ -249,15 +249,8 @@ def run(
     if not todo:
         logger.info("run: every simulation is complete; nothing to do")
     elif execution.backend == "slurm" and task is None:
-        job_id = submit(
-            project,
-            receptors=todo,
-            execution=execution,
-            skip_existing=skip_existing,
-            compute_root=compute_root,
-        )
-        if job_id is not None:
-            wait(job_id)
+        job_id, cluster = _submit(project, todo, execution, skip_existing, compute_root)
+        wait(job_id, cluster=cluster)
     else:
         logger.info("run(%s): %d receptors", ", ".join(project.variants), len(todo))
         # In this process, so Ctrl-C and SIGTERM stop the workers cleanly
@@ -327,7 +320,8 @@ def submit(
     if not todo:
         logger.info("submit: every simulation is complete; nothing to do")
         return None
-    return _submit(project, todo, execution, skip_existing, compute_root)
+    job_id, _ = _submit(project, todo, execution, skip_existing, compute_root)
+    return job_id
 
 
 def _sbatch_lines(options: dict[str, Any]) -> list[str]:
@@ -425,8 +419,13 @@ def _submit(
     execution: ExecutionConfig,
     skip_existing: bool,
     compute_root: str | Path | None,
-) -> str:
-    """Write a submission folder for *pending* receptors, submit its job array, and return the job id."""
+) -> tuple[str, str | None]:
+    """
+    Write a submission folder for *pending* receptors, submit its job array, and return its job id and cluster.
+
+    The cluster is the one ``sbatch`` sent the job to when it is not the
+    default (``clusters`` in the Slurm options), else ``None``.
+    """
     # One folder per submission, so a later array never overwrites these.
     stamp = f"{datetime.now():%Y%m%d_%H%M%S}_{uuid4().hex[:6]}"
     folder = project.directory / "_slurm" / stamp
@@ -457,12 +456,26 @@ def _submit(
         raise RuntimeError(
             f"sbatch refused {script}: {result.stderr.strip() or result.stdout.strip()}"
         )
-    job_id = result.stdout.strip().split(";")[0]
-    logger.info("Submitted job: %s (%d tasks); logs in %s", job_id, n_tasks, folder)
-    return job_id
+    # --parsable prints "<id>", or "<id>;<cluster>" for a job on another cluster.
+    job_id, _, cluster = result.stdout.strip().partition(";")
+    logger.info(
+        "Submitted job: %s%s (%d tasks); logs in %s",
+        job_id,
+        f" on cluster {cluster}" if cluster else "",
+        n_tasks,
+        folder,
+    )
+    return job_id, cluster or None
 
 
-def _task_states(job_id: str) -> dict[str, tuple[str, str]] | None:
+def _on_cluster(cluster: str | None) -> list[str]:
+    """Return the words that send a Slurm command to *cluster* (``-M``); none for the default one."""
+    return ["-M", cluster] if cluster else []
+
+
+def _task_states(
+    job_id: str, cluster: str | None = None
+) -> dict[str, tuple[str, str]] | None:
     """
     Return ``{task: (state, exit code)}`` for the tasks of a job array, from ``sacct``.
 
@@ -470,7 +483,16 @@ def _task_states(job_id: str) -> dict[str, tuple[str, str]] | None:
     is slow to hear of a new job.
     """
     result = subprocess.run(
-        ["sacct", "-j", job_id, "-X", "-n", "-P", "--format=JobID,State,ExitCode"],
+        [
+            "sacct",
+            *_on_cluster(cluster),
+            "-j",
+            job_id,
+            "-X",
+            "-n",
+            "-P",
+            "--format=JobID,State,ExitCode",
+        ],
         capture_output=True,
         text=True,
         check=False,
@@ -486,7 +508,9 @@ def _task_states(job_id: str) -> dict[str, tuple[str, str]] | None:
     return states or None
 
 
-def wait(job_id: str, poll: float = 30.0) -> dict[str, tuple[str, str]]:
+def wait(
+    job_id: str, poll: float = 30.0, *, cluster: str | None = None
+) -> dict[str, tuple[str, str]]:
     """
     Wait until every task of a Slurm job array has ended, and return how each ended.
 
@@ -495,16 +519,26 @@ def wait(job_id: str, poll: float = 30.0) -> dict[str, tuple[str, str]]:
     (exit 3), is logged with its state; its simulations stay pending in the
     status table.
 
+    Parameters
+    ----------
+    job_id : str
+        The job array's id.
+    poll : float, default 30
+        Seconds between ``sacct`` calls.
+    cluster : str, optional
+        The Slurm cluster the job is on, when it is not the default one
+        (``clusters`` in the Slurm options).
+
     Returns
     -------
     dict
         ``{task: (state, exit code)}`` as ``sacct`` gives them, such as
         ``{"123_0": ("COMPLETED", "0:0")}``.
     """
-    states = _task_states(job_id)
+    states = _task_states(job_id, cluster)
     while states is None or any(s in _ACTIVE for s, _ in states.values()):
         time.sleep(poll)
-        states = _task_states(job_id)
+        states = _task_states(job_id, cluster)
     for task, (state, code) in sorted(states.items()):
         if state == "COMPLETED" or (state == "FAILED" and code in ("1:0", "3:0")):
             continue
@@ -580,13 +614,21 @@ def _run_task(
     return table
 
 
+def _this_cluster() -> list[str]:
+    """Return the words that send a Slurm command to the cluster this task runs on."""
+    return _on_cluster(os.environ.get("SLURM_CLUSTER_NAME"))
+
+
 def _preempted() -> bool:
     """Whether Slurm has selected this job for preemption (``scontrol show job`` gives a ``PreemptTime``)."""
     job_id = os.environ.get("SLURM_JOB_ID")
     if not job_id:
         return False
     result = subprocess.run(
-        ["scontrol", "show", "job", job_id], capture_output=True, text=True, check=False
+        ["scontrol", *_this_cluster(), "show", "job", job_id],
+        capture_output=True,
+        text=True,
+        check=False,
     )
     match = re.search(r"PreemptTime=(\S+)", result.stdout)
     return match is not None and match.group(1) not in ("None", "Unknown")
@@ -608,7 +650,10 @@ def _requeue() -> bool:
         )
         return False
     result = subprocess.run(
-        ["scontrol", "requeue", job_id], capture_output=True, text=True, check=False
+        ["scontrol", *_this_cluster(), "requeue", job_id],
+        capture_output=True,
+        text=True,
+        check=False,
     )
     if result.returncode != 0:
         logger.warning("scontrol requeue %s failed: %s", job_id, result.stderr.strip())
