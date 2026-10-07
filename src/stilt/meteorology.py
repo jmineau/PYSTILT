@@ -338,28 +338,6 @@ class Met:
             )
         return files
 
-    def required_files(self, r_time: Any, n_hours: int) -> list[Path]:
-        """
-        Return the met files that cover one simulation, as HYSPLIT reads them.
-
-        Shorthand for :meth:`files_for` the run's window
-        (:func:`run_window`), with the hour after the release for a
-        backward run.
-
-        Parameters
-        ----------
-        r_time : datetime-like
-            Receptor time.
-        n_hours : int
-            Simulation length in hours, negative for backward runs.
-
-        Raises
-        ------
-        MeteorologyError
-            Fewer than ``n_min`` files were found.
-        """
-        return self.files_for(run_window(r_time, n_hours), hour_after=n_hours < 0)
-
     def files_for(
         self, window: tuple[Any, Any], *, hour_after: bool = False
     ) -> list[Path]:

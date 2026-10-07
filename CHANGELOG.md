@@ -120,8 +120,8 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   workdir=None, timeout=None) -> ModelRun(particles, log, met_files)`
   (breaking). A model gets the `MetConfig` and the `(start, end)` the run
   covers (`stilt.meteorology.run_window`), and finds its own met: HYSPLIT
-  builds its `Met` and asks `Met.files_for(window, hour_after=...)`, of
-  which `required_files(r_time, n_hours)` is now a shorthand. The run
+  builds its `Met` and asks `Met.files_for(window, hour_after=...)`;
+  `Met.required_files` is removed. The run
   returns its log as text, and a failed run raises `SimulationError` with
   `log`, so the worker no longer reads `stilt.log` from the working
   directory. `stilt.transport.run_model` runs a model and applies the core
@@ -813,6 +813,8 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Removed
 
+- `Plume.contains`. Test a point against the outline with
+  `shapely.contains_xy(plume.polygon, lon, lat)`.
 - `Simulation.outcome` and `stilt.transport.hysplit.identify_failure_reason`,
   which guessed why a run failed from phrases in a log shared by every
   variant on the same particles. `sim.failure` replaces them (#134).

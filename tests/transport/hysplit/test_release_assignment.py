@@ -7,7 +7,7 @@ from pathlib import Path
 
 import numpy as np
 
-from stilt.meteorology import Met, MetConfig
+from stilt.meteorology import Met, MetConfig, run_window
 from stilt.receptors import ColumnReceptor, MultiPointReceptor
 from stilt.transport.hysplit import HysplitConfig, read_particle_dat, write_inputs
 from stilt.transport.hysplit.driver import _run_hycs_std
@@ -18,7 +18,8 @@ from ...fixtures.particles import finished
 
 def _raw_particles(receptor, config, met, workdir, timeout):
     """Run hycs_std and return its particles as HYSPLIT wrote them, before release heights are added."""
-    files = met.required_files(r_time=receptor.time, n_hours=config.n_hours)
+    window = run_window(receptor.time, config.n_hours)
+    files = met.files_for(window, hour_after=config.n_hours < 0)
     write_inputs(workdir, receptor, config, files)
     _run_hycs_std(workdir, timeout)
     return read_particle_dat(workdir / "PARTICLE_STILT.DAT", config.varsiwant)
