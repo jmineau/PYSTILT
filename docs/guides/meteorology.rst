@@ -197,8 +197,12 @@ faster and use less memory. Cropping matters most for global products
        directory="/data/met/hrrr",
        subgrid_enable=True,
        subgrid_bounds=Bounds(xmin=-114, xmax=-110, ymin=39, ymax=42),
-       subgrid_buffer=0.5,   # degrees added on each side (default 0.2)
    )
+
+A particle that leaves the box stops, as it would at the edge of the
+weather model's grid. Make the box wide enough for where the particles go
+over the whole run, not only the footprint grid. A box too tight cuts off
+the far part of a footprint without any warning.
 
 When downloading, each file is cropped right after it arrives and only the
 cropped copy is kept.
@@ -221,9 +225,9 @@ projects can share one:
    )
 
 Inside ``subgrid_dir``, each crop gets its own folder, named by a short
-hash of the crop box and ``subgrid_levels``. Changing ``subgrid_bounds``,
-``subgrid_buffer``, or ``subgrid_levels`` starts a new folder, and projects
-with the same crop share one. ``Met(name, config).crop_dir`` gives
+hash of the crop box and ``subgrid_levels``. Changing ``subgrid_bounds``
+or ``subgrid_levels`` starts a new folder, and projects with the same crop
+share one. ``Met(name, config).crop_dir`` gives
 the folder. Old folders are not deleted.
 
 ``subgrid_levels`` also drops the upper vertical levels, for downloaded

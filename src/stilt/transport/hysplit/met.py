@@ -100,12 +100,11 @@ class MetConfig(BaseModel):
     )
     subgrid_bounds: Bounds | None = Field(
         None,
-        description="Longitude/latitude box to crop the meteorology to.",
-    )
-    subgrid_buffer: float = Field(
-        0.2,
-        ge=0,
-        description="Margin added to every side of ``subgrid_bounds``, in degrees.",
+        description=(
+            "Longitude/latitude box to crop the meteorology to. Particles that "
+            "leave it stop, so make it wide enough for the whole run, not only "
+            "the footprint grid."
+        ),
     )
     subgrid_levels: int | None = Field(
         None,
@@ -119,6 +118,12 @@ class MetConfig(BaseModel):
     def _validate_mode(self) -> Self:
         """Check the archive and its options, and the fields each mode needs."""
         extra = self.download_options
+        if "subgrid_buffer" in extra:
+            raise ValueError(
+                "subgrid_buffer is gone: the crop is subgrid_bounds. Widen the "
+                "bounds by the buffer instead (it was in degrees; STILT-R's "
+                "met_subgrid_buffer is a fraction of the footprint grid's size)."
+            )
         if self.download is not None:
             from arlmet.archives import ARCHIVES
 
@@ -192,18 +197,13 @@ class MetConfig(BaseModel):
         """
         Return the crop as ``{"bbox": [west, south, east, north], "levels": n}``, or ``None`` without one.
 
-        The box is ``subgrid_bounds`` widened by ``subgrid_buffer``, so two
-        ways of writing the same box are one crop. ``levels`` is
-        ``subgrid_levels``, ``None`` to keep all.
+        The box is ``subgrid_bounds``; ``levels`` is ``subgrid_levels``,
+        ``None`` to keep all.
         """
         b = self.subgrid_bounds
         if not self.subgrid_enable or b is None:
             return None
-        buf = self.subgrid_buffer
-        return {
-            "bbox": [b.xmin - buf, b.ymin - buf, b.xmax + buf, b.ymax + buf],
-            "levels": self.subgrid_levels,
-        }
+        return {"bbox": [b.xmin, b.ymin, b.xmax, b.ymax], "levels": self.subgrid_levels}
 
     @property
     def download_options(self) -> dict[str, Any]:
@@ -290,11 +290,11 @@ class Met:
             )
         return self._archive
 
-    def _effective_bbox(self) -> tuple[float, float, float, float]:
-        """Return ``(west, south, east, north)`` of the subgrid bounds plus the buffer."""
+    def _bbox(self) -> tuple[float, float, float, float]:
+        """Return the crop box, ``(west, south, east, north)``."""
         crop = self.config.crop()
         if crop is None:
-            raise ValueError("subgrid_bounds is required to compute effective bbox.")
+            raise ValueError("subgrid_bounds is required to crop.")
         west, south, east, north = crop["bbox"]
         return (west, south, east, north)
 
@@ -304,9 +304,9 @@ class Met:
         Directory holding this met's cropped files.
 
         It is a folder inside ``subgrid_dir`` named by a short hash of the
-        crop box (``subgrid_bounds`` plus ``subgrid_buffer``) and
-        ``subgrid_levels``. Changing any of them gives a new folder, so
-        old crops are never reused for a different crop.
+        crop box (``subgrid_bounds``) and ``subgrid_levels``. Changing
+        either gives a new folder, so old crops are never reused for a
+        different crop.
         """
         if self.config.subgrid_dir is None:
             raise ValueError("subgrid_dir is required to crop local files.")
@@ -327,7 +327,7 @@ class Met:
         """Return the files that cover *window* from the ARL archive, downloading any not yet in ``directory``."""
         t_start, t_end = _cover(window, hour_after)
 
-        bbox = self._effective_bbox() if self.config.subgrid_enable else None
+        bbox = self._bbox() if self.config.subgrid_enable else None
         levels = self._level_indices() if self.config.subgrid_enable else None
 
         archive = self._get_archive()
@@ -465,7 +465,7 @@ class Met:
 
         crop_dir = self.crop_dir
         crop_dir.mkdir(parents=True, exist_ok=True)
-        bbox = self._effective_bbox()
+        bbox = self._bbox()
         levels = self._level_indices()
 
         subsetted: list[Path] = []

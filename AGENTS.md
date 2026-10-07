@@ -306,7 +306,7 @@ output directory, never only in memory.
   the settings records. A met's record is built, not dumped: its config's
   `settings()`, for HYSPLIT the source id in the ARL headers (the first
   file under `directory`, or the archive's `source` for `download`) and
-  the crop (`MetConfig.crop()`, the box with its buffer, and the levels).
+  the crop (`MetConfig.crop()`, `subgrid_bounds` and `subgrid_levels`).
   Where the files are and how they are named are never recorded, so
   moving them keeps every result, and two products named alike hash
   apart. Grid and levels are not in the record: a product's header
