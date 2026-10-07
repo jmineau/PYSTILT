@@ -6,7 +6,7 @@ import pandas as pd
 import pytest
 
 from stilt.config import ProjectConfig
-from stilt.execution import run_particles
+from stilt.execution.worker import run_particles
 from stilt.output import Output
 from stilt.simulation import Simulation
 from stilt.transport import ModelRun, get_model

@@ -33,8 +33,8 @@ import typer
 import yaml
 from pydantic import ValidationError
 
-from stilt.execution import resolve_compute_root
 from stilt.execution.config import ExecutionConfig
+from stilt.execution.runner import resolve_compute_root
 from stilt.project import Project
 
 app = typer.Typer(

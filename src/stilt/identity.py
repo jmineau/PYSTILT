@@ -199,8 +199,6 @@ def footprint_hash(particles_hash: str, settings: Mapping[str, Any]) -> str:
 
 
 __all__ = [
-    "canonical",
-    "footprint_hash",
     "footprint_settings",
     "read_footprint_settings",
     "read_run_settings",

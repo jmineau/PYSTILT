@@ -1,23 +1,20 @@
-"""Running simulations: the runner that starts the work and the workers that do it."""
+"""
+Running simulations: the runner that starts the work and the workers that do it.
+
+:func:`run` runs what is missing here or on Slurm and waits; :func:`submit`
+submits it and returns. :func:`task_share` is which receptors one task of a
+job array runs, and :func:`job_script` the script such a job array runs, for
+a scheduler PYSTILT does not drive itself. The workers are in
+:mod:`stilt.execution.worker`.
+"""
 
 from .config import ExecutionConfig
-from .runner import job_script, resolve_compute_root, run, submit, task_share
-from .worker import (
-    make_footprint,
-    run_particles,
-    run_receptor,
-    run_receptors,
-)
+from .runner import job_script, run, submit, task_share
 
 __all__ = [
     "ExecutionConfig",
     "job_script",
-    "resolve_compute_root",
     "run",
-    "run_receptor",
-    "run_receptors",
-    "run_particles",
     "submit",
     "task_share",
-    "make_footprint",
 ]

@@ -37,17 +37,17 @@ from stilt.footprint.io import open_footprints
 from stilt.meteorology import MetConfig
 from stilt.output import KINDS, Kind, Output, completed
 from stilt.particles import particles_from_table
-from stilt.receptors import (
-    Receptor,
+from stilt.receptors import Receptor, read_receptors
+from stilt.receptors.table import (
+    COLUMNS,
+    ROW_COLUMNS,
     append_receptors_csv,
     check_distinct_ids,
     read_receptor_frame,
-    read_receptors,
     receptor_rows,
     receptors_from_rows,
     receptors_to_csv,
 )
-from stilt.receptors.table import COLUMNS, ROW_COLUMNS
 from stilt.simulation import Simulation
 
 if TYPE_CHECKING:
@@ -422,7 +422,7 @@ class Project:
         Add receptors to ``receptors.csv`` and return the ids of the new ones.
 
         The file is created if needed, and otherwise only appended to, in its
-        own columns (:func:`stilt.receptors.append_receptors_csv`). Receptors
+        own columns (:func:`stilt.receptors.table.append_receptors_csv`). Receptors
         it already holds are skipped.
 
         Parameters

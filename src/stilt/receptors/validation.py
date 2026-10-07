@@ -4,7 +4,7 @@ The checks a receptor must pass, each written once for many points.
 Each check returns ``(bad, message)``: the points that fail it and why. A
 receptor runs the checks on its own points and raises the first failure
 (:mod:`stilt.receptors.models`). The receptor table runs them on a whole
-file and names the first bad row (:func:`stilt.receptors.receptor_rows`).
+file and names the first bad row (:func:`stilt.receptors.table.receptor_rows`).
 """
 
 from __future__ import annotations

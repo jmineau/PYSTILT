@@ -8,6 +8,13 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- The public names of `stilt.receptors`, `stilt.execution`, and
+  `stilt.identity` are what a user or a plug-in author calls (breaking).
+  The receptor table helpers (`receptor_rows`, `receptors_to_csv`, ...)
+  are in `stilt.receptors.table`, the workers (`run_particles`,
+  `make_footprint`, `run_receptor`, `run_receptors`) in
+  `stilt.execution.worker`, and `resolve_compute_root` in
+  `stilt.execution.runner`. `task_share` joins `stilt.__all__`.
 - `execution.time` is required with `backend: slurm` (breaking). Without it
   each task got the partition's default limit, which can be days. It is
   written to `--time` as given (`02:00:00`, not `120`), and
