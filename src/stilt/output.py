@@ -26,7 +26,7 @@ beside the old one instead of overwriting it. ``pyarrow.dataset``, DuckDB,
 polars, and R's arrow read ``settings`` and ``date`` as columns of the whole
 tree. Particles are one Parquet file per receptor. Footprints are sparse
 tables of the non-zero cells, in float32 as STILT-R writes them; an empty
-footprint is a file with no rows and its reason in the metadata.
+footprint is a file with no rows, marked ``stilt:empty`` in its metadata.
 
 Start from :class:`Output` and a resolved variant (``project.variants``).
 Every function takes the kind of result, ``"particles"`` or
@@ -837,17 +837,15 @@ class Output:
         self,
         variant: Variant,
         receptor: Receptor,
-        reason: str,
         realization: int | None = None,
     ) -> Location:
-        """Record that a receptor's footprint is empty (no particle over the grid), with the reason."""
+        """Record that a receptor's footprint is empty: no particle reached the grid."""
         path, config, digest = self._footprint_file(
             variant, str(receptor.id), realization
         )
         return write_empty_footprint(
             path,
             receptor,
-            reason,
             config,
             variant.name,
             _footprint_stamp(digest, variant, realization),

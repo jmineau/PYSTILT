@@ -8,6 +8,12 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- An empty footprint file is marked `stilt:empty: true` in its metadata
+  (breaking for stored output: `stilt:empty_reason` is no longer read; the
+  upgrade script rewrites it). `EmptyFootprint` has no `reason`, and
+  `sim.empty_reason` is removed: a footprint that is `None` while
+  `sim.has_footprint` is true is empty, which means no particle reached
+  the grid.
 - `Simulation.is_complete` is a property that checks two files, as
   `has_particles` and `has_footprint` do (breaking: no parentheses). It
   listed the whole date folder, 4,700 times slower on a 20,000-file day.

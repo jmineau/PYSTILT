@@ -590,10 +590,11 @@ The README links to it and keeps no table of its own.
   cache; a `config.yaml` edited by hand needs a new `Project(path)`.
 - **Empty footprints are successes, and not footprints.** When no particle
   reaches the grid, `calc_footprint` raises `EmptyFootprint` and
-  the worker's `make_footprint` writes a footprint file with no rows and
-  the reason in its metadata. `sim.is_complete` is true, `sim.footprint` is
-  `None`, `sim.empty_reason` says why, and `project.footprints()` gives it
-  no row and lists it in `attrs["empty"]`. Never synthesize a zero-valued footprint for it: a zero
+  the worker's `make_footprint` writes a footprint file with no rows,
+  marked `stilt:empty` in its metadata. `sim.is_complete` and
+  `sim.has_footprint` are true, `sim.footprint` is `None`, and
+  `project.footprints()` gives it no row and lists it in
+  `attrs["empty"]`. Never synthesize a zero-valued footprint for it: a zero
   enhancement would flow into a comparison or an inversion unnoticed.
 - **A failure record is a note, not a result.** When a step fails the
   worker writes `<receptor id>.failure.yaml` in the logs of the folder

@@ -477,8 +477,7 @@ def calc_footprint(
     ImportError
         If a transform is a mapping whose ``kind`` cannot be imported.
     EmptyFootprint
-        If no particle is over the grid. ``reason`` is ``"no_particles"``
-        when the table is empty and ``"outside_domain"`` otherwise.
+        If no particle is over the grid, or the table has none.
 
     Examples
     --------
@@ -514,7 +513,7 @@ def calc_footprint(
     time_integrate = config.time_integrate
 
     if particles.empty:
-        raise EmptyFootprint("no_particles")
+        raise EmptyFootprint()
 
     p = particles.copy(deep=False)
     n_particles = p["particle"].nunique()
@@ -585,7 +584,7 @@ def calc_footprint(
     )
 
     if p.empty:
-        raise EmptyFootprint("outside_domain")
+        raise EmptyFootprint()
 
     foot_arr = _accumulate_smoothed_footprint(
         p,

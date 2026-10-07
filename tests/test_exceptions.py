@@ -47,7 +47,7 @@ def test_stilt_error_is_exported():
 
 def test_empty_footprint_is_not_a_failure():
     assert not issubclass(EmptyFootprint, (SimulationError, RuntimeError))
-    assert EmptyFootprint("outside_domain").reason == "outside_domain"
+    assert str(EmptyFootprint()) == "No particle is over the footprint grid."
 
 
 def test_hysplit_not_found_is_not_a_failed_run():

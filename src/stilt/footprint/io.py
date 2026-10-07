@@ -128,7 +128,7 @@ def _from_sparse_table(
 ) -> xr.DataArray | None:
     """Return the dense footprint of a stored sparse table, or ``None`` when it is empty."""
     meta = table.schema.metadata or {}
-    if meta.get(b"stilt:empty_reason", b""):
+    if _is_empty(meta):
         return None
     receptor = Receptor.from_json(meta[b"stilt:receptor"])
     hours = json.loads(meta[b"stilt:hours"])
@@ -223,13 +223,9 @@ def read_footprint(
     return foot
 
 
-def _empty_reason(path: str | Path | UPath) -> str | None:
-    """Return why a stored footprint is empty, or ``None`` when it is not, from its metadata alone."""
-    import pyarrow.parquet as pq
-
-    with readable(path) as source:
-        meta = pq.read_schema(source).metadata or {}
-    return meta.get(b"stilt:empty_reason", b"").decode() or None
+def _is_empty(meta: dict[bytes, bytes]) -> bool:
+    """Whether a stored footprint's metadata marks it empty: no particle reached the grid."""
+    return meta.get(b"stilt:empty") == b"true"
 
 
 #: About how many bytes of footprint values one chunk of :func:`open_footprints` holds.
@@ -334,7 +330,7 @@ def open_footprints(
         raise ValueError("Stored footprints need settings with a grid.")
 
     receptors = [Receptor.from_json(meta[b"stilt:receptor"]) for meta in footers]
-    is_empty = [bool(meta.get(b"stilt:empty_reason", b"")) for meta in footers]
+    is_empty = [_is_empty(meta) for meta in footers]
     kept = [i for i, empty in enumerate(is_empty) if not empty]
     recorded = [h for i in kept for h in json.loads(footers[i][b"stilt:hours"])]
     hours = (
@@ -422,7 +418,7 @@ def _file_metadata(
     config: FootprintConfig,
     name: str,
     hours: list[int],
-    empty_reason: str,
+    empty: bool,
     metadata: dict[bytes, bytes] | None,
     geometry_hash: str | None = None,
 ) -> dict[bytes, bytes]:
@@ -431,7 +427,7 @@ def _file_metadata(
         b"stilt:receptor": receptor.to_json().encode(),
         b"stilt:name": name.encode(),
         b"stilt:hours": json.dumps(hours).encode(),
-        b"stilt:empty_reason": empty_reason.encode(),
+        b"stilt:empty": b"true" if empty else b"false",
         b"stilt:footprint": _settings_json(config, geometry_hash).encode(),
         **(metadata or {}),
     }
@@ -514,7 +510,7 @@ def write_footprint(
         settings,
         foot.stilt.name,
         hours.tolist(),
-        "",
+        False,
         metadata,
         foot.stilt.geometry_hash if geometry_hash is None else geometry_hash,
     )
@@ -524,18 +520,17 @@ def write_footprint(
 def write_empty_footprint(
     path: str | Path | UPath,
     receptor: Receptor,
-    reason: str,
     config: FootprintConfig,
     name: str = "",
     metadata: dict[bytes, bytes] | None = None,
     geometry_hash: str | None = None,
 ) -> Location:
     """
-    Record in a footprint file that a receptor's footprint is empty, and why.
+    Record in a footprint file that a receptor's footprint is empty: no particle reached the grid.
 
-    The file has no rows; :func:`read_footprint` returns ``None`` for it.
-    ``reason`` is, for example, ``"outside_domain"``.
+    The file has no rows and is marked ``stilt:empty``;
+    :func:`read_footprint` returns ``None`` for it.
     """
-    meta = _file_metadata(receptor, config, name, [], reason, metadata, geometry_hash)
+    meta = _file_metadata(receptor, config, name, [], True, metadata, geometry_hash)
     table = FOOTPRINT_SCHEMA.empty_table().replace_schema_metadata(meta)
     return write_parquet(table, location(path))

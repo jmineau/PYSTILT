@@ -109,16 +109,14 @@ def test_calc_footprint_raises_when_particles_outside_domain(
     particles = _particles_in_domain()
     particles["lon"] = 0.0  # far outside [-114, -113]
     particles["lat"] = 0.0
-    with pytest.raises(EmptyFootprint) as info:
+    with pytest.raises(EmptyFootprint):
         calc_footprint(particles, point_receptor, _grid())
-    assert info.value.reason == "outside_domain"
 
 
 def test_calc_footprint_raises_when_there_are_no_particles(point_receptor):
     particles = _particles_in_domain().iloc[0:0]
-    with pytest.raises(EmptyFootprint) as info:
+    with pytest.raises(EmptyFootprint):
         calc_footprint(particles, point_receptor, _grid())
-    assert info.value.reason == "no_particles"
 
 
 def test_calc_footprint_assigns_name(point_receptor):

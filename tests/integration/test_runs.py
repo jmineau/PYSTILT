@@ -151,12 +151,12 @@ def test_empty_footprint(tmp_path, wbb_receptor, wbb_config):
     sim = model.simulation(*_sim_id(wbb_receptor))
     assert sim.is_complete
     assert sim.has_particles
-    assert sim.empty_reason == "outside_domain"
+    assert sim.has_footprint
     assert sim.footprint is None
     ds = model.footprints()
     assert ds.sizes["receptor"] == 0
     assert ds.attrs["empty"] == [wbb_receptor.id]
-    # An empty footprint is complete; sim.empty_reason says why it is empty.
+    # An empty footprint is complete.
     assert model.status()["state"].tolist() == ["complete"]
 
     # A rerun has nothing to do and does not touch the empty record.

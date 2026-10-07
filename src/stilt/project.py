@@ -718,9 +718,9 @@ class Project:
 
         Notes
         -----
-        An empty footprint (no particle reached the grid) is complete.
-        :attr:`stilt.Simulation.empty_reason` says why one is empty, and a
-        :meth:`jacobian` lists the empty ones.
+        An empty footprint (no particle reached the grid) is complete: its
+        ``sim.footprint`` is ``None`` while ``sim.has_footprint`` is true,
+        and :meth:`jacobian` lists the empty ones.
 
         Examples
         --------

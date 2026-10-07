@@ -277,11 +277,16 @@ Empty footprints
 
 Sometimes a simulation runs fine but no particle ever reaches the footprint
 grid. Usually the grid is too small or is not upwind. PYSTILT then writes a
-footprint file with no cells and the reason inside. The simulation counts
-as finished, so reruns skip it. ``sim.footprint`` is ``None``,
-``sim.empty_reason`` says why, and ``project.footprints()`` gives it no
+footprint file with no cells, marked empty. The simulation counts as
+finished, so reruns skip it. ``sim.footprint`` is ``None`` while
+``sim.has_footprint`` is true, and ``project.footprints()`` gives it no
 row and lists it in ``attrs["empty"]``. A Jacobian lists them in
 ``H.empty``. If you see many, make your footprint grid bigger.
+
+.. code-block:: python
+
+   sim.variant.footprint is None              # the variant has no grid
+   sim.has_footprint and sim.footprint is None  # no particle reached the grid
 
 An empty footprint is not a footprint of zeros. It means the transport never
 connected the receptor to your grid, so treating it as "the model says zero"

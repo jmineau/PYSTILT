@@ -99,9 +99,7 @@ def _write_footprint(
     sim = project.simulation(receptor.id, variant)
     assert sim.variant.footprint is not None
     if empty:
-        return sim.output.write_empty_footprint(
-            sim.variant, sim.receptor, "outside_domain"
-        )
+        return sim.output.write_empty_footprint(sim.variant, sim.receptor)
     grid = sim.variant.footprint.grid
     assert grid is not None
     x_axis, y_axis = grid.axes
@@ -593,7 +591,8 @@ def test_status_counts_an_empty_footprint_as_complete(tmp_path):
     _write_footprint(project, b, empty=True)
     status = project.status()
     assert status["state"].tolist() == ["complete", "complete"]
-    assert project.simulation(b.id, "hrrr").empty_reason == "outside_domain"
+    empty = project.simulation(b.id, "hrrr")
+    assert empty.has_footprint and empty.footprint is None
 
 
 def test_status_opens_no_result_file_and_builds_no_receptor(tmp_path, monkeypatch):
