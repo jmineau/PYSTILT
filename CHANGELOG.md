@@ -892,6 +892,8 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- A run left an empty `<compute root>/<receptor id>/` folder behind for
+  every receptor.
 - Relative paths depended on the working directory: a relative met
   `directory` or `subgrid_dir` was found from wherever Python started, and
   a relative averaging-kernel `table` too unless `directory=` was passed.
