@@ -115,8 +115,8 @@ def init(project: Path = _NEW_PROJECT_ARG) -> None:
         raise typer.Exit(code=1) from None
 
     typer.echo(f"Initialized STILT project at '{project}'")
-    typer.echo("  config.yaml   — edit met directory and footprint settings")
-    typer.echo("  receptors.csv — add receptor times/locations here, one per line:")
+    typer.echo("  config.yaml    edit the met directory and footprint settings")
+    typer.echo("  receptors.csv  add receptor times and locations, one per line:")
     typer.echo("                  2023-01-01 12:00:00,-111.85,40.77,5")
 
 
@@ -308,14 +308,16 @@ def submit(
     n_workers: int | None = _N_WORKERS,
     cpus: int | None = _CPUS,
     compute_root: str | None = _COMPUTE_ROOT,
+    receptors: Path | None = _RECEPTORS,
 ) -> None:
     """
     Submit every unfinished simulation in a project to Slurm, and return.
 
     The receptors are split among a Slurm job array's tasks, with the
-    resources under execution in config.yaml. Check on them with stilt
-    status.
+    resources under execution in config.yaml. --receptors limits it to the
+    receptors listed in a file. Check on them with stilt status.
     """
+    receptor_ids = None if receptors is None else _read_ids(receptors)
     opened, options = _start(
         project,
         backend="slurm",
@@ -324,8 +326,12 @@ def submit(
         no_skip=no_skip,
         compute_root=compute_root,
         waits=False,
+        receptor_ids=receptor_ids,
     )
-    job_id = opened.submit(**options)
+    try:
+        job_id = opened.submit(receptors=receptor_ids, **options)
+    except ValueError as error:
+        _fail(str(error))
     if job_id is not None:
         typer.echo(f"Submitted job: {job_id}")
     else:
@@ -401,7 +407,10 @@ def _print_status(project: Project, ran: pd.DataFrame | None = None) -> None:
     causes = Counter(table.loc[table.state == "failed", "reason"])
     if causes:
         listed = ", ".join(f"{cause} {n}" for cause, n in causes.most_common())
-        typer.echo(f"failed: {listed}  (sim.failure says why)")
+        typer.echo(
+            f"failed: {listed}  (why: the .failure.yaml beside each log, "
+            f"under {project.output.directory / 'logs'})"
+        )
     if ran is not None:
         return
     unreferenced = project.unreferenced()

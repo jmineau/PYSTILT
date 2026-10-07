@@ -428,6 +428,18 @@ def test_submit_submits_to_slurm_and_returns(tmp_path, calls):
     assert "Submitted job: 12345" in result.output
 
 
+def test_submit_receptors_reads_ids_from_a_file(tmp_path, calls):
+    _write_minimal_config(tmp_path)
+    listed = tmp_path / "ids.txt"
+    listed.write_text("r1\nr2\n")
+
+    result = runner.invoke(app, ["submit", str(tmp_path), "--receptors", str(listed)])
+
+    assert result.exit_code == 0, result.output
+    assert calls[0][1]["receptors"] == ["r1", "r2"]
+    assert "Receptors listed: 2" in result.output
+
+
 # ---------------------------------------------------------------------------
 # init command
 # ---------------------------------------------------------------------------

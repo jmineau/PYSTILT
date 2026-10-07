@@ -959,6 +959,7 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- `stilt submit --receptors FILE`, as `stilt run` has.
 - A footprint read from an output directory says what made it:
   `attrs["stilt_version"]` (the PYSTILT version) and
   `attrs["stilt_particles_hash"]` (the settings hash of its particles,
