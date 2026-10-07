@@ -18,7 +18,6 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from ..conftest import integration
 from ..fixtures.r_stilt_reference import STILT_R_NAMES
 
 pytestmark = [pytest.mark.fidelity]
@@ -94,7 +93,6 @@ def _parse_setup_cfg(path: Path) -> dict[str, str]:
 # ---------------------------------------------------------------------------
 
 
-@integration
 def test_setup_cfg_physics_matches_r_namelist(scenario_outputs: dict) -> None:
     """
     Every physics-relevant SETUP.CFG entry matches calc_trajectory.r's namelist.
@@ -122,7 +120,6 @@ def test_setup_cfg_physics_matches_r_namelist(scenario_outputs: dict) -> None:
     )
 
 
-@integration
 def test_trajectory_contains_all_r_varsiwant_columns(scenario_outputs: dict) -> None:
     """
     Trajectory parquet exposes every column STILT-R's varsiwant requests.
@@ -137,7 +134,6 @@ def test_trajectory_contains_all_r_varsiwant_columns(scenario_outputs: dict) -> 
     assert not missing, f"Trajectory parquet missing R-required columns: {missing}"
 
 
-@integration
 def test_setup_cfg_ivmax_at_least_r_varsiwant_count(scenario_outputs: dict) -> None:
     """
     ivmax in SETUP.CFG is at least as large as R's varsiwant column count.

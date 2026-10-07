@@ -34,7 +34,6 @@ import xarray as xr
 
 from stilt.transport.hysplit.driver import _bundled_exe_dir, setup_seed
 
-from ..conftest import integration
 from ..fixtures.r_stilt_reference import (
     STILT_R_NAMES,
     ReferenceScenario,
@@ -292,7 +291,6 @@ def _r_footprint_from_traj(
 # ---------------------------------------------------------------------------
 
 
-@integration
 def test_setup_cfg_pins_krand_and_seed(scenario_outputs: dict) -> None:
     """SETUP.CFG written by PYSTILT contains the expected RNG controls."""
     s: ReferenceScenario = scenario_outputs["scenario"]
@@ -307,13 +305,11 @@ def test_setup_cfg_pins_krand_and_seed(scenario_outputs: dict) -> None:
     )
 
 
-@integration
 def test_hysplit_binary_matches_r(r_stilt_dir: Path) -> None:
     """Trajectory parity is only meaningful when both tools run the same hycs_std."""
     _assert_hysplit_binary_matches_r(r_stilt_dir)
 
 
-@integration
 def test_forward_hnf_foot_intentionally_differs_from_r(
     scenario_outputs: dict,
     r_stilt_dir: Path,
@@ -358,7 +354,6 @@ def test_forward_hnf_foot_intentionally_differs_from_r(
     assert py_foot[first.to_numpy()].mean() > r_foot[first.to_numpy()].mean()
 
 
-@integration
 def test_trajectory_matches_r(
     scenario_outputs: dict,
     r_stilt_dir: Path,
@@ -420,7 +415,6 @@ def test_trajectory_matches_r(
     )
 
 
-@integration
 def test_footprint_matches_r(
     scenario_outputs: dict,
     rscript: str,
@@ -451,7 +445,6 @@ def test_footprint_matches_r(
     _assert_footprint_deep(py_ds, r_ds, s)
 
 
-@integration
 def test_error_trajectory_matches_r(
     scenario_outputs: dict,
     r_stilt_dir: Path,

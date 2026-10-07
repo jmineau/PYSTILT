@@ -140,11 +140,11 @@ jobs:
         cd stilt-r-src/r/src
         R CMD SHLIB permute.f90
 
-    - name: Run integration tests (includes R fidelity tests)
+    - name: Run integration and STILT-R fidelity tests
       env:
         STILT_R_DIR: ${{ github.workspace }}/stilt-r-src
         STILT_TEST_MET_DIR: ${{ github.workspace }}/tests/met_cache
-      run: uv run pytest tests/ -v -m integration
+      run: uv run pytest tests/ -v -m "integration or fidelity"
 
     - name: Run STILT-R synthetic footprint tests
       env:
