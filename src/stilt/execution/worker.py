@@ -21,6 +21,7 @@ import multiprocessing
 import os
 import shutil
 import signal
+import socket
 import threading
 import traceback
 from pathlib import Path
@@ -177,6 +178,16 @@ def run_particles(
     # this simulation's directory behind; it is PYSTILT's own, so clear it.
     shutil.rmtree(workdir, ignore_errors=True)
     workdir.mkdir(parents=True)
+    # A log from the start, which the model's log replaces when the run
+    # ends: a run cut off before then reads as interrupted, not as never run.
+    started = dt.datetime.now(dt.UTC).isoformat(timespec="seconds")
+    output.write_log(
+        sim.variant,
+        rid,
+        f"PYSTILT started this run at {started} on {socket.gethostname()}; "
+        "the transport model's log replaces this line when the run ends.\n",
+        sim.realization,
+    )
     log = ""
     succeeded = False
     try:

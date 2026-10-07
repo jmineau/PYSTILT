@@ -580,6 +580,21 @@ def test_status_marks_outputs_a_variant_does_not_produce(tmp_path, point_recepto
     assert by_variant.loc["hrrr", "state"] == "pending"
 
 
+def test_status_tells_an_interrupted_run_from_one_never_run(tmp_path):
+    """A log with no particles and no failure record is a run that was cut off."""
+    a, b, c = _receptor(12), _receptor(13), _receptor(14)
+    project = _project(tmp_path, [a, b, c])
+    variant = project.variants["hrrr"]
+    project.output.write_log(variant, a.id, "started\n")
+    project.output.write_log(variant, b.id, "HYSPLIT said no\n")
+    project.output.record_failure("particles", variant, b.id, {"reason": "X"})
+
+    status = project.status()
+
+    assert status["state"].tolist() == ["interrupted", "failed", "pending"]
+    assert project.incomplete()["receptor"].tolist() == [a.id, b.id, c.id]
+
+
 def test_status_counts_an_empty_footprint_as_complete(tmp_path):
     a, b = _receptor(12), _receptor(13)
     project = _project(tmp_path, [a, b])

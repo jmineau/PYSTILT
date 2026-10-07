@@ -58,7 +58,7 @@ if TYPE_CHECKING:
 RECEPTOR_COLUMNS = ("receptor", "time", "kind", "location")
 
 #: Where a simulation stands, the ``state`` column of :meth:`Project.status`.
-STATES = ("complete", "failed", "pending")
+STATES = ("complete", "failed", "interrupted", "pending")
 
 
 def _as_receptors(
@@ -711,8 +711,9 @@ class Project:
             when it is missing, and ``NA`` when the variant does not make
             it. ``state`` is ``complete`` when every expected result exists
             (:attr:`stilt.Simulation.is_complete`), ``failed`` when the last
-            run failed, and ``pending`` otherwise: not run yet, or stopped
-            before it finished. ``step``, ``reason``, and ``message`` say
+            run failed, ``interrupted`` when a run of its particles started
+            and stopped before it finished (a time limit, preemption, or a
+            killed process), and ``pending`` when nothing has run. ``step``, ``reason``, and ``message`` say
             why a failed simulation failed (:attr:`stilt.Simulation.failure`),
             and are ``NA`` for the others.
 
@@ -739,9 +740,16 @@ class Project:
         complete = self._complete(frame, present)
         found = self._failure_records(frame, present)
         records = [found.get(row, {}) for row in rows]
+        started = self._started(frame, present, found)
         state = [
-            "complete" if done else "failed" if record else "pending"
-            for done, record in zip(complete, records, strict=True)
+            "complete"
+            if done
+            else "failed"
+            if record
+            else "interrupted"
+            if row in started
+            else "pending"
+            for done, record, row in zip(complete, records, rows, strict=True)
         ]
         return frame.assign(
             particles=pd.array(particles, dtype="boolean"),
@@ -781,6 +789,29 @@ class Project:
                     for rid, record in failures.items():
                         found[(rid, name, k)] = record
         return found
+
+    def _started(
+        self,
+        frame: pd.DataFrame,
+        present: dict[_Key, _Present],
+        failed: dict[tuple[str, str, int | None], dict[str, Any]],
+    ) -> set[tuple[str, str, int | None]]:
+        """
+        Return the selected simulations whose particles run started and did not finish.
+
+        That is a log with no particles and no failure record. Only the
+        date folders of receptors without particles are listed.
+        """
+        started: set[tuple[str, str, int | None]] = set()
+        for name, k, rows in _groups(frame):
+            missing = set(rows["receptor"]) - present[(name, k)][0]
+            if not missing:
+                continue
+            logged = self.output.logged(self.variants[name], missing, k)
+            started |= {
+                (rid, name, k) for rid in logged if (rid, name, k) not in failed
+            }
+        return started
 
     def incomplete(self, sel: Any = None) -> pd.DataFrame:
         """

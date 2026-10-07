@@ -196,7 +196,7 @@ def _read_ids(path: Path) -> list[str]:
 
 def _exit_code(table: pd.DataFrame) -> int:
     """Return the exit code for the status table of the simulations a run ran."""
-    if (table["state"] == "pending").any():
+    if bool(table["state"].isin(["pending", "interrupted"]).any()):
         return EXIT_INTERRUPTED
     if (table["state"] == "failed").any():
         return EXIT_FAILED

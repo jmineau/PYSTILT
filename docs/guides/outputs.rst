@@ -195,8 +195,11 @@ To see what is left to do:
 
 ``status()`` adds a ``particles`` and a ``footprint`` column that say
 whether each output exists. They are blank where the variant does not make
-that output. The ``state`` column is ``complete``, ``failed``, or
-``pending`` (not run yet, or stopped before it finished). For a failed
+that output. The ``state`` column is ``complete``, ``failed``,
+``interrupted`` (the run started and was stopped before it finished, by a
+time limit, preemption, or a killed process), or ``pending`` (not run
+yet). A run that stops partway leaves a log saying when and where it
+started. For a failed
 simulation, ``step``, ``reason``, and ``message`` say why. ``status()``
 reads folder listings and the failure records of failed simulations, and
 opens no result file, so it is quick on a large project. From the command
