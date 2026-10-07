@@ -50,7 +50,7 @@ class ModelRun:
         (:attr:`stilt.Simulation.log`). Empty for a model that writes none.
     met_files : list of Path
         The meteorology files the run read, recorded in the particle file
-        (:attr:`stilt.Simulation.met_files`). Empty for a model that reads
+        (:func:`stilt.particles.particles_metadata`). Empty for a model that reads
         no files.
     """
 

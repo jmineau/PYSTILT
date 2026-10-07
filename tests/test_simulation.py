@@ -1,7 +1,5 @@
 """Tests for stilt.simulation: the Simulation value object."""
 
-import datetime as dt
-
 import pandas as pd
 import pytest
 import xarray as xr
@@ -9,7 +7,6 @@ import xarray as xr
 from stilt.config import Variant
 from stilt.execution.worker import make_footprint
 from stilt.footprint.config import FootprintConfig
-from stilt.identity import settings_hash
 from stilt.meteorology import MetConfig
 from stilt.output import Output
 from stilt.particles import particles_metadata
@@ -98,7 +95,7 @@ def test_paths_are_none_until_the_run_exists(point_receptor, tmp_path):
     assert sim.footprint_path is None
     assert sim.log_path is None
     assert not sim.has_particles and not sim.has_footprint
-    assert not sim.is_complete()
+    assert not sim.is_complete
     assert sim.failure is None
     with pytest.raises(FileNotFoundError):
         _ = sim.particles
@@ -113,20 +110,6 @@ def test_paths_are_none_until_the_run_exists(point_receptor, tmp_path):
     assert sim.footprint_path is None  # no footprint folder yet
     sim.output.record_failure("footprints", sim.variant, rid, {})
     assert sim.footprint_path == sim.output.path("footprints", sim.variant, rid)
-
-
-def test_simulation_time_range_backward(point_receptor, tmp_path):
-    sim = _sim(tmp_path, point_receptor, n_hours=-6)
-    start, stop = sim.time_range
-    assert stop == point_receptor.time
-    assert start == point_receptor.time - dt.timedelta(hours=6)
-
-
-def test_simulation_time_range_forward(point_receptor, tmp_path):
-    sim = _sim(tmp_path, point_receptor, n_hours=6)
-    start, stop = sim.time_range
-    assert start == point_receptor.time
-    assert stop == point_receptor.time + dt.timedelta(hours=6)
 
 
 def test_log_property_raises_when_missing(point_receptor, tmp_path):
@@ -144,12 +127,12 @@ def test_reads_particles_written_under_the_same_settings(point_receptor, tmp_pat
     written = _write_particles(sim)
 
     again = _sim(tmp_path, point_receptor)  # a fresh value
-    assert again.has_particles and again.is_complete()
+    assert again.has_particles and again.is_complete
     assert len(again.particles) == len(written)
     meta = particles_metadata(again.particles_path)
     assert meta.receptor == point_receptor
     assert meta.settings["numpar"] == 10
-    assert again.met_files == []
+    assert meta.met_files == []
     assert "datetime" in again.particles.columns
     assert again.particles is again.particles  # kept once read
 
@@ -199,18 +182,18 @@ def test_completion_needs_particles_and_the_footprint_when_configured(
 ):
     sim = _sim(tmp_path, point_receptor, footprint=FOOT)
     traj = _write_particles(sim)
-    assert sim.has_particles and not sim.is_complete()
+    assert sim.has_particles and not sim.is_complete
     make_footprint(sim, traj)
-    assert sim.is_complete()
+    assert sim.is_complete
     assert sim.footprint_path is not None
     assert sim.footprint_path.parent.parent.name.startswith("settings=hrrr-")
 
 
 def test_particles_only_variant_is_complete_with_particles(point_receptor, tmp_path):
     sim = _sim(tmp_path, point_receptor)
-    assert not sim.makes_footprint
+    assert sim.variant.footprint is None
     _write_particles(sim)
-    assert sim.is_complete()
+    assert sim.is_complete
 
 
 def test_written_footprint_reads_back(point_receptor, tmp_path):
@@ -224,7 +207,7 @@ def test_written_footprint_reads_back(point_receptor, tmp_path):
     assert isinstance(back, xr.DataArray)
     assert back.stilt.receptor == point_receptor and back.stilt.grid == GRID
     xr.testing.assert_allclose(back, foot.astype("float32").astype("float64"))
-    assert again.is_complete() and again.failure is None
+    assert again.is_complete and again.failure is None
 
 
 def test_empty_footprint_is_recorded_with_its_reason(point_receptor, tmp_path):
@@ -237,9 +220,9 @@ def test_empty_footprint_is_recorded_with_its_reason(point_receptor, tmp_path):
     assert make_footprint(sim, traj) is None
 
     assert sim.footprint is None
-    assert sim.has_footprint and sim.is_complete()
+    assert sim.has_footprint and sim.is_complete
     assert sim.empty_reason == "outside_domain"
-    assert sim.is_complete() and sim.failure is None
+    assert sim.is_complete and sim.failure is None
 
 
 def test_failure_reads_the_record_for_the_missing_step(point_receptor, tmp_path):
@@ -348,18 +331,6 @@ def test_calc_footprint_uses_the_receptor_kernel_from_a_project_table(
     weighted = sim.calc_footprint()  # the table is found in sim.directory
     base = plain.calc_footprint()
     assert float(weighted.sum()) == pytest.approx(0.5 * float(base.sum()))
-
-
-def test_settings_are_the_records_that_name_the_folders(point_receptor, tmp_path):
-    grid = Grid(xmin=-112.0, xmax=-111.5, ymin=40.5, ymax=41.0, xres=0.1, yres=0.1)
-    sim = _sim(tmp_path, point_receptor, footprint=FootprintConfig(grid=grid))
-    settings = sim.settings
-    assert settings["particles"] == sim.variant.run_settings
-    assert settings["particles"]["numpar"] == 10
-    assert settings["footprint"]["grid"]["xres"] == 0.1
-    assert settings_hash(settings["particles"]) == sim.variant.particles_hash
-
-    assert _sim(tmp_path, point_receptor).settings["footprint"] is None
 
 
 # ---------------------------------------------------------------------------

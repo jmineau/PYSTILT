@@ -528,7 +528,7 @@ def test_unreferenced_lists_output_folders_the_config_no_longer_uses(
     assert [k.split("-")[0] for k in stale["particles"]] == ["zi08"]
     assert sorted(k.rsplit("-", 1)[0] for k in stale["footprints"]) == ["hrrr", "zi08"]
     # Nothing was deleted.
-    assert project.simulation(point_receptor.id, "zi08").is_complete()
+    assert project.simulation(point_receptor.id, "zi08").is_complete
 
 
 # ---------------------------------------------------------------------------

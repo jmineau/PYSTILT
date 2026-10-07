@@ -149,7 +149,7 @@ def test_empty_footprint(tmp_path, wbb_receptor, wbb_config):
     model.run()
 
     sim = model.simulation(*_sim_id(wbb_receptor))
-    assert sim.is_complete()
+    assert sim.is_complete
     assert sim.has_particles
     assert sim.empty_reason == "outside_domain"
     assert sim.footprint is None
@@ -672,15 +672,13 @@ def test_forward_run(tmp_path, met_dir, wbb_grid):
     assert particles["time"].max() > 0
     assert "foot_no_hnf_dilution" in particles.columns
 
-    start, stop = sim.time_range
-    assert start == receptor.time
-    assert stop == receptor.time + pd.Timedelta(hours=3)
+    start, stop = receptor.time, receptor.time + pd.Timedelta(hours=3)
 
     assert sim.has_footprint, f"no footprint for {sim.id}"
     foot = sim.footprint
     assert foot is not None
     times = pd.DatetimeIndex(foot["time"].values)
-    # hourly layers running forward, inside the window time_range reports
+    # hourly layers running forward, inside the run's window
     assert times.is_monotonic_increasing
     assert times.min() >= pd.Timestamp(start)
     assert times.max() <= pd.Timestamp(stop)

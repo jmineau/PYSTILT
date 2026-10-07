@@ -9,6 +9,7 @@ from stilt.config import ProjectConfig
 from stilt.execution.worker import run_particles
 from stilt.meteorology import Met, run_window
 from stilt.output import Output
+from stilt.particles import particles_metadata
 from stilt.simulation import Simulation
 from stilt.transport import ModelRun, get_model
 from stilt.transport.hysplit import HysplitConfig, HysplitModel
@@ -135,7 +136,7 @@ def test_run_particles_goes_through_the_model_the_settings_name(
     assert calls[0]["timeout"] == 45  # the timeout reaches the model
     assert len(traj) == 1
     assert sim.has_particles
-    assert sim.met_files == [tmp_path / "met_file"]
+    assert particles_metadata(sim.particles_path).met_files == [tmp_path / "met_file"]
 
 
 class _EchoModel:

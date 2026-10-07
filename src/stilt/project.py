@@ -710,7 +710,7 @@ class Project:
             ``footprint`` are ``True`` when the result exists, ``False``
             when it is missing, and ``NA`` when the variant does not make
             it. ``state`` is ``complete`` when every expected result exists
-            (:meth:`stilt.Simulation.is_complete`), ``failed`` when the last
+            (:attr:`stilt.Simulation.is_complete`), ``failed`` when the last
             run failed, and ``pending`` otherwise: not run yet, or stopped
             before it finished. ``step``, ``reason``, and ``message`` say
             why a failed simulation failed (:attr:`stilt.Simulation.failure`),

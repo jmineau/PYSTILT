@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import datetime as dt
 import logging
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -17,12 +16,11 @@ from stilt.exceptions import EmptyFootprint
 from stilt.footprint import gridding
 from stilt.footprint.config import FootprintConfig
 from stilt.footprint.io import _empty_reason, read_footprint
-from stilt.output import Output
+from stilt.output import Output, completed
 from stilt.particles import (
     Background,
     TransportError,
     background,
-    particles_metadata,
     read_particles,
     transport_error,
 )
@@ -150,22 +148,6 @@ class Simulation:
             self.variant, self.receptor.id, self.realization
         )
 
-    @property
-    def settings(self) -> dict[str, Any]:
-        """
-        What this simulation's results are made with, as the output folders record them.
-
-        ``{"particles": ..., "footprint": ...}``: the run settings (the
-        transport model's, the met's, the model build, whether it is an ensemble) and
-        the footprint settings, ``None`` for a variant without a grid. These
-        are the records the folders' ``_settings.yaml`` hold, and their
-        hashes name the folders.
-        """
-        return {
-            "particles": self.variant.run_settings,
-            "footprint": self.variant.footprint_settings,
-        }
-
     # -- presence and completion -------------------------------------------
 
     @property
@@ -185,36 +167,22 @@ class Simulation:
         return path is not None and path.exists()
 
     @property
-    def makes_footprint(self) -> bool:
-        """Whether this simulation makes a footprint, which it does when its variant has a grid."""
-        return self.variant.footprint is not None
-
     def is_complete(self) -> bool:
         """
-        Return whether every expected result exists.
+        Whether every expected result exists.
 
-        That is the particles, and the footprint when the variant has a grid
-        (:meth:`stilt.output.Output.complete`, the one definition of done).
+        That is the particles, and the footprint when the variant has a grid.
+        It is :func:`stilt.output.completed`, the one definition of done,
+        for one receptor, from two file checks.
         """
         rid = self.receptor.id
-        return rid in self.output.complete(self.variant, [rid], self.realization)
+        mine = frozenset([rid])
+        particles = mine if self.has_particles else frozenset()
+        if self.variant.footprint is None:
+            return rid in completed(particles, None)
+        return rid in completed(particles, mine if self.has_footprint else frozenset())
 
     # -- status ------------------------------------------------------------
-
-    @property
-    def time_range(self) -> tuple[dt.datetime, dt.datetime]:
-        """
-        Start and end of the period the particles cover.
-
-        Returns
-        -------
-        tuple of datetime
-            ``(start, stop)`` with ``start < stop`` for backward and forward
-            runs alike.
-        """
-        r_time = self.receptor.time
-        other_end = r_time + dt.timedelta(hours=self.variant.transport.n_hours)
-        return min(r_time, other_end), max(r_time, other_end)
 
     @property
     def empty_reason(self) -> str | None:
@@ -249,7 +217,7 @@ class Simulation:
         {'step': 'particles', 'reason': 'MET_COVERAGE',
          'message': 'HYSPLIT: start point not within (x,y,t) any data file', ...}
         """
-        if self.is_complete():
+        if self.is_complete:
             return None
         kind = "footprints" if self.has_particles else "particles"
         return self.output.failure(
@@ -272,21 +240,6 @@ class Simulation:
         if log_path is None or not log_path.exists():
             raise FileNotFoundError(f"No log for {self} yet.")
         return log_path.read_text()
-
-    @property
-    def met_files(self) -> list[Path]:
-        """
-        The meteorology files the transport model read for these particles.
-
-        Raises
-        ------
-        FileNotFoundError
-            If the particles have not been written yet.
-        """
-        path = self.particles_path
-        if path is None or not path.exists():
-            raise FileNotFoundError(f"{self} has no particles yet.")
-        return particles_metadata(path).met_files
 
     @cached_property
     def particles(self) -> pd.DataFrame:
@@ -330,7 +283,7 @@ class Simulation:
             If the footprint has not been written yet. Nothing is kept, so a
             read after the run finishes loads it.
         """
-        if not self.makes_footprint:
+        if self.variant.footprint is None:
             return None
         path = self.footprint_path
         if path is None or not path.exists():

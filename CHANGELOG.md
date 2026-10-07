@@ -8,6 +8,13 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- `Simulation.is_complete` is a property that checks two files, as
+  `has_particles` and `has_footprint` do (breaking: no parentheses). It
+  listed the whole date folder, 4,700 times slower on a 20,000-file day.
+  `Simulation.time_range`, `settings`, `makes_footprint`, and `met_files`
+  are removed: use `sim.variant.run_settings` and `footprint_settings`,
+  `sim.variant.footprint is not None`, and
+  `stilt.particles.particles_metadata(sim.particles_path).met_files`.
 - The public names of `stilt.receptors`, `stilt.execution`, and
   `stilt.identity` are what a user or a plug-in author calls (breaking).
   The receptor table helpers (`receptor_rows`, `receptors_to_csv`, ...)
