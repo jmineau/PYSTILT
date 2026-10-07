@@ -1,2 +1,5 @@
 # Ignore .ASC files for GitHub Linguist
 *.ASC linguist-vendored
+
+# setuptools-scm reads the version of a GitHub or Zenodo archive from this file
+.git_archival.txt export-subst

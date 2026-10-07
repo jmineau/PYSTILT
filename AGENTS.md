@@ -561,9 +561,11 @@ when you write it.
   `docs: ...`).
 - User-visible changes go under `## [Unreleased]` in `CHANGELOG.md`, which
   follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
-- The version is a static string in `pyproject.toml`; pushing a `vX.Y.Z` tag
-  publishes to PyPI via `publish.yml`. **Do not bump the version, cut a
-  release, or push a tag unless the maintainer asks.**
+- The version comes from git tags (setuptools-scm): a release is the tag
+  `vX.Y.Z`, and between releases the version is a dev version such as
+  `0.1.0a23.dev5+g1a2b3c4`. Pushing a `vX.Y.Z` tag publishes to PyPI via
+  `publish.yml`. **Do not cut a release or push a tag unless the maintainer
+  asks.**
 
 ### Issues, pull requests, and roadmap
 

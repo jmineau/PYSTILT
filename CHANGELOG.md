@@ -95,6 +95,9 @@ layout; `docs/migration/` covers moving from STILT-R, X-STILT, and stiltctl.
 - Python 3.11 or newer is required, and the `cloud` extra is `download`
   (breaking). One wheel per platform, each with only its own HYSPLIT
   build; a machine without one gets a clear error (#61).
+- The version comes from git tags (setuptools-scm). Between releases,
+  `stilt.__version__` is a dev version such as `0.1.0a23.dev5+g1a2b3c4`
+  instead of the last release's number.
 
 ### Added
 
