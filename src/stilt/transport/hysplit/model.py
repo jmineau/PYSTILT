@@ -133,7 +133,7 @@ class HysplitModel:
             of a known failure message in the log; or ``NO_PARTICLE_DATA``
             when HYSPLIT wrote no particle file. Particles that stop before
             the end of the run fail afterwards, for any model
-            (:func:`stilt.transport.check_reach`).
+            (:func:`stilt.transport.run_model`).
         MeteorologyError
             Before HYSPLIT runs, when a met file the run needs is missing.
         """

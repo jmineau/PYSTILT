@@ -74,7 +74,7 @@ Transport model
 
 The worker runs a simulation through the model its settings name. HYSPLIT
 is the one transport model. Whatever the model, a run whose particles stop
-before the end of the run fails (:func:`~stilt.transport.check_reach`).
+before the end of the run fails, as ``MET_COVERAGE``.
 
 .. autosummary::
    :toctree: _api
@@ -83,5 +83,4 @@ before the end of the run fails (:func:`~stilt.transport.check_reach`).
    stilt.transport.TransportModel
    stilt.transport.ModelRun
    stilt.transport.get_model
-   stilt.transport.check_reach
    stilt.transport.hysplit.HysplitModel

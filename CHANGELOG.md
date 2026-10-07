@@ -1048,10 +1048,6 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
-- Each particle file records how far its particles got, `stilt:reach_minutes`
-  (`particles_metadata(path).reach_minutes`), and
-  `stilt.transport.check_reach(particles, n_hours)` is the check every run
-  passes.
 - A "Checking a run" page in the user guide: the four states, every
   failure reason in plain words and what to do about it, the log and kept
   workdirs, empty footprints, and what to check when a footprint looks
