@@ -250,6 +250,32 @@ def test_run_keeps_fortran_runtime_output_on_failure(tmp_path):
     )
 
 
+def test_met_that_ran_out_fails_from_hysplits_warning_file(tmp_path):
+    """HYSPLIT says so in WARNING, not in its log (#189)."""
+    _script(
+        tmp_path,
+        "echo ' WARNING emspnt: exceeding puff limit' > WARNING\n"
+        "echo ' WARNING metpos: no more meteorology -     63723240' >> WARNING\n",
+    )
+
+    with pytest.raises(SimulationError) as caught:
+        driver.run_hycs_std(tmp_path, timeout=5)
+    assert caught.value.reason == FailureReason.MET_COVERAGE
+    assert str(caught.value) == (
+        "HYSPLIT: WARNING metpos: no more meteorology -     63723240"
+    )
+
+
+def test_particles_that_left_the_met_domain_are_not_a_failure(tmp_path):
+    _script(
+        tmp_path,
+        "echo ' WARNING emspnt: exceeding puff limit' > WARNING\n"
+        "echo ' WARNING metpos: off spatial domain of all grids' >> WARNING\n",
+    )
+
+    driver.run_hycs_std(tmp_path, timeout=5)  # does not raise
+
+
 def test_run_times_out_and_keeps_log_output(tmp_path):
     _script(tmp_path, "echo 'starting hycs_std'\nsleep 30\n")
 
@@ -325,27 +351,20 @@ def _run(tmp_path, receptor, config=None):
     )
 
 
-def test_a_run_whose_particles_stop_early_fails_with_the_log(
+def test_a_run_whose_particles_left_the_domain_early_is_complete(
     tmp_path, point_receptor, monkeypatch
 ):
-    """Whatever stopped them, the core check after the run fails it (#169)."""
+    """Particles that stop short with no met failure are a domain exit, kept for any model (#189)."""
     from stilt.transport import run_model
 
-    _fake_hysplit(
-        monkeypatch,
-        log=" WARNING metset: Only one time period of meteo data\n",
-        rows=_ending_at(13 * 60),
-    )
+    _fake_hysplit(monkeypatch, log="", rows=_ending_at(13 * 60))
     make_met_files(tmp_path / "met", point_receptor.time, -24)
     met = make_met_config(tmp_path / "met")
     (tmp_path / "run").mkdir()
 
-    with pytest.raises(SimulationError) as caught:
-        run_model("hysplit", point_receptor, _config(), met, tmp_path / "run")
+    run = run_model("hysplit", point_receptor, _config(), met, tmp_path / "run")
 
-    assert caught.value.reason == "MET_COVERAGE"
-    assert "Only one time period of meteo data" in caught.value.log
-    assert "The particles stop 13 h into a 24 h run" in caught.value.log
+    assert run.particles["time"].min() == -13 * 60
 
 
 def test_run_keeps_a_run_that_reaches_the_end_past_a_damaged_met_file(
@@ -375,7 +394,7 @@ def test_run_leaves_an_empty_particle_file_to_the_caller(
 def test_run_leaves_particles_that_stop_early_to_the_caller(
     tmp_path, point_receptor, monkeypatch
 ):
-    """HYSPLIT's own run returns them; the core check fails them (run_model)."""
+    """Particles that all left the met's domain before the end are a run."""
     _fake_hysplit(monkeypatch, log="", rows=_ending_at(13 * 60))
 
     assert _run(tmp_path, point_receptor).particles["time"].min() == -13 * 60

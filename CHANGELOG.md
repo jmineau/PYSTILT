@@ -63,12 +63,13 @@ layout; `docs/migration/` covers moving from STILT-R, X-STILT, and stiltctl.
   `download`. Moving or renaming the met files keeps every result, and two
   archives named alike no longer share results. The met's `directory` must
   hold its files on the machine that opens the project.
-- A run whose particles stop early fails (breaking; #98, #169).
+- A run cut short by its meteorology fails (breaking; #98, #169, #189).
   A missing met file fails the simulation before HYSPLIT runs, naming the
-  hours with no file. A run whose particles stop before `n_hours` (a met
-  file cut short, or every particle leaving the met's domain or crop) fails
-  after it, whatever the transport model. Both are `MET_COVERAGE`. Before,
-  such a run wrote a partial footprint and counted as complete.
+  hours with no file. A met file cut short fails it when HYSPLIT says the
+  meteorology ran out (`no more meteorology` in its `WARNING` file). Both
+  are `MET_COVERAGE`. Before, such a run wrote a partial footprint and
+  counted as complete. A run whose particles all leave the met's domain,
+  or its crop, before `n_hours` is complete.
 - Failures are recorded (breaking). A failed simulation does not stop
   the others: `<receptor id>.failure.yaml` beside its log says why
   (`sim.failure`), and each simulation is `complete`, `failed`,
