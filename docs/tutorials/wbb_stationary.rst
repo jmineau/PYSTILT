@@ -70,7 +70,7 @@ Step 2: Make the project
    )
 
 ``numpar=100`` keeps this tutorial quick. Use more particles for research
-results (see :doc:`../guides/configuration`).
+results (see :doc:`../guides/projects`).
 
 ``Project.init`` writes ``config.yaml`` and ``receptors.csv`` to
 ``./wbb_project`` and stops if the folder already has a ``config.yaml``.

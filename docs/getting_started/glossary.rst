@@ -56,7 +56,7 @@ Glossary
       A named set of settings that every receptor is run under. It is a
       :term:`met` plus any settings that differ from the :term:`defaults` in
       ``config.yaml``, such as a different ``ziscale``, a wind-error run, or
-      another footprint grid. See :doc:`../guides/configuration`.
+      another footprint grid. See :doc:`../guides/projects`.
 
    realization
       One member of a variant declared with ``realizations: N``. The same
@@ -71,7 +71,7 @@ Glossary
       (``./output`` by default, or a URL such as ``s3://bucket/output``). It
       holds one :term:`settings folder` per set of settings under
       ``particles/``, ``footprints/``, and ``logs/``, and several projects
-      can share it. See :doc:`../guides/project_layout`.
+      can share it. See :doc:`../guides/projects`.
 
    settings folder
       One folder of results in the :term:`output directory`: everything made
@@ -115,7 +115,7 @@ Glossary
       A folder holding your settings (``config.yaml``), your receptors
       (``receptors.csv``), and any other inputs (``tables/``, such as
       averaging kernels). The results go to the :term:`output directory` it
-      names. See :doc:`../guides/project_layout`.
+      names. See :doc:`../guides/projects`.
 
    numpar
       The number of particles released per simulation. More particles give
