@@ -999,6 +999,10 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- `--output` on `stilt run`, `stilt submit`, and `stilt status`, and
+  `Project(path, output=...)`: use another output directory than
+  `config.yaml` names (a path or a URL) without editing it. A Slurm task
+  is handed the output its submitter used.
 - `stilt status --json`: the counts per state, overall and per variant,
   the failures by reason, and the settings folders, as JSON for a program
   to read.

@@ -33,7 +33,7 @@ def _sbatch(script: str) -> dict[str, str | bool]:
 
 
 def test_job_script_asks_for_what_the_execution_settings_say(tmp_path):
-    project = Project(tmp_path / "My_Project")
+    project = Project(tmp_path / "My_Project", output=tmp_path / "out")
     folder = tmp_path / "My_Project" / "_slurm" / "stamp"
     execution = ExecutionConfig(
         backend="slurm",
@@ -79,13 +79,15 @@ def test_job_script_asks_for_what_the_execution_settings_say(tmp_path):
     assert f"--receptors {folder / 'receptors.txt'}" in last
     assert '--task "$SLURM_ARRAY_TASK_ID/7"' in last
     assert f"--execution {folder / 'execution.yaml'}" in last
+    # Each task writes where the submitting process does, not to config.yaml's output.
+    assert f"--output {(tmp_path / 'out').resolve()}" in last
     assert "--no-skip" not in script
     assert "--compute-root" not in script  # each node uses its own scratch
 
 
 def test_job_script_leaves_out_what_was_not_set(tmp_path):
     script = job_script(
-        Project(tmp_path),
+        Project(tmp_path, output=tmp_path / "out"),
         ExecutionConfig(backend="slurm", time="01:00:00"),
         tmp_path,
         1,
@@ -101,7 +103,7 @@ def test_job_script_runs_again_only_on_the_first_start_and_names_a_compute_root(
     tmp_path,
 ):
     script = job_script(
-        Project(tmp_path),
+        Project(tmp_path, output=tmp_path / "out"),
         ExecutionConfig(backend="slurm", time="01:00:00"),
         tmp_path,
         2,
@@ -118,7 +120,7 @@ def test_job_script_is_valid_bash(tmp_path):
     script = tmp_path / "job.sh"
     script.write_text(
         job_script(
-            Project(tmp_path / "with space"),
+            Project(tmp_path / "with space", output=tmp_path / "out"),
             ExecutionConfig(backend="slurm", time="01:00:00", setup=["echo ready"]),
             tmp_path / "with space" / "_slurm",
             3,
@@ -166,7 +168,7 @@ def _out(stdout: str = "", returncode: int = 0, stderr: str = "") -> SimpleNames
 
 def test_submit_writes_a_submission_and_hands_it_to_sbatch(pending, commands, tmp_path):
     pending.extend(["a", "b", "c"])
-    project = Project(tmp_path / "my_project")
+    project = Project(tmp_path / "my_project", output=tmp_path / "out")
     execution = ExecutionConfig(
         backend="slurm", time="01:00:00", n_workers=2, cpus=4, timeout=600
     )
@@ -191,7 +193,7 @@ def test_submit_uses_no_more_tasks_than_receptors(pending, commands, tmp_path):
     pending.append("a")
     commands.answers["sbatch"] = [_out("5\n")]
     runner.submit(
-        Project(tmp_path),
+        Project(tmp_path, output=tmp_path / "out"),
         execution=ExecutionConfig(backend="slurm", time="01:00:00", n_workers=8),
     )
     assert _sbatch(Path(commands.ran[0][2]).read_text())["array"] == "0-0"
@@ -200,7 +202,7 @@ def test_submit_uses_no_more_tasks_than_receptors(pending, commands, tmp_path):
 def test_submit_with_nothing_to_do_submits_nothing(pending, commands, tmp_path):
     assert (
         runner.submit(
-            Project(tmp_path),
+            Project(tmp_path, output=tmp_path / "out"),
             execution=ExecutionConfig(backend="slurm", time="01:00:00"),
         )
         is None
@@ -213,7 +215,7 @@ def test_submit_says_why_sbatch_refused(pending, commands, tmp_path):
     commands.answers["sbatch"] = [_out(returncode=1, stderr="Invalid account")]
     with pytest.raises(RuntimeError, match="Invalid account"):
         runner.submit(
-            Project(tmp_path),
+            Project(tmp_path, output=tmp_path / "out"),
             execution=ExecutionConfig(backend="slurm", time="01:00:00"),
         )
 

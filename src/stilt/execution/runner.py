@@ -391,6 +391,9 @@ def job_script(
         f"$SLURM_ARRAY_TASK_ID/{n_tasks}",
         "--execution",
         str(folder / "execution.yaml"),
+        # The output the submitting process uses, which may not be config.yaml's.
+        "--output",
+        str(project.output.directory),
     ]
     if compute_root is not None:
         command += ["--compute-root", str(resolve_compute_root(project, compute_root))]

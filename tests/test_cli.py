@@ -11,6 +11,7 @@ import stilt.__main__
 from stilt.cli import _resolve_project, app
 from stilt.config import ProjectConfig
 from stilt.execution.config import ExecutionConfig
+from stilt.project import Project
 from stilt.spatial import Grid
 
 from .fixtures.factories import make_met_config, make_project_config
@@ -294,6 +295,25 @@ def test_run_on_slurm_waits_for_the_job(tmp_path, calls):
     assert [verb for verb, _ in calls] == ["run"]
     assert calls[0][1]["execution"].n_workers == 2
     assert "Submitting to Slurm and waiting for the job to finish" in result.output
+
+
+def test_run_writes_to_the_output_given(tmp_path, calls, monkeypatch):
+    _write_minimal_config(tmp_path)
+    opened = []
+    real = Project.__init__
+
+    def record(self, path, *, output=None):
+        opened.append(output)
+        real(self, path, output=output)
+
+    monkeypatch.setattr(Project, "__init__", record)
+
+    elsewhere = str(tmp_path / "elsewhere")
+    result = runner.invoke(app, ["run", str(tmp_path), "--output", elsewhere])
+
+    assert result.exit_code == 0, result.output
+    assert elsewhere in opened
+    assert f"Output: {elsewhere}" in result.output
 
 
 def test_run_reads_execution_settings_from_a_file(tmp_path, calls):

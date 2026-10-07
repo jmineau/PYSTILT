@@ -85,6 +85,11 @@ Credentials come from where those packages look for them, such as
 ``~/.aws/credentials`` or ``AWS_ACCESS_KEY_ID``. For another store that
 speaks the S3 protocol, set ``AWS_ENDPOINT_URL``.
 
+To use another output directory than ``config.yaml`` names, without
+editing it, give ``--output`` to ``stilt run``, ``stilt submit``, or
+``stilt status``, or open the project with ``stilt.Project(path,
+output="s3://my-bucket/slv-2023")``.
+
 Everything else is the same: the folder layout, reruns that skip finished
 simulations, ``stilt status``, and loading results. Runs, local or on
 Slurm or Kubernetes, write each result straight to the store. HYSPLIT
