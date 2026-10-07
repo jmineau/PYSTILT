@@ -593,9 +593,6 @@ The README links to it and keeps no table of its own.
 - Code that looks over-engineered goes on the running list in
   [#48](https://github.com/jmineau/PYSTILT/issues/48) (label `simplify`),
   not into an unrelated change.
-- **Do not act on GitHub for the user unless asked.** No new issues, pull
-  requests, comments, or review replies on their behalf. Summarize findings
-  for the user and let them post in their own words.
 - Before working on an issue, read it (`gh issue view <n>`) for the current
   scope and discussion.
 - A pull request fixes one thing, links the issue it resolves
