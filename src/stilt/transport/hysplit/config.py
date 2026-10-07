@@ -60,8 +60,9 @@ class HysplitConfig(TransportConfig):
         None,
         description=(
             "Directory holding a custom ``hycs_std`` build to run in place of "
-            "the one bundled with PYSTILT. It is saved with each trajectory's "
-            "parameters. A build that writes release-time (t = 0) rows to "
+            "the one bundled with PYSTILT, with a ``version`` file beside it. "
+            "The version is recorded with each run, so runs of different "
+            "builds are kept apart. A build that writes release-time (t = 0) rows to "
             "``PARTICLE_STILT.DAT`` gives exact release heights for multipoint "
             "and slant receptors."
         ),

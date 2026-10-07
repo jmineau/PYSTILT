@@ -109,7 +109,7 @@ Weighting
 A column instrument averages over air mass and applies its own averaging
 kernel. The particles of a slant receptor start evenly spaced in height, so
 weight them before they become a footprint (see
-:doc:`../advanced/transforms`):
+:doc:`transforms`):
 
 .. code-block:: yaml
 

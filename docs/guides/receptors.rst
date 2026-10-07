@@ -72,7 +72,7 @@ HYSPLIT releases the particles evenly in height between ``bottom`` and
 
 A column footprint usually needs weighting by pressure, and often by the
 instrument's averaging kernel. Add the ``pressure_weighting`` and
-``averaging_kernel`` transforms for that (see :doc:`/advanced/transforms`).
+``averaging_kernel`` transforms for that (see :doc:`/guides/transforms`).
 
 
 MultiPointReceptor

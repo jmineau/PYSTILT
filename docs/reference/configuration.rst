@@ -18,6 +18,52 @@ the code.
   New to PYSTILT? The :doc:`Projects and variants guide <../guides/projects>`
   covers the few settings most projects need. This page lists all of them.
 
+Every key
+---------
+
+These tables are generated from the code, so they always match the
+installed version.
+
+Top level
+~~~~~~~~~
+
+A project's own keys. Every key of the transport model and
+the footprint below is also top-level, as the defaults each variant starts
+from, and a variant may override any of them.
+
+.. config-model:: stilt.config.ProjectConfig
+   :declared-only:
+
+HYSPLIT
+~~~~~~~
+
+The transport model's parameters, top-level keys of
+``config.yaml`` (:doc:`hysplit`).
+
+.. config-model:: stilt.transport.hysplit.HysplitConfig
+
+Footprint
+~~~~~~~~~
+
+The footprint's settings, top-level keys too.
+
+.. config-model:: stilt.footprint.config.FootprintConfig
+
+A met
+~~~~~
+
+The keys of one entry under ``mets:``, for HYSPLIT
+(:doc:`../guides/meteorology`).
+
+.. config-model:: stilt.transport.hysplit.MetConfig
+
+Execution
+~~~~~~~~~
+
+The keys under ``execution:`` (:doc:`../guides/running`).
+
+.. config-model:: stilt.execution.config.ExecutionConfig
+
 Config objects
 --------------
 
