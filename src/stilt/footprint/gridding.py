@@ -378,8 +378,8 @@ def _accumulate_smoothed_footprint(
             kernel_cache[step_w] = _make_gauss_kernel(rs, step_w)
         k = kernel_cache[step_w]
 
-        loi_arr = step["loi"].values.astype(int)
-        lai_arr = step["lai"].values.astype(int)
+        loi_arr = step["loi"].to_numpy().astype(int)
+        lai_arr = step["lai"].to_numpy().astype(int)
         foot_vals = step["foot"].to_numpy(dtype=float)
         valid = (
             (loi_arr >= 0)

@@ -24,10 +24,9 @@ repos:
 
   - repo: local
     hooks:
-      - id: pyright
-        name: pyright
+      - id: pyrefly
+        name: pyrefly
+        entry: uv run --no-sync pyrefly check  # checks src/ (pyproject.toml)
         language: system
-        entry: uv run pyright
-        pass_filenames: false
-        args: [src/stilt]  # Mirror CI: only check src, not tests
         types: [python]
+        pass_filenames: false

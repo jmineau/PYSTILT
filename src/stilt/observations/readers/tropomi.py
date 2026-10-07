@@ -105,7 +105,7 @@ def _tropomi_operational(
     )[:, ::-1]
     qa = pick(p["qa_value"])
 
-    columns = {
+    columns: dict[str, Any] = {
         "sounding_id": [
             f"{orbit_str}_{s:04d}_{g:03d}"
             for s, g in zip(scanline.tolist(), ground_pixel.tolist(), strict=True)
@@ -171,7 +171,7 @@ def _tropomi_blended(
         if "methane_mixing_ratio_blended" in ds.variables
         else "methane_mixing_ratio_bias_corrected"
     )
-    columns = {
+    columns: dict[str, Any] = {
         "sounding_id": [f"{orbit_str}_{i}" for i in ii.tolist()],
         "time": times,
         "longitude": lon[ii],

@@ -35,20 +35,25 @@ def _make_ax(
 ) -> tuple[Figure, Axes]:
     """Return ``(fig, ax)``, making a cartopy map when cartopy is installed."""
     if ax is not None:
-        return ax.get_figure(), ax  # type: ignore[return-value]
+        # pyrefly: ignore[bad-return]
+        return ax.get_figure(), ax
     try:
-        import cartopy.crs as ccrs  # type: ignore[import-untyped]
-        import cartopy.feature as cfeature  # type: ignore[import-untyped]
+        import cartopy.crs as ccrs
+        import cartopy.feature as cfeature
 
         fig = plt.figure()
         ax = fig.add_subplot(1, 1, 1, projection=ccrs.PlateCarree())
-        ax.add_feature(cfeature.STATES, linewidth=0.4, edgecolor="0.4")  # type: ignore[attr-defined]
-        ax.add_feature(cfeature.COASTLINE, linewidth=0.5)  # type: ignore[attr-defined]
+        # pyrefly: ignore[missing-attribute]
+        ax.add_feature(cfeature.STATES, linewidth=0.4, edgecolor="0.4")
+        # pyrefly: ignore[missing-attribute]
+        ax.add_feature(cfeature.COASTLINE, linewidth=0.5)
         if extent is not None:
-            ax.set_extent(extent, crs=ccrs.PlateCarree())  # type: ignore[attr-defined]
+            # pyrefly: ignore[missing-attribute]
+            ax.set_extent(extent, crs=ccrs.PlateCarree())
 
             if tiler is not None:
-                ax.add_image(tiler, tiler_zoom)  # type: ignore[attr-defined]
+                # pyrefly: ignore[bad-argument-type, bad-argument-count]
+                ax.add_image(tiler, tiler_zoom)
     except ImportError:
         fig, ax = plt.subplots()
         if extent is not None:
@@ -545,6 +550,8 @@ class SimulationPlotAccessor:
             foot.stilt.plot.map(ax=ax, log=log, cmap=foot_cmap, show_grid=show_grid)
 
         if show_particles and particles is not None:
+            # pandas-stubs read the registered .stilt accessor as a column
+            # pyrefly: ignore[missing-attribute]
             particles.stilt.plot.map(
                 ax=ax,
                 color_by=particles_color_by,

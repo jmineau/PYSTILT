@@ -40,6 +40,8 @@ def group_by_overpass(
     >>> for label, scene in df.groupby("overpass"):
     ...     ...
     """
+    # pandas-stubs' Series() does not take every ArrayLike (pandas does)
+    # pyrefly: ignore[no-matching-overload]
     series = times if isinstance(times, pd.Series) else pd.Series(times)
     stamps = pd.to_datetime(series)
     if stamps.isna().any():

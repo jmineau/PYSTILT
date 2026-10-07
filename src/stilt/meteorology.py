@@ -245,25 +245,25 @@ def fit_variogram(
     if sigma is not None:
         if h.size < 1:
             raise ValueError("fit_variogram needs at least one finite point.")
-        (length,), _ = curve_fit(
+        (length,) = curve_fit(
             lambda x, ell: VariogramFit(sigma, ell)(x),
             h,
             g,
             p0=[float(np.median(h))],
             bounds=(1e-9, np.inf),
-        )
+        )[0]
         return VariogramFit(float(sigma), float(length))
     if h.size < 2:
         raise ValueError(
             "fit_variogram needs at least two finite points to fit sigma too."
         )
-    (length, sig), _ = curve_fit(
+    (length, sig) = curve_fit(
         lambda x, ell, s: VariogramFit(s, ell)(x),
         h,
         g,
         p0=[float(np.median(h)), float(np.sqrt(max(g.max(), 1e-12)))],
         bounds=(1e-9, np.inf),
-    )
+    )[0]
     return VariogramFit(float(sig), float(length))
 
 
