@@ -223,7 +223,7 @@ def test_run_particles_keeps_no_empty_scratch_copy(sim, met, compute_root, monke
         name = "hysplit"
 
         def run(self, receptor, params, met, window, workdir=None, timeout=None):
-            raise MeteorologyError("Insufficient number of meteorological files found.")
+            raise MeteorologyError("No met file for 2023-01-01 11:00.")
 
     monkeypatch.setattr("stilt.transport.get_model", lambda name: _Model())
     with pytest.raises(MeteorologyError):
@@ -561,11 +561,11 @@ def test_a_success_clears_the_failure_it_replaces(tmp_path, receptor, monkeypatc
     sim = project.simulation(str(receptor.id), "hrrr")
 
     def fail(sim, **kwargs):
-        raise MeteorologyError("Insufficient number of meteorological files found.")
+        raise MeteorologyError("No met file for 2023-01-01 11:00.")
 
     monkeypatch.setattr(worker, "run_particles", fail)
     _run_receptor(project, receptor)
-    assert sim.failure is not None and sim.failure["reason"] == "MISSING_MET_FILES"
+    assert sim.failure is not None and sim.failure["reason"] == "MET_COVERAGE"
     assert project.output.failure("particles", sim.variant, sim.receptor.id)
 
     _fake_run_particles(monkeypatch, [])
@@ -890,7 +890,7 @@ class BatchedToy:
                 {
                     "receptor": str(r.id),
                     "particle": [1, 2, 1, 2],
-                    "time": [0, 0, -60, -60],
+                    "time": [0, 0, config.n_hours * 60, config.n_hours * 60],
                     "lon": r.longitude,
                     "lat": r.latitude,
                     "zagl": r.altitude,

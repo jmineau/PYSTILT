@@ -14,7 +14,7 @@ failed ones by reason:
 
    $ stilt status ./my_project
    Project: /data/my_project  total=1200  completed=1150  pending=50
-   failed: MISSING_MET_FILES 42, MET_COVERAGE 8  (why: the .failure.yaml beside each log, under /data/output/logs)
+   failed: MET_COVERAGE 42, TIMEOUT 8  (why: the .failure.yaml beside each log, under /data/output/logs)
 
 In Python, ``project.status()`` is the same, one row per simulation:
 
@@ -85,20 +85,21 @@ The reasons
 
    * - Reason
      - What happened, and what to do
-   * - ``MISSING_MET_FILES``
-     - PYSTILT found fewer meteorology files than the run needs (``n_min``
-       of the met). Check the met's ``directory`` and ``file_format``
-       against the files on disk, and that the files cover the receptor
-       time and ``n_hours`` before it (:doc:`meteorology`).
    * - ``MET_COVERAGE``
-     - HYSPLIT found the files but the receptor is outside them: in time
-       (after the last hour the files hold) or in space (off the met grid,
-       or off a cropped met's area). Add the missing files, or widen the
-       crop.
-   * - ``MET_TRUNCATED``
-     - A met file holds a single time step where it should hold more, and
-       the particles stop before the end of the run. The file was cut
-       short, as by a download that stopped. Download it again.
+     - The meteorology does not cover the run. The message says which:
+
+       - ``No met file ... for <hours>``: a file the run needs is missing.
+         Check the met's ``directory`` and ``file_format`` against the
+         files on disk. A backward run needs files from ``n_hours`` before
+         the receptor time to just after it (:doc:`meteorology`).
+       - ``The particles stop <h> h into a <n> h run``: the particles
+         stopped early. Either a met file was cut short (the log then has
+         ``Only one time period of meteo data``; download it again), or
+         every particle left the met's domain or its crop (widen
+         ``subgrid_bounds``).
+       - A HYSPLIT message, such as ``start point not within (x,y,t) any
+         data file``: the receptor is outside the files, in time or in
+         space.
    * - ``VARYING_MET_INTERVAL``
      - The met files do not all have the same time step, such as hourly
        and 3-hourly files mixed in one directory. Keep one product per

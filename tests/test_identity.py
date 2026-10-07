@@ -64,7 +64,7 @@ def test_custom_build_needs_a_version_file(tmp_path):
 
 
 def test_a_runs_met_is_its_product_and_crop(tmp_path):
-    met = _met(tmp_path, subgrid_dir=tmp_path / "sub", n_min=2)
+    met = _met(tmp_path, subgrid_dir=tmp_path / "sub")
     recorded = run_settings(
         HysplitConfig(), met.settings(), ModelInfo(name="hysplit", version="v5.1.0")
     )
@@ -121,7 +121,7 @@ def test_run_settings_leave_out_what_changes_no_particle(tmp_path):
 
 def test_where_met_is_downloaded_from_does_not_identify_the_run(tmp_path):
     base = _variant(tmp_path, numpar=100)
-    for override in ({"download_from": "ftp"}, {"n_min": 3}):
+    for override in ({"download_from": "ftp"},):
         other = _variant(tmp_path, met=_met(tmp_path, **override), numpar=100)
         assert other.particles_hash == base.particles_hash
 

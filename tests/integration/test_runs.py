@@ -21,7 +21,6 @@ from stilt.footprint.targets import Mesh
 from stilt.identity import transport_from_settings
 from stilt.particles import particles_metadata
 from stilt.project import Project
-from stilt.transport.hysplit import MetConfig
 from stilt.transport.hysplit.driver import winderrtf
 
 from ..conftest import integration
@@ -171,21 +170,24 @@ def test_empty_footprint(tmp_path, wbb_receptor, wbb_config):
 
 
 @integration
-def test_failure_missing_met(tmp_path, wbb_receptor, traj_only_config):
-    """Simulation fails gracefully when the met directory is empty."""
-    empty_met = tmp_path / "empty_met"
-    empty_met.mkdir()
+def test_failure_missing_met(tmp_path, wbb_receptor, traj_only_config, met_dir):
+    """A simulation whose met files are missing fails alone, naming the hours."""
+    # The met holds a summer file only, so the winter receptor's hours have none.
+    summer_only = tmp_path / "summer_only"
+    summer_only.mkdir()
+    summer = next(met_dir.glob("20210715_00-05*"))
+    (summer_only / summer.name).symlink_to(summer)
+    met = traj_only_config.mets["hrrr"]
 
-    bad_config = traj_only_config.model_copy(
-        update={
-            "mets": {
-                "hrrr": MetConfig(
-                    directory=empty_met,
-                    file_format="%Y%m%d.%Hz.hrrra",
-                    file_tres="6h",
-                )
+    bad_config = _with(
+        traj_only_config,
+        mets={
+            "hrrr": {
+                "directory": summer_only,
+                "file_format": met["file_format"],
+                "file_tres": met["file_tres"],
             }
-        }
+        },
     )
     model = Project.init(
         tmp_path / "fail_missing_met",
@@ -199,15 +201,16 @@ def test_failure_missing_met(tmp_path, wbb_receptor, traj_only_config):
     # The particles are absent (incomplete), and the worker recorded why.
     assert not sim.has_particles
     assert sim.failure is not None
-    assert sim.failure["reason"] == "MISSING_MET_FILES"
+    assert sim.failure["reason"] == "MET_COVERAGE"
+    assert "No met file" in sim.failure["message"]
     status = model.status()
     assert status["state"].tolist() == ["failed"]
-    assert status["reason"].tolist() == ["MISSING_MET_FILES"]
+    assert status["reason"].tolist() == ["MET_COVERAGE"]
 
 
 @integration
 def test_failure_met_cut_short(tmp_path, wbb_receptor, traj_only_config, met_dir):
-    """A met file cut to one time period fails the run that needs it."""
+    """A met file cut to one time period stops the particles early, which fails the run (#169)."""
     cut_met = tmp_path / "met"
     cut_met.mkdir()
     for path in met_dir.iterdir():
@@ -228,8 +231,8 @@ def test_failure_met_cut_short(tmp_path, wbb_receptor, traj_only_config, met_dir
         mets={
             "hrrr": {
                 "directory": cut_met,
-                "file_format": met.file_format,
-                "file_tres": met.file_tres,
+                "file_format": met["file_format"],
+                "file_tres": met["file_tres"],
             }
         },
     )
@@ -240,11 +243,11 @@ def test_failure_met_cut_short(tmp_path, wbb_receptor, traj_only_config, met_dir
 
     sim = project.simulation(*_sim_id(wbb_receptor))
     assert not sim.has_particles
-    assert sim.failure is not None and sim.failure["reason"] == "MET_TRUNCATED"
+    assert sim.failure is not None and sim.failure["reason"] == "MET_COVERAGE"
     assert sim.log_path is not None
     log = sim.log_path.read_text()
     assert "Only one time period of meteo data" in log
-    assert "Meteorology ends early" in log
+    assert "The particles stop" in log
 
 
 # ---------------------------------------------------------------------------
@@ -566,7 +569,7 @@ def test_seeded_error_realizations_differ_and_reproduce(
 def test_geometry_footprint(tmp_path, wbb_receptor, met_dir):
     """A footprint named by geometry derives its raster, runs, and aggregates."""
 
-    from .fixtures.r_stilt_reference import (
+    from ..fixtures.r_stilt_reference import (
         REFERENCE_KRAND,
         REFERENCE_SEED,
     )
@@ -631,7 +634,7 @@ def test_forward_run(tmp_path, met_dir, wbb_grid):
     """A forward simulation runs end to end and carries a forward time axis."""
     from stilt.receptors import PointReceptor
 
-    from .fixtures.r_stilt_reference import (
+    from ..fixtures.r_stilt_reference import (
         REFERENCE_ALTITUDE,
         REFERENCE_KRAND,
         REFERENCE_LATITUDE,

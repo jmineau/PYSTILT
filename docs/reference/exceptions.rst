@@ -35,7 +35,9 @@ A worker records a :class:`~stilt.exceptions.SimulationError` as a failed
 simulation (:attr:`stilt.Simulation.failure`). Its ``reason`` is a short
 name for the cause: for HYSPLIT, one of
 :class:`stilt.transport.hysplit.FailureReason`, such as ``MET_COVERAGE``,
-``MET_TRUNCATED``, ``NO_PARTICLE_DATA``, or ``TIMEOUT``.
+``NO_PARTICLE_DATA``, or ``TIMEOUT``. A run whose particles stop before the
+end of the run fails as ``MET_COVERAGE`` for any transport model
+(:func:`stilt.transport.check_reach`).
 
 .. autosummary::
    :toctree: _api

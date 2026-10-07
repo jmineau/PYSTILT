@@ -25,12 +25,10 @@ def _run_files(met, r_time, n_hours):
     return met.files_for(run_window(r_time, n_hours), hour_after=n_hours < 0)
 
 
-def _make_met(tmp_path: Path, file_format: str, tres: str, n_min: int = 1) -> Met:
+def _make_met(tmp_path: Path, file_format: str, tres: str) -> Met:
     return Met(
         "hrrr",
-        MetConfig(
-            directory=tmp_path, file_format=file_format, file_tres=tres, n_min=n_min
-        ),
+        MetConfig(directory=tmp_path, file_format=file_format, file_tres=tres),
     )
 
 
@@ -192,15 +190,14 @@ def test_met_download_passes_subgrid_levels(tmp_path):
     assert mock_archive.fetch.call_args.kwargs["levels"] == [0, 1, 2]
 
 
-def test_met_download_n_min_raises(tmp_path):
-    """MeteorologyError when fetch returns fewer files than n_min."""
+def test_met_download_with_no_files_raises(tmp_path):
     mock_archive = MagicMock()
     mock_archive.fetch.return_value = []
 
-    met = _make_download_met(tmp_path, n_min=2)
+    met = _make_download_met(tmp_path)
     met._archive = mock_archive
 
-    with pytest.raises(MeteorologyError, match="Insufficient"):
+    with pytest.raises(MeteorologyError, match="No hrrr files"):
         _run_files(met, "2024-07-18 12:00", -24)
 
 
@@ -213,7 +210,7 @@ BOUNDS = Bounds(xmin=-114.0, xmax=-110.0, ymin=39.0, ymax=42.0)
 
 
 def _archive_met(tmp_path: Path, **kwargs) -> Met:
-    """A local archive holding one 1 h file, cropped into tmp_path/crops."""
+    """A local archive holding one 6 h file, cropped into tmp_path/crops."""
     archive = tmp_path / "archive"
     archive.mkdir(parents=True, exist_ok=True)
     (archive / "20230101_12").write_text("met")
@@ -227,7 +224,7 @@ def _archive_met(tmp_path: Path, **kwargs) -> Met:
         MetConfig(
             directory=archive,
             file_format="%Y%m%d_%H",
-            file_tres="1h",
+            file_tres="6h",
             subgrid_enable=True,
             **settings,
         ),
@@ -235,8 +232,8 @@ def _archive_met(tmp_path: Path, **kwargs) -> Met:
 
 
 def _files(met: Met) -> list[Path]:
-    """Return the files one simulation at the test time reads."""
-    return met.readable(_run_files(met, dt.datetime(2023, 1, 1, 12), -1))
+    """Return the files a forward 1 h run at the test time reads: the one 6 h file."""
+    return met.readable(_run_files(met, dt.datetime(2023, 1, 1, 12), 1))
 
 
 def _fake_extract(text: str = "cropped"):
@@ -396,13 +393,15 @@ def test_readable_returns_local_files_where_they_are(tmp_path):
     """Without cropping, HYSPLIT reads the met files in place: nothing is files."""
     source_dir = tmp_path / "met"
     source_dir.mkdir(parents=True)
-    src = source_dir / "20230101_12"
+    before, src = source_dir / "20230101_11", source_dir / "20230101_12"
+    before.write_text("met")
     src.write_text("met")
 
     met = _make_met(source_dir, "%Y%m%d_%H", "1h")
 
     assert met.readable([src]) == [src]
-    assert met.readable(_run_files(met, dt.datetime(2023, 1, 1, 12), -1)) == [src]
+    run = _run_files(met, dt.datetime(2023, 1, 1, 12), -1)
+    assert met.readable(run) == [before, src]
     assert sorted(p.name for p in tmp_path.iterdir()) == ["met"]
 
 
@@ -457,7 +456,7 @@ def test_files_for_backward_24h(tmp_path):
 
 def test_files_for_backward_deduplicates(tmp_path):
     """Files should not repeat in the returned list."""
-    _touch_files(tmp_path, ["20230101_12"])
+    _touch_files(tmp_path, ["20230101_11", "20230101_12"])
     met = _make_met(tmp_path, "%Y%m%d_%H", "1h")
     files = _run_files(met, dt.datetime(2023, 1, 1, 12), -1)
     assert len(files) == len(set(f.name for f in files))
@@ -480,22 +479,27 @@ def test_files_for_forward_run(tmp_path):
 
 def test_files_for_raises_when_no_files(tmp_path):
     met = _make_met(tmp_path, "%Y%m%d_%H", "1h")
-    with pytest.raises(MeteorologyError, match="Insufficient"):
+    with pytest.raises(MeteorologyError, match="No met file"):
         _run_files(met, dt.datetime(2023, 1, 1, 12), -1)
 
 
-def test_files_for_raises_when_below_n_min(tmp_path):
-    _touch_files(tmp_path, ["20230101_12"])
-    met = _make_met(tmp_path, "%Y%m%d_%H", "1h", n_min=5)
-    with pytest.raises(MeteorologyError, match="Insufficient"):
-        _run_files(met, dt.datetime(2023, 1, 1, 12), -1)
+def test_one_missing_file_fails_the_run_naming_its_hours(tmp_path):
+    """Every file the run needs must be there, or HYSPLIT stops the particles where the met ends (#169)."""
+    _touch_files(tmp_path, ["20230101_11", "20230101_13"])
+    met = _make_met(tmp_path, "%Y%m%d_%H", "1h")
+    with pytest.raises(MeteorologyError, match="for 2023-01-01 12:00 ") as info:
+        _run_files(met, dt.datetime(2023, 1, 1, 13), -2)
+    assert info.value.reason == "MET_COVERAGE"
 
 
 def test_files_for_error_reports_missing_patterns(tmp_path):
-    """Error message names the unmatched pattern and the directory."""
+    """Error message names the missing file names and the directory."""
     met = _make_met(tmp_path, "%Y%m%d_%H", "1h")
-    with pytest.raises(MeteorologyError, match="Patterns not found"):
+    with pytest.raises(
+        MeteorologyError, match="named 20230101_11, 20230101_12"
+    ) as info:
         _run_files(met, dt.datetime(2023, 1, 1, 12), -1)
+    assert str(tmp_path) in str(info.value)
 
 
 # ---------------------------------------------------------------------------
@@ -504,7 +508,7 @@ def test_files_for_error_reports_missing_patterns(tmp_path):
 
 
 def test_files_for_ignores_lock_files(tmp_path):
-    _touch_files(tmp_path, ["20230101_12", "20230101_12.lock"])
+    _touch_files(tmp_path, ["20230101_11", "20230101_12", "20230101_12.lock"])
     met = _make_met(tmp_path, "%Y%m%d_%H", "1h")
     files = _run_files(met, dt.datetime(2023, 1, 1, 12), -1)
     assert all(".lock" not in f.name for f in files)
@@ -556,7 +560,7 @@ def test_files_for_searches_recursively(tmp_path):
     _touch_files(nested, ["20240601_00-05_hrrr"])
     met = _make_met(tmp_path, "%Y%m%d_%H", "6 hours")
 
-    files = _run_files(met, dt.datetime(2024, 6, 1, 0), -1)
+    files = _run_files(met, dt.datetime(2024, 6, 1, 0), 1)
 
     assert [f.name for f in files] == ["20240601_00-05_hrrr"]
 
@@ -569,7 +573,7 @@ def test_files_for_deduplicates_root_symlink_and_nested_file(tmp_path):
     (tmp_path / "20210601_00-05_hrrr").symlink_to(target)
     met = _make_met(tmp_path, "%Y%m%d_%H", "6 hours")
 
-    files = _run_files(met, dt.datetime(2021, 6, 1, 0), -1)
+    files = _run_files(met, dt.datetime(2021, 6, 1, 0), 1)
 
     assert len(files) == 1
     assert files[0].name == "20210601_00-05_hrrr"
@@ -666,7 +670,7 @@ def test_local_met_gets_the_next_file_in_the_last_hour_of_a_file(tmp_path):
         (tmp_path / name).touch()
     met = Met(
         "hrrr",
-        MetConfig(directory=tmp_path, file_format="%Y%m%d_%H", file_tres="6h", n_min=1),
+        MetConfig(directory=tmp_path, file_format="%Y%m%d_%H", file_tres="6h"),
     )
 
     in_last_hour = _run_files(met, "2024-07-18 17:30", -1)
@@ -682,7 +686,7 @@ def test_local_hourly_met_on_the_hour_reads_no_extra_file(tmp_path):
         (tmp_path / name).touch()
     met = Met(
         "hrrr",
-        MetConfig(directory=tmp_path, file_format="%Y%m%d_%H", file_tres="1h", n_min=1),
+        MetConfig(directory=tmp_path, file_format="%Y%m%d_%H", file_tres="1h"),
     )
 
     on_the_hour = _run_files(met, "2024-07-18 18:00", -1)
@@ -700,7 +704,6 @@ def test_met_config_construction(tmp_path):
     )
     assert mc.directory == tmp_path / "met"
     assert mc.file_format == "%Y%m%d_%H"
-    assert mc.n_min == 1  # default
 
 
 # ---------------------------------------------------------------------------
@@ -771,6 +774,11 @@ def test_the_crop_is_the_box(tmp_path):
         "bbox": [BOUNDS.xmin, BOUNDS.ymin, BOUNDS.xmax, BOUNDS.ymax],
         "levels": None,
     }
+
+
+def test_n_min_is_refused_with_why(tmp_path):
+    with pytest.raises(ValueError, match="n_min is gone: a run needs every met file"):
+        _local(tmp_path, n_min=5)
 
 
 def test_a_buffer_is_refused_with_how_to_widen_the_box(tmp_path):

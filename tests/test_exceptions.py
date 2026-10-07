@@ -64,7 +64,7 @@ def test_a_simulation_error_carries_its_reason():
     assert SimulationError("no short name").reason is None
 
 
-def test_a_meteorology_error_names_missing_met_files():
-    assert MeteorologyError(
-        "Insufficient number of meteorological files found."
-    ).reason == ("MISSING_MET_FILES")
+def test_a_meteorology_error_is_a_met_coverage_failure():
+    assert (
+        MeteorologyError("No met file for 2021-01-14 00:00.").reason == "MET_COVERAGE"
+    )
