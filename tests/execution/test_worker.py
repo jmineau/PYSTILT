@@ -256,6 +256,25 @@ def _run_receptor(project, receptor, **kwargs):
 SHARED = {"hrrr": {}, "hrrr-s2": {"smooth_factor": 2.0}, "zi08": {"ziscale": 0.8}}
 
 
+def test_a_receptor_leaves_no_folders_under_the_compute_root(
+    tmp_path, receptor, monkeypatch
+):
+    project = _model(tmp_path, [receptor], variants={"hrrr": {"realizations": 2}})
+    compute_root = project.directory / "scratch"
+
+    class _Model:
+        name = "hysplit"
+
+        def run(self, receptor, params, met, window, workdir=None, timeout=None):
+            (workdir / "CONTROL").write_text("")
+            raise RuntimeError("stop here")
+
+    monkeypatch.setattr("stilt.transport.get_model", lambda name: _Model())
+
+    assert len(_run_receptor(project, receptor)) == 2  # both realizations failed
+    assert list(compute_root.iterdir()) == []
+
+
 def test_the_execution_settings_given_reach_the_hysplit_run(
     tmp_path, receptor, monkeypatch
 ):

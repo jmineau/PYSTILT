@@ -18,6 +18,7 @@ import contextlib
 import datetime as dt
 import logging
 import multiprocessing
+import os
 import shutil
 import signal
 import threading
@@ -302,15 +303,29 @@ def run_receptor(
             sim = project.simulation(receptor_id, name, k)
             groups.setdefault((variant.particles_hash, k), []).append(sim)
     problems: list[str] = []
-    for group in groups.values():
-        problems += _run_group(
-            project,
-            group,
-            compute_root=compute_root,
-            execution=execution,
-            skip_existing=skip_existing,
-        )
+    try:
+        for group in groups.values():
+            problems += _run_group(
+                project,
+                group,
+                compute_root=compute_root,
+                execution=execution,
+                skip_existing=skip_existing,
+            )
+    finally:
+        # Each workdir is removed after its run, which leaves the receptor's
+        # folders above it (compute_root/<receptor>/<variant>/) behind.
+        _remove_empty_dirs(compute_root / receptor_id)
     return problems
+
+
+def _remove_empty_dirs(root: Path) -> None:
+    """Remove *root* and every folder under it, as long as they hold no files."""
+    if not root.is_dir():
+        return
+    for directory, _, _ in os.walk(root, topdown=False):
+        with contextlib.suppress(OSError):
+            Path(directory).rmdir()
 
 
 def _run_group(
