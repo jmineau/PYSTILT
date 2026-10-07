@@ -355,7 +355,7 @@ def _run_group(
 
     problems: list[str] = []
     for sim in sims:
-        if not sim.makes_footprint or (
+        if sim.variant.footprint is None or (
             not rerun and skip_existing and sim.has_footprint
         ):
             continue

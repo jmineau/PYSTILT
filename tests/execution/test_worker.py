@@ -530,7 +530,7 @@ def test_a_success_clears_the_failure_it_replaces(tmp_path, receptor, monkeypatc
     _fake_make_footprint(monkeypatch, [])
     _run_receptor(project, receptor)
 
-    assert sim.is_complete() and sim.failure is None
+    assert sim.is_complete and sim.failure is None
     assert project.output.failure("particles", sim.variant, sim.receptor.id) is None
 
 

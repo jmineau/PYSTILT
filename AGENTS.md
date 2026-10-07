@@ -76,7 +76,7 @@ footprint made from it. Whether
 a simulation is complete is decided **by the files in the output
 directory**, by `stilt.output.completed`: the particles exist, and the
 footprint when the variant has a grid. `Output.complete`,
-`Simulation.is_complete()`, and `status()` all apply it. `config.yaml` and `receptors.csv` are the user's
+`Simulation.is_complete`, and `status()` all apply it. `config.yaml` and `receptors.csv` are the user's
 inputs: `Project.init` (or `stilt init`) writes `config.yaml` once, PYSTILT
 never rewrites it, and `Project.add_receptors` only appends to
 `receptors.csv`. Changing a setting never overwrites a result: it hashes to
@@ -354,7 +354,7 @@ as complete.
 - **Completion is by file.** A simulation is complete iff its files exist
   in the output directory. `stilt.output.completed` is the rule, written
   once; `Output.complete` applies it to a listing of the date folders, and
-  `Simulation.is_complete()` and `status()` call it. `has_particles` and
+  `Simulation.is_complete` and `status()` call it. `has_particles` and
   `has_footprint` look for the same files one at a time. Never add a
   different rule for whether a result exists, a completion registry, or a
   manifest.
@@ -591,7 +591,7 @@ The README links to it and keeps no table of its own.
 - **Empty footprints are successes, and not footprints.** When no particle
   reaches the grid, `calc_footprint` raises `EmptyFootprint` and
   the worker's `make_footprint` writes a footprint file with no rows and
-  the reason in its metadata. `sim.is_complete()` is true, `sim.footprint` is
+  the reason in its metadata. `sim.is_complete` is true, `sim.footprint` is
   `None`, `sim.empty_reason` says why, and `project.footprints()` gives it
   no row and lists it in `attrs["empty"]`. Never synthesize a zero-valued footprint for it: a zero
   enhancement would flow into a comparison or an inversion unnoticed.

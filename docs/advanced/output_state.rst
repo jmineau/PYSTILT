@@ -10,7 +10,7 @@ The result files are the record
 
 PYSTILT keeps no separate list of which simulations have run. A simulation
 is finished when its result files exist in the output directory
-(:meth:`stilt.Simulation.is_complete`). It needs:
+(:attr:`stilt.Simulation.is_complete`). It needs:
 
 - the particle file,
   ``particles/settings=<variant>-<hash>/date=<day>/<receptor>.parquet``
