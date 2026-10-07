@@ -1,6 +1,7 @@
 """Tests for the worker-side execution functions in ``stilt.execution.worker``."""
 
 import datetime as dt
+from typing import ClassVar
 
 import pandas as pd
 import pytest
@@ -17,7 +18,7 @@ from stilt.project import Project
 from stilt.receptors import PointReceptor, Receptor
 from stilt.simulation import Simulation
 from stilt.spatial import Grid
-from stilt.transport import ModelRun
+from stilt.transport import ModelRun, TransportConfig
 from stilt.transport.hysplit import FailureReason, HysplitConfig
 
 from ..fixtures.factories import make_met_config, make_project_config, make_variant
@@ -191,6 +192,29 @@ def test_a_run_stopped_partway_leaves_its_start_in_the_log(
 
     assert "PYSTILT started this run" in sim.log
     assert not sim.has_particles and sim.failure is None
+
+
+def test_a_model_that_needs_no_workdir_gets_none(sim, met, compute_root, monkeypatch):
+    seen: list = []
+
+    class _Model:
+        name = "hysplit"
+        needs_workdir = False
+
+        def run(self, receptor, params, met, window, workdir=None, timeout=None):
+            seen.append(workdir)
+            raise SimulationError("stop here", log="model log\n")
+
+    monkeypatch.setattr("stilt.transport.get_model", lambda name: _Model())
+    monkeypatch.setattr(worker, "get_model", lambda name: _Model())
+    workdir = compute_root / sim.receptor.id / sim.variant.name
+    with pytest.raises(SimulationError):
+        worker.run_particles(sim, met=met, workdir=workdir)
+
+    assert seen == [None]
+    assert not workdir.exists()
+    assert sim.log == "model log\n"
+    assert sim.kept_workdir is None or not sim.kept_workdir.exists()
 
 
 def test_run_particles_keeps_no_empty_scratch_copy(sim, met, compute_root, monkeypatch):
@@ -595,7 +619,15 @@ def _fake_run_receptor(calls: list[dict], status=None):
     one problem); the others complete.
     """
 
-    def fake(project, receptor_id, *, compute_root, execution=None, skip_existing=True):
+    def fake(
+        project,
+        receptor_id,
+        *,
+        compute_root,
+        execution=None,
+        skip_existing=True,
+        batched=True,
+    ):
         calls.append(
             {
                 "receptor": receptor_id,
@@ -820,3 +852,106 @@ def test_run_receptors_pool_keyboard_interrupt_terminates(
     [pool] = fake_pool.instances
     assert pool.terminated
     assert [c["receptor"] for c in calls] == [ids[0]]
+
+
+# ---------------------------------------------------------------------------
+# A batched transport model
+# ---------------------------------------------------------------------------
+
+
+class BatchConfig(TransportConfig):
+    """The batched toy model's config: the shared parameters only."""
+
+
+class BatchedToy:
+    """A toy model that runs many receptors per call and needs no workdir, as an emulator would."""
+
+    name = "toy"
+    config_class = BatchConfig
+    batched = True
+    needs_workdir = False
+    calls: ClassVar[list[list[str]]] = []
+    skip: ClassVar[set[str]] = set()  # receptors it returns no rows for
+
+    def version(self, config):
+        return "1.0"
+
+    def data_files(self, config):
+        return None
+
+    def run(self, receptor, config, met, window, workdir=None, timeout=None):
+        raise AssertionError("a batched model is run with run_many")
+
+    def run_many(self, receptors, config, met, windows, workdir=None, timeout=None):
+        assert workdir is None
+        BatchedToy.calls.append([str(r.id) for r in receptors])
+        tables = [
+            pd.DataFrame(
+                {
+                    "receptor": str(r.id),
+                    "particle": [1, 2, 1, 2],
+                    "time": [0, 0, -60, -60],
+                    "lon": r.longitude,
+                    "lat": r.latitude,
+                    "zagl": r.altitude,
+                    "foot": [0.0, 0.0, 0.01, 0.02],
+                }
+            )
+            for r in receptors
+            if str(r.id) not in self.skip
+        ]
+        return ModelRun(particles=pd.concat(tables), log="toy ran\n")
+
+
+BATCHED_TOY = f"{__name__}.BatchedToy"
+
+
+@pytest.fixture
+def batched_toy():
+    BatchedToy.calls = []
+    BatchedToy.skip = set()
+    return BatchedToy
+
+
+def test_a_batched_model_runs_every_receptor_of_a_variant_in_one_call(
+    tmp_path, receptor, other_receptor, batched_toy
+):
+    third = PointReceptor(
+        time=dt.datetime(2023, 1, 1, 14),
+        longitude=-111.85,
+        latitude=40.77,
+        altitude=5.0,
+    )
+    project = _model(
+        tmp_path,
+        [receptor, other_receptor, third],
+        grid=GRID,
+        hnf_plume=False,
+        variants={
+            "toy": {"model": BATCHED_TOY},
+            "toy-s2": {"model": BATCHED_TOY, "smooth_factor": 2.0},
+        },
+    )
+    ids = [str(r.id) for r in (receptor, other_receptor, third)]
+    batched_toy.skip = {ids[2]}
+
+    run_receptors(project, ids, compute_root=tmp_path / "scratch")
+
+    # One call for the variants that share particles, all three receptors in it.
+    assert batched_toy.calls == [ids]
+    for rid in ids[:2]:
+        for variant in ("toy", "toy-s2"):
+            sim = project.simulation(rid, variant)
+            assert sim.is_complete, (rid, variant)
+        assert project.simulation(rid, "toy").log == "toy ran\n"
+    # The receptor the model gave no rows fails alone.
+    failed = project.simulation(ids[2], "toy")
+    assert not failed.has_particles
+    assert failed.failure["reason"] == "NO_PARTICLE_DATA"
+    # No workdir was made for a model that does not ask for one.
+    assert not (tmp_path / "scratch").exists()
+
+    # Run again: nothing is missing, so the model is not called.
+    batched_toy.skip = set()
+    run_receptors(project, ids[:2], compute_root=tmp_path / "scratch")
+    assert batched_toy.calls == [ids]

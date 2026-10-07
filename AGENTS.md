@@ -226,8 +226,12 @@ docs/                Sphinx (pydata-sphinx-theme)
    cluster preempts with SIGTERM, 30 s grace, and CANCEL, and Slurm checks
    `--signal` times only about once a minute, so USR1 may not come). A
    `scancel` only stops it. The unit of work is a receptor: `run_receptor` runs
-   HYSPLIT once per distinct transport hash, then writes the footprint of
-   every variant that shares those particles. `run(task=(i, n))` (`stilt
+   the transport model once per distinct transport hash, then writes the
+   footprint of every variant that shares those particles. A batched model
+   (`batched = True`, `run_many`) is the exception: `run_receptors` first
+   runs each of its variant groups once for all the receptors that need
+   particles, then the per-receptor loop does the rest. HYSPLIT is not
+   batched. `run(task=(i, n))` (`stilt
    run --task i/n`) runs one share here whatever the backend; the share is
    taken from all the receptors before the complete ones are dropped
    (`task_share`), so tasks that start at different times never overlap.

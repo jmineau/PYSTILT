@@ -36,7 +36,7 @@ from stilt.footprint import calc_footprint
 from stilt.meteorology import MetConfig
 from stilt.output import Kind
 from stilt.simulation import Simulation
-from stilt.transport import run_model
+from stilt.transport import get_model, run_model, run_model_many
 
 if TYPE_CHECKING:
     from stilt.project import Project
@@ -174,20 +174,14 @@ def run_particles(
         missing.
     """
     output, rid = sim.output, sim.receptor.id
-    # The model runs in an empty directory. A job stopped partway can leave
-    # this simulation's directory behind; it is PYSTILT's own, so clear it.
-    shutil.rmtree(workdir, ignore_errors=True)
-    workdir.mkdir(parents=True)
-    # A log from the start, which the model's log replaces when the run
-    # ends: a run cut off before then reads as interrupted, not as never run.
-    started = dt.datetime.now(dt.UTC).isoformat(timespec="seconds")
-    output.write_log(
-        sim.variant,
-        rid,
-        f"PYSTILT started this run at {started} on {socket.gethostname()}; "
-        "the transport model's log replaces this line when the run ends.\n",
-        sim.realization,
-    )
+    needs_workdir = getattr(get_model(sim.variant.model.name), "needs_workdir", True)
+    if needs_workdir:
+        # The model runs in an empty directory. A job stopped partway can
+        # leave this simulation's directory behind; it is PYSTILT's own, so
+        # clear it.
+        shutil.rmtree(workdir, ignore_errors=True)
+        workdir.mkdir(parents=True)
+    _log_start(sim)
     log = ""
     succeeded = False
     try:
@@ -196,7 +190,7 @@ def run_particles(
             sim.receptor,
             sim.transport,
             met,
-            workdir,
+            workdir if needs_workdir else None,
             timeout=timeout,
         )
         log = result.log
@@ -215,11 +209,89 @@ def run_particles(
     finally:
         if log:
             output.write_log(sim.variant, rid, log, sim.realization)
-        # An empty directory is not kept: a run that failed before writing
-        # anything, such as on missing meteorology, has nothing to look at.
-        if (keep_scratch or not succeeded) and any(workdir.iterdir()):
-            output.keep_workdir(sim.variant, rid, workdir, sim.realization)
-        shutil.rmtree(workdir, ignore_errors=True)
+        if needs_workdir:
+            # An empty directory is not kept: a run that failed before
+            # writing anything, such as on missing meteorology, has nothing
+            # to look at.
+            if (keep_scratch or not succeeded) and any(workdir.iterdir()):
+                output.keep_workdir(sim.variant, rid, workdir, sim.realization)
+            shutil.rmtree(workdir, ignore_errors=True)
+
+
+def _log_start(sim: Simulation) -> None:
+    """
+    Write a log line saying the run of *sim*'s particles started, which the model's log replaces.
+
+    A run cut off before it ends keeps only this line, so it reads as
+    interrupted rather than as never run.
+    """
+    started = dt.datetime.now(dt.UTC).isoformat(timespec="seconds")
+    sim.output.write_log(
+        sim.variant,
+        sim.receptor.id,
+        f"PYSTILT started this run at {started} on {socket.gethostname()}; "
+        "the transport model's log replaces this line when the run ends.\n",
+        sim.realization,
+    )
+
+
+def run_particles_batch(
+    sims: list[Simulation], *, met: MetConfig, timeout: int | None = None
+) -> tuple[dict[str, pd.DataFrame], dict[str, str]]:
+    """
+    Run a batched transport model once for many receptors, and write each one's particles.
+
+    *sims* are simulations of one variant and realization, one per receptor,
+    so they share the transport settings. The model's one call
+    (:func:`stilt.transport.run_model_many`) gives each receptor its
+    particles or an error: the particles and the log are written, and a
+    failure is recorded with its simulation.
+
+    Returns
+    -------
+    tuple of (dict, dict)
+        The particles written, and a line saying why for each receptor
+        that failed, both by receptor id.
+    """
+    first = sims[0]
+    for sim in sims:
+        _log_start(sim)
+    try:
+        results = run_model_many(
+            first.variant.model.name,
+            [sim.receptor for sim in sims],
+            first.transport,
+            met,
+            timeout=timeout,
+        )
+    except Exception as error:
+        log = getattr(error, "log", "")
+        failed: dict[str, str] = {}
+        for sim in sims:
+            if log:
+                sim.output.write_log(sim.variant, sim.receptor.id, log, sim.realization)
+            failed[sim.receptor.id] = _failed(sim, "particles", error)
+        return {}, failed
+    written: dict[str, pd.DataFrame] = {}
+    failed = {}
+    for sim in sims:
+        rid = sim.receptor.id
+        result = results[rid]
+        if result.log:
+            sim.output.write_log(sim.variant, rid, result.log, sim.realization)
+        if isinstance(result, SimulationError):
+            failed[rid] = _failed(sim, "particles", result)
+            continue
+        sim.output.write_particles(
+            sim.variant,
+            sim.receptor,
+            result.particles,
+            result.met_files,
+            sim.realization,
+        )
+        _succeeded(sim, "particles")
+        written[rid] = result.particles
+    return written, failed
 
 
 def make_footprint(sim: Simulation, particles: pd.DataFrame) -> xr.DataArray | None:
@@ -267,6 +339,7 @@ def run_receptor(
     compute_root: Path,
     execution: ExecutionConfig | None = None,
     skip_existing: bool = True,
+    batched: bool = True,
 ) -> list[str]:
     """
     Run every simulation of one receptor, and return what did not complete.
@@ -297,6 +370,10 @@ def run_receptor(
         to the project's.
     skip_existing : bool, default True
         Keep particles and footprints that already exist.
+    batched : bool, default True
+        Also run the variants of a batched transport model, one receptor
+        per call. :func:`run_receptors` runs those for all its receptors at
+        once first, and passes False.
 
     Returns
     -------
@@ -306,14 +383,12 @@ def run_receptor(
         :meth:`stilt.Project.status` reads them.
     """
     execution = execution if execution is not None else project.config.execution
-    groups: dict[tuple[str, int | None], list[Simulation]] = {}
-    for name, variant in project.variants.items():
-        for k in variant.realization_numbers:
-            sim = project.simulation(receptor_id, name, k)
-            groups.setdefault((variant.particles_hash, k), []).append(sim)
     problems: list[str] = []
     try:
-        for group in groups.values():
+        for (_, k), names in _groups(project).items():
+            if not batched and _is_batched(project, names[0]):
+                continue
+            group = [project.simulation(receptor_id, n, k) for n in names]
             problems += _run_group(
                 project,
                 group,
@@ -325,6 +400,67 @@ def run_receptor(
         # Each workdir is removed after its run, which leaves the receptor's
         # folders above it (compute_root/<receptor>/<variant>/) behind.
         _remove_empty_dirs(compute_root / receptor_id)
+    return problems
+
+
+def _groups(project: Project) -> dict[tuple[str, int | None], list[str]]:
+    """
+    Return the variants that share particles, by particles hash and realization.
+
+    Each group's transport model runs once per receptor (or once for many
+    receptors, when it is batched), and each variant in it makes its own
+    footprint from those particles.
+    """
+    groups: dict[tuple[str, int | None], list[str]] = {}
+    for name, variant in project.variants.items():
+        for k in variant.realization_numbers:
+            groups.setdefault((variant.particles_hash, k), []).append(name)
+    return groups
+
+
+def _is_batched(project: Project, variant: str) -> bool:
+    """Whether a variant's transport model runs many receptors in one call."""
+    model = get_model(project.variants[variant].model.name)
+    return bool(getattr(model, "batched", False))
+
+
+def _run_batched(
+    project: Project,
+    receptor_ids: list[str],
+    *,
+    execution: ExecutionConfig,
+    skip_existing: bool,
+) -> dict[str, list[str]]:
+    """
+    Run the variants of batched transport models for many receptors, one model call per group.
+
+    For each group of variants that share particles, the receptors whose
+    particles are missing (all of them, without *skip_existing*) run in one
+    call (:func:`run_particles_batch`); then each variant's footprint is
+    made per receptor. Returns the failures by receptor id.
+    """
+    problems: dict[str, list[str]] = {rid: [] for rid in receptor_ids}
+    for (_, k), names in _groups(project).items():
+        if not _is_batched(project, names[0]):
+            continue
+        firsts = [project.simulation(rid, names[0], k) for rid in receptor_ids]
+        todo = [s for s in firsts if not (skip_existing and s.has_particles)]
+        written: dict[str, pd.DataFrame] = {}
+        if todo:
+            met = project.mets[todo[0].variant.met]
+            written, failed = run_particles_batch(
+                todo, met=met, timeout=execution.timeout
+            )
+            for rid, line in failed.items():
+                problems[rid].append(line)
+        ran = {s.receptor.id for s in todo}
+        for rid in receptor_ids:
+            if rid in ran and rid not in written:
+                continue  # its particles failed, and so did every footprint
+            sims = [project.simulation(rid, n, k) for n in names]
+            problems[rid] += _make_footprints(
+                sims, written.get(rid), rerun=rid in ran, skip_existing=skip_existing
+            )
     return problems
 
 
@@ -361,7 +497,23 @@ def _run_group(
         except Exception as error:
             return [_failed(first, "particles", error)]
         _succeeded(first, "particles")
+    return _make_footprints(sims, particles, rerun=rerun, skip_existing=skip_existing)
 
+
+def _make_footprints(
+    sims: list[Simulation],
+    particles: pd.DataFrame | None,
+    *,
+    rerun: bool,
+    skip_existing: bool,
+) -> list[str]:
+    """
+    Make the footprint of each simulation that shares *particles*, and return what failed.
+
+    *particles* are the ones just made (*rerun*), or ``None`` to read the
+    stored ones once, when a footprint needs them.
+    """
+    first = sims[0]
     problems: list[str] = []
     for sim in sims:
         if sim.variant.footprint is None or (
@@ -420,6 +572,7 @@ def _pool_run(item: tuple[int, str]) -> tuple[int, list[str] | None]:
             compute_root=_POOL_COMPUTE_ROOT,
             execution=_POOL_EXECUTION,
             skip_existing=_POOL_SKIP,
+            batched=False,  # run_receptors ran those first
         )
     except KeyboardInterrupt:
         # A pool task must return; the parent stops the pool when it sees this.
@@ -437,9 +590,11 @@ def run_receptors(
     """
     Run a list of receptors, in this process or in a process pool.
 
-    Pool workers open the project again from its directory. A SIGTERM,
-    such as Slurm preemption or the end of the job's time limit, stops the
-    batch. What finished is in the output directory, with a failure record
+    The variants of a batched transport model run first, one model call
+    for all the receptors that need their particles. Then each receptor
+    runs its other variants. Pool workers open the project again from its
+    directory. A SIGTERM, such as Slurm preemption or the end of the job's
+    time limit, stops the batch. What finished is in the output directory, with a failure record
     for each simulation that failed.
 
     Parameters
@@ -463,16 +618,31 @@ def run_receptors(
     execution = execution if execution is not None else project.config.execution
     total = len(receptor_ids)
 
+    earlier: dict[str, list[str]] = {}
+    if any(_is_batched(project, names[0]) for names in _groups(project).values()):
+        with _sigterm_as_interrupt():
+            try:
+                earlier = _run_batched(
+                    project,
+                    receptor_ids,
+                    execution=execution,
+                    skip_existing=skip_existing,
+                )
+            except KeyboardInterrupt:
+                logger.info("stopped during a batched run; the rest did not run")
+                return
+
     if execution.cpus <= 1:
         with _sigterm_as_interrupt():
             for i, receptor_id in enumerate(receptor_ids, 1):
                 try:
-                    problems = run_receptor(
+                    problems = earlier.get(receptor_id, []) + run_receptor(
                         project,
                         receptor_id,
                         compute_root=compute_root,
                         execution=execution,
                         skip_existing=skip_existing,
+                        batched=False,
                     )
                 except KeyboardInterrupt:
                     logger.info("stopped at %s; the rest did not run", receptor_id)
@@ -496,7 +666,8 @@ def run_receptors(
                     pool.terminate()
                     break
                 done += 1
-                _log_progress(receptor_ids[idx], problems, done, total)
+                rid = receptor_ids[idx]
+                _log_progress(rid, earlier.get(rid, []) + problems, done, total)
             else:
                 # Normal completion: let workers exit cleanly. terminate() would
                 # SIGTERM idle workers, whose handler raises KeyboardInterrupt.
@@ -515,6 +686,7 @@ def run_receptors(
 __all__ = [
     "make_footprint",
     "run_particles",
+    "run_particles_batch",
     "run_receptor",
     "run_receptors",
 ]
