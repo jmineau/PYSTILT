@@ -475,7 +475,6 @@ def test_model_config_rejects_unimportable_transform_from_yaml(tmp_path):
 
 def test_model_config_unknown_keys_raise(tmp_path):
     """from_yaml must fail fast on unrecognized keys."""
-
     yaml_text = textwrap.dedent(f"""\
         n_hours: -24
         mets:

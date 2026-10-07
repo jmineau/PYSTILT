@@ -147,7 +147,7 @@ def test_met_download_from_is_passed_to_fetch(tmp_path):
 
 
 def test_met_download_with_subgrid_passes_bbox(tmp_path):
-    """download + subgrid_enable passes bbox to arlmet fetch."""
+    """``download`` + ``subgrid_enable`` passes bbox to arlmet fetch."""
     mock_archive = MagicMock()
     mock_archive.fetch.return_value = [tmp_path / "file1"]
     (tmp_path / "file1").touch()
@@ -172,7 +172,7 @@ def test_met_download_with_subgrid_passes_bbox(tmp_path):
 
 
 def test_met_download_passes_subgrid_levels(tmp_path):
-    """download + subgrid_levels=N asks arlmet to keep the lowest N levels."""
+    """``download`` + ``subgrid_levels=N`` asks arlmet to keep the lowest N levels."""
     mock_archive = MagicMock()
     mock_archive.fetch.return_value = [tmp_path / "file1"]
     (tmp_path / "file1").touch()

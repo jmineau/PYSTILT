@@ -216,8 +216,7 @@ def _r_footprint_from_traj(
     scenario: ReferenceScenario,
 ) -> xr.Dataset:
     """
-    Run STILT-R calc_footprint on a PYSTILT trajectory parquet and return the
-    resulting footprint as an xarray Dataset.
+    Return STILT-R's calc_footprint of a PYSTILT trajectory parquet, as a Dataset.
 
     Feeds the HNF-corrected ``foot`` column directly to R so the comparison
     is: does PYSTILT's footprint calculation agree with R's given the same

@@ -568,7 +568,6 @@ def test_seeded_error_realizations_differ_and_reproduce(
 @integration
 def test_geometry_footprint(tmp_path, wbb_receptor, met_dir):
     """A footprint named by geometry derives its raster, runs, and aggregates."""
-
     from ..fixtures.r_stilt_reference import (
         REFERENCE_KRAND,
         REFERENCE_SEED,

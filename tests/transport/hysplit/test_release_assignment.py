@@ -58,7 +58,6 @@ def test_hysplit_multipoint_release_points_follow_control_order(tmp_path, met_di
     so each explicit release point should receive the same-size contiguous
     ``particle`` block.
     """
-
     receptor = MultiPointReceptor(
         time=dt.datetime(2021, 1, 15, 6, 0),
         longitudes=[-112.0, -111.8, -111.6],
@@ -110,7 +109,6 @@ def test_hysplit_multipoint_release_points_follow_control_order_nondivisible(
     tmp_path, met_dir
 ):
     """Nondivisible particle counts still use contiguous blocks in point order."""
-
     receptor = MultiPointReceptor(
         time=dt.datetime(2021, 1, 15, 6, 0),
         longitudes=[-112.0, -111.8, -111.6],
@@ -153,7 +151,6 @@ def test_hysplit_column_release_spans_vertical_line_without_endpoint_chunking(
     tmp_path, met_dir
 ):
     """Column releases span the requested vertical range rather than endpoint chunks."""
-
     receptor = ColumnReceptor(
         time=dt.datetime(2021, 1, 15, 6, 0),
         longitude=-112.0,
@@ -213,7 +210,6 @@ def test_close_spaced_slant_release_heights_are_recovered(tmp_path, met_dir):
     position put the assigned release height off by ~240 m RMS; matching on
     height recovers it to within the vertical drift.
     """
-
     n_levels = 10
     altitudes = np.linspace(300.0, 3000.0, n_levels)
     metres_per_deg_lon = 111_320.0 * np.cos(np.radians(40.766))

@@ -487,7 +487,8 @@ quirks.
 - Python 3.11+ (`requires-python`, which ruff also reads). Use the standard
   library for what 3.11 added (`typing.Self`, `enum.StrEnum`, `tomllib`,
   `datetime.UTC`) rather than `typing_extensions` or backports.
-- Ruff rules `E, F, UP, B, SIM, I, D213, NPY, RUF100`; line length is left to the formatter.
+- Ruff rules `E, F, UP, B, SIM, I, D, D213, NPY, RUF100`, with pydocstyle's
+  NumPy convention (`D`); line length is left to the formatter.
 - **NumPy-style docstrings** (Sphinx napoleon is configured for NumPy only),
   with the summary on the line after the opening quotes (`D213`).
 - pyrefly (its default preset) checks `src/` and must pass with no errors.

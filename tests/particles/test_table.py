@@ -85,9 +85,11 @@ def _settings(params: HysplitConfig) -> dict:
 
 def test_parquet_roundtrip_preserves_naive_utc_from_tz_aware_receptor(tmp_path):
     """
-    A tz-aware receptor time must normalize to naive UTC and stay naive
-    through the trajectory parquet round-trip so the receptor/trajectory/
-    footprint time axes align without pandas raising on mixed tz comparisons."""
+    A tz-aware receptor time becomes naive UTC and stays so through parquet.
+
+    Then the receptor, trajectory and footprint time axes align without
+    pandas raising on mixed tz comparisons.
+    """
     aware_receptor = PointReceptor(
         time=pd.Timestamp("2023-01-01 12:00:00+00:00"),
         longitude=-111.85,
@@ -571,8 +573,11 @@ def _particles_two_lengths() -> pd.DataFrame:
 
 def test_endpoints_returns_far_end_per_particle(point_receptor, tmp_path):
     """
-    endpoints() returns one row per particle at its largest-|time| row, with no
-    duration filtering: a particle that left the domain early is a real endpoint."""
+    ``endpoints()`` returns each particle's row with the largest ``|time|``.
+
+    There is no duration filtering: a particle that left the domain early is
+    a real endpoint.
+    """
     particles = finished(_particles_two_lengths(), point_receptor, _params(tmp_path))
     # As read_particles gives them.
     particles["datetime"] = point_receptor.time + pd.to_timedelta(

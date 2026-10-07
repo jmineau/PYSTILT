@@ -96,8 +96,9 @@ _TRAJ_COLS_NO_HNF: tuple[str, ...] = (
 @dataclass(frozen=True)
 class ReferenceScenario:
     """
-    All parameters needed to run a seeded PYSTILT fidelity case and compare
-    against STILT-R run live.
+    A seeded fidelity case, run in PYSTILT and compared with STILT-R run live.
+
+    It holds every parameter both runs need.
 
     Attributes
     ----------

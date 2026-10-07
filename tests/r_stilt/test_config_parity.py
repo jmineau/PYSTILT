@@ -136,7 +136,7 @@ def test_trajectory_contains_all_r_varsiwant_columns(scenario_outputs: dict) -> 
 
 def test_setup_cfg_ivmax_at_least_r_varsiwant_count(scenario_outputs: dict) -> None:
     """
-    ivmax in SETUP.CFG is at least as large as R's varsiwant column count.
+    ``ivmax`` in SETUP.CFG is at least as large as R's varsiwant column count.
 
     ivmax tells HYSPLIT how many output columns to write.  If it were smaller
     than R's varsiwant length, the particle file would be truncated and column

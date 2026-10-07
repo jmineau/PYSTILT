@@ -114,7 +114,7 @@ def test_status_exits_when_no_config(tmp_path):
 
 
 def test_status_prints_project_info(tmp_path):
-    """status prints one summary line with the project root and counts."""
+    """``status`` prints one summary line with the project root and counts."""
     _write_minimal_config(tmp_path)
 
     result = runner.invoke(app, ["status", str(tmp_path)])

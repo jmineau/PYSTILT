@@ -614,7 +614,7 @@ def test_winderrtf_zero_value_params():
 
 
 def test_stilt_params_maxpar_defaults_to_numpar():
-    """maxpar stays unset in the config; SETUP.CFG gets numpar in its place."""
+    """``maxpar`` stays unset in the config; SETUP.CFG gets numpar in its place."""
     p = HysplitConfig(numpar=500)
     assert p.maxpar is None
     assert setup_entries(p)["maxpar"] == 500
