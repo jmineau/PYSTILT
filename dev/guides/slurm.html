@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=cae64e1e"></script>
+    <script src="../_static/documentation_options.js?v=923dd212"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
     <link rel="prev" title="Running" href="running.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev263+g08d98d035" />
+  <meta name="docsearch:version" content="0.1.0a23.dev266+gdc9b38568" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -623,6 +623,9 @@ to load modules or set environment variables.</p>
 <span class="w">    </span><span class="nt">exclusive</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w">      </span><span class="c1"># a bare flag, --exclusive</span>
 </pre></div>
 </div>
+<p><code class="docutils literal notranslate"><span class="pre">clusters:</span> <span class="pre">kingspeak</span></code> sends the job to another cluster of a site that
+has several. PYSTILT follows the job there. Give <code class="docutils literal notranslate"><span class="pre">squeue</span></code> and
+<code class="docutils literal notranslate"><span class="pre">scancel</span></code> the cluster too: <code class="docutils literal notranslate"><span class="pre">squeue</span> <span class="pre">-M</span> <span class="pre">kingspeak</span> <span class="pre">-j</span> <span class="pre">&lt;job_id&gt;</span></code>.</p>
 </dd>
 </dl>
 <p>A setting PYSTILT does not know is an error, so a misspelled <code class="docutils literal notranslate"><span class="pre">partition</span></code>

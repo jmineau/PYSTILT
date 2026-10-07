@@ -39,7 +39,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../_static/documentation_options.js?v=cae64e1e"></script>
+    <script src="../../_static/documentation_options.js?v=923dd212"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -58,7 +58,7 @@
     <link rel="search" title="Search" href="../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev263+g08d98d035" />
+  <meta name="docsearch:version" content="0.1.0a23.dev266+gdc9b38568" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -513,7 +513,6 @@
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
-<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">Iterator</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">functools</span><span class="w"> </span><span class="kn">import</span> <span class="n">cached_property</span>
@@ -1484,8 +1483,9 @@
 <span class="sd">        or the bins are dropped. The selection must hold one variant.</span>
 
 <span class="sd">        Footprints are read and summed *batch* receptors at a time, in</span>
-<span class="sd">        *workers* threads, so memory stays at a few batches of footprints</span>
-<span class="sd">        whatever the selection&#39;s size; the result itself is sparse.</span>
+<span class="sd">        *workers* threads. Each thread holds one batch, so memory peaks at</span>
+<span class="sd">        about *workers* times a batch whatever the selection&#39;s size; the</span>
+<span class="sd">        result itself is sparse.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -1498,11 +1498,13 @@
 <span class="sd">            closed on the left (``closed=&quot;left&quot;``): each bin holds the</span>
 <span class="sd">            footprint hours that start in it.</span>
 <span class="sd">        workers : int, optional</span>
-<span class="sd">            Threads that read and sum batches. Defaults to the number of</span>
-<span class="sd">            CPUs.</span>
+<span class="sd">            Threads that read and sum batches. Defaults to the CPUs this</span>
+<span class="sd">            process may use (in a Slurm job, the job&#39;s), at most 8: more</span>
+<span class="sd">            threads add memory and stop adding speed.</span>
 <span class="sd">        batch : int, default 64</span>
 <span class="sd">            Receptors read and summed together. At about 350,000 cells a</span>
-<span class="sd">            footprint, 64 take some 2 GB at their peak.</span>
+<span class="sd">            footprint, a batch of 64 takes some 2 GB at its peak, so 8</span>
+<span class="sd">            threads take some 16 GB.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
@@ -1538,7 +1540,7 @@
             <span class="n">time_bins</span><span class="p">,</span>
             <span class="n">missing</span><span class="o">=</span><span class="p">[</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">requested</span> <span class="k">if</span> <span class="n">r</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">found</span><span class="p">],</span>
             <span class="n">geometry_hash</span><span class="o">=</span><span class="n">variant</span><span class="o">.</span><span class="n">geometry_hash</span><span class="p">,</span>
-            <span class="n">workers</span><span class="o">=</span><span class="n">workers</span> <span class="k">if</span> <span class="n">workers</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">cpu_count</span><span class="p">()</span> <span class="ow">or</span> <span class="mi">1</span><span class="p">),</span>
+            <span class="n">workers</span><span class="o">=</span><span class="n">workers</span><span class="p">,</span>
         <span class="p">)</span></div>
 
 

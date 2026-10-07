@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../_static/documentation_options.js?v=cae64e1e"></script>
+    <script src="../../_static/documentation_options.js?v=923dd212"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
     <link rel="prev" title="stilt.Project.init" href="stilt.Project.init.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev263+g08d98d035" />
+  <meta name="docsearch:version" content="0.1.0a23.dev266+gdc9b38568" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -838,8 +838,9 @@ cells it overlaps in proportion to area, time layers are summed
 within each of <em>time_bins</em>, and cells or layers outside the target
 or the bins are dropped. The selection must hold one variant.</p>
 <p>Footprints are read and summed <em>batch</em> receptors at a time, in
-<em>workers</em> threads, so memory stays at a few batches of footprints
-whatever the selection’s size; the result itself is sparse.</p>
+<em>workers</em> threads. Each thread holds one batch, so memory peaks at
+about <em>workers</em> times a batch whatever the selection’s size; the
+result itself is sparse.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -848,10 +849,12 @@ whatever the selection’s size; the result itself is sparse.</p>
 <li><p><strong>time_bins</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.IntervalIndex.html#pandas.IntervalIndex" title="(in pandas v3.0.6)"><code class="xref py py-class docutils literal notranslate"><span class="pre">IntervalIndex</span></code></a></span>) – Flux time bins, such as a flux inventory’s steps. They must be
 closed on the left (<code class="docutils literal notranslate"><span class="pre">closed=&quot;left&quot;</span></code>): each bin holds the
 footprint hours that start in it.</p></li>
-<li><p><strong>workers</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a> | <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></span>) – Threads that read and sum batches. Defaults to the number of
-CPUs.</p></li>
+<li><p><strong>workers</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a> | <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></span>) – Threads that read and sum batches. Defaults to the CPUs this
+process may use (in a Slurm job, the job’s), at most 8: more
+threads add memory and stop adding speed.</p></li>
 <li><p><strong>batch</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a></span>) – Receptors read and summed together. At about 350,000 cells a
-footprint, 64 take some 2 GB at their peak.</p></li>
+footprint, a batch of 64 takes some 2 GB at its peak, so 8
+threads take some 16 GB.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>

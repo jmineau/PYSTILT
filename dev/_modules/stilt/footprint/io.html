@@ -39,7 +39,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../../_static/documentation_options.js?v=cae64e1e"></script>
+    <script src="../../../_static/documentation_options.js?v=923dd212"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -58,7 +58,7 @@
     <link rel="search" title="Search" href="../../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev263+g08d98d035" />
+  <meta name="docsearch:version" content="0.1.0a23.dev266+gdc9b38568" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -732,6 +732,26 @@
 <span class="c1">#: About how many bytes of footprint values one chunk of :func:`open_footprints` holds.</span>
 <span class="n">_CHUNK_BYTES</span> <span class="o">=</span> <span class="mi">128</span> <span class="o">*</span> <span class="mi">2</span><span class="o">**</span><span class="mi">20</span>
 
+<span class="c1">#: The most threads that read or sum footprints when not told how many.</span>
+<span class="c1">#: Summing stops getting faster at about 8 (#190).</span>
+<span class="n">MAX_THREADS</span> <span class="o">=</span> <span class="mi">8</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_threads</span><span class="p">(</span><span class="n">workers</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return *workers*, or by default the CPUs this process may use, at most :data:`MAX_THREADS`.</span>
+
+<span class="sd">    In a Slurm job or a container that is what the job was given, not the</span>
+<span class="sd">    machine&#39;s CPUs (``os.cpu_count``).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">workers</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">workers</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">cpus</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">sched_getaffinity</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>  <span class="c1"># Linux</span>
+    <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>  <span class="c1"># macOS and Windows</span>
+        <span class="n">cpus</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">cpu_count</span><span class="p">()</span> <span class="ow">or</span> <span class="mi">1</span>
+    <span class="k">return</span> <span class="nb">min</span><span class="p">(</span><span class="n">cpus</span><span class="p">,</span> <span class="n">MAX_THREADS</span><span class="p">)</span>
+
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_footer</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Location</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">bytes</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the metadata of a stored footprint, reading only its footer.&quot;&quot;&quot;</span>
@@ -781,8 +801,8 @@
 <span class="sd">        Footprint files from an output directory, all made with the same</span>
 <span class="sd">        settings (one variant&#39;s). URLs read from an object store.</span>
 <span class="sd">    workers : int, optional</span>
-<span class="sd">        Threads that read the files&#39; metadata. Defaults to the number of</span>
-<span class="sd">        CPUs.</span>
+<span class="sd">        Threads that read the files&#39; metadata. Defaults to the CPUs this</span>
+<span class="sd">        process may use, at most 8.</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
@@ -810,7 +830,7 @@
     <span class="n">located</span> <span class="o">=</span> <span class="p">[</span><span class="n">location</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">paths</span><span class="p">]</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">located</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;No footprint files to open.&quot;</span><span class="p">)</span>
-    <span class="n">threads</span> <span class="o">=</span> <span class="n">workers</span> <span class="k">if</span> <span class="n">workers</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">cpu_count</span><span class="p">()</span> <span class="ow">or</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">threads</span> <span class="o">=</span> <span class="n">_threads</span><span class="p">(</span><span class="n">workers</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">threads</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">located</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
         <span class="k">with</span> <span class="n">ThreadPoolExecutor</span><span class="p">(</span><span class="n">max_workers</span><span class="o">=</span><span class="n">threads</span><span class="p">)</span> <span class="k">as</span> <span class="n">pool</span><span class="p">:</span>
             <span class="n">footers</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">pool</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">_footer</span><span class="p">,</span> <span class="n">located</span><span class="p">))</span>
