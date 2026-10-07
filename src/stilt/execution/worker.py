@@ -282,7 +282,7 @@ def run_receptor(
         Receptor to run.
     compute_root : Path
         Directory the workdirs are made in, one per simulation, as
-        :func:`~stilt.execution.resolve_compute_root` returns it.
+        :func:`~stilt.execution.runner.resolve_compute_root` returns it.
     execution : ExecutionConfig, optional
         Execution settings, for ``timeout`` and ``keep_scratch``. Defaults
         to the project's.
@@ -441,7 +441,7 @@ def run_receptors(
         Receptors to run.
     compute_root : Path
         Directory the workdirs are made in, one per simulation, as
-        :func:`~stilt.execution.resolve_compute_root` returns it.
+        :func:`~stilt.execution.runner.resolve_compute_root` returns it.
     execution : ExecutionConfig, optional
         Execution settings: ``cpus`` is the number of worker processes (1
         runs in this process), and ``timeout`` and ``keep_scratch`` apply

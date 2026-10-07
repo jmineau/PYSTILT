@@ -54,7 +54,7 @@ def sim(monkeypatch, tmp_path, point_receptor):
 
 
 def _run(sim, tmp_path, **kwargs):
-    from stilt.execution import run_particles
+    from stilt.execution.worker import run_particles
 
     return run_particles(
         sim, met=sim.variant.met_config, workdir=tmp_path / "scratch", **kwargs

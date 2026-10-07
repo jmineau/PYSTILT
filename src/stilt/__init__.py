@@ -11,7 +11,7 @@ from importlib.metadata import version as _version
 
 from .config import ProjectConfig
 from .exceptions import StiltError
-from .execution import ExecutionConfig
+from .execution import ExecutionConfig, task_share
 from .footprint import FootprintConfig, Mesh, Zones, calc_footprint, read_footprint
 from .meteorology import MetConfig
 from .particles import read_particles
@@ -55,6 +55,7 @@ __all__ = [
     "Zones",
     # One receptor, without a project
     "run_trajectories",
+    "task_share",
     "calc_footprint",
     # Result files
     "read_particles",

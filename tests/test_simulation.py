@@ -7,7 +7,7 @@ import pytest
 import xarray as xr
 
 from stilt.config import Variant
-from stilt.execution import make_footprint
+from stilt.execution.worker import make_footprint
 from stilt.footprint.config import FootprintConfig
 from stilt.identity import settings_hash
 from stilt.meteorology import MetConfig

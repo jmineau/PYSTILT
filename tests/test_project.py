@@ -10,8 +10,8 @@ import pytest
 import xarray as xr
 
 from stilt.config import ProjectConfig
-from stilt.execution import resolve_compute_root
 from stilt.execution.config import ExecutionConfig
+from stilt.execution.runner import resolve_compute_root
 from stilt.meteorology import MetConfig
 from stilt.output import Output
 from stilt.project import Project

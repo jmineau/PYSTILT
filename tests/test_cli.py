@@ -170,7 +170,7 @@ def test_status_counts_full_simulation_completion(tmp_path):
     assert "total=1  completed=0  pending=1" in result.output
 
     # Once the footprint is present too, the simulation counts as complete.
-    from stilt.execution import make_footprint
+    from stilt.execution.worker import make_footprint
 
     sim = project.simulation(receptor.id, "hrrr")  # a fresh value
     make_footprint(sim, sim.particles)
@@ -222,7 +222,7 @@ def test_run_runs_the_project_with_its_execution_settings(tmp_path, calls):
     assert kwargs["execution"] == ExecutionConfig(time="01:00:00")  # config.yaml's
     assert kwargs["skip_existing"] is True
     # Resolved once, so the run uses the directory the banner shows.
-    from stilt.execution import resolve_compute_root
+    from stilt.execution.runner import resolve_compute_root
     from stilt.project import Project
 
     scratch = resolve_compute_root(Project(tmp_path))

@@ -15,10 +15,10 @@ from stilt.receptors import (
     PointReceptor,
     Receptor,
     read_receptors,
-    receptors_to_csv,
     write_receptors,
 )
 from stilt.receptors.models import _format_coord
+from stilt.receptors.table import receptors_to_csv
 
 # ---------------------------------------------------------------------------
 # _format_coord
@@ -771,7 +771,7 @@ def test_read_receptors_keeps_extra_columns_as_attrs(tmp_path):
 def test_receptor_attrs_round_trip_through_csv(
     tmp_path, point_receptor, column_receptor
 ):
-    from stilt.receptors import append_receptors_csv, receptors_to_csv
+    from stilt.receptors.table import append_receptors_csv, receptors_to_csv
 
     labelled = point_receptor.model_copy(update={"attrs": {"scene": "A"}})
     text = receptors_to_csv([labelled, column_receptor])
@@ -904,7 +904,7 @@ def test_multipoint_id_of_whole_metre_heights_is_unchanged():
 
 def test_receptors_that_share_an_id_are_refused():
     """Two receptors closer than the id resolves would overwrite each other."""
-    from stilt.receptors import check_distinct_ids
+    from stilt.receptors.table import check_distinct_ids
 
     a, b = _multi([10.001, 500.0]), _multi([10.004, 500.0])
     assert a != b and a.id == b.id
@@ -978,7 +978,7 @@ def test_frame_accepts_the_alternate_column_names():
 
 def test_append_msl_receptor_to_plain_altitude_file_keeps_its_reference():
     """An MSL receptor appended to a file with no reference column read back as AGL."""
-    from stilt.receptors import append_receptors_csv
+    from stilt.receptors.table import append_receptors_csv
 
     text = "time,longitude,latitude,altitude\n2023-01-01 12:00:00,-111.85,40.77,5\n"
     msl = PointReceptor(
@@ -999,7 +999,7 @@ def test_append_msl_receptor_to_plain_altitude_file_keeps_its_reference():
 
 
 def test_append_agl_receptor_leaves_a_plain_file_without_the_column():
-    from stilt.receptors import append_receptors_csv
+    from stilt.receptors.table import append_receptors_csv
 
     text = "time,lon,lat,z,site\n2023-01-01 12:00:00,-111.85,40.77,5,WBB\n"
     agl = PointReceptor(
@@ -1018,7 +1018,7 @@ def test_append_agl_receptor_leaves_a_plain_file_without_the_column():
 
 
 def test_append_to_a_zagl_file_still_refuses_an_msl_receptor():
-    from stilt.receptors import append_receptors_csv
+    from stilt.receptors.table import append_receptors_csv
 
     text = "time,long,lati,zagl\n2023-01-01 12:00:00,-111.85,40.77,5\n"
     msl = PointReceptor(
@@ -1041,7 +1041,11 @@ def test_receptor_rows_ids_match_the_receptors(
     point_receptor, column_receptor, multipoint_receptor
 ):
     """The table's ids come from the same rules as receptor.id, for every kind."""
-    from stilt.receptors import receptor_rows, receptors_from_rows, receptors_to_frame
+    from stilt.receptors.table import (
+        receptor_rows,
+        receptors_from_rows,
+        receptors_to_frame,
+    )
 
     sub_metre = MultiPointReceptor(
         time="2023-01-01 13:00",
@@ -1079,7 +1083,7 @@ def test_receptor_rows_ids_match_the_receptors(
 
 def test_receptor_rows_column_id_does_not_depend_on_row_order():
     """A column listed top row first gets the id its receptor has."""
-    from stilt.receptors import receptor_rows
+    from stilt.receptors.table import receptor_rows
 
     frame = pd.DataFrame(
         {
@@ -1095,7 +1099,7 @@ def test_receptor_rows_column_id_does_not_depend_on_row_order():
 
 
 def test_receptor_rows_checks_every_row_without_building(tmp_path):
-    from stilt.receptors import receptor_rows
+    from stilt.receptors.table import receptor_rows
 
     def table(**columns):
         base = {
@@ -1126,7 +1130,7 @@ def test_receptor_rows_checks_every_row_without_building(tmp_path):
 
 
 def test_a_receptor_listed_twice_is_kept_once(point_receptor):
-    from stilt.receptors import receptor_rows, receptors_to_frame
+    from stilt.receptors.table import receptor_rows, receptors_to_frame
 
     rows = receptor_rows(receptors_to_frame([point_receptor, point_receptor]))
 
@@ -1138,7 +1142,11 @@ def test_receptors_from_checked_rows_are_not_checked_again(
 ):
     """The table runs a receptor's checks once; building from its rows skips them."""
     import stilt.receptors.models as models
-    from stilt.receptors import receptor_rows, receptors_from_rows, receptors_to_frame
+    from stilt.receptors.table import (
+        receptor_rows,
+        receptors_from_rows,
+        receptors_to_frame,
+    )
 
     receptors = [point_receptor, column_receptor, multipoint_receptor]
     rows = receptor_rows(receptors_to_frame(receptors))
