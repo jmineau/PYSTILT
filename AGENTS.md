@@ -84,8 +84,9 @@ a new folder.
 
 **`Project` reads; the workers write results.** `Project(path)` opens a
 project directory: its config, its receptors, the simulations they define,
-and a view of their results. Its only write is `add_receptors`, which
-appends to `receptors.csv`. It knows no scheduler or scratch directory.
+and a view of their results. Its only writes are to its inputs:
+`add_receptors` appends to `receptors.csv`, and `add_table` to
+`tables/<name>.parquet`. It knows no scheduler or compute root.
 `stilt.execution.run` and `submit` (which `Project.run()` and
 `Project.submit()` call) find the receptors with missing results, resolve
 the compute root, and start the workers, which are the only code that
@@ -173,11 +174,11 @@ src/stilt/
   exceptions.py      every exception class, all under StiltError
   visualization.py   matplotlib helpers (optional dependency)
 
-  execution/         ExecutionConfig (config.py), the runner (saves a model's inputs, plans what is missing,
-                     runs it here or writes and submits a Slurm job array script
-                     whose tasks run `stilt run --task`)
-                     and the worker (runs HYSPLIT on scratch and writes results
-                     for one or many simulations)
+  execution/         ExecutionConfig (config.py), the runner (plans what is missing,
+                     runs it here or writes `_slurm/<stamp>/` and submits a
+                     Slurm job array script whose tasks run `stilt run --task`)
+                     and the worker (runs the transport model in a workdir
+                     and writes results for one or many simulations)
   observations/      the X-STILT port, before or after the transport run:
                      product readers and SOUNDING_SCHEMA, overpass grouping
                      and sounding selection, slant geometry and
@@ -266,8 +267,8 @@ output directory, never only in memory.
   key with the nearest known one (`difflib`), reading no other file.
   `ProjectConfig.resolve(directory)` (behind `project.variants`) turns
   each into `Variant`s: it validates the variant's transport settings with
-  its model's config class (once), expands `realizations: N` into
-  `<name>-0..N-1` with `seed + k`, reads each geometry once (a relative
+  its model's config class (once), keeps `realizations: N` as one
+  ensemble variant (realization `k` runs with `seed + k`), reads each geometry once (a relative
   file from the project directory) to derive the grid, and asks the
   transport model its version once per build. `Project.init` resolves
   before it writes `config.yaml`. Stored `_settings.yaml` records keep
@@ -330,7 +331,7 @@ folder below a kind is hive-style, so each tree reads as one dataset:
 A particles folder's hash is `Variant.particles_hash`; a footprint
 folder's is `Variant.footprint_hash`, over the run settings' hash and the
 footprint settings together. "Particles" is the one word for the particle table in code
-(`Particles`, `sim.particles`, `has_particles`); "run" is only the verb, and
+(`sim.particles`, `project.particles()`, `has_particles`); "run" is only the verb, and
 "trajectory" means one particle's path. Lookup
 reads the stored `_settings.yaml` back through the current config classes
 (`stilt.identity`) and re-hashes, so a field added later with a default
@@ -348,8 +349,10 @@ as complete.
 - **Completion is by file.** A simulation is complete iff its files exist
   in the output directory. `stilt.output.completed` is the rule, written
   once; `Output.complete` applies it to a listing of the date folders, and
-  `Simulation.is_complete()` and `status()` call it. Never add a second
-  "does this output exist" check, a completion registry, or a manifest.
+  `Simulation.is_complete()` and `status()` call it. `has_particles` and
+  `has_footprint` look for the same files one at a time. Never add a
+  different rule for whether a result exists, a completion registry, or a
+  manifest.
 - **Bulk methods work from listings.** A method of `Project` that takes a
   selection works from folder listings and receptor ids, and never builds
   a `Simulation` per row: on a large project one receptor costs milliseconds, and
@@ -367,7 +370,9 @@ as complete.
   output must stay exactly as fast; time a listing of a large folder when
   changing it.
 - **Identity is content.** A results folder is its settings hash; a changed setting is
-  a new folder, never an overwrite, and PYSTILT never deletes a folder.
+  a new folder, never an overwrite, and PYSTILT never deletes a results
+  folder. (A kept workdir under `scratch/` is replaced by the next one
+  kept for the same simulation.)
 - **State lives in the project directory and the output directory.**
   Anything kept in a process-local variable is lost to a Slurm task, which
   opens the project again from its directory.
