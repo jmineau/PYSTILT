@@ -18,7 +18,6 @@ from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Protocol, Self
 
-import numpy as np
 import pandas as pd
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -374,8 +373,8 @@ def run_model(
     Raises
     ------
     SimulationError
-        If the run fails, the model wrote no particles, or they stop before
-        the end of the run (``MET_COVERAGE``).
+        If the run fails, as when the meteorology does not cover it
+        (``MET_COVERAGE``), or the model wrote no particles.
     """
     window = run_window(receptor.time, config.n_hours)
     run = get_model(name).run(receptor, config, met, window, workdir, timeout=timeout)
@@ -441,45 +440,18 @@ def run_model_many(
     return results
 
 
-def _check_reach(particles: pd.DataFrame, n_hours: int) -> None:
-    """
-    Raise if no particle reaches the end of the run.
-
-    A run is complete when its furthest particle gets to ``n_hours`` from
-    the release, within one output step (the smallest gap between the
-    particle table's times). Particles stop early when the
-    meteorology ends, or when every one has left the meteorology's domain
-    (or its crop). Either way the footprint would hold only part of the
-    run, so the simulation fails, as ``MET_COVERAGE``, whatever the model.
-
-    Raises
-    ------
-    SimulationError
-        With ``reason`` ``MET_COVERAGE``.
-    """
-    times = np.unique(np.abs(particles["time"].to_numpy(dtype=float)))
-    end = abs(n_hours) * 60
-    step = float(np.diff(times).min()) if len(times) > 1 else 0.0
-    reach = float(times[-1])
-    if reach >= end - step:
-        return
-    raise SimulationError(
-        f"The particles stop {reach / 60:.3g} h into a {end / 60:g} h run: the "
-        "meteorology does not cover the whole run, or every particle left its "
-        "domain.",
-        reason="MET_COVERAGE",
-    )
-
-
 def _finish(run: ModelRun, receptor: Receptor, config: TransportConfig) -> ModelRun:
     """
     Return *run* with its particles checked, their release heights, and the near-field correction.
 
+    Particles that stop before the end of the run are kept: the transport
+    model fails a run cut short by its meteorology itself, and particles
+    that all left the met's domain are a complete run.
+
     Raises
     ------
     SimulationError
-        With the run's log, if the model wrote no particles, or they stop
-        before the end of the run (:func:`_check_reach`).
+        With the run's log, if the model wrote no particles.
     """
     if run.particles.empty:
         raise SimulationError(
@@ -488,11 +460,6 @@ def _finish(run: ModelRun, receptor: Receptor, config: TransportConfig) -> Model
             log=run.log,
         )
     check_particles(run.particles)
-    try:
-        _check_reach(run.particles, config.n_hours)
-    except SimulationError as error:
-        error.log = f"{run.log}{error}\n"
-        raise
     particles = add_release_heights(run.particles, receptor)
     if config.hnf_plume:
         missing = sorted(set(HNF_PLUME_COLUMNS) - set(particles.columns))

@@ -633,13 +633,14 @@ The README links to it and keeps no table of its own.
   `project.footprints()` gives it no row and lists it in
   `attrs["empty"]`. Never synthesize a zero-valued footprint for it: a zero
   enhancement would flow into a comparison or an inversion unnoticed.
-- **A run that stops early is a failure.** After any model's run,
-  `_check_reach` (`stilt.transport`, in `_finish`) fails it as
-  `MET_COVERAGE` when no particle reaches `n_hours` within one output
-  step, whatever stopped them; there is no setting to allow it (#169),
-  so every particle file written reaches the end of its run. HYSPLIT's
-  `Met.files_for` also fails before running when a file is missing,
-  naming the hours.
+- **Met that ran out is a failure; a domain exit is not.** The transport
+  model tells them apart, not the core (#189). HYSPLIT's driver reads its
+  `WARNING` file after each run and fails `no more meteorology` (and the
+  other `metpos` time warnings in `FAILURE_PHRASES`) as `MET_COVERAGE`.
+  Particles that all left the met's domain or its crop are a complete
+  run, so a particle file may stop before `n_hours`. HYSPLIT writes only
+  its first `metpos` warning per run. HYSPLIT's `Met.files_for` also
+  fails before running when a file is missing, naming the hours.
 - **A failure record is a note, not a result.** When a step fails the
   worker writes `<receptor id>.failure.yaml` in the logs of the folder
   whose result failed (`logs/settings=<key>/date=.../`: the particles'

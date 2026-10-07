@@ -29,6 +29,10 @@ def test_all_failure_reasons_exist():
         ("PARTICLE_STILT.DAT does not contain any trajectory data", "NO_PARTICLE_DATA"),
         ("Fortran runtime error: end of file", "FORTRAN_RUNTIME_ERROR"),
         ("start point not within (x,y,t) any data file", "MET_COVERAGE"),
+        ("WARNING metpos: no more meteorology -     63723240", "MET_COVERAGE"),
+        ("WARNING metpos: too much time between files - 1", "MET_COVERAGE"),
+        ("WARNING metpos: no meteo data at current time - 1", "MET_COVERAGE"),
+        ("WARNING metpos: no data at current time on any grid - 1", "MET_COVERAGE"),
     ],
 )
 def test_failure_in_names_the_reason_and_the_line_for_a_known_message(line, reason):
@@ -37,3 +41,7 @@ def test_failure_in_names_the_reason_and_the_line_for_a_known_message(line, reas
 
 def test_failure_in_returns_none_for_an_unknown_log():
     assert failure_in("something completely unrecognized\n") is None
+
+
+def test_particles_that_left_the_met_domain_are_no_failure():
+    assert failure_in(" WARNING metpos: off spatial domain of all grids\n") is None

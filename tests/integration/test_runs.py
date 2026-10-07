@@ -209,8 +209,26 @@ def test_failure_missing_met(tmp_path, wbb_receptor, traj_only_config, met_dir):
 
 
 @integration
+def test_particles_that_leave_the_met_domain_complete_the_run(
+    tmp_path, wbb_receptor, traj_only_config
+):
+    """A January night empties the test met's 4 by 3 degree crop in about 11 hours (#189)."""
+    config = _with(traj_only_config, n_hours=-24)
+    project = Project.init(
+        tmp_path / "domain_exit", config=config, receptors=[wbb_receptor]
+    )
+    project.run()
+
+    sim = project.simulation(*_sim_id(wbb_receptor))
+    assert sim.is_complete
+    assert sim.failure is None
+    hours = sim.particles["time"].abs().max() / 60
+    assert hours < 24  # every particle left the met's domain first
+
+
+@integration
 def test_failure_met_cut_short(tmp_path, wbb_receptor, traj_only_config, met_dir):
-    """A met file cut to one time period stops the particles early, which fails the run (#169)."""
+    """A met file cut to one time period stops the particles early, which fails the run (#169, #189)."""
     cut_met = tmp_path / "met"
     cut_met.mkdir()
     for path in met_dir.iterdir():
@@ -244,10 +262,9 @@ def test_failure_met_cut_short(tmp_path, wbb_receptor, traj_only_config, met_dir
     sim = project.simulation(*_sim_id(wbb_receptor))
     assert not sim.has_particles
     assert sim.failure is not None and sim.failure["reason"] == "MET_COVERAGE"
+    assert "no more meteorology" in sim.failure["message"]
     assert sim.log_path is not None
-    log = sim.log_path.read_text()
-    assert "Only one time period of meteo data" in log
-    assert "The particles stop" in log
+    assert "Only one time period of meteo data" in sim.log_path.read_text()
 
 
 # ---------------------------------------------------------------------------

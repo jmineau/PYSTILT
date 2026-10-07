@@ -92,11 +92,10 @@ The reasons
          Check the met's ``directory`` and ``file_format`` against the
          files on disk. A backward run needs files from ``n_hours`` before
          the receptor time to just after it (:doc:`meteorology`).
-       - ``The particles stop <h> h into a <n> h run``: the particles
-         stopped early. Either a met file was cut short (the log then has
-         ``Only one time period of meteo data``; download it again), or
-         every particle left the met's domain or its crop (widen
-         ``subgrid_bounds``).
+       - ``no more meteorology``: the particles reached a time that no met
+         file holds, usually because a file was cut short. Download it
+         again. HYSPLIT says so in the ``WARNING`` file of the kept
+         workdir.
        - A HYSPLIT message, such as ``start point not within (x,y,t) any
          data file``: the receptor is outside the files, in time or in
          space.
@@ -180,8 +179,11 @@ The grid
 
 The length of the run
    ``n_hours`` sets how far back the particles go. A footprint that stops
-   short of a source you expect may need a longer run. A run whose
-   particles stop before ``n_hours`` ran out of meteorology: read the log.
+   short of a source you expect may need a longer run. Particles also stop
+   early when they all leave the met's domain or its crop, and the run is
+   still complete. ``sim.particles["time"].abs().max() / 60`` is how many
+   hours they went. If that is short of ``n_hours`` and the footprint
+   needs more, widen ``subgrid_bounds``.
 
 The number of particles
    Few particles give a patchy footprint. Raise ``numpar`` (500 to 1000

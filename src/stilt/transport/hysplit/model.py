@@ -130,10 +130,11 @@ class HysplitModel:
         SimulationError
             With HYSPLIT's log in ``log``, and ``reason`` ``TIMEOUT`` when
             the run exceeded *timeout* seconds; the :class:`FailureReason`
-            of a known failure message in the log; or ``NO_PARTICLE_DATA``
-            when HYSPLIT wrote no particle file. Particles that stop before
-            the end of the run fail afterwards, for any model
-            (:func:`stilt.transport.run_model`).
+            of a known failure message in the log or ``WARNING`` file, such
+            as the met running out (``MET_COVERAGE``); or
+            ``NO_PARTICLE_DATA`` when HYSPLIT wrote no particle file.
+            Particles that all left the met's domain before the end of the
+            run are kept.
         MeteorologyError
             Before HYSPLIT runs, when a met file the run needs is missing.
         """

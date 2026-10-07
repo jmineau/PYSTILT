@@ -43,6 +43,8 @@ WINDERR_FILE = "WINDERR"
 ZIERR_FILE = "ZIERR"
 ZICONTROL_FILE = "ZICONTROL"
 LOG_FILE = "stilt.log"
+#: HYSPLIT's own file of warnings, such as the met running out.
+WARNING_FILE = "WARNING"
 
 #: The settings ``CONTROL`` takes; :class:`ControlFile` writes them.
 CONTROL_SETTINGS = ("n_hours", "emisshrs", "w_option", "z_top")
@@ -320,7 +322,9 @@ def run_hycs_std(workdir: Path, timeout: int | None = None) -> None:
     SimulationError
         With ``reason`` ``TIMEOUT`` when the run exceeded *timeout*
         seconds, or the :class:`FailureReason` of a known failure message in
-        the log.
+        the log or HYSPLIT's ``WARNING`` file, such as ``no more
+        meteorology`` (``MET_COVERAGE``). Particles that all left the met's
+        domain are not a failure.
     """
     log_path = workdir / LOG_FILE
     with (
@@ -341,7 +345,11 @@ def run_hycs_std(workdir: Path, timeout: int | None = None) -> None:
                 f"HYSPLIT ran longer than the {timeout} s timeout.",
                 reason=FailureReason.TIMEOUT,
             ) from e
-    found = failure_in(log_path.read_text(encoding="utf-8", errors="replace"))
+    messages = log_path.read_text(encoding="utf-8", errors="replace")
+    warnings = workdir / WARNING_FILE
+    if warnings.exists():
+        messages += warnings.read_text(encoding="utf-8", errors="replace")
+    found = failure_in(messages)
     if found is not None:
         reason, line = found
         raise SimulationError(f"HYSPLIT: {line}", reason=reason)
