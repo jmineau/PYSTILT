@@ -183,7 +183,8 @@ Moving to a newer STILT-R commit
 
       git clone https://github.com/uataq/stilt stilt-r-src
       git -C stilt-r-src checkout <new-sha>
-      STILT_R_DIR=$PWD/stilt-r-src uv run pytest tests/r_stilt/ -v -m integration
+      STILT_R_DIR=$PWD/stilt-r-src STILT_TEST_MET_DIR=tests/met_cache \
+        uv run pytest tests/r_stilt/ -v -m fidelity
 
 #. If every scenario passes at the current tolerances, commit the change and
    update "Last verified" above.

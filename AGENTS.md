@@ -202,8 +202,10 @@ src/stilt/
                      and data tables (data/)
 
 tests/               pytest; markers `integration`, `fidelity`, and `r_only`. Folders
-                     follow src/stilt (execution/, observations/,
-                     transport/hysplit/); r_stilt/ holds the STILT-R comparisons
+                     follow src/stilt (execution/, footprint/, observations/,
+                     particles/, transport/hysplit/); integration/ holds the
+                     end-to-end runs, r_stilt/ the STILT-R comparisons, and
+                     fixtures/ the factories and helpers tests share
 docs/                Sphinx (pydata-sphinx-theme)
 ```
 
@@ -417,9 +419,12 @@ latest release; a docs change on `main` goes live with the next release.
 
 ### Tests
 
-Plain `pytest` runs the unit tests. Two opt-in markers:
+Plain `pytest` runs the unit tests and skips the rest. Three markers,
+disjoint (a test has at most one); CI runs `-m "integration or fidelity"`
+and then `-m r_only`:
 
-- `-m integration`: end-to-end runs with real met files and HYSPLIT. Slow.
+- `-m integration`: PYSTILT end to end, with real met files and HYSPLIT
+  (`tests/integration/`). Slow.
   The `met_dir` fixture needs `STILT_TEST_MET_DIR` pointing at a directory
   of HRRR ARL files, or `STILT_TEST_FETCH_MET=1` to download the seven 6 h
   blocks it needs into the ignored `tests/met_cache/`. Once downloaded, set
@@ -427,9 +432,10 @@ Plain `pytest` runs the unit tests. Two opt-in markers:
   integration test is skipped.
 - `-m r_only`: the STILT-R comparisons that need R but no met files or
   HYSPLIT (the synthetic footprint tests). Fast; needs `STILT_R_DIR` and
-  `Rscript`. They are part of `fidelity` too.
-- `-m fidelity`: live comparison against STILT-R. Slow; needs `STILT_R_DIR`
-  pointing at a STILT-R checkout and `Rscript` on `PATH`.
+  `Rscript`.
+- `-m fidelity`: PYSTILT against STILT-R, both running HYSPLIT on the
+  test met files. Slow; needs the met files as `integration` does,
+  `STILT_R_DIR` pointing at a STILT-R checkout, and `Rscript` on `PATH`.
 
 A local `.env` is loaded by `pytest-dotenv`, which is the place for
 `STILT_R_DIR` and similar settings.

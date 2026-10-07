@@ -189,9 +189,10 @@ typeCheckingMode = "basic"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 markers = [
-    "integration: end-to-end tests requiring real met files and HYSPLIT execution",
-    "fidelity: STILT-R live comparison tests (slow; require STILT_R_DIR and Rscript)",
-    "r_only: STILT-R comparisons that need R but no met files or HYSPLIT (fast; require STILT_R_DIR and Rscript)",
+    # Disjoint: a test has at most one of these. CI runs -m "integration or fidelity", then -m r_only.
+    "integration: PYSTILT end to end, with real met files and HYSPLIT (slow)",
+    "fidelity: PYSTILT against STILT-R, both running HYSPLIT on real met files (slow; require STILT_R_DIR and Rscript)",
+    "r_only: PYSTILT against STILT-R without met files or HYSPLIT (fast; require STILT_R_DIR and Rscript)",
 ]
 env_files = [".env"]
 
