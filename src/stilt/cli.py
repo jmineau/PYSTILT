@@ -12,8 +12,7 @@ prints a short summary. Examples::
     stilt run --task 3/10             # run task 3 of 10 here (a job array's task)
     stilt run --receptors ids.txt     # run only the receptors listed in ids.txt
     stilt submit                      # submit a Slurm job array and return
-    stilt status                      # count finished simulations
-    stilt output ls                   # list the output directory's settings folders
+    stilt status                      # count finished simulations; list the settings folders
 
 ``stilt run`` exits with 0 when every simulation it ran is complete, 1 when
 some failed, and 3 when some did not finish because the run was
@@ -358,42 +357,17 @@ def submit(
 
 @app.command()
 def status(project: str | None = _PROJECT_ARG) -> None:
-    """Count finished and pending simulations, per variant when there are several."""
-    _print_status(Project(_resolve_project(project)))
-
-
-output_app = typer.Typer(
-    help="Look at a project's output directory.", no_args_is_help=True
-)
-app.add_typer(output_app, name="output")
-
-
-@output_app.command("ls")
-def output_ls(project: str | None = _PROJECT_ARG) -> None:
     """
-    List the settings folders in the output directory.
+    Count finished and unfinished simulations, and list the output's settings folders.
 
-    Each folder holds the results of one set of settings. The list says
-    which of the project's variants use each folder, how many result files
-    it holds, and, for a folder no variant uses, how its settings differ
-    from the variant of its name.
+    The counts are per variant when there are several. Each settings folder
+    holds the results of one set of settings; the list says how many result
+    files it holds, which variants use it, and, for a folder no variant
+    uses, how its settings differ from the variant of its name.
     """
     opened = Project(_resolve_project(project))
-    table = opened.output.folders(opened.variants)
-    typer.echo(f"Output: {opened.output.directory}")
-    if table.empty:
-        typer.echo("No settings folders yet.")
-        return
-    shown = table.assign(
-        folder="settings=" + table["folder"],
-        variant=table["variant"].replace("", "(none)"),
-        files=table["files"].map("{:,}".format),
-    )
-    typer.echo(shown[["kind", "folder", "files", "variant"]].to_string(index=False))
-    for row in table.loc[table["differs"] != ""].to_dict("records"):
-        typer.echo(
-            f"settings={row['folder']} differs from {row['name']}: {row['differs']}"
-        )
+    _print_status(opened)
+    _print_folders(opened)
 
 
 # ---------------------------------------------------------------------------
@@ -429,16 +403,31 @@ def _print_status(project: Project, ran: pd.DataFrame | None = None) -> None:
             f"failed: {listed}  (why: the .failure.yaml beside each log, "
             f"under {project.output.directory / 'logs'})"
         )
-    if ran is not None:
+
+
+def _print_folders(project: Project) -> None:
+    """Print the output directory's settings folders, which variants use each, and how the others differ."""
+    table = project.folders()
+    typer.echo(f"Output: {project.output.directory}")
+    if table.empty:
+        typer.echo("  no settings folders yet")
         return
-    unreferenced = project.unreferenced()
-    for kind, keys in unreferenced.items():
-        if keys:
-            typer.echo(
-                f"{kind} folders in {project.output.directory} that no variant here uses: "
-                f"{', '.join('settings=' + k for k in keys)}  (from changed settings, "
-                "dropped variants, or another project; PYSTILT never deletes them)"
-            )
+    kind_width = max(len(k) for k in table["kind"])
+    name_width = max(len(f) for f in table["folder"]) + len("settings=")
+    counts = [f"{n:,} file" + ("" if n == 1 else "s") for n in table["files"]]
+    count_width = max(len(c) for c in counts)
+    for row, count in zip(table.to_dict("records"), counts, strict=True):
+        used = row["variant"] or "(no variant)"
+        line = (
+            f"  {row['kind']:<{kind_width}}  {'settings=' + row['folder']:<{name_width}}"
+            f"  {count:>{count_width}}  {used}"
+        )
+        typer.echo(f"{line}  {row['differs']}" if row["differs"] else line)
+    if (table["variant"] == "").any():
+        typer.echo(
+            "  A folder no variant uses is from changed settings, a dropped "
+            "variant, or another project. PYSTILT never deletes one."
+        )
 
 
 def _print_run_start(

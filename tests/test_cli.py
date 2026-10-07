@@ -568,7 +568,7 @@ def test_status_lists_output_folders_no_variant_uses(tmp_path):
     result = runner.invoke(app, ["status", str(tmp_path)])
 
     assert result.exit_code == 0, result.output
-    assert "particles folders" in result.output
+    assert "(no variant)" in result.output
     assert "settings=old-" in result.output
     assert "never deletes" in result.output
 
@@ -605,7 +605,7 @@ def test_status_counts_failures_by_reason(tmp_path):
     assert "failed: MISSING_MET_FILES 2, ValueError 1" in result.output
 
 
-def test_output_ls_lists_folders_and_what_differs(tmp_path):
+def test_status_lists_folders_and_what_differs(tmp_path):
     import datetime as dt
 
     from stilt.config import ProjectConfig
@@ -658,12 +658,14 @@ def test_output_ls_lists_folders_and_what_differs(tmp_path):
         receptors=[receptor],
     )
 
-    result = runner.invoke(app, ["output", "ls", str(new.directory)])
+    result = runner.invoke(app, ["status", str(new.directory)])
 
     assert result.exit_code == 0, result.output
-    assert "(none)" in result.output
+    assert f"Output: {tmp_path / 'out'}" in result.output
+    assert "1 file  (no variant)" in result.output
     assert "numpar: 500 (config: 1000)" in result.output
-    table = old.output.folders(old.variants)
+    assert "PYSTILT never deletes one" in result.output
+    table = old.folders()
     assert table[["kind", "name", "files", "variant", "differs"]].values.tolist() == [
         ["particles", "hrrr", 1, "hrrr", ""]
     ]

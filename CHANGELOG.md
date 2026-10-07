@@ -8,6 +8,12 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- `stilt status` lists the output directory's settings folders: how many
+  result files each holds, which variants use it, and how one no variant
+  uses differs. `stilt output ls` is removed (breaking), and
+  `project.folders()` replaces `project.unreferenced()`. The summary
+  `stilt run` prints at the end leaves the folder list out, which takes
+  seconds on a large shared output.
 - `stilt run` exits 3 when some simulations did not finish (was 2), and
   every command exits 2 when its command line is wrong (was 1), as Click
   already did for an unknown option (breaking for scripts that read the

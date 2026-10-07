@@ -193,27 +193,27 @@ Changing a setting
 
 Edit ``config.yaml`` and run again. The variant's settings now hash to a
 new folder, so every receptor runs again into it, and the old folder
-stays. ``stilt status`` lists folders in the output directory that no
-variant in the config uses any more:
+stays. ``stilt status`` lists every settings folder in the output
+directory, how many result files it holds, which variants use it, and how
+a folder no variant uses differs from the variant of its name. Here
+``numpar`` went from 1000 to 2000, and ``hrrr-smooth`` differs from
+``hrrr`` only in its footprint, so the two share particles:
 
 .. code-block:: text
 
-   particles folders in /data/output that no variant here uses: settings=hrrr-a3f9c2 ...
-
-``stilt output ls`` lists every settings folder, which variants use it,
-how many result files it holds, and how an unused folder's settings differ
-from the variant of its name:
-
-.. code-block:: text
-
-   $ stilt output ls
+   $ stilt status ./my_project
+   Project: /data/my_project  total=8,760  completed=8,760  pending=0
+     hrrr: total=4,380  completed=4,380  pending=0
+     hrrr-smooth: total=4,380  completed=4,380  pending=0
    Output: /data/output
-         kind               folder   files  variant
-    particles settings=hrrr-a3f9c2   8,760   (none)
-    particles settings=hrrr-5d01e7   8,760     hrrr
-   settings=hrrr-a3f9c2 differs from hrrr: ziscale: 1 (config: 0.8)
+     particles   settings=hrrr-5d01e7         4,380 files  hrrr, hrrr-smooth
+     particles   settings=hrrr-a3f9c2         4,380 files  (no variant)  numpar: 1000 (config: 2000)
+     footprints  settings=hrrr-93278c         4,380 files  hrrr
+     footprints  settings=hrrr-smooth-1b7e40  4,380 files  hrrr-smooth
 
-In Python the same table is ``project.output.folders(project.variants)``.
+The counts at the top are simulations (a receptor under a variant); a
+folder's count is files, and one particles folder can serve several
+variants. In Python the same table is ``project.folders()``.
 PYSTILT never deletes a folder, since another project may share the
 directory. When you are sure, delete a folder by hand.
 

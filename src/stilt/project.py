@@ -35,7 +35,7 @@ from stilt.footprint import Geometry, Jacobian
 from stilt.footprint.aggregation import _jacobian
 from stilt.footprint.io import open_footprints
 from stilt.meteorology import MetConfig
-from stilt.output import KINDS, Kind, Output, completed
+from stilt.output import Kind, Output, completed
 from stilt.particles import particles_from_table
 from stilt.receptors import Receptor, read_receptors
 from stilt.receptors.table import (
@@ -573,31 +573,32 @@ class Project:
             realization,
         )
 
-    def unreferenced(self) -> dict[str, list[str]]:
+    def folders(self) -> pd.DataFrame:
         """
-        Return the output folders no variant of this config points at.
+        Return every settings folder in the output directory, and which variants use it.
+
+        A settings folder holds the results of one set of settings, named
+        after the variant that first made them and a short hash of the
+        settings (``settings=hrrr-b2399e``). A folder no variant uses comes
+        from changed settings, a dropped variant, or another project sharing
+        the output directory; PYSTILT never deletes one. ``stilt status``
+        prints this table.
 
         Returns
         -------
-        dict
-            ``{"particles": [keys], "footprints": [keys]}``, the ``settings=``
-            values of runs and footprint folders in the output directory that
-            no current variant produces or reads. They come from settings
-            that were changed or variants that were dropped, or from another
-            project sharing the directory. PYSTILT never deletes them.
+        pandas.DataFrame
+            ``kind`` (``particles`` or ``footprints``), ``folder`` (the
+            ``settings=`` value), ``name`` (the variant that made it),
+            ``files`` (the result files it holds), ``variant`` (the variants
+            here that use it, empty when none does), and ``differs`` (how an
+            unused folder's settings differ from the variant of its name).
+
+        Examples
+        --------
+        >>> folders = project.folders()
+        >>> folders[folders.variant == ""]  # results no variant here uses
         """
-        used = {
-            "particles": {v.particles_hash for v in self.variants.values()},
-            "footprints": {v.footprint_hash for v in self.variants.values()},
-        }
-        return {
-            kind: [
-                name
-                for name, digest in self.output.hashes(kind).items()
-                if digest not in used[kind]
-            ]
-            for kind in KINDS
-        }
+        return self.output.folders(self.variants)
 
     @cached_property
     def plot(self) -> ProjectPlotAccessor:

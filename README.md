@@ -88,12 +88,11 @@ setting, edit `config.yaml`.
 stilt init ./my_project          # write a starter config.yaml and receptors.csv
 stilt run ./my_project           # run every receptor that is not done yet
 stilt run ./my_project --cpus 8  # the same, eight receptors at a time
-stilt status ./my_project        # what has finished
-stilt output ls ./my_project     # the settings folders in the output directory
+stilt status ./my_project        # what has finished, and the settings folders
 ```
 
-`stilt run` exits with 0 when every simulation it ran is complete, 1 when some failed, and 2
-when it was stopped before they finished.
+`stilt run` exits with 0 when every simulation it ran is complete, 1 when some failed, and 3
+when it was stopped before they finished. Every command exits with 2 when its command line is wrong.
 
 ## Variants
 

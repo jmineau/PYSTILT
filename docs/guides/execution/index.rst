@@ -52,8 +52,6 @@ Commands you'll use
 
 ``stilt status <project>``
    Count finished and remaining simulations, and the failed ones by reason.
-
-``stilt output ls <project>``
    List the settings folders in the output directory, which variants use
    them, and how the unused ones differ.
 
