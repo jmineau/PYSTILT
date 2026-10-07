@@ -104,7 +104,7 @@ def _write_footprint(
     assert grid is not None
     x_axis, y_axis = grid.axes
     data = xr.DataArray(
-        np.random.rand(1, len(y_axis), len(x_axis)),
+        np.random.default_rng(0).random((1, len(y_axis), len(x_axis))),
         dims=("time", "lat", "lon"),
         coords={"time": [sim.receptor.time], "lat": y_axis, "lon": x_axis},
     )

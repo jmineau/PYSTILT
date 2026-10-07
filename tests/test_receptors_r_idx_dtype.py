@@ -1,6 +1,7 @@
 """A receptor must not be split when its r_idx rows straddle a pandas read chunk."""
 
 import pandas as pd
+import pytest
 
 from stilt.receptors import MultiPointReceptor, read_receptors
 
@@ -46,7 +47,8 @@ def test_mixed_int_and_str_r_idx_does_not_split_a_receptor(tmp_path):
     df.to_csv(f, index=False)
 
     # sanity: the naive reader really does split it, so this test guards the fix
-    naive = pd.read_csv(f)
+    with pytest.warns(pd.errors.DtypeWarning, match="r_idx"):
+        naive = pd.read_csv(f)
     assert naive.r_idx.nunique() > df.r_idx.astype(str).nunique()
 
     recs = read_receptors(f)

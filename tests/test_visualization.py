@@ -11,7 +11,7 @@ import pytest
 import xarray as xr
 
 matplotlib.use("Agg")
-import matplotlib.pyplot as plt  # noqa: E402 — must come after use("Agg")
+import matplotlib.pyplot as plt  # must come after use("Agg")
 
 from stilt.footprint.config import FootprintConfig
 from stilt.receptors import ColumnReceptor, MultiPointReceptor, PointReceptor
@@ -95,7 +95,7 @@ def minimal_footprint(receptor, grid):
     lons = np.array([-113.5, -112.5, -111.5])
     lats = np.array([39.5, 40.5, 41.5])
     data = xr.DataArray(
-        np.random.rand(2, len(lats), len(lons)),
+        np.random.default_rng(0).random((2, len(lats), len(lons))),
         dims=("time", "lat", "lon"),
         coords={"time": times, "lat": lats, "lon": lons},
     )
@@ -268,7 +268,7 @@ def test_footprint_facet_single_time(receptor, grid):
     lons = np.array([-113.5, -112.5])
     lats = np.array([39.5, 40.5])
     data = xr.DataArray(
-        np.random.rand(1, len(lats), len(lons)),
+        np.random.default_rng(0).random((1, len(lats), len(lons))),
         dims=("time", "lat", "lon"),
         coords={"time": times, "lat": lats, "lon": lons},
     )
@@ -292,7 +292,7 @@ def projected_footprint(receptor):
     )
     x, y = grid.axes
     data = xr.DataArray(
-        np.random.rand(2, len(y), len(x)),
+        np.random.default_rng(0).random((2, len(y), len(x))),
         dims=("time", "y", "x"),
         coords={
             "time": [dt.datetime(2023, 1, 1, 11), dt.datetime(2023, 1, 1, 12)],

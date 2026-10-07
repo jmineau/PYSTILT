@@ -133,6 +133,8 @@ layout; `docs/migration/` covers moving from STILT-R, X-STILT, and stiltctl.
   (every failure reason and what to do), *Projects and variants*,
   *Summing footprints* (areas and the Jacobian), *Your own HYSPLIT build*,
   querying the output with DuckDB, and a table of every `config.yaml` key.
+- The documentation has a version dropdown. The site opens at the latest
+  release, `dev/` follows `main`, and each release keeps its own pages.
 
 ### Removed
 

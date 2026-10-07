@@ -419,26 +419,39 @@ Driven by [`just`](https://github.com/casey/just) and [`uv`](https://docs.astral
 
 | Command | What it does |
 |---|---|
-| `just install` | `uv sync --group dev` |
-| `just test` | `uv run pytest -v` (unit tests only) |
-| `just quality-check` | ruff, pyrefly, and the import contracts (`lint-imports`), then the tests |
-| `just ruff` | `ruff check --fix` and `ruff format` on `src/stilt` |
-| `just build-docs` | clean Sphinx HTML build into `docs/_build` |
-| `just dist` | the sdist and one wheel per bundled HYSPLIT build, into `dist/` |
+| `just sync` | `uv sync`: the package and the dev tools into `.venv` |
+| `just test` | the unit tests, in parallel (extra args go to pytest; `-n 0` for serial) |
+| `just cov` | the unit tests with coverage, as CI runs them |
+| `just lint` / `just format` | ruff check and format check / fix and format |
+| `just type-check` | pyrefly |
+| `just imports` | the import contracts (`lint-imports`) |
+| `just docstr` | docstring coverage of the public API (95%) |
+| `just quality-check` | lint, type check, import contracts, docstrings, unit tests |
+| `just build-docs` | clean Sphinx HTML build into `docs/_build`; warnings are errors |
+| `just docs-serve` | live docs preview at <http://127.0.0.1:8000> |
+| `just dist` | the sdist and one wheel per bundled HYSPLIT build into `dist/`, then `just check-dist` |
 | `just check-dist` | check each wheel's tag and that it holds only its own `hycs_std` |
 | `just pre-commit` | all pre-commit hooks on all files |
+| `just changelog` | draft CHANGELOG entries from the commits since the last release |
+| `just version` | the version setuptools-scm computes from git |
+| `just release X.Y.Z` | tag and push a release (the maintainer runs it) |
 | `just clean` | remove build artifacts, caches, coverage, docs build |
 
-CI (`.github/workflows/`): `tests.yml`, `quality.yml`, `docs.yml`, and
-`publish.yml` for releases. `docs.yml` builds the docs on every pull request
-but deploys the site only from a `vX.Y.Z` tag, so the site matches the
-latest release; a docs change on `main` goes live with the next release.
+CI (`.github/workflows/`) runs the same recipes: `tests.yml`, `quality.yml`,
+`docs.yml`, and `publish.yml` for releases. `docs.yml` builds the docs on
+every pull request and publishes a versioned site: `main` as `dev/`, each
+release tag as its version, and the newest release as `stable/`, where the
+site's root points. The tooling comes from
+[jmineau/python-template](https://github.com/jmineau/python-template)
+(`.copier-answers.yml`); `copier update` pulls in its changes.
 
 ### Tests
 
-Plain `pytest` runs the unit tests and skips the rest. Three markers,
-disjoint (a test has at most one); CI runs `-m "integration or fidelity"`
-and then `-m r_only`:
+`just test` runs the unit tests: every test without one of the three
+markers below. Plain `pytest` also runs them and skips the rest unless the
+variables below are set. Warnings are errors; a test that expects one
+asserts it with `pytest.warns`. The three markers are disjoint (a test has
+at most one); CI runs `-m "integration or fidelity"` and then `-m r_only`:
 
 - `-m integration`: PYSTILT end to end, with real met files and HYSPLIT
   (`tests/integration/`). Slow.
@@ -471,10 +484,10 @@ quirks.
 
 ### Code conventions
 
-- Python 3.11+ (`ruff target-version = "py311"`). Use the standard
+- Python 3.11+ (`requires-python`, which ruff also reads). Use the standard
   library for what 3.11 added (`typing.Self`, `enum.StrEnum`, `tomllib`,
   `datetime.UTC`) rather than `typing_extensions` or backports.
-- Ruff rules `E, F, UP, B, SIM, I, D213`; line length is left to the formatter.
+- Ruff rules `E, F, UP, B, SIM, I, D213, NPY, RUF100`; line length is left to the formatter.
 - **NumPy-style docstrings** (Sphinx napoleon is configured for NumPy only),
   with the summary on the line after the opening quotes (`D213`).
 - pyrefly (its default preset) checks `src/` and must pass with no errors.
@@ -564,9 +577,9 @@ when you write it.
   follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The version comes from git tags (setuptools-scm): a release is the tag
   `vX.Y.Z`, and between releases the version is a dev version such as
-  `0.1.0a23.dev5+g1a2b3c4`. Pushing a `vX.Y.Z` tag publishes to PyPI via
-  `publish.yml`. **Do not cut a release or push a tag unless the maintainer
-  asks.**
+  `0.1.0a23.dev5+g1a2b3c4`. `just release X.Y.Z` pushes the tag, and
+  `publish.yml` publishes it to PyPI (CONTRIBUTING.md, Releasing). **Do not
+  cut a release or push a tag unless the maintainer asks.**
 
 ### Issues, pull requests, and roadmap
 

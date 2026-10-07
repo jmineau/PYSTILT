@@ -1,0 +1,10 @@
+# zizmor (https://docs.zizmor.sh) audits the workflows; it runs as a pre-commit hook.
+rules:
+  unpinned-uses:
+    config:
+      policies:
+        # Pin actions to version tags (kept current by Dependabot) rather than
+        # commit hashes: hash pins are the stricter supply-chain defense, but
+        # Dependabot and `copier update` would both keep rewriting the same
+        # lines. Delete this rule to require hash pins.
+        "*": ref-pin

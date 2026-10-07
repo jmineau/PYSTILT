@@ -1,96 +1,105 @@
-name: Publish to PyPI
+name: Publish
 
+# Pushing a vX.Y.Z tag (see `just release`) builds the package from that tag,
+# publishes it to PyPI with trusted publishing, and creates a GitHub Release
+# from the tag's CHANGELOG.md section. Zenodo archives each GitHub Release.
+#
+# Keep this file's name: the PyPI trusted publisher is registered for it.
 on:
   push:
-    tags:
-      - "v*.*.*"
+    tags: ["v*"]
+
+permissions:
+  contents: read
 
 jobs:
   build:
-    name: Build distributions
     runs-on: ubuntu-latest
-
+    env:
+      UV_NO_SYNC: "1"  # `just` recipes run in the environment synced below
     steps:
-      - uses: actions/checkout@v5
-
-      - name: Set up Python
-        uses: actions/setup-python@v6
+      - uses: actions/checkout@v7
         with:
-          python-version: "3.12"
+          persist-credentials: false
+          fetch-depth: 0  # setuptools-scm reads the version from tags
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v4
+      - uses: astral-sh/setup-uv@v10.2.0
+        with:
+          version: "0.12.23"
+          python-version: "3.14"
 
-      # One wheel per bundled HYSPLIT build, plus an sdist without binaries.
-      # `python -m build` would make its wheel from the sdist, with no binary.
-      - name: Build the sdist and platform wheels
-        run: uvx --from rust-just just dist
+      - name: Install
+        run: uv sync --locked
 
-      - name: Check distributions
+      # One wheel per bundled HYSPLIT build, plus an sdist without binaries
+      # (`just dist` also checks each wheel holds only its own hycs_std).
+      - name: Build and check
+        run: uv run just dist
+
+      - name: Check the version matches the tag
         run: |
-          uvx twine check dist/*
-          uvx --from rust-just just check-dist
+          version="$(uv run python -m setuptools_scm)"
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::setuptools-scm computed $version, but the tag is $GITHUB_REF_NAME"
+            exit 1
+          fi
 
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: dist
           path: dist/
 
   publish-pypi:
-    name: Publish to PyPI
     needs: build
     runs-on: ubuntu-latest
     environment:
       name: pypi
       url: https://pypi.org/p/pystilt
     permissions:
-      id-token: write  # required for trusted publishing (OIDC)
-
+      id-token: write  # trusted publishing (OIDC); also signs attestations
     steps:
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: dist
           path: dist/
 
-      - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+      - uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          # Re-running a tag (a moved tag, a retried job) must not fail on a
-          # version PyPI already has.
+          # Re-running a tag (a retried job) must not fail on a version PyPI
+          # already has.
           skip-existing: true
 
-  create-github-release:
-    name: Create GitHub Release
+  github-release:
     needs: publish-pypi
     runs-on: ubuntu-latest
     permissions:
       contents: write
-
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: dist
           path: dist/
 
-      - name: Extract changelog entry
-        id: changelog
+      - name: Extract the CHANGELOG section
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          # Extract the section for this version from CHANGELOG.md
-          NOTES=$(awk "/^## \[${VERSION}\]/{found=1; next} /^## \[/{if(found) exit} found{print}" CHANGELOG.md)
-          echo "notes<<EOF" >> "$GITHUB_OUTPUT"
-          echo "$NOTES" >> "$GITHUB_OUTPUT"
-          echo "EOF" >> "$GITHUB_OUTPUT"
+          version="${GITHUB_REF_NAME#v}"
+          awk -v v="$version" '
+            index($0, "## [" v "]") == 1 { found = 1; next }
+            /^## \[/ { if (found) exit }
+            found { print }
+          ' CHANGELOG.md > release-notes.md
+          test -s release-notes.md || { echo "::error::CHANGELOG.md has no '## [$version]' section"; exit 1; }
 
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          body: ${{ steps.changelog.outputs.notes }}
-          files: dist/*
-          draft: false
-          prerelease: ${{ contains(github.ref_name, 'a') || contains(github.ref_name, 'b') || contains(github.ref_name, 'rc') }}
+      - name: Create the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          prerelease=()
+          # PEP 440 pre-releases (a, b, rc) and dev releases
+          if [[ "$GITHUB_REF_NAME" =~ (a|b|rc)[0-9]+$|\.dev[0-9]+$ ]]; then prerelease=(--prerelease); fi
+          gh release create "$GITHUB_REF_NAME" dist/* --verify-tag \
+            --title "$GITHUB_REF_NAME" --notes-file release-notes.md "${prerelease[@]}"
