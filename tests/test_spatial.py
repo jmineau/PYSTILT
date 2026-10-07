@@ -1,8 +1,10 @@
 """Tests for stilt.spatial: the footprint grid and the CRS helpers."""
 
 import numpy as np
+import pytest
 
 from stilt import Grid
+from stilt.spatial import _grid_cell_starts
 
 # ---------------------------------------------------------------------------
 # Grid as a geometry
@@ -80,3 +82,57 @@ def test_grid_reads_stilt_r_projection_as_crs():
     old = Grid(**kw, projection="EPSG:32612")
     assert old == Grid(**kw, crs="EPSG:32612")
     assert "crs" in old.model_dump() and "projection" not in old.model_dump()
+
+
+def test_grid_cell_starts_use_complete_half_open_cells():
+    starts = _grid_cell_starts(0.0, 1.0, 0.3)
+
+    np.testing.assert_allclose(starts, [0.0, 0.3, 0.6])
+
+
+def test_grid_cell_starts_keep_decimal_boundary_cell():
+    starts = _grid_cell_starts(-113.0, -111.0, 0.01)
+
+    assert len(starts) == 200
+    assert starts[0] == pytest.approx(-113.0)
+    assert starts[-1] == pytest.approx(-111.01)
+
+
+@pytest.mark.parametrize("resolution", [0.1, 0.05, 0.01, 0.002])
+@pytest.mark.parametrize("base", [40.0, -112.0, -180.0])
+def test_grid_cell_starts_keep_last_cell_for_inexact_bounds(base, resolution):
+    # Bounds on the 0.01 grid are not exact in binary; the rounding error in
+    # ``maximum - minimum`` must not cost the final cell (or the only cell).
+    for i in range(100):
+        minimum = round(base + i * 0.01, 10)
+        for k in range(1, 60):
+            maximum = round(minimum + k * resolution, 10)
+            assert len(_grid_cell_starts(minimum, maximum, resolution)) == k, (
+                minimum,
+                maximum,
+            )
+
+
+def test_grid_cell_starts_inexact_bound_examples():
+    assert len(_grid_cell_starts(40.45, 40.93, 0.01)) == 48
+    np.testing.assert_allclose(_grid_cell_starts(40.0, 40.01, 0.01), [40.0])
+
+
+def test_grid_cell_starts_still_drop_partial_cell():
+    # The tolerance covers float roundoff only, not a real shortfall.
+    assert len(_grid_cell_starts(40.45, 40.93 - 1e-8, 0.01)) == 47
+    with pytest.raises(ValueError, match="at least one complete cell"):
+        _grid_cell_starts(40.0, 40.01 - 1e-8, 0.01)
+
+
+def test_grid_to_xarray_longlat_centers():
+    """Grid.to_xarray() yields CF lon/lat cell centers matching the footprint grid."""
+    grid = Grid(xmin=-114.0, xmax=-113.8, ymin=39.0, ymax=39.2, xres=0.1, yres=0.1)
+    ds = grid.to_xarray()
+
+    np.testing.assert_allclose(ds["lon"].values, [-113.95, -113.85])
+    np.testing.assert_allclose(ds["lat"].values, [39.05, 39.15])
+    assert ds.attrs["Conventions"] == "CF-1.8"
+    assert "crs" in ds
+    assert ds["lon"].attrs["standard_name"] == "longitude"
+    assert ds["lat"].attrs["units"] == "degrees_north"
