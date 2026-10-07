@@ -879,6 +879,12 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Removed
 
+- `subgrid_buffer` (breaking): the crop is `subgrid_bounds`, so the box
+  you write is the box HYSPLIT reads. It added 0.2° to every side unless
+  set, and was in degrees where STILT-R's `met_subgrid_buffer` is a
+  fraction of the footprint grid's size. A met that sets it is refused
+  with how to widen the bounds; the migration guide shows the STILT-R
+  conversion.
 - `Plume.contains`. Test a point against the outline with
   `shapely.contains_xy(plume.polygon, lon, lat)`.
 - `Simulation.outcome` and `stilt.transport.hysplit.identify_failure_reason`,

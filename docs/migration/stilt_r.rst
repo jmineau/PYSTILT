@@ -53,11 +53,15 @@ The workflow side by side
      - ``mets: <name>: file_tres``
    * - ``n_met_min``
      - ``mets: <name>: n_min``
-   * - ``met_subgrid_enable``, ``met_subgrid_buffer``,
-       ``met_subgrid_levels``
-     - ``mets: <name>: subgrid_enable``, ``subgrid_buffer``,
-       ``subgrid_levels``. PYSTILT also needs ``subgrid_bounds``, and
-       ``subgrid_dir`` for your own files.
+   * - ``met_subgrid_enable``, ``met_subgrid_levels``
+     - ``mets: <name>: subgrid_enable``, ``subgrid_levels``. PYSTILT also
+       needs ``subgrid_bounds``, the crop box, and ``subgrid_dir`` for your
+       own files.
+   * - ``met_subgrid_buffer``
+     - No setting. STILT-R crops to the footprint grid widened by this
+       fraction of its size on each side. In PYSTILT, write the widened box
+       as ``subgrid_bounds``: for a grid from -114 to -111 and a buffer of
+       0.2, ``xmin: -114.6``, ``xmax: -110.4``.
    * - ``xmn``, ``xmx``, ``ymn``, ``ymx``
      - ``grid: xmin``, ``xmax``, ``ymin``, ``ymax``
    * - ``xres``, ``yres``, ``projection``

@@ -162,7 +162,6 @@ def test_met_download_with_subgrid_passes_bbox(tmp_path):
             download="hrrr",
             subgrid_enable=True,
             subgrid_bounds=bounds,
-            subgrid_buffer=0.5,
         ),
     )
     met._archive = mock_archive
@@ -170,7 +169,7 @@ def test_met_download_with_subgrid_passes_bbox(tmp_path):
     _run_files(met, "2024-07-18 12:00", -24)
 
     bbox = mock_archive.fetch.call_args.kwargs["bbox"]
-    assert bbox == (-114.5, 38.5, -109.5, 42.5)
+    assert bbox == (-114.0, 39.0, -110.0, 42.0)
     assert mock_archive.fetch.call_args.kwargs["levels"] is None
 
 
@@ -220,7 +219,6 @@ def _archive_met(tmp_path: Path, **kwargs) -> Met:
     (archive / "20230101_12").write_text("met")
     settings = {
         "subgrid_bounds": BOUNDS,
-        "subgrid_buffer": 0.0,
         "subgrid_dir": tmp_path / "crops",
         **kwargs,
     }
@@ -291,7 +289,6 @@ def test_met_local_subgrid_levels(tmp_path):
     "change",
     [
         {"subgrid_bounds": Bounds(xmin=-113.0, xmax=-110.0, ymin=39.0, ymax=42.0)},
-        {"subgrid_buffer": 0.5},
         {"subgrid_levels": 20},
     ],
 )
@@ -314,12 +311,9 @@ def test_changing_the_crop_changes_crop_dir(tmp_path, change):
 
 
 def test_the_same_crop_shares_crop_dir(tmp_path):
-    """Crop settings that give the same box share one folder, whatever the archive."""
-    wide = Bounds(xmin=-114.5, xmax=-109.5, ymin=38.5, ymax=42.5)
-    a = _archive_met(tmp_path, subgrid_buffer=0.5)
-    b = _archive_met(
-        tmp_path / "other", subgrid_bounds=wide, subgrid_dir=tmp_path / "crops"
-    )
+    """The same crop shares one folder, whatever the archive."""
+    a = _archive_met(tmp_path)
+    b = _archive_met(tmp_path / "other", subgrid_dir=tmp_path / "crops")
     assert a.crop_dir == b.crop_dir
 
 
@@ -765,37 +759,23 @@ def test_two_products_named_alike_are_told_apart(tmp_path):
     assert _local(tmp_path / "hrrr").settings() != _local(tmp_path / "nam").settings()
 
 
-def test_the_crop_is_the_box_with_its_buffer(tmp_path):
-    padded = _local(
+def test_the_crop_is_the_box(tmp_path):
+    met = _local(
         tmp_path,
         subgrid_enable=True,
         subgrid_bounds=BOUNDS,
-        subgrid_buffer=0.5,
-        subgrid_dir=tmp_path / "crops",
-    )
-    widened = _local(
-        tmp_path,
-        subgrid_enable=True,
-        subgrid_bounds=Bounds(
-            xmin=BOUNDS.xmin - 0.5,
-            xmax=BOUNDS.xmax + 0.5,
-            ymin=BOUNDS.ymin - 0.5,
-            ymax=BOUNDS.ymax + 0.5,
-        ),
-        subgrid_buffer=0,
         subgrid_dir=tmp_path / "crops",
     )
 
-    assert padded.crop() == widened.crop()
-    assert padded.crop() == {
-        "bbox": [
-            BOUNDS.xmin - 0.5,
-            BOUNDS.ymin - 0.5,
-            BOUNDS.xmax + 0.5,
-            BOUNDS.ymax + 0.5,
-        ],
+    assert met.crop() == {
+        "bbox": [BOUNDS.xmin, BOUNDS.ymin, BOUNDS.xmax, BOUNDS.ymax],
         "levels": None,
     }
+
+
+def test_a_buffer_is_refused_with_how_to_widen_the_box(tmp_path):
+    with pytest.raises(ValueError, match="Widen the bounds"):
+        _local(tmp_path, subgrid_buffer=0.2)
 
 
 def test_a_crop_turned_off_is_no_crop(tmp_path):
