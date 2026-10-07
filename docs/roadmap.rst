@@ -59,6 +59,8 @@ each a ``stilt run --task`` command line.
      - Removed
    * - Cloud object store outputs (GCS, S3)
      - Implemented
+   * - Transport models other than HYSPLIT, named by import path (``model: mypkg.MyModel``), including models that run many receptors per call
+     - Implemented (the interface; HYSPLIT is the one model)
 
 Column and satellite science (from X-STILT)
 --------------------------------------------
