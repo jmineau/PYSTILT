@@ -1,0 +1,50 @@
+﻿stilt.particles.ParticlesAccessor
+=================================
+
+.. currentmodule:: stilt.particles
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.. class-signature:: stilt.particles.ParticlesAccessor
+
+
+.. class-parameters:: stilt.particles.ParticlesAccessor
+
+
+
+Methods
+-------
+
+.. autosummary::
+   :toctree:
+
+
+   ~ParticlesAccessor.endpoints
+   ~ParticlesAccessor.enhancement
+
+
+Attributes
+----------
+
+.. autosummary::
+
+   ~ParticlesAccessor.plot
+

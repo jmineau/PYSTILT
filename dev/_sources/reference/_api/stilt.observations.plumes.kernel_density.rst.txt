@@ -1,0 +1,6 @@
+﻿stilt.observations.plumes.kernel\_density
+=========================================
+
+.. currentmodule:: stilt.observations.plumes
+
+.. autofunction:: kernel_density

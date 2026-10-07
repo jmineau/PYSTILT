@@ -1,0 +1,6 @@
+stilt.config.Variant.transport\_for
+===================================
+
+.. currentmodule:: stilt.config
+
+.. automethod:: Variant.transport_for

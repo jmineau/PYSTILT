@@ -1,0 +1,159 @@
+﻿stilt.Receptor
+==============
+
+.. currentmodule:: stilt
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.. class-signature:: stilt.Receptor
+
+
+Parameters
+----------
+
+.. config-model:: stilt.Receptor
+
+
+
+Methods
+-------
+
+.. autosummary::
+   :toctree:
+
+
+   ~Receptor.coords
+   ~Receptor.from_dict
+   ~Receptor.from_json
+   ~Receptor.from_points
+   ~Receptor.to_dict
+   ~Receptor.to_json
+
+
+Attributes
+----------
+
+.. autosummary::
+
+   ~Receptor.geometry
+   ~Receptor.id
+   ~Receptor.location_id
+   ~Receptor.plot
+   ~Receptor.points
+   ~Receptor.kind
+   ~Receptor.time
+   ~Receptor.altitude_ref
+   ~Receptor.attrs
+

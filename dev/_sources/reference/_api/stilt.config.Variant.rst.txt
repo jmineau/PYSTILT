@@ -1,0 +1,110 @@
+﻿stilt.config.Variant
+====================
+
+.. currentmodule:: stilt.config
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.. class-signature:: stilt.config.Variant
+
+
+.. class-parameters:: stilt.config.Variant
+
+
+
+Methods
+-------
+
+.. autosummary::
+   :toctree:
+
+
+   ~Variant.transport_for
+
+
+Attributes
+----------
+
+.. autosummary::
+
+   ~Variant.footprint
+   ~Variant.footprint_hash
+   ~Variant.footprint_settings
+   ~Variant.geometry_hash
+   ~Variant.met_settings
+   ~Variant.particles_hash
+   ~Variant.realization_numbers
+   ~Variant.realizations
+   ~Variant.run_settings
+   ~Variant.name
+   ~Variant.met
+   ~Variant.met_config
+   ~Variant.transport
+   ~Variant.model
+

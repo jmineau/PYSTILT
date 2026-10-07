@@ -1,0 +1,1513 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>stilt.output &#8212; PYSTILT dev</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=7f76b32a3354e82990f2" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=7f76b32a3354e82990f2" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=90cc9208" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../../_static/scripts/fontawesome.js?digest=7f76b32a3354e82990f2"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=7f76b32a3354e82990f2" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=7f76b32a3354e82990f2" />
+
+    <script src="../../_static/documentation_options.js?v=0af36158"></script>
+    <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/stilt/output';</script>
+    <script>
+        DOCUMENTATION_OPTIONS.theme_version = '0.17.0';
+        DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = 'dev';
+        DOCUMENTATION_OPTIONS.show_version_warning_banner =
+            true;
+        </script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="0.1.0a23.dev261+gb929e3256" />
+  
+    
+    <script src="../../_static/searchtools.js"></script>
+    <script src="../../_static/language_data.js"></script>
+    <script src="../../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+<aside class="bd-header-announcement" aria-label="Announcement">
+  <div class="bd-header-announcement__content">PYSTILT is in alpha: names and options may change between releases.</div>
+</aside>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class=" navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">PYSTILT dev</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class=" navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../getting_started/index.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../tutorials/index.html">
+    Tutorials
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../guides/index.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../migration/index.html">
+    Coming From Another STILT
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../reference/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../advanced/index.html">
+    Internals
+  </a>
+</li>
+
+            <li class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button"
+                data-bs-toggle="dropdown" aria-expanded="false"
+                aria-controls="pst-nav-more-links">
+                    More
+                </button>
+                <ul id="pst-nav-more-links" class="dropdown-menu">
+                    
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../roadmap.html">
+    Roadmap
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../development.html">
+    Development
+  </a>
+</li>
+
+                </ul>
+            </li>
+            
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-2"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-2"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-2"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-2">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/jmineau/PYSTILT" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../getting_started/index.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../tutorials/index.html">
+    Tutorials
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../guides/index.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../migration/index.html">
+    Coming From Another STILT
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../reference/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../advanced/index.html">
+    Internals
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../roadmap.html">
+    Roadmap
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../development.html">
+    Development
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-3"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-3"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-3"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-3">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/jmineau/PYSTILT" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../index.html" class="nav-link">Module code</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">stilt.output</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for stilt.output</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">The output directory, where particles and footprints are kept.</span>
+
+<span class="sd">A project&#39;s results live in an output directory that several projects can</span>
+<span class="sd">share. It has one tree per kind of result, and inside each a folder per set</span>
+<span class="sd">of settings, in hive form so every tree reads as one dataset::</span>
+
+<span class="sd">    &lt;output&gt;/</span>
+<span class="sd">      particles/</span>
+<span class="sd">        settings=hrrr-a3f9c2/            variant name + short hash of the transport settings</span>
+<span class="sd">          _settings.yaml</span>
+<span class="sd">          date=2024-07-01/&lt;receptor&gt;.parquet</span>
+<span class="sd">        settings=hrrr-err-7be104/        an ensemble: one folder, a partition per realization</span>
+<span class="sd">          realization=0/date=2024-07-01/&lt;receptor&gt;.parquet</span>
+<span class="sd">      footprints/</span>
+<span class="sd">        settings=hrrr-93278c/            variant name + short hash of transport + footprint settings</span>
+<span class="sd">          _settings.yaml                 names the particles folder it was made from</span>
+<span class="sd">          date=2024-07-01/&lt;receptor&gt;.parquet</span>
+<span class="sd">        settings=hrrr-hexes-1b2c3d/      same particles, other footprint settings</span>
+<span class="sd">      logs/</span>
+<span class="sd">        settings=hrrr-a3f9c2/date=2024-07-01/&lt;receptor&gt;.log</span>
+
+<span class="sd">A folder is found by the hash of its settings, so two projects that run the</span>
+<span class="sd">same settings share one folder, and a changed setting lands in a new folder</span>
+<span class="sd">beside the old one instead of overwriting it. ``pyarrow.dataset``, DuckDB,</span>
+<span class="sd">polars, and R&#39;s arrow read ``settings`` and ``date`` as columns of the whole</span>
+<span class="sd">tree. Particles are one Parquet file per receptor. Footprints are sparse</span>
+<span class="sd">tables of the non-zero cells, in float32 as STILT-R writes them; an empty</span>
+<span class="sd">footprint is a file with no rows, marked ``stilt:empty`` in its metadata.</span>
+
+<span class="sd">Logs, failure records, and kept workdirs are in trees of their own</span>
+<span class="sd">(``logs/``, ``scratch/``) rather than beside the results, so that each</span>
+<span class="sd">results tree holds Parquet files only and reads as one dataset. Whether a</span>
+<span class="sd">simulation is complete is read from the results trees alone; the logs only</span>
+<span class="sd">explain the ones that are not.</span>
+
+<span class="sd">Start from :class:`Output` and a resolved variant (``project.variants``).</span>
+<span class="sd">Every function takes the kind of result, ``&quot;particles&quot;`` or</span>
+<span class="sd">``&quot;footprints&quot;``, and the variant::</span>
+
+<span class="sd">    out = Output(&quot;output&quot;)</span>
+<span class="sd">    out.write_particles(variant, receptor, frame, met_files)</span>
+<span class="sd">    out.path(&quot;particles&quot;, variant, receptor.id)  # one receptor&#39;s file</span>
+<span class="sd">    out.present(&quot;footprints&quot;, variant, receptor_ids)  # which have a footprint</span>
+<span class="sd">    out.table(&quot;footprints&quot;, variant)  # many footprints as one table</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">shutil</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">Mapping</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">concurrent.futures</span><span class="w"> </span><span class="kn">import</span> <span class="n">ThreadPoolExecutor</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Literal</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pyarrow</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pa</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pyarrow.dataset</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pads</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">yaml</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt._paths</span><span class="w"> </span><span class="kn">import</span> <span class="n">atomic_path</span><span class="p">,</span> <span class="n">location</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.footprint</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">FOOTPRINT_SCHEMA</span><span class="p">,</span>
+    <span class="n">FootprintConfig</span><span class="p">,</span>
+    <span class="n">write_empty_footprint</span><span class="p">,</span>
+    <span class="n">write_footprint</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.identity</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">footprint_hash</span><span class="p">,</span>
+    <span class="n">footprint_settings</span><span class="p">,</span>
+    <span class="n">read_footprint_settings</span><span class="p">,</span>
+    <span class="n">read_run_settings</span><span class="p">,</span>
+    <span class="n">settings_hash</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.particles</span><span class="w"> </span><span class="kn">import</span> <span class="n">write_particles</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.receptors</span><span class="w"> </span><span class="kn">import</span> <span class="n">Receptor</span><span class="p">,</span> <span class="n">parse_receptor_id</span>
+
+<span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">upath</span><span class="w"> </span><span class="kn">import</span> <span class="n">UPath</span>
+
+    <span class="kn">from</span><span class="w"> </span><span class="nn">stilt._paths</span><span class="w"> </span><span class="kn">import</span> <span class="n">Location</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">Variant</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+<span class="c1">#: Underscore-prefixed, so dataset readers skip it.</span>
+<span class="n">SETTINGS_FILE</span> <span class="o">=</span> <span class="s2">&quot;_settings.yaml&quot;</span>
+<span class="c1">#: A receptor&#39;s failure record, under its folder&#39;s logs: ``&lt;receptor_id&gt;.failure.yaml``.</span>
+<span class="n">FAILURE_SUFFIX</span> <span class="o">=</span> <span class="s2">&quot;.failure.yaml&quot;</span>
+<span class="n">HASH_CHARS</span> <span class="o">=</span> <span class="mi">6</span>
+
+<span class="c1"># -- identity -----------------------------------------------------------------</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_date_dir</span><span class="p">(</span><span class="n">receptor_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the ``date=YYYY-MM-DD`` folder of a receptor id, which starts with the receptor time.&quot;&quot;&quot;</span>
+    <span class="n">time</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">parse_receptor_id</span><span class="p">(</span><span class="n">receptor_id</span><span class="p">)</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;date=</span><span class="si">{</span><span class="n">time</span><span class="si">:</span><span class="s2">%Y-%m-%d</span><span class="si">}</span><span class="s2">&quot;</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_names</span><span class="p">(</span><span class="n">folder</span><span class="p">:</span> <span class="n">Location</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return the names in *folder*, or none when it does not exist.</span>
+
+<span class="sd">    A filesystem is listed with ``os.scandir``, the fast path. An object</span>
+<span class="sd">    store is listed through its fsspec filesystem, with its cache of</span>
+<span class="sd">    listings cleared first, since workers elsewhere add files to it.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">folder</span><span class="p">,</span> <span class="n">Path</span><span class="p">):</span>
+            <span class="k">return</span> <span class="p">[</span><span class="n">entry</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">scandir</span><span class="p">(</span><span class="n">folder</span><span class="p">)]</span>
+        <span class="n">folder</span><span class="o">.</span><span class="n">fs</span><span class="o">.</span><span class="n">invalidate_cache</span><span class="p">(</span><span class="n">folder</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
+        <span class="n">listed</span> <span class="o">=</span> <span class="n">folder</span><span class="o">.</span><span class="n">fs</span><span class="o">.</span><span class="n">ls</span><span class="p">(</span><span class="n">folder</span><span class="o">.</span><span class="n">path</span><span class="p">,</span> <span class="n">detail</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">FileNotFoundError</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">[]</span>
+    <span class="k">return</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">item</span><span class="p">)</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">rsplit</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">listed</span><span class="p">]</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_list_receptor_files</span><span class="p">(</span>
+    <span class="n">root</span><span class="p">:</span> <span class="n">Location</span><span class="p">,</span> <span class="n">suffix</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">among</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Location</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return ``{receptor_id: path}`` for every ``date=*/&lt;id&gt;&lt;suffix&gt;`` under *root*, in date order.</span>
+
+<span class="sd">    With *among*, only those receptors are returned, and only their date</span>
+<span class="sd">    folders are listed. The date folders are listed in a few threads: on a</span>
+<span class="sd">    network filesystem or an object store the listing waits on the server,</span>
+<span class="sd">    and a project can have thousands of date folders.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">among</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">wanted</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">days</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">name</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">_names</span><span class="p">(</span><span class="n">root</span><span class="p">)</span> <span class="k">if</span> <span class="n">name</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;date=&quot;</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">wanted</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">among</span><span class="p">)</span>
+        <span class="n">days</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">({</span><span class="n">_date_dir</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">wanted</span><span class="p">})</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">names</span><span class="p">(</span><span class="n">day</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">name</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">_names</span><span class="p">(</span><span class="n">root</span> <span class="o">/</span> <span class="n">day</span><span class="p">)</span> <span class="k">if</span> <span class="n">name</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="n">suffix</span><span class="p">))</span>
+
+    <span class="k">with</span> <span class="n">ThreadPoolExecutor</span><span class="p">(</span><span class="n">max_workers</span><span class="o">=</span><span class="mi">16</span><span class="p">)</span> <span class="k">as</span> <span class="n">pool</span><span class="p">:</span>
+        <span class="n">listed</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">pool</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">names</span><span class="p">,</span> <span class="n">days</span><span class="p">))</span>
+    <span class="n">found</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="n">name</span><span class="p">[:</span> <span class="o">-</span><span class="nb">len</span><span class="p">(</span><span class="n">suffix</span><span class="p">)]:</span> <span class="n">folder</span> <span class="o">/</span> <span class="n">name</span>
+        <span class="k">for</span> <span class="n">folder</span><span class="p">,</span> <span class="n">per_day</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">((</span><span class="n">root</span> <span class="o">/</span> <span class="n">d</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">days</span><span class="p">),</span> <span class="n">listed</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">per_day</span>
+    <span class="p">}</span>
+    <span class="k">if</span> <span class="n">wanted</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">found</span> <span class="o">=</span> <span class="p">{</span><span class="n">rid</span><span class="p">:</span> <span class="n">path</span> <span class="k">for</span> <span class="n">rid</span><span class="p">,</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">found</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">rid</span> <span class="ow">in</span> <span class="n">wanted</span><span class="p">}</span>
+    <span class="k">return</span> <span class="n">found</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_read_yaml</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Location</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return a YAML file of one mapping as a dict; an empty file is ``{}``.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span><span class="n">path</span><span class="o">.</span><span class="n">read_text</span><span class="p">())</span> <span class="ow">or</span> <span class="p">{}</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_write_yaml</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Location</span><span class="p">,</span> <span class="n">record</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Write *record* to *path* as YAML in one step, making its folder as needed.&quot;&quot;&quot;</span>
+    <span class="n">path</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">with</span> <span class="n">atomic_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="k">as</span> <span class="n">tmp</span><span class="p">:</span>
+        <span class="n">tmp</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span>
+            <span class="n">yaml</span><span class="o">.</span><span class="n">safe_dump</span><span class="p">(</span><span class="n">record</span><span class="p">,</span> <span class="n">default_flow_style</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">sort_keys</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_write_settings</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Location</span><span class="p">,</span> <span class="n">record</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Write a ``settings.yaml`` once. An existing file with the same hash is left alone.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+        <span class="n">existing</span> <span class="o">=</span> <span class="n">_read_yaml</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">existing</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;hash&quot;</span><span class="p">)</span> <span class="o">!=</span> <span class="n">record</span><span class="p">[</span><span class="s2">&quot;hash&quot;</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">FileExistsError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2"> holds settings with hash </span><span class="si">{</span><span class="n">existing</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;hash&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">, &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;not </span><span class="si">{</span><span class="n">record</span><span class="p">[</span><span class="s1">&#39;hash&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">.&quot;</span>
+            <span class="p">)</span>
+        <span class="k">return</span>
+    <span class="c1"># Another worker may write the same settings meanwhile; both files say</span>
+    <span class="c1"># the same thing, so whichever rename lands last is fine.</span>
+    <span class="n">_write_yaml</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">record</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_pystilt_version</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the installed PYSTILT version, as ``stilt.__version__`` does.&quot;&quot;&quot;</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">importlib.metadata</span><span class="w"> </span><span class="kn">import</span> <span class="n">PackageNotFoundError</span><span class="p">,</span> <span class="n">version</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">version</span><span class="p">(</span><span class="s2">&quot;pystilt&quot;</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">PackageNotFoundError</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot;0+unknown&quot;</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_stamp</span><span class="p">(</span><span class="n">digest</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">realization</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">bytes</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return what every result file records besides its contents.</span>
+
+<span class="sd">    Its folder&#39;s settings hash, the PYSTILT version, and, for an ensemble,</span>
+<span class="sd">    its realization number.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">stamp</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="sa">b</span><span class="s2">&quot;stilt:hash&quot;</span><span class="p">:</span> <span class="n">digest</span><span class="o">.</span><span class="n">encode</span><span class="p">(),</span>
+        <span class="sa">b</span><span class="s2">&quot;stilt:pystilt&quot;</span><span class="p">:</span> <span class="n">_pystilt_version</span><span class="p">()</span><span class="o">.</span><span class="n">encode</span><span class="p">(),</span>
+    <span class="p">}</span>
+    <span class="k">if</span> <span class="n">realization</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">stamp</span><span class="p">[</span><span class="sa">b</span><span class="s2">&quot;stilt:realization&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">realization</span><span class="p">)</span><span class="o">.</span><span class="n">encode</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">stamp</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_footprint_stamp</span><span class="p">(</span>
+    <span class="n">digest</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">,</span> <span class="n">realization</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">bytes</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return what a footprint file records besides its contents: :func:`_stamp`, and its particles&#39; hash.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="o">**</span><span class="n">_stamp</span><span class="p">(</span><span class="n">digest</span><span class="p">,</span> <span class="n">realization</span><span class="p">),</span>
+        <span class="sa">b</span><span class="s2">&quot;stilt:particles_hash&quot;</span><span class="p">:</span> <span class="n">variant</span><span class="o">.</span><span class="n">particles_hash</span><span class="o">.</span><span class="n">encode</span><span class="p">(),</span>
+    <span class="p">}</span>
+
+
+<span class="c1"># -- the output directory -----------------------------------------------------</span>
+
+<span class="c1">#: A kind of result, and the tree it is kept in.</span>
+<span class="n">Kind</span> <span class="o">=</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;particles&quot;</span><span class="p">,</span> <span class="s2">&quot;footprints&quot;</span><span class="p">]</span>
+<span class="n">KINDS</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Kind</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;particles&quot;</span><span class="p">,</span> <span class="s2">&quot;footprints&quot;</span><span class="p">)</span>
+
+<span class="c1">#: What :meth:`Output.table` returns when no file is read, by kind.</span>
+<span class="n">_EMPTY</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">pa</span><span class="o">.</span><span class="n">Table</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;particles&quot;</span><span class="p">:</span> <span class="n">pa</span><span class="o">.</span><span class="n">table</span><span class="p">({</span><span class="s2">&quot;receptor&quot;</span><span class="p">:</span> <span class="n">pa</span><span class="o">.</span><span class="n">array</span><span class="p">([],</span> <span class="n">pa</span><span class="o">.</span><span class="n">string</span><span class="p">())}),</span>
+    <span class="s2">&quot;footprints&quot;</span><span class="p">:</span> <span class="n">FOOTPRINT_SCHEMA</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pa</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="s2">&quot;date&quot;</span><span class="p">,</span> <span class="n">pa</span><span class="o">.</span><span class="n">date32</span><span class="p">()))</span><span class="o">.</span><span class="n">empty_table</span><span class="p">(),</span>
+<span class="p">}</span>
+
+<span class="c1">#: The ``date=YYYY-MM-DD`` folders, read as a ``date32`` column.</span>
+<span class="n">_DATE_PARTITIONING</span> <span class="o">=</span> <span class="n">pads</span><span class="o">.</span><span class="n">partitioning</span><span class="p">(</span>
+    <span class="n">pa</span><span class="o">.</span><span class="n">schema</span><span class="p">([(</span><span class="s2">&quot;date&quot;</span><span class="p">,</span> <span class="n">pa</span><span class="o">.</span><span class="n">date32</span><span class="p">())]),</span> <span class="n">flavor</span><span class="o">=</span><span class="s2">&quot;hive&quot;</span>
+<span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_settings_folders</span><span class="p">(</span><span class="n">tree</span><span class="p">:</span> <span class="n">Location</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the ``settings=`` values under *tree* that hold a settings file, in name order.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="p">[</span>
+        <span class="n">name</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="s2">&quot;settings=&quot;</span><span class="p">)</span> <span class="p">:]</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">_names</span><span class="p">(</span><span class="n">tree</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">name</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;settings=&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">tree</span> <span class="o">/</span> <span class="n">name</span> <span class="o">/</span> <span class="n">SETTINGS_FILE</span><span class="p">)</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span>
+    <span class="p">]</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_receptor_file</span><span class="p">(</span>
+    <span class="n">folder</span><span class="p">:</span> <span class="n">Location</span><span class="p">,</span> <span class="n">receptor_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">suffix</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;.parquet&quot;</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Location</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return a receptor&#39;s file in *folder*: ``date=YYYY-MM-DD/&lt;receptor_id&gt;&lt;suffix&gt;``.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">folder</span> <span class="o">/</span> <span class="n">_date_dir</span><span class="p">(</span><span class="n">receptor_id</span><span class="p">)</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">receptor_id</span><span class="si">}{</span><span class="n">suffix</span><span class="si">}</span><span class="s2">&quot;</span>
+
+
+<div class="viewcode-block" id="completed">
+<a class="viewcode-back" href="../../reference/_api/stilt.output.completed.html#stilt.output.completed">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">completed</span><span class="p">(</span>
+    <span class="n">particles</span><span class="p">:</span> <span class="nb">frozenset</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">footprints</span><span class="p">:</span> <span class="nb">frozenset</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">frozenset</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return the receptors that are complete, from the ones with particles and with a footprint.</span>
+
+<span class="sd">    The one definition of done: the particles exist, and the footprint</span>
+<span class="sd">    too when the variant makes one (*footprints* is ``None`` when it does</span>
+<span class="sd">    not). An empty footprint is complete.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">particles</span> <span class="k">if</span> <span class="n">footprints</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">particles</span> <span class="o">&amp;</span> <span class="n">footprints</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_count_files</span><span class="p">(</span><span class="n">folder</span><span class="p">:</span> <span class="n">Location</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return how many result files a settings folder holds, in every ``realization=k`` partition.&quot;&quot;&quot;</span>
+    <span class="n">parts</span> <span class="o">=</span> <span class="p">[</span><span class="n">n</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">_names</span><span class="p">(</span><span class="n">folder</span><span class="p">)</span> <span class="k">if</span> <span class="n">n</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;realization=&quot;</span><span class="p">)]</span>
+    <span class="n">roots</span> <span class="o">=</span> <span class="p">[</span><span class="n">folder</span> <span class="o">/</span> <span class="n">n</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">parts</span><span class="p">]</span> <span class="k">if</span> <span class="n">parts</span> <span class="k">else</span> <span class="p">[</span><span class="n">folder</span><span class="p">]</span>
+    <span class="k">return</span> <span class="nb">sum</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">_list_receptor_files</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="s2">&quot;.parquet&quot;</span><span class="p">))</span> <span class="k">for</span> <span class="n">root</span> <span class="ow">in</span> <span class="n">roots</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_short</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return a setting&#39;s value in a few characters.&quot;&quot;&quot;</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">text</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">text</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mi">40</span> <span class="k">else</span> <span class="n">text</span><span class="p">[:</span><span class="mi">37</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot;...&quot;</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_diff</span><span class="p">(</span>
+    <span class="n">stored</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">current</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">prefix</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return ``key: stored (config: current)`` for each setting that differs, nested blocks by dotted key.&quot;&quot;&quot;</span>
+    <span class="n">found</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">stored</span><span class="p">)</span> <span class="o">|</span> <span class="nb">set</span><span class="p">(</span><span class="n">current</span><span class="p">)):</span>
+        <span class="n">a</span><span class="p">,</span> <span class="n">b</span> <span class="o">=</span> <span class="n">stored</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="s2">&quot;-&quot;</span><span class="p">),</span> <span class="n">current</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="s2">&quot;-&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">):</span>
+            <span class="n">found</span> <span class="o">+=</span> <span class="n">_diff</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">prefix</span><span class="si">}{</span><span class="n">key</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">a</span> <span class="o">!=</span> <span class="n">b</span><span class="p">:</span>
+            <span class="n">found</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">prefix</span><span class="si">}{</span><span class="n">key</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">_short</span><span class="p">(</span><span class="n">a</span><span class="p">)</span><span class="si">}</span><span class="s2"> (config: </span><span class="si">{</span><span class="n">_short</span><span class="p">(</span><span class="n">b</span><span class="p">)</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">found</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_differences</span><span class="p">(</span>
+    <span class="n">kind</span><span class="p">:</span> <span class="n">Kind</span><span class="p">,</span> <span class="n">record</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="n">Location</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return how a folder&#39;s stored settings differ from *variant*&#39;s, the first four, ``; ``-joined.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">kind</span> <span class="o">==</span> <span class="s2">&quot;particles&quot;</span><span class="p">:</span>
+        <span class="n">stored</span> <span class="o">=</span> <span class="n">read_run_settings</span><span class="p">(</span><span class="n">record</span><span class="p">[</span><span class="s2">&quot;settings&quot;</span><span class="p">])</span>
+        <span class="n">current</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">variant</span><span class="o">.</span><span class="n">run_settings</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">config</span><span class="p">,</span> <span class="n">geometry_hash</span> <span class="o">=</span> <span class="n">read_footprint_settings</span><span class="p">(</span><span class="n">record</span><span class="p">[</span><span class="s2">&quot;settings&quot;</span><span class="p">],</span> <span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">))</span>
+        <span class="n">stored</span> <span class="o">=</span> <span class="n">footprint_settings</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">geometry_hash</span><span class="p">)</span>
+        <span class="n">current</span> <span class="o">=</span> <span class="n">variant</span><span class="o">.</span><span class="n">footprint_settings</span>
+    <span class="k">if</span> <span class="n">current</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot;the variant makes no footprints&quot;</span>
+    <span class="n">found</span> <span class="o">=</span> <span class="n">_diff</span><span class="p">(</span><span class="n">stored</span><span class="p">,</span> <span class="n">current</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">kind</span> <span class="o">==</span> <span class="s2">&quot;footprints&quot;</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">found</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot;made from other particles&quot;</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">found</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">4</span><span class="p">:</span>
+        <span class="n">found</span> <span class="o">=</span> <span class="p">[</span><span class="o">*</span><span class="n">found</span><span class="p">[:</span><span class="mi">4</span><span class="p">],</span> <span class="sa">f</span><span class="s2">&quot;and </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">found</span><span class="p">)</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">4</span><span class="si">}</span><span class="s2"> more&quot;</span><span class="p">]</span>
+    <span class="k">return</span> <span class="s2">&quot;; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">found</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_check_realization</span><span class="p">(</span><span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">,</span> <span class="n">realization</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Raise unless *realization* is one *variant* runs as.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">realization</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">variant</span><span class="o">.</span><span class="n">realization_numbers</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Variant </span><span class="si">{</span><span class="n">variant</span><span class="o">.</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> runs as realizations &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">variant</span><span class="o">.</span><span class="n">realization_numbers</span><span class="si">}</span><span class="s2">, not </span><span class="si">{</span><span class="n">realization</span><span class="si">!r}</span><span class="s2">.&quot;</span>
+        <span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_check_kind</span><span class="p">(</span><span class="n">kind</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">kind</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">KINDS</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;kind is &#39;particles&#39; or &#39;footprints&#39;, not </span><span class="si">{</span><span class="n">kind</span><span class="si">!r}</span><span class="s2">.&quot;</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="Output">
+<a class="viewcode-back" href="../../reference/_api/stilt.output.Output.html#stilt.output.Output">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Output</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    An output directory: particles and footprints, by their settings.</span>
+
+<span class="sd">    Each kind of result has a tree, and in it a folder per set of settings,</span>
+<span class="sd">    named ``settings=&lt;variant&gt;-&lt;hash&gt;``. A variant&#39;s folder is found by the</span>
+<span class="sd">    hash of its settings, whatever name it was created under, so projects</span>
+<span class="sd">    that run the same settings share it. Every method takes the kind of</span>
+<span class="sd">    result (``&quot;particles&quot;`` or ``&quot;footprints&quot;``) and the variant, resolved</span>
+<span class="sd">    (``project.variants``).</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    path : str or Path</span>
+<span class="sd">        The directory, created on first write. A URL such as</span>
+<span class="sd">        ``s3://bucket/output`` puts it on an object store, read and written</span>
+<span class="sd">        through fsspec (install its package, such as ``s3fs``).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="n">UPath</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1">#: The output directory: a Path, or a universal path on an object store.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">directory</span><span class="p">:</span> <span class="n">Location</span> <span class="o">=</span> <span class="n">location</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="c1"># Each folder&#39;s settings hash, by kind and folder name. Reading one</span>
+        <span class="c1"># means reading its _settings.yaml and hashing it again, so each is</span>
+        <span class="c1"># read once; a lookup that misses lists the tree again.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_hashes</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;particles&quot;</span><span class="p">:</span> <span class="p">{},</span> <span class="s2">&quot;footprints&quot;</span><span class="p">:</span> <span class="p">{}}</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;Output(</span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">directory</span><span class="p">)</span><span class="si">!r}</span><span class="s2">)&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="nb">object</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">Output</span><span class="p">)</span> <span class="ow">and</span> <span class="n">other</span><span class="o">.</span><span class="n">directory</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">directory</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__hash__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">hash</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">directory</span><span class="p">))</span>
+
+    <span class="c1"># -- folders -----------------------------------------------------------</span>
+
+<div class="viewcode-block" id="Output.hashes">
+<a class="viewcode-back" href="../../reference/_api/stilt.output.Output.hashes.html#stilt.output.Output.hashes">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">hashes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">kind</span><span class="p">:</span> <span class="n">Kind</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return every folder of *kind*, as ``{name: settings hash}`` in name order.</span>
+
+<span class="sd">        The name is the ``settings=`` value. The hash is of the folder&#39;s</span>
+<span class="sd">        stored settings read back through the current config classes</span>
+<span class="sd">        (:mod:`stilt.identity`), so a setting added since the folder was</span>
+<span class="sd">        written, with a default, still matches.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">_check_kind</span><span class="p">(</span><span class="n">kind</span><span class="p">)</span>
+        <span class="n">known</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_hashes</span><span class="p">[</span><span class="n">kind</span><span class="p">]</span>
+        <span class="n">names</span> <span class="o">=</span> <span class="n">_settings_folders</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">directory</span> <span class="o">/</span> <span class="n">kind</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">names</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">known</span><span class="p">:</span>
+                <span class="n">known</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read_hash</span><span class="p">(</span><span class="n">kind</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">{</span><span class="n">name</span><span class="p">:</span> <span class="n">known</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">names</span><span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="Output.folders">
+<a class="viewcode-back" href="../../reference/_api/stilt.output.Output.folders.html#stilt.output.Output.folders">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">folders</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">variants</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Variant</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return every settings folder in the output directory, one row each.</span>
+
+<span class="sd">        A settings folder holds the results of one set of settings, named</span>
+<span class="sd">        after the variant that first made them and a short hash of the</span>
+<span class="sd">        settings (``settings=hrrr-b2399e``).</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        variants : mapping of str to Variant, optional</span>
+<span class="sd">            A project&#39;s variants (``project.variants``), to say which use</span>
+<span class="sd">            each folder and how the others differ from them.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        pandas.DataFrame</span>
+<span class="sd">            ``kind`` (``particles`` or ``footprints``), ``folder`` (the</span>
+<span class="sd">            ``settings=`` value), ``name`` (the variant that made it), and</span>
+<span class="sd">            ``files`` (the result files it holds, every realization of an</span>
+<span class="sd">            ensemble counted). With *variants*, also ``variant``, the</span>
+<span class="sd">            variants that use the folder (empty when none does), and</span>
+<span class="sd">            ``differs``, how an unused folder&#39;s settings differ from those</span>
+<span class="sd">            of the variant of its name.</span>
+
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; project.output.folders(project.variants)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">rows</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">kind</span> <span class="ow">in</span> <span class="n">KINDS</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">folder</span><span class="p">,</span> <span class="n">digest</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">hashes</span><span class="p">(</span><span class="n">kind</span><span class="p">)</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="n">path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dir</span><span class="p">(</span><span class="n">kind</span><span class="p">,</span> <span class="n">folder</span><span class="p">)</span>
+                <span class="n">record</span> <span class="o">=</span> <span class="n">_read_yaml</span><span class="p">(</span><span class="n">path</span> <span class="o">/</span> <span class="n">SETTINGS_FILE</span><span class="p">)</span>
+                <span class="n">row</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+                    <span class="s2">&quot;kind&quot;</span><span class="p">:</span> <span class="n">kind</span><span class="p">,</span>
+                    <span class="s2">&quot;folder&quot;</span><span class="p">:</span> <span class="n">folder</span><span class="p">,</span>
+                    <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;name&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">),</span>
+                    <span class="s2">&quot;files&quot;</span><span class="p">:</span> <span class="n">_count_files</span><span class="p">(</span><span class="n">path</span><span class="p">),</span>
+                <span class="p">}</span>
+                <span class="k">if</span> <span class="n">variants</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">using</span> <span class="o">=</span> <span class="p">[</span>
+                        <span class="n">name</span>
+                        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">variants</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+                        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_variant_hash</span><span class="p">(</span><span class="n">kind</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="o">==</span> <span class="n">digest</span>
+                    <span class="p">]</span>
+                    <span class="n">row</span><span class="p">[</span><span class="s2">&quot;variant&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">using</span><span class="p">)</span>
+                    <span class="n">same</span> <span class="o">=</span> <span class="n">variants</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">])</span>
+                    <span class="n">row</span><span class="p">[</span><span class="s2">&quot;differs&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                        <span class="s2">&quot;&quot;</span>
+                        <span class="k">if</span> <span class="n">using</span> <span class="ow">or</span> <span class="n">same</span> <span class="ow">is</span> <span class="kc">None</span>
+                        <span class="k">else</span> <span class="n">_differences</span><span class="p">(</span><span class="n">kind</span><span class="p">,</span> <span class="n">record</span><span class="p">,</span> <span class="n">same</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
+                    <span class="p">)</span>
+                <span class="n">rows</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
+        <span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;kind&quot;</span><span class="p">,</span> <span class="s2">&quot;folder&quot;</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">,</span> <span class="s2">&quot;files&quot;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">variants</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">columns</span> <span class="o">+=</span> <span class="p">[</span><span class="s2">&quot;variant&quot;</span><span class="p">,</span> <span class="s2">&quot;differs&quot;</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">rows</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="n">columns</span><span class="p">)</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_read_hash</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">kind</span><span class="p">:</span> <span class="n">Kind</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the settings hash of one folder, from its ``_settings.yaml``.&quot;&quot;&quot;</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dir</span><span class="p">(</span><span class="n">kind</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span> <span class="o">/</span> <span class="n">SETTINGS_FILE</span>
+        <span class="n">record</span> <span class="o">=</span> <span class="n">_read_yaml</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">kind</span> <span class="o">==</span> <span class="s2">&quot;particles&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">settings_hash</span><span class="p">(</span><span class="n">read_run_settings</span><span class="p">(</span><span class="n">record</span><span class="p">[</span><span class="s2">&quot;settings&quot;</span><span class="p">]))</span>
+        <span class="n">config</span><span class="p">,</span> <span class="n">geometry_hash</span> <span class="o">=</span> <span class="n">read_footprint_settings</span><span class="p">(</span><span class="n">record</span><span class="p">[</span><span class="s2">&quot;settings&quot;</span><span class="p">],</span> <span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">))</span>
+        <span class="n">particles</span> <span class="o">=</span> <span class="n">record</span><span class="p">[</span><span class="s2">&quot;particles&quot;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">particles</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_hashes</span><span class="p">[</span><span class="s2">&quot;particles&quot;</span><span class="p">]:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_hashes</span><span class="p">[</span><span class="s2">&quot;particles&quot;</span><span class="p">][</span><span class="n">particles</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read_hash</span><span class="p">(</span>
+                <span class="s2">&quot;particles&quot;</span><span class="p">,</span> <span class="n">particles</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="n">footprint_hash</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_hashes</span><span class="p">[</span><span class="s2">&quot;particles&quot;</span><span class="p">][</span><span class="n">particles</span><span class="p">],</span>
+            <span class="n">footprint_settings</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">geometry_hash</span><span class="p">),</span>
+        <span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_variant_hash</span><span class="p">(</span><span class="n">kind</span><span class="p">:</span> <span class="n">Kind</span><span class="p">,</span> <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the hash that names *variant*&#39;s folder of *kind*, ``None`` for footprints without a grid.&quot;&quot;&quot;</span>
+        <span class="n">_check_kind</span><span class="p">(</span><span class="n">kind</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">variant</span><span class="o">.</span><span class="n">particles_hash</span> <span class="k">if</span> <span class="n">kind</span> <span class="o">==</span> <span class="s2">&quot;particles&quot;</span> <span class="k">else</span> <span class="n">variant</span><span class="o">.</span><span class="n">footprint_hash</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">kind</span><span class="p">:</span> <span class="n">Kind</span><span class="p">,</span> <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the name of *variant*&#39;s folder of *kind*, or ``None`` when it does not exist.&quot;&quot;&quot;</span>
+        <span class="n">digest</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_variant_hash</span><span class="p">(</span><span class="n">kind</span><span class="p">,</span> <span class="n">variant</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">digest</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">folder_hash</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_hashes</span><span class="p">[</span><span class="n">kind</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">folder_hash</span> <span class="o">==</span> <span class="n">digest</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">name</span>
+        <span class="c1"># A miss lists the tree again: another worker may have made the folder.</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">folder_hash</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">hashes</span><span class="p">(</span><span class="n">kind</span><span class="p">)</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">folder_hash</span> <span class="o">==</span> <span class="n">digest</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">name</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+<div class="viewcode-block" id="Output.folder">
+<a class="viewcode-back" href="../../reference/_api/stilt.output.Output.folder.html#stilt.output.Output.folder">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">folder</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">kind</span><span class="p">:</span> <span class="n">Kind</span><span class="p">,</span> <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Location</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return *variant*&#39;s folder of *kind*, or ``None`` before it exists.</span>
+
+<span class="sd">        ``None`` too for the footprints of a variant without a grid.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_name</span><span class="p">(</span><span class="n">kind</span><span class="p">,</span> <span class="n">variant</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">name</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dir</span><span class="p">(</span><span class="n">kind</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_dir</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tree</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Location</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the folder *name* of a tree: ``&lt;tree&gt;/settings=&lt;name&gt;``.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">directory</span> <span class="o">/</span> <span class="n">tree</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;settings=</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_create</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">kind</span><span class="p">:</span> <span class="n">Kind</span><span class="p">,</span> <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the name of *variant*&#39;s folder of *kind*, writing its settings file on first use.&quot;&quot;&quot;</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_name</span><span class="p">(</span><span class="n">kind</span><span class="p">,</span> <span class="n">variant</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">name</span>
+        <span class="k">if</span> <span class="n">kind</span> <span class="o">==</span> <span class="s2">&quot;particles&quot;</span><span class="p">:</span>
+            <span class="n">digest</span> <span class="o">=</span> <span class="n">variant</span><span class="o">.</span><span class="n">particles_hash</span>
+            <span class="n">record</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">variant</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                <span class="s2">&quot;hash&quot;</span><span class="p">:</span> <span class="n">digest</span><span class="p">,</span>
+                <span class="s2">&quot;pystilt&quot;</span><span class="p">:</span> <span class="n">_pystilt_version</span><span class="p">(),</span>
+                <span class="s2">&quot;settings&quot;</span><span class="p">:</span> <span class="n">variant</span><span class="o">.</span><span class="n">run_settings</span><span class="p">,</span>
+            <span class="p">}</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">variant</span><span class="o">.</span><span class="n">footprint</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;Variant </span><span class="si">{</span><span class="n">variant</span><span class="o">.</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> makes no footprints (no grid).&quot;</span>
+                <span class="p">)</span>
+            <span class="n">particles</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create</span><span class="p">(</span><span class="s2">&quot;particles&quot;</span><span class="p">,</span> <span class="n">variant</span><span class="p">)</span>
+            <span class="n">settings</span> <span class="o">=</span> <span class="n">footprint_settings</span><span class="p">(</span><span class="n">variant</span><span class="o">.</span><span class="n">footprint</span><span class="p">,</span> <span class="n">variant</span><span class="o">.</span><span class="n">geometry_hash</span><span class="p">)</span>
+            <span class="n">digest</span> <span class="o">=</span> <span class="n">footprint_hash</span><span class="p">(</span><span class="n">variant</span><span class="o">.</span><span class="n">particles_hash</span><span class="p">,</span> <span class="n">settings</span><span class="p">)</span>
+            <span class="n">record</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">variant</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                <span class="s2">&quot;hash&quot;</span><span class="p">:</span> <span class="n">digest</span><span class="p">,</span>
+                <span class="s2">&quot;particles&quot;</span><span class="p">:</span> <span class="n">particles</span><span class="p">,</span>
+                <span class="s2">&quot;particles_hash&quot;</span><span class="p">:</span> <span class="n">variant</span><span class="o">.</span><span class="n">particles_hash</span><span class="p">,</span>
+                <span class="s2">&quot;pystilt&quot;</span><span class="p">:</span> <span class="n">_pystilt_version</span><span class="p">(),</span>
+                <span class="s2">&quot;settings&quot;</span><span class="p">:</span> <span class="n">settings</span><span class="p">,</span>
+            <span class="p">}</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">variant</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">digest</span><span class="p">[:</span><span class="n">HASH_CHARS</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="n">_write_settings</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_dir</span><span class="p">(</span><span class="n">kind</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span> <span class="o">/</span> <span class="n">SETTINGS_FILE</span><span class="p">,</span> <span class="n">record</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_hashes</span><span class="p">[</span><span class="n">kind</span><span class="p">][</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">digest</span>
+        <span class="k">return</span> <span class="n">name</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_part</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">tree</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">,</span> <span class="n">realization</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Location</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return the folder *name* of a tree, inside its ``realization=k`` partition for an ensemble.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            If *realization* is not one the variant runs as.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">_check_realization</span><span class="p">(</span><span class="n">variant</span><span class="p">,</span> <span class="n">realization</span><span class="p">)</span>
+        <span class="n">folder</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dir</span><span class="p">(</span><span class="n">tree</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">folder</span> <span class="k">if</span> <span class="n">realization</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">folder</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;realization=</span><span class="si">{</span><span class="n">realization</span><span class="si">}</span><span class="s2">&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_found</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">kind</span><span class="p">:</span> <span class="n">Kind</span><span class="p">,</span> <span class="n">tree</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">,</span> <span class="n">realization</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Location</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the existing folder of *variant*&#39;s results of *kind* in *tree*, or ``None``.&quot;&quot;&quot;</span>
+        <span class="n">_check_realization</span><span class="p">(</span><span class="n">variant</span><span class="p">,</span> <span class="n">realization</span><span class="p">)</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_name</span><span class="p">(</span><span class="n">kind</span><span class="p">,</span> <span class="n">variant</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">name</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">_part</span><span class="p">(</span><span class="n">tree</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">realization</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_made</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">kind</span><span class="p">:</span> <span class="n">Kind</span><span class="p">,</span> <span class="n">tree</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">,</span> <span class="n">realization</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Location</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the folder of *variant*&#39;s results of *kind* in *tree*, making the settings folder on first use.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_part</span><span class="p">(</span><span class="n">tree</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create</span><span class="p">(</span><span class="n">kind</span><span class="p">,</span> <span class="n">variant</span><span class="p">),</span> <span class="n">variant</span><span class="p">,</span> <span class="n">realization</span><span class="p">)</span>
+
+    <span class="c1"># -- one receptor&#39;s files ------------------------------------------------</span>
+
+<div class="viewcode-block" id="Output.path">
+<a class="viewcode-back" href="../../reference/_api/stilt.output.Output.path.html#stilt.output.Output.path">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">path</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">kind</span><span class="p">:</span> <span class="n">Kind</span><span class="p">,</span>
+        <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">,</span>
+        <span class="n">receptor_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">realization</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Location</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return the file of one receptor&#39;s result, whether or not it exists.</span>
+
+<span class="sd">        ``None`` before the variant&#39;s folder of *kind* exists. An ensemble&#39;s</span>
+<span class="sd">        results are in a ``realization=k`` partition of its folder.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">folder</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_found</span><span class="p">(</span><span class="n">kind</span><span class="p">,</span> <span class="n">kind</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">realization</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">folder</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">_receptor_file</span><span class="p">(</span><span class="n">folder</span><span class="p">,</span> <span class="n">receptor_id</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Output.log_path">
+<a class="viewcode-back" href="../../reference/_api/stilt.output.Output.log_path.html#stilt.output.Output.log_path">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">log_path</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">,</span> <span class="n">receptor_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">realization</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Location</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return where the log of a receptor&#39;s transport model run is kept, or ``None`` before its folder exists.&quot;&quot;&quot;</span>
+        <span class="n">logs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_found</span><span class="p">(</span><span class="s2">&quot;particles&quot;</span><span class="p">,</span> <span class="s2">&quot;logs&quot;</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">realization</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">logs</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">_receptor_file</span><span class="p">(</span><span class="n">logs</span><span class="p">,</span> <span class="n">receptor_id</span><span class="p">,</span> <span class="s2">&quot;.log&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Output.kept_workdir">
+<a class="viewcode-back" href="../../reference/_api/stilt.output.Output.kept_workdir.html#stilt.output.Output.kept_workdir">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">kept_workdir</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">,</span> <span class="n">receptor_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">realization</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Location</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return where a receptor&#39;s failed run&#39;s working directory is kept, or ``None`` before its folder exists.&quot;&quot;&quot;</span>
+        <span class="n">kept</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_found</span><span class="p">(</span><span class="s2">&quot;particles&quot;</span><span class="p">,</span> <span class="s2">&quot;scratch&quot;</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">realization</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">kept</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">kept</span> <span class="o">/</span> <span class="n">_date_dir</span><span class="p">(</span><span class="n">receptor_id</span><span class="p">)</span> <span class="o">/</span> <span class="n">receptor_id</span></div>
+
+
+    <span class="c1"># -- many receptors&#39; files ----------------------------------------------</span>
+
+<div class="viewcode-block" id="Output.present">
+<a class="viewcode-back" href="../../reference/_api/stilt.output.Output.present.html#stilt.output.Output.present">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">present</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">kind</span><span class="p">:</span> <span class="n">Kind</span><span class="p">,</span>
+        <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">,</span>
+        <span class="n">receptor_ids</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">realization</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">frozenset</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return the receptors that have a file of *kind* for *variant*.</span>
+
+<span class="sd">        Only the date folders of *receptor_ids* are listed; without them,</span>
+<span class="sd">        every date folder is. No file is opened.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">folder</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_found</span><span class="p">(</span><span class="n">kind</span><span class="p">,</span> <span class="n">kind</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">realization</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">folder</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">frozenset</span><span class="p">()</span>
+        <span class="k">return</span> <span class="nb">frozenset</span><span class="p">(</span><span class="n">_list_receptor_files</span><span class="p">(</span><span class="n">folder</span><span class="p">,</span> <span class="s2">&quot;.parquet&quot;</span><span class="p">,</span> <span class="n">receptor_ids</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="Output.complete">
+<a class="viewcode-back" href="../../reference/_api/stilt.output.Output.complete.html#stilt.output.Output.complete">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">complete</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">,</span>
+        <span class="n">receptor_ids</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">realization</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">frozenset</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return the receptors whose simulations under *variant* are complete (:func:`completed`).</span>
+
+<span class="sd">        Only the receptors with particles are looked for in the footprints.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">particles</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">present</span><span class="p">(</span><span class="s2">&quot;particles&quot;</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">receptor_ids</span><span class="p">,</span> <span class="n">realization</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">variant</span><span class="o">.</span><span class="n">footprint</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">completed</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">footprints</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">present</span><span class="p">(</span><span class="s2">&quot;footprints&quot;</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">particles</span><span class="p">,</span> <span class="n">realization</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">completed</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="n">footprints</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Output.table">
+<a class="viewcode-back" href="../../reference/_api/stilt.output.Output.table.html#stilt.output.Output.table">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">table</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">kind</span><span class="p">:</span> <span class="n">Kind</span><span class="p">,</span>
+        <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">,</span>
+        <span class="n">receptor_ids</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">realization</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pa</span><span class="o">.</span><span class="n">Table</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return the files of many receptors as one table.</span>
+
+<span class="sd">        Columns are ``receptor``, the stored columns, and ``date`` (the</span>
+<span class="sd">        receptor date, from the folder, as ``date32``).</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        kind : {&quot;particles&quot;, &quot;footprints&quot;}</span>
+<span class="sd">            Which results.</span>
+<span class="sd">        variant : Variant</span>
+<span class="sd">            Whose results.</span>
+<span class="sd">        receptor_ids : iterable of str, optional</span>
+<span class="sd">            The receptors to read, each of which must have a file</span>
+<span class="sd">            (:meth:`present`). Without it, every file in the folder is read.</span>
+<span class="sd">        realization : int, optional</span>
+<span class="sd">            Which realization of an ensemble.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">_check_kind</span><span class="p">(</span><span class="n">kind</span><span class="p">)</span>
+        <span class="n">folder</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_found</span><span class="p">(</span><span class="n">kind</span><span class="p">,</span> <span class="n">kind</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">realization</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">folder</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">_EMPTY</span><span class="p">[</span><span class="n">kind</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">receptor_ids</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">paths</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">_list_receptor_files</span><span class="p">(</span><span class="n">folder</span><span class="p">,</span> <span class="s2">&quot;.parquet&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">paths</span> <span class="o">=</span> <span class="p">[</span><span class="n">_receptor_file</span><span class="p">(</span><span class="n">folder</span><span class="p">,</span> <span class="n">r</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span><span class="n">receptor_ids</span><span class="p">)]</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">paths</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">_EMPTY</span><span class="p">[</span><span class="n">kind</span><span class="p">]</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">folder</span><span class="p">,</span> <span class="n">Path</span><span class="p">):</span>
+            <span class="n">dataset</span> <span class="o">=</span> <span class="n">pads</span><span class="o">.</span><span class="n">dataset</span><span class="p">(</span>
+                <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">paths</span><span class="p">],</span>
+                <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;parquet&quot;</span><span class="p">,</span>
+                <span class="n">partitioning</span><span class="o">=</span><span class="n">_DATE_PARTITIONING</span><span class="p">,</span>
+                <span class="n">partition_base_dir</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">folder</span><span class="p">),</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>  <span class="c1"># an object store, read through its fsspec filesystem</span>
+            <span class="n">dataset</span> <span class="o">=</span> <span class="n">pads</span><span class="o">.</span><span class="n">dataset</span><span class="p">(</span>
+                <span class="p">[</span><span class="n">p</span><span class="o">.</span><span class="n">path</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">paths</span> <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">Path</span><span class="p">)],</span>
+                <span class="n">filesystem</span><span class="o">=</span><span class="n">folder</span><span class="o">.</span><span class="n">fs</span><span class="p">,</span>
+                <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;parquet&quot;</span><span class="p">,</span>
+                <span class="n">partitioning</span><span class="o">=</span><span class="n">_DATE_PARTITIONING</span><span class="p">,</span>
+                <span class="n">partition_base_dir</span><span class="o">=</span><span class="n">folder</span><span class="o">.</span><span class="n">path</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="n">dataset</span><span class="o">.</span><span class="n">to_table</span><span class="p">()</span></div>
+
+
+    <span class="c1"># -- failure records ---------------------------------------------------</span>
+
+<div class="viewcode-block" id="Output.failure">
+<a class="viewcode-back" href="../../reference/_api/stilt.output.Output.failure.html#stilt.output.Output.failure">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">failure</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">kind</span><span class="p">:</span> <span class="n">Kind</span><span class="p">,</span>
+        <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">,</span>
+        <span class="n">receptor_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">realization</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return why a receptor&#39;s result of *kind* failed, as the worker recorded it, or ``None``.</span>
+
+<span class="sd">        A record holds ``step``, ``reason``, ``message``, and ``time``, and a</span>
+<span class="sd">        ``traceback`` for an unexpected error. It is removed when the result</span>
+<span class="sd">        is written.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">logs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_found</span><span class="p">(</span><span class="n">kind</span><span class="p">,</span> <span class="s2">&quot;logs&quot;</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">realization</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">logs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">_receptor_file</span><span class="p">(</span><span class="n">logs</span><span class="p">,</span> <span class="n">receptor_id</span><span class="p">,</span> <span class="n">FAILURE_SUFFIX</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">_read_yaml</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span> <span class="k">else</span> <span class="kc">None</span></div>
+
+
+<div class="viewcode-block" id="Output.failures">
+<a class="viewcode-back" href="../../reference/_api/stilt.output.Output.failures.html#stilt.output.Output.failures">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">failures</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">kind</span><span class="p">:</span> <span class="n">Kind</span><span class="p">,</span>
+        <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">,</span>
+        <span class="n">receptor_ids</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">realization</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return ``{receptor_id: record}`` for the receptors with a failure record of *kind*.</span>
+
+<span class="sd">        With *receptor_ids*, only their date folders are listed. The records</span>
+<span class="sd">        found are read in a few threads.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">logs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_found</span><span class="p">(</span><span class="n">kind</span><span class="p">,</span> <span class="s2">&quot;logs&quot;</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">realization</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">logs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">{}</span>
+        <span class="n">paths</span> <span class="o">=</span> <span class="n">_list_receptor_files</span><span class="p">(</span><span class="n">logs</span><span class="p">,</span> <span class="n">FAILURE_SUFFIX</span><span class="p">,</span> <span class="n">receptor_ids</span><span class="p">)</span>
+        <span class="k">with</span> <span class="n">ThreadPoolExecutor</span><span class="p">(</span><span class="n">max_workers</span><span class="o">=</span><span class="mi">16</span><span class="p">)</span> <span class="k">as</span> <span class="n">pool</span><span class="p">:</span>
+            <span class="n">records</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">pool</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">_read_yaml</span><span class="p">,</span> <span class="n">paths</span><span class="o">.</span><span class="n">values</span><span class="p">()))</span>
+        <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">paths</span><span class="p">,</span> <span class="n">records</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="Output.record_failure">
+<a class="viewcode-back" href="../../reference/_api/stilt.output.Output.record_failure.html#stilt.output.Output.record_failure">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">record_failure</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">kind</span><span class="p">:</span> <span class="n">Kind</span><span class="p">,</span>
+        <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">,</span>
+        <span class="n">receptor_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">record</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+        <span class="n">realization</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Write why a receptor&#39;s result of *kind* failed, replacing an earlier record.</span>
+
+<span class="sd">        It goes in the logs of the folder whose result failed: a particles</span>
+<span class="sd">        failure covers every variant on those particles, a footprint failure</span>
+<span class="sd">        is the variant&#39;s own.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">logs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_made</span><span class="p">(</span><span class="n">kind</span><span class="p">,</span> <span class="s2">&quot;logs&quot;</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">realization</span><span class="p">)</span>
+        <span class="n">_write_yaml</span><span class="p">(</span><span class="n">_receptor_file</span><span class="p">(</span><span class="n">logs</span><span class="p">,</span> <span class="n">receptor_id</span><span class="p">,</span> <span class="n">FAILURE_SUFFIX</span><span class="p">),</span> <span class="n">record</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Output.clear_failure">
+<a class="viewcode-back" href="../../reference/_api/stilt.output.Output.clear_failure.html#stilt.output.Output.clear_failure">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">clear_failure</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">kind</span><span class="p">:</span> <span class="n">Kind</span><span class="p">,</span>
+        <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">,</span>
+        <span class="n">receptor_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">realization</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Remove a receptor&#39;s failure record of *kind*, once its result is written.&quot;&quot;&quot;</span>
+        <span class="n">logs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_found</span><span class="p">(</span><span class="n">kind</span><span class="p">,</span> <span class="s2">&quot;logs&quot;</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">realization</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">logs</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">_receptor_file</span><span class="p">(</span><span class="n">logs</span><span class="p">,</span> <span class="n">receptor_id</span><span class="p">,</span> <span class="n">FAILURE_SUFFIX</span><span class="p">)</span><span class="o">.</span><span class="n">unlink</span><span class="p">(</span><span class="n">missing_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div>
+
+
+    <span class="c1"># -- writing -----------------------------------------------------------</span>
+
+<div class="viewcode-block" id="Output.write_particles">
+<a class="viewcode-back" href="../../reference/_api/stilt.output.Output.write_particles.html#stilt.output.Output.write_particles">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">write_particles</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">,</span>
+        <span class="n">receptor</span><span class="p">:</span> <span class="n">Receptor</span><span class="p">,</span>
+        <span class="n">particles</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+        <span class="n">met_files</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">],</span>
+        <span class="n">realization</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Location</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Write a receptor&#39;s particles (:func:`stilt.particles.write_particles`).</span>
+
+<span class="sd">        The file records the run&#39;s settings, so it reads alone, and the</span>
+<span class="sd">        folder&#39;s settings hash, the PYSTILT version, and the realization.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">folder</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_made</span><span class="p">(</span><span class="s2">&quot;particles&quot;</span><span class="p">,</span> <span class="s2">&quot;particles&quot;</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">realization</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">write_particles</span><span class="p">(</span>
+            <span class="n">_receptor_file</span><span class="p">(</span><span class="n">folder</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">receptor</span><span class="o">.</span><span class="n">id</span><span class="p">)),</span>
+            <span class="n">particles</span><span class="p">,</span>
+            <span class="n">receptor</span><span class="p">,</span>
+            <span class="n">variant</span><span class="o">.</span><span class="n">run_settings</span><span class="p">,</span>
+            <span class="n">met_files</span><span class="p">,</span>
+            <span class="n">metadata</span><span class="o">=</span><span class="n">_stamp</span><span class="p">(</span><span class="n">variant</span><span class="o">.</span><span class="n">particles_hash</span><span class="p">,</span> <span class="n">realization</span><span class="p">),</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Output.logged">
+<a class="viewcode-back" href="../../reference/_api/stilt.output.Output.logged.html#stilt.output.Output.logged">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">logged</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">,</span>
+        <span class="n">receptor_ids</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">realization</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">frozenset</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return the receptors that have a transport model log for *variant*.</span>
+
+<span class="sd">        Only the date folders of *receptor_ids* are listed. A log with no</span>
+<span class="sd">        particles and no failure record is a run that started and did not</span>
+<span class="sd">        finish (``interrupted`` in :meth:`stilt.Project.status`).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">logs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_found</span><span class="p">(</span><span class="s2">&quot;particles&quot;</span><span class="p">,</span> <span class="s2">&quot;logs&quot;</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">realization</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">logs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">frozenset</span><span class="p">()</span>
+        <span class="k">return</span> <span class="nb">frozenset</span><span class="p">(</span><span class="n">_list_receptor_files</span><span class="p">(</span><span class="n">logs</span><span class="p">,</span> <span class="s2">&quot;.log&quot;</span><span class="p">,</span> <span class="n">receptor_ids</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="Output.write_log">
+<a class="viewcode-back" href="../../reference/_api/stilt.output.Output.write_log.html#stilt.output.Output.write_log">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">write_log</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">,</span>
+        <span class="n">receptor_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">realization</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Location</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Write the log of a receptor&#39;s transport model run.&quot;&quot;&quot;</span>
+        <span class="n">logs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_made</span><span class="p">(</span><span class="s2">&quot;particles&quot;</span><span class="p">,</span> <span class="s2">&quot;logs&quot;</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">realization</span><span class="p">)</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">_receptor_file</span><span class="p">(</span><span class="n">logs</span><span class="p">,</span> <span class="n">receptor_id</span><span class="p">,</span> <span class="s2">&quot;.log&quot;</span><span class="p">)</span>
+        <span class="n">path</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">path</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">path</span></div>
+
+
+<div class="viewcode-block" id="Output.keep_workdir">
+<a class="viewcode-back" href="../../reference/_api/stilt.output.Output.keep_workdir.html#stilt.output.Output.keep_workdir">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">keep_workdir</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">,</span>
+        <span class="n">receptor_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">workdir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
+        <span class="n">realization</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Location</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Copy a run&#39;s working directory to :meth:`kept_workdir`, replacing an earlier copy.</span>
+
+<span class="sd">        A failed run&#39;s is kept, so CONTROL, SETUP.CFG, and the model&#39;s own</span>
+<span class="sd">        output can be read after the job ends.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">scratch</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_made</span><span class="p">(</span><span class="s2">&quot;particles&quot;</span><span class="p">,</span> <span class="s2">&quot;scratch&quot;</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">realization</span><span class="p">)</span>
+        <span class="n">kept</span> <span class="o">=</span> <span class="n">scratch</span> <span class="o">/</span> <span class="n">_date_dir</span><span class="p">(</span><span class="n">receptor_id</span><span class="p">)</span> <span class="o">/</span> <span class="n">receptor_id</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">kept</span><span class="p">,</span> <span class="n">Path</span><span class="p">):</span>
+            <span class="n">shutil</span><span class="o">.</span><span class="n">rmtree</span><span class="p">(</span><span class="n">kept</span><span class="p">,</span> <span class="n">ignore_errors</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">kept</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">shutil</span><span class="o">.</span><span class="n">copytree</span><span class="p">(</span><span class="n">workdir</span><span class="p">,</span> <span class="n">kept</span><span class="p">,</span> <span class="n">symlinks</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">kept</span>
+        <span class="c1"># An object store keeps no links, so the met files the working</span>
+        <span class="c1"># directory links to are left out.</span>
+        <span class="k">if</span> <span class="n">kept</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+            <span class="n">kept</span><span class="o">.</span><span class="n">fs</span><span class="o">.</span><span class="n">rm</span><span class="p">(</span><span class="n">kept</span><span class="o">.</span><span class="n">path</span><span class="p">,</span> <span class="n">recursive</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">workdir</span><span class="o">.</span><span class="n">rglob</span><span class="p">(</span><span class="s2">&quot;*&quot;</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="n">file</span><span class="o">.</span><span class="n">is_file</span><span class="p">()</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">file</span><span class="o">.</span><span class="n">is_symlink</span><span class="p">():</span>
+                <span class="p">(</span><span class="n">kept</span> <span class="o">/</span> <span class="n">file</span><span class="o">.</span><span class="n">relative_to</span><span class="p">(</span><span class="n">workdir</span><span class="p">)</span><span class="o">.</span><span class="n">as_posix</span><span class="p">())</span><span class="o">.</span><span class="n">write_bytes</span><span class="p">(</span>
+                    <span class="n">file</span><span class="o">.</span><span class="n">read_bytes</span><span class="p">()</span>
+                <span class="p">)</span>
+        <span class="k">return</span> <span class="n">kept</span></div>
+
+
+<div class="viewcode-block" id="Output.write_footprint">
+<a class="viewcode-back" href="../../reference/_api/stilt.output.Output.write_footprint.html#stilt.output.Output.write_footprint">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">write_footprint</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">,</span> <span class="n">foot</span><span class="p">:</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">,</span> <span class="n">realization</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Location</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Write one receptor&#39;s footprint (:func:`stilt.footprint.write_footprint`).</span>
+
+<span class="sd">        The footprint must be on the variant&#39;s grid. The file records the</span>
+<span class="sd">        footprint settings, the folder&#39;s hash, and the hash of the particles</span>
+<span class="sd">        it was made from, so it reads alone.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">path</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">digest</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_footprint_file</span><span class="p">(</span>
+            <span class="n">variant</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">foot</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">receptor</span><span class="o">.</span><span class="n">id</span><span class="p">),</span> <span class="n">realization</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">write_footprint</span><span class="p">(</span>
+            <span class="n">path</span><span class="p">,</span>
+            <span class="n">foot</span><span class="p">,</span>
+            <span class="n">config</span><span class="p">,</span>
+            <span class="n">_footprint_stamp</span><span class="p">(</span><span class="n">digest</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">realization</span><span class="p">),</span>
+            <span class="n">geometry_hash</span><span class="o">=</span><span class="n">variant</span><span class="o">.</span><span class="n">geometry_hash</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Output.write_empty_footprint">
+<a class="viewcode-back" href="../../reference/_api/stilt.output.Output.write_empty_footprint.html#stilt.output.Output.write_empty_footprint">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">write_empty_footprint</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">,</span>
+        <span class="n">receptor</span><span class="p">:</span> <span class="n">Receptor</span><span class="p">,</span>
+        <span class="n">realization</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Location</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Record that a receptor&#39;s footprint is empty: no particle reached the grid.&quot;&quot;&quot;</span>
+        <span class="n">path</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">digest</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_footprint_file</span><span class="p">(</span>
+            <span class="n">variant</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">receptor</span><span class="o">.</span><span class="n">id</span><span class="p">),</span> <span class="n">realization</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">write_empty_footprint</span><span class="p">(</span>
+            <span class="n">path</span><span class="p">,</span>
+            <span class="n">receptor</span><span class="p">,</span>
+            <span class="n">config</span><span class="p">,</span>
+            <span class="n">variant</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+            <span class="n">_footprint_stamp</span><span class="p">(</span><span class="n">digest</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">realization</span><span class="p">),</span>
+            <span class="n">geometry_hash</span><span class="o">=</span><span class="n">variant</span><span class="o">.</span><span class="n">geometry_hash</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_footprint_file</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">variant</span><span class="p">:</span> <span class="n">Variant</span><span class="p">,</span> <span class="n">receptor_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">realization</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Location</span><span class="p">,</span> <span class="n">FootprintConfig</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return a receptor&#39;s footprint file, the settings, and the folder&#39;s hash, making the folder on first use.&quot;&quot;&quot;</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create</span><span class="p">(</span><span class="s2">&quot;footprints&quot;</span><span class="p">,</span> <span class="n">variant</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">variant</span><span class="o">.</span><span class="n">footprint</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># _create has raised already</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Variant </span><span class="si">{</span><span class="n">variant</span><span class="o">.</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> makes no footprints.&quot;</span><span class="p">)</span>
+        <span class="n">folder</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_part</span><span class="p">(</span><span class="s2">&quot;footprints&quot;</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">realization</span><span class="p">)</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">_receptor_file</span><span class="p">(</span><span class="n">folder</span><span class="p">,</span> <span class="n">receptor_id</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">path</span><span class="p">,</span> <span class="n">variant</span><span class="o">.</span><span class="n">footprint</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_hashes</span><span class="p">[</span><span class="s2">&quot;footprints&quot;</span><span class="p">][</span><span class="n">name</span><span class="p">]</span></div>
+
+
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;KINDS&quot;</span><span class="p">,</span> <span class="s2">&quot;Kind&quot;</span><span class="p">,</span> <span class="s2">&quot;Output&quot;</span><span class="p">,</span> <span class="s2">&quot;completed&quot;</span><span class="p">]</span>
+</pre></div>
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../_static/scripts/bootstrap.js?digest=7f76b32a3354e82990f2"></script>
+<script defer src="../../_static/scripts/pydata-sphinx-theme.js?digest=7f76b32a3354e82990f2"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2026, James Mineau.
+      <br/>
+    
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.1.0.
+    <br/>
+  </p>
+</div>
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.17.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

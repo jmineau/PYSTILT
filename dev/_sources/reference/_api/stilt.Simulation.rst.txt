@@ -1,0 +1,145 @@
+﻿stilt.Simulation
+================
+
+.. currentmodule:: stilt
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.. class-signature:: stilt.Simulation
+
+
+.. class-parameters:: stilt.Simulation
+
+
+
+Methods
+-------
+
+.. autosummary::
+   :toctree:
+
+
+   ~Simulation.background
+   ~Simulation.calc_footprint
+   ~Simulation.transport_error
+
+
+Attributes
+----------
+
+.. autosummary::
+
+   ~Simulation.directory
+   ~Simulation.failure
+   ~Simulation.footprint
+   ~Simulation.footprint_path
+   ~Simulation.has_footprint
+   ~Simulation.has_particles
+   ~Simulation.id
+   ~Simulation.is_complete
+   ~Simulation.kept_workdir
+   ~Simulation.log
+   ~Simulation.log_path
+   ~Simulation.particles
+   ~Simulation.particles_path
+   ~Simulation.plot
+   ~Simulation.realization
+   ~Simulation.transport
+   ~Simulation.receptor
+   ~Simulation.variant
+   ~Simulation.output
+

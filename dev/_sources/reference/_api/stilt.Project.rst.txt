@@ -1,0 +1,150 @@
+﻿stilt.Project
+=============
+
+.. currentmodule:: stilt
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.. class-signature:: stilt.Project
+
+
+.. class-parameters:: stilt.Project
+
+
+
+Methods
+-------
+
+.. autosummary::
+   :toctree:
+
+
+   ~Project.add_receptors
+   ~Project.add_table
+   ~Project.folders
+   ~Project.footprints
+   ~Project.incomplete
+   ~Project.init
+   ~Project.jacobian
+   ~Project.particles
+   ~Project.receptor
+   ~Project.run
+   ~Project.simulation
+   ~Project.status
+   ~Project.submit
+   ~Project.table_path
+
+
+Attributes
+----------
+
+.. autosummary::
+
+   ~Project.config
+   ~Project.config_path
+   ~Project.name
+   ~Project.output
+   ~Project.plot
+   ~Project.receptors
+   ~Project.receptors_path
+   ~Project.simulations
+   ~Project.variants
+

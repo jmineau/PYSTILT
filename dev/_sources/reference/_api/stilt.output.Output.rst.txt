@@ -1,0 +1,135 @@
+﻿stilt.output.Output
+===================
+
+.. currentmodule:: stilt.output
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.. class-signature:: stilt.output.Output
+
+
+.. class-parameters:: stilt.output.Output
+
+
+
+Methods
+-------
+
+.. autosummary::
+   :toctree:
+
+
+   ~Output.clear_failure
+   ~Output.complete
+   ~Output.failure
+   ~Output.failures
+   ~Output.folder
+   ~Output.folders
+   ~Output.hashes
+   ~Output.keep_workdir
+   ~Output.kept_workdir
+   ~Output.log_path
+   ~Output.logged
+   ~Output.path
+   ~Output.present
+   ~Output.record_failure
+   ~Output.table
+   ~Output.write_empty_footprint
+   ~Output.write_footprint
+   ~Output.write_log
+   ~Output.write_particles
+
+
+Attributes
+----------
+
+.. autosummary::
+
+   ~Output.directory
+

@@ -1,0 +1,1079 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>stilt.receptors.table &#8212; PYSTILT dev</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../_static/styles/theme.css?digest=7f76b32a3354e82990f2" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=7f76b32a3354e82990f2" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/custom.css?v=90cc9208" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../../../_static/scripts/fontawesome.js?digest=7f76b32a3354e82990f2"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=7f76b32a3354e82990f2" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=7f76b32a3354e82990f2" />
+
+    <script src="../../../_static/documentation_options.js?v=0af36158"></script>
+    <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/stilt/receptors/table';</script>
+    <script>
+        DOCUMENTATION_OPTIONS.theme_version = '0.17.0';
+        DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = 'dev';
+        DOCUMENTATION_OPTIONS.show_version_warning_banner =
+            true;
+        </script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="0.1.0a23.dev261+gb929e3256" />
+  
+    
+    <script src="../../../_static/searchtools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    <script src="../../../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+<aside class="bd-header-announcement" aria-label="Announcement">
+  <div class="bd-header-announcement__content">PYSTILT is in alpha: names and options may change between releases.</div>
+</aside>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class=" navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">PYSTILT dev</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class=" navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../getting_started/index.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../tutorials/index.html">
+    Tutorials
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../guides/index.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../migration/index.html">
+    Coming From Another STILT
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../reference/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../advanced/index.html">
+    Internals
+  </a>
+</li>
+
+            <li class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button"
+                data-bs-toggle="dropdown" aria-expanded="false"
+                aria-controls="pst-nav-more-links">
+                    More
+                </button>
+                <ul id="pst-nav-more-links" class="dropdown-menu">
+                    
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../../roadmap.html">
+    Roadmap
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../../development.html">
+    Development
+  </a>
+</li>
+
+                </ul>
+            </li>
+            
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-2"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-2"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-2"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-2">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/jmineau/PYSTILT" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../getting_started/index.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../tutorials/index.html">
+    Tutorials
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../guides/index.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../migration/index.html">
+    Coming From Another STILT
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../reference/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../advanced/index.html">
+    Internals
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../roadmap.html">
+    Roadmap
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../development.html">
+    Development
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-3"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-3"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-3"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-3">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/jmineau/PYSTILT" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../../index.html" class="nav-link">Module code</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">stilt.receptors.table</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for stilt.receptors.table</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">The receptor table: one row per release point, as ``receptors.csv`` holds it.</span>
+
+<span class="sd">:func:`receptor_rows` checks a table quickly, without building receptors,</span>
+<span class="sd">and the functions here convert between tables, CSV files, and receptors.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">dt</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Iterable</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">io</span><span class="w"> </span><span class="kn">import</span> <span class="n">StringIO</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">IO</span><span class="p">,</span> <span class="n">Any</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.models</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">ColumnReceptor</span><span class="p">,</span>
+    <span class="n">MultiPointReceptor</span><span class="p">,</span>
+    <span class="n">PointReceptor</span><span class="p">,</span>
+    <span class="n">Receptor</span><span class="p">,</span>
+    <span class="n">_column_location</span><span class="p">,</span>
+    <span class="n">_multipoint_locations</span><span class="p">,</span>
+    <span class="n">_point_location</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.validation</span><span class="w"> </span><span class="kn">import</span> <span class="n">column_errors</span><span class="p">,</span> <span class="n">multipoint_errors</span><span class="p">,</span> <span class="n">point_errors</span>
+
+<span class="c1">#: The columns of a receptor table, one row per release point.</span>
+<span class="n">COLUMNS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;r_idx&quot;</span><span class="p">,</span> <span class="s2">&quot;time&quot;</span><span class="p">,</span> <span class="s2">&quot;longitude&quot;</span><span class="p">,</span> <span class="s2">&quot;latitude&quot;</span><span class="p">,</span> <span class="s2">&quot;altitude&quot;</span><span class="p">,</span> <span class="s2">&quot;altitude_ref&quot;</span><span class="p">)</span>
+
+<span class="c1">#: Column names :func:`read_receptors` accepts for each field, in any case.</span>
+<span class="n">ALIASES</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;r_idx&quot;</span><span class="p">:</span> <span class="p">(</span><span class="s2">&quot;r_idx&quot;</span><span class="p">,),</span>
+    <span class="s2">&quot;time&quot;</span><span class="p">:</span> <span class="p">(</span><span class="s2">&quot;time&quot;</span><span class="p">,),</span>
+    <span class="s2">&quot;longitude&quot;</span><span class="p">:</span> <span class="p">(</span><span class="s2">&quot;longitude&quot;</span><span class="p">,</span> <span class="s2">&quot;long&quot;</span><span class="p">,</span> <span class="s2">&quot;lon&quot;</span><span class="p">),</span>
+    <span class="s2">&quot;latitude&quot;</span><span class="p">:</span> <span class="p">(</span><span class="s2">&quot;latitude&quot;</span><span class="p">,</span> <span class="s2">&quot;lati&quot;</span><span class="p">,</span> <span class="s2">&quot;lat&quot;</span><span class="p">),</span>
+    <span class="s2">&quot;altitude&quot;</span><span class="p">:</span> <span class="p">(</span><span class="s2">&quot;altitude&quot;</span><span class="p">,</span> <span class="s2">&quot;zagl&quot;</span><span class="p">,</span> <span class="s2">&quot;zmsl&quot;</span><span class="p">,</span> <span class="s2">&quot;z&quot;</span><span class="p">),</span>
+    <span class="s2">&quot;altitude_ref&quot;</span><span class="p">:</span> <span class="p">(</span><span class="s2">&quot;altitude_ref&quot;</span><span class="p">,</span> <span class="s2">&quot;height_ref&quot;</span><span class="p">),</span>
+<span class="p">}</span>
+
+
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<span class="c1"># The receptor table</span>
+<span class="c1"># ---------------------------------------------------------------------------</span>
+
+
+<div class="viewcode-block" id="receptors_to_frame">
+<a class="viewcode-back" href="../../../reference/_api/stilt.receptors.receptors_to_frame.html#stilt.receptors_to_frame">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">receptors_to_frame</span><span class="p">(</span><span class="n">receptors</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Receptor</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return receptors as one table with a row per release point.</span>
+
+<span class="sd">    The columns are ``r_idx`` (the receptor&#39;s position, shared by the rows</span>
+<span class="sd">    of a column or multipoint receptor), ``time``, ``longitude``,</span>
+<span class="sd">    ``latitude``, ``altitude``, ``altitude_ref``, and one column per label</span>
+<span class="sd">    in any receptor&#39;s ``attrs``.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">receptors</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">receptors</span><span class="p">)</span>
+    <span class="n">labels</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span><span class="n">k</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">receptors</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">r</span><span class="o">.</span><span class="n">attrs</span><span class="p">))</span>
+    <span class="n">rows</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">{</span>
+            <span class="s2">&quot;r_idx&quot;</span><span class="p">:</span> <span class="n">idx</span><span class="p">,</span>
+            <span class="s2">&quot;time&quot;</span><span class="p">:</span> <span class="n">r</span><span class="o">.</span><span class="n">time</span><span class="p">,</span>
+            <span class="s2">&quot;longitude&quot;</span><span class="p">:</span> <span class="n">lon</span><span class="p">,</span>
+            <span class="s2">&quot;latitude&quot;</span><span class="p">:</span> <span class="n">lat</span><span class="p">,</span>
+            <span class="s2">&quot;altitude&quot;</span><span class="p">:</span> <span class="n">alt</span><span class="p">,</span>
+            <span class="s2">&quot;altitude_ref&quot;</span><span class="p">:</span> <span class="n">r</span><span class="o">.</span><span class="n">altitude_ref</span><span class="p">,</span>
+            <span class="o">**</span><span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">r</span><span class="o">.</span><span class="n">attrs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">k</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">labels</span><span class="p">},</span>
+        <span class="p">}</span>
+        <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">receptors</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">lat</span><span class="p">,</span> <span class="n">lon</span><span class="p">,</span> <span class="n">alt</span> <span class="ow">in</span> <span class="n">r</span><span class="o">.</span><span class="n">coords</span><span class="p">()</span>
+    <span class="p">]</span>
+    <span class="n">frame</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">rows</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="o">*</span><span class="n">COLUMNS</span><span class="p">,</span> <span class="o">*</span><span class="n">labels</span><span class="p">])</span>
+    <span class="k">return</span> <span class="n">frame</span><span class="o">.</span><span class="n">astype</span><span class="p">({</span><span class="s2">&quot;time&quot;</span><span class="p">:</span> <span class="s2">&quot;datetime64[ns]&quot;</span><span class="p">})</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_normalize_columns</span><span class="p">(</span><span class="n">frame</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return *frame* with the receptor columns under their standard names.</span>
+
+<span class="sd">    Also returns the file&#39;s own spelling of each standard column. Any other</span>
+<span class="sd">    column is kept as it is. A ``zmsl`` altitude column implies ``msl``.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">spelling</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">field</span><span class="p">,</span> <span class="n">aliases</span> <span class="ow">in</span> <span class="n">ALIASES</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">frame</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">col</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="n">aliases</span><span class="p">:</span>
+                <span class="n">spelling</span><span class="p">[</span><span class="n">field</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">col</span><span class="p">)</span>
+                <span class="k">break</span>
+    <span class="n">frame</span> <span class="o">=</span> <span class="n">frame</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">{</span><span class="n">name</span><span class="p">:</span> <span class="n">field</span> <span class="k">for</span> <span class="n">field</span><span class="p">,</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">spelling</span><span class="o">.</span><span class="n">items</span><span class="p">()})</span>
+    <span class="k">if</span> <span class="s2">&quot;altitude_ref&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">frame</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+        <span class="n">implied</span> <span class="o">=</span> <span class="s2">&quot;msl&quot;</span> <span class="k">if</span> <span class="n">spelling</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;altitude&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;zmsl&quot;</span> <span class="k">else</span> <span class="s2">&quot;agl&quot;</span>
+        <span class="n">frame</span> <span class="o">=</span> <span class="n">frame</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span><span class="n">altitude_ref</span><span class="o">=</span><span class="n">implied</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">frame</span><span class="p">,</span> <span class="n">spelling</span>
+
+
+<span class="c1">#: Columns :func:`receptor_rows` adds; a receptors file may not use these names.</span>
+<span class="n">ROW_COLUMNS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;receptor&quot;</span><span class="p">,</span> <span class="s2">&quot;kind&quot;</span><span class="p">,</span> <span class="s2">&quot;location&quot;</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">receptor_rows</span><span class="p">(</span><span class="n">frame</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Check a receptor table and return it with each row&#39;s receptor id, kind, and location.</span>
+
+<span class="sd">    The table has a row per release point, as ``receptors.csv`` does, with</span>
+<span class="sd">    ``time``, ``longitude``, ``latitude``, and ``altitude`` columns in any of</span>
+<span class="sd">    the accepted spellings (see :func:`receptors_from_frame`). The result has</span>
+<span class="sd">    the standard column names, ``altitude_ref``, and three more columns:</span>
+<span class="sd">    ``receptor`` (the id), ``kind`` (``point``, ``column``, or</span>
+<span class="sd">    ``multipoint``), and ``location`` (the location id). A receptor listed</span>
+<span class="sd">    twice keeps its first rows. No receptor object is built, so this is quick</span>
+<span class="sd">    on a large file; :func:`receptors_from_rows` builds the receptors.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        For anything a receptor would refuse: a missing column, a longitude</span>
+<span class="sd">        or latitude out of range, a negative height above ground, rows of one</span>
+<span class="sd">        group that differ in time or altitude reference, a column whose two</span>
+<span class="sd">        heights are equal, a multipoint receptor with two points at one</span>
+<span class="sd">        location, or two different receptors with one id.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">frame</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">_normalize_columns</span><span class="p">(</span><span class="n">frame</span><span class="p">)</span>
+    <span class="n">required</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;time&quot;</span><span class="p">,</span> <span class="s2">&quot;longitude&quot;</span><span class="p">,</span> <span class="s2">&quot;latitude&quot;</span><span class="p">,</span> <span class="s2">&quot;altitude&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">c</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">frame</span><span class="o">.</span><span class="n">columns</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">required</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Receptor table must contain columns: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">required</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">clash</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">frame</span><span class="o">.</span><span class="n">columns</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">ROW_COLUMNS</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">clash</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;A receptors file may not have a column named </span><span class="si">{</span><span class="n">clash</span><span class="si">}</span><span class="s2">; PYSTILT uses &quot;</span>
+            <span class="s2">&quot;those names. Rename the column.&quot;</span>
+        <span class="p">)</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">frame</span><span class="p">)</span>
+    <span class="n">time</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">frame</span><span class="p">[</span><span class="s2">&quot;time&quot;</span><span class="p">])</span>
+    <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">dt</span><span class="p">,</span> <span class="s2">&quot;tz&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">tz_convert</span><span class="p">(</span><span class="s2">&quot;UTC&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">tz_localize</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+    <span class="n">lon</span> <span class="o">=</span> <span class="n">frame</span><span class="p">[</span><span class="s2">&quot;longitude&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="n">lat</span> <span class="o">=</span> <span class="n">frame</span><span class="p">[</span><span class="s2">&quot;latitude&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="n">alt</span> <span class="o">=</span> <span class="n">frame</span><span class="p">[</span><span class="s2">&quot;altitude&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="n">ref</span> <span class="o">=</span> <span class="n">frame</span><span class="p">[</span><span class="s2">&quot;altitude_ref&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+    <span class="c1"># Group keys as text: a file that mixes numeric and string ids must not</span>
+    <span class="c1"># split one receptor into two. Without r_idx, every row is a receptor.</span>
+    <span class="n">keys</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">frame</span><span class="p">[</span><span class="s2">&quot;r_idx&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+        <span class="k">if</span> <span class="s2">&quot;r_idx&quot;</span> <span class="ow">in</span> <span class="n">frame</span><span class="o">.</span><span class="n">columns</span>
+        <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">n</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+    <span class="p">)</span>
+    <span class="n">codes</span><span class="p">,</span> <span class="n">uniques</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">factorize</span><span class="p">(</span><span class="n">keys</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">fail</span><span class="p">(</span><span class="n">mask</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Raise *message* for the first row or group where *mask* is set.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">mask</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+            <span class="n">where</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">flatnonzero</span><span class="p">(</span><span class="n">mask</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="n">label</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;r_idx=</span><span class="si">{</span><span class="n">uniques</span><span class="p">[</span><span class="n">codes</span><span class="p">[</span><span class="n">where</span><span class="p">]]</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">if</span> <span class="s2">&quot;r_idx&quot;</span> <span class="ow">in</span> <span class="n">frame</span> <span class="k">else</span> <span class="sa">f</span><span class="s2">&quot;row </span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">message</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="n">fail</span><span class="p">(</span><span class="o">~</span><span class="n">np</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">ref</span><span class="p">,</span> <span class="p">(</span><span class="s2">&quot;agl&quot;</span><span class="p">,</span> <span class="s2">&quot;msl&quot;</span><span class="p">)),</span> <span class="s2">&quot;altitude_ref must be &#39;agl&#39; or &#39;msl&#39;.&quot;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">bad</span><span class="p">,</span> <span class="n">message</span> <span class="ow">in</span> <span class="n">point_errors</span><span class="p">(</span><span class="n">lon</span><span class="p">,</span> <span class="n">lat</span><span class="p">,</span> <span class="n">alt</span><span class="p">,</span> <span class="n">ref</span><span class="p">):</span>
+        <span class="n">fail</span><span class="p">(</span><span class="n">bad</span><span class="p">,</span> <span class="n">message</span><span class="p">)</span>
+
+    <span class="n">g</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+        <span class="p">{</span>
+            <span class="s2">&quot;code&quot;</span><span class="p">:</span> <span class="n">codes</span><span class="p">,</span>
+            <span class="s2">&quot;time&quot;</span><span class="p">:</span> <span class="n">time</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span>
+            <span class="s2">&quot;ref&quot;</span><span class="p">:</span> <span class="n">ref</span><span class="p">,</span>
+            <span class="s2">&quot;lon&quot;</span><span class="p">:</span> <span class="n">lon</span><span class="p">,</span>
+            <span class="s2">&quot;lat&quot;</span><span class="p">:</span> <span class="n">lat</span><span class="p">,</span>
+            <span class="s2">&quot;alt&quot;</span><span class="p">:</span> <span class="n">alt</span><span class="p">,</span>
+        <span class="p">}</span>
+    <span class="p">)</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">&quot;code&quot;</span><span class="p">,</span> <span class="n">sort</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">size</span> <span class="o">=</span> <span class="n">g</span><span class="p">[</span><span class="s2">&quot;code&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="s2">&quot;size&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+    <span class="n">fail</span><span class="p">(</span>
+        <span class="n">g</span><span class="p">[</span><span class="s2">&quot;ref&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="s2">&quot;nunique&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">,</span>
+        <span class="s2">&quot;All rows in one receptor group must share the same altitude_ref.&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">fail</span><span class="p">(</span>
+        <span class="n">g</span><span class="p">[</span><span class="s2">&quot;time&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="s2">&quot;nunique&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">,</span>
+        <span class="s2">&quot;All rows in one receptor group must share the same release time.&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">same_xy</span> <span class="o">=</span> <span class="p">(</span><span class="n">g</span><span class="p">[</span><span class="s2">&quot;lon&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="s2">&quot;nunique&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span>
+        <span class="n">g</span><span class="p">[</span><span class="s2">&quot;lat&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="s2">&quot;nunique&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span> <span class="o">==</span> <span class="mi">1</span>
+    <span class="p">)</span>
+    <span class="n">kind</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span>
+        <span class="n">size</span> <span class="o">==</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;point&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">((</span><span class="n">size</span> <span class="o">==</span> <span class="mi">2</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">same_xy</span><span class="p">,</span> <span class="s2">&quot;column&quot;</span><span class="p">,</span> <span class="s2">&quot;multipoint&quot;</span><span class="p">)</span>
+    <span class="p">)</span>
+    <span class="c1"># A column&#39;s two rows may come in either order.</span>
+    <span class="n">bottom</span> <span class="o">=</span> <span class="n">g</span><span class="p">[</span><span class="s2">&quot;alt&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="s2">&quot;min&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+    <span class="n">top</span> <span class="o">=</span> <span class="n">g</span><span class="p">[</span><span class="s2">&quot;alt&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="s2">&quot;max&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">bad</span><span class="p">,</span> <span class="n">message</span> <span class="ow">in</span> <span class="n">column_errors</span><span class="p">(</span><span class="n">bottom</span><span class="p">,</span> <span class="n">top</span><span class="p">):</span>
+        <span class="n">fail</span><span class="p">((</span><span class="n">kind</span> <span class="o">==</span> <span class="s2">&quot;column&quot;</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">bad</span><span class="p">,</span> <span class="n">message</span><span class="p">)</span>
+
+    <span class="c1"># Ids are made once per receptor, from its first row (or all its rows for</span>
+    <span class="c1"># a multipoint), then spread to its rows. Python floats round much faster</span>
+    <span class="c1"># than numpy scalars, and give the same result.</span>
+    <span class="n">_</span><span class="p">,</span> <span class="n">first_rows</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">codes</span><span class="p">,</span> <span class="n">return_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>  <span class="c1"># groups are 0, 1, ... in order</span>
+    <span class="n">lon_f</span><span class="p">,</span> <span class="n">lat_f</span><span class="p">,</span> <span class="n">alt_f</span> <span class="o">=</span> <span class="n">lon</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">lat</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">alt</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+    <span class="n">group_kind</span> <span class="o">=</span> <span class="n">kind</span><span class="p">[</span><span class="n">first_rows</span><span class="p">]</span>
+    <span class="n">group_ref</span> <span class="o">=</span> <span class="n">ref</span><span class="p">[</span><span class="n">first_rows</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+    <span class="n">bottom_f</span><span class="p">,</span> <span class="n">top_f</span> <span class="o">=</span> <span class="n">bottom</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">top</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+    <span class="n">group_location</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">first_rows</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">object</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">code</span><span class="p">,</span> <span class="n">row</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">first_rows</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">group_kind</span><span class="p">[</span><span class="n">code</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;point&quot;</span><span class="p">:</span>
+            <span class="n">group_location</span><span class="p">[</span><span class="n">code</span><span class="p">]</span> <span class="o">=</span> <span class="n">_point_location</span><span class="p">(</span>
+                <span class="n">lon_f</span><span class="p">[</span><span class="n">row</span><span class="p">],</span> <span class="n">lat_f</span><span class="p">[</span><span class="n">row</span><span class="p">],</span> <span class="n">alt_f</span><span class="p">[</span><span class="n">row</span><span class="p">],</span> <span class="n">group_ref</span><span class="p">[</span><span class="n">code</span><span class="p">]</span>
+            <span class="p">)</span>
+        <span class="k">elif</span> <span class="n">group_kind</span><span class="p">[</span><span class="n">code</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;column&quot;</span><span class="p">:</span>
+            <span class="n">group_location</span><span class="p">[</span><span class="n">code</span><span class="p">]</span> <span class="o">=</span> <span class="n">_column_location</span><span class="p">(</span>
+                <span class="n">lon_f</span><span class="p">[</span><span class="n">row</span><span class="p">],</span> <span class="n">lat_f</span><span class="p">[</span><span class="n">row</span><span class="p">],</span> <span class="n">bottom_f</span><span class="p">[</span><span class="n">row</span><span class="p">],</span> <span class="n">top_f</span><span class="p">[</span><span class="n">row</span><span class="p">],</span> <span class="n">group_ref</span><span class="p">[</span><span class="n">code</span><span class="p">]</span>
+            <span class="p">)</span>
+    <span class="n">multi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">flatnonzero</span><span class="p">(</span><span class="n">kind</span> <span class="o">==</span> <span class="s2">&quot;multipoint&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">multi</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">bad</span><span class="p">,</span> <span class="n">message</span> <span class="ow">in</span> <span class="n">multipoint_errors</span><span class="p">(</span><span class="n">lon</span><span class="p">[</span><span class="n">multi</span><span class="p">],</span> <span class="n">lat</span><span class="p">[</span><span class="n">multi</span><span class="p">],</span> <span class="n">codes</span><span class="p">[</span><span class="n">multi</span><span class="p">]):</span>
+            <span class="n">dup</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
+            <span class="n">dup</span><span class="p">[</span><span class="n">multi</span><span class="p">]</span> <span class="o">=</span> <span class="n">bad</span>
+            <span class="n">fail</span><span class="p">(</span><span class="n">dup</span><span class="p">,</span> <span class="n">message</span><span class="p">)</span>
+        <span class="n">found</span> <span class="o">=</span> <span class="n">_multipoint_locations</span><span class="p">(</span>
+            <span class="n">codes</span><span class="p">[</span><span class="n">multi</span><span class="p">],</span> <span class="n">lon</span><span class="p">[</span><span class="n">multi</span><span class="p">],</span> <span class="n">lat</span><span class="p">[</span><span class="n">multi</span><span class="p">],</span> <span class="n">alt</span><span class="p">[</span><span class="n">multi</span><span class="p">],</span> <span class="n">group_ref</span>
+        <span class="p">)</span>
+        <span class="k">for</span> <span class="n">code</span><span class="p">,</span> <span class="n">location</span> <span class="ow">in</span> <span class="n">found</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">group_location</span><span class="p">[</span><span class="n">code</span><span class="p">]</span> <span class="o">=</span> <span class="n">location</span>
+    <span class="n">stamps</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">first_rows</span><span class="p">]</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y%m</span><span class="si">%d</span><span class="s2">%H%M&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">object</span><span class="p">)</span>
+    <span class="n">group_ids</span> <span class="o">=</span> <span class="n">stamps</span> <span class="o">+</span> <span class="s2">&quot;_&quot;</span> <span class="o">+</span> <span class="n">group_location</span>
+    <span class="n">location</span> <span class="o">=</span> <span class="n">group_location</span><span class="p">[</span><span class="n">codes</span><span class="p">]</span>
+    <span class="n">ids</span> <span class="o">=</span> <span class="n">group_ids</span><span class="p">[</span><span class="n">codes</span><span class="p">]</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">frame</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span>
+        <span class="n">time</span><span class="o">=</span><span class="n">time</span><span class="p">,</span> <span class="n">altitude_ref</span><span class="o">=</span><span class="n">ref</span><span class="p">,</span> <span class="n">receptor</span><span class="o">=</span><span class="n">ids</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="n">kind</span><span class="p">,</span> <span class="n">location</span><span class="o">=</span><span class="n">location</span>
+    <span class="p">)</span>
+
+    <span class="c1"># A receptor id names its result files: one id, one receptor.</span>
+    <span class="n">repeated</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">flatnonzero</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">Index</span><span class="p">(</span><span class="n">group_ids</span><span class="p">)</span><span class="o">.</span><span class="n">duplicated</span><span class="p">(</span><span class="n">keep</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">repeated</span><span class="p">):</span>
+        <span class="n">by_id</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">code</span> <span class="ow">in</span> <span class="n">repeated</span><span class="p">:</span>
+            <span class="n">by_id</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">group_ids</span><span class="p">[</span><span class="n">code</span><span class="p">]),</span> <span class="p">[])</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">code</span><span class="p">))</span>
+        <span class="n">drop</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">group</span> <span class="ow">in</span> <span class="n">by_id</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+            <span class="n">check_distinct_ids</span><span class="p">(</span>
+                <span class="p">[</span><span class="n">receptors_from_rows</span><span class="p">(</span><span class="n">out</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">codes</span> <span class="o">==</span> <span class="n">code</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">code</span> <span class="ow">in</span> <span class="n">group</span><span class="p">]</span>
+            <span class="p">)</span>
+            <span class="n">drop</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">group</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>  <span class="c1"># the same receptor listed again</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">out</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="o">~</span><span class="n">np</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">codes</span><span class="p">,</span> <span class="n">drop</span><span class="p">)]</span>
+    <span class="k">return</span> <span class="n">out</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_build</span><span class="p">(</span>
+    <span class="n">kind</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">time</span><span class="p">:</span> <span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="p">,</span>
+    <span class="n">altitude_ref</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">attrs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+    <span class="n">lon</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">lat</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">alt</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Receptor</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return the receptor of one group of checked rows, given as plain values.</span>
+
+<span class="sd">    The rows passed :func:`receptor_rows`, which runs every check a receptor</span>
+<span class="sd">    runs, so the receptor is built without running them again.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">common</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;time&quot;</span><span class="p">:</span> <span class="n">time</span><span class="p">,</span> <span class="s2">&quot;altitude_ref&quot;</span><span class="p">:</span> <span class="n">altitude_ref</span><span class="p">,</span> <span class="s2">&quot;attrs&quot;</span><span class="p">:</span> <span class="n">attrs</span><span class="p">}</span>
+    <span class="k">if</span> <span class="n">kind</span> <span class="o">==</span> <span class="s2">&quot;point&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">PointReceptor</span><span class="o">.</span><span class="n">model_construct</span><span class="p">(</span>
+            <span class="n">longitude</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">lon</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>
+            <span class="n">latitude</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">lat</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>
+            <span class="n">altitude</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">alt</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>
+            <span class="o">**</span><span class="n">common</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="k">if</span> <span class="n">kind</span> <span class="o">==</span> <span class="s2">&quot;column&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">ColumnReceptor</span><span class="o">.</span><span class="n">model_construct</span><span class="p">(</span>
+            <span class="n">longitude</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">lon</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>
+            <span class="n">latitude</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">lat</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>
+            <span class="n">bottom</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">alt</span><span class="o">.</span><span class="n">min</span><span class="p">()),</span>
+            <span class="n">top</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">alt</span><span class="o">.</span><span class="n">max</span><span class="p">()),</span>
+            <span class="o">**</span><span class="n">common</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="n">MultiPointReceptor</span><span class="o">.</span><span class="n">model_construct</span><span class="p">(</span>
+        <span class="n">longitudes</span><span class="o">=</span><span class="nb">tuple</span><span class="p">(</span><span class="n">lon</span><span class="o">.</span><span class="n">tolist</span><span class="p">()),</span>
+        <span class="n">latitudes</span><span class="o">=</span><span class="nb">tuple</span><span class="p">(</span><span class="n">lat</span><span class="o">.</span><span class="n">tolist</span><span class="p">()),</span>
+        <span class="n">altitudes</span><span class="o">=</span><span class="nb">tuple</span><span class="p">(</span><span class="n">alt</span><span class="o">.</span><span class="n">tolist</span><span class="p">()),</span>
+        <span class="o">**</span><span class="n">common</span><span class="p">,</span>
+    <span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">receptors_from_rows</span><span class="p">(</span><span class="n">rows</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Receptor</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Build the receptors of a table that :func:`receptor_rows` checked.</span>
+
+<span class="sd">    The rows are not checked again. Each receptor&#39;s labels (``attrs``) are</span>
+<span class="sd">    the other columns of its first row.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    list of Receptor</span>
+<span class="sd">        In table order, one per receptor id.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">names</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">c</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">rows</span><span class="o">.</span><span class="n">columns</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">COLUMNS</span> <span class="ow">and</span> <span class="n">c</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">ROW_COLUMNS</span><span class="p">]</span>
+    <span class="n">labels</span> <span class="o">=</span> <span class="n">rows</span><span class="p">[</span><span class="n">names</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">object</span><span class="p">)</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+    <span class="n">times</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DatetimeIndex</span><span class="p">(</span><span class="n">rows</span><span class="p">[</span><span class="s2">&quot;time&quot;</span><span class="p">])</span><span class="o">.</span><span class="n">to_pydatetime</span><span class="p">()</span>
+    <span class="n">lon</span> <span class="o">=</span> <span class="n">rows</span><span class="p">[</span><span class="s2">&quot;longitude&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="n">lat</span> <span class="o">=</span> <span class="n">rows</span><span class="p">[</span><span class="s2">&quot;latitude&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="n">alt</span> <span class="o">=</span> <span class="n">rows</span><span class="p">[</span><span class="s2">&quot;altitude&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="n">kind</span> <span class="o">=</span> <span class="n">rows</span><span class="p">[</span><span class="s2">&quot;kind&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+    <span class="n">ref</span> <span class="o">=</span> <span class="n">rows</span><span class="p">[</span><span class="s2">&quot;altitude_ref&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+    <span class="n">receptors</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">idx</span> <span class="ow">in</span> <span class="n">rows</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">&quot;receptor&quot;</span><span class="p">,</span> <span class="n">sort</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span><span class="o">.</span><span class="n">indices</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+        <span class="n">i</span> <span class="o">=</span> <span class="n">idx</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">attrs</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="n">k</span><span class="p">:</span> <span class="p">(</span><span class="kc">None</span> <span class="k">if</span> <span class="n">pd</span><span class="o">.</span><span class="n">isna</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">else</span> <span class="n">v</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">names</span><span class="p">,</span> <span class="n">labels</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="p">}</span>
+        <span class="n">receptors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+            <span class="n">_build</span><span class="p">(</span>
+                <span class="nb">str</span><span class="p">(</span><span class="n">kind</span><span class="p">[</span><span class="n">i</span><span class="p">]),</span>
+                <span class="n">times</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                <span class="nb">str</span><span class="p">(</span><span class="n">ref</span><span class="p">[</span><span class="n">i</span><span class="p">]),</span>
+                <span class="n">attrs</span><span class="p">,</span>
+                <span class="n">lon</span><span class="p">[</span><span class="n">idx</span><span class="p">],</span>
+                <span class="n">lat</span><span class="p">[</span><span class="n">idx</span><span class="p">],</span>
+                <span class="n">alt</span><span class="p">[</span><span class="n">idx</span><span class="p">],</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="n">receptors</span>
+
+
+<div class="viewcode-block" id="receptors_from_frame">
+<a class="viewcode-back" href="../../../reference/_api/stilt.receptors.receptors_from_frame.html#stilt.receptors_from_frame">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">receptors_from_frame</span><span class="p">(</span><span class="n">frame</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Receptor</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Check a table with a row per release point and build its receptors.</span>
+
+<span class="sd">    The table needs ``time``, ``longitude``, ``latitude``, and ``altitude``</span>
+<span class="sd">    columns. Each row is one :class:`PointReceptor`, unless an ``r_idx``</span>
+<span class="sd">    column groups rows into one receptor: a group of two rows at one</span>
+<span class="sd">    location is a :class:`ColumnReceptor`, any other group a</span>
+<span class="sd">    :class:`MultiPointReceptor`.</span>
+
+<span class="sd">    ======================  =============================================</span>
+<span class="sd">    Field                   Accepted column names (any case)</span>
+<span class="sd">    ======================  =============================================</span>
+<span class="sd">    time                    ``time``</span>
+<span class="sd">    longitude               ``longitude``, ``long``, ``lon``</span>
+<span class="sd">    latitude                ``latitude``, ``lati``, ``lat``</span>
+<span class="sd">    altitude (m)            ``altitude``, ``zagl``, ``zmsl``, ``z``</span>
+<span class="sd">    receptor group          ``r_idx``</span>
+<span class="sd">    altitude reference      ``altitude_ref``, ``height_ref``</span>
+<span class="sd">    ======================  =============================================</span>
+
+<span class="sd">    Without an ``altitude_ref`` column, altitudes are above mean sea level</span>
+<span class="sd">    when the column is named ``zmsl`` and above ground level otherwise. Any</span>
+<span class="sd">    other column becomes a label in each receptor&#39;s ``attrs``. For a group,</span>
+<span class="sd">    labels come from its first row.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    list of Receptor</span>
+<span class="sd">        In table order. A receptor listed twice appears once.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        As :func:`receptor_rows` raises.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">receptors_from_rows</span><span class="p">(</span><span class="n">receptor_rows</span><span class="p">(</span><span class="n">frame</span><span class="p">))</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">check_distinct_ids</span><span class="p">(</span><span class="n">receptors</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Receptor</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Raise if two different receptors share an id.</span>
+
+<span class="sd">    An id names a receptor&#39;s result files, so two receptors with one id</span>
+<span class="sd">    would overwrite each other. Equal receptors listed twice are fine.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">seen</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Receptor</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">receptors</span><span class="p">:</span>
+        <span class="n">other</span> <span class="o">=</span> <span class="n">seen</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">r</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">other</span> <span class="ow">is</span> <span class="ow">not</span> <span class="n">r</span> <span class="ow">and</span> <span class="n">other</span> <span class="o">!=</span> <span class="n">r</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Two different receptors share the id </span><span class="si">{</span><span class="n">r</span><span class="o">.</span><span class="n">id</span><span class="si">!r}</span><span class="s2">: </span><span class="si">{</span><span class="n">other</span><span class="si">!r}</span><span class="s2"> and </span><span class="si">{</span><span class="n">r</span><span class="si">!r}</span><span class="s2">.&quot;</span>
+            <span class="p">)</span>
+
+
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<span class="c1"># CSV files</span>
+<span class="c1"># ---------------------------------------------------------------------------</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">read_receptor_frame</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="n">IO</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Read a receptors CSV as a table, with ``r_idx`` as text and ``time`` parsed, without building receptors.&quot;&quot;&quot;</span>
+    <span class="n">header</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">nrows</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">columns</span>
+    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">&quot;seek&quot;</span><span class="p">):</span>
+        <span class="n">path</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+    <span class="c1"># With type inference, pandas types each chunk of a large file on its</span>
+    <span class="c1"># own, so an r_idx column that mixes numbers and text would come back</span>
+    <span class="c1"># part int and part str.</span>
+    <span class="n">dtype</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="n">c</span><span class="p">:</span> <span class="nb">str</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">header</span> <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">c</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;r_idx&quot;</span><span class="p">}</span>
+    <span class="n">times</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">header</span> <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">c</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;time&quot;</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="n">parse_dates</span><span class="o">=</span><span class="n">times</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="read_receptors">
+<a class="viewcode-back" href="../../../reference/_api/stilt.read_receptors.html#stilt.read_receptors">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">read_receptors</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="n">IO</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Receptor</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Read receptors from a CSV file.</span>
+
+<span class="sd">    The file needs columns for time, longitude, latitude, and altitude, and</span>
+<span class="sd">    may group rows into one receptor with ``r_idx``. See</span>
+<span class="sd">    :func:`receptors_from_frame` for the rules and the accepted column</span>
+<span class="sd">    names.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    path : str, Path or file-like</span>
+<span class="sd">        CSV file path or open text stream.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    list of Receptor</span>
+<span class="sd">        In file order.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">receptors_from_frame</span><span class="p">(</span><span class="n">read_receptor_frame</span><span class="p">(</span><span class="n">path</span><span class="p">))</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_csv_frame</span><span class="p">(</span><span class="n">receptors</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Receptor</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the receptor table with times as the text written to CSV.&quot;&quot;&quot;</span>
+    <span class="n">frame</span> <span class="o">=</span> <span class="n">receptors_to_frame</span><span class="p">(</span><span class="n">receptors</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">frame</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span>
+        <span class="n">time</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">DatetimeIndex</span><span class="p">(</span><span class="n">frame</span><span class="p">[</span><span class="s2">&quot;time&quot;</span><span class="p">])</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2"> %H:%M:%S&quot;</span><span class="p">)</span>
+    <span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">receptors_to_csv</span><span class="p">(</span><span class="n">receptors</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Receptor</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return receptors as CSV text that :func:`read_receptors` reads back.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">_csv_frame</span><span class="p">(</span><span class="n">receptors</span><span class="p">)</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">lineterminator</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="write_receptors">
+<a class="viewcode-back" href="../../../reference/_api/stilt.receptors.write_receptors.html#stilt.write_receptors">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">write_receptors</span><span class="p">(</span><span class="n">receptors</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Receptor</span><span class="p">],</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Write receptors to a CSV file that :func:`read_receptors` reads, and return its path.&quot;&quot;&quot;</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="n">path</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">path</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">receptors_to_csv</span><span class="p">(</span><span class="n">receptors</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">path</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">append_receptors_csv</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">receptors</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Receptor</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return the text of a receptors CSV with rows for more receptors appended.</span>
+
+<span class="sd">    The existing header sets the columns and their order, so a hand-written</span>
+<span class="sd">    file keeps its column names and ``r_idx`` values, and its rows are kept</span>
+<span class="sd">    as written. Label columns are filled from each receptor&#39;s ``attrs`` or</span>
+<span class="sd">    left empty. New receptors are numbered after the largest ``r_idx`` in</span>
+<span class="sd">    the file. When a new receptor&#39;s heights are above sea level and the file</span>
+<span class="sd">    has no ``altitude_ref`` column, the column is added, with ``agl`` on the</span>
+<span class="sd">    existing rows.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If the file lacks a time, longitude, latitude, or altitude column,</span>
+<span class="sd">        has no ``r_idx`` column for a column or multipoint receptor, or</span>
+<span class="sd">        names its altitude column ``zagl``/``zmsl`` for a different altitude</span>
+<span class="sd">        reference than a new receptor uses.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">receptors</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">receptors</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+        <span class="k">return</span> <span class="n">receptors_to_csv</span><span class="p">(</span><span class="n">receptors</span><span class="p">)</span>
+    <span class="n">columns</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">StringIO</span><span class="p">(</span><span class="n">text</span><span class="p">),</span> <span class="n">nrows</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span>
+    <span class="n">_</span><span class="p">,</span> <span class="n">spelling</span> <span class="o">=</span> <span class="n">_normalize_columns</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">columns</span><span class="p">))</span>
+    <span class="n">missing</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;time&quot;</span><span class="p">,</span> <span class="s2">&quot;longitude&quot;</span><span class="p">,</span> <span class="s2">&quot;latitude&quot;</span><span class="p">,</span> <span class="s2">&quot;altitude&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="n">f</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">spelling</span>
+    <span class="p">]</span>
+    <span class="k">if</span> <span class="n">missing</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;receptors.csv lacks a column for </span><span class="si">{</span><span class="n">missing</span><span class="si">}</span><span class="s2">; cannot append.&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="s2">&quot;r_idx&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">spelling</span> <span class="ow">and</span> <span class="nb">any</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">coords</span><span class="p">())</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">receptors</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">&quot;receptors.csv has no r_idx column, so a column or multipoint receptor &quot;</span>
+            <span class="s2">&quot;cannot be appended; add an r_idx column to the file.&quot;</span>
+        <span class="p">)</span>
+    <span class="k">if</span> <span class="s2">&quot;altitude_ref&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">spelling</span><span class="p">:</span>
+        <span class="n">file_ref</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;zagl&quot;</span><span class="p">:</span> <span class="s2">&quot;agl&quot;</span><span class="p">,</span> <span class="s2">&quot;zmsl&quot;</span><span class="p">:</span> <span class="s2">&quot;msl&quot;</span><span class="p">}</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">spelling</span><span class="p">[</span><span class="s2">&quot;altitude&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">())</span>
+        <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">receptors</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">file_ref</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">r</span><span class="o">.</span><span class="n">altitude_ref</span> <span class="o">!=</span> <span class="n">file_ref</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;receptors.csv altitudes are </span><span class="si">{</span><span class="n">file_ref</span><span class="si">}</span><span class="s2">; receptor </span><span class="si">{</span><span class="n">r</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2"> is &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">r</span><span class="o">.</span><span class="n">altitude_ref</span><span class="si">}</span><span class="s2">. Add an altitude_ref column to mix them.&quot;</span>
+                <span class="p">)</span>
+        <span class="k">if</span> <span class="n">file_ref</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">any</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">altitude_ref</span> <span class="o">!=</span> <span class="s2">&quot;agl&quot;</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">receptors</span><span class="p">):</span>
+            <span class="c1"># The one case that rewrites the existing rows: they gain the column.</span>
+            <span class="n">existing</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">StringIO</span><span class="p">(</span><span class="n">text</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">keep_default_na</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="n">text</span> <span class="o">=</span> <span class="n">existing</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span><span class="n">altitude_ref</span><span class="o">=</span><span class="s2">&quot;agl&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span>
+                <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">lineterminator</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+            <span class="n">columns</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;altitude_ref&quot;</span><span class="p">)</span>
+            <span class="n">spelling</span><span class="p">[</span><span class="s2">&quot;altitude_ref&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;altitude_ref&quot;</span>
+
+    <span class="n">new</span> <span class="o">=</span> <span class="n">_csv_frame</span><span class="p">(</span><span class="n">receptors</span><span class="p">)</span>
+    <span class="k">if</span> <span class="s2">&quot;r_idx&quot;</span> <span class="ow">in</span> <span class="n">spelling</span><span class="p">:</span>
+        <span class="n">ids</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span>
+            <span class="n">StringIO</span><span class="p">(</span><span class="n">text</span><span class="p">),</span>
+            <span class="n">usecols</span><span class="o">=</span><span class="p">[</span><span class="n">spelling</span><span class="p">[</span><span class="s2">&quot;r_idx&quot;</span><span class="p">]],</span>
+            <span class="n">dtype</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span>
+            <span class="n">keep_default_na</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">iloc</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span>
+        <span class="n">numbers</span> <span class="o">=</span> <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">ids</span> <span class="k">if</span> <span class="n">v</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">lstrip</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">isdigit</span><span class="p">()]</span>
+        <span class="n">new</span><span class="p">[</span><span class="s2">&quot;r_idx&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="nb">max</span><span class="p">(</span><span class="n">numbers</span><span class="p">,</span> <span class="n">default</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+    <span class="n">new</span> <span class="o">=</span> <span class="n">new</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">spelling</span><span class="p">)</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">columns</span><span class="p">)</span>
+    <span class="n">rows</span> <span class="o">=</span> <span class="n">new</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">object</span><span class="p">)</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">new</span><span class="o">.</span><span class="n">notna</span><span class="p">(),</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+    <span class="n">body</span> <span class="o">=</span> <span class="n">text</span> <span class="k">if</span> <span class="n">text</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="n">text</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+    <span class="k">return</span> <span class="n">body</span> <span class="o">+</span> <span class="n">rows</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">header</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">lineterminator</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../../_static/scripts/bootstrap.js?digest=7f76b32a3354e82990f2"></script>
+<script defer src="../../../_static/scripts/pydata-sphinx-theme.js?digest=7f76b32a3354e82990f2"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2026, James Mineau.
+      <br/>
+    
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.1.0.
+    <br/>
+  </p>
+</div>
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.17.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

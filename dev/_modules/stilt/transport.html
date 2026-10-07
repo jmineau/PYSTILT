@@ -1,0 +1,1175 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>stilt.transport &#8212; PYSTILT dev</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=7f76b32a3354e82990f2" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=7f76b32a3354e82990f2" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=90cc9208" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../../_static/scripts/fontawesome.js?digest=7f76b32a3354e82990f2"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=7f76b32a3354e82990f2" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=7f76b32a3354e82990f2" />
+
+    <script src="../../_static/documentation_options.js?v=0af36158"></script>
+    <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/stilt/transport';</script>
+    <script>
+        DOCUMENTATION_OPTIONS.theme_version = '0.17.0';
+        DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = 'dev';
+        DOCUMENTATION_OPTIONS.show_version_warning_banner =
+            true;
+        </script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="0.1.0a23.dev261+gb929e3256" />
+  
+    
+    <script src="../../_static/searchtools.js"></script>
+    <script src="../../_static/language_data.js"></script>
+    <script src="../../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+<aside class="bd-header-announcement" aria-label="Announcement">
+  <div class="bd-header-announcement__content">PYSTILT is in alpha: names and options may change between releases.</div>
+</aside>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class=" navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">PYSTILT dev</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class=" navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../getting_started/index.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../tutorials/index.html">
+    Tutorials
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../guides/index.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../migration/index.html">
+    Coming From Another STILT
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../reference/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../advanced/index.html">
+    Internals
+  </a>
+</li>
+
+            <li class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button"
+                data-bs-toggle="dropdown" aria-expanded="false"
+                aria-controls="pst-nav-more-links">
+                    More
+                </button>
+                <ul id="pst-nav-more-links" class="dropdown-menu">
+                    
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../roadmap.html">
+    Roadmap
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../development.html">
+    Development
+  </a>
+</li>
+
+                </ul>
+            </li>
+            
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-2"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-2"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-2"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-2">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/jmineau/PYSTILT" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../getting_started/index.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../tutorials/index.html">
+    Tutorials
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../guides/index.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../migration/index.html">
+    Coming From Another STILT
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../reference/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../advanced/index.html">
+    Internals
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../roadmap.html">
+    Roadmap
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../development.html">
+    Development
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-3"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-3"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-3"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-3">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/jmineau/PYSTILT" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../index.html" class="nav-link">Module code</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">stilt.transport</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for stilt.transport</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">The transport model interface.</span>
+
+<span class="sd">A transport model turns one receptor and one set of transport settings into</span>
+<span class="sd">a particle table. Each model is a subpackage here. HYSPLIT</span>
+<span class="sd">(:class:`stilt.transport.hysplit.HysplitModel`) is the only one today. The</span>
+<span class="sd">worker reaches it through :func:`get_model` by the name a run&#39;s settings</span>
+<span class="sd">record, so a second model needs no change to the worker.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">dt</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">importlib</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Mapping</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span><span class="p">,</span> <span class="n">replace</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">ClassVar</span><span class="p">,</span> <span class="n">Protocol</span><span class="p">,</span> <span class="n">Self</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseModel</span><span class="p">,</span> <span class="n">ConfigDict</span><span class="p">,</span> <span class="n">Field</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">SimulationError</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.meteorology</span><span class="w"> </span><span class="kn">import</span> <span class="n">run_window</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.particles</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">HNF_PLUME_COLUMNS</span><span class="p">,</span>
+    <span class="n">add_release_heights</span><span class="p">,</span>
+    <span class="n">check_particles</span><span class="p">,</span>
+    <span class="n">correct_near_field</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.receptors</span><span class="w"> </span><span class="kn">import</span> <span class="n">Receptor</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="ModelRun">
+<a class="viewcode-back" href="../../reference/_api/stilt.transport.ModelRun.html#stilt.ModelRun">[docs]</a>
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">ModelRun</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    What one model run produced.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    particles : pandas.DataFrame</span>
+<span class="sd">        The particle table, one row per particle per time step</span>
+<span class="sd">        (:data:`stilt.particles.PARTICLE_SCHEMA`).</span>
+<span class="sd">    log : str</span>
+<span class="sd">        The model&#39;s log of the run, kept with the particles</span>
+<span class="sd">        (:attr:`stilt.Simulation.log`). Empty for a model that writes none.</span>
+<span class="sd">    met_files : list of Path</span>
+<span class="sd">        The meteorology files the run read, recorded in the particle file</span>
+<span class="sd">        (:func:`stilt.particles.particles_metadata`). Empty for a model that reads</span>
+<span class="sd">        no files.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">particles</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
+    <span class="n">log</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+    <span class="n">met_files</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="ModelInfo">
+<a class="viewcode-back" href="../../reference/_api/stilt.transport.ModelInfo.html#stilt.ModelInfo">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">ModelInfo</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;The transport model build a run was made with, recorded in the run&#39;s settings.&quot;&quot;&quot;</span>
+
+    <span class="n">model_config</span> <span class="o">=</span> <span class="n">ConfigDict</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">extra</span><span class="o">=</span><span class="s2">&quot;forbid&quot;</span><span class="p">)</span>
+
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="o">...</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">&quot;The model as ``model:`` names it: a built-in name such as &quot;</span>
+            <span class="s2">&quot;``hysplit``, or the import path of a model class.&quot;</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">version</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="o">...</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Version string of the build, such as ``v5.1.0``.&quot;</span>
+    <span class="p">)</span>
+    <span class="n">data_files</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="kc">None</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">&quot;SHA-256 of each data file the run used in place of the model&#39;s &quot;</span>
+            <span class="s2">&quot;own, by file name. ``None`` when it used the model&#39;s own.&quot;</span>
+        <span class="p">),</span>
+    <span class="p">)</span></div>
+
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">TransportConfig</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    The base of every transport model&#39;s config.</span>
+
+<span class="sd">    It holds the parameters PYSTILT&#39;s own code reads, whatever the model:</span>
+<span class="sd">    the run length and the seed, which set the run window and the</span>
+<span class="sd">    realizations, and the near-field settings PYSTILT applies to any</span>
+<span class="sd">    model&#39;s particles. Everything else, the particle count included, is the</span>
+<span class="sd">    model&#39;s own. A model&#39;s config subclasses it with its own</span>
+<span class="sd">    parameters and is the model&#39;s ``config_class``. In ``config.yaml`` the</span>
+<span class="sd">    parameters are flat, top-level keys for the project&#39;s model, and a</span>
+<span class="sd">    variant that names another model inherits the shared ones and gives</span>
+<span class="sd">    that model&#39;s own. A subclass overrides :meth:`settings` or</span>
+<span class="sd">    :meth:`realizations` only where its model differs.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">model_config</span> <span class="o">=</span> <span class="n">ConfigDict</span><span class="p">(</span><span class="n">extra</span><span class="o">=</span><span class="s2">&quot;forbid&quot;</span><span class="p">)</span>
+
+    <span class="c1">#: Fields that change no particle, such as where the build is, left out</span>
+    <span class="c1">#: of a run&#39;s recorded settings.</span>
+    <span class="n">UNRECORDED</span><span class="p">:</span> <span class="n">ClassVar</span><span class="p">[</span><span class="nb">frozenset</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">()</span>
+
+    <span class="n">n_hours</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="o">-</span><span class="mi">24</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Length of each simulation, in hours. Negative runs backward in time.&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">hnf_plume</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="kc">True</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">&quot;Apply a vertical Gaussian plume model to particles in the hyper &quot;</span>
+            <span class="s2">&quot;near-field. This shrinks their effective dilution depth and raises &quot;</span>
+            <span class="s2">&quot;the influence of fluxes close to the receptor. Needs the particle &quot;</span>
+            <span class="s2">&quot;columns ``dens``, ``tlgr``, ``sigw``, ``foot``, ``mlht``, and &quot;</span>
+            <span class="s2">&quot;``samt``.&quot;</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">veght</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="mf">0.5</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">&quot;Height below which a particle&#39;s time counts toward the footprint. &quot;</span>
+            <span class="s2">&quot;A value of 1 or less is a fraction of the mixed-layer height; a &quot;</span>
+            <span class="s2">&quot;larger value is meters above ground.&quot;</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">seed</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="kc">None</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">&quot;Seed of the model&#39;s random numbers, for a reproducible run. &quot;</span>
+            <span class="s2">&quot;Realization ``k`` of a variant runs with ``seed + k``.&quot;</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">settings</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return what a run records of this config: every field but the :attr:`UNRECORDED` ones.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_dump</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;json&quot;</span><span class="p">,</span> <span class="n">exclude</span><span class="o">=</span><span class="nb">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">UNRECORDED</span><span class="p">))</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">realizations</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Self</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return *n* realizations of this config, realization ``k`` with ``seed + k``.</span>
+
+<span class="sd">        Realization 0 uses the configured seed. Without a seed every</span>
+<span class="sd">        realization is the same config, and the model must draw its own</span>
+<span class="sd">        random numbers for them to differ.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">seed</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">seed</span>
+        <span class="k">return</span> <span class="p">[</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_copy</span><span class="p">(</span><span class="n">update</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;seed&quot;</span><span class="p">:</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">seed</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">seed</span> <span class="o">+</span> <span class="n">k</span><span class="p">})</span>
+            <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+        <span class="p">]</span>
+
+
+<div class="viewcode-block" id="TransportModel">
+<a class="viewcode-back" href="../../reference/_api/stilt.transport.TransportModel.html#stilt.TransportModel">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">TransportModel</span><span class="p">(</span><span class="n">Protocol</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A transport model that follows particles from a receptor.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    name : str</span>
+<span class="sd">        The model&#39;s short name, such as ``&quot;hysplit&quot;``.</span>
+<span class="sd">    needs_workdir : bool, optional</span>
+<span class="sd">        Whether :meth:`run` is handed an empty directory for its files. True</span>
+<span class="sd">        when the model does not say; a model that writes no files sets it</span>
+<span class="sd">        False, and gets ``None``.</span>
+<span class="sd">    batched : bool, optional</span>
+<span class="sd">        Whether the model runs many receptors in one call</span>
+<span class="sd">        (:meth:`run_many`). False when the model does not say. The worker</span>
+<span class="sd">        then hands it every receptor of a variant that needs particles at</span>
+<span class="sd">        once, where it otherwise calls :meth:`run` for one at a time.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">config_class</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">type</span><span class="p">[</span><span class="n">TransportConfig</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;The model&#39;s config, a :class:`TransportConfig`, which validates its parameters.&quot;&quot;&quot;</span>
+        <span class="o">...</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">met_config_class</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">type</span><span class="p">[</span><span class="n">BaseModel</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        The model&#39;s met config, which validates an entry under ``mets:``.</span>
+
+<span class="sd">        Its ``settings()`` returns what a run records of the met: which</span>
+<span class="sd">        weather it is, and anything else that changes the particles, but not</span>
+<span class="sd">        where its files are kept. HYSPLIT&#39;s is</span>
+<span class="sd">        :class:`stilt.transport.hysplit.MetConfig`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="o">...</span>
+
+<div class="viewcode-block" id="TransportModel.version">
+<a class="viewcode-back" href="../../reference/_api/stilt.transport.TransportModel.version.html#stilt.TransportModel.version">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">version</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the version of the build *config* would run, recorded with the run.&quot;&quot;&quot;</span>
+        <span class="o">...</span></div>
+
+
+<div class="viewcode-block" id="TransportModel.data_files">
+<a class="viewcode-back" href="../../reference/_api/stilt.transport.TransportModel.data_files.html#stilt.TransportModel.data_files">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">data_files</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return the checksum of each data file *config* replaces, by file name.</span>
+
+<span class="sd">        ``None`` when the run uses the model&#39;s own data files. These are part</span>
+<span class="sd">        of the run&#39;s identity, since the data change the particles.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="o">...</span></div>
+
+
+<div class="viewcode-block" id="TransportModel.run">
+<a class="viewcode-back" href="../../reference/_api/stilt.transport.TransportModel.run.html#stilt.TransportModel.run">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">receptor</span><span class="p">:</span> <span class="n">Receptor</span><span class="p">,</span>
+        <span class="n">config</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+        <span class="n">met</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+        <span class="n">window</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="p">,</span> <span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="p">],</span>
+        <span class="n">workdir</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">timeout</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ModelRun</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Run one receptor and return its particles.</span>
+
+<span class="sd">        The particles are the model&#39;s own: PYSTILT checks them and adds the</span>
+<span class="sd">        release heights and the near-field correction afterwards</span>
+<span class="sd">        (:func:`run_model`).</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        receptor : Receptor</span>
+<span class="sd">            Where and when particles are released.</span>
+<span class="sd">        config : TransportConfig</span>
+<span class="sd">            The model&#39;s config, of its ``config_class``.</span>
+<span class="sd">        met : BaseModel</span>
+<span class="sd">            The meteorology, of the model&#39;s ``met_config_class``. In a</span>
+<span class="sd">            project its directories are absolute.</span>
+<span class="sd">        window : tuple of datetime</span>
+<span class="sd">            The time the run covers, ``(start, end)`` in time order</span>
+<span class="sd">            (:func:`stilt.meteorology.run_window`).</span>
+<span class="sd">        workdir : Path, optional</span>
+<span class="sd">            An empty directory for the run&#39;s files, kept when the run fails.</span>
+<span class="sd">            ``None`` for a model that needs one to make its own.</span>
+<span class="sd">        timeout : int, optional</span>
+<span class="sd">            Time limit in seconds, for a model that runs a program.</span>
+<span class="sd">            ``None`` waits indefinitely.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        SimulationError</span>
+<span class="sd">            When the run fails, with the model&#39;s log in ``log``.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="o">...</span></div>
+</div>
+
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">BatchedTransportModel</span><span class="p">(</span><span class="n">TransportModel</span><span class="p">,</span> <span class="n">Protocol</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A transport model that runs many receptors in one call, such as an emulator on a GPU.</span>
+
+<span class="sd">    It sets ``batched = True`` and gives :meth:`run_many` beside</span>
+<span class="sd">    :meth:`run`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">batched</span><span class="p">:</span> <span class="nb">bool</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">run_many</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">receptors</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Receptor</span><span class="p">],</span>
+        <span class="n">config</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+        <span class="n">met</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+        <span class="n">windows</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="p">,</span> <span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="p">]],</span>
+        <span class="n">workdir</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">timeout</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ModelRun</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Run many receptors with one config, and return their particles as one table.</span>
+
+<span class="sd">        The table has a ``receptor`` column holding each row&#39;s receptor id,</span>
+<span class="sd">        beside the particle columns :meth:`run` returns. ``windows[i]`` is</span>
+<span class="sd">        the time ``receptors[i]`` covers. A receptor with no rows failed;</span>
+<span class="sd">        the others are written. The log and met files are shared by all.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        SimulationError</span>
+<span class="sd">            When the whole call fails, with the model&#39;s log in ``log``.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="o">...</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_hysplit</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">TransportModel</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return HYSPLIT, importing its package only when it is asked for.&quot;&quot;&quot;</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.transport.hysplit</span><span class="w"> </span><span class="kn">import</span> <span class="n">HysplitModel</span>
+
+    <span class="k">return</span> <span class="n">HysplitModel</span><span class="p">()</span>
+
+
+<span class="c1">#: The transport models built into PYSTILT, by the name ``model:`` takes in</span>
+<span class="c1">#: ``config.yaml``. A model in its own package is named by its import path</span>
+<span class="c1">#: instead, as a transform&#39;s ``kind:`` is.</span>
+<span class="n">MODELS</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Callable</span><span class="p">[[],</span> <span class="n">TransportModel</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;hysplit&quot;</span><span class="p">:</span> <span class="n">_hysplit</span><span class="p">}</span>
+
+
+<div class="viewcode-block" id="get_model">
+<a class="viewcode-back" href="../../reference/_api/stilt.transport.get_model.html#stilt.get_model">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_model</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TransportModel</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return the transport model *name* names.</span>
+
+<span class="sd">    *name* is a built-in model (:data:`MODELS`, such as ``hysplit``) or the</span>
+<span class="sd">    import path of a model class, such as ``emulator.stilt.EmulatorModel``,</span>
+<span class="sd">    which is imported and made with no arguments. A model in a package of</span>
+<span class="sd">    its own needs no registration, so every process that opens the project</span>
+<span class="sd">    finds it.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If *name* is not a built-in model and not an import path.</span>
+<span class="sd">    ImportError</span>
+<span class="sd">        If *name* is an import path that cannot be imported on this machine.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="s2">&quot;.&quot;</span> <span class="ow">in</span> <span class="n">name</span><span class="p">:</span>
+        <span class="n">module_name</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">attr</span> <span class="o">=</span> <span class="n">name</span><span class="o">.</span><span class="n">rpartition</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">module</span> <span class="o">=</span> <span class="n">importlib</span><span class="o">.</span><span class="n">import_module</span><span class="p">(</span><span class="n">module_name</span><span class="p">)</span>
+            <span class="bp">cls</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">module</span><span class="p">,</span> <span class="n">attr</span><span class="p">)</span>
+        <span class="k">except</span> <span class="p">(</span><span class="ne">ImportError</span><span class="p">,</span> <span class="ne">AttributeError</span><span class="p">)</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ImportError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Transport model </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> could not be imported (</span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">). &quot;</span>
+                <span class="s2">&quot;Install the package that defines it on this machine.&quot;</span>
+            <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">()</span>
+    <span class="n">factory</span> <span class="o">=</span> <span class="n">MODELS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">factory</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Unknown transport model </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2">. The built-in models are &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">MODELS</span><span class="p">)</span><span class="si">}</span><span class="s2">; another is named by its import path, such as &quot;</span>
+            <span class="s2">&quot;mypkg.models.MyModel.&quot;</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="n">factory</span><span class="p">()</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">run_model</span><span class="p">(</span>
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">receptor</span><span class="p">:</span> <span class="n">Receptor</span><span class="p">,</span>
+    <span class="n">config</span><span class="p">:</span> <span class="n">TransportConfig</span><span class="p">,</span>
+    <span class="n">met</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="n">workdir</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">timeout</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ModelRun</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Run the transport model called *name* for one receptor, and finish its particles.</span>
+
+<span class="sd">    The particles are checked against the particle table</span>
+<span class="sd">    (:func:`stilt.particles.check_particles`), get their release heights</span>
+<span class="sd">    (:func:`stilt.particles.add_release_heights`), and, when</span>
+<span class="sd">    ``config.hnf_plume`` is set, the near-field correction</span>
+<span class="sd">    (:func:`stilt.particles.correct_near_field`). These steps are PYSTILT&#39;s,</span>
+<span class="sd">    the same for any model. A model whose particles lack the columns the</span>
+<span class="sd">    correction reads gets none, and the run&#39;s log says so.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    name : str</span>
+<span class="sd">        The transport model (:data:`MODELS`).</span>
+<span class="sd">    receptor : Receptor</span>
+<span class="sd">        Where and when particles are released.</span>
+<span class="sd">    config : TransportConfig</span>
+<span class="sd">        The model&#39;s config.</span>
+<span class="sd">    met : BaseModel</span>
+<span class="sd">        The meteorology, of the model&#39;s ``met_config_class``.</span>
+<span class="sd">    workdir : Path, optional</span>
+<span class="sd">        An empty directory for the run&#39;s files. ``None`` lets the model make</span>
+<span class="sd">        its own.</span>
+<span class="sd">    timeout : int, optional</span>
+<span class="sd">        Time limit in seconds.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    SimulationError</span>
+<span class="sd">        If the run fails, the model wrote no particles, or they stop before</span>
+<span class="sd">        the end of the run (``MET_COVERAGE``).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">window</span> <span class="o">=</span> <span class="n">run_window</span><span class="p">(</span><span class="n">receptor</span><span class="o">.</span><span class="n">time</span><span class="p">,</span> <span class="n">config</span><span class="o">.</span><span class="n">n_hours</span><span class="p">)</span>
+    <span class="n">run</span> <span class="o">=</span> <span class="n">get_model</span><span class="p">(</span><span class="n">name</span><span class="p">)</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">receptor</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">met</span><span class="p">,</span> <span class="n">window</span><span class="p">,</span> <span class="n">workdir</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">_finish</span><span class="p">(</span><span class="n">run</span><span class="p">,</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">config</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">run_model_many</span><span class="p">(</span>
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">receptors</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Receptor</span><span class="p">],</span>
+    <span class="n">config</span><span class="p">:</span> <span class="n">TransportConfig</span><span class="p">,</span>
+    <span class="n">met</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="n">workdir</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">timeout</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">ModelRun</span> <span class="o">|</span> <span class="n">SimulationError</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Run a batched transport model once for many receptors, and finish each one&#39;s particles.</span>
+
+<span class="sd">    The model&#39;s one table is split by its ``receptor`` column, and each</span>
+<span class="sd">    receptor&#39;s particles get the steps :func:`run_model` applies. A receptor</span>
+<span class="sd">    whose particles are missing or fail those steps gets its error, and the</span>
+<span class="sd">    others their runs.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    dict</span>
+<span class="sd">        ``{receptor id: ModelRun}``, or the :class:`SimulationError` of a</span>
+<span class="sd">        receptor that failed.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    SimulationError</span>
+<span class="sd">        If the whole call fails.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">windows</span> <span class="o">=</span> <span class="p">[</span><span class="n">run_window</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">time</span><span class="p">,</span> <span class="n">config</span><span class="o">.</span><span class="n">n_hours</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">receptors</span><span class="p">]</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">get_model</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+    <span class="n">run_many</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">&quot;run_many&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">run_many</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Transport model </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> has no run_many.&quot;</span><span class="p">)</span>
+    <span class="n">run</span> <span class="o">=</span> <span class="n">run_many</span><span class="p">(</span><span class="n">receptors</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">met</span><span class="p">,</span> <span class="n">windows</span><span class="p">,</span> <span class="n">workdir</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">)</span>
+    <span class="k">if</span> <span class="s2">&quot;receptor&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">run</span><span class="o">.</span><span class="n">particles</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">SimulationError</span><span class="p">(</span>
+            <span class="s2">&quot;A batched transport model&#39;s particles need a receptor column.&quot;</span><span class="p">,</span>
+            <span class="n">reason</span><span class="o">=</span><span class="s2">&quot;NO_PARTICLE_DATA&quot;</span><span class="p">,</span>
+            <span class="n">log</span><span class="o">=</span><span class="n">run</span><span class="o">.</span><span class="n">log</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="n">by_receptor</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="n">run</span><span class="o">.</span><span class="n">particles</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">&quot;receptor&quot;</span><span class="p">,</span> <span class="n">sort</span><span class="o">=</span><span class="kc">False</span><span class="p">)))</span>
+    <span class="n">results</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">ModelRun</span> <span class="o">|</span> <span class="n">SimulationError</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">receptor</span> <span class="ow">in</span> <span class="n">receptors</span><span class="p">:</span>
+        <span class="n">rows</span> <span class="o">=</span> <span class="n">by_receptor</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">receptor</span><span class="o">.</span><span class="n">id</span><span class="p">))</span>
+        <span class="n">own</span> <span class="o">=</span> <span class="n">replace</span><span class="p">(</span>
+            <span class="n">run</span><span class="p">,</span>
+            <span class="n">particles</span><span class="o">=</span><span class="p">(</span>
+                <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">rows</span> <span class="ow">is</span> <span class="kc">None</span>
+                <span class="k">else</span> <span class="n">rows</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="s2">&quot;receptor&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">results</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">receptor</span><span class="o">.</span><span class="n">id</span><span class="p">)]</span> <span class="o">=</span> <span class="n">_finish</span><span class="p">(</span><span class="n">own</span><span class="p">,</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">config</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">SimulationError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+            <span class="n">error</span><span class="o">.</span><span class="n">log</span> <span class="o">=</span> <span class="n">run</span><span class="o">.</span><span class="n">log</span>
+            <span class="n">results</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">receptor</span><span class="o">.</span><span class="n">id</span><span class="p">)]</span> <span class="o">=</span> <span class="n">error</span>
+    <span class="k">return</span> <span class="n">results</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_check_reach</span><span class="p">(</span><span class="n">particles</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">n_hours</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Raise if no particle reaches the end of the run.</span>
+
+<span class="sd">    A run is complete when its furthest particle gets to ``n_hours`` from</span>
+<span class="sd">    the release, within one output step (the smallest gap between the</span>
+<span class="sd">    particle table&#39;s times). Particles stop early when the</span>
+<span class="sd">    meteorology ends, or when every one has left the meteorology&#39;s domain</span>
+<span class="sd">    (or its crop). Either way the footprint would hold only part of the</span>
+<span class="sd">    run, so the simulation fails, as ``MET_COVERAGE``, whatever the model.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    SimulationError</span>
+<span class="sd">        With ``reason`` ``MET_COVERAGE``.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">times</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">particles</span><span class="p">[</span><span class="s2">&quot;time&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)))</span>
+    <span class="n">end</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">n_hours</span><span class="p">)</span> <span class="o">*</span> <span class="mi">60</span>
+    <span class="n">step</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">times</span><span class="p">)</span><span class="o">.</span><span class="n">min</span><span class="p">())</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">times</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="k">else</span> <span class="mf">0.0</span>
+    <span class="n">reach</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">times</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+    <span class="k">if</span> <span class="n">reach</span> <span class="o">&gt;=</span> <span class="n">end</span> <span class="o">-</span> <span class="n">step</span><span class="p">:</span>
+        <span class="k">return</span>
+    <span class="k">raise</span> <span class="n">SimulationError</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;The particles stop </span><span class="si">{</span><span class="n">reach</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">60</span><span class="si">:</span><span class="s2">.3g</span><span class="si">}</span><span class="s2"> h into a </span><span class="si">{</span><span class="n">end</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">60</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> h run: the &quot;</span>
+        <span class="s2">&quot;meteorology does not cover the whole run, or every particle left its &quot;</span>
+        <span class="s2">&quot;domain.&quot;</span><span class="p">,</span>
+        <span class="n">reason</span><span class="o">=</span><span class="s2">&quot;MET_COVERAGE&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_finish</span><span class="p">(</span><span class="n">run</span><span class="p">:</span> <span class="n">ModelRun</span><span class="p">,</span> <span class="n">receptor</span><span class="p">:</span> <span class="n">Receptor</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">TransportConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ModelRun</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return *run* with its particles checked, their release heights, and the near-field correction.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    SimulationError</span>
+<span class="sd">        With the run&#39;s log, if the model wrote no particles, or they stop</span>
+<span class="sd">        before the end of the run (:func:`_check_reach`).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">run</span><span class="o">.</span><span class="n">particles</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">SimulationError</span><span class="p">(</span>
+            <span class="s2">&quot;The transport model wrote no particles.&quot;</span><span class="p">,</span>
+            <span class="n">reason</span><span class="o">=</span><span class="s2">&quot;NO_PARTICLE_DATA&quot;</span><span class="p">,</span>
+            <span class="n">log</span><span class="o">=</span><span class="n">run</span><span class="o">.</span><span class="n">log</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="n">check_particles</span><span class="p">(</span><span class="n">run</span><span class="o">.</span><span class="n">particles</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">_check_reach</span><span class="p">(</span><span class="n">run</span><span class="o">.</span><span class="n">particles</span><span class="p">,</span> <span class="n">config</span><span class="o">.</span><span class="n">n_hours</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">SimulationError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+        <span class="n">error</span><span class="o">.</span><span class="n">log</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">run</span><span class="o">.</span><span class="n">log</span><span class="si">}{</span><span class="n">error</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="k">raise</span>
+    <span class="n">particles</span> <span class="o">=</span> <span class="n">add_release_heights</span><span class="p">(</span><span class="n">run</span><span class="o">.</span><span class="n">particles</span><span class="p">,</span> <span class="n">receptor</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">hnf_plume</span><span class="p">:</span>
+        <span class="n">missing</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">HNF_PLUME_COLUMNS</span><span class="p">)</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">particles</span><span class="o">.</span><span class="n">columns</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">missing</span><span class="p">:</span>
+            <span class="n">note</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;near-field correction skipped: no </span><span class="si">{</span><span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">missing</span><span class="p">)</span><span class="si">}</span><span class="s2"> columns&quot;</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">receptor</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">note</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">replace</span><span class="p">(</span><span class="n">run</span><span class="p">,</span> <span class="n">particles</span><span class="o">=</span><span class="n">particles</span><span class="p">,</span> <span class="n">log</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">run</span><span class="o">.</span><span class="n">log</span><span class="si">}{</span><span class="n">note</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">particles</span> <span class="o">=</span> <span class="n">correct_near_field</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">config</span><span class="o">.</span><span class="n">veght</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">replace</span><span class="p">(</span><span class="n">run</span><span class="p">,</span> <span class="n">particles</span><span class="o">=</span><span class="n">particles</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="run_trajectories">
+<a class="viewcode-back" href="../../reference/_api/stilt.run_trajectories.html#stilt.run_trajectories">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">run_trajectories</span><span class="p">(</span>
+    <span class="n">receptor</span><span class="p">:</span> <span class="n">Receptor</span><span class="p">,</span>
+    <span class="n">met</span><span class="p">:</span> <span class="n">BaseModel</span> <span class="o">|</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">model</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;hysplit&quot;</span><span class="p">,</span>
+    <span class="n">workdir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">timeout</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="o">**</span><span class="n">params</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Run the transport model for one receptor and return its particles.</span>
+
+<span class="sd">    This is what a project runs for each receptor, without a project: the</span>
+<span class="sd">    particles are returned, not stored. STILT-R calls it</span>
+<span class="sd">    ``calc_trajectory``.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    receptor : Receptor</span>
+<span class="sd">        Where and when particles are released.</span>
+<span class="sd">    met : dict or BaseModel</span>
+<span class="sd">        The meteorology, as one entry under ``mets:`` in ``config.yaml``,</span>
+<span class="sd">        checked by the model&#39;s met config</span>
+<span class="sd">        (:class:`stilt.transport.hysplit.MetConfig` for HYSPLIT). A relative</span>
+<span class="sd">        ``directory`` starts from the working directory.</span>
+<span class="sd">    model : str, default &quot;hysplit&quot;</span>
+<span class="sd">        The transport model.</span>
+<span class="sd">    workdir : str or Path, optional</span>
+<span class="sd">        Directory the model runs in, kept afterwards for a look at its</span>
+<span class="sd">        files. It must be empty or not exist yet. Without it the model runs</span>
+<span class="sd">        in a temporary directory that is removed.</span>
+<span class="sd">    timeout : int, optional</span>
+<span class="sd">        Time limit in seconds. ``None`` waits indefinitely.</span>
+<span class="sd">    **params</span>
+<span class="sd">        The transport model&#39;s parameters, such as ``n_hours`` and</span>
+<span class="sd">        ``numpar`` (:class:`stilt.transport.hysplit.HysplitConfig`).</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    pandas.DataFrame</span>
+<span class="sd">        The particle table, one row per particle per output step.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If *workdir* is not empty, or a parameter is not one of the</span>
+<span class="sd">        model&#39;s.</span>
+<span class="sd">    SimulationError</span>
+<span class="sd">        If the run fails; ``reason`` says why.</span>
+<span class="sd">    MeteorologyError</span>
+<span class="sd">        If the met files the run needs are missing.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; receptor = stilt.PointReceptor(</span>
+<span class="sd">    ...     time=&quot;2023-07-15 18:00&quot;, longitude=-111.848, latitude=40.766, altitude=10</span>
+<span class="sd">    ... )</span>
+<span class="sd">    &gt;&gt;&gt; met = {&quot;directory&quot;: &quot;/data/hrrr&quot;, &quot;file_format&quot;: &quot;%Y%m%d_%H&quot;, &quot;file_tres&quot;: &quot;6h&quot;}</span>
+<span class="sd">    &gt;&gt;&gt; particles = stilt.run_trajectories(receptor, met, n_hours=-24, numpar=200)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">transport_model</span> <span class="o">=</span> <span class="n">get_model</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">transport_model</span><span class="o">.</span><span class="n">config_class</span><span class="p">(</span><span class="o">**</span><span class="n">params</span><span class="p">)</span>
+    <span class="n">met_config</span> <span class="o">=</span> <span class="n">transport_model</span><span class="o">.</span><span class="n">met_config_class</span><span class="o">.</span><span class="n">model_validate</span><span class="p">(</span><span class="n">met</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">workdir</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">workdir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">workdir</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">workdir</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span> <span class="ow">and</span> <span class="nb">any</span><span class="p">(</span><span class="n">workdir</span><span class="o">.</span><span class="n">iterdir</span><span class="p">()):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">workdir</span><span class="si">}</span><span class="s2"> is not empty. The model would read files left from &quot;</span>
+                <span class="s2">&quot;another run; give an empty or new directory.&quot;</span>
+            <span class="p">)</span>
+        <span class="n">workdir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">run_model</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">receptor</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">met_config</span><span class="p">,</span> <span class="n">workdir</span><span class="p">,</span> <span class="n">timeout</span><span class="p">)</span><span class="o">.</span><span class="n">particles</span></div>
+
+
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">&quot;MODELS&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;BatchedTransportModel&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;ModelInfo&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;ModelRun&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;TransportConfig&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;TransportModel&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;get_model&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;run_model&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;run_model_many&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;run_trajectories&quot;</span><span class="p">,</span>
+<span class="p">]</span>
+</pre></div>
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../_static/scripts/bootstrap.js?digest=7f76b32a3354e82990f2"></script>
+<script defer src="../../_static/scripts/pydata-sphinx-theme.js?digest=7f76b32a3354e82990f2"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2026, James Mineau.
+      <br/>
+    
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.1.0.
+    <br/>
+  </p>
+</div>
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.17.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

@@ -1,0 +1,179 @@
+﻿stilt.ColumnReceptor
+====================
+
+.. currentmodule:: stilt
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.. class-signature:: stilt.ColumnReceptor
+
+
+Parameters
+----------
+
+.. config-model:: stilt.ColumnReceptor
+
+
+
+Methods
+-------
+
+.. autosummary::
+   :toctree:
+
+
+   ~ColumnReceptor.coords
+   ~ColumnReceptor.from_dict
+   ~ColumnReceptor.from_json
+   ~ColumnReceptor.from_points
+   ~ColumnReceptor.to_dict
+   ~ColumnReceptor.to_json
+
+
+Attributes
+----------
+
+.. autosummary::
+
+   ~ColumnReceptor.geometry
+   ~ColumnReceptor.id
+   ~ColumnReceptor.location_id
+   ~ColumnReceptor.plot
+   ~ColumnReceptor.points
+   ~ColumnReceptor.kind
+   ~ColumnReceptor.longitude
+   ~ColumnReceptor.latitude
+   ~ColumnReceptor.bottom
+   ~ColumnReceptor.top
+   ~ColumnReceptor.time
+   ~ColumnReceptor.altitude_ref
+   ~ColumnReceptor.attrs
+

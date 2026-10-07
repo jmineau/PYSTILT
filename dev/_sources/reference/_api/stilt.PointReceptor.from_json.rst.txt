@@ -1,0 +1,6 @@
+stilt.PointReceptor.from\_json
+==============================
+
+.. currentmodule:: stilt
+
+.. automethod:: PointReceptor.from_json

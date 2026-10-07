@@ -1,0 +1,42 @@
+﻿stilt.observations.Plume
+========================
+
+.. currentmodule:: stilt.observations
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.. class-signature:: stilt.observations.Plume
+
+
+.. class-parameters:: stilt.observations.Plume
+
+
+
+
+Attributes
+----------
+
+.. autosummary::
+
+   ~Plume.polygon
+   ~Plume.density
+   ~Plume.threshold
+

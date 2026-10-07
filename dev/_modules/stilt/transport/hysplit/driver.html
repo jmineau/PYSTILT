@@ -1,0 +1,939 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>stilt.transport.hysplit.driver &#8212; PYSTILT dev</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../../_static/styles/theme.css?digest=7f76b32a3354e82990f2" rel="stylesheet" />
+<link href="../../../../_static/styles/pydata-sphinx-theme.css?digest=7f76b32a3354e82990f2" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/custom.css?v=90cc9208" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../../../../_static/scripts/fontawesome.js?digest=7f76b32a3354e82990f2"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=7f76b32a3354e82990f2" />
+<link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=7f76b32a3354e82990f2" />
+
+    <script src="../../../../_static/documentation_options.js?v=0af36158"></script>
+    <script src="../../../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/stilt/transport/hysplit/driver';</script>
+    <script>
+        DOCUMENTATION_OPTIONS.theme_version = '0.17.0';
+        DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = 'dev';
+        DOCUMENTATION_OPTIONS.show_version_warning_banner =
+            true;
+        </script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="0.1.0a23.dev261+gb929e3256" />
+  
+    
+    <script src="../../../../_static/searchtools.js"></script>
+    <script src="../../../../_static/language_data.js"></script>
+    <script src="../../../../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+<aside class="bd-header-announcement" aria-label="Announcement">
+  <div class="bd-header-announcement__content">PYSTILT is in alpha: names and options may change between releases.</div>
+</aside>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class=" navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">PYSTILT dev</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class=" navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../getting_started/index.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../tutorials/index.html">
+    Tutorials
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../guides/index.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../migration/index.html">
+    Coming From Another STILT
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../reference/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../advanced/index.html">
+    Internals
+  </a>
+</li>
+
+            <li class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button"
+                data-bs-toggle="dropdown" aria-expanded="false"
+                aria-controls="pst-nav-more-links">
+                    More
+                </button>
+                <ul id="pst-nav-more-links" class="dropdown-menu">
+                    
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../../../roadmap.html">
+    Roadmap
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../../../development.html">
+    Development
+  </a>
+</li>
+
+                </ul>
+            </li>
+            
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-2"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-2"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-2"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-2">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/jmineau/PYSTILT" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../getting_started/index.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../tutorials/index.html">
+    Tutorials
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../guides/index.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../migration/index.html">
+    Coming From Another STILT
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../reference/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../advanced/index.html">
+    Internals
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../roadmap.html">
+    Roadmap
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../development.html">
+    Development
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-3"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-3"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-3"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-3">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/jmineau/PYSTILT" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../../../index.html" class="nav-link">Module code</a></li>
+    
+    
+    <li class="breadcrumb-item"><a href="../../transport.html" class="nav-link">stilt.transport</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">stilt.transport.hysplit.driver</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for stilt.transport.hysplit.driver</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Write HYSPLIT&#39;s input files, run ``hycs_std``, and read the particles it writes.</span>
+
+<span class="sd">:func:`write_inputs` fills a working directory with everything</span>
+<span class="sd">``hycs_std`` reads, and :func:`read_particle_dat` reads the particle file</span>
+<span class="sd">it writes. :class:`~stilt.transport.hysplit.HysplitModel` runs the two</span>
+<span class="sd">around ``hycs_std`` in one directory; call them yourself to look at the</span>
+<span class="sd">input files of a run, or to read a ``PARTICLE_STILT.DAT`` from elsewhere.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">platform</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">signal</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">subprocess</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Sequence</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">importlib.resources</span><span class="w"> </span><span class="kn">import</span> <span class="n">files</span> <span class="k">as</span> <span class="n">pkg_files</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">HYSPLITNotFoundError</span><span class="p">,</span> <span class="n">SimulationError</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.receptors</span><span class="w"> </span><span class="kn">import</span> <span class="n">Receptor</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.transport.hysplit.config</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">WIND_ERROR_SETTINGS</span><span class="p">,</span>
+    <span class="n">ZI_ERROR_SETTINGS</span><span class="p">,</span>
+    <span class="n">HysplitConfig</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.transport.hysplit.control</span><span class="w"> </span><span class="kn">import</span> <span class="n">ControlFile</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.transport.hysplit.failures</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">FailureReason</span><span class="p">,</span>
+    <span class="n">failure_in</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.transport.hysplit.namelist</span><span class="w"> </span><span class="kn">import</span> <span class="n">NameList</span>
+
+<span class="n">CONTROL_FILE</span> <span class="o">=</span> <span class="s2">&quot;CONTROL&quot;</span>
+<span class="n">SETUP_FILE</span> <span class="o">=</span> <span class="s2">&quot;SETUP.CFG&quot;</span>
+<span class="n">HYCS_STD_FILE</span> <span class="o">=</span> <span class="s2">&quot;hycs_std&quot;</span>
+<span class="n">PARTICLE_STILT_FILE</span> <span class="o">=</span> <span class="s2">&quot;PARTICLE_STILT.DAT&quot;</span>
+<span class="n">WINDERR_FILE</span> <span class="o">=</span> <span class="s2">&quot;WINDERR&quot;</span>
+<span class="n">ZIERR_FILE</span> <span class="o">=</span> <span class="s2">&quot;ZIERR&quot;</span>
+<span class="n">ZICONTROL_FILE</span> <span class="o">=</span> <span class="s2">&quot;ZICONTROL&quot;</span>
+<span class="n">LOG_FILE</span> <span class="o">=</span> <span class="s2">&quot;stilt.log&quot;</span>
+
+<span class="c1">#: The settings ``CONTROL`` takes; :class:`ControlFile` writes them.</span>
+<span class="n">CONTROL_SETTINGS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;n_hours&quot;</span><span class="p">,</span> <span class="s2">&quot;emisshrs&quot;</span><span class="p">,</span> <span class="s2">&quot;w_option&quot;</span><span class="p">,</span> <span class="s2">&quot;z_top&quot;</span><span class="p">)</span>
+
+<span class="c1">#: Settings PYSTILT uses itself, in no HYSPLIT input file.</span>
+<span class="n">PYSTILT_SETTINGS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;hnf_plume&quot;</span><span class="p">,</span> <span class="s2">&quot;exe_dir&quot;</span><span class="p">,</span> <span class="s2">&quot;data_dir&quot;</span><span class="p">)</span>
+
+<span class="c1">#: Every setting that is not a ``SETUP.CFG`` entry. All other settings are.</span>
+<span class="n">NOT_IN_SETUP</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">(</span>
+    <span class="p">{</span>
+        <span class="o">*</span><span class="n">CONTROL_SETTINGS</span><span class="p">,</span>
+        <span class="s2">&quot;ziscale&quot;</span><span class="p">,</span>  <span class="c1"># ZICONTROL</span>
+        <span class="o">*</span><span class="n">WIND_ERROR_SETTINGS</span><span class="p">,</span>
+        <span class="o">*</span><span class="n">ZI_ERROR_SETTINGS</span><span class="p">,</span>
+        <span class="o">*</span><span class="n">PYSTILT_SETTINGS</span><span class="p">,</span>
+    <span class="p">}</span>
+<span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_bundled_exe_dir</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return the directory of the bundled ``hycs_std`` for this platform.</span>
+
+<span class="sd">    The bundled builds are x86-64 Linux and x86-64 macOS. The macOS build</span>
+<span class="sd">    also runs on Apple Silicon through Rosetta. Any other platform raises,</span>
+<span class="sd">    rather than running a binary the operating system cannot execute. So</span>
+<span class="sd">    does an install from the source archive, which carries no binary.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">system</span> <span class="o">=</span> <span class="n">platform</span><span class="o">.</span><span class="n">system</span><span class="p">()</span>
+    <span class="n">machine</span> <span class="o">=</span> <span class="n">platform</span><span class="o">.</span><span class="n">machine</span><span class="p">()</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+    <span class="n">subdir</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">system</span> <span class="o">==</span> <span class="s2">&quot;Linux&quot;</span> <span class="ow">and</span> <span class="n">machine</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;x86_64&quot;</span><span class="p">,</span> <span class="s2">&quot;amd64&quot;</span><span class="p">):</span>
+        <span class="n">subdir</span> <span class="o">=</span> <span class="s2">&quot;linux_x64&quot;</span>
+    <span class="k">elif</span> <span class="n">system</span> <span class="o">==</span> <span class="s2">&quot;Darwin&quot;</span> <span class="ow">and</span> <span class="n">machine</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;x86_64&quot;</span><span class="p">,</span> <span class="s2">&quot;arm64&quot;</span><span class="p">):</span>
+        <span class="n">subdir</span> <span class="o">=</span> <span class="s2">&quot;macos_x64&quot;</span>
+    <span class="k">if</span> <span class="n">subdir</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">exe_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">pkg_files</span><span class="p">(</span><span class="s2">&quot;stilt.transport.hysplit&quot;</span><span class="p">)</span> <span class="o">/</span> <span class="s2">&quot;bin&quot;</span> <span class="o">/</span> <span class="n">subdir</span><span class="p">))</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">exe_dir</span> <span class="o">/</span> <span class="n">HYCS_STD_FILE</span><span class="p">)</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+            <span class="k">return</span> <span class="n">exe_dir</span>
+    <span class="k">raise</span> <span class="n">HYSPLITNotFoundError</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;No bundled HYSPLIT binary for </span><span class="si">{</span><span class="n">system</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">platform</span><span class="o">.</span><span class="n">machine</span><span class="p">()</span><span class="si">}</span><span class="s2">. &quot;</span>
+        <span class="s2">&quot;Build hycs_std for this machine and set exe_dir in config.yaml &quot;</span>
+        <span class="s2">&quot;to the directory that holds it.&quot;</span>
+    <span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_bundled_data_dir</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the directory of HYSPLIT&#39;s bundled data tables.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">Path</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">pkg_files</span><span class="p">(</span><span class="s2">&quot;stilt.transport.hysplit&quot;</span><span class="p">)</span> <span class="o">/</span> <span class="s2">&quot;data&quot;</span><span class="p">))</span>
+
+
+<span class="c1">#: HYSPLIT&#39;s names for the columns the particle table names otherwise</span>
+<span class="c1">#: (:data:`stilt.particles.PARTICLE_SCHEMA`); the rest keep HYSPLIT&#39;s.</span>
+<span class="n">PARTICLE_COLUMNS</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;indx&quot;</span><span class="p">:</span> <span class="s2">&quot;particle&quot;</span><span class="p">,</span> <span class="s2">&quot;long&quot;</span><span class="p">:</span> <span class="s2">&quot;lon&quot;</span><span class="p">,</span> <span class="s2">&quot;lati&quot;</span><span class="p">:</span> <span class="s2">&quot;lat&quot;</span><span class="p">}</span>
+
+
+<div class="viewcode-block" id="read_particle_dat">
+<a class="viewcode-back" href="../../../../reference/_api/stilt.transport.hysplit.read_particle_dat.html#stilt.transport.hysplit.read_particle_dat">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">read_particle_dat</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">,</span> <span class="n">columns</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Read a ``PARTICLE_STILT.DAT`` file as a particle table.</span>
+
+<span class="sd">    The ``varsiwant`` codes ``indx``, ``long``, and ``lati`` become the</span>
+<span class="sd">    particle table&#39;s ``particle``, ``lon``, and ``lat``</span>
+<span class="sd">    (:data:`PARTICLE_COLUMNS`).</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    path : str or Path</span>
+<span class="sd">        The file HYSPLIT wrote.</span>
+<span class="sd">    columns : sequence of str</span>
+<span class="sd">        Its columns, the ``varsiwant`` of the run, in order.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    pandas.DataFrame</span>
+<span class="sd">        One row per particle per output step, as HYSPLIT wrote them. The</span>
+<span class="sd">        release heights and the near-field correction are added after the</span>
+<span class="sd">        run (:func:`stilt.transport.run_model`).</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If the file has a different number of columns.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="n">names</span> <span class="o">=</span> <span class="p">[</span><span class="n">PARTICLE_COLUMNS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">columns</span><span class="p">]</span>
+    <span class="c1"># numpy.loadtxt reads large files much faster than pandas and handles</span>
+    <span class="c1"># HYSPLIT&#39;s variable-width spacing.</span>
+    <span class="k">with</span> <span class="n">warnings</span><span class="o">.</span><span class="n">catch_warnings</span><span class="p">():</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">filterwarnings</span><span class="p">(</span>
+            <span class="s2">&quot;ignore&quot;</span><span class="p">,</span>
+            <span class="n">message</span><span class="o">=</span><span class="s2">&quot;loadtxt: input contained no data&quot;</span><span class="p">,</span>
+            <span class="n">category</span><span class="o">=</span><span class="ne">UserWarning</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">loadtxt</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">skiprows</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">ndmin</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">values</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">Index</span><span class="p">(</span><span class="n">names</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">values</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">names</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> has </span><span class="si">{</span><span class="n">values</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2"> columns, expected </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">names</span><span class="p">)</span><span class="si">}</span><span class="s2"> &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;from varsiwant=</span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">columns</span><span class="p">)</span><span class="si">!r}</span><span class="s2">.&quot;</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">Index</span><span class="p">(</span><span class="n">names</span><span class="p">))</span></div>
+
+
+
+<span class="c1"># -- what each input file holds -----------------------------------------------</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">setup_entries</span><span class="p">(</span><span class="n">params</span><span class="p">:</span> <span class="n">HysplitConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return the ``SETUP.CFG`` namelist entries of *params*, leaving out unset ones.</span>
+
+<span class="sd">    Every setting not in :data:`NOT_IN_SETUP` is an entry, in declaration</span>
+<span class="sd">    order. The driver adds ``KMSL``, ``IVMAX``, and ``WINDERRTF``, which</span>
+<span class="sd">    depend on the receptor or follow from other settings.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">entries</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="n">name</span><span class="p">:</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">HysplitConfig</span><span class="o">.</span><span class="n">model_fields</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">NOT_IN_SETUP</span> <span class="ow">and</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+    <span class="p">}</span>
+    <span class="n">entries</span><span class="p">[</span><span class="s2">&quot;maxpar&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">params</span><span class="o">.</span><span class="n">effective_maxpar</span>
+    <span class="n">entries</span><span class="p">[</span><span class="s2">&quot;zicontroltf&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">zicontroltf</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">params</span><span class="o">.</span><span class="n">seed</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">entries</span><span class="p">[</span><span class="s2">&quot;seed&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">setup_seed</span><span class="p">(</span><span class="n">params</span><span class="o">.</span><span class="n">seed</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">entries</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">setup_seed</span><span class="p">(</span><span class="n">seed</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return the ``SEED`` value written to ``SETUP.CFG`` for a user seed.</span>
+
+<span class="sd">    HYSPLIT sets its generator state to ``-1 + SEED``. Under ``krand=2`` it</span>
+<span class="sd">    reinitializes only from a negative state, and every state of -1 or more</span>
+<span class="sd">    gives the same stream. Writing ``-(|seed| + 1)`` puts the state at</span>
+<span class="sd">    ``-(|seed| + 2)``. That is negative, different for each ``|seed|``, and</span>
+<span class="sd">    never the unseeded default (``SEED = 0``). A patched HYSPLIT that uses</span>
+<span class="sd">    ``SEED`` directly maps a negative ``SEED`` to the same state, so the</span>
+<span class="sd">    value works with both builds.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="o">-</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">ziscale_factors</span><span class="p">(</span><span class="n">params</span><span class="p">:</span> <span class="n">HysplitConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return the hourly mixed-layer factors for ``ZICONTROL``, or ``None`` when unscaled.</span>
+
+<span class="sd">    A single ``ziscale`` value is repeated for every hour of the run and a</span>
+<span class="sd">    list is used as given. Factors that are all 1.0 give ``None``.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">values</span> <span class="o">=</span> <span class="n">params</span><span class="o">.</span><span class="n">hourly_ziscale</span><span class="p">()</span>
+    <span class="k">if</span> <span class="nb">all</span><span class="p">(</span><span class="n">v</span> <span class="o">==</span> <span class="mf">1.0</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">values</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">return</span> <span class="n">values</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">zicontroltf</span><span class="p">(</span><span class="n">params</span><span class="p">:</span> <span class="n">HysplitConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return HYSPLIT&#39;s ``ZICONTROLTF`` flag: 1 when ``ziscale`` scales the mixed layer.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">ziscale_factors</span><span class="p">(</span><span class="n">params</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">winderr</span><span class="p">(</span><span class="n">params</span><span class="p">:</span> <span class="n">HysplitConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the ``WINDERR`` values, in the file&#39;s order, or ``None`` when unset.&quot;&quot;&quot;</span>
+    <span class="n">values</span> <span class="o">=</span> <span class="p">[</span><span class="nb">getattr</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">WIND_ERROR_SETTINGS</span><span class="p">]</span>
+    <span class="k">return</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">values</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">zierr</span><span class="p">(</span><span class="n">params</span><span class="p">:</span> <span class="n">HysplitConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the ``ZIERR`` values, in the file&#39;s order, or ``None`` when unset.&quot;&quot;&quot;</span>
+    <span class="n">values</span> <span class="o">=</span> <span class="p">[</span><span class="nb">getattr</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">ZI_ERROR_SETTINGS</span><span class="p">]</span>
+    <span class="k">return</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">values</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">winderrtf</span><span class="p">(</span><span class="n">params</span><span class="p">:</span> <span class="n">HysplitConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return HYSPLIT&#39;s ``WINDERRTF`` flag: 1 for wind errors, 2 for mixed-layer errors, 3 for both.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">winderr</span><span class="p">(</span><span class="n">params</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="n">zierr</span><span class="p">(</span><span class="n">params</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_write_values</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">values</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Write one value per line to ``path``; nothing is written when ``values`` is ``None``.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">values</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">path</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">values</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="write_inputs">
+<a class="viewcode-back" href="../../../../reference/_api/stilt.transport.hysplit.write_inputs.html#stilt.transport.hysplit.write_inputs">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">write_inputs</span><span class="p">(</span>
+    <span class="n">workdir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">,</span>
+    <span class="n">receptor</span><span class="p">:</span> <span class="n">Receptor</span><span class="p">,</span>
+    <span class="n">config</span><span class="p">:</span> <span class="n">HysplitConfig</span><span class="p">,</span>
+    <span class="n">met_files</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Path</span><span class="p">],</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Write everything ``hycs_std`` reads for one receptor into *workdir*.</span>
+
+<span class="sd">    Links ``hycs_std`` (from ``config.exe_dir``, or the bundled build) and</span>
+<span class="sd">    HYSPLIT&#39;s data tables (the bundled ones, replaced by any in</span>
+<span class="sd">    ``config.data_dir``), and writes ``CONTROL`` and ``SETUP.CFG``, plus</span>
+<span class="sd">    ``ZICONTROL``, ``WINDERR``, and ``ZIERR`` when the settings call for</span>
+<span class="sd">    them. *workdir* is created if needed, and should be empty.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    workdir : str or Path</span>
+<span class="sd">        Directory to write into.</span>
+<span class="sd">    receptor : Receptor</span>
+<span class="sd">        Where and when particles are released. Its ``altitude_ref`` sets</span>
+<span class="sd">        HYSPLIT&#39;s ``KMSL``.</span>
+<span class="sd">    config : HysplitConfig</span>
+<span class="sd">        Transport and error settings.</span>
+<span class="sd">    met_files : sequence of Path</span>
+<span class="sd">        Meteorology files, in the order HYSPLIT should read them.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    HYSPLITNotFoundError</span>
+<span class="sd">        If there is no ``hycs_std`` to link.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">workdir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">workdir</span><span class="p">)</span>
+    <span class="n">workdir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="c1"># Link the binary and the data tables, as STILT-R does. Only hycs_std is</span>
+    <span class="c1"># taken from exe_dir: a custom build directory usually holds a whole</span>
+    <span class="c1"># HYSPLIT exec/ tree.</span>
+    <span class="n">exe_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">exe_dir</span><span class="p">)</span> <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">exe_dir</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">_bundled_exe_dir</span><span class="p">()</span>
+    <span class="n">exe</span> <span class="o">=</span> <span class="n">exe_dir</span> <span class="o">/</span> <span class="n">HYCS_STD_FILE</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">exe</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="n">HYSPLITNotFoundError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;No </span><span class="si">{</span><span class="n">HYCS_STD_FILE</span><span class="si">!r}</span><span class="s2"> executable in </span><span class="si">{</span><span class="n">exe_dir</span><span class="si">}</span><span class="s2">. Check exe_dir.&quot;</span>
+        <span class="p">)</span>
+    <span class="n">links</span> <span class="o">=</span> <span class="p">{</span><span class="n">HYCS_STD_FILE</span><span class="p">:</span> <span class="n">exe</span><span class="p">}</span>
+    <span class="n">links</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="n">f</span><span class="o">.</span><span class="n">name</span><span class="p">:</span> <span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">_bundled_data_dir</span><span class="p">()</span><span class="o">.</span><span class="n">iterdir</span><span class="p">()})</span>
+    <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">data_dir</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># its tables replace the bundled ones</span>
+        <span class="n">links</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
+            <span class="p">{</span><span class="n">f</span><span class="o">.</span><span class="n">name</span><span class="p">:</span> <span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">Path</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">data_dir</span><span class="p">)</span><span class="o">.</span><span class="n">iterdir</span><span class="p">()</span> <span class="k">if</span> <span class="n">f</span><span class="o">.</span><span class="n">is_file</span><span class="p">()}</span>
+        <span class="p">)</span>
+    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">target</span> <span class="ow">in</span> <span class="n">links</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="p">(</span><span class="n">workdir</span> <span class="o">/</span> <span class="n">name</span><span class="p">)</span><span class="o">.</span><span class="n">symlink_to</span><span class="p">(</span><span class="n">target</span><span class="o">.</span><span class="n">resolve</span><span class="p">())</span>
+
+    <span class="n">ControlFile</span><span class="p">(</span>
+        <span class="n">receptor</span><span class="o">=</span><span class="n">receptor</span><span class="p">,</span>
+        <span class="n">n_hours</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">n_hours</span><span class="p">,</span>
+        <span class="n">emisshrs</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">emisshrs</span><span class="p">,</span>
+        <span class="n">w_option</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">w_option</span><span class="p">,</span>
+        <span class="n">z_top</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">z_top</span><span class="p">,</span>
+        <span class="n">met_files</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="n">met_files</span><span class="p">),</span>
+    <span class="p">)</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">workdir</span> <span class="o">/</span> <span class="n">CONTROL_FILE</span><span class="p">)</span>
+
+    <span class="n">entries</span> <span class="o">=</span> <span class="n">setup_entries</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+    <span class="c1"># HYSPLIT&#39;s KMSL: 0 for heights above ground, 1 above sea level.</span>
+    <span class="n">entries</span><span class="p">[</span><span class="s2">&quot;kmsl&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span> <span class="k">if</span> <span class="n">receptor</span><span class="o">.</span><span class="n">altitude_ref</span> <span class="o">==</span> <span class="s2">&quot;msl&quot;</span> <span class="k">else</span> <span class="mi">0</span>
+    <span class="n">entries</span><span class="p">[</span><span class="s2">&quot;ivmax&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">varsiwant</span><span class="p">)</span>  <span class="c1"># number of output variables</span>
+    <span class="n">entries</span><span class="p">[</span><span class="s2">&quot;winderrtf&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">winderrtf</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+    <span class="n">setup</span> <span class="o">=</span> <span class="n">NameList</span><span class="p">(</span><span class="s2">&quot;SETUP&quot;</span><span class="p">)</span>
+    <span class="n">setup</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">entries</span><span class="p">)</span>
+    <span class="n">setup</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">workdir</span> <span class="o">/</span> <span class="n">SETUP_FILE</span><span class="p">)</span>
+
+    <span class="n">factors</span> <span class="o">=</span> <span class="n">ziscale_factors</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">factors</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="p">(</span><span class="n">workdir</span> <span class="o">/</span> <span class="n">ZICONTROL_FILE</span><span class="p">)</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span>
+            <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="nb">str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">factors</span><span class="p">)),</span> <span class="o">*</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">factors</span><span class="p">)])</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="p">)</span>
+    <span class="n">_write_values</span><span class="p">(</span><span class="n">workdir</span> <span class="o">/</span> <span class="n">WINDERR_FILE</span><span class="p">,</span> <span class="n">winderr</span><span class="p">(</span><span class="n">config</span><span class="p">))</span>
+    <span class="n">_write_values</span><span class="p">(</span><span class="n">workdir</span> <span class="o">/</span> <span class="n">ZIERR_FILE</span><span class="p">,</span> <span class="n">zierr</span><span class="p">(</span><span class="n">config</span><span class="p">))</span></div>
+
+
+
+<div class="viewcode-block" id="run_hycs_std">
+<a class="viewcode-back" href="../../../../reference/_api/stilt.transport.hysplit.run_hycs_std.html#stilt.transport.hysplit.run_hycs_std">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">run_hycs_std</span><span class="p">(</span><span class="n">workdir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">timeout</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Run the ``hycs_std`` in *workdir*, writing its output to ``stilt.log``.</span>
+
+<span class="sd">    *workdir* holds the inputs :func:`write_inputs` wrote. With *timeout*</span>
+<span class="sd">    seconds the run is stopped when it takes longer; without it, it may run</span>
+<span class="sd">    as long as HYSPLIT does.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    SimulationError</span>
+<span class="sd">        With ``reason`` ``TIMEOUT`` when the run exceeded *timeout*</span>
+<span class="sd">        seconds, or the :class:`FailureReason` of a known failure message in</span>
+<span class="sd">        the log.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">log_path</span> <span class="o">=</span> <span class="n">workdir</span> <span class="o">/</span> <span class="n">LOG_FILE</span>
+    <span class="k">with</span> <span class="p">(</span>
+        <span class="n">log_path</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="s2">&quot;w&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">handle</span><span class="p">,</span>
+        <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">(</span>
+            <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">workdir</span> <span class="o">/</span> <span class="n">HYCS_STD_FILE</span><span class="p">)],</span>
+            <span class="n">cwd</span><span class="o">=</span><span class="n">workdir</span><span class="p">,</span>
+            <span class="n">stdout</span><span class="o">=</span><span class="n">handle</span><span class="p">,</span>
+            <span class="n">stderr</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">STDOUT</span><span class="p">,</span>
+            <span class="n">start_new_session</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="p">)</span> <span class="k">as</span> <span class="n">proc</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">proc</span><span class="o">.</span><span class="n">wait</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">TimeoutExpired</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">_terminate</span><span class="p">(</span><span class="n">proc</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">SimulationError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;HYSPLIT ran longer than the </span><span class="si">{</span><span class="n">timeout</span><span class="si">}</span><span class="s2"> s timeout.&quot;</span><span class="p">,</span>
+                <span class="n">reason</span><span class="o">=</span><span class="n">FailureReason</span><span class="o">.</span><span class="n">TIMEOUT</span><span class="p">,</span>
+            <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">e</span>
+    <span class="n">found</span> <span class="o">=</span> <span class="n">failure_in</span><span class="p">(</span><span class="n">log_path</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s2">&quot;replace&quot;</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">found</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">reason</span><span class="p">,</span> <span class="n">line</span> <span class="o">=</span> <span class="n">found</span>
+        <span class="k">raise</span> <span class="n">SimulationError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;HYSPLIT: </span><span class="si">{</span><span class="n">line</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">reason</span><span class="o">=</span><span class="n">reason</span><span class="p">)</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_terminate</span><span class="p">(</span><span class="n">proc</span><span class="p">:</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">[</span><span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Stop a HYSPLIT process group with SIGTERM, then SIGKILL if it does not exit.&quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">killpg</span><span class="p">(</span><span class="n">proc</span><span class="o">.</span><span class="n">pid</span><span class="p">,</span> <span class="n">signal</span><span class="o">.</span><span class="n">SIGTERM</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">ProcessLookupError</span><span class="p">:</span>
+        <span class="k">return</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">proc</span><span class="o">.</span><span class="n">wait</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+        <span class="k">return</span>
+    <span class="k">except</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">TimeoutExpired</span><span class="p">:</span>
+        <span class="k">pass</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">killpg</span><span class="p">(</span><span class="n">proc</span><span class="o">.</span><span class="n">pid</span><span class="p">,</span> <span class="n">signal</span><span class="o">.</span><span class="n">SIGKILL</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">ProcessLookupError</span><span class="p">:</span>
+        <span class="k">return</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">proc</span><span class="o">.</span><span class="n">wait</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">TimeoutExpired</span><span class="p">:</span>
+        <span class="n">proc</span><span class="o">.</span><span class="n">wait</span><span class="p">()</span>
+</pre></div>
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../../../_static/scripts/bootstrap.js?digest=7f76b32a3354e82990f2"></script>
+<script defer src="../../../../_static/scripts/pydata-sphinx-theme.js?digest=7f76b32a3354e82990f2"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2026, James Mineau.
+      <br/>
+    
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.1.0.
+    <br/>
+  </p>
+</div>
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.17.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

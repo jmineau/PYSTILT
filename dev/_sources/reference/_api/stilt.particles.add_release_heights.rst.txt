@@ -1,0 +1,6 @@
+﻿stilt.particles.add\_release\_heights
+=====================================
+
+.. currentmodule:: stilt.particles
+
+.. autofunction:: add_release_heights

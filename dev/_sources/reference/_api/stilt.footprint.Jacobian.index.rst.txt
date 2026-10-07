@@ -1,0 +1,6 @@
+stilt.footprint.Jacobian.index
+==============================
+
+.. currentmodule:: stilt.footprint
+
+.. automethod:: Jacobian.index

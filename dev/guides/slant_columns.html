@@ -1,0 +1,888 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Slant Columns &#8212; PYSTILT dev</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=7f76b32a3354e82990f2" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=7f76b32a3354e82990f2" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=90cc9208" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=7f76b32a3354e82990f2"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=7f76b32a3354e82990f2" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=7f76b32a3354e82990f2" />
+
+    <script src="../_static/documentation_options.js?v=0af36158"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'guides/slant_columns';</script>
+    <script>
+        DOCUMENTATION_OPTIONS.theme_version = '0.17.0';
+        DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = 'dev';
+        DOCUMENTATION_OPTIONS.show_version_warning_banner =
+            true;
+        </script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Particle Weighting (Transforms)" href="transforms.html" />
+    <link rel="prev" title="Reading Retrieval Products" href="readers.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="0.1.0a23.dev261+gb929e3256" />
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+<aside class="bd-header-announcement" aria-label="Announcement">
+  <div class="bd-header-announcement__content">PYSTILT is in alpha: names and options may change between releases.</div>
+</aside>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class=" navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">PYSTILT dev</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class=" navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started/index.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../tutorials/index.html">
+    Tutorials
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../migration/index.html">
+    Coming From Another STILT
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../reference/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../advanced/index.html">
+    Internals
+  </a>
+</li>
+
+            <li class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button"
+                data-bs-toggle="dropdown" aria-expanded="false"
+                aria-controls="pst-nav-more-links">
+                    More
+                </button>
+                <ul id="pst-nav-more-links" class="dropdown-menu">
+                    
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../roadmap.html">
+    Roadmap
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../development.html">
+    Development
+  </a>
+</li>
+
+                </ul>
+            </li>
+            
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-2"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-2"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-2"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-2">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/jmineau/PYSTILT" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started/index.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../tutorials/index.html">
+    Tutorials
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../migration/index.html">
+    Coming From Another STILT
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../reference/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../advanced/index.html">
+    Internals
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../roadmap.html">
+    Roadmap
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../development.html">
+    Development
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-3"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-3"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-3"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-3">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/jmineau/PYSTILT" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item pst-sidebar-collapse"><button id="pst-collapse-sidebar-button" aria-expanded="true" aria-controls="pst-primary-sidebar"><svg class="pst-icon svg-inline--fa" role="img" aria-hidden="true" focusable="false" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+    <path fill="currentColor" d="M3 15.5C2.36232 15.5 1.74874 15.2564 1.28478 14.8189C0.820828 14.3815 0.541576 13.7832 0.504167 13.1467L0.5 13L0.5 3C0.499965 2.36232 0.743605 1.74874 1.18107 1.28478C1.61854 0.820828 2.21676 0.541576 2.85333 0.504167L3 0.5L13 0.5C13.6377 0.499965 14.2513 0.743605 14.7152 1.18107C15.1792 1.61854 15.4584 2.21676 15.4958 2.85333L15.5 3L15.5 13C15.5 13.6377 15.2564 14.2513 14.8189 14.7152C14.3815 15.1792 13.7832 15.4584 13.1467 15.4958L13 15.5L3 15.5ZM3 13.8333L10.5 13.8333L10.5 2.16667L3 2.16667C2.79589 2.16669 2.59889 2.24163 2.44636 2.37726C2.29383 2.5129 2.19638 2.69979 2.1725 2.9025L2.16667 3L2.16667 13C2.16669 13.2041 2.24163 13.4011 2.37726 13.5536C2.5129 13.7062 2.69979 13.8036 2.9025 13.8275L3 13.8333ZM6.65583 10.325L6.5775 10.2558L4.91083 8.58917C4.76735 8.44567 4.68116 8.25476 4.66843 8.05223C4.65569 7.84971 4.71729 7.6495 4.84167 7.48917L4.91083 7.41083L6.5775 5.74417C6.72747 5.59471 6.9287 5.50794 7.14032 5.50148C7.35194 5.49502 7.55809 5.56935 7.7169 5.70937C7.8757 5.8494 7.97525 6.04463 7.99533 6.25539C8.01541 6.46616 7.95451 6.67667 7.825 6.84417L7.75583 6.9225L6.67917 8L7.75583 9.0775C7.89931 9.22099 7.98551 9.41191 7.99824 9.61443C8.01097 9.81695 7.94938 10.0172 7.825 10.1775L7.75583 10.2558C7.61234 10.3993 7.42142 10.4855 7.2189 10.4982C7.01638 10.511 6.81617 10.4494 6.65583 10.325Z"/>
+  </svg>
+  <span class="pst-collapse-sidebar-label">Collapse Sidebar</span>
+  <span class="pst-expand-sidebar-label">Expand Sidebar</span>
+</button></div>
+        <div class="sidebar-primary-item">
+
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><p aria-level="2" class="caption" role="heading"><span class="caption-text">Setting up a project</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="receptors.html">Receptors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="meteorology.html">Meteorology</a></li>
+<li class="toctree-l1"><a class="reference internal" href="projects.html">Projects And Variants</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Running</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1 has-children"><a class="reference internal" href="running.html">Running</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="slurm.html">On An HPC Cluster (Slurm)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="containers.html">In Containers (Kubernetes)</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="checking.html">Checking A Run</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Results</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="outputs.html">Footprints And Particles</a></li>
+<li class="toctree-l1"><a class="reference internal" href="aggregation.html">Summing Footprints: Areas And The Jacobian</a></li>
+<li class="toctree-l1"><a class="reference internal" href="transport_error.html">Transport Error</a></li>
+<li class="toctree-l1"><a class="reference internal" href="wind_errors.html">Wind Error Statistics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="background.html">Background</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Column and satellite measurements</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="readers.html">Reading Retrieval Products</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Slant Columns</a></li>
+<li class="toctree-l1"><a class="reference internal" href="transforms.html">Particle Weighting (Transforms)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="plume_background.html">Plume Background</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">HYSPLIT</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="hysplit_build.html">Your Own HYSPLIT Build And Data Tables</a></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="index.html" class="nav-link">User Guide</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Slant Columns</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="slant-columns">
+<h1>Slant Columns<a class="headerlink" href="#slant-columns" title="Link to this heading">#</a></h1>
+<p>A column instrument that does not look straight up measures the air along
+a tilted path. A ground-based solar tracker (EM27/SUN, TCCON) looks at the
+sun. An off-nadir satellite sounding looks toward the satellite. PYSTILT
+models the path as a <a class="reference internal" href="../reference/_api/stilt.MultiPointReceptor.html#stilt.MultiPointReceptor" title="stilt.MultiPointReceptor"><code class="xref py py-class docutils literal notranslate"><span class="pre">MultiPointReceptor</span></code></a> whose points step up
+the line of sight. All the points run in one simulation, and the particles
+are weighted afterwards.</p>
+<p>This page covers the geometry, an EM27/SUN example, and satellite
+soundings.</p>
+<section id="geometry">
+<h2>Geometry<a class="headerlink" href="#geometry" title="Link to this heading">#</a></h2>
+<p><a class="reference internal" href="../reference/_api/stilt.observations.slant_points.html#stilt.observations.slant_points" title="stilt.observations.slant_points"><code class="xref py py-func docutils literal notranslate"><span class="pre">slant_points()</span></code></a> turns a location, a list of
+altitudes, and two angles into <code class="docutils literal notranslate"><span class="pre">(longitude,</span> <span class="pre">latitude,</span> <span class="pre">altitude)</span></code> points.
+Each altitude <span class="math notranslate nohighlight">\(z\)</span> is placed a horizontal distance</p>
+<div class="math notranslate nohighlight">
+\[d = (z - z_\text{anchor}) \tan\theta\]</div>
+<p>from the location, along the azimuth bearing. <span class="math notranslate nohighlight">\(\theta\)</span> is the zenith
+angle. <span class="math notranslate nohighlight">\(z_\text{anchor}\)</span> is the altitude where the path passes through
+the location. It is the first altitude unless you pass <code class="docutils literal notranslate"><span class="pre">anchor=</span></code>.</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">zenith</span></code></dt><dd><p>Degrees from the local vertical. For a solar tracker, use the solar
+zenith angle at the time of the measurement.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">azimuth</span></code></dt><dd><p>Degrees clockwise from north, pointing from the ground toward the
+instrument or the sun. Higher points are moved in this direction. For a
+solar tracker, use the solar azimuth angle. Satellite products usually
+give the bearing to the satellite as <code class="docutils literal notranslate"><span class="pre">sensor_azimuth_angle</span></code> or
+<code class="docutils literal notranslate"><span class="pre">viewing_azimuth_angle</span></code>. A few products give the reverse bearing, so
+check the product’s definition.</p>
+</dd>
+<dt>Altitudes</dt><dd><p>Give the altitudes above mean sea level and build the receptor with
+<code class="docutils literal notranslate"><span class="pre">altitude_ref=&quot;msl&quot;</span></code>. The path is a straight line in height above sea
+level, and heights above ground would bend it with the terrain. Start at
+the station or surface altitude. End at the top of the air you want to
+resolve, and no higher than the top of the meteorology. Air above the
+last point is not sampled. It belongs to the background (see
+<a class="reference internal" href="#weighting">Weighting</a> below).</p>
+</dd>
+</dl>
+<p>The points are laid out on a flat plane tangent to the Earth. A 3 km column
+at an 80° zenith angle reaches 17 km sideways. Even there, ignoring the
+Earth’s curvature moves the top point by less than one percent of the
+column height.</p>
+</section>
+<section id="em27-sun-example">
+<h2>EM27/SUN example<a class="headerlink" href="#em27-sun-example" title="Link to this heading">#</a></h2>
+<p>An EM27/SUN retrieval gives one column value per spectrum, with the solar
+zenith and azimuth angles at that time. <a class="reference internal" href="../reference/_api/stilt.observations.read_ggg_oof.html#stilt.observations.read_ggg_oof" title="stilt.observations.read_ggg_oof"><code class="xref py py-func docutils literal notranslate"><span class="pre">read_ggg_oof()</span></code></a>
+reads a day of these (see <a class="reference internal" href="readers.html"><span class="doc">Reading Retrieval Products</span></a>). The sun moves about 15° per
+hour, so build one receptor per averaging window, not one per day:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">stilt</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.observations</span><span class="w"> </span><span class="kn">import</span> <span class="n">read_ggg_oof</span><span class="p">,</span> <span class="n">slant_points</span>
+
+<span class="n">project</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">Project</span><span class="p">(</span><span class="s2">&quot;./em27&quot;</span><span class="p">)</span>      <span class="c1"># made with stilt init or Project.init</span>
+
+<span class="n">df</span> <span class="o">=</span> <span class="n">read_ggg_oof</span><span class="p">(</span><span class="s2">&quot;ha20230715.vav.ada.aia.oof&quot;</span><span class="p">,</span> <span class="s2">&quot;xch4&quot;</span><span class="p">)</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="o">.</span><span class="n">good</span><span class="p">]</span>
+<span class="n">windows</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">df</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s2">&quot;time&quot;</span><span class="p">)[[</span><span class="s2">&quot;longitude&quot;</span><span class="p">,</span> <span class="s2">&quot;latitude&quot;</span><span class="p">,</span> <span class="s2">&quot;surface_altitude&quot;</span><span class="p">,</span> <span class="s2">&quot;zenith&quot;</span><span class="p">,</span> <span class="s2">&quot;azimuth&quot;</span><span class="p">]]</span>
+    <span class="o">.</span><span class="n">resample</span><span class="p">(</span><span class="s2">&quot;10min&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span>
+<span class="p">)</span>
+
+<span class="n">receptors</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="n">stilt</span><span class="o">.</span><span class="n">Receptor</span><span class="o">.</span><span class="n">from_points</span><span class="p">(</span>
+        <span class="n">t</span><span class="p">,</span>
+        <span class="n">slant_points</span><span class="p">(</span>
+            <span class="n">w</span><span class="o">.</span><span class="n">longitude</span><span class="p">,</span> <span class="n">w</span><span class="o">.</span><span class="n">latitude</span><span class="p">,</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">w</span><span class="o">.</span><span class="n">surface_altitude</span><span class="p">,</span> <span class="n">w</span><span class="o">.</span><span class="n">surface_altitude</span> <span class="o">+</span> <span class="mf">3000.0</span><span class="p">,</span> <span class="mi">20</span><span class="p">),</span>
+            <span class="n">zenith</span><span class="o">=</span><span class="n">w</span><span class="o">.</span><span class="n">zenith</span><span class="p">,</span> <span class="n">azimuth</span><span class="o">=</span><span class="n">w</span><span class="o">.</span><span class="n">azimuth</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="n">altitude_ref</span><span class="o">=</span><span class="s2">&quot;msl&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">for</span> <span class="n">t</span><span class="p">,</span> <span class="n">w</span> <span class="ow">in</span> <span class="n">windows</span><span class="o">.</span><span class="n">iterrows</span><span class="p">()</span>
+<span class="p">]</span>
+<span class="n">project</span><span class="o">.</span><span class="n">add_receptors</span><span class="p">(</span><span class="n">receptors</span><span class="p">)</span>
+<span class="n">project</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>Twenty points over 3 km is a typical spacing. HYSPLIT splits <code class="docutils literal notranslate"><span class="pre">numpar</span></code>
+among the points, so raise <code class="docutils literal notranslate"><span class="pre">numpar</span></code> when you add points.</p>
+<p>Also add <code class="docutils literal notranslate"><span class="pre">zsfc</span></code> to <code class="docutils literal notranslate"><span class="pre">varsiwant</span></code> in <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>. PYSTILT needs it to
+work out which point each particle started from (see <a class="reference internal" href="#how-the-release-heights-come-back">How the release
+heights come back</a>).</p>
+<p>Before running, check the geometry. Plot <code class="docutils literal notranslate"><span class="pre">receptor.longitudes</span></code> and
+<code class="docutils literal notranslate"><span class="pre">receptor.latitudes</span></code> against <code class="docutils literal notranslate"><span class="pre">receptor.altitudes</span></code> for a morning window
+and an afternoon window. The path should lean east in the morning and west
+in the afternoon.</p>
+</section>
+<section id="weighting">
+<h2>Weighting<a class="headerlink" href="#weighting" title="Link to this heading">#</a></h2>
+<p>A column instrument averages over air mass and applies its own averaging
+kernel. The particles of a slant receptor start evenly spaced in height, so
+weight them before they become a footprint (see
+<a class="reference internal" href="transforms.html"><span class="doc">Particle Weighting (Transforms)</span></a>):</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">transforms</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">pressure_weighting</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">pressure_weighting</span></code> works everything out from the particles, so you give
+it no inputs. Each point of the slant stands for its share of the air
+mass, split evenly among the particles released there. The weights add up
+to the fraction of the atmosphere’s mass that the receptor covers. The air
+above the receptor top is part of the background. For an MSL receptor the
+transform needs <code class="docutils literal notranslate"><span class="pre">zsfc</span></code> in <code class="docutils literal notranslate"><span class="pre">varsiwant</span></code>, as the release-height matching
+does.</p>
+<p>Each window needs its own averaging kernel, because an EM27/SUN kernel
+changes with the solar zenith angle. A <code class="docutils literal notranslate"><span class="pre">.oof</span></code> file does not have the
+kernels. Take them from the run’s <code class="docutils literal notranslate"><span class="pre">*.private.nc</span></code> with
+<a class="reference internal" href="../reference/_api/stilt.observations.read_ggg_netcdf.html#stilt.observations.read_ggg_netcdf" title="stilt.observations.read_ggg_netcdf"><code class="xref py py-func docutils literal notranslate"><span class="pre">read_ggg_netcdf()</span></code></a>, which expands GGG’s kernel
+table for each spectrum. You can also use a site table keyed by solar
+zenith angle, as PROFFAST provides. Make the table with
+<a class="reference internal" href="../reference/_api/stilt.transforms.averaging_kernel_table.html#stilt.transforms.averaging_kernel_table" title="stilt.transforms.averaging_kernel_table"><code class="xref py py-func docutils literal notranslate"><span class="pre">averaging_kernel_table()</span></code></a> and add it to the project
+with <code class="docutils literal notranslate"><span class="pre">project.add_table</span></code>. The <code class="docutils literal notranslate"><span class="pre">averaging_kernel</span></code> transform then looks
+up each receptor’s kernel:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">stilt.observations</span><span class="w"> </span><span class="kn">import</span> <span class="n">read_ggg_netcdf</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.transforms</span><span class="w"> </span><span class="kn">import</span> <span class="n">averaging_kernel_table</span>
+
+<span class="n">ak</span> <span class="o">=</span> <span class="n">read_ggg_netcdf</span><span class="p">(</span><span class="s2">&quot;ha20230715_20230715.private.nc&quot;</span><span class="p">,</span> <span class="s2">&quot;xch4&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s2">&quot;time&quot;</span><span class="p">)</span>
+<span class="c1"># one kernel per window: the spectrum nearest the window&#39;s midpoint</span>
+<span class="n">nearest</span> <span class="o">=</span> <span class="n">ak</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">get_indexer</span><span class="p">(</span><span class="n">windows</span><span class="o">.</span><span class="n">index</span> <span class="o">+</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timedelta</span><span class="p">(</span><span class="s2">&quot;5min&quot;</span><span class="p">),</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;nearest&quot;</span><span class="p">)</span>
+<span class="n">kernels</span> <span class="o">=</span> <span class="p">[</span><span class="n">ak</span><span class="o">.</span><span class="n">ak</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">nearest</span><span class="p">]</span>
+<span class="n">table</span> <span class="o">=</span> <span class="n">averaging_kernel_table</span><span class="p">(</span><span class="n">receptors</span><span class="p">,</span> <span class="n">levels</span><span class="o">=</span><span class="n">ak</span><span class="o">.</span><span class="n">ak_pressure</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">values</span><span class="o">=</span><span class="n">kernels</span><span class="p">)</span>
+<span class="n">project</span><span class="o">.</span><span class="n">add_table</span><span class="p">(</span><span class="s2">&quot;kernels&quot;</span><span class="p">,</span> <span class="n">table</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">transforms</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">averaging_kernel</span>
+<span class="w">    </span><span class="nt">table</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">kernels</span>
+<span class="w">    </span><span class="nt">coordinate</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">pres</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">pressure_weighting</span>
+</pre></div>
+</div>
+<p>By default the kernel’s <code class="docutils literal notranslate"><span class="pre">levels</span></code> are release heights in the receptor’s
+vertical reference, which is metres above sea level for a slant. The GGG
+kernel is given on pressures, so set <code class="docutils literal notranslate"><span class="pre">coordinate:</span> <span class="pre">pres</span></code>. If one kernel is
+close enough for a whole campaign, give it inline as <code class="docutils literal notranslate"><span class="pre">levels</span></code> and
+<code class="docutils literal notranslate"><span class="pre">values</span></code> instead of a table.</p>
+</section>
+<section id="satellite-soundings">
+<h2>Satellite soundings<a class="headerlink" href="#satellite-soundings" title="Link to this heading">#</a></h2>
+<p>A satellite overpass gives many soundings. Each has its own location,
+surface altitude, viewing angles, and averaging kernel. Build one slant
+receptor per row of the product table, starting at each sounding’s surface
+altitude:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">stilt</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.observations</span><span class="w"> </span><span class="kn">import</span> <span class="n">slant_points</span>
+
+<span class="n">receptors</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="n">stilt</span><span class="o">.</span><span class="n">Receptor</span><span class="o">.</span><span class="n">from_points</span><span class="p">(</span>
+        <span class="n">row</span><span class="o">.</span><span class="n">time</span><span class="p">,</span>
+        <span class="n">slant_points</span><span class="p">(</span>
+            <span class="n">row</span><span class="o">.</span><span class="n">longitude</span><span class="p">,</span> <span class="n">row</span><span class="o">.</span><span class="n">latitude</span><span class="p">,</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">row</span><span class="o">.</span><span class="n">surface_altitude</span><span class="p">,</span> <span class="n">row</span><span class="o">.</span><span class="n">surface_altitude</span> <span class="o">+</span> <span class="mi">3000</span><span class="p">,</span> <span class="mi">20</span><span class="p">),</span>
+            <span class="n">zenith</span><span class="o">=</span><span class="n">row</span><span class="o">.</span><span class="n">zenith</span><span class="p">,</span> <span class="n">azimuth</span><span class="o">=</span><span class="n">row</span><span class="o">.</span><span class="n">azimuth</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="n">altitude_ref</span><span class="o">=</span><span class="s2">&quot;msl&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">itertuples</span><span class="p">()</span>
+<span class="p">]</span>
+<span class="n">project</span><span class="o">.</span><span class="n">add_receptors</span><span class="p">(</span><span class="n">receptors</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Many satellite workflows ignore the slant and use a
+<a class="reference internal" href="../reference/_api/stilt.ColumnReceptor.html#stilt.ColumnReceptor" title="stilt.ColumnReceptor"><code class="xref py py-class docutils literal notranslate"><span class="pre">ColumnReceptor</span></code></a> instead. At a 20° viewing angle the top of a
+3 km column is only about 1 km from the nadir point, which is within one
+cell of a coarse footprint grid.</p>
+<section id="altitudes-from-the-retrieval-s-pressure-levels">
+<h3>Altitudes from the retrieval’s pressure levels<a class="headerlink" href="#altitudes-from-the-retrieval-s-pressure-levels" title="Link to this heading">#</a></h3>
+<p>Retrievals define their vertical grid in pressure. OCO-2 gives
+<code class="docutils literal notranslate"><span class="pre">pressure_levels</span></code> for each sounding. TROPOMI’s layer edges are
+<code class="docutils literal notranslate"><span class="pre">surface_pressure</span></code> minus multiples of <code class="docutils literal notranslate"><span class="pre">pressure_interval</span></code>. To put the
+slant points on those levels instead of an even spacing in height, convert
+them with <a class="reference internal" href="../reference/_api/stilt.observations.pressure_altitudes.html#stilt.observations.pressure_altitudes" title="stilt.observations.pressure_altitudes"><code class="xref py py-func docutils literal notranslate"><span class="pre">pressure_altitudes()</span></code></a>. It uses the
+hypsometric equation, starting from the sounding’s surface pressure and
+surface altitude:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">stilt.observations</span><span class="w"> </span><span class="kn">import</span> <span class="n">pressure_altitudes</span><span class="p">,</span> <span class="n">slant_points</span>
+
+<span class="n">levels</span> <span class="o">=</span> <span class="n">pressure_altitudes</span><span class="p">(</span>
+    <span class="n">row</span><span class="o">.</span><span class="n">pressure_levels</span><span class="p">,</span>                   <span class="c1"># hPa, in the product&#39;s order</span>
+    <span class="n">surface_pressure</span><span class="o">=</span><span class="n">row</span><span class="o">.</span><span class="n">surface_pressure</span><span class="p">,</span>  <span class="c1"># hPa</span>
+    <span class="n">surface_altitude</span><span class="o">=</span><span class="n">row</span><span class="o">.</span><span class="n">surface_altitude</span><span class="p">,</span>  <span class="c1"># m MSL</span>
+    <span class="n">top</span><span class="o">=</span><span class="n">row</span><span class="o">.</span><span class="n">surface_altitude</span> <span class="o">+</span> <span class="mf">3000.0</span><span class="p">,</span>      <span class="c1"># drop levels above this</span>
+<span class="p">)</span>
+<span class="n">points</span> <span class="o">=</span> <span class="n">slant_points</span><span class="p">(</span>
+    <span class="n">row</span><span class="o">.</span><span class="n">longitude</span><span class="p">,</span> <span class="n">row</span><span class="o">.</span><span class="n">latitude</span><span class="p">,</span> <span class="n">levels</span><span class="p">,</span> <span class="n">zenith</span><span class="o">=</span><span class="n">row</span><span class="o">.</span><span class="n">zenith</span><span class="p">,</span> <span class="n">azimuth</span><span class="o">=</span><span class="n">row</span><span class="o">.</span><span class="n">azimuth</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>The altitudes come back sorted from the surface upward, whatever order the
+product lists its levels in. The first one anchors the path at the
+sounding’s location. Levels below the surface are dropped, and so are
+levels above <code class="docutils literal notranslate"><span class="pre">top</span></code>. The top of the meteorology is a sensible value for
+<code class="docutils literal notranslate"><span class="pre">top</span></code>.</p>
+<p>Without a temperature, the conversion uses the standard-atmosphere lapse
+rate (6.5 K/km) from the surface. This matches the U.S. Standard Atmosphere
+below 11 km. If the retrieval or its prior gives a temperature profile,
+pass it as <code class="docutils literal notranslate"><span class="pre">temperature=</span></code> with one value per level, in kelvin.</p>
+<p>HYSPLIT still sees these points as heights. The weighting in <a class="reference internal" href="#weighting">Weighting</a>
+applies unchanged. <a class="reference internal" href="../tutorials/satellite_column.html"><span class="doc">Tutorial: A Satellite Column, Start To Finish</span></a> shows how to choose
+which soundings to run.</p>
+</section>
+</section>
+<section id="how-the-release-heights-come-back">
+<h2>How the release heights come back<a class="headerlink" href="#how-the-release-heights-come-back" title="Link to this heading">#</a></h2>
+<p>The weighting needs each particle’s release height, but HYSPLIT does not
+record which point a particle started from. PYSTILT works it out from the
+first row HYSPLIT writes for the particle, by matching its height to the
+nearest point. This works because the points of a slant are at different
+altitudes.</p>
+<p>For an MSL receptor the match uses <code class="docutils literal notranslate"><span class="pre">zagl</span> <span class="pre">+</span> <span class="pre">zsfc</span></code>, so <code class="docutils literal notranslate"><span class="pre">zsfc</span></code> must be in
+<code class="docutils literal notranslate"><span class="pre">varsiwant</span></code>. It is not there by default. Without it, PYSTILT falls back to
+matching on horizontal position. That is unreliable for points closer than
+1 km, and PYSTILT warns when it happens.</p>
+<p>The section on release heights in <a class="reference internal" href="receptors.html"><span class="doc">Receptors</span></a> has the details. It
+also shows how to run a HYSPLIT build that writes rows at the release time,
+which makes the match exact.</p>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="readers.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Reading Retrieval Products</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="transforms.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Particle Weighting (Transforms)</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#geometry">Geometry</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#em27-sun-example">EM27/SUN example</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#weighting">Weighting</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#satellite-soundings">Satellite soundings</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#altitudes-from-the-retrieval-s-pressure-levels">Altitudes from the retrieval’s pressure levels</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#how-the-release-heights-come-back">How the release heights come back</a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  <div class="tocsection sourcelink">
+    <a href="../_sources/guides/slant_columns.rst.txt">
+      <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=7f76b32a3354e82990f2"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=7f76b32a3354e82990f2"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2026, James Mineau.
+      <br/>
+    
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.1.0.
+    <br/>
+  </p>
+</div>
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.17.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

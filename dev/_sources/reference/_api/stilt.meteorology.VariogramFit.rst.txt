@@ -1,0 +1,37 @@
+﻿stilt.meteorology.VariogramFit
+==============================
+
+.. currentmodule:: stilt.meteorology
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.. class-signature:: stilt.meteorology.VariogramFit
+
+
+.. class-parameters:: stilt.meteorology.VariogramFit
+
+
+
+
+Attributes
+----------
+
+.. autosummary::
+
+   ~VariogramFit.sigma
+   ~VariogramFit.length
+

@@ -1,0 +1,6 @@
+﻿stilt.execution.runner.resolve\_compute\_root
+=============================================
+
+.. currentmodule:: stilt.execution.runner
+
+.. autofunction:: resolve_compute_root

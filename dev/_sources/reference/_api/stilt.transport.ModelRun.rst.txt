@@ -1,0 +1,42 @@
+﻿stilt.transport.ModelRun
+========================
+
+.. currentmodule:: stilt.transport
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.. class-signature:: stilt.transport.ModelRun
+
+
+.. class-parameters:: stilt.transport.ModelRun
+
+
+
+
+Attributes
+----------
+
+.. autosummary::
+
+   ~ModelRun.log
+   ~ModelRun.particles
+   ~ModelRun.met_files
+

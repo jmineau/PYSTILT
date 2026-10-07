@@ -1,0 +1,72 @@
+﻿stilt.particles.TransportError
+==============================
+
+.. currentmodule:: stilt.particles
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.. class-signature:: stilt.particles.TransportError
+
+
+.. class-parameters:: stilt.particles.TransportError
+
+
+
+
+Attributes
+----------
+
+.. autosummary::
+
+   ~TransportError.background
+   ~TransportError.realizations
+   ~TransportError.sd
+   ~TransportError.variance
+   ~TransportError.noise
+   ~TransportError.enhancement
+   ~TransportError.enhancement_perturbed
+   ~TransportError.levels
+   ~TransportError.length_scale
+

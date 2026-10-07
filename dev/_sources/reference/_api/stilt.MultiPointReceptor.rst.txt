@@ -1,0 +1,174 @@
+﻿stilt.MultiPointReceptor
+========================
+
+.. currentmodule:: stilt
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.. class-signature:: stilt.MultiPointReceptor
+
+
+Parameters
+----------
+
+.. config-model:: stilt.MultiPointReceptor
+
+
+
+Methods
+-------
+
+.. autosummary::
+   :toctree:
+
+
+   ~MultiPointReceptor.coords
+   ~MultiPointReceptor.from_dict
+   ~MultiPointReceptor.from_json
+   ~MultiPointReceptor.from_points
+   ~MultiPointReceptor.to_dict
+   ~MultiPointReceptor.to_json
+
+
+Attributes
+----------
+
+.. autosummary::
+
+   ~MultiPointReceptor.geometry
+   ~MultiPointReceptor.id
+   ~MultiPointReceptor.location_id
+   ~MultiPointReceptor.plot
+   ~MultiPointReceptor.points
+   ~MultiPointReceptor.kind
+   ~MultiPointReceptor.longitudes
+   ~MultiPointReceptor.latitudes
+   ~MultiPointReceptor.altitudes
+   ~MultiPointReceptor.time
+   ~MultiPointReceptor.altitude_ref
+   ~MultiPointReceptor.attrs
+

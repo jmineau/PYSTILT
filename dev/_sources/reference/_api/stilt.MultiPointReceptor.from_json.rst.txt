@@ -1,0 +1,6 @@
+stilt.MultiPointReceptor.from\_json
+===================================
+
+.. currentmodule:: stilt
+
+.. automethod:: MultiPointReceptor.from_json

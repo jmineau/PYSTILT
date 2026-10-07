@@ -1,0 +1,6 @@
+﻿stilt.identity.footprint\_hash
+==============================
+
+.. currentmodule:: stilt.identity
+
+.. autofunction:: footprint_hash
