@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
-from stilt._atomic import atomic_path
+from stilt._paths import atomic_path
 from stilt.footprint.config import FootprintConfig
 from stilt.identity import read_footprint_settings
 from stilt.receptors import Receptor

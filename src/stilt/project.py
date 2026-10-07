@@ -28,8 +28,7 @@ import pyarrow as pa
 import xarray as xr
 import yaml
 
-from stilt._atomic import write_parquet
-from stilt._paths import absolute, location
+from stilt._paths import absolute, location, write_parquet
 from stilt.config import STARTER_CONFIG, ProjectConfig, Variant
 from stilt.execution.config import ExecutionConfig
 from stilt.footprint import Geometry, Jacobian

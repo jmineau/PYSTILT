@@ -55,8 +55,7 @@ import pyarrow.dataset as pads
 import xarray as xr
 import yaml
 
-from stilt._atomic import atomic_path
-from stilt._paths import location
+from stilt._paths import atomic_path, location
 from stilt.footprint import (
     FOOTPRINT_SCHEMA,
     FootprintConfig,

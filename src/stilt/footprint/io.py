@@ -23,8 +23,7 @@ import pandas as pd
 import pyarrow as pa
 import xarray as xr
 
-from stilt._atomic import write_parquet
-from stilt._paths import location, readable
+from stilt._paths import location, readable, write_parquet
 from stilt.footprint.config import FootprintConfig
 from stilt.identity import footprint_settings, read_footprint_settings
 from stilt.receptors import Receptor

@@ -16,7 +16,7 @@ from numpy.typing import ArrayLike
 from pandas.tseries.frequencies import to_offset
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from stilt._atomic import atomic_path
+from stilt._paths import atomic_path
 from stilt.exceptions import MeteorologyError
 from stilt.spatial import Bounds, haversine_km
 
