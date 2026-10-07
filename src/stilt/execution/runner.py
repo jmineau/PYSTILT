@@ -370,7 +370,14 @@ def job_script(
         command += ["--compute-root", str(resolve_compute_root(project, compute_root))]
     # $SLURM_ARRAY_TASK_ID must expand, so that word is quoted with "".
     words = [f'"{w}"' if w.startswith("$") else shlex.quote(w) for w in command]
-    lines = ["#!/bin/bash", *_sbatch_lines(options), "", *execution.setup]
+    # A task's log starts with where and when it ran, again after a requeue,
+    # so a task on a bad node can be found from its log.
+    header = (
+        'echo "$(date -u +%FT%TZ) $SLURMD_NODENAME '
+        "job ${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID} "
+        'restart ${SLURM_RESTART_COUNT:-0}"'
+    )
+    lines = ["#!/bin/bash", *_sbatch_lines(options), "", header, *execution.setup]
     if not skip_existing:
         # A requeued task keeps what it finished before.
         lines += [

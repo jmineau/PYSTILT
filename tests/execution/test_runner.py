@@ -67,6 +67,9 @@ def test_job_script_asks_for_what_the_execution_settings_say(tmp_path):
         "exclusive": True,
     }
     lines = script.splitlines()
+    # The log says where and when the task ran, before any setup can fail.
+    header = lines.index("module load gcc") - 1
+    assert lines[header].startswith('echo "$(date -u +%FT%TZ) $SLURMD_NODENAME job ')
     assert lines.index("module load gcc") < lines.index("export OMP_NUM_THREADS=1")
     last = lines[-1]
     assert last.startswith("exec ")
