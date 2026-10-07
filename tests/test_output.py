@@ -427,7 +427,8 @@ def test_jacobian_matches_footprint_aggregate(written_footprints, target):
     assert H.empty == [empty_id]
     assert H.missing == []
     assert H.data.shape == (3, len(bins) * len(target.index))
-    assert H.columns.names == ["time", "cell"]
+    # The target's own levels: lon, lat for a grid; cell for a mesh.
+    assert H.columns.names == ["time", *target.index.names]
 
     frame = H.to_frame()
     for rid, foot in feet_by_id.items():
@@ -519,14 +520,27 @@ def test_jacobian_to_xarray_holds_the_matrix(written_footprints):
     np.testing.assert_array_equal(lazy.data.todense(), dense.values)
 
 
-def test_jacobian_to_xarray_keeps_grid_cells_as_tuples(written_footprints):
+def test_a_grid_jacobian_names_its_cell_levels(written_footprints):
     out, feet_by_id, _ = written_footprints
     target = Grid(xmin=-112.0, xmax=-111.5, ymin=40.5, ymax=41.0, xres=0.25, yres=0.25)
+    bins = _bins()
     H = jacobian(
-        out.table("footprints", FEET), FEET.footprint, target, _bins(), list(feet_by_id)
+        out.table("footprints", FEET), FEET.footprint, target, bins, list(feet_by_id)
     )
-    cells = H.to_xarray(dense=True).cell.values
-    assert list(cells) == list(target.index)
+
+    assert H.columns.names == ["time", "lon", "lat"]
+    assert list(H.columns[: len(target.index)].droplevel("time")) == list(target.index)
+    dense = H.to_xarray(dense=True)
+    assert list(dense.cell.values) == list(target.index)
+    grid = dense.unstack("cell")
+    assert grid.dims == ("receptor", "time", "lon", "lat")
+    np.testing.assert_allclose(float(grid.sum()), H.data.sum())
+
+    sparse_frame = H.to_frame(sparse=True)
+    assert isinstance(sparse_frame.dtypes.iloc[0], pd.SparseDtype)
+    np.testing.assert_array_equal(
+        sparse_frame.sparse.to_dense().to_numpy(), H.to_frame().to_numpy()
+    )
 
 
 # ---------------------------------------------------------------------------

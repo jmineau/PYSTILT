@@ -8,6 +8,11 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- `Jacobian.columns` has named levels from the target: `time, lon, lat`
+  for a grid (`time, x, y` when projected) and `time, cell` for a mesh or
+  zones, where a grid's cells were one level of `(x, y)` tuples (breaking).
+  `Jacobian.to_frame(sparse=True)` builds pandas sparse columns from the
+  sparse matrix with no dense copy.
 - `stilt status` lists the output directory's settings folders: how many
   result files each holds, which variants use it, and how one no variant
   uses differs. `stilt output ls` is removed (breaking), and

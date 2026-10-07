@@ -154,7 +154,13 @@ pystilt[sparse]``), or a NumPy array with ``dense=True``:
 .. code-block:: python
 
    H = project.jacobian(july, zones, time_bins)
-   H.to_xarray()   # receptor, time, cell
+   H.to_xarray()             # receptor, time, cell
+   H.to_frame(sparse=True)   # receptors by (time, cell), pandas sparse columns
+
+The columns are the time bin and then the target's cells, as named levels:
+``time, cell`` for zones or a mesh, and ``time, lon, lat`` for a grid
+(``time, x, y`` when it is projected). For a grid,
+``H.to_xarray().unstack("cell")`` has ``lon`` and ``lat`` dimensions.
 
 The particles come back as one table, so pandas can group them:
 
