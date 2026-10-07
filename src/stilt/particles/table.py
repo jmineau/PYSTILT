@@ -78,12 +78,17 @@ class ParticleMetadata(NamedTuple):
     realization : int or None
         Which realization of an ensemble the particles are, which ran with
         ``seed + realization``; ``None`` for a single run.
+    reach_minutes : float or None
+        How far the particles got from the release, in minutes: the largest
+        ``|time|``. A complete run reaches ``|n_hours| * 60``. ``None`` for
+        a file written before particle files recorded it.
     """
 
     receptor: Receptor
     settings: dict[str, Any]
     met_files: list[Path]
     realization: int | None = None
+    reach_minutes: float | None = None
 
 
 def check_particles(particles: pd.DataFrame, need: Iterable[str] = ()) -> None:
@@ -137,11 +142,13 @@ def particles_metadata(path: str | Path | UPath) -> ParticleMetadata:
             "files recorded them; rewrite its output directory (see #132)."
         )
     realization = meta.get(b"stilt:realization")
+    reach = meta.get(b"stilt:reach_minutes")
     return ParticleMetadata(
         receptor=Receptor.from_json(meta[b"stilt:receptor"]),
         settings=json.loads(meta[b"stilt:settings"]),
         met_files=[Path(p) for p in json.loads(meta[b"stilt:met_files"])],
         realization=None if realization is None else int(realization),
+        reach_minutes=None if reach is None else float(reach),
     )
 
 
@@ -237,8 +244,9 @@ def write_particles(
     ``time`` and ``particle`` are stored as int32, and ``datetime`` is left out
     since it is the receptor time plus ``time``. A ``receptor`` column holds
     the receptor id, so a scan of many files can tell receptors apart. The
-    receptor, the run's settings, and the met files go in the file's
-    metadata, so the file reads alone.
+    receptor, the run's settings, the met files, and how far the particles
+    got (``stilt:reach_minutes``) go in the file's metadata, so the file
+    reads alone.
 
     Parameters
     ----------
@@ -286,6 +294,9 @@ def write_particles(
         b"stilt:receptor": receptor.to_json().encode(),
         b"stilt:settings": json.dumps(dict(settings)).encode(),
         b"stilt:met_files": json.dumps([str(p) for p in met_files]).encode(),
+        b"stilt:reach_minutes": repr(
+            float(np.abs(particles["time"].to_numpy(dtype=float)).max(initial=0.0))
+        ).encode(),
         **(metadata or {}),
     }
     table = table.replace_schema_metadata(meta)

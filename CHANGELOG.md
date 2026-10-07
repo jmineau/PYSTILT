@@ -8,6 +8,15 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- A simulation whose particles stop before the end of its run fails, as
+  `MET_COVERAGE`, for any transport model (breaking; #169). It was written
+  and counted complete: a 24-hour run with 6 hours of met on disk made a
+  6-hour footprint, with one warning on stderr. Whatever stopped the
+  particles (a missing or cut file, or every particle leaving the met's
+  domain or crop), the footprint would hold part of the run. There is no
+  setting to allow it. Results already written stay complete until rerun.
+- HYSPLIT's met needs every file its run's hours fall in: a missing one
+  fails the simulation before HYSPLIT runs, naming the hours with no file.
 - A run's settings record its met as the weather product and the crop
   (breaking: every particles folder gets a new hash). The product is the
   source id in the ARL file headers (`HRRR`, `NAM`, ...), read from the
@@ -879,6 +888,10 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Removed
 
+- `n_min` from a met (breaking): every file is needed. A met that sets it
+  is refused with why. The failure reasons `MISSING_MET_FILES` and
+  `MET_TRUNCATED` are folded into `MET_COVERAGE`, whose message says which
+  hours had no file or how far the particles got.
 - `subgrid_buffer` (breaking): the crop is `subgrid_bounds`, so the box
   you write is the box HYSPLIT reads. It added 0.2° to every side unless
   set, and was in degrees where STILT-R's `met_subgrid_buffer` is a
@@ -1035,6 +1048,10 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Each particle file records how far its particles got, `stilt:reach_minutes`
+  (`particles_metadata(path).reach_minutes`), and
+  `stilt.transport.check_reach(particles, n_hours)` is the check every run
+  passes.
 - A "Checking a run" page in the user guide: the four states, every
   failure reason in plain words and what to do about it, the log and kept
   workdirs, empty footprints, and what to check when a footprint looks

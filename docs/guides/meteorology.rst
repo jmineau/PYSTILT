@@ -46,16 +46,15 @@ file covers:
 ``file_tres``
    How much time each file covers, such as ``1h``, ``3h``, or ``6h``.
 
-``n_min``
-   The fewest files a simulation needs (default 1).
-
 For each simulation, PYSTILT works out which files cover the hours the run
-spans (``n_hours`` from the receptor time) and looks for those. If it finds fewer than
-``n_min``, the simulation fails with an error. If some are missing but at
-least ``n_min`` are found, PYSTILT logs a warning and runs with the files it
-has. Raise ``n_min`` to turn gaps into errors. A 24-hour backward run with
-6-hour HRRR files needs 5 or 6 files, depending on the receptor hour, so
-``n_min: 5`` is a good choice there.
+spans (``n_hours`` from the receptor time) and looks for those. A 24-hour
+backward run with 6-hour HRRR files needs 5 or 6 files, depending on the
+receptor hour. Every one is needed. If one is missing, the simulation fails
+before HYSPLIT runs, as ``MET_COVERAGE``, naming the hours with no file.
+
+A run whose particles stop before the end of the run fails too, whatever
+stopped them: a met file cut short, or every particle leaving the
+meteorology's domain or its crop (:doc:`checking`).
 
 In Python, the same settings are a dictionary or a
 :class:`~stilt.transport.hysplit.MetConfig`, HYSPLIT's met config:

@@ -609,7 +609,7 @@ def test_status_counts_failures_by_reason(tmp_path):
         receptors=receptors,
         variants={"hrrr": {}},
     )
-    reasons = ["MISSING_MET_FILES", "MISSING_MET_FILES", None]
+    reasons = ["MET_COVERAGE", "MET_COVERAGE", None]
     for receptor, reason in zip(receptors, reasons, strict=True):
         sim = project.simulation(str(receptor.id), "hrrr")
         sim.output.record_failure(
@@ -622,7 +622,7 @@ def test_status_counts_failures_by_reason(tmp_path):
     result = runner.invoke(app, ["status", str(tmp_path)])
 
     assert result.exit_code == 0, result.output
-    assert "failed: MISSING_MET_FILES 2, ValueError 1" in result.output
+    assert "failed: MET_COVERAGE 2, ValueError 1" in result.output
 
 
 def test_status_json_is_the_same_as_data(tmp_path):
@@ -638,7 +638,7 @@ def test_status_json_is_the_same_as_data(tmp_path):
     )
     variant = project.variants["hrrr"]
     project.output.record_failure(
-        "particles", variant, receptor.id, {"reason": "MISSING_MET_FILES"}
+        "particles", variant, receptor.id, {"reason": "MET_COVERAGE"}
     )
 
     result = runner.invoke(app, ["status", str(tmp_path), "--json"])
@@ -654,7 +654,7 @@ def test_status_json_is_the_same_as_data(tmp_path):
         "pending": 0,
     }
     assert data["variants"]["hrrr"]["failed"] == 1
-    assert data["failed"] == {"MISSING_MET_FILES": 1}
+    assert data["failed"] == {"MET_COVERAGE": 1}
     [folder] = data["folders"]
     assert (folder["kind"], folder["variants"], folder["files"]) == (
         "particles",

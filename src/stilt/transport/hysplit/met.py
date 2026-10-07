@@ -90,10 +90,6 @@ class MetConfig(BaseModel):
             "``6h``. Required when ``download`` is not set."
         ),
     )
-    n_min: int = Field(
-        1,
-        description="Minimum number of files a simulation needs. Fewer fails the simulation.",
-    )
     subgrid_enable: bool = Field(
         False,
         description="Crop the meteorology to ``subgrid_bounds`` before running.",
@@ -118,12 +114,8 @@ class MetConfig(BaseModel):
     def _validate_mode(self) -> Self:
         """Check the archive and its options, and the fields each mode needs."""
         extra = self.download_options
-        if "subgrid_buffer" in extra:
-            raise ValueError(
-                "subgrid_buffer is gone: the crop is subgrid_bounds. Widen the "
-                "bounds by the buffer instead (it was in degrees; STILT-R's "
-                "met_subgrid_buffer is a fraction of the footprint grid's size)."
-            )
+        for key in extra.keys() & _REMOVED.keys():
+            raise ValueError(f"{key} is gone: {_REMOVED[key]}")
         if self.download is not None:
             from arlmet.archives import ARCHIVES
 
@@ -347,11 +339,10 @@ class Met:
                 "Install with: pip install pystilt[download]"
             ) from exc
 
-        n_files = len(files)
-        if n_files == 0 or n_files < self.config.n_min:
+        if not files:
             raise MeteorologyError(
-                f"Insufficient number of meteorological files found. "
-                f"Found: {n_files}, Required: {self.config.n_min}."
+                f"No {self.config.download} files from {t_start} to {t_end} "
+                f"were found or downloaded."
             )
         return files
 
@@ -378,7 +369,8 @@ class Met:
         Raises
         ------
         MeteorologyError
-            Fewer than ``n_min`` files were found.
+            A file the run needs is missing. Every one is needed: HYSPLIT
+            would stop the particles where the met runs out.
         """
         if self.config.download is not None:
             return self._download(window, hour_after)
@@ -406,27 +398,18 @@ class Met:
             else:
                 missing.append(pattern)
 
-        files = self._dedupe_matched_files(files)
-
-        n_files = len(files)
-        if n_files == 0 or n_files < self.config.n_min:
-            detail = ""
-            if missing:
-                examples = ", ".join(missing[:3])
-                detail = f" Patterns not found in {self.directory}: {examples}."
-            raise MeteorologyError(
-                f"Insufficient number of meteorological files found. "
-                f"Found: {n_files}, Required: {self.config.n_min}.{detail}"
-            )
-
         if missing:
-            examples = ", ".join(missing[:3])
-            logger.warning(
-                "Met patterns not found (simulation may lack temporal coverage): %s",
-                examples,
+            hours = [
+                f"{t:%Y-%m-%d %H:%M}"
+                for t in met_times
+                if t.strftime(file_format) in missing
+            ]
+            raise MeteorologyError(
+                f"No met file in {self.directory} for {', '.join(hours)} "
+                f"(each {file_tres}, named {', '.join(missing)}...). The run "
+                f"covers {earlier:%Y-%m-%d %H:%M} to {later:%Y-%m-%d %H:%M}."
             )
-
-        return files
+        return self._dedupe_matched_files(files)
 
     def readable(self, files: list[Path]) -> list[Path]:
         """
@@ -477,6 +460,20 @@ class Met:
                     extract_subset(src, tmp, bbox=bbox, levels=levels)
             subsetted.append(cache_path)
         return subsetted
+
+
+#: Met settings that were removed, and what to do instead.
+_REMOVED = {
+    "subgrid_buffer": (
+        "the crop is subgrid_bounds. Widen the bounds by the buffer instead (it "
+        "was in degrees; STILT-R's met_subgrid_buffer is a fraction of the "
+        "footprint grid's size)."
+    ),
+    "n_min": (
+        "a run needs every met file its hours fall in, and fails naming the "
+        "hours with no file."
+    ),
+}
 
 
 def _arl_candidates(directory: Path) -> Iterator[Path]:

@@ -227,7 +227,7 @@ def test_empty_footprint_is_recorded_with_its_reason(point_receptor, tmp_path):
 def test_failure_reads_the_record_for_the_missing_step(point_receptor, tmp_path):
     grid = Grid(xmin=-112.0, xmax=-111.5, ymin=40.5, ymax=41.0, xres=0.1, yres=0.1)
     sim = _sim(tmp_path, point_receptor, footprint=FootprintConfig(grid=grid))
-    particles = {"step": "particles", "reason": "MISSING_MET_FILES"}
+    particles = {"step": "particles", "reason": "MET_COVERAGE"}
     footprint = {"step": "footprint", "reason": "ValueError"}
     sim.output.record_failure("particles", sim.variant, sim.receptor.id, particles)
     sim.output.record_failure("footprints", sim.variant, sim.receptor.id, footprint)

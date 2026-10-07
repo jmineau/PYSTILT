@@ -20,7 +20,9 @@ Before you start
 
 STILT moves particles with wind fields from a weather model, stored as
 :term:`ARL`-format files. You need files covering your measurement time and
-the hours before it.
+every hour of the run before it: for a 24-hour backward run, from 24 hours
+before the measurement to just after it. A simulation with a file missing
+fails, naming the hours.
 
 If you already have ARL files, for example in a group archive, tell PYSTILT
 the folder they are in, a pattern for their names, and how many hours each

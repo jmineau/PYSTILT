@@ -307,8 +307,9 @@ def _fake_hysplit(monkeypatch, *, log: str, rows: list[list[float]] | None) -> l
 
 
 def _ending_at(minute: int) -> list[list[float]]:
-    """Particle rows of one particle whose last row is *minute* before release."""
-    return [[-1, 1, -111.9, 40.7, 10.0, 0.0], [-minute, 1, -112.0, 40.6, 20.0, 0.0]]
+    """Particle rows of one particle, written every hour, whose last row is *minute* before release."""
+    times = [-1, *range(-60, -minute - 1, -60)]
+    return [[t, 1, -111.9, 40.7, 10.0, 0.0] for t in times]
 
 
 def _run(tmp_path, receptor, config=None):
@@ -324,19 +325,27 @@ def _run(tmp_path, receptor, config=None):
     )
 
 
-def test_run_fails_when_the_met_is_cut_short(tmp_path, point_receptor, monkeypatch):
+def test_a_run_whose_particles_stop_early_fails_with_the_log(
+    tmp_path, point_receptor, monkeypatch
+):
+    """Whatever stopped them, the core check after the run fails it (#169)."""
+    from stilt.transport import run_model
+
     _fake_hysplit(
         monkeypatch,
         log=" WARNING metset: Only one time period of meteo data\n",
         rows=_ending_at(13 * 60),
     )
+    make_met_files(tmp_path / "met", point_receptor.time, -24)
+    met = make_met_config(tmp_path / "met")
+    (tmp_path / "run").mkdir()
 
     with pytest.raises(SimulationError) as caught:
-        _run(tmp_path, point_receptor)
+        run_model("hysplit", point_receptor, _config(), met, tmp_path / "run")
 
-    assert caught.value.reason == FailureReason.MET_TRUNCATED
-    log = (tmp_path / "run" / "stilt.log").read_text()
-    assert "particles stop 13 h into a 24 h run" in log
+    assert caught.value.reason == "MET_COVERAGE"
+    assert "Only one time period of meteo data" in caught.value.log
+    assert "The particles stop 13 h into a 24 h run" in caught.value.log
 
 
 def test_run_keeps_a_run_that_reaches_the_end_past_a_damaged_met_file(
@@ -363,9 +372,10 @@ def test_run_leaves_an_empty_particle_file_to_the_caller(
     assert _run(tmp_path, point_receptor).particles.empty
 
 
-def test_run_keeps_particles_that_left_the_met_domain(
+def test_run_leaves_particles_that_stop_early_to_the_caller(
     tmp_path, point_receptor, monkeypatch
 ):
+    """HYSPLIT's own run returns them; the core check fails them (run_model)."""
     _fake_hysplit(monkeypatch, log="", rows=_ending_at(13 * 60))
 
     assert _run(tmp_path, point_receptor).particles["time"].min() == -13 * 60

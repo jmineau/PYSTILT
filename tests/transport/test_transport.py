@@ -172,11 +172,11 @@ class _EchoModel:
         }
         particles = pd.DataFrame(
             {
-                "particle": [1],
-                "time": [-1.0],
-                "lon": [-111.9],
-                "lat": [40.7],
-                "zagl": [5.0],
+                "particle": [1, 1],
+                "time": [-1.0, config.n_hours * 60.0],
+                "lon": [-111.9, -112.0],
+                "lat": [40.7, 40.6],
+                "zagl": [5.0, 20.0],
             }
         )
         return ModelRun(particles, met_files=[])
@@ -207,7 +207,7 @@ def test_run_trajectories_returns_the_particles_and_removes_its_workdir(
     assert "near-field correction skipped" in caplog.text
     assert "foot_no_hnf_dilution" not in particles.columns
 
-    assert particles["particle"].tolist() == [1]
+    assert particles["particle"].unique().tolist() == [1]
     assert echo.seen["config"].numpar == 50
     assert echo.seen["timeout"] == 9
     assert echo.seen["met"].directory == tmp_path.resolve()

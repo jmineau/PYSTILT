@@ -52,7 +52,9 @@ The workflow side by side
    * - ``met_file_tres``
      - ``mets: <name>: file_tres``
    * - ``n_met_min``
-     - ``mets: <name>: n_min``
+     - No setting. Every file a run needs must be there, and a run whose
+       particles stop early fails (``MET_COVERAGE``). STILT-R runs with the
+       files it finds and writes the shorter footprint.
    * - ``met_subgrid_enable``, ``met_subgrid_levels``
      - ``mets: <name>: subgrid_enable``, ``subgrid_levels``. PYSTILT also
        needs ``subgrid_bounds``, the crop box, and ``subgrid_dir`` for your

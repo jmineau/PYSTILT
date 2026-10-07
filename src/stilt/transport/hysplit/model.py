@@ -17,7 +17,6 @@ from .driver import (
     LOG_FILE,
     PARTICLE_STILT_FILE,
     _bundled_data_dir,
-    _check_met_reached_end,
     read_particle_dat,
     run_hycs_std,
     write_inputs,
@@ -131,10 +130,12 @@ class HysplitModel:
         SimulationError
             With HYSPLIT's log in ``log``, and ``reason`` ``TIMEOUT`` when
             the run exceeded *timeout* seconds; the :class:`FailureReason`
-            of a known failure message in the log; ``MET_TRUNCATED`` when a
-            met file was cut short and the particles stop before the end of
-            the run; or ``NO_PARTICLE_DATA`` when HYSPLIT wrote no particle
-            file.
+            of a known failure message in the log; or ``NO_PARTICLE_DATA``
+            when HYSPLIT wrote no particle file. Particles that stop before
+            the end of the run fail afterwards, for any model
+            (:func:`stilt.transport.check_reach`).
+        MeteorologyError
+            Before HYSPLIT runs, when a met file the run needs is missing.
         """
         if workdir is None:
             with tempfile.TemporaryDirectory(prefix="stilt-") as tmp:
@@ -151,7 +152,6 @@ class HysplitModel:
                     reason=FailureReason.NO_PARTICLE_DATA,
                 )
             particles = read_particle_dat(path, config.varsiwant)
-            _check_met_reached_end(particles, workdir / LOG_FILE, config)
         except SimulationError as error:
             error.log = _read_log(workdir)
             raise

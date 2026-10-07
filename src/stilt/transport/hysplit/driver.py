@@ -30,7 +30,6 @@ from stilt.transport.hysplit.config import (
 )
 from stilt.transport.hysplit.control import ControlFile
 from stilt.transport.hysplit.failures import (
-    MET_TRUNCATED_WARNING,
     FailureReason,
     failure_in,
 )
@@ -367,33 +366,3 @@ def _terminate(proc: subprocess.Popen[Any]) -> None:
         proc.wait(timeout=5)
     except subprocess.TimeoutExpired:
         proc.wait()
-
-
-def _check_met_reached_end(
-    particles: pd.DataFrame, log_path: Path, config: HysplitConfig
-) -> None:
-    """
-    Raise if a met file was cut short and no particle reaches the end of the run.
-
-    HYSPLIT only warns when a met file holds one time period, and its
-    particles stop where the met runs out. The warning alone is not a
-    failure, since the damaged file may cover hours the particles never
-    reach. Particles that leave the met domain do not trigger this either,
-    unless the warning is also in the log.
-    """
-    if particles.empty:
-        return
-    log = log_path.read_text(encoding="utf-8", errors="replace")
-    if MET_TRUNCATED_WARNING not in log:
-        return
-    end = abs(config.n_hours) * 60
-    reach = float(np.abs(particles["time"].to_numpy()).max())
-    if reach >= end - max(config.outdt, 0):
-        return
-    message = (
-        f"Meteorology ends early: the particles stop {reach / 60:g} h into a "
-        f"{end / 60:g} h run."
-    )
-    with log_path.open("a", encoding="utf-8") as handle:
-        handle.write(message + "\n")
-    raise SimulationError(message, reason=FailureReason.MET_TRUNCATED)

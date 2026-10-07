@@ -56,7 +56,7 @@ class SimulationError(StiltError, RuntimeError):
 class MeteorologyError(SimulationError):
     """The meteorology files a simulation needs could not be found or staged."""
 
-    reason = "MISSING_MET_FILES"
+    reason = "MET_COVERAGE"
 
 
 class HYSPLITNotFoundError(StiltError, FileNotFoundError):
