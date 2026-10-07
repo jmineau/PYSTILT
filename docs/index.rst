@@ -72,6 +72,8 @@ laptop or tens of thousands on an HPC cluster.
    getting_started/index
    tutorials/index
    guides/index
+   migration/index
    reference/index
+   advanced/index
    roadmap
    development

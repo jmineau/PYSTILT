@@ -197,7 +197,7 @@ transforms:
 ```
 
 A transform is any object with an `apply(particles, receptor=None, directory=None)` method. The
-[transforms guide](https://jmineau.github.io/PYSTILT/advanced/transforms.html)
+[transforms guide](https://jmineau.github.io/PYSTILT/guides/transforms.html)
 covers the column-weighting science and how to write your own.
 
 ## Loading results

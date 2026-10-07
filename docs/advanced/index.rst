@@ -1,10 +1,16 @@
-:orphan:
+Internals
+=========
 
-Advanced Topics
-===============
+How PYSTILT works inside. You don't need these pages to use PYSTILT. They
+help when you run at scale, share an output directory between projects,
+or build on PYSTILT.
 
-These pages cover how PYSTILT works inside. They are listed in the
-:doc:`../guides/index`.
+:doc:`output_state`
+   How a result is found, why a changed setting makes a new folder, and
+   how two workers never step on each other.
 
-- :doc:`transforms`
-- :doc:`output_state`
+.. toctree::
+   :maxdepth: 1
+   :hidden:
+
+   output_state

@@ -126,8 +126,10 @@ layout; `docs/migration/` covers moving from STILT-R, X-STILT, and stiltctl.
   Column, Start To Finish*.
 - An empty footprint (no particle reached the grid) is a file marked
   `stilt:empty`; it is complete, and `project.footprints()` lists it apart.
-- Guides: *Checking a run* (every failure reason and what to do),
-  *Projects and variants*, and querying the output with DuckDB.
+- The user guide is reorganized, one idea per page. New: *Checking a run*
+  (every failure reason and what to do), *Projects and variants*,
+  *Summing footprints* (areas and the Jacobian), *Your own HYSPLIT build*,
+  querying the output with DuckDB, and a table of every `config.yaml` key.
 
 ### Removed
 

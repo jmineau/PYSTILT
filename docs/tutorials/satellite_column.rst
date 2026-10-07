@@ -99,7 +99,7 @@ already there as they were.
 Step 4: Weight the particles
 ----------------------------
 
-Two transforms go in ``config.yaml`` (:doc:`../advanced/transforms`). The
+Two transforms go in ``config.yaml`` (:doc:`../guides/transforms`). The
 averaging kernel differs per sounding, so it reads the kernel table by
 name. Pressure weighting is worked out from the particles, so every
 receptor uses the same setting:

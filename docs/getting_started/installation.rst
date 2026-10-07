@@ -56,24 +56,8 @@ Apple Silicon Macs with an arm64 Python. PYSTILT still imports and reads
 existing results, but a run stops with an error that no bundled HYSPLIT binary
 exists for the machine.
 
-To use your own HYSPLIT build there or anywhere else, compile ``hycs_std``.
-Put a file named ``version`` beside it that holds the build's version, such
-as ``v5.3.2``. Then set ``exe_dir`` in ``config.yaml`` to that folder:
-
-.. code-block:: yaml
-
-   exe_dir: /path/to/hysplit/exec
-
-HYSPLIT's data tables (``ASCDATA.CFG``, ``LANDUSE.ASC``, ``ROUGLEN.ASC``,
-``TERRAIN.ASC``) come with PYSTILT too. To use your own, such as a
-higher-resolution land use, put them in a folder and set ``data_dir``. A
-table the folder does not hold comes from the bundled set:
-
-.. code-block:: yaml
-
-   data_dir: /path/to/hysplit/bdyfiles
-
-The tables change the particles, so a run records each table that differs
-from the bundled one, and such runs are kept apart from the others.
+There, or anywhere you want another HYSPLIT version or your own land-use
+tables, compile ``hycs_std`` and set ``exe_dir`` in ``config.yaml``
+(:doc:`../guides/hysplit_build`).
 
 Next: :doc:`quickstart`.

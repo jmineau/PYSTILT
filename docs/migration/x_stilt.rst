@@ -32,7 +32,7 @@ the ones that have an equivalent.
      - :func:`stilt.observations.group_by_overpass`, then ``df.groupby("overpass")``
    * - Vertical weighting (AK × PWF)
      - ``wgt.trajec.foot*.r``
-     - ``averaging_kernel`` and ``pressure_weighting`` transforms (:doc:`/advanced/transforms`)
+     - ``averaging_kernel`` and ``pressure_weighting`` transforms (:doc:`/guides/transforms`)
    * - Per-sounding averaging kernels (``get.wgt.funcv3``)
      - ``wgt.trajec.foot*.r``
      - ``averaging_kernel`` with ``table:`` (:func:`stilt.transforms.averaging_kernel_table`)
