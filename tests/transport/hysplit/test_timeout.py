@@ -11,7 +11,7 @@ import pytest
 from stilt.execution.config import ExecutionConfig
 from stilt.transport.hysplit.config import HysplitConfig
 
-from ...fixtures.factories import make_met_config, make_variant
+from ...fixtures.factories import make_met_config, make_met_files, make_variant
 
 SEEN: dict = {}
 
@@ -22,17 +22,6 @@ def _stop(workdir, timeout=None):
     raise RuntimeError("stop before running HYSPLIT")
 
 
-class _FakeMet:
-    def __init__(self, *args):
-        pass
-
-    def files_for(self, window, hour_after=False):
-        return []
-
-    def readable(self, files):
-        return files
-
-
 @pytest.fixture
 def sim(monkeypatch, tmp_path, point_receptor):
     """A Simulation with HYSPLIT stubbed out, and a runner for it."""
@@ -41,9 +30,9 @@ def sim(monkeypatch, tmp_path, point_receptor):
     from stilt.transport.hysplit import model
 
     monkeypatch.setattr(model, "write_inputs", lambda *args: None)
-    monkeypatch.setattr(model, "_run_hycs_std", _stop)
-    monkeypatch.setattr(model, "Met", _FakeMet)
+    monkeypatch.setattr(model, "run_hycs_std", _stop)
     SEEN.clear()
+    make_met_files(tmp_path / "met", point_receptor.time, -24)
     met_config = make_met_config(tmp_path / "met")
 
     def _make():

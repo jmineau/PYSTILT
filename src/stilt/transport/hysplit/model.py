@@ -19,8 +19,8 @@ from .driver import (
     PARTICLE_STILT_FILE,
     _bundled_data_dir,
     _check_met_reached_end,
-    _run_hycs_std,
     read_particle_dat,
+    run_hycs_std,
     write_inputs,
 )
 from .failures import FailureReason
@@ -137,7 +137,7 @@ class HysplitModel:
         source = files.files_for(window, hour_after=config.n_hours < 0)
         write_inputs(workdir, receptor, config, files.readable(source))
         try:
-            _run_hycs_std(workdir, timeout)
+            run_hycs_std(workdir, timeout)
             path = workdir / PARTICLE_STILT_FILE
             if not path.exists():
                 raise SimulationError(

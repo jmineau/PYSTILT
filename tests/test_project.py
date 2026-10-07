@@ -1034,14 +1034,14 @@ def test_run_on_slurm_submits_and_waits(tmp_path, monkeypatch, point_receptor):
     waited = []
     submitted = []
 
-    def submit(project, pending, execution, skip_existing, compute_root):
+    def submit(project, *, receptors, execution, skip_existing, compute_root):
         submitted.append(
-            {"pending": pending, "execution": execution, "compute_root": compute_root}
+            {"pending": receptors, "execution": execution, "compute_root": compute_root}
         )
         return "777"
 
-    monkeypatch.setattr("stilt.execution.runner._submit", submit)
-    monkeypatch.setattr("stilt.execution.runner._wait", waited.append)
+    monkeypatch.setattr("stilt.execution.runner.submit", submit)
+    monkeypatch.setattr("stilt.execution.runner.wait", waited.append)
 
     status = project.run(compute_root="/s")
     assert waited == ["777"]

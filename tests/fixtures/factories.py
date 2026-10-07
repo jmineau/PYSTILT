@@ -34,6 +34,33 @@ def make_met_config(
     )
 
 
+def make_met_files(directory: Path, time: Any, n_hours: int) -> list[Path]:
+    """
+    Write empty hourly met files that cover a run of *n_hours* from *time*, and return them.
+
+    They are named as :func:`make_met_config` expects, one hour beyond the
+    run on each side, so :class:`stilt.meteorology.Met` finds them. Nothing
+    can read them: use them where the transport model does not run.
+    """
+    import pandas as pd
+
+    from stilt.meteorology import run_window
+
+    start, end = run_window(time, n_hours)
+    hours = pd.date_range(
+        pd.Timestamp(start).floor("h") - pd.Timedelta(hours=1),
+        pd.Timestamp(end).ceil("h") + pd.Timedelta(hours=1),
+        freq="h",
+    )
+    directory.mkdir(parents=True, exist_ok=True)
+    files = []
+    for hour in hours:
+        path = directory / f"{hour:%Y%m%d_%H}"
+        path.touch()
+        files.append(path)
+    return files
+
+
 def make_project_config(tmp_path: Path, **settings: Any) -> ProjectConfig:
     """
     Return a project config with one met, ``hrrr``, and one variant of the defaults.

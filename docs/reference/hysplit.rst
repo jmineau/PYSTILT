@@ -26,7 +26,8 @@ Running HYSPLIT
 :func:`~stilt.transport.hysplit.write_inputs` writes everything
 ``hycs_std`` reads for one receptor into a folder: ``CONTROL``,
 ``SETUP.CFG``, and the error and mixed-layer files when the settings call
-for them. Use it to look at the input files of a run.
+for them. Use it to look at the input files of a run, and
+:func:`~stilt.transport.hysplit.run_hycs_std` to run ``hycs_std`` on them.
 :func:`~stilt.transport.hysplit.read_particle_dat` reads a
 ``PARTICLE_STILT.DAT`` as a particle table. The release heights and the
 near-field correction are PYSTILT's steps, the same for any model
@@ -46,6 +47,7 @@ near-field correction are PYSTILT's steps, the same for any model
    :nosignatures:
 
    stilt.transport.hysplit.write_inputs
+   stilt.transport.hysplit.run_hycs_std
    stilt.transport.hysplit.read_particle_dat
 
 Failure reasons

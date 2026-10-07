@@ -308,9 +308,13 @@ def write_inputs(
     _write_values(workdir / ZIERR_FILE, zierr(config))
 
 
-def _run_hycs_std(workdir: Path, timeout: int | None) -> None:
+def run_hycs_std(workdir: Path, timeout: int | None = None) -> None:
     """
     Run the ``hycs_std`` in *workdir*, writing its output to ``stilt.log``.
+
+    *workdir* holds the inputs :func:`write_inputs` wrote. With *timeout*
+    seconds the run is stopped when it takes longer; without it, it may run
+    as long as HYSPLIT does.
 
     Raises
     ------
