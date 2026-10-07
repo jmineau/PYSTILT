@@ -118,10 +118,24 @@ def read_run_settings(stored: Mapping[str, Any]) -> dict[str, Any]:
     Return the run settings a ``_settings.yaml`` records, read through the current classes.
 
     Settings this version does not have are dropped, so a folder written
-    before a setting was removed still loads. A folder of one realization,
+    before a setting was removed still loads. A record of a transport model
+    that is not installed here is returned as written, with a warning. A folder of one realization,
     as realizations were written before they were partitions, keeps its
     number, so it hashes as it did and no current variant finds it.
     """
+    name = _model_info(stored).name
+    try:
+        get_model(name)
+    except (ImportError, ValueError) as error:
+        # Another project's folder in a shared output directory, made by a
+        # model not installed here: keep its record as written, so its hash
+        # and everything else in the directory still read.
+        warnings.warn(
+            f"Transport model {name!r} of a stored run could not be loaded "
+            f"({error}). Its settings are kept as written.",
+            stacklevel=2,
+        )
+        return dict(stored)
     record = run_settings(
         transport_from_settings(stored),
         MetConfig.model_validate(stored["met"]),

@@ -102,7 +102,7 @@ def make_variant(
         met="hrrr",
         met_config=met_config if met_config is not None else MET,
         transport=transport,
-        model=ModelInfo(version="v5.1.0"),
+        model=ModelInfo(name="hysplit", version="v5.1.0"),
         footprint=footprint,
         realizations=realizations,
     )

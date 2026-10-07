@@ -66,14 +66,16 @@ def test_custom_build_needs_a_version_file(tmp_path):
 
 def test_a_runs_met_is_recorded_without_its_directories(tmp_path):
     met = _met(tmp_path, subgrid_dir=tmp_path / "sub", n_min=2)
-    recorded = run_settings(HysplitConfig(), met, ModelInfo(version="v5.1.0"), None)
+    recorded = run_settings(
+        HysplitConfig(), met, ModelInfo(name="hysplit", version="v5.1.0"), None
+    )
     assert not {"directory", "subgrid_dir", "n_min", "download_from"} & set(
         recorded["met"]
     )
     moved = met.model_copy(update={"directory": tmp_path / "elsewhere"})
-    assert run_settings(HysplitConfig(), moved, ModelInfo(version="v5.1.0"), None) == (
-        recorded
-    )
+    assert run_settings(
+        HysplitConfig(), moved, ModelInfo(name="hysplit", version="v5.1.0"), None
+    ) == (recorded)
 
 
 def test_run_settings_leave_out_what_changes_no_particle(tmp_path):
@@ -87,7 +89,9 @@ def test_run_settings_leave_out_what_changes_no_particle(tmp_path):
         _variant(tmp_path, numpar=100, maxpar=100).particles_hash == base.particles_hash
     )
     assert _variant(tmp_path, numpar=200).particles_hash != base.particles_hash
-    other_model = replace(base, model=ModelInfo(version="v5.3.2+t0-rows"))
+    other_model = replace(
+        base, model=ModelInfo(name="hysplit", version="v5.3.2+t0-rows")
+    )
     assert other_model.particles_hash != base.particles_hash
 
 
