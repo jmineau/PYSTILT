@@ -1,14 +1,15 @@
 [build-system]
-requires = ["setuptools>=70.1"]
+requires = ["setuptools>=77", "setuptools-scm>=8"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "pystilt"
-version = "0.1.0a22"
+dynamic = ["version"]  # from git tags, via setuptools-scm
 description = "A Python implementation of the STILT Lagrangian atmospheric transport model."
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
+license-files = ["LICENSE"]
 authors = [
     {name = "James Mineau", email = "jameskmineau@gmail.com"}
 ]
@@ -228,3 +229,18 @@ where = ["src"]
 [tool.setuptools.package-data]
 "stilt" = ["py.typed"]
 "stilt.transport.hysplit" = ["bin/**/*", "data/*"]
+
+[tool.setuptools_scm]
+# Releases are git tags vX.Y.Z (see CONTRIBUTING.md). Between releases the
+# version is the next one as a dev version, e.g. 0.1.0a23.dev3+g1a2b3c4.
+fallback_version = "0.0.0"  # no git metadata at all (e.g. a bare source copy)
+
+[tool.uv]
+required-version = ">=0.12"
+# Rebuild the editable install when the build config or the git state changes,
+# so `__version__` follows new commits and tags.
+cache-keys = [
+    { file = "pyproject.toml" },
+    { file = "setup.py" },
+    { git = { commit = true, tags = true } },
+]

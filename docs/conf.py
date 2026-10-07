@@ -3,15 +3,12 @@
 from __future__ import annotations
 
 import sys
-import tomllib
+from importlib.metadata import version as _version
 from pathlib import Path
 
 DOCS = Path(__file__).resolve().parent
-ROOT = DOCS.parent
-SRC = ROOT / "src"
 
 sys.path.insert(0, str(DOCS / "_ext"))
-sys.path.insert(0, str(SRC))
 
 PYDANTIC_AUTODOC_EXCLUDES = {
     "model_config",
@@ -28,7 +25,7 @@ PYDANTIC_AUTODOC_EXCLUDES = {
 project = "PYSTILT"
 copyright = "2026, James Mineau"
 author = "James Mineau"
-release = tomllib.loads((ROOT / "pyproject.toml").read_text())["project"]["version"]
+release = _version("pystilt")  # from git tags, via setuptools-scm
 version = release
 
 # -- General configuration ---------------------------------------------------
