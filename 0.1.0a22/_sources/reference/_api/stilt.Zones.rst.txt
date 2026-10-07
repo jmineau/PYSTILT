@@ -1,0 +1,129 @@
+﻿stilt.Zones
+===========
+
+.. currentmodule:: stilt
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.. class-signature:: stilt.Zones
+
+.. class-parameters:: stilt.Zones
+
+
+Methods
+-------
+
+.. autosummary::
+   :toctree:
+
+
+   ~Zones.from_labels
+
+
+Attributes
+----------
+
+.. autosummary::
+
+   ~Zones.bounds
+   ~Zones.crs
+   ~Zones.hash
+   ~Zones.index
+   ~Zones.is_longlat
+   ~Zones.membership
+   ~Zones.min_cell_width
+   ~Zones.base
+   ~Zones.labels
+

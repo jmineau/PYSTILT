@@ -1,0 +1,866 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>stilt.execution.worker &#8212; PYSTILT 0.1.0a22</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../_static/styles/theme.css?digest=7f76b32a3354e82990f2" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=7f76b32a3354e82990f2" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/custom.css?v=90cc9208" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../../../_static/scripts/fontawesome.js?digest=7f76b32a3354e82990f2"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=7f76b32a3354e82990f2" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=7f76b32a3354e82990f2" />
+
+    <script src="../../../_static/documentation_options.js?v=801db8bb"></script>
+    <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/stilt/execution/worker';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="0.1.0a22" />
+  
+    
+    <script src="../../../_static/searchtools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    <script src="../../../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+<aside class="bd-header-announcement" aria-label="Announcement">
+  <div class="bd-header-announcement__content">PYSTILT is in alpha: names and options may change between releases.</div>
+</aside>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class=" navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">PYSTILT 0.1.0a22</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class=" navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../getting_started/index.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../tutorials/index.html">
+    Tutorials
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../guides/index.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../reference/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../roadmap.html">
+    Roadmap
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../development.html">
+    Development
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/jmineau/PYSTILT" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../getting_started/index.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../tutorials/index.html">
+    Tutorials
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../guides/index.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../reference/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../roadmap.html">
+    Roadmap
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../development.html">
+    Development
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/jmineau/PYSTILT" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../../index.html" class="nav-link">Module code</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">stilt.execution.worker</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for stilt.execution.worker</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Worker functions that run one simulation, one receptor, or many receptors.</span>
+
+<span class="sd">Workers are handed receptors. :func:`run_receptor` runs every variant of</span>
+<span class="sd">one receptor, and :func:`run_simulation` runs each one: HYSPLIT where the</span>
+<span class="sd">trajectories are missing, then the footprint. :func:`run_receptors` runs a</span>
+<span class="sd">list of receptors in this process or a process pool, and</span>
+<span class="sd">:func:`pull_receptors` takes receptors from the PostgreSQL work queue.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">multiprocessing</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">signal</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">traceback</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Literal</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">ConfigValidationError</span><span class="p">,</span> <span class="n">SimulationError</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.simulation</span><span class="w"> </span><span class="kn">import</span> <span class="n">Simulation</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.backends.protocol</span><span class="w"> </span><span class="kn">import</span> <span class="n">sigterm_as_interrupt</span>
+
+<span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.model</span><span class="w"> </span><span class="kn">import</span> <span class="n">Model</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+<span class="n">Status</span> <span class="o">=</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;complete&quot;</span><span class="p">,</span> <span class="s2">&quot;failed&quot;</span><span class="p">,</span> <span class="s2">&quot;error&quot;</span><span class="p">,</span> <span class="s2">&quot;interrupted&quot;</span><span class="p">]</span>
+
+<span class="c1">#: Statuses from worst to best, for summarizing a receptor&#39;s simulations.</span>
+<span class="n">_SEVERITY</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Status</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;interrupted&quot;</span><span class="p">,</span> <span class="s2">&quot;error&quot;</span><span class="p">,</span> <span class="s2">&quot;failed&quot;</span><span class="p">,</span> <span class="s2">&quot;complete&quot;</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="SimulationResult">
+<a class="viewcode-back" href="../../../reference/_api/stilt.execution.SimulationResult.html#stilt.execution.SimulationResult">[docs]</a>
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">slots</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">SimulationResult</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Outcome of one simulation run by a worker.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    sim_id : str</span>
+<span class="sd">        Simulation id.</span>
+<span class="sd">    status : {&quot;complete&quot;, &quot;failed&quot;, &quot;error&quot;, &quot;interrupted&quot;}</span>
+<span class="sd">        ``failed`` is a HYSPLIT or STILT failure (a :class:`SimulationError`),</span>
+<span class="sd">        ``error`` any other exception, and ``interrupted`` a stopped worker.</span>
+<span class="sd">    error : str or None</span>
+<span class="sd">        Error message, when the simulation did not complete.</span>
+<span class="sd">    ran_hysplit : bool</span>
+<span class="sd">        Whether HYSPLIT ran in this call.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">sim_id</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">status</span><span class="p">:</span> <span class="n">Status</span>
+    <span class="n">error</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">ran_hysplit</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span></div>
+
+
+
+<div class="viewcode-block" id="ReceptorResult">
+<a class="viewcode-back" href="../../../reference/_api/stilt.execution.ReceptorResult.html#stilt.execution.ReceptorResult">[docs]</a>
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">slots</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">ReceptorResult</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Outcome of running every simulation of one receptor.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    receptor_id : str</span>
+<span class="sd">        Receptor id.</span>
+<span class="sd">    status : {&quot;complete&quot;, &quot;failed&quot;, &quot;error&quot;, &quot;interrupted&quot;}</span>
+<span class="sd">        Worst status among the receptor&#39;s simulations.</span>
+<span class="sd">    error : str or None</span>
+<span class="sd">        Error message of the simulation with the worst status.</span>
+<span class="sd">    simulations : tuple of SimulationResult</span>
+<span class="sd">        Result of each simulation.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">receptor_id</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">status</span><span class="p">:</span> <span class="n">Status</span>
+    <span class="n">error</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">simulations</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">SimulationResult</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">tuple</span><span class="p">)</span>
+
+<div class="viewcode-block" id="ReceptorResult.summarise">
+<a class="viewcode-back" href="../../../reference/_api/stilt.execution.ReceptorResult.summarise.html#stilt.execution.ReceptorResult.summarise">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">summarise</span><span class="p">(</span>
+        <span class="bp">cls</span><span class="p">,</span> <span class="n">receptor_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">results</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">SimulationResult</span><span class="p">]</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ReceptorResult</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the receptor result for a list of simulation results.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">results</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="n">receptor_id</span><span class="p">,</span> <span class="s2">&quot;complete&quot;</span><span class="p">)</span>
+        <span class="n">worst</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">results</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">r</span><span class="p">:</span> <span class="n">_SEVERITY</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">status</span><span class="p">))</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="n">receptor_id</span><span class="p">,</span> <span class="n">worst</span><span class="o">.</span><span class="n">status</span><span class="p">,</span> <span class="n">worst</span><span class="o">.</span><span class="n">error</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">results</span><span class="p">))</span></div>
+</div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_append_error_log</span><span class="p">(</span><span class="n">sim</span><span class="p">:</span> <span class="n">Simulation</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">phase</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">error</span><span class="p">:</span> <span class="ne">BaseException</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Append the error and its traceback to the simulation log.&quot;&quot;&quot;</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">log_path</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">trace</span> <span class="o">=</span> <span class="n">traceback</span><span class="o">.</span><span class="n">format_exc</span><span class="p">()</span>
+    <span class="n">lines</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="s2">&quot;&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;=== PYSTILT ERROR ===&quot;</span><span class="p">,</span>
+        <span class="sa">f</span><span class="s2">&quot;Phase: </span><span class="si">{</span><span class="n">phase</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+        <span class="sa">f</span><span class="s2">&quot;Type: </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">error</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+        <span class="sa">f</span><span class="s2">&quot;Message: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+    <span class="p">]</span>
+    <span class="k">if</span> <span class="n">trace</span> <span class="ow">and</span> <span class="n">trace</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="ow">and</span> <span class="n">trace</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="o">!=</span> <span class="s2">&quot;NoneType: None&quot;</span><span class="p">:</span>
+        <span class="n">lines</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;Traceback:&quot;</span><span class="p">,</span> <span class="n">trace</span><span class="o">.</span><span class="n">rstrip</span><span class="p">()])</span>
+    <span class="k">with</span> <span class="n">sim</span><span class="o">.</span><span class="n">log_path</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">lines</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="run_simulation">
+<a class="viewcode-back" href="../../../reference/_api/stilt.execution.run_simulation.html#stilt.execution.run_simulation">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">run_simulation</span><span class="p">(</span><span class="n">sim</span><span class="p">:</span> <span class="n">Simulation</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">skip_existing</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SimulationResult</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Run one simulation and copy its outputs into the project.</span>
+
+<span class="sd">    HYSPLIT runs when the trajectories are missing, or always when</span>
+<span class="sd">    ``skip_existing`` is false. A ``from:`` variant reads its parent&#39;s</span>
+<span class="sd">    trajectories instead. When the variant has a grid, the footprint is</span>
+<span class="sd">    computed if it is missing, and again whenever HYSPLIT ran, so a</span>
+<span class="sd">    footprint always matches its trajectories. An empty footprint writes a</span>
+<span class="sd">    ``.empty`` marker, which counts as complete. Errors are caught, written</span>
+<span class="sd">    to the simulation log, and returned in the result.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    sim : Simulation</span>
+<span class="sd">        Simulation to run.</span>
+<span class="sd">    skip_existing : bool, default True</span>
+<span class="sd">        Keep trajectories and footprints that already exist.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    SimulationResult</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">phase</span> <span class="o">=</span> <span class="s2">&quot;trajectory&quot;</span>
+    <span class="n">ran_hysplit</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">sim</span><span class="o">.</span><span class="n">is_derived</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">sim</span><span class="o">.</span><span class="n">trajectories</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">SimulationError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">sim</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2"> derives from </span><span class="si">{</span><span class="n">sim</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">, which has no trajectory&quot;</span>  <span class="c1"># type: ignore[union-attr]</span>
+                <span class="p">)</span>
+        <span class="k">elif</span> <span class="ow">not</span> <span class="p">(</span><span class="n">skip_existing</span> <span class="ow">and</span> <span class="n">sim</span><span class="o">.</span><span class="n">has_trajectory</span><span class="p">):</span>
+            <span class="n">sim</span><span class="o">.</span><span class="n">run_trajectories</span><span class="p">(</span><span class="n">write</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">ran_hysplit</span> <span class="o">=</span> <span class="kc">True</span>
+
+        <span class="k">if</span> <span class="n">sim</span><span class="o">.</span><span class="n">makes_footprint</span> <span class="ow">and</span> <span class="ow">not</span> <span class="p">(</span>
+            <span class="n">skip_existing</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">ran_hysplit</span> <span class="ow">and</span> <span class="n">sim</span><span class="o">.</span><span class="n">has_footprint</span>
+        <span class="p">):</span>
+            <span class="n">phase</span> <span class="o">=</span> <span class="s2">&quot;footprint&quot;</span>
+            <span class="n">sim</span><span class="o">.</span><span class="n">generate_footprint</span><span class="p">(</span><span class="n">write</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">sim</span><span class="o">.</span><span class="n">publish</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">SimulationResult</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">id</span><span class="p">),</span> <span class="s2">&quot;complete&quot;</span><span class="p">,</span> <span class="n">ran_hysplit</span><span class="o">=</span><span class="n">ran_hysplit</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">exception</span><span class="p">(</span><span class="s2">&quot;simulation </span><span class="si">%s</span><span class="s2"> failed during </span><span class="si">%s</span><span class="s2">: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">sim</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">phase</span><span class="p">,</span> <span class="n">error</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">_append_error_log</span><span class="p">(</span><span class="n">sim</span><span class="p">,</span> <span class="n">phase</span><span class="o">=</span><span class="n">phase</span><span class="p">,</span> <span class="n">error</span><span class="o">=</span><span class="n">error</span><span class="p">)</span>
+            <span class="n">sim</span><span class="o">.</span><span class="n">publish</span><span class="p">()</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">exception</span><span class="p">(</span><span class="s2">&quot;simulation </span><span class="si">%s</span><span class="s2">: could not publish failure log&quot;</span><span class="p">,</span> <span class="n">sim</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+        <span class="n">status</span> <span class="o">=</span> <span class="s2">&quot;failed&quot;</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">error</span><span class="p">,</span> <span class="n">SimulationError</span><span class="p">)</span> <span class="k">else</span> <span class="s2">&quot;error&quot;</span>
+        <span class="k">return</span> <span class="n">SimulationResult</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">id</span><span class="p">),</span> <span class="n">status</span><span class="p">,</span> <span class="n">error</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">error</span><span class="p">))</span></div>
+
+
+
+<div class="viewcode-block" id="run_receptor">
+<a class="viewcode-back" href="../../../reference/_api/stilt.execution.run_receptor.html#stilt.execution.run_receptor">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">run_receptor</span><span class="p">(</span>
+    <span class="n">model</span><span class="p">:</span> <span class="n">Model</span><span class="p">,</span> <span class="n">receptor_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">skip_existing</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ReceptorResult</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Run every simulation of one receptor.</span>
+
+<span class="sd">    Variants that run HYSPLIT go first, then the ``from:`` variants that</span>
+<span class="sd">    reuse their trajectories. A ``from:`` variant whose parent ran HYSPLIT in</span>
+<span class="sd">    this call is recomputed even with ``skip_existing``. A</span>
+<span class="sd">    ``KeyboardInterrupt``, such as a preempted job, gives an ``interrupted``</span>
+<span class="sd">    result.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    model : Model</span>
+<span class="sd">        Model the receptor belongs to.</span>
+<span class="sd">    receptor_id : str</span>
+<span class="sd">        Receptor to run.</span>
+<span class="sd">    skip_existing : bool, default True</span>
+<span class="sd">        Keep trajectories and footprints that already exist.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    ReceptorResult</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">sims</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">simulations</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">receptor</span><span class="o">=</span><span class="n">receptor_id</span><span class="p">))</span>
+    <span class="n">ordered</span> <span class="o">=</span> <span class="p">[</span><span class="n">s</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">sims</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">s</span><span class="o">.</span><span class="n">is_derived</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span><span class="n">s</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">sims</span> <span class="k">if</span> <span class="n">s</span><span class="o">.</span><span class="n">is_derived</span><span class="p">]</span>
+    <span class="n">results</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">SimulationResult</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">sim</span> <span class="ow">in</span> <span class="n">ordered</span><span class="p">:</span>
+            <span class="n">skip</span> <span class="o">=</span> <span class="n">skip_existing</span>
+            <span class="k">if</span> <span class="n">sim</span><span class="o">.</span><span class="n">is_derived</span><span class="p">:</span>
+                <span class="n">reran</span> <span class="o">=</span> <span class="p">{</span><span class="n">r</span><span class="o">.</span><span class="n">sim_id</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">results</span> <span class="k">if</span> <span class="n">r</span><span class="o">.</span><span class="n">ran_hysplit</span><span class="p">}</span>
+                <span class="n">skip</span> <span class="o">=</span> <span class="n">skip_existing</span> <span class="ow">and</span> <span class="nb">str</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">id</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">reran</span>  <span class="c1"># type: ignore[union-attr]</span>
+            <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">run_simulation</span><span class="p">(</span><span class="n">sim</span><span class="p">,</span> <span class="n">skip_existing</span><span class="o">=</span><span class="n">skip</span><span class="p">))</span>
+    <span class="k">except</span> <span class="ne">KeyboardInterrupt</span><span class="p">:</span>
+        <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+            <span class="n">SimulationResult</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">id</span><span class="p">),</span> <span class="s2">&quot;interrupted&quot;</span><span class="p">,</span> <span class="n">error</span><span class="o">=</span><span class="s2">&quot;Worker preempted&quot;</span><span class="p">)</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="n">ReceptorResult</span><span class="o">.</span><span class="n">summarise</span><span class="p">(</span><span class="n">receptor_id</span><span class="p">,</span> <span class="n">results</span><span class="p">)</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_log_result</span><span class="p">(</span><span class="n">result</span><span class="p">:</span> <span class="n">ReceptorResult</span><span class="p">,</span> <span class="n">done</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">total</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Log one progress line for a finished receptor.&quot;&quot;&quot;</span>
+    <span class="n">detail</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;: </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">error</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">error</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+        <span class="s2">&quot;[</span><span class="si">%d</span><span class="s2">/</span><span class="si">%d</span><span class="s2">] </span><span class="si">%s</span><span class="s2"> </span><span class="si">%s%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">done</span><span class="p">,</span> <span class="n">total</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">receptor_id</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">status</span><span class="p">,</span> <span class="n">detail</span>
+    <span class="p">)</span>
+
+
+<span class="c1"># -- process pool -------------------------------------------------------------</span>
+
+<span class="n">_POOL_MODEL</span><span class="p">:</span> <span class="n">Model</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="n">_POOL_SKIP</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_raise_interrupt</span><span class="p">(</span><span class="n">signum</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">frame</span><span class="p">:</span> <span class="nb">object</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Turn a signal into KeyboardInterrupt so cleanup runs.&quot;&quot;&quot;</span>
+    <span class="k">raise</span> <span class="ne">KeyboardInterrupt</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_init_pool_worker</span><span class="p">(</span><span class="n">project</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">compute_root</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">skip_existing</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Build the worker process&#39;s Model and make SIGTERM raise KeyboardInterrupt.&quot;&quot;&quot;</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.model</span><span class="w"> </span><span class="kn">import</span> <span class="n">Model</span>
+
+    <span class="k">global</span> <span class="n">_POOL_MODEL</span><span class="p">,</span> <span class="n">_POOL_SKIP</span>
+    <span class="n">signal</span><span class="o">.</span><span class="n">signal</span><span class="p">(</span><span class="n">signal</span><span class="o">.</span><span class="n">SIGTERM</span><span class="p">,</span> <span class="n">_raise_interrupt</span><span class="p">)</span>
+    <span class="n">_POOL_MODEL</span> <span class="o">=</span> <span class="n">Model</span><span class="p">(</span><span class="n">project</span><span class="o">=</span><span class="n">project</span><span class="p">,</span> <span class="n">compute_root</span><span class="o">=</span><span class="n">compute_root</span><span class="p">)</span>
+    <span class="n">_POOL_SKIP</span> <span class="o">=</span> <span class="n">skip_existing</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_pool_run</span><span class="p">(</span><span class="n">item</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">ReceptorResult</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Run one receptor in a pool worker, returning its index and result.&quot;&quot;&quot;</span>
+    <span class="n">idx</span><span class="p">,</span> <span class="n">receptor_id</span> <span class="o">=</span> <span class="n">item</span>
+    <span class="k">assert</span> <span class="n">_POOL_MODEL</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+    <span class="k">return</span> <span class="n">idx</span><span class="p">,</span> <span class="n">run_receptor</span><span class="p">(</span><span class="n">_POOL_MODEL</span><span class="p">,</span> <span class="n">receptor_id</span><span class="p">,</span> <span class="n">skip_existing</span><span class="o">=</span><span class="n">_POOL_SKIP</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="run_receptors">
+<a class="viewcode-back" href="../../../reference/_api/stilt.execution.run_receptors.html#stilt.execution.run_receptors">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">run_receptors</span><span class="p">(</span>
+    <span class="n">model</span><span class="p">:</span> <span class="n">Model</span><span class="p">,</span>
+    <span class="n">receptor_ids</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">n_cores</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="n">skip_existing</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">ReceptorResult</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Run a list of receptors, in this process or in a process pool.</span>
+
+<span class="sd">    Pool workers load the model again from ``model.project.root``, so the</span>
+<span class="sd">    config and receptors must already be saved in the project, as</span>
+<span class="sd">    :meth:`Model.register` does. A SIGTERM, such as Slurm preemption or the</span>
+<span class="sd">    end of the job&#39;s time limit, stops the batch with an ``interrupted``</span>
+<span class="sd">    result.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    model : Model</span>
+<span class="sd">        Model the receptors belong to.</span>
+<span class="sd">    receptor_ids : list of str</span>
+<span class="sd">        Receptors to run.</span>
+<span class="sd">    n_cores : int, default 1</span>
+<span class="sd">        Number of worker processes. 1 runs in this process.</span>
+<span class="sd">    skip_existing : bool, default True</span>
+<span class="sd">        Keep trajectories and footprints that already exist.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    list of ReceptorResult</span>
+<span class="sd">        One result per receptor, in input order. After an interruption, only</span>
+<span class="sd">        the receptors that finished.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">receptor_ids</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">[]</span>
+
+    <span class="k">if</span> <span class="n">n_cores</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">results</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">ReceptorResult</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">with</span> <span class="n">sigterm_as_interrupt</span><span class="p">():</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">receptor_id</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">receptor_ids</span><span class="p">,</span> <span class="mi">1</span><span class="p">):</span>
+                <span class="n">result</span> <span class="o">=</span> <span class="n">run_receptor</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">receptor_id</span><span class="p">,</span> <span class="n">skip_existing</span><span class="o">=</span><span class="n">skip_existing</span><span class="p">)</span>
+                <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+                <span class="n">_log_result</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">receptor_ids</span><span class="p">))</span>
+                <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="s2">&quot;interrupted&quot;</span><span class="p">:</span>
+                    <span class="k">break</span>
+        <span class="k">return</span> <span class="n">results</span>
+
+    <span class="n">ordered</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">ReceptorResult</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">pool</span> <span class="o">=</span> <span class="n">multiprocessing</span><span class="o">.</span><span class="n">Pool</span><span class="p">(</span>
+        <span class="n">n_cores</span><span class="p">,</span>
+        <span class="n">initializer</span><span class="o">=</span><span class="n">_init_pool_worker</span><span class="p">,</span>
+        <span class="n">initargs</span><span class="o">=</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">project</span><span class="o">.</span><span class="n">root</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">compute_root</span><span class="p">),</span> <span class="n">skip_existing</span><span class="p">),</span>
+    <span class="p">)</span>
+    <span class="k">with</span> <span class="n">sigterm_as_interrupt</span><span class="p">():</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">result</span> <span class="ow">in</span> <span class="n">pool</span><span class="o">.</span><span class="n">imap_unordered</span><span class="p">(</span>
+                <span class="n">_pool_run</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="nb">enumerate</span><span class="p">(</span><span class="n">receptor_ids</span><span class="p">))</span>
+            <span class="p">):</span>
+                <span class="n">ordered</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">result</span>
+                <span class="n">_log_result</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">ordered</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">receptor_ids</span><span class="p">))</span>
+                <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="s2">&quot;interrupted&quot;</span><span class="p">:</span>
+                    <span class="n">pool</span><span class="o">.</span><span class="n">terminate</span><span class="p">()</span>
+                    <span class="k">break</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># Normal completion: let workers exit cleanly. terminate() would</span>
+                <span class="c1"># SIGTERM idle workers, whose handler raises KeyboardInterrupt.</span>
+                <span class="n">pool</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="k">except</span> <span class="ne">KeyboardInterrupt</span><span class="p">:</span>
+            <span class="c1"># Preempted or Ctrl-C: stop the workers and hand back what finished.</span>
+            <span class="n">pool</span><span class="o">.</span><span class="n">terminate</span><span class="p">()</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="n">pool</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+    <span class="k">return</span> <span class="p">[</span><span class="n">ordered</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">ordered</span><span class="p">)]</span></div>
+
+
+
+<span class="c1"># -- pull mode ----------------------------------------------------------------</span>
+
+
+<div class="viewcode-block" id="pull_receptors">
+<a class="viewcode-back" href="../../../reference/_api/stilt.execution.pull_receptors.html#stilt.execution.pull_receptors">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">pull_receptors</span><span class="p">(</span>
+    <span class="n">model</span><span class="p">:</span> <span class="n">Model</span><span class="p">,</span>
+    <span class="n">follow</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">poll_interval</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">10.0</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">skip_existing</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Run receptors from the model&#39;s work queue until it is empty.</span>
+
+<span class="sd">    Each receptor is claimed so that no other worker runs it at the same</span>
+<span class="sd">    time, and its result is recorded in the queue.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    model : Model</span>
+<span class="sd">        Model with a work queue (set ``PYSTILT_DB_URL``).</span>
+<span class="sd">    follow : bool, default False</span>
+<span class="sd">        Keep waiting for new work when the queue is empty.</span>
+<span class="sd">    poll_interval : float, default 10.0</span>
+<span class="sd">        Seconds to wait after finding the queue empty. The wait doubles on</span>
+<span class="sd">        each empty check, up to 60 s.</span>
+<span class="sd">    skip_existing : bool, default True</span>
+<span class="sd">        Keep trajectories and footprints that already exist.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">queue</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">queue</span>
+    <span class="k">if</span> <span class="n">queue</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">ConfigValidationError</span><span class="p">(</span>
+            <span class="s2">&quot;Pull-mode workers require a Postgres work queue. &quot;</span>
+            <span class="s2">&quot;Configure it via PYSTILT_DB_URL.&quot;</span>
+        <span class="p">)</span>
+    <span class="n">idle_sleep</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">poll_interval</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">)</span>
+    <span class="n">max_idle_sleep</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="mf">60.0</span><span class="p">,</span> <span class="nb">max</span><span class="p">(</span><span class="n">idle_sleep</span><span class="p">,</span> <span class="n">poll_interval</span> <span class="o">*</span> <span class="mi">8</span><span class="p">))</span>
+    <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+        <span class="k">with</span> <span class="n">queue</span><span class="o">.</span><span class="n">claim_one</span><span class="p">()</span> <span class="k">as</span> <span class="n">claim</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">claim</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">follow</span><span class="p">:</span>
+                    <span class="k">return</span>
+                <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">idle_sleep</span><span class="p">)</span>
+                <span class="n">idle_sleep</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">idle_sleep</span> <span class="o">*</span> <span class="mf">2.0</span><span class="p">,</span> <span class="n">max_idle_sleep</span><span class="p">)</span>
+                <span class="k">continue</span>
+            <span class="n">idle_sleep</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">poll_interval</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">)</span>
+            <span class="n">claim</span><span class="o">.</span><span class="n">record</span><span class="p">(</span>
+                <span class="n">run_receptor</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">claim</span><span class="o">.</span><span class="n">receptor_id</span><span class="p">,</span> <span class="n">skip_existing</span><span class="o">=</span><span class="n">skip_existing</span><span class="p">)</span>
+            <span class="p">)</span></div>
+
+
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">&quot;ReceptorResult&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;SimulationResult&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;pull_receptors&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;run_receptor&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;run_receptors&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;run_simulation&quot;</span><span class="p">,</span>
+<span class="p">]</span>
+</pre></div>
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../../_static/scripts/bootstrap.js?digest=7f76b32a3354e82990f2"></script>
+<script defer src="../../../_static/scripts/pydata-sphinx-theme.js?digest=7f76b32a3354e82990f2"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2026, James Mineau.
+      <br/>
+    
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.1.0.
+    <br/>
+  </p>
+</div>
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.17.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

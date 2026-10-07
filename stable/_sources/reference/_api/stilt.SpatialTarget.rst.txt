@@ -1,0 +1,6 @@
+﻿stilt.SpatialTarget
+===================
+
+.. currentmodule:: stilt
+
+.. autodata:: SpatialTarget

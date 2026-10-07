@@ -1,0 +1,6 @@
+stilt.LocationID.center
+=======================
+
+.. currentmodule:: stilt
+
+.. automethod:: LocationID.center

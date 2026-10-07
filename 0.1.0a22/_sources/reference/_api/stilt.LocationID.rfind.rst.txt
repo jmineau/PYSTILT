@@ -1,0 +1,6 @@
+stilt.LocationID.rfind
+======================
+
+.. currentmodule:: stilt
+
+.. automethod:: LocationID.rfind

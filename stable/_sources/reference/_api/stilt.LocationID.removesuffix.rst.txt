@@ -1,0 +1,6 @@
+stilt.LocationID.removesuffix
+=============================
+
+.. currentmodule:: stilt
+
+.. automethod:: LocationID.removesuffix

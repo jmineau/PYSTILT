@@ -1,0 +1,6 @@
+stilt.config.STILTParams.realization\_seed
+==========================================
+
+.. currentmodule:: stilt.config
+
+.. automethod:: STILTParams.realization_seed

@@ -1,0 +1,6 @@
+stilt.LocationID.split
+======================
+
+.. currentmodule:: stilt
+
+.. automethod:: LocationID.split

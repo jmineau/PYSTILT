@@ -1,0 +1,6 @@
+stilt.ReceptorID.casefold
+=========================
+
+.. currentmodule:: stilt
+
+.. automethod:: ReceptorID.casefold

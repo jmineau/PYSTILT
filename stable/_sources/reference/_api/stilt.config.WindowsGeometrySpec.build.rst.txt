@@ -1,0 +1,6 @@
+stilt.config.WindowsGeometrySpec.build
+======================================
+
+.. currentmodule:: stilt.config
+
+.. automethod:: WindowsGeometrySpec.build

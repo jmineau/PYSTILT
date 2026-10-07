@@ -1,0 +1,6 @@
+stilt.Footprint.integrate\_over\_time
+=====================================
+
+.. currentmodule:: stilt
+
+.. automethod:: Footprint.integrate_over_time

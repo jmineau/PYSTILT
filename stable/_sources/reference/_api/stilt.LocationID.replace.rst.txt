@@ -1,0 +1,6 @@
+stilt.LocationID.replace
+========================
+
+.. currentmodule:: stilt
+
+.. automethod:: LocationID.replace

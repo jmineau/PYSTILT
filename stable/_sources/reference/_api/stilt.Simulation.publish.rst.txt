@@ -1,0 +1,6 @@
+stilt.Simulation.publish
+========================
+
+.. currentmodule:: stilt
+
+.. automethod:: Simulation.publish

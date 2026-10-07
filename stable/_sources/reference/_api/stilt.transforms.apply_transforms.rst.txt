@@ -1,0 +1,6 @@
+﻿stilt.transforms.apply\_transforms
+==================================
+
+.. currentmodule:: stilt.transforms
+
+.. autofunction:: apply_transforms

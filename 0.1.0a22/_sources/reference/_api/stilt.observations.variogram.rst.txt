@@ -1,0 +1,6 @@
+﻿stilt.observations.variogram
+============================
+
+.. currentmodule:: stilt.observations
+
+.. autofunction:: variogram

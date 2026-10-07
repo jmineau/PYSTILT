@@ -1,0 +1,6 @@
+stilt.LocationID.splitlines
+===========================
+
+.. currentmodule:: stilt
+
+.. automethod:: LocationID.splitlines

@@ -1,0 +1,6 @@
+stilt.ReceptorID.expandtabs
+===========================
+
+.. currentmodule:: stilt
+
+.. automethod:: ReceptorID.expandtabs

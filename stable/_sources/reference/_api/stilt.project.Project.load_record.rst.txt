@@ -1,0 +1,6 @@
+stilt.project.Project.load\_record
+==================================
+
+.. currentmodule:: stilt.project
+
+.. automethod:: Project.load_record

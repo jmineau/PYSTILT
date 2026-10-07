@@ -1,0 +1,6 @@
+﻿stilt.store.make\_store
+=======================
+
+.. currentmodule:: stilt.store
+
+.. autofunction:: make_store

@@ -1,0 +1,40 @@
+﻿stilt.TransformContext
+======================
+
+.. currentmodule:: stilt
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.. class-signature:: stilt.TransformContext
+
+.. class-parameters:: stilt.TransformContext
+
+
+
+Attributes
+----------
+
+.. autosummary::
+
+   ~TransformContext.receptor
+   ~TransformContext.variant
+   ~TransformContext.store
+

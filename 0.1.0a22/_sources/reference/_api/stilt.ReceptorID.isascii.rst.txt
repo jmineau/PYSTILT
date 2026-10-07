@@ -1,0 +1,6 @@
+stilt.ReceptorID.isascii
+========================
+
+.. currentmodule:: stilt
+
+.. automethod:: ReceptorID.isascii

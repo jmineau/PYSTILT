@@ -1,0 +1,6 @@
+stilt.store.LocalStore.delete
+=============================
+
+.. currentmodule:: stilt.store
+
+.. automethod:: LocalStore.delete

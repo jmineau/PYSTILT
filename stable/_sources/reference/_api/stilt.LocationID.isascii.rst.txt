@@ -1,0 +1,6 @@
+stilt.LocationID.isascii
+========================
+
+.. currentmodule:: stilt
+
+.. automethod:: LocationID.isascii

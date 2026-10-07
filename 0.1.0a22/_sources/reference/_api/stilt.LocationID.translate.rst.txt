@@ -1,0 +1,6 @@
+stilt.LocationID.translate
+==========================
+
+.. currentmodule:: stilt
+
+.. automethod:: LocationID.translate

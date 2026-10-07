@@ -1,0 +1,48 @@
+﻿stilt.execution.LocalExecutor
+=============================
+
+.. currentmodule:: stilt.execution
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.. class-signature:: stilt.execution.LocalExecutor
+
+.. class-parameters:: stilt.execution.LocalExecutor
+
+
+Methods
+-------
+
+.. autosummary::
+   :toctree:
+
+
+   ~LocalExecutor.start
+
+
+Attributes
+----------
+
+.. autosummary::
+
+   ~LocalExecutor.dispatch
+   ~LocalExecutor.n_workers
+

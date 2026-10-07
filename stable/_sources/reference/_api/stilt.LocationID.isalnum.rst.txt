@@ -1,0 +1,6 @@
+stilt.LocationID.isalnum
+========================
+
+.. currentmodule:: stilt
+
+.. automethod:: LocationID.isalnum

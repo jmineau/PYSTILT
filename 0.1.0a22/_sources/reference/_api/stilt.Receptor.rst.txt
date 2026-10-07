@@ -1,0 +1,73 @@
+﻿stilt.Receptor
+==============
+
+.. currentmodule:: stilt
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.. class-signature:: stilt.Receptor
+
+.. class-parameters:: stilt.Receptor
+
+
+Methods
+-------
+
+.. autosummary::
+   :toctree:
+
+
+   ~Receptor.from_dict
+   ~Receptor.from_points
+   ~Receptor.to_dict
+
+
+Attributes
+----------
+
+.. autosummary::
+
+   ~Receptor.geometry
+   ~Receptor.id
+   ~Receptor.location_id
+   ~Receptor.plot
+   ~Receptor.points
+

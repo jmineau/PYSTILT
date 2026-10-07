@@ -1,0 +1,73 @@
+﻿stilt.collections.SimulationCollection
+======================================
+
+.. currentmodule:: stilt.collections
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.. class-signature:: stilt.collections.SimulationCollection
+
+.. class-parameters:: stilt.collections.SimulationCollection
+
+
+Methods
+-------
+
+.. autosummary::
+   :toctree:
+
+
+   ~SimulationCollection.incomplete
+   ~SimulationCollection.keys
+   ~SimulationCollection.sel
+   ~SimulationCollection.status
+
+
+Attributes
+----------
+
+.. autosummary::
+
+   ~SimulationCollection.footprint
+   ~SimulationCollection.receptors
+   ~SimulationCollection.trajectories
+   ~SimulationCollection.variants
+

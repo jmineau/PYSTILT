@@ -1,0 +1,6 @@
+﻿stilt.flux.horizontal\_dims
+===========================
+
+.. currentmodule:: stilt.flux
+
+.. autofunction:: horizontal_dims

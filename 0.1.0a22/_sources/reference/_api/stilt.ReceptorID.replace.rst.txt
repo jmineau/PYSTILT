@@ -1,0 +1,6 @@
+stilt.ReceptorID.replace
+========================
+
+.. currentmodule:: stilt
+
+.. automethod:: ReceptorID.replace

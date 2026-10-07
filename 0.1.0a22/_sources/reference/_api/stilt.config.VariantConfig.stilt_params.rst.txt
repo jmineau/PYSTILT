@@ -1,0 +1,6 @@
+stilt.config.VariantConfig.stilt\_params
+========================================
+
+.. currentmodule:: stilt.config
+
+.. automethod:: VariantConfig.stilt_params

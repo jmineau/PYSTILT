@@ -1,0 +1,6 @@
+stilt.collections.SimulationCollection.incomplete
+=================================================
+
+.. currentmodule:: stilt.collections
+
+.. automethod:: SimulationCollection.incomplete

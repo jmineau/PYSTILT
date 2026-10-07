@@ -1,0 +1,6 @@
+﻿stilt.observations.fit\_variogram
+=================================
+
+.. currentmodule:: stilt.observations
+
+.. autofunction:: fit_variogram

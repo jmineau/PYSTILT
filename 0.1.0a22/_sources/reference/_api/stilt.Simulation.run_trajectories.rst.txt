@@ -1,0 +1,6 @@
+stilt.Simulation.run\_trajectories
+==================================
+
+.. currentmodule:: stilt
+
+.. automethod:: Simulation.run_trajectories

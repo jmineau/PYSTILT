@@ -1,0 +1,6 @@
+﻿stilt.flux.vertical\_dim
+========================
+
+.. currentmodule:: stilt.flux
+
+.. autofunction:: vertical_dim

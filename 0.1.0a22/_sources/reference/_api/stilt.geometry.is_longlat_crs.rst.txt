@@ -1,0 +1,6 @@
+﻿stilt.geometry.is\_longlat\_crs
+===============================
+
+.. currentmodule:: stilt.geometry
+
+.. autofunction:: is_longlat_crs

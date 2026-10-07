@@ -1,0 +1,73 @@
+﻿stilt.ColumnReceptor
+====================
+
+.. currentmodule:: stilt
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.. class-signature:: stilt.ColumnReceptor
+
+.. class-parameters:: stilt.ColumnReceptor
+
+
+Methods
+-------
+
+.. autosummary::
+   :toctree:
+
+
+   ~ColumnReceptor.from_dict
+   ~ColumnReceptor.from_points
+   ~ColumnReceptor.to_dict
+
+
+Attributes
+----------
+
+.. autosummary::
+
+   ~ColumnReceptor.geometry
+   ~ColumnReceptor.id
+   ~ColumnReceptor.location_id
+   ~ColumnReceptor.plot
+   ~ColumnReceptor.points
+

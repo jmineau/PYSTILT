@@ -1,0 +1,6 @@
+stilt.ReceptorID.count
+======================
+
+.. currentmodule:: stilt
+
+.. automethod:: ReceptorID.count

@@ -1,0 +1,783 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Wind Error Statistics &#8212; PYSTILT 0.1.0a22</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=7f76b32a3354e82990f2" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=7f76b32a3354e82990f2" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=90cc9208" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=7f76b32a3354e82990f2"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=7f76b32a3354e82990f2" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=7f76b32a3354e82990f2" />
+
+    <script src="../_static/documentation_options.js?v=801db8bb"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'guides/wind_errors';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Background" href="background.html" />
+    <link rel="prev" title="Transport Error" href="transport_error.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="0.1.0a22" />
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+<aside class="bd-header-announcement" aria-label="Announcement">
+  <div class="bd-header-announcement__content">PYSTILT is in alpha: names and options may change between releases.</div>
+</aside>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class=" navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">PYSTILT 0.1.0a22</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class=" navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started/index.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../tutorials/index.html">
+    Tutorials
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../reference/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../roadmap.html">
+    Roadmap
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../development.html">
+    Development
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/jmineau/PYSTILT" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started/index.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../tutorials/index.html">
+    Tutorials
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../reference/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../roadmap.html">
+    Roadmap
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../development.html">
+    Development
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/jmineau/PYSTILT" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item pst-sidebar-collapse"><button id="pst-collapse-sidebar-button" aria-expanded="true" aria-controls="pst-primary-sidebar"><svg class="pst-icon svg-inline--fa" role="img" aria-hidden="true" focusable="false" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+    <path fill="currentColor" d="M3 15.5C2.36232 15.5 1.74874 15.2564 1.28478 14.8189C0.820828 14.3815 0.541576 13.7832 0.504167 13.1467L0.5 13L0.5 3C0.499965 2.36232 0.743605 1.74874 1.18107 1.28478C1.61854 0.820828 2.21676 0.541576 2.85333 0.504167L3 0.5L13 0.5C13.6377 0.499965 14.2513 0.743605 14.7152 1.18107C15.1792 1.61854 15.4584 2.21676 15.4958 2.85333L15.5 3L15.5 13C15.5 13.6377 15.2564 14.2513 14.8189 14.7152C14.3815 15.1792 13.7832 15.4584 13.1467 15.4958L13 15.5L3 15.5ZM3 13.8333L10.5 13.8333L10.5 2.16667L3 2.16667C2.79589 2.16669 2.59889 2.24163 2.44636 2.37726C2.29383 2.5129 2.19638 2.69979 2.1725 2.9025L2.16667 3L2.16667 13C2.16669 13.2041 2.24163 13.4011 2.37726 13.5536C2.5129 13.7062 2.69979 13.8036 2.9025 13.8275L3 13.8333ZM6.65583 10.325L6.5775 10.2558L4.91083 8.58917C4.76735 8.44567 4.68116 8.25476 4.66843 8.05223C4.65569 7.84971 4.71729 7.6495 4.84167 7.48917L4.91083 7.41083L6.5775 5.74417C6.72747 5.59471 6.9287 5.50794 7.14032 5.50148C7.35194 5.49502 7.55809 5.56935 7.7169 5.70937C7.8757 5.8494 7.97525 6.04463 7.99533 6.25539C8.01541 6.46616 7.95451 6.67667 7.825 6.84417L7.75583 6.9225L6.67917 8L7.75583 9.0775C7.89931 9.22099 7.98551 9.41191 7.99824 9.61443C8.01097 9.81695 7.94938 10.0172 7.825 10.1775L7.75583 10.2558C7.61234 10.3993 7.42142 10.4855 7.2189 10.4982C7.01638 10.511 6.81617 10.4494 6.65583 10.325Z"/>
+  </svg>
+  <span class="pst-collapse-sidebar-label">Collapse Sidebar</span>
+  <span class="pst-expand-sidebar-label">Expand Sidebar</span>
+</button></div>
+        <div class="sidebar-primary-item">
+
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><p aria-level="2" class="caption" role="heading"><span class="caption-text">Setting up a project</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="receptors.html">Receptors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="meteorology.html">Meteorology</a></li>
+<li class="toctree-l1"><a class="reference internal" href="configuration.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="project_layout.html">Project Folders And Reruns</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Running simulations</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1 has-children"><a class="reference internal" href="execution/index.html">Where To Run</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="execution/local.html">On Your Computer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="execution/slurm.html">On An HPC Cluster (Slurm)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="execution/kubernetes.html">In The Cloud (Kubernetes)</a></li>
+</ul>
+</details></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Working with results</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="outputs.html">Load And Plot Results</a></li>
+<li class="toctree-l1"><a class="reference internal" href="transport_error.html">Transport Error</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Wind Error Statistics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="background.html">Background</a></li>
+<li class="toctree-l1"><a class="reference internal" href="plume_background.html">Plume Background</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Column and satellite measurements</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="readers.html">Reading Retrieval Products</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../advanced/observations.html">Satellite And Column Observations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="slant_columns.html">Slant Columns</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../advanced/transforms.html">Particle Weighting (Transforms)</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Coming from other STILT tools</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../migration/stilt_r.html">Coming From STILT-R</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../migration/x_stilt.html">Coming From X-STILT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../migration/stiltctl.html">Coming From stiltctl</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Under the hood</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../advanced/output_state.html">How PYSTILT Tracks Finished Work</a></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="index.html" class="nav-link">User Guide</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Wind Error Statistics</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="wind-error-statistics">
+<h1>Wind Error Statistics<a class="headerlink" href="#wind-error-statistics" title="Link to this heading">#</a></h1>
+<p>A transport-error run (<a class="reference internal" href="transport_error.html"><span class="doc">Transport Error</span></a>) needs four numbers that
+describe the meteorology’s wind errors. They are the standard deviation of
+the error and how long, how high, and how far it stays correlated.
+<a class="reference external" href="https://doi.org/10.1029/2004GL021127">Lin and Gerbig (2005)</a> derive
+them by comparing the analysed wind with observed winds. This page does the
+same for your meteorology and region. Derive your own values instead of
+copying them from another analysis or place. The correlation scales decide
+whether the perturbation has any effect at all.</p>
+<section id="what-the-numbers-are">
+<h2>What the numbers are<a class="headerlink" href="#what-the-numbers-are" title="Link to this heading">#</a></h2>
+<p>For each wind component, the error at an observation is the analysed wind
+minus the observed wind. Its standard deviation is <code class="docutils literal notranslate"><span class="pre">siguverr</span></code>.</p>
+<p>The correlation scales come from the variogram. At a separation <code class="docutils literal notranslate"><span class="pre">h</span></code>, the
+variogram is half the mean squared difference between the errors of pairs
+of observations <code class="docutils literal notranslate"><span class="pre">h</span></code> apart. For an error with an exponential correlation
+it is</p>
+<div class="math notranslate nohighlight">
+\[\gamma(h) = \sigma^2 \left(1 - e^{-h/l}\right)\]</div>
+<p>where σ is the standard deviation and <code class="docutils literal notranslate"><span class="pre">l</span></code> the correlation scale. Fitting
+this curve with σ fixed gives <code class="docutils literal notranslate"><span class="pre">l</span></code>. Pairs of heights give <code class="docutils literal notranslate"><span class="pre">zcoruverr</span></code>,
+pairs of times give <code class="docutils literal notranslate"><span class="pre">tluverr</span></code>, and pairs of stations give
+<code class="docutils literal notranslate"><span class="pre">horcoruverr</span></code>.</p>
+<p>Each scale needs data that resolves it. Radiosonde profiles resolve height,
+but launches are twelve hours apart, so they cannot measure a time scale of
+a few hours. Hourly surface stations resolve time and horizontal distance,
+but they only sample the bottom of the layer. The recipe below takes the
+standard deviation and the vertical scale from radiosondes, and the time
+and horizontal scales from surface stations.</p>
+</section>
+<section id="step-1-the-errors">
+<h2>Step 1: the errors<a class="headerlink" href="#step-1-the-errors" title="Link to this heading">#</a></h2>
+<p>Sample the meteorology at the observations with
+<a class="reference external" href="https://github.com/jmineau/arl-met">arlmet</a>. Winds in ARL files on
+projected grids are stored relative to the grid, so ask for earth-relative
+components (<code class="docutils literal notranslate"><span class="pre">earth_relative=True</span></code>, arlmet 0.1.0a8 or later). Radiosondes
+report geopotential height, so sample in metres above sea level:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">arlmet</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+
+<span class="n">sondes</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s2">&quot;slc_2024_sondes.csv&quot;</span><span class="p">)</span>   <span class="c1"># time, lon, lat, height (m MSL), elevation, u, v</span>
+<span class="n">points</span> <span class="o">=</span> <span class="n">sondes</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;height&quot;</span><span class="p">:</span> <span class="s2">&quot;z&quot;</span><span class="p">})</span>
+<span class="n">met</span> <span class="o">=</span> <span class="n">arlmet</span><span class="o">.</span><span class="n">sample_points</span><span class="p">(</span><span class="n">hrrr_files</span><span class="p">,</span> <span class="n">points</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;UWND&quot;</span><span class="p">,</span> <span class="s2">&quot;VWND&quot;</span><span class="p">],</span>
+                           <span class="n">z_kind</span><span class="o">=</span><span class="s2">&quot;msl&quot;</span><span class="p">,</span> <span class="n">earth_relative</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">upper</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span>
+    <span class="s2">&quot;time&quot;</span><span class="p">:</span> <span class="n">sondes</span><span class="p">[</span><span class="s2">&quot;time&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;height&quot;</span><span class="p">:</span> <span class="n">sondes</span><span class="p">[</span><span class="s2">&quot;height&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="n">sondes</span><span class="p">[</span><span class="s2">&quot;elevation&quot;</span><span class="p">],</span>   <span class="c1"># m above ground</span>
+    <span class="s2">&quot;u_err&quot;</span><span class="p">:</span> <span class="n">met</span><span class="p">[</span><span class="s2">&quot;UWND&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="n">sondes</span><span class="p">[</span><span class="s2">&quot;u&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;v_err&quot;</span><span class="p">:</span> <span class="n">met</span><span class="p">[</span><span class="s2">&quot;VWND&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="n">sondes</span><span class="p">[</span><span class="s2">&quot;v&quot;</span><span class="p">],</span>
+<span class="p">})</span>
+</pre></div>
+</div>
+<p>Surface stations report wind at a height above ground, 10 m for a standard
+anemometer. Sample the 10 m wind, or the lowest model level:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># stations: time, site, lon, lat, u, v</span>
+<span class="n">points</span> <span class="o">=</span> <span class="n">stations</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span><span class="n">z</span><span class="o">=</span><span class="mf">10.0</span><span class="p">)</span>
+<span class="n">met</span> <span class="o">=</span> <span class="n">arlmet</span><span class="o">.</span><span class="n">sample_points</span><span class="p">(</span><span class="n">hrrr_files</span><span class="p">,</span> <span class="n">points</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;U10M&quot;</span><span class="p">,</span> <span class="s2">&quot;V10M&quot;</span><span class="p">],</span>
+                           <span class="n">z_kind</span><span class="o">=</span><span class="s2">&quot;agl&quot;</span><span class="p">,</span> <span class="n">earth_relative</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">surface</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span>
+    <span class="s2">&quot;time&quot;</span><span class="p">:</span> <span class="n">stations</span><span class="p">[</span><span class="s2">&quot;time&quot;</span><span class="p">],</span> <span class="s2">&quot;site&quot;</span><span class="p">:</span> <span class="n">stations</span><span class="p">[</span><span class="s2">&quot;site&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;lon&quot;</span><span class="p">:</span> <span class="n">stations</span><span class="p">[</span><span class="s2">&quot;lon&quot;</span><span class="p">],</span> <span class="s2">&quot;lat&quot;</span><span class="p">:</span> <span class="n">stations</span><span class="p">[</span><span class="s2">&quot;lat&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;u_err&quot;</span><span class="p">:</span> <span class="n">met</span><span class="p">[</span><span class="s2">&quot;U10M&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="n">stations</span><span class="p">[</span><span class="s2">&quot;u&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;v_err&quot;</span><span class="p">:</span> <span class="n">met</span><span class="p">[</span><span class="s2">&quot;V10M&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="n">stations</span><span class="p">[</span><span class="s2">&quot;v&quot;</span><span class="p">],</span>
+<span class="p">})</span>
+</pre></div>
+</div>
+<p>Reading the observations is up to you. The Salt Lake Valley numbers below
+used the sonde reader in <a class="reference external" href="https://github.com/jmineau/lair">lair</a>.</p>
+<p>For radiosondes anywhere in the world, the usual source is NOAA’s
+Integrated Global Radiosonde Archive (IGRA2).
+<a class="reference external" href="https://unidata.github.io/siphon/">siphon</a> reads it
+(<code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">siphon</span></code>). IGRA2 names a WMO station by its two-letter
+country code, <code class="docutils literal notranslate"><span class="pre">M</span></code>, and the WMO number padded to eight digits. Salt Lake
+City, WMO 72572, is <code class="docutils literal notranslate"><span class="pre">USM00072572</span></code>. The full list is
+<code class="docutils literal notranslate"><span class="pre">igra2-station-list.txt</span></code> in the NCEI archive. This builds the <code class="docutils literal notranslate"><span class="pre">sondes</span></code>
+table above:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">dt</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">siphon.simplewebservice.igra2</span><span class="w"> </span><span class="kn">import</span> <span class="n">IGRAUpperAir</span>
+
+<span class="n">levels</span><span class="p">,</span> <span class="n">launches</span> <span class="o">=</span> <span class="n">IGRAUpperAir</span><span class="o">.</span><span class="n">request_data</span><span class="p">(</span>
+    <span class="p">[</span><span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2024</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2024</span><span class="p">,</span> <span class="mi">12</span><span class="p">,</span> <span class="mi">31</span><span class="p">,</span> <span class="mi">23</span><span class="p">)],</span> <span class="s2">&quot;USM00072572&quot;</span>
+<span class="p">)</span>
+<span class="n">launches</span> <span class="o">=</span> <span class="n">launches</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span><span class="s2">&quot;date&quot;</span><span class="p">)[[</span><span class="s2">&quot;date&quot;</span><span class="p">,</span> <span class="s2">&quot;latitude&quot;</span><span class="p">,</span> <span class="s2">&quot;longitude&quot;</span><span class="p">]]</span>
+<span class="n">levels</span> <span class="o">=</span> <span class="n">levels</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">launches</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="s2">&quot;date&quot;</span><span class="p">)</span>
+<span class="n">ground</span> <span class="o">=</span> <span class="n">levels</span><span class="p">[</span><span class="s2">&quot;lvltyp2&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span>                  <span class="c1"># IGRA2&#39;s surface level</span>
+<span class="n">elevation</span> <span class="o">=</span> <span class="n">levels</span><span class="p">[</span><span class="s2">&quot;height&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">ground</span><span class="p">)</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="n">levels</span><span class="p">[</span><span class="s2">&quot;date&quot;</span><span class="p">])</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="s2">&quot;max&quot;</span><span class="p">)</span>
+<span class="n">sondes</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span>
+    <span class="s2">&quot;time&quot;</span><span class="p">:</span> <span class="n">levels</span><span class="p">[</span><span class="s2">&quot;date&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;lon&quot;</span><span class="p">:</span> <span class="n">levels</span><span class="p">[</span><span class="s2">&quot;longitude&quot;</span><span class="p">],</span> <span class="s2">&quot;lat&quot;</span><span class="p">:</span> <span class="n">levels</span><span class="p">[</span><span class="s2">&quot;latitude&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;height&quot;</span><span class="p">:</span> <span class="n">levels</span><span class="p">[</span><span class="s2">&quot;height&quot;</span><span class="p">],</span>                  <span class="c1"># geopotential height, m</span>
+    <span class="s2">&quot;elevation&quot;</span><span class="p">:</span> <span class="n">elevation</span><span class="p">,</span>
+    <span class="s2">&quot;u&quot;</span><span class="p">:</span> <span class="n">levels</span><span class="p">[</span><span class="s2">&quot;u_wind&quot;</span><span class="p">],</span> <span class="s2">&quot;v&quot;</span><span class="p">:</span> <span class="n">levels</span><span class="p">[</span><span class="s2">&quot;v_wind&quot;</span><span class="p">],</span>
+<span class="p">})</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>Each call downloads the station’s whole record and keeps the dates you ask
+for, so ask for the full period once, not one launch at a time. <code class="docutils literal notranslate"><span class="pre">time</span></code> is
+the nominal launch hour, 00 or 12 UTC. The balloon goes up as much as an
+hour earlier. The last line drops levels without a height, which IGRA2 has
+on some significant levels. It also drops launches with no surface level,
+since their heights above ground are unknown.</p>
+</section>
+<section id="step-2-the-scales">
+<h2>Step 2: the scales<a class="headerlink" href="#step-2-the-scales" title="Link to this heading">#</a></h2>
+<p><a class="reference internal" href="../reference/_api/stilt.observations.variogram.html#stilt.observations.variogram" title="stilt.observations.variogram"><code class="xref py py-func docutils literal notranslate"><span class="pre">variogram()</span></code></a> builds the empirical variogram. It
+takes the errors, the coordinate the separation is measured in, and a
+<code class="docutils literal notranslate"><span class="pre">group</span></code> label. Only points with the same label are paired. The coordinate
+can also be two columns of longitude and latitude, and the separation is
+then the great-circle distance in kilometres.
+<a class="reference internal" href="../reference/_api/stilt.observations.fit_variogram.html#stilt.observations.fit_variogram" title="stilt.observations.fit_variogram"><code class="xref py py-func docutils literal notranslate"><span class="pre">fit_variogram()</span></code></a> fits the exponential model with
+σ fixed.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.observations</span><span class="w"> </span><span class="kn">import</span> <span class="n">fit_variogram</span><span class="p">,</span> <span class="n">variogram</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">scale</span><span class="p">(</span><span class="n">errors</span><span class="p">,</span> <span class="n">lag</span><span class="p">,</span> <span class="n">group</span><span class="p">,</span> <span class="n">bins</span><span class="p">):</span>
+    <span class="n">table</span> <span class="o">=</span> <span class="n">variogram</span><span class="p">(</span><span class="n">errors</span><span class="p">,</span> <span class="n">lag</span><span class="p">,</span> <span class="n">group</span><span class="o">=</span><span class="n">group</span><span class="p">,</span> <span class="n">bins</span><span class="o">=</span><span class="n">bins</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">fit_variogram</span><span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="s2">&quot;lag&quot;</span><span class="p">],</span> <span class="n">table</span><span class="p">[</span><span class="s2">&quot;gamma&quot;</span><span class="p">],</span> <span class="n">sigma</span><span class="o">=</span><span class="n">errors</span><span class="o">.</span><span class="n">std</span><span class="p">())</span><span class="o">.</span><span class="n">length</span>
+
+<span class="n">layer</span> <span class="o">=</span> <span class="n">upper</span><span class="p">[</span><span class="n">upper</span><span class="p">[</span><span class="s2">&quot;height&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">between</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">3000</span><span class="p">)]</span>        <span class="c1"># m above ground</span>
+<span class="n">minutes</span> <span class="o">=</span> <span class="p">(</span><span class="n">surface</span><span class="p">[</span><span class="s2">&quot;time&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">(</span><span class="s2">&quot;2000-01-01&quot;</span><span class="p">))</span> <span class="o">/</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timedelta</span><span class="p">(</span><span class="s2">&quot;1min&quot;</span><span class="p">)</span>
+<span class="n">components</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;u_err&quot;</span><span class="p">,</span> <span class="s2">&quot;v_err&quot;</span><span class="p">)</span>
+
+<span class="n">siguverr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">([</span><span class="n">layer</span><span class="p">[</span><span class="n">c</span><span class="p">]</span><span class="o">.</span><span class="n">std</span><span class="p">()</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">components</span><span class="p">])</span>
+<span class="n">zcoruverr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">([</span><span class="n">scale</span><span class="p">(</span><span class="n">layer</span><span class="p">[</span><span class="n">c</span><span class="p">],</span> <span class="n">layer</span><span class="p">[</span><span class="s2">&quot;height&quot;</span><span class="p">],</span> <span class="n">layer</span><span class="p">[</span><span class="s2">&quot;time&quot;</span><span class="p">],</span>
+                           <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">3100</span><span class="p">,</span> <span class="mi">100</span><span class="p">))</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">components</span><span class="p">])</span>
+<span class="n">tluverr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">([</span><span class="n">scale</span><span class="p">(</span><span class="n">surface</span><span class="p">[</span><span class="n">c</span><span class="p">],</span> <span class="n">minutes</span><span class="p">,</span> <span class="n">surface</span><span class="p">[</span><span class="s2">&quot;site&quot;</span><span class="p">],</span>
+                         <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">14401</span><span class="p">,</span> <span class="mi">60</span><span class="p">))</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">components</span><span class="p">])</span>
+<span class="n">horcoruverr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">([</span><span class="n">scale</span><span class="p">(</span><span class="n">surface</span><span class="p">[</span><span class="n">c</span><span class="p">],</span> <span class="n">surface</span><span class="p">[[</span><span class="s2">&quot;lon&quot;</span><span class="p">,</span> <span class="s2">&quot;lat&quot;</span><span class="p">]],</span> <span class="n">surface</span><span class="p">[</span><span class="s2">&quot;time&quot;</span><span class="p">],</span>
+                             <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">51</span><span class="p">))</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">components</span><span class="p">])</span>
+</pre></div>
+</div>
+<p>The recipe makes these choices, and you can change any of them:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">layer</span></code> is the height range whose errors matter for your transport.
+Use the boundary layer and a little above for a surface receptor, and
+more for a column.</p></li>
+<li><p>The vertical variogram pairs levels within one launch (<code class="docutils literal notranslate"><span class="pre">group</span></code> is the
+launch time), in 100 m bins up to 3 km.</p></li>
+<li><p>The time variogram pairs hours at one station, out to ten days.</p></li>
+<li><p>The horizontal variogram pairs stations at one time, out to 50 km.</p></li>
+<li><p>Each fit fixes σ at the standard deviation of the errors it was built
+from.</p></li>
+<li><p>u and v are done separately and averaged.</p></li>
+<li><p>The mean error (the bias) is ignored, as in Lin and Gerbig. The
+perturbation does not represent it.</p></li>
+</ul>
+<p>The four values go into <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> under the same names, or into
+<a class="reference internal" href="../reference/_api/stilt.config.ErrorParams.html#stilt.config.ErrorParams" title="stilt.config.ErrorParams"><code class="xref py py-class docutils literal notranslate"><span class="pre">ErrorParams</span></code></a>. Look at the fits before you trust
+them:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+
+<span class="n">table</span> <span class="o">=</span> <span class="n">variogram</span><span class="p">(</span><span class="n">layer</span><span class="p">[</span><span class="s2">&quot;u_err&quot;</span><span class="p">],</span> <span class="n">layer</span><span class="p">[</span><span class="s2">&quot;height&quot;</span><span class="p">],</span> <span class="n">group</span><span class="o">=</span><span class="n">layer</span><span class="p">[</span><span class="s2">&quot;time&quot;</span><span class="p">],</span>
+                  <span class="n">bins</span><span class="o">=</span><span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">3100</span><span class="p">,</span> <span class="mi">100</span><span class="p">))</span>
+<span class="n">fit</span> <span class="o">=</span> <span class="n">fit_variogram</span><span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="s2">&quot;lag&quot;</span><span class="p">],</span> <span class="n">table</span><span class="p">[</span><span class="s2">&quot;gamma&quot;</span><span class="p">],</span> <span class="n">sigma</span><span class="o">=</span><span class="n">layer</span><span class="p">[</span><span class="s2">&quot;u_err&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">std</span><span class="p">())</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="s2">&quot;lag&quot;</span><span class="p">],</span> <span class="n">table</span><span class="p">[</span><span class="s2">&quot;gamma&quot;</span><span class="p">],</span> <span class="n">s</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="s2">&quot;lag&quot;</span><span class="p">],</span> <span class="n">fit</span><span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="s2">&quot;lag&quot;</span><span class="p">]))</span>
+</pre></div>
+</div>
+<p>Seasonal and diurnal values are worth a look. Filter both tables and run
+the recipe again. For the Salt Lake Valley the horizontal scale ranged
+from 9 km in summer to 20 km in winter.</p>
+<p>Without surface stations, the time scale can only come from pairs of
+launches at the same height. That tells you whether the errors are still
+correlated twelve hours later, and little else. <code class="docutils literal notranslate"><span class="pre">horcoruverr</span></code> then has to
+come from another source.</p>
+</section>
+<section id="salt-lake-valley-hrrr-2024">
+<h2>Salt Lake Valley, HRRR, 2024<a class="headerlink" href="#salt-lake-valley-hrrr-2024" title="Link to this heading">#</a></h2>
+<p>Radiosondes from Salt Lake City and 20 surface stations in the valley,
+compared with the 3 km HRRR analysis, gave:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Component</p></th>
+<th class="head"><p>σ [m/s]</p></th>
+<th class="head"><p>l_z [m]</p></th>
+<th class="head"><p>l_x [km]</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>u</p></td>
+<td><p>2.37</p></td>
+<td><p>365</p></td>
+<td><p>12.1</p></td>
+</tr>
+<tr class="row-odd"><td><p>v</p></td>
+<td><p>2.87</p></td>
+<td><p>548</p></td>
+<td><p>16.5</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>These became the values in the <a class="reference internal" href="transport_error.html"><span class="doc">Transport Error</span></a> example:
+<code class="docutils literal notranslate"><span class="pre">siguverr:</span> <span class="pre">2.6</span></code>, <code class="docutils literal notranslate"><span class="pre">zcoruverr:</span> <span class="pre">450</span></code>, <code class="docutils literal notranslate"><span class="pre">horcoruverr:</span> <span class="pre">14</span></code> and
+<code class="docutils literal notranslate"><span class="pre">tluverr:</span> <span class="pre">260</span></code>. The hourly stations gave time scales of 207 min for u
+and 221 min for v, and the sondes, extrapolated, 212 to 312 min. The recipe
+above gives 2.5 m/s, 480 m, 214 min and 14 km. For comparison, Lin and
+Gerbig found about 120 km, 4 hours and 900 m for an 80 km analysis over the
+eastern United States.</p>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="transport_error.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Transport Error</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="background.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Background</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-the-numbers-are">What the numbers are</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#step-1-the-errors">Step 1: the errors</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#step-2-the-scales">Step 2: the scales</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#salt-lake-valley-hrrr-2024">Salt Lake Valley, HRRR, 2024</a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  <div class="tocsection sourcelink">
+    <a href="../_sources/guides/wind_errors.rst.txt">
+      <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=7f76b32a3354e82990f2"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=7f76b32a3354e82990f2"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2026, James Mineau.
+      <br/>
+    
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.1.0.
+    <br/>
+  </p>
+</div>
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.17.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

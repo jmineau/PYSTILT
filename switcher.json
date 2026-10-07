@@ -3,5 +3,11 @@
     "name": "dev",
     "version": "dev",
     "url": "https://jmineau.github.io/PYSTILT/dev/"
+  },
+  {
+    "name": "0.1.0a22 (latest)",
+    "version": "0.1.0a22",
+    "url": "https://jmineau.github.io/PYSTILT/stable/",
+    "preferred": true
   }
 ]

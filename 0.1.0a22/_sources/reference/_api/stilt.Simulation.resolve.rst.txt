@@ -1,0 +1,6 @@
+stilt.Simulation.resolve
+========================
+
+.. currentmodule:: stilt
+
+.. automethod:: Simulation.resolve

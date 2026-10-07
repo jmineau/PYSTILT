@@ -1,0 +1,149 @@
+﻿stilt.Mesh
+==========
+
+.. currentmodule:: stilt
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.. class-signature:: stilt.Mesh
+
+.. class-parameters:: stilt.Mesh
+
+
+Methods
+-------
+
+.. autosummary::
+   :toctree:
+
+
+   ~Mesh.from_file
+   ~Mesh.from_geodataframe
+   ~Mesh.from_grid
+   ~Mesh.from_h3
+   ~Mesh.from_windows
+   ~Mesh.to_crs
+
+
+Attributes
+----------
+
+.. autosummary::
+
+   ~Mesh.bounds
+   ~Mesh.hash
+   ~Mesh.index
+   ~Mesh.is_longlat
+   ~Mesh.min_cell_width
+   ~Mesh.ids
+   ~Mesh.geometries
+   ~Mesh.crs
+

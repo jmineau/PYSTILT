@@ -1,0 +1,6 @@
+﻿stilt.Geometry
+==============
+
+.. currentmodule:: stilt
+
+.. autodata:: Geometry

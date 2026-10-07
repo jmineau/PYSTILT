@@ -1,0 +1,6 @@
+stilt.Model.register
+====================
+
+.. currentmodule:: stilt
+
+.. automethod:: Model.register

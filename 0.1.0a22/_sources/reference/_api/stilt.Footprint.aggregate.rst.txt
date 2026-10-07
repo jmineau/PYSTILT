@@ -1,0 +1,6 @@
+stilt.Footprint.aggregate
+=========================
+
+.. currentmodule:: stilt
+
+.. automethod:: Footprint.aggregate

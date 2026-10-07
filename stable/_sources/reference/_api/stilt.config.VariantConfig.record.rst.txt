@@ -1,0 +1,6 @@
+stilt.config.VariantConfig.record
+=================================
+
+.. currentmodule:: stilt.config
+
+.. automethod:: VariantConfig.record

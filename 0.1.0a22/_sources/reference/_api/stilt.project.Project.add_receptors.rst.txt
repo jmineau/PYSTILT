@@ -1,0 +1,6 @@
+stilt.project.Project.add\_receptors
+====================================
+
+.. currentmodule:: stilt.project
+
+.. automethod:: Project.add_receptors

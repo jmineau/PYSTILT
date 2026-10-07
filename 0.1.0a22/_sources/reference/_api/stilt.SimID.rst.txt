@@ -1,0 +1,51 @@
+﻿stilt.SimID
+===========
+
+.. currentmodule:: stilt
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.. class-signature:: stilt.SimID
+
+.. class-parameters:: stilt.SimID
+
+Methods
+-------
+
+.. autosummary::
+   :toctree:
+
+   ~SimID.parse
+
+Attributes
+----------
+
+.. autosummary::
+   ~SimID.receptor
+   ~SimID.variant

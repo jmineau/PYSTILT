@@ -1,0 +1,6 @@
+stilt.LocationID.lower
+======================
+
+.. currentmodule:: stilt
+
+.. automethod:: LocationID.lower

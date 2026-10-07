@@ -1,0 +1,6 @@
+stilt.ColumnReceptor.from\_points
+=================================
+
+.. currentmodule:: stilt
+
+.. automethod:: ColumnReceptor.from_points

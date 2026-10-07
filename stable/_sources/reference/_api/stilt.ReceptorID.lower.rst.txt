@@ -1,0 +1,6 @@
+stilt.ReceptorID.lower
+======================
+
+.. currentmodule:: stilt
+
+.. automethod:: ReceptorID.lower

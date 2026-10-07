@@ -1,0 +1,6 @@
+stilt.execution.LocalExecutor.start
+===================================
+
+.. currentmodule:: stilt.execution
+
+.. automethod:: LocalExecutor.start

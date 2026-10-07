@@ -1,0 +1,6 @@
+stilt.ReceptorID.encode
+=======================
+
+.. currentmodule:: stilt
+
+.. automethod:: ReceptorID.encode

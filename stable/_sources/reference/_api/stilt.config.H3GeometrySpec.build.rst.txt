@@ -1,0 +1,6 @@
+stilt.config.H3GeometrySpec.build
+=================================
+
+.. currentmodule:: stilt.config
+
+.. automethod:: H3GeometrySpec.build

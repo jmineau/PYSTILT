@@ -1,0 +1,6 @@
+stilt.store.LocalStore.read\_bytes
+==================================
+
+.. currentmodule:: stilt.store
+
+.. automethod:: LocalStore.read_bytes

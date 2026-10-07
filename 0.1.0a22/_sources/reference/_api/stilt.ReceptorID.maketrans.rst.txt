@@ -1,0 +1,6 @@
+stilt.ReceptorID.maketrans
+==========================
+
+.. currentmodule:: stilt
+
+.. automethod:: ReceptorID.maketrans

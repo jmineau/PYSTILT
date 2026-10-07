@@ -1,0 +1,6 @@
+stilt.execution.SlurmExecutor.from\_config
+==========================================
+
+.. currentmodule:: stilt.execution
+
+.. automethod:: SlurmExecutor.from_config

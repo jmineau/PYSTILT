@@ -1,0 +1,6 @@
+stilt.Footprint.calculate
+=========================
+
+.. currentmodule:: stilt
+
+.. automethod:: Footprint.calculate

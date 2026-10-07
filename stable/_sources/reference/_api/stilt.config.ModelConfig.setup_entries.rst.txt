@@ -1,0 +1,6 @@
+stilt.config.ModelConfig.setup\_entries
+=======================================
+
+.. currentmodule:: stilt.config
+
+.. automethod:: ModelConfig.setup_entries

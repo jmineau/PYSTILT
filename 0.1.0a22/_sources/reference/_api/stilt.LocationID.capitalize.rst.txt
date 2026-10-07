@@ -1,0 +1,6 @@
+stilt.LocationID.capitalize
+===========================
+
+.. currentmodule:: stilt
+
+.. automethod:: LocationID.capitalize

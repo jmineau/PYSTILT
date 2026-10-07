@@ -1,0 +1,6 @@
+stilt.PointReceptor.to\_dict
+============================
+
+.. currentmodule:: stilt
+
+.. automethod:: PointReceptor.to_dict

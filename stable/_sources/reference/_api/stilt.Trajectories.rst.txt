@@ -1,0 +1,63 @@
+﻿stilt.Trajectories
+==================
+
+.. currentmodule:: stilt
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.. class-signature:: stilt.Trajectories
+
+.. class-parameters:: stilt.Trajectories
+
+
+Methods
+-------
+
+.. autosummary::
+   :toctree:
+
+
+   ~Trajectories.endpoints
+   ~Trajectories.footprint
+   ~Trajectories.from_parquet
+   ~Trajectories.from_particles
+   ~Trajectories.to_parquet
+
+
+Attributes
+----------
+
+.. autosummary::
+
+   ~Trajectories.plot
+

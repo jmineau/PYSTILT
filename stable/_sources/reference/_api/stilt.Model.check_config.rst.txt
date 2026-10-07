@@ -1,0 +1,6 @@
+stilt.Model.check\_config
+=========================
+
+.. currentmodule:: stilt
+
+.. automethod:: Model.check_config

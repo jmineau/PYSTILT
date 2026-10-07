@@ -1,0 +1,6 @@
+stilt.config.ModelConfig.resolve\_variants
+==========================================
+
+.. currentmodule:: stilt.config
+
+.. automethod:: ModelConfig.resolve_variants

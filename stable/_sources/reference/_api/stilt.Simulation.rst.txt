@@ -1,0 +1,188 @@
+﻿stilt.Simulation
+================
+
+.. currentmodule:: stilt
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.. class-signature:: stilt.Simulation
+
+.. class-parameters:: stilt.Simulation
+
+
+Methods
+-------
+
+.. autosummary::
+   :toctree:
+
+
+   ~Simulation.clear_empty_footprint_marker
+   ~Simulation.delete
+   ~Simulation.generate_footprint
+   ~Simulation.is_complete
+   ~Simulation.key
+   ~Simulation.publish
+   ~Simulation.resolve
+   ~Simulation.run_trajectories
+   ~Simulation.transform_context
+   ~Simulation.write_empty_footprint_marker
+
+
+Attributes
+----------
+
+.. autosummary::
+
+   ~Simulation.empty_footprint_path
+   ~Simulation.empty_reason
+   ~Simulation.footprint
+   ~Simulation.footprint_path
+   ~Simulation.has_footprint
+   ~Simulation.has_trajectory
+   ~Simulation.is_backward
+   ~Simulation.is_derived
+   ~Simulation.log
+   ~Simulation.log_path
+   ~Simulation.makes_footprint
+   ~Simulation.met_dir
+   ~Simulation.met_files
+   ~Simulation.outcome
+   ~Simulation.outputs
+   ~Simulation.plot
+   ~Simulation.source_met_files
+   ~Simulation.time_range
+   ~Simulation.trajectories
+   ~Simulation.trajectories_path
+   ~Simulation.variant
+

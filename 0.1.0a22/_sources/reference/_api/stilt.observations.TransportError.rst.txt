@@ -1,0 +1,70 @@
+﻿stilt.observations.TransportError
+=================================
+
+.. currentmodule:: stilt.observations
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.. class-signature:: stilt.observations.TransportError
+
+.. class-parameters:: stilt.observations.TransportError
+
+
+
+Attributes
+----------
+
+.. autosummary::
+
+   ~TransportError.background
+   ~TransportError.realizations
+   ~TransportError.sd
+   ~TransportError.variance
+   ~TransportError.noise
+   ~TransportError.enhancement
+   ~TransportError.enhancement_perturbed
+   ~TransportError.levels
+   ~TransportError.length_scale
+

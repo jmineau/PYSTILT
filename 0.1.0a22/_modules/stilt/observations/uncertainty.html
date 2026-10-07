@@ -1,0 +1,926 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>stilt.observations.uncertainty &#8212; PYSTILT 0.1.0a22</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../_static/styles/theme.css?digest=7f76b32a3354e82990f2" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=7f76b32a3354e82990f2" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/custom.css?v=90cc9208" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../../../_static/scripts/fontawesome.js?digest=7f76b32a3354e82990f2"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=7f76b32a3354e82990f2" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=7f76b32a3354e82990f2" />
+
+    <script src="../../../_static/documentation_options.js?v=801db8bb"></script>
+    <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/stilt/observations/uncertainty';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="0.1.0a22" />
+  
+    
+    <script src="../../../_static/searchtools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    <script src="../../../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+<aside class="bd-header-announcement" aria-label="Announcement">
+  <div class="bd-header-announcement__content">PYSTILT is in alpha: names and options may change between releases.</div>
+</aside>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class=" navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">PYSTILT 0.1.0a22</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class=" navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../getting_started/index.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../tutorials/index.html">
+    Tutorials
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../guides/index.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../reference/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../roadmap.html">
+    Roadmap
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../development.html">
+    Development
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/jmineau/PYSTILT" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../getting_started/index.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../tutorials/index.html">
+    Tutorials
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../guides/index.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../reference/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../roadmap.html">
+    Roadmap
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../development.html">
+    Development
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/jmineau/PYSTILT" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../../index.html" class="nav-link">Module code</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">stilt.observations.uncertainty</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for stilt.observations.uncertainty</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Transport error of the modeled enhancement, from wind-perturbed trajectories.</span>
+
+<span class="sd">The method is that of Lin and Gerbig (2005, GRL, doi:10.1029/2004GL021127).</span>
+<span class="sd">A variant with wind-error settings (``siguverr``, ``tluverr``,</span>
+<span class="sd">``zcoruverr``, ``horcoruverr``) runs the particles again with an extra</span>
+<span class="sd">random wind that has the statistics of the meteorology&#39;s errors. Each</span>
+<span class="sd">particle&#39;s enhancement is its ``foot × flux`` summed along its trajectory.</span>
+<span class="sd">The perturbed particles sample more of the flux field, so the enhancement</span>
+<span class="sd">varies more across them. The increase is the transport-error variance</span>
+<span class="sd">(their equation 4)::</span>
+
+<span class="sd">    var_transport = var(enhancement | perturbed) − var(enhancement | unperturbed)</span>
+
+<span class="sd">For a column receptor the difference is taken per release level, and the</span>
+<span class="sd">levels are combined with the column weighting and a vertical error</span>
+<span class="sd">correlation, as in X-STILT (Wu et al., 2018, GMD). The difference of two</span>
+<span class="sd">sample variances is noisy and can be negative. It is returned with its sign</span>
+<span class="sd">and with an estimate of its noise, so many receptors can be combined with a</span>
+<span class="sd">median and a single value can be compared with its noise.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Sequence</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.flux</span><span class="w"> </span><span class="kn">import</span> <span class="n">particle_enhancement</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.observations.backgrounds</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">default_context</span><span class="p">,</span>
+    <span class="n">endpoint_weights</span><span class="p">,</span>
+    <span class="n">fill_missing</span><span class="p">,</span>
+    <span class="n">particle_background</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.transforms</span><span class="w"> </span><span class="kn">import</span> <span class="n">TransformContext</span><span class="p">,</span> <span class="n">apply_transforms</span><span class="p">,</span> <span class="n">release_coordinate</span>
+
+<span class="c1">#: X-STILT&#39;s empirical mean vertical correlation length of transport errors, m.</span>
+<span class="n">DEFAULT_LENGTH_SCALE</span> <span class="o">=</span> <span class="mf">356.0</span>
+
+
+<div class="viewcode-block" id="TransportError">
+<a class="viewcode-back" href="../../../reference/_api/stilt.observations.TransportError.html#stilt.observations.TransportError">[docs]</a>
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">TransportError</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Transport error of a modeled enhancement, returned by :func:`transport_error`.</span>
+
+<span class="sd">    Values are in the flux&#39;s units times the footprint&#39;s, which is ppm for a</span>
+<span class="sd">    flux in µmol m⁻² s⁻¹, and squared for variances. With a ``background``</span>
+<span class="sd">    field, the per-particle values are modeled mole fractions (enhancement</span>
+<span class="sd">    plus background at the endpoint), so ``enhancement`` and</span>
+<span class="sd">    ``enhancement_perturbed`` are mole fractions and ``variance`` includes</span>
+<span class="sd">    the background&#39;s response to the wind errors.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    variance : float</span>
+<span class="sd">        Transport-error variance, the extra spread the wind perturbation</span>
+<span class="sd">        added. Kept with its sign, since a negative value is sampling noise.</span>
+<span class="sd">    noise : float</span>
+<span class="sd">        Standard deviation of ``variance`` expected with no perturbation,</span>
+<span class="sd">        estimated from random halves of the unperturbed particles.</span>
+<span class="sd">        ``variance`` is resolved only when it is several times ``noise``.</span>
+<span class="sd">    enhancement : float</span>
+<span class="sd">        Modeled enhancement from the unperturbed particles.</span>
+<span class="sd">    enhancement_perturbed : float</span>
+<span class="sd">        Modeled enhancement from the perturbed particles, averaged over the</span>
+<span class="sd">        realizations.</span>
+<span class="sd">    levels : pandas.DataFrame</span>
+<span class="sd">        One row per release level, with columns ``height`` (mean release</span>
+<span class="sd">        height, m), ``n`` (particles), ``weight`` (share of the particles),</span>
+<span class="sd">        ``mean_orig``, ``var_orig``, ``mean_err``, and ``var_err`` (mean and</span>
+<span class="sd">        variance of the per-particle enhancement without and with the</span>
+<span class="sd">        perturbation), ``dvar`` (``var_err - var_orig``), and ``sd_trans``</span>
+<span class="sd">        (signed square root of ``dvar``).</span>
+<span class="sd">    length_scale : float or None</span>
+<span class="sd">        Vertical correlation length used to combine the levels, in m.</span>
+<span class="sd">    background : float</span>
+<span class="sd">        Weighted background from the unperturbed particles, or 0 without a</span>
+<span class="sd">        ``background`` field. ``enhancement - background`` is the</span>
+<span class="sd">        enhancement alone.</span>
+<span class="sd">    realizations : int</span>
+<span class="sd">        Number of error realizations in the estimate.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">variance</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">noise</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">enhancement</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">enhancement_perturbed</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">levels</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
+    <span class="n">length_scale</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span>
+    <span class="n">background</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span>
+    <span class="n">realizations</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">sd</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Transport-error standard deviation, or 0 when ``variance`` is negative.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">variance</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)))</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_level_edges</span><span class="p">(</span><span class="n">heights</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span> <span class="n">levels</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">float</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return the release-height bin edges of the levels.</span>
+
+<span class="sd">    Given edges are used as they are. With a number of levels, the edges</span>
+<span class="sd">    split the height range evenly, or fall halfway between the distinct</span>
+<span class="sd">    heights when there are no more of them than ``levels``. The outer edges</span>
+<span class="sd">    are then open, so the perturbed particles fall in the same levels.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">levels</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">levels</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">levels</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;levels must be &gt;= 1.&quot;</span><span class="p">)</span>
+    <span class="n">unique</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">heights</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">unique</span><span class="o">.</span><span class="n">size</span> <span class="o">&lt;=</span> <span class="n">levels</span><span class="p">:</span>
+        <span class="n">edges</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(([</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">],</span> <span class="p">(</span><span class="n">unique</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">unique</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span> <span class="o">/</span> <span class="mf">2.0</span><span class="p">,</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">]))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">edges</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">unique</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">unique</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">levels</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">edges</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">edges</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">inf</span>
+    <span class="k">return</span> <span class="n">edges</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_level_labels</span><span class="p">(</span><span class="n">heights</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span> <span class="n">edges</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return each particle&#39;s level number, NaN outside the edges.&quot;&quot;&quot;</span>
+    <span class="n">label</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">cut</span><span class="p">(</span><span class="n">heights</span><span class="p">,</span> <span class="n">edges</span><span class="p">,</span> <span class="n">labels</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">include_lowest</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">label</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span> <span class="n">index</span><span class="o">=</span><span class="n">heights</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_level_stats</span><span class="p">(</span><span class="n">values</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">percentile</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the mean of all values and the variance of those at or below ``percentile``.&quot;&quot;&quot;</span>
+    <span class="n">v</span> <span class="o">=</span> <span class="n">values</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">values</span><span class="p">)]</span>
+    <span class="k">if</span> <span class="n">v</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+    <span class="n">mean</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span>
+    <span class="k">if</span> <span class="n">percentile</span> <span class="o">&lt;</span> <span class="mf">1.0</span><span class="p">:</span>
+        <span class="n">v</span> <span class="o">=</span> <span class="n">v</span><span class="p">[</span><span class="n">v</span> <span class="o">&lt;=</span> <span class="n">np</span><span class="o">.</span><span class="n">quantile</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">percentile</span><span class="p">)]</span>
+    <span class="k">if</span> <span class="n">v</span><span class="o">.</span><span class="n">size</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">mean</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+    <span class="k">return</span> <span class="n">mean</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">var</span><span class="p">(</span><span class="n">ddof</span><span class="o">=</span><span class="mi">0</span><span class="p">))</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_signed_sqrt</span><span class="p">(</span><span class="n">values</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return ``sign(v) * sqrt(|v|)``, with NaN as 0.&quot;&quot;&quot;</span>
+    <span class="n">v</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan_to_num</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span> <span class="n">nan</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">v</span><span class="p">))</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_combine</span><span class="p">(</span><span class="n">levels</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">length_scale</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return the column variance ``Σ_i w_i² v_i + Σ_{i≠j} w_i w_j s_i s_j corr_ij``.</span>
+
+<span class="sd">    ``s`` is the per-level ``sd_trans``. On the diagonal, ``v`` is the</span>
+<span class="sd">    signed variance difference, so a level whose spread fell counts</span>
+<span class="sd">    negatively. The cross terms use the signed square roots, so correlated levels of the</span>
+<span class="sd">    same sign add and levels of opposite sign cancel.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">w</span> <span class="o">=</span> <span class="n">levels</span><span class="p">[</span><span class="s2">&quot;weight&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="n">levels</span><span class="p">[</span><span class="s2">&quot;sd_trans&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="n">h</span> <span class="o">=</span> <span class="n">levels</span><span class="p">[</span><span class="s2">&quot;height&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="n">diag</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan_to_num</span><span class="p">(</span><span class="n">levels</span><span class="p">[</span><span class="s2">&quot;dvar&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span> <span class="n">nan</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">length_scale</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">corr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">h</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">corr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">h</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">-</span> <span class="n">h</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:])</span> <span class="o">/</span> <span class="n">length_scale</span><span class="p">)</span>
+    <span class="n">prod</span> <span class="o">=</span> <span class="n">w</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="n">w</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">s</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="n">s</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">corr</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">fill_diagonal</span><span class="p">(</span><span class="n">prod</span><span class="p">,</span> <span class="n">w</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="n">diag</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">prod</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_level_table</span><span class="p">(</span>
+    <span class="n">x_orig</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span>
+    <span class="n">x_errs</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">],</span>
+    <span class="n">label_orig</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span>
+    <span class="n">label_errs</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">],</span>
+    <span class="n">level_height</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">percentile</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return the table of means, variances, and weights per release level.</span>
+
+<span class="sd">    The perturbed mean and variance of each level are averaged over the</span>
+<span class="sd">    error realizations (one ``x_errs`` and ``label_errs`` pair each) before</span>
+<span class="sd">    ``dvar`` is taken.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">rows</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">n_total</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">x_orig</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">lvl</span><span class="p">,</span> <span class="n">height</span> <span class="ow">in</span> <span class="n">level_height</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">idx_o</span> <span class="o">=</span> <span class="n">label_orig</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()[(</span><span class="n">label_orig</span> <span class="o">==</span> <span class="n">lvl</span><span class="p">)</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()]</span>
+        <span class="n">mean_o</span><span class="p">,</span> <span class="n">var_o</span> <span class="o">=</span> <span class="n">_level_stats</span><span class="p">(</span><span class="n">x_orig</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">idx_o</span><span class="p">)</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span> <span class="n">percentile</span><span class="p">)</span>
+        <span class="n">means_e</span><span class="p">,</span> <span class="n">vars_e</span> <span class="o">=</span> <span class="p">[],</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">x_err</span><span class="p">,</span> <span class="n">label_err</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">x_errs</span><span class="p">,</span> <span class="n">label_errs</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+            <span class="n">idx_e</span> <span class="o">=</span> <span class="n">label_err</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()[(</span><span class="n">label_err</span> <span class="o">==</span> <span class="n">lvl</span><span class="p">)</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()]</span>
+            <span class="n">m</span><span class="p">,</span> <span class="n">v</span> <span class="o">=</span> <span class="n">_level_stats</span><span class="p">(</span><span class="n">x_err</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">idx_e</span><span class="p">)</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span> <span class="n">percentile</span><span class="p">)</span>
+            <span class="n">means_e</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">m</span><span class="p">)</span>
+            <span class="n">vars_e</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+        <span class="n">mean_e</span><span class="p">,</span> <span class="n">var_e</span> <span class="o">=</span> <span class="n">_nanmean</span><span class="p">(</span><span class="n">means_e</span><span class="p">),</span> <span class="n">_nanmean</span><span class="p">(</span><span class="n">vars_e</span><span class="p">)</span>
+        <span class="n">rows</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;height&quot;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">height</span><span class="p">),</span>
+                <span class="s2">&quot;n&quot;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">idx_o</span><span class="p">)),</span>
+                <span class="s2">&quot;weight&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">idx_o</span><span class="p">)</span> <span class="o">/</span> <span class="n">n_total</span><span class="p">,</span>
+                <span class="s2">&quot;mean_orig&quot;</span><span class="p">:</span> <span class="n">mean_o</span><span class="p">,</span>
+                <span class="s2">&quot;mean_err&quot;</span><span class="p">:</span> <span class="n">mean_e</span><span class="p">,</span>
+                <span class="s2">&quot;var_orig&quot;</span><span class="p">:</span> <span class="n">var_o</span><span class="p">,</span>
+                <span class="s2">&quot;var_err&quot;</span><span class="p">:</span> <span class="n">var_e</span><span class="p">,</span>
+            <span class="p">}</span>
+        <span class="p">)</span>
+    <span class="n">table</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">rows</span><span class="p">)</span>
+    <span class="n">table</span><span class="p">[</span><span class="s2">&quot;dvar&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">table</span><span class="p">[</span><span class="s2">&quot;var_err&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="n">table</span><span class="p">[</span><span class="s2">&quot;var_orig&quot;</span><span class="p">]</span>
+    <span class="n">table</span><span class="p">[</span><span class="s2">&quot;sd_trans&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">_signed_sqrt</span><span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="s2">&quot;dvar&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">())</span>
+    <span class="k">return</span> <span class="n">table</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_nanmean</span><span class="p">(</span><span class="n">values</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">float</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the mean ignoring NaN, or NaN when every value is NaN.&quot;&quot;&quot;</span>
+    <span class="n">arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="n">finite</span> <span class="o">=</span> <span class="n">arr</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">arr</span><span class="p">)]</span>
+    <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">finite</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span> <span class="k">if</span> <span class="n">finite</span><span class="o">.</span><span class="n">size</span> <span class="k">else</span> <span class="nb">float</span><span class="p">(</span><span class="s2">&quot;nan&quot;</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_noise</span><span class="p">(</span>
+    <span class="n">x_orig</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span>
+    <span class="n">label_orig</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span>
+    <span class="n">level_height</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">splits</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">percentile</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">length_scale</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return the standard deviation of ``variance`` with no perturbation.</span>
+
+<span class="sd">    The unperturbed particles of each level are split into two random halves,</span>
+<span class="sd">    treated as the unperturbed and perturbed tables. The spread of the</span>
+<span class="sd">    estimate over ``splits`` random splits, divided by ``sqrt(2)`` to go from</span>
+<span class="sd">    half to full ensembles, is the noise. Returns NaN for fewer than two</span>
+<span class="sd">    splits.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">splits</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="s2">&quot;nan&quot;</span><span class="p">)</span>
+    <span class="n">rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">indx</span> <span class="o">=</span> <span class="n">x_orig</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+    <span class="n">lab</span> <span class="o">=</span> <span class="n">label_orig</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">indx</span><span class="p">)</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+    <span class="n">estimates</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">splits</span><span class="p">):</span>
+        <span class="n">half</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">indx</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">lvl</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">lab</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">lab</span><span class="p">)]):</span>
+            <span class="n">members</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">flatnonzero</span><span class="p">(</span><span class="n">lab</span> <span class="o">==</span> <span class="n">lvl</span><span class="p">)</span>
+            <span class="n">chosen</span> <span class="o">=</span> <span class="n">rng</span><span class="o">.</span><span class="n">permutation</span><span class="p">(</span><span class="n">members</span><span class="p">)[:</span> <span class="nb">len</span><span class="p">(</span><span class="n">members</span><span class="p">)</span> <span class="o">//</span> <span class="mi">2</span><span class="p">]</span>
+            <span class="n">half</span><span class="p">[</span><span class="n">chosen</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">a</span><span class="p">,</span> <span class="n">b</span> <span class="o">=</span> <span class="n">x_orig</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">half</span><span class="p">],</span> <span class="n">x_orig</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="o">~</span><span class="n">half</span><span class="p">]</span>
+        <span class="n">table</span> <span class="o">=</span> <span class="n">_level_table</span><span class="p">(</span>
+            <span class="n">a</span><span class="p">,</span>
+            <span class="p">[</span><span class="n">b</span><span class="p">],</span>
+            <span class="n">label_orig</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">index</span><span class="p">),</span>
+            <span class="p">[</span><span class="n">label_orig</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">b</span><span class="o">.</span><span class="n">index</span><span class="p">)],</span>
+            <span class="n">level_height</span><span class="p">,</span>
+            <span class="n">percentile</span><span class="o">=</span><span class="n">percentile</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">table</span><span class="p">[</span><span class="s2">&quot;weight&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">table</span><span class="p">[</span><span class="s2">&quot;n&quot;</span><span class="p">]</span> <span class="o">/</span> <span class="n">table</span><span class="p">[</span><span class="s2">&quot;n&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+        <span class="n">estimates</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">_combine</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">length_scale</span><span class="p">))</span>
+    <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">estimates</span><span class="p">,</span> <span class="n">ddof</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mf">2.0</span><span class="p">))</span>
+
+
+<div class="viewcode-block" id="transport_error">
+<a class="viewcode-back" href="../../../reference/_api/stilt.observations.transport_error.html#stilt.observations.transport_error">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">transport_error</span><span class="p">(</span>
+    <span class="n">particles</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+    <span class="n">error_particles</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">],</span>
+    <span class="n">flux</span><span class="p">:</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">transforms</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">(),</span>
+    <span class="n">context</span><span class="p">:</span> <span class="n">TransformContext</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">levels</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mi">20</span><span class="p">,</span>
+    <span class="n">length_scale</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">DEFAULT_LENGTH_SCALE</span><span class="p">,</span>
+    <span class="n">percentile</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">noise_splits</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">16</span><span class="p">,</span>
+    <span class="n">background</span><span class="p">:</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TransportError</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return the transport-error variance of a modeled enhancement (Lin and Gerbig, 2005).</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    particles : pandas.DataFrame</span>
+<span class="sd">        Unperturbed particle table of a receptor (``sim.trajectories.data``).</span>
+<span class="sd">    error_particles : pandas.DataFrame or sequence of pandas.DataFrame</span>
+<span class="sd">        Particle table of a wind-error variant of the same receptor, or a</span>
+<span class="sd">        list of them for a variant with ``realizations: N``, such as</span>
+<span class="sd">        ``[t.data for t in sims.sel(variant=&quot;hrrr-err&quot;).trajectories.load().values()]``.</span>
+<span class="sd">    flux : xarray.DataArray</span>
+<span class="sd">        Surface flux field (see :mod:`stilt.flux`).</span>
+<span class="sd">    transforms : sequence, optional</span>
+<span class="sd">        The footprint&#39;s particle transforms (``sim.config.transforms``),</span>
+<span class="sd">        applied to both tables so the error is weighted like the footprint.</span>
+<span class="sd">    context : TransformContext, optional</span>
+<span class="sd">        Context to apply the transforms with (``sim.transform_context()``).</span>
+<span class="sd">    levels : int or sequence of float, default 20</span>
+<span class="sd">        Release-height levels to compute statistics on: a number of</span>
+<span class="sd">        equal-width bins between the lowest and highest release height, or</span>
+<span class="sd">        bin edges in meters. When the particles have no more distinct</span>
+<span class="sd">        release heights than ``levels`` (a multipoint receptor), each height</span>
+<span class="sd">        is a level. A point receptor is one level.</span>
+<span class="sd">    length_scale : float or None, default 356.0</span>
+<span class="sd">        Vertical e-folding length of the error correlation between levels,</span>
+<span class="sd">        in meters (X-STILT&#39;s value). ``None`` treats the levels as</span>
+<span class="sd">        uncorrelated. It has no effect for a point receptor.</span>
+<span class="sd">    percentile : float, default 1.0</span>
+<span class="sd">        In each level, drop particles above this quantile of the enhancement</span>
+<span class="sd">        before taking the variance. 1.0 keeps every particle, as Lin and</span>
+<span class="sd">        Gerbig do. X-STILT uses 0.99 to limit the few particles that cross a</span>
+<span class="sd">        point source. Means always use every particle.</span>
+<span class="sd">    noise_splits : int, default 16</span>
+<span class="sd">        Number of random half-splits of the unperturbed particles used to</span>
+<span class="sd">        estimate ``noise``. Fewer than 2 skips it and gives NaN.</span>
+<span class="sd">    background : xarray.DataArray, optional</span>
+<span class="sd">        Background field sampled at each particle&#39;s endpoint (see</span>
+<span class="sd">        :func:`~stilt.observations.background`). Wind errors move the</span>
+<span class="sd">        endpoints as well as the surface contact, so with a field the</span>
+<span class="sd">        statistics are of the modeled mole fraction per particle, as X-STILT</span>
+<span class="sd">        computes them.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    TransportError</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    Per level ``l`` with ``n_l`` of ``N`` particles, ``dvar_l`` is the change</span>
+<span class="sd">    in the variance of the per-particle enhancement under the perturbation,</span>
+<span class="sd">    ``s_l = sign(dvar_l) sqrt(|dvar_l|)``, and the column variance is</span>
+<span class="sd">    ``Σ_ij w_i w_j s_i s_j exp(-|h_i - h_j| / L)`` with ``w_l = n_l / N`` and</span>
+<span class="sd">    ``h`` the level heights. For one level it is ``dvar`` itself. The</span>
+<span class="sd">    transforms are applied to the particles first, so the level statistics</span>
+<span class="sd">    are already column-weighted and the level weights are particle counts.</span>
+
+<span class="sd">    With several error realizations, each level&#39;s ``mean_err`` and</span>
+<span class="sd">    ``var_err`` are averaged over them before ``dvar`` is formed, so the</span>
+<span class="sd">    perturbed side&#39;s sampling noise falls as ``1/sqrt(N)``. The unperturbed</span>
+<span class="sd">    side is the same particles in every realization, so its noise does not</span>
+<span class="sd">    fall: with ``N`` realizations the null spread of ``variance`` is</span>
+<span class="sd">    ``sqrt((1 + 1/N) / 2)`` times the single-realization ``noise``, which</span>
+<span class="sd">    tends to ``1/sqrt(2)``. ``noise`` includes that factor. More</span>
+<span class="sd">    realizations therefore give at most a ``sqrt(2)`` tighter estimate and</span>
+<span class="sd">    cannot resolve a case that one realization leaves unresolved.</span>
+
+<span class="sd">    The signal is the extra spread the perturbation adds. It is small when</span>
+<span class="sd">    the wind error decorrelates quickly (HYSPLIT decorrelates it with the</span>
+<span class="sd">    distance a particle travels as well as with time), and when turbulence</span>
+<span class="sd">    already spreads the particles widely, as on a convective afternoon.</span>
+<span class="sd">    Compare a single value with ``noise``. Over many receptors, combine the</span>
+<span class="sd">    signed ``variance`` values with a median instead of clipping each at</span>
+<span class="sd">    zero.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="mi">0</span> <span class="o">&lt;</span> <span class="n">percentile</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;percentile must be in (0, 1].&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">length_scale</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">length_scale</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;length_scale must be &gt; 0 or None.&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">noise_splits</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;noise_splits must be &gt;= 0.&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">context</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">context</span> <span class="o">=</span> <span class="n">default_context</span><span class="p">()</span>
+    <span class="n">transforms</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">transforms</span><span class="p">)</span>
+    <span class="n">error_tables</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="p">[</span><span class="n">error_particles</span><span class="p">]</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">error_particles</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span>
+        <span class="k">else</span> <span class="nb">list</span><span class="p">(</span><span class="n">error_particles</span><span class="p">)</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">error_tables</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;error_particles must hold at least one realization.&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_prepare</span><span class="p">(</span>
+        <span class="n">table</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the modeled value, release height, and weighted background per particle.&quot;&quot;&quot;</span>
+        <span class="n">ctx</span> <span class="o">=</span> <span class="n">context</span>
+        <span class="n">sampled_background</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">background</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># each particle&#39;s background, weighted like its enhancement</span>
+            <span class="n">weights</span> <span class="o">=</span> <span class="n">endpoint_weights</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">transforms</span><span class="p">,</span> <span class="n">ctx</span><span class="p">)</span>
+            <span class="n">sampled</span> <span class="o">=</span> <span class="n">fill_missing</span><span class="p">(</span><span class="n">particle_background</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">background</span><span class="p">),</span> <span class="n">weights</span><span class="p">)</span>
+            <span class="n">sampled_background</span> <span class="o">=</span> <span class="n">weights</span> <span class="o">*</span> <span class="n">sampled</span>
+        <span class="k">if</span> <span class="n">transforms</span><span class="p">:</span>
+            <span class="n">table</span> <span class="o">=</span> <span class="n">apply_transforms</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">transforms</span><span class="p">,</span> <span class="n">ctx</span><span class="p">)</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">particle_enhancement</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">flux</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">sampled_background</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">x</span> <span class="o">+</span> <span class="n">sampled_background</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">x</span><span class="p">,</span> <span class="n">_release_heights</span><span class="p">(</span><span class="n">table</span><span class="p">),</span> <span class="n">sampled_background</span>
+
+    <span class="n">x_orig</span><span class="p">,</span> <span class="n">h_orig</span><span class="p">,</span> <span class="n">b_orig</span> <span class="o">=</span> <span class="n">_prepare</span><span class="p">(</span><span class="n">particles</span><span class="p">)</span>
+    <span class="c1"># the unperturbed particles&#39; weighted background, reported separately</span>
+    <span class="n">background_value</span> <span class="o">=</span> <span class="mf">0.0</span> <span class="k">if</span> <span class="n">b_orig</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">float</span><span class="p">(</span><span class="n">b_orig</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span>
+
+    <span class="n">edges</span> <span class="o">=</span> <span class="n">_level_edges</span><span class="p">(</span><span class="n">h_orig</span><span class="p">,</span> <span class="n">levels</span><span class="p">)</span>
+    <span class="n">label_orig</span> <span class="o">=</span> <span class="n">_level_labels</span><span class="p">(</span><span class="n">h_orig</span><span class="p">,</span> <span class="n">edges</span><span class="p">)</span>
+    <span class="n">lab</span><span class="p">,</span> <span class="n">hgt</span> <span class="o">=</span> <span class="n">label_orig</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span> <span class="n">h_orig</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="n">present</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">lab</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">lab</span><span class="p">)])</span>
+    <span class="n">level_height</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">([</span><span class="n">hgt</span><span class="p">[</span><span class="n">lab</span> <span class="o">==</span> <span class="n">u</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span> <span class="k">for</span> <span class="n">u</span> <span class="ow">in</span> <span class="n">present</span><span class="p">],</span> <span class="n">index</span><span class="o">=</span><span class="n">present</span><span class="p">)</span>
+
+    <span class="n">x_errs</span><span class="p">,</span> <span class="n">label_errs</span> <span class="o">=</span> <span class="p">[],</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">err</span> <span class="ow">in</span> <span class="n">error_tables</span><span class="p">:</span>
+        <span class="n">x_err</span><span class="p">,</span> <span class="n">h_err</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">_prepare</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
+        <span class="n">x_errs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">x_err</span><span class="p">)</span>
+        <span class="n">label_errs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">_level_labels</span><span class="p">(</span><span class="n">h_err</span><span class="p">,</span> <span class="n">edges</span><span class="p">))</span>
+
+    <span class="n">table</span> <span class="o">=</span> <span class="n">_level_table</span><span class="p">(</span>
+        <span class="n">x_orig</span><span class="p">,</span>
+        <span class="n">x_errs</span><span class="p">,</span>
+        <span class="n">label_orig</span><span class="p">,</span>
+        <span class="n">label_errs</span><span class="p">,</span>
+        <span class="n">level_height</span><span class="p">,</span>
+        <span class="n">percentile</span><span class="o">=</span><span class="n">percentile</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">n_real</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">error_tables</span><span class="p">)</span>
+    <span class="c1"># The main particles are shared by every realization, so only the</span>
+    <span class="c1"># perturbed side&#39;s noise averages down; see the Notes.</span>
+    <span class="n">noise_factor</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">((</span><span class="mf">1.0</span> <span class="o">+</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">n_real</span><span class="p">)</span> <span class="o">/</span> <span class="mf">2.0</span><span class="p">))</span>
+    <span class="n">w</span> <span class="o">=</span> <span class="n">table</span><span class="p">[</span><span class="s2">&quot;weight&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">TransportError</span><span class="p">(</span>
+        <span class="n">variance</span><span class="o">=</span><span class="n">_combine</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">length_scale</span><span class="p">),</span>
+        <span class="n">noise</span><span class="o">=</span><span class="n">noise_factor</span>
+        <span class="o">*</span> <span class="n">_noise</span><span class="p">(</span>
+            <span class="n">x_orig</span><span class="p">,</span>
+            <span class="n">label_orig</span><span class="p">,</span>
+            <span class="n">level_height</span><span class="p">,</span>
+            <span class="n">splits</span><span class="o">=</span><span class="n">noise_splits</span><span class="p">,</span>
+            <span class="n">percentile</span><span class="o">=</span><span class="n">percentile</span><span class="p">,</span>
+            <span class="n">length_scale</span><span class="o">=</span><span class="n">length_scale</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="n">enhancement</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nansum</span><span class="p">(</span><span class="n">w</span> <span class="o">*</span> <span class="n">table</span><span class="p">[</span><span class="s2">&quot;mean_orig&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">())),</span>
+        <span class="n">enhancement_perturbed</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nansum</span><span class="p">(</span><span class="n">w</span> <span class="o">*</span> <span class="n">table</span><span class="p">[</span><span class="s2">&quot;mean_err&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">())),</span>
+        <span class="n">levels</span><span class="o">=</span><span class="n">table</span><span class="p">,</span>
+        <span class="n">length_scale</span><span class="o">=</span><span class="n">length_scale</span><span class="p">,</span>
+        <span class="n">background</span><span class="o">=</span><span class="n">background_value</span><span class="p">,</span>
+        <span class="n">realizations</span><span class="o">=</span><span class="n">n_real</span><span class="p">,</span>
+    <span class="p">)</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_release_heights</span><span class="p">(</span><span class="n">particles</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return each particle&#39;s release height (``xhgt``), or zeros without ``xhgt``.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="s2">&quot;xhgt&quot;</span> <span class="ow">in</span> <span class="n">particles</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">release_coordinate</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="s2">&quot;xhgt&quot;</span><span class="p">)</span>
+    <span class="n">indx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">particles</span><span class="p">[</span><span class="s2">&quot;indx&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">())</span>
+    <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">indx</span><span class="p">)</span>
+
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;DEFAULT_LENGTH_SCALE&quot;</span><span class="p">,</span> <span class="s2">&quot;TransportError&quot;</span><span class="p">,</span> <span class="s2">&quot;transport_error&quot;</span><span class="p">]</span>
+</pre></div>
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../../_static/scripts/bootstrap.js?digest=7f76b32a3354e82990f2"></script>
+<script defer src="../../../_static/scripts/pydata-sphinx-theme.js?digest=7f76b32a3354e82990f2"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2026, James Mineau.
+      <br/>
+    
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.1.0.
+    <br/>
+  </p>
+</div>
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.17.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

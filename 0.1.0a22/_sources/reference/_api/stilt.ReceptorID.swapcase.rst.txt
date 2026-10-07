@@ -1,0 +1,6 @@
+stilt.ReceptorID.swapcase
+=========================
+
+.. currentmodule:: stilt
+
+.. automethod:: ReceptorID.swapcase

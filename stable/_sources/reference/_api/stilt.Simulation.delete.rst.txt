@@ -1,0 +1,6 @@
+stilt.Simulation.delete
+=======================
+
+.. currentmodule:: stilt
+
+.. automethod:: Simulation.delete

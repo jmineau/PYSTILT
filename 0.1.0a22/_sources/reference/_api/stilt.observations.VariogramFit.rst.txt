@@ -1,0 +1,35 @@
+﻿stilt.observations.VariogramFit
+===============================
+
+.. currentmodule:: stilt.observations
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.. class-signature:: stilt.observations.VariogramFit
+
+.. class-parameters:: stilt.observations.VariogramFit
+
+
+
+Attributes
+----------
+
+.. autosummary::
+
+   ~VariogramFit.sigma
+   ~VariogramFit.length
+

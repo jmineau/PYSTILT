@@ -1,0 +1,6 @@
+stilt.config.VariantConfig.setup\_seed
+======================================
+
+.. currentmodule:: stilt.config
+
+.. automethod:: VariantConfig.setup_seed

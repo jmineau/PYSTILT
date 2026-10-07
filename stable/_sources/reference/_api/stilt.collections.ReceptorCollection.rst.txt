@@ -1,0 +1,32 @@
+﻿stilt.collections.ReceptorCollection
+====================================
+
+.. currentmodule:: stilt.collections
+
+
+
+
+
+
+
+
+
+
+
+
+
+.. class-signature:: stilt.collections.ReceptorCollection
+
+.. class-parameters:: stilt.collections.ReceptorCollection
+
+
+Methods
+-------
+
+.. autosummary::
+   :toctree:
+
+
+   ~ReceptorCollection.sel
+
+

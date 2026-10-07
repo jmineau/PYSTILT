@@ -1,0 +1,55 @@
+﻿stilt.observations.PlumeBackground
+==================================
+
+.. currentmodule:: stilt.observations
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.. class-signature:: stilt.observations.PlumeBackground
+
+.. class-parameters:: stilt.observations.PlumeBackground
+
+
+
+Attributes
+----------
+
+.. autosummary::
+
+   ~PlumeBackground.value
+   ~PlumeBackground.uncertainty
+   ~PlumeBackground.n
+   ~PlumeBackground.in_plume
+   ~PlumeBackground.used
+   ~PlumeBackground.sides
+

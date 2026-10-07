@@ -1,0 +1,6 @@
+stilt.LocationID.endswith
+=========================
+
+.. currentmodule:: stilt
+
+.. automethod:: LocationID.endswith

@@ -1,0 +1,713 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Satellite And Column Observations &#8212; PYSTILT 0.1.0a22</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=7f76b32a3354e82990f2" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=7f76b32a3354e82990f2" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=90cc9208" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=7f76b32a3354e82990f2"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=7f76b32a3354e82990f2" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=7f76b32a3354e82990f2" />
+
+    <script src="../_static/documentation_options.js?v=801db8bb"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'advanced/observations';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Slant Columns" href="../guides/slant_columns.html" />
+    <link rel="prev" title="Reading Retrieval Products" href="../guides/readers.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="0.1.0a22" />
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+<aside class="bd-header-announcement" aria-label="Announcement">
+  <div class="bd-header-announcement__content">PYSTILT is in alpha: names and options may change between releases.</div>
+</aside>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class=" navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">PYSTILT 0.1.0a22</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class=" navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started/index.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../tutorials/index.html">
+    Tutorials
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../guides/index.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../reference/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../roadmap.html">
+    Roadmap
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../development.html">
+    Development
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/jmineau/PYSTILT" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started/index.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../tutorials/index.html">
+    Tutorials
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../guides/index.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../reference/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../roadmap.html">
+    Roadmap
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../development.html">
+    Development
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/jmineau/PYSTILT" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item pst-sidebar-collapse"><button id="pst-collapse-sidebar-button" aria-expanded="true" aria-controls="pst-primary-sidebar"><svg class="pst-icon svg-inline--fa" role="img" aria-hidden="true" focusable="false" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+    <path fill="currentColor" d="M3 15.5C2.36232 15.5 1.74874 15.2564 1.28478 14.8189C0.820828 14.3815 0.541576 13.7832 0.504167 13.1467L0.5 13L0.5 3C0.499965 2.36232 0.743605 1.74874 1.18107 1.28478C1.61854 0.820828 2.21676 0.541576 2.85333 0.504167L3 0.5L13 0.5C13.6377 0.499965 14.2513 0.743605 14.7152 1.18107C15.1792 1.61854 15.4584 2.21676 15.4958 2.85333L15.5 3L15.5 13C15.5 13.6377 15.2564 14.2513 14.8189 14.7152C14.3815 15.1792 13.7832 15.4584 13.1467 15.4958L13 15.5L3 15.5ZM3 13.8333L10.5 13.8333L10.5 2.16667L3 2.16667C2.79589 2.16669 2.59889 2.24163 2.44636 2.37726C2.29383 2.5129 2.19638 2.69979 2.1725 2.9025L2.16667 3L2.16667 13C2.16669 13.2041 2.24163 13.4011 2.37726 13.5536C2.5129 13.7062 2.69979 13.8036 2.9025 13.8275L3 13.8333ZM6.65583 10.325L6.5775 10.2558L4.91083 8.58917C4.76735 8.44567 4.68116 8.25476 4.66843 8.05223C4.65569 7.84971 4.71729 7.6495 4.84167 7.48917L4.91083 7.41083L6.5775 5.74417C6.72747 5.59471 6.9287 5.50794 7.14032 5.50148C7.35194 5.49502 7.55809 5.56935 7.7169 5.70937C7.8757 5.8494 7.97525 6.04463 7.99533 6.25539C8.01541 6.46616 7.95451 6.67667 7.825 6.84417L7.75583 6.9225L6.67917 8L7.75583 9.0775C7.89931 9.22099 7.98551 9.41191 7.99824 9.61443C8.01097 9.81695 7.94938 10.0172 7.825 10.1775L7.75583 10.2558C7.61234 10.3993 7.42142 10.4855 7.2189 10.4982C7.01638 10.511 6.81617 10.4494 6.65583 10.325Z"/>
+  </svg>
+  <span class="pst-collapse-sidebar-label">Collapse Sidebar</span>
+  <span class="pst-expand-sidebar-label">Expand Sidebar</span>
+</button></div>
+        <div class="sidebar-primary-item">
+
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><p aria-level="2" class="caption" role="heading"><span class="caption-text">Setting up a project</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../guides/receptors.html">Receptors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guides/meteorology.html">Meteorology</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guides/configuration.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guides/project_layout.html">Project Folders And Reruns</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Running simulations</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1 has-children"><a class="reference internal" href="../guides/execution/index.html">Where To Run</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../guides/execution/local.html">On Your Computer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../guides/execution/slurm.html">On An HPC Cluster (Slurm)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../guides/execution/kubernetes.html">In The Cloud (Kubernetes)</a></li>
+</ul>
+</details></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Working with results</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../guides/outputs.html">Load And Plot Results</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guides/transport_error.html">Transport Error</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guides/wind_errors.html">Wind Error Statistics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guides/background.html">Background</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guides/plume_background.html">Plume Background</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Column and satellite measurements</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../guides/readers.html">Reading Retrieval Products</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Satellite And Column Observations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guides/slant_columns.html">Slant Columns</a></li>
+<li class="toctree-l1"><a class="reference internal" href="transforms.html">Particle Weighting (Transforms)</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Coming from other STILT tools</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../migration/stilt_r.html">Coming From STILT-R</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../migration/x_stilt.html">Coming From X-STILT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../migration/stiltctl.html">Coming From stiltctl</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Under the hood</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="output_state.html">How PYSTILT Tracks Finished Work</a></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../guides/index.html" class="nav-link">User Guide</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Satellite And Column Observations</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="satellite-and-column-observations">
+<h1>Satellite And Column Observations<a class="headerlink" href="#satellite-and-column-observations" title="Link to this heading">#</a></h1>
+<p>A tower measurement becomes a receptor directly. Satellite soundings and
+column retrievals (TCCON, EM27/SUN) take more steps. You choose which
+soundings to run, turn each one into a receptor, and weight each one’s
+particles with its own averaging kernel. <code class="docutils literal notranslate"><span class="pre">stilt.observations</span></code> and
+<code class="docutils literal notranslate"><span class="pre">stilt.transforms</span></code> have small functions for each step, ported from
+X-STILT. They work on the table your product reader returns.</p>
+<p>There is no observation class to fill in. A Level 2 file is already a table
+with one row per sounding. Keep it as a <a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.0.6)"><code class="xref py py-class docutils literal notranslate"><span class="pre">pandas.DataFrame</span></code></a> and pass
+PYSTILT the columns it needs.</p>
+<section id="the-four-steps">
+<h2>The four steps<a class="headerlink" href="#the-four-steps" title="Link to this heading">#</a></h2>
+<ol class="arabic simple">
+<li><p><strong>Read</strong> the product into a DataFrame with one row per sounding. It
+needs the time, longitude, latitude, and averaging kernel, plus whatever
+else you use (surface altitude, viewing angles, pixel corners, quality
+flags). <a class="reference internal" href="../guides/readers.html"><span class="doc">Reading Retrieval Products</span></a> has readers for TROPOMI, OCO-2, TCCON,
+and GGG files, and lists the columns a reader should return.</p></li>
+<li><p><strong>Select</strong> the soundings to run. Filter on quality flags and time with
+pandas. <a class="reference internal" href="../reference/_api/stilt.observations.select_observations_spatial.html#stilt.observations.select_observations_spatial" title="stilt.observations.select_observations_spatial"><code class="xref py py-func docutils literal notranslate"><span class="pre">select_observations_spatial()</span></code></a> does
+X-STILT’s near-field plus background sampling.
+<a class="reference internal" href="../reference/_api/stilt.observations.group_by_overpass.html#stilt.observations.group_by_overpass" title="stilt.observations.group_by_overpass"><code class="xref py py-func docutils literal notranslate"><span class="pre">group_by_overpass()</span></code></a> labels each row with its
+overpass.</p></li>
+<li><p><strong>Build receptors</strong>, one per row. Use a <a class="reference internal" href="../reference/_api/stilt.ColumnReceptor.html#stilt.ColumnReceptor" title="stilt.ColumnReceptor"><code class="xref py py-class docutils literal notranslate"><span class="pre">ColumnReceptor</span></code></a>
+for a nadir column, or <a class="reference internal" href="../reference/_api/stilt.Receptor.from_points.html#stilt.Receptor.from_points" title="stilt.Receptor.from_points"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Receptor.from_points</span></code></a> with
+<a class="reference internal" href="../reference/_api/stilt.observations.slant_points.html#stilt.observations.slant_points" title="stilt.observations.slant_points"><code class="xref py py-func docutils literal notranslate"><span class="pre">slant_points()</span></code></a> for a slant path
+(<a class="reference internal" href="../guides/slant_columns.html"><span class="doc">Slant Columns</span></a>).
+<a class="reference internal" href="../reference/_api/stilt.observations.jitter_points.html#stilt.observations.jitter_points" title="stilt.observations.jitter_points"><code class="xref py py-func docutils literal notranslate"><span class="pre">jitter_points()</span></code></a> spreads several receptors
+across one large pixel.</p></li>
+<li><p><strong>Weight</strong> the particles with transforms (<a class="reference internal" href="transforms.html"><span class="doc">Particle Weighting (Transforms)</span></a>). Pressure
+weighting is worked out from the particles, so every receptor uses the
+same setting. The averaging kernel differs per sounding. Write the
+kernels to a table in the project with
+<a class="reference internal" href="../reference/_api/stilt.transforms.averaging_kernel_table.html#stilt.transforms.averaging_kernel_table" title="stilt.transforms.averaging_kernel_table"><code class="xref py py-func docutils literal notranslate"><span class="pre">averaging_kernel_table()</span></code></a> and point the
+<code class="docutils literal notranslate"><span class="pre">averaging_kernel</span></code> transform at it. Every way of running the model,
+Slurm included, then applies the right kernel to each receptor.</p></li>
+</ol>
+</section>
+<section id="a-worked-example">
+<h2>A worked example<a class="headerlink" href="#a-worked-example" title="Link to this heading">#</a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">stilt</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt</span><span class="w"> </span><span class="kn">import</span> <span class="n">ColumnReceptor</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.observations</span><span class="w"> </span><span class="kn">import</span> <span class="n">group_by_overpass</span><span class="p">,</span> <span class="n">read_tropomi_ch4</span><span class="p">,</span> <span class="n">select_observations_spatial</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.transforms</span><span class="w"> </span><span class="kn">import</span> <span class="n">averaging_kernel_table</span>
+
+<span class="n">model</span> <span class="o">=</span> <span class="n">stilt</span><span class="o">.</span><span class="n">Model</span><span class="p">(</span><span class="n">project</span><span class="o">=</span><span class="s2">&quot;./xch4&quot;</span><span class="p">)</span>
+
+<span class="c1"># 1. read: one row per sounding, kernels as arrays in two columns</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">read_tropomi_ch4</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>          <span class="c1"># or read_oco2, read_tccon, or your own</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="o">.</span><span class="n">good</span><span class="p">]</span>                     <span class="c1"># quality flags are a pandas filter</span>
+
+<span class="c1"># 2. select: label overpasses, then thin each one to X-STILT&#39;s grid</span>
+<span class="n">df</span><span class="p">[</span><span class="s2">&quot;overpass&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">group_by_overpass</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;time&quot;</span><span class="p">])</span>
+<span class="n">chosen</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">scene</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">&quot;overpass&quot;</span><span class="p">):</span>
+    <span class="n">keep</span> <span class="o">=</span> <span class="n">select_observations_spatial</span><span class="p">(</span>
+        <span class="n">scene</span><span class="o">.</span><span class="n">longitude</span><span class="p">,</span> <span class="n">scene</span><span class="o">.</span><span class="n">latitude</span><span class="p">,</span>
+        <span class="n">site_longitude</span><span class="o">=-</span><span class="mf">111.85</span><span class="p">,</span> <span class="n">site_latitude</span><span class="o">=</span><span class="mf">40.77</span><span class="p">,</span>
+        <span class="n">near_field_dlon</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span> <span class="n">near_field_dlat</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span>
+        <span class="n">near_field_cols</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">near_field_rows</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
+        <span class="n">background_cols</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">background_rows</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+        <span class="n">domain_lon_range</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mf">113.5</span><span class="p">,</span> <span class="o">-</span><span class="mf">110.5</span><span class="p">),</span> <span class="n">domain_lat_range</span><span class="o">=</span><span class="p">(</span><span class="mf">39.5</span><span class="p">,</span> <span class="mf">42.0</span><span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">chosen</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">scene</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">keep</span><span class="p">])</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">chosen</span><span class="p">)</span>
+
+<span class="c1"># 3. build: one receptor per row</span>
+<span class="n">receptors</span> <span class="o">=</span> <span class="p">[</span><span class="n">ColumnReceptor</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">time</span><span class="p">,</span> <span class="n">r</span><span class="o">.</span><span class="n">longitude</span><span class="p">,</span> <span class="n">r</span><span class="o">.</span><span class="n">latitude</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">3000</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">itertuples</span><span class="p">()]</span>
+<span class="n">model</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">receptors</span><span class="o">=</span><span class="n">receptors</span><span class="p">)</span>
+
+<span class="c1"># 4. weight: each sounding&#39;s kernel, keyed by its receptor, in the project</span>
+<span class="n">table</span> <span class="o">=</span> <span class="n">averaging_kernel_table</span><span class="p">(</span><span class="n">receptors</span><span class="p">,</span> <span class="n">levels</span><span class="o">=</span><span class="n">df</span><span class="o">.</span><span class="n">ak_pressure</span><span class="p">,</span> <span class="n">values</span><span class="o">=</span><span class="n">df</span><span class="o">.</span><span class="n">ak</span><span class="p">)</span>
+<span class="n">table</span><span class="o">.</span><span class="n">to_parquet</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">project</span><span class="o">.</span><span class="n">directory</span> <span class="o">/</span> <span class="s2">&quot;kernels.parquet&quot;</span><span class="p">)</span>
+
+<span class="n">model</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>The footprint transforms go in <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">transforms</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">averaging_kernel</span>
+<span class="w">    </span><span class="nt">table</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">kernels.parquet</span>
+<span class="w">    </span><span class="nt">coordinate</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">pres</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">pressure_weighting</span>
+</pre></div>
+</div>
+<p>The kernel table is an input file, like <code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code>. It has a
+<code class="docutils literal notranslate"><span class="pre">receptor</span></code> column with the receptor id, and one row per kernel point with
+its <code class="docutils literal notranslate"><span class="pre">level</span></code> and <code class="docutils literal notranslate"><span class="pre">value</span></code>. It can be Parquet or CSV. The <code class="docutils literal notranslate"><span class="pre">table</span></code> path is
+relative to the project root, so a Slurm or Kubernetes worker finds it too.
+A receptor with no rows in the table raises an error.</p>
+</section>
+<section id="kernels-on-pressure-levels">
+<h2>Kernels on pressure levels<a class="headerlink" href="#kernels-on-pressure-levels" title="Link to this heading">#</a></h2>
+<p>Most satellite products give the kernel on the retrieval’s own pressure
+grid. The grid differs per sounding because it starts at the surface
+pressure. Pass those pressures as <code class="docutils literal notranslate"><span class="pre">levels</span></code> and set <code class="docutils literal notranslate"><span class="pre">coordinate:</span> <span class="pre">pres</span></code>.
+The transform then uses each particle’s pressure at its first output step,
+so nothing has to be converted to height.</p>
+<p>OCO-2 kernels are values at levels. TROPOMI kernels are layer averages, so
+pass the layer midpoints (the TROPOMI reader’s <code class="docutils literal notranslate"><span class="pre">ak_pressure</span></code> already
+holds them). GGG kernels are on a fixed pressure grid per site, which
+<a class="reference internal" href="../reference/_api/stilt.observations.read_ggg_netcdf.html#stilt.observations.read_ggg_netcdf" title="stilt.observations.read_ggg_netcdf"><code class="xref py py-func docutils literal notranslate"><span class="pre">read_ggg_netcdf()</span></code></a> returns as <code class="docutils literal notranslate"><span class="pre">ak_pressure</span></code>.</p>
+<p>A PROFFAST EM27/SUN kernel is tabulated by solar zenith angle on a fixed
+altitude grid. Pick the kernel for each window’s zenith angle and pass the
+shared grid once as <code class="docutils literal notranslate"><span class="pre">levels</span></code>. Give the altitudes in the receptor’s
+vertical reference, because the default coordinate is the release height
+<code class="docutils literal notranslate"><span class="pre">xhgt</span></code>.</p>
+</section>
+<section id="adding-your-own-instrument">
+<h2>Adding your own instrument<a class="headerlink" href="#adding-your-own-instrument" title="Link to this heading">#</a></h2>
+<p>A new instrument needs only a reader, a function that returns a DataFrame
+with the columns the steps above use. Nothing is registered or subclassed.
+Add any product-specific columns your analysis needs. The reader handles
+the product’s conventions, such as unit conversions, quality flags, which
+variable holds the kernel, and how to rebuild the pressure grid. The steps
+after reading are the same for every instrument. <a class="reference internal" href="../guides/readers.html"><span class="doc">Reading Retrieval Products</span></a>
+lists the columns and says which module to copy.</p>
+</section>
+<section id="what-this-layer-does-not-do">
+<h2>What this layer does not do<a class="headerlink" href="#what-this-layer-does-not-do" title="Link to this heading">#</a></h2>
+<p>It has no readers for background or flux fields. A background mole-fraction
+field comes in as an xarray array (<a class="reference internal" href="../guides/background.html"><span class="doc">Background</span></a>). The
+background can also come from the swath itself, beside a plume from a
+forward run (<a class="reference internal" href="../guides/plume_background.html"><span class="doc">Plume Background</span></a>). A flux field also comes in
+as an xarray array (<a class="reference internal" href="../guides/transport_error.html"><span class="doc">Transport Error</span></a>).</p>
+<p>The prior term of a column observation operator is left to the inversion.
+That term is the sum over levels of pressure weight × (1 − kernel) × prior
+profile.</p>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="../guides/readers.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Reading Retrieval Products</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="../guides/slant_columns.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Slant Columns</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-four-steps">The four steps</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#a-worked-example">A worked example</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#kernels-on-pressure-levels">Kernels on pressure levels</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#adding-your-own-instrument">Adding your own instrument</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-this-layer-does-not-do">What this layer does not do</a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  <div class="tocsection sourcelink">
+    <a href="../_sources/advanced/observations.rst.txt">
+      <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=7f76b32a3354e82990f2"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=7f76b32a3354e82990f2"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2026, James Mineau.
+      <br/>
+    
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.1.0.
+    <br/>
+  </p>
+</div>
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.17.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

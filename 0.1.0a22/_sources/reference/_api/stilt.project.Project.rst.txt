@@ -1,0 +1,88 @@
+﻿stilt.project.Project
+=====================
+
+.. currentmodule:: stilt.project
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.. class-signature:: stilt.project.Project
+
+.. class-parameters:: stilt.project.Project
+
+
+Methods
+-------
+
+.. autosummary::
+   :toctree:
+
+
+   ~Project.add_receptors
+   ~Project.load_config
+   ~Project.load_receptors
+   ~Project.load_record
+   ~Project.save_config
+   ~Project.save_record
+
+
+Attributes
+----------
+
+.. autosummary::
+
+   ~Project.directory
+   ~Project.has_config
+   ~Project.has_receptors
+   ~Project.name
+   ~Project.simulations_dir
+

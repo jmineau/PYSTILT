@@ -1,0 +1,40 @@
+﻿stilt.observations.Background
+=============================
+
+.. currentmodule:: stilt.observations
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.. class-signature:: stilt.observations.Background
+
+.. class-parameters:: stilt.observations.Background
+
+
+
+Attributes
+----------
+
+.. autosummary::
+
+   ~Background.value
+   ~Background.per_particle
+   ~Background.weights
+

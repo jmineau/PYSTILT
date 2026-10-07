@@ -1,0 +1,73 @@
+﻿stilt.MultiPointReceptor
+========================
+
+.. currentmodule:: stilt
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.. class-signature:: stilt.MultiPointReceptor
+
+.. class-parameters:: stilt.MultiPointReceptor
+
+
+Methods
+-------
+
+.. autosummary::
+   :toctree:
+
+
+   ~MultiPointReceptor.from_dict
+   ~MultiPointReceptor.from_points
+   ~MultiPointReceptor.to_dict
+
+
+Attributes
+----------
+
+.. autosummary::
+
+   ~MultiPointReceptor.geometry
+   ~MultiPointReceptor.id
+   ~MultiPointReceptor.location_id
+   ~MultiPointReceptor.plot
+   ~MultiPointReceptor.points
+

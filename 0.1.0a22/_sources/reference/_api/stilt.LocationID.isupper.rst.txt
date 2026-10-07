@@ -1,0 +1,6 @@
+stilt.LocationID.isupper
+========================
+
+.. currentmodule:: stilt
+
+.. automethod:: LocationID.isupper

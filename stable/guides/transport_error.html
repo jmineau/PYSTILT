@@ -1,0 +1,877 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Transport Error &#8212; PYSTILT 0.1.0a22</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=7f76b32a3354e82990f2" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=7f76b32a3354e82990f2" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=90cc9208" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=7f76b32a3354e82990f2"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=7f76b32a3354e82990f2" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=7f76b32a3354e82990f2" />
+
+    <script src="../_static/documentation_options.js?v=801db8bb"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'guides/transport_error';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Wind Error Statistics" href="wind_errors.html" />
+    <link rel="prev" title="Load And Plot Results" href="outputs.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="0.1.0a22" />
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+<aside class="bd-header-announcement" aria-label="Announcement">
+  <div class="bd-header-announcement__content">PYSTILT is in alpha: names and options may change between releases.</div>
+</aside>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class=" navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">PYSTILT 0.1.0a22</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class=" navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started/index.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../tutorials/index.html">
+    Tutorials
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../reference/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../roadmap.html">
+    Roadmap
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../development.html">
+    Development
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/jmineau/PYSTILT" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started/index.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../tutorials/index.html">
+    Tutorials
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../reference/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../roadmap.html">
+    Roadmap
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../development.html">
+    Development
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/jmineau/PYSTILT" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item pst-sidebar-collapse"><button id="pst-collapse-sidebar-button" aria-expanded="true" aria-controls="pst-primary-sidebar"><svg class="pst-icon svg-inline--fa" role="img" aria-hidden="true" focusable="false" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+    <path fill="currentColor" d="M3 15.5C2.36232 15.5 1.74874 15.2564 1.28478 14.8189C0.820828 14.3815 0.541576 13.7832 0.504167 13.1467L0.5 13L0.5 3C0.499965 2.36232 0.743605 1.74874 1.18107 1.28478C1.61854 0.820828 2.21676 0.541576 2.85333 0.504167L3 0.5L13 0.5C13.6377 0.499965 14.2513 0.743605 14.7152 1.18107C15.1792 1.61854 15.4584 2.21676 15.4958 2.85333L15.5 3L15.5 13C15.5 13.6377 15.2564 14.2513 14.8189 14.7152C14.3815 15.1792 13.7832 15.4584 13.1467 15.4958L13 15.5L3 15.5ZM3 13.8333L10.5 13.8333L10.5 2.16667L3 2.16667C2.79589 2.16669 2.59889 2.24163 2.44636 2.37726C2.29383 2.5129 2.19638 2.69979 2.1725 2.9025L2.16667 3L2.16667 13C2.16669 13.2041 2.24163 13.4011 2.37726 13.5536C2.5129 13.7062 2.69979 13.8036 2.9025 13.8275L3 13.8333ZM6.65583 10.325L6.5775 10.2558L4.91083 8.58917C4.76735 8.44567 4.68116 8.25476 4.66843 8.05223C4.65569 7.84971 4.71729 7.6495 4.84167 7.48917L4.91083 7.41083L6.5775 5.74417C6.72747 5.59471 6.9287 5.50794 7.14032 5.50148C7.35194 5.49502 7.55809 5.56935 7.7169 5.70937C7.8757 5.8494 7.97525 6.04463 7.99533 6.25539C8.01541 6.46616 7.95451 6.67667 7.825 6.84417L7.75583 6.9225L6.67917 8L7.75583 9.0775C7.89931 9.22099 7.98551 9.41191 7.99824 9.61443C8.01097 9.81695 7.94938 10.0172 7.825 10.1775L7.75583 10.2558C7.61234 10.3993 7.42142 10.4855 7.2189 10.4982C7.01638 10.511 6.81617 10.4494 6.65583 10.325Z"/>
+  </svg>
+  <span class="pst-collapse-sidebar-label">Collapse Sidebar</span>
+  <span class="pst-expand-sidebar-label">Expand Sidebar</span>
+</button></div>
+        <div class="sidebar-primary-item">
+
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><p aria-level="2" class="caption" role="heading"><span class="caption-text">Setting up a project</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="receptors.html">Receptors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="meteorology.html">Meteorology</a></li>
+<li class="toctree-l1"><a class="reference internal" href="configuration.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="project_layout.html">Project Folders And Reruns</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Running simulations</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1 has-children"><a class="reference internal" href="execution/index.html">Where To Run</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="execution/local.html">On Your Computer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="execution/slurm.html">On An HPC Cluster (Slurm)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="execution/kubernetes.html">In The Cloud (Kubernetes)</a></li>
+</ul>
+</details></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Working with results</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="outputs.html">Load And Plot Results</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Transport Error</a></li>
+<li class="toctree-l1"><a class="reference internal" href="wind_errors.html">Wind Error Statistics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="background.html">Background</a></li>
+<li class="toctree-l1"><a class="reference internal" href="plume_background.html">Plume Background</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Column and satellite measurements</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="readers.html">Reading Retrieval Products</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../advanced/observations.html">Satellite And Column Observations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="slant_columns.html">Slant Columns</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../advanced/transforms.html">Particle Weighting (Transforms)</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Coming from other STILT tools</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../migration/stilt_r.html">Coming From STILT-R</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../migration/x_stilt.html">Coming From X-STILT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../migration/stiltctl.html">Coming From stiltctl</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Under the hood</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../advanced/output_state.html">How PYSTILT Tracks Finished Work</a></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="index.html" class="nav-link">User Guide</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Transport Error</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="transport-error">
+<h1>Transport Error<a class="headerlink" href="#transport-error" title="Link to this heading">#</a></h1>
+<p>A footprint says where a measurement’s air came from, according to one
+meteorological analysis. The analysis has wind errors, so the modelled
+enhancement has an error too. PYSTILT estimates it with the method of
+<a class="reference external" href="https://doi.org/10.1029/2004GL021127">Lin and Gerbig (2005)</a>. You run
+the particles a second time with a random wind error added, one that has
+the statistics of the meteorology’s errors. The perturbed particles spread
+further. The extra spread of the modelled enhancement across the particles
+is the transport-error variance. An inversion uses it as the transport part
+of each observation’s model-data mismatch.</p>
+<section id="run-with-wind-errors">
+<h2>Run with wind errors<a class="headerlink" href="#run-with-wind-errors" title="Link to this heading">#</a></h2>
+<p>The perturbed run is a <a class="reference internal" href="configuration.html"><span class="doc">variant</span></a> of its own. It uses
+the same receptors and meteorology, with four wind-error settings added.
+The names are the same as in STILT-R.</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">variants</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">hrrr</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{}</span><span class="w">                 </span><span class="c1"># the unperturbed run</span>
+<span class="w">  </span><span class="nt">hrrr-err</span><span class="p">:</span><span class="w">                </span><span class="c1"># the same run with perturbed winds</span>
+<span class="w">    </span><span class="nt">siguverr</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2.6</span><span class="w">          </span><span class="c1"># wind error standard deviation, m/s</span>
+<span class="w">    </span><span class="nt">tluverr</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">260</span><span class="w">           </span><span class="c1"># its correlation time, min</span>
+<span class="w">    </span><span class="nt">zcoruverr</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">450</span><span class="w">         </span><span class="c1"># its vertical correlation length, m</span>
+<span class="w">    </span><span class="nt">horcoruverr</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">14</span><span class="w">        </span><span class="c1"># its horizontal correlation length, km</span>
+<span class="w">    </span><span class="nt">grid</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">null</span><span class="w">             </span><span class="c1"># particles only</span>
+</pre></div>
+</div>
+<p>Every receptor then has a second simulation,
+<code class="docutils literal notranslate"><span class="pre">model.simulations[rid,</span> <span class="pre">&quot;hrrr-err&quot;]</span></code>, whose particles saw the perturbed
+winds. You can add the error variant to a finished project, and only the
+new simulations run. The error run costs as much as the original.
+<code class="docutils literal notranslate"><span class="pre">grid:</span> <span class="pre">null</span></code> skips the footprint, which the error calculation does not
+need. Keep a grid if you want to plot a perturbed footprint.</p>
+<section id="choosing-the-settings">
+<h3>Choosing the settings<a class="headerlink" href="#choosing-the-settings" title="Link to this heading">#</a></h3>
+<p>The correlation scales matter as much as the standard deviation. HYSPLIT
+decorrelates the wind error over time (<code class="docutils literal notranslate"><span class="pre">tluverr</span></code>) and over the distance
+a particle travels (<code class="docutils literal notranslate"><span class="pre">horcoruverr</span></code>). If the scales are too short, the
+error turns into noise that averages out along each trajectory. The
+perturbed particles then spread no further than the unperturbed ones, and
+there is nothing to measure. At 10 m/s, for example, a particle crosses a
+5 km correlation length in eight minutes.</p>
+<p>Derive the four values from wind observations for your meteorology and
+region, as Lin and Gerbig did (<a class="reference internal" href="wind_errors.html"><span class="doc">Wind Error Statistics</span></a>). Do not copy them from
+another analysis, and do not pick small scales to be safe. The values above
+are for HRRR over the Salt Lake Valley.</p>
+<p>HYSPLIT also has mixed-layer height errors (<code class="docutils literal notranslate"><span class="pre">sigzierr</span></code>, <code class="docutils literal notranslate"><span class="pre">tlzierr</span></code>,
+<code class="docutils literal notranslate"><span class="pre">horcorzierr</span></code>), set the same way. They have little effect. HYSPLIT
+multiplies each particle’s footprint by its own random factor and leaves
+the path alone. Because the factors are independent between particles,
+they average out over a few thousand particles. For a mixed-layer error
+that every particle shares, use <code class="docutils literal notranslate"><span class="pre">ziscale</span></code> instead
+(<a class="reference internal" href="#mixed-layer-height">Mixed-layer height</a>).</p>
+</section>
+<section id="several-realizations">
+<h3>Several realizations<a class="headerlink" href="#several-realizations" title="Link to this heading">#</a></h3>
+<p>One error run is one random draw of the wind error. To average over
+several draws, set <code class="docutils literal notranslate"><span class="pre">realizations</span></code> on the error variant:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">hrrr-err</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">siguverr</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2.6</span>
+<span class="w">  </span><span class="c1"># ...</span>
+<span class="w">  </span><span class="nt">realizations</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4</span><span class="w">          </span><span class="c1"># hrrr-err-0 .. hrrr-err-3</span>
+</pre></div>
+</div>
+<p>The variant then runs four times per receptor, as the simulations
+<code class="docutils literal notranslate"><span class="pre">hrrr-err-0</span></code> to <code class="docutils literal notranslate"><span class="pre">hrrr-err-3</span></code>. The unperturbed <code class="docutils literal notranslate"><span class="pre">hrrr</span></code> run is not
+repeated. A variant with <code class="docutils literal notranslate"><span class="pre">realizations</span></code> always gets numbered names, even
+with <code class="docutils literal notranslate"><span class="pre">realizations:</span> <span class="pre">1</span></code>. Each realization needs a different random draw,
+and there are two ways to get one:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">krand:</span> <span class="pre">4</span></code>, the default. HYSPLIT seeds each run from the clock. The
+realizations differ, but a rerun gives different ones.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">krand:</span> <span class="pre">2</span></code> with a <code class="docutils literal notranslate"><span class="pre">seed</span></code>. Realization <code class="docutils literal notranslate"><span class="pre">k</span></code> runs with <code class="docutils literal notranslate"><span class="pre">seed</span> <span class="pre">+</span> <span class="pre">k</span></code>,
+and a rerun reproduces every realization exactly.</p></li>
+</ul>
+<p>PYSTILT rejects any other setting when it reads the config, because every
+realization would get the same draw. Each realization is its own
+simulation, so a rerun only does the missing ones. You can raise
+<code class="docutils literal notranslate"><span class="pre">realizations</span></code> later and only the new realizations run.</p>
+<p>Pass all the realizations to <a class="reference internal" href="../reference/_api/stilt.observations.transport_error.html#stilt.observations.transport_error" title="stilt.observations.transport_error"><code class="xref py py-func docutils literal notranslate"><span class="pre">transport_error()</span></code></a>
+as a list. It averages them before taking the difference:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">sims</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">simulations</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">receptor</span><span class="o">=</span><span class="n">rid</span><span class="p">)</span>
+<span class="n">err</span> <span class="o">=</span> <span class="n">transport_error</span><span class="p">(</span>
+    <span class="n">sims</span><span class="p">[</span><span class="n">rid</span><span class="p">,</span> <span class="s2">&quot;hrrr&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">trajectories</span><span class="o">.</span><span class="n">data</span><span class="p">,</span>
+    <span class="p">[</span><span class="n">t</span><span class="o">.</span><span class="n">data</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">sims</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">variant</span><span class="o">=</span><span class="s2">&quot;hrrr-err&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">trajectories</span><span class="o">.</span><span class="n">load</span><span class="p">()</span><span class="o">.</span><span class="n">values</span><span class="p">()],</span>
+    <span class="n">flux</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">err</span><span class="o">.</span><span class="n">realizations</span>  <span class="c1"># 4</span>
+</pre></div>
+</div>
+<p>More realizations help less than you might expect. They reduce the noise
+of the perturbed runs, but every realization is compared with the same
+unperturbed run, so the noise of the estimate falls by at most a factor of
+√2 (see <a class="reference internal" href="#notes">Notes</a>). Realizations are worth their cost when a single run’s
+<code class="docutils literal notranslate"><span class="pre">variance</span></code> is within a factor of two of its <code class="docutils literal notranslate"><span class="pre">noise</span></code>. When <code class="docutils literal notranslate"><span class="pre">variance</span></code>
+is far below <code class="docutils literal notranslate"><span class="pre">noise</span></code>, check the wind-error scales instead.</p>
+</section>
+</section>
+<section id="the-modelled-enhancement">
+<h2>The modelled enhancement<a class="headerlink" href="#the-modelled-enhancement" title="Link to this heading">#</a></h2>
+<p>The enhancement a footprint predicts for a surface flux field is the
+footprint times the flux, summed over the grid. <code class="docutils literal notranslate"><span class="pre">flux</span></code> is an
+<a class="reference external" href="https://docs.xarray.dev/en/stable/generated/xarray.DataArray.html#xarray.DataArray" title="(in xarray v2026.9.0)"><code class="xref py py-class docutils literal notranslate"><span class="pre">xarray.DataArray</span></code></a> on <code class="docutils literal notranslate"><span class="pre">lat</span></code> and <code class="docutils literal notranslate"><span class="pre">lon</span></code>, with an optional <code class="docutils literal notranslate"><span class="pre">time</span></code>
+dimension. It is sampled at the footprint’s cell centres, and footprint
+cells outside the flux field add nothing. If the flux cells are much
+smaller than the footprint cells, regrid the flux first.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">flux</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">open_dataarray</span><span class="p">(</span><span class="s2">&quot;ch4_flux.nc&quot;</span><span class="p">)</span>          <span class="c1"># µmol m⁻² s⁻¹ on lat/lon</span>
+<span class="n">foot</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">simulations</span><span class="p">[</span><span class="n">rid</span><span class="p">,</span> <span class="s2">&quot;hrrr&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">footprint</span>
+<span class="n">enhancement</span> <span class="o">=</span> <span class="n">foot</span><span class="o">.</span><span class="n">enhancement</span><span class="p">(</span><span class="n">flux</span><span class="p">)</span>             <span class="c1"># ppm per footprint time step</span>
+<span class="n">total</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">enhancement</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span>
+</pre></div>
+</div>
+<p>A flux in µmol m⁻² s⁻¹ times a footprint in ppm per (µmol m⁻² s⁻¹) gives
+ppm.</p>
+</section>
+<section id="the-emission-error">
+<h2>The emission error<a class="headerlink" href="#the-emission-error" title="Link to this heading">#</a></h2>
+<p>The flux field’s own uncertainty gives another error on the enhancement.
+Take <code class="docutils literal notranslate"><span class="pre">sigma</span></code>, a field of one standard deviation per cell in the flux’s
+units. Put it on the footprint grid and compute two limits:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="n">f</span> <span class="o">=</span> <span class="n">foot</span><span class="o">.</span><span class="n">integrate_over_time</span><span class="p">()</span>
+<span class="n">s</span> <span class="o">=</span> <span class="n">sigma</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">lat</span><span class="o">=</span><span class="n">f</span><span class="p">[</span><span class="s2">&quot;lat&quot;</span><span class="p">],</span> <span class="n">lon</span><span class="o">=</span><span class="n">f</span><span class="p">[</span><span class="s2">&quot;lon&quot;</span><span class="p">],</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;nearest&quot;</span><span class="p">)</span>
+<span class="n">err_correlated</span> <span class="o">=</span> <span class="nb">float</span><span class="p">((</span><span class="n">f</span> <span class="o">*</span> <span class="n">s</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span>                   <span class="c1"># every cell errs the same way</span>
+<span class="n">err_independent</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(((</span><span class="n">f</span> <span class="o">*</span> <span class="n">s</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()))</span>  <span class="c1"># each cell on its own</span>
+</pre></div>
+</div>
+<p>The first assumes the errors in all cells move together, so it is an upper
+bound. X-STILT reports this one as the emission error (<code class="docutils literal notranslate"><span class="pre">cal.emiss.err</span></code>),
+with <code class="docutils literal notranslate"><span class="pre">sigma</span></code> from the spread of several inventories. The second assumes
+the cells are independent, which gives a lower bound. Real inventory errors
+are correlated over some distance, so the true value lies in between.
+Computing it needs the covariance of the flux errors, which is the prior
+error covariance of an inversion. If you set up the inversion with fips,
+<code class="docutils literal notranslate"><span class="pre">InverseProblem.prior_obs_error</span></code> is that covariance carried to every
+observation (the footprint matrix times the prior covariance times its
+transpose). The square root of its diagonal is each observation’s emission
+error. Add it in quadrature to the transport and retrieval errors to get
+the total error of a modelled value.</p>
+</section>
+<section id="the-transport-error">
+<h2>The transport error<a class="headerlink" href="#the-transport-error" title="Link to this heading">#</a></h2>
+<p><a class="reference internal" href="../reference/_api/stilt.observations.transport_error.html#stilt.observations.transport_error" title="stilt.observations.transport_error"><code class="xref py py-func docutils literal notranslate"><span class="pre">transport_error()</span></code></a> takes a receptor’s unperturbed
+and perturbed particle tables and the flux field:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt.observations</span><span class="w"> </span><span class="kn">import</span> <span class="n">transport_error</span>
+
+<span class="n">rows</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="k">for</span> <span class="n">sim</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">simulations</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">variant</span><span class="o">=</span><span class="s2">&quot;hrrr&quot;</span><span class="p">):</span>
+    <span class="n">err</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">simulations</span><span class="p">[</span><span class="n">sim</span><span class="o">.</span><span class="n">id</span><span class="o">.</span><span class="n">receptor</span><span class="p">,</span> <span class="s2">&quot;hrrr-err&quot;</span><span class="p">]</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">transport_error</span><span class="p">(</span>
+        <span class="n">sim</span><span class="o">.</span><span class="n">trajectories</span><span class="o">.</span><span class="n">data</span><span class="p">,</span>
+        <span class="n">err</span><span class="o">.</span><span class="n">trajectories</span><span class="o">.</span><span class="n">data</span><span class="p">,</span>
+        <span class="n">flux</span><span class="p">,</span>
+        <span class="n">transforms</span><span class="o">=</span><span class="n">sim</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">transforms</span><span class="p">,</span>
+        <span class="n">context</span><span class="o">=</span><span class="n">sim</span><span class="o">.</span><span class="n">transform_context</span><span class="p">(),</span>
+    <span class="p">)</span>
+    <span class="n">rows</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">&quot;receptor&quot;</span><span class="p">:</span> <span class="n">sim</span><span class="o">.</span><span class="n">receptor</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="s2">&quot;enhancement&quot;</span><span class="p">:</span> <span class="n">result</span><span class="o">.</span><span class="n">enhancement</span><span class="p">,</span>
+                 <span class="s2">&quot;variance&quot;</span><span class="p">:</span> <span class="n">result</span><span class="o">.</span><span class="n">variance</span><span class="p">,</span> <span class="s2">&quot;noise&quot;</span><span class="p">:</span> <span class="n">result</span><span class="o">.</span><span class="n">noise</span><span class="p">})</span>
+<span class="n">errors</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">rows</span><span class="p">)</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s2">&quot;receptor&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">result.variance</span></code> is the transport-error variance of the modelled
+enhancement, in the enhancement’s units squared. <code class="docutils literal notranslate"><span class="pre">result.sd</span></code> is its
+square root. Pass the footprint’s transforms and the simulation’s context
+so the particles are weighted the way the footprint weights them. That
+covers the averaging kernel (including one from a per-receptor table),
+pressure weighting, and lifetime decay. For a tower receptor there is
+nothing to pass.</p>
+</section>
+<section id="is-the-estimate-meaningful">
+<h2>Is the estimate meaningful?<a class="headerlink" href="#is-the-estimate-meaningful" title="Link to this heading">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">variance</span></code> is the difference of two sample variances, each from a few
+thousand particles. It is noisy and is sometimes negative. Two checks tell
+you whether a value means anything:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">result.noise</span></code> is the standard deviation <code class="docutils literal notranslate"><span class="pre">variance</span></code> would have with no
+wind error at all. A <code class="docutils literal notranslate"><span class="pre">variance</span></code> within two or three times <code class="docutils literal notranslate"><span class="pre">noise</span></code> is
+not resolved.</p></li>
+<li><p>Over many receptors, take the median of the signed <code class="docutils literal notranslate"><span class="pre">variance</span></code>, by hour,
+season, or site. Do not clip each value at zero first, because that turns
+noise into a positive error. <code class="docutils literal notranslate"><span class="pre">result.sd</span></code> treats a negative variance as
+zero, so use it only once the variance is resolved.</p></li>
+</ul>
+<p>The signal is largest when turbulence spreads the particles least, at night
+and in winter. On a convective afternoon the unperturbed particles already
+fill the boundary layer. The wind error adds little, and the estimate is
+usually within its noise.</p>
+</section>
+<section id="what-the-numbers-mean">
+<h2>What the numbers mean<a class="headerlink" href="#what-the-numbers-mean" title="Link to this heading">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">result.levels</span></code> shows the calculation for each release level. A point
+receptor has one level.</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">height</span></code> is the level’s mean release height in metres, and <code class="docutils literal notranslate"><span class="pre">n</span></code> its
+number of particles.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">weight</span></code> is the level’s share of the particles.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">mean_orig</span></code> and <code class="docutils literal notranslate"><span class="pre">mean_err</span></code> are the mean enhancement per particle
+without and with the perturbation. Their weighted sums are
+<code class="docutils literal notranslate"><span class="pre">result.enhancement</span></code> and <code class="docutils literal notranslate"><span class="pre">result.enhancement_perturbed</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">var_orig</span></code> and <code class="docutils literal notranslate"><span class="pre">var_err</span></code> are the variances of the per-particle
+enhancement, and <code class="docutils literal notranslate"><span class="pre">dvar</span></code> is their difference. This is Lin and Gerbig’s
+equation 4 for the level.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">sd_trans</span></code> is the square root of <code class="docutils literal notranslate"><span class="pre">dvar</span></code>, keeping its sign.</p></li>
+</ul>
+<p><code class="docutils literal notranslate"><span class="pre">result.enhancement</span></code> is close to what the footprint gives. The two differ
+a little because the footprint smooths the particles onto its grid.</p>
+<p>A column receptor’s particles are grouped into <code class="docutils literal notranslate"><span class="pre">levels</span></code> release-height
+bins of equal width, 20 by default. A multipoint or slant receptor with no
+more than <code class="docutils literal notranslate"><span class="pre">levels</span></code> release heights gets one level per height. The levels
+are then combined with an exponential error correlation in the vertical:</p>
+<div class="math notranslate nohighlight">
+\[\sigma^2 = \sum_i w_i^2\, \mathrm{dvar}_i
+         + \sum_{i \ne j} w_i w_j s_i s_j\, e^{-|h_i - h_j| / L}\]</div>
+<p>Here <code class="docutils literal notranslate"><span class="pre">w</span></code> is <code class="docutils literal notranslate"><span class="pre">weight</span></code>, <code class="docutils literal notranslate"><span class="pre">s</span></code> is <code class="docutils literal notranslate"><span class="pre">sd_trans</span></code>, <code class="docutils literal notranslate"><span class="pre">h</span></code> is <code class="docutils literal notranslate"><span class="pre">height</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">L</span></code> is <code class="docutils literal notranslate"><span class="pre">length_scale</span></code>, 356 m by default (X-STILT’s value). With
+<code class="docutils literal notranslate"><span class="pre">length_scale=None</span></code> the levels are independent.</p>
+<p><code class="docutils literal notranslate"><span class="pre">percentile=0.99</span></code> reproduces X-STILT’s trimming
+(<a class="reference external" href="https://doi.org/10.5194/gmd-11-4843-2018">Wu et al., 2018</a>). It drops
+the top 1 % of particles in each level before taking the variance, which
+damps the few particles that pass over a point source at the cost of a
+small bias. X-STILT also fits a line through the levels where <code class="docutils literal notranslate"><span class="pre">dvar</span></code> is
+positive. PYSTILT does not, because fitting only those levels biases the
+result upward: under pure sampling noise it reports a positive error at
+every level.</p>
+<p>The method measures how much the wind error moves particles between flux
+cells. It says little when the flux field is uniform, and it is only as
+good as the wind statistics you gave the run. It covers transport only.
+Emission and retrieval errors are separate terms. Wind errors also move
+the trajectory endpoints, and with them the background. Pass a background
+field to include that part (<a class="reference internal" href="background.html"><span class="doc">Background</span></a>).</p>
+</section>
+<section id="mixed-layer-height">
+<h2>Mixed-layer height<a class="headerlink" href="#mixed-layer-height" title="Link to this heading">#</a></h2>
+<p>A real error in the mixed-layer height is shared. Every particle in the
+valley sees the same layer, too shallow or too deep. <code class="docutils literal notranslate"><span class="pre">ziscale</span></code> models
+this. It multiplies HYSPLIT’s mixed-layer height by one factor for every
+particle. Runs with factors above and below 1.0 show how sensitive the
+enhancement is to the mixed layer. Declare them as variants of the same
+project:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">variants</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">hrrr</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{}</span>
+<span class="w">  </span><span class="nt">hrrr-zi06</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">ziscale</span><span class="p">:</span><span class="w"> </span><span class="nv">0.6</span><span class="p p-Indicator">}</span><span class="w">   </span><span class="c1"># every hour of the run; a list gives one factor per hour</span>
+<span class="w">  </span><span class="nt">hrrr-zi14</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">ziscale</span><span class="p">:</span><span class="w"> </span><span class="nv">1.4</span><span class="p p-Indicator">}</span>
+</pre></div>
+</div>
+<p>Before you run them:</p>
+<ul class="simple">
+<li><p>Set <code class="docutils literal notranslate"><span class="pre">krand:</span> <span class="pre">2</span></code> and a <code class="docutils literal notranslate"><span class="pre">seed</span></code> in the defaults. Every variant then draws
+the same turbulence, and the difference between variants is the mixed
+layer alone. Without a seed each run adds its own sampling noise.</p></li>
+<li><p>HYSPLIT applies the minimum mixing depth <code class="docutils literal notranslate"><span class="pre">kmix0</span></code> (150 m by default)
+after the factor. A mixed layer already at that floor is not lowered
+further.</p></li>
+<li><p>HYSPLIT holds at most 150 hourly factors. A single <code class="docutils literal notranslate"><span class="pre">ziscale</span></code> value is
+repeated for every hour, so it needs <code class="docutils literal notranslate"><span class="pre">abs(n_hours)</span> <span class="pre">&lt;=</span> <span class="pre">150</span></code>. For a
+longer run, give a list. Hours past the end of the list are unscaled.</p></li>
+</ul>
+<p>How much it matters depends on the receptor. A column spans the mixed
+layer, so a change in its depth mostly moves influence around inside the
+column, and the column enhancement changes little. A surface receptor has
+no such averaging and can change by tens of percent. Test it for your own
+receptors.</p>
+<p>The spread between these runs is a sensitivity. To turn it into an error
+you need to know how far the meteorology’s mixed-layer height is from the
+real one. One way is to compare it with radiosonde profiles, analysed with
+the bulk Richardson method HYSPLIT uses by default (<code class="docutils literal notranslate"><span class="pre">kmixd:</span> <span class="pre">3</span></code>).</p>
+</section>
+<section id="notes">
+<h2>Notes<a class="headerlink" href="#notes" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p>Lin and Gerbig derived their scales from variograms of analysed minus
+radiosonde winds, and got about 120 km, 4 hours, and 900 m for an 80 km
+analysis. For a 3 km model such as HRRR the horizontal scale is much
+shorter (<a class="reference internal" href="wind_errors.html"><span class="doc">Wind Error Statistics</span></a>).</p></li>
+<li><p>With <code class="docutils literal notranslate"><span class="pre">krand:</span> <span class="pre">4</span></code> the clock gives only about 5000 distinct seeds, so two
+realizations can be identical. With a few realizations this is very
+unlikely. With a hundred it is more likely than not.</p></li>
+<li><p>With <code class="docutils literal notranslate"><span class="pre">krand:</span> <span class="pre">2</span></code>, realization 0 uses <code class="docutils literal notranslate"><span class="pre">seed</span></code> itself, as STILT-R’s error
+run does.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">noise</span></code> comes from splitting the unperturbed particles into random
+halves and treating one half as the perturbed run
+(<code class="docutils literal notranslate"><span class="pre">noise_splits</span></code> times, 16 by default). With <code class="docutils literal notranslate"><span class="pre">N</span></code> realizations the
+noise is <code class="docutils literal notranslate"><span class="pre">sqrt((1</span> <span class="pre">+</span> <span class="pre">1/N)</span> <span class="pre">/</span> <span class="pre">2)</span></code> times that of a single run, which never
+falls below <code class="docutils literal notranslate"><span class="pre">1/sqrt(2)</span></code>. <code class="docutils literal notranslate"><span class="pre">result.noise</span></code> already includes this factor.</p></li>
+</ul>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="outputs.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Load And Plot Results</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="wind_errors.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Wind Error Statistics</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#run-with-wind-errors">Run with wind errors</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#choosing-the-settings">Choosing the settings</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#several-realizations">Several realizations</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-modelled-enhancement">The modelled enhancement</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-emission-error">The emission error</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-transport-error">The transport error</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#is-the-estimate-meaningful">Is the estimate meaningful?</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-the-numbers-mean">What the numbers mean</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#mixed-layer-height">Mixed-layer height</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#notes">Notes</a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  <div class="tocsection sourcelink">
+    <a href="../_sources/guides/transport_error.rst.txt">
+      <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=7f76b32a3354e82990f2"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=7f76b32a3354e82990f2"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2026, James Mineau.
+      <br/>
+    
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.1.0.
+    <br/>
+  </p>
+</div>
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.17.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

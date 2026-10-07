@@ -1,0 +1,6 @@
+stilt.store.FsspecStore.read\_bytes
+===================================
+
+.. currentmodule:: stilt.store
+
+.. automethod:: FsspecStore.read_bytes

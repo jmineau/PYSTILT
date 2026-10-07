@@ -1,0 +1,6 @@
+stilt.Trajectories.from\_parquet
+================================
+
+.. currentmodule:: stilt
+
+.. automethod:: Trajectories.from_parquet

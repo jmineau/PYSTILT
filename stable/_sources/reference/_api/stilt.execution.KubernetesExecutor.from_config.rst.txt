@@ -1,0 +1,6 @@
+stilt.execution.KubernetesExecutor.from\_config
+===============================================
+
+.. currentmodule:: stilt.execution
+
+.. automethod:: KubernetesExecutor.from_config

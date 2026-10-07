@@ -1,0 +1,78 @@
+﻿stilt.Footprint
+===============
+
+.. currentmodule:: stilt
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.. class-signature:: stilt.Footprint
+
+.. class-parameters:: stilt.Footprint
+
+
+Methods
+-------
+
+.. autosummary::
+   :toctree:
+
+
+   ~Footprint.aggregate
+   ~Footprint.calculate
+   ~Footprint.enhancement
+   ~Footprint.from_netcdf
+   ~Footprint.integrate_over_time
+   ~Footprint.to_netcdf
+
+
+Attributes
+----------
+
+.. autosummary::
+
+   ~Footprint.plot
+   ~Footprint.time_range
+   ~Footprint.grid
+

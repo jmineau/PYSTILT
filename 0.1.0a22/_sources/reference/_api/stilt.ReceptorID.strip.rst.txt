@@ -1,0 +1,6 @@
+stilt.ReceptorID.strip
+======================
+
+.. currentmodule:: stilt
+
+.. automethod:: ReceptorID.strip

@@ -1,0 +1,6 @@
+stilt.SimID.parse
+=================
+
+.. currentmodule:: stilt
+
+.. automethod:: SimID.parse

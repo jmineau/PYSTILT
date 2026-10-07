@@ -1,0 +1,6 @@
+stilt.Footprint.enhancement
+===========================
+
+.. currentmodule:: stilt
+
+.. automethod:: Footprint.enhancement

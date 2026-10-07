@@ -1,0 +1,6 @@
+stilt.Footprint.from\_netcdf
+============================
+
+.. currentmodule:: stilt
+
+.. automethod:: Footprint.from_netcdf

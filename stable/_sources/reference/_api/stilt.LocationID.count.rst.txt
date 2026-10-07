@@ -1,0 +1,6 @@
+stilt.LocationID.count
+======================
+
+.. currentmodule:: stilt
+
+.. automethod:: LocationID.count

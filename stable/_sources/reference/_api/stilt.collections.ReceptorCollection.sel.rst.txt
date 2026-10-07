@@ -1,0 +1,6 @@
+stilt.collections.ReceptorCollection.sel
+========================================
+
+.. currentmodule:: stilt.collections
+
+.. automethod:: ReceptorCollection.sel

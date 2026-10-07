@@ -1,0 +1,6 @@
+stilt.collections.SimulationCollection.sel
+==========================================
+
+.. currentmodule:: stilt.collections
+
+.. automethod:: SimulationCollection.sel

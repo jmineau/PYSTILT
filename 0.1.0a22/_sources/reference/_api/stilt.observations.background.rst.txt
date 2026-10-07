@@ -1,0 +1,6 @@
+﻿stilt.observations.background
+=============================
+
+.. currentmodule:: stilt.observations
+
+.. autofunction:: background

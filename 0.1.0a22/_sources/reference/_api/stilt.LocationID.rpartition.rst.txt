@@ -1,0 +1,6 @@
+stilt.LocationID.rpartition
+===========================
+
+.. currentmodule:: stilt
+
+.. automethod:: LocationID.rpartition

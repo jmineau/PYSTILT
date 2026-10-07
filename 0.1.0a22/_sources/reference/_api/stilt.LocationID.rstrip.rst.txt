@@ -1,0 +1,6 @@
+stilt.LocationID.rstrip
+=======================
+
+.. currentmodule:: stilt
+
+.. automethod:: LocationID.rstrip

@@ -1,0 +1,6 @@
+stilt.ReceptorID.removeprefix
+=============================
+
+.. currentmodule:: stilt
+
+.. automethod:: ReceptorID.removeprefix

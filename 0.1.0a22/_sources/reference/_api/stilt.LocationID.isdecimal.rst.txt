@@ -1,0 +1,6 @@
+stilt.LocationID.isdecimal
+==========================
+
+.. currentmodule:: stilt
+
+.. automethod:: LocationID.isdecimal

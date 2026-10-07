@@ -1,0 +1,57 @@
+﻿stilt.store.Store
+=================
+
+.. currentmodule:: stilt.store
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.. class-signature:: stilt.store.Store
+
+.. class-parameters:: stilt.store.Store
+
+
+Methods
+-------
+
+.. autosummary::
+   :toctree:
+
+
+   ~Store.delete
+   ~Store.exists
+   ~Store.local_path
+   ~Store.publish_file
+   ~Store.read_bytes
+   ~Store.write_bytes
+
+

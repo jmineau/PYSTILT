@@ -1,0 +1,94 @@
+﻿stilt.transforms.FirstOrderLifetime
+===================================
+
+.. currentmodule:: stilt.transforms
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.. class-signature:: stilt.transforms.FirstOrderLifetime
+
+.. class-parameters:: stilt.transforms.FirstOrderLifetime
+
+
+Methods
+-------
+
+.. autosummary::
+   :toctree:
+
+
+   ~FirstOrderLifetime.apply
+
+
+Attributes
+----------
+
+.. autosummary::
+
+   ~FirstOrderLifetime.kind
+   ~FirstOrderLifetime.lifetime_hours
+

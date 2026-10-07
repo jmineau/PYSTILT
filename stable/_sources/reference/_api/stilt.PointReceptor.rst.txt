@@ -1,0 +1,73 @@
+﻿stilt.PointReceptor
+===================
+
+.. currentmodule:: stilt
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.. class-signature:: stilt.PointReceptor
+
+.. class-parameters:: stilt.PointReceptor
+
+
+Methods
+-------
+
+.. autosummary::
+   :toctree:
+
+
+   ~PointReceptor.from_dict
+   ~PointReceptor.from_points
+   ~PointReceptor.to_dict
+
+
+Attributes
+----------
+
+.. autosummary::
+
+   ~PointReceptor.geometry
+   ~PointReceptor.id
+   ~PointReceptor.location_id
+   ~PointReceptor.plot
+   ~PointReceptor.points
+
