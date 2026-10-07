@@ -14,7 +14,7 @@ You can give PYSTILT meteorology in two ways:
 
 Each set of meteorology files is a *met* with a name in ``config.yaml``
 (``hrrr`` in the examples below). Variants refer to a met by this name, and
-a variant named after a met runs with it (see :doc:`configuration`). Give
+a variant named after a met runs with it (see :doc:`projects`). Give
 each met a variant to run the same receptors with several mets and compare
 them.
 

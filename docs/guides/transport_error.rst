@@ -14,7 +14,7 @@ of each observation's model-data mismatch.
 Run with wind errors
 --------------------
 
-The perturbed run is a :doc:`variant <configuration>` of its own. It uses
+The perturbed run is a :doc:`variant <projects>` of its own. It uses
 the same receptors and meteorology, with four wind-error settings added.
 The names are the same as in STILT-R.
 

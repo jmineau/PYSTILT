@@ -9,8 +9,8 @@ you are new to PYSTILT, start with :doc:`../getting_started/quickstart`.
 - :doc:`receptors`: where and when you measured (towers, columns,
   satellites)
 - :doc:`meteorology`: use your own ARL files or download them from NOAA
-- :doc:`configuration`: what goes in ``config.yaml``
-- :doc:`project_layout`: what is in a project folder, and how reruns work
+- :doc:`projects`: what goes in ``config.yaml``, variants, and how reruns
+  and changed settings work
 
 **Running simulations**
 
@@ -59,8 +59,7 @@ you are new to PYSTILT, start with :doc:`../getting_started/quickstart`.
 
    receptors
    meteorology
-   configuration
-   project_layout
+   projects
 
 .. toctree::
    :hidden:

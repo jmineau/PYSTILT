@@ -14,7 +14,7 @@ Each page below lists its fields with their defaults and is generated from
 the code.
 
 .. tip::
-  New to PYSTILT? The :doc:`configuration guide <../guides/configuration>`
+  New to PYSTILT? The :doc:`Projects and variants guide <../guides/projects>`
   covers the few settings most projects need. This page lists all of them.
 
 Config objects

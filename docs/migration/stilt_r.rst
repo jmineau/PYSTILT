@@ -34,7 +34,7 @@ The workflow side by side
    * - Outputs
      - ``out/by-id/<id>/``, ``_traj.rds`` and ``_foot.nc``
      - the output directory: ``particles/`` and ``footprints/`` Parquet files
-       by variant settings and day (:doc:`../guides/project_layout`)
+       by variant settings and day (:doc:`../guides/projects`)
 
 ``run_stilt.r`` settings in PYSTILT
 -----------------------------------
@@ -96,7 +96,7 @@ The workflow side by side
        ``stilt run --no-skip`` reruns everything. To make a second
        footprint from the same particles, add a variant that changes only
        footprint settings; it shares the particles
-       (:doc:`../guides/configuration`).
+       (:doc:`../guides/projects`).
    * - ``simulation_id`` (run a subset)
      - ``project.run(receptors=[...])`` with the receptor ids you want,
        or ``stilt run --receptors ids.txt``
@@ -114,7 +114,7 @@ Other differences
 
 A project runs its receptors under named *variants*. A variant is a
 met plus any settings that differ from the defaults (see
-:doc:`../guides/configuration`). One project can run the same receptors with
+:doc:`../guides/projects`). One project can run the same receptors with
 several mets, a range of ``ziscale`` values, or a second
 footprint grid. Each variant gets its own folder.
 
@@ -132,7 +132,7 @@ PYSTILT never overwrites a result. STILT-R deletes ``out/by-id`` and starts
 over whenever ``run_trajec = TRUE``. In PYSTILT a variant's results live in
 folders named by a hash of its settings, so changed settings run into a new
 folder and the old one stays until you delete it (see
-:doc:`../guides/configuration`).
+:doc:`../guides/projects`).
 
 Receptors
 ---------
@@ -163,7 +163,7 @@ keeps the receptor and the settings in it.
 
 A point or column receptor's id has the same form as STILT-R's simulation
 ID, and names its files: ``date=2015-07-05/201507050000_-111.8472_40.7665_21.parquet``
-in each variant's settings folder (see :doc:`../guides/project_layout`). A
+in each variant's settings folder (see :doc:`../guides/projects`). A
 simulation is that id under a variant, ``201507050000_-111.8472_40.7665_21/hrrr``.
 
 Moving a project over

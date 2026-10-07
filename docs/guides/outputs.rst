@@ -2,7 +2,7 @@ Load And Plot Results
 =====================
 
 Each simulation is one receptor run under one variant
-(:doc:`configuration`). It has up to two results in the output directory:
+(:doc:`projects`). It has up to two results in the output directory:
 
 - the **particles**, where every particle went, as a Parquet file
 - the **footprint**, when the variant has a grid, as a Parquet file of the

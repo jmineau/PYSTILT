@@ -175,7 +175,7 @@ use :func:`read_receptors`, or pass the path to the project:
    project.add_receptors("my_receptors.csv")
 
 Receptors you add to a project later are appended to its ``receptors.csv``
-using the file's own columns (see :doc:`project_layout`). If a new receptor's
+using the file's own columns (see :doc:`projects`). If a new receptor's
 heights are above sea level and the file has no ``altitude_ref`` column, the
 column is added.
 
@@ -238,7 +238,7 @@ All three classes have these members:
 
 ``receptor.id``
    A string of the form ``YYYYMMDDHHMM_{location}``. It names the receptor's
-   result files (see :doc:`project_layout`), so two different receptors may
+   result files (see :doc:`projects`), so two different receptors may
    not share one. For a point or column receptor it spells out the time,
    position, and heights, with ``msl`` at the end for heights above sea
    level. ``receptor.location_id`` is the location part.

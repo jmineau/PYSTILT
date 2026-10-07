@@ -40,7 +40,7 @@ Extras add optional features. List them in the brackets, for example
 
 An output directory on an object store needs the fsspec package for it,
 such as ``s3fs`` for ``s3://`` or ``gcsfs`` for ``gs://``
-(:doc:`../guides/project_layout`).
+(:doc:`../guides/projects`).
 
 HYSPLIT is included
 -------------------
