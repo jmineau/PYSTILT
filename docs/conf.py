@@ -51,14 +51,7 @@ exclude_patterns = [
     "_build",
     "Thumbs.db",
     ".DS_Store",
-    "api/_autosummary/kubernetes*.rst",
-    "reference/api",
-    "reference/api/*",
-    "reference/api/**",
     "reference/_api/*.__init__.rst",
-    "reference/generated",
-    "reference/generated/*",
-    "reference/generated/**",
 ]
 
 # -- Options for HTML output -------------------------------------------------
