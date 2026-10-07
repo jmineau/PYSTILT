@@ -17,7 +17,7 @@ from stilt.simulation import Simulation
 from stilt.spatial import Grid
 from stilt.transforms import FirstOrderLifetime, transform_kind
 
-from .fixtures.factories import make_variant
+from .fixtures.factories import make_met_config, make_variant
 from .fixtures.particles import finished
 
 GRID = Grid(xmin=-114.0, xmax=-111.0, ymin=39.0, ymax=42.0, xres=0.1, yres=0.1)
@@ -25,9 +25,7 @@ FOOT = FootprintConfig(grid=GRID, time_integrate=True, smooth_factor=0.0)
 
 
 def _met_config(tmp_path, **kwargs) -> MetConfig:
-    return MetConfig(
-        directory=tmp_path / "met", file_format="%Y%m%d_%H", file_tres="1h", **kwargs
-    )
+    return make_met_config(tmp_path / "met", **kwargs)
 
 
 def _variant(

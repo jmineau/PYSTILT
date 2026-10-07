@@ -1,25 +1,54 @@
 """
 Small objects many tests need, built in one place.
 
-A test that needs a resolved variant or a receptor calls these, so a change
-to :class:`stilt.config.Variant` or the receptor types is one edit here, not
+A test that needs a met config, a project config, a resolved variant, or a
+receptor calls these, so a change to :class:`stilt.meteorology.MetConfig`,
+:class:`stilt.config.Variant`, or the receptor types is one edit here, not
 one in every test module.
 """
 
 from __future__ import annotations
 
 import datetime as dt
+from pathlib import Path
 from typing import Any
 
-from stilt.config import Variant
+from stilt.config import ProjectConfig, Variant
 from stilt.footprint.config import FootprintConfig
 from stilt.meteorology import MetConfig
 from stilt.receptors import PointReceptor
 from stilt.transport import ModelInfo, TransportConfig
 from stilt.transport.hysplit import HysplitConfig
 
+
+def make_met_config(
+    directory: str | Path,
+    *,
+    file_format: str = "%Y%m%d_%H",
+    file_tres: str = "1h",
+    **fields: Any,
+) -> MetConfig:
+    """Return a met config of files named by hour (``%Y%m%d_%H``) under *directory*."""
+    return MetConfig(
+        directory=directory, file_format=file_format, file_tres=file_tres, **fields
+    )
+
+
+def make_project_config(tmp_path: Path, **settings: Any) -> ProjectConfig:
+    """
+    Return a project config with one met, ``hrrr``, and one variant of the defaults.
+
+    The met is :func:`make_met_config` under ``tmp_path / "met"``. *settings*
+    are other :class:`~stilt.ProjectConfig` settings, and replace the met
+    and the variant when they name ``mets`` or ``variants``.
+    """
+    settings.setdefault("mets", {"hrrr": make_met_config(tmp_path / "met")})
+    settings.setdefault("variants", {"hrrr": {}})
+    return ProjectConfig(**settings)
+
+
 #: A met that names files nobody reads: enough for a variant's settings.
-MET = MetConfig(directory="/data/hrrr", file_format="%Y%m%d_%H", file_tres="6h")
+MET = make_met_config("/data/hrrr", file_tres="6h")
 
 
 def make_variant(

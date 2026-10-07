@@ -24,6 +24,7 @@ from stilt.visualization import (
     _make_ax,
 )
 
+from .fixtures.factories import make_project_config
 from .fixtures.footprints import as_footprint
 
 # ---------------------------------------------------------------------------
@@ -414,19 +415,9 @@ def test_project_availability_empty():
 
 
 def test_project_availability_with_sims(tmp_path, receptor):
-    from stilt.config import ProjectConfig
     from stilt.project import Project
 
-    config = ProjectConfig(
-        mets={
-            "hrrr": {
-                "directory": tmp_path / "met",
-                "file_format": "%Y%m%d_%H",
-                "file_tres": "1h",
-            }
-        },
-        variants={"hrrr": {}},
-    )
+    config = make_project_config(tmp_path)
     project = Project.init(tmp_path, config=config, receptors=[receptor])
     assert len(project.simulations) == 1
 

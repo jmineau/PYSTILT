@@ -19,7 +19,7 @@ from stilt.receptors import PointReceptor
 from stilt.spatial import Grid
 from stilt.transport.hysplit.driver import winderrtf
 
-from .fixtures.factories import make_receptor
+from .fixtures.factories import make_met_config, make_receptor
 from .fixtures.footprints import as_footprint
 from .fixtures.particles import finished
 
@@ -41,9 +41,7 @@ _GRID = Grid(xmin=-114.0, xmax=-113.0, ymin=39.0, ymax=40.0, xres=0.1, yres=0.1)
 
 
 def _met(tmp_path) -> MetConfig:
-    return MetConfig(
-        directory=tmp_path / "met", file_format="%Y%m%d_%H", file_tres="1h"
-    )
+    return make_met_config(tmp_path / "met")
 
 
 def _config(tmp_path, include_footprint=True, **overrides) -> ProjectConfig:
@@ -1181,11 +1179,7 @@ def test_relative_paths_start_from_the_project_not_the_working_directory(
 
 def test_init_refuses_a_variant_with_bad_settings_and_writes_nothing(tmp_path):
     """A variant's transport settings are checked before config.yaml is written."""
-    met = {
-        "directory": str(tmp_path / "met"),
-        "file_format": "%Y%m%d_%H",
-        "file_tres": "1h",
-    }
+    met = make_met_config(str(tmp_path / "met"))
     with pytest.raises(ValueError, match="numpr"):
         Project.init(
             tmp_path / "proj", mets={"hrrr": met}, variants={"hrrr": {"numpr": 10}}

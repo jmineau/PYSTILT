@@ -14,16 +14,13 @@ from stilt.transport import ModelInfo
 from stilt.transport.hysplit import HysplitConfig
 from stilt.transport.hysplit.model import hysplit_version
 
+from .fixtures.factories import make_met_config
+
 GRID = {"xmin": -112, "xmax": -111, "ymin": 40, "ymax": 41, "xres": 0.1, "yres": 0.1}
 
 
 def _met(tmp_path, **overrides) -> MetConfig:
-    return MetConfig(
-        directory=tmp_path / "met",
-        file_format="%Y%m%d_%H",
-        file_tres="6h",
-        **overrides,
-    )
+    return make_met_config(tmp_path / "met", file_tres="6h", **overrides)
 
 
 def _variant(tmp_path, met: MetConfig | None = None, **transport) -> Variant:

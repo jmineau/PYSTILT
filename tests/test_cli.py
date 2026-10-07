@@ -13,6 +13,8 @@ from stilt.config import ProjectConfig
 from stilt.execution.config import ExecutionConfig
 from stilt.spatial import Grid
 
+from .fixtures.factories import make_met_config, make_project_config
+
 runner = CliRunner()
 
 
@@ -23,15 +25,8 @@ runner = CliRunner()
 
 def _write_minimal_config(tmp_path):
     """Write a minimal config.yaml + receptors.csv so _resolve_project succeeds."""
-    cfg = ProjectConfig(
-        mets={
-            "hrrr": {
-                "directory": tmp_path / "met",
-                "file_format": "%Y%m%d_%H",
-                "file_tres": "1h",
-            }
-        },
-        variants={"hrrr": {}},
+    cfg = make_project_config(
+        tmp_path,
         # Local, with the time limit a Slurm run of it needs.
         execution={"time": "01:00:00"},
     )
@@ -134,14 +129,8 @@ def test_status_counts_full_simulation_completion(tmp_path):
     from stilt.project import Project
     from stilt.receptors import PointReceptor
 
-    cfg = ProjectConfig(
-        mets={
-            "hrrr": {
-                "directory": tmp_path / "met",
-                "file_format": "%Y%m%d_%H",
-                "file_tres": "1h",
-            }
-        },
+    cfg = make_project_config(
+        tmp_path,
         grid=Grid(
             xmin=-114.0,
             xmax=-113.0,
@@ -584,13 +573,7 @@ def test_status_counts_failures_by_reason(tmp_path):
     ]
     project = Project.init(
         tmp_path,
-        mets={
-            "hrrr": {
-                "directory": tmp_path / "met",
-                "file_format": "%Y%m%d_%H",
-                "file_tres": "1h",
-            }
-        },
+        mets={"hrrr": make_met_config(tmp_path / "met")},
         receptors=receptors,
         variants={"hrrr": {}},
     )
@@ -625,7 +608,7 @@ def test_output_ls_lists_folders_and_what_differs(tmp_path):
         latitude=40.77,
         altitude=5.0,
     )
-    met = {"directory": tmp_path / "met", "file_format": "%Y%m%d_%H", "file_tres": "1h"}
+    met = make_met_config(tmp_path / "met")
     old = Project.init(
         tmp_path / "old",
         config=ProjectConfig(

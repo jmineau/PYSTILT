@@ -25,6 +25,7 @@ from stilt.project import Project
 from stilt.transport.hysplit.driver import winderrtf
 
 from .conftest import integration
+from .fixtures.factories import make_met_config
 
 _XYERR = {"siguverr": 2.0, "tluverr": 60.0, "zcoruverr": 500.0, "horcoruverr": 40.0}
 
@@ -580,11 +581,9 @@ def test_geometry_footprint(tmp_path, wbb_receptor, met_dir):
     }
     config = ProjectConfig(
         mets={
-            "hrrr": {
-                "directory": met_dir,
-                "file_format": REFERENCE_MET_FILE_FORMAT,
-                "file_tres": "6h",
-            }
+            "hrrr": make_met_config(
+                met_dir, file_format=REFERENCE_MET_FILE_FORMAT, file_tres="6h"
+            )
         },
         n_hours=-6,
         numpar=100,
@@ -656,11 +655,9 @@ def test_forward_run(tmp_path, met_dir, wbb_grid):
     )
     config = ProjectConfig(
         mets={
-            "hrrr": {
-                "directory": met_dir,
-                "file_format": REFERENCE_MET_FILE_FORMAT,
-                "file_tres": "6h",
-            }
+            "hrrr": make_met_config(
+                met_dir, file_format=REFERENCE_MET_FILE_FORMAT, file_tres="6h"
+            )
         },
         n_hours=3,
         numpar=100,

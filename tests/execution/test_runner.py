@@ -15,6 +15,8 @@ from stilt.execution.config import ExecutionConfig, slurm_minutes
 from stilt.execution.runner import _project_slug, job_script, task_share
 from stilt.project import Project
 
+from ..fixtures.factories import make_project_config
+
 # ---------------------------------------------------------------------------
 # The job array script
 # ---------------------------------------------------------------------------
@@ -394,19 +396,9 @@ def test_project_slug_names_the_slurm_job(directory, expected):
 def _hourly_project(tmp_path, n: int) -> Project:
     import datetime as dt
 
-    from stilt.config import ProjectConfig
     from stilt.receptors import PointReceptor
 
-    config = ProjectConfig(
-        mets={
-            "hrrr": {
-                "directory": tmp_path / "met",
-                "file_format": "%Y%m%d_%H",
-                "file_tres": "1h",
-            }
-        },
-        variants={"hrrr": {}},
-    )
+    config = make_project_config(tmp_path)
     receptors = [
         PointReceptor(
             time=dt.datetime(2023, 1, 1, h),
