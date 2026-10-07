@@ -28,7 +28,7 @@ Both files are yours to edit. PYSTILT never rewrites ``config.yaml``, and it
 only appends to ``receptors.csv``. ``project.add_table("kernels", table)``
 adds rows to ``tables/kernels.parquet`` the same way, and a transform names
 it as ``table: kernels``. A Slurm run also makes a ``_slurm/`` folder with
-its job scripts and logs (:doc:`execution/slurm`).
+its job scripts and logs (:doc:`slurm`).
 
 A typical config.yaml
 ---------------------
@@ -100,7 +100,7 @@ The settings most people change
      - ``./output``
    * - ``execution``
      - Where to run. Leave it out to run on your own computer. See
-       :doc:`execution/index`.
+       :doc:`running`.
      - (omit)
 
 These footprint settings sit next to ``grid`` at the top level:
@@ -115,7 +115,7 @@ These footprint settings sit next to ``grid`` at the top level:
 
 ``transforms``
    Steps that weight the particles before the footprint is made, mainly for
-   column measurements. See :doc:`../advanced/transforms`.
+   column measurements. See :doc:`transforms`.
 
 ``config.yaml`` also takes the lower-level HYSPLIT and STILT settings, such
 as turbulence, time step, and output variables, by the names STILT-R uses.

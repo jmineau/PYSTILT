@@ -267,4 +267,4 @@ Next steps
 - Run many receptors: :doc:`../tutorials/wbb_stationary`
 - Understand the different receptor types: :doc:`../guides/receptors`
 - More plotting and analysis: :doc:`../guides/outputs`
-- Run thousands of simulations on a cluster: :doc:`../guides/execution/slurm`
+- Run thousands of simulations on a cluster: :doc:`../guides/slurm`

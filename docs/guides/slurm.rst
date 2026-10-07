@@ -53,7 +53,10 @@ Options
 ``time``
    The time limit of each array task, written to ``--time`` as you give
    it. It is required: without it a task gets the partition's default
-   limit, which can be days, and holds its node that long if it hangs.
+   limit, which can be days, and holds its node that long if it hangs. To
+   choose it, time a few simulations in a small test project, multiply by
+   the receptors per task and the variants, and add a margin. A task that
+   runs out of time loses nothing (below).
 
 ``mem``, ``partition``, ``account``, ``qos``
    The ``sbatch`` options of the same names.
@@ -111,9 +114,11 @@ job has left the queue:
 
    stilt run ./my_project
 
-Only unfinished receptors are submitted. Don't resubmit while the first job
-is still running. The receptors it hasn't finished yet would be submitted a
-second time. Use ``--no-skip`` to force everything to run again.
+Only unfinished receptors are submitted. Repeat until ``stilt status``
+shows none remaining. Don't resubmit while the first job is still running:
+the receptors it hasn't finished yet would be submitted a second time. If
+every task fails at once, look in the tasks' logs (below) first. Use
+``--no-skip`` to force everything to run again.
 
 From Python, ``project.run()`` submits the job array, waits until every
 task has ended (it asks ``sacct``), and returns the status table of the
@@ -158,5 +163,5 @@ If a task fails, look in its ``<task>.log`` for problems with the task
 itself. Its first line says when and on which node it started, and the
 job and task ids; a requeued task adds another such line. Look in each
 simulation's log in the output directory for transport model problems
-(see :doc:`index`). The folders are safe to delete once a job has
-left the queue.
+(:doc:`checking`). The folders are safe to delete once a job has left the
+queue.
