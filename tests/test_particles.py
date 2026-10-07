@@ -163,7 +163,7 @@ def test_write_particles_is_atomic_on_failure(point_receptor, tmp_path, monkeypa
         Path(write_path).write_bytes(b"partial parquet")
         raise RuntimeError("write failed")
 
-    monkeypatch.setattr("stilt.particles.pq.write_table", _broken_write)
+    monkeypatch.setattr("stilt.particles.table.pq.write_table", _broken_write)
 
     with pytest.raises(RuntimeError, match="write failed"):
         write_particles(path, traj, point_receptor, _settings(params), [])

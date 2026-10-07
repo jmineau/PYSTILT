@@ -143,11 +143,14 @@ src/stilt/
                      without checking them again
     validation.py    the checks a receptor must pass, written once for many
                      points and shared by the models and the table
-  particles.py       the particle table (a DataFrame): prepare, read, and write
-                     particle files; the `.stilt` pandas accessor (endpoints,
-                     enhancement from a flux field); what particles give
-                     beyond the footprint, `background` and `transport_error`
-                     (`sim.background`, `sim.transport_error`)
+  particles/         the particle table (a DataFrame); __init__.py re-exports only
+    table.py         its columns, particle files (read, write, metadata),
+                     release heights, and the near-field plume correction
+    accessor.py      the `.stilt` pandas accessor (endpoints, enhancement
+                     from a flux field)
+    background.py    the background at a receptor (`sim.background`)
+    transport_error.py  the transport error of the enhancement
+                     (`sim.transport_error`)
   footprint/         the footprint (a DataArray)
     config.py        FootprintConfig and the geometry specs
     gridding.py      `calc_footprint`, as STILT-R's (fidelity-guarded)
@@ -615,7 +618,7 @@ The README links to it and keeps no table of its own.
   lines: bottom and top), and why a `MultiPointReceptor` may not repeat a
   horizontal location (the constructor raises). The bundled build releases
   column particles bottom-to-top in `indx` order (the table's `particle`), which
-  `add_release_heights` (`particles.py`) falls back to for `xhgt` when a
+  `add_release_heights` (`particles/table.py`) falls back to for `xhgt` when a
   model writes no `t = 0` release row.
 - **Pressure weighting is derived from the particles.**
   `PressureWeighting` fits `ln p = b + a·z` to the particles' first-step
@@ -646,13 +649,13 @@ The README links to it and keeps no table of its own.
   data is needed only for the two-parameter `p(z)` fit.
 - **Release heights come from the `t = 0` row.** The particle table's
   contract asks a model to write each particle's release at `time = 0`. From
-  it `add_release_heights` (`particles.py`, a core step the worker applies
+  it `add_release_heights` (`particles/table.py`, a core step the worker applies
   to any model's particles, as is `correct_near_field`) finds which point of
   a multipoint receptor a particle left from, or which slab of a column;
   `xhgt` is that point's altitude or that slab's centre, never the random
   height inside the slab.
 - **Multipoint and slant `xhgt` recovery** (`_multipoint_release_heights` in
-  `particles.py`) prefers, in order: `t = 0` rows if present (exact), a match
+  `particles/table.py`) prefers, in order: `t = 0` rows if present (exact), a match
   on height when release altitudes are distinct (about 20 m apart), then
   horizontal position with a warning under 1 km. The bundled HYSPLIT v5.1.0
   writes no `t = 0` row; until a published build does, `exe_dir`
