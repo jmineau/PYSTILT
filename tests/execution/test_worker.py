@@ -853,6 +853,81 @@ def test_run_receptors_pool_keyboard_interrupt_terminates(
     assert [c["receptor"] for c in calls] == [ids[0]]
 
 
+#: A transport model in its own package, which pool workers import by path.
+_TOY_PACKAGE = """
+import pandas as pd
+from pydantic import BaseModel
+from stilt.transport import ModelRun, TransportConfig
+
+class ToyConfig(TransportConfig):
+    pass
+
+class ToyMet(BaseModel):
+    weather: str
+
+    def settings(self):
+        return {"weather": self.weather}
+
+class ToyModel:
+    name = "toy"
+    config_class = ToyConfig
+    met_config_class = ToyMet
+
+    def version(self, config):
+        return "1.0"
+
+    def data_files(self, config):
+        return None
+
+    def run(self, receptor, config, met, window, workdir=None, timeout=None):
+        particles = pd.DataFrame({
+            "particle": [1, 2, 1, 2],
+            "time": [0, 0, -60, -60],
+            "lon": receptor.longitude,
+            "lat": receptor.latitude,
+            "zagl": receptor.altitude,
+            "foot": [0.0, 0.0, 0.01, 0.01],
+        })
+        return ModelRun(particles=particles)
+"""
+
+
+def test_a_run_on_two_cpus_writes_to_the_output_it_was_given(tmp_path):
+    """Pool workers open the project again; they must write where the parent looks (#188)."""
+    import os
+    import subprocess
+    import sys
+
+    (tmp_path / "toypool").mkdir()
+    (tmp_path / "toypool" / "__init__.py").write_text(_TOY_PACKAGE)
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "config.yaml").write_text(
+        "model: toypool.ToyModel\n"
+        "n_hours: -1\n"
+        "hnf_plume: false\n"
+        "mets:\n  toy:\n    weather: hrrr\n"
+        "variants:\n  toy: {}\n"
+    )
+    (project / "receptors.csv").write_text(
+        "time,longitude,latitude,altitude\n"
+        + "".join(f"2023-01-01 {h:02d}:00:00,-111.85,40.77,5.0\n" for h in range(4))
+    )
+    override = tmp_path / "elsewhere"
+
+    done = subprocess.run(
+        [sys.executable, "-m", "stilt", "run", str(project), "--cpus", "2"]
+        + ["--output", str(override), "--compute-root", str(tmp_path / "work")],
+        capture_output=True,
+        text=True,
+        env={**os.environ, "PYTHONPATH": str(tmp_path)},
+    )
+
+    assert done.returncode == 0, done.stdout + done.stderr
+    assert len(list(override.glob("particles/*/date=*/*.parquet"))) == 4
+    assert not (project / "output").exists()
+
+
 # ---------------------------------------------------------------------------
 # A batched transport model
 # ---------------------------------------------------------------------------

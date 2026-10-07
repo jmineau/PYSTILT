@@ -540,14 +540,18 @@ _POOL_SKIP: bool = True
 
 
 def _init_pool_worker(
-    project: str, compute_root: str, execution: ExecutionConfig, skip_existing: bool
+    project: str,
+    output: str,
+    compute_root: str,
+    execution: ExecutionConfig,
+    skip_existing: bool,
 ) -> None:
-    """Open the worker process's Project and make SIGTERM raise KeyboardInterrupt."""
+    """Open the worker process's Project, on the parent's output, and make SIGTERM raise KeyboardInterrupt."""
     from stilt.project import Project
 
     global _POOL_PROJECT, _POOL_COMPUTE_ROOT, _POOL_EXECUTION, _POOL_SKIP
     signal.signal(signal.SIGTERM, _raise_interrupt)
-    _POOL_PROJECT = Project(project)
+    _POOL_PROJECT = Project(project, output=output)
     _POOL_COMPUTE_ROOT = Path(compute_root)
     _POOL_EXECUTION = execution
     _POOL_SKIP = skip_existing
@@ -585,7 +589,7 @@ def run_receptors(
     The variants of a batched transport model run first, one model call
     for all the receptors that need their particles. Then each receptor
     runs its other variants. Pool workers open the project again from its
-    directory. A SIGTERM, such as Slurm preemption or the end of the job's
+    directory, with the same output directory. A SIGTERM, such as Slurm preemption or the end of the job's
     time limit, stops the batch. What finished is in the output directory, with a failure record
     for each simulation that failed.
 
@@ -645,7 +649,13 @@ def run_receptors(
     pool = multiprocessing.Pool(
         execution.cpus,
         initializer=_init_pool_worker,
-        initargs=(str(project.directory), str(compute_root), execution, skip_existing),
+        initargs=(
+            str(project.directory),
+            str(project.output.directory),
+            str(compute_root),
+            execution,
+            skip_existing,
+        ),
     )
     done = 0
     with _sigterm_as_interrupt():
