@@ -2,7 +2,7 @@
 Small objects many tests need, built in one place.
 
 A test that needs a met config, a project config, a resolved variant, or a
-receptor calls these, so a change to :class:`stilt.meteorology.MetConfig`,
+receptor calls these, so a change to :class:`stilt.transport.hysplit.MetConfig`,
 :class:`stilt.config.Variant`, or the receptor types is one edit here, not
 one in every test module.
 """
@@ -15,10 +15,67 @@ from typing import Any
 
 from stilt.config import ProjectConfig, Variant
 from stilt.footprint.config import FootprintConfig
-from stilt.meteorology import MetConfig
 from stilt.receptors import PointReceptor
 from stilt.transport import ModelInfo, TransportConfig
-from stilt.transport.hysplit import HysplitConfig
+from stilt.transport.hysplit import HysplitConfig, MetConfig
+
+#: The source id the ARL files these factories write carry.
+SOURCE = "HRRR"
+
+_ARL_BYTES: dict[str, bytes] = {}
+
+
+def write_arl_file(path: Path, source: str = SOURCE) -> Path:
+    """
+    Write a small ARL file whose header names *source*, and return its path.
+
+    One time step on a 20 x 20 grid: enough for a met's source to be read
+    from it (:meth:`stilt.transport.hysplit.MetConfig.source`), not for
+    HYSPLIT to run on it.
+    """
+    if source not in _ARL_BYTES:
+        import tempfile
+
+        import numpy as np
+        import pandas as pd
+        from arlmet import File
+        from arlmet.grid import Grid, Projection
+        from arlmet.vertical import PressureAxis
+
+        grid = Grid(
+            projection=Projection(
+                pole_lat=90.0,
+                pole_lon=0.0,
+                tangent_lat=1.0,
+                tangent_lon=1.0,
+                grid_size=0.0,
+                orientation=0.0,
+                cone_angle=0.0,
+                sync_x=1.0,
+                sync_y=1.0,
+                sync_lat=-10.0,
+                sync_lon=20.0,
+            ),
+            nx=20,
+            ny=20,
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            arl = Path(tmp) / "arl"
+            with File(
+                arl,
+                mode="w",
+                source=source,
+                grid=grid,
+                vertical_axis=PressureAxis(levels=[0.0]),
+            ) as f:
+                rs = f.create_recordset(pd.Timestamp("2000-01-01"))
+                rs.create_datarecord(
+                    "PRSS", level=0, forecast=0, data=np.ones((20, 20), np.float32)
+                )
+            _ARL_BYTES[source] = arl.read_bytes()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(_ARL_BYTES[source])
+    return path
 
 
 def make_met_config(
@@ -28,7 +85,16 @@ def make_met_config(
     file_tres: str = "1h",
     **fields: Any,
 ) -> MetConfig:
-    """Return a met config of files named by hour (``%Y%m%d_%H``) under *directory*."""
+    """
+    Return a met config of files named by hour (``%Y%m%d_%H``) under *directory*.
+
+    When *directory* holds no files yet, an ARL file, ``header.arl``, is
+    written there, so the met's source can be read as a project reads it;
+    its name matches no hour. A directory of real met files is left alone.
+    """
+    directory = Path(directory)
+    if not (directory.is_dir() and any(directory.iterdir())):
+        write_arl_file(directory / "header.arl")
     return MetConfig(
         directory=directory, file_format=file_format, file_tres=file_tres, **fields
     )
@@ -36,11 +102,12 @@ def make_met_config(
 
 def make_met_files(directory: Path, time: Any, n_hours: int) -> list[Path]:
     """
-    Write empty hourly met files that cover a run of *n_hours* from *time*, and return them.
+    Write hourly met files that cover a run of *n_hours* from *time*, and return them.
 
     They are named as :func:`make_met_config` expects, one hour beyond the
-    run on each side, so :class:`stilt.meteorology.Met` finds them. Nothing
-    can read them: use them where the transport model does not run.
+    run on each side, so :class:`stilt.transport.hysplit.Met` finds them.
+    Each is :func:`write_arl_file`'s one step: the transport model cannot
+    run on them.
     """
     import pandas as pd
 
@@ -55,9 +122,7 @@ def make_met_files(directory: Path, time: Any, n_hours: int) -> list[Path]:
     directory.mkdir(parents=True, exist_ok=True)
     files = []
     for hour in hours:
-        path = directory / f"{hour:%Y%m%d_%H}"
-        path.touch()
-        files.append(path)
+        files.append(write_arl_file(directory / f"{hour:%Y%m%d_%H}"))
     return files
 
 
@@ -74,8 +139,8 @@ def make_project_config(tmp_path: Path, **settings: Any) -> ProjectConfig:
     return ProjectConfig(**settings)
 
 
-#: A met that names files nobody reads: enough for a variant's settings.
-MET = make_met_config("/data/hrrr", file_tres="6h")
+#: A met that reads no file: an archive's, enough for a variant's settings.
+MET = MetConfig(directory="/data/hrrr", download="hrrr")
 
 
 def make_variant(

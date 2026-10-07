@@ -12,14 +12,13 @@ from stilt.execution import worker
 from stilt.execution.config import ExecutionConfig
 from stilt.execution.worker import make_footprint, run_receptor, run_receptors
 from stilt.footprint.config import FootprintConfig
-from stilt.meteorology import Met, MetConfig
 from stilt.output import Output
 from stilt.project import Project
 from stilt.receptors import PointReceptor, Receptor
 from stilt.simulation import Simulation
 from stilt.spatial import Grid
 from stilt.transport import ModelRun, TransportConfig
-from stilt.transport.hysplit import FailureReason, HysplitConfig
+from stilt.transport.hysplit import FailureReason, HysplitConfig, Met, MetConfig
 
 from ..fixtures.factories import make_met_config, make_project_config, make_variant
 
@@ -171,7 +170,7 @@ def test_run_particles_starts_in_an_empty_directory(
 
     monkeypatch.setattr("stilt.transport.get_model", lambda name: _Model())
     with pytest.raises(RuntimeError):
-        worker.run_particles(sim, met=met, workdir=workdir)
+        worker.run_particles(sim, workdir=workdir)
     assert seen == [[]]
 
 
@@ -188,7 +187,7 @@ def test_a_run_stopped_partway_leaves_its_start_in_the_log(
 
     monkeypatch.setattr("stilt.transport.get_model", lambda name: _Model())
     with pytest.raises(KeyboardInterrupt):
-        worker.run_particles(sim, met=met, workdir=compute_root / "w")
+        worker.run_particles(sim, workdir=compute_root / "w")
 
     assert "PYSTILT started this run" in sim.log
     assert not sim.has_particles and sim.failure is None
@@ -209,7 +208,7 @@ def test_a_model_that_needs_no_workdir_gets_none(sim, met, compute_root, monkeyp
     monkeypatch.setattr(worker, "get_model", lambda name: _Model())
     workdir = compute_root / sim.receptor.id / sim.variant.name
     with pytest.raises(SimulationError):
-        worker.run_particles(sim, met=met, workdir=workdir)
+        worker.run_particles(sim, workdir=workdir)
 
     assert seen == [None]
     assert not workdir.exists()
@@ -229,7 +228,7 @@ def test_run_particles_keeps_no_empty_scratch_copy(sim, met, compute_root, monke
     monkeypatch.setattr("stilt.transport.get_model", lambda name: _Model())
     with pytest.raises(MeteorologyError):
         worker.run_particles(
-            sim, met=met, workdir=compute_root / sim.receptor.id / sim.variant.name
+            sim, workdir=compute_root / sim.receptor.id / sim.variant.name
         )
 
     kept = sim.output.kept_workdir(sim.variant, sim.receptor.id)
@@ -249,7 +248,7 @@ def test_run_particles_without_particles_is_a_simulation_error(
     monkeypatch.setattr("stilt.transport.get_model", lambda name: _Model())
     with pytest.raises(SimulationError) as caught:
         worker.run_particles(
-            sim, met=met, workdir=compute_root / sim.receptor.id / sim.variant.name
+            sim, workdir=compute_root / sim.receptor.id / sim.variant.name
         )
     assert caught.value.reason == "NO_PARTICLE_DATA"
 
@@ -262,7 +261,7 @@ def test_run_particles_without_particles_is_a_simulation_error(
 def _fake_run_particles(monkeypatch, calls: list[str]):
     """Replace run_particles with one that writes particles and records the variant it ran for."""
 
-    def fake(sim, *, met, workdir, keep_scratch=False, timeout=None):
+    def fake(sim, *, workdir, keep_scratch=False, timeout=None):
         calls.append(sim.variant.name)
         return _write_particles(sim)
 
@@ -868,6 +867,7 @@ class BatchedToy:
 
     name = "toy"
     config_class = BatchConfig
+    met_config_class = MetConfig
     batched = True
     needs_workdir = False
     calls: ClassVar[list[list[str]]] = []

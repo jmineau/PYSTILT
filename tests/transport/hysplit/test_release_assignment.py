@@ -7,10 +7,11 @@ from pathlib import Path
 
 import numpy as np
 
-from stilt.meteorology import Met, run_window
+from stilt.meteorology import run_window
 from stilt.receptors import ColumnReceptor, MultiPointReceptor
 from stilt.transport.hysplit import (
     HysplitConfig,
+    Met,
     read_particle_dat,
     run_hycs_std,
     write_inputs,

@@ -467,9 +467,11 @@ check:
 
 .. code-block:: python
 
+   from stilt.transport.hysplit import MetConfig
+
    config = stilt.ProjectConfig(
        mets={
-           "hrrr": stilt.MetConfig(
+           "hrrr": MetConfig(
                directory="/data/arl/hrrr",
                file_format="%Y%m%d_%H",
                file_tres="6h",

@@ -8,13 +8,12 @@ import yaml
 
 from stilt.config import ProjectConfig, Variant
 from stilt.identity import read_run_settings, run_settings, settings_hash
-from stilt.meteorology import MetConfig
 from stilt.output import Output
 from stilt.transport import ModelInfo
-from stilt.transport.hysplit import HysplitConfig
+from stilt.transport.hysplit import HysplitConfig, MetConfig
 from stilt.transport.hysplit.model import hysplit_version
 
-from .fixtures.factories import make_met_config
+from .fixtures.factories import make_met_config, write_arl_file
 
 GRID = {"xmin": -112, "xmax": -111, "ymin": 40, "ymax": 41, "xres": 0.1, "yres": 0.1}
 
@@ -64,25 +63,50 @@ def test_custom_build_needs_a_version_file(tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_a_runs_met_is_recorded_without_its_directories(tmp_path):
+def test_a_runs_met_is_its_product_and_crop(tmp_path):
     met = _met(tmp_path, subgrid_dir=tmp_path / "sub", n_min=2)
     recorded = run_settings(
-        HysplitConfig(), met, ModelInfo(name="hysplit", version="v5.1.0"), None
+        HysplitConfig(), met.settings(), ModelInfo(name="hysplit", version="v5.1.0")
     )
-    assert not {"directory", "subgrid_dir", "n_min", "download_from"} & set(
-        recorded["met"]
+    assert recorded["met"] == {"source": "HRRR", "crop": None}
+
+
+def test_moving_or_renaming_the_met_files_keeps_the_hash(tmp_path):
+    base = _variant(tmp_path, numpar=100)
+    write_arl_file(tmp_path / "moved" / "hrrr.20240718.t00z")
+    moved = _met(tmp_path).model_copy(
+        update={"directory": tmp_path / "moved", "file_format": "hrrr.%Y%m%d.t%Hz"}
     )
-    moved = met.model_copy(update={"directory": tmp_path / "elsewhere"})
-    assert run_settings(
-        HysplitConfig(), moved, ModelInfo(name="hysplit", version="v5.1.0"), None
-    ) == (recorded)
+    assert _variant(tmp_path, met=moved, numpar=100).particles_hash == (
+        base.particles_hash
+    )
+
+
+def test_two_products_named_alike_are_two_runs(tmp_path):
+    """An HRRR and a NAM archive with the same file names hash apart (R2-24)."""
+    hrrr = _variant(tmp_path, numpar=100)
+    write_arl_file(tmp_path / "nam" / "20240718_00", source="NAM")
+    nam = _met(tmp_path).model_copy(update={"directory": tmp_path / "nam"})
+    assert _variant(tmp_path, met=nam, numpar=100).particles_hash != (
+        hrrr.particles_hash
+    )
+
+
+def test_a_single_run_records_no_realization(tmp_path):
+    recorded = _variant(tmp_path).run_settings
+    assert "realization" not in recorded
+    assert "ensemble" not in recorded
 
 
 def test_run_settings_leave_out_what_changes_no_particle(tmp_path):
     base = _variant(tmp_path, numpar=100)
     recorded = base.run_settings
     assert "exe_dir" not in recorded
-    assert recorded["model"] == {"name": "hysplit", "version": "v5.1.0"}
+    assert recorded["model"] == {
+        "name": "hysplit",
+        "version": "v5.1.0",
+        "data_files": None,
+    }
     assert recorded["maxpar"] == 100  # unset maxpar is numpar, as HYSPLIT receives it
 
     assert (
@@ -168,15 +192,6 @@ def _rewrite_record(folder, change) -> None:
     record = yaml.safe_load(path.read_text())
     change(record["settings"])
     path.write_text(yaml.safe_dump(record))
-
-
-def test_a_folder_stored_with_download_settings_is_still_found(tmp_path):
-    """Folders written while download_from and n_min were hashed are found by re-hashing."""
-    variant = _variant(tmp_path, numpar=100)
-    folder = _make_folder(tmp_path / "out", variant)
-    _rewrite_record(folder, lambda s: s["met"].update(download_from="ftp", n_min=3))
-
-    assert Output(tmp_path / "out").folder("particles", variant) == folder
 
 
 def test_a_folder_with_a_setting_this_version_lacks_still_loads(tmp_path):

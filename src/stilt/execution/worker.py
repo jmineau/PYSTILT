@@ -33,7 +33,6 @@ import xarray as xr
 from stilt.exceptions import EmptyFootprint, SimulationError
 from stilt.execution.config import ExecutionConfig
 from stilt.footprint import calc_footprint
-from stilt.meteorology import MetConfig
 from stilt.output import Kind
 from stilt.simulation import Simulation
 from stilt.transport import get_model, run_model, run_model_many
@@ -133,7 +132,6 @@ def _succeeded(sim: Simulation, step: Step) -> None:
 def run_particles(
     sim: Simulation,
     *,
-    met: MetConfig,
     workdir: Path,
     keep_scratch: bool = False,
     timeout: int | None = None,
@@ -142,7 +140,7 @@ def run_particles(
     Run the transport model for a simulation and write its particles to the output directory.
 
     The transport model the variant names runs in *workdir*
-    (:func:`stilt.transport.run_model`). Its log is written to the output
+    (:func:`stilt.transport.run_model`), with the variant's met. Its log is written to the output
     directory whether the run succeeds or fails. The working directory is
     then removed, unless the run failed or *keep_scratch* is set, in which
     case it is copied under the output directory's ``scratch/`` first.
@@ -151,8 +149,6 @@ def run_particles(
     ----------
     sim : Simulation
         What to run.
-    met : MetConfig
-        Meteorology for the run, with absolute directories.
     workdir : Path
         Directory to run in. Created here.
     keep_scratch : bool, default False
@@ -189,7 +185,7 @@ def run_particles(
             sim.variant.model.name,
             sim.receptor,
             sim.transport,
-            met,
+            sim.variant.met_config,
             workdir if needs_workdir else None,
             timeout=timeout,
         )
@@ -236,7 +232,7 @@ def _log_start(sim: Simulation) -> None:
 
 
 def run_particles_batch(
-    sims: list[Simulation], *, met: MetConfig, timeout: int | None = None
+    sims: list[Simulation], *, timeout: int | None = None
 ) -> tuple[dict[str, pd.DataFrame], dict[str, str]]:
     """
     Run a batched transport model once for many receptors, and write each one's particles.
@@ -261,7 +257,7 @@ def run_particles_batch(
             first.variant.model.name,
             [sim.receptor for sim in sims],
             first.transport,
-            met,
+            first.variant.met_config,
             timeout=timeout,
         )
     except Exception as error:
@@ -447,10 +443,7 @@ def _run_batched(
         todo = [s for s in firsts if not (skip_existing and s.has_particles)]
         written: dict[str, pd.DataFrame] = {}
         if todo:
-            met = project.mets[todo[0].variant.met]
-            written, failed = run_particles_batch(
-                todo, met=met, timeout=execution.timeout
-            )
+            written, failed = run_particles_batch(todo, timeout=execution.timeout)
             for rid, line in failed.items():
                 problems[rid].append(line)
         ran = {s.receptor.id for s in todo}
@@ -489,7 +482,6 @@ def _run_group(
         try:
             particles = run_particles(
                 first,
-                met=project.mets[first.variant.met],
                 workdir=compute_root / str(first),
                 keep_scratch=execution.keep_scratch,
                 timeout=execution.timeout,

@@ -34,7 +34,6 @@ from stilt.execution.config import ExecutionConfig
 from stilt.footprint import Geometry, Jacobian
 from stilt.footprint.aggregation import _jacobian
 from stilt.footprint.io import open_footprints
-from stilt.meteorology import MetConfig
 from stilt.output import Kind, Output, completed
 from stilt.particles import particles_from_table
 from stilt.receptors import Receptor, read_receptors
@@ -339,25 +338,6 @@ class Project:
         and a relative geometry file starts from the project directory.
         """
         return self.config.resolve(self.directory)
-
-    @cached_property
-    def mets(self) -> dict[str, MetConfig]:
-        """
-        The mets declared in the config, by name, with absolute directories.
-
-        A relative ``directory`` or ``subgrid_dir`` starts from the project
-        directory, whatever the working directory, and ``~`` and
-        ``$VARIABLES`` are expanded.
-        """
-        mets = {}
-        for name, cfg in self.config.mets.items():
-            paths = {
-                field: absolute(value, self.directory)
-                for field in ("directory", "subgrid_dir")
-                if (value := getattr(cfg, field)) is not None
-            }
-            mets[name] = cfg.model_copy(update=paths)
-        return mets
 
     @cached_property
     def _rows(self) -> pd.DataFrame:

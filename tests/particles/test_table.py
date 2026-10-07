@@ -9,7 +9,6 @@ import pyarrow.parquet as pq
 import pytest
 
 from stilt.identity import run_settings, transport_from_settings
-from stilt.meteorology import MetConfig
 from stilt.particles import (
     correct_near_field,
     particles_metadata,
@@ -80,7 +79,7 @@ def _params(tmp_path, hnf_plume=False) -> HysplitConfig:
 
 def _settings(params: HysplitConfig) -> dict:
     """The run settings a particle file records, for *params* and a test met."""
-    met = MetConfig(file_format="%Y%m%d_%H", file_tres="1h")
+    met = {"source": "HRRR", "crop": None}
     return run_settings(params, met, ModelInfo(name="hysplit", version="v5.1.0"), None)
 
 

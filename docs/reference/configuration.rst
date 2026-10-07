@@ -4,12 +4,13 @@ Configuration
 .. currentmodule:: stilt
 
 Everything you can write in ``config.yaml`` is a field of
-:class:`ProjectConfig`. That covers the mets
-(:class:`MetConfig`), the footprint settings (:class:`FootprintConfig`),
-the ``variants``, the ``execution`` section (:class:`ExecutionConfig`), and
-the STILT and HYSPLIT settings. Each class lives next to the code that uses
-it (``stilt.footprint.config``, ``stilt.meteorology``,
-``stilt.execution.config``), and all of them are importable from ``stilt``.
+:class:`ProjectConfig`. That covers the mets (for HYSPLIT,
+:class:`~stilt.transport.hysplit.MetConfig`), the footprint settings
+(:class:`FootprintConfig`), the ``variants``, the ``execution`` section
+(:class:`ExecutionConfig`), and the STILT and HYSPLIT settings. Each class
+lives next to the code that uses it (``stilt.footprint.config``,
+``stilt.execution.config``, ``stilt.transport.hysplit``), and all but the
+transport model's are importable from ``stilt``.
 Each page below lists its fields with their defaults and is generated from
 the code.
 
@@ -33,7 +34,6 @@ directory HYSPLIT runs in. It never changes a result.
    :nosignatures:
 
    ProjectConfig
-   MetConfig
    FootprintConfig
    ExecutionConfig
    Bounds

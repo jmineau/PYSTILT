@@ -57,11 +57,14 @@ has. Raise ``n_min`` to turn gaps into errors. A 24-hour backward run with
 6-hour HRRR files needs 5 or 6 files, depending on the receptor hour, so
 ``n_min: 5`` is a good choice there.
 
-In Python, the same settings are a dictionary or a :class:`~stilt.MetConfig`:
+In Python, the same settings are a dictionary or a
+:class:`~stilt.transport.hysplit.MetConfig`, HYSPLIT's met config:
 
 .. code-block:: python
 
-   hrrr = stilt.MetConfig(
+   from stilt.transport.hysplit import MetConfig
+
+   hrrr = MetConfig(
        directory="/data/met/hrrr",
        file_format="%Y%m%d_%H",
        file_tres="6h",
@@ -160,7 +163,7 @@ For example, ``nams`` takes a ``domain``:
 
 .. code-block:: python
 
-   nams_ak = stilt.MetConfig(
+   nams_ak = MetConfig(
        download="nams",
        domain="ak",            # "conus" (default), "ak", or "hi"
        directory="/data/met/nams_ak",
@@ -171,7 +174,7 @@ archive on AWS. The others are ``"ftp"`` and ``"http"``.
 
 .. code-block:: python
 
-   stilt.MetConfig(download="gdas1", directory="/data/met/gdas1", download_from="ftp")
+   MetConfig(download="gdas1", directory="/data/met/gdas1", download_from="ftp")
 
 Files already in ``directory`` are not downloaded again.
 
@@ -186,7 +189,8 @@ faster and use less memory. Cropping matters most for global products
 
 .. code-block:: python
 
-   from stilt import Bounds, MetConfig
+   from stilt import Bounds
+   from stilt.transport.hysplit import MetConfig
 
    hrrr = MetConfig(
        download="hrrr",
@@ -232,6 +236,24 @@ files and your own.
        subgrid_levels=20,   # keep the lowest 20 levels
    )
 
+
+Which weather a run records
+---------------------------
+
+Each ARL file names the weather model it comes from in its header, such
+as ``HRRR``, ``NAM``, or ``GDAS``. A run's settings folder records that
+name, read from the header of the first file in ``directory``, and the
+crop. A downloaded met's name comes from its archive, so no file is read.
+
+Where the files are kept and how they are named are not recorded. Moving
+the met files, or switching to a copy named differently, keeps every run
+already made. Two mets whose files are named alike but come from
+different weather models, such as an HRRR and a NAM archive, give
+different settings folders.
+
+The header is read when a project's settings folders are first needed,
+to run it or to read its results. A met's ``directory`` must hold its
+files on the machine that opens the project.
 
 Where HYSPLIT reads the files
 -----------------------------
