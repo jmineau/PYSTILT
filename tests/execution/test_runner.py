@@ -429,8 +429,10 @@ def test_tasks_split_the_receptors_the_same_way_whenever_each_starts(
     tmp_path, monkeypatch
 ):
     """
-    A share is taken before the complete receptors are dropped. Taken after,
-    a task that starts late would shift onto another task's receptors.
+    A share is taken before the complete receptors are dropped.
+
+    Taken after, a task that starts late would shift onto another task's
+    receptors.
     """
     project = _hourly_project(tmp_path, 7)
     every = list(dict.fromkeys(project.simulations["receptor"]))

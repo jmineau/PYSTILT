@@ -175,6 +175,7 @@ class ConfigModelDirective(SphinxDirective):
     }
 
     def run(self) -> list[nodes.Node]:
+        """Return the list-table of the model's fields."""
         model = _resolve_model(self.arguments[0])
         rows = _iter_fields(
             model,
@@ -214,6 +215,7 @@ class ClassSignatureDirective(SphinxDirective):
     has_content = False
 
     def run(self) -> list[nodes.Node]:
+        """Return the class signature and its summary."""
         obj = _resolve_object(self.arguments[0])
         module_name, _, attr = self.arguments[0].rpartition(".")
         try:
@@ -242,6 +244,7 @@ class ClassParametersDirective(SphinxDirective):
     has_content = False
 
     def run(self) -> list[nodes.Node]:
+        """Return the class's Parameters section, parsed as reST."""
         section = _docstring_section(_resolve_object(self.arguments[0]), "Parameters")
         if not section:
             return []

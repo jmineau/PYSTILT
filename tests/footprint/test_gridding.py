@@ -193,8 +193,9 @@ def test_make_gauss_kernel_odd_shape():
 
 def test_make_gauss_kernel_symmetric():
     """
-    For equal x/y resolution, the kernel is symmetric under both axis flips and
-    transposition.  An asymmetric kernel would create directional bias — footprints
+    For equal x/y resolution, the kernel is symmetric under flips and transposition.
+
+    An asymmetric kernel would create directional bias — footprints
     would incorrectly favour one compass direction over another.
     """
     k = _make_gauss_kernel((0.01, 0.01), sigma=0.3)
@@ -287,8 +288,7 @@ def test_interpolate_early_timesteps_matches_r_na_omit_with_extra_columns():
 
 def test_calc_footprint_linearity_in_foot_values(point_receptor):
     """
-    Scaling all particle foot values by a constant scales the output by the same
-    factor.
+    Scaling all particle foot values by a constant scales the output by as much.
 
     This is the foundational property of Bayesian inversion: concentration =
     integral(footprint * flux). If the footprint is not linear in the particle
@@ -394,10 +394,9 @@ def test_calc_footprint_time_integrate_equals_sum_of_time_slices(point_receptor)
 
 def test_calc_footprint_smooth_zero_assigns_exact_cells(point_receptor):
     """
-    With smooth_factor=0, each particle's foot goes entirely into the one cell it
-    falls in — no neighbouring cells receive any spillover.
+    With smooth_factor=0, each particle's foot goes entirely into its own cell.
 
-    This tests the 1×1 identity kernel path (sigma=0 → _make_gauss_kernel returns
+    No neighbouring cells receive any spillover. This tests the 1×1 identity kernel path (sigma=0 → _make_gauss_kernel returns
     [[1.0]]).  A bug here would mean that the ``permute.f90``-equivalent scatter
     operation distributes sensitivity to wrong cells, corrupting the spatial pattern
     of all no-smooth footprints.
@@ -432,7 +431,7 @@ def test_calc_footprint_smooth_zero_assigns_exact_cells(point_receptor):
 
 def test_concentration_reconstruction_from_known_footprint(point_receptor):
     """
-    c = Σ foot[i,j] * q[i,j] recovers the analytically expected concentration.
+    ``c = Σ foot[i,j] * q[i,j]`` recovers the analytically expected concentration.
 
     This is the fundamental identity that Bayesian flux inversion relies on:
     a receptor concentration enhancement equals the dot product of the footprint
@@ -522,7 +521,7 @@ def test_concentration_reconstruction_from_known_footprint(point_receptor):
 
 
 def test_wrap_antimeridian_longitudes_global_branch():
-    """xdist == 0 (global 360° grid) anchors to [-180, 180] without wrapping."""
+    """``xdist == 0`` (global 360° grid) anchors to [-180, 180] without wrapping."""
     p = pd.DataFrame({"lon": [-179.0, 0.0, 179.0]})
     out, xmin, xmax, wrapped = _wrap_antimeridian_longitudes(p, xmin=-180.0, xmax=180.0)
     assert xmin == -180.0
@@ -533,7 +532,7 @@ def test_wrap_antimeridian_longitudes_global_branch():
 
 
 def test_wrap_antimeridian_longitudes_crossing_branch():
-    """xmax < xmin (dateline crossing) rotates longitudes into [0, 360)."""
+    """``xmax < xmin`` (dateline crossing) rotates longitudes into [0, 360)."""
     p = pd.DataFrame({"lon": [179.0, -179.0, 170.0, -170.0]})
     out, xmin, xmax, wrapped = _wrap_antimeridian_longitudes(p, xmin=170.0, xmax=-170.0)
     assert wrapped is True
@@ -545,7 +544,7 @@ def test_wrap_antimeridian_longitudes_crossing_branch():
 
 
 def test_wrap_antimeridian_longitudes_partial_wrap_branch():
-    """xmax > 180 (partial wrap, e.g. xmin=170, xmax=200) also rotates."""
+    """``xmax > 180`` (partial wrap, e.g. xmin=170, xmax=200) also rotates."""
     p = pd.DataFrame({"lon": [175.0, -175.0]})
     out, xmin, xmax, wrapped = _wrap_antimeridian_longitudes(p, xmin=170.0, xmax=200.0)
     assert wrapped is True
@@ -606,10 +605,10 @@ def test_project_particles_to_crs_rejects_invalid_proj_string():
 
 def test_compute_kernel_bandwidths_single_particle_returns_zero_sigma():
     """
-    Zero-variance edge case: a single particle has var(long)=var(lati)=NaN,
-    which R's na.omit() drops. PYSTILT's helper returns w=0 (identity kernel)
-    instead, so a one-particle trajectory still produces a valid (degenerate)
-    footprint rather than crashing.
+    A one-particle trajectory produces a valid (degenerate) footprint.
+
+    A single particle has var(long)=var(lati)=NaN, which R's na.omit() drops.
+    PYSTILT's helper returns w=0 (identity kernel) instead of crashing.
     """
     p = pd.DataFrame(
         {

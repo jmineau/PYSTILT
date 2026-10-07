@@ -58,8 +58,9 @@ def _column_trajectory(
 @integration
 def test_hypsometric_fit_holds_on_a_real_winter_profile(met_dir, tmp_path):
     """
-    A Salt Lake winter inversion is the least isothermal case available, and
-    the log-linear pressure fit still explains essentially all the variance.
+    The log-linear pressure fit explains nearly all the variance in winter.
+
+    A Salt Lake winter inversion is the least isothermal case available.
     """
     _, particles = _column_trajectory(met_dir, tmp_path, "pwf_fit_winter")
 
@@ -96,9 +97,11 @@ def test_pwf_weights_are_physical_on_real_trajectories(met_dir, tmp_path):
 @integration
 def test_pwf_fit_absorbs_first_step_particle_scatter(met_dir, tmp_path):
     """
-    HYSPLIT's first output step is not the release state: turbulence has
-    already scattered particles several slab widths, leaving raw pressures
-    non-monotone in release height.  Weighting on those raw pressures directly
+    The pressure fit absorbs the scatter of HYSPLIT's first output step.
+
+    That step is not the release state: turbulence has already scattered
+    particles several slab widths, leaving raw pressures non-monotone in
+    release height.  Weighting on those raw pressures directly
     would hand neighbouring particles wildly different weights; the fit is
     what keeps the profile physical.
     """

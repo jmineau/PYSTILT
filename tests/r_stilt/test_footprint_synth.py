@@ -1,8 +1,8 @@
 """
-Synthetic footprint comparison tests: PYSTILT vs STILT-R on hand-crafted
-particle DataFrames, bypassing HYSPLIT entirely.
+Synthetic footprint tests: PYSTILT vs STILT-R on hand-crafted particle tables.
 
-Exercises code paths the seeded end-to-end tests cannot reliably target:
+They bypass HYSPLIT entirely, and exercise code paths the seeded end-to-end
+tests cannot reliably target:
 
   test_single_particle_gaussian     One particle; verify Gaussian rasterization.
   test_all_outside_domain           All particles off-grid → zero footprint.

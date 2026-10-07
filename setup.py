@@ -33,6 +33,7 @@ class PlatformDistribution(Distribution):
     """A distribution with platform-specific files, installed to platlib."""
 
     def has_ext_modules(self):
+        """Return True, so the wheel installs to platlib."""
         return True
 
 
@@ -40,6 +41,7 @@ class PlatformWheel(bdist_wheel):
     """A ``py3-none-<platform>`` wheel: any Python 3, one platform."""
 
     def get_tag(self):
+        """Return the wheel's tag, ``py3-none-<platform>``."""
         _, _, plat_name = super().get_tag()
         return "py3", "none", plat_name
 
@@ -48,6 +50,7 @@ class BuildPyOneBinary(build_py):
     """Copy the package, then drop every HYSPLIT build but the wheel's own."""
 
     def run(self):
+        """Copy the package, then remove the other platforms' HYSPLIT builds."""
         super().run()
         wheel = self.distribution.command_obj.get("bdist_wheel")
         if wheel is None or self.editable_mode:
