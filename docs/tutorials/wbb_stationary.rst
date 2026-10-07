@@ -130,4 +130,4 @@ Next
 - Turn these footprints into modeled concentrations in
   :doc:`flux_inversion`.
 - See :doc:`../guides/outputs` for more ways to load and plot results.
-- Run a whole year on a cluster with :doc:`hpc_slurm`.
+- Run a whole year on a cluster: :doc:`../guides/slurm`.

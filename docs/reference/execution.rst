@@ -2,7 +2,7 @@ Execution
 =========
 
 Most users only need ``project.run()``, ``project.submit()``, or
-``stilt run`` (:doc:`../guides/execution/index`). The functions below do the
+``stilt run`` (:doc:`../guides/running`). The functions below do the
 work underneath.
 
 - :func:`~stilt.execution.run` is what ``project.run()`` calls. It finds the

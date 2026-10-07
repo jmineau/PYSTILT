@@ -143,7 +143,7 @@ Glossary
       A step that changes how much each particle counts before the footprint
       is calculated. Used for column measurements (:term:`averaging kernel`
       and :term:`pressure weighting`) and for gases that decay in the
-      atmosphere. See :doc:`../advanced/transforms`.
+      atmosphere. See :doc:`../guides/transforms`.
 
    averaging kernel
       How sensitive a column retrieval is to each height in the atmosphere.
@@ -158,7 +158,7 @@ Glossary
       Where the simulations run. The choices are ``local`` (your computer)
       and ``slurm`` (an HPC cluster).
       Set it in the ``execution`` section of ``config.yaml``. See
-      :doc:`../guides/execution/index`.
+      :doc:`../guides/running`.
 
    empty footprint
       A simulation that ran fine but whose particles never touched the
