@@ -226,3 +226,36 @@ def test_netcdf_roundtrip_keeps_geometry_and_hash(tmp_path):
         settings = json.loads(ds["foot"].attrs["stilt_footprint"])
     assert settings["geometry"] is None and settings["geometry_hash"] is None
     assert read_footprint(plain).stilt.geometry_hash is None
+
+
+# ---------------------------------------------------------------------------
+# Threads
+# ---------------------------------------------------------------------------
+
+
+def test_threads_default_to_the_cpus_this_process_may_use_at_most_eight(monkeypatch):
+    """In a Slurm job the process may use fewer CPUs than the node has (#190)."""
+    import os
+
+    from stilt.footprint import io
+
+    monkeypatch.setattr(os, "cpu_count", lambda: 112)
+    monkeypatch.setattr(
+        os, "sched_getaffinity", lambda pid: set(range(4)), raising=False
+    )
+    assert io._threads(None) == 4
+    monkeypatch.setattr(
+        os, "sched_getaffinity", lambda pid: set(range(16)), raising=False
+    )
+    assert io._threads(None) == io.MAX_THREADS == 8
+    assert io._threads(32) == 32  # an explicit count is kept
+
+
+def test_threads_count_the_machine_where_affinity_is_unknown(monkeypatch):
+    import os
+
+    from stilt.footprint import io
+
+    monkeypatch.delattr(os, "sched_getaffinity", raising=False)
+    monkeypatch.setattr(os, "cpu_count", lambda: 2)
+    assert io._threads(None) == 2

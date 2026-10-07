@@ -15,7 +15,6 @@ the only code that writes results.
 
 from __future__ import annotations
 
-import os
 import re
 from collections.abc import Iterable, Iterator
 from functools import cached_property
@@ -949,8 +948,9 @@ class Project:
         or the bins are dropped. The selection must hold one variant.
 
         Footprints are read and summed *batch* receptors at a time, in
-        *workers* threads, so memory stays at a few batches of footprints
-        whatever the selection's size; the result itself is sparse.
+        *workers* threads. Each thread holds one batch, so memory peaks at
+        about *workers* times a batch whatever the selection's size; the
+        result itself is sparse.
 
         Parameters
         ----------
@@ -963,11 +963,13 @@ class Project:
             closed on the left (``closed="left"``): each bin holds the
             footprint hours that start in it.
         workers : int, optional
-            Threads that read and sum batches. Defaults to the number of
-            CPUs.
+            Threads that read and sum batches. Defaults to the CPUs this
+            process may use (in a Slurm job, the job's), at most 8: more
+            threads add memory and stop adding speed.
         batch : int, default 64
             Receptors read and summed together. At about 350,000 cells a
-            footprint, 64 take some 2 GB at their peak.
+            footprint, a batch of 64 takes some 2 GB at its peak, so 8
+            threads take some 16 GB.
 
         Returns
         -------
@@ -1003,7 +1005,7 @@ class Project:
             time_bins,
             missing=[r for r in requested if r not in found],
             geometry_hash=variant.geometry_hash,
-            workers=workers if workers is not None else (os.cpu_count() or 1),
+            workers=workers,
         )
 
     # -- running ---------------------------------------------------------------
