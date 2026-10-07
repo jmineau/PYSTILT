@@ -1006,6 +1006,10 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- A "Checking a run" page in the user guide: the four states, every
+  failure reason in plain words and what to do about it, the log and kept
+  workdirs, empty footprints, and what to check when a footprint looks
+  wrong.
 - A transport model may run many receptors in one call: it sets
   `batched = True` and gives `run_many`, and the worker hands it every
   receptor of a variant that needs particles at once. A model that writes

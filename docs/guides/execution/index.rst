@@ -68,45 +68,13 @@ Options for ``stilt run``:
   (:doc:`containers`).
 
 ``stilt run`` exits with 0 when every simulation it ran is complete, 1 when
-some failed, and 2 when some did not finish because the run was stopped.
+some failed, and 3 when some did not finish because the run was stopped. It
+exits with 2 when its command line is wrong.
 
 When a simulation fails
 -----------------------
 
 A failed simulation doesn't stop the others. The worker records why it
-failed, keeps HYSPLIT's working folder under ``scratch/`` in the output
-directory, and goes on. The simulation stays unfinished, so the next
-``stilt run`` tries it again. Fix the cause (often missing meteorology) and
-run again. Finished simulations are skipped, and a simulation that succeeds
-loses its failure record.
-
-``stilt status`` counts the failures by reason:
-
-.. code-block:: text
-
-   Project: /path/to/my_project  total=1200  completed=1150  pending=50
-   failed: MISSING_MET_FILES 42, MET_TRUNCATED 8  (why: the .failure.yaml beside each log, under /path/to/my_project/output/logs)
-
-In Python, ``sim.failure`` says why one simulation failed, and
-``status()`` lists every failed simulation in a selection:
-
-.. code-block:: pycon
-
-   >>> sim.failure
-   {'step': 'particles', 'reason': 'MET_COVERAGE',
-    'message': 'HYSPLIT: start point not within (x,y,t) any data file',
-    'time': '2026-10-03T21:14:05+00:00'}
-   >>> st = project.status()
-   >>> st[st.state == "failed"][["receptor", "variant", "reason"]]
-
-``step`` is ``particles`` when the transport model failed, which fails every variant that
-shares those particles, and ``footprint`` when only that variant's footprint
-did. ``reason`` is a short name for the cause, or the error's class when it
-has none. For a HYSPLIT failure, ``message`` is the line of HYSPLIT's log
-that says what went wrong. ``sim.log`` reads the whole log, and
-``sim.kept_workdir`` is HYSPLIT's working folder, kept in the output
-directory. An unexpected error, such as a bug, also has a ``traceback``.
-
-A footprint can be empty because no particle reached the grid. That is not a
-failure. PYSTILT records it with the reason, and the simulation counts as
-finished (see :doc:`../outputs`).
+failed and goes on, and the next ``stilt run`` tries it again.
+``stilt status`` counts the failures by reason, and :doc:`../checking`
+says what each reason means and where to look.
