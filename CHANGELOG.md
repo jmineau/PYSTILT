@@ -999,6 +999,9 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- `stilt status --json`: the counts per state, overall and per variant,
+  the failures by reason, and the settings folders, as JSON for a program
+  to read.
 - `status()` says `interrupted` for a simulation whose particles run
   started and stopped before it finished (a time limit, preemption, or a
   killed process), where it said `pending` as for one never run. The

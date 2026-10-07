@@ -23,9 +23,11 @@ directory that is not a project.
 
 from __future__ import annotations
 
+import json
 import logging
 import re
 from collections import Counter
+from collections.abc import Iterable
 from pathlib import Path
 from typing import Any, NoReturn
 
@@ -36,7 +38,7 @@ from pydantic import ValidationError
 
 from stilt.execution.config import ExecutionConfig
 from stilt.execution.runner import resolve_compute_root
-from stilt.project import Project
+from stilt.project import STATES, Project
 
 app = typer.Typer(
     name="stilt",
@@ -356,7 +358,12 @@ def submit(
 
 
 @app.command()
-def status(project: str | None = _PROJECT_ARG) -> None:
+def status(
+    project: str | None = _PROJECT_ARG,
+    as_json: bool = typer.Option(
+        False, "--json", help="Print the same as JSON, for a program to read."
+    ),
+) -> None:
     """
     Count finished and unfinished simulations, and list the output's settings folders.
 
@@ -366,6 +373,9 @@ def status(project: str | None = _PROJECT_ARG) -> None:
     uses, how its settings differ from the variant of its name.
     """
     opened = Project(_resolve_project(project))
+    if as_json:
+        typer.echo(json.dumps(_status_data(opened), indent=2))
+        return
     _print_status(opened)
     _print_folders(opened)
 
@@ -403,6 +413,46 @@ def _print_status(project: Project, ran: pd.DataFrame | None = None) -> None:
             f"failed: {listed}  (why: the .failure.yaml beside each log, "
             f"under {project.output.directory / 'logs'})"
         )
+
+
+def _state_counts(states: Iterable[str]) -> dict[str, int]:
+    """Return how many simulations are in each state, and the total."""
+    counts = Counter(states)
+    return {"total": counts.total(), **{s: counts[s] for s in STATES}}
+
+
+def _status_data(project: Project) -> dict[str, Any]:
+    """
+    Return what ``stilt status`` prints, as plain data.
+
+    ``simulations`` and ``variants`` count the simulations in each state,
+    ``failed`` counts the failed ones by reason, and ``folders`` lists the
+    settings folders as :meth:`stilt.Project.folders` does.
+    """
+    table = project.status()
+    failed = table.loc[table.state == "failed", "reason"]
+    folders = project.folders()
+    return {
+        "project": str(project.directory),
+        "output": str(project.output.directory),
+        "simulations": _state_counts(table["state"]),
+        "variants": {
+            name: _state_counts(table.loc[table.variant == name, "state"])
+            for name in project.variants
+        },
+        "failed": dict(Counter(failed.fillna("unknown")).most_common()),
+        "folders": [
+            {
+                "kind": row["kind"],
+                "folder": row["folder"],
+                "name": row["name"],
+                "files": int(row["files"]),
+                "variants": [v for v in row["variant"].split(", ") if v],
+                "differs": row["differs"],
+            }
+            for row in folders.to_dict("records")
+        ],
+    }
 
 
 def _print_folders(project: Project) -> None:
