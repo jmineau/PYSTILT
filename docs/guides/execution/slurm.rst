@@ -50,13 +50,18 @@ Options
    CPUs per array task (default 1). With more than one, each task runs that
    many receptors at the same time. A local run uses ``cpus`` the same way.
 
-``time``, ``mem``, ``partition``, ``account``, ``qos``
+``time``
+   The time limit of each array task, written to ``--time`` as you give
+   it. It is required: without it a task gets the partition's default
+   limit, which can be days, and holds its node that long if it hangs.
+
+``mem``, ``partition``, ``account``, ``qos``
    The ``sbatch`` options of the same names.
 
 ``array_parallelism``
    The most tasks allowed to run at once, to stay within your group's
-   limits. ``array_parallelism: 50`` becomes ``--array=0-199%50``. It is 256
-   when unset.
+   limits. ``array_parallelism: 50`` becomes ``--array=0-199%50``. Unset,
+   Slurm's own limits apply.
 
 ``setup``
    Shell commands to run at the start of each task, before PYSTILT. Use it
@@ -70,6 +75,7 @@ Options
       execution:
         backend: slurm
         n_workers: 200
+        time: "02:00:00"
         slurm:
           exclude: node17,node42
           constraint: skl

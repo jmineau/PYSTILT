@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Any, Literal, Self
 
 from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
     field_validator,
+    model_validator,
 )
 
 
@@ -52,7 +53,11 @@ class ExecutionConfig(BaseModel):
     )
     time: str | int | None = Field(
         None,
-        description="Slurm time limit per task, as ``HH:MM:SS``, ``D-HH:MM:SS``, or minutes.",
+        description=(
+            "Slurm time limit per task, as ``HH:MM:SS``, ``D-HH:MM:SS``, or "
+            "minutes. Required with ``backend: slurm``: without it a task gets "
+            "the partition's default, which can be days."
+        ),
     )
     mem: str | None = Field(None, description="Memory per Slurm task, such as ``8G``.")
     partition: str | None = Field(None, description="Slurm partition.")
@@ -79,7 +84,7 @@ class ExecutionConfig(BaseModel):
     array_parallelism: int | None = Field(
         None,
         ge=1,
-        description="Most Slurm tasks running at once. 256 when unset.",
+        description="Most Slurm tasks running at once. Unset leaves it to Slurm.",
     )
     setup: list[str] = Field(
         default_factory=list,
@@ -111,10 +116,16 @@ class ExecutionConfig(BaseModel):
             slurm_minutes(value)  # raises on a form sbatch would not take
         return value
 
-    @property
-    def time_minutes(self) -> int | None:
-        """The time limit in whole minutes, rounded up, or ``None`` when unset."""
-        return None if self.time is None else slurm_minutes(self.time)
+    @model_validator(mode="after")
+    def _slurm_needs_time(self) -> Self:
+        """Raise when a Slurm run has no time limit."""
+        if self.backend == "slurm" and self.time is None and "time" not in self.slurm:
+            raise ValueError(
+                "execution.time is required with backend: slurm, such as "
+                "time: '02:00:00'. Without it each task gets the partition's "
+                "default time limit, which can be days."
+            )
+        return self
 
 
 def slurm_minutes(time: str | int) -> int:
