@@ -12,13 +12,13 @@ architecture and the rules the code relies on.
    git clone https://github.com/YOUR_USERNAME/PYSTILT.git
    cd PYSTILT
    ```
-2. Install the development dependencies with uv:
+2. Install the package and the development tools into `.venv` with uv:
    ```bash
-   uv sync --group dev
+   uv sync
    ```
 3. Install the pre-commit hooks:
    ```bash
-   pre-commit install
+   uv run pre-commit install
    ```
 
 ## Making a change
@@ -31,7 +31,7 @@ architecture and the rules the code relies on.
    that fails without the fix. User-facing changes need a docs update.
 3. Run the checks:
    ```bash
-   just quality-check   # ruff, pyrefly, the import contracts, and the unit tests
+   just quality-check   # ruff, pyrefly, the import contracts, docstrings, and the unit tests
    just pre-commit      # all pre-commit hooks
    ```
 4. Commit with a [Conventional Commits](https://www.conventionalcommits.org/)
@@ -170,11 +170,48 @@ and check all of them with:
 
 ```bash
 just dist         # sdist plus one wheel per bundled HYSPLIT build, in dist/
-just check-dist   # each wheel's platform tag and binary, and no binary in the sdist
 ```
 
-Don't publish from `python -m build` or a bare `uv build`: they make the wheel
-from the source archive, so it has no binary.
+`just dist` ends with `just check-dist`, which checks each wheel's platform
+tag and binary, and that the sdist has none. Don't publish from
+`python -m build` or a bare `uv build`: they make the wheel from the source
+archive, so it has no binary.
+
+## Releasing
+
+The version comes from git tags, through setuptools-scm, so there is no
+version string to bump.
+
+1. Run `just changelog` to draft the entries from your commit messages, edit
+   them into `CHANGELOG.md` under `## [Unreleased]`, then rename that heading
+   to `## [X.Y.Z] - YYYY-MM-DD` and start a new empty `## [Unreleased]` above
+   it. Commit (`chore(release): X.Y.Z`) and push to `main`.
+2. Run `just release X.Y.Z`. It checks that the tree is clean, that `main` is in
+   sync with GitHub, and that the version is newer than every existing tag, then
+   pushes the tag `vX.Y.Z`.
+3. The Publish workflow builds the tag with `just dist`, uploads it to PyPI and
+   creates a GitHub Release from the CHANGELOG section. Zenodo archives the
+   release and mints a DOI. The Documentation workflow publishes the docs as
+   `X.Y.Z/` in the version dropdown.
+
+Pre-releases (`0.1.0a23`, `0.1.0rc1`) work the same way. Until the first final
+release, the newest pre-release is also the docs' default (`stable/`). Once a
+final release is out, the pre-releases before it leave the dropdown (see
+`DOCS_PRERELEASES` in `.github/workflows/docs.yml` to change that).
+
+## Dependency updates
+
+Dependabot opens one pull request a month per kind of pin: GitHub Actions,
+pre-commit hooks, and `uv.lock` (the dev tools; it never raises the minimum
+versions in `pyproject.toml`). Merge it when CI passes.
+
+## Template
+
+The tooling (CI workflows, pre-commit, justfile, packaging configuration) comes
+from [jmineau/python-template](https://github.com/jmineau/python-template).
+`.copier-answers.yml` records the template version; `copier update` pulls in
+later template changes. Improvements that would help every package are best
+made in the template.
 
 ## Pull requests
 

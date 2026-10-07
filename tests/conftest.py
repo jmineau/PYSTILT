@@ -174,7 +174,7 @@ def r_stilt_dir() -> Path:
 
 
 @pytest.fixture(scope="session")
-def rscript(r_stilt_dir) -> str:  # noqa: ARG001
+def rscript(r_stilt_dir) -> str:
     """Path to the Rscript executable. Skips if not on PATH."""
     exe = shutil.which("Rscript")
     if not exe:

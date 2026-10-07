@@ -2,45 +2,49 @@ name: Code Quality
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  quality-check:
+  quality:
     runs-on: ubuntu-latest
+    env:
+      UV_NO_SYNC: "1"  # `just` recipes run in the environment synced below
+      RUFF_OUTPUT_FORMAT: github  # annotate the PR diff
 
     steps:
-    - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0  # setuptools-scm reads the version from tags
 
-    - name: Install uv
-      uses: astral-sh/setup-uv@v4
-      with:
-        enable-cache: true
+      - uses: astral-sh/setup-uv@v10.2.0
+        with:
+          version: "0.12.23"
+          python-version: "3.11"
 
-    - name: Set up Python
-      uses: actions/setup-python@v6
-      with:
-        python-version: '3.11'
+      - name: Install
+        run: uv sync --locked
 
-    - name: Install dependencies
-      run: uv sync --group dev
+      - name: Lint and format check
+        run: uv run just lint
 
-    - name: Lint with ruff
-      run: |
-        uv run ruff check --output-format=github src/stilt
+      - name: Type check
+        if: ${{ !cancelled() }}
+        run: uv run just type-check
 
-    - name: Type checking with pyrefly
-      if: ${{ !cancelled() }}
-      run: |
-        uv run pyrefly check
+      - name: Import contracts
+        if: ${{ !cancelled() }}
+        run: uv run just imports
 
-    - name: Check import contracts
-      if: ${{ !cancelled() }}
-      run: |
-        uv run lint-imports
-
-    - name: Check docstring coverage
-      if: ${{ !cancelled() }}
-      run: |
-        uv run docstr-coverage src/stilt --skip-magic --skip-init --fail-under 95
+      - name: Docstring coverage
+        if: ${{ !cancelled() }}
+        run: uv run just docstr

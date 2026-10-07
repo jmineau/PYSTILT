@@ -23,15 +23,19 @@ PYSTILT uses `uv <https://docs.astral.sh/uv/>`_ and
 
 .. code-block:: bash
 
-   uv sync --group dev
+   uv sync
+   uv run pre-commit install
 
 Common tasks:
 
 .. code-block:: bash
 
-   just test             # run the test suite
-   just quality-check    # lint, type-check, and test
+   just test             # run the unit tests
+   just quality-check    # lint, type check, import contracts, docstrings, unit tests
    just build-docs       # build this documentation into docs/_build/html
+   just docs-serve       # preview it at http://127.0.0.1:8000, rebuilt on every save
+
+``just`` with no arguments lists the rest.
 
 .. _stilt-r-parity:
 

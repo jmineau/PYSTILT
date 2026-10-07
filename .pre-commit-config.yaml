@@ -13,20 +13,51 @@ repos:
       - id: check-merge-conflict
       - id: debug-statements
 
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.14.0
+  - repo: https://github.com/pre-commit/pygrep-hooks
+    rev: v1.10.0
     hooks:
-      # Run the linter
-      - id: ruff-check
-        args: [ --fix ]
-      # Run the formatter
-      - id: ruff-format
+      - id: rst-backticks
+      - id: rst-directive-colons
+      - id: rst-inline-touching-normal
 
+  - repo: https://github.com/abravalheri/validate-pyproject
+    rev: "0.26"
+    hooks:
+      - id: validate-pyproject
+
+  # Security audit of the GitHub Actions workflows (policy in .github/zizmor.yml).
+  - repo: https://github.com/zizmorcore/zizmor-pre-commit
+    rev: v1.30.1
+    hooks:
+      - id: zizmor
+
+  # These run the tools in .venv, so their versions are the ones in uv.lock (one
+  # place to update; Dependabot does it) and pyrefly sees the project's
+  # dependencies. --no-sync: a hook never re-syncs .venv; run `just sync` after
+  # changing dependencies.
   - repo: local
     hooks:
+      - id: uv-lock
+        name: uv lock
+        entry: uv lock
+        language: system
+        files: ^(uv\.lock|pyproject\.toml)$
+        pass_filenames: false
+      - id: ruff-check
+        name: ruff check
+        entry: uv run --no-sync ruff check --fix --show-fixes --force-exclude
+        language: system
+        types_or: [python, pyi]
+        require_serial: true
+      - id: ruff-format
+        name: ruff format
+        entry: uv run --no-sync ruff format --force-exclude
+        language: system
+        types_or: [python, pyi]
+        require_serial: true
       - id: pyrefly
         name: pyrefly
-        entry: uv run --no-sync pyrefly check  # checks src/ (pyproject.toml)
+        entry: uv run --no-sync pyrefly check
         language: system
         types: [python]
         pass_filenames: false

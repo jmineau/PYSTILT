@@ -1,0 +1,27 @@
+name: Bug report
+description: Something in stilt raises, crashes, or gives wrong results
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Minimal example
+      description: The shortest code that shows the problem. Include the full traceback if there is one.
+      render: python
+    validations:
+      required: true
+  - type: textarea
+    id: versions
+    attributes:
+      label: Versions
+      description: Output of `python -c "import stilt, sys; print(stilt.__version__, sys.version)"` and your OS.
+      render: text
+    validations:
+      required: true

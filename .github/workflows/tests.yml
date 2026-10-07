@@ -2,66 +2,74 @@ name: Tests
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  unit:
-    name: Unit tests
+  test:
+    name: ${{ matrix.os }} / Python ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
+        # The bundled HYSPLIT builds are Linux and macOS only.
         os: [ubuntu-latest, macos-latest]
-        python-version: ['3.11', '3.12', '3.13', '3.14']
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
+    env:
+      UV_NO_SYNC: "1"  # `just` recipes run in the environment synced below
 
     steps:
-    - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0  # setuptools-scm reads the version from tags
 
-    - name: Install uv
-      uses: astral-sh/setup-uv@v4
-      with:
-        enable-cache: true
+      - uses: astral-sh/setup-uv@v10.2.0
+        with:
+          version: "0.12.23"
+          python-version: ${{ matrix.python-version }}
 
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v6
-      with:
-        python-version: ${{ matrix.python-version }}
+      - name: Install
+        run: uv sync --locked
 
-    - name: Install dependencies
-      run: uv sync --group dev --python ${{ matrix.python-version }}
+      - name: Unit tests
+        run: uv run just cov
 
-    - name: Run unit tests
-      run: |
-        uv run --python ${{ matrix.python-version }} pytest tests/ --ignore=tests/r_stilt -m "not integration" -v --cov=src/stilt --cov-report=term-missing --cov-report=xml:coverage.xml --junitxml=junit.xml -o junit_family=legacy
+      - name: Upload coverage to Codecov
+        if: ${{ matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11' && !cancelled() }}
+        uses: codecov/codecov-action@v7
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage.xml
 
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v5
-      if: ${{ matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11' && !cancelled() }}
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
-        files: coverage.xml
-
-    - name: Upload test results to Codecov
-      uses: codecov/codecov-action@v5
-      if: ${{ matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11' && !cancelled() }}
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
-        files: junit.xml
-        report_type: test_results
+      - name: Upload test results to Codecov
+        if: ${{ matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11' && !cancelled() }}
+        uses: codecov/codecov-action@v7
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: junit.xml
+          report_type: test_results
 
   integration:
     name: Integration + STILT-R tests
     runs-on: ubuntu-latest  # HYSPLIT binary is linux_x64 only
-
     env:
+      UV_NO_SYNC: "1"
       # Pinned uataq/stilt commit used for STILT-R fidelity comparison.
       #
       # HOW TO UPDATE:
       #   1. Bump STILT_R_SHA to the new commit.
       #   2. Run the fidelity tests locally:
-      #        STILT_R_DIR=stilt-r-src uv run pytest tests/r_stilt/ -v -m integration
+      #        STILT_R_DIR=stilt-r-src uv run pytest tests/r_stilt/ -v -m fidelity
       #   3. If tests pass  → commit the new SHA.
       #      If tests diverge → read the diff; determine whether PYSTILT or STILT-R
       #      changed and update whichever is wrong before committing the SHA bump.
@@ -76,138 +84,131 @@ jobs:
       STILT_R_SHA: 0e290a68730e155bc2156e28af492a463228c88a
 
     steps:
-    - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0  # setuptools-scm reads the version from tags
 
-    - name: Install uv
-      uses: astral-sh/setup-uv@v4
-      with:
-        enable-cache: true
+      - uses: astral-sh/setup-uv@v10.2.0
+        with:
+          version: "0.12.23"
+          python-version: "3.12"
 
-    - name: Set up Python
-      uses: actions/setup-python@v6
-      with:
-        python-version: '3.12'
+      - name: Install
+        run: uv sync --locked
 
-    - name: Install dependencies
-      run: uv sync --group dev
+      - name: Restore HRRR met cache
+        id: met-cache
+        uses: actions/cache/restore@v6
+        with:
+          path: tests/met_cache
+          # Bump the version suffix when _MET_BLOCKS changes in conftest.py
+          key: met-hrrr-2021-v1
 
-    - name: Restore HRRR met cache
-      id: met-cache
-      uses: actions/cache/restore@v4
-      with:
-        path: tests/met_cache
-        # Bump the version suffix when _MET_BLOCKS changes in conftest.py
-        key: met-hrrr-2021-v1
+      - name: Prewarm HRRR met cache
+        if: steps.met-cache.outputs.cache-hit != 'true'
+        env:
+          STILT_TEST_FETCH_MET: "1"
+        run: |
+          uv run pytest \
+            tests/transport/hysplit/test_release_assignment.py::test_hysplit_multipoint_release_points_follow_control_order \
+            --setup-only -q
 
-    - name: Prewarm HRRR met cache
-      if: steps.met-cache.outputs.cache-hit != 'true'
-      env:
-        STILT_TEST_FETCH_MET: "1"
-      run: |
-        uv run pytest \
-          tests/transport/hysplit/test_release_assignment.py::test_hysplit_multipoint_release_points_follow_control_order \
-          --setup-only -q
+      - name: Save HRRR met cache
+        if: steps.met-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: tests/met_cache
+          key: ${{ steps.met-cache.outputs.cache-primary-key }}
 
-    - name: Save HRRR met cache
-      if: steps.met-cache.outputs.cache-hit != 'true'
-      uses: actions/cache/save@v4
-      with:
-        path: tests/met_cache
-        key: ${{ steps.met-cache.outputs.cache-primary-key }}
+      - name: Set up R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: 'release'
 
-    - name: Set up R
-      uses: r-lib/actions/setup-r@v2
-      with:
-        r-version: 'release'
+      - name: Install system dependencies for R packages
+        run: sudo apt-get install -y libnetcdf-dev libgdal-dev libgeos-dev libproj-dev libssl-dev libxml2-dev
 
-    - name: Install system dependencies for R packages
-      run: sudo apt-get install -y libnetcdf-dev libgdal-dev libgeos-dev libproj-dev libssl-dev libxml2-dev
+      - name: Clone uataq/stilt R source at pinned commit
+        run: |
+          git init stilt-r-src
+          git -C stilt-r-src fetch --depth 1 https://github.com/uataq/stilt "$STILT_R_SHA"
+          git -C stilt-r-src checkout FETCH_HEAD
 
-    - name: Clone uataq/stilt R source at pinned commit
-      run: |
-        git init stilt-r-src
-        git -C stilt-r-src fetch --depth 1 https://github.com/uataq/stilt "$STILT_R_SHA"
-        git -C stilt-r-src checkout FETCH_HEAD
+      - name: Populate STILT-R exe directory from bundled binaries
+        run: |
+          mkdir -p stilt-r-src/exe
+          cp stilt-r-src/bin/linux_x64/hycs_std stilt-r-src/exe/hycs_std
+          chmod +x stilt-r-src/exe/hycs_std
 
-    - name: Populate STILT-R exe directory from bundled binaries
-      run: |
-        mkdir -p stilt-r-src/exe
-        cp stilt-r-src/bin/linux_x64/hycs_std stilt-r-src/exe/hycs_std
-        chmod +x stilt-r-src/exe/hycs_std
+      - name: Build permute.so
+        run: |
+          cd stilt-r-src/r/src
+          R CMD SHLIB permute.f90
 
-    - name: Build permute.so
-      run: |
-        cd stilt-r-src/r/src
-        R CMD SHLIB permute.f90
+      - name: Run integration and STILT-R fidelity tests
+        env:
+          STILT_R_DIR: ${{ github.workspace }}/stilt-r-src
+          STILT_TEST_MET_DIR: ${{ github.workspace }}/tests/met_cache
+        run: uv run pytest tests/ -v -m "integration or fidelity"
 
-    - name: Run integration and STILT-R fidelity tests
-      env:
-        STILT_R_DIR: ${{ github.workspace }}/stilt-r-src
-        STILT_TEST_MET_DIR: ${{ github.workspace }}/tests/met_cache
-      run: uv run pytest tests/ -v -m "integration or fidelity"
-
-    - name: Run STILT-R synthetic footprint tests
-      env:
-        STILT_R_DIR: ${{ github.workspace }}/stilt-r-src
-        STILT_TEST_MET_DIR: ${{ github.workspace }}/tests/met_cache
-      run: uv run pytest tests/r_stilt -v -m r_only
+      - name: Run STILT-R synthetic footprint tests
+        env:
+          STILT_R_DIR: ${{ github.workspace }}/stilt-r-src
+          STILT_TEST_MET_DIR: ${{ github.workspace }}/tests/met_cache
+        run: uv run pytest tests/r_stilt -v -m r_only
 
   package:
     name: Package smoke test
     runs-on: ubuntu-latest
+    env:
+      UV_NO_SYNC: "1"
 
     steps:
-    - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0  # setuptools-scm reads the version from tags
 
-    - name: Install uv
-      uses: astral-sh/setup-uv@v4
-      with:
-        enable-cache: true
+      - uses: astral-sh/setup-uv@v10.2.0
+        with:
+          version: "0.12.23"
+          python-version: "3.12"
 
-    - name: Set up Python
-      uses: actions/setup-python@v6
-      with:
-        python-version: '3.12'
+      - name: Install
+        run: uv sync --locked
 
-    - name: Build the sdist and platform wheels
-      run: uvx --from rust-just just dist
+      - name: Build and check the sdist and platform wheels
+        run: uv run just dist
 
-    - name: Check distributions
-      run: uvx twine check dist/*
+      - name: Install the Linux wheel in a clean environment
+        run: |
+          uv venv .pkgtest
+          uv pip install --python .pkgtest dist/*manylinux*.whl
 
-    - name: Check each wheel holds only its own HYSPLIT binary
-      run: uvx --from rust-just just check-dist
+      - name: Smoke test installed package
+        run: |
+          .pkgtest/bin/python -c "import stilt; print(stilt.__version__)"
+          .pkgtest/bin/python -m stilt --help
+          .pkgtest/bin/stilt --help
+          .pkgtest/bin/python -c "from stilt.transport.hysplit.driver import _bundled_exe_dir; print(_bundled_exe_dir())"
 
-    - name: Install the Linux wheel in a clean environment
-      run: |
-        python -m venv .pkgtest
-        .pkgtest/bin/pip install --upgrade pip
-        .pkgtest/bin/pip install dist/*manylinux*.whl
+      - name: Install the sdist in a clean environment
+        run: |
+          uv venv .sdisttest
+          uv pip install --python .sdisttest dist/*.tar.gz
 
-    - name: Smoke test installed package
-      run: |
-        .pkgtest/bin/python -c "import stilt; print(stilt.__version__)"
-        .pkgtest/bin/python -m stilt --help
-        .pkgtest/bin/stilt --help
-        .pkgtest/bin/python -c "from stilt.transport.hysplit.driver import _bundled_exe_dir; print(_bundled_exe_dir())"
+      - name: Smoke test the sdist install (no bundled HYSPLIT)
+        run: |
+          .sdisttest/bin/python -c "import stilt; print(stilt.__version__)"
+          .sdisttest/bin/python - <<'EOF'
+          from stilt.exceptions import HYSPLITNotFoundError
+          from stilt.transport.hysplit.driver import _bundled_exe_dir
 
-    - name: Install the sdist in a clean environment
-      run: |
-        python -m venv .sdisttest
-        .sdisttest/bin/pip install --upgrade pip
-        .sdisttest/bin/pip install dist/*.tar.gz
-
-    - name: Smoke test the sdist install (no bundled HYSPLIT)
-      run: |
-        .sdisttest/bin/python -c "import stilt; print(stilt.__version__)"
-        .sdisttest/bin/python - <<'EOF'
-        from stilt.exceptions import HYSPLITNotFoundError
-        from stilt.transport.hysplit.driver import _bundled_exe_dir
-
-        try:
-            _bundled_exe_dir()
-        except HYSPLITNotFoundError as err:
-            print(err)
-        else:
-            raise SystemExit("the sdist install found a bundled hycs_std")
-        EOF
+          try:
+              _bundled_exe_dir()
+          except HYSPLITNotFoundError as err:
+              print(err)
+          else:
+              raise SystemExit("the sdist install found a bundled hycs_std")
+          EOF

@@ -349,7 +349,7 @@ def test_an_interrupt_that_is_not_the_notice_is_not_swallowed(
 @pytest.mark.parametrize(
     ("time", "minutes"),
     [
-        (90, 90),
+        pytest.param(90, 90, id="90-as-int"),
         ("90", 90),
         ("30:00", 30),
         ("02:00:00", 120),

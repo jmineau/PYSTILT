@@ -1,65 +1,128 @@
-name: Deploy Documentation
+name: Documentation
 
-# The site shows the latest release, so it deploys only from a release tag.
-# Pull requests build the docs as a check. To redeploy a release (a docs fix
-# that cannot wait), run this workflow by hand on that tag.
+# Pull requests build the docs (warnings fail the build). Pushes to main publish
+# them as dev/, release tags as <version>/ (final releases also as stable/), on
+# GitHub Pages, with a version dropdown. The gh-pages branch stores the
+# published versions; .github/scripts/docs_versions.py maintains it.
 on:
   push:
-    tags:
-      - "v*.*.*"
+    branches: [main]
+    tags: ["v*"]
   pull_request:
-    branches: [ main ]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
-  group: "pages"
-  cancel-in-progress: false
+  group: docs-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  # Which pre-releases (a, b, rc) the dropdown lists:
+  #   upcoming: those newer than the latest final release; older ones are deleted
+  #             from the site once their final release is out
+  #   all:      every pre-release ever published
+  #   none:     no pre-releases (their folders are kept but not listed)
+  DOCS_PRERELEASES: upcoming
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      UV_NO_SYNC: "1"  # `just` recipes run in the environment synced below
+
     steps:
-      - uses: actions/checkout@v5
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v4
+      - uses: actions/checkout@v7
         with:
-          enable-cache: true
+          persist-credentials: false
+          fetch-depth: 0  # setuptools-scm reads the version from tags
 
-      - name: Set up Python
-        uses: actions/setup-python@v6
+      - uses: astral-sh/setup-uv@v10.2.0
         with:
-          python-version: '3.11'
+          version: "0.12.23"
+          python-version: "3.14"
 
-      - name: Install dependencies
-        run: uv sync --group dev
+      - name: Install
+        run: uv sync --locked
 
-      - name: Setup just
-        uses: extractions/setup-just@v3
+      - name: Build
+        run: uv run just build-docs
 
-      - name: Build documentation
-        run: |
-          just build-docs
-
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-artifact@v7
+        if: github.event_name != 'pull_request'
         with:
+          name: docs-html
           path: docs/_build/html
 
   deploy:
-    # The github-pages environment must allow v* tags (Settings > Environments).
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+    needs: build
+    runs-on: ubuntu-latest
+    concurrency:
+      group: docs-deploy  # one update of the gh-pages branch at a time
+      cancel-in-progress: false
+    permissions:
+      contents: write  # push the gh-pages branch
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    needs: build
+
     steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          path: src
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: docs-html
+          path: html
+
+      - uses: astral-sh/setup-uv@v10.2.0
+        with:
+          version: "0.12.23"
+
+      - name: Check out the gh-pages branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh auth setup-git
+          if git ls-remote --exit-code --heads "https://github.com/$GITHUB_REPOSITORY" gh-pages > /dev/null; then
+            git clone --quiet --single-branch --branch gh-pages "https://github.com/$GITHUB_REPOSITORY" site
+          else
+            git init --quiet site
+            git -C site checkout --quiet --orphan gh-pages
+          fi
+
+      - name: Add this build to the site
+        run: |
+          if [ "$GITHUB_REF_TYPE" = tag ]; then target="${GITHUB_REF_NAME#v}"; else target=dev; fi
+          echo "target=$target" >> "$GITHUB_ENV"
+          uv run --no-project --with packaging python src/.github/scripts/docs_versions.py \
+            site html "$target" \
+            --base-url "https://jmineau.github.io/PYSTILT/" \
+            --prereleases "$DOCS_PRERELEASES"
+
+      - name: Push the gh-pages branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd site
+          git add --all
+          if git diff --cached --quiet; then echo "No changes."; exit 0; fi
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit --quiet -m "docs: publish $target"
+          if ! git remote | grep -q origin; then git remote add origin "https://github.com/$GITHUB_REPOSITORY"; fi
+          git push --quiet origin gh-pages
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
+
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5

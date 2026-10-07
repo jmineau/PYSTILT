@@ -1,0 +1,39 @@
+# Dependabot opens pull requests that update pinned versions. Each ecosystem
+# gets one grouped PR a month, and skips releases younger than a week
+# (supply-chain safety). CI runs on each PR; merge it or close it.
+version: 2
+updates:
+  # Actions used by the workflows (actions/checkout@v7, ...)
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    cooldown:
+      default-days: 7
+    groups:
+      actions:
+        patterns: ["*"]
+
+  # Hook revs in .pre-commit-config.yaml (ruff and pyrefly come from uv.lock)
+  - package-ecosystem: pre-commit
+    directory: /
+    schedule:
+      interval: monthly
+    cooldown:
+      default-days: 7
+    groups:
+      pre-commit:
+        patterns: ["*"]
+
+  # uv.lock: the dev tools CI and contributors run. lockfile-only never raises
+  # the minimum versions in pyproject.toml, which would force them on users.
+  - package-ecosystem: uv
+    directory: /
+    schedule:
+      interval: monthly
+    cooldown:
+      default-days: 7
+    versioning-strategy: lockfile-only
+    groups:
+      uv:
+        patterns: ["*"]

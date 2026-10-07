@@ -396,7 +396,9 @@ def test_aggregate_mesh_ids_index_and_time_bins():
 
     mesh = Mesh.from_windows([(-113.95, 39.05), (-113.85, 39.15)], 0.1, ids=["a", "b"])
     bins = pd.interval_range(start=t0, periods=2, freq="1h", closed="left")
-    result = foot.stilt.aggregate(mesh, bins)
+    # The mesh's cells are the footprint's own size.
+    with pytest.warns(UserWarning, match="under-resolved"):
+        result = foot.stilt.aggregate(mesh, bins)
 
     assert result.index.tolist() == ["a", "b"]
     assert result.index.name == "cell"
