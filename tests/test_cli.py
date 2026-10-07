@@ -605,6 +605,44 @@ def test_status_counts_failures_by_reason(tmp_path):
     assert "failed: MISSING_MET_FILES 2, ValueError 1" in result.output
 
 
+def test_status_json_is_the_same_as_data(tmp_path):
+    import json
+
+    from stilt.project import Project
+    from stilt.receptors import PointReceptor
+
+    _write_minimal_config(tmp_path)
+    project = Project(tmp_path)
+    receptor = PointReceptor(
+        time="2023-01-01 12:00:00", longitude=-111.85, latitude=40.77, altitude=5.0
+    )
+    variant = project.variants["hrrr"]
+    project.output.record_failure(
+        "particles", variant, receptor.id, {"reason": "MISSING_MET_FILES"}
+    )
+
+    result = runner.invoke(app, ["status", str(tmp_path), "--json"])
+
+    assert result.exit_code == 0, result.output
+    data = json.loads(result.output)
+    assert data["project"] == str(tmp_path.resolve())
+    assert data["simulations"] == {
+        "total": 1,
+        "complete": 0,
+        "failed": 1,
+        "interrupted": 0,
+        "pending": 0,
+    }
+    assert data["variants"]["hrrr"]["failed"] == 1
+    assert data["failed"] == {"MISSING_MET_FILES": 1}
+    [folder] = data["folders"]
+    assert (folder["kind"], folder["variants"], folder["files"]) == (
+        "particles",
+        ["hrrr"],
+        0,
+    )
+
+
 def test_status_lists_folders_and_what_differs(tmp_path):
     import datetime as dt
 

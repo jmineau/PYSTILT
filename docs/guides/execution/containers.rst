@@ -106,4 +106,6 @@ Exit codes
        it stopped.
 
 When the Job is done, ``stilt status /project`` counts the finished and
-failed simulations of the whole project.
+failed simulations of the whole project. ``stilt status /project --json``
+gives the same counts, per state and variant, as JSON for the program
+that drives the Job.
