@@ -79,7 +79,7 @@ The met ``directory`` in ``config.yaml`` must be the path inside the
 container (``/met`` here). ``completions`` and the ``N`` in ``--task`` must
 match. ``--cpus 4`` runs four receptors at once in each pod. ``exec`` makes
 ``stilt`` the process that receives Kubernetes' stop signal, so a stopped
-pod stops its runs cleanly and exits with code 2.
+pod stops its runs cleanly and exits with code 3.
 
 Exit codes
 ----------
@@ -98,6 +98,9 @@ Exit codes
      - Some simulations failed. ``stilt status`` counts them by reason. A
        retry runs them again, which helps only when the cause is fixed.
    * - 2
+     - The command line was wrong: an unknown option, a bad value, or a
+       directory that is not a project. Nothing ran. Do not retry.
+   * - 3
      - Some simulations did not finish, because the run was stopped (Ctrl-C,
        or a stop signal from Kubernetes or Slurm). A retry continues where
        it stopped.

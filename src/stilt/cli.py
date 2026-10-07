@@ -16,8 +16,10 @@ prints a short summary. Examples::
     stilt output ls                   # list the output directory's settings folders
 
 ``stilt run`` exits with 0 when every simulation it ran is complete, 1 when
-some failed, and 2 when some did not finish because the run was
-interrupted (Ctrl-C, or SIGTERM from a scheduler).
+some failed, and 3 when some did not finish because the run was
+interrupted (Ctrl-C, or SIGTERM from a scheduler). Every command exits with
+2 when its command line is wrong: an unknown option, a bad value, or a
+directory that is not a project.
 """
 
 from __future__ import annotations
@@ -68,14 +70,15 @@ _COMPUTE_ROOT = typer.Option(
 )
 
 
-#: Exit codes of ``stilt run``.
-EXIT_COMPLETE, EXIT_FAILED, EXIT_INTERRUPTED = 0, 1, 2
+#: Exit codes. 2 is also Click's own for an unknown option or command, so a
+#: driver never takes a typo for a run to retry.
+EXIT_COMPLETE, EXIT_FAILED, EXIT_USAGE, EXIT_INTERRUPTED = 0, 1, 2, 3
 
 
 def _fail(message: str) -> NoReturn:
-    """Print an error and exit with 1."""
+    """Print an error about the command line or the project, and exit with 2."""
     typer.echo(f"Error: {message}", err=True)
-    raise typer.Exit(code=1)
+    raise typer.Exit(code=EXIT_USAGE)
 
 
 def _settings_problems(error: ValidationError) -> str:
@@ -98,7 +101,7 @@ def _resolve_project(path: str | Path | None) -> str:
             "(no config.yaml found).",
             err=True,
         )
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=EXIT_USAGE)
     return str(resolved)
 
 
@@ -123,7 +126,7 @@ def init(project: Path = _NEW_PROJECT_ARG) -> None:
             f"Error: '{project}' already contains a config.yaml. Aborting.",
             err=True,
         )
-        raise typer.Exit(code=1) from None
+        raise typer.Exit(code=EXIT_USAGE) from None
 
     typer.echo(f"Initialized STILT project at '{project}'")
     typer.echo("  config.yaml    edit the met directory and footprint settings")
@@ -288,7 +291,8 @@ def run(
     --receptors limits the run to the receptors listed in a file. --task
     I/N runs one share of them here, for each task of a job array or a
     Kubernetes indexed Job. Exits with 0 when every simulation that ran is
-    complete, 1 when some failed, and 2 when some did not finish.
+    complete, 1 when some failed, 3 when some did not finish, and 2 when
+    the command line is wrong.
     """
     receptor_ids = None if receptors is None else _read_ids(receptors)
     share = None if task is None else _parse_task(task)
