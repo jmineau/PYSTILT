@@ -981,6 +981,8 @@ class Project:
 
         Raises
         ------
+        TypeError
+            If ``time_bins`` is not a :class:`pandas.IntervalIndex`.
         ValueError
             If the selection holds more or fewer than one variant, the
             variant has no grid or no footprints yet, or ``time_bins`` is not

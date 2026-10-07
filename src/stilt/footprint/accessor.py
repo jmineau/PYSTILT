@@ -299,6 +299,8 @@ class FootprintAccessor:
 
         Raises
         ------
+        TypeError
+            If ``time_bins`` is not a :class:`pandas.IntervalIndex`.
         ValueError
             If ``time_bins`` is not closed on the left.
         """

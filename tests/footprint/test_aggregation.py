@@ -122,6 +122,14 @@ def test_aggregate_rejects_bins_not_closed_on_the_left(closed):
         foot.stilt.aggregate(target=_one_cell(-113.95, 39.05, 0.1), time_bins=bins)
 
 
+def test_time_bins_given_as_a_frequency_say_what_to_pass():
+    """A string had raised a bare AttributeError (#192)."""
+    foot = make_footprint(n_times=2)
+
+    with pytest.raises(TypeError, match="interval_range"):
+        foot.stilt.aggregate(target=_one_cell(-113.95, 39.05, 0.1), time_bins="6h")
+
+
 def test_aggregate_zero_values_in_domain():
     """Grid coordinate within domain but with all-zero values returns zeros."""
     foot = make_footprint(n_times=1)

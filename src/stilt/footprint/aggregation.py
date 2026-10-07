@@ -34,9 +34,18 @@ def _bin_edges(time_bins: pd.IntervalIndex) -> tuple[np.ndarray, np.ndarray]:
 
     Raises
     ------
+    TypeError
+        If *time_bins* is not a :class:`pandas.IntervalIndex`, such as a
+        frequency string.
     ValueError
         If the bins are not closed on the left.
     """
+    if not isinstance(time_bins, pd.IntervalIndex):
+        raise TypeError(
+            f"time_bins must be a pandas.IntervalIndex, not {time_bins!r}. "
+            "Build the bins from a start, an end, and a frequency, for "
+            "example pd.interval_range(start, end, freq='6h', closed='left')."
+        )
     if time_bins.closed != "left":
         raise ValueError(
             f"time_bins must be closed on the left, not {time_bins.closed!r}. "
