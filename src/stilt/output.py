@@ -762,7 +762,19 @@ class Output:
 
         The file records the run's settings, so it reads alone, and the
         folder's settings hash, the PYSTILT version, and the realization.
+
+        Raises
+        ------
+        ValueError
+            If *particles* has no rows. A particle file makes its simulation
+            complete, and a run with no particles is a failure
+            (``NO_PARTICLE_DATA``).
         """
+        if particles.empty:
+            raise ValueError(
+                f"No particles to write for {receptor.id}: a particle file "
+                "would make the simulation complete."
+            )
         folder = self._made("particles", "particles", variant, realization)
         return write_particles(
             _receptor_file(folder, str(receptor.id)),
