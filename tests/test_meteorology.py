@@ -703,3 +703,14 @@ def test_local_hourly_met_on_the_hour_reads_no_extra_file(tmp_path):
 
     assert [p.name for p in on_the_hour] == ["20240718_17", "20240718_18"]
     assert [p.name for p in past_it] == ["20240718_17", "20240718_18", "20240718_19"]
+
+
+def test_met_config_construction(tmp_path):
+    mc = MetConfig(
+        directory=tmp_path / "met",
+        file_format="%Y%m%d_%H",
+        file_tres="1h",
+    )
+    assert mc.directory == tmp_path / "met"
+    assert mc.file_format == "%Y%m%d_%H"
+    assert mc.n_min == 1  # default
