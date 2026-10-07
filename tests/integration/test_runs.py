@@ -24,8 +24,8 @@ from stilt.particles import particles_metadata
 from stilt.project import Project
 from stilt.transport.hysplit.driver import winderrtf
 
-from .conftest import integration
-from .fixtures.factories import make_met_config
+from ..conftest import integration
+from .conftest import reference_met
 
 _XYERR = {"siguverr": 2.0, "tluverr": 60.0, "zcoruverr": 500.0, "horcoruverr": 40.0}
 
@@ -568,7 +568,6 @@ def test_geometry_footprint(tmp_path, wbb_receptor, met_dir):
 
     from .fixtures.r_stilt_reference import (
         REFERENCE_KRAND,
-        REFERENCE_MET_FILE_FORMAT,
         REFERENCE_SEED,
     )
 
@@ -580,11 +579,7 @@ def test_geometry_footprint(tmp_path, wbb_receptor, met_dir):
         "ids": ["wbb", "nw"],
     }
     config = ProjectConfig(
-        mets={
-            "hrrr": make_met_config(
-                met_dir, file_format=REFERENCE_MET_FILE_FORMAT, file_tres="6h"
-            )
-        },
+        mets={"hrrr": reference_met(met_dir)},
         n_hours=-6,
         numpar=100,
         krand=REFERENCE_KRAND,
@@ -641,7 +636,6 @@ def test_forward_run(tmp_path, met_dir, wbb_grid):
         REFERENCE_KRAND,
         REFERENCE_LATITUDE,
         REFERENCE_LONGITUDE,
-        REFERENCE_MET_FILE_FORMAT,
         REFERENCE_SEED,
         REFERENCE_SUMMER_TIME,
     )
@@ -654,11 +648,7 @@ def test_forward_run(tmp_path, met_dir, wbb_grid):
         altitude=REFERENCE_ALTITUDE,
     )
     config = ProjectConfig(
-        mets={
-            "hrrr": make_met_config(
-                met_dir, file_format=REFERENCE_MET_FILE_FORMAT, file_tres="6h"
-            )
-        },
+        mets={"hrrr": reference_met(met_dir)},
         n_hours=3,
         numpar=100,
         krand=REFERENCE_KRAND,

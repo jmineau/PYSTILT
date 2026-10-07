@@ -640,7 +640,7 @@ The README links to it and keeps no table of its own.
   release height. Raw first-step pressures give neighbouring particles weights
   spanning 145×; the fit gives 1.49×, the true hydrostatic ratio across 3 km.
   Never "simplify" `particle_pwf` to use `pres` directly
-  (`tests/test_pwf_integration.py` guards this).
+  (`tests/integration/test_pressure_weighting.py` guards this).
 - **Exact release positions would not help PWF.** PARTICLE.DAT starts at
   `t = -DELT`, never `t = 0`, but the scatter is not only transport:
   `emspnt.f` places each particle uniformly at random inside its own
