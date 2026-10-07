@@ -7,12 +7,13 @@ from pathlib import Path
 
 import numpy as np
 
-from stilt.meteorology import Met, MetConfig, run_window
+from stilt.meteorology import Met, run_window
 from stilt.receptors import ColumnReceptor, MultiPointReceptor
 from stilt.transport.hysplit import HysplitConfig, read_particle_dat, write_inputs
 from stilt.transport.hysplit.driver import _run_hycs_std
 
 from ...conftest import integration
+from ...fixtures.factories import make_met_config
 from ...fixtures.particles import finished
 
 
@@ -65,9 +66,7 @@ def test_hysplit_multipoint_release_points_follow_control_order(tmp_path, met_di
         hnf_plume=False,
         varsiwant=["time", "indx", "long", "lati", "zagl", "foot"],
     )
-    met = Met(
-        "hrrr", MetConfig(directory=met_dir, file_format="%Y%m%d_%H", file_tres="6h")
-    )
+    met = Met("hrrr", make_met_config(met_dir, file_tres="6h"))
     result = _raw_particles(
         receptor, params, met, Path(tmp_path) / "hysplit_assignment", timeout=120
     )
@@ -119,9 +118,7 @@ def test_hysplit_multipoint_release_points_follow_control_order_nondivisible(
         hnf_plume=False,
         varsiwant=["time", "indx", "long", "lati", "zagl", "foot"],
     )
-    met = Met(
-        "hrrr", MetConfig(directory=met_dir, file_format="%Y%m%d_%H", file_tres="6h")
-    )
+    met = Met("hrrr", make_met_config(met_dir, file_tres="6h"))
     result = _raw_particles(
         receptor,
         params,
@@ -169,9 +166,7 @@ def test_hysplit_column_release_spans_vertical_line_without_endpoint_chunking(
         hnf_plume=False,
         varsiwant=["time", "indx", "long", "lati", "zagl", "foot"],
     )
-    met = Met(
-        "hrrr", MetConfig(directory=met_dir, file_format="%Y%m%d_%H", file_tres="6h")
-    )
+    met = Met("hrrr", make_met_config(met_dir, file_tres="6h"))
     result = _raw_particles(
         receptor, params, met, Path(tmp_path) / "hysplit_column_assignment", timeout=120
     )
@@ -224,9 +219,7 @@ def test_close_spaced_slant_release_heights_are_recovered(tmp_path, met_dir):
         altitudes=altitudes,
     )
     params = HysplitConfig(n_hours=-1, numpar=200, hnf_plume=False)
-    met = Met(
-        "hrrr", MetConfig(directory=met_dir, file_format="%Y%m%d_%H", file_tres="6h")
-    )
+    met = Met("hrrr", make_met_config(met_dir, file_tres="6h"))
     particles = _raw_particles(
         receptor, params, met, Path(tmp_path) / "close_slant", timeout=300
     )

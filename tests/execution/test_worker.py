@@ -20,7 +20,7 @@ from stilt.spatial import Grid
 from stilt.transport import ModelRun
 from stilt.transport.hysplit import FailureReason, HysplitConfig
 
-from ..fixtures.factories import make_variant
+from ..fixtures.factories import make_met_config, make_project_config, make_variant
 
 # ---------------------------------------------------------------------------
 # Fixtures and helpers
@@ -51,9 +51,7 @@ def other_receptor() -> Receptor:
 
 @pytest.fixture
 def met_config(tmp_path) -> MetConfig:
-    return MetConfig(
-        directory=tmp_path / "met", file_format="%Y%m%d_%H", file_tres="1h"
-    )
+    return make_met_config(tmp_path / "met")
 
 
 @pytest.fixture
@@ -138,16 +136,7 @@ def _write_footprint(sim: Simulation, *, empty: bool = False) -> None:
 
 
 def _model_config(tmp_path, **kwargs) -> ProjectConfig:
-    return ProjectConfig(
-        mets={
-            "hrrr": MetConfig(
-                directory=tmp_path / "met",
-                file_format="%Y%m%d_%H",
-                file_tres="1h",
-            )
-        },
-        **{"variants": {"hrrr": {}}, **kwargs},
-    )
+    return make_project_config(tmp_path, **kwargs)
 
 
 def _model(tmp_path, receptors, **config_kwargs) -> Project:

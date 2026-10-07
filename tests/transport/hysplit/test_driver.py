@@ -17,6 +17,8 @@ from stilt.transport.hysplit import (
 )
 from stilt.transport.hysplit.control import ControlFile
 
+from ...fixtures.factories import make_met_config
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -316,10 +318,10 @@ def _ending_at(minute: int) -> list[list[float]]:
 
 
 def _run(tmp_path, receptor, config=None):
-    from stilt.meteorology import MetConfig, run_window
+    from stilt.meteorology import run_window
 
     config = config or _config()
-    met = MetConfig(directory=tmp_path, file_format="%Y%m%d_%H", file_tres="1h")
+    met = make_met_config(tmp_path)
     window = run_window(receptor.time, config.n_hours)
     (tmp_path / "run").mkdir(exist_ok=True)
     return HysplitModel().run(

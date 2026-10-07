@@ -7,13 +7,12 @@ import pytest
 
 from stilt.config import ProjectConfig
 from stilt.execution import run_particles
-from stilt.meteorology import MetConfig
 from stilt.output import Output
 from stilt.simulation import Simulation
 from stilt.transport import ModelRun, get_model
 from stilt.transport.hysplit import HysplitConfig, HysplitModel
 
-from ..fixtures.factories import make_variant
+from ..fixtures.factories import make_met_config, make_variant
 
 
 def test_get_model_returns_hysplit_by_default_and_by_name():
@@ -41,7 +40,7 @@ def test_hysplit_model_version_is_the_bundled_build_or_exe_dirs(tmp_path):
 
 
 def test_the_settings_record_the_model_that_makes_the_particles(tmp_path):
-    met = MetConfig(directory=tmp_path, file_format="%Y%m%d_%H", file_tres="1h")
+    met = make_met_config(tmp_path)
     variant = (
         ProjectConfig(mets={"hrrr": met}, n_hours=-1, variants={"hrrr": {}})
     ).resolve()["hrrr"]
@@ -100,7 +99,7 @@ def test_hysplit_model_reads_the_met_in_place_and_records_the_source(
     monkeypatch.setattr(
         model_module, "Met", lambda name, config: _FakeMet(source, cropped)
     )
-    met = MetConfig(directory=tmp_path, file_format="%Y%m%d_%H", file_tres="1h")
+    met = make_met_config(tmp_path)
     result = HysplitModel().run(
         point_receptor,
         params,
@@ -143,7 +142,7 @@ def test_run_particles_goes_through_the_model_the_settings_name(
     monkeypatch.setattr(
         "stilt.transport.get_model", lambda name: asked.append(name) or _Model()
     )
-    met_config = MetConfig(directory=tmp_path, file_format="%Y%m%d_%H", file_tres="1h")
+    met_config = make_met_config(tmp_path)
     variant = make_variant(met_config=met_config, n_hours=-1, numpar=1, hnf_plume=False)
     sim = Simulation(point_receptor, variant, Output(tmp_path / "output"))
 
@@ -201,7 +200,7 @@ def echo(monkeypatch):
 
 
 def _met(tmp_path) -> dict:
-    return {"directory": tmp_path, "file_format": "%Y%m%d_%H", "file_tres": "6h"}
+    return make_met_config(tmp_path, file_tres="6h")
 
 
 def test_run_trajectories_returns_the_particles_and_removes_its_workdir(

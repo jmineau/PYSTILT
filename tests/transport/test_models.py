@@ -11,6 +11,8 @@ from stilt.config import ProjectConfig
 from stilt.identity import read_run_settings, settings_hash
 from stilt.transport import ModelInfo, TransportConfig
 
+from ..fixtures.factories import make_met_config
+
 GRID = {"xmin": -112, "xmax": -111, "ymin": 40, "ymax": 41, "xres": 0.1, "yres": 0.1}
 
 
@@ -43,13 +45,7 @@ def toy(monkeypatch):
 
 
 def _mets(tmp_path):
-    return {
-        "hrrr": {
-            "directory": tmp_path / "met",
-            "file_format": "%Y%m%d_%H",
-            "file_tres": "6h",
-        }
-    }
+    return {"hrrr": make_met_config(tmp_path / "met", file_tres="6h")}
 
 
 def test_a_variant_may_run_another_model(tmp_path, toy):

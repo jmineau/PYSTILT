@@ -9,11 +9,11 @@ import pytest
 
 from stilt.config import ProjectConfig
 from stilt.footprint.config import FootprintConfig
-from stilt.meteorology import MetConfig
 from stilt.receptors import ColumnReceptor, MultiPointReceptor, PointReceptor
 from stilt.spatial import Grid
 from stilt.transport.hysplit import HysplitConfig
 
+from .fixtures.factories import make_met_config
 from .fixtures.r_stilt_reference import (
     REFERENCE_MET_FILE_FORMAT,
     REFERENCE_TIME,
@@ -146,11 +146,7 @@ def multipoint_receptor():
 @pytest.fixture
 def met_config(tmp_path):
     """MetConfig pointing at a temporary directory."""
-    return MetConfig(
-        directory=tmp_path / "met",
-        file_format="%Y%m%d_%H",
-        file_tres="1h",
-    )
+    return make_met_config(tmp_path / "met")
 
 
 @pytest.fixture
@@ -253,11 +249,9 @@ def wbb_config(met_dir, wbb_grid) -> ProjectConfig:
     """Minimal ProjectConfig for integration tests (n_hours=-6, numpar=100)."""
     return ProjectConfig(
         mets={
-            "hrrr": {
-                "directory": met_dir,
-                "file_format": REFERENCE_MET_FILE_FORMAT,
-                "file_tres": "6h",
-            }
+            "hrrr": make_met_config(
+                met_dir, file_format=REFERENCE_MET_FILE_FORMAT, file_tres="6h"
+            )
         },
         n_hours=-6,
         numpar=100,
@@ -271,11 +265,9 @@ def traj_only_config(met_dir) -> ProjectConfig:
     """ProjectConfig without footprints for trajectory-only tests."""
     return ProjectConfig(
         mets={
-            "hrrr": {
-                "directory": met_dir,
-                "file_format": REFERENCE_MET_FILE_FORMAT,
-                "file_tres": "6h",
-            }
+            "hrrr": make_met_config(
+                met_dir, file_format=REFERENCE_MET_FILE_FORMAT, file_tres="6h"
+            )
         },
         n_hours=-6,
         numpar=100,
@@ -291,11 +283,9 @@ def multifoot_config(met_dir, wbb_grid) -> ProjectConfig:
     )
     return ProjectConfig(
         mets={
-            "hrrr": {
-                "directory": met_dir,
-                "file_format": REFERENCE_MET_FILE_FORMAT,
-                "file_tres": "6h",
-            }
+            "hrrr": make_met_config(
+                met_dir, file_format=REFERENCE_MET_FILE_FORMAT, file_tres="6h"
+            )
         },
         n_hours=-6,
         numpar=100,
@@ -313,11 +303,9 @@ def multipoint_config(met_dir) -> ProjectConfig:
     grid = Grid(xmin=-113.0, xmax=-110.5, ymin=39.5, ymax=42.0, xres=0.01, yres=0.01)
     return ProjectConfig(
         mets={
-            "hrrr": {
-                "directory": met_dir,
-                "file_format": REFERENCE_MET_FILE_FORMAT,
-                "file_tres": "6h",
-            }
+            "hrrr": make_met_config(
+                met_dir, file_format=REFERENCE_MET_FILE_FORMAT, file_tres="6h"
+            )
         },
         n_hours=-6,
         numpar=100,
