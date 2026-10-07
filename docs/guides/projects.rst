@@ -295,9 +295,9 @@ footprint, so the two share particles:
 .. code-block:: text
 
    $ stilt status ./my_project
-   Project: /data/my_project  total=8,760  completed=8,760  pending=0
-     hrrr: total=4,380  completed=4,380  pending=0
-     hrrr-smooth: total=4,380  completed=4,380  pending=0
+   Project: /data/my_project  total=8760  complete=8760  failed=0  interrupted=0  pending=0
+     hrrr: total=4380  complete=4380  failed=0  interrupted=0  pending=0
+     hrrr-smooth: total=4380  complete=4380  failed=0  interrupted=0  pending=0
    Output: /data/output
      particles   settings=hrrr-5d01e7         4,380 files  hrrr, hrrr-smooth
      particles   settings=hrrr-a3f9c2         4,380 files  (no variant)  numpar: 1000 (config: 2000)

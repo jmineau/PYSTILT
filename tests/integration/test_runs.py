@@ -401,7 +401,7 @@ def test_cli_run(tmp_path, wbb_config, wbb_receptor):
     assert result.exit_code == 0, (
         f"stilt run exited {result.exit_code}\nOutput:\n{result.output}"
     )
-    assert "completed=1" in result.output
+    assert "complete=1" in result.output
 
     sim = Project(project_dir).simulation(*_sim_id(wbb_receptor))
     assert sim.has_particles, "CLI run: no particles"

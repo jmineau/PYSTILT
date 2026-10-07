@@ -71,7 +71,8 @@ layout; `docs/migration/` covers moving from STILT-R, X-STILT, and stiltctl.
 - Failures are recorded (breaking). A failed simulation does not stop
   the others: `<receptor id>.failure.yaml` beside its log says why
   (`sim.failure`), and each simulation is `complete`, `failed`,
-  `interrupted`, or `pending`. Exceptions share one base,
+  `interrupted`, or `pending`; `stilt status` counts each, per variant.
+  Exceptions share one base,
   `stilt.StiltError`, in `stilt.exceptions` (was `stilt.errors`).
 - Running (breaking). `stilt run` (and `project.run()`) runs and
   waits, locally or as a Slurm job array; `stilt submit` (and

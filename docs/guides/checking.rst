@@ -13,8 +13,8 @@ failed ones by reason:
 .. code-block:: text
 
    $ stilt status ./my_project
-   Project: /data/my_project  total=1200  completed=1150  pending=50
-   failed: MET_COVERAGE 42, TIMEOUT 8  (why: the .failure.yaml beside each log, under /data/output/logs)
+   Project: /data/my_project  total=1200  complete=1150  failed=42  interrupted=0  pending=8
+   failed: MET_COVERAGE 34, TIMEOUT 8  (why: the .failure.yaml beside each log, under /data/output/logs)
 
 In Python, ``project.status()`` is the same, one row per simulation:
 
