@@ -111,6 +111,17 @@ def test_kind_is_particles_or_footprints(tmp_path):
 # ---------------------------------------------------------------------------
 
 
+def test_an_empty_particle_table_is_not_written(tmp_path):
+    """A particle file makes a simulation complete, so an empty one would hide a failure (#192)."""
+    out = Output(tmp_path / "output")
+    receptor = receptor_at()
+    empty = fake_particles(receptor).iloc[0:0]
+
+    with pytest.raises(ValueError, match="No particles"):
+        out.write_particles(VARIANT, receptor, empty, [])
+    assert out.present("particles", VARIANT) == set()
+
+
 def test_particles_round_trip_in_date_folders(tmp_path):
     from stilt.particles import read_particles
 
