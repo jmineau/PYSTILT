@@ -6,1252 +6,154 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Migration
+
+This release redesigns how a project is laid out, run, and read. A
+0.1.0a22 project needs its `config.yaml` updated (the keys below), and its
+results in `simulations/by-id/` are not read: run it again, or read them
+with the old release. The *Projects and variants* guide describes the new
+layout; `docs/migration/` covers moving from STILT-R, X-STILT, and stiltctl.
+
 ### Changed
 
-- A simulation whose particles stop before the end of its run fails, as
-  `MET_COVERAGE`, for any transport model (breaking; #169). It was written
-  and counted complete: a 24-hour run with 6 hours of met on disk made a
-  6-hour footprint, with one warning on stderr. Whatever stopped the
-  particles (a missing or cut file, or every particle leaving the met's
-  domain or crop), the footprint would hold part of the run. There is no
-  setting to allow it. Results already written stay complete until rerun.
-- HYSPLIT's met needs every file its run's hours fall in: a missing one
-  fails the simulation before HYSPLIT runs, naming the hours with no file.
-- A run's settings record its met as the weather product and the crop
-  (breaking: every particles folder gets a new hash). The product is the
-  source id in the ARL file headers (`HRRR`, `NAM`, ...), read from the
-  first file under the met's `directory`, or the archive's for
-  `download` (arlmet 0.1.0b2). Where the files are kept and how they are
-  named (`directory`, `file_format`, `file_tres`, `download`,
-  `download_from`, `n_min`) are no longer recorded: moving the met files
-  keeps every result, and two archives named alike, such as an HRRR and a
-  NAM archive, no longer share a settings folder. A single run no longer
-  records `realization: null`, and the model record always has
-  `data_files`. Folders written before are not found under the new
-  hashes until they are renamed (#170).
-- `MetConfig` is HYSPLIT's met config, `stilt.transport.hysplit.MetConfig`,
-  with `Met` beside it, and `stilt.MetConfig` is gone (breaking). A
-  transport model names its met config as `met_config_class`, and
-  `ProjectConfig.mets` holds each met as written, checked by the met config
-  of the model that reads it. `kind` is gone, and `directory` is required
-  by HYSPLIT's met only: another model's met need not name one.
-  `project.mets` is gone; a variant's met is `variant.met_config`, and
-  `run_particles` takes none.
-- A met's `directory` and `subgrid_dir` are read one way everywhere: `~`
-  and `$VARIABLES` expand in `run_trajectories` and `Met` too, as in a
-  project.
-- `ModelInfo.name` has no default, and `get_model` takes the name
-  (breaking); a run records the model as `config.yaml` names it.
-- `Jacobian.columns` has named levels from the target: `time, lon, lat`
-  for a grid (`time, x, y` when projected) and `time, cell` for a mesh or
-  zones, where a grid's cells were one level of `(x, y)` tuples (breaking).
-  `Jacobian.to_frame(sparse=True)` builds pandas sparse columns from the
-  sparse matrix with no dense copy.
-- `stilt status` lists the output directory's settings folders: how many
-  result files each holds, which variants use it, and how one no variant
-  uses differs. `stilt output ls` is removed (breaking), and
-  `project.folders()` replaces `project.unreferenced()`. The summary
-  `stilt run` prints at the end leaves the folder list out, which takes
-  seconds on a large shared output.
-- `stilt run` exits 3 when some simulations did not finish (was 2), and
-  every command exits 2 when its command line is wrong (was 1), as Click
-  already did for an unknown option (breaking for scripts that read the
-  code). 0 is complete and 1 some failed, as before. A driver can retry 3
-  and never retries a typo.
-- An empty footprint file is marked `stilt:empty: true` in its metadata
-  (breaking for stored output: `stilt:empty_reason` is no longer read; the
-  upgrade script rewrites it). `EmptyFootprint` has no `reason`, and
-  `sim.empty_reason` is removed: a footprint that is `None` while
-  `sim.has_footprint` is true is empty, which means no particle reached
-  the grid.
-- `Simulation.is_complete` is a property that checks two files, as
-  `has_particles` and `has_footprint` do (breaking: no parentheses). It
-  listed the whole date folder, 4,700 times slower on a 20,000-file day.
-  `Simulation.time_range`, `settings`, `makes_footprint`, and `met_files`
-  are removed: use `sim.variant.run_settings` and `footprint_settings`,
-  `sim.variant.footprint is not None`, and
-  `stilt.particles.particles_metadata(sim.particles_path).met_files`.
-- The public names of `stilt.receptors`, `stilt.execution`, and
-  `stilt.identity` are what a user or a plug-in author calls (breaking).
-  The receptor table helpers (`receptor_rows`, `receptors_to_csv`, ...)
-  are in `stilt.receptors.table`, the workers (`run_particles`,
-  `make_footprint`, `run_receptor`, `run_receptors`) in
-  `stilt.execution.worker`, and `resolve_compute_root` in
-  `stilt.execution.runner`. `task_share` joins `stilt.__all__`.
-- `execution.time` is required with `backend: slurm` (breaking). Without it
-  each task got the partition's default limit, which can be days. It is
-  written to `--time` as given (`02:00:00`, not `120`), and
-  `ExecutionConfig.time_minutes` is removed. `stilt run` and `stilt submit`
-  print a bad execution setting as one line, not a traceback.
-- A Slurm task's log starts with `task i of n`, not `backend=local`.
-  Help and settings descriptions say "the transport model" where any
-  model runs.
-- `Project.init(path, receptors=None, *, config=None, ...)` (breaking):
-  the receptors come second, as the quickstart passes them, and `config`
-  is keyword-only. `Project.init(path, receptors)` raised a `TypeError`.
-- `project.plot.availability()` draws one row per location with a bar
-  for each day that has receptors, shaded by how many, where it drew a
-  bar per receptor; it stays quick on projects of tens of thousands of
-  receptors (#150).
-
-- `stilt.transforms` is a package with one module per transform
-  (`averaging_kernel`, `pressure_weighting`, `lifetime`); every name
-  imports from `stilt.transforms` as before. The transforms guide states
-  the contract: a transform changes the footprint through `foot` and may
-  add columns, and the built-ins only scale `foot` (#150).
-
-- Extras (breaking): `cloud` is `download` (downloading meteorology);
-  `geometry` adds `exactextract`, which PYSTILT already used when it was
-  installed, and `visualization` adds `cartopy` for map features (#150).
-
-- The satellite and column page is a tutorial, *A Satellite Column, Start
-  To Finish* (was the advanced page *Satellite And Column Observations*),
-  from a TROPOMI orbit to modelled and observed enhancements with
-  `receptors_from_soundings`, `add_table`, and `modelled_column` (#150).
-
-- `foot.stilt.enhancement(flux)` raises when the flux cells are finer than
-  the footprint's, where it took one small flux cell per footprint cell,
-  and warns when cells of one size are offset by more than a tenth of a
-  cell. The flux tutorial says how to choose a footprint grid for an
-  inventory, and to put a finer inventory on it as an area-weighted mean
-  (xESMF) or make the footprints on the inventory's grid; PYSTILT has no
-  flux regridder (#139, #150).
-
-- Background and transport error are the simulation's (breaking):
-  `sim.background(field)` and `sim.transport_error(error, flux)`, where
-  `error` is the receptor under a wind-error variant or a list of its
-  realizations. Both weight the particles with the variant's transforms,
-  receptor, and project directory, which were passed by hand. Without a
-  project they are `stilt.particles.background` and
-  `stilt.particles.transport_error` (with `Background`, `TransportError`,
-  and `DEFAULT_LENGTH_SCALE`); `stilt.observations` no longer has them.
-  `variogram`, `fit_variogram`, and `VariogramFit` are in
-  `stilt.meteorology`, and `haversine_km` in `stilt.spatial` (#150).
-
-- Slurm runs no longer go through submitit (breaking), which is no longer
-  a dependency. `stilt submit` and `project.submit()` write a submission
-  folder, `_slurm/<stamp>/` with `job.sh`, `receptors.txt`, and
-  `execution.yaml`, and submit `job.sh` with `sbatch`. Task `i` of the
-  array runs `stilt run <project> --receptors receptors.txt --task i/N
-  --execution execution.yaml`, so a task is a command line that can be read
-  and rerun by hand, and the whole execution override reaches it.
-  `project.submit()` returns the Slurm job id (was submitit jobs), and
-  `project.run()` on Slurm waits by polling `sacct` and returns the status
-  table without raising when a task ended badly; such tasks are logged and
-  their simulations stay pending. A task that stops with work left
-  requeues itself with `scontrol requeue`, at most 10 times, when it got
-  SIGUSR1 (`--signal=B:USR1@120`, two minutes before the time limit) or
-  was preempted (`scontrol show job` gives a `PreemptTime`); `scancel`
-  stops it without a requeue. Each task logs to `<task>.log`, appended
-  across requeues. `stilt run --execution FILE` reads the execution
-  settings from a file. `stilt.execution.Batch`, `split`, and
-  `slurm_parameters` are gone; `job_script` writes the script. This
-  reverses #100: submitit was there to run a pickled callable, and the
-  unit of work is now a command line (#150).
-
-- `stilt run` exits with 1 when a simulation it ran failed and 2 when some
-  did not finish because the run was stopped (Ctrl-C or SIGTERM), where it
-  exited with 0. A container or a driver can act on it (#136, #150).
-
-- `project.footprints(sel)` returns one `xarray.Dataset` of a variant's
-  footprints (breaking), where it returned a dictionary of arrays. The
-  footprints are stacked on `hour`, the hours after each receptor's time,
-  so receptors at any time share one axis; a `time(receptor, hour)`
-  coordinate says when each hour starts. Only the files' metadata is read
-  when it opens, and the values load with dask, a day's receptors at a
-  time. Empty footprints have no row and are listed in `attrs["empty"]`,
-  receptors not run yet in `attrs["missing"]`. `dask` is a dependency
-  (#150).
-
-- The particle table's `indx`, `long`, and `lati` are `particle`, `lon`,
-  and `lat` (breaking), in memory and in the stored files, so a
-  simulation's particles and its footprint spell longitude the same way.
-  HYSPLIT's `varsiwant` codes are unchanged and are mapped when its output
-  is read (`stilt.transport.hysplit.driver.PARTICLE_COLUMNS`); the other
-  columns keep STILT-R's names. Particle files written before are rewritten
-  by the upgrade script (#150).
-
-- Realizations are an axis, not numbered variants (breaking). A variant
-  with `realizations: N` is one variant, `hrrr-err`, whose simulations
-  are realizations `0` to `N - 1`: the `realization` column of
-  `project.simulations`, `project.simulation(rid, "hrrr-err", k)`, and a
-  `realization=k/` partition of the variant's folder for its particles,
-  footprints, logs, and kept working directories. The run record says
-  `ensemble: true` with the base seed in place of the realization number,
-  so raising N only adds partitions. The `group` column and
-  `Variant.group` are gone, `Variant.realization` is `realizations` (the
-  count) with `transport_for(k)`, and `sim.id` is
-  `(receptor, variant, realization)`. A single run records
-  `realization: null` as before, so its hash and folder are unchanged; a
-  folder of numbered realizations from before is no longer found (#150).
-
-- `sim.scratch_path` is `sim.kept_workdir`, and `Output.scratch_path` is
-  `Output.kept_workdir` (breaking): the working directory a failed run (or
-  any run with `keep_scratch`) left, kept under `scratch/` in the output
-  directory. `sim.log` and `sim.met_files` stay, empty for a model that
-  has none (#150).
-
-- The transport model boundary is `run(receptor, config, met, window,
-  workdir=None, timeout=None) -> ModelRun(particles, log, met_files)`
-  (breaking). A model gets the `MetConfig` and the `(start, end)` the run
-  covers (`stilt.meteorology.run_window`), and finds its own met: HYSPLIT
-  builds its `Met` and asks `Met.files_for(window, hour_after=...)`;
-  `Met.required_files` is removed. The run
-  returns its log as text, and a failed run raises `SimulationError` with
-  `log`, so the worker no longer reads `stilt.log` from the working
-  directory. `stilt.transport.run_model` runs a model and applies the core
-  steps, for the worker and `run_trajectories` alike. `project.mets` holds
-  `MetConfig`s with absolute directories, where it held `Met`s (#150).
-- `MetConfig` has `kind: files`, how the meteorology is stored, so another
-  kind can be added later. It is left out of a run's record while it is
-  `files`, so no hash changes (#150).
-
-- The release heights and the near-field correction are PYSTILT's steps,
-  applied by the worker to any transport model's particles (breaking):
-  `stilt.particles.add_release_heights(particles, receptor)` and
-  `correct_near_field(particles, receptor, veght)` (was
-  `calc_plume_dilution(particles, r_zagl, veght)`). HYSPLIT's model
-  returns the particles it wrote, and `finish_particles` and
-  `stilt.transport.hysplit.release` are gone. A model whose particles lack
-  the columns the correction reads gets none, with a warning (#150).
-- A release row at `time = 0` gives a column receptor's `xhgt` too: the
-  centre of the slab the particle was released in, where it was taken from
-  `particle` order. The bundled HYSPLIT writes no such row, so its results are
-  unchanged (#150).
-
-- A config must declare its variants (breaking). Without a `variants:`
-  section the config no longer runs one variant per met; it fails with a
-  message that says what to write (`variants: {hrrr: {}}`). Files PYSTILT
-  writes always had the section; a hand-written `config.yaml` without it
-  needs two lines (#150).
-- An unknown key in `config.yaml`, at the top or in a variant, is an error
-  that names the nearest setting and what it belongs to: `'smooth_factr'
-  is not a setting. Did you mean 'smooth_factor', a footprint setting?`
-  It used to reach HYSPLIT's config and be reported as one of its fields
-  (#150).
-- `hnf_plume` and `veght` are on the base `TransportConfig`, with
-  `n_hours` and `seed`: the parameters PYSTILT's own code reads, which a
-  variant that runs another transport model inherits. `numpar` is
-  HYSPLIT's, since nothing in the core reads it. No hash changes (#150).
-- `stilt.variants` is gone (breaking): `Variant` is in `stilt.config`,
-  `stilt.variants.resolve(config)` is `config.resolve(directory)`, and
-  `ProjectConfig.variant(name)` and `Declared` are private. A relative
-  geometry file in a footprint's settings starts from the project
-  directory, where it started from the working directory; the recorded
-  path and the hashes are unchanged (#150).
-
-- `project.simulations` is a plain pandas DataFrame, and the verbs are on
-  `Project` (breaking): `project.status(sel)`, `incomplete(sel)`,
-  `particles(sel)` (was `load_particles`), `footprints(sel)` (was
-  `load_footprints`), and `jacobian(sel, target, time_bins)`. A selection
-  is any table with `receptor` and `variant` columns (pandas, polars,
-  pyarrow) or a boolean mask over `project.simulations`; leave it out for
-  every simulation. A pandas selection keeps its own columns in
-  `status()`. `Simulations`, its `.frame`, and its iteration are gone;
-  look a row up with `project.simulation(receptor, variant)` (#150).
-- `SimID` is gone (breaking). `sim.id` is the tuple `(receptor, variant)`,
-  and `str(sim)` is `receptor/variant`. A run's working directory is
-  `<compute root>/<receptor>/<variant>` as before (#150).
-- `project.jacobian` reads and sums footprints in `workers` threads, the
-  number of CPUs by default, where it used `execution.cpus`; `batch` sets
-  how many receptors are read together (64) (#150).
-
-- `project.run()` and `stilt.execution.run` return the status table of
-  the simulations they ran, the rows of `project.simulations.status()`
-  (breaking). `SimulationResult` is gone: a worker records each failure in
-  the output directory, and the table reads them. `run_receptor` returns
-  one line per failure for the progress log, `run_receptors` and
-  `Batch` return nothing, and a stopped receptor raises
-  `KeyboardInterrupt` (#150).
-
-- `Output` has no folder classes (breaking). `stilt.output.Particles` and
-  `Footprints` are gone, with `Output.particles()`, `footprints()`,
-  `find_particles()`, `find_footprints()`, `particle_sets()`, and
-  `footprint_sets()`. Each method takes the kind of result
-  (`"particles"` or `"footprints"`) and the variant:
-  `output.path(kind, variant, receptor_id)`, `present(kind, variant,
-  receptor_ids)`, `complete(variant, receptor_ids)`, `table(kind,
-  variant, receptor_ids)`, `folder(kind, variant)`, `folders(kind)`,
-  `failure`, `failures`, `record_failure`, `clear_failure`, and the
-  writers `write_particles`, `write_footprint`, `write_empty_footprint`,
-  `write_log`, and `keep_workdir`. The output directory is
-  `output.directory`, where it was `output.path` (#150).
-- One rule says a simulation is complete, `stilt.output.completed`:
-  `Output.complete`, `Simulation.is_complete()`, and `status()` apply it,
-  so the test that held two copies together is gone (#150).
-
-- Docs: the quickstart and the README make one footprint with
-  `run_trajectories` and `calc_footprint` before they make a project
-  (#150).
-
-- `sim.generate_footprint` is `sim.calc_footprint`, `stilt.calc_footprint`
-  with the simulation's particles, receptor, and settings filled in
-  (breaking). It takes the settings to change as keywords
-  (`sim.calc_footprint(smooth_factor=2.0)`, `grid=`, `time_integrate=`,
-  `transforms=`), each replacing the variant's own; it no longer takes a
-  `FootprintConfig`, and `transforms` replaces the variant's transforms
-  rather than adding to them (#150).
-
-- `stilt.__all__` lists what a user calls (breaking): the project and its
-  configs, the receptors, `Simulation`, `Grid`, `Bounds`, `Mesh`, `Zones`,
-  `run_trajectories`, `calc_footprint`, `read_particles`,
-  `read_footprint`, `averaging_kernel_table`, and `StiltError`. `Output`,
-  `Simulations`, `Variant`, `SimID`, `Met`, `Geometry`,
-  `particles_metadata`, and `write_particles` are imported from their
-  modules (`stilt.output.Output`, `stilt.meteorology.Met`, ...) (#150).
-
-- `stilt.footprint.calculate` is `stilt.calc_footprint`, STILT-R's name,
-  and takes its settings as keywords (breaking):
-  `calc_footprint(particles, receptor, grid, smooth_factor=1.0,
-  time_integrate=False, transforms=())`. It no longer takes a
-  `FootprintConfig` (#150).
-
-- `Simulations.jacobian` reads and sums footprints in batches of 64
-  receptors, `execution.cpus` batches at a time, and stacks the rows, so
-  its memory no longer grows with the selection. On 2,000 footprints of
-  about 350,000 cells each it peaked at 105 GB and took 188 s; it now
-  takes 4 GB and 112 s on one thread, 32 s on eight, with the same matrix.
-  The time bin is found once per receptor-hour, and the sum onto the
-  target is one sparse product per batch (#148).
-
-- Multipoint receptor ids are computed for a whole table at once, and
-  the ids are byte for byte the same (checked on every receptor of two
-  large projects). Reading a `receptors.csv` of 63,000 multipoint
-  receptors (2.6 million rows) takes 9 s, where it took 12.5 s (#148).
-
-- `Simulations.status()` opens no result file (breaking). It took about
-  25 minutes on a project of 64,000 footprints, reading every footprint's
-  metadata for its `empty` column and building a simulation per row; it
-  now takes seconds (#141). Its columns are `particles`, `footprint`, and
-  `state` (`complete`, `failed`, or `pending`), plus `step`, `reason`, and
-  `message` for failed simulations. The `empty` and `complete` columns are
-  gone: an empty footprint is complete, `sim.empty_reason` says why it is
-  empty, and a Jacobian lists the empty ones. `failures()` is gone too;
-  use `st[st.state == "failed"]`.
-
-- A failure record is one flat file per failed result, in the logs folder
-  of the folder that failed: `logs/settings=<particles key>/` for HYSPLIT,
-  `logs/settings=<footprint key>/` for a footprint (breaking). A footprint
-  failure is found by its folder's settings hash, so a project that names
-  the variant differently finds it. A record holds `step`, `reason`,
-  `message`, and `time`, and a `traceback` for an unexpected error.
-  `reason` is always set (the cause, or the error's class), so `error` is
-  gone; `log` and `scratch` are gone too, since `sim.log` and the new
-  `sim.scratch_path` give them. For a HYSPLIT failure the message is the
-  line of its log that matched. An expected failure logs one line instead
-  of a traceback. `Particles.write_failure` and `failed` are replaced by
-  `record_failure`, `clear_failure`, and `failures` on both folder kinds
-  (#148).
-
-- Docs: a receptor's and a `Mesh`'s fields are described once, in their
-  field descriptions, and the reference pages list them from there.
-  `Project.run` and `Project.submit` point to `stilt.execution.run` and
-  `submit` for their parameters. The `PointReceptor` example builds a
-  receptor with keyword arguments, the only way it can be built (#134).
-- `Project.init(path, starter=True)` writes the commented starter
-  `config.yaml` that `stilt init` writes (`stilt.config.STARTER_CONFIG`),
-  and `stilt init` calls it. `stilt run` resolves the local scratch
-  directory once, so the banner shows the directory the run uses (#134).
-- `stilt.transport.TransportConfig` is a pydantic base class, where it was
-  a protocol (#134). It holds `n_hours`, `seed`, `UNRECORDED`, and default
-  `settings()` and `realizations(n)`; `HysplitConfig` subclasses it, and a
-  second model's config inherits what it does not change. A seeded run's
-  `SETUP.CFG` now lists `SEED` before the other entries; the values are
-  unchanged.
-- `HYSPLITDriver` is gone (breaking). `write_inputs(workdir, receptor,
-  config, met_files)` writes the files `hycs_std` reads, and
-  `read_particle_dat(path, columns)` reads a `PARTICLE_STILT.DAT` as a
-  particle table; both are in `stilt.transport.hysplit`, with
-  `finish_particles`. `HysplitModel.run` holds the working directory and
-  runs `hycs_std` between them (#134).
-- `kmsl` is no longer a setting (breaking). HYSPLIT's `KMSL` is written
-  from each receptor's `altitude_ref`, which the setting could only
-  contradict. A `config.yaml` that sets it now fails to load; stored
-  settings that record `kmsl: null` still read (#134).
-- The HYSPLIT driver decides which input file each setting goes to; the
-  config's fields no longer carry routing tags, and `fields_in` is gone.
-  The `WINDERR` and `ZIERR` lines follow the explicit
-  `WIND_ERROR_SETTINGS` and `ZI_ERROR_SETTINGS`, not the order fields are
-  declared in. The files HYSPLIT reads are unchanged (#134).
-- `aggregate` and `jacobian` sum footprint cells through one function, so
-  binning hours and applying the overlap weights is written once.
-  `Footprints.jacobian` is gone (breaking): a selection's `jacobian` reads
-  the folder's table and calls `stilt.footprint.jacobian` itself, which
-  takes any table of footprint cells (#134).
-- Transforms take the receptor and the project directory (breaking). A
-  transform's method is `apply(particles, receptor=None, directory=None)`;
-  `TransformContext`, the `ParticleTransform` protocol, and
-  `Project.transform_context` are gone. `calculate`,
-  `Simulation.generate_footprint`, `background` and `transport_error` take
-  `receptor=` (where they do not already) and `directory=` in place of
-  `context=` (#134).
-- Receptors are checked once (#134). A receptor built from the rows of a
-  checked table (`receptors.csv`, `receptors_from_frame`) no longer runs
-  the same checks again. `receptors_from_rows(rows)` builds every receptor
-  of a `receptor_rows` table and replaces `receptor_from_rows` (breaking).
-  The check that a multipoint receptor's points have distinct locations
-  runs on arrays. On a file of 2.5 million multipoint rows (82,000
-  receptors), checking the table went from 21 to 13 seconds and reading
-  every receptor from 35 to 16 seconds.
-- **One failure record per simulation** (breaking). When a run fails, the
-  worker writes `<receptor id>.failure.yaml` beside the receptor's log:
-  the step that failed, the exception, a short `reason` (such as
-  `MET_COVERAGE` or `TIMEOUT`), the message, and the HYSPLIT log and
-  scratch folder kept in the output directory. A success removes it.
-  `sim.failure` reads it, `sims.failures()` lists the failed simulations,
-  `status()` has a `reason` column, and `stilt status` counts failures by
-  reason. The worker no longer appends a `PYSTILT ERROR` block to the
-  HYSPLIT log, and error messages no longer name the scratch folder that
-  is removed after the run (#134).
-- **Variants that share particles run as one group** (#134). HYSPLIT runs
-  at most once per group, and every footprint of the group is made from
-  the particles in memory, where each variant read them back from Parquet.
-  `run_receptor` does this directly; `run_simulation` is gone, and
-  `SimulationResult` no longer has `ran_hysplit` or `phase`.
-- `HYSPLITTimeoutError`, `HYSPLITFailureError`, `NoParticleOutputError` and
-  `EmptyParticleOutputError` are `SimulationError` with a `reason`
-  (`TIMEOUT`, the `FailureReason` from the log, or `NO_PARTICLE_DATA`)
-  (breaking). `MeteorologyError` keeps its class, with reason
-  `MISSING_MET_FILES` (#134).
-- The core no longer imports HYSPLIT's package at all; the one exception to
-  that import contract, `Simulation.outcome`, is gone (#134).
-
-- An `Output` reads each settings folder's `_settings.yaml` once. A
-  lookup that misses (a variant that has not run yet) lists the tree again
-  but reads only folders it has not seen, where it used to read and hash
-  every folder again on each miss. A footprint folder finds its particles
-  folder in the same cache (#134).
-- `Particles` and `Footprints` share one base for what every settings
-  folder does (`file`, `has`, `receptors`, `table`, `path`, equality);
-  each keeps only what differs. `Footprints.hash` is an attribute set when
-  the folder is read, as `Particles.hash` already was (#134).
-
-- **Each part owns its config** (breaking). `FootprintConfig` and the
-  geometry specs are in `stilt.footprint.config`, `MetConfig` in
-  `stilt.meteorology`, and
-  `ExecutionConfig` in `stilt.execution.config`; the `stilt.config` package
-  is one module holding `ProjectConfig`. Import them from `stilt`
-  (`stilt.Grid`, `stilt.FootprintConfig`, `stilt.MetConfig`, and now
-  `stilt.ExecutionConfig`) or from their new modules; `stilt.config` no
-  longer re-exports them. `Bounds` and `Grid` stay in `stilt.spatial`, the
-  raster and CRS layer (#134).
-- **A variant's transport settings are checked when it resolves**
-  (breaking). `VariantConfig` and `config.variant_configs` are gone.
-  `ProjectConfig` still checks at load what needs no transport model
-  (variant names, mets, `model`, `realizations`, `from:`, grid merging,
-  footprint settings without a grid) and offers each declared variant
-  merged with the defaults as `config.variant(name)`. `project.variants`
-  (`stilt.variants.resolve`) validates each variant's transport settings
-  once, with its model's config class, and expands `realizations`, so a
-  misspelled HYSPLIT setting inside a variant is reported there.
-  `Project.init` resolves before it writes `config.yaml`, so it still
-  refuses a bad config (#134).
-- `ProjectConfig` is no longer a `FootprintConfig`. The top-level footprint
-  settings are `config.footprint`, as the model's are `config.transport`;
-  `config.grid` is now the raw value from the file, as `config.numpar`
-  already was (#134).
-
-- `HYSPLITDriver` needs the `directory` to run in. Without one it made a
-  temporary directory that nothing removed (#134).
-- `MetConfig.subgrid_buffer` must be 0 or more; a negative buffer is a
-  validation error when the config loads (#134).
-- A footprint's `.stilt` accessor reads the receptor and settings
-  attributes once per array, so a transform that cannot be imported warns
-  once rather than on every access (#134).
-- A footprint folder whose `_settings.yaml` names a transform this machine
-  cannot import still lists and reads, with a warning, as footprint files
-  already did (#134).
-- `import stilt` no longer imports HYSPLIT's driver; `stilt.transport.get_model`
-  loads it when a run needs it (#134).
-- `stilt.observations.selection.haversine_km` is the great-circle distance
-  the variogram code uses, public in its module (#134).
-
-- **Particle files record their run's settings** (breaking). A particle
-  file's metadata holds the same settings as its folder's `_settings.yaml`
-  (`stilt:settings`): the transport model's settings, the met's, the model
-  build, and the realization number, in place of the model's whole config
-  (`stilt:params`). `particles_metadata(path)` returns
-  `(receptor, settings, met_files)`;
-  `stilt.identity.transport_from_settings(settings)` rebuilds the config.
-  `write_particles` takes the settings, and `Particles.write` no longer
-  takes a config. `particles_metadata` raises on a particle file written
-  before this change, which records no settings; `read_particles` still
-  reads it. #132 describes the one-time rewrite of an existing output
-  directory.
-- **A transport model owns its config, and a model is a variant axis**
-  (breaking). `stilt.config.TransportParams` is
-  `stilt.transport.hysplit.HysplitConfig`. `ProjectConfig` gains `model`
-  (`hysplit` unless set); the model's parameters stay flat, top-level keys,
-  checked by its config class, and are in `config.transport` (so
-  `config.numpar` is `config.transport.numpar`). A variant may name another
-  `model`; it then gives that model's parameters itself and inherits only
-  the met and the footprint settings, so models compare in one project.
-  `project.simulations` has a `model` column. Existing `config.yaml` files
-  read as before, and the hashes of existing folders are unchanged.
-- The near-field plume correction (`hnf_plume`) is applied by the HYSPLIT
-  model, whose config holds it (`stilt.transport.hysplit.model.finish_particles`).
-  `stilt.particles.prepare(raw, receptor)` no longer takes the config.
-  Particle files record their model (`stilt:model`); files without it are
-  read as HYSPLIT's.
-- `stilt.transport.get_model` reads the `stilt.transport.MODELS` table, where
-  another model's port adds its entry.
-- **Variants resolve in one place, and settings have one home** (breaking).
-  `project.variants` holds `stilt.Variant` objects, which carry a variant's
-  configs, its met, the transport model build (`stilt.transport.ModelInfo`),
-  and two hashes: `particles_hash` and `footprint_hash`, computed once.
-  `stilt.variants.resolve(config)` replaces `ProjectConfig.resolve_variants()`.
-  `stilt.config.VariantConfig` is now one declared variant merged with the
-  defaults, before the geometry and the model build are read
-  (`config.variant_configs`). The settings records and their hashes are in
-  `stilt.identity`. The hashes of existing folders are unchanged.
-- `TransportSettings`, `MetSettings`, `FootprintConfig.resolve()`, and the
-  geometry specs' `build()` are removed. `Mesh.from_spec(spec)` reads a
-  geometry spec. `FootprintConfig.geometry_hash` is gone; the hash is on the
-  `Variant` and in each footprint's settings (`foot.stilt.geometry_hash`).
-- `MetConfig.directory` is optional on the class, and a project requires it
-  for every met when its config loads, so a met read back from a folder's
-  settings validates. A project also checks `subgrid_dir` for cropped local
-  mets, which `MetConfig` alone no longer does.
-- `Output.particles(variant)`, `Output.footprints(variant)`,
-  `Output.find_particles(variant)`, and `Output.find_footprints(variant)`
-  take a `Variant`. `Footprints.hash_for` is `stilt.identity.footprint_hash`.
-- `stilt.config` and `stilt.receptors` import nothing above them, checked by
-  an import-linter contract.
-- `stilt.receptors` is a package: `models` (the receptor types and their
-  ids), `table` (the receptor table and CSV files), and `validation` (the
-  checks a receptor must pass, now written once and shared by the models
-  and the table). Everything `stilt.receptors` exported is still exported
-  from it.
-- `Mesh`, `Zones`, `Geometry`, `overlap_weights`, and `check_resolution` are
-  in `stilt.footprint` (module `stilt.footprint.targets`), since only
-  footprints are summed onto them. `stilt.Mesh`, `stilt.Zones`, and
-  `stilt.Geometry` are unchanged; `from stilt.spatial import Mesh` becomes
-  `from stilt.footprint import Mesh`. `stilt.spatial` keeps `Bounds`,
-  `Grid`, and the CRS helpers, the values configuration is made of.
-- `stilt.footprint` is a package: `gridding` (`calculate`), `aggregation`
-  (`aggregate`, `jacobian`), `io` (the array and footprint files), and
-  `accessor`. Everything `stilt.footprint` exported is still exported
-  from it; only private helpers moved.
-- **`stilt.flux` is `stilt.sampling`** (breaking for module imports). It
-  samples any gridded field at points, a surface flux or a mole fraction.
-  `sample_flux(flux, x, y, times)` is `sample_field(flux, x, y,
-  times=times, fill_value=0.0)`. `fill_value` is the value for points
-  outside the field and for missing cells, `NaN` by default.
-  `particle_enhancement(particles, flux)` is
-  `particles.stilt.enhancement(flux)`, the per-particle twin of
-  `foot.stilt.enhancement(flux)`.
-- `VerticalReference` is `stilt.receptors.VerticalReference` (it was
-  `stilt.config.VerticalReference`), so `stilt.receptors` no longer
-  imports `stilt.config`. `stilt.config.kmsl_from_vertical_reference` is
-  removed; the HYSPLIT driver sets `KMSL` from the receptor itself.
-- **`Mesh.to_grid` replaces `Grid.from_geometry`** (breaking).
-  `Grid.from_geometry(mesh, ...)` becomes `mesh.to_grid(...)`, with the same
-  arguments. `Zones.to_grid` hands off to its base, and returns a grid base
-  as it is, since a footprint on that grid overlaps every zone exactly. A
-  `Grid` no longer knows about meshes and zones. `Grid.min_cell_width`,
-  `Zones.bounds`, and `Zones.min_cell_width` are removed; only the grid
-  derivation read them.
-- `stilt.observations.winds` is `stilt.observations.variograms`. The public
-  names (`variogram`, `fit_variogram`, `VariogramFit`) are unchanged.
-- The documentation site shows the latest release rather than `main`.
-- `foot.stilt.plot.facet()` is xarray's faceted plot, in the footprint's
-  own coordinates (`x`/`y` for a projected grid). Its keyword arguments go
-  to `DataArray.plot`.
-- `stilt.flux.horizontal_dims` is `stilt.spatial.horizontal_dims`, and
-  `Grid.dims` gives a footprint's dimension names on that grid.
-- `stilt.SpatialTarget` (it was another name for `stilt.Geometry`),
-  `Grid.from_geometries`, and `Grid.resolution`.
-- `stilt.output.Jacobian` is `stilt.footprint.Jacobian`. A Jacobian built
-  for a footprint folder now also warns when the target mesh is not the one
-  the footprint grid was chosen for, as `foot.stilt.aggregate` does.
-- **`Grid.projection` is `Grid.crs`**, matching `Mesh.crs` (breaking for
-  code that reads `grid.projection`). `config.yaml`, stored settings, and
-  footprint files that say `projection` still load; PYSTILT writes `crs`.
-  `Grid.from_geometry(projection=)` is `Grid.from_geometry(crs=)`. Existing
-  footprint folders are still found.
-- **`stilt.spatial`** (breaking for module imports). `Grid`, `Bounds`,
-  `Mesh`, `Zones`, the CRS helpers, and the overlap weights are in one
-  module, `stilt.spatial`, replacing `stilt.geometry` and
-  `stilt.config.spatial`. `stilt.Grid`, `stilt.Mesh` and the other
-  package-root names are unchanged; `from stilt.geometry import Mesh`
-  becomes `from stilt.spatial import Mesh`. The geometry specs moved into
-  `stilt.config.footprint` and are still exported from `stilt.config`.
-  `is_longlat_crs` is `stilt.spatial.is_longlat`, the one test for
-  longitude/latitude, so a grid with `projection: EPSG:4326` is now
-  treated as longitude/latitude, as a mesh already was.
-- **One `TransportParams` class** (breaking). `STILTParams` and the three
-  classes it combined (`ModelParams`, the old `TransportParams`, and
-  `ErrorParams`) are one class, `stilt.config.TransportParams`, with the
-  same fields under the same names, so `config.yaml` and the run hashes do
-  not change. Each field records the HYSPLIT file it goes to (or that
-  PYSTILT uses it), and `stilt.config.params.fields_in(file)` lists them.
-  The file builders moved to `stilt.transport.hysplit.driver` as functions:
-  `params.setup_entries()` is `setup_entries(params)`, and so are
-  `setup_seed`, `ziscale_factors`, `zicontroltf`, `winderr`, `zierr`, and
-  `winderrtf`.
-- **`stilt run` always waits, and `stilt submit` returns** (breaking for
-  scripts). They now match `project.run()` and `project.submit()`.
-  `stilt run --backend slurm` submits the job array and waits for it; the
-  new `stilt submit` submits it and returns. `--wait` is gone.
-- **`timeout` and `keep_scratch` move under `execution:`, and `rm_dat` is
-  removed** (breaking). They change no result and say how runs are carried
-  out. A successful run's working directory is removed anyway, so `rm_dat`
-  had an effect only with `keep_scratch`, which now keeps the directory as
-  HYSPLIT left it. Move the two keys in `config.yaml`:
-
-  ```yaml
-  execution:
-    timeout: 900
-    keep_scratch: true
-  ```
-
-  A transport model's `run()` takes `timeout=`.
-- **One name for each part of a simulation** (breaking). `sim.params`,
-  `sim.footprint_config`, and `sim.receptor_id` are removed. Use
-  `sim.variant.transport`, `sim.variant.footprint`, and `sim.receptor.id`.
-- **A selection of simulations loads its own results**
-  ([#107](https://github.com/jmineau/PYSTILT/issues/107); breaking).
-  `project.simulations` is a `Simulations`: the table plus the project it
-  came from. Select it as before, then ask the selection:
-
-  ```python
-  july = sims[(sims.variant == "hrrr") & sims.time.between(a, b)]
-  july.status()
-  july.load_footprints()      # {simulation id: DataArray}
-  july.load_particles()       # one table, with receptor and variant columns
-  for sim in july: ...
-  ```
-
-  `project.status()`, `incomplete()`, `load_particles()`,
-  `load_footprints()`, and `jacobian()` are gone; call them on
-  `project.simulations` or a selection. `jacobian(target, time_bins)`
-  takes a selection of one variant. A selection understands columns and
-  row masks; for any other pandas operation use `sims.frame`, and
-  `stilt.Simulations(project, frame)` makes a selection from a table again.
-  `Particles.table()` reads many receptors' particles at once, like
-  `Footprints.table()`.
-- **Particles and footprints are plain data**
-  ([#107](https://github.com/jmineau/PYSTILT/issues/107); breaking).
-  `sim.particles` is a pandas DataFrame and `sim.footprint` an xarray
-  DataArray, so pandas and xarray work on them directly with no `.data`
-  step. PYSTILT's own methods are under `.stilt`:
-  `foot.stilt.aggregate(...)`, `foot.stilt.enhancement(flux)`,
-  `foot.stilt.receptor`, `foot.stilt.plot.map()`,
-  `particles.stilt.endpoints()`, `particles.stilt.plot.map()`. The
-  `Trajectories` and `Footprint` classes are gone. A footprint keeps its
-  receptor id as the coordinate `foot.receptor`, so
-  `xr.concat(feet, dim="receptor")` stacks footprints labelled by receptor.
-
-  | Before | After |
-  |---|---|
-  | `traj.data`, `foot.data` | `sim.particles`, `sim.footprint` themselves |
-  | `Footprint.calculate(...)`, `traj.footprint(config)` | `stilt.footprint.calculate(particles, receptor, config)`, or `sim.generate_footprint(config)` |
-  | `Trajectories.from_particles(...)` | `stilt.particles.prepare(raw, receptor, params)` |
-  | `Trajectories.from_parquet(path)`, `traj.to_parquet(path)` | `stilt.read_particles(path)`, `stilt.particles_metadata(path)`, `stilt.write_particles(...)` |
-  | `Footprint.from_netcdf(path)`, `foot.to_netcdf(path)` | `stilt.read_footprint(path)`, `foot.stilt.to_netcdf(path)` |
-  | `foot.integrate_over_time()` | `foot.sum("time")` |
-  | `foot.time_range` | `foot.indexes["time"]` |
-  | `traj.met_files` | `sim.met_files` |
-  | `traj.endpoints()`, with `time` as a timestamp, `endpoint_age_min` and `run_time` | `particles.stilt.endpoints()`: each particle's last row, every column kept (`time` stays minutes since release, `datetime` is the timestamp) |
-  | `stilt.trajectory.endpoint_rows(p)` | `p.stilt.endpoints()` |
-  | `show_traj=`, `traj_cmap=`, ... in `sim.plot.map()` | `show_particles=`, `particles_cmap=`, ... |
-
-  Footprint files in the output directory now record their own settings,
-  grid included, so `stilt.read_footprint(path)` opens one without its
-  folder. It reads NetCDF files too.
-- **Exceptions share one base class, `stilt.StiltError`, and live in
-  `stilt.exceptions`** ([#80](https://github.com/jmineau/PYSTILT/issues/80);
-  breaking). `stilt.errors` is renamed `stilt.exceptions`, with no alias.
-  Each exception still subclasses its builtin, so `except RuntimeError`
-  and `except FileNotFoundError` keep working. `EmptyFootprintError` is
-  renamed `EmptyFootprint` and is no longer a `RuntimeError`, since an
-  empty footprint is a result rather than a failure. A missing HYSPLIT
-  executable raises the new `HYSPLITNotFoundError` (a `FileNotFoundError`)
-  in all three places it is checked; a platform with no bundled build used
-  to raise `RuntimeError`. `FailureReason` and `identify_failure_reason`
-  move to `stilt.transport.hysplit`, beside the driver whose log they read.
-- **"Particles" is the one name for a simulation's particle table**
-  ([#107](https://github.com/jmineau/PYSTILT/issues/107); breaking). The
-  folder of particle files under one set of settings is now `Particles`
-  (was `Run`), so "run" only means running something. The renames are:
-
-  | Before | After |
-  |---|---|
-  | `sim.trajectories`, `sim.has_trajectory`, `sim.trajectories_path` | `sim.particles`, `sim.has_particles`, `sim.particles_path` |
-  | `project.load_trajectories()` | `project.load_particles()` |
-  | the `trajectory` column of `project.status()` | `particles` |
-  | `stilt.trajectory` | `stilt.particles` |
-  | `stilt.execution.run_trajectories` | `stilt.execution.run_particles` |
-  | `Output.run()`, `Output.find_run()`, `Output.runs()` | `Output.particles()`, `Output.find_particles()`, `Output.particle_sets()` |
-  | `Run.particles_path()`, `has_particles()`, `read_particles()`, `write_particles()` | `Particles.file()`, `has()`, `read()`, `write()` |
-  | `Footprints.footprint_path()`, `Footprints.run`, `Footprints.run_key` | `Footprints.file()`, `Footprints.particles`, `Footprints.particles_key` |
-  | `EmptyTrajectoryError`, `FailureReason.NO_TRAJECTORY_DATA` | `EmptyParticleOutputError`, `FailureReason.NO_PARTICLE_DATA` |
-
-  A simulation is one receptor, so it no longer hands out the folders that
-  hold other receptors' results (`sim.run`, `sim.footprints`). Its own
-  file paths are still public.
-- **Receptor ids name everything that makes a receptor distinct**
-  ([#105](https://github.com/jmineau/PYSTILT/issues/105); breaking for
-  column and MSL receptors). A column id gives its bottom and top
-  (`202101150600_-112_40.5_X0-3000`), and heights above mean sea level end
-  the id with `msl` (`_100msl`, `_X0-3000msl`, `multi_<hash>msl`). Before,
-  two columns at one place and time shared an id, and so did an AGL and an
-  MSL point at one height. Two projects sharing an output directory could
-  then use each other's particles without a warning. Ids of AGL points and
-  AGL multipoint receptors do not change. Each particle file now has a
-  `receptor` column, so a scan of the `particles/` tree with pyarrow,
-  DuckDB, polars, or R can tell receptors apart. Reading one file drops the
-  column.
-- **Results live in an output directory, not inside the project**
-  ([#74](https://github.com/jmineau/PYSTILT/issues/74), design in
-  [#67](https://github.com/jmineau/PYSTILT/issues/67); breaking). A
-  project directory holds `config.yaml` and `receptors.csv`; its results go
-  to the directory `output:` names (`./output` by default), which several
-  projects can share. The directory has one tree per kind of result
-  (`particles/`, `footprints/`, `logs/`), a `settings=<variant>-<hash>`
-  folder per set of settings, and `date=YYYY-MM-DD` folders below, so each
-  tree reads as one dataset. Particles are one Parquet file per receptor;
-  footprints are stored sparse in float32, with an empty footprint as a file
-  with no rows and its reason. Results of earlier versions under
-  `simulations/by-id` are not read; there is no migration in the alpha.
-- **A run is identified by its settings, not its variant name.** Two
-  variants with the same transport settings share one HYSPLIT run per
-  receptor and differ only in the footprint made from it, so `from:` is no
-  longer needed and is rejected with advice. Editing a setting no longer
-  raises `ConfigChangedError`: the next `stilt run` writes into a new
-  folder beside the old one, and `stilt status` lists folders the config no
-  longer uses. PYSTILT never deletes them.
-- **HYSPLIT runs on scratch.** The working directory (`compute_root`,
-  `PYSTILT_COMPUTE_ROOT`, or `$TMPDIR/pystilt/<project>`) is removed after
-  a successful run and copied under the output directory's `scratch/`
-  after a failed one; `keep_scratch: true` keeps every run's.
-- Reading `sim.trajectories` or `sim.footprint` before the result is
-  written raises `FileNotFoundError` instead of returning `None`, so the
-  same object reads the result once the run lands. `None` now means only
-  that the variant makes no footprint or that the footprint is empty. Check
-  `sim.has_trajectory` / `sim.has_footprint` first while a run may still be
-  going.
-- **Receptors as a table.** `stilt.receptors.receptors_to_frame` returns
-  receptors with a row per release point, and
-  `stilt.receptors.receptors_from_frame` builds them from one.
-- Every particle and footprint file records the hash of the settings it was
-  made with and the PYSTILT version that wrote it (`stilt:hash` and
-  `stilt:pystilt` in the Parquet metadata), so a file copied out of the
-  output directory still says where it came from.
-- `project.jacobian(target, time_bins, variant=...)` sums a variant's
-  footprints onto a target in one pass, as a sparse matrix with
-  labelled rows and columns (`stilt.output.Jacobian`). The time bins must
-  be closed on the left, since a footprint time is the start of its hour;
-  other bins raise a `ValueError`.
-- **`VariantConfig` is composed, not flattened.** A resolved variant holds
-  `transport` (a `TransportSettings`, whose hash names the run) and
-  `footprint` (a `FootprintConfig`, or `None`) instead of sixty flat
-  fields; `stilt_params()` and the `footprint` property on
-  `FootprintConfig` are gone. The flat surface of `config.yaml` is
-  unchanged.
-- **`Simulation` is a value: receptor, variant, and output directory.** It
-  reads results and reports completion, and runs nothing. HYSPLIT runs and
-  footprint writing live in `stilt.execution` (`run_trajectories`,
-  `write_footprint`, `run_simulation`); `Simulation.generate_footprint`
-  calculates without writing.
-- **Loading a config no longer reads its `geometry`**
-  ([#64](https://github.com/jmineau/PYSTILT/issues/64)). The mesh is built
-  when the variants are resolved (`ProjectConfig.resolve_variants`), once per
-  geometry however many variants inherit it, instead of in validation on
-  every load. A worker can load a config whose geometry file it cannot
-  read. `FootprintConfig(geometry=...)` no longer fills in `grid` and
-  `geometry_hash` itself; call `FootprintConfig.resolve()`, which
-  `Footprint.calculate` also does. Geometry specs keep their built mesh as
-  `spec.mesh`. The derived grid is no longer written to `config.yaml` by
-  `to_yaml`. A variant can no longer change part of a grid derived from the
-  default geometry (`grid: {xres: 0.1}`); set `cells_per_target` or give a
-  full grid. Footprint folder hashes are unchanged.
-- `TransformContext.store` is now `TransformContext.directory`, the project
-  directory that relative file names in transform settings are taken from.
-- `Simulation.trajectories_path`, `footprint_path`, and `log_path` point
-  into the output directory and are `None` before the run's folder exists.
-  `generate_footprint` with other settings writes to its own folder and no
-  longer replaces `sim.footprint`
-  ([#65](https://github.com/jmineau/PYSTILT/issues/65)).
-- **One wheel per platform**
-  ([#61](https://github.com/jmineau/PYSTILT/issues/61)). PYSTILT used to
-  publish one `py3-none-any` wheel that held both HYSPLIT builds, so pip
-  installed it anywhere. It now publishes a Linux x86-64 wheel
-  (`manylinux_2_17_x86_64`) and an Intel macOS wheel (`macosx_11_0_x86_64`),
-  each with only its own `hycs_std`. On any other platform, Apple Silicon
-  with an arm64 Python included, pip installs the source archive, which has
-  no HYSPLIT binary. PYSTILT imports, and a run raises the "no bundled
-  HYSPLIT binary" error until `exe_dir` names your own build. Maintainers
-  build all three with `just dist`.
-- **Met naming** (breaking). In a `mets` entry, `source:` is now
-  `download:` and `backend:` is now `download_from:`, so the name says what
-  it does and `backend` means only the execution backend. `MetStream` is now
-  `Met`, and `MetConfig.source_kwargs` is `download_options`. A named entry
-  under `mets` is called a *met* throughout the docs.
-- **Requires arlmet 0.1.0b1**, which renamed its download sources to
-  archives. The `cloud` extra installs `arlmet[archives]` in place of `s3fs`,
-  and `fsspec` is no longer a core dependency. PYSTILT 0.1.0a22 does not work
-  with arlmet 0.1.0b1: pin `arlmet<0.1.0b1` if you stay on it.
-- **Status and run planning list folders instead of checking files**
-  ([#60](https://github.com/jmineau/PYSTILT/issues/60)). `stilt status`,
-  `project.incomplete()`, and the planning step of `stilt run`
-  read which receptors are done from a listing of the date folders the
-  selection falls in, rather than checking two files per simulation.
-  `Run.receptors()` and `Footprints.receptors()` take `among=` to check
-  only some receptors. `stilt status` no longer
-  opens every footprint file. `status()` still reports `empty`, which needs
-  the file.
-- **HYSPLIT sits behind a transport model interface**
-  ([#87](https://github.com/jmineau/PYSTILT/issues/87), decision 8 of
-  [#67](https://github.com/jmineau/PYSTILT/issues/67)). The worker runs a
-  simulation through `stilt.transport.get_model(name)`, where the name is
-  the one the run's settings record. `stilt.transport.hysplit.HysplitModel`
-  is the one transport model. Each model is a subpackage of
-  `stilt.transport`, so `stilt.hysplit` is now `stilt.transport.hysplit`.
-  HYSPLIT now reads the meteorology files where they are (the cropped
-  copies when a met is cropped) instead of through links made in each run's
-  working directory, so a kept `scratch/` folder no longer has a `met/`
-  folder. `Met.stage_files_for_simulation` is replaced by
-  `Met.files`.
-- **Slurm runs go through submitit; the queue and Kubernetes are removed**
-  ([#87](https://github.com/jmineau/PYSTILT/issues/87), decision 7 of
-  [#67](https://github.com/jmineau/PYSTILT/issues/67); breaking). A Slurm
-  run is one job array of batches of receptors, submitted with
-  [submitit](https://github.com/facebookincubator/submitit) (a new
-  dependency). Each task runs with the Python that submitted it, so `setup:`
-  no longer has to activate an environment, and a task that is preempted or
-  runs out of time is submitted again and skips what it finished. Logs and
-  submission files are in `slurm/<date_time>_<id>/` in the project;
-  `chunks/` is gone. `project.run()` waits for the job and
-  `project.submit()` returns the submitit jobs at once.
-- **`execution:` settings are checked**
-  ([#63](https://github.com/jmineau/PYSTILT/issues/63); breaking). The
-  section is now `backend`, `n_workers`, `cpus`, `time`, `mem`, `partition`,
-  `account`, `qos`, `array_parallelism`, `setup`, and `slurm`. A setting it
-  does not have is an error instead of being ignored or passed to `sbatch`.
-  Move any other `sbatch` option, such as `exclude` or `requeue`, under
-  `slurm:`, and rename `cpus_per_task` to `cpus`. `n_workers` is the number
-  of Slurm array tasks, and `cpus` the receptors each task runs at once. A
-  local run is one task, so its processes are now set by `cpus` (and
-  `stilt run --cpus`), not `n_workers`.
-- **`Project` replaces `Model`; a project's receptors and simulations are
-  tables** ([#99](https://github.com/jmineau/PYSTILT/issues/99), step 5 of
-  [#67](https://github.com/jmineau/PYSTILT/issues/67); breaking).
-  `stilt.Project.init(path, config=..., receptors=..., **settings)` makes a
-  project: it writes `config.yaml` once and refuses a directory that has
-  one. `stilt.Project(path)` opens it and only reads. To change a setting,
-  edit `config.yaml`; PYSTILT never rewrites it. `project.add_receptors()`
-  appends to `receptors.csv` and replaces `register()`.
-  `project.receptors` and `project.simulations` are DataFrames, one row per
-  receptor and one per receptor and variant, selected with pandas
-  (`sims[sims.variant == "hrrr"]`, `sims[sims.site == "WBB"]`).
-  `project.status(sims)`, `project.incomplete(sims)`,
-  `project.load_trajectories(sims)`, and `project.load_footprints(sims)`
-  take such a selection; `project.receptor(id)` and
-  `project.simulation(id, variant)` return one object. Receptors are built
-  only when asked for: `receptors.csv` is read and checked as a table
-  (`stilt.receptors.receptor_rows`), so opening a project of 117 000 point
-  receptors takes 1.3 s instead of 6.6 s, and one of 2.5 million rows of
-  multipoint receptors 18 s instead of 53 s. Ids are unchanged. `project.run()`
-  blocks on either backend and returns the receptor results;
-  `project.submit()` sends the work to Slurm and returns the submitit jobs.
-  `ModelConfig` is now `ProjectConfig`. `Model` (its module, `stilt.model`,
-  now holds the transport model interface), `stilt.collections` (`SimulationCollection`, `ReceptorCollection`,
-  `OutputCollection`), `stilt.execution.register`, and the run handles
-  (`JobHandle`, `LocalHandle`, `SlurmHandle`) are removed. Pass the scratch
-  directory to the run (`project.run(compute_root=...)`,
-  `stilt run --compute-root`, or `PYSTILT_COMPUTE_ROOT`);
-  `stilt.execution.resolve_compute_root` says where that is.
-- **Receptors are frozen pydantic models**
-  ([#86](https://github.com/jmineau/PYSTILT/issues/86),
-  [#66](https://github.com/jmineau/PYSTILT/issues/66); breaking).
-  `PointReceptor`, `ColumnReceptor`, and `MultiPointReceptor` take their
-  arguments by name only (`PointReceptor(time=..., longitude=...,
-  latitude=..., altitude=...)`); `Receptor.from_points` still takes a list
-  of points. They can no longer be changed in place: use
-  `receptor.model_copy(update={...})`, and pass labels as `attrs=` instead
-  of assigning `receptor.attrs`. An unknown argument is a `ValidationError`.
-  A receptor is no longer iterable and has no `len()`: `receptor.coords()`
-  lists its `(lat, lon, alt)` points. `receptor.id` and `receptor.location_id`
-  are plain strings; `ReceptorID` and `LocationID` are removed
-  (`stilt.receptors.parse_receptor_id` splits an id into its time and
-  location). `to_dict()` names the type under `kind` (`"point"`); dicts
-  stored by earlier versions still load. `MultiPointReceptor.longitudes`,
-  `latitudes`, and `altitudes` are tuples.
-- **The id of a multipoint receptor covers its heights to 0.01 m**
-  ([#50](https://github.com/jmineau/PYSTILT/issues/50)). Heights used to be
-  cut to whole metres in the id, so two receptors that differed by less
-  than a metre shared one and the second was dropped without a warning.
-  Ids of receptors with whole-metre heights are unchanged. Two different
-  receptors that still share an id are now refused when receptors are read
-  or added.
-
-### Removed
-
-- `n_min` from a met (breaking): every file is needed. A met that sets it
-  is refused with why. The failure reasons `MISSING_MET_FILES` and
-  `MET_TRUNCATED` are folded into `MET_COVERAGE`, whose message says which
-  hours had no file or how far the particles got.
-- `subgrid_buffer` (breaking): the crop is `subgrid_bounds`, so the box
-  you write is the box HYSPLIT reads. It added 0.2° to every side unless
-  set, and was in degrees where STILT-R's `met_subgrid_buffer` is a
-  fraction of the footprint grid's size. A met that sets it is refused
-  with how to widen the bounds; the migration guide shows the STILT-R
-  conversion.
-- `Plume.contains`. Test a point against the outline with
-  `shapely.contains_xy(plume.polygon, lon, lat)`.
-- `Simulation.outcome` and `stilt.transport.hysplit.identify_failure_reason`,
-  which guessed why a run failed from phrases in a log shared by every
-  variant on the same particles. `sim.failure` replaces them (#134).
-
-- `stilt.particles.prepare`. It added a `datetime` column that nothing on
-  the way to the particle file or the footprint read; `read_particles`
-  adds `datetime` when it reads (#134).
-- `BuiltinTransform` and `KERNEL_TABLE_COLUMNS` from
-  `stilt.transforms.__all__` (#134).
-
-- `stilt.observations.slant`. `slant_points`, `pressure_altitudes`, and
-  `jitter_points` are in `stilt.observations.placement`; import them from
-  `stilt.observations` as before.
-- The single-value `temperature` of `pressure_altitudes`. Pass one
-  temperature per pressure level, or none for the standard atmosphere.
-- `stilt.observations.particle_background`, `endpoint_weights`, and
-  `fill_missing`. `background(...).per_particle` is the field at each
-  endpoint, and `background(...).weights` the weights.
-- `stilt.project.project_slug`, now a private helper of the runner, which
-  names Slurm jobs with it. `run_receptors` requires `compute_root`, as
-  `resolve_compute_root` returns it.
-- `stilt.execution.ReceptorResult`. `project.run()`, `stilt.execution.run`,
-  and `run_receptors` return a flat list of `SimulationResult`, receptor by
-  receptor; `run_receptor` returns that receptor's list.
-- `stilt.execution.write_footprint` is `make_footprint`, and takes no
-  `config=` or `transforms=`: it makes the variant's own footprint.
-  `sim.generate_footprint` makes footprints with other settings.
-  `stilt.footprint.write_footprint` writes a footprint file.
-- `stilt.particles.prepare` no longer adds the release height `xhgt`. The
-  HYSPLIT model adds it before returning its particles
-  (`stilt.transport.hysplit.release.add_release_heights`), since it depends
-  on how HYSPLIT orders particles. Call that function first when preparing
-  particles read straight from HYSPLIT's output.
-- `stilt.config.hysplit_version` is `stilt.transport.hysplit.model.hysplit_version`.
-  `TransportSettings.build` asks the transport model for its version.
-
-- The PostgreSQL work queue (`stilt.service`, `PYSTILT_DB_URL`,
-  `stilt register`, `stilt pull-worker`, `stilt serve`), the Kubernetes
-  backend and manifests, `stilt push-worker` and chunk files, and the
-  `Executor` classes (`LocalExecutor`, `SlurmExecutor`, `KubernetesExecutor`,
-  `get_executor`). The `cloud` extra no longer installs `gcsfs`, `psycopg`,
-  or `kubernetes`. Closes the scope of
-  [#4](https://github.com/jmineau/PYSTILT/issues/4),
-  [#6](https://github.com/jmineau/PYSTILT/issues/6),
-  [#7](https://github.com/jmineau/PYSTILT/issues/7),
-  [#55](https://github.com/jmineau/PYSTILT/issues/55), and
-  [#56](https://github.com/jmineau/PYSTILT/issues/56).
-- `simulations/variants.yaml`, `ConfigChangedError`, `Model.check_config`,
-  `Model.remove`, `Model.orphans`, `stilt rm`, the `.empty` marker,
-  `Simulation.publish`, `Simulation.parent`, `stilt.store` and object-store
-  project roots (`s3://`, `gs://`), `RuntimeSettings.cache_dir`, and
-  `VariantConfig.derived_from` / `record`.
-- `ConfigValidationError`, which nothing raised any more
-  ([#80](https://github.com/jmineau/PYSTILT/issues/80)).
-- `stilt.execution.sigterm_as_interrupt`, now private. The worker uses it to
-  clean up when Slurm stops a task.
-- `validate_vertical_reference`, `Met.files`, `ErrorParams.error_enabled`
-  (use `winderrtf > 0`), `ProjectConfig.footprint` (use a variant's
-  `footprint`), `VariantConfig.realization` (use
-  `variant.transport.realization`), and `STILTParams.realization_seed`.
-- `read_footprint(config=)`. A footprint file records its own settings,
-  and the output folder reads it like any other file. Footprint files
-  written before files recorded their settings need them added first.
-- `Particles.find_footprints(config)`. `Output.find_footprints` now takes a
-  variant: `output.find_footprints(variant)`.
-- `Simulation.is_backward` (`sim.time_range` gives the period either way)
-  and `Particles.footprint_sets()` (filter `Output.footprint_sets()` by
-  `particles_key`).
-- Reading receptors stored with their kind under `"type"`, as particle
-  and footprint files from the old `simulations/by-id/` layout do.
-  `Receptor.from_dict` needs the `kind` key.
-- `RuntimeSettings` and the `pydantic-settings` dependency. The runner reads
-  `PYSTILT_COMPUTE_ROOT` itself. An empty `PYSTILT_COMPUTE_ROOT` now means
-  unset rather than the current directory.
-
-### Fixed
-
-- A run left an empty `<compute root>/<receptor id>/` folder behind for
-  every receptor.
-- Relative paths depended on the working directory: a relative met
-  `directory` or `subgrid_dir` was found from wherever Python started, and
-  a relative averaging-kernel `table` too unless `directory=` was passed.
-  They now start from the project directory, and met directories expand
-  `$VARIABLES` like the other paths (a behaviour change for a relative met
-  directory that worked only from the right working directory).
-  `Simulation` holds its project directory, so `sim.generate_footprint()`
-  and `make_footprint` find a kernel table without a `directory=`
-  argument, which they no longer take. An absolute `output` is resolved,
-  so one directory reached through a link is one `Output` (#148).
-- `project.run(execution=...)` and `project.submit(execution=...)` passed
-  only `cpus` to the workers, which read `timeout` and `keep_scratch` back
-  from `config.yaml`, so an override of either was ignored. `Batch` and
-  `run_receptors` now take the `ExecutionConfig` in place of `cpus` and
-  `n_cores` (breaking for code that calls them directly) (#148).
-- `foot.stilt.enhancement` took the grid axes by position, so a footprint
-  with its dimensions in another order gave a wrong enhancement (zero in
-  a test), and a footprint summed over time raised a `KeyError`. It now
-  works by dimension name, gives the total for a time-summed footprint,
-  and raises when the flux varies in time and the footprint does not.
-  `foot.stilt.aggregate` returned zeros for a footprint without a `time`
-  dimension; it now raises (#148).
-- `Simulation.outcome` reported `failed:UNKNOWN` for a variant whose
-  footprint was never made when another variant on the same particles had
-  run. Its replacement, `sim.failure`, reads the variant's own record
-  (#134).
-
-- Downloaded meteorology now includes the next file when the receptor is in
-  the last hour of a file, as local meteorology and STILT-R do. HYSPLIT
-  interpolates the release time between two hours, so a backward run at,
-  for example, 17:30 with 6-hour HRRR files needs the 18:00 file (#134).
-- A run that fails before writing anything, such as on missing
-  meteorology, no longer leaves an empty copy of its directory under the
-  output directory's `scratch/` (#134).
-
-- A grid derived for zones over a projected grid covered a box near the
-  equator, because the base grid's longitude/latitude bounds were read as
-  projected coordinates. Deriving one for a `Grid` raised `AttributeError`.
-- `foot.stilt.aggregate` and `jacobian` warned that zones made of the
-  footprint grid's own cells were under-resolved, although the overlap is
-  exact.
-- When HYSPLIT fails for a receptor, the other variants that share its
-  transport settings fail with the same error instead of running HYSPLIT
-  again. A receptor with N such variants no longer runs, or times out,
-  N times.
-- A footprint with a single hourly layer that is not the receptor's own
-  hour, such as a backward run whose particles all leave the grid within
-  the first hour, is stamped at that hour, as in STILT-R. It was stamped at
-  the receptor time.
-- A calculated footprint's coordinates are rounded as a stored one's are
-  when read back, so the two line up (`sim.generate_footprint() -
-  sim.footprint` no longer misaligns some cells).
-- A run that ends without particles reports `failed:NO_PARTICLE_DATA` in
-  `sim.outcome` and `stilt status`. PYSTILT's own errors for it were not
-  recognised and came out as `failed:UNKNOWN`.
-- `foot.stilt.plot.map()` and `facet()` work on a footprint on a projected
-  grid (`x` and `y`). They read `lon` and `lat` and raised.
-- A `config.yaml` loads on a machine where its `exe_dir` is not reachable.
-  Loading checks the variants without building them; the HYSPLIT build is
-  needed only once the variants are resolved.
-- `ziscale: [[0.8, 0.9]]` (STILT-R's nested form) and `ziscale: [0.8, 0.9]`
-  are now the same run. They hashed differently before. Existing output is
-  still found.
-- Changing a met's `download_from` or `n_min` no longer makes every run
-  look new. Neither changes the particles, so neither is part of a run's
-  hash. Existing output is still found.
+- `Project` replaces `Model` (breaking). `stilt.Project.init(path,
+  receptors, settings)` writes `config.yaml` and `receptors.csv` once;
+  `stilt.Project(path)` opens a project. `ModelConfig` is `ProjectConfig`.
+  `project.simulations` is a pandas DataFrame; select rows as in pandas and
+  pass them to `project.status(sel)`, `particles(sel)`, `footprints(sel)`,
+  or `jacobian(sel, target, time_bins)`. One simulation is
+  `project.simulation(receptor_id, variant)` (was `model.simulations[...]`).
+  The collection classes, `SimID`, `ReceptorID`, and `LocationID` are gone.
+- Results go to an output directory (breaking). `output:` in
+  `config.yaml` names it (`./output` unless set; several projects can share
+  one, and it can be an `s3://` or other fsspec URL). It holds
+  `particles/`, `footprints/`, and `logs/`, each with a folder per set of
+  settings (`settings=<variant>-<hash>/date=.../<receptor id>.parquet`)
+  named by a hash of what changes the result, so a changed setting makes a
+  new folder and never overwrites. `variants.yaml`, `ConfigChangedError`,
+  `stilt rm`, and the `.empty` marker are gone. `stilt status` opens no
+  result file: seconds where it took 25 minutes on 64,000 footprints.
+- Results are plain data (breaking). `sim.particles` is a DataFrame
+  (was `sim.trajectories`, a `Trajectories`) and `sim.footprint` a
+  DataArray (was a `Footprint`), with PYSTILT's methods in the `.stilt`
+  accessor (`foot.stilt.plot.map()`, `.enhancement(flux)`,
+  `.aggregate(...)`); `foot.sum("time")` replaces `integrate_over_time()`.
+  The particle columns `indx`, `long`, `lati` are `particle`, `lon`, `lat`.
+- A config declares its variants, and is checked when it loads
+  (breaking). Without `variants:` a config no longer runs one variant per
+  met. An unknown key is an error naming the nearest setting. `from:` is
+  rejected: variants with the same transport settings share particles on
+  their own. `realizations: N` makes one variant whose simulations have a
+  `realization` column, where it made N numbered variants.
+- Run settings are flat keys of the transport model (breaking).
+  HYSPLIT's settings are `stilt.transport.hysplit.HysplitConfig`, written as
+  top-level keys as before; `STILTParams` and `RuntimeSettings` are gone.
+  `kmsl` comes from each receptor's `altitude_ref`. `timeout` moves under
+  `execution:`, beside the new `keep_scratch`; `rm_dat` is gone.
+- Meteorology settings (breaking). In a `mets` entry, `source:` is
+  `download:` and `backend:` is `download_from:`. `n_min` and
+  `subgrid_buffer` are gone: every file a run needs must be there, and the
+  crop is `subgrid_bounds` exactly. The met config is HYSPLIT's,
+  `stilt.transport.hysplit.MetConfig`. `~` and `$VARIABLES` expand in a
+  met's directories, and a relative one starts from the project.
+- A run records its met as the weather product and the crop. The
+  product is the source id in the ARL file headers (`HRRR`, `NAM`, ...),
+  read from the first file in the met's `directory`, or the archive's for
+  `download`. Moving or renaming the met files keeps every result, and two
+  archives named alike no longer share results. The met's `directory` must
+  hold its files on the machine that opens the project.
+- A run whose particles stop early fails (breaking; #98, #169).
+  A missing met file fails the simulation before HYSPLIT runs, naming the
+  hours with no file. A run whose particles stop before `n_hours` (a met
+  file cut short, or every particle leaving the met's domain or crop) fails
+  after it, whatever the transport model. Both are `MET_COVERAGE`. Before,
+  such a run wrote a partial footprint and counted as complete.
+- Failures are recorded (breaking). A failed simulation does not stop
+  the others: `<receptor id>.failure.yaml` beside its log says why
+  (`sim.failure`), and each simulation is `complete`, `failed`,
+  `interrupted`, or `pending`. Exceptions share one base,
+  `stilt.StiltError`, in `stilt.exceptions` (was `stilt.errors`).
+- Running (breaking). `stilt run` (and `project.run()`) runs and
+  waits, locally or as a Slurm job array; `stilt submit` (and
+  `project.submit()`) submits the array and returns. `--wait/--no-wait` is
+  gone. A submission is a folder `_slurm/<stamp>/` with its `job.sh`;
+  `execution.time` is required, other `sbatch` options go under
+  `execution.slurm`, and a task at its time limit or preempted requeues
+  itself. `stilt run` exits 0 (complete), 1 (some failed), or 3 (some
+  interrupted); every command exits 2 on a wrong command line. A failed
+  run's workdir is kept under `scratch/` in the output directory.
+- Receptors are frozen pydantic models, and an id names everything that
+  makes a receptor distinct (a multipoint's heights to 0.01 m), so some ids
+  differ from 0.1.0a22's (breaking).
+- Footprint and geometry names (breaking). `Footprint.calculate` is
+  `stilt.calc_footprint`, STILT-R's name. `Grid.projection` is `Grid.crs`.
+  `Grid.from_geometry(mesh, ...)` is `mesh.to_grid(...)`. `stilt.flux` is
+  `stilt.sampling`.
+- `sim.background(field)` and `sim.transport_error(error, flux)` belong to
+  the simulation, and a transform's method is `apply(particles,
+  receptor=None, directory=None)` (`TransformContext` is gone) (breaking).
+- Python 3.11 or newer is required, and the `cloud` extra is `download`
+  (breaking). One wheel per platform, each with only its own HYSPLIT
+  build; a machine without one gets a clear error (#61).
 
 ### Added
 
-- A "Checking a run" page in the user guide: the four states, every
-  failure reason in plain words and what to do about it, the log and kept
-  workdirs, empty footprints, and what to check when a footprint looks
-  wrong.
-- A transport model may run many receptors in one call: it sets
-  `batched = True` and gives `run_many`, and the worker hands it every
-  receptor of a variant that needs particles at once. A model that writes
-  no files sets `needs_workdir = False` and gets no workdir. HYSPLIT runs
-  as before.
-- `model:` takes the import path of a model class in another package
-  (`model: mypkg.models.MyModel`), as a transform's `kind:` does, so a
-  model needs no registration in every process. A settings folder made by
-  a model that is not installed reads as its stored settings, with a
-  warning, instead of stopping `stilt status` for the whole output
-  directory.
-- `--output` on `stilt run`, `stilt submit`, and `stilt status`, and
-  `Project(path, output=...)`: use another output directory than
-  `config.yaml` names (a path or a URL) without editing it. A Slurm task
-  is handed the output its submitter used.
-- `stilt status --json`: the counts per state, overall and per variant,
-  the failures by reason, and the settings folders, as JSON for a program
-  to read.
-- `status()` says `interrupted` for a simulation whose particles run
-  started and stopped before it finished (a time limit, preemption, or a
-  killed process), where it said `pending` as for one never run. The
-  worker writes a one-line log when a run starts, and the model's log
-  replaces it when the run ends.
-- `stilt.execution.pending` (the receptors a run would run, for a driver
-  that writes its own `receptors.txt`), `stilt.execution.wait` (wait for a
-  Slurm job array and return how each task ended), and
-  `stilt.transport.hysplit.run_hycs_std` (run `hycs_std` in a folder
-  `write_inputs` wrote).
-- Each Slurm task's log starts with a line giving the time, node, job,
-  and task, and adds one after each requeue.
-- `stilt submit --receptors FILE`, as `stilt run` has.
-- A footprint read from an output directory says what made it:
-  `attrs["stilt_version"]` (the PYSTILT version) and
-  `attrs["stilt_particles_hash"]` (the settings hash of its particles,
-  which footprint files now record), kept by `foot.stilt.to_netcdf` (#150).
-
-- The outputs guide shows how to query the output directory with DuckDB,
-  without PYSTILT (#150).
-
-- `stilt output ls` lists the output directory's settings folders: which
-  of the project's variants use each, how many result files it holds, and
-  how an unused folder's settings differ from the variant of its name.
-  `project.output.folders(project.variants)` is the same table;
-  `Output.folders(kind)`, the folder-to-hash mapping, is `Output.hashes(kind)`
-  (#150).
-
-- Satellite and ground-based column workflows in fewer steps:
-  `stilt.observations.receptors_from_soundings(df, "column" | "slant",
-  top=...)` returns a receptor for each sounding of a reader's table (its
-  `sounding_id` kept as an attribute) and their averaging-kernel table;
-  `project.add_table("kernels", table)` adds it to the project as
-  `tables/kernels.parquet`, appending and leaving receptors it already
-  holds as they were; and the `averaging_kernel` transform reads it as
-  `table: kernels` (a file name still works). `SOUNDING_SCHEMA` and
-  `check_soundings` put the readers' columns in code, and
-  `modelled_column(enhancement, background, ak=, pressure_weight=,
-  prior=)` adds the retrieval's prior term to give the column a retrieval
-  would report (#150).
-
-- The output directory can be on an object store: `output:
-  s3://bucket/path` (or `gs://`, or any fsspec URL) in `config.yaml`, read
-  and written through fsspec with its package installed (`s3fs`,
-  `gcsfs`). Three things change and nothing else: the output's paths are
-  universal paths (`universal-pathlib`, a new dependency) when the output
-  is a URL; folders are listed through the store's filesystem; and a
-  result is put directly, since a single put is already atomic there, where
-  a filesystem write goes through a temporary file and a rename. A local
-  output takes the same paths as before. `read_particles`,
-  `read_footprint`, and `open_footprints` take URLs. A kept working
-  directory on a store leaves out the links to met files (#135, #150).
-
-- `stilt run --task I/N` runs task `I` of `N` in this process, whatever the
-  backend: every `N`-th receptor of the project from `I`, skipping the
-  complete ones. Each task of a job array or a Kubernetes indexed Job runs
-  one share, and tasks that start at different times split the receptors
-  the same way. `stilt run --receptors FILE` runs the receptors listed in a
-  file. In Python they are `project.run(task=(i, n), receptors=ids)` and
-  `stilt.execution.task_share`; `project.submit(receptors=ids)` submits a
-  list. A new page of the execution guide runs a project as a Kubernetes
-  indexed Job (#136, #150).
-
-- `stilt.footprint.open_footprints(paths)` opens stored footprint files of
-  one settings folder as the dataset `project.footprints` returns, for
-  footprints read without a project (#150).
-- `Jacobian.to_xarray(dense=False)`: the matrix as a DataArray with dims
-  `(receptor, time, cell)`, its values a `sparse.COO` array or, with
-  `dense=True`, a NumPy array, and the empty and missing receptors as
-  attributes. `sparse` is the optional extra `pystilt[sparse]` (#150).
-
-- `stilt.particles.PARTICLE_SCHEMA` and `check_particles`: the columns
-  every particle table has (`particle`, `time`, `lon`, `lat`, `zagl`), which
-  a transport model's run must return. The worker checks a model's
-  particles and `calc_footprint` checks for `foot`, naming the missing
-  columns. A new reference page, the particle table, says what each column
-  is, its units, the sign of `time`, what `foot` is, and that a model
-  should write a release row at `time = 0` (#150).
-
-- `stilt.run_trajectories(receptor, met, **params)` runs the transport
-  model for one receptor without a project and returns its particles, as
-  STILT-R's `calc_trajectory` does. With `stilt.calc_footprint`, a
-  footprint takes two calls (#150).
-
-- `Simulation.settings`: the run and footprint settings a simulation's
-  results are made with, as the output folders record them (#134).
-
-- `Receptor.to_json()` and `Receptor.from_json()`, the form result files
-  record a receptor in (#134).
-
-- **`data_dir`**: a folder of HYSPLIT data tables (`ASCDATA.CFG`,
-  `LANDUSE.ASC`, `ROUGLEN.ASC`, `TERRAIN.ASC`) to use in place of the
-  bundled ones, as `exe_dir` does for `hycs_std`. A table the folder does
-  not hold comes from the bundled set. Each table that differs from the
-  bundled one is recorded by its SHA-256 in the run's settings
-  (`ModelInfo.data_files`) and is part of its hash; runs on the bundled
-  tables keep their hashes. Transport models report these with
-  `data_files(params)`.
-
-- **`TransportSettings`, what identifies a run**
-  ([#74](https://github.com/jmineau/PYSTILT/issues/74)). The transport
-  fields that change a run's particles, the settings of its meteorology
-  (`MetSettings`, which `MetConfig` now builds on), and the transport
-  model and version that produced them (`ModelInfo`). Its hash names the run's folder
-  in the output directory, and a stored `settings.yaml` loads back through
-  it, so a field added later with a default still matches. A custom
-  `exe_dir` needs a `version` file beside `hycs_std`. Nothing uses this yet
-  beyond `stilt.output`.
+- `stilt.run_trajectories(receptor, met, params)` and
+  `stilt.calc_footprint(particles, receptor, grid)`: one receptor without a
+  project, as STILT-R's `calc_trajectory` and `calc_footprint`.
+- A transport model interface (`stilt.transport`). `model:` names a
+  built-in model or the import path of a model class in another package, a
+  variant can name another model, and a model may run many receptors per
+  call (`batched = True`), as an emulator would.
+- `data_dir`: a folder of HYSPLIT data tables to use in place of the
+  bundled ones. Its files are part of a run's settings.
+- `stilt run --task I/N` runs one share of the receptors in this process,
+  for a scheduler other than Slurm. `stilt.execution.pending` lists the
+  receptors a run would run, and `wait(job_id)` waits for a Slurm job.
+- `stilt status --json`; `--output` on `run`, `submit`, and `status`
+  (`Project(path, output=...)`); `stilt submit --receptors FILE`.
+  `stilt status` lists the settings folders and the variants using each
+  (`project.folders()`).
+- `project.jacobian(sel, target, time_bins)` sums footprints onto a grid,
+  mesh, or zones as a sparse matrix, its columns named levels from the
+  target (`time, lon, lat` or `time, cell`), in bounded memory.
+- `project.footprints(sel)` and `stilt.footprint.open_footprints(paths)`:
+  many footprints as one dataset. Result files read alone:
+  `stilt.read_particles`, `stilt.read_footprint`, and
+  `stilt.particles.particles_metadata` (receptor, settings, met files).
+- `stilt.observations.receptors_from_soundings` and `project.add_table`
+  for satellite and column receptors, and a tutorial, *A Satellite
+  Column, Start To Finish*.
+- An empty footprint (no particle reached the grid) is a file marked
+  `stilt:empty`; it is complete, and `project.footprints()` lists it apart.
+- Guides: *Checking a run* (every failure reason and what to do),
+  *Projects and variants*, and querying the output with DuckDB.
 
 ### Removed
 
-- **Python 3.10 is no longer supported** (breaking). PYSTILT now requires
-  Python 3.11 or newer; 3.10 reaches end of life in October 2026. The
-  `typing-extensions` dependency is gone, and CI tests 3.11 through 3.14
-  ([#62](https://github.com/jmineau/PYSTILT/issues/62)).
+- The PostgreSQL work queue and the Kubernetes backend (`stilt register`,
+  `pull-worker`, `push-worker`, `serve`, `PYSTILT_DB_URL`); run `stilt run
+  --task I/N` from another scheduler. `MetStream`, `Model.check_config`,
+  `Model.remove`, and `Model.orphans`.
 
 ### Fixed
 
-- **A run on a damaged met file fails instead of counting as done**
-  ([#98](https://github.com/jmineau/PYSTILT/issues/98)). When a met file
-  holds only one time period, HYSPLIT warns and stops the particles where
-  the met runs out. The run used to write the short trajectories and its
-  footprint, which then missed every hour after that point. Now, when the
-  warning is in the log and no particle reaches the end of the run, the
-  run fails with the reason `MET_TRUNCATED` and is run again next time.
-  The warning alone is not a failure, since the damaged file may cover
-  hours the particles never reach.
-- **`stilt init` writes a receptors file that loads**
-  ([#49](https://github.com/jmineau/PYSTILT/issues/49)). The starter
-  `receptors.csv` held a `# Example: ...` line, which the reader parsed as
-  a receptor, so the first `stilt run` after adding a row failed. The file
-  now holds only the header, and `stilt init` prints the example instead.
-- **Machines without a bundled HYSPLIT build get a clear error**
-  ([#61](https://github.com/jmineau/PYSTILT/issues/61)). The bundled
-  binary was chosen by operating system only, so an aarch64 Linux machine
-  was handed the x86-64 build and failed with an operating-system error on
-  the first run. The architecture is now checked too, and the error says to
-  set `exe_dir` to your own `hycs_std` build (it used to say `PATH`, which
-  PYSTILT never reads). Apple Silicon Macs keep using the macOS build
-  through Rosetta.
-- **HYSPLIT settings take the types HYSPLIT reads**
-  ([#57](https://github.com/jmineau/PYSTILT/issues/57)). `rhb`, `rht`, and
-  `tout` are whole numbers, so a value such as `rhb: 80.5` is rejected here
-  instead of stopping HYSPLIT with a namelist error. `delt`, `dxf`, `dyf`,
-  `hscale`, `p10f`, `qcycle`, `splitf`, `vscale`, `vscales`, `vscaleu`,
-  `wbbh`, `wbwf`, and `wbwr` now accept fractions such as `delt: 0.5`. The
-  default `SETUP.CFG` is unchanged.
-- **Cropped meteorology is cached per crop and written safely**
-  ([#53](https://github.com/jmineau/PYSTILT/issues/53)). Crops of your own
-  met files were found by file name only, so changing `subgrid_bounds`,
-  `subgrid_buffer`, or `subgrid_levels` silently reused the old crop. Each
-  crop now goes in its own folder inside `subgrid_dir` (`Met.crop_dir`),
-  named by a hash of the crop box and levels. A crop is written to a
-  temporary name and renamed into place, so parallel workers never read a
-  half-written file, and its file handle is now closed. Breaking:
-  `subgrid_dir` is required when cropping your own files (it used to
-  default to a folder inside the met archive), crops saved by earlier
-  versions are not found (move them into `crop_dir` to keep them).
-  `subgrid_levels` now applies to downloaded files too (it was silently
-  ignored), which needs arlmet 0.1.0a9.
-- **Two workers can start the same run at once**
-  ([#90](https://github.com/jmineau/PYSTILT/issues/90)). Workers that created
-  a run folder at the same moment shared one temporary file name for its
-  settings, so one of them failed its first receptor with a
-  `FileNotFoundError` on `_settings.tmp`. Every writer now uses its own
-  temporary name, for settings, particles, footprints, and the
-  `to_parquet` / `to_netcdf` exports.
-- **Appending an MSL receptor keeps its altitude reference**
-  ([#51](https://github.com/jmineau/PYSTILT/issues/51)). Adding a receptor
-  with heights above sea level to a `receptors.csv` that had a plain
-  `altitude` column and no `altitude_ref` column wrote it without its
-  reference, so it read back as above ground. The column is now added, with
-  `agl` on the existing rows.
-- `model.plot.availability(ax=...)` formats the dates on the figure of the
-  axes you pass. It used to format whichever figure was current
-  ([#58](https://github.com/jmineau/PYSTILT/issues/58)).
-- **`Footprint.aggregate` rejects time bins not closed on the left**
-  ([#58](https://github.com/jmineau/PYSTILT/issues/58)). Every bin was
-  summed as if closed on the left, whatever its `closed` said. A bin from
-  `pd.interval_range`, which is closed on the right by default, took the
-  hour at its start and left out the hour at its end. Such bins now raise
-  a `ValueError`. Build them with `closed="left"`, as the docs now do.
+- `stilt init` writes a receptors file that loads (#49). HYSPLIT settings
+  take the types HYSPLIT reads (`rhb`, `rht`, ...) (#57).
+- Crops of your own met files are cached per crop box and written
+  atomically, so two crops never mix and a stopped crop leaves nothing
+  behind (#53). Two workers can start the same run at once (#90).
+- Appending an MSL receptor keeps its altitude reference (#51), and
+  aggregating a footprint rejects time bins not closed on the left (#58).
+- Downloaded met includes the next file when the receptor is in the last
+  hour of a file, as local met and STILT-R do.
+- `ziscale: [[0.8, 0.9]]` (STILT-R's nested form) and `[0.8, 0.9]` are one
+  run. A footprint with one hourly layer that is not the receptor's hour
+  is placed at its hour.
+- A grid derived for zones on a projected grid covered a box near the
+  equator. Footprint maps work on a projected grid, and
+  `plot.availability(ax=...)` formats the figure of the axes you pass.
+- A `config.yaml` loads where its `exe_dir` is not reachable.
 
 ## [0.1.0a22] - 2026-09-29
 
