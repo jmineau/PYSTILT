@@ -507,24 +507,26 @@ def test_variants_with_equal_transport_settings_share_a_run(tmp_path, point_rece
     assert len(project.output.hashes("particles")) == 1
 
 
-def test_unreferenced_lists_output_folders_the_config_no_longer_uses(
-    tmp_path, point_receptor
-):
+def test_folders_say_which_the_config_no_longer_uses(tmp_path, point_receptor):
     project = _project(
         tmp_path, [point_receptor], variants={"hrrr": {}, "zi08": {"ziscale": 0.8}}
     )
     for variant in ("hrrr", "zi08"):
         _write_trajectory(project, point_receptor, variant)
         _write_footprint(project, point_receptor, variant)
-    assert project.unreferenced() == {"particles": [], "footprints": []}
+    assert (project.folders()["variant"] != "").all()
 
     # The user drops zi08 and changes hrrr's smoothing in config.yaml.
     _config(tmp_path, variants={"hrrr": {"smooth_factor": 0.5}}).to_yaml(
         project.config_path
     )
-    stale = Project(project.directory).unreferenced()
-    assert [k.split("-")[0] for k in stale["particles"]] == ["zi08"]
-    assert sorted(k.rsplit("-", 1)[0] for k in stale["footprints"]) == ["hrrr", "zi08"]
+    folders = Project(project.directory).folders()
+    stale = folders[folders["variant"] == ""]
+    by_kind = {
+        k: sorted(stale.loc[stale.kind == k, "name"])
+        for k in ("particles", "footprints")
+    }
+    assert by_kind == {"particles": ["zi08"], "footprints": ["hrrr", "zi08"]}
     # Nothing was deleted.
     assert project.simulation(point_receptor.id, "zi08").is_complete
 

@@ -78,7 +78,7 @@ Glossary
       with one set of settings, named after the variant that first made it
       and a short hash of the settings, such as ``settings=hrrr-b2399e``. A
       changed setting makes a new folder and never overwrites one, and
-      projects with the same settings share a folder. ``stilt output ls``
+      projects with the same settings share a folder. ``stilt status``
       lists them.
 
    workdir
