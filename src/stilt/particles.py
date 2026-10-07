@@ -25,8 +25,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 import xarray as xr
 
-from stilt._atomic import write_parquet
-from stilt._paths import location, readable
+from stilt._paths import location, readable, write_parquet
 from stilt.receptors import (
     ColumnReceptor,
     MultiPointReceptor,

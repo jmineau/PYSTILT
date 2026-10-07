@@ -236,7 +236,7 @@ docs/                Sphinx (pydata-sphinx-theme)
 
 The import contracts in `pyproject.toml` (run by `lint-imports` in CI)
 hold this shape. One `layers` contract lists every top-level module from
-the CLI down to `_atomic`, `_paths`, and `exceptions`; a module imports
+the CLI down to `_paths` and `exceptions`; a module imports
 only the layers below it, and modules that import each other share a
 layer. It is exhaustive, so a new top-level module fails until it is
 placed. Two short contracts hold what a layer cannot: only

@@ -145,7 +145,7 @@ layers = [
     "receptors : visualization",
     "transforms | sampling",
     "spatial",
-    "_atomic | _paths | exceptions",
+    "_paths | exceptions",
 ]
 
 # HYSPLIT is one transport model, reached through stilt.transport.get_model.
