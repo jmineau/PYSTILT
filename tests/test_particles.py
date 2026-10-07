@@ -698,3 +698,84 @@ def test_a_column_release_row_says_which_slab_a_particle_stands_for():
     # Without the release rows, particle indx is in slab indx.
     first_step = add_release_heights(rows[rows.time == -1], column)
     assert first_step["xhgt"].tolist() == [125.0, 375.0, 625.0, 875.0]
+
+
+def test_hnf_correction_invariants():
+    """
+    Mathematical invariants of the HNF near-field plume-dilution correction.
+
+    The HNF correction replaces the HYSPLIT-raw foot with a Gaussian near-field
+    value (0.02897 / (plume * dens) * samt * 60) when the plume has not yet
+    grown to fill the mixing layer.  This can be larger or smaller than the raw
+    value.  The invariants that must always hold:
+
+    1. Corrected foot is always positive.
+    2. When plume >= pbl_mixing, foot is left unchanged (identity path).
+    3. The raw values are preserved in `foot_no_hnf_dilution`.
+    """
+    rng = np.random.default_rng(77)
+    n = 50
+    raw_foot = rng.uniform(1e-5, 1e-3, n)
+    # Force some particles to have large plume (sigma >> mlht) so the identity
+    # path is exercised.  Large sigw + long time → large plume.
+    sigw = np.concatenate(
+        [
+            rng.uniform(0.01, 0.5, n // 2),  # small sigma → near-field path
+            rng.uniform(5.0, 20.0, n // 2),  # large sigma → identity path
+        ]
+    )
+    particles = pd.DataFrame(
+        {
+            "time": np.concatenate(
+                [
+                    rng.uniform(-0.5, -0.1, n // 2),  # short time → small plume
+                    rng.uniform(-6.0, -5.0, n // 2),  # long time → large plume
+                ]
+            ),
+            "particle": [float(i + 1) for i in range(n)],
+            "lon": [-112.0] * n,
+            "lat": [40.5] * n,
+            "zagl": [5.0] * n,
+            "foot": raw_foot,
+            "mlht": [500.0] * n,  # pbl_mixing = 0.5 * 500 = 250 m
+            "dens": [1.2] * n,
+            "samt": [60.0] * n,
+            "sigw": sigw,
+            "tlgr": [100.0] * n,
+        }
+    )
+
+    result = correct_near_field(particles.copy(), point_at(5.0), 0.5)
+
+    # Invariant 1: corrected foot is always positive.
+    assert np.all(result["foot"].values > 0), (
+        "HNF-corrected foot values must be positive"
+    )
+
+    # Invariant 2: identity path — particles where plume >= pbl_mixing
+    # are unchanged.  Reconstruct plume = r_zagl + sigma to find them.
+    abs_time_s = np.abs(particles["time"] * 60)
+    tlgr = particles["tlgr"]
+    sigma = (
+        particles["samt"]
+        * np.sqrt(2)
+        * particles["sigw"]
+        * np.sqrt(tlgr * abs_time_s + tlgr**2 * np.exp(-abs_time_s / tlgr) - 1)
+    )
+    plume = 5.0 + sigma  # r_zagl=5 + sigma (single timestep, cumsum is sigma itself)
+    pbl_mixing = 0.5 * particles["mlht"]
+    identity_mask = (plume >= pbl_mixing).to_numpy()
+
+    np.testing.assert_allclose(
+        result.loc[identity_mask, "foot"].values,
+        raw_foot[identity_mask],
+        rtol=1e-12,
+        err_msg="Particles with plume >= pbl_mixing must have foot unchanged",
+    )
+
+    # Invariant 3: raw values preserved in foot_no_hnf_dilution.
+    np.testing.assert_array_equal(
+        result["foot_no_hnf_dilution"].values,
+        raw_foot,
+        err_msg="foot_no_hnf_dilution must equal the original foot values",
+    )
