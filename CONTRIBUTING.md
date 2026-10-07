@@ -31,7 +31,7 @@ architecture and the rules the code relies on.
    that fails without the fix. User-facing changes need a docs update.
 3. Run the checks:
    ```bash
-   just quality-check   # ruff, pyright, the import contracts, and the unit tests
+   just quality-check   # ruff, pyrefly, the import contracts, and the unit tests
    just pre-commit      # all pre-commit hooks
    ```
 4. Commit with a [Conventional Commits](https://www.conventionalcommits.org/)

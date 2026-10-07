@@ -121,7 +121,7 @@ def _level_edges(heights: pd.Series, levels: int | Sequence[float]) -> np.ndarra
 
 def _level_labels(heights: pd.Series, edges: np.ndarray) -> pd.Series:
     """Return each particle's level number, NaN outside the edges."""
-    label = pd.cut(heights, edges, labels=False, include_lowest=True)
+    label = pd.cut(heights, edges.tolist(), labels=False, include_lowest=True)
     return pd.Series(np.asarray(label, dtype=float), index=heights.index)
 
 

@@ -41,8 +41,8 @@ quality-check:
 	@echo "Running quality checks..."
 	@echo "Linting with ruff..."
 	uv run ruff check src/stilt
-	@echo "Type checking with pyright..."
-	uv run pyright src/stilt
+	@echo "Type checking with pyrefly..."
+	uv run pyrefly check
 	@echo "Checking import contracts..."
 	uv run lint-imports
 	just test

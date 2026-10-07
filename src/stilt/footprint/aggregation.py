@@ -154,8 +154,8 @@ def _sum_table(
     # array of ids, and an int32 per cell.
     table = table.unify_dictionaries().combine_chunks()
     receptor_col = table.column("receptor").combine_chunks()
-    ids: list[str] = receptor_col.dictionary.to_pylist()  # type: ignore[attr-defined]
-    dict_idx = receptor_col.indices.to_numpy()  # type: ignore[attr-defined]
+    ids: list[str] = receptor_col.dictionary.to_pylist()
+    dict_idx = receptor_col.indices.to_numpy()
     found = set(ids)
     rows = [r for r in receptors if r in found]
     row_of = {r: i for i, r in enumerate(rows)}
@@ -223,6 +223,8 @@ class Jacobian(NamedTuple):
             they are a dense array.
         """
         if sparse:
+            # pandas-stubs type the DataFrame.sparse accessor as `...`
+            # pyrefly: ignore[missing-attribute]
             stored = pd.DataFrame.sparse.from_spmatrix(self.data)
             # A cell not stored is zero. pandas 3 fills from_spmatrix's
             # columns with NaN, so each is rebuilt with a fill of 0.

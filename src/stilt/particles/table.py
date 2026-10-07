@@ -353,7 +353,7 @@ def _column_release_heights(p: pd.DataFrame, receptor: ColumnReceptor) -> pd.Ser
     without them, particle ``particle`` is in slab ``particle``, as the bundled
     HYSPLIT releases them.
     """
-    numpar = int(p["particle"].max())  # type: ignore[arg-type]
+    numpar = int(p["particle"].max())
     step = (receptor.top - receptor.bottom) / numpar
     released = _release_rows(p)
     height = None if released is None else _height(released, receptor)

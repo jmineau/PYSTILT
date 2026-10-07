@@ -413,8 +413,8 @@ def _print_status(project: Project, ran: pd.DataFrame | None = None) -> None:
     label = f"Project: {project.directory}" if ran is None else "This run:"
     typer.echo(f"{label}  {_counts(len(table), len(pending))}")
     if len(project.variants) > 1:
-        total = Counter(table["variant"])
-        waiting = Counter(pending["variant"])
+        total = Counter(table["variant"].tolist())
+        waiting = Counter(pending["variant"].tolist())
         for variant in project.variants:
             typer.echo(f"  {variant}: {_counts(total[variant], waiting[variant])}")
     causes = Counter(table.loc[table.state == "failed", "reason"])

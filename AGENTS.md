@@ -421,7 +421,7 @@ Driven by [`just`](https://github.com/casey/just) and [`uv`](https://docs.astral
 |---|---|
 | `just install` | `uv sync --group dev` |
 | `just test` | `uv run pytest -v` (unit tests only) |
-| `just quality-check` | ruff, pyright, and the import contracts (`lint-imports`), then the tests |
+| `just quality-check` | ruff, pyrefly, and the import contracts (`lint-imports`), then the tests |
 | `just ruff` | `ruff check --fix` and `ruff format` on `src/stilt` |
 | `just build-docs` | clean Sphinx HTML build into `docs/_build` |
 | `just dist` | the sdist and one wheel per bundled HYSPLIT build, into `dist/` |
@@ -477,13 +477,14 @@ quirks.
 - Ruff rules `E, F, UP, B, SIM, I, D213`; line length is left to the formatter.
 - **NumPy-style docstrings** (Sphinx napoleon is configured for NumPy only),
   with the summary on the line after the opening quotes (`D213`).
-- Pyright in `basic` mode against the project `.venv`. `py.typed` ships.
-  CI type-checks under Python 3.11, the oldest supported version. To
-  reproduce it, note that `pyproject.toml` pins pyright to `.venv`, so
-  `--pythonpath` does not switch environments; build a 3.11 environment
-  elsewhere (`UV_PROJECT_ENVIRONMENT=<dir>/.venv uv sync --python 3.11
-  --group dev`) and run `pyright --venvpath <dir> src/stilt`.
-  Fix types at the source rather than reaching for `typing.cast`.
+- pyrefly (its default preset) checks `src/` and must pass with no errors.
+  `py.typed` ships. CI type-checks under Python 3.11, the oldest supported
+  version; `uv run pyrefly check --python-version 3.11` checks against it
+  locally.
+  Fix types at the source rather than reaching for `typing.cast`. When
+  the error is in a library's stubs (pandas-stubs often is), suppress it
+  with `# pyrefly: ignore[<code>]` on the line above, after a comment
+  saying why.
 - Keep the `from __future__ import annotations` headers.
 - Exception classes live in `stilt/exceptions.py`. Each subclasses
   `StiltError` and the builtin that describes it; a failed run is a

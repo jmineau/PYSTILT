@@ -70,7 +70,8 @@ def location(path: str | Path | UPath, base: str | Path | None = None) -> Path |
     if isinstance(path, str) and path.startswith("file://"):
         path = path[len("file://") :]
     if not is_url(path):
-        return absolute(path, base)  # type: ignore[arg-type]
+        # pyrefly: ignore[bad-argument-type]
+        return absolute(path, base)
     from upath import UPath
 
     return path if isinstance(path, UPath) else UPath(str(path).rstrip("/"))

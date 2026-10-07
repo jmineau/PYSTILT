@@ -226,7 +226,7 @@ class Grid(Bounds):
 
         x, y = self.axes
         names = ["lon", "lat"] if self.is_longlat else ["x", "y"]
-        return pd.MultiIndex.from_product([x, y], names=names)
+        return pd.MultiIndex.from_product([pd.Index(x), pd.Index(y)], names=names)
 
     def to_xarray(self) -> xr.Dataset:
         """

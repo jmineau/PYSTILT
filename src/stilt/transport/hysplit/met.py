@@ -379,6 +379,8 @@ class Met:
         file_format, file_tres = self.config.file_format, self.config.file_tres
         # MetConfig requires both when there is no download.
         assert file_format is not None and file_tres is not None
+        # pandas-stubs' to_offset takes no Timedelta (pandas does)
+        # pyrefly: ignore[no-matching-overload]
         tres = to_offset(pd.to_timedelta(file_tres)).freqstr
         earlier, later = _cover(window, hour_after, tres)
         met_times = pd.date_range(earlier.floor(tres), later, freq=tres)

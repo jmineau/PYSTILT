@@ -355,7 +355,7 @@ class Project:
     def _positions(self) -> dict[str, np.ndarray]:
         """Where each receptor's rows are in :attr:`_rows`, by id, so :meth:`receptor` need not search."""
         groups = self._rows.groupby("receptor", sort=False).indices
-        return {str(rid): positions for rid, positions in groups.items()}
+        return {str(rid): np.asarray(positions) for rid, positions in groups.items()}
 
     @cached_property
     def receptors(self) -> pd.DataFrame:

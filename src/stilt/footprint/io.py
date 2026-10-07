@@ -304,15 +304,15 @@ def open_footprints(
     import dask.array as da
     from dask.delayed import delayed
 
-    paths = [location(p) for p in paths]
-    if not paths:
+    located = [location(p) for p in paths]
+    if not located:
         raise ValueError("No footprint files to open.")
     threads = workers if workers is not None else (os.cpu_count() or 1)
-    if threads > 1 and len(paths) > 1:
+    if threads > 1 and len(located) > 1:
         with ThreadPoolExecutor(max_workers=threads) as pool:
-            footers = list(pool.map(_footer, paths))
+            footers = list(pool.map(_footer, located))
     else:
-        footers = [_footer(p) for p in paths]
+        footers = [_footer(p) for p in located]
 
     stored = {meta.get(b"stilt:footprint") for meta in footers}
     if None in stored:
@@ -323,7 +323,7 @@ def open_footprints(
             "variant's footprints at a time."
         )
     config, geometry_hash = read_footprint_settings(
-        json.loads(stored.pop() or b"{}"), paths[0].name
+        json.loads(stored.pop() or b"{}"), located[0].name
     )
     grid = config.grid
     if grid is None:
@@ -344,10 +344,10 @@ def open_footprints(
     ny, nx = len(y_axis), len(x_axis)
     per_block = max(1, _CHUNK_BYTES // max(1, len(hours) * ny * nx * 4))
     blocks = []
-    for _, run in itertools.groupby(kept, key=lambda i: paths[i].parent):
+    for _, run in itertools.groupby(kept, key=lambda i: located[i].parent):
         ids = list(run)
         for start in range(0, len(ids), per_block):
-            files = [paths[i] for i in ids[start : start + per_block]]
+            files = [located[i] for i in ids[start : start + per_block]]
             read = delayed(_dense_block, pure=True)(files, hours, ny, nx)
             shape = (len(files), len(hours), ny, nx)
             blocks.append(da.from_delayed(read, shape=shape, dtype=np.float32))

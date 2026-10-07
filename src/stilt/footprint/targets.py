@@ -213,7 +213,7 @@ class Mesh(BaseModel):
         cell strings.
         """
         try:
-            import h3  # pyright: ignore[reportMissingImports]
+            import h3
         except ImportError as exc:  # pragma: no cover - optional dep
             raise ImportError("Mesh.from_h3 requires the 'h3' package.") from exc
 
@@ -458,7 +458,7 @@ class Zones(BaseModel):
     @property
     def membership(self) -> sparse.csr_matrix:
         """Sparse ``(n_regions, n_base_cells)`` matrix, 1 where a base cell is in a region."""
-        codes = self.index.get_indexer(list(self.labels))
+        codes = self.index.get_indexer(pd.Index(self.labels, dtype=object))
         n_base = len(self.labels)
         return sparse.csr_matrix(
             (np.ones(n_base), (codes, np.arange(n_base))),
@@ -544,7 +544,7 @@ def _grid_weights(
 def _exactextract_available() -> bool:
     """Return whether the optional exactextract backend is importable."""
     try:
-        import exactextract  # noqa: F401  # pyright: ignore[reportMissingImports]
+        import exactextract  # noqa: F401
     except ImportError:
         return False
     return True
@@ -560,8 +560,8 @@ def _mesh_weights_exactextract(
     on large rasters. ``exactextract`` numbers cells from the top row, so its
     ``cell_id`` is renumbered to start from the bottom row.
     """
-    from exactextract import exact_extract  # pyright: ignore[reportMissingImports]
-    from exactextract.raster import (  # pyright: ignore[reportMissingImports]
+    from exactextract import exact_extract
+    from exactextract.raster import (
         NumPyRasterSource,
     )
 
@@ -622,7 +622,7 @@ def _mesh_weights(
     if len(p_idx) == 0:
         return sparse.csr_matrix((len(mesh), len(boxes)))
     inter = shapely.area(shapely.intersection(polys[p_idx], boxes[b_idx]))
-    frac = inter / shapely.area(boxes[b_idx])
+    frac = np.asarray(inter / shapely.area(boxes[b_idx]))
     keep = frac > 0
     return sparse.csr_matrix(
         (frac[keep], (p_idx[keep], b_idx[keep])), shape=(len(mesh), len(boxes))

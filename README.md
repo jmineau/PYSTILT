@@ -9,7 +9,6 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22211796.svg)](https://doi.org/10.5281/zenodo.22211796)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
-[![Pyright](https://img.shields.io/badge/pyright-checked-brightgreen.svg)](https://github.com/microsoft/pyright)
 
 PYSTILT is a Python version of the [STILT](https://uataq.github.io/stilt/) atmospheric transport model.
 It follows air backward in time from a measurement with [HYSPLIT](https://www.ready.noaa.gov/HYSPLIT.php)

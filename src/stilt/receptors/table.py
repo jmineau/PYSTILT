@@ -297,7 +297,7 @@ def receptors_from_rows(rows: pd.DataFrame) -> list[Receptor]:
     """
     names = [str(c) for c in rows.columns if c not in COLUMNS and c not in ROW_COLUMNS]
     labels = rows[names].astype(object).to_numpy()
-    times = rows["time"].dt.to_pydatetime()
+    times = pd.DatetimeIndex(rows["time"]).to_pydatetime()
     lon = rows["longitude"].to_numpy(dtype=float)
     lat = rows["latitude"].to_numpy(dtype=float)
     alt = rows["altitude"].to_numpy(dtype=float)
@@ -388,7 +388,7 @@ def read_receptor_frame(path: str | Path | IO[str]) -> pd.DataFrame:
     """Read a receptors CSV as a table, with ``r_idx`` as text and ``time`` parsed, without building receptors."""
     header = pd.read_csv(path, nrows=0).columns
     if hasattr(path, "seek"):
-        path.seek(0)  # type: ignore[union-attr]
+        path.seek(0)
     # With type inference, pandas types each chunk of a large file on its
     # own, so an r_idx column that mixes numbers and text would come back
     # part int and part str.
@@ -422,7 +422,9 @@ def read_receptors(path: str | Path | IO[str]) -> list[Receptor]:
 def _csv_frame(receptors: Iterable[Receptor]) -> pd.DataFrame:
     """Return the receptor table with times as the text written to CSV."""
     frame = receptors_to_frame(receptors)
-    return frame.assign(time=frame["time"].dt.strftime("%Y-%m-%d %H:%M:%S"))
+    return frame.assign(
+        time=pd.DatetimeIndex(frame["time"]).strftime("%Y-%m-%d %H:%M:%S")
+    )
 
 
 def receptors_to_csv(receptors: Iterable[Receptor]) -> str:
