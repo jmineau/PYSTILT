@@ -375,7 +375,7 @@ def run_model(
     ------
     SimulationError
         If the run fails, the model wrote no particles, or they stop before
-        the end of the run (``MET_COVERAGE``, :func:`check_reach`).
+        the end of the run (``MET_COVERAGE``).
     """
     window = run_window(receptor.time, config.n_hours)
     run = get_model(name).run(receptor, config, met, window, workdir, timeout=timeout)
@@ -441,12 +441,7 @@ def run_model_many(
     return results
 
 
-def reach_minutes(particles: pd.DataFrame) -> float:
-    """Return how far the particles got from the release, in minutes: the largest ``|time|``."""
-    return float(np.abs(particles["time"].to_numpy(dtype=float)).max())
-
-
-def check_reach(particles: pd.DataFrame, n_hours: int) -> None:
+def _check_reach(particles: pd.DataFrame, n_hours: int) -> None:
     """
     Raise if no particle reaches the end of the run.
 
@@ -484,7 +479,7 @@ def _finish(run: ModelRun, receptor: Receptor, config: TransportConfig) -> Model
     ------
     SimulationError
         With the run's log, if the model wrote no particles, or they stop
-        before the end of the run (:func:`check_reach`).
+        before the end of the run (:func:`_check_reach`).
     """
     if run.particles.empty:
         raise SimulationError(
@@ -494,7 +489,7 @@ def _finish(run: ModelRun, receptor: Receptor, config: TransportConfig) -> Model
         )
     check_particles(run.particles)
     try:
-        check_reach(run.particles, config.n_hours)
+        _check_reach(run.particles, config.n_hours)
     except SimulationError as error:
         error.log = f"{run.log}{error}\n"
         raise
@@ -590,7 +585,6 @@ __all__ = [
     "ModelRun",
     "TransportConfig",
     "TransportModel",
-    "check_reach",
     "get_model",
     "run_model",
     "run_model_many",

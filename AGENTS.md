@@ -614,12 +614,12 @@ The README links to it and keeps no table of its own.
   `attrs["empty"]`. Never synthesize a zero-valued footprint for it: a zero
   enhancement would flow into a comparison or an inversion unnoticed.
 - **A run that stops early is a failure.** After any model's run,
-  `check_reach` (`stilt.transport`, in `_finish`) fails it as
+  `_check_reach` (`stilt.transport`, in `_finish`) fails it as
   `MET_COVERAGE` when no particle reaches `n_hours` within one output
-  step, whatever stopped them; there is no setting to allow it (#169).
-  HYSPLIT's `Met.files_for` also fails before running when a file is
-  missing, naming the hours. Each particle file records its reach
-  (`stilt:reach_minutes`).
+  step, whatever stopped them; there is no setting to allow it (#169),
+  so every particle file written reaches the end of its run. HYSPLIT's
+  `Met.files_for` also fails before running when a file is missing,
+  naming the hours.
 - **A failure record is a note, not a result.** When a step fails the
   worker writes `<receptor id>.failure.yaml` in the logs of the folder
   whose result failed (`logs/settings=<key>/date=.../`: the particles'
