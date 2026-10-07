@@ -593,7 +593,7 @@ def test_all_outside_domain(rscript, r_stilt_dir, tmp_path):
         foot=[1e-4] * 5,
     )
 
-    with pytest.raises(EmptyFootprint, match="outside_domain"):
+    with pytest.raises(EmptyFootprint):
         _py_footprint(tmp_path / "py", p)
     r_ds = _r_footprint(tmp_path / "r", rscript, r_stilt_dir, p)
 

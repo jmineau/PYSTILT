@@ -15,7 +15,7 @@ import xarray as xr
 from stilt.exceptions import EmptyFootprint
 from stilt.footprint import gridding
 from stilt.footprint.config import FootprintConfig
-from stilt.footprint.io import _empty_reason, read_footprint
+from stilt.footprint.io import read_footprint
 from stilt.output import Output, completed
 from stilt.particles import (
     Background,
@@ -185,19 +185,6 @@ class Simulation:
     # -- status ------------------------------------------------------------
 
     @property
-    def empty_reason(self) -> str | None:
-        """
-        Why the footprint is empty, or ``None`` when it is not, or does not exist.
-
-        ``"outside_domain"`` means no particle reached the grid and
-        ``"no_particles"`` that there were none.
-        """
-        path = self.footprint_path
-        if path is None or not path.exists():
-            return None
-        return _empty_reason(path)
-
-    @property
     def failure(self) -> dict[str, Any] | None:
         """
         Why this simulation is not complete, as the worker recorded it, or ``None``.
@@ -273,9 +260,9 @@ class Simulation:
         whose ``.stilt`` accessor has the PYSTILT methods.
 
         Read from the output directory on first access and kept. An empty
-        footprint (no particle reached the grid) is ``None`` with the reason
-        in :attr:`empty_reason`. Check :attr:`has_footprint` first when the
-        run may not have finished.
+        footprint, where no particle reached the grid, is ``None`` while
+        :attr:`has_footprint` is true. Check :attr:`has_footprint` first
+        when the run may not have finished.
 
         Raises
         ------

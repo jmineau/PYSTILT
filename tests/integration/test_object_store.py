@@ -93,7 +93,7 @@ def test_output_on_an_object_store_writes_lists_and_reads(store):
     assert float(ds.foot.sum()) == pytest.approx(float(foot.sum()), rel=1e-6)
 
     later = receptor_at(hour=18)
-    out.write_empty_footprint(FEET, later, "outside_domain")
+    out.write_empty_footprint(FEET, later)
     assert out.present("footprints", FEET) == {rid, str(later.id)}
     assert read_footprint(out.path("footprints", FEET, str(later.id))) is None  # type: ignore[arg-type]
 

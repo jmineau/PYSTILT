@@ -221,7 +221,6 @@ def test_empty_footprint_is_recorded_with_its_reason(point_receptor, tmp_path):
 
     assert sim.footprint is None
     assert sim.has_footprint and sim.is_complete
-    assert sim.empty_reason == "outside_domain"
     assert sim.is_complete and sim.failure is None
 
 

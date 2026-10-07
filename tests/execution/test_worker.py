@@ -130,7 +130,7 @@ def _write_footprint(sim: Simulation, *, empty: bool = False) -> None:
     """Record a footprint (or an empty one) for *sim* in the output directory."""
     assert sim.variant.footprint is not None
     if empty:
-        sim.output.write_empty_footprint(sim.variant, sim.receptor, "outside_domain")
+        sim.output.write_empty_footprint(sim.variant, sim.receptor)
     else:
         make_footprint(sim, _particles(sim.receptor))
 

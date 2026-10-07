@@ -48,7 +48,7 @@ def test_footprint_files_record_the_geometry_hash(tmp_path):
     )
     receptor = receptor_at()
     path = out.write_footprint(variant, fake_footprint(receptor))
-    out.write_empty_footprint(variant, receptor_at(hour=13), "outside_domain")
+    out.write_empty_footprint(variant, receptor_at(hour=13))
     assert read_footprint(path).stilt.geometry_hash == "deadbeef00"
     folder = out.folder("footprints", variant)
     record = yaml.safe_load((folder / "_settings.yaml").read_text())
@@ -246,7 +246,6 @@ def test_footprint_folder_is_variant_name_and_combined_hash(tmp_path):
 
 def test_footprint_round_trip_is_exact_in_float32(tmp_path):
     from stilt.footprint import read_footprint
-    from stilt.footprint.io import _empty_reason
 
     out = Output(tmp_path / "output")
     receptor = receptor_at()
@@ -266,7 +265,7 @@ def test_footprint_round_trip_is_exact_in_float32(tmp_path):
     np.testing.assert_array_equal(
         back.values, foot.values.astype(np.float32).astype(np.float64)
     )
-    assert _empty_reason(path) is None
+    assert _metadata(path)[b"stilt:empty"] == b"false"
 
 
 def test_footprint_all_zero_layer_keeps_its_shape(tmp_path):
@@ -279,16 +278,22 @@ def test_footprint_all_zero_layer_keeps_its_shape(tmp_path):
     assert float(back[1].sum()) == 0.0
 
 
-def test_empty_footprint_is_a_file_with_no_rows_and_a_reason(tmp_path):
+def _metadata(path) -> dict[bytes, bytes]:
+    """Return the metadata of a result file."""
+    import pyarrow.parquet as pq
+
+    return pq.read_schema(path).metadata
+
+
+def test_empty_footprint_is_a_file_with_no_rows_marked_empty(tmp_path):
     from stilt.footprint import read_footprint
-    from stilt.footprint.io import _empty_reason
 
     out = Output(tmp_path / "output")
     receptor = receptor_at()
-    path = out.write_empty_footprint(FEET, receptor, "outside_domain")
+    path = out.write_empty_footprint(FEET, receptor)
     assert path.exists()
     assert read_footprint(path) is None
-    assert _empty_reason(path) == "outside_domain"
+    assert _metadata(path)[b"stilt:empty"] == b"true"
     assert out.present("footprints", FEET) == {receptor.id}
 
 
@@ -316,7 +321,7 @@ def test_a_variant_without_a_grid_has_no_footprint_folder(tmp_path):
     assert out.folder("footprints", VARIANT) is None
     assert out.present("footprints", VARIANT) == frozenset()
     with pytest.raises(ValueError, match="no grid"):
-        out.write_empty_footprint(VARIANT, receptor_at(), "outside_domain")
+        out.write_empty_footprint(VARIANT, receptor_at())
 
 
 # ---------------------------------------------------------------------------
@@ -330,7 +335,7 @@ def test_complete_is_particles_and_a_footprint_when_the_variant_has_a_grid(tmp_p
     for receptor in (a, b):
         write_one(out, FEET, receptor)
     out.write_footprint(FEET, fake_footprint(a))
-    out.write_empty_footprint(FEET, c, "outside_domain")  # a footprint, no particles
+    out.write_empty_footprint(FEET, c)  # a footprint, no particles
     ids = [a.id, b.id, c.id]
     assert out.complete(FEET, ids) == {a.id}
     assert out.complete(VARIANT, ids) == {a.id, b.id}  # particles alone
@@ -395,7 +400,7 @@ def written_footprints(tmp_path):
         out.write_footprint(FEET, foot)
         feet_by_id[str(receptor.id)] = foot
     empty = receptor_at(hour=23)
-    out.write_empty_footprint(FEET, empty, "outside_domain")
+    out.write_empty_footprint(FEET, empty)
     return out, feet_by_id, str(empty.id)
 
 
@@ -539,7 +544,7 @@ def test_open_footprints_stacks_receptors_on_the_hour(tmp_path):
     }
     for foot in feet.values():
         out.write_footprint(FEET, foot)
-    out.write_empty_footprint(FEET, empty, "outside_domain")
+    out.write_empty_footprint(FEET, empty)
     paths = [out.path("footprints", FEET, r.id) for r in (late, empty, early)]
 
     ds = open_footprints(paths)
@@ -686,7 +691,7 @@ def test_each_result_file_names_its_settings_and_the_version_that_wrote_it(tmp_p
     out = Output(tmp_path / "output")
     particles = out.write_particles(FEET, receptor, fake_particles(receptor), [])
     footprint = out.write_footprint(FEET, fake_footprint(receptor))
-    empty = out.write_empty_footprint(FEET, receptor_at(13), "outside_domain")
+    empty = out.write_empty_footprint(FEET, receptor_at(13))
 
     meta = pq.read_schema(particles).metadata
     assert meta[b"stilt:hash"].decode() == FEET.particles_hash
@@ -738,7 +743,7 @@ def test_a_footprint_folder_stored_with_projection_is_found_by_crs(tmp_path):
     """Folders written when the grid said ``projection`` are found by a ``crs`` config."""
     variant = output_variant(footprint=FootprintConfig(grid=GRID))
     out = Output(tmp_path / "output")
-    out.write_empty_footprint(variant, receptor_at(), "outside_domain")
+    out.write_empty_footprint(variant, receptor_at())
     folder = out.folder("footprints", variant)
     record_path = folder / "_settings.yaml"
     record = yaml.safe_load(record_path.read_text())
@@ -780,7 +785,7 @@ def test_a_lookup_reads_each_folder_once(tmp_path, monkeypatch):
 
 def test_a_footprint_folder_reads_its_particles_folder_once(tmp_path, monkeypatch):
     out = Output(tmp_path / "output")
-    out.write_empty_footprint(FEET, receptor_at(), "outside_domain")
+    out.write_empty_footprint(FEET, receptor_at())
 
     import stilt.output
 

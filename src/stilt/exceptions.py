@@ -74,23 +74,11 @@ class EmptyFootprint(StiltError):
     No particle is over the footprint grid, so there is no footprint.
 
     An empty footprint is a finished result, not a failure. The worker
-    catches it and writes a footprint file with no rows and the reason.
-
-    Parameters
-    ----------
-    reason : str
-        ``"no_particles"`` when the particle table is empty, or
-        ``"outside_domain"`` when no particle reached the grid.
-
-    Attributes
-    ----------
-    reason : str
-        Why the footprint is empty.
+    catches it and writes a footprint file with no rows, marked empty.
     """
 
-    def __init__(self, reason: str):
-        super().__init__(f"No particle over the footprint grid ({reason}).")
-        self.reason = reason
+    def __init__(self) -> None:
+        super().__init__("No particle is over the footprint grid.")
 
 
 __all__ = [

@@ -218,7 +218,7 @@ def make_footprint(sim: Simulation, particles: pd.DataFrame) -> xr.DataArray | N
     The settings are the variant's own. A relative file name in a
     transform's settings starts from the project directory
     (``sim.directory``). When no particle reaches the grid,
-    an empty footprint is recorded with the reason and ``None`` is returned.
+    an empty footprint is recorded, marked empty, and ``None`` is returned.
     :meth:`stilt.Simulation.calc_footprint` makes footprints with other
     settings, without writing them.
 
@@ -242,10 +242,8 @@ def make_footprint(sim: Simulation, particles: pd.DataFrame) -> xr.DataArray | N
             directory=sim.directory,
             geometry_hash=sim.variant.geometry_hash,
         )
-    except EmptyFootprint as error:
-        sim.output.write_empty_footprint(
-            sim.variant, sim.receptor, error.reason, sim.realization
-        )
+    except EmptyFootprint:
+        sim.output.write_empty_footprint(sim.variant, sim.receptor, sim.realization)
         return None
     sim.output.write_footprint(sim.variant, foot, sim.realization)
     return foot
