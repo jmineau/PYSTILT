@@ -119,19 +119,37 @@ def resolve_compute_root(
     return absolute(Path(tmp_root) / "pystilt" / project.name)
 
 
-def _pending(
+def pending(
     project: Project,
-    skip_existing: bool,
+    *,
     receptors: Iterable[str] | None = None,
     task: tuple[int, int] | None = None,
+    skip_existing: bool = True,
 ) -> list[str]:
     """
-    Return the ids of the receptors to run, each once.
+    Return the ids of the receptors a run would run, each once, in project order.
 
-    *receptors* limits them to those, in that order. *task* ``(i, n)``
-    takes share ``i`` of ``n`` of them (of all the project's receptors
-    without *receptors*) before the complete ones are dropped, so the tasks
-    of a job array split the receptors the same way whenever each starts.
+    A driver that starts tasks itself writes these to the ``receptors.txt``
+    each task reads (``stilt run --receptors``).
+
+    Parameters
+    ----------
+    project : Project
+        The project.
+    receptors : iterable of str, optional
+        Only these receptors, in this order.
+    task : tuple of (int, int), optional
+        ``(i, n)``: share ``i`` of ``n`` (:func:`task_share`), taken from
+        all the receptors (or all of *receptors*) before the complete ones
+        are dropped, so the tasks of a job array split the receptors the
+        same way whenever each starts.
+    skip_existing : bool, default True
+        Leave out receptors whose simulations are all complete.
+
+    Raises
+    ------
+    ValueError
+        If a receptor in *receptors* is not in the project.
     """
     sims = project.simulations
     every = list(dict.fromkeys(sims["receptor"]))
@@ -227,13 +245,21 @@ def run(
     stopped by ``scancel`` is not requeued.
     """
     execution = execution if execution is not None else project.config.execution
-    pending = _pending(project, skip_existing, receptors, task)
-    if not pending:
+    todo = pending(project, receptors=receptors, task=task, skip_existing=skip_existing)
+    if not todo:
         logger.info("run: every simulation is complete; nothing to do")
     elif execution.backend == "slurm" and task is None:
-        _wait(_submit(project, pending, execution, skip_existing, compute_root))
+        job_id = submit(
+            project,
+            receptors=todo,
+            execution=execution,
+            skip_existing=skip_existing,
+            compute_root=compute_root,
+        )
+        if job_id is not None:
+            wait(job_id)
     else:
-        logger.info("run(%s): %d receptors", ", ".join(project.variants), len(pending))
+        logger.info("run(%s): %d receptors", ", ".join(project.variants), len(todo))
         # In this process, so Ctrl-C and SIGTERM stop the workers cleanly
         # and progress prints as it happens.
         from .worker import run_receptors
@@ -241,7 +267,7 @@ def run(
         def work() -> None:
             run_receptors(
                 project,
-                pending,
+                todo,
                 compute_root=resolve_compute_root(project, compute_root),
                 execution=execution,
                 skip_existing=skip_existing,
@@ -250,8 +276,8 @@ def run(
         if task is None:
             work()
         else:
-            return _run_task(project, pending, work)
-    return _status(project, pending)
+            return _run_task(project, todo, work)
+    return _status(project, todo)
 
 
 def submit(
@@ -297,11 +323,11 @@ def submit(
             f"submit sends work to Slurm, and this run's backend is "
             f"{execution.backend!r}. Use run(), or set execution.backend to slurm."
         )
-    pending = _pending(project, skip_existing, receptors)
-    if not pending:
+    todo = pending(project, receptors=receptors, skip_existing=skip_existing)
+    if not todo:
         logger.info("submit: every simulation is complete; nothing to do")
         return None
-    return _submit(project, pending, execution, skip_existing, compute_root)
+    return _submit(project, todo, execution, skip_existing, compute_root)
 
 
 def _sbatch_lines(options: dict[str, Any]) -> list[str]:
@@ -457,13 +483,20 @@ def _task_states(job_id: str) -> dict[str, tuple[str, str]] | None:
     return states or None
 
 
-def _wait(job_id: str, poll: float = 30.0) -> None:
+def wait(job_id: str, poll: float = 30.0) -> dict[str, tuple[str, str]]:
     """
-    Wait until every task of a job array has ended, polling ``sacct``.
+    Wait until every task of a Slurm job array has ended, and return how each ended.
 
-    A task that ended other than complete, or with failed simulations
-    (exit 1) or interrupted ones (exit 2), is logged with its state; its
-    simulations stay pending in the status table.
+    Polls ``sacct`` every *poll* seconds. A task that ended other than
+    complete, or with failed simulations (exit 1) or interrupted ones
+    (exit 2), is logged with its state; its simulations stay pending in the
+    status table.
+
+    Returns
+    -------
+    dict
+        ``{task: (state, exit code)}`` as ``sacct`` gives them, such as
+        ``{"123_0": ("COMPLETED", "0:0")}``.
     """
     states = _task_states(job_id)
     while states is None or any(s in _ACTIVE for s, _ in states.values()):
@@ -475,6 +508,7 @@ def _wait(job_id: str, poll: float = 30.0) -> None:
         logger.warning(
             "Slurm task %s ended %s (exit %s); see its log", task, state, code
         )
+    return states
 
 
 # ---------------------------------------------------------------------------

@@ -7,12 +7,13 @@ import pytest
 
 from stilt.config import ProjectConfig
 from stilt.execution.worker import run_particles
+from stilt.meteorology import Met, run_window
 from stilt.output import Output
 from stilt.simulation import Simulation
 from stilt.transport import ModelRun, get_model
 from stilt.transport.hysplit import HysplitConfig, HysplitModel
 
-from ..fixtures.factories import make_met_config, make_variant
+from ..fixtures.factories import make_met_config, make_met_files, make_variant
 
 
 def test_get_model_returns_hysplit_by_default_and_by_name():
@@ -64,7 +65,7 @@ def _fake_hysplit(monkeypatch) -> dict:
         (workdir / "PARTICLE_STILT.DAT").write_text("")
 
     monkeypatch.setattr(model_module, "write_inputs", write_inputs)
-    monkeypatch.setattr(model_module, "_run_hycs_std", run_hycs_std)
+    monkeypatch.setattr(model_module, "run_hycs_std", run_hycs_std)
     monkeypatch.setattr(
         model_module,
         "read_particle_dat",
@@ -73,40 +74,21 @@ def _fake_hysplit(monkeypatch) -> dict:
     return seen
 
 
-class _FakeMet:
-    def __init__(self, source, read):
-        self.source, self.read = source, read
-
-    def files_for(self, window, hour_after=False):
-        return self.source
-
-    def readable(self, files):
-        assert files == self.source
-        return self.read
-
-
 def test_hysplit_model_reads_the_met_in_place_and_records_the_source(
     tmp_path, point_receptor, monkeypatch
 ):
     seen = _fake_hysplit(monkeypatch)
-    source = [tmp_path / "archive" / "20230101_12"]
-    cropped = [tmp_path / "crops" / "20230101_12"]
     params = HysplitConfig(n_hours=-1, hnf_plume=False)
+    make_met_files(tmp_path / "archive", point_receptor.time, params.n_hours)
+    met = make_met_config(tmp_path / "archive")
+    window = run_window(point_receptor.time, params.n_hours)
+    source = Met("met", met).files_for(window, hour_after=True)
+    cropped = [tmp_path / "crops" / path.name for path in source]
+    # A cropped met hands HYSPLIT its crops in place of the source files.
+    monkeypatch.setattr(Met, "readable", lambda self, files: cropped)
 
-    from stilt.meteorology import run_window
-    from stilt.transport.hysplit import model as model_module
-
-    monkeypatch.setattr(
-        model_module, "Met", lambda name, config: _FakeMet(source, cropped)
-    )
-    met = make_met_config(tmp_path)
     result = HysplitModel().run(
-        point_receptor,
-        params,
-        met,
-        run_window(point_receptor.time, params.n_hours),
-        tmp_path / "work",
-        timeout=30,
+        point_receptor, params, met, window, tmp_path / "work", timeout=30
     )
 
     assert isinstance(result, ModelRun)

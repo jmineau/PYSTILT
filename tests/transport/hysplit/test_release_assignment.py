@@ -9,8 +9,12 @@ import numpy as np
 
 from stilt.meteorology import Met, run_window
 from stilt.receptors import ColumnReceptor, MultiPointReceptor
-from stilt.transport.hysplit import HysplitConfig, read_particle_dat, write_inputs
-from stilt.transport.hysplit.driver import _run_hycs_std
+from stilt.transport.hysplit import (
+    HysplitConfig,
+    read_particle_dat,
+    run_hycs_std,
+    write_inputs,
+)
 
 from ...conftest import integration
 from ...fixtures.factories import make_met_config
@@ -22,7 +26,7 @@ def _raw_particles(receptor, config, met, workdir, timeout):
     window = run_window(receptor.time, config.n_hours)
     files = met.files_for(window, hour_after=config.n_hours < 0)
     write_inputs(workdir, receptor, config, files)
-    _run_hycs_std(workdir, timeout)
+    run_hycs_std(workdir, timeout)
     return read_particle_dat(workdir / "PARTICLE_STILT.DAT", config.varsiwant)
 
 

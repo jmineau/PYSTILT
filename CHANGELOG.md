@@ -975,6 +975,11 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- `stilt.execution.pending` (the receptors a run would run, for a driver
+  that writes its own `receptors.txt`), `stilt.execution.wait` (wait for a
+  Slurm job array and return how each task ended), and
+  `stilt.transport.hysplit.run_hycs_std` (run `hycs_std` in a folder
+  `write_inputs` wrote).
 - Each Slurm task's log starts with a line giving the time, node, job,
   and task, and adds one after each requeue.
 - `stilt submit --receptors FILE`, as `stilt run` has.

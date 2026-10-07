@@ -25,7 +25,7 @@ from stilt.transport.hysplit.driver import (
     ziscale_factors,
 )
 
-from ...fixtures.factories import make_met_config
+from ...fixtures.factories import make_met_config, make_met_files
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -181,19 +181,6 @@ def _write_particle_dat(path: Path, rows: list[list[float]]) -> None:
     path.write_text("\n".join(lines) + "\n")
 
 
-class _FakeMet:
-    """A met that needs no files."""
-
-    def __init__(self, *args):
-        pass
-
-    def files_for(self, window, hour_after=False):
-        return []
-
-    def readable(self, files):
-        return files
-
-
 # ---------------------------------------------------------------------------
 # read_particle_dat
 # ---------------------------------------------------------------------------
@@ -254,7 +241,7 @@ def test_run_keeps_fortran_runtime_output_on_failure(tmp_path):
     )
 
     with pytest.raises(SimulationError) as caught:
-        driver._run_hycs_std(tmp_path, timeout=5)
+        driver.run_hycs_std(tmp_path, timeout=5)
     assert caught.value.reason == FailureReason.FORTRAN_RUNTIME_ERROR
     assert "Fortran runtime error" in (tmp_path / "stilt.log").read_text()
     # The message is HYSPLIT's own line, so a record says what went wrong.
@@ -267,7 +254,7 @@ def test_run_times_out_and_keeps_log_output(tmp_path):
     _script(tmp_path, "echo 'starting hycs_std'\nsleep 30\n")
 
     with pytest.raises(SimulationError, match="timeout") as caught:
-        driver._run_hycs_std(tmp_path, timeout=1)
+        driver.run_hycs_std(tmp_path, timeout=1)
     assert caught.value.reason == FailureReason.TIMEOUT
     assert "starting hycs_std" in (tmp_path / "stilt.log").read_text()
 
@@ -315,8 +302,7 @@ def _fake_hysplit(monkeypatch, *, log: str, rows: list[list[float]] | None) -> l
         if rows is not None:
             _write_particle_dat(workdir / "PARTICLE_STILT.DAT", rows)
 
-    monkeypatch.setattr(model, "_run_hycs_std", fake_run)
-    monkeypatch.setattr(model, "Met", _FakeMet)
+    monkeypatch.setattr(model, "run_hycs_std", fake_run)
     return calls
 
 
@@ -329,7 +315,8 @@ def _run(tmp_path, receptor, config=None):
     from stilt.meteorology import run_window
 
     config = config or _config()
-    met = make_met_config(tmp_path)
+    make_met_files(tmp_path / "met", receptor.time, config.n_hours)
+    met = make_met_config(tmp_path / "met")
     window = run_window(receptor.time, config.n_hours)
     (tmp_path / "run").mkdir(exist_ok=True)
     return HysplitModel().run(

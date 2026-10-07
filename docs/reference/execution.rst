@@ -27,7 +27,10 @@ work underneath.
 
 On Slurm each task of the job array runs one share of the receptors
 (:func:`~stilt.execution.task_share`) with ``stilt run --task``. A local
-run happens in this process.
+run happens in this process. A program that starts the tasks itself, on
+another scheduler, writes :func:`~stilt.execution.pending` to the
+``receptors.txt`` each task reads; :func:`~stilt.execution.wait` waits for a
+Slurm job array by its id.
 
 Running
 -------
@@ -38,6 +41,8 @@ Running
 
    stilt.execution.run
    stilt.execution.submit
+   stilt.execution.pending
+   stilt.execution.wait
    stilt.execution.task_share
 
 Workers

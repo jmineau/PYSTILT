@@ -137,9 +137,7 @@ def test_job_script_is_valid_bash(tmp_path):
 def pending(monkeypatch):
     """Set which receptors the runner finds incomplete."""
     ids: list[str] = []
-    monkeypatch.setattr(
-        runner, "_pending", lambda project, skip_existing, *_: list(ids)
-    )
+    monkeypatch.setattr(runner, "pending", lambda project, **_: list(ids))
     return ids
 
 
@@ -231,13 +229,14 @@ def test_waiting_polls_sacct_until_every_task_ends(commands, caplog):
         ),
     ]
     with caplog.at_level("WARNING", logger="stilt.execution.runner"):
-        runner._wait("9", poll=0)
+        states = runner.wait("9", poll=0)
 
     assert [c[0] for c in commands.ran] == ["sacct"] * 4
     warned = caplog.text
     assert "9_2 ended OUT_OF_MEMORY" in warned
     assert "9_3 ended CANCELLED" in warned
     assert "9_1" not in warned  # failed simulations are the status table's to report
+    assert states["9_2"] == ("OUT_OF_MEMORY", "0:125")
     assert "9_0" not in warned
 
 
@@ -438,9 +437,9 @@ def test_tasks_split_the_receptors_the_same_way_whenever_each_starts(
         Project, "incomplete", lambda self, sel=None: sel[~sel["receptor"].isin(done)]
     )
 
-    first = runner._pending(project, True, task=(0, 3))
+    first = runner.pending(project, task=(0, 3))
     done.update(every[:4])  # some finish before tasks 1 and 2 start
-    later = [runner._pending(project, True, task=(i, 3)) for i in (1, 2)]
+    later = [runner.pending(project, task=(i, 3)) for i in (1, 2)]
 
     shares = [every[i::3] for i in range(3)]
     assert first == shares[0]
@@ -454,11 +453,17 @@ def test_a_receptor_list_limits_the_run_and_keeps_its_order(tmp_path, monkeypatc
         Project, "incomplete", lambda self, sel=None: sel[sel["receptor"] != every[3]]
     )
     listed = [every[3], every[1], every[1], every[0]]
-    assert runner._pending(project, True, listed) == [every[1], every[0]]
-    assert runner._pending(project, False, listed) == [every[3], every[1], every[0]]
-    assert runner._pending(project, False, listed, (1, 2)) == [every[1]]
+    assert runner.pending(project, receptors=listed) == [every[1], every[0]]
+    assert runner.pending(project, receptors=listed, skip_existing=False) == [
+        every[3],
+        every[1],
+        every[0],
+    ]
+    assert runner.pending(
+        project, receptors=listed, task=(1, 2), skip_existing=False
+    ) == [every[1]]
     with pytest.raises(ValueError, match="not in this project"):
-        runner._pending(project, True, ["nope", every[0]])
+        runner.pending(project, receptors=["nope", every[0]])
 
 
 def test_a_task_runs_here_whatever_the_backend(tmp_path, monkeypatch, commands):
