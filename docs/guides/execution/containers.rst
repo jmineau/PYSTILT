@@ -28,6 +28,8 @@ What every container needs
   containers do not need to talk to each other. The output directory can
   instead be on an object store (``output: s3://bucket/...``, see
   :doc:`../project_layout`), with the containers given its credentials.
+  ``stilt run --output s3://bucket/...`` uses another output directory
+  than ``config.yaml`` names, without editing it.
 - A scratch folder for HYSPLIT. Set ``PYSTILT_COMPUTE_ROOT`` to one on fast
   local disk, such as an ``emptyDir``.
 

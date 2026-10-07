@@ -147,7 +147,8 @@ earlier one's logs:
 .. code-block:: bash
 
    python -m stilt run my_project --receptors .../receptors.txt \
-       --task $SLURM_ARRAY_TASK_ID/N --execution .../execution.yaml
+       --task $SLURM_ARRAY_TASK_ID/N --execution .../execution.yaml \
+       --output /path/to/output
 
 with the Python that submitted it. To rerun one task by hand, on a compute
 node, run that line with the task's number in place of

@@ -154,6 +154,11 @@ class Project:
     ----------
     path : str or Path
         Project directory.
+    output : str or Path, optional
+        Read and write results here instead of the output directory
+        ``config.yaml`` names: a path, or a URL such as
+        ``s3://bucket/output``. For a container whose output is somewhere
+        else than the project's.
 
     Attributes
     ----------
@@ -194,8 +199,9 @@ class Project:
     >>> project.status(sims[sims.variant == "hrrr"])
     """
 
-    def __init__(self, path: str | Path) -> None:
+    def __init__(self, path: str | Path, *, output: str | Path | None = None) -> None:
         self.directory = absolute(path)
+        self._output = output
 
     @classmethod
     def init(
@@ -312,7 +318,14 @@ class Project:
 
     @cached_property
     def output(self) -> Output:
-        """The output directory, from ``config.output`` (``./output`` by default), relative to the project."""
+        """
+        The output directory.
+
+        The ``output`` the project was opened with, or else ``config.output``
+        (``./output`` by default), relative to the project.
+        """
+        if self._output is not None:
+            return Output(location(self._output))
         return Output(location(self.config.output, self.directory))
 
     @cached_property

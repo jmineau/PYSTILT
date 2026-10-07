@@ -138,6 +138,18 @@ def test_init_writes_the_settings_given_and_the_receptors(tmp_path, point_recept
     assert Project(tmp_path / "proj").config == project.config
 
 
+def test_an_output_given_when_opening_replaces_the_configs(tmp_path, point_receptor):
+    project = _project(tmp_path, [point_receptor])
+    assert project.output.directory == project.directory / "output"
+
+    elsewhere = Project(project.directory, output=tmp_path / "bucket")
+
+    assert elsewhere.output.directory == tmp_path / "bucket"
+    _write_trajectory(elsewhere, point_receptor)
+    assert elsewhere.simulation(point_receptor.id, "hrrr").has_particles
+    assert not project.simulation(point_receptor.id, "hrrr").has_particles
+
+
 def test_init_takes_the_receptors_second(tmp_path, point_receptor):
     # The quickstart's order: a project directory, then its receptors.
     project = Project.init(

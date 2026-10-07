@@ -158,6 +158,11 @@ _RECEPTORS = typer.Option(
     "--receptors",
     help="File of receptor ids, one per line. Only those receptors run.",
 )
+_OUTPUT = typer.Option(
+    None,
+    "--output",
+    help="Output directory to use instead of config.yaml's: a path, or a URL such as s3://bucket/output.",
+)
 _EXECUTION = typer.Option(
     None,
     "--execution",
@@ -219,9 +224,10 @@ def _start(
     receptor_ids: list[str] | None = None,
     task: tuple[int, int] | None = None,
     execution_file: Path | None = None,
+    output: str | None = None,
 ) -> tuple[Project, dict[str, Any]]:
     """Open the project, print what is about to run, and return the run's options."""
-    opened = Project(_resolve_project(project))
+    opened = Project(_resolve_project(project), output=output)
     if execution_file is None:
         settings = opened.config.execution.model_dump(exclude_unset=True)
     else:
@@ -280,6 +286,7 @@ def run(
     receptors: Path | None = _RECEPTORS,
     task: str | None = _TASK,
     execution: Path | None = _EXECUTION,
+    output: str | None = _OUTPUT,
 ) -> None:
     """
     Run every unfinished simulation in a project, and wait until they are done.
@@ -308,6 +315,7 @@ def run(
         receptor_ids=receptor_ids,
         task=share,
         execution_file=execution,
+        output=output,
     )
     try:
         table = opened.run(receptors=receptor_ids, task=share, **options)
@@ -328,6 +336,7 @@ def submit(
     cpus: int | None = _CPUS,
     compute_root: str | None = _COMPUTE_ROOT,
     receptors: Path | None = _RECEPTORS,
+    output: str | None = _OUTPUT,
 ) -> None:
     """
     Submit every unfinished simulation in a project to Slurm, and return.
@@ -346,6 +355,7 @@ def submit(
         compute_root=compute_root,
         waits=False,
         receptor_ids=receptor_ids,
+        output=output,
     )
     try:
         job_id = opened.submit(receptors=receptor_ids, **options)
@@ -363,6 +373,7 @@ def status(
     as_json: bool = typer.Option(
         False, "--json", help="Print the same as JSON, for a program to read."
     ),
+    output: str | None = _OUTPUT,
 ) -> None:
     """
     Count finished and unfinished simulations, and list the output's settings folders.
@@ -372,7 +383,7 @@ def status(
     files it holds, which variants use it, and, for a folder no variant
     uses, how its settings differ from the variant of its name.
     """
-    opened = Project(_resolve_project(project))
+    opened = Project(_resolve_project(project), output=output)
     if as_json:
         typer.echo(json.dumps(_status_data(opened), indent=2))
         return
