@@ -26,9 +26,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
+import pyarrow as pa
 import yaml
 
-from stilt._paths import absolute
+from stilt._paths import absolute, write_parquet
 from stilt.execution.config import ExecutionConfig
 
 if TYPE_CHECKING:
@@ -287,10 +288,12 @@ def submit(
     The receptors with missing results are split among up to ``n_workers``
     tasks of one job array, and this returns once it is submitted. The
     submission is a folder ``_slurm/<date_time>_<id>/`` in the project:
-    ``receptors.txt`` lists the receptors to run, ``execution.yaml`` holds
-    the execution settings, ``job.sh`` is the script given to ``sbatch``,
-    and ``<task>.log`` is each task's log. Task ``i`` runs
-    ``stilt run <project> --receptors receptors.txt --task i/N``. A task
+    ``receptors.txt`` lists the receptors to run, ``receptors.parquet``
+    holds their checked rows from ``receptors.csv``, ``execution.yaml``
+    holds the execution settings, ``job.sh`` is the script given to
+    ``sbatch``, and ``<task>.log`` is each task's log. Task ``i`` runs
+    ``stilt run <project> --receptors receptors.parquet --task i/N``, so it
+    does not read and check all of ``receptors.csv`` again. A task
     that is preempted or nears its time limit requeues itself and skips
     what it finished (see :func:`run`).
 
@@ -347,7 +350,7 @@ def job_script(
     """
     Return the ``sbatch`` script of a job array whose tasks each run a share of the receptors.
 
-    Task ``i`` runs ``stilt run <project> --receptors <folder>/receptors.txt
+    Task ``i`` runs ``stilt run <project> --receptors <folder>/receptors.parquet
     --task i/n_tasks --execution <folder>/execution.yaml`` with the Python
     that called this. The ``#SBATCH`` lines come from *execution*: its
     resources, ``--requeue``, ``--signal=B:USR1@120`` (see :func:`run`),
@@ -380,7 +383,7 @@ def job_script(
         "run",
         str(project.directory),
         "--receptors",
-        str(folder / "receptors.txt"),
+        str(folder / "receptors.parquet"),
         "--task",
         f"$SLURM_ARRAY_TASK_ID/{n_tasks}",
         "--execution",
@@ -431,6 +434,11 @@ def _submit(
     folder = project.directory / "_slurm" / stamp
     folder.mkdir(parents=True)
     (folder / "receptors.txt").write_text("\n".join(pending) + "\n")
+    # The checked rows, in the order the tasks split them (task_share).
+    rows = project._rows_of(pending)
+    write_parquet(
+        pa.Table.from_pandas(rows, preserve_index=False), folder / "receptors.parquet"
+    )
     (folder / "execution.yaml").write_text(
         yaml.safe_dump(execution.model_dump(exclude_unset=True), sort_keys=False)
     )

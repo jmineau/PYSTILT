@@ -76,7 +76,7 @@ def test_job_script_asks_for_what_the_execution_settings_say(tmp_path):
     last = lines[-1]
     assert last.startswith("exec ")
     assert f"-m stilt run {project.directory} " in last
-    assert f"--receptors {folder / 'receptors.txt'}" in last
+    assert f"--receptors {folder / 'receptors.parquet'}" in last
     assert '--task "$SLURM_ARRAY_TASK_ID/7"' in last
     assert f"--execution {folder / 'execution.yaml'}" in last
     # Each task writes where the submitting process does, not to config.yaml's output.
@@ -169,8 +169,11 @@ def _out(stdout: str = "", returncode: int = 0, stderr: str = "") -> SimpleNames
 
 
 def test_submit_writes_a_submission_and_hands_it_to_sbatch(pending, commands, tmp_path):
-    pending.extend(["a", "b", "c"])
-    project = Project(tmp_path / "my_project", output=tmp_path / "out")
+    import pandas as pd
+
+    project = _hourly_project(tmp_path, 4)
+    ids = list(project.receptors["receptor"])
+    pending.extend([ids[2], ids[0], ids[3]])  # the order a run gives
     execution = ExecutionConfig(
         backend="slurm", time="01:00:00", n_workers=2, cpus=4, timeout=600
     )
@@ -183,7 +186,11 @@ def test_submit_writes_a_submission_and_hands_it_to_sbatch(pending, commands, tm
     assert (sbatch, parsable) == ("sbatch", "--parsable")
     folder = Path(script).parent
     assert folder.parent == project.directory / "_slurm"
-    assert (folder / "receptors.txt").read_text().split() == ["a", "b", "c"]
+    assert (folder / "receptors.txt").read_text().split() == pending
+    # The tasks read the checked rows, in the order they split them (#191).
+    rows = pd.read_parquet(folder / "receptors.parquet")
+    assert rows["receptor"].tolist() == pending
+    assert {"kind", "location", "altitude_ref"} <= set(rows.columns)
     stored = yaml.safe_load((folder / "execution.yaml").read_text())
     assert ExecutionConfig.model_validate(stored) == execution
     text = Path(script).read_text()
@@ -192,10 +199,11 @@ def test_submit_writes_a_submission_and_hands_it_to_sbatch(pending, commands, tm
 
 
 def test_submit_uses_no_more_tasks_than_receptors(pending, commands, tmp_path):
-    pending.append("a")
+    project = _hourly_project(tmp_path, 1)
+    pending.extend(project.receptors["receptor"])
     commands.answers["sbatch"] = [_out("5\n")]
     runner.submit(
-        Project(tmp_path, output=tmp_path / "out"),
+        project,
         execution=ExecutionConfig(backend="slurm", time="01:00:00", n_workers=8),
     )
     assert _sbatch(Path(commands.ran[0][2]).read_text())["array"] == "0-0"
@@ -213,11 +221,12 @@ def test_submit_with_nothing_to_do_submits_nothing(pending, commands, tmp_path):
 
 
 def test_submit_says_why_sbatch_refused(pending, commands, tmp_path):
-    pending.append("a")
+    project = _hourly_project(tmp_path, 1)
+    pending.extend(project.receptors["receptor"])
     commands.answers["sbatch"] = [_out(returncode=1, stderr="Invalid account")]
     with pytest.raises(RuntimeError, match="Invalid account"):
         runner.submit(
-            Project(tmp_path, output=tmp_path / "out"),
+            project,
             execution=ExecutionConfig(backend="slurm", time="01:00:00"),
         )
 
@@ -250,7 +259,8 @@ def test_a_job_on_another_cluster_is_followed_there(
     """``sbatch --parsable`` names the cluster when it is not the default (#187)."""
     import pandas as pd
 
-    pending.extend(["a", "b"])
+    project = _hourly_project(tmp_path, 2)
+    pending.extend(project.receptors["receptor"])
     monkeypatch.setattr(
         runner, "_status", lambda project, ids: pd.DataFrame({"state": ["complete"]})
     )
@@ -264,7 +274,7 @@ def test_a_job_on_another_cluster_is_followed_there(
         backend="slurm", time="01:00:00", slurm={"clusters": "kingspeak"}
     )
 
-    runner.run(Project(tmp_path, output=tmp_path / "out"), execution=execution)
+    runner.run(project, execution=execution)
 
     sacct = [c for c in commands.ran if c[0] == "sacct"]
     assert len(sacct) == 2

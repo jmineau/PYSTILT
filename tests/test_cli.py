@@ -402,6 +402,42 @@ def test_a_wrong_command_line_exits_2_not_interrupted(tmp_path, calls, args):
     assert calls == []
 
 
+def test_a_task_takes_its_receptors_from_the_submissions_rows(tmp_path, monkeypatch):
+    """A task reads receptors.parquet, not all of receptors.csv (#191)."""
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+
+    _write_minimal_config(tmp_path)
+    project = Project(tmp_path)
+    rows = project._rows
+    pq.write_table(
+        pa.Table.from_pandas(rows, preserve_index=False), tmp_path / "r.parquet"
+    )
+    (tmp_path / "receptors.csv").write_text("not a receptor table\n")
+    seen = []
+
+    def run(self, **kwargs):
+        seen.append((list(self.receptors["receptor"]), kwargs["receptors"]))
+        return pd.DataFrame({"receptor": [], "variant": [], "state": [], "reason": []})
+
+    monkeypatch.setattr("stilt.cli.Project.run", run)
+    result = runner.invoke(
+        app,
+        [
+            "run",
+            str(tmp_path),
+            "--receptors",
+            str(tmp_path / "r.parquet"),
+            "--task",
+            "0/1",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    ids = list(rows["receptor"])
+    assert seen == [(ids, ids)]
+
+
 def test_run_task_runs_its_share_here(tmp_path, calls):
     _write_minimal_config(tmp_path)
     config = yaml.safe_load((tmp_path / "config.yaml").read_text())

@@ -200,6 +200,8 @@ class Project:
     def __init__(self, path: str | Path, *, output: str | Path | None = None) -> None:
         self.directory = absolute(path)
         self._output = output
+        #: Checked receptor rows used in place of receptors.csv (:meth:`_take_rows`).
+        self._taken_rows: pd.DataFrame | None = None
 
     @classmethod
     def init(
@@ -345,6 +347,8 @@ class Project:
 
         No receptor is built here; :meth:`receptor` builds one when asked.
         """
+        if self._taken_rows is not None:
+            return self._taken_rows
         if not self.receptors_path.exists():
             empty = pd.DataFrame(columns=["time", "longitude", "latitude", "altitude"])
             return receptor_rows(empty)
@@ -398,14 +402,39 @@ class Project:
             If the project has no receptor with one of the ids.
         """
         ids = list(dict.fromkeys(receptor_ids))
-        for rid in ids:
-            if rid not in self._positions:
-                raise KeyError(f"No receptor {rid!r} in {self.directory}.")
         if not ids:
             return {}
-        rows = self._rows.iloc[np.concatenate([self._positions[r] for r in ids])]
         # receptors_from_rows builds them in the order the ids first appear.
-        return dict(zip(ids, receptors_from_rows(rows), strict=True))
+        return dict(zip(ids, receptors_from_rows(self._rows_of(ids)), strict=True))
+
+    def _rows_of(self, receptor_ids: list[str]) -> pd.DataFrame:
+        """
+        Return the checked rows of *receptor_ids*, in that order.
+
+        Raises
+        ------
+        KeyError
+            If the project has no receptor with one of the ids.
+        """
+        for rid in receptor_ids:
+            if rid not in self._positions:
+                raise KeyError(f"No receptor {rid!r} in {self.directory}.")
+        return self._rows.iloc[
+            np.concatenate([self._positions[r] for r in receptor_ids])
+        ]
+
+    def _take_rows(self, rows: pd.DataFrame) -> None:
+        """
+        Use *rows*, checked receptor rows (:func:`~stilt.receptors.table.receptor_rows`), in place of ``receptors.csv``.
+
+        A Slurm task reads the rows of its submission's receptors
+        (``receptors.parquet``, written by :func:`stilt.execution.submit`)
+        rather than reading and checking the whole file again. The project
+        then knows only those receptors.
+        """
+        self._taken_rows = rows.reset_index(drop=True)
+        for name in ("_rows", "_positions", "receptors", "_simulations"):
+            vars(self).pop(name, None)
 
     def add_receptors(
         self, receptors: Receptor | Iterable[Receptor] | str | Path
