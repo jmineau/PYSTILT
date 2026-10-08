@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=c5076060"></script>
+    <script src="../_static/documentation_options.js?v=e1a3236f"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
     <link rel="prev" title="Receptors" href="receptors.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev281+g84fcbbf53" />
+  <meta name="docsearch:version" content="0.1.0a23.dev284+g0139caa33" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -480,6 +480,7 @@
 <li class="toctree-l1"><a class="reference internal" href="transport_error.html">Transport Error</a></li>
 <li class="toctree-l1"><a class="reference internal" href="wind_errors.html">Wind Error Statistics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="background.html">Background</a></li>
+<li class="toctree-l1"><a class="reference internal" href="trajectory_analyses.html">Trajectory-Style Analyses</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Column and satellite measurements</span></p>
 <ul class="nav bd-sidenav">
@@ -727,6 +728,37 @@ archive on AWS. The others are <code class="docutils literal notranslate"><span 
 </div>
 <p>Files already in <code class="docutils literal notranslate"><span class="pre">directory</span></code> are not downloaded again.</p>
 </section>
+<section id="era5">
+<h2>ERA5<a class="headerlink" href="#era5" title="Link to this heading">#</a></h2>
+<p>ERA5, ECMWF’s global reanalysis, is hourly on a 0.25 degree grid. NOAA
+does not publish it in ARL format, and PYSTILT does not convert it, so
+convert it to ARL first. Then it is a met like any other:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">mets</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">era5</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">directory</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/data/met/era5</span>
+<span class="w">    </span><span class="nt">file_format</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;ERA5_%Y%m%d&quot;</span>
+<span class="w">    </span><span class="nt">file_tres</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">24h</span>
+<span class="nt">variants</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">era5</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">met</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">era5</span>
+<span class="w">    </span><span class="nt">kbls</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
+<span class="w">    </span><span class="nt">kmixd</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0</span>
+</pre></div>
+</div>
+<p>Two settings differ from the defaults:</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">kbls:</span> <span class="pre">2</span></code></dt><dd><p>Derive the boundary layer’s stability from the wind and temperature
+profiles. ERA5’s friction velocity is too small (ECMWF’s ERA5
+documentation says so), and stability derived from it, the default
+<code class="docutils literal notranslate"><span class="pre">kbls:</span> <span class="pre">1</span></code>, can leave too little mixing.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">kmixd:</span> <span class="pre">0</span></code></dt><dd><p>Use ERA5’s own boundary-layer height, which ECMWF computes on its model
+levels. HYSPLIT’s own estimate, the default <code class="docutils literal notranslate"><span class="pre">kmixd:</span> <span class="pre">3</span></code>, would come
+from ERA5’s pressure levels, about 200 m apart near the ground. The
+converted files need the boundary-layer height (PBLH) for this.</p>
+</dd>
+</dl>
+</section>
 <section id="cropping-to-your-region">
 <h2>Cropping to your region<a class="headerlink" href="#cropping-to-your-region" title="Link to this heading">#</a></h2>
 <p>Set <code class="docutils literal notranslate"><span class="pre">subgrid_enable</span></code> and <code class="docutils literal notranslate"><span class="pre">subgrid_bounds</span></code> to crop the meteorology to a
@@ -851,6 +883,7 @@ crop.</p>
     <ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#use-files-you-already-have">Use files you already have</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#download-from-noaa">Download from NOAA</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#era5">ERA5</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#cropping-to-your-region">Cropping to your region</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#which-weather-a-run-records">Which weather a run records</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#where-hysplit-reads-the-files">Where HYSPLIT reads the files</a></li>

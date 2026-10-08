@@ -179,6 +179,39 @@ archive on AWS. The others are ``"ftp"`` and ``"http"``.
 
 Files already in ``directory`` are not downloaded again.
 
+ERA5
+----
+
+ERA5, ECMWF's global reanalysis, is hourly on a 0.25 degree grid. NOAA
+does not publish it in ARL format, and PYSTILT does not convert it, so
+convert it to ARL first. Then it is a met like any other:
+
+.. code-block:: yaml
+
+   mets:
+     era5:
+       directory: /data/met/era5
+       file_format: "ERA5_%Y%m%d"
+       file_tres: 24h
+   variants:
+     era5:
+       met: era5
+       kbls: 2
+       kmixd: 0
+
+Two settings differ from the defaults:
+
+``kbls: 2``
+   Derive the boundary layer's stability from the wind and temperature
+   profiles. ERA5's friction velocity is too small (ECMWF's ERA5
+   documentation says so), and stability derived from it, the default
+   ``kbls: 1``, can leave too little mixing.
+
+``kmixd: 0``
+   Use ERA5's own boundary-layer height, which ECMWF computes on its model
+   levels. HYSPLIT's own estimate, the default ``kmixd: 3``, would come
+   from ERA5's pressure levels, about 200 m apart near the ground. The
+   converted files need the boundary-layer height (PBLH) for this.
 
 Cropping to your region
 -----------------------

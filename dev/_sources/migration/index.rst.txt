@@ -16,6 +16,10 @@ and steps are in PYSTILT.
    Running STILT on cloud infrastructure: what replaces the work queue and
    the long-lived workers.
 
+:doc:`jena_stilt`
+   The Jena ``stiltR`` code behind the ICOS footprint service: how its
+   footprints differ, and the settings that come closest.
+
 .. toctree::
    :maxdepth: 1
    :hidden:
@@ -23,3 +27,4 @@ and steps are in PYSTILT.
    stilt_r
    x_stilt
    stiltctl
+   jena_stilt
