@@ -9,6 +9,10 @@ The site (the gh-pages branch) holds one folder per published version::
     switcher.json the version dropdown's entries
     index.html    redirects to stable/ (or dev/ before the first release)
     404.html      sends links from before versioning to the same page in stable/
+    .nojekyll     makes GitHub Pages serve the branch as it is
+
+GitHub Pages serves the branch (Settings > Pages > Source: Deploy from a
+branch), so a push to it publishes the site.
 
 Run by the Documentation workflow: ``python docs_versions.py SITE HTML TARGET``,
 where TARGET is ``dev`` or a version such as ``0.2.0``.
@@ -99,6 +103,10 @@ def main() -> None:
         else:
             entries.append({"name": name, "version": name, "url": f"{base}{name}/"})
     (site / "switcher.json").write_text(json.dumps(entries, indent=2) + "\n")
+
+    # Without this file GitHub Pages runs Jekyll on the branch, which drops
+    # every _static/ and _sources/ folder.
+    (site / ".nojekyll").touch()
 
     home = "stable" if stable else "dev"
     (site / "index.html").write_text(
