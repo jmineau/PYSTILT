@@ -1103,11 +1103,15 @@ def test_run_on_slurm_submits_and_waits(tmp_path, monkeypatch, point_receptor):
     def wait(job_id, *, cluster=None):
         waited.append((job_id, cluster))
 
+    slept: list[float] = []
     monkeypatch.setattr("stilt.execution.runner._submit", submit)
     monkeypatch.setattr("stilt.execution.runner.wait", wait)
+    monkeypatch.setattr("stilt.execution.runner.time.sleep", slept.append)
 
     status = project.run(compute_root="/s")
     assert waited == [("777", "kingspeak")]
+    # Nothing ran, so it listed once more before saying so.
+    assert slept == [60]
     assert submitted[0]["pending"] == [point_receptor.id]
     assert submitted[0]["compute_root"] == "/s"
     assert submitted[0]["execution"].backend == "slurm"

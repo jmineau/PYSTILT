@@ -47,6 +47,11 @@ NOTICE_SECONDS = 120
 #: Times a Slurm task requeues itself before it stops for good.
 MAX_REQUEUES = 10
 
+#: Seconds :func:`run` waits to list the results once more when some look
+#: unfinished after a job array ends. On a network filesystem the
+#: submitting node can see a compute node's new files up to a minute late.
+RELIST_SECONDS = 60
+
 #: Slurm job states of a task that has not ended.
 _ACTIVE = frozenset(
     {
@@ -179,6 +184,11 @@ def _status(project: Project, receptor_ids: list[str]) -> pd.DataFrame:
     return project.status(sims[sims["receptor"].isin(receptor_ids)])
 
 
+def _unfinished(table: pd.DataFrame) -> bool:
+    """Whether a status table has simulations that did not finish (pending or interrupted)."""
+    return bool(table["state"].isin(["pending", "interrupted"]).any())
+
+
 def run(
     project: Project,
     *,
@@ -196,7 +206,9 @@ def run(
     footprint of every variant that has a grid. With ``backend: local`` the
     receptors run in this process (``cpus`` at a time). With
     ``backend: slurm`` they are submitted as one job array (:func:`submit`)
-    and this waits for it.
+    and this waits for it. When some simulations look unfinished after the
+    job ends, their results are listed once more :data:`RELIST_SECONDS`
+    later, since a network filesystem can show this node new files late.
 
     Parameters
     ----------
@@ -252,6 +264,16 @@ def run(
     elif execution.backend == "slurm" and task is None:
         job_id, cluster = _submit(project, todo, execution, skip_existing, compute_root)
         wait(job_id, cluster=cluster)
+        table = _status(project, todo)
+        if _unfinished(table):
+            logger.info(
+                "Some simulations look unfinished; listing again in %d s, in "
+                "case this node sees the compute nodes' files late.",
+                RELIST_SECONDS,
+            )
+            time.sleep(RELIST_SECONDS)
+            table = _status(project, todo)
+        return table
     else:
         logger.info("run(%s): %d receptors", ", ".join(project.variants), len(todo))
         # In this process, so Ctrl-C and SIGTERM stop the workers cleanly
@@ -616,8 +638,7 @@ def _run_task(
         finally:
             notice.armed = False
         table = _status(project, pending)
-        unfinished = bool(table["state"].isin(["pending", "interrupted"]).any())
-        if unfinished and (notice or _preempted()):
+        if _unfinished(table) and (notice or _preempted()):
             _requeue()
     return table
 
@@ -675,6 +696,7 @@ def _requeue() -> bool:
 __all__ = [
     "MAX_REQUEUES",
     "NOTICE_SECONDS",
+    "RELIST_SECONDS",
     "job_script",
     "resolve_compute_root",
     "run",
