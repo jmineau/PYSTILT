@@ -71,7 +71,7 @@ layout; `docs/migration/` covers moving from STILT-R, X-STILT, and stiltctl.
   counted as complete. A run whose particles all leave the met's domain,
   or its crop, before `n_hours` is complete.
 - Failures are recorded (breaking). A failed simulation does not stop
-  the others: `<receptor id>.failure.yaml` beside its log says why
+  the others: `<receptor id>.failure.yaml` under `logs/` says why
   (`sim.failure`), and each simulation is `complete`, `failed`,
   `interrupted`, or `pending`; `stilt status` counts each, per variant.
   Exceptions share one base, `stilt.StiltError`, in `stilt.exceptions`

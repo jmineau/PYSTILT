@@ -19,6 +19,10 @@ of settings, in hive form so every tree reads as one dataset::
         settings=hrrr-hexes-1b2c3d/      same particles, other footprint settings
       logs/
         settings=hrrr-a3f9c2/date=2024-07-01/<receptor>.log
+        settings=hrrr-a3f9c2/date=2024-07-01/<receptor>.failure.yaml   a failed run
+        settings=hrrr-93278c/date=2024-07-01/<receptor>.failure.yaml   a failed footprint
+      scratch/
+        settings=hrrr-a3f9c2/date=2024-07-01/<receptor>/               a kept workdir
 
 A folder is found by the hash of its settings, so two projects that run the
 same settings share one folder, and a changed setting lands in a new folder

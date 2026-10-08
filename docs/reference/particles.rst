@@ -21,11 +21,13 @@ Every table has five columns, :data:`PARTICLE_SCHEMA`:
    * - ``particle``
      - none
      - Particle number, from 1 to ``numpar``. A particle keeps its number
-       for the whole run. HYSPLIT and STILT-R call it ``indx``.
+       for the whole run. HYSPLIT and STILT-R call it ``indx``. Stored as
+       int32 and read back as float64.
    * - ``time``
      - minutes
      - Time since release. Negative for a backward run, positive for a
-       forward one. Stored as whole minutes.
+       forward one. Stored as whole minutes, int32, and read back as
+       float64.
    * - ``lon``
      - degrees east
      - Longitude of the particle (HYSPLIT's ``long``).
@@ -51,8 +53,9 @@ A footprint also needs ``foot``:
 The release row
 ---------------
 
-A model should write each particle's release as a row at ``time = 0``. That
-row is where the particle started, so it says which release point of a
+A model should write each particle's release as a row at ``time = 0``, with
+``foot = 0``: a positive ``foot`` there would add a layer at hour 0 to the
+footprint. That row is where the particle started, so it says which release point of a
 multipoint receptor the particle left from, and which slab of a column
 receptor (:func:`add_release_heights`). The HYSPLIT build bundled with
 PYSTILT writes no such row: its first row is one time step after release.
@@ -95,7 +98,9 @@ reads:
      - Pressure, for pressure weighting.
    * - ``zsfc``
      - m
-     - Terrain height above sea level, for receptors given above sea level.
+     - Terrain height above sea level. It is not in the default
+       ``varsiwant``. Add it to weight a receptor given above sea level
+       (``altitude_ref="msl"``) by pressure, which raises without it.
 
 The near-field correction reads ``dens``, ``samt``, ``sigw``, ``tlgr``,
 ``foot``, and ``mlht`` (:data:`HNF_PLUME_COLUMNS`).

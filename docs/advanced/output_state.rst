@@ -16,7 +16,7 @@ is finished when its result files exist in the output directory
   ``particles/settings=<variant>-<hash>/date=<day>/<receptor>.parquet``
 - the footprint file in the variant's ``footprints/`` folder, when the
   variant has a grid. A footprint that no particle reached is a file with
-  no rows and the reason in its metadata, and it counts.
+  no rows, marked ``stilt:empty: true`` in its metadata, and it counts.
 
 Each result has one expected path, so checking one simulation is a file
 lookup. For many simulations (``stilt status``, or planning a run) PYSTILT
