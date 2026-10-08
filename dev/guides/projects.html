@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=a3f6a224"></script>
+    <script src="../_static/documentation_options.js?v=2c8ec258"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
     <link rel="prev" title="Meteorology" href="meteorology.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev286+g820de718e" />
+  <meta name="docsearch:version" content="0.1.0a23.dev288+g7ecab9a4c" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -856,7 +856,7 @@ variant runs, and you can select both when you load results, for example
 <code class="docutils literal notranslate"><span class="pre">sims[sims.variant.isin([&quot;hrrr&quot;,</span> <span class="pre">&quot;hrrr-zi08&quot;])]</span></code>.</p>
 <p>Some settings do not change a result, so changing them changes no folder:</p>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">execution</span></code> (including <code class="docutils literal notranslate"><span class="pre">timeout</span></code> and <code class="docutils literal notranslate"><span class="pre">keep_scratch</span></code>) and <code class="docutils literal notranslate"><span class="pre">output</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">execution</span></code> (including <code class="docutils literal notranslate"><span class="pre">timeout</span></code> and <code class="docutils literal notranslate"><span class="pre">keep_workdir</span></code>) and <code class="docutils literal notranslate"><span class="pre">output</span></code></p></li>
 <li><p>the <code class="docutils literal notranslate"><span class="pre">exe_dir</span></code> and <code class="docutils literal notranslate"><span class="pre">data_dir</span></code> paths (what they hold is recorded
 instead: the build’s version, and a checksum of each data table that
 differs from the bundled one, so a different build or table is a new

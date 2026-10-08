@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=a3f6a224"></script>
+    <script src="../_static/documentation_options.js?v=2c8ec258"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
     <link rel="prev" title="Internals" href="index.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev286+g820de718e" />
+  <meta name="docsearch:version" content="0.1.0a23.dev288+g7ecab9a4c" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -599,7 +599,7 @@ given, else <code class="docutils literal notranslate"><span class="pre">PYSTILT
 <span class="pre">name&gt;</span></code>. After a successful run the particle file and the log are written
 to the output directory and the workdir is removed. After a failure the
 workdir is copied to <code class="docutils literal notranslate"><span class="pre">scratch/</span></code> in the output directory first, so
-CONTROL, SETUP.CFG, and MESSAGE survive the job. <code class="docutils literal notranslate"><span class="pre">keep_scratch:</span> <span class="pre">true</span></code>
+CONTROL, SETUP.CFG, and MESSAGE survive the job. <code class="docutils literal notranslate"><span class="pre">keep_workdir:</span> <span class="pre">true</span></code>
 under <code class="docutils literal notranslate"><span class="pre">execution:</span></code> in <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> keeps every run’s workdir.</p>
 <p>Files are written through a temporary name and renamed into place, so a
 reader never sees a partial file, and two workers that run the same receptor

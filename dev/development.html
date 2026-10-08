@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="_static/documentation_options.js?v=a3f6a224"></script>
+    <script src="_static/documentation_options.js?v=2c8ec258"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/clipboard.min.js?v=a7894cd8"></script>
@@ -60,7 +60,7 @@
     <link rel="prev" title="Roadmap" href="roadmap.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev286+g820de718e" />
+  <meta name="docsearch:version" content="0.1.0a23.dev288+g7ecab9a4c" />
   
     
     <script src="_static/searchtools.js"></script>
@@ -651,6 +651,12 @@ so its plume is widest at release. PYSTILT accumulates outward from the
 release point. The two <code class="docutils literal notranslate"><span class="pre">foot</span></code> values differ on purpose, and
 <code class="docutils literal notranslate"><span class="pre">test_forward_hnf_foot_intentionally_differs_from_r</span></code> guards the
 difference.</p></li>
+<li><p><strong>The HNF correction with ``veght`` above 1.</strong> HYSPLIT reads such a
+<code class="docutils literal notranslate"><span class="pre">veght</span></code> as meters above ground, and so does PYSTILT’s correction.
+STILT-R multiplies it by the mixed-layer height, which removes most of
+the footprint after the first hour
+(<a class="reference external" href="https://github.com/uataq/stilt/issues/142">uataq/stilt#142</a>). No
+fidelity scenario sets <code class="docutils literal notranslate"><span class="pre">veght</span></code> above 1.</p></li>
 <li><p><strong>Untested inputs.</strong> Runs longer than 24 h backward, latitudes above 80°,
 and grids finer than 0.001° have not been compared.</p></li>
 <li><p><strong>Other STILT-R commits.</strong> Nothing detects upstream changes to

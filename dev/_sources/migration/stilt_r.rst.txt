@@ -76,7 +76,7 @@ The workflow side by side
      - ``execution: timeout``
    * - ``rm_dat``
      - no setting: a successful run's working directory is removed;
-       ``execution: keep_scratch`` keeps it
+       ``execution: keep_workdir`` keeps it
    * - HYSPLIT settings (``capemin``, ``delt``, ``kmix0``, ``tlfrac``,
        ``veght``, …)
      - same names, top level

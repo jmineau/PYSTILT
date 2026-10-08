@@ -325,7 +325,7 @@ variant runs, and you can select both when you load results, for example
 
 Some settings do not change a result, so changing them changes no folder:
 
-- ``execution`` (including ``timeout`` and ``keep_scratch``) and ``output``
+- ``execution`` (including ``timeout`` and ``keep_workdir``) and ``output``
 - the ``exe_dir`` and ``data_dir`` paths (what they hold is recorded
   instead: the build's version, and a checksum of each data table that
   differs from the bundled one, so a different build or table is a new

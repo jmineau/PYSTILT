@@ -39,7 +39,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../../_static/documentation_options.js?v=a3f6a224"></script>
+    <script src="../../../_static/documentation_options.js?v=2c8ec258"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -58,7 +58,7 @@
     <link rel="search" title="Search" href="../../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev286+g820de718e" />
+  <meta name="docsearch:version" content="0.1.0a23.dev288+g7ecab9a4c" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -948,13 +948,18 @@
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Correct ``foot`` for plume dilution in the hyper-near field, as STILT-R&#39;s ``calc_plume_dilution`` does.</span>
 
-<span class="sd">    ``foot`` assumes surface fluxes are mixed through the lowest ``veght``</span>
-<span class="sd">    fraction of the mixed layer. Close to the receptor, the plume from the</span>
-<span class="sd">    release point is thinner than that. Following STILT-R, the plume depth</span>
-<span class="sd">    grows from the release height with the turbulence each particle meets.</span>
-<span class="sd">    While it is below ``veght`` times the mixed-layer height, ``foot`` is</span>
-<span class="sd">    recalculated with the plume depth in its place. The worker applies it</span>
-<span class="sd">    to any model&#39;s particles when ``hnf_plume`` is set.</span>
+<span class="sd">    ``foot`` assumes surface fluxes are mixed through the air below</span>
+<span class="sd">    ``veght``: a fraction of the mixed-layer height when ``veght`` is 1 or</span>
+<span class="sd">    less, and a height in meters above ground when it is larger, as HYSPLIT</span>
+<span class="sd">    reads it. Close to the receptor, the plume from the release point is</span>
+<span class="sd">    thinner than that. Following STILT-R, the plume depth grows from the</span>
+<span class="sd">    release height with the turbulence each particle meets. While it is</span>
+<span class="sd">    below the ``veght`` height, ``foot`` is recalculated with the plume</span>
+<span class="sd">    depth in its place. The worker applies it to any model&#39;s particles when</span>
+<span class="sd">    ``hnf_plume`` is set.</span>
+
+<span class="sd">    STILT-R multiplies ``veght`` by the mixed-layer height whatever its</span>
+<span class="sd">    value, so the two differ when ``veght`` is above 1.</span>
 
 <span class="sd">    Needs the columns :data:`HNF_PLUME_COLUMNS`, and the release height:</span>
 <span class="sd">    ``xhgt`` (:func:`add_release_heights`) or the altitude of a point</span>
@@ -967,8 +972,9 @@
 <span class="sd">    receptor : Receptor</span>
 <span class="sd">        Receptor the particles were released from.</span>
 <span class="sd">    veght : float</span>
-<span class="sd">        Fraction of the mixed-layer height that surface fluxes are mixed</span>
-<span class="sd">        through (STILT&#39;s ``veght``).</span>
+<span class="sd">        Height that surface fluxes are mixed through (STILT&#39;s ``veght``): a</span>
+<span class="sd">        fraction of the mixed-layer height when 1 or less, else meters</span>
+<span class="sd">        above ground.</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
@@ -1003,7 +1009,7 @@
             <span class="o">-</span> <span class="mi">1</span>
         <span class="p">)</span>
     <span class="p">)</span>
-    <span class="n">p</span><span class="p">[</span><span class="s2">&quot;pbl_mixing&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">veght</span> <span class="o">*</span> <span class="n">p</span><span class="p">[</span><span class="s2">&quot;mlht&quot;</span><span class="p">]</span>
+    <span class="n">p</span><span class="p">[</span><span class="s2">&quot;pbl_mixing&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">veght</span> <span class="o">*</span> <span class="n">p</span><span class="p">[</span><span class="s2">&quot;mlht&quot;</span><span class="p">]</span> <span class="k">if</span> <span class="n">veght</span> <span class="o">&lt;=</span> <span class="mi">1</span> <span class="k">else</span> <span class="n">veght</span>
 
     <span class="n">start_h</span> <span class="o">=</span> <span class="n">p</span><span class="p">[</span><span class="s2">&quot;xhgt&quot;</span><span class="p">]</span> <span class="k">if</span> <span class="s2">&quot;xhgt&quot;</span> <span class="ow">in</span> <span class="n">p</span><span class="o">.</span><span class="n">columns</span> <span class="k">else</span> <span class="n">r_zagl</span>
     <span class="k">if</span> <span class="n">start_h</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>

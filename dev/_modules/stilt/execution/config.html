@@ -39,7 +39,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../../_static/documentation_options.js?v=a3f6a224"></script>
+    <script src="../../../_static/documentation_options.js?v=2c8ec258"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -58,7 +58,7 @@
     <link rel="search" title="Search" href="../../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev286+g820de718e" />
+  <meta name="docsearch:version" content="0.1.0a23.dev288+g7ecab9a4c" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -521,7 +521,7 @@
 <span class="sd">    With ``backend: slurm`` they are split among ``n_workers`` tasks of one</span>
 <span class="sd">    Slurm job array. Either way a task runs ``cpus`` receptors at once. The</span>
 <span class="sd">    Slurm settings are ignored by a local run, so a config can hold them and</span>
-<span class="sd">    be run either way. ``timeout`` and ``keep_scratch`` apply to both. None</span>
+<span class="sd">    be run either way. ``timeout`` and ``keep_workdir`` apply to both. None</span>
 <span class="sd">    of these settings change a result.</span>
 
 <span class="sd">    Examples</span>
@@ -573,7 +573,7 @@
             <span class="s2">&quot;a worker until its job ends.&quot;</span>
         <span class="p">),</span>
     <span class="p">)</span>
-    <span class="n">keep_scratch</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+    <span class="n">keep_workdir</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
         <span class="kc">False</span><span class="p">,</span>
         <span class="n">description</span><span class="o">=</span><span class="p">(</span>
             <span class="s2">&quot;Keep every run&#39;s workdir, as the transport model left it, under &quot;</span>

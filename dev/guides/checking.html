@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=a3f6a224"></script>
+    <script src="../_static/documentation_options.js?v=2c8ec258"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
     <link rel="prev" title="In Containers (Kubernetes)" href="containers.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev286+g820de718e" />
+  <meta name="docsearch:version" content="0.1.0a23.dev288+g7ecab9a4c" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -707,7 +707,7 @@ folder of its input and output files. A successful run’s workdir is
 removed. A failed run’s is kept under <code class="docutils literal notranslate"><span class="pre">scratch/</span></code> in the output directory,
 and <code class="docutils literal notranslate"><span class="pre">sim.kept_workdir</span></code> is where. For HYSPLIT it holds <code class="docutils literal notranslate"><span class="pre">CONTROL</span></code>,
 <code class="docutils literal notranslate"><span class="pre">SETUP.CFG</span></code>, and <code class="docutils literal notranslate"><span class="pre">MESSAGE</span></code>, enough to rerun <code class="docutils literal notranslate"><span class="pre">hycs_std</span></code> by hand. Set
-<code class="docutils literal notranslate"><span class="pre">keep_scratch:</span> <span class="pre">true</span></code> under <code class="docutils literal notranslate"><span class="pre">execution:</span></code> to keep every run’s workdir.</p>
+<code class="docutils literal notranslate"><span class="pre">keep_workdir:</span> <span class="pre">true</span></code> under <code class="docutils literal notranslate"><span class="pre">execution:</span></code> to keep every run’s workdir.</p>
 <p>A run cut off partway leaves its log, which starts with a line saying when
 and on which node it started. <code class="docutils literal notranslate"><span class="pre">status()</span></code> calls a simulation
 <code class="docutils literal notranslate"><span class="pre">interrupted</span></code> when its log exists and it has no particles and no failure

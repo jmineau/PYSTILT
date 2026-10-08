@@ -133,6 +133,12 @@ What does not match
   release point. The two ``foot`` values differ on purpose, and
   ``test_forward_hnf_foot_intentionally_differs_from_r`` guards the
   difference.
+- **The HNF correction with ``veght`` above 1.** HYSPLIT reads such a
+  ``veght`` as meters above ground, and so does PYSTILT's correction.
+  STILT-R multiplies it by the mixed-layer height, which removes most of
+  the footprint after the first hour
+  (`uataq/stilt#142 <https://github.com/uataq/stilt/issues/142>`_). No
+  fidelity scenario sets ``veght`` above 1.
 - **Untested inputs.** Runs longer than 24 h backward, latitudes above 80°,
   and grids finer than 0.001° have not been compared.
 - **Other STILT-R commits.** Nothing detects upstream changes to

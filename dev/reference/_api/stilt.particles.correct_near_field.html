@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../_static/documentation_options.js?v=a3f6a224"></script>
+    <script src="../../_static/documentation_options.js?v=2c8ec258"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
     <link rel="prev" title="stilt.particles.add_release_heights" href="stilt.particles.add_release_heights.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev286+g820de718e" />
+  <meta name="docsearch:version" content="0.1.0a23.dev288+g7ecab9a4c" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -845,13 +845,17 @@
 <dt class="sig sig-object py" id="stilt.particles.correct_near_field">
 <span class="sig-prename descclassname"><span class="pre">stilt.particles.</span></span><span class="sig-name descname"><span class="pre">correct_near_field</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">particles</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">receptor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">veght</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/stilt/particles/table.html#correct_near_field"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#stilt.particles.correct_near_field" title="Link to this definition">#</a></dt>
 <dd><p>Correct <code class="docutils literal notranslate"><span class="pre">foot</span></code> for plume dilution in the hyper-near field, as STILT-R’s <code class="docutils literal notranslate"><span class="pre">calc_plume_dilution</span></code> does.</p>
-<p><code class="docutils literal notranslate"><span class="pre">foot</span></code> assumes surface fluxes are mixed through the lowest <code class="docutils literal notranslate"><span class="pre">veght</span></code>
-fraction of the mixed layer. Close to the receptor, the plume from the
-release point is thinner than that. Following STILT-R, the plume depth
-grows from the release height with the turbulence each particle meets.
-While it is below <code class="docutils literal notranslate"><span class="pre">veght</span></code> times the mixed-layer height, <code class="docutils literal notranslate"><span class="pre">foot</span></code> is
-recalculated with the plume depth in its place. The worker applies it
-to any model’s particles when <code class="docutils literal notranslate"><span class="pre">hnf_plume</span></code> is set.</p>
+<p><code class="docutils literal notranslate"><span class="pre">foot</span></code> assumes surface fluxes are mixed through the air below
+<code class="docutils literal notranslate"><span class="pre">veght</span></code>: a fraction of the mixed-layer height when <code class="docutils literal notranslate"><span class="pre">veght</span></code> is 1 or
+less, and a height in meters above ground when it is larger, as HYSPLIT
+reads it. Close to the receptor, the plume from the release point is
+thinner than that. Following STILT-R, the plume depth grows from the
+release height with the turbulence each particle meets. While it is
+below the <code class="docutils literal notranslate"><span class="pre">veght</span></code> height, <code class="docutils literal notranslate"><span class="pre">foot</span></code> is recalculated with the plume
+depth in its place. The worker applies it to any model’s particles when
+<code class="docutils literal notranslate"><span class="pre">hnf_plume</span></code> is set.</p>
+<p>STILT-R multiplies <code class="docutils literal notranslate"><span class="pre">veght</span></code> by the mixed-layer height whatever its
+value, so the two differ when <code class="docutils literal notranslate"><span class="pre">veght</span></code> is above 1.</p>
 <p>Needs the columns <a class="reference internal" href="stilt.particles.HNF_PLUME_COLUMNS.html#stilt.particles.HNF_PLUME_COLUMNS" title="stilt.particles.HNF_PLUME_COLUMNS"><code class="xref py py-data docutils literal notranslate"><span class="pre">HNF_PLUME_COLUMNS</span></code></a>, and the release height:
 <code class="docutils literal notranslate"><span class="pre">xhgt</span></code> (<a class="reference internal" href="stilt.particles.add_release_heights.html#stilt.particles.add_release_heights" title="stilt.particles.add_release_heights"><code class="xref py py-func docutils literal notranslate"><span class="pre">add_release_heights()</span></code></a>) or the altitude of a point
 receptor.</p>
@@ -860,8 +864,9 @@ receptor.</p>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>particles</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.0.6)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></a></span>) – Particle table.</p></li>
 <li><p><strong>receptor</strong> (<span class="sphinx_autodoc_typehints-type">stilt.receptor.Receptor</span>) – Receptor the particles were released from.</p></li>
-<li><p><strong>veght</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a></span>) – Fraction of the mixed-layer height that surface fluxes are mixed
-through (STILT’s <code class="docutils literal notranslate"><span class="pre">veght</span></code>).</p></li>
+<li><p><strong>veght</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a></span>) – Height that surface fluxes are mixed through (STILT’s <code class="docutils literal notranslate"><span class="pre">veght</span></code>): a
+fraction of the mixed-layer height when 1 or less, else meters
+above ground.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
