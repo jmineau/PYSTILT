@@ -1,9 +1,10 @@
 name: Documentation
 
 # Pull requests build the docs (warnings fail the build). Pushes to main publish
-# them as dev/, release tags as <version>/ (final releases also as stable/), on
-# GitHub Pages, with a version dropdown. The gh-pages branch stores the
-# published versions; .github/scripts/docs_versions.py maintains it.
+# them as dev/, release tags as <version>/ (final releases also as stable/), with
+# a version dropdown. The gh-pages branch is the site: .github/scripts/
+# docs_versions.py adds each build to it, and GitHub Pages serves the branch
+# (Settings > Pages > Source: Deploy from a branch), rebuilding after each push.
 on:
   push:
     branches: [main]
@@ -65,11 +66,6 @@ jobs:
       cancel-in-progress: false
     permissions:
       contents: write  # push the gh-pages branch
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
       - uses: actions/checkout@v7
@@ -107,6 +103,9 @@ jobs:
             --base-url "https://jmineau.github.io/PYSTILT/" \
             --prereleases "$DOCS_PRERELEASES"
 
+      # GitHub Pages serves the branch, so this push publishes the site: its
+      # "pages build and deployment" run (in the Actions tab) finishes within a
+      # minute. A push by the workflow's own token does trigger that run.
       - name: Push the gh-pages branch
         env:
           GH_TOKEN: ${{ github.token }}
@@ -118,11 +117,3 @@ jobs:
             commit --quiet -m "docs: publish $target"
           if ! git remote | grep -q origin; then git remote add origin "https://github.com/$GITHUB_REPOSITORY"; fi
           git push --quiet origin gh-pages
-
-      - uses: actions/upload-pages-artifact@v5
-        with:
-          path: site
-
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v5

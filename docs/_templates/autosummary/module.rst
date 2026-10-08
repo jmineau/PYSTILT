@@ -17,6 +17,18 @@
 {% endif %}
 {% endfor %}
 
+{#- Public names the package re-exports from its submodules: _ext/api_pages.py. #}
+{% set exported = module_page.exported(fullname) %}
+{% if exported %}
+.. rubric:: Exported from submodules
+
+.. autosummary::
+   :nosignatures:
+{% for item in exported %}
+   ~{{ item }}
+{%- endfor %}
+{% endif %}
+
 {% if modules %}
 .. rubric:: Modules
 

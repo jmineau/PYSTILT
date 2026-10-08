@@ -445,7 +445,8 @@ CI (`.github/workflows/`) runs the same recipes: `tests.yml`, `quality.yml`,
 `docs.yml`, and `publish.yml` for releases. `docs.yml` builds the docs on
 every pull request and publishes a versioned site: `main` as `dev/`, each
 release tag as its version, and the newest release as `stable/`, where the
-site's root points. The tooling comes from
+site's root points. The workflow only pushes the `gh-pages` branch, which
+GitHub Pages serves. The tooling comes from
 [jmineau/python-template](https://github.com/jmineau/python-template)
 (`.copier-answers.yml`); `copier update` pulls in its changes.
 

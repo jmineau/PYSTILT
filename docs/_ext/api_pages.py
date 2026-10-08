@@ -1,5 +1,5 @@
 """
-Class pages for the API reference, in the style of pandas'.
+Class and module pages for the API reference, in the style of pandas'.
 
 A class page (``_templates/autosummary/class.rst``) shows the class
 docstring, then a table of its attributes and one of its methods. Each row
@@ -252,13 +252,62 @@ def drop_member_sections(app, what, name, obj, options, lines) -> None:
             del lines[start:end]
 
 
+class ModulePage:
+    """
+    What a module page shows besides what the module defines.
+
+    A package often re-exports its public API from submodules and lists it in
+    ``__all__``. autosummary leaves those names out of a module's page, which
+    would leave the package's own page a bare list of submodules. This finds
+    them so ``module.rst`` can list them, linking to the pages of the
+    submodules that define them (no second page, which Sphinx would report as
+    a duplicate). Like ``ClassPage``, it is an object so that Sphinx can
+    pickle it with the configuration.
+    """
+
+    def exported(self, fullname: str) -> list[str]:
+        """
+        Return the public names *fullname* re-exports from its package.
+
+        Each name is where the object is defined (relative to *fullname* when
+        it is under it), for ``module.rst`` to link to. Only classes,
+        exceptions and functions of the module's own package count, and only
+        when ``__all__`` lists them.
+        """
+        try:
+            module = import_by_name(fullname)[1]
+        except ImportError:
+            return []
+        names = []
+        for name in getattr(module, "__all__", ()):
+            obj = getattr(module, name, None)
+            if not (isinstance(obj, type) or inspect.isfunction(obj)):
+                continue
+            home = getattr(obj, "__module__", None)
+            if home in (None, module.__name__):
+                continue
+            if home.split(".")[0] != module.__name__.split(".")[0]:
+                continue
+            if obj.__name__.startswith("_") or "<locals>" in obj.__qualname__:
+                continue
+            path = f"{home}.{obj.__qualname__}"
+            # autosummary wants a name under the current module relative to it.
+            names.append(path.removeprefix(f"{fullname}."))
+        return names
+
+
 def add_template_context(app, config) -> None:
-    """Make ``class_page`` available to the autosummary templates."""
+    """Make ``class_page`` and ``module_page`` available to the autosummary templates."""
     config.autosummary_context.setdefault("class_page", ClassPage())
+    config.autosummary_context.setdefault("module_page", ModulePage())
 
 
 def setup(app):
     """Register the hooks, ahead of napoleon's (priority 500)."""
+    # The hooks need autodoc's event and autosummary's config value, so load
+    # both here: the extension then works wherever conf.py lists it.
+    app.setup_extension("sphinx.ext.autodoc")
+    app.setup_extension("sphinx.ext.autosummary")
     app.connect("config-inited", add_template_context)
     app.connect("autodoc-process-docstring", drop_member_sections, priority=400)
     return {"parallel_read_safe": True, "parallel_write_safe": True}
