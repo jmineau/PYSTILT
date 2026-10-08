@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=e1a3236f"></script>
+    <script src="../_static/documentation_options.js?v=15b0047c"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
     <link rel="prev" title="Plume Background" href="plume_background.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev284+g0139caa33" />
+  <meta name="docsearch:version" content="0.1.0a23.dev285+gdbaa0b303" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -587,12 +587,15 @@ matches each particle to its release point from that first position
 </section>
 <section id="what-a-build-reads-from-pystilt">
 <h2>What a build reads from PYSTILT<a class="headerlink" href="#what-a-build-reads-from-pystilt" title="Link to this heading">#</a></h2>
-<p>PYSTILT writes HYSPLIT’s <code class="docutils literal notranslate"><span class="pre">CONTROL</span></code> file with each met file as its own
-grid, as STILT-R does. HYSPLIT reads at most 12 grids (<code class="docutils literal notranslate"><span class="pre">mgrd</span></code> in its
-<code class="docutils literal notranslate"><span class="pre">DEFGRID.INC</span></code>), so a run can read at most 12 met files. With 6-hour
-files that is a run of about 60 hours, and with hourly files about 10. A
-run that needs more stops with <code class="docutils literal notranslate"><span class="pre">Numb</span> <span class="pre">meteo</span> <span class="pre">grids</span> <span class="pre">exceed</span> <span class="pre">DEFGRID</span> <span class="pre">limit</span></code>
-in its log. A build compiled with a larger <code class="docutils literal notranslate"><span class="pre">mgrd</span></code> reads more.</p>
+<p>PYSTILT writes HYSPLIT’s <code class="docutils literal notranslate"><span class="pre">CONTROL</span></code> file with the met files as one grid,
+listed in time. HYSPLIT reads at most 128 files of one grid (<code class="docutils literal notranslate"><span class="pre">mtim</span></code> in
+its <code class="docutils literal notranslate"><span class="pre">DEFGRID.INC</span></code>), in the bundled build and in NOAA’s, so a run can
+read at most 128 met files: 32 days of 6-hour files, or about 5 days of
+hourly ones. A run that needs more stops with <code class="docutils literal notranslate"><span class="pre">Numb</span> <span class="pre">meteo</span> <span class="pre">times</span> <span class="pre">exceed</span>
+<span class="pre">DEFGRID</span> <span class="pre">limit</span></code> in its log.</p>
+<p>STILT-R lists each file as its own grid instead, which NOAA’s builds limit
+to 12 files a run and the bundled build to 99 (<code class="docutils literal notranslate"><span class="pre">mgrd</span></code>). The particles
+are the same either way.</p>
 <p>To rerun a kept workdir by hand, you can edit its <code class="docutils literal notranslate"><span class="pre">CONTROL</span></code> file. A
 <code class="docutils literal notranslate"><span class="pre">#</span></code> starts a comment on the start time, the starting locations, and the
 line with the number of met files. HYSPLIT reads the met directory and

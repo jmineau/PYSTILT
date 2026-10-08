@@ -42,12 +42,16 @@ matches each particle to its release point from that first position
 What a build reads from PYSTILT
 -------------------------------
 
-PYSTILT writes HYSPLIT's ``CONTROL`` file with each met file as its own
-grid, as STILT-R does. HYSPLIT reads at most 12 grids (``mgrd`` in its
-``DEFGRID.INC``), so a run can read at most 12 met files. With 6-hour
-files that is a run of about 60 hours, and with hourly files about 10. A
-run that needs more stops with ``Numb meteo grids exceed DEFGRID limit``
-in its log. A build compiled with a larger ``mgrd`` reads more.
+PYSTILT writes HYSPLIT's ``CONTROL`` file with the met files as one grid,
+listed in time. HYSPLIT reads at most 128 files of one grid (``mtim`` in
+its ``DEFGRID.INC``), in the bundled build and in NOAA's, so a run can
+read at most 128 met files: 32 days of 6-hour files, or about 5 days of
+hourly ones. A run that needs more stops with ``Numb meteo times exceed
+DEFGRID limit`` in its log.
+
+STILT-R lists each file as its own grid instead, which NOAA's builds limit
+to 12 files a run and the bundled build to 99 (``mgrd``). The particles
+are the same either way.
 
 To rerun a kept workdir by hand, you can edit its ``CONTROL`` file. A
 ``#`` starts a comment on the start time, the starting locations, and the
