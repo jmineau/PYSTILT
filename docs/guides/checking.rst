@@ -87,8 +87,8 @@ stale note. ``sim.failure`` reads it:
 
 ``step`` is ``particles`` when the transport model failed. That fails every
 variant that shares those particles. It is ``footprint`` when only that
-variant's footprint failed. ``message`` is the line of the model's log that
-says what went wrong. An unexpected error, such as a bug, also has a
+variant's footprint failed. ``message`` is the line of the transport model's
+log that says what went wrong. An unexpected error, such as a bug, also has a
 ``traceback``.
 
 The reasons

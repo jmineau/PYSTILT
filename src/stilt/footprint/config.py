@@ -106,7 +106,8 @@ class FootprintConfig(BaseModel):
     and ``geometry`` unset for a variant that only produces particles.
     Give ``geometry`` to name the polygons the footprint will be aggregated
     to, and the grid is derived from them (:meth:`stilt.Mesh.to_grid`) when
-    the project's variants are resolved, not when the config loads. When
+    the project first reads its variants (``project.variants``), not when
+    the config loads. When
     both are given, ``grid`` is used as is and ``geometry`` is recorded with
     the footprints.
     """
