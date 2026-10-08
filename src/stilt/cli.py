@@ -445,7 +445,7 @@ def _print_status(project: Project, ran: pd.DataFrame | None = None) -> None:
     if causes:
         listed = ", ".join(f"{cause} {n}" for cause, n in causes.most_common())
         typer.echo(
-            f"failed: {listed}  (why: the .failure.yaml beside each log, "
+            f"failed: {listed}  (why: each one's .failure.yaml, "
             f"under {project.output.directory / 'logs'})"
         )
 

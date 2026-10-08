@@ -66,9 +66,9 @@ class ControlFile(BaseModel):
         lines.append("test")  # (11) pollutant 4-char identifier
         lines.append("1")  # (12) emission rate (per hour)
         lines.append(str(self.emisshrs))  # (13) hours of emission (can be fractional)
-        lines.append(
-            "00 00 00 00 00"
-        )  # (14) release start (YY MM DD HH MM), 0s for start of met file
+        # (14) release start (YY MM DD HH MM). Zeros mean the simulation
+        # start, which keeps the receptor's minute.
+        lines.append("00 00 00 00 00")
 
         # Concentration / Grid  Definition (hardcoded - required by HYSPLIT parser, ignored by STILT)
         lines.append("1")  # (15) number of simultaneous concentration grids

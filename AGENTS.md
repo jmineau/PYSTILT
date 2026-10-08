@@ -364,7 +364,7 @@ reads the stored `_settings.yaml` back through the current config classes
 still matches. `compute_root`
 is scratch: HYSPLIT runs there and the directory is discarded after success.
 Footprints are sparse tables (`hour, y, x, foot`, float32); an empty
-footprint is a file with no rows and the reason in its metadata, and counts
+footprint is a file with no rows, marked `stilt:empty: true`, and counts
 as complete.
 
 ## Invariants

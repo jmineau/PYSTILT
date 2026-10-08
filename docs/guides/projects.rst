@@ -213,13 +213,18 @@ directory share it.
        settings=hrrr-a3f9c2/                 # one folder per set of transport settings
          _settings.yaml                      # the settings, written out in full
          date=2023-07-15/<receptor id>.parquet
+       settings=hrrr-err-7be104/             # an ensemble: a folder per realization
+         realization=0/date=2023-07-15/<receptor id>.parquet
      footprints/
        settings=hrrr-93278c/                 # one folder per variant's footprint settings
          _settings.yaml                      # names the particles folder it was made from
          date=2023-07-15/<receptor id>.parquet
      logs/
        settings=hrrr-a3f9c2/date=2023-07-15/<receptor id>.log
-     scratch/                                # workdirs of failed runs
+       settings=hrrr-a3f9c2/date=2023-07-15/<receptor id>.failure.yaml   # a failed run
+       settings=hrrr-93278c/date=2023-07-15/<receptor id>.failure.yaml   # a failed footprint
+     scratch/
+       settings=hrrr-a3f9c2/date=2023-07-15/<receptor id>/              # a kept workdir
 
 Each :term:`settings folder` is named after the variant that first made it,
 plus a short code computed from the settings it was made with. That is why
@@ -258,7 +263,9 @@ output="s3://my-bucket/slv-2023")``.
 
 Everything else is the same: the folder layout, reruns that skip finished
 simulations, ``stilt status``, and loading results. Runs write each result
-straight to the store. HYSPLIT itself still runs in a workdir on local disk
+straight to the store. An output on ``memory://`` lasts only as long as the
+process that made it, so ``stilt status`` from a new process finds no
+settings folders there. HYSPLIT itself still runs in a workdir on local disk
 (``--compute-root`` or ``PYSTILT_COMPUTE_ROOT``). Listing an object store
 takes longer than listing a disk, so ``stilt status`` on a large project is
 slower.
@@ -267,9 +274,9 @@ Reruns skip finished work
 -------------------------
 
 Before running, PYSTILT checks which simulations are finished and runs only
-the rest. A simulation is finished when its results exist in the output
-directory: the particle file, and the footprint file if the variant has a
-grid. If the particle file is missing, HYSPLIT runs again, and the
+the rest. A simulation is complete when the result files its variant makes
+exist in the output directory. Today that is the particle file, and the
+footprint file when the variant has a grid. If the particle file is missing, HYSPLIT runs again, and the
 footprints of every variant that shares those particles are remade from
 the new particles.
 
