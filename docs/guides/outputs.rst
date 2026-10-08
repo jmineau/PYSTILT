@@ -278,6 +278,9 @@ several.
 Without PYSTILT
 ---------------
 
+:doc:`../reference/layout` describes every file and metadata key, for a
+reader in another language.
+
 The output directory is a set of Parquet files in folders named
 ``settings=...`` and ``date=...``, which many tools read as columns. With
 `DuckDB <https://duckdb.org>`_, from Python, R, or its own shell, a

@@ -231,7 +231,8 @@ workdirs are explained in :doc:`checking`.
 
 The folder names are what pyarrow, DuckDB, polars, and R's ``arrow``
 package read as columns, so ``output/footprints`` opens as one table with
-``settings`` and ``date`` columns, no PYSTILT needed.
+``settings`` and ``date`` columns, no PYSTILT needed. :doc:`../reference/layout`
+describes every file, for a reader written without PYSTILT.
 
 On an object store
 ~~~~~~~~~~~~~~~~~~

@@ -11,6 +11,9 @@ to do something, start with the :doc:`../guides/index` instead.
 :doc:`particles`
    The particle table a transport model run gives: its columns and units.
 
+:doc:`layout`
+   The files of an output directory, for reading them without PYSTILT.
+
 :doc:`configuration`
    Every ``config.yaml`` option.
 
@@ -43,6 +46,7 @@ to do something, start with the :doc:`../guides/index` instead.
 
    core
    particles
+   layout
    configuration
    meteorology
    execution
