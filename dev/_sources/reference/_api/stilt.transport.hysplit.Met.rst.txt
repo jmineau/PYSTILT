@@ -29,6 +29,7 @@ Methods
 .. autosummary::
    :toctree:
 
+   ~Met.check
    ~Met.files_for
    ~Met.readable
 

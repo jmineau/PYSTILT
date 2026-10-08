@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=4c076e02"></script>
+    <script src="../_static/documentation_options.js?v=9ac7ab43"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
     <link rel="prev" title="In Containers (Kubernetes)" href="containers.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev289+g409224645" />
+  <meta name="docsearch:version" content="0.1.0a23.dev291+g28b1d4e26" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -664,9 +664,13 @@ log that says what went wrong. An unexpected error, such as a bug, also has a
 Check the met’s <code class="docutils literal notranslate"><span class="pre">directory</span></code> and <code class="docutils literal notranslate"><span class="pre">file_format</span></code> against the
 files on disk. A backward run needs files from <code class="docutils literal notranslate"><span class="pre">n_hours</span></code> before
 the receptor time to just after it (<a class="reference internal" href="meteorology.html"><span class="doc">Meteorology</span></a>).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">The</span> <span class="pre">met</span> <span class="pre">file</span> <span class="pre">...</span> <span class="pre">is</span> <span class="pre">damaged</span></code> or <code class="docutils literal notranslate"><span class="pre">The</span> <span class="pre">met</span> <span class="pre">files</span> <span class="pre">hold</span> <span class="pre">no</span> <span class="pre">time</span>
+<span class="pre">step</span> <span class="pre">between</span> <span class="pre">...</span></code>: a file is there but cut short, written
+partway, or has records lost to null bytes, so it lacks hours the
+run needs. Download or crop it again. PYSTILT checks each file
+before HYSPLIT runs (<a class="reference external" href="https://jmineau.github.io/arl-met/stable/_autosummary/arlmet.File.check.html#arlmet.File.check" title="(in arl-met v0.1.0b3)"><code class="xref py py-meth docutils literal notranslate"><span class="pre">arlmet.File.check()</span></code></a>).</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">no</span> <span class="pre">more</span> <span class="pre">meteorology</span></code>: the particles reached a time that no met
-file holds, usually because a file was cut short. Download it
-again. HYSPLIT says so in the <code class="docutils literal notranslate"><span class="pre">WARNING</span></code> file of the kept
+file holds. HYSPLIT says so in the <code class="docutils literal notranslate"><span class="pre">WARNING</span></code> file of the kept
 workdir.</p></li>
 <li><p>A HYSPLIT message, such as <code class="docutils literal notranslate"><span class="pre">start</span> <span class="pre">point</span> <span class="pre">not</span> <span class="pre">within</span> <span class="pre">(x,y,t)</span> <span class="pre">any</span>
 <span class="pre">data</span> <span class="pre">file</span></code>: the receptor is outside the files, in time or in

@@ -52,11 +52,15 @@ backward run with 6-hour HRRR files needs 5 or 6 files, depending on the
 receptor hour. Every one is needed. If one is missing, the simulation fails
 before HYSPLIT runs, as ``MET_COVERAGE``, naming the hours with no file.
 
-A met file cut short fails the run too, as ``MET_COVERAGE``, when HYSPLIT
-says the meteorology ran out. Particles that all leave the meteorology's
-domain, or its crop, before the end of the run are not a failure. The run
-is complete, and its footprint holds the hours the particles were inside
-(:doc:`checking`).
+A file that is there but damaged fails the run before HYSPLIT runs too,
+as ``MET_COVERAGE``: one cut short, holding an hour written partway, or
+with records lost to null bytes. PYSTILT reads the files with arlmet
+(:meth:`arlmet.File.check`) and checks that together they hold every hour
+the run needs. Each file is read once in a process, since a check reads
+every record's header: a few seconds for a 1 GB HRRR file. Particles that
+all leave the meteorology's domain, or its crop, before the end of the run
+are not a failure. The run is complete, and its footprint holds the hours
+the particles were inside (:doc:`checking`).
 
 In Python, the same settings are a dictionary or a
 :class:`~stilt.transport.hysplit.MetConfig`, HYSPLIT's met config:

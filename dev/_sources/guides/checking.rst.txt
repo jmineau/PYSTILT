@@ -107,9 +107,13 @@ The reasons
          Check the met's ``directory`` and ``file_format`` against the
          files on disk. A backward run needs files from ``n_hours`` before
          the receptor time to just after it (:doc:`meteorology`).
+       - ``The met file ... is damaged`` or ``The met files hold no time
+         step between ...``: a file is there but cut short, written
+         partway, or has records lost to null bytes, so it lacks hours the
+         run needs. Download or crop it again. PYSTILT checks each file
+         before HYSPLIT runs (:meth:`arlmet.File.check`).
        - ``no more meteorology``: the particles reached a time that no met
-         file holds, usually because a file was cut short. Download it
-         again. HYSPLIT says so in the ``WARNING`` file of the kept
+         file holds. HYSPLIT says so in the ``WARNING`` file of the kept
          workdir.
        - A HYSPLIT message, such as ``start point not within (x,y,t) any
          data file``: the receptor is outside the files, in time or in

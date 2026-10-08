@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../_static/documentation_options.js?v=4c076e02"></script>
+    <script src="../../_static/documentation_options.js?v=9ac7ab43"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
     <link rel="prev" title="stilt.transport.hysplit.MetConfig.source" href="stilt.transport.hysplit.MetConfig.source.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev289+g409224645" />
+  <meta name="docsearch:version" content="0.1.0a23.dev291+g28b1d4e26" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -678,6 +678,7 @@
 </details></li>
 <li class="toctree-l2 current active has-children"><a aria-current="page" class="current reference internal" href="#">stilt.transport.hysplit.Met</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.Met.crop_dir.html">stilt.transport.hysplit.Met.crop_dir</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.Met.check.html">stilt.transport.hysplit.Met.check</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.Met.files_for.html">stilt.transport.hysplit.Met.files_for</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.Met.readable.html">stilt.transport.hysplit.Met.readable</a></li>
 </ul>
@@ -933,10 +934,13 @@ share.</p>
 <h2>Methods<a class="headerlink" href="#methods" title="Link to this heading">#</a></h2>
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table">
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="stilt.transport.hysplit.Met.files_for.html#stilt.transport.hysplit.Met.files_for" title="stilt.transport.hysplit.Met.files_for"><code class="xref py py-obj docutils literal notranslate"><span class="pre">files_for</span></code></a>(window, *[, hour_after])</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="stilt.transport.hysplit.Met.check.html#stilt.transport.hysplit.Met.check" title="stilt.transport.hysplit.Met.check"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check</span></code></a>(files, window, *[, hour_after])</p></td>
+<td><p>Raise unless <em>files</em> are whole and hold every time step <em>window</em> needs.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="stilt.transport.hysplit.Met.files_for.html#stilt.transport.hysplit.Met.files_for" title="stilt.transport.hysplit.Met.files_for"><code class="xref py py-obj docutils literal notranslate"><span class="pre">files_for</span></code></a>(window, *[, hour_after])</p></td>
 <td><p>Return the met files that cover <em>window</em>, <code class="docutils literal notranslate"><span class="pre">(start,</span> <span class="pre">end)</span></code> in time order.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="stilt.transport.hysplit.Met.readable.html#stilt.transport.hysplit.Met.readable" title="stilt.transport.hysplit.Met.readable"><code class="xref py py-obj docutils literal notranslate"><span class="pre">readable</span></code></a>(files)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="stilt.transport.hysplit.Met.readable.html#stilt.transport.hysplit.Met.readable" title="stilt.transport.hysplit.Met.readable"><code class="xref py py-obj docutils literal notranslate"><span class="pre">readable</span></code></a>(files)</p></td>
 <td><p>Return the files a transport model should read in place of <em>files</em>.</p></td>
 </tr>
 </tbody>

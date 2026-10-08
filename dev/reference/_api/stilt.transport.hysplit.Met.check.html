@@ -7,7 +7,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>stilt.MultiPointReceptor.location_id &#8212; PYSTILT dev</title>
+    <title>stilt.transport.hysplit.Met.check &#8212; PYSTILT dev</title>
   
   
   
@@ -46,7 +46,7 @@
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../../_static/copybutton.js?v=f281be69"></script>
     <script src="../../_static/design-tabs.js?v=f930bc37"></script>
-    <script>DOCUMENTATION_OPTIONS.pagename = 'reference/_api/stilt.MultiPointReceptor.location_id';</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'reference/_api/stilt.transport.hysplit.Met.check';</script>
     <script>
         DOCUMENTATION_OPTIONS.theme_version = '0.22.0';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
@@ -57,8 +57,8 @@
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
-    <link rel="next" title="stilt.MultiPointReceptor.coords" href="stilt.MultiPointReceptor.coords.html" />
-    <link rel="prev" title="stilt.MultiPointReceptor" href="stilt.MultiPointReceptor.html" />
+    <link rel="next" title="stilt.transport.hysplit.Met.files_for" href="stilt.transport.hysplit.Met.files_for.html" />
+    <link rel="prev" title="stilt.transport.hysplit.Met.crop_dir" href="stilt.transport.hysplit.Met.crop_dir.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
   <meta name="docsearch:version" content="0.1.0a23.dev291+g28b1d4e26" />
@@ -459,7 +459,7 @@
      aria-label="Section Navigation">
   <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
   <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
-<li class="toctree-l1 current active has-children"><a class="reference internal" href="../core.html">Core Objects</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l1 has-children"><a class="reference internal" href="../core.html">Core Objects</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="stilt.run_trajectories.html">stilt.run_trajectories</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.calc_footprint.html">stilt.calc_footprint</a></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="stilt.Project.html">stilt.Project</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
@@ -512,8 +512,8 @@
 <li class="toctree-l3"><a class="reference internal" href="stilt.ColumnReceptor.coords.html">stilt.ColumnReceptor.coords</a></li>
 </ul>
 </details></li>
-<li class="toctree-l2 current active has-children"><a class="reference internal" href="stilt.MultiPointReceptor.html">stilt.MultiPointReceptor</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
-<li class="toctree-l3 current active"><a aria-current="page" class="current reference internal" href="#">stilt.MultiPointReceptor.location_id</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="stilt.MultiPointReceptor.html">stilt.MultiPointReceptor</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="stilt.MultiPointReceptor.location_id.html">stilt.MultiPointReceptor.location_id</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.MultiPointReceptor.coords.html">stilt.MultiPointReceptor.coords</a></li>
 </ul>
 </details></li>
@@ -667,7 +667,7 @@
 <li class="toctree-l2"><a class="reference internal" href="stilt.footprint.config.WindowsGeometrySpec.html">stilt.footprint.config.WindowsGeometrySpec</a></li>
 </ul>
 </details></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../meteorology.html">Meteorology</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="../meteorology.html">Meteorology</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
 <li class="toctree-l2 has-children"><a class="reference internal" href="stilt.transport.hysplit.MetConfig.html">stilt.transport.hysplit.MetConfig</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.MetConfig.download_options.html">stilt.transport.hysplit.MetConfig.download_options</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.MetConfig.crop.html">stilt.transport.hysplit.MetConfig.crop</a></li>
@@ -676,9 +676,9 @@
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.MetConfig.source.html">stilt.transport.hysplit.MetConfig.source</a></li>
 </ul>
 </details></li>
-<li class="toctree-l2 has-children"><a class="reference internal" href="stilt.transport.hysplit.Met.html">stilt.transport.hysplit.Met</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2 current active has-children"><a class="reference internal" href="stilt.transport.hysplit.Met.html">stilt.transport.hysplit.Met</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.Met.crop_dir.html">stilt.transport.hysplit.Met.crop_dir</a></li>
-<li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.Met.check.html">stilt.transport.hysplit.Met.check</a></li>
+<li class="toctree-l3 current active"><a aria-current="page" class="current reference internal" href="#">stilt.transport.hysplit.Met.check</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.Met.files_for.html">stilt.transport.hysplit.Met.files_for</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.Met.readable.html">stilt.transport.hysplit.Met.readable</a></li>
 </ul>
@@ -879,12 +879,12 @@
     <li class="breadcrumb-item"><a href="../index.html" class="nav-link">API Reference</a></li>
     
     
-    <li class="breadcrumb-item"><a href="../core.html" class="nav-link">Core Objects</a></li>
+    <li class="breadcrumb-item"><a href="../meteorology.html" class="nav-link">Meteorology</a></li>
     
     
-    <li class="breadcrumb-item"><a href="stilt.MultiPointReceptor.html" class="nav-link">stilt.MultiPointReceptor</a></li>
+    <li class="breadcrumb-item"><a href="stilt.transport.hysplit.Met.html" class="nav-link">stilt.transport.hysplit.Met</a></li>
     
-    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">stilt.MultiPointReceptor.location_id</span></li>
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">stilt.transport.hysplit.Met.check</span></li>
   </ul>
 </nav>
 </div>
@@ -901,15 +901,37 @@
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section id="stilt-multipointreceptor-location-id">
-<h1>stilt.MultiPointReceptor.location_id<a class="headerlink" href="#stilt-multipointreceptor-location-id" title="Link to this heading">#</a></h1>
-<dl class="py property">
-<dt class="sig sig-object py" id="stilt.MultiPointReceptor.location_id">
-<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">MultiPointReceptor.</span></span><span class="sig-name descname"><span class="pre">location_id</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><a class="headerlink" href="#stilt.MultiPointReceptor.location_id" title="Link to this definition">#</a></dt>
-<dd><p>Location id, <code class="docutils literal notranslate"><span class="pre">&quot;multi_&lt;hash&gt;&quot;</span></code>, ending in <code class="docutils literal notranslate"><span class="pre">msl</span></code> above sea level.</p>
-<p>The hash covers the sorted points, with longitudes and latitudes
-rounded to 5 decimals and altitudes to 0.01 m. A whole-metre
-altitude hashes as its integer.</p>
+  <section id="stilt-transport-hysplit-met-check">
+<h1>stilt.transport.hysplit.Met.check<a class="headerlink" href="#stilt-transport-hysplit-met-check" title="Link to this heading">#</a></h1>
+<dl class="py method">
+<dt class="sig sig-object py" id="stilt.transport.hysplit.Met.check">
+<span class="sig-prename descclassname"><span class="pre">Met.</span></span><span class="sig-name descname"><span class="pre">check</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">files</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">window</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">hour_after</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/stilt/transport/hysplit/met.html#Met.check"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#stilt.transport.hysplit.Met.check" title="Link to this definition">#</a></dt>
+<dd><p>Raise unless <em>files</em> are whole and hold every time step <em>window</em> needs.</p>
+<p>A met file can be damaged and keep its name: a time step written
+partway, a missing time step, or records lost to null bytes.
+HYSPLIT then stops its particles where the damage starts, and when
+some of them have left the met’s domain first, its log does not say
+why. Each file is checked once in a process
+(<a class="reference external" href="https://jmineau.github.io/arl-met/stable/_autosummary/arlmet.File.check.html#arlmet.File.check" title="(in arl-met v0.1.0b3)"><code class="xref py py-meth docutils literal notranslate"><span class="pre">arlmet.File.check()</span></code></a>), and together their time steps must
+reach from the first time the run needs to the last, with no gap
+wider than their spacing. That also finds a file cut after a whole
+time step, which looks whole to arlmet.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>files</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a>]</span>) – The files the transport model will read (<a class="reference internal" href="stilt.transport.hysplit.Met.readable.html#stilt.transport.hysplit.Met.readable" title="stilt.transport.hysplit.Met.readable"><code class="xref py py-meth docutils literal notranslate"><span class="pre">readable()</span></code></a>).</p></li>
+<li><p><strong>window</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code></a>]</span>) – The time the run covers (<code class="xref py py-func docutils literal notranslate"><span class="pre">run_window()</span></code>).</p></li>
+<li><p><strong>hour_after</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></a></span>) – Also need the hour after the window, as <a class="reference internal" href="stilt.transport.hysplit.Met.files_for.html#stilt.transport.hysplit.Met.files_for" title="stilt.transport.hysplit.Met.files_for"><code class="xref py py-meth docutils literal notranslate"><span class="pre">files_for()</span></code></a> does.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="stilt.exceptions.MeteorologyError.html#stilt.exceptions.MeteorologyError" title="stilt.exceptions.MeteorologyError"><strong>MeteorologyError</strong></a> – Naming the damaged file and its first problem, or the times the
+    files do not hold.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></span></p>
+</dd>
+</dl>
 </dd></dl>
 
 </section>
@@ -925,20 +947,20 @@ altitude hashes as its integer.</p>
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="stilt.MultiPointReceptor.html"
+       href="stilt.transport.hysplit.Met.crop_dir.html"
        title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">stilt.MultiPointReceptor</p>
+        <p class="prev-next-title">stilt.transport.hysplit.Met.crop_dir</p>
       </div>
     </a>
     <a class="right-next"
-       href="stilt.MultiPointReceptor.coords.html"
+       href="stilt.transport.hysplit.Met.files_for.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">stilt.MultiPointReceptor.coords</p>
+        <p class="prev-next-title">stilt.transport.hysplit.Met.files_for</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
@@ -961,14 +983,14 @@ altitude hashes as its integer.</p>
   </div>
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#stilt.MultiPointReceptor.location_id"><code class="docutils literal notranslate"><span class="pre">MultiPointReceptor.location_id</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#stilt.transport.hysplit.Met.check"><code class="docutils literal notranslate"><span class="pre">Met.check()</span></code></a></li>
 </ul>
   </nav></div>
 
   <div class="sidebar-secondary-item">
 
   <div class="tocsection sourcelink">
-    <a href="../../_sources/reference/_api/stilt.MultiPointReceptor.location_id.rst.txt">
+    <a href="../../_sources/reference/_api/stilt.transport.hysplit.Met.check.rst.txt">
       <i class="fa-solid fa-file-lines"></i> Show Source
     </a>
   </div>
