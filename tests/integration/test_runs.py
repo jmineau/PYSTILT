@@ -287,13 +287,17 @@ def test_failure_met_cut_short(tmp_path, wbb_receptor, traj_only_config, met_dir
 def test_hysplit_fails_a_run_whose_met_runs_out(
     tmp_path, wbb_receptor, traj_only_config, met_dir, monkeypatch
 ):
-    """Without the check before the run, HYSPLIT's own warning fails it (#189)."""
+    """
+    Without the check before the run, HYSPLIT's own warning fails it (#189).
+
+    Whether HYSPLIT warns depends on the turbulence draws, so the seed is
+    fixed. Seeds 1 to 9 warn here; seed 10 does not (the test below).
+    """
     from stilt.transport.hysplit import Met
 
     monkeypatch.setattr(Met, "check", lambda self, *args, **kwargs: None)
-    project = _project_on_met_cut_short(
-        tmp_path, wbb_receptor, traj_only_config, met_dir
-    )
+    config = _with(traj_only_config, krand=2, seed=7)
+    project = _project_on_met_cut_short(tmp_path, wbb_receptor, config, met_dir)
     project.run()
 
     sim = project.simulation(*_sim_id(wbb_receptor))
@@ -302,6 +306,33 @@ def test_hysplit_fails_a_run_whose_met_runs_out(
     assert "no more meteorology" in sim.failure["message"]
     assert sim.log_path is not None
     assert "Only one time period of meteo data" in sim.log_path.read_text()
+
+
+@integration
+def test_hysplit_can_drop_every_particle_at_a_met_gap_without_a_warning(
+    tmp_path, wbb_receptor, traj_only_config, met_dir, monkeypatch
+):
+    """
+    HYSPLIT may stop every particle where the met runs out and still say it completed.
+
+    This is why the met files are checked before a run (``Met.check``):
+    without it, the run would pass for one whose particles all left the
+    domain. With ``krand: 4`` about one run in five does this.
+    """
+    from stilt.transport.hysplit import Met
+
+    monkeypatch.setattr(Met, "check", lambda self, *args, **kwargs: None)
+    config = _with(traj_only_config, krand=2, seed=10)
+    project = _project_on_met_cut_short(tmp_path, wbb_receptor, config, met_dir)
+    project.run()
+
+    sim = project.simulation(*_sim_id(wbb_receptor))
+    assert sim.has_particles  # complete, though the run asked for 12 hours
+    assert sim.particles["age"].abs().max() == 6 * 60  # where the cut file starts
+    assert sim.log_path is not None
+    log = sim.log_path.read_text()
+    assert "Complete Hysplit" in log
+    assert "no more meteorology" not in log
 
 
 # ---------------------------------------------------------------------------

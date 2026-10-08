@@ -648,9 +648,12 @@ The README links to it and keeps no table of its own.
   `WARNING` file after each run and fails `no more meteorology` (and the
   other `metpos` time warnings in `FAILURE_PHRASES`) as `MET_COVERAGE`.
   Particles that all left the met's domain or its crop are a complete
-  run, so a particle file may stop before `n_hours`. HYSPLIT writes only
-  its first `metpos` warning per run, so a domain exit can hide met that
-  ran out later. `Met.files_for` therefore fails before running when a
+  run, so a particle file may stop before `n_hours`. HYSPLIT's warning
+  is not reliable: it writes only its first `metpos` warning per run, so
+  a domain exit can hide met that ran out later, and with `krand: 4`
+  about one run in five that reaches a met file cut short drops every
+  particle there with no warning at all and says `Complete Hysplit`
+  (60 runs, 2026-10-08). `Met.files_for` therefore fails before running when a
   file is missing, naming the hours, and `Met.check` when a file is
   damaged or the files lack a time step the run needs (arlmet's
   `File.check()` and `File.times`, read once per file in a process).
