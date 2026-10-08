@@ -1,0 +1,6 @@
+stilt.transport.BatchedTransportModel.version
+=============================================
+
+.. currentmodule:: stilt.transport
+
+.. automethod:: BatchedTransportModel.version

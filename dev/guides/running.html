@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=6192170d"></script>
+    <script src="../_static/documentation_options.js?v=c5076060"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
     <link rel="prev" title="Projects And Variants" href="projects.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev275+g08fc11f45" />
+  <meta name="docsearch:version" content="0.1.0a23.dev281+g84fcbbf53" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -654,8 +654,8 @@ as a Slurm job array. Its options:</p>
 id per line.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">--output</span> <span class="pre">DIR</span></code> uses another output directory than <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>
 names.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">--compute-root</span> <span class="pre">DIR</span></code> runs the transport model in <code class="docutils literal notranslate"><span class="pre">DIR</span></code>, a scratch
-folder emptied after each successful run.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--compute-root</span> <span class="pre">DIR</span></code> is the compute root: each run gets a workdir
+in <code class="docutils literal notranslate"><span class="pre">DIR</span></code>, removed after it succeeds.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">--task</span> <span class="pre">I/N</span></code> runs task <code class="docutils literal notranslate"><span class="pre">I</span></code> of <code class="docutils literal notranslate"><span class="pre">N</span></code> here, as one task of a job
 array (<a class="reference internal" href="containers.html"><span class="doc">In Containers (Kubernetes)</span></a>).</p></li>
 </ul>

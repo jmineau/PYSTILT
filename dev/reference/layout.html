@@ -1,0 +1,1379 @@
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Output Layout &#8212; PYSTILT dev</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=64cc4de3f052d77215f0" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=90cc9208" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=64cc4de3f052d77215f0"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
+
+    <script src="../_static/documentation_options.js?v=c5076060"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'reference/layout';</script>
+    <script>
+        DOCUMENTATION_OPTIONS.theme_version = '0.22.0';
+        DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://jmineau.github.io/PYSTILT/switcher.json';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = 'dev';
+        DOCUMENTATION_OPTIONS.show_version_warning_banner =
+            true;
+        </script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Configuration" href="configuration.html" />
+    <link rel="prev" title="stilt.particles.correct_near_field" href="_api/stilt.particles.correct_near_field.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="0.1.0a23.dev281+g84fcbbf53" />
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+<aside class="bd-header-announcement" aria-label="Announcement">
+  <div class="bd-header-announcement__content">PYSTILT is in alpha: names and options may change between releases.</div>
+</aside>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button type="button" class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class=" navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">PYSTILT dev</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class=" navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started/index.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../tutorials/index.html">
+    Tutorials
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../guides/index.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../migration/index.html">
+    Coming From Another STILT
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../advanced/index.html">
+    Internals
+  </a>
+</li>
+
+            <li class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button"
+                data-bs-toggle="dropdown" aria-expanded="false"
+                aria-controls="pst-nav-more-links">
+                    More
+                </button>
+                <ul id="pst-nav-more-links" class="dropdown-menu">
+                    
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../roadmap.html">
+    Roadmap
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../development.html">
+    Development
+  </a>
+</li>
+
+                </ul>
+            </li>
+            
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-2"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-2"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-2"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-2">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+      
+        <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/jmineau/PYSTILT" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button type="button" class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started/index.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../tutorials/index.html">
+    Tutorials
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../guides/index.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../migration/index.html">
+    Coming From Another STILT
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../advanced/index.html">
+    Internals
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../roadmap.html">
+    Roadmap
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../development.html">
+    Development
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-3"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-3"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-3"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-3">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+        
+          <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/jmineau/PYSTILT" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item pst-sidebar-collapse"><button type="button" id="pst-collapse-sidebar-button" aria-expanded="true" aria-controls="pst-primary-sidebar">
+  <svg class="pst-icon" role="img" aria-hidden="true" focusable="false" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+    <path fill="currentColor" d="M3 15.5C2.36232 15.5 1.74874 15.2564 1.28478 14.8189C0.820828 14.3815 0.541576 13.7832 0.504167 13.1467L0.5 13L0.5 3C0.499965 2.36232 0.743605 1.74874 1.18107 1.28478C1.61854 0.820828 2.21676 0.541576 2.85333 0.504167L3 0.5L13 0.5C13.6377 0.499965 14.2513 0.743605 14.7152 1.18107C15.1792 1.61854 15.4584 2.21676 15.4958 2.85333L15.5 3L15.5 13C15.5 13.6377 15.2564 14.2513 14.8189 14.7152C14.3815 15.1792 13.7832 15.4584 13.1467 15.4958L13 15.5L3 15.5ZM3 13.8333L10.5 13.8333L10.5 2.16667L3 2.16667C2.79589 2.16669 2.59889 2.24163 2.44636 2.37726C2.29383 2.5129 2.19638 2.69979 2.1725 2.9025L2.16667 3L2.16667 13C2.16669 13.2041 2.24163 13.4011 2.37726 13.5536C2.5129 13.7062 2.69979 13.8036 2.9025 13.8275L3 13.8333ZM6.65583 10.325L6.5775 10.2558L4.91083 8.58917C4.76735 8.44567 4.68116 8.25476 4.66843 8.05223C4.65569 7.84971 4.71729 7.6495 4.84167 7.48917L4.91083 7.41083L6.5775 5.74417C6.72747 5.59471 6.9287 5.50794 7.14032 5.50148C7.35194 5.49502 7.55809 5.56935 7.7169 5.70937C7.8757 5.8494 7.97525 6.04463 7.99533 6.25539C8.01541 6.46616 7.95451 6.67667 7.825 6.84417L7.75583 6.9225L6.67917 8L7.75583 9.0775C7.89931 9.22099 7.98551 9.41191 7.99824 9.61443C8.01097 9.81695 7.94938 10.0172 7.825 10.1775L7.75583 10.2558C7.61234 10.3993 7.42142 10.4855 7.2189 10.4982C7.01638 10.511 6.81617 10.4494 6.65583 10.325Z"/>
+  </svg>
+  <span class="pst-collapse-sidebar-label">Collapse Sidebar</span>
+  <span class="pst-expand-sidebar-label">Expand Sidebar</span>
+</button></div>
+        <div class="sidebar-primary-item">
+
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1 has-children"><a class="reference internal" href="core.html">Core Objects</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.run_trajectories.html">stilt.run_trajectories</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.calc_footprint.html">stilt.calc_footprint</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="_api/stilt.Project.html">stilt.Project</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.Project.add_receptors.html">stilt.Project.add_receptors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.Project.add_table.html">stilt.Project.add_table</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.Project.folders.html">stilt.Project.folders</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.Project.footprints.html">stilt.Project.footprints</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.Project.incomplete.html">stilt.Project.incomplete</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.Project.init.html">stilt.Project.init</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.Project.jacobian.html">stilt.Project.jacobian</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.Project.particles.html">stilt.Project.particles</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.Project.receptor.html">stilt.Project.receptor</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.Project.run.html">stilt.Project.run</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.Project.simulation.html">stilt.Project.simulation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.Project.status.html">stilt.Project.status</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.Project.submit.html">stilt.Project.submit</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.Project.table_path.html">stilt.Project.table_path</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="_api/stilt.Receptor.html">stilt.Receptor</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.Receptor.coords.html">stilt.Receptor.coords</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.Receptor.from_dict.html">stilt.Receptor.from_dict</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.Receptor.from_json.html">stilt.Receptor.from_json</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.Receptor.from_points.html">stilt.Receptor.from_points</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.Receptor.to_dict.html">stilt.Receptor.to_dict</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.Receptor.to_json.html">stilt.Receptor.to_json</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="_api/stilt.PointReceptor.html">stilt.PointReceptor</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.PointReceptor.coords.html">stilt.PointReceptor.coords</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.PointReceptor.from_dict.html">stilt.PointReceptor.from_dict</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.PointReceptor.from_json.html">stilt.PointReceptor.from_json</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.PointReceptor.from_points.html">stilt.PointReceptor.from_points</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.PointReceptor.to_dict.html">stilt.PointReceptor.to_dict</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.PointReceptor.to_json.html">stilt.PointReceptor.to_json</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="_api/stilt.ColumnReceptor.html">stilt.ColumnReceptor</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.ColumnReceptor.coords.html">stilt.ColumnReceptor.coords</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.ColumnReceptor.from_dict.html">stilt.ColumnReceptor.from_dict</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.ColumnReceptor.from_json.html">stilt.ColumnReceptor.from_json</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.ColumnReceptor.from_points.html">stilt.ColumnReceptor.from_points</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.ColumnReceptor.to_dict.html">stilt.ColumnReceptor.to_dict</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.ColumnReceptor.to_json.html">stilt.ColumnReceptor.to_json</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="_api/stilt.MultiPointReceptor.html">stilt.MultiPointReceptor</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.MultiPointReceptor.coords.html">stilt.MultiPointReceptor.coords</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.MultiPointReceptor.from_dict.html">stilt.MultiPointReceptor.from_dict</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.MultiPointReceptor.from_json.html">stilt.MultiPointReceptor.from_json</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.MultiPointReceptor.from_points.html">stilt.MultiPointReceptor.from_points</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.MultiPointReceptor.to_dict.html">stilt.MultiPointReceptor.to_dict</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.MultiPointReceptor.to_json.html">stilt.MultiPointReceptor.to_json</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.read_receptors.html">stilt.read_receptors</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.receptors.write_receptors.html">stilt.receptors.write_receptors</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.receptors.receptors_to_frame.html">stilt.receptors.receptors_to_frame</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.receptors.receptors_from_frame.html">stilt.receptors.receptors_from_frame</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.receptors.parse_receptor_id.html">stilt.receptors.parse_receptor_id</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="_api/stilt.Simulation.html">stilt.Simulation</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.Simulation.background.html">stilt.Simulation.background</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.Simulation.calc_footprint.html">stilt.Simulation.calc_footprint</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.Simulation.transport_error.html">stilt.Simulation.transport_error</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="_api/stilt.config.Variant.html">stilt.config.Variant</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.config.Variant.transport_for.html">stilt.config.Variant.transport_for</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.identity.run_settings.html">stilt.identity.run_settings</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.identity.read_run_settings.html">stilt.identity.read_run_settings</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.identity.transport_from_settings.html">stilt.identity.transport_from_settings</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.identity.footprint_settings.html">stilt.identity.footprint_settings</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.identity.read_footprint_settings.html">stilt.identity.read_footprint_settings</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.identity.settings_hash.html">stilt.identity.settings_hash</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.transport.ModelInfo.html">stilt.transport.ModelInfo</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.read_particles.html">stilt.read_particles</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.particles.particles_metadata.html">stilt.particles.particles_metadata</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.particles.write_particles.html">stilt.particles.write_particles</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.read_footprint.html">stilt.read_footprint</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.footprint.write_footprint.html">stilt.footprint.write_footprint</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.footprint.write_empty_footprint.html">stilt.footprint.write_empty_footprint</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.footprint.open_footprints.html">stilt.footprint.open_footprints</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="_api/stilt.particles.ParticlesAccessor.html">stilt.particles.ParticlesAccessor</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.particles.ParticlesAccessor.endpoints.html">stilt.particles.ParticlesAccessor.endpoints</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.particles.ParticlesAccessor.enhancement.html">stilt.particles.ParticlesAccessor.enhancement</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="_api/stilt.footprint.FootprintAccessor.html">stilt.footprint.FootprintAccessor</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.footprint.FootprintAccessor.aggregate.html">stilt.footprint.FootprintAccessor.aggregate</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.footprint.FootprintAccessor.enhancement.html">stilt.footprint.FootprintAccessor.enhancement</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.footprint.FootprintAccessor.to_netcdf.html">stilt.footprint.FootprintAccessor.to_netcdf</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.particles.background.html">stilt.particles.background</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.particles.Background-class.html">stilt.particles.Background</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.particles.transport_error.html">stilt.particles.transport_error</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.particles.TransportError.html">stilt.particles.TransportError</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="_api/stilt.Mesh.html">stilt.Mesh</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.Mesh.from_file.html">stilt.Mesh.from_file</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.Mesh.from_geodataframe.html">stilt.Mesh.from_geodataframe</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.Mesh.from_grid.html">stilt.Mesh.from_grid</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.Mesh.from_h3.html">stilt.Mesh.from_h3</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.Mesh.from_spec.html">stilt.Mesh.from_spec</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.Mesh.from_windows.html">stilt.Mesh.from_windows</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.Mesh.to_crs.html">stilt.Mesh.to_crs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.Mesh.to_grid.html">stilt.Mesh.to_grid</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="_api/stilt.Zones.html">stilt.Zones</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.Zones.from_labels.html">stilt.Zones.from_labels</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.Zones.to_grid.html">stilt.Zones.to_grid</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.footprint.Geometry.html">stilt.footprint.Geometry</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.footprint.overlap_weights.html">stilt.footprint.overlap_weights</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.footprint.check_resolution.html">stilt.footprint.check_resolution</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.spatial.same_crs.html">stilt.spatial.same_crs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.spatial.is_longlat.html">stilt.spatial.is_longlat</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.spatial.horizontal_dims.html">stilt.spatial.horizontal_dims</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.sampling.sample_field.html">stilt.sampling.sample_field</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.sampling.vertical_dim.html">stilt.sampling.vertical_dim</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.sampling.nearest_cell.html">stilt.sampling.nearest_cell</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="particles.html">The Particle Table</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.particles.PARTICLE_SCHEMA.html">stilt.particles.PARTICLE_SCHEMA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.particles.FOOTPRINT_COLUMNS.html">stilt.particles.FOOTPRINT_COLUMNS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.particles.HNF_PLUME_COLUMNS.html">stilt.particles.HNF_PLUME_COLUMNS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.particles.check_particles.html">stilt.particles.check_particles</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.particles.add_release_heights.html">stilt.particles.add_release_heights</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.particles.correct_near_field.html">stilt.particles.correct_near_field</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 current active"><a aria-current="page" class="current reference internal" href="#">Output Layout</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="configuration.html">Configuration</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="_api/stilt.ProjectConfig.html">stilt.ProjectConfig</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.ProjectConfig.declared.html">stilt.ProjectConfig.declared</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.ProjectConfig.from_yaml.html">stilt.ProjectConfig.from_yaml</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.ProjectConfig.met_config.html">stilt.ProjectConfig.met_config</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.ProjectConfig.resolve.html">stilt.ProjectConfig.resolve</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.ProjectConfig.to_yaml.html">stilt.ProjectConfig.to_yaml</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.FootprintConfig.html">stilt.FootprintConfig</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.ExecutionConfig.html">stilt.ExecutionConfig</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.Bounds.html">stilt.Bounds</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="_api/stilt.Grid.html">stilt.Grid</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.Grid.to_xarray.html">stilt.Grid.to_xarray</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.footprint.config.FileGeometrySpec.html">stilt.footprint.config.FileGeometrySpec</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.footprint.config.H3GeometrySpec.html">stilt.footprint.config.H3GeometrySpec</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.footprint.config.WindowsGeometrySpec.html">stilt.footprint.config.WindowsGeometrySpec</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="meteorology.html">Meteorology</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="_api/stilt.transport.hysplit.MetConfig.html">stilt.transport.hysplit.MetConfig</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.hysplit.MetConfig.crop.html">stilt.transport.hysplit.MetConfig.crop</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.hysplit.MetConfig.settings.html">stilt.transport.hysplit.MetConfig.settings</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.hysplit.MetConfig.source.html">stilt.transport.hysplit.MetConfig.source</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="_api/stilt.transport.hysplit.Met.html">stilt.transport.hysplit.Met</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.hysplit.Met.files_for.html">stilt.transport.hysplit.Met.files_for</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.hysplit.Met.readable.html">stilt.transport.hysplit.Met.readable</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.meteorology.run_window.html">stilt.meteorology.run_window</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.meteorology.variogram.html">stilt.meteorology.variogram</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.meteorology.fit_variogram.html">stilt.meteorology.fit_variogram</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.meteorology.VariogramFit.html">stilt.meteorology.VariogramFit</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="execution.html">Execution</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.execution.run.html">stilt.execution.run</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.execution.submit.html">stilt.execution.submit</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.execution.pending.html">stilt.execution.pending</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.execution.wait.html">stilt.execution.wait</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.execution.task_share.html">stilt.execution.task_share</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.execution.runner.resolve_compute_root.html">stilt.execution.runner.resolve_compute_root</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.execution.worker.run_particles.html">stilt.execution.worker.run_particles</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.execution.worker.make_footprint.html">stilt.execution.worker.make_footprint</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.execution.worker.run_receptor.html">stilt.execution.worker.run_receptor</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.execution.worker.run_receptors.html">stilt.execution.worker.run_receptors</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.execution.job_script.html">stilt.execution.job_script</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="_api/stilt.transport.TransportModel.html">stilt.transport.TransportModel</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.TransportModel.data_files.html">stilt.transport.TransportModel.data_files</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.TransportModel.run.html">stilt.transport.TransportModel.run</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.TransportModel.version.html">stilt.transport.TransportModel.version</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="_api/stilt.transport.BatchedTransportModel.html">stilt.transport.BatchedTransportModel</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.BatchedTransportModel.data_files.html">stilt.transport.BatchedTransportModel.data_files</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.BatchedTransportModel.run.html">stilt.transport.BatchedTransportModel.run</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.BatchedTransportModel.run_many.html">stilt.transport.BatchedTransportModel.run_many</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.BatchedTransportModel.version.html">stilt.transport.BatchedTransportModel.version</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="_api/stilt.transport.TransportConfig.html">stilt.transport.TransportConfig</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.TransportConfig.realizations.html">stilt.transport.TransportConfig.realizations</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.TransportConfig.settings.html">stilt.transport.TransportConfig.settings</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.transport.ModelRun.html">stilt.transport.ModelRun</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.transport.get_model.html">stilt.transport.get_model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.transport.run_model.html">stilt.transport.run_model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.transport.run_model_many.html">stilt.transport.run_model_many</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="_api/stilt.transport.hysplit.HysplitModel.html">stilt.transport.hysplit.HysplitModel</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.hysplit.HysplitModel.data_files.html">stilt.transport.hysplit.HysplitModel.data_files</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.hysplit.HysplitModel.run.html">stilt.transport.hysplit.HysplitModel.run</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.hysplit.HysplitModel.version.html">stilt.transport.hysplit.HysplitModel.version</a></li>
+</ul>
+</details></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="transforms.html">Transforms</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="_api/stilt.transforms.AveragingKernel.html">stilt.transforms.AveragingKernel</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.transforms.AveragingKernel.apply.html">stilt.transforms.AveragingKernel.apply</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.transforms.AveragingKernel.kernel.html">stilt.transforms.AveragingKernel.kernel</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="_api/stilt.transforms.PressureWeighting.html">stilt.transforms.PressureWeighting</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.transforms.PressureWeighting.apply.html">stilt.transforms.PressureWeighting.apply</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="_api/stilt.transforms.FirstOrderLifetime.html">stilt.transforms.FirstOrderLifetime</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.transforms.FirstOrderLifetime.apply.html">stilt.transforms.FirstOrderLifetime.apply</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.transforms.averaging_kernel_table.html">stilt.transforms.averaging_kernel_table</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.transforms.release_coordinate.html">stilt.transforms.release_coordinate</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.transforms.particle_pwf.html">stilt.transforms.particle_pwf</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.transforms.ak_weights.html">stilt.transforms.ak_weights</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.transforms.load_transform.html">stilt.transforms.load_transform</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.transforms.dump_transform.html">stilt.transforms.dump_transform</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.transforms.apply_transforms.html">stilt.transforms.apply_transforms</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="observations.html">Observations</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.observations.receptors_from_soundings.html">stilt.observations.receptors_from_soundings</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.observations.group_by_overpass.html">stilt.observations.group_by_overpass</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.observations.select_observations_spatial.html">stilt.observations.select_observations_spatial</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.observations.jitter_points.html">stilt.observations.jitter_points</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.observations.slant_points.html">stilt.observations.slant_points</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.observations.pressure_altitudes.html">stilt.observations.pressure_altitudes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.observations.check_soundings.html">stilt.observations.check_soundings</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.observations.read_tropomi_ch4.html">stilt.observations.read_tropomi_ch4</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.observations.read_oco2.html">stilt.observations.read_oco2</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.observations.read_tccon.html">stilt.observations.read_tccon</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.observations.read_ggg_oof.html">stilt.observations.read_ggg_oof</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.observations.read_ggg_netcdf.html">stilt.observations.read_ggg_netcdf</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.observations.plume_polygon.html">stilt.observations.plume_polygon</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.observations.Plume.html">stilt.observations.Plume</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.observations.plume_background.html">stilt.observations.plume_background</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.observations.PlumeBackground.html">stilt.observations.PlumeBackground</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.observations.plumes.kernel_density.html">stilt.observations.plumes.kernel_density</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.observations.plumes.density_polygon.html">stilt.observations.plumes.density_polygon</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.observations.modelled_column.html">stilt.observations.modelled_column</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="project.html">Project And Output</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="_api/stilt.output.Output.html">stilt.output.Output</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.output.Output.clear_failure.html">stilt.output.Output.clear_failure</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.output.Output.complete.html">stilt.output.Output.complete</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.output.Output.failure.html">stilt.output.Output.failure</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.output.Output.failures.html">stilt.output.Output.failures</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.output.Output.folder.html">stilt.output.Output.folder</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.output.Output.folders.html">stilt.output.Output.folders</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.output.Output.hashes.html">stilt.output.Output.hashes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.output.Output.keep_workdir.html">stilt.output.Output.keep_workdir</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.output.Output.kept_workdir.html">stilt.output.Output.kept_workdir</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.output.Output.log_path.html">stilt.output.Output.log_path</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.output.Output.logged.html">stilt.output.Output.logged</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.output.Output.path.html">stilt.output.Output.path</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.output.Output.present.html">stilt.output.Output.present</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.output.Output.record_failure.html">stilt.output.Output.record_failure</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.output.Output.table.html">stilt.output.Output.table</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.output.Output.write_empty_footprint.html">stilt.output.Output.write_empty_footprint</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.output.Output.write_footprint.html">stilt.output.Output.write_footprint</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.output.Output.write_log.html">stilt.output.Output.write_log</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.output.Output.write_particles.html">stilt.output.Output.write_particles</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.output.completed.html">stilt.output.completed</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="_api/stilt.footprint.Jacobian.html">stilt.footprint.Jacobian</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.footprint.Jacobian.count.html">stilt.footprint.Jacobian.count</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.footprint.Jacobian.index.html">stilt.footprint.Jacobian.index</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.footprint.Jacobian.to_frame.html">stilt.footprint.Jacobian.to_frame</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.footprint.Jacobian.to_xarray.html">stilt.footprint.Jacobian.to_xarray</a></li>
+</ul>
+</details></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="hysplit.html">HYSPLIT Integration</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="_api/stilt.transport.hysplit.HysplitConfig.html">stilt.transport.hysplit.HysplitConfig</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.hysplit.HysplitConfig.hourly_ziscale.html">stilt.transport.hysplit.HysplitConfig.hourly_ziscale</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.hysplit.HysplitConfig.realizations.html">stilt.transport.hysplit.HysplitConfig.realizations</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_api/stilt.transport.hysplit.HysplitConfig.settings.html">stilt.transport.hysplit.HysplitConfig.settings</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.transport.hysplit.write_inputs.html">stilt.transport.hysplit.write_inputs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.transport.hysplit.run_hycs_std.html">stilt.transport.hysplit.run_hycs_std</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.transport.hysplit.read_particle_dat.html">stilt.transport.hysplit.read_particle_dat</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.transport.hysplit.FailureReason.html">stilt.transport.hysplit.FailureReason</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="exceptions.html">Exceptions</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.StiltError.html">stilt.StiltError</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.exceptions.SimulationError.html">stilt.exceptions.SimulationError</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.exceptions.MeteorologyError.html">stilt.exceptions.MeteorologyError</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.exceptions.HYSPLITNotFoundError.html">stilt.exceptions.HYSPLITNotFoundError</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_api/stilt.exceptions.EmptyFootprint.html">stilt.exceptions.EmptyFootprint</a></li>
+</ul>
+</details></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="index.html" class="nav-link">API Reference</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Output Layout</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="output-layout">
+<h1>Output Layout<a class="headerlink" href="#output-layout" title="Link to this heading">#</a></h1>
+<p>This page describes the files in an output directory, so that a reader in
+R, Julia, DuckDB, or plain pyarrow can read them without PYSTILT. In Python,
+<a class="reference internal" href="_api/stilt.read_particles.html#stilt.read_particles" title="stilt.read_particles"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.read_particles()</span></code></a>, <a class="reference internal" href="_api/stilt.read_footprint.html#stilt.read_footprint" title="stilt.read_footprint"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.read_footprint()</span></code></a>, and
+<a class="reference internal" href="_api/stilt.Project.footprints.html#stilt.Project.footprints" title="stilt.Project.footprints"><code class="xref py py-meth docutils literal notranslate"><span class="pre">stilt.Project.footprints()</span></code></a> do all of this for you.</p>
+<section id="the-folders">
+<h2>The folders<a class="headerlink" href="#the-folders" title="Link to this heading">#</a></h2>
+<p>Each kind of result has its own tree. Inside it, each settings folder holds
+the results of one set of settings, split by the receptor’s date:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>&lt;output&gt;/
+  particles/
+    settings=hrrr-7d36c8/
+      _settings.yaml
+      date=2024-07-15/&lt;receptor id&gt;.parquet
+    settings=hrrr-err-b2399e/                 an ensemble
+      _settings.yaml
+      realization=0/date=2024-07-15/&lt;receptor id&gt;.parquet
+      realization=1/date=2024-07-15/&lt;receptor id&gt;.parquet
+  footprints/
+    settings=hrrr-f82d40/
+      _settings.yaml
+      date=2024-07-15/&lt;receptor id&gt;.parquet
+  logs/
+    settings=hrrr-7d36c8/date=2024-07-15/&lt;receptor id&gt;.log
+    settings=hrrr-7d36c8/date=2024-07-15/&lt;receptor id&gt;.failure.yaml
+    settings=hrrr-f82d40/date=2024-07-15/&lt;receptor id&gt;.failure.yaml
+  scratch/
+    settings=hrrr-7d36c8/date=2024-07-15/&lt;receptor id&gt;/
+</pre></div>
+</div>
+<p>A settings folder is named <code class="docutils literal notranslate"><span class="pre">&lt;variant&gt;-&lt;six</span> <span class="pre">characters&gt;</span></code>. The variant is
+the name in <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> that first made the folder, and the six
+characters are the start of its settings hash (below). The date is the
+receptor’s release date in UTC. An ensemble (<code class="docutils literal notranslate"><span class="pre">realizations:</span> <span class="pre">N</span></code>) has a
+<code class="docutils literal notranslate"><span class="pre">realization=k</span></code> folder between the settings folder and the dates.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">logs/</span></code> tree follows the folders of the results:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">&lt;receptor</span> <span class="pre">id&gt;.log</span></code> is the transport model’s log, under the particles’
+settings folder.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&lt;receptor</span> <span class="pre">id&gt;.failure.yaml</span></code> says why a result failed. A failed run
+writes it under the particles’ settings folder. A failed footprint
+writes it under the footprint’s own settings folder, since the
+particles were fine. It is removed when the result is written.</p></li>
+</ul>
+<p><code class="docutils literal notranslate"><span class="pre">scratch/</span></code> holds kept workdirs, one folder per simulation, under the
+particles’ settings folder. A failed run’s workdir is kept, and with
+<code class="docutils literal notranslate"><span class="pre">keep_scratch:</span> <span class="pre">true</span></code> under <code class="docutils literal notranslate"><span class="pre">execution:</span></code> every run’s is.</p>
+<p>The results trees hold only Parquet files and <code class="docutils literal notranslate"><span class="pre">_settings.yaml</span></code>, so each
+reads as one dataset.</p>
+</section>
+<section id="settings-yaml">
+<h2><code class="docutils literal notranslate"><span class="pre">_settings.yaml</span></code><a class="headerlink" href="#settings-yaml" title="Link to this heading">#</a></h2>
+<p>Every settings folder holds a <code class="docutils literal notranslate"><span class="pre">_settings.yaml</span></code>. A particles folder’s:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">hrrr</span>
+<span class="nt">hash</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">7d36c80b3b5a1a33cc355998f5755de469f61c53151a9d1b953fa698c81cd51f</span>
+<span class="nt">pystilt</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.1.0a23</span>
+<span class="nt">settings</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">capemin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">-1</span>
+<span class="w">  </span><span class="c1"># ... every transport parameter, in name order</span>
+<span class="w">  </span><span class="nt">met</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">crop</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">null</span>
+<span class="w">    </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">HRRR</span>
+<span class="w">  </span><span class="nt">model</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">data_files</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">null</span>
+<span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">hysplit</span>
+<span class="w">    </span><span class="nt">version</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">v5.1.0</span>
+<span class="w">  </span><span class="nt">n_hours</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">-24</span>
+<span class="w">  </span><span class="c1"># ...</span>
+</pre></div>
+</div>
+<p>A footprints folder’s adds the particles folder it was made from:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">hrrr</span>
+<span class="nt">hash</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">f82d40aea8c29b2a30b99b1c5a74166937ee4eef5df20aa80407bfb69a3ab7a0</span>
+<span class="nt">particles</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">hrrr-7d36c8</span>
+<span class="nt">particles_hash</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">7d36c80b3b5a1a33cc355998f5755de469f61c53151a9d1b953fa698c81cd51f</span>
+<span class="nt">pystilt</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.1.0a23</span>
+<span class="nt">settings</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">cells_per_target</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4</span>
+<span class="w">  </span><span class="nt">geometry</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">null</span>
+<span class="w">  </span><span class="nt">geometry_hash</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">null</span>
+<span class="w">  </span><span class="nt">grid</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">crs</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">+proj=longlat</span>
+<span class="w">    </span><span class="nt">xmin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">-112.5</span>
+<span class="w">    </span><span class="nt">xmax</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">-111.5</span>
+<span class="w">    </span><span class="nt">xres</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.01</span>
+<span class="w">    </span><span class="nt">ymin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">40.25</span>
+<span class="w">    </span><span class="nt">ymax</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">41.25</span>
+<span class="w">    </span><span class="nt">yres</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.01</span>
+<span class="w">  </span><span class="nt">smooth_factor</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
+<span class="w">  </span><span class="nt">time_integrate</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+<span class="w">  </span><span class="nt">transforms</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[]</span>
+</pre></div>
+</div>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">name</span></code></dt><dd><p>The variant that made the folder.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">hash</span></code></dt><dd><p>The folder’s settings hash, a SHA-256 in hex. The folder name ends in
+its first six characters.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">pystilt</span></code></dt><dd><p>The PYSTILT version that wrote the folder.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">settings</span></code></dt><dd><p>What the results were made with. In a particles folder, the transport
+model’s parameters, <code class="docutils literal notranslate"><span class="pre">met</span></code> (the weather product and its crop), and
+<code class="docutils literal notranslate"><span class="pre">model</span></code> (the transport model and its build). An ensemble adds
+<code class="docutils literal notranslate"><span class="pre">ensemble:</span> <span class="pre">true</span></code>, and realization <code class="docutils literal notranslate"><span class="pre">k</span></code> ran with <code class="docutils literal notranslate"><span class="pre">seed</span> <span class="pre">+</span> <span class="pre">k</span></code>. In a
+footprints folder, the footprint settings, with the grid.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">particles</span></code>, <code class="docutils literal notranslate"><span class="pre">particles_hash</span></code></dt><dd><p>In a footprints folder only: the name and hash of the particles folder.</p>
+</dd>
+</dl>
+<p>A particles folder’s hash covers its <code class="docutils literal notranslate"><span class="pre">settings</span></code> block. A footprints
+folder’s hash covers its <code class="docutils literal notranslate"><span class="pre">settings</span></code> block together with
+<code class="docutils literal notranslate"><span class="pre">particles_hash</span></code>, so the same footprint settings on other particles give
+another folder. Every result file records its folder’s full hash as
+<code class="docutils literal notranslate"><span class="pre">stilt:hash</span></code>.</p>
+</section>
+<section id="particle-files">
+<h2>Particle files<a class="headerlink" href="#particle-files" title="Link to this heading">#</a></h2>
+<p>A particle file is <code class="docutils literal notranslate"><span class="pre">particles/settings=.../date=.../&lt;receptor</span> <span class="pre">id&gt;.parquet</span></code>,
+one row per particle per output step. <a class="reference internal" href="particles.html"><span class="doc">The Particle Table</span></a> describes what each
+column means.</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<colgroup>
+<col style="width: 20.0%" />
+<col style="width: 25.0%" />
+<col style="width: 55.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Column</p></th>
+<th class="head"><p>Stored as</p></th>
+<th class="head"><p>Notes</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">receptor</span></code></p></td>
+<td><p>dictionary of string</p></td>
+<td><p>The receptor id, the same on every row.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">particle</span></code></p></td>
+<td><p>int32</p></td>
+<td><p><a class="reference internal" href="_api/stilt.read_particles.html#stilt.read_particles" title="stilt.read_particles"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.read_particles()</span></code></a> gives it back as float64.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">time</span></code></p></td>
+<td><p>int32</p></td>
+<td><p>Minutes since release, negative for a backward run. Read back as
+float64.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">lon</span></code>, <code class="docutils literal notranslate"><span class="pre">lat</span></code>, <code class="docutils literal notranslate"><span class="pre">zagl</span></code>, and the rest</p></td>
+<td><p>float64</p></td>
+<td><p>The columns <code class="docutils literal notranslate"><span class="pre">varsiwant</span></code> asked HYSPLIT for, plus <code class="docutils literal notranslate"><span class="pre">xhgt</span></code> for a
+column or multipoint receptor.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">datetime</span></code> is not stored: it is the receptor time plus <code class="docutils literal notranslate"><span class="pre">time</span></code>.</p>
+<p>The file’s metadata (Parquet key-value metadata):</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<colgroup>
+<col style="width: 25.0%" />
+<col style="width: 75.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Key</p></th>
+<th class="head"><p>Value</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">stilt:receptor</span></code></p></td>
+<td><p>The receptor as JSON (below).</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">stilt:settings</span></code></p></td>
+<td><p>The run’s settings as JSON, the <code class="docutils literal notranslate"><span class="pre">settings</span></code> block of the folder’s
+<code class="docutils literal notranslate"><span class="pre">_settings.yaml</span></code>.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">stilt:met_files</span></code></p></td>
+<td><p>The met files the run read, a JSON list of paths.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">stilt:hash</span></code></p></td>
+<td><p>The folder’s settings hash.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">stilt:pystilt</span></code></p></td>
+<td><p>The PYSTILT version that wrote the file.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">stilt:realization</span></code></p></td>
+<td><p>The realization number, in an ensemble only.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="footprint-files">
+<h2>Footprint files<a class="headerlink" href="#footprint-files" title="Link to this heading">#</a></h2>
+<p>A footprint file holds only the cells that are not zero:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<colgroup>
+<col style="width: 20.0%" />
+<col style="width: 25.0%" />
+<col style="width: 55.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Column</p></th>
+<th class="head"><p>Stored as</p></th>
+<th class="head"><p>Notes</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">receptor</span></code></p></td>
+<td><p>dictionary of string</p></td>
+<td><p>The receptor id.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">hour</span></code></p></td>
+<td><p>int16</p></td>
+<td><p>The layer, in hours after the receptor time (below).</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">y</span></code></p></td>
+<td><p>int16</p></td>
+<td><p>The cell’s row in the grid, 0 at <code class="docutils literal notranslate"><span class="pre">ymin</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">x</span></code></p></td>
+<td><p>int16</p></td>
+<td><p>The cell’s column in the grid, 0 at <code class="docutils literal notranslate"><span class="pre">xmin</span></code>.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">foot</span></code></p></td>
+<td><p>float32</p></td>
+<td><p>The footprint value, in ppm per (µmol m⁻² s⁻¹).</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The file’s metadata:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<colgroup>
+<col style="width: 25.0%" />
+<col style="width: 75.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Key</p></th>
+<th class="head"><p>Value</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">stilt:receptor</span></code></p></td>
+<td><p>The receptor as JSON.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">stilt:footprint</span></code></p></td>
+<td><p>The footprint settings as JSON, with the grid: the <code class="docutils literal notranslate"><span class="pre">settings</span></code>
+block of the folder’s <code class="docutils literal notranslate"><span class="pre">_settings.yaml</span></code>.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">stilt:hours</span></code></p></td>
+<td><p>Every layer of the footprint, a JSON list such as <code class="docutils literal notranslate"><span class="pre">[-24,</span> <span class="pre">...,</span> <span class="pre">-1]</span></code>.
+It includes layers with no cell left, so a dense array has
+<code class="docutils literal notranslate"><span class="pre">len(stilt:hours)</span></code> layers.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">stilt:name</span></code></p></td>
+<td><p>The variant that made the footprint.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">stilt:empty</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">true</span></code> when no particle reached the grid, else <code class="docutils literal notranslate"><span class="pre">false</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">stilt:hash</span></code></p></td>
+<td><p>The folder’s settings hash.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">stilt:particles_hash</span></code></p></td>
+<td><p>The settings hash of the particles it was made from.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">stilt:pystilt</span></code></p></td>
+<td><p>The PYSTILT version that wrote the file.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">stilt:realization</span></code></p></td>
+<td><p>The realization number, in an ensemble only.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>An empty footprint is a file with no rows and <code class="docutils literal notranslate"><span class="pre">stilt:empty</span></code> set to
+<code class="docutils literal notranslate"><span class="pre">true</span></code>. A file without the key is not empty. An empty footprint is
+complete: the run worked, and nothing reached the grid. Treat it as
+missing, not as a footprint of zeros.</p>
+<section id="the-hour">
+<h3>The hour<a class="headerlink" href="#the-hour" title="Link to this heading">#</a></h3>
+<p>Layer <code class="docutils literal notranslate"><span class="pre">k</span></code> holds the particles’ influence from <code class="docutils literal notranslate"><span class="pre">k</span></code> hours to <code class="docutils literal notranslate"><span class="pre">k</span> <span class="pre">+</span> <span class="pre">1</span></code>
+hours after the receptor time, and is stamped at its start. A particle
+row at <code class="docutils literal notranslate"><span class="pre">time</span></code> minutes falls in layer <code class="docutils literal notranslate"><span class="pre">floor(time</span> <span class="pre">/</span> <span class="pre">60)</span></code>. For a receptor
+at 18:30 on a backward run:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<colgroup>
+<col style="width: 30.0%" />
+<col style="width: 20.0%" />
+<col style="width: 50.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Particle <code class="docutils literal notranslate"><span class="pre">time</span></code> (minutes)</p></th>
+<th class="head"><p>Layer</p></th>
+<th class="head"><p>Covers</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>-1 to -60</p></td>
+<td><p>-1</p></td>
+<td><p>17:30 to 18:30, stamped 17:30</p></td>
+</tr>
+<tr class="row-odd"><td><p>-61 to -120</p></td>
+<td><p>-2</p></td>
+<td><p>16:30 to 17:30, stamped 16:30</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The layers keep the receptor’s minute, so a receptor at 18:30 has layers
+starting at half past. A footprint made with <code class="docutils literal notranslate"><span class="pre">time_integrate:</span> <span class="pre">true</span></code> has
+one layer, hour 0, stamped at the receptor time, which holds the whole run.</p>
+</section>
+<section id="the-grid">
+<h3>The grid<a class="headerlink" href="#the-grid" title="Link to this heading">#</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">x</span></code> and <code class="docutils literal notranslate"><span class="pre">y</span></code> index the grid in <code class="docutils literal notranslate"><span class="pre">stilt:footprint</span></code> (or the folder’s
+<code class="docutils literal notranslate"><span class="pre">_settings.yaml</span></code>):</p>
+<ul class="simple">
+<li><p>The number of columns is <code class="docutils literal notranslate"><span class="pre">floor((xmax</span> <span class="pre">-</span> <span class="pre">xmin)</span> <span class="pre">/</span> <span class="pre">xres)</span></code>, and likewise
+for rows. A partial cell at the edge is dropped, so <code class="docutils literal notranslate"><span class="pre">xmax</span> <span class="pre">=</span> <span class="pre">-110.505</span></code>
+with <code class="docutils literal notranslate"><span class="pre">xmin</span> <span class="pre">=</span> <span class="pre">-113</span></code> and <code class="docutils literal notranslate"><span class="pre">xres</span> <span class="pre">=</span> <span class="pre">0.01</span></code> gives 249 columns.</p></li>
+<li><p>Column <code class="docutils literal notranslate"><span class="pre">i</span></code> is centred on <code class="docutils literal notranslate"><span class="pre">xmin</span> <span class="pre">+</span> <span class="pre">(i</span> <span class="pre">+</span> <span class="pre">0.5)</span> <span class="pre">*</span> <span class="pre">xres</span></code>, and row <code class="docutils literal notranslate"><span class="pre">j</span></code> on
+<code class="docutils literal notranslate"><span class="pre">ymin</span> <span class="pre">+</span> <span class="pre">(j</span> <span class="pre">+</span> <span class="pre">0.5)</span> <span class="pre">*</span> <span class="pre">yres</span></code>. Row 0 is the southern edge.</p></li>
+<li><p>On a projected grid (<code class="docutils literal notranslate"><span class="pre">crs</span></code> other than <code class="docutils literal notranslate"><span class="pre">+proj=longlat</span></code>) the bounds are
+degrees and the resolution is in the projection’s units. Only the
+corners <code class="docutils literal notranslate"><span class="pre">(xmin,</span> <span class="pre">ymin)</span></code> and <code class="docutils literal notranslate"><span class="pre">(xmax,</span> <span class="pre">ymax)</span></code> are transformed to the
+projection, and the cells are laid out between them.</p></li>
+</ul>
+<p>For example, in pyarrow:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pyarrow.parquet</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pq</span>
+
+<span class="n">table</span> <span class="o">=</span> <span class="n">pq</span><span class="o">.</span><span class="n">ParquetFile</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+<span class="n">meta</span> <span class="o">=</span> <span class="n">table</span><span class="o">.</span><span class="n">schema</span><span class="o">.</span><span class="n">metadata</span>
+<span class="n">grid</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">meta</span><span class="p">[</span><span class="sa">b</span><span class="s2">&quot;stilt:footprint&quot;</span><span class="p">])[</span><span class="s2">&quot;grid&quot;</span><span class="p">]</span>
+<span class="n">hours</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">meta</span><span class="p">[</span><span class="sa">b</span><span class="s2">&quot;stilt:hours&quot;</span><span class="p">])</span>
+<span class="n">nx</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">((</span><span class="n">grid</span><span class="p">[</span><span class="s2">&quot;xmax&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="n">grid</span><span class="p">[</span><span class="s2">&quot;xmin&quot;</span><span class="p">])</span> <span class="o">/</span> <span class="n">grid</span><span class="p">[</span><span class="s2">&quot;xres&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="mf">1e-9</span><span class="p">))</span>
+<span class="n">ny</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">((</span><span class="n">grid</span><span class="p">[</span><span class="s2">&quot;ymax&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="n">grid</span><span class="p">[</span><span class="s2">&quot;ymin&quot;</span><span class="p">])</span> <span class="o">/</span> <span class="n">grid</span><span class="p">[</span><span class="s2">&quot;yres&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="mf">1e-9</span><span class="p">))</span>
+<span class="n">foot</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">hours</span><span class="p">),</span> <span class="n">ny</span><span class="p">,</span> <span class="n">nx</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;float32&quot;</span><span class="p">)</span>
+<span class="n">layer</span> <span class="o">=</span> <span class="p">{</span><span class="n">h</span><span class="p">:</span> <span class="n">i</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">h</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">hours</span><span class="p">)}</span>
+<span class="n">t</span> <span class="o">=</span> <span class="p">[</span><span class="n">layer</span><span class="p">[</span><span class="n">h</span><span class="p">]</span> <span class="k">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="n">table</span><span class="p">[</span><span class="s2">&quot;hour&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_pylist</span><span class="p">()]</span>
+<span class="n">foot</span><span class="p">[</span><span class="n">t</span><span class="p">,</span> <span class="n">table</span><span class="p">[</span><span class="s2">&quot;y&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span> <span class="n">table</span><span class="p">[</span><span class="s2">&quot;x&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()]</span> <span class="o">=</span> <span class="n">table</span><span class="p">[</span><span class="s2">&quot;foot&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>The small tolerance keeps the last whole cell when the bounds are decimals
+that binary floats store a little short.</p>
+</section>
+<section id="units">
+<h3>Units<a class="headerlink" href="#units" title="Link to this heading">#</a></h3>
+<p>Footprint values are in ppm per (µmol m⁻² s⁻¹), <code class="docutils literal notranslate"><span class="pre">ppm</span> <span class="pre">m2</span> <span class="pre">s</span> <span class="pre">umol-1</span></code>. The
+files do not say so; <a class="reference internal" href="_api/stilt.read_footprint.html#stilt.read_footprint" title="stilt.read_footprint"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.read_footprint()</span></code></a> adds the units to the
+array it returns.</p>
+</section>
+</section>
+<section id="receptor-ids-and-the-receptor">
+<h2>Receptor ids and the receptor<a class="headerlink" href="#receptor-ids-and-the-receptor" title="Link to this heading">#</a></h2>
+<p>A receptor id is the release time to the minute, then the location:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>202407151830_-111.85_40.77_5            a point: lon_lat_altitude
+202407151830_-111.85_40.77_X0-3000msl   a column: lon_lat_X&lt;bottom&gt;-&lt;top&gt;
+202407151830_multi_7bb3ffdc53           a multipoint: a hash of its points
+</pre></div>
+</div>
+<p>A location ends in <code class="docutils literal notranslate"><span class="pre">msl</span></code> when its heights are above sea level. Whole
+numbers are written without a decimal point.</p>
+<p><code class="docutils literal notranslate"><span class="pre">stilt:receptor</span></code> holds the whole receptor as JSON. Its <code class="docutils literal notranslate"><span class="pre">time</span></code> keeps
+the seconds, and is UTC with no time zone:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>{&quot;kind&quot;: &quot;point&quot;, &quot;time&quot;: &quot;2024-07-15T18:30:00&quot;, &quot;altitude_ref&quot;: &quot;agl&quot;,
+ &quot;longitude&quot;: -111.85, &quot;latitude&quot;: 40.77, &quot;altitude&quot;: 5.0}
+
+{&quot;kind&quot;: &quot;column&quot;, &quot;time&quot;: &quot;2024-07-15T18:30:00&quot;, &quot;altitude_ref&quot;: &quot;msl&quot;,
+ &quot;longitude&quot;: -111.85, &quot;latitude&quot;: 40.77, &quot;bottom&quot;: 0.0, &quot;top&quot;: 3000.0}
+
+{&quot;kind&quot;: &quot;multipoint&quot;, &quot;time&quot;: &quot;2024-07-15T18:30:00&quot;, &quot;altitude_ref&quot;: &quot;agl&quot;,
+ &quot;longitudes&quot;: [-111.85, -111.86], &quot;latitudes&quot;: [40.77, 40.78],
+ &quot;altitudes&quot;: [5.0, 10.0]}
+</pre></div>
+</div>
+</section>
+<section id="reading-many-files">
+<h2>Reading many files<a class="headerlink" href="#reading-many-files" title="Link to this heading">#</a></h2>
+<p>Read as a dataset with hive partitioning, a tree gives the folder names as
+columns: <code class="docutils literal notranslate"><span class="pre">settings</span></code>, <code class="docutils literal notranslate"><span class="pre">date</span></code>, and in an ensemble <code class="docutils literal notranslate"><span class="pre">realization</span></code>.
+DuckDB (<code class="docutils literal notranslate"><span class="pre">hive_partitioning</span> <span class="pre">=</span> <span class="pre">true</span></code>), polars, R’s arrow, and
+<code class="docutils literal notranslate"><span class="pre">pyarrow.dataset</span></code> all do this. A reader of one file gets only the stored
+columns. <a class="reference internal" href="../guides/outputs.html"><span class="doc">Footprints And Particles</span></a> has DuckDB examples.</p>
+</section>
+<section id="keys-you-do-not-know">
+<h2>Keys you do not know<a class="headerlink" href="#keys-you-do-not-know" title="Link to this heading">#</a></h2>
+<p>A reader should skip metadata keys and <code class="docutils literal notranslate"><span class="pre">_settings.yaml</span></code> keys it does not
+know. Later versions may add some, and files rewritten from development
+builds may still carry old ones, such as an empty <code class="docutils literal notranslate"><span class="pre">stilt:empty_reason</span></code>.</p>
+</section>
+<section id="which-rules-a-file-follows">
+<h2>Which rules a file follows<a class="headerlink" href="#which-rules-a-file-follows" title="Link to this heading">#</a></h2>
+<p>A file follows the rules of the PYSTILT version that wrote it:
+<code class="docutils literal notranslate"><span class="pre">stilt:pystilt</span></code> in a result file, and <code class="docutils literal notranslate"><span class="pre">pystilt</span></code> in a
+<code class="docutils literal notranslate"><span class="pre">_settings.yaml</span></code>. There is no separate format number. This page
+describes the files of the current version, and the list below says when
+a rule changed.</p>
+<ul class="simple">
+<li><p><strong>0.1.0a23</strong>: the first release with this layout. Results moved from
+<code class="docutils literal notranslate"><span class="pre">simulations/by-id/</span></code> to the output directory, particles and footprints
+are Parquet files in settings folders, and an empty footprint is marked
+<code class="docutils literal notranslate"><span class="pre">stilt:empty</span></code>. Files from development builds before it carry a
+version ending in <code class="docutils literal notranslate"><span class="pre">.dev...</span></code>, and may differ.</p></li>
+</ul>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="_api/stilt.particles.correct_near_field.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">stilt.particles.correct_near_field</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="configuration.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Configuration</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-folders">The folders</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#settings-yaml"><code class="docutils literal notranslate"><span class="pre">_settings.yaml</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#particle-files">Particle files</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#footprint-files">Footprint files</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#the-hour">The hour</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#the-grid">The grid</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#units">Units</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#receptor-ids-and-the-receptor">Receptor ids and the receptor</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#reading-many-files">Reading many files</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#keys-you-do-not-know">Keys you do not know</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#which-rules-a-file-follows">Which rules a file follows</a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  <div class="tocsection sourcelink">
+    <a href="../_sources/reference/layout.rst.txt">
+      <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2026, James Mineau.
+      <br/>
+    
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.1.0.
+  </p>
+</div>
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.22.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

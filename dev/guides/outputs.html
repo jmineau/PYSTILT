@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=6192170d"></script>
+    <script src="../_static/documentation_options.js?v=c5076060"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
     <link rel="prev" title="Checking A Run" href="checking.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev275+g08fc11f45" />
+  <meta name="docsearch:version" content="0.1.0a23.dev281+g84fcbbf53" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -738,7 +738,9 @@ observations merged with <code class="docutils literal notranslate"><span class=
 does a boolean mask over <code class="docutils literal notranslate"><span class="pre">project.simulations</span></code>.</p>
 <p>The footprints of one variant come back as one <a class="reference external" href="https://docs.xarray.dev/en/stable/generated/xarray.Dataset.html#xarray.Dataset" title="(in xarray v2026.9.0)"><code class="xref py py-class docutils literal notranslate"><span class="pre">xarray.Dataset</span></code></a>.
 Receptors at different times line up on <code class="docutils literal notranslate"><span class="pre">hour</span></code>, the hours after each
-receptor’s time, so a backward run’s first hour is -1. The <code class="docutils literal notranslate"><span class="pre">time</span></code>
+receptor’s time, so a backward run’s first hour is -1. One footprint
+(<code class="docutils literal notranslate"><span class="pre">sim.footprint</span></code>) has <code class="docutils literal notranslate"><span class="pre">time</span></code> in place of <code class="docutils literal notranslate"><span class="pre">hour</span></code>, its dimensions
+<code class="docutils literal notranslate"><span class="pre">(time,</span> <span class="pre">lat,</span> <span class="pre">lon)</span></code>. The <code class="docutils literal notranslate"><span class="pre">time</span></code>
 coordinate says when each of a receptor’s hours starts:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">footprints</span><span class="o">.</span><span class="n">foot</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="s2">&quot;hour&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="s2">&quot;receptor&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">plot</span><span class="p">()</span>   <span class="c1"># the mean footprint</span>
 <span class="n">footprints</span><span class="o">.</span><span class="n">foot</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">receptor</span><span class="o">=</span><span class="n">rid</span><span class="p">)</span>                     <span class="c1"># one receptor&#39;s hours</span>
@@ -800,6 +802,8 @@ several.</p>
 </section>
 <section id="without-pystilt">
 <h2>Without PYSTILT<a class="headerlink" href="#without-pystilt" title="Link to this heading">#</a></h2>
+<p><a class="reference internal" href="../reference/layout.html"><span class="doc">Output Layout</span></a> describes every file and metadata key, for a
+reader in another language.</p>
 <p>The output directory is a set of Parquet files in folders named
 <code class="docutils literal notranslate"><span class="pre">settings=...</span></code> and <code class="docutils literal notranslate"><span class="pre">date=...</span></code>, which many tools read as columns. With
 <a class="reference external" href="https://duckdb.org">DuckDB</a>, from Python, R, or its own shell, a

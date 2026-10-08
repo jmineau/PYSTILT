@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../_static/documentation_options.js?v=6192170d"></script>
+    <script src="../../_static/documentation_options.js?v=c5076060"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
     <link rel="prev" title="HYSPLIT Integration" href="../hysplit.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev275+g08fc11f45" />
+  <meta name="docsearch:version" content="0.1.0a23.dev281+g84fcbbf53" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -535,13 +535,14 @@
 <li class="toctree-l2"><a class="reference internal" href="stilt.identity.transport_from_settings.html">stilt.identity.transport_from_settings</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.identity.footprint_settings.html">stilt.identity.footprint_settings</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.identity.read_footprint_settings.html">stilt.identity.read_footprint_settings</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.identity.footprint_hash.html">stilt.identity.footprint_hash</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.identity.settings_hash.html">stilt.identity.settings_hash</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.transport.ModelInfo.html">stilt.transport.ModelInfo</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.read_particles.html">stilt.read_particles</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.particles.particles_metadata.html">stilt.particles.particles_metadata</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.particles.write_particles.html">stilt.particles.write_particles</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.read_footprint.html">stilt.read_footprint</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stilt.footprint.write_footprint.html">stilt.footprint.write_footprint</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stilt.footprint.write_empty_footprint.html">stilt.footprint.write_empty_footprint</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.footprint.open_footprints.html">stilt.footprint.open_footprints</a></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="stilt.particles.ParticlesAccessor.html">stilt.particles.ParticlesAccessor</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l3"><a class="reference internal" href="stilt.particles.ParticlesAccessor.endpoints.html">stilt.particles.ParticlesAccessor.endpoints</a></li>
@@ -555,7 +556,7 @@
 </ul>
 </details></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.particles.background.html">stilt.particles.background</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stilt.particles.Background.html">stilt.particles.Background</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stilt.particles.Background-class.html">stilt.particles.Background</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.particles.transport_error.html">stilt.particles.transport_error</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.particles.TransportError.html">stilt.particles.TransportError</a></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="stilt.Mesh.html">stilt.Mesh</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
@@ -594,6 +595,7 @@
 <li class="toctree-l2"><a class="reference internal" href="stilt.particles.correct_near_field.html">stilt.particles.correct_near_field</a></li>
 </ul>
 </details></li>
+<li class="toctree-l1"><a class="reference internal" href="../layout.html">Output Layout</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../configuration.html">Configuration</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2 has-children"><a class="reference internal" href="stilt.ProjectConfig.html">stilt.ProjectConfig</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l3"><a class="reference internal" href="stilt.ProjectConfig.declared.html">stilt.ProjectConfig.declared</a></li>
@@ -651,8 +653,22 @@
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.TransportModel.version.html">stilt.transport.TransportModel.version</a></li>
 </ul>
 </details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="stilt.transport.BatchedTransportModel.html">stilt.transport.BatchedTransportModel</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="stilt.transport.BatchedTransportModel.data_files.html">stilt.transport.BatchedTransportModel.data_files</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stilt.transport.BatchedTransportModel.run.html">stilt.transport.BatchedTransportModel.run</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stilt.transport.BatchedTransportModel.run_many.html">stilt.transport.BatchedTransportModel.run_many</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stilt.transport.BatchedTransportModel.version.html">stilt.transport.BatchedTransportModel.version</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="stilt.transport.TransportConfig.html">stilt.transport.TransportConfig</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="stilt.transport.TransportConfig.realizations.html">stilt.transport.TransportConfig.realizations</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stilt.transport.TransportConfig.settings.html">stilt.transport.TransportConfig.settings</a></li>
+</ul>
+</details></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.transport.ModelRun.html">stilt.transport.ModelRun</a></li>
 <li class="toctree-l2"><a class="reference internal" href="stilt.transport.get_model.html">stilt.transport.get_model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stilt.transport.run_model.html">stilt.transport.run_model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stilt.transport.run_model_many.html">stilt.transport.run_model_many</a></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="stilt.transport.hysplit.HysplitModel.html">stilt.transport.hysplit.HysplitModel</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.HysplitModel.data_files.html">stilt.transport.hysplit.HysplitModel.data_files</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stilt.transport.hysplit.HysplitModel.run.html">stilt.transport.hysplit.HysplitModel.run</a></li>
@@ -1164,7 +1180,7 @@ or not at all.</p>
 <td><p><code class="docutils literal notranslate"><span class="pre">False</span></code></p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">z_top</span></code></p></td>
-<td><p>Top of the model domain, in meters above ground.</p></td>
+<td><p>Top of HYSPLIT’s computational domain, in meters above ground.</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">25000.0</span></code></p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ziscale</span></code></p></td>

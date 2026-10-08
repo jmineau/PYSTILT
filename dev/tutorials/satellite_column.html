@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=6192170d"></script>
+    <script src="../_static/documentation_options.js?v=c5076060"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
     <link rel="prev" title="Tutorial: From Footprints To Concentrations" href="flux_inversion.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev275+g08fc11f45" />
+  <meta name="docsearch:version" content="0.1.0a23.dev281+g84fcbbf53" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -638,7 +638,7 @@ the release height.</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>stilt<span class="w"> </span>run<span class="w"> </span>./xch4<span class="w">          </span><span class="c1"># or stilt submit ./xch4 on a cluster</span>
 </pre></div>
 </div>
-<p>Every way of running the model, Slurm included, applies each receptor’s
+<p>Every way of running the transport model, Slurm included, applies each receptor’s
 own kernel, because the table is part of the project.</p>
 </section>
 <section id="step-6-compare-enhancements">
@@ -713,7 +713,7 @@ That air saw no fluxes in the domain, so the field alone gives it
 <section id="your-own-instrument">
 <h2>Your own instrument<a class="headerlink" href="#your-own-instrument" title="Link to this heading">#</a></h2>
 <p>A new instrument needs only a reader: a function that returns a table with
-the columns of <a class="reference internal" href="../reference/observations.html#stilt.observations.readers.schema.SOUNDING_SCHEMA" title="stilt.observations.readers.schema.SOUNDING_SCHEMA"><code class="xref py py-data docutils literal notranslate"><span class="pre">SOUNDING_SCHEMA</span></code></a>. Nothing is
+the columns of <code class="xref py py-data docutils literal notranslate"><span class="pre">SOUNDING_SCHEMA</span></code>. Nothing is
 registered or subclassed. The reader handles the product’s conventions,
 such as unit conversions, quality flags, which variable holds the kernel,
 and how to rebuild the pressure grid. Every step after reading is the same.

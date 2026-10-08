@@ -128,7 +128,9 @@ hours, on a log scale. Cells with more color influenced the measurement more.
 
 The footprint is an :class:`xarray.DataArray` with dimensions
 ``(time, lat, lon)`` and units of ppm per (µmol m⁻² s⁻¹), one map per
-hour. Sum it over time with xarray:
+hour. Many receptors' footprints, from a project, line up on ``hour``
+after each receptor's time instead (``(receptor, hour, lat, lon)``,
+:doc:`../guides/outputs`). Sum it over time with xarray:
 
 .. code-block:: python
 
@@ -190,7 +192,8 @@ folder.
        logs/settings=hrrr-a3f9c2/date=2023-07-15/202307151800_-111.848_40.766_10.log
 
 The folders are :term:`settings folders <settings folder>`, named after
-the variant, ``hrrr``, plus a short hash of the settings it ran with. The
+the variant, ``hrrr``, plus a short code computed from the settings it ran
+with. The
 file name is the :term:`receptor id` (time, longitude, latitude, and
 altitude), and a receptor under a variant is a :term:`simulation`. HYSPLIT's own input files, such as ``CONTROL`` and
 ``SETUP.CFG``, are written to a working directory (the workdir) and

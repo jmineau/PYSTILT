@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="_static/documentation_options.js?v=6192170d"></script>
+    <script src="_static/documentation_options.js?v=c5076060"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/clipboard.min.js?v=a7894cd8"></script>
@@ -60,7 +60,7 @@
     <link rel="prev" title="Roadmap" href="roadmap.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev275+g08fc11f45" />
+  <meta name="docsearch:version" content="0.1.0a23.dev281+g84fcbbf53" />
   
     
     <script src="_static/searchtools.js"></script>
@@ -707,7 +707,7 @@ subdirectory, and older STILT-R listed it twice.</p>
 <li><p>Change <code class="docutils literal notranslate"><span class="pre">STILT_R_SHA</span></code> in <code class="docutils literal notranslate"><span class="pre">.github/workflows/tests.yml</span></code>.</p></li>
 <li><p>Run the fidelity tests locally:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/uataq/stilt<span class="w"> </span>stilt-r-src
-git<span class="w"> </span>-C<span class="w"> </span>stilt-r-src<span class="w"> </span>checkout<span class="w"> </span>&lt;new-sha&gt;
+git<span class="w"> </span>-C<span class="w"> </span>stilt-r-src<span class="w"> </span>checkout<span class="w"> </span>NEW_SHA<span class="w">   </span><span class="c1"># the commit to pin</span>
 <span class="nv">STILT_R_DIR</span><span class="o">=</span><span class="nv">$PWD</span>/stilt-r-src<span class="w"> </span><span class="nv">STILT_TEST_MET_DIR</span><span class="o">=</span>tests/met_cache<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/r_stilt/<span class="w"> </span>-v<span class="w"> </span>-m<span class="w"> </span>fidelity
 </pre></div>

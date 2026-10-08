@@ -1,0 +1,75 @@
+﻿stilt.transport.BatchedTransportModel
+=====================================
+
+.. currentmodule:: stilt.transport
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.. class-signature:: stilt.transport.BatchedTransportModel
+
+
+.. class-parameters:: stilt.transport.BatchedTransportModel
+
+
+
+Methods
+-------
+
+.. autosummary::
+   :toctree:
+
+
+   ~BatchedTransportModel.data_files
+   ~BatchedTransportModel.run
+   ~BatchedTransportModel.run_many
+   ~BatchedTransportModel.version
+
+
+Attributes
+----------
+
+.. autosummary::
+
+   ~BatchedTransportModel.config_class
+   ~BatchedTransportModel.met_config_class
+   ~BatchedTransportModel.batched
+   ~BatchedTransportModel.name
+

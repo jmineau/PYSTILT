@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=6192170d"></script>
+    <script src="../_static/documentation_options.js?v=c5076060"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
     <link rel="prev" title="Internals" href="index.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev275+g08fc11f45" />
+  <meta name="docsearch:version" content="0.1.0a23.dev281+g84fcbbf53" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -528,14 +528,14 @@ machines, or with several projects sharing one output directory.</p>
 <section id="the-result-files-are-the-record">
 <h2>The result files are the record<a class="headerlink" href="#the-result-files-are-the-record" title="Link to this heading">#</a></h2>
 <p>PYSTILT keeps no separate list of which simulations have run. A simulation
-is finished when its result files exist in the output directory
-(<code class="xref py py-attr docutils literal notranslate"><span class="pre">stilt.Simulation.is_complete</span></code>). It needs:</p>
+is complete when the result files its variant makes exist in the output
+directory (<code class="xref py py-attr docutils literal notranslate"><span class="pre">stilt.Simulation.is_complete</span></code>). Today that is:</p>
 <ul class="simple">
 <li><p>the particle file,
 <code class="docutils literal notranslate"><span class="pre">particles/settings=&lt;variant&gt;-&lt;hash&gt;/date=&lt;day&gt;/&lt;receptor&gt;.parquet</span></code></p></li>
 <li><p>the footprint file in the variant’s <code class="docutils literal notranslate"><span class="pre">footprints/</span></code> folder, when the
 variant has a grid. A footprint that no particle reached is a file with
-no rows and the reason in its metadata, and it counts.</p></li>
+no rows, marked <code class="docutils literal notranslate"><span class="pre">stilt:empty:</span> <span class="pre">true</span></code> in its metadata, and it counts.</p></li>
 </ul>
 <p>Each result has one expected path, so checking one simulation is a file
 lookup. For many simulations (<code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">status</span></code>, or planning a run) PYSTILT
@@ -559,6 +559,8 @@ it. <code class="docutils literal notranslate"><span class="pre">project.add_rec
 </section>
 <section id="settings-name-the-folders">
 <h2>Settings name the folders<a class="headerlink" href="#settings-name-the-folders" title="Link to this heading">#</a></h2>
+<p><a class="reference internal" href="../reference/layout.html"><span class="doc">Output Layout</span></a> lists what each <code class="docutils literal notranslate"><span class="pre">_settings.yaml</span></code> and result
+file holds.</p>
 <p>Each variant resolves into two records of settings (<code class="xref py py-mod docutils literal notranslate"><span class="pre">stilt.identity</span></code>).
 Its run settings hold everything that changes the particles: the HYSPLIT
 parameters, the content of the meteorology, and the transport model’s
@@ -591,14 +593,14 @@ Slurm task is handed a batch of receptor IDs.</p>
 </section>
 <section id="where-hysplit-runs">
 <h2>Where HYSPLIT runs<a class="headerlink" href="#where-hysplit-runs" title="Link to this heading">#</a></h2>
-<p>HYSPLIT has to run in a local folder that holds its input files. That
-folder is scratch: <code class="docutils literal notranslate"><span class="pre">compute_root</span></code> if given, else <code class="docutils literal notranslate"><span class="pre">PYSTILT_COMPUTE_ROOT</span></code>,
-else <code class="docutils literal notranslate"><span class="pre">$TMPDIR/pystilt/&lt;project</span> <span class="pre">name&gt;</span></code>. After a successful run the particle
-file and the log are written to the output directory and the folder is
-removed. After a failure the folder is copied to <code class="docutils literal notranslate"><span class="pre">scratch/</span></code> in the output
-directory first, so CONTROL, SETUP.CFG, and MESSAGE survive the job.
-<code class="docutils literal notranslate"><span class="pre">keep_scratch:</span> <span class="pre">true</span></code> under <code class="docutils literal notranslate"><span class="pre">execution:</span></code> in <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> keeps every
-run’s folder.</p>
+<p>HYSPLIT has to run in a local folder that holds its input files, the
+run’s workdir. Workdirs are made in the compute root: <code class="docutils literal notranslate"><span class="pre">compute_root</span></code> if
+given, else <code class="docutils literal notranslate"><span class="pre">PYSTILT_COMPUTE_ROOT</span></code>, else <code class="docutils literal notranslate"><span class="pre">$TMPDIR/pystilt/&lt;project</span>
+<span class="pre">name&gt;</span></code>. After a successful run the particle file and the log are written
+to the output directory and the workdir is removed. After a failure the
+workdir is copied to <code class="docutils literal notranslate"><span class="pre">scratch/</span></code> in the output directory first, so
+CONTROL, SETUP.CFG, and MESSAGE survive the job. <code class="docutils literal notranslate"><span class="pre">keep_scratch:</span> <span class="pre">true</span></code>
+under <code class="docutils literal notranslate"><span class="pre">execution:</span></code> in <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code> keeps every run’s workdir.</p>
 <p>Files are written through a temporary name and renamed into place, so a
 reader never sees a partial file, and two workers that run the same receptor
 by accident produce equivalent files with the last rename winning. No lock
@@ -609,7 +611,8 @@ is needed.</p>
 <p>This controls where PYSTILT runs. It never changes what it calculates, so it
 lives outside <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>.</p>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">PYSTILT_COMPUTE_ROOT</span></code>: the scratch folder where workers run HYSPLIT</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">PYSTILT_COMPUTE_ROOT</span></code>: the compute root, where workers make each run’s
+workdir</p></li>
 </ul>
 </section>
 </section>

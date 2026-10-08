@@ -39,7 +39,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../../_static/documentation_options.js?v=6192170d"></script>
+    <script src="../../../_static/documentation_options.js?v=c5076060"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -58,7 +58,7 @@
     <link rel="search" title="Search" href="../../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev275+g08fc11f45" />
+  <meta name="docsearch:version" content="0.1.0a23.dev281+g84fcbbf53" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -704,8 +704,8 @@
                 <span class="n">foot</span> <span class="o">=</span> <span class="n">ds</span><span class="p">[</span><span class="s2">&quot;foot&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">load</span><span class="p">()</span>
         <span class="n">foot</span><span class="o">.</span><span class="n">attrs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;grid_mapping&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">foot</span>
-    <span class="c1"># One file alone: pq.read_table would add the settings= and date=</span>
-    <span class="c1"># folder names of an output directory as columns.</span>
+    <span class="c1"># One file alone, without the settings= and date= columns that reading</span>
+    <span class="c1"># an output directory as a dataset adds from the folder names.</span>
     <span class="k">with</span> <span class="n">readable</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="k">as</span> <span class="n">source</span><span class="p">:</span>
         <span class="n">table</span> <span class="o">=</span> <span class="n">pq</span><span class="o">.</span><span class="n">ParquetFile</span><span class="p">(</span><span class="n">source</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
     <span class="n">stored</span> <span class="o">=</span> <span class="p">(</span><span class="n">table</span><span class="o">.</span><span class="n">schema</span><span class="o">.</span><span class="n">metadata</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="sa">b</span><span class="s2">&quot;stilt:footprint&quot;</span><span class="p">)</span>
@@ -957,6 +957,8 @@
     <span class="p">}</span>
 
 
+<div class="viewcode-block" id="write_footprint">
+<a class="viewcode-back" href="../../../reference/_api/stilt.footprint.write_footprint.html#stilt.footprint.write_footprint">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">write_footprint</span><span class="p">(</span>
     <span class="n">path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="n">UPath</span><span class="p">,</span>
     <span class="n">foot</span><span class="p">:</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">,</span>
@@ -1038,9 +1040,12 @@
         <span class="n">metadata</span><span class="p">,</span>
         <span class="n">foot</span><span class="o">.</span><span class="n">stilt</span><span class="o">.</span><span class="n">geometry_hash</span> <span class="k">if</span> <span class="n">geometry_hash</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">geometry_hash</span><span class="p">,</span>
     <span class="p">)</span>
-    <span class="k">return</span> <span class="n">write_parquet</span><span class="p">(</span><span class="n">table</span><span class="o">.</span><span class="n">replace_schema_metadata</span><span class="p">(</span><span class="n">meta</span><span class="p">),</span> <span class="n">location</span><span class="p">(</span><span class="n">path</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">write_parquet</span><span class="p">(</span><span class="n">table</span><span class="o">.</span><span class="n">replace_schema_metadata</span><span class="p">(</span><span class="n">meta</span><span class="p">),</span> <span class="n">location</span><span class="p">(</span><span class="n">path</span><span class="p">))</span></div>
 
 
+
+<div class="viewcode-block" id="write_empty_footprint">
+<a class="viewcode-back" href="../../../reference/_api/stilt.footprint.write_empty_footprint.html#stilt.footprint.write_empty_footprint">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">write_empty_footprint</span><span class="p">(</span>
     <span class="n">path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="n">UPath</span><span class="p">,</span>
     <span class="n">receptor</span><span class="p">:</span> <span class="n">Receptor</span><span class="p">,</span>
@@ -1057,7 +1062,8 @@
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">meta</span> <span class="o">=</span> <span class="n">_file_metadata</span><span class="p">(</span><span class="n">receptor</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="p">[],</span> <span class="kc">True</span><span class="p">,</span> <span class="n">metadata</span><span class="p">,</span> <span class="n">geometry_hash</span><span class="p">)</span>
     <span class="n">table</span> <span class="o">=</span> <span class="n">FOOTPRINT_SCHEMA</span><span class="o">.</span><span class="n">empty_table</span><span class="p">()</span><span class="o">.</span><span class="n">replace_schema_metadata</span><span class="p">(</span><span class="n">meta</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">write_parquet</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">location</span><span class="p">(</span><span class="n">path</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">write_parquet</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">location</span><span class="p">(</span><span class="n">path</span><span class="p">))</span></div>
+
 </pre></div>
 
                 </article>

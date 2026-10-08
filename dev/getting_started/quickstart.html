@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=6192170d"></script>
+    <script src="../_static/documentation_options.js?v=c5076060"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
     <link rel="prev" title="Installation" href="installation.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev275+g08fc11f45" />
+  <meta name="docsearch:version" content="0.1.0a23.dev281+g84fcbbf53" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -636,7 +636,9 @@ direction the air came from. The map shows the footprint summed over all 24
 hours, on a log scale. Cells with more color influenced the measurement more.</p>
 <p>The footprint is an <a class="reference external" href="https://docs.xarray.dev/en/stable/generated/xarray.DataArray.html#xarray.DataArray" title="(in xarray v2026.9.0)"><code class="xref py py-class docutils literal notranslate"><span class="pre">xarray.DataArray</span></code></a> with dimensions
 <code class="docutils literal notranslate"><span class="pre">(time,</span> <span class="pre">lat,</span> <span class="pre">lon)</span></code> and units of ppm per (µmol m⁻² s⁻¹), one map per
-hour. Sum it over time with xarray:</p>
+hour. Many receptors’ footprints, from a project, line up on <code class="docutils literal notranslate"><span class="pre">hour</span></code>
+after each receptor’s time instead (<code class="docutils literal notranslate"><span class="pre">(receptor,</span> <span class="pre">hour,</span> <span class="pre">lat,</span> <span class="pre">lon)</span></code>,
+<a class="reference internal" href="../guides/outputs.html"><span class="doc">Footprints And Particles</span></a>). Sum it over time with xarray:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">foot</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="s2">&quot;time&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -687,7 +689,8 @@ folder.</p>
 </pre></div>
 </div>
 <p>The folders are <a class="reference internal" href="glossary.html#term-settings-folder"><span class="xref std std-term">settings folders</span></a>, named after
-the variant, <code class="docutils literal notranslate"><span class="pre">hrrr</span></code>, plus a short hash of the settings it ran with. The
+the variant, <code class="docutils literal notranslate"><span class="pre">hrrr</span></code>, plus a short code computed from the settings it ran
+with. The
 file name is the <a class="reference internal" href="glossary.html#term-receptor-id"><span class="xref std std-term">receptor id</span></a> (time, longitude, latitude, and
 altitude), and a receptor under a variant is a <a class="reference internal" href="glossary.html#term-simulation"><span class="xref std std-term">simulation</span></a>. HYSPLIT’s own input files, such as <code class="docutils literal notranslate"><span class="pre">CONTROL</span></code> and
 <code class="docutils literal notranslate"><span class="pre">SETUP.CFG</span></code>, are written to a working directory (the workdir) and

@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=6192170d"></script>
+    <script src="../_static/documentation_options.js?v=c5076060"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
     <link rel="prev" title="Meteorology" href="meteorology.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev275+g08fc11f45" />
+  <meta name="docsearch:version" content="0.1.0a23.dev281+g84fcbbf53" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -713,7 +713,9 @@ and a <code class="docutils literal notranslate"><span class="pre">seed</span></
 count later only adds realizations.</p>
 </dd>
 <dt><code class="docutils literal notranslate"><span class="pre">model</span></code></dt><dd><p>The transport model, <code class="docutils literal notranslate"><span class="pre">hysplit</span></code> unless set. A model in a package of
-its own is named by its import path.</p>
+its own is named by its import path. The settings record the path as
+written, so naming the same class by another path, such as a
+re-export, gives another settings folder.</p>
 </dd>
 <dt>Any other setting</dt><dd><p>Transport settings (<code class="docutils literal notranslate"><span class="pre">numpar</span></code>, <code class="docutils literal notranslate"><span class="pre">ziscale</span></code>, turbulence, wind errors)
 and footprint settings (<code class="docutils literal notranslate"><span class="pre">grid</span></code>, <code class="docutils literal notranslate"><span class="pre">smooth_factor</span></code>, <code class="docutils literal notranslate"><span class="pre">time_integrate</span></code>,
@@ -757,13 +759,18 @@ directory share it.</p>
     settings=hrrr-a3f9c2/                 # one folder per set of transport settings
       _settings.yaml                      # the settings, written out in full
       date=2023-07-15/&lt;receptor id&gt;.parquet
+    settings=hrrr-err-7be104/             # an ensemble: a folder per realization
+      realization=0/date=2023-07-15/&lt;receptor id&gt;.parquet
   footprints/
     settings=hrrr-93278c/                 # one folder per variant&#39;s footprint settings
       _settings.yaml                      # names the particles folder it was made from
       date=2023-07-15/&lt;receptor id&gt;.parquet
   logs/
     settings=hrrr-a3f9c2/date=2023-07-15/&lt;receptor id&gt;.log
-  scratch/                                # workdirs of failed runs
+    settings=hrrr-a3f9c2/date=2023-07-15/&lt;receptor id&gt;.failure.yaml   # a failed run
+    settings=hrrr-93278c/date=2023-07-15/&lt;receptor id&gt;.failure.yaml   # a failed footprint
+  scratch/
+    settings=hrrr-a3f9c2/date=2023-07-15/&lt;receptor id&gt;/              # a kept workdir
 </pre></div>
 </div>
 <p>Each <a class="reference internal" href="../getting_started/glossary.html#term-settings-folder"><span class="xref std std-term">settings folder</span></a> is named after the variant that first made it,
@@ -775,7 +782,8 @@ settings in full, so a folder explains itself. The logs and the kept
 workdirs are explained in <a class="reference internal" href="checking.html"><span class="doc">Checking A Run</span></a>.</p>
 <p>The folder names are what pyarrow, DuckDB, polars, and R’s <code class="docutils literal notranslate"><span class="pre">arrow</span></code>
 package read as columns, so <code class="docutils literal notranslate"><span class="pre">output/footprints</span></code> opens as one table with
-<code class="docutils literal notranslate"><span class="pre">settings</span></code> and <code class="docutils literal notranslate"><span class="pre">date</span></code> columns, no PYSTILT needed.</p>
+<code class="docutils literal notranslate"><span class="pre">settings</span></code> and <code class="docutils literal notranslate"><span class="pre">date</span></code> columns, no PYSTILT needed. <a class="reference internal" href="../reference/layout.html"><span class="doc">Output Layout</span></a>
+describes every file, for a reader written without PYSTILT.</p>
 <section id="on-an-object-store">
 <h3>On an object store<a class="headerlink" href="#on-an-object-store" title="Link to this heading">#</a></h3>
 <p>The output directory can be on an object store such as Amazon S3 or Google
@@ -794,7 +802,9 @@ editing it, give <code class="docutils literal notranslate"><span class="pre">--
 <span class="pre">output=&quot;s3://my-bucket/slv-2023&quot;)</span></code>.</p>
 <p>Everything else is the same: the folder layout, reruns that skip finished
 simulations, <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">status</span></code>, and loading results. Runs write each result
-straight to the store. HYSPLIT itself still runs in a workdir on local disk
+straight to the store. An output on <code class="docutils literal notranslate"><span class="pre">memory://</span></code> lasts only as long as the
+process that made it, so <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">status</span></code> from a new process finds no
+settings folders there. HYSPLIT itself still runs in a workdir on local disk
 (<code class="docutils literal notranslate"><span class="pre">--compute-root</span></code> or <code class="docutils literal notranslate"><span class="pre">PYSTILT_COMPUTE_ROOT</span></code>). Listing an object store
 takes longer than listing a disk, so <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">status</span></code> on a large project is
 slower.</p>
@@ -803,9 +813,9 @@ slower.</p>
 <section id="reruns-skip-finished-work">
 <h2>Reruns skip finished work<a class="headerlink" href="#reruns-skip-finished-work" title="Link to this heading">#</a></h2>
 <p>Before running, PYSTILT checks which simulations are finished and runs only
-the rest. A simulation is finished when its results exist in the output
-directory: the particle file, and the footprint file if the variant has a
-grid. If the particle file is missing, HYSPLIT runs again, and the
+the rest. A simulation is complete when the result files its variant makes
+exist in the output directory. Today that is the particle file, and the
+footprint file when the variant has a grid. If the particle file is missing, HYSPLIT runs again, and the
 footprints of every variant that shares those particles are remade from
 the new particles.</p>
 <p>So after an interruption, a failed Slurm task, or adding a variant, run the

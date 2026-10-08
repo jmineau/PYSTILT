@@ -8,13 +8,17 @@ Where each simulation stands
 ----------------------------
 
 ``stilt status`` counts the simulations of a project, per variant, and the
-failed ones by reason:
+failed ones by reason. Then it lists the output's settings folders
+(:doc:`projects`):
 
 .. code-block:: text
 
    $ stilt status ./my_project
    Project: /data/my_project  total=1200  complete=1150  failed=42  interrupted=0  pending=8
-   failed: MET_COVERAGE 34, TIMEOUT 8  (why: the .failure.yaml beside each log, under /data/output/logs)
+   failed: MET_COVERAGE 34, TIMEOUT 8  (why: each one's .failure.yaml, under /data/output/logs)
+   Output: /data/output
+     particles   settings=hrrr-5d01e7  1,150 files  hrrr
+     footprints  settings=hrrr-93278c  1,150 files  hrrr
 
 In Python, ``project.status()`` is the same, one row per simulation:
 
@@ -35,19 +39,27 @@ the output directory, so it is the same whoever asks and whenever.
      - What it means
      - What to do
    * - ``complete``
-     - Its particles exist, and its footprint when the variant has a grid.
+     - The result files its variant makes exist in the output directory.
+       Today that is the particle file, and the footprint file when the
+       variant has a grid.
      - Nothing. A rerun skips it.
    * - ``failed``
      - The last run failed. A failure record says why (below).
      - Fix the cause and run again. Only the unfinished simulations run.
    * - ``interrupted``
-     - A run started and was stopped before it finished: a time limit,
-       preemption, Ctrl-C, or a killed process.
+     - The transport model's run started and was stopped before it
+       finished: a time limit, preemption, Ctrl-C, or a killed process.
      - Run again. A Slurm task that gets its two-minute warning requeues
        itself; the rest are picked up by the next ``stilt run``.
    * - ``pending``
-     - Nothing has run yet.
+     - The transport model has not run yet, or the particles exist and the
+       footprint is not made yet.
      - Run the project.
+
+A footprint that is not made yet is ``pending`` whether its step never
+started or was stopped partway. The files cannot tell those apart: a
+footprint variant added later, on particles that already exist, leaves
+the same files.
 
 ``stilt run`` says how its own simulations ended in its exit code: 0 when
 all are complete, 1 when some failed, and 3 when some were interrupted. It
@@ -58,9 +70,12 @@ Why a simulation failed
 -----------------------
 
 A failed simulation does not stop the others. The worker writes a failure
-record, ``<receptor id>.failure.yaml``, beside the simulation's log, and
-goes on. The record is removed when the result is written, so a simulation
-that later succeeds carries no stale note. ``sim.failure`` reads it:
+record, ``<receptor id>.failure.yaml``, in the output's ``logs/`` tree, and
+goes on. A failed run's record is under its particles' settings folder,
+beside the run's log. A failed footprint's record is under the footprint's
+own settings folder (:doc:`../reference/layout`). The record is removed
+when the result is written, so a simulation that later succeeds carries no
+stale note. ``sim.failure`` reads it:
 
 .. code-block:: pycon
 
@@ -72,8 +87,8 @@ that later succeeds carries no stale note. ``sim.failure`` reads it:
 
 ``step`` is ``particles`` when the transport model failed. That fails every
 variant that shares those particles. It is ``footprint`` when only that
-variant's footprint failed. ``message`` is the line of the model's log that
-says what went wrong. An unexpected error, such as a bug, also has a
+variant's footprint failed. ``message`` is the line of the transport model's
+log that says what went wrong. An unexpected error, such as a bug, also has a
 ``traceback``.
 
 The reasons
@@ -127,9 +142,10 @@ and ``sim.kept_workdir`` is where. For HYSPLIT it holds ``CONTROL``,
 ``SETUP.CFG``, and ``MESSAGE``, enough to rerun ``hycs_std`` by hand. Set
 ``keep_scratch: true`` under ``execution:`` to keep every run's workdir.
 
-A run cut off partway leaves a log of one line, saying when and on which
-node it started. That line is how ``status()`` tells ``interrupted`` from
-``pending``.
+A run cut off partway leaves its log, which starts with a line saying when
+and on which node it started. ``status()`` calls a simulation
+``interrupted`` when its log exists and it has no particles and no failure
+record.
 
 Empty footprints
 ----------------

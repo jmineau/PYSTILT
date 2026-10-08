@@ -76,7 +76,8 @@ Glossary
    settings folder
       One folder of results in the :term:`output directory`: everything made
       with one set of settings, named after the variant that first made it
-      and a short hash of the settings, such as ``settings=hrrr-b2399e``. A
+      and a short code computed from the settings, such as
+      ``settings=hrrr-b2399e``. A
       changed setting makes a new folder and never overwrites one, and
       projects with the same settings share a folder. ``stilt status``
       lists them.

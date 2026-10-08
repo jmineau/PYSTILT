@@ -9,14 +9,14 @@ The result files are the record
 -------------------------------
 
 PYSTILT keeps no separate list of which simulations have run. A simulation
-is finished when its result files exist in the output directory
-(:attr:`stilt.Simulation.is_complete`). It needs:
+is complete when the result files its variant makes exist in the output
+directory (:attr:`stilt.Simulation.is_complete`). Today that is:
 
 - the particle file,
   ``particles/settings=<variant>-<hash>/date=<day>/<receptor>.parquet``
 - the footprint file in the variant's ``footprints/`` folder, when the
   variant has a grid. A footprint that no particle reached is a file with
-  no rows and the reason in its metadata, and it counts.
+  no rows, marked ``stilt:empty: true`` in its metadata, and it counts.
 
 Each result has one expected path, so checking one simulation is a file
 lookup. For many simulations (``stilt status``, or planning a run) PYSTILT
@@ -42,6 +42,9 @@ it. ``project.add_receptors()`` appends new receptors to
 
 Settings name the folders
 -------------------------
+
+:doc:`../reference/layout` lists what each ``_settings.yaml`` and result
+file holds.
 
 Each variant resolves into two records of settings (:mod:`stilt.identity`).
 Its run settings hold everything that changes the particles: the HYSPLIT
@@ -80,14 +83,14 @@ Slurm task is handed a batch of receptor IDs.
 Where HYSPLIT runs
 ------------------
 
-HYSPLIT has to run in a local folder that holds its input files. That
-folder is scratch: ``compute_root`` if given, else ``PYSTILT_COMPUTE_ROOT``,
-else ``$TMPDIR/pystilt/<project name>``. After a successful run the particle
-file and the log are written to the output directory and the folder is
-removed. After a failure the folder is copied to ``scratch/`` in the output
-directory first, so CONTROL, SETUP.CFG, and MESSAGE survive the job.
-``keep_scratch: true`` under ``execution:`` in ``config.yaml`` keeps every
-run's folder.
+HYSPLIT has to run in a local folder that holds its input files, the
+run's workdir. Workdirs are made in the compute root: ``compute_root`` if
+given, else ``PYSTILT_COMPUTE_ROOT``, else ``$TMPDIR/pystilt/<project
+name>``. After a successful run the particle file and the log are written
+to the output directory and the workdir is removed. After a failure the
+workdir is copied to ``scratch/`` in the output directory first, so
+CONTROL, SETUP.CFG, and MESSAGE survive the job. ``keep_scratch: true``
+under ``execution:`` in ``config.yaml`` keeps every run's workdir.
 
 Files are written through a temporary name and renamed into place, so a
 reader never sees a partial file, and two workers that run the same receptor
@@ -100,4 +103,5 @@ Environment variables
 This controls where PYSTILT runs. It never changes what it calculates, so it
 lives outside ``config.yaml``.
 
-- ``PYSTILT_COMPUTE_ROOT``: the scratch folder where workers run HYSPLIT
+- ``PYSTILT_COMPUTE_ROOT``: the compute root, where workers make each run's
+  workdir

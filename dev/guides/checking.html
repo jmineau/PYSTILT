@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=6192170d"></script>
+    <script src="../_static/documentation_options.js?v=c5076060"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
     <link rel="prev" title="In Containers (Kubernetes)" href="containers.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev275+g08fc11f45" />
+  <meta name="docsearch:version" content="0.1.0a23.dev281+g84fcbbf53" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -558,10 +558,14 @@ not, and what to do when a footprint looks wrong.</p>
 <section id="where-each-simulation-stands">
 <h2>Where each simulation stands<a class="headerlink" href="#where-each-simulation-stands" title="Link to this heading">#</a></h2>
 <p><code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">status</span></code> counts the simulations of a project, per variant, and the
-failed ones by reason:</p>
+failed ones by reason. Then it lists the output’s settings folders
+(<a class="reference internal" href="projects.html"><span class="doc">Projects And Variants</span></a>):</p>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>$ stilt status ./my_project
 Project: /data/my_project  total=1200  complete=1150  failed=42  interrupted=0  pending=8
-failed: MET_COVERAGE 34, TIMEOUT 8  (why: the .failure.yaml beside each log, under /data/output/logs)
+failed: MET_COVERAGE 34, TIMEOUT 8  (why: each one&#39;s .failure.yaml, under /data/output/logs)
+Output: /data/output
+  particles   settings=hrrr-5d01e7  1,150 files  hrrr
+  footprints  settings=hrrr-93278c  1,150 files  hrrr
 </pre></div>
 </div>
 <p>In Python, <code class="docutils literal notranslate"><span class="pre">project.status()</span></code> is the same, one row per simulation:</p>
@@ -586,7 +590,9 @@ the output directory, so it is the same whoever asks and whenever.</p>
 </thead>
 <tbody>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">complete</span></code></p></td>
-<td><p>Its particles exist, and its footprint when the variant has a grid.</p></td>
+<td><p>The result files its variant makes exist in the output directory.
+Today that is the particle file, and the footprint file when the
+variant has a grid.</p></td>
 <td><p>Nothing. A rerun skips it.</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">failed</span></code></p></td>
@@ -594,18 +600,23 @@ the output directory, so it is the same whoever asks and whenever.</p>
 <td><p>Fix the cause and run again. Only the unfinished simulations run.</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">interrupted</span></code></p></td>
-<td><p>A run started and was stopped before it finished: a time limit,
-preemption, Ctrl-C, or a killed process.</p></td>
+<td><p>The transport model’s run started and was stopped before it
+finished: a time limit, preemption, Ctrl-C, or a killed process.</p></td>
 <td><p>Run again. A Slurm task that gets its two-minute warning requeues
 itself; the rest are picked up by the next <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">run</span></code>.</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">pending</span></code></p></td>
-<td><p>Nothing has run yet.</p></td>
+<td><p>The transport model has not run yet, or the particles exist and the
+footprint is not made yet.</p></td>
 <td><p>Run the project.</p></td>
 </tr>
 </tbody>
 </table>
 </div>
+<p>A footprint that is not made yet is <code class="docutils literal notranslate"><span class="pre">pending</span></code> whether its step never
+started or was stopped partway. The files cannot tell those apart: a
+footprint variant added later, on particles that already exist, leaves
+the same files.</p>
 <p><code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">run</span></code> says how its own simulations ended in its exit code: 0 when
 all are complete, 1 when some failed, and 3 when some were interrupted. It
 exits with 2 when its command line is wrong. A script or a scheduler can
@@ -614,9 +625,12 @@ rerun on 3, and stop to look on 1.</p>
 <section id="why-a-simulation-failed">
 <h2>Why a simulation failed<a class="headerlink" href="#why-a-simulation-failed" title="Link to this heading">#</a></h2>
 <p>A failed simulation does not stop the others. The worker writes a failure
-record, <code class="docutils literal notranslate"><span class="pre">&lt;receptor</span> <span class="pre">id&gt;.failure.yaml</span></code>, beside the simulation’s log, and
-goes on. The record is removed when the result is written, so a simulation
-that later succeeds carries no stale note. <code class="docutils literal notranslate"><span class="pre">sim.failure</span></code> reads it:</p>
+record, <code class="docutils literal notranslate"><span class="pre">&lt;receptor</span> <span class="pre">id&gt;.failure.yaml</span></code>, in the output’s <code class="docutils literal notranslate"><span class="pre">logs/</span></code> tree, and
+goes on. A failed run’s record is under its particles’ settings folder,
+beside the run’s log. A failed footprint’s record is under the footprint’s
+own settings folder (<a class="reference internal" href="../reference/layout.html"><span class="doc">Output Layout</span></a>). The record is removed
+when the result is written, so a simulation that later succeeds carries no
+stale note. <code class="docutils literal notranslate"><span class="pre">sim.failure</span></code> reads it:</p>
 <div class="highlight-pycon notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">sim</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">simulation</span><span class="p">(</span><span class="n">receptor_id</span><span class="p">,</span> <span class="s2">&quot;hrrr&quot;</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">sim</span><span class="o">.</span><span class="n">failure</span>
 <span class="go">{&#39;step&#39;: &#39;particles&#39;, &#39;reason&#39;: &#39;MET_COVERAGE&#39;,</span>
@@ -626,8 +640,8 @@ that later succeeds carries no stale note. <code class="docutils literal notrans
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">step</span></code> is <code class="docutils literal notranslate"><span class="pre">particles</span></code> when the transport model failed. That fails every
 variant that shares those particles. It is <code class="docutils literal notranslate"><span class="pre">footprint</span></code> when only that
-variant’s footprint failed. <code class="docutils literal notranslate"><span class="pre">message</span></code> is the line of the model’s log that
-says what went wrong. An unexpected error, such as a bug, also has a
+variant’s footprint failed. <code class="docutils literal notranslate"><span class="pre">message</span></code> is the line of the transport model’s
+log that says what went wrong. An unexpected error, such as a bug, also has a
 <code class="docutils literal notranslate"><span class="pre">traceback</span></code>.</p>
 <section id="the-reasons">
 <h3>The reasons<a class="headerlink" href="#the-reasons" title="Link to this heading">#</a></h3>
@@ -693,9 +707,10 @@ removed. A failed run’s is kept under <code class="docutils literal notranslat
 and <code class="docutils literal notranslate"><span class="pre">sim.kept_workdir</span></code> is where. For HYSPLIT it holds <code class="docutils literal notranslate"><span class="pre">CONTROL</span></code>,
 <code class="docutils literal notranslate"><span class="pre">SETUP.CFG</span></code>, and <code class="docutils literal notranslate"><span class="pre">MESSAGE</span></code>, enough to rerun <code class="docutils literal notranslate"><span class="pre">hycs_std</span></code> by hand. Set
 <code class="docutils literal notranslate"><span class="pre">keep_scratch:</span> <span class="pre">true</span></code> under <code class="docutils literal notranslate"><span class="pre">execution:</span></code> to keep every run’s workdir.</p>
-<p>A run cut off partway leaves a log of one line, saying when and on which
-node it started. That line is how <code class="docutils literal notranslate"><span class="pre">status()</span></code> tells <code class="docutils literal notranslate"><span class="pre">interrupted</span></code> from
-<code class="docutils literal notranslate"><span class="pre">pending</span></code>.</p>
+<p>A run cut off partway leaves its log, which starts with a line saying when
+and on which node it started. <code class="docutils literal notranslate"><span class="pre">status()</span></code> calls a simulation
+<code class="docutils literal notranslate"><span class="pre">interrupted</span></code> when its log exists and it has no particles and no failure
+record.</p>
 </section>
 </section>
 <section id="empty-footprints">

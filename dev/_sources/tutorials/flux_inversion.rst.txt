@@ -139,8 +139,8 @@ Comparing with observations
    ax.set_ylabel("CH4 enhancement (ppm)")
    plt.tight_layout()
 
-The model gives only the enhancement. Before comparing, subtract a background
-from the observations, or add one to the model. The background is the
+PYSTILT gives only the enhancement. Before comparing, subtract a background
+from the observations, or add one to the modelled enhancement. The background is the
 concentration of the air arriving from outside the domain (see
 :doc:`../guides/background`).
 

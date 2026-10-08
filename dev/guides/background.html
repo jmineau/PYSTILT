@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=6192170d"></script>
+    <script src="../_static/documentation_options.js?v=c5076060"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
     <link rel="prev" title="Wind Error Statistics" href="wind_errors.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev275+g08fc11f45" />
+  <meta name="docsearch:version" content="0.1.0a23.dev281+g84fcbbf53" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -585,8 +585,8 @@ column of your own, such as height above sea level from <code class="docutils li
 nearest grid cell. An endpoint above the top level takes the top level. An
 endpoint outside the field’s grid gets no value and is left out of the
 average. Longitudes from 0 to 360, as in many global models, are handled.</p>
-<p>PYSTILT does not read model files. If your model’s levels vary in space, as
-CarbonTracker’s do, sample it yourself and pass one value per particle
+<p>PYSTILT does not read a global model’s files. If its levels vary in space,
+as CarbonTracker’s do, sample it yourself and pass one value per particle
 instead of a field, as a Series indexed by particle number (<code class="docutils literal notranslate"><span class="pre">particle</span></code>).
 <code class="docutils literal notranslate"><span class="pre">sim.particles.stilt.endpoints()</span></code> gives the endpoints as a table for this,
 and lair’s <code class="docutils literal notranslate"><span class="pre">CarbonTracker.sample</span></code> takes that table directly.</p>

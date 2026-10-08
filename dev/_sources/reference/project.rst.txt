@@ -13,11 +13,6 @@ Project
 
 :class:`stilt.Project` is documented with the :doc:`core`.
 
-.. autosummary::
-   :toctree: _api
-   :nosignatures:
-
-
 Output directory
 ----------------
 

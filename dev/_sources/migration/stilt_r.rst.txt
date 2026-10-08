@@ -136,8 +136,8 @@ only the new variant.
 
 PYSTILT never overwrites a result. STILT-R deletes ``out/by-id`` and starts
 over whenever ``run_trajec = TRUE``. In PYSTILT a variant's results live in
-folders named by a hash of its settings, so changed settings run into a new
-folder and the old one stays until you delete it (see
+:term:`settings folders <settings folder>`, so changed settings run into a
+new folder and the old one stays until you delete it (see
 :doc:`../guides/projects`).
 
 Receptors

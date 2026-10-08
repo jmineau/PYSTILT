@@ -1,0 +1,6 @@
+stilt.transport.BatchedTransportModel.data\_files
+=================================================
+
+.. currentmodule:: stilt.transport
+
+.. automethod:: BatchedTransportModel.data_files

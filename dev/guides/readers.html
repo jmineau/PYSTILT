@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=6192170d"></script>
+    <script src="../_static/documentation_options.js?v=c5076060"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
     <link rel="prev" title="Background" href="background.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev275+g08fc11f45" />
+  <meta name="docsearch:version" content="0.1.0a23.dev281+g84fcbbf53" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -557,7 +557,7 @@
 OCO-2 Lite file, a TCCON site file, or a day of EM27/SUN spectra from GGG.
 The readers in <code class="xref py py-mod docutils literal notranslate"><span class="pre">stilt.observations</span></code> turn each of these into a table
 with one row per sounding. The columns are the same for every instrument
-(<a class="reference internal" href="../reference/observations.html#stilt.observations.readers.schema.SOUNDING_SCHEMA" title="stilt.observations.readers.schema.SOUNDING_SCHEMA"><code class="xref py py-data docutils literal notranslate"><span class="pre">SOUNDING_SCHEMA</span></code></a>), so the rest of the workflow
+(<code class="xref py py-data docutils literal notranslate"><span class="pre">SOUNDING_SCHEMA</span></code>), so the rest of the workflow
 (<a class="reference internal" href="../tutorials/satellite_column.html"><span class="doc">Tutorial: A Satellite Column, Start To Finish</span></a>) is too.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">stilt.observations</span><span class="w"> </span><span class="kn">import</span> <span class="n">read_tropomi_ch4</span>
 
@@ -806,7 +806,7 @@ the path starts at the instrument.</p></li>
 <code class="docutils literal notranslate"><span class="pre">stilt/observations/readers/</span></code>. Use <code class="docutils literal notranslate"><span class="pre">tropomi.py</span></code> for a swath product and
 <code class="docutils literal notranslate"><span class="pre">ggg.py</span></code> for a ground station. The reader holds all of the product’s
 conventions, and its output must have the columns above, which
-<a class="reference internal" href="../reference/observations.html#stilt.observations.readers.schema.SOUNDING_SCHEMA" title="stilt.observations.readers.schema.SOUNDING_SCHEMA"><code class="xref py py-data docutils literal notranslate"><span class="pre">SOUNDING_SCHEMA</span></code></a> lists in code. Keep it a plain
+<code class="xref py py-data docutils literal notranslate"><span class="pre">SOUNDING_SCHEMA</span></code> lists in code. Keep it a plain
 function that returns the table.</p>
 <p>Add a small slice of a real file under <code class="docutils literal notranslate"><span class="pre">tests/observations/data/products</span></code>,
 and a test that calls <a class="reference internal" href="../reference/_api/stilt.observations.check_soundings.html#stilt.observations.check_soundings" title="stilt.observations.check_soundings"><code class="xref py py-func docutils literal notranslate"><span class="pre">check_soundings()</span></code></a> on the
