@@ -201,7 +201,9 @@ does a boolean mask over ``project.simulations``.
 
 The footprints of one variant come back as one :class:`xarray.Dataset`.
 Receptors at different times line up on ``hour``, the hours after each
-receptor's time, so a backward run's first hour is -1. The ``time``
+receptor's time, so a backward run's first hour is -1. One footprint
+(``sim.footprint``) has ``time`` in place of ``hour``, its dimensions
+``(time, lat, lon)``. The ``time``
 coordinate says when each of a receptor's hours starts:
 
 .. code-block:: python

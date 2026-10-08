@@ -39,6 +39,21 @@ build writes its first row one time step after release, and PYSTILT
 matches each particle to its release point from that first position
 (:doc:`../reference/particles`).
 
+What a build reads from PYSTILT
+-------------------------------
+
+PYSTILT writes HYSPLIT's ``CONTROL`` file with each met file as its own
+grid, as STILT-R does. HYSPLIT reads at most 12 grids (``mgrd`` in its
+``DEFGRID.INC``), so a run can read at most 12 met files. With 6-hour
+files that is a run of about 60 hours, and with hourly files about 10. A
+run that needs more stops with ``Numb meteo grids exceed DEFGRID limit``
+in its log. A build compiled with a larger ``mgrd`` reads more.
+
+To rerun a kept workdir by hand, you can edit its ``CONTROL`` file. A
+``#`` starts a comment on the start time, the starting locations, and the
+line with the number of met files. HYSPLIT reads the met directory and
+file lines whole, so a ``#`` there becomes part of the path.
+
 Data tables
 -----------
 

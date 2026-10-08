@@ -161,7 +161,9 @@ three variants make 300 simulations. A variant may set:
 
 ``model``
    The transport model, ``hysplit`` unless set. A model in a package of
-   its own is named by its import path.
+   its own is named by its import path. The settings record the path as
+   written, so naming the same class by another path, such as a
+   re-export, gives another settings folder.
 
 Any other setting
    Transport settings (``numpar``, ``ziscale``, turbulence, wind errors)

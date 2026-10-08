@@ -101,7 +101,10 @@ receptor of a variant that needs particles at once, and a receptor it
 returns no rows for fails alone. A model in a package of its own needs no
 registration: `config.yaml` names it by import path
 (`model: mypkg.models.MyModel`), as a transform's `kind:` is, and every
-process that opens the project imports it from there. A model built into
+process that opens the project imports it from there. The run settings
+record the `model:` string as written, so the same class named by two
+paths (`mypkg.models.MyModel` and a re-export, `mypkg.MyModel`) gets two
+settings folders. Pick one path and keep it. A model built into
 PYSTILT goes in `stilt.transport.MODELS` under a short name instead. Keep
 its package out of the core: the import contracts in `pyproject.toml` say
 how.
