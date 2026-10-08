@@ -52,7 +52,7 @@ def _sim(
 def _trajectories(receptor, params, foot: float = 1e-5) -> pd.DataFrame:
     particles = pd.DataFrame(
         {
-            "time": [-60],
+            "age": [-60],
             "particle": [1],
             "lon": [-111.9],
             "lat": [40.7],
@@ -321,7 +321,9 @@ def test_calc_footprint_uses_the_receptor_kernel_from_a_project_table(
     )
     sim = _sim(tmp_path, point_receptor, footprint=config, directory=tmp_path)
     with_height = _trajectories(point_receptor, sim.variant.transport)
-    with_height["xhgt"] = 10.0  # the kernel weights particles by release height
+    with_height["release_height"] = (
+        10.0  # the kernel weights particles by release height
+    )
     sim.output.write_particles(sim.variant, point_receptor, with_height, [])
     plain = _sim(tmp_path, point_receptor, footprint=FOOT, variant="plain")
     # Same transport settings: the particles are shared.

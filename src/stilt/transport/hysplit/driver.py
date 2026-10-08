@@ -98,15 +98,15 @@ def _bundled_data_dir() -> Path:
 
 #: HYSPLIT's names for the columns the particle table names otherwise
 #: (:data:`stilt.particles.PARTICLE_SCHEMA`); the rest keep HYSPLIT's.
-PARTICLE_COLUMNS = {"indx": "particle", "long": "lon", "lati": "lat"}
+PARTICLE_COLUMNS = {"indx": "particle", "time": "age", "long": "lon", "lati": "lat"}
 
 
 def read_particle_dat(path: str | Path, columns: Sequence[str]) -> pd.DataFrame:
     """
     Read a ``PARTICLE_STILT.DAT`` file as a particle table.
 
-    The ``varsiwant`` codes ``indx``, ``long``, and ``lati`` become the
-    particle table's ``particle``, ``lon``, and ``lat``
+    The ``varsiwant`` codes ``indx``, ``time``, ``long``, and ``lati``
+    become the particle table's ``particle``, ``age``, ``lon``, and ``lat``
     (:data:`PARTICLE_COLUMNS`).
 
     Parameters

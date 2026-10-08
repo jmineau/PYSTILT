@@ -51,7 +51,7 @@ def fake_particles(receptor: PointReceptor, n: int = 50) -> pd.DataFrame:
     time = np.tile(steps, n)
     data = pd.DataFrame(
         {
-            "time": time,
+            "age": time,
             "particle": particle,
             "lon": -111.85 + rng.normal(0, 0.1, len(time)),
             "lat": 40.77 + rng.normal(0, 0.1, len(time)),
@@ -60,7 +60,7 @@ def fake_particles(receptor: PointReceptor, n: int = 50) -> pd.DataFrame:
         }
     )
     data["datetime"] = pd.Timestamp(receptor.time) + pd.to_timedelta(
-        data["time"], unit="min"
+        data["age"], unit="min"
     )
     return data
 

@@ -53,7 +53,7 @@ def particle_pwf(
     ----------
     particles : pandas.DataFrame
         Particle table with ``particle``, ``pres`` (hPa), and ``zagl`` (m), and
-        optionally ``xhgt``, the release height (m). Without ``xhgt`` the
+        optionally ``release_height``, the release height (m). Without ``release_height`` the
         first-step height is used. An MSL receptor also needs ``zsfc``, the
         terrain height (m above sea level).
     surface_pressure : float, optional
@@ -98,7 +98,9 @@ def particle_pwf(
         zsfc = None
         z_fit = zagl
     z_release = (
-        release_coordinate(particles, "xhgt") if "xhgt" in particles.columns else z_fit
+        release_coordinate(particles, "release_height")
+        if "release_height" in particles.columns
+        else z_fit
     )
 
     heights = np.unique(z_release.to_numpy())  # distinct release heights, ascending

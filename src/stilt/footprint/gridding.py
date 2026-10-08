@@ -85,13 +85,13 @@ def _interpolate_early_timesteps(
     min, and 0.5 min to 100 min). ``foot`` is then rescaled so each of those
     three windows keeps its total, as STILT-R does.
     """
-    early = cast(pd.DataFrame, p[np.abs(p["time"]) < 100])
+    early = cast(pd.DataFrame, p[np.abs(p["age"]) < 100])
     if early.empty:
         return p
 
     # Match R: per-particle median(abs(diff(lon/lat))), then median across particles.
     # should_interpolate = median(dx) > xres OR median(dy) > yres
-    sorted_early = early.sort_values(by=["particle", "time"])
+    sorted_early = early.sort_values(by=["particle", "age"])
     diffs = cast(
         pd.DataFrame,
         sorted_early.groupby("particle", sort=False)[["lon", "lat"]].diff().abs(),
@@ -110,7 +110,7 @@ def _interpolate_early_timesteps(
     t_new = _interpolation_times(time_sign)
 
     # Store pre-interpolation foot sums per window for rescaling later.
-    atime = np.abs(p["time"])
+    atime = np.abs(p["age"])
     foot_sums = [
         p.loc[atime <= 10, "foot"].sum(),
         p.loc[(atime > 10) & (atime <= 20), "foot"].sum(),
@@ -118,10 +118,10 @@ def _interpolate_early_timesteps(
     ]
 
     p = _interpolate_particle_tracks(p, t_new=t_new)
-    p["time"] = p["time"].round(1)
+    p["age"] = p["age"].round(1)
 
     # Rescale foot so total influence per window matches original.
-    atime = np.abs(p["time"])
+    atime = np.abs(p["age"])
     masks = [
         atime <= 10,
         (atime > 10) & (atime <= 20),
@@ -140,7 +140,7 @@ def _interpolate_particle_tracks(p: pd.DataFrame, *, t_new: np.ndarray) -> pd.Da
     frames: list[pd.DataFrame] = []
     original_columns = list(p.columns)
     for number, group in p.groupby("particle", sort=False):
-        source_time = group["time"].to_numpy(dtype=float)
+        source_time = group["age"].to_numpy(dtype=float)
         target_time = np.unique(np.concatenate([source_time, t_new]))
         order = np.argsort(source_time)
         sorted_time = source_time[order]
@@ -153,13 +153,13 @@ def _interpolate_particle_tracks(p: pd.DataFrame, *, t_new: np.ndarray) -> pd.Da
         expanded = pd.DataFrame(
             {
                 "particle": np.full(len(target_time), number),
-                "time": target_time,
+                "age": target_time,
             }
         )
         join_group = group.copy(deep=False)
-        join_group["time"] = join_group["time"].astype(float)
+        join_group["age"] = join_group["age"].astype(float)
         frame = expanded.merge(
-            join_group, on=["particle", "time"], how="left", sort=False
+            join_group, on=["particle", "age"], how="left", sort=False
         )
         for col in ["lon", "lat", "foot"]:
             values = group[col].to_numpy(dtype=float)[order][unique_idx]
@@ -179,7 +179,7 @@ def _interpolate_particle_tracks(p: pd.DataFrame, *, t_new: np.ndarray) -> pd.Da
     return (
         pd.concat(frames, ignore_index=True)
         .dropna()
-        .sort_values(["particle", "time"], ascending=[True, False], kind="stable")
+        .sort_values(["particle", "age"], ascending=[True, False], kind="stable")
         .reset_index(drop=True)
     )
 
@@ -335,12 +335,12 @@ def _filter_and_rasterize_particles(
     # Sum foot for particles in the same cell at the same time step.
     p = cast(
         pd.DataFrame,
-        filtered.groupby(["loi", "lai", "time", "rtime"], as_index=False)["foot"].sum(),
+        filtered.groupby(["loi", "lai", "age", "rtime"], as_index=False)["foot"].sum(),
     )
 
     # time_integrate=True collapses all steps into a single layer; otherwise
     # bin into hourly layers for time-resolved output.
-    p["layer"] = 0 if time_integrate else np.floor(p["time"] / 60).astype(int)
+    p["layer"] = 0 if time_integrate else np.floor(p["age"] / 60).astype(int)
     layers = np.sort(np.asarray(p["layer"].unique(), dtype=int))
     return p, layers
 
@@ -438,7 +438,7 @@ def calc_footprint(
     ----------
     particles : pandas.DataFrame
         Particle table, such as :func:`stilt.run_trajectories` returns or
-        ``sim.particles``, with columns ``particle``, ``time`` (minutes since
+        ``sim.particles``, with columns ``particle``, ``age`` (minutes since
         release), ``lon``, ``lat``, and ``foot``.
     receptor : Receptor
         Receptor the particles were released from.
@@ -518,7 +518,7 @@ def calc_footprint(
     p = particles.copy(deep=False)
     n_particles = p["particle"].nunique()
     # time_sign: -1 for backward runs, +1 for forward.
-    time_sign = int(np.sign(p["time"].median()))
+    time_sign = int(np.sign(p["age"].median()))
 
     wrapped_longitude = False
     if is_longlat:
@@ -530,8 +530,8 @@ def calc_footprint(
 
     # rtime = time elapsed since each particle's first output step.
     # Used below to compute kernel bandwidth (particles spread more with time).
-    min_abs_time = p["time"].abs().groupby(p["particle"], sort=False).transform("min")
-    p["rtime"] = p["time"] - time_sign * min_abs_time
+    min_abs_time = p["age"].abs().groupby(p["particle"], sort=False).transform("min")
+    p["rtime"] = p["age"] - time_sign * min_abs_time
 
     if not is_longlat:
         p, xmin, xmax, ymin, ymax = _project_particles_to_crs(

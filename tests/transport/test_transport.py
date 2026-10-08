@@ -121,7 +121,7 @@ def test_run_particles_goes_through_the_model_the_settings_name(
             calls.append({"receptor": receptor, "timeout": timeout, "workdir": workdir})
             particles = pd.DataFrame(
                 {
-                    "time": [-60.0],
+                    "age": [-60.0],
                     "particle": [1.0],
                     "lon": [-111.9],
                     "lat": [40.7],
@@ -176,7 +176,7 @@ class _EchoModel:
         particles = pd.DataFrame(
             {
                 "particle": [1, 1],
-                "time": [-1.0, config.n_hours * 60.0],
+                "age": [-1.0, config.n_hours * 60.0],
                 "lon": [-111.9, -112.0],
                 "lat": [40.7, 40.6],
                 "zagl": [5.0, 20.0],

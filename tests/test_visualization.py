@@ -79,7 +79,7 @@ def grid():
 def minimal_trajectories(receptor):
     data = pd.DataFrame(
         {
-            "time": [-60.0, -30.0, 0.0],
+            "age": [-60.0, -30.0, 0.0],
             "lon": [-111.85, -111.90, -111.95],
             "lat": [40.77, 40.75, 40.73],
             "zagl": [100.0, 200.0, 300.0],

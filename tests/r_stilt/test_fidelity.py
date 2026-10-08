@@ -181,7 +181,7 @@ def _csv(values: float | tuple[float, ...]) -> str:
 def _sorted_trajectory(df: pd.DataFrame, columns: tuple[str, ...]) -> pd.DataFrame:
     return (
         df.loc[:, list(columns)]
-        .sort_values(by=["particle", "time"])
+        .sort_values(by=["particle", "age"])
         .reset_index(drop=True)
     )
 
@@ -329,7 +329,7 @@ def test_forward_hnf_foot_intentionally_differs_from_r(
         pytest.skip(f"[{s.name}] trajectory shared with another scenario")
     _assert_hysplit_binary_matches_r(r_stilt_dir)
 
-    cols = ("particle", "time", "foot", "foot_no_hnf_dilution")
+    cols = ("particle", "age", "foot", "foot_no_hnf_dilution")
     py = _sorted_trajectory(pd.read_parquet(scenario_outputs["traj"]), cols)
     r = _sorted_trajectory(scenario_outputs["r_traj"], cols)
 
@@ -349,7 +349,7 @@ def test_forward_hnf_foot_intentionally_differs_from_r(
         "cumulative sum may have been reverted."
     )
     # PYSTILT's plume is smallest just after release, so its foot starts higher
-    first = py["time"].abs() == py["time"].abs().min()
+    first = py["age"].abs() == py["age"].abs().min()
     assert py_foot[first.to_numpy()].mean() > r_foot[first.to_numpy()].mean()
 
 
@@ -401,13 +401,13 @@ def test_trajectory_matches_r(
         err_msg=f"[{s.name}] particle indices differ.",
     )
     np.testing.assert_array_equal(
-        py_sorted["time"].to_numpy(),
-        r_sorted["time"].to_numpy(),
+        py_sorted["age"].to_numpy(),
+        r_sorted["age"].to_numpy(),
         err_msg=f"[{s.name}] trajectory times differ.",
     )
     np.testing.assert_allclose(
-        py_sorted.drop(columns=["particle", "time"]).to_numpy(dtype=float),
-        r_sorted.drop(columns=["particle", "time"]).to_numpy(dtype=float),
+        py_sorted.drop(columns=["particle", "age"]).to_numpy(dtype=float),
+        r_sorted.drop(columns=["particle", "age"]).to_numpy(dtype=float),
         rtol=1e-7,
         atol=1e-10,
         err_msg=f"[{s.name}] trajectory values differ from STILT-R live output.",
@@ -492,13 +492,13 @@ def test_error_trajectory_matches_r(
         err_msg=f"[{s.name}] error trajectory particle indices differ.",
     )
     np.testing.assert_array_equal(
-        py_sorted["time"].to_numpy(),
-        r_sorted["time"].to_numpy(),
+        py_sorted["age"].to_numpy(),
+        r_sorted["age"].to_numpy(),
         err_msg=f"[{s.name}] error trajectory times differ.",
     )
     np.testing.assert_allclose(
-        py_sorted.drop(columns=["particle", "time"]).to_numpy(dtype=float),
-        r_sorted.drop(columns=["particle", "time"]).to_numpy(dtype=float),
+        py_sorted.drop(columns=["particle", "age"]).to_numpy(dtype=float),
+        r_sorted.drop(columns=["particle", "age"]).to_numpy(dtype=float),
         rtol=1e-7,
         atol=1e-10,
         err_msg=f"[{s.name}] error trajectory values differ from STILT-R.",

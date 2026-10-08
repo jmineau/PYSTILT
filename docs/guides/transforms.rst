@@ -33,7 +33,7 @@ Built-in transforms
 
 ``averaging_kernel`` (:class:`stilt.transforms.AveragingKernel`)
    Multiplies each particle's ``foot`` by the kernel, interpolated to the
-   particle's release height ``xhgt``. The ``levels`` are in metres in the
+   particle's release height, ``release_height``. The ``levels`` are in metres in the
    receptor's vertical reference: above ground, or above sea level for a
    receptor built with ``altitude_ref="msl"``. For a kernel on pressure
    levels (hPa), set ``coordinate: pres``. Outside ``levels`` the kernel
@@ -80,8 +80,8 @@ Built-in transforms
 
 ``first_order_lifetime`` (:class:`stilt.transforms.FirstOrderLifetime`)
    Scales ``foot`` by :math:`\exp(-\text{age} / \tau)`, where
-   :math:`\tau` is ``lifetime_hours``. The age is the particle's transport
-   time, from its ``time`` column.
+   :math:`\tau` is ``lifetime_hours``. The age is the particle's time since
+   release, its ``age`` column.
 
 For satellite and TCCON columns, list ``averaging_kernel`` and then
 ``pressure_weighting``. With no transforms every particle counts equally,
@@ -150,7 +150,7 @@ To see what a transform did, apply it to the particle table yourself:
 .. code-block:: python
 
    weighted = PressureWeighting().apply(sim.particles)
-   weighted.drop_duplicates("particle")[["xhgt", "xpres", "pwf"]]
+   weighted.drop_duplicates("particle")[["release_height", "xpres", "pwf"]]
 
 Writing your own transform
 --------------------------
@@ -175,7 +175,7 @@ unchanged.
        max_height: float = 1500.0
 
        def apply(self, particles, receptor=None, directory=None):
-           z = release_coordinate(particles, "xhgt")           # one value per particle
+           z = release_coordinate(particles, "release_height") # one value per particle
            keep = z.reindex(particles["particle"].to_numpy()) <= self.max_height
            out = particles.copy()
            out["foot"] = np.where(keep.to_numpy(), out["foot"], 0.0)

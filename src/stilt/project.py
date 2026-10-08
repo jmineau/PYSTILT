@@ -857,9 +857,9 @@ class Project:
         sel : DataFrame or mask, optional
             The simulations, as for :meth:`status`. All of them by default.
         columns : list of str, optional
-            Only these particle columns, such as ``["particle", "time",
+            Only these particle columns, such as ``["particle", "age",
             "lon", "lat", "foot"]``, after ``receptor``, ``variant``, and
-            ``realization``. ``datetime`` is built from ``time``. Every
+            ``realization``. ``datetime`` is built from ``age``. Every
             column by default. Fewer columns read faster and take less
             memory.
 
@@ -883,8 +883,8 @@ class Project:
         stored = None
         if columns is not None:
             stored = [c for c in columns if c not in (*first, "datetime")]
-            if with_datetime and "time" not in stored:
-                stored.append("time")
+            if with_datetime and "age" not in stored:
+                stored.append("age")
         frame = self._selected(sel)
         parts = []
         for name, k, rows in _groups(frame):

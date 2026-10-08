@@ -45,12 +45,12 @@ class ParticlesAccessor:
         -------
         pandas.DataFrame
             One row per particle, with every column of the particle table.
-            ``time`` is minutes since release and ``datetime`` the UTC time.
+            ``age`` is minutes since release and ``datetime`` the UTC time.
         """
         p = self._particles.reset_index(drop=True)
         if p.empty:
             return p
-        reach = p["time"].abs()
+        reach = p["age"].abs()
         last = reach.groupby(p["particle"], sort=False).idxmax().to_numpy(dtype=int)
         return p.iloc[last]
 

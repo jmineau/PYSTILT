@@ -261,7 +261,9 @@ def _met_config(tmp_path):
 
 def test_model_config_yaml_roundtrip_with_footprint_transforms(tmp_path, grid):
     given = [
-        AveragingKernel(levels=[0.0, 1000.0], values=[0.2, 0.8], coordinate="xhgt"),
+        AveragingKernel(
+            levels=[0.0, 1000.0], values=[0.2, 0.8], coordinate="release_height"
+        ),
         PressureWeighting(),
         FirstOrderLifetime(lifetime_hours=4.0),
     ]
@@ -416,7 +418,7 @@ def test_model_config_loads_footprint_transforms_from_yaml(tmp_path):
           - kind: averaging_kernel
             levels: [0.0, 1000.0]
             values: [0.3, 0.7]
-            coordinate: xhgt
+            coordinate: release_height
           - kind: pressure_weighting
           - kind: first_order_lifetime
             lifetime_hours: 3.0
@@ -435,7 +437,7 @@ def test_model_config_loads_footprint_transforms_from_yaml(tmp_path):
     assert isinstance(transforms[0], AveragingKernel)
     assert transforms[0].levels == [0.0, 1000.0]
     assert transforms[0].values == [0.3, 0.7]
-    assert transforms[0].coordinate == "xhgt"
+    assert transforms[0].coordinate == "release_height"
     assert isinstance(transforms[1], PressureWeighting)
     assert transforms[1].surface_pressure is None
     assert isinstance(transforms[2], FirstOrderLifetime)

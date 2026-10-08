@@ -95,7 +95,9 @@ def test_netcdf_roundtrip_prefers_stored_name_attr(tmp_path):
 
 def test_netcdf_roundtrip_preserves_transforms(tmp_path):
     foot = make_footprint(n_times=1)
-    kernel = AveragingKernel(levels=[0.0, 1000.0], values=[0.1, 0.9], coordinate="xhgt")
+    kernel = AveragingKernel(
+        levels=[0.0, 1000.0], values=[0.1, 0.9], coordinate="release_height"
+    )
     config = FootprintConfig(grid=foot.stilt.grid, transforms=[kernel])
     foot = as_footprint(foot, foot.stilt.receptor, config, "slv")
     sim_dir = tmp_path / "202301011200_-111.85_40.77_5"

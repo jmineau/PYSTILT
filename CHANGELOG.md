@@ -39,7 +39,11 @@ layout; `docs/migration/` covers moving from STILT-R, X-STILT, and stiltctl.
   DataArray (was a `Footprint`), with PYSTILT's methods in the `.stilt`
   accessor (`foot.stilt.plot.map()`, `.enhancement(flux)`,
   `.aggregate(...)`); `foot.sum("time")` replaces `integrate_over_time()`.
-  The particle columns `indx`, `long`, `lati` are `particle`, `lon`, `lat`.
+  The particle columns `indx`, `time`, `long`, `lati`, and `xhgt` are
+  `particle`, `age`, `lon`, `lat`, and `release_height`; `varsiwant` keeps
+  HYSPLIT's codes. `age` is still minutes since release, negative on a
+  backward run. An averaging kernel's `coordinate` is `release_height`
+  unless set, so a footprint made with one gets a new settings folder.
 - A config declares its variants, and is checked when it loads
   (breaking). Without `variants:` a config no longer runs one variant per
   met. An unknown key is an error naming the nearest setting. `from:` is

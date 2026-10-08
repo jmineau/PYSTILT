@@ -66,7 +66,7 @@ def _receptor(hour: int, longitude: float = -111.85, **attrs) -> PointReceptor:
 def _particles() -> pd.DataFrame:
     return pd.DataFrame(
         {
-            "time": [-60.0, -120.0],
+            "age": [-60.0, -120.0],
             "particle": [1.0, 1.0],
             "lon": [-113.9, -113.5],
             "lat": [39.7, 39.6],

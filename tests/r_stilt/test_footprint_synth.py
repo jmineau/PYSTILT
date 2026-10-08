@@ -87,7 +87,7 @@ _VEGHT = 0.5  # default STILT veght
 
 #: PYSTILT's particle columns, by STILT-R's names. The tables here are built
 #: with STILT-R's names, which its helpers read; PYSTILT gets them renamed.
-_PY_NAMES = {"indx": "particle", "long": "lon", "lati": "lat"}
+_PY_NAMES = {"indx": "particle", "time": "age", "long": "lon", "lati": "lat"}
 _R_NAMES = {py: r for r, py in _PY_NAMES.items()}
 
 
@@ -260,7 +260,7 @@ def _py_footprint_stages(
     is_longlat = "+proj=longlat" in projection
 
     p = _as_py(particles).copy(deep=False)
-    time_sign = int(np.sign(p["time"].median()))
+    time_sign = int(np.sign(p["age"].median()))
     if is_longlat:
         p, xmin, xmax, _ = _wrap_antimeridian_longitudes(p, xmin=xmin, xmax=xmax)
 
@@ -269,12 +269,12 @@ def _py_footprint_stages(
     )
     p_with_rtime = p_after_interp.copy()
     min_abs_time = (
-        p_with_rtime["time"]
+        p_with_rtime["age"]
         .abs()
         .groupby(p_with_rtime["particle"], sort=False)
         .transform("min")
     )
-    p_with_rtime["rtime"] = p_with_rtime["time"] - time_sign * min_abs_time
+    p_with_rtime["rtime"] = p_with_rtime["age"] - time_sign * min_abs_time
 
     if not is_longlat:
         p_with_rtime, xmin, xmax, ymin, ymax = _project_particles_to_crs(
@@ -334,7 +334,7 @@ def _py_footprint_stages(
         "grid_x": pd.DataFrame({"axis": "x", "value": glong}),
         "grid_y": pd.DataFrame({"axis": "y", "value": glati}),
         "kernel": kernel_out[["rtime", "varsum", "lati", "w"]].reset_index(drop=True),
-        "raster": raster.reset_index(drop=True),
+        "raster": raster.rename(columns={"age": "time"}).reset_index(drop=True),
     }
 
 

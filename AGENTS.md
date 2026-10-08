@@ -32,7 +32,7 @@ v1.0**, so prefer the clean design over a compatibility shim.
 |---|---|
 | PyPI distribution | `pystilt` |
 | Import name | `stilt` (`import stilt`, never `import pystilt`) |
-| Particle columns | `particle`, `lon`, `lat` for HYSPLIT's and STILT-R's `indx`, `long`, `lati` (mapped in `read_particle_dat`); the rest keep STILT-R's names (`time`, `zagl`, `foot`, `mlht`, ...) |
+| Particle columns | The core columns get plain names: `particle`, `age`, `lon`, `lat` for HYSPLIT's and STILT-R's `indx`, `time`, `long`, `lati` (mapped in `read_particle_dat`), and `release_height` for STILT-R's `xhgt`. `zagl`, `foot`, and the rest keep HYSPLIT's codes, the names `varsiwant` asks for them by (`mlht`, `samt`, ...) |
 | Source directory | `src/stilt/` |
 | CLI entry point | `stilt` (Typer; see `[project.scripts]`) |
 | Config | What the user writes: always a class (`ProjectConfig`, `FootprintConfig`, `ExecutionConfig`, a model's `HysplitConfig` and its met config, `MetConfig`), each next to the code that uses it |
@@ -683,8 +683,8 @@ The README links to it and keeps no table of its own.
   lines: bottom and top), and why a `MultiPointReceptor` may not repeat a
   horizontal location (the constructor raises). The bundled build releases
   column particles bottom-to-top in `indx` order (the table's `particle`), which
-  `add_release_heights` (`particles/table.py`) falls back to for `xhgt` when a
-  model writes no `t = 0` release row.
+  `add_release_heights` (`particles/table.py`) falls back to for `release_height` when a
+  model writes no `age = 0` release row.
 - **Pressure weighting is derived from the particles.**
   `PressureWeighting` fits `ln p = b + a·z` to the particles' first-step
   `(zagl, pres)` and gives each distinct release height the pressure slab
@@ -710,20 +710,20 @@ The README links to it and keeps no table of its own.
   `t = -DELT`, never `t = 0`, but the scatter is not only transport:
   `emspnt.f` places each particle uniformly at random inside its own
   `1/numpar` slab. The air a particle represents is its slab, known
-  analytically from `numpar` and the column, which is what `xhgt` is. Particle
+  analytically from `numpar` and the column, which is what `release_height` is. Particle
   data is needed only for the two-parameter `p(z)` fit.
-- **Release heights come from the `t = 0` row.** The particle table's
-  contract asks a model to write each particle's release at `time = 0`. From
+- **Release heights come from the `age = 0` row.** The particle table's
+  contract asks a model to write each particle's release at `age = 0`. From
   it `add_release_heights` (`particles/table.py`, a core step the worker applies
   to any model's particles, as is `correct_near_field`) finds which point of
   a multipoint receptor a particle left from, or which slab of a column;
-  `xhgt` is that point's altitude or that slab's centre, never the random
+  `release_height` is that point's altitude or that slab's centre, never the random
   height inside the slab.
-- **Multipoint and slant `xhgt` recovery** (`_multipoint_release_heights` in
-  `particles/table.py`) prefers, in order: `t = 0` rows if present (exact), a match
+- **Multipoint and slant `release_height` recovery** (`_multipoint_release_heights` in
+  `particles/table.py`) prefers, in order: `age = 0` rows if present (exact), a match
   on height when release altitudes are distinct (about 20 m apart), then
   horizontal position with a warning under 1 km. The bundled HYSPLIT v5.1.0
-  writes no `t = 0` row; until a published build does, `exe_dir`
+  writes no `age = 0` row; until a published build does, `exe_dir`
   can point at a patched `hycs_std`, and nothing needs undoing when one lands.
   The existing multipoint tests space points about 17 km apart, the one regime
   where horizontal matching works; they do not cover close-spaced slants

@@ -113,8 +113,8 @@ The columns you are most likely to use:
      - Particle longitude and latitude (STILT-R's ``long`` / ``lati``)
    * - ``zagl``
      - Particle height above ground, m
-   * - ``time``
-     - Minutes from the receptor time (negative for a backward run)
+   * - ``age``
+     - Minutes since release (negative for a backward run; STILT-R's ``time``)
    * - ``datetime``
      - Time of the row, UTC
    * - ``foot``
@@ -122,8 +122,9 @@ The columns you are most likely to use:
        ppm per (µmol m⁻² s⁻¹)
    * - ``particle``
      - Particle number (STILT-R's ``indx``)
-   * - ``xhgt``
-     - Release height, for column and multipoint receptors
+   * - ``release_height``
+     - Release height, for column and multipoint receptors (STILT-R's
+       ``xhgt``)
    * - ``mlht``, ``sigw``, ``tlgr``, ``pres``
      - Mixed-layer height, vertical velocity spread, Lagrangian time scale,
        and pressure

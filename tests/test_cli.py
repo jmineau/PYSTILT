@@ -155,7 +155,7 @@ def test_status_counts_full_simulation_completion(tmp_path):
     sim = project.simulation(receptor.id, "hrrr")
     particles = pd.DataFrame(
         {
-            "time": [-60.0],
+            "age": [-60.0],
             "particle": [1.0],
             "lon": [-113.5],
             "lat": [39.5],
@@ -762,7 +762,7 @@ def test_status_lists_folders_and_what_differs(tmp_path):
     sim = old.simulation(receptor.id, "hrrr")
     particles = pd.DataFrame(
         {
-            "time": [-60.0],
+            "age": [-60.0],
             "particle": [1.0],
             "lon": [-111.9],
             "lat": [40.7],

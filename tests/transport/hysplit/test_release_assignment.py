@@ -33,8 +33,8 @@ def _raw_particles(receptor, config, met, workdir, timeout):
 
 def _release_time_rows(particles):
     """Return the rows closest to release time, sorted by particle index."""
-    latest_time = particles["time"].max()
-    return particles.loc[particles["time"] == latest_time].sort_values("particle")
+    latest_time = particles["age"].max()
+    return particles.loc[particles["age"] == latest_time].sort_values("particle")
 
 
 def _nearest_release_assignments(release_rows, receptor):
@@ -54,7 +54,7 @@ def test_hysplit_multipoint_release_points_follow_control_order(tmp_path, met_di
     Multipoint particles are assigned to explicit points in CONTROL order.
 
     This test characterizes the compiled HYSPLIT binary directly rather than
-    PYSTILT's later ``xhgt`` reconstruction. It uses a divisible particle count
+    PYSTILT's later ``release_height`` reconstruction. It uses a divisible particle count
     so each explicit release point should receive the same-size contiguous
     ``particle`` block.
     """
@@ -228,7 +228,9 @@ def test_close_spaced_slant_release_heights_are_recovered(tmp_path, met_dir):
 
     release = _release_time_rows(data).drop_duplicates("particle")
     # Each group's actual height should sit at the altitude it was assigned.
-    errors = release.groupby("xhgt")["zagl"].mean() - sorted(set(release["xhgt"]))
+    errors = release.groupby("release_height")["zagl"].mean() - sorted(
+        set(release["release_height"])
+    )
     assert float(np.sqrt((errors**2).mean())) < 60.0
     # and every level received particles
-    assert set(release["xhgt"]) == set(altitudes.tolist())
+    assert set(release["release_height"]) == set(altitudes.tolist())

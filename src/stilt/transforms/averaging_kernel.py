@@ -31,7 +31,7 @@ def ak_weights(
     particles: pd.DataFrame,
     levels: list[float],
     values: list[float],
-    coordinate: str = "xhgt",
+    coordinate: str = "release_height",
 ) -> np.ndarray:
     """
     Return the averaging kernel at each particle's release coordinate.
@@ -48,8 +48,8 @@ def ak_weights(
         Levels the kernel is given on, in the units of ``coordinate``.
     values : list of float
         Kernel value at each level.
-    coordinate : str, default "xhgt"
-        Particle column to interpolate on: ``xhgt`` (release height, m) or
+    coordinate : str, default "release_height"
+        Particle column to interpolate on: ``release_height`` (release height, m) or
         ``pres`` (hPa).
 
     Returns
@@ -60,7 +60,7 @@ def ak_weights(
     if coordinate not in particles.columns:
         raise ValueError(
             f"Particle DataFrame has no column {coordinate!r}. "
-            "Assign release heights ('xhgt') before applying an averaging kernel, "
+            "Assign release heights ('release_height') before applying an averaging kernel, "
             "or pass coordinate='pres' for pressure-based interpolation."
         )
     lv = np.asarray(levels, dtype=float)
@@ -206,8 +206,8 @@ class AveragingKernel(BaseModel):
         ),
     )
     coordinate: str = Field(
-        default="xhgt",
-        description="Particle column the levels refer to: ``xhgt`` (release height) or ``pres``.",
+        default="release_height",
+        description="Particle column the levels refer to: ``release_height`` (release height) or ``pres``.",
     )
 
     @model_validator(mode="after")

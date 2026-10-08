@@ -40,7 +40,7 @@ def _particles():
     return pd.DataFrame(
         {
             "particle": [1, 1, 2, 2, 3, 3],
-            "time": [0.0, -60.0, 0.0, -60.0, -30.0, -120.0],
+            "age": [0.0, -60.0, 0.0, -60.0, -30.0, -120.0],
             "lon": [-111.0, -112.0, -111.0, -110.0, -111.0, -111.0],
             "lat": [40.0, 40.0, 40.0, 41.0, 40.0, 41.0],
             "pres": [900.0, 1000.0, 900.0, 650.0, 900.0, 820.0],
@@ -62,17 +62,17 @@ def test_endpoints_pick_the_largest_abs_time_per_particle():
     ends = _particles().stilt.endpoints()
 
     assert ends["particle"].tolist() == [1, 2, 3]
-    assert ends["time"].tolist() == [-60.0, -60.0, -120.0]
+    assert ends["age"].tolist() == [-60.0, -60.0, -120.0]
 
 
 def test_endpoints_handle_forward_runs_and_duplicate_index():
     p = _particles()
-    p["time"] = -p["time"]
+    p["age"] = -p["age"]
     p.index = [0, 0, 1, 1, 2, 2]
 
     ends = p.stilt.endpoints()
 
-    assert ends["time"].tolist() == [60.0, 60.0, 120.0]
+    assert ends["age"].tolist() == [60.0, 60.0, 120.0]
     assert p.iloc[0:0].stilt.endpoints().empty
 
 
@@ -201,11 +201,11 @@ def _column(n=60, p_sfc=1000.0):
     return pd.DataFrame(
         {
             "particle": np.arange(1, n + 1),
-            "time": np.full(n, -60.0),
+            "age": np.full(n, -60.0),
             "lon": np.full(n, -111.0),
             "lat": np.full(n, 40.0),
             "zagl": z,
-            "xhgt": z,
+            "release_height": z,
             "pres": p_sfc * np.exp(-z / 8000.0),
             "foot": np.ones(n),
         }

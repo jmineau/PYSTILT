@@ -196,7 +196,7 @@ How particles are released
 Advanced: release heights for multipoint and slant receptors
 ------------------------------------------------------------
 
-Vertical weighting needs each particle's release height (``xhgt``). HYSPLIT
+Vertical weighting needs each particle's release height (``release_height``). HYSPLIT
 does not record which release point a particle came from, so PYSTILT works
 it out from the first row HYSPLIT writes for the particle. With the bundled
 HYSPLIT build, that row comes one timestep after release. By then the wind
