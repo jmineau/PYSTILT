@@ -545,13 +545,21 @@ def _init_pool_worker(
     compute_root: str,
     execution: ExecutionConfig,
     skip_existing: bool,
+    rows: pd.DataFrame | None = None,
 ) -> None:
-    """Open the worker process's Project, on the parent's output, and make SIGTERM raise KeyboardInterrupt."""
+    """
+    Open the worker process's Project, on the parent's output, and make SIGTERM raise KeyboardInterrupt.
+
+    *rows* are the receptor rows the parent took in place of
+    ``receptors.csv`` (a Slurm task's), if any.
+    """
     from stilt.project import Project
 
     global _POOL_PROJECT, _POOL_COMPUTE_ROOT, _POOL_EXECUTION, _POOL_SKIP
     signal.signal(signal.SIGTERM, _raise_interrupt)
     _POOL_PROJECT = Project(project, output=output)
+    if rows is not None:
+        _POOL_PROJECT._take_rows(rows)
     _POOL_COMPUTE_ROOT = Path(compute_root)
     _POOL_EXECUTION = execution
     _POOL_SKIP = skip_existing
@@ -655,6 +663,7 @@ def run_receptors(
             str(compute_root),
             execution,
             skip_existing,
+            project._taken_rows,
         ),
     )
     done = 0

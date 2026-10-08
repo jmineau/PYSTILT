@@ -156,7 +156,10 @@ _CPUS = typer.Option(
 _RECEPTORS = typer.Option(
     None,
     "--receptors",
-    help="File of receptor ids, one per line. Only those receptors run.",
+    help=(
+        "File of receptor ids, one per line, or the receptors.parquet a Slurm "
+        "submission writes. Only those receptors run."
+    ),
 )
 _OUTPUT = typer.Option(
     None,
@@ -193,14 +196,23 @@ def _parse_task(task: str) -> tuple[int, int]:
     return i, n
 
 
-def _read_ids(path: Path) -> list[str]:
-    """Return the receptor ids in a file, one per line; blank lines and # comments are skipped."""
+def _read_receptors(path: Path) -> tuple[list[str], pd.DataFrame | None]:
+    """
+    Return the receptor ids in a file, and their checked rows when the file holds them.
+
+    A text file lists ids, one per line; blank lines and # comments are
+    skipped. A Parquet file is the ``receptors.parquet`` a Slurm submission
+    writes: the checked rows of its receptors, in the order they run.
+    """
     try:
+        if path.suffix == ".parquet":
+            rows = pd.read_parquet(path)
+            return list(dict.fromkeys(rows["receptor"].astype(str))), rows
         text = path.read_text()
-    except OSError as error:
+    except (OSError, ValueError, KeyError) as error:
         _fail(f"cannot read {path}: {error}")
     lines = (line.strip() for line in text.splitlines())
-    return [line for line in lines if line and not line.startswith("#")]
+    return [line for line in lines if line and not line.startswith("#")], None
 
 
 def _exit_code(table: pd.DataFrame) -> int:
@@ -222,12 +234,20 @@ def _start(
     compute_root: str | None,
     waits: bool,
     receptor_ids: list[str] | None = None,
+    receptor_rows: pd.DataFrame | None = None,
     task: tuple[int, int] | None = None,
     execution_file: Path | None = None,
     output: str | None = None,
 ) -> tuple[Project, dict[str, Any]]:
-    """Open the project, print what is about to run, and return the run's options."""
+    """
+    Open the project, print what is about to run, and return the run's options.
+
+    With *receptor_rows* (from ``--receptors receptors.parquet``) the
+    project takes its receptors from them, not from ``receptors.csv``.
+    """
     opened = Project(_resolve_project(project), output=output)
+    if receptor_rows is not None:
+        opened._take_rows(receptor_rows)
     if execution_file is None:
         settings = opened.config.execution.model_dump(exclude_unset=True)
     else:
@@ -302,7 +322,9 @@ def run(
     complete, 1 when some failed, 3 when some did not finish, and 2 when
     the command line is wrong.
     """
-    receptor_ids = None if receptors is None else _read_ids(receptors)
+    receptor_ids, rows = (
+        (None, None) if receptors is None else _read_receptors(receptors)
+    )
     share = None if task is None else _parse_task(task)
     opened, options = _start(
         project,
@@ -313,6 +335,7 @@ def run(
         compute_root=compute_root,
         waits=True,
         receptor_ids=receptor_ids,
+        receptor_rows=rows,
         task=share,
         execution_file=execution,
         output=output,
@@ -345,7 +368,9 @@ def submit(
     resources under execution in config.yaml. --receptors limits it to the
     receptors listed in a file. Check on them with stilt status.
     """
-    receptor_ids = None if receptors is None else _read_ids(receptors)
+    receptor_ids, rows = (
+        (None, None) if receptors is None else _read_receptors(receptors)
+    )
     opened, options = _start(
         project,
         backend="slurm",
@@ -355,6 +380,7 @@ def submit(
         compute_root=compute_root,
         waits=False,
         receptor_ids=receptor_ids,
+        receptor_rows=rows,
         output=output,
     )
     try:

@@ -217,9 +217,12 @@ docs/                Sphinx (pydata-sphinx-theme)
    `stilt.execution.run` finds the receptors with missing results and
    either runs them in this process (`backend: local`) or submits them as
    one Slurm job array (`backend: slurm`): `submit` writes
-   `_slurm/<stamp>/{receptors.txt,execution.yaml,job.sh}` and calls
-   `sbatch`, each task runs `stilt run --receptors receptors.txt --task
-   $SLURM_ARRAY_TASK_ID/N --execution execution.yaml`, and `run` waits by
+   `_slurm/<stamp>/{receptors.txt,receptors.parquet,execution.yaml,job.sh}`
+   and calls `sbatch`, each task runs `stilt run --receptors
+   receptors.parquet --task $SLURM_ARRAY_TASK_ID/N --execution
+   execution.yaml` (the parquet holds the submitted receptors' checked
+   rows, which the task's project takes in place of `receptors.csv`), and
+   `run` waits by
    polling `sacct`. `submit` returns the job id at once. A task that stops
    with work left requeues itself (`scontrol requeue`) when it got SIGUSR1,
    which the script asks for two minutes before the time limit
@@ -338,7 +341,8 @@ folder below a kind is hive-style, so each tree reads as one dataset:
   receptors.csv               receptor list; add_receptors() appends new receptors
   tables/<name>.parquet       other inputs, such as kernels; add_table() appends
   _slurm/<stamp>/             one folder per Slurm submission: job.sh,
-                              receptors.txt, execution.yaml, <task>.log
+                              receptors.txt, receptors.parquet,
+                              execution.yaml, <task>.log
 
 <output>/
   particles/settings=<variant>-<hash>/_settings.yaml

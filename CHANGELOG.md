@@ -72,15 +72,16 @@ layout; `docs/migration/` covers moving from STILT-R, X-STILT, and stiltctl.
   the others: `<receptor id>.failure.yaml` beside its log says why
   (`sim.failure`), and each simulation is `complete`, `failed`,
   `interrupted`, or `pending`; `stilt status` counts each, per variant.
-  Exceptions share one base,
-  `stilt.StiltError`, in `stilt.exceptions` (was `stilt.errors`).
+  Exceptions share one base, `stilt.StiltError`, in `stilt.exceptions`
+  (was `stilt.errors`).
 - Running (breaking). `stilt run` (and `project.run()`) runs and
   waits, locally or as a Slurm job array; `stilt submit` (and
   `project.submit()`) submits the array and returns. `--wait/--no-wait` is
-  gone. A submission is a folder `_slurm/<stamp>/` with its `job.sh`;
-  `execution.time` is required, other `sbatch` options go under
-  `execution.slurm`, and a task at its time limit or preempted requeues
-  itself. A job sent to another cluster (`clusters:` under
+  gone. A submission is a folder `_slurm/<stamp>/` with its `job.sh` and
+  `receptors.parquet`, the checked rows its tasks read in place of
+  `receptors.csv`; `execution.time` is required, other `sbatch` options go
+  under `execution.slurm`, and a task at its time limit or preempted
+  requeues itself. A job sent to another cluster (`clusters:` under
   `execution.slurm`) is followed there. `stilt run` exits 0 (complete), 1
   (some failed), or 3 (some interrupted); every command exits 2 on a wrong
   command line. A failed run's workdir is kept under `scratch/` in the
