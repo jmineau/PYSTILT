@@ -107,6 +107,10 @@ layout; `docs/migration/` covers moving from STILT-R, X-STILT, and stiltctl.
 
 ### Added
 
+- The API reference gives every attribute and property its own page, with the
+  class's tables linking to them, and a subclass links to the members it
+  inherits instead of repeating them. Fields a class docstring already
+  describes no longer show as empty rows.
 - `stilt.run_trajectories(receptor, met, params)` and
   `stilt.calc_footprint(particles, receptor, grid)`: one receptor without a
   project, as STILT-R's `calc_trajectory` and `calc_footprint`.
