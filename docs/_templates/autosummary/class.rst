@@ -2,79 +2,21 @@
 
 .. currentmodule:: {{ module }}
 
-{% set hidden = [
-   '__init__',
-   '__weakref__',
-   'DEFAULT_TARGET',
-   'construct',
-   'copy',
-   'dict',
-   'from_orm',
-   'json',
-   'model_computed_fields',
-   'model_config',
-   'model_construct',
-   'model_copy',
-   'model_dump',
-   'model_dump_json',
-   'model_extra',
-   'model_fields',
-   'model_fields_set',
-   'model_json_schema',
-   'model_parametrized_name',
-   'model_post_init',
-   'model_rebuild',
-   'model_validate',
-   'model_validate_json',
-   'model_validate_strings',
-   'parse_file',
-   'parse_obj',
-   'parse_raw',
-   'schema',
-   'schema_json',
-   'update_forward_refs',
-   'validate',
-] %}
-{% set ns = namespace(methods=[], attributes=[]) %}
-{% for item in methods %}
-{% if item not in hidden %}
-{% set ns.methods = ns.methods + [item] %}
-{% endif %}
-{% endfor %}
-{% for item in attributes %}
-{% if item not in hidden %}
-{% set ns.attributes = ns.attributes + [item] %}
-{% endif %}
-{% endfor %}
+{#- Which members get a row and a page of their own, and what is inherited:
+    _ext/api_pages.py. Pydantic's own members are left out there, so no list
+    of them is kept here. #}
+{% set attrs = class_page.members(fullname, attributes) | sort(case_sensitive=False) %}
+{% set meths = class_page.members(fullname, all_methods) | sort(case_sensitive=False) %}
 
-{% if objname.endswith('Config') or objname.endswith('GeometrySpec') or objname in ('Bounds', 'Grid') %}
-.. class-signature:: {{ fullname }}
-
-Parameters
-----------
-
-.. config-model:: {{ fullname }}
-
-{% if ns.methods %}
-Methods
--------
-
-.. autosummary::
-   :toctree:
-
-{% for item in ns.methods %}
-   ~{{ objname }}.{{ item }}
-{%- endfor %}
-{% endif %}
-{% elif fullname == 'stilt.transport.hysplit.FailureReason' %}
+{% if class_page.is_enum(fullname) %}
 .. autoclass:: {{ fullname }}
    :members:
    :undoc-members:
-   :exclude-members: {{ methods | join(', ') }}
+   :show-inheritance:
 {% else %}
 .. class-signature:: {{ fullname }}
 
-{% if objname.endswith('Receptor') or objname == 'Mesh' %}
+{% if objname.endswith('Config') or objname.endswith('GeometrySpec') or objname in ('Bounds', 'Grid', 'Mesh') or objname.endswith('Receptor') %}
 Parameters
 ----------
 
@@ -83,24 +25,36 @@ Parameters
 .. class-parameters:: {{ fullname }}
 {% endif %}
 
-{% if ns.methods %}
+{% if attrs %}
+Attributes
+----------
+
+.. autosummary::
+   :toctree:
+{% for item in attrs %}
+   ~{{ objname }}.{{ item }}
+{%- endfor %}
+{% endif %}
+
+{% if meths %}
 Methods
 -------
 
 .. autosummary::
    :toctree:
-
-{% for item in ns.methods %}
+{% for item in meths %}
    ~{{ objname }}.{{ item }}
 {%- endfor %}
 {% endif %}
-{% if ns.attributes %}
-Attributes
-----------
 
-.. autosummary::
-{% for item in ns.attributes %}
-   ~{{ objname }}.{{ item }}
-{%- endfor %}
+{% for base, members in class_page.inherited(fullname, attributes + all_methods) %}
+{% if loop.first %}
+Inherited
+---------
+
 {% endif %}
+From :class:`~.{{ base }}`:
+{%- for member in members %} :py:obj:`~.{{ member }}`{{ "," if not loop.last }}{% endfor %}
+
+{% endfor %}
 {% endif %}

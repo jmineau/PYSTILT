@@ -181,6 +181,7 @@ allow_indirect_imports = true
 
 [tool.pyrefly]
 project-includes = ["src"]
+python-version = "3.11"  # as CI checks, against the oldest supported Python
 
 [tool.pytest]
 minversion = "9.0"
@@ -192,8 +193,8 @@ log_level = "INFO"  # show captured logs for failing tests
 # third-party warning with e.g. "ignore:some message:DeprecationWarning:pkg".
 filterwarnings = [
     "error",
-    # numpy ignores this one itself (netCDF4 raises it on import); pytest's
-    # "error" filter would bring it back.
+    # numpy ignores this one itself (compiled packages such as netCDF4 raise it on
+    # import); pytest's "error" filter would bring it back.
     "ignore:numpy.ndarray size changed:RuntimeWarning",
 ]
 markers = [
@@ -223,9 +224,9 @@ ignore = [
 
 [tool.ruff.format]
 docstring-code-format = true
-# ruff also formats code blocks in Markdown; the README's examples keep their
-# hand-aligned comments.
-exclude = ["README.md"]
+# ruff also formats code blocks in Markdown; these keep their examples as written
+# (e.g. hand-aligned comments).
+exclude = ["README.md", "AGENTS.md"]
 
 [tool.ruff.lint]
 select = [
@@ -235,7 +236,7 @@ select = [
     "B",  # flake8-bugbear
     "SIM",  # flake8-simplify
     "I",  # isort
-    "D",  # pydocstyle, numpy convention (below)
+    "D",  # pydocstyle, NumPy convention (below)
     "D213",  # docstring summary on the second line
     "NPY",  # NumPy-specific, incl. NumPy 2 deprecations
     "RUF100",  # unused noqa

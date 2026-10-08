@@ -44,6 +44,7 @@ extensions = [
     "sphinx_autodoc_typehints",
     "sphinx_copybutton",
     "sphinx_design",
+    "api_pages",  # _ext/api_pages.py: which members a class page lists; after autodoc
 ]
 
 templates_path = ["_templates"]
@@ -103,7 +104,7 @@ napoleon_include_special_with_doc = True
 napoleon_use_admonition_for_examples = False
 napoleon_use_admonition_for_notes = False
 napoleon_use_admonition_for_references = False
-napoleon_use_ivar = False
+napoleon_use_ivar = True  # what a class page's tables leave in "Attributes"
 napoleon_use_param = True
 napoleon_use_rtype = True
 napoleon_preprocess_types = False
@@ -175,8 +176,14 @@ def trim_class_docstrings(
     options: object,
     lines: list[str],
 ) -> None:
-    """Keep generated class pages focused while preserving parameter docs."""
-    if what != "class":
+    """
+    Drop a config model's Attributes and Methods sections, keeping its parameters.
+
+    The ``config-model`` directive renders a model's fields. For other classes,
+    ``api_pages`` drops only what the class page's tables list, so the
+    descriptions of the rest (a ``NamedTuple``'s fields, say) stay.
+    """
+    if what != "class" or not hasattr(obj, "model_fields"):
         return
 
     drop_sections = {"Attributes", "Methods"}
