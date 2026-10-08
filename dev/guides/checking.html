@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=6c6a0a8a"></script>
+    <script src="../_static/documentation_options.js?v=6192170d"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
     <link rel="prev" title="In Containers (Kubernetes)" href="containers.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev274+g77e4c0843" />
+  <meta name="docsearch:version" content="0.1.0a23.dev275+g08fc11f45" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -649,11 +649,10 @@ says what went wrong. An unexpected error, such as a bug, also has a
 Check the met’s <code class="docutils literal notranslate"><span class="pre">directory</span></code> and <code class="docutils literal notranslate"><span class="pre">file_format</span></code> against the
 files on disk. A backward run needs files from <code class="docutils literal notranslate"><span class="pre">n_hours</span></code> before
 the receptor time to just after it (<a class="reference internal" href="meteorology.html"><span class="doc">Meteorology</span></a>).</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">The</span> <span class="pre">particles</span> <span class="pre">stop</span> <span class="pre">&lt;h&gt;</span> <span class="pre">h</span> <span class="pre">into</span> <span class="pre">a</span> <span class="pre">&lt;n&gt;</span> <span class="pre">h</span> <span class="pre">run</span></code>: the particles
-stopped early. Either a met file was cut short (the log then has
-<code class="docutils literal notranslate"><span class="pre">Only</span> <span class="pre">one</span> <span class="pre">time</span> <span class="pre">period</span> <span class="pre">of</span> <span class="pre">meteo</span> <span class="pre">data</span></code>; download it again), or
-every particle left the met’s domain or its crop (widen
-<code class="docutils literal notranslate"><span class="pre">subgrid_bounds</span></code>).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">no</span> <span class="pre">more</span> <span class="pre">meteorology</span></code>: the particles reached a time that no met
+file holds, usually because a file was cut short. Download it
+again. HYSPLIT says so in the <code class="docutils literal notranslate"><span class="pre">WARNING</span></code> file of the kept
+workdir.</p></li>
 <li><p>A HYSPLIT message, such as <code class="docutils literal notranslate"><span class="pre">start</span> <span class="pre">point</span> <span class="pre">not</span> <span class="pre">within</span> <span class="pre">(x,y,t)</span> <span class="pre">any</span>
 <span class="pre">data</span> <span class="pre">file</span></code>: the receptor is outside the files, in time or in
 space.</p></li>
@@ -737,8 +736,11 @@ footprint is weak and far away.</p>
 nothing, so a footprint cut off at an edge needs a wider grid.</p>
 </dd>
 <dt>The length of the run</dt><dd><p><code class="docutils literal notranslate"><span class="pre">n_hours</span></code> sets how far back the particles go. A footprint that stops
-short of a source you expect may need a longer run. A run whose
-particles stop before <code class="docutils literal notranslate"><span class="pre">n_hours</span></code> ran out of meteorology: read the log.</p>
+short of a source you expect may need a longer run. Particles also stop
+early when they all leave the met’s domain or its crop, and the run is
+still complete. <code class="docutils literal notranslate"><span class="pre">sim.particles[&quot;time&quot;].abs().max()</span> <span class="pre">/</span> <span class="pre">60</span></code> is how many
+hours they went. If that is short of <code class="docutils literal notranslate"><span class="pre">n_hours</span></code> and the footprint
+needs more, widen <code class="docutils literal notranslate"><span class="pre">subgrid_bounds</span></code>.</p>
 </dd>
 <dt>The number of particles</dt><dd><p>Few particles give a patchy footprint. Raise <code class="docutils literal notranslate"><span class="pre">numpar</span></code> (500 to 1000
 for a tower).</p>

@@ -39,7 +39,7 @@
   <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../../../_static/documentation_options.js?v=6c6a0a8a"></script>
+    <script src="../../../../_static/documentation_options.js?v=6192170d"></script>
     <script src="../../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -58,7 +58,7 @@
     <link rel="search" title="Search" href="../../../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev274+g77e4c0843" />
+  <meta name="docsearch:version" content="0.1.0a23.dev275+g08fc11f45" />
   
     
     <script src="../../../../_static/searchtools.js"></script>
@@ -499,7 +499,7 @@
                 <article class="bd-article">
                   
   <h1>Source code for stilt.transport.hysplit.failures</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;Why a HYSPLIT run failed, read from the messages in its log while it runs.&quot;&quot;&quot;</span>
+<span></span><span class="sd">&quot;&quot;&quot;Why a HYSPLIT run failed, read from the messages in its log and its WARNING file.&quot;&quot;&quot;</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
@@ -512,8 +512,8 @@
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Why a HYSPLIT run failed.</span>
 
-<span class="sd">    The driver reads it from HYSPLIT&#39;s log when the run ends, or knows it</span>
-<span class="sd">    (a timeout, no particle output), and raises a</span>
+<span class="sd">    The driver reads it from HYSPLIT&#39;s log and ``WARNING`` file when the</span>
+<span class="sd">    run ends, or knows it (a timeout, no particle output), and raises a</span>
 <span class="sd">    :class:`~stilt.exceptions.SimulationError` with it as ``reason``. The</span>
 <span class="sd">    worker records it with the simulation.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -526,10 +526,19 @@
 
 
 
-<span class="c1">#: Phrases HYSPLIT (or the driver) writes to stilt.log, mapped to their FailureReason.</span>
+<span class="c1">#: Phrases HYSPLIT (or the driver) writes to stilt.log or HYSPLIT&#39;s WARNING</span>
+<span class="c1">#: file, mapped to their FailureReason. The four ``metpos`` warnings say a</span>
+<span class="c1">#: particle inside the met&#39;s grid reached a time no met file holds: the met</span>
+<span class="c1">#: ran out. HYSPLIT writes only the first such warning of a run, and</span>
+<span class="c1">#: ``off spatial domain of all grids`` when every particle left the met&#39;s</span>
+<span class="c1">#: domain, which is not a failure.</span>
 <span class="n">FAILURE_PHRASES</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">FailureReason</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
     <span class="s2">&quot;start point not within (x,y,t) any data file&quot;</span><span class="p">:</span> <span class="n">FailureReason</span><span class="o">.</span><span class="n">MET_COVERAGE</span><span class="p">,</span>
     <span class="s2">&quot;start time after end of meteorology data&quot;</span><span class="p">:</span> <span class="n">FailureReason</span><span class="o">.</span><span class="n">MET_COVERAGE</span><span class="p">,</span>
+    <span class="s2">&quot;no more meteorology&quot;</span><span class="p">:</span> <span class="n">FailureReason</span><span class="o">.</span><span class="n">MET_COVERAGE</span><span class="p">,</span>
+    <span class="s2">&quot;too much time between files&quot;</span><span class="p">:</span> <span class="n">FailureReason</span><span class="o">.</span><span class="n">MET_COVERAGE</span><span class="p">,</span>
+    <span class="s2">&quot;no meteo data at current time&quot;</span><span class="p">:</span> <span class="n">FailureReason</span><span class="o">.</span><span class="n">MET_COVERAGE</span><span class="p">,</span>
+    <span class="s2">&quot;no data at current time on any grid&quot;</span><span class="p">:</span> <span class="n">FailureReason</span><span class="o">.</span><span class="n">MET_COVERAGE</span><span class="p">,</span>
     <span class="s2">&quot;meteorological data time interval varies&quot;</span><span class="p">:</span> <span class="n">FailureReason</span><span class="o">.</span><span class="n">VARYING_MET_INTERVAL</span><span class="p">,</span>
     <span class="s2">&quot;PARTICLE_STILT.DAT does not contain any trajectory data&quot;</span><span class="p">:</span> <span class="n">FailureReason</span><span class="o">.</span><span class="n">NO_PARTICLE_DATA</span><span class="p">,</span>
     <span class="s2">&quot;Fortran runtime error&quot;</span><span class="p">:</span> <span class="n">FailureReason</span><span class="o">.</span><span class="n">FORTRAN_RUNTIME_ERROR</span><span class="p">,</span>
@@ -538,7 +547,7 @@
 
 <span class="k">def</span><span class="w"> </span><span class="nf">failure_in</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">FailureReason</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Return the first known failure in a HYSPLIT log, as its reason and the log line that says it.</span>
+<span class="sd">    Return the first known failure in HYSPLIT&#39;s messages, as its reason and the line that says it.</span>
 
 <span class="sd">    Phrases are tried in the order of :data:`FAILURE_PHRASES`. ``None``</span>
 <span class="sd">    when the log holds none of them.</span>

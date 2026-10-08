@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../_static/documentation_options.js?v=6c6a0a8a"></script>
+    <script src="../../_static/documentation_options.js?v=6192170d"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
     <link rel="prev" title="stilt.transport.hysplit.HysplitModel.data_files" href="stilt.transport.hysplit.HysplitModel.data_files.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev274+g77e4c0843" />
+  <meta name="docsearch:version" content="0.1.0a23.dev275+g08fc11f45" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -844,10 +844,11 @@ added by the caller, as for any model
 <dd class="field-odd"><ul class="simple">
 <li><p><a class="reference internal" href="stilt.exceptions.SimulationError.html#stilt.exceptions.SimulationError" title="stilt.exceptions.SimulationError"><strong>SimulationError</strong></a> – With HYSPLIT’s log in <code class="docutils literal notranslate"><span class="pre">log</span></code>, and <code class="docutils literal notranslate"><span class="pre">reason</span></code> <code class="docutils literal notranslate"><span class="pre">TIMEOUT</span></code> when
     the run exceeded <em>timeout</em> seconds; the <a class="reference internal" href="stilt.transport.hysplit.FailureReason.html#stilt.transport.hysplit.FailureReason" title="stilt.transport.hysplit.FailureReason"><code class="xref py py-class docutils literal notranslate"><span class="pre">FailureReason</span></code></a>
-    of a known failure message in the log; or <code class="docutils literal notranslate"><span class="pre">NO_PARTICLE_DATA</span></code>
-    when HYSPLIT wrote no particle file. Particles that stop before
-    the end of the run fail afterwards, for any model
-    (<code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.transport.run_model()</span></code>).</p></li>
+    of a known failure message in the log or <code class="docutils literal notranslate"><span class="pre">WARNING</span></code> file, such
+    as the met running out (<code class="docutils literal notranslate"><span class="pre">MET_COVERAGE</span></code>); or
+    <code class="docutils literal notranslate"><span class="pre">NO_PARTICLE_DATA</span></code> when HYSPLIT wrote no particle file.
+    Particles that all left the met’s domain before the end of the
+    run are kept.</p></li>
 <li><p><a class="reference internal" href="stilt.exceptions.MeteorologyError.html#stilt.exceptions.MeteorologyError" title="stilt.exceptions.MeteorologyError"><strong>MeteorologyError</strong></a> – Before HYSPLIT runs, when a met file the run needs is missing.</p></li>
 </ul>
 </dd>

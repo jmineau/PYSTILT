@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=6c6a0a8a"></script>
+    <script src="../_static/documentation_options.js?v=6192170d"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
     <link rel="prev" title="stilt.transport.hysplit.FailureReason" href="_api/stilt.transport.hysplit.FailureReason.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev274+g77e4c0843" />
+  <meta name="docsearch:version" content="0.1.0a23.dev275+g08fc11f45" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -854,8 +854,8 @@ a negative particle count, raise <code class="docutils literal notranslate"><spa
 simulation (<code class="xref py py-attr docutils literal notranslate"><span class="pre">stilt.Simulation.failure</span></code>). Its <code class="docutils literal notranslate"><span class="pre">reason</span></code> is a short
 name for the cause: for HYSPLIT, one of
 <a class="reference internal" href="_api/stilt.transport.hysplit.FailureReason.html#stilt.transport.hysplit.FailureReason" title="stilt.transport.hysplit.FailureReason"><code class="xref py py-class docutils literal notranslate"><span class="pre">stilt.transport.hysplit.FailureReason</span></code></a>, such as <code class="docutils literal notranslate"><span class="pre">MET_COVERAGE</span></code>,
-<code class="docutils literal notranslate"><span class="pre">NO_PARTICLE_DATA</span></code>, or <code class="docutils literal notranslate"><span class="pre">TIMEOUT</span></code>. A run whose particles stop before the
-end of the run fails as <code class="docutils literal notranslate"><span class="pre">MET_COVERAGE</span></code> for any transport model.</p>
+<code class="docutils literal notranslate"><span class="pre">NO_PARTICLE_DATA</span></code>, or <code class="docutils literal notranslate"><span class="pre">TIMEOUT</span></code>. A run that the meteorology does not
+cover fails as <code class="docutils literal notranslate"><span class="pre">MET_COVERAGE</span></code>.</p>
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="_api/stilt.exceptions.SimulationError.html#stilt.exceptions.SimulationError" title="stilt.exceptions.SimulationError"><code class="xref py py-obj docutils literal notranslate"><span class="pre">stilt.exceptions.SimulationError</span></code></a></p></td>

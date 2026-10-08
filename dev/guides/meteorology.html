@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=6c6a0a8a"></script>
+    <script src="../_static/documentation_options.js?v=6192170d"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
     <link rel="prev" title="Receptors" href="receptors.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev274+g77e4c0843" />
+  <meta name="docsearch:version" content="0.1.0a23.dev275+g08fc11f45" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -596,9 +596,11 @@ spans (<code class="docutils literal notranslate"><span class="pre">n_hours</spa
 backward run with 6-hour HRRR files needs 5 or 6 files, depending on the
 receptor hour. Every one is needed. If one is missing, the simulation fails
 before HYSPLIT runs, as <code class="docutils literal notranslate"><span class="pre">MET_COVERAGE</span></code>, naming the hours with no file.</p>
-<p>A run whose particles stop before the end of the run fails too, whatever
-stopped them: a met file cut short, or every particle leaving the
-meteorology’s domain or its crop (<a class="reference internal" href="checking.html"><span class="doc">Checking A Run</span></a>).</p>
+<p>A met file cut short fails the run too, as <code class="docutils literal notranslate"><span class="pre">MET_COVERAGE</span></code>, when HYSPLIT
+says the meteorology ran out. Particles that all leave the meteorology’s
+domain, or its crop, before the end of the run are not a failure. The run
+is complete, and its footprint holds the hours the particles were inside
+(<a class="reference internal" href="checking.html"><span class="doc">Checking A Run</span></a>).</p>
 <p>In Python, the same settings are a dictionary or a
 <a class="reference internal" href="../reference/_api/stilt.transport.hysplit.MetConfig.html#stilt.transport.hysplit.MetConfig" title="stilt.transport.hysplit.MetConfig"><code class="xref py py-class docutils literal notranslate"><span class="pre">MetConfig</span></code></a>, HYSPLIT’s met config:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">stilt.transport.hysplit</span><span class="w"> </span><span class="kn">import</span> <span class="n">MetConfig</span>
