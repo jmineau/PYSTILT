@@ -565,6 +565,38 @@ def test_files_for_searches_recursively(tmp_path):
     assert [f.name for f in files] == ["20240601_00-05_hrrr"]
 
 
+def test_files_for_walks_the_directory_once(tmp_path, monkeypatch):
+    """It walked the whole tree once per file pattern (#191)."""
+    import os
+
+    from stilt.transport.hysplit import met as met_module
+
+    _touch_files(tmp_path, [f"20230101_{h:02d}" for h in range(24)])
+    walks = []
+    real_walk = os.walk
+    monkeypatch.setattr(
+        met_module.os, "walk", lambda top: walks.append(top) or real_walk(top)
+    )
+    met = _make_met(tmp_path, "%Y%m%d_%H", "1h")
+
+    files = _run_files(met, dt.datetime(2023, 1, 1, 12), -6)
+
+    assert len(files) == 7
+    assert walks == [met.directory]
+
+
+def test_files_for_matches_a_format_with_a_folder(tmp_path):
+    nested = tmp_path / "2024"
+    nested.mkdir()
+    _touch_files(nested, ["20240601_00-05_hrrr"])
+    _touch_files(tmp_path, ["20240601_00-05_hrrr_elsewhere"])
+    met = _make_met(tmp_path, "%Y/%Y%m%d_%H", "6 hours")
+
+    files = _run_files(met, dt.datetime(2024, 6, 1, 0), 1)
+
+    assert files == [(nested / "20240601_00-05_hrrr").resolve()]
+
+
 def test_files_for_deduplicates_root_symlink_and_nested_file(tmp_path):
     nested = tmp_path / "2021" / "06"
     nested.mkdir(parents=True)
