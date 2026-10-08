@@ -234,9 +234,8 @@ def test_particles_that_leave_the_met_domain_complete_the_run(
     assert hours < 24  # every particle left the met's domain first
 
 
-@integration
-def test_failure_met_cut_short(tmp_path, wbb_receptor, traj_only_config, met_dir):
-    """A met file cut to one time period stops the particles early, which fails the run (#169, #189)."""
+def _project_on_met_cut_short(tmp_path, wbb_receptor, traj_only_config, met_dir):
+    """A 12 h project whose 18-23 Z met file on the 14th holds only its first hour."""
     cut_met = tmp_path / "met"
     cut_met.mkdir()
     for path in met_dir.iterdir():
@@ -262,8 +261,38 @@ def test_failure_met_cut_short(tmp_path, wbb_receptor, traj_only_config, met_dir
             }
         },
     )
-    project = Project.init(
+    return Project.init(
         tmp_path / "met_cut_short", config=config, receptors=[wbb_receptor]
+    )
+
+
+@integration
+def test_failure_met_cut_short(tmp_path, wbb_receptor, traj_only_config, met_dir):
+    """A met file cut after its first hour fails the run before HYSPLIT starts, naming the gap (#169, #189)."""
+    project = _project_on_met_cut_short(
+        tmp_path, wbb_receptor, traj_only_config, met_dir
+    )
+    project.run()
+
+    sim = project.simulation(*_sim_id(wbb_receptor))
+    assert not sim.has_particles
+    assert sim.failure is not None and sim.failure["reason"] == "MET_COVERAGE"
+    assert (
+        "no time step between 2021-01-14 18:00 and 2021-01-15 00:00"
+        in sim.failure["message"]
+    )
+
+
+@integration
+def test_hysplit_fails_a_run_whose_met_runs_out(
+    tmp_path, wbb_receptor, traj_only_config, met_dir, monkeypatch
+):
+    """Without the check before the run, HYSPLIT's own warning fails it (#189)."""
+    from stilt.transport.hysplit import Met
+
+    monkeypatch.setattr(Met, "check", lambda self, *args, **kwargs: None)
+    project = _project_on_met_cut_short(
+        tmp_path, wbb_receptor, traj_only_config, met_dir
     )
     project.run()
 

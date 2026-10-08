@@ -10,6 +10,7 @@ one in every test module.
 from __future__ import annotations
 
 import datetime as dt
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
@@ -22,18 +23,27 @@ from stilt.transport.hysplit import HysplitConfig, MetConfig
 #: The source id the ARL files these factories write carry.
 SOURCE = "HRRR"
 
-_ARL_BYTES: dict[str, bytes] = {}
+_ARL_BYTES: dict[tuple[str, tuple[str, ...], bool], bytes] = {}
 
 
-def write_arl_file(path: Path, source: str = SOURCE) -> Path:
+def write_arl_file(
+    path: Path,
+    source: str = SOURCE,
+    *,
+    times: Sequence[Any] = ("2000-01-01",),
+    partial: bool = False,
+) -> Path:
     """
     Write a small ARL file whose header names *source*, and return its path.
 
-    One time step on a 20 x 20 grid: enough for a met's source to be read
-    from it (:meth:`stilt.transport.hysplit.MetConfig.source`), not for
-    HYSPLIT to run on it.
+    One time step per entry in *times* on a 20 x 20 grid, each with PRSS
+    at the surface and TEMP above it: enough for a met's source to be read
+    from it (:meth:`stilt.transport.hysplit.MetConfig.source`) and for
+    arlmet to check it, not for HYSPLIT to run on it. With *partial*, the
+    last time step has no TEMP, as a write stopped partway leaves it.
     """
-    if source not in _ARL_BYTES:
+    key = (source, tuple(str(t) for t in times), partial)
+    if key not in _ARL_BYTES:
         import tempfile
 
         import numpy as np
@@ -59,6 +69,7 @@ def write_arl_file(path: Path, source: str = SOURCE) -> Path:
             nx=20,
             ny=20,
         )
+        field = np.ones((20, 20), np.float32)
         with tempfile.TemporaryDirectory() as tmp:
             arl = Path(tmp) / "arl"
             with File(
@@ -66,15 +77,18 @@ def write_arl_file(path: Path, source: str = SOURCE) -> Path:
                 mode="w",
                 source=source,
                 grid=grid,
-                vertical_axis=PressureAxis(levels=[0.0]),
+                vertical_axis=PressureAxis(levels=[0.0, 850.0]),
             ) as f:
-                rs = f.create_recordset(pd.Timestamp("2000-01-01"))
-                rs.create_datarecord(
-                    "PRSS", level=0, forecast=0, data=np.ones((20, 20), np.float32)
-                )
-            _ARL_BYTES[source] = arl.read_bytes()
+                for i, time in enumerate(times):
+                    rs = f.create_recordset(pd.Timestamp(time))
+                    rs.create_datarecord("PRSS", level=0, forecast=0, data=field)
+                    if not (partial and i == len(times) - 1):
+                        rs.create_datarecord(
+                            "TEMP", level=1, forecast=0, data=field * 280
+                        )
+            _ARL_BYTES[key] = arl.read_bytes()
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(_ARL_BYTES[source])
+    path.write_bytes(_ARL_BYTES[key])
     return path
 
 
@@ -106,7 +120,8 @@ def make_met_files(directory: Path, time: Any, n_hours: int) -> list[Path]:
 
     They are named as :func:`make_met_config` expects, one hour beyond the
     run on each side, so :class:`stilt.transport.hysplit.Met` finds them.
-    Each is :func:`write_arl_file`'s one step: the transport model cannot
+    Each holds its own hour (:func:`write_arl_file`), so they pass
+    :meth:`stilt.transport.hysplit.Met.check`; the transport model cannot
     run on them.
     """
     import pandas as pd
@@ -122,7 +137,7 @@ def make_met_files(directory: Path, time: Any, n_hours: int) -> list[Path]:
     directory.mkdir(parents=True, exist_ok=True)
     files = []
     for hour in hours:
-        files.append(write_arl_file(directory / f"{hour:%Y%m%d_%H}"))
+        files.append(write_arl_file(directory / f"{hour:%Y%m%d_%H}", times=[hour]))
     return files
 
 
