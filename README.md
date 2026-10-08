@@ -191,8 +191,8 @@ transforms:
   - kind: pressure_weighting
   - kind: first_order_lifetime
     lifetime_hours: 4.0
-  - kind: mypkg.transforms.MyWeighting   # your own pydantic class with an apply() method
-    some_field: 3
+  - kind: mypkg.transforms.BoundaryLayerOnly   # your own pydantic class with an apply() method
+    max_height: 1200
 ```
 
 A transform is any object with an `apply(particles, receptor=None, directory=None)` method. The

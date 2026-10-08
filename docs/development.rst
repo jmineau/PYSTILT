@@ -186,7 +186,7 @@ Moving to a newer STILT-R commit
    .. code-block:: bash
 
       git clone https://github.com/uataq/stilt stilt-r-src
-      git -C stilt-r-src checkout <new-sha>
+      git -C stilt-r-src checkout NEW_SHA   # the commit to pin
       STILT_R_DIR=$PWD/stilt-r-src STILT_TEST_MET_DIR=tests/met_cache \
         uv run pytest tests/r_stilt/ -v -m fidelity
 
