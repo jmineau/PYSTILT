@@ -128,7 +128,9 @@ hours, on a log scale. Cells with more color influenced the measurement more.
 
 The footprint is an :class:`xarray.DataArray` with dimensions
 ``(time, lat, lon)`` and units of ppm per (µmol m⁻² s⁻¹), one map per
-hour. Sum it over time with xarray:
+hour. Many receptors' footprints, from a project, line up on ``hour``
+after each receptor's time instead (``(receptor, hour, lat, lon)``,
+:doc:`../guides/outputs`). Sum it over time with xarray:
 
 .. code-block:: python
 
