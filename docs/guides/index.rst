@@ -30,6 +30,8 @@ you are new to PYSTILT, start with :doc:`../getting_started/quickstart`.
 - :doc:`wind_errors`: the wind-error statistics a transport-error run needs
 - :doc:`background`: the mole fraction at the trajectory endpoints, as a
   background for the receptor
+- :doc:`trajectory_analyses`: residence time, PSCF, CWT, and mean paths
+  from particles and footprints, for HyTraj and pysplit users
 
 **Column and satellite measurements**
 
@@ -73,6 +75,7 @@ you are new to PYSTILT, start with :doc:`../getting_started/quickstart`.
    transport_error
    wind_errors
    background
+   trajectory_analyses
 
 .. toctree::
    :hidden:
