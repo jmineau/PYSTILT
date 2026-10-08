@@ -4,10 +4,12 @@ HYSPLIT's meteorology: the met config (:class:`MetConfig`), and finding, downloa
 
 from __future__ import annotations
 
+import fnmatch
 import inspect
 import logging
 import os
 from collections.abc import Iterator
+from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, Self
 
@@ -263,6 +265,34 @@ class Met:
     # Internal helpers
     # ------------------------------------------------------------------
 
+    @cached_property
+    def _listing(self) -> list[tuple[tuple[str, ...], Path]]:
+        """
+        Every file under :attr:`directory`, walked once, as its path's parts relative to it and the path.
+
+        Lock files and backup copies (``name~<timestamp>~``, ``name.~1~``,
+        ``name~``, which all end in ``~``) are left out.
+        """
+        found: list[tuple[tuple[str, ...], Path]] = []
+        for root, _, names in os.walk(self.directory):
+            parts = Path(root).relative_to(self.directory).parts
+            for name in names:
+                if ".lock" not in name and not name.endswith("~"):
+                    found.append(((*parts, name), Path(root) / name))
+        return found
+
+    def _matching(self, pattern: str) -> list[Path]:
+        """Return the files whose path ends in one that starts with *pattern*, as ``rglob(pattern + "*")`` finds them."""
+        depth = pattern.count("/") + 1
+        found = []
+        for parts, path in self._listing:
+            if len(parts) < depth:
+                continue
+            tail = "/".join(parts[-depth:])
+            if fnmatch.fnmatchcase(tail, pattern + "*") and path.is_file():
+                found.append(path)
+        return found
+
     @staticmethod
     def _dedupe_matched_files(paths: list[Path]) -> list[Path]:
         """Resolve symlinks and drop duplicate files, sorted by name."""
@@ -389,12 +419,7 @@ class Met:
         files: list[Path] = []
         missing: list[str] = []
         for pattern in patterns:
-            # Backup copies (name~<timestamp>~, name.~1~, name~) all end in "~".
-            matches = [
-                p
-                for p in self.directory.rglob(f"{pattern}*")
-                if p.is_file() and ".lock" not in p.name and not p.name.endswith("~")
-            ]
+            matches = self._matching(pattern)
             if matches:
                 files.extend(matches)
             else:
