@@ -189,6 +189,18 @@ def test_correct_near_field_adds_reference_column():
     assert out["foot_no_hnf_dilution"].iloc[0] == pytest.approx(1e-5)
 
 
+def test_correct_near_field_reads_veght_above_one_as_meters():
+    """A veght above 1 is meters above ground, as HYSPLIT reads it (#167)."""
+    p = _particles_basic().drop(columns=["zagl"]).assign(xhgt=[5.0, 5.0])
+    # The plume is about 32 m deep after one hour and 70 m after two.
+    as_fraction = correct_near_field(p, _NO_POINT, 0.5)  # below 250 m
+    as_meters = correct_near_field(p, _NO_POINT, 50.0)  # below 50 m
+
+    assert as_meters["foot"].iloc[0] == pytest.approx(as_fraction["foot"].iloc[0])
+    assert as_fraction["foot"].iloc[1] != pytest.approx(p["foot"].iloc[1])
+    assert as_meters["foot"].iloc[1] == pytest.approx(p["foot"].iloc[1])
+
+
 def test_correct_near_field_grows_outward_from_release_when_forward():
     """A forward run accumulates sigma from the release point, not the far end."""
     backward = _particles_basic().drop(columns=["zagl"]).assign(xhgt=[5.0, 5.0])

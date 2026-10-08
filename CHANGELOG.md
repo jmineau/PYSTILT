@@ -160,6 +160,10 @@ layout; `docs/migration/` covers moving from STILT-R, X-STILT, and stiltctl.
   time; listed as one grid per file, as STILT-R does, NOAA's HYSPLIT
   builds read at most 12 and the bundled one 99. The particles are the
   same.
+- The near-field correction (`hnf_plume`) reads a `veght` above 1 as
+  meters above ground, as HYSPLIT does (#167). It multiplied it by the
+  mixed-layer height, as STILT-R does. Nothing changes for a `veght` of 1
+  or less.
 - `stilt init` writes a receptors file that loads (#49). HYSPLIT settings
   take the types HYSPLIT reads (`rhb`, `rht`, ...) (#57).
 - Crops of your own met files are cached per crop box and written

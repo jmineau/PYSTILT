@@ -433,13 +433,18 @@ def correct_near_field(
     """
     Correct ``foot`` for plume dilution in the hyper-near field, as STILT-R's ``calc_plume_dilution`` does.
 
-    ``foot`` assumes surface fluxes are mixed through the lowest ``veght``
-    fraction of the mixed layer. Close to the receptor, the plume from the
-    release point is thinner than that. Following STILT-R, the plume depth
-    grows from the release height with the turbulence each particle meets.
-    While it is below ``veght`` times the mixed-layer height, ``foot`` is
-    recalculated with the plume depth in its place. The worker applies it
-    to any model's particles when ``hnf_plume`` is set.
+    ``foot`` assumes surface fluxes are mixed through the air below
+    ``veght``: a fraction of the mixed-layer height when ``veght`` is 1 or
+    less, and a height in meters above ground when it is larger, as HYSPLIT
+    reads it. Close to the receptor, the plume from the release point is
+    thinner than that. Following STILT-R, the plume depth grows from the
+    release height with the turbulence each particle meets. While it is
+    below the ``veght`` height, ``foot`` is recalculated with the plume
+    depth in its place. The worker applies it to any model's particles when
+    ``hnf_plume`` is set.
+
+    STILT-R multiplies ``veght`` by the mixed-layer height whatever its
+    value, so the two differ when ``veght`` is above 1.
 
     Needs the columns :data:`HNF_PLUME_COLUMNS`, and the release height:
     ``xhgt`` (:func:`add_release_heights`) or the altitude of a point
@@ -452,8 +457,9 @@ def correct_near_field(
     receptor : Receptor
         Receptor the particles were released from.
     veght : float
-        Fraction of the mixed-layer height that surface fluxes are mixed
-        through (STILT's ``veght``).
+        Height that surface fluxes are mixed through (STILT's ``veght``): a
+        fraction of the mixed-layer height when 1 or less, else meters
+        above ground.
 
     Returns
     -------
@@ -488,7 +494,7 @@ def correct_near_field(
             - 1
         )
     )
-    p["pbl_mixing"] = veght * p["mlht"]
+    p["pbl_mixing"] = veght * p["mlht"] if veght <= 1 else veght
 
     start_h = p["xhgt"] if "xhgt" in p.columns else r_zagl
     if start_h is None:
