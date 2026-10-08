@@ -210,16 +210,24 @@ def test_failure_missing_met(tmp_path, wbb_receptor, traj_only_config, met_dir):
 
 @integration
 def test_particles_that_leave_the_met_domain_complete_the_run(
-    tmp_path, wbb_receptor, traj_only_config
+    tmp_path, traj_only_config
 ):
-    """A January night empties the test met's 4 by 3 degree crop in about 11 hours (#189)."""
+    """A January night at WBB empties the test met's 4 by 3 degree crop in about 11 hours (#189)."""
+    from stilt.receptors import PointReceptor
+
+    # The last particle left after 10 to 12 hours in 24 runs. From the
+    # reference receptor, 30 km south-west, one of the 100 particles stayed
+    # all 24 hours in about a third of runs.
+    receptor = PointReceptor(
+        time="2021-01-15 06:00", longitude=-111.848, latitude=40.766, altitude=10
+    )
     config = _with(traj_only_config, n_hours=-24)
     project = Project.init(
-        tmp_path / "domain_exit", config=config, receptors=[wbb_receptor]
+        tmp_path / "domain_exit", config=config, receptors=[receptor]
     )
     project.run()
 
-    sim = project.simulation(*_sim_id(wbb_receptor))
+    sim = project.simulation(*_sim_id(receptor))
     assert sim.is_complete
     assert sim.failure is None
     hours = sim.particles["time"].abs().max() / 60
