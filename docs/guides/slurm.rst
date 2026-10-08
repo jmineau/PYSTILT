@@ -126,7 +126,9 @@ every task fails at once, look in the tasks' logs (below) first. Use
 
 From Python, ``project.run()`` submits the job array, waits until every
 task has ended (it asks ``sacct``), and returns the status table of the
-simulations it submitted. ``project.submit()`` submits and returns the
+simulations it submitted. When some look unfinished then, it lists the
+output again a minute later, since a network filesystem can show the
+submitting node new files late. ``project.submit()`` submits and returns the
 Slurm job id at once:
 
 .. code-block:: python

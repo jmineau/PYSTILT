@@ -281,6 +281,31 @@ def test_a_job_on_another_cluster_is_followed_there(
     assert all(c[1:5] == ["-M", "kingspeak", "-j", "777"] for c in sacct)
 
 
+def test_a_run_lists_once_more_when_the_files_look_late(
+    pending, commands, tmp_path, monkeypatch
+):
+    """The submitting node can see new files a minute late on a network filesystem (#191)."""
+    import pandas as pd
+
+    project = _hourly_project(tmp_path, 1)
+    pending.extend(project.receptors["receptor"])
+    listings = iter([["pending"], ["complete"]])
+    monkeypatch.setattr(
+        runner, "_status", lambda project, ids: pd.DataFrame({"state": next(listings)})
+    )
+    monkeypatch.setattr(runner, "wait", lambda job_id, cluster=None: {})
+    slept: list[float] = []
+    monkeypatch.setattr(runner.time, "sleep", slept.append)
+    commands.answers["sbatch"] = [_out("5\n")]
+
+    table = runner.run(
+        project, execution=ExecutionConfig(backend="slurm", time="01:00:00")
+    )
+
+    assert slept == [runner.RELIST_SECONDS]
+    assert table["state"].tolist() == ["complete"]
+
+
 def test_a_job_on_the_default_cluster_names_none(commands):
     commands.answers["sacct"] = [_out("9_0|COMPLETED|0:0\n")]
     runner.wait("9", poll=0)
