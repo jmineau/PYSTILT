@@ -50,7 +50,7 @@ layout; `docs/migration/` covers moving from STILT-R, X-STILT, and stiltctl.
   HYSPLIT's settings are `stilt.transport.hysplit.HysplitConfig`, written as
   top-level keys as before; `STILTParams` and `RuntimeSettings` are gone.
   `kmsl` comes from each receptor's `altitude_ref`. `timeout` moves under
-  `execution:`, beside the new `keep_scratch`; `rm_dat` is gone.
+  `execution:`, beside the new `keep_workdir`; `rm_dat` is gone.
 - Meteorology settings (breaking). In a `mets` entry, `source:` is
   `download:` and `backend:` is `download_from:`. `n_min` and
   `subgrid_buffer` are gone: every file a run needs must be there, and the

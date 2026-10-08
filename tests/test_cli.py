@@ -349,7 +349,7 @@ def test_run_writes_to_the_output_given(tmp_path, calls, monkeypatch):
 def test_run_reads_execution_settings_from_a_file(tmp_path, calls):
     _write_minimal_config(tmp_path)
     settings = tmp_path / "execution.yaml"
-    settings.write_text("backend: slurm\ncpus: 3\ntimeout: 900\nkeep_scratch: true\n")
+    settings.write_text("backend: slurm\ncpus: 3\ntimeout: 900\nkeep_workdir: true\n")
 
     result = runner.invoke(
         app,
@@ -369,7 +369,7 @@ def test_run_reads_execution_settings_from_a_file(tmp_path, calls):
     execution = calls[0][1]["execution"]
     # The file's settings, then the options, and a task runs here.
     assert (execution.backend, execution.cpus, execution.timeout) == ("local", 2, 900)
-    assert execution.keep_scratch is True
+    assert execution.keep_workdir is True
 
 
 @pytest.mark.parametrize(

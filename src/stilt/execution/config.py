@@ -21,7 +21,7 @@ class ExecutionConfig(BaseModel):
     With ``backend: slurm`` they are split among ``n_workers`` tasks of one
     Slurm job array. Either way a task runs ``cpus`` receptors at once. The
     Slurm settings are ignored by a local run, so a config can hold them and
-    be run either way. ``timeout`` and ``keep_scratch`` apply to both. None
+    be run either way. ``timeout`` and ``keep_workdir`` apply to both. None
     of these settings change a result.
 
     Examples
@@ -73,7 +73,7 @@ class ExecutionConfig(BaseModel):
             "a worker until its job ends."
         ),
     )
-    keep_scratch: bool = Field(
+    keep_workdir: bool = Field(
         False,
         description=(
             "Keep every run's workdir, as the transport model left it, under "

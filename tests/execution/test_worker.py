@@ -261,7 +261,7 @@ def test_run_particles_without_particles_is_a_simulation_error(
 def _fake_run_particles(monkeypatch, calls: list[str]):
     """Replace run_particles with one that writes particles and records the variant it ran for."""
 
-    def fake(sim, *, workdir, keep_scratch=False, timeout=None):
+    def fake(sim, *, workdir, keep_workdir=False, timeout=None):
         calls.append(sim.variant.name)
         return _write_particles(sim)
 
@@ -309,7 +309,7 @@ def test_a_receptor_leaves_no_folders_under_the_compute_root(
 def test_the_execution_settings_given_reach_the_hysplit_run(
     tmp_path, receptor, monkeypatch
 ):
-    """An override passed in, not config.yaml's, sets the timeout and keep_scratch."""
+    """An override passed in, not config.yaml's, sets the timeout and keep_workdir."""
     project = _model(tmp_path, [receptor])
     seen: dict = {}
 
@@ -318,10 +318,10 @@ def test_the_execution_settings_given_reach_the_hysplit_run(
         return _write_particles(sim)
 
     monkeypatch.setattr(worker, "run_particles", fake)
-    override = ExecutionConfig(timeout=42, keep_scratch=True)
+    override = ExecutionConfig(timeout=42, keep_workdir=True)
     _run_receptor(project, receptor, execution=override)
 
-    assert (seen["timeout"], seen["keep_scratch"]) == (42, True)
+    assert (seen["timeout"], seen["keep_workdir"]) == (42, True)
 
 
 def test_a_particles_only_variant_runs_hysplit_and_completes(
@@ -437,11 +437,11 @@ def test_rerun_particles_remake_a_footprint_that_already_existed(
     assert hysplit == ["hrrr"] and [name for name, _ in feet] == ["hrrr"]
 
 
-def test_run_receptor_takes_timeout_and_keep_scratch_from_execution(
+def test_run_receptor_takes_timeout_and_keep_workdir_from_execution(
     tmp_path, receptor, monkeypatch
 ):
     project = _model(
-        tmp_path, [receptor], execution={"timeout": 120, "keep_scratch": True}
+        tmp_path, [receptor], execution={"timeout": 120, "keep_workdir": True}
     )
     seen: list[dict] = []
 
@@ -452,7 +452,7 @@ def test_run_receptor_takes_timeout_and_keep_scratch_from_execution(
     monkeypatch.setattr(worker, "run_particles", fake)
     _run_receptor(project, receptor)
 
-    assert seen and all(k["timeout"] == 120 and k["keep_scratch"] for k in seen)
+    assert seen and all(k["timeout"] == 120 and k["keep_workdir"] for k in seen)
 
 
 def test_run_receptor_stops_on_preemption_with_what_finished_written(
