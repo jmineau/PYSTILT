@@ -1137,6 +1137,45 @@ def test_a_receptor_listed_twice_is_kept_once(point_receptor):
     assert rows["receptor"].tolist() == [point_receptor.id]
 
 
+def test_many_receptors_listed_twice_are_checked_quickly():
+    """Each repeated id was built through a mask over the whole table: 31 s here (#191)."""
+    import time
+
+    from stilt.receptors.table import receptor_rows
+
+    once = pd.DataFrame(
+        {
+            "time": pd.date_range("2024-01-01", periods=10_000, freq="h"),
+            "longitude": -111.85,
+            "latitude": 40.77,
+            "altitude": 5.0,
+        }
+    )
+    start = time.perf_counter()
+    rows = receptor_rows(pd.concat([once, once], ignore_index=True))
+    assert time.perf_counter() - start < 10
+    assert rows["receptor"].is_unique and len(rows) == 10_000
+
+
+def test_a_repeated_id_among_many_still_names_two_different_receptors():
+    from stilt.receptors.table import receptor_rows, receptors_to_frame
+
+    a, b = _multi([10.001, 500.0]), _multi([10.004, 500.0])
+    points = [
+        PointReceptor(
+            time=dt.datetime(2024, 1, 1, h),
+            longitude=-111.85,
+            latitude=40.77,
+            altitude=5,
+        )
+        for h in range(3)
+    ]
+    frame = receptors_to_frame([*points, a, *points, b])
+
+    with pytest.raises(ValueError, match="share the id"):
+        receptor_rows(frame)
+
+
 def test_receptors_from_checked_rows_are_not_checked_again(
     monkeypatch, point_receptor, column_receptor, multipoint_receptor
 ):
