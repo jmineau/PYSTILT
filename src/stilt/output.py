@@ -628,6 +628,7 @@ class Output:
         variant: Variant,
         receptor_ids: Iterable[str] | None = None,
         realization: int | None = None,
+        columns: list[str] | None = None,
     ) -> pa.Table:
         """
         Return the files of many receptors as one table.
@@ -646,6 +647,14 @@ class Output:
             (:meth:`present`). Without it, every file in the folder is read.
         realization : int, optional
             Which realization of an ensemble.
+        columns : list of str, optional
+            Only these stored columns, after ``receptor``. Every column by
+            default.
+
+        Raises
+        ------
+        ValueError
+            If a column in *columns* is not in the files.
         """
         _check_kind(kind)
         folder = self._found(kind, kind, variant, realization)
@@ -672,7 +681,16 @@ class Output:
                 partitioning=_DATE_PARTITIONING,
                 partition_base_dir=folder.path,
             )
-        return dataset.to_table()
+        if columns is None:
+            return dataset.to_table()
+        wanted = ["receptor", *(c for c in columns if c != "receptor")]
+        unknown = [c for c in wanted if c not in dataset.schema.names]
+        if unknown:
+            raise ValueError(
+                f"No column {unknown[0]!r} in the {kind} files; they hold "
+                f"{dataset.schema.names}."
+            )
+        return dataset.to_table(columns=wanted)
 
     # -- failure records ---------------------------------------------------
 

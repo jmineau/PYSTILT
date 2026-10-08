@@ -846,7 +846,9 @@ class Project:
         frame = self._selected(sel)
         return frame.loc[~self._complete(frame, self._present(frame))]
 
-    def particles(self, sel: Any = None) -> pd.DataFrame:
+    def particles(
+        self, sel: Any = None, columns: list[str] | None = None
+    ) -> pd.DataFrame:
         """
         Load the particles of every selected simulation that has them, as one table.
 
@@ -854,6 +856,12 @@ class Project:
         ----------
         sel : DataFrame or mask, optional
             The simulations, as for :meth:`status`. All of them by default.
+        columns : list of str, optional
+            Only these particle columns, such as ``["particle", "time",
+            "lon", "lat", "foot"]``, after ``receptor``, ``variant``, and
+            ``realization``. ``datetime`` is built from ``time``. Every
+            column by default. Fewer columns read faster and take less
+            memory.
 
         Returns
         -------
@@ -870,26 +878,29 @@ class Project:
         whole large project, read the ``particles/`` tree of the output
         directory with pyarrow, DuckDB, or polars instead.
         """
+        first = ["receptor", "variant", "realization"]
+        with_datetime = columns is None or "datetime" in columns
+        stored = None
+        if columns is not None:
+            stored = [c for c in columns if c not in (*first, "datetime")]
+            if with_datetime and "time" not in stored:
+                stored.append("time")
         frame = self._selected(sel)
         parts = []
         for name, k, rows in _groups(frame):
             variant = self.variants[name]
             present = self.output.present("particles", variant, rows["receptor"], k)
-            table = self.output.table("particles", variant, present, k)
+            table = self.output.table("particles", variant, present, k, stored)
             if table.num_rows:
-                part = particles_from_table(table).assign(variant=name)
+                part = particles_from_table(table, with_datetime).assign(variant=name)
                 parts.append(
                     part.assign(realization=pd.array([k] * len(part), "Int64"))
                 )
         if not parts:
-            return pd.DataFrame(
-                columns=pd.Index(["receptor", "variant", "realization"])
-            )
+            return pd.DataFrame(columns=pd.Index(first))
         particles = pd.concat(parts, ignore_index=True)
-        first = ["receptor", "variant", "realization"]
-        return particles.loc[
-            :, first + [c for c in particles.columns if c not in first]
-        ]
+        rest = particles.columns if columns is None else columns
+        return particles.loc[:, first + [c for c in rest if c not in first]]
 
     def footprints(self, sel: Any = None) -> xr.Dataset:
         """
