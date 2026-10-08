@@ -223,7 +223,8 @@ class ProjectConfig(BaseModel):
     are in :attr:`footprint`. Each variant names a met and overrides some of
     the defaults; only the declared variants run. A variant that names
     another ``model`` gives that model's own parameters itself, and
-    inherits the parameters every model shares (:class:`TransportConfig`).
+    inherits the parameters every model shares
+    (:class:`~stilt.transport.TransportConfig`).
     An unknown key is an error that names the nearest setting.
     """
 

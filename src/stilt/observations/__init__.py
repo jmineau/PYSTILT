@@ -16,7 +16,7 @@ Before a run:
   receptors over a pixel (:func:`jitter_points`), or lay out a slant line
   of sight (:func:`slant_points`) at the retrieval's pressure levels
   (:func:`pressure_altitudes`). Every reader's table has the columns in
-  :data:`~stilt.observations.readers.schema.SOUNDING_SCHEMA` (:func:`check_soundings`).
+  :data:`SOUNDING_SCHEMA` (:func:`check_soundings`).
 
 After a run:
 

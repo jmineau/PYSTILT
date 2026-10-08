@@ -26,8 +26,14 @@ Product readers
 Each reader returns a table of soundings with the columns in
 ``SOUNDING_SCHEMA``, which :doc:`/guides/readers` describes.
 
-.. autodata:: stilt.observations.readers.schema.SOUNDING_SCHEMA
-   :no-value:
+.. data:: stilt.observations.SOUNDING_SCHEMA
+
+   Every column of a table of soundings, as ``{name: (when, meaning)}``.
+   ``when`` is ``always``; ``kernel``, for every product with an averaging
+   kernel (all but GGG ``.oof`` files); or ``optional``, when the product
+   has it. Vertical arrays run from the surface upward, pressures are in
+   hPa, altitudes in meters above sea level, and azimuths in degrees
+   clockwise from north toward the instrument or the sun.
 
 .. autosummary::
    :toctree: _api

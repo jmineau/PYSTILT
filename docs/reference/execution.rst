@@ -73,15 +73,21 @@ Slurm job arrays
 Transport model
 ----------------
 
-The worker runs a simulation through the model its settings name. HYSPLIT
-is the one transport model. Whatever the model, a run whose particles stop
-before the end of the run fails, as ``MET_COVERAGE``.
+The worker runs a simulation through the transport model its settings name.
+HYSPLIT is the one built in, and CONTRIBUTING describes how to add another.
+A model fails a run that its meteorology does not cover, as
+``MET_COVERAGE``. Particles that all leave the met's domain before the end
+of the run are a complete run.
 
 .. autosummary::
    :toctree: _api
    :nosignatures:
 
    stilt.transport.TransportModel
+   stilt.transport.BatchedTransportModel
+   stilt.transport.TransportConfig
    stilt.transport.ModelRun
    stilt.transport.get_model
+   stilt.transport.run_model
+   stilt.transport.run_model_many
    stilt.transport.hysplit.HysplitModel

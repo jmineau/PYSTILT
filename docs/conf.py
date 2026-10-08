@@ -129,6 +129,12 @@ autodoc_type_aliases = {
 # Autosummary settings
 autosummary_generate = True
 autosummary_generate_overwrite = True
+# The function stilt.particles.background and the class Background would get
+# pages whose names differ only by case, which overwrite each other on macOS
+# and Windows.
+autosummary_filename_map = {
+    "stilt.particles.Background": "stilt.particles.Background-class"
+}
 set_type_checking_flag = True
 
 # Intersphinx settings
