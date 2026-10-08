@@ -146,16 +146,16 @@ column means.
    * - ``particle``
      - int32
      - :func:`stilt.read_particles` gives it back as float64.
-   * - ``time``
+   * - ``age``
      - int32
      - Minutes since release, negative for a backward run. Read back as
        float64.
    * - ``lon``, ``lat``, ``zagl``, and the rest
      - float64
-     - The columns ``varsiwant`` asked HYSPLIT for, plus ``xhgt`` for a
+     - The columns ``varsiwant`` asked HYSPLIT for, plus ``release_height`` for a
        column or multipoint receptor.
 
-``datetime`` is not stored: it is the receptor time plus ``time``.
+``time`` is not stored: it is the receptor time plus ``age``.
 
 The file's metadata (Parquet key-value metadata):
 
@@ -247,14 +247,14 @@ The hour
 
 Layer ``k`` holds the particles' influence from ``k`` hours to ``k + 1``
 hours after the receptor time, and is stamped at its start. A particle
-row at ``time`` minutes falls in layer ``floor(time / 60)``. For a receptor
+row at ``age`` minutes falls in layer ``floor(age / 60)``. For a receptor
 at 18:30 on a backward run:
 
 .. list-table::
    :header-rows: 1
    :widths: 30 20 50
 
-   * - Particle ``time`` (minutes)
+   * - Particle ``age`` (minutes)
      - Layer
      - Covers
    * - -1 to -60

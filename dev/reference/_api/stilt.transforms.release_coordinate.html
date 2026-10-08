@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../_static/documentation_options.js?v=9ac7ab43"></script>
+    <script src="../../_static/documentation_options.js?v=edd25f46"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
     <link rel="prev" title="stilt.transforms.averaging_kernel_table" href="stilt.transforms.averaging_kernel_table.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev291+g28b1d4e26" />
+  <meta name="docsearch:version" content="0.1.0a23.dev293+ge87171ef8" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -904,10 +904,10 @@
 <dt class="sig sig-object py" id="stilt.transforms.release_coordinate">
 <span class="sig-prename descclassname"><span class="pre">stilt.transforms.</span></span><span class="sig-name descname"><span class="pre">release_coordinate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">particles</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coordinate</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/stilt/transforms/_common.html#release_coordinate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#stilt.transforms.release_coordinate" title="Link to this definition">#</a></dt>
 <dd><p>Return each particle’s value of <code class="docutils literal notranslate"><span class="pre">coordinate</span></code> at release, indexed by <code class="docutils literal notranslate"><span class="pre">particle</span></code>.</p>
-<p>Some columns, such as <code class="docutils literal notranslate"><span class="pre">xhgt</span></code>, are constant along a trajectory. Others,
+<p>Some columns, such as <code class="docutils literal notranslate"><span class="pre">release_height</span></code>, are constant along a trajectory. Others,
 such as <code class="docutils literal notranslate"><span class="pre">pres</span></code>, change at every time step. The release value is taken
 from the row nearest the receptor time (smallest <code class="docutils literal notranslate"><span class="pre">|time|</span></code>), or from the
-first row when there is no numeric <code class="docutils literal notranslate"><span class="pre">time</span></code> column.</p>
+first row when there is no numeric <code class="docutils literal notranslate"><span class="pre">age</span></code> column.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.Series.html#pandas.Series" title="(in pandas v3.0.6)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Series</span></code></a></span></p>

@@ -39,7 +39,7 @@
   <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../../../_static/documentation_options.js?v=9ac7ab43"></script>
+    <script src="../../../../_static/documentation_options.js?v=edd25f46"></script>
     <script src="../../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -58,7 +58,7 @@
     <link rel="search" title="Search" href="../../../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev291+g28b1d4e26" />
+  <meta name="docsearch:version" content="0.1.0a23.dev293+ge87171ef8" />
   
     
     <script src="../../../../_static/searchtools.js"></script>
@@ -599,7 +599,7 @@
 
 <span class="c1">#: HYSPLIT&#39;s names for the columns the particle table names otherwise</span>
 <span class="c1">#: (:data:`stilt.particles.PARTICLE_SCHEMA`); the rest keep HYSPLIT&#39;s.</span>
-<span class="n">PARTICLE_COLUMNS</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;indx&quot;</span><span class="p">:</span> <span class="s2">&quot;particle&quot;</span><span class="p">,</span> <span class="s2">&quot;long&quot;</span><span class="p">:</span> <span class="s2">&quot;lon&quot;</span><span class="p">,</span> <span class="s2">&quot;lati&quot;</span><span class="p">:</span> <span class="s2">&quot;lat&quot;</span><span class="p">}</span>
+<span class="n">PARTICLE_COLUMNS</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;indx&quot;</span><span class="p">:</span> <span class="s2">&quot;particle&quot;</span><span class="p">,</span> <span class="s2">&quot;time&quot;</span><span class="p">:</span> <span class="s2">&quot;age&quot;</span><span class="p">,</span> <span class="s2">&quot;long&quot;</span><span class="p">:</span> <span class="s2">&quot;lon&quot;</span><span class="p">,</span> <span class="s2">&quot;lati&quot;</span><span class="p">:</span> <span class="s2">&quot;lat&quot;</span><span class="p">}</span>
 
 
 <div class="viewcode-block" id="read_particle_dat">
@@ -608,8 +608,8 @@
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Read a ``PARTICLE_STILT.DAT`` file as a particle table.</span>
 
-<span class="sd">    The ``varsiwant`` codes ``indx``, ``long``, and ``lati`` become the</span>
-<span class="sd">    particle table&#39;s ``particle``, ``lon``, and ``lat``</span>
+<span class="sd">    The ``varsiwant`` codes ``indx``, ``time``, ``long``, and ``lati``</span>
+<span class="sd">    become the particle table&#39;s ``particle``, ``age``, ``lon``, and ``lat``</span>
 <span class="sd">    (:data:`PARTICLE_COLUMNS`).</span>
 
 <span class="sd">    Parameters</span>

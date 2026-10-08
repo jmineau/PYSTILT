@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=9ac7ab43"></script>
+    <script src="../_static/documentation_options.js?v=edd25f46"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
     <link rel="prev" title="Coming From Another STILT" href="index.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev291+g28b1d4e26" />
+  <meta name="docsearch:version" content="0.1.0a23.dev293+ge87171ef8" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -707,7 +707,10 @@ new folder and the old one stays until you delete it (see
 <p><code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code> holds the same information as STILT-R’s <code class="docutils literal notranslate"><span class="pre">receptors</span></code> data
 frame. STILT-R’s column names <code class="docutils literal notranslate"><span class="pre">long</span></code>, <code class="docutils literal notranslate"><span class="pre">lati</span></code>, and <code class="docutils literal notranslate"><span class="pre">zagl</span></code> work as they
 are. Rename <code class="docutils literal notranslate"><span class="pre">run_time</span></code> to <code class="docutils literal notranslate"><span class="pre">time</span></code>. In the particle table, STILT-R’s
-<code class="docutils literal notranslate"><span class="pre">long</span></code>, <code class="docutils literal notranslate"><span class="pre">lati</span></code>, and <code class="docutils literal notranslate"><span class="pre">indx</span></code> are <code class="docutils literal notranslate"><span class="pre">lon</span></code>, <code class="docutils literal notranslate"><span class="pre">lat</span></code>, and <code class="docutils literal notranslate"><span class="pre">particle</span></code>.</p>
+<code class="docutils literal notranslate"><span class="pre">long</span></code>, <code class="docutils literal notranslate"><span class="pre">lati</span></code>, <code class="docutils literal notranslate"><span class="pre">indx</span></code>, <code class="docutils literal notranslate"><span class="pre">time</span></code>, and <code class="docutils literal notranslate"><span class="pre">xhgt</span></code> are <code class="docutils literal notranslate"><span class="pre">lon</span></code>, <code class="docutils literal notranslate"><span class="pre">lat</span></code>,
+<code class="docutils literal notranslate"><span class="pre">particle</span></code>, <code class="docutils literal notranslate"><span class="pre">age</span></code>, and <code class="docutils literal notranslate"><span class="pre">release_height</span></code>. PYSTILT’s <code class="docutils literal notranslate"><span class="pre">time</span></code> column is
+the UTC time of each row, so a script that filters on STILT-R’s <code class="docutils literal notranslate"><span class="pre">time</span></code>
+in minutes must use <code class="docutils literal notranslate"><span class="pre">age</span></code>.</p>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>time,long,lati,zagl
 2015-07-05 00:00:00,-111.8472,40.7665,21
 </pre></div>

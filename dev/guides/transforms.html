@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=9ac7ab43"></script>
+    <script src="../_static/documentation_options.js?v=edd25f46"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -62,7 +62,7 @@
     <link rel="prev" title="Slant Columns" href="slant_columns.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev291+g28b1d4e26" />
+  <meta name="docsearch:version" content="0.1.0a23.dev293+ge87171ef8" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -583,7 +583,7 @@ footprint config are recorded in the footprint’s netCDF file.</p>
 </div>
 <dl>
 <dt><code class="docutils literal notranslate"><span class="pre">averaging_kernel</span></code> (<a class="reference internal" href="../reference/_api/stilt.transforms.AveragingKernel.html#stilt.transforms.AveragingKernel" title="stilt.transforms.AveragingKernel"><code class="xref py py-class docutils literal notranslate"><span class="pre">stilt.transforms.AveragingKernel</span></code></a>)</dt><dd><p>Multiplies each particle’s <code class="docutils literal notranslate"><span class="pre">foot</span></code> by the kernel, interpolated to the
-particle’s release height <code class="docutils literal notranslate"><span class="pre">xhgt</span></code>. The <code class="docutils literal notranslate"><span class="pre">levels</span></code> are in metres in the
+particle’s release height, <code class="docutils literal notranslate"><span class="pre">release_height</span></code>. The <code class="docutils literal notranslate"><span class="pre">levels</span></code> are in metres in the
 receptor’s vertical reference: above ground, or above sea level for a
 receptor built with <code class="docutils literal notranslate"><span class="pre">altitude_ref=&quot;msl&quot;</span></code>. For a kernel on pressure
 levels (hPa), set <code class="docutils literal notranslate"><span class="pre">coordinate:</span> <span class="pre">pres</span></code>. Outside <code class="docutils literal notranslate"><span class="pre">levels</span></code> the kernel
@@ -623,8 +623,8 @@ particle carries the whole sub-column. Start the receptor at or near
 the surface unless that is what you want.</p>
 </dd>
 <dt><code class="docutils literal notranslate"><span class="pre">first_order_lifetime</span></code> (<a class="reference internal" href="../reference/_api/stilt.transforms.FirstOrderLifetime.html#stilt.transforms.FirstOrderLifetime" title="stilt.transforms.FirstOrderLifetime"><code class="xref py py-class docutils literal notranslate"><span class="pre">stilt.transforms.FirstOrderLifetime</span></code></a>)</dt><dd><p>Scales <code class="docutils literal notranslate"><span class="pre">foot</span></code> by <span class="math notranslate nohighlight">\(\exp(-\text{age} / \tau)\)</span>, where
-<span class="math notranslate nohighlight">\(\tau\)</span> is <code class="docutils literal notranslate"><span class="pre">lifetime_hours</span></code>. The age is the particle’s transport
-time, from its <code class="docutils literal notranslate"><span class="pre">time</span></code> column.</p>
+<span class="math notranslate nohighlight">\(\tau\)</span> is <code class="docutils literal notranslate"><span class="pre">lifetime_hours</span></code>. The age is the particle’s time since
+release, its <code class="docutils literal notranslate"><span class="pre">age</span></code> column.</p>
 </dd>
 </dl>
 <p>For satellite and TCCON columns, list <code class="docutils literal notranslate"><span class="pre">averaging_kernel</span></code> and then
@@ -682,7 +682,7 @@ nothing in the project changes. Without a simulation,
 <a class="reference internal" href="../reference/_api/stilt.calc_footprint.html#stilt.calc_footprint" title="stilt.calc_footprint"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.calc_footprint()</span></code></a> takes the same <code class="docutils literal notranslate"><span class="pre">transforms</span></code>.</p>
 <p>To see what a transform did, apply it to the particle table yourself:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">weighted</span> <span class="o">=</span> <span class="n">PressureWeighting</span><span class="p">()</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">particles</span><span class="p">)</span>
-<span class="n">weighted</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span><span class="s2">&quot;particle&quot;</span><span class="p">)[[</span><span class="s2">&quot;xhgt&quot;</span><span class="p">,</span> <span class="s2">&quot;xpres&quot;</span><span class="p">,</span> <span class="s2">&quot;pwf&quot;</span><span class="p">]]</span>
+<span class="n">weighted</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span><span class="s2">&quot;particle&quot;</span><span class="p">)[[</span><span class="s2">&quot;release_height&quot;</span><span class="p">,</span> <span class="s2">&quot;xpres&quot;</span><span class="p">,</span> <span class="s2">&quot;pwf&quot;</span><span class="p">]]</span>
 </pre></div>
 </div>
 </section>
@@ -705,7 +705,7 @@ unchanged.</p>
     <span class="n">max_height</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1500.0</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">apply</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">particles</span><span class="p">,</span> <span class="n">receptor</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">directory</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="n">z</span> <span class="o">=</span> <span class="n">release_coordinate</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="s2">&quot;xhgt&quot;</span><span class="p">)</span>           <span class="c1"># one value per particle</span>
+        <span class="n">z</span> <span class="o">=</span> <span class="n">release_coordinate</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="s2">&quot;release_height&quot;</span><span class="p">)</span> <span class="c1"># one value per particle</span>
         <span class="n">keep</span> <span class="o">=</span> <span class="n">z</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">particles</span><span class="p">[</span><span class="s2">&quot;particle&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">())</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_height</span>
         <span class="n">out</span> <span class="o">=</span> <span class="n">particles</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
         <span class="n">out</span><span class="p">[</span><span class="s2">&quot;foot&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">keep</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span> <span class="n">out</span><span class="p">[</span><span class="s2">&quot;foot&quot;</span><span class="p">],</span> <span class="mf">0.0</span><span class="p">)</span>

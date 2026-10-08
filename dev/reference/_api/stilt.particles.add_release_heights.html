@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../_static/documentation_options.js?v=9ac7ab43"></script>
+    <script src="../../_static/documentation_options.js?v=edd25f46"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
     <link rel="prev" title="stilt.particles.check_particles" href="stilt.particles.check_particles.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev291+g28b1d4e26" />
+  <meta name="docsearch:version" content="0.1.0a23.dev293+ge87171ef8" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -903,11 +903,11 @@
 <dl class="py function">
 <dt class="sig sig-object py" id="stilt.particles.add_release_heights">
 <span class="sig-prename descclassname"><span class="pre">stilt.particles.</span></span><span class="sig-name descname"><span class="pre">add_release_heights</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">particles</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">receptor</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/stilt/particles/table.html#add_release_heights"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#stilt.particles.add_release_heights" title="Link to this definition">#</a></dt>
-<dd><p>Return <em>particles</em> with each particle’s release height <code class="docutils literal notranslate"><span class="pre">xhgt</span></code>, for a column or multipoint receptor.</p>
-<p>The release row (<code class="docutils literal notranslate"><span class="pre">time</span> <span class="pre">=</span> <span class="pre">0</span></code>) says where each particle started. For a
-multipoint receptor that is one of its points, and <code class="docutils literal notranslate"><span class="pre">xhgt</span></code> is that
+<dd><p>Return <em>particles</em> with each particle’s <code class="docutils literal notranslate"><span class="pre">release_height</span></code>, for a column or multipoint receptor.</p>
+<p>The release row (<code class="docutils literal notranslate"><span class="pre">age</span> <span class="pre">=</span> <span class="pre">0</span></code>) says where each particle started. For a
+multipoint receptor that is one of its points, and <code class="docutils literal notranslate"><span class="pre">release_height</span></code> is that
 point’s altitude. For a column receptor it is inside one of the
-<code class="docutils literal notranslate"><span class="pre">numpar</span></code> slabs the column is split into, and <code class="docutils literal notranslate"><span class="pre">xhgt</span></code> is that slab’s
+<code class="docutils literal notranslate"><span class="pre">numpar</span></code> slabs the column is split into, and <code class="docutils literal notranslate"><span class="pre">release_height</span></code> is that slab’s
 centre: the slab is what the particle stands for, not the random
 height inside it. A model that writes no release row, such as the
 bundled HYSPLIT, falls back to matching: a column’s particles are

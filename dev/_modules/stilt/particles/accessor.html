@@ -39,7 +39,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../../_static/documentation_options.js?v=9ac7ab43"></script>
+    <script src="../../../_static/documentation_options.js?v=edd25f46"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -58,7 +58,7 @@
     <link rel="search" title="Search" href="../../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev291+g28b1d4e26" />
+  <meta name="docsearch:version" content="0.1.0a23.dev293+ge87171ef8" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -547,12 +547,12 @@
 <span class="sd">        -------</span>
 <span class="sd">        pandas.DataFrame</span>
 <span class="sd">            One row per particle, with every column of the particle table.</span>
-<span class="sd">            ``time`` is minutes since release and ``datetime`` the UTC time.</span>
+<span class="sd">            ``age`` is minutes since release and ``time`` the UTC time.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">p</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_particles</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">p</span>
-        <span class="n">reach</span> <span class="o">=</span> <span class="n">p</span><span class="p">[</span><span class="s2">&quot;time&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span>
+        <span class="n">reach</span> <span class="o">=</span> <span class="n">p</span><span class="p">[</span><span class="s2">&quot;age&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span>
         <span class="n">last</span> <span class="o">=</span> <span class="n">reach</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">&quot;particle&quot;</span><span class="p">],</span> <span class="n">sort</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span><span class="o">.</span><span class="n">idxmax</span><span class="p">()</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">p</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">last</span><span class="p">]</span></div>
 
@@ -573,7 +573,7 @@
 <span class="sd">        flux : xarray.DataArray</span>
 <span class="sd">            Surface flux on a ``lat``/``lon`` grid, in µmol m⁻² s⁻¹ for an</span>
 <span class="sd">            enhancement in ppm. A flux with a ``time`` dimension is taken at</span>
-<span class="sd">            each particle&#39;s ``datetime``. Points outside it, and missing</span>
+<span class="sd">            each particle&#39;s ``time``. Points outside it, and missing</span>
 <span class="sd">            cells, count as zero flux.</span>
 
 <span class="sd">        Returns</span>
@@ -586,13 +586,13 @@
 <span class="sd">        ------</span>
 <span class="sd">        ValueError</span>
 <span class="sd">            If the flux varies in time and the particles have no</span>
-<span class="sd">            ``datetime`` column.</span>
+<span class="sd">            ``time`` column.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">p</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_particles</span>
-        <span class="n">times</span> <span class="o">=</span> <span class="n">p</span><span class="p">[</span><span class="s2">&quot;datetime&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span> <span class="k">if</span> <span class="s2">&quot;datetime&quot;</span> <span class="ow">in</span> <span class="n">p</span><span class="o">.</span><span class="n">columns</span> <span class="k">else</span> <span class="kc">None</span>
+        <span class="n">times</span> <span class="o">=</span> <span class="n">p</span><span class="p">[</span><span class="s2">&quot;time&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span> <span class="k">if</span> <span class="s2">&quot;time&quot;</span> <span class="ow">in</span> <span class="n">p</span><span class="o">.</span><span class="n">columns</span> <span class="k">else</span> <span class="kc">None</span>
         <span class="k">if</span> <span class="s2">&quot;time&quot;</span> <span class="ow">in</span> <span class="n">flux</span><span class="o">.</span><span class="n">dims</span> <span class="ow">and</span> <span class="n">times</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="s2">&quot;flux varies in time but the particles have no &#39;datetime&#39; column.&quot;</span>
+                <span class="s2">&quot;flux varies in time but the particles have no &#39;time&#39; column.&quot;</span>
             <span class="p">)</span>
         <span class="n">sampled</span> <span class="o">=</span> <span class="n">sample_field</span><span class="p">(</span>
             <span class="n">flux</span><span class="p">,</span>

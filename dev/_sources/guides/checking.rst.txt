@@ -201,7 +201,7 @@ The length of the run
    ``n_hours`` sets how far back the particles go. A footprint that stops
    short of a source you expect may need a longer run. Particles also stop
    early when they all leave the met's domain or its crop, and the run is
-   still complete. ``sim.particles["time"].abs().max() / 60`` is how many
+   still complete. ``sim.particles["age"].abs().max() / 60`` is how many
    hours they went. If that is short of ``n_hours`` and the footprint
    needs more, widen ``subgrid_bounds``.
 

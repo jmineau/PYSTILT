@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=9ac7ab43"></script>
+    <script src="../_static/documentation_options.js?v=edd25f46"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
     <link rel="prev" title="Checking A Run" href="checking.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev291+g28b1d4e26" />
+  <meta name="docsearch:version" content="0.1.0a23.dev293+ge87171ef8" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -653,11 +653,12 @@ step.</p>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">zagl</span></code></p></td>
 <td><p>Particle height above ground, m</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">time</span></code></p></td>
-<td><p>Minutes from the receptor time (negative for a backward run)</p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">age</span></code></p></td>
+<td><p>Minutes since release, negative for a backward run (STILT-R’s
+<code class="docutils literal notranslate"><span class="pre">time</span></code>)</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">datetime</span></code></p></td>
-<td><p>Time of the row, UTC</p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">time</span></code></p></td>
+<td><p>Time of the row, UTC, built from <code class="docutils literal notranslate"><span class="pre">age</span></code> when the table is read</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">foot</span></code></p></td>
 <td><p>The particle’s influence from the surface at this step, in
@@ -666,8 +667,9 @@ ppm per (µmol m⁻² s⁻¹)</p></td>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">particle</span></code></p></td>
 <td><p>Particle number (STILT-R’s <code class="docutils literal notranslate"><span class="pre">indx</span></code>)</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">xhgt</span></code></p></td>
-<td><p>Release height, for column and multipoint receptors</p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">release_height</span></code></p></td>
+<td><p>Release height, for column and multipoint receptors (STILT-R’s
+<code class="docutils literal notranslate"><span class="pre">xhgt</span></code>)</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">mlht</span></code>, <code class="docutils literal notranslate"><span class="pre">sigw</span></code>, <code class="docutils literal notranslate"><span class="pre">tlgr</span></code>, <code class="docutils literal notranslate"><span class="pre">pres</span></code></p></td>
 <td><p>Mixed-layer height, vertical velocity spread, Lagrangian time scale,

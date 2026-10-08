@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=9ac7ab43"></script>
+    <script src="../_static/documentation_options.js?v=edd25f46"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
     <link rel="prev" title="In Containers (Kubernetes)" href="containers.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev291+g28b1d4e26" />
+  <meta name="docsearch:version" content="0.1.0a23.dev293+ge87171ef8" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -758,7 +758,7 @@ nothing, so a footprint cut off at an edge needs a wider grid.</p>
 <dt>The length of the run</dt><dd><p><code class="docutils literal notranslate"><span class="pre">n_hours</span></code> sets how far back the particles go. A footprint that stops
 short of a source you expect may need a longer run. Particles also stop
 early when they all leave the met’s domain or its crop, and the run is
-still complete. <code class="docutils literal notranslate"><span class="pre">sim.particles[&quot;time&quot;].abs().max()</span> <span class="pre">/</span> <span class="pre">60</span></code> is how many
+still complete. <code class="docutils literal notranslate"><span class="pre">sim.particles[&quot;age&quot;].abs().max()</span> <span class="pre">/</span> <span class="pre">60</span></code> is how many
 hours they went. If that is short of <code class="docutils literal notranslate"><span class="pre">n_hours</span></code> and the footprint
 needs more, widen <code class="docutils literal notranslate"><span class="pre">subgrid_bounds</span></code>.</p>
 </dd>

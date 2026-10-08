@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../_static/documentation_options.js?v=9ac7ab43"></script>
+    <script src="../../_static/documentation_options.js?v=edd25f46"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
     <link rel="prev" title="stilt.transforms.release_coordinate" href="stilt.transforms.release_coordinate.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev291+g28b1d4e26" />
+  <meta name="docsearch:version" content="0.1.0a23.dev293+ge87171ef8" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -926,7 +926,7 @@ among them.</p>
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>particles</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.0.6)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></a></span>) – Particle table with <code class="docutils literal notranslate"><span class="pre">particle</span></code>, <code class="docutils literal notranslate"><span class="pre">pres</span></code> (hPa), and <code class="docutils literal notranslate"><span class="pre">zagl</span></code> (m), and
-optionally <code class="docutils literal notranslate"><span class="pre">xhgt</span></code>, the release height (m). Without <code class="docutils literal notranslate"><span class="pre">xhgt</span></code> the
+optionally <code class="docutils literal notranslate"><span class="pre">release_height</span></code>, the release height (m). Without <code class="docutils literal notranslate"><span class="pre">release_height</span></code> the
 first-step height is used. An MSL receptor also needs <code class="docutils literal notranslate"><span class="pre">zsfc</span></code>, the
 terrain height (m above sea level).</p></li>
 <li><p><strong>surface_pressure</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a> | <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></span>) – Surface pressure in hPa. Defaults to the fitted curve at the ground.</p></li>

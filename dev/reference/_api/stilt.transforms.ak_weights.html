@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../_static/documentation_options.js?v=9ac7ab43"></script>
+    <script src="../../_static/documentation_options.js?v=edd25f46"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
     <link rel="prev" title="stilt.transforms.particle_pwf" href="stilt.transforms.particle_pwf.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev291+g28b1d4e26" />
+  <meta name="docsearch:version" content="0.1.0a23.dev293+ge87171ef8" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -902,7 +902,7 @@
 <h1>stilt.transforms.ak_weights<a class="headerlink" href="#stilt-transforms-ak-weights" title="Link to this heading">#</a></h1>
 <dl class="py function">
 <dt class="sig sig-object py" id="stilt.transforms.ak_weights">
-<span class="sig-prename descclassname"><span class="pre">stilt.transforms.</span></span><span class="sig-name descname"><span class="pre">ak_weights</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">particles</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">levels</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">values</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coordinate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'xhgt'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/stilt/transforms/averaging_kernel.html#ak_weights"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#stilt.transforms.ak_weights" title="Link to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">stilt.transforms.</span></span><span class="sig-name descname"><span class="pre">ak_weights</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">particles</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">levels</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">values</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coordinate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'release_height'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/stilt/transforms/averaging_kernel.html#ak_weights"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#stilt.transforms.ak_weights" title="Link to this definition">#</a></dt>
 <dd><p>Return the averaging kernel at each particle’s release coordinate.</p>
 <p>The kernel is interpolated linearly to each particle’s release value of
 <code class="docutils literal notranslate"><span class="pre">coordinate</span></code> and repeated on every row of that particle. Outside
@@ -913,7 +913,7 @@
 <li><p><strong>particles</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.0.6)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></a></span>) – Particle table with <code class="docutils literal notranslate"><span class="pre">particle</span></code> and <code class="docutils literal notranslate"><span class="pre">coordinate</span></code>.</p></li>
 <li><p><strong>levels</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a>]</span>) – Levels the kernel is given on, in the units of <code class="docutils literal notranslate"><span class="pre">coordinate</span></code>.</p></li>
 <li><p><strong>values</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a>]</span>) – Kernel value at each level.</p></li>
-<li><p><strong>coordinate</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a></span>) – Particle column to interpolate on: <code class="docutils literal notranslate"><span class="pre">xhgt</span></code> (release height, m) or
+<li><p><strong>coordinate</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a></span>) – Particle column to interpolate on: <code class="docutils literal notranslate"><span class="pre">release_height</span></code> (release height, m) or
 <code class="docutils literal notranslate"><span class="pre">pres</span></code> (hPa).</p></li>
 </ul>
 </dd>

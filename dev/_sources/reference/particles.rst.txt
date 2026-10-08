@@ -23,11 +23,11 @@ Every table has five columns, :data:`PARTICLE_SCHEMA`:
      - Particle number, from 1 to ``numpar``. A particle keeps its number
        for the whole run. HYSPLIT and STILT-R call it ``indx``. Stored as
        int32 and read back as float64.
-   * - ``time``
+   * - ``age``
      - minutes
      - Time since release. Negative for a backward run, positive for a
-       forward one. Stored as whole minutes, int32, and read back as
-       float64.
+       forward one. HYSPLIT and STILT-R call it ``time``. Stored as whole
+       minutes, int32, and read back as float64.
    * - ``lon``
      - degrees east
      - Longitude of the particle (HYSPLIT's ``long``).
@@ -53,7 +53,7 @@ A footprint also needs ``foot``:
 The release row
 ---------------
 
-A model should write each particle's release as a row at ``time = 0``, with
+A model should write each particle's release as a row at ``age = 0``, with
 ``foot = 0``: a positive ``foot`` there would add a layer at hour 0 to the
 footprint. That row is where the particle started, so it says which release point of a
 multipoint receptor the particle left from, and which slab of a column
@@ -67,9 +67,9 @@ position, and takes a column's particles to be released bottom to top in
 Columns the model adds
 ----------------------
 
-HYSPLIT writes the variables in ``varsiwant``, under HYSPLIT's names but
-for the three above (``indx``, ``long``, ``lati``). Some that PYSTILT
-reads:
+HYSPLIT writes the variables in ``varsiwant`` under HYSPLIT's names,
+except ``indx``, ``time``, ``long``, and ``lati``, which become the
+columns above. Some that PYSTILT reads:
 
 .. list-table::
    :header-rows: 1
@@ -108,18 +108,21 @@ The near-field correction reads ``dens``, ``samt``, ``sigw``, ``tlgr``,
 Columns PYSTILT adds
 --------------------
 
-``xhgt``
+``release_height``
    Release height of each particle, in metres in the receptor's own
    vertical reference, for column and multipoint receptors
    (:func:`add_release_heights`). For a column it is the centre of the
-   particle's slab, the part of the column the particle stands for.
+   particle's slab, the part of the column the particle stands for. STILT-R and
+   X-STILT call it ``xhgt``.
 
 ``foot_no_hnf_dilution``
    ``foot`` before the near-field correction (:func:`correct_near_field`),
    when ``hnf_plume`` is on.
 
-``datetime``
-   The time of each row, in UTC, added when the table is read from a file.
+``time``
+   The time of each row, in UTC: the receptor time plus ``age``, added
+   when the table is read from a file. STILT-R's ``time`` is ``age``
+   here.
 
 Checking a table
 ----------------

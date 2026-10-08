@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=9ac7ab43"></script>
+    <script src="../_static/documentation_options.js?v=edd25f46"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
     <link rel="prev" title="Particle Weighting (Transforms)" href="transforms.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev291+g28b1d4e26" />
+  <meta name="docsearch:version" content="0.1.0a23.dev293+ge87171ef8" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -612,7 +612,7 @@ forward with 1000 particles. In PYSTILT each release is a
 </div>
 <p>No footprint is needed. The plume only needs the particle tables, which
 hold each particle’s position at every output step along with its
-<code class="docutils literal notranslate"><span class="pre">datetime</span></code>.</p>
+<code class="docutils literal notranslate"><span class="pre">time</span></code>.</p>
 </section>
 <section id="the-plume">
 <h2>The plume<a class="headerlink" href="#the-plume" title="Link to this heading">#</a></h2>
@@ -622,7 +622,7 @@ across all the forward runs, and outline them:</p>
 
 <span class="n">window</span> <span class="o">=</span> <span class="p">(</span><span class="n">overpass</span> <span class="o">-</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timedelta</span><span class="p">(</span><span class="n">minutes</span><span class="o">=</span><span class="mi">3</span><span class="p">),</span> <span class="n">overpass</span> <span class="o">+</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timedelta</span><span class="p">(</span><span class="n">minutes</span><span class="o">=</span><span class="mi">3</span><span class="p">))</span>
 <span class="n">particles</span> <span class="o">=</span> <span class="n">forward</span><span class="o">.</span><span class="n">particles</span><span class="p">()</span>
-<span class="n">particles</span> <span class="o">=</span> <span class="n">particles</span><span class="p">[</span><span class="n">particles</span><span class="p">[</span><span class="s2">&quot;datetime&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">between</span><span class="p">(</span><span class="o">*</span><span class="n">window</span><span class="p">)]</span>
+<span class="n">particles</span> <span class="o">=</span> <span class="n">particles</span><span class="p">[</span><span class="n">particles</span><span class="p">[</span><span class="s2">&quot;time&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">between</span><span class="p">(</span><span class="o">*</span><span class="n">window</span><span class="p">)]</span>
 
 <span class="n">plume</span> <span class="o">=</span> <span class="n">plume_polygon</span><span class="p">(</span><span class="n">particles</span><span class="p">[</span><span class="s2">&quot;lon&quot;</span><span class="p">],</span> <span class="n">particles</span><span class="p">[</span><span class="s2">&quot;lat&quot;</span><span class="p">])</span>
 <span class="n">plume</span><span class="o">.</span><span class="n">polygon</span>      <span class="c1"># shapely Polygon in longitude and latitude</span>

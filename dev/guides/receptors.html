@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=9ac7ab43"></script>
+    <script src="../_static/documentation_options.js?v=edd25f46"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
     <link rel="prev" title="User Guide" href="index.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev291+g28b1d4e26" />
+  <meta name="docsearch:version" content="0.1.0a23.dev293+ge87171ef8" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -728,7 +728,7 @@ the first nine get 21 each and the last gets 11.</p></li>
 </section>
 <section id="advanced-release-heights-for-multipoint-and-slant-receptors">
 <h2>Advanced: release heights for multipoint and slant receptors<a class="headerlink" href="#advanced-release-heights-for-multipoint-and-slant-receptors" title="Link to this heading">#</a></h2>
-<p>Vertical weighting needs each particle’s release height (<code class="docutils literal notranslate"><span class="pre">xhgt</span></code>). HYSPLIT
+<p>Vertical weighting needs each particle’s release height (<code class="docutils literal notranslate"><span class="pre">release_height</span></code>). HYSPLIT
 does not record which release point a particle came from, so PYSTILT works
 it out from the first row HYSPLIT writes for the particle. With the bundled
 HYSPLIT build, that row comes one timestep after release. By then the wind

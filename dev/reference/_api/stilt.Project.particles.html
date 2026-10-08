@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../_static/documentation_options.js?v=9ac7ab43"></script>
+    <script src="../../_static/documentation_options.js?v=edd25f46"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
     <link rel="prev" title="stilt.Project.jacobian" href="stilt.Project.jacobian.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev291+g28b1d4e26" />
+  <meta name="docsearch:version" content="0.1.0a23.dev293+ge87171ef8" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -911,9 +911,9 @@
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>sel</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code></a></span>) – The simulations, as for <a class="reference internal" href="stilt.Project.status.html#stilt.Project.status" title="stilt.Project.status"><code class="xref py py-meth docutils literal notranslate"><span class="pre">status()</span></code></a>. All of them by default.</p></li>
-<li><p><strong>columns</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>] | <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></span>) – Only these particle columns, such as <code class="docutils literal notranslate"><span class="pre">[&quot;particle&quot;,</span> <span class="pre">&quot;time&quot;,</span>
+<li><p><strong>columns</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>] | <a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></span>) – Only these particle columns, such as <code class="docutils literal notranslate"><span class="pre">[&quot;particle&quot;,</span> <span class="pre">&quot;age&quot;,</span>
 <span class="pre">&quot;lon&quot;,</span> <span class="pre">&quot;lat&quot;,</span> <span class="pre">&quot;foot&quot;]</span></code>, after <code class="docutils literal notranslate"><span class="pre">receptor</span></code>, <code class="docutils literal notranslate"><span class="pre">variant</span></code>, and
-<code class="docutils literal notranslate"><span class="pre">realization</span></code>. <code class="docutils literal notranslate"><span class="pre">datetime</span></code> is built from <code class="docutils literal notranslate"><span class="pre">time</span></code>. Every
+<code class="docutils literal notranslate"><span class="pre">realization</span></code>. <code class="docutils literal notranslate"><span class="pre">time</span></code> (UTC) is built from <code class="docutils literal notranslate"><span class="pre">age</span></code>. Every
 column by default. Fewer columns read faster and take less
 memory.</p></li>
 </ul>

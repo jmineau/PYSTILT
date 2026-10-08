@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=9ac7ab43"></script>
+    <script src="../_static/documentation_options.js?v=edd25f46"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
     <link rel="prev" title="stilt.sampling.nearest_cell" href="_api/stilt.sampling.nearest_cell.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev291+g28b1d4e26" />
+  <meta name="docsearch:version" content="0.1.0a23.dev293+ge87171ef8" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -922,11 +922,11 @@ a pandas DataFrame. <a class="reference internal" href="layout.html"><span class
 for the whole run. HYSPLIT and STILT-R call it <code class="docutils literal notranslate"><span class="pre">indx</span></code>. Stored as
 int32 and read back as float64.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">time</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">age</span></code></p></td>
 <td><p>minutes</p></td>
 <td><p>Time since release. Negative for a backward run, positive for a
-forward one. Stored as whole minutes, int32, and read back as
-float64.</p></td>
+forward one. HYSPLIT and STILT-R call it <code class="docutils literal notranslate"><span class="pre">time</span></code>. Stored as whole
+minutes, int32, and read back as float64.</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">lon</span></code></p></td>
 <td><p>degrees east</p></td>
@@ -957,7 +957,7 @@ particles.</p>
 </dl>
 <section id="the-release-row">
 <h2>The release row<a class="headerlink" href="#the-release-row" title="Link to this heading">#</a></h2>
-<p>A model should write each particle’s release as a row at <code class="docutils literal notranslate"><span class="pre">time</span> <span class="pre">=</span> <span class="pre">0</span></code>, with
+<p>A model should write each particle’s release as a row at <code class="docutils literal notranslate"><span class="pre">age</span> <span class="pre">=</span> <span class="pre">0</span></code>, with
 <code class="docutils literal notranslate"><span class="pre">foot</span> <span class="pre">=</span> <span class="pre">0</span></code>: a positive <code class="docutils literal notranslate"><span class="pre">foot</span></code> there would add a layer at hour 0 to the
 footprint. That row is where the particle started, so it says which release point of a
 multipoint receptor the particle left from, and which slab of a column
@@ -970,9 +970,9 @@ position, and takes a column’s particles to be released bottom to top in
 </section>
 <section id="columns-the-model-adds">
 <h2>Columns the model adds<a class="headerlink" href="#columns-the-model-adds" title="Link to this heading">#</a></h2>
-<p>HYSPLIT writes the variables in <code class="docutils literal notranslate"><span class="pre">varsiwant</span></code>, under HYSPLIT’s names but
-for the three above (<code class="docutils literal notranslate"><span class="pre">indx</span></code>, <code class="docutils literal notranslate"><span class="pre">long</span></code>, <code class="docutils literal notranslate"><span class="pre">lati</span></code>). Some that PYSTILT
-reads:</p>
+<p>HYSPLIT writes the variables in <code class="docutils literal notranslate"><span class="pre">varsiwant</span></code> under HYSPLIT’s names,
+except <code class="docutils literal notranslate"><span class="pre">indx</span></code>, <code class="docutils literal notranslate"><span class="pre">time</span></code>, <code class="docutils literal notranslate"><span class="pre">long</span></code>, and <code class="docutils literal notranslate"><span class="pre">lati</span></code>, which become the
+columns above. Some that PYSTILT reads:</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <colgroup>
 <col style="width: 14.0%" />
@@ -1025,15 +1025,18 @@ reads:</p>
 <section id="columns-pystilt-adds">
 <h2>Columns PYSTILT adds<a class="headerlink" href="#columns-pystilt-adds" title="Link to this heading">#</a></h2>
 <dl class="simple">
-<dt><code class="docutils literal notranslate"><span class="pre">xhgt</span></code></dt><dd><p>Release height of each particle, in metres in the receptor’s own
+<dt><code class="docutils literal notranslate"><span class="pre">release_height</span></code></dt><dd><p>Release height of each particle, in metres in the receptor’s own
 vertical reference, for column and multipoint receptors
 (<a class="reference internal" href="_api/stilt.particles.add_release_heights.html#stilt.particles.add_release_heights" title="stilt.particles.add_release_heights"><code class="xref py py-func docutils literal notranslate"><span class="pre">add_release_heights()</span></code></a>). For a column it is the centre of the
-particle’s slab, the part of the column the particle stands for.</p>
+particle’s slab, the part of the column the particle stands for. STILT-R and
+X-STILT call it <code class="docutils literal notranslate"><span class="pre">xhgt</span></code>.</p>
 </dd>
 <dt><code class="docutils literal notranslate"><span class="pre">foot_no_hnf_dilution</span></code></dt><dd><p><code class="docutils literal notranslate"><span class="pre">foot</span></code> before the near-field correction (<a class="reference internal" href="_api/stilt.particles.correct_near_field.html#stilt.particles.correct_near_field" title="stilt.particles.correct_near_field"><code class="xref py py-func docutils literal notranslate"><span class="pre">correct_near_field()</span></code></a>),
 when <code class="docutils literal notranslate"><span class="pre">hnf_plume</span></code> is on.</p>
 </dd>
-<dt><code class="docutils literal notranslate"><span class="pre">datetime</span></code></dt><dd><p>The time of each row, in UTC, added when the table is read from a file.</p>
+<dt><code class="docutils literal notranslate"><span class="pre">time</span></code></dt><dd><p>The time of each row, in UTC: the receptor time plus <code class="docutils literal notranslate"><span class="pre">age</span></code>, added
+when the table is read from a file. STILT-R’s <code class="docutils literal notranslate"><span class="pre">time</span></code> is <code class="docutils literal notranslate"><span class="pre">age</span></code>
+here.</p>
 </dd>
 </dl>
 </section>
@@ -1065,7 +1068,7 @@ lack the columns the correction reads gets none, and a warning says so.</p>
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="_api/stilt.particles.add_release_heights.html#stilt.particles.add_release_heights" title="stilt.particles.add_release_heights"><code class="xref py py-obj docutils literal notranslate"><span class="pre">add_release_heights</span></code></a></p></td>
-<td><p>Return <em>particles</em> with each particle's release height <code class="docutils literal notranslate"><span class="pre">xhgt</span></code>, for a column or multipoint receptor.</p></td>
+<td><p>Return <em>particles</em> with each particle's <code class="docutils literal notranslate"><span class="pre">release_height</span></code>, for a column or multipoint receptor.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="_api/stilt.particles.correct_near_field.html#stilt.particles.correct_near_field" title="stilt.particles.correct_near_field"><code class="xref py py-obj docutils literal notranslate"><span class="pre">correct_near_field</span></code></a></p></td>
 <td><p>Correct <code class="docutils literal notranslate"><span class="pre">foot</span></code> for plume dilution in the hyper-near field, as STILT-R's <code class="docutils literal notranslate"><span class="pre">calc_plume_dilution</span></code> does.</p></td>

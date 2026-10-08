@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=9ac7ab43"></script>
+    <script src="../_static/documentation_options.js?v=edd25f46"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
     <link rel="prev" title="stilt.particles.correct_near_field" href="_api/stilt.particles.correct_near_field.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev291+g28b1d4e26" />
+  <meta name="docsearch:version" content="0.1.0a23.dev293+ge87171ef8" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -1038,20 +1038,20 @@ column means.</p>
 <td><p>int32</p></td>
 <td><p><a class="reference internal" href="_api/stilt.read_particles.html#stilt.read_particles" title="stilt.read_particles"><code class="xref py py-func docutils literal notranslate"><span class="pre">stilt.read_particles()</span></code></a> gives it back as float64.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">time</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">age</span></code></p></td>
 <td><p>int32</p></td>
 <td><p>Minutes since release, negative for a backward run. Read back as
 float64.</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">lon</span></code>, <code class="docutils literal notranslate"><span class="pre">lat</span></code>, <code class="docutils literal notranslate"><span class="pre">zagl</span></code>, and the rest</p></td>
 <td><p>float64</p></td>
-<td><p>The columns <code class="docutils literal notranslate"><span class="pre">varsiwant</span></code> asked HYSPLIT for, plus <code class="docutils literal notranslate"><span class="pre">xhgt</span></code> for a
+<td><p>The columns <code class="docutils literal notranslate"><span class="pre">varsiwant</span></code> asked HYSPLIT for, plus <code class="docutils literal notranslate"><span class="pre">release_height</span></code> for a
 column or multipoint receptor.</p></td>
 </tr>
 </tbody>
 </table>
 </div>
-<p><code class="docutils literal notranslate"><span class="pre">datetime</span></code> is not stored: it is the receptor time plus <code class="docutils literal notranslate"><span class="pre">time</span></code>.</p>
+<p><code class="docutils literal notranslate"><span class="pre">time</span></code> is not stored: it is the receptor time plus <code class="docutils literal notranslate"><span class="pre">age</span></code>.</p>
 <p>The file’s metadata (Parquet key-value metadata):</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <colgroup>
@@ -1179,7 +1179,7 @@ missing, not as a footprint of zeros.</p>
 <h3>The hour<a class="headerlink" href="#the-hour" title="Link to this heading">#</a></h3>
 <p>Layer <code class="docutils literal notranslate"><span class="pre">k</span></code> holds the particles’ influence from <code class="docutils literal notranslate"><span class="pre">k</span></code> hours to <code class="docutils literal notranslate"><span class="pre">k</span> <span class="pre">+</span> <span class="pre">1</span></code>
 hours after the receptor time, and is stamped at its start. A particle
-row at <code class="docutils literal notranslate"><span class="pre">time</span></code> minutes falls in layer <code class="docutils literal notranslate"><span class="pre">floor(time</span> <span class="pre">/</span> <span class="pre">60)</span></code>. For a receptor
+row at <code class="docutils literal notranslate"><span class="pre">age</span></code> minutes falls in layer <code class="docutils literal notranslate"><span class="pre">floor(age</span> <span class="pre">/</span> <span class="pre">60)</span></code>. For a receptor
 at 18:30 on a backward run:</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <colgroup>
@@ -1188,7 +1188,7 @@ at 18:30 on a backward run:</p>
 <col style="width: 50.0%" />
 </colgroup>
 <thead>
-<tr class="row-odd"><th class="head"><p>Particle <code class="docutils literal notranslate"><span class="pre">time</span></code> (minutes)</p></th>
+<tr class="row-odd"><th class="head"><p>Particle <code class="docutils literal notranslate"><span class="pre">age</span></code> (minutes)</p></th>
 <th class="head"><p>Layer</p></th>
 <th class="head"><p>Covers</p></th>
 </tr>
