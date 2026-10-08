@@ -773,6 +773,38 @@ def test_particles_of_a_selection_is_one_table(tmp_path):
     assert project.particles(sims[sims.receptor == b.id]).empty
 
 
+def test_particles_reads_only_the_columns_asked_for(tmp_path):
+    """A day of a site was 12 GB with every column (#191)."""
+    a = _receptor(12)
+    project = _project(tmp_path, [a])
+    _write_trajectory(project, a)
+    every = project.particles()
+
+    some = project.particles(columns=["lon", "lat", "foot"])
+    assert list(some.columns) == [
+        "receptor",
+        "variant",
+        "realization",
+        "lon",
+        "lat",
+        "foot",
+    ]
+    pd.testing.assert_frame_equal(some, every[list(some.columns)])
+
+    timed = project.particles(columns=["datetime", "foot"])
+    assert list(timed.columns) == [
+        "receptor",
+        "variant",
+        "realization",
+        "datetime",
+        "foot",
+    ]
+    assert (timed["datetime"] == every["datetime"]).all()
+
+    with pytest.raises(ValueError, match="No column 'height'"):
+        project.particles(columns=["height"])
+
+
 def test_footprints_open_one_variant_as_a_dataset(tmp_path, monkeypatch):
     done, empty, missing = _receptor(12), _receptor(13), _receptor(14)
     project = _project(

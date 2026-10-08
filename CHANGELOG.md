@@ -20,8 +20,9 @@ layout; `docs/migration/` covers moving from STILT-R, X-STILT, and stiltctl.
   receptors, settings)` writes `config.yaml` and `receptors.csv` once;
   `stilt.Project(path)` opens a project. `ModelConfig` is `ProjectConfig`.
   `project.simulations` is a pandas DataFrame; select rows as in pandas and
-  pass them to `project.status(sel)`, `particles(sel)`, `footprints(sel)`,
-  or `jacobian(sel, target, time_bins)`. One simulation is
+  pass them to `project.status(sel)`, `particles(sel)` (`columns=` reads
+  fewer), `footprints(sel)`, or `jacobian(sel, target, time_bins)`. One
+  simulation is
   `project.simulation(receptor_id, variant)` (was `model.simulations[...]`).
   The collection classes, `SimID`, `ReceptorID`, and `LocationID` are gone.
 - Results go to an output directory (breaking). `output:` in
