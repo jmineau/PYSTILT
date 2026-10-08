@@ -121,6 +121,28 @@ def test_control_file_roundtrip_multiple_met_files(point_receptor, tmp_path):
     assert loaded.met_files[1].name == "hrrr_2023010100"
 
 
+def test_control_lists_the_met_files_as_one_grid(point_receptor, tmp_path):
+    """HYSPLIT reads at most 12 grids but 128 files of one grid."""
+    met = [Path(f"/met/hrrr_{i:02d}") for i in range(20)]
+    path = tmp_path / "CONTROL"
+    _make_control(point_receptor, met_files=met).write(path)
+
+    lines = path.read_text().splitlines()
+    count = lines.index("/met/") - 1
+    assert lines[count] == "1 20"
+    assert [f.name for f in ControlFile.read(path).met_files] == [m.name for m in met]
+
+
+def test_control_reads_a_met_count_of_one_file_per_grid(point_receptor, tmp_path):
+    """A CONTROL file written by STILT-R gives a bare count."""
+    met = [Path("/met/hrrr_a"), Path("/met/hrrr_b")]
+    path = tmp_path / "CONTROL"
+    _make_control(point_receptor, met_files=met).write(path)
+    path.write_text(path.read_text().replace("\n1 2\n", "\n2\n"))
+
+    assert [f.name for f in ControlFile.read(path).met_files] == ["hrrr_a", "hrrr_b"]
+
+
 def test_control_file_roundtrip_column_receptor(column_receptor, tmp_path):
     cf = _make_control(column_receptor)
     path = tmp_path / "CONTROL"

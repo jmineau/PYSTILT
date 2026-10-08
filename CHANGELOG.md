@@ -156,6 +156,10 @@ layout; `docs/migration/` covers moving from STILT-R, X-STILT, and stiltctl.
 
 ### Fixed
 
+- A run reads up to 128 met files. `CONTROL` lists them as one grid in
+  time; listed as one grid per file, as STILT-R does, NOAA's HYSPLIT
+  builds read at most 12 and the bundled one 99. The particles are the
+  same.
 - `stilt init` writes a receptors file that loads (#49). HYSPLIT settings
   take the types HYSPLIT reads (`rhb`, `rht`, ...) (#57).
 - Crops of your own met files are cached per crop box and written

@@ -53,8 +53,12 @@ class ControlFile(BaseModel):
             str(self.z_top)
         )  # (6) top of model domain (internal coordinates, m-agl)
 
-        # Met files - directory and filename on separate lines each
-        lines.append(str(len(self.met_files)))  # (7) number of met files
+        # Met files - directory and filename on separate lines each. (7) is
+        # "1 N": one grid with N files in time, at most 128 (mtim in
+        # HYSPLIT's DEFGRID.INC). A bare "N", as STILT-R writes, makes each
+        # file its own grid: at most 12 in NOAA's builds and 99 in the
+        # bundled one (mgrd). Both give the same particles.
+        lines.append(f"1 {len(self.met_files)}")
         for met_file in self.met_files:
             lines.append(
                 str(met_file.parent) + "/"
@@ -150,8 +154,9 @@ class ControlFile(BaseModel):
         w_option = int(lines[cursor + 1].strip())
         z_top = float(lines[cursor + 2].strip())
 
-        # Parse met files
-        n_met_files = int(lines[cursor + 3].strip())
+        # Parse met files: "N" (one file per grid) or "grids files"
+        counts = [int(value) for value in lines[cursor + 3].split()]
+        n_met_files = counts[0] * (counts[1] if len(counts) > 1 else 1)
         cursor += 4
         met_files = []
         for i in range(n_met_files):
