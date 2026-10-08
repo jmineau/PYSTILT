@@ -83,7 +83,6 @@ default, still matches.
    identity.transport_from_settings
    identity.footprint_settings
    identity.read_footprint_settings
-   identity.footprint_hash
    identity.settings_hash
    transport.ModelInfo
 
@@ -104,6 +103,8 @@ write particle and footprint files without a project.
    particles.particles_metadata
    particles.write_particles
    read_footprint
+   footprint.write_footprint
+   footprint.write_empty_footprint
    footprint.open_footprints
    particles.ParticlesAccessor
    footprint.FootprintAccessor
