@@ -226,7 +226,7 @@ projects can share one:
    )
 
 Inside ``subgrid_dir``, each crop gets its own folder, named by a short
-hash of the crop box and ``subgrid_levels``. Changing ``subgrid_bounds``
+code computed from the crop box and ``subgrid_levels``. Changing ``subgrid_bounds``
 or ``subgrid_levels`` starts a new folder, and projects with the same crop
 share one. ``Met(name, config).crop_dir`` gives
 the folder. Old folders are not deleted.

@@ -30,8 +30,9 @@ What every container needs
   :doc:`projects`), with the containers given its credentials.
   ``stilt run --output s3://bucket/...`` uses another output directory
   than ``config.yaml`` names, without editing it.
-- A scratch folder for HYSPLIT. Set ``PYSTILT_COMPUTE_ROOT`` to one on fast
-  local disk, such as an ``emptyDir``.
+- A compute root, where each run gets its workdir. Set
+  ``PYSTILT_COMPUTE_ROOT`` to a folder on fast local disk, such as an
+  ``emptyDir``.
 
 A Kubernetes indexed Job
 ------------------------

@@ -39,8 +39,8 @@ nearest grid cell. An endpoint above the top level takes the top level. An
 endpoint outside the field's grid gets no value and is left out of the
 average. Longitudes from 0 to 360, as in many global models, are handled.
 
-PYSTILT does not read model files. If your model's levels vary in space, as
-CarbonTracker's do, sample it yourself and pass one value per particle
+PYSTILT does not read a global model's files. If its levels vary in space,
+as CarbonTracker's do, sample it yourself and pass one value per particle
 instead of a field, as a Series indexed by particle number (``particle``).
 ``sim.particles.stilt.endpoints()`` gives the endpoints as a table for this,
 and lair's ``CarbonTracker.sample`` takes that table directly.

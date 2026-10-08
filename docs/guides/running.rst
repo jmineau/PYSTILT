@@ -108,8 +108,8 @@ Commands
      id per line.
    - ``--output DIR`` uses another output directory than ``config.yaml``
      names.
-   - ``--compute-root DIR`` runs the transport model in ``DIR``, a scratch
-     folder emptied after each successful run.
+   - ``--compute-root DIR`` is the compute root: each run gets a workdir
+     in ``DIR``, removed after it succeeds.
    - ``--task I/N`` runs task ``I`` of ``N`` here, as one task of a job
      array (:doc:`containers`).
 

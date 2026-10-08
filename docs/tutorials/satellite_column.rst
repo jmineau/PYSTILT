@@ -128,7 +128,7 @@ Step 5: Run
 
    stilt run ./xch4          # or stilt submit ./xch4 on a cluster
 
-Every way of running the model, Slurm included, applies each receptor's
+Every way of running the transport model, Slurm included, applies each receptor's
 own kernel, because the table is part of the project.
 
 Step 6: Compare enhancements

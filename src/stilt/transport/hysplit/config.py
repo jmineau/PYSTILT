@@ -462,7 +462,7 @@ class HysplitConfig(TransportConfig):
     )
     z_top: float = Field(
         25000.0,
-        description="Top of the model domain, in meters above ground.",
+        description="Top of HYSPLIT's computational domain, in meters above ground.",
     )
     ziscale: float | list[float] = Field(
         1.0,
