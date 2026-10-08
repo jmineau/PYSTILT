@@ -39,7 +39,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../_static/documentation_options.js?v=2c8ec258"></script>
+    <script src="../../_static/documentation_options.js?v=4c076e02"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -58,7 +58,7 @@
     <link rel="search" title="Search" href="../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev288+g7ecab9a4c" />
+  <meta name="docsearch:version" content="0.1.0a23.dev289+g409224645" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -802,6 +802,8 @@
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;The project&#39;s ``receptors.csv``.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">directory</span> <span class="o">/</span> <span class="s2">&quot;receptors.csv&quot;</span>
 
+<div class="viewcode-block" id="Project.config">
+<a class="viewcode-back" href="../../reference/_api/stilt.Project.config.html#stilt.Project.config">[docs]</a>
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">config</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ProjectConfig</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -817,8 +819,11 @@
                 <span class="sa">f</span><span class="s2">&quot;No config.yaml in </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">directory</span><span class="si">}</span><span class="s2">. Make a project with &quot;</span>
                 <span class="s2">&quot;stilt.Project.init(...) or `stilt init`.&quot;</span>
             <span class="p">)</span>
-        <span class="k">return</span> <span class="n">ProjectConfig</span><span class="o">.</span><span class="n">from_yaml</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config_path</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">ProjectConfig</span><span class="o">.</span><span class="n">from_yaml</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config_path</span><span class="p">)</span></div>
 
+
+<div class="viewcode-block" id="Project.output">
+<a class="viewcode-back" href="../../reference/_api/stilt.Project.output.html#stilt.Project.output">[docs]</a>
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">output</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Output</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -829,8 +834,11 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_output</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">Output</span><span class="p">(</span><span class="n">location</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_output</span><span class="p">))</span>
-        <span class="k">return</span> <span class="n">Output</span><span class="p">(</span><span class="n">location</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">output</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">directory</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">Output</span><span class="p">(</span><span class="n">location</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">output</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">directory</span><span class="p">))</span></div>
 
+
+<div class="viewcode-block" id="Project.variants">
+<a class="viewcode-back" href="../../reference/_api/stilt.Project.variants.html#stilt.Project.variants">[docs]</a>
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">variants</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Variant</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -841,7 +849,8 @@
 <span class="sd">        here, so the geometry is read on first use (:meth:`stilt.ProjectConfig.resolve`),</span>
 <span class="sd">        and a relative geometry file starts from the project directory.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">resolve</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">directory</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">resolve</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">directory</span><span class="p">)</span></div>
+
 
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_rows</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
@@ -863,6 +872,8 @@
         <span class="n">groups</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rows</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">&quot;receptor&quot;</span><span class="p">,</span> <span class="n">sort</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span><span class="o">.</span><span class="n">indices</span>
         <span class="k">return</span> <span class="p">{</span><span class="nb">str</span><span class="p">(</span><span class="n">rid</span><span class="p">):</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">positions</span><span class="p">)</span> <span class="k">for</span> <span class="n">rid</span><span class="p">,</span> <span class="n">positions</span> <span class="ow">in</span> <span class="n">groups</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
 
+<div class="viewcode-block" id="Project.receptors">
+<a class="viewcode-back" href="../../reference/_api/stilt.Project.receptors.html#stilt.Project.receptors">[docs]</a>
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">receptors</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -877,7 +888,8 @@
         <span class="n">labels</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">rows</span><span class="o">.</span><span class="n">columns</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">COLUMNS</span> <span class="ow">and</span> <span class="n">c</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">ROW_COLUMNS</span><span class="p">]</span>
         <span class="n">first</span> <span class="o">=</span> <span class="n">rows</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span><span class="s2">&quot;receptor&quot;</span><span class="p">)</span>
         <span class="n">frame</span> <span class="o">=</span> <span class="n">first</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="p">[</span><span class="o">*</span><span class="n">RECEPTOR_COLUMNS</span><span class="p">,</span> <span class="o">*</span><span class="n">labels</span><span class="p">]]</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">frame</span><span class="o">.</span><span class="n">astype</span><span class="p">({</span><span class="s2">&quot;time&quot;</span><span class="p">:</span> <span class="s2">&quot;datetime64[ns]&quot;</span><span class="p">})</span>
+        <span class="k">return</span> <span class="n">frame</span><span class="o">.</span><span class="n">astype</span><span class="p">({</span><span class="s2">&quot;time&quot;</span><span class="p">:</span> <span class="s2">&quot;datetime64[ns]&quot;</span><span class="p">})</span></div>
+
 
 <div class="viewcode-block" id="Project.receptor">
 <a class="viewcode-back" href="../../reference/_api/stilt.Project.receptor.html#stilt.Project.receptor">[docs]</a>
@@ -1142,12 +1154,15 @@
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">folders</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">variants</span><span class="p">)</span></div>
 
 
+<div class="viewcode-block" id="Project.plot">
+<a class="viewcode-back" href="../../reference/_api/stilt.Project.plot.html#stilt.Project.plot">[docs]</a>
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">plot</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ProjectPlotAccessor</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Plotting methods, such as ``project.plot.availability()``.&quot;&quot;&quot;</span>
         <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.visualization</span><span class="w"> </span><span class="kn">import</span> <span class="n">ProjectPlotAccessor</span>
 
-        <span class="k">return</span> <span class="n">ProjectPlotAccessor</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">ProjectPlotAccessor</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></div>
+
 
     <span class="c1"># -- the simulations&#39; results ----------------------------------------------</span>
 

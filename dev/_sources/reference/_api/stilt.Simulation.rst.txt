@@ -6,99 +6,6 @@
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 .. class-signature:: stilt.Simulation
 
 
@@ -106,24 +13,12 @@
 
 
 
-Methods
--------
-
-.. autosummary::
-   :toctree:
-
-
-   ~Simulation.background
-   ~Simulation.calc_footprint
-   ~Simulation.transport_error
-
-
 Attributes
 ----------
 
 .. autosummary::
+   :toctree:
 
-   ~Simulation.directory
    ~Simulation.failure
    ~Simulation.footprint
    ~Simulation.footprint_path
@@ -137,9 +32,19 @@ Attributes
    ~Simulation.particles
    ~Simulation.particles_path
    ~Simulation.plot
-   ~Simulation.realization
    ~Simulation.transport
-   ~Simulation.receptor
-   ~Simulation.variant
-   ~Simulation.output
+
+
+
+Methods
+-------
+
+.. autosummary::
+   :toctree:
+
+   ~Simulation.background
+   ~Simulation.calc_footprint
+   ~Simulation.transport_error
+
+
 

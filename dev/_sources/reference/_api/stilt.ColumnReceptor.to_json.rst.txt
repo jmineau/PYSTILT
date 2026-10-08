@@ -1,6 +1,0 @@
-stilt.ColumnReceptor.to\_json
-=============================
-
-.. currentmodule:: stilt
-
-.. automethod:: ColumnReceptor.to_json

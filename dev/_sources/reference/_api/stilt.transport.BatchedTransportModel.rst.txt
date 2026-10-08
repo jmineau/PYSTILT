@@ -6,47 +6,12 @@
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 .. class-signature:: stilt.transport.BatchedTransportModel
 
 
 .. class-parameters:: stilt.transport.BatchedTransportModel
+
+
 
 
 
@@ -56,20 +21,15 @@ Methods
 .. autosummary::
    :toctree:
 
-
-   ~BatchedTransportModel.data_files
-   ~BatchedTransportModel.run
    ~BatchedTransportModel.run_many
-   ~BatchedTransportModel.version
 
 
-Attributes
-----------
 
-.. autosummary::
 
-   ~BatchedTransportModel.config_class
-   ~BatchedTransportModel.met_config_class
-   ~BatchedTransportModel.batched
-   ~BatchedTransportModel.name
+Inherited
+---------
+
+
+From :class:`~.TransportModel`: :py:obj:`~.TransportModel.config_class`, :py:obj:`~.TransportModel.data_files`, :py:obj:`~.TransportModel.met_config_class`, :py:obj:`~.TransportModel.run`, :py:obj:`~.TransportModel.version`
+
 

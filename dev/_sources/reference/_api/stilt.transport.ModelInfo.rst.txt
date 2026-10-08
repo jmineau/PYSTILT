@@ -6,69 +6,6 @@
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 .. class-signature:: stilt.transport.ModelInfo
 
 
@@ -77,12 +14,6 @@
 
 
 
-Attributes
-----------
 
-.. autosummary::
 
-   ~ModelInfo.name
-   ~ModelInfo.version
-   ~ModelInfo.data_files
 

@@ -39,7 +39,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../_static/documentation_options.js?v=2c8ec258"></script>
+    <script src="../../_static/documentation_options.js?v=4c076e02"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -58,7 +58,7 @@
     <link rel="search" title="Search" href="../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev288+g7ecab9a4c" />
+  <meta name="docsearch:version" content="0.1.0a23.dev289+g409224645" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -666,6 +666,8 @@
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">transport</span><span class="o">.</span><span class="n">realizations</span><span class="p">(</span><span class="n">realization</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)[</span><span class="n">realization</span><span class="p">]</span></div>
 
 
+<div class="viewcode-block" id="Variant.met_settings">
+<a class="viewcode-back" href="../../reference/_api/stilt.config.Variant.met_settings.html#stilt.Variant.met_settings">[docs]</a>
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">met_settings</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -683,8 +685,11 @@
         <span class="k">try</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">met_config</span><span class="o">.</span><span class="n">settings</span><span class="p">()</span>
         <span class="k">except</span> <span class="ne">FileNotFoundError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Met </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">met</span><span class="si">!r}</span><span class="s2">: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
+            <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Met </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">met</span><span class="si">!r}</span><span class="s2">: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span></div>
 
+
+<div class="viewcode-block" id="Variant.run_settings">
+<a class="viewcode-back" href="../../reference/_api/stilt.config.Variant.run_settings.html#stilt.Variant.run_settings">[docs]</a>
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">run_settings</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;The settings that identify this variant&#39;s particles, as ``_settings.yaml`` records them.&quot;&quot;&quot;</span>
@@ -693,26 +698,36 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">met_settings</span><span class="p">,</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">,</span>
             <span class="n">ensemble</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">realizations</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="p">)</span>
+        <span class="p">)</span></div>
 
+
+<div class="viewcode-block" id="Variant.particles_hash">
+<a class="viewcode-back" href="../../reference/_api/stilt.config.Variant.particles_hash.html#stilt.Variant.particles_hash">[docs]</a>
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">particles_hash</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Hash of :attr:`run_settings`, which finds the particles folder.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="n">settings_hash</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">run_settings</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">settings_hash</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">run_settings</span><span class="p">)</span></div>
 
+
+<div class="viewcode-block" id="Variant.footprint_settings">
+<a class="viewcode-back" href="../../reference/_api/stilt.config.Variant.footprint_settings.html#stilt.Variant.footprint_settings">[docs]</a>
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">footprint_settings</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;The settings that identify this variant&#39;s footprints, or ``None`` for particles only.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">footprint</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="kc">None</span>
-        <span class="k">return</span> <span class="n">footprint_settings</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">footprint</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry_hash</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">footprint_settings</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">footprint</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">geometry_hash</span><span class="p">)</span></div>
 
+
+<div class="viewcode-block" id="Variant.footprint_hash">
+<a class="viewcode-back" href="../../reference/_api/stilt.config.Variant.footprint_hash.html#stilt.Variant.footprint_hash">[docs]</a>
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">footprint_hash</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Hash of the particles and :attr:`footprint_settings`, which finds the footprint folder.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">footprint_settings</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="kc">None</span>
         <span class="k">return</span> <span class="n">footprint_hash</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">particles_hash</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">footprint_settings</span><span class="p">)</span></div>
+</div>
 
 
 

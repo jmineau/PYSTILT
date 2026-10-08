@@ -6,86 +6,17 @@
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 .. class-signature:: stilt.FootprintConfig
+
 
 Parameters
 ----------
 
 .. config-model:: stilt.FootprintConfig
+
+
+
+
+
 
 

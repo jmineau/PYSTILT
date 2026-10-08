@@ -6,51 +6,25 @@
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 .. class-signature:: stilt.footprint.FootprintAccessor
 
 
 .. class-parameters:: stilt.footprint.FootprintAccessor
+
+
+
+Attributes
+----------
+
+.. autosummary::
+   :toctree:
+
+   ~FootprintAccessor.config
+   ~FootprintAccessor.geometry_hash
+   ~FootprintAccessor.grid
+   ~FootprintAccessor.name
+   ~FootprintAccessor.plot
+   ~FootprintAccessor.receptor
 
 
 
@@ -60,21 +34,9 @@ Methods
 .. autosummary::
    :toctree:
 
-
    ~FootprintAccessor.aggregate
    ~FootprintAccessor.enhancement
    ~FootprintAccessor.to_netcdf
 
 
-Attributes
-----------
-
-.. autosummary::
-
-   ~FootprintAccessor.config
-   ~FootprintAccessor.geometry_hash
-   ~FootprintAccessor.grid
-   ~FootprintAccessor.name
-   ~FootprintAccessor.plot
-   ~FootprintAccessor.receptor
 

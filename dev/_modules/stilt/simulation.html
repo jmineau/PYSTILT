@@ -39,7 +39,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../_static/documentation_options.js?v=2c8ec258"></script>
+    <script src="../../_static/documentation_options.js?v=4c076e02"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -58,7 +58,7 @@
     <link rel="search" title="Search" href="../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev288+g7ecab9a4c" />
+  <meta name="docsearch:version" content="0.1.0a23.dev289+g409224645" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -728,6 +728,8 @@
             <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;No log for </span><span class="si">{</span><span class="bp">self</span><span class="si">}</span><span class="s2"> yet.&quot;</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">log_path</span><span class="o">.</span><span class="n">read_text</span><span class="p">()</span>
 
+<div class="viewcode-block" id="Simulation.particles">
+<a class="viewcode-back" href="../../reference/_api/stilt.Simulation.particles.html#stilt.Simulation.particles">[docs]</a>
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">particles</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -749,8 +751,11 @@
         <span class="n">path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">particles_path</span>
         <span class="k">if</span> <span class="n">path</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
             <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="si">}</span><span class="s2"> has no particles yet.&quot;</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">read_particles</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">read_particles</span><span class="p">(</span><span class="n">path</span><span class="p">)</span></div>
 
+
+<div class="viewcode-block" id="Simulation.footprint">
+<a class="viewcode-back" href="../../reference/_api/stilt.Simulation.footprint.html#stilt.Simulation.footprint">[docs]</a>
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">footprint</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -775,14 +780,18 @@
         <span class="n">path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">footprint_path</span>
         <span class="k">if</span> <span class="n">path</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
             <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="si">}</span><span class="s2"> has no footprint yet.&quot;</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">read_footprint</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">read_footprint</span><span class="p">(</span><span class="n">path</span><span class="p">)</span></div>
 
+
+<div class="viewcode-block" id="Simulation.plot">
+<a class="viewcode-back" href="../../reference/_api/stilt.Simulation.plot.html#stilt.Simulation.plot">[docs]</a>
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">plot</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SimulationPlotAccessor</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Plotting methods, such as ``sim.plot.map()``.&quot;&quot;&quot;</span>
         <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.visualization</span><span class="w"> </span><span class="kn">import</span> <span class="n">SimulationPlotAccessor</span>
 
-        <span class="k">return</span> <span class="n">SimulationPlotAccessor</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">SimulationPlotAccessor</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></div>
+
 
 <div class="viewcode-block" id="Simulation.calc_footprint">
 <a class="viewcode-back" href="../../reference/_api/stilt.Simulation.calc_footprint.html#stilt.Simulation.calc_footprint">[docs]</a>

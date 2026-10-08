@@ -1,6 +1,0 @@
-stilt.footprint.Jacobian.count
-==============================
-
-.. currentmodule:: stilt.footprint
-
-.. automethod:: Jacobian.count

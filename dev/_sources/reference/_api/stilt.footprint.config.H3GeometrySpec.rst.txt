@@ -6,74 +6,17 @@
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 .. class-signature:: stilt.footprint.config.H3GeometrySpec
+
 
 Parameters
 ----------
 
 .. config-model:: stilt.footprint.config.H3GeometrySpec
+
+
+
+
+
 
 

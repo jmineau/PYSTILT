@@ -6,107 +6,28 @@
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 .. class-signature:: stilt.Project
 
 
 .. class-parameters:: stilt.Project
+
+
+
+Attributes
+----------
+
+.. autosummary::
+   :toctree:
+
+   ~Project.config
+   ~Project.config_path
+   ~Project.name
+   ~Project.output
+   ~Project.plot
+   ~Project.receptors
+   ~Project.receptors_path
+   ~Project.simulations
+   ~Project.variants
 
 
 
@@ -115,7 +36,6 @@ Methods
 
 .. autosummary::
    :toctree:
-
 
    ~Project.add_receptors
    ~Project.add_table
@@ -133,18 +53,4 @@ Methods
    ~Project.table_path
 
 
-Attributes
-----------
-
-.. autosummary::
-
-   ~Project.config
-   ~Project.config_path
-   ~Project.name
-   ~Project.output
-   ~Project.plot
-   ~Project.receptors
-   ~Project.receptors_path
-   ~Project.simulations
-   ~Project.variants
 

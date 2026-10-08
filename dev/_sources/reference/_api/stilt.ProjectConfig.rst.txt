@@ -6,111 +6,25 @@
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 .. class-signature:: stilt.ProjectConfig
+
 
 Parameters
 ----------
 
 .. config-model:: stilt.ProjectConfig
+
+
+
+Attributes
+----------
+
+.. autosummary::
+   :toctree:
+
+   ~ProjectConfig.footprint
+   ~ProjectConfig.transport
+
 
 
 Methods
@@ -119,10 +33,12 @@ Methods
 .. autosummary::
    :toctree:
 
-
    ~ProjectConfig.declared
    ~ProjectConfig.from_yaml
    ~ProjectConfig.met_config
+   ~ProjectConfig.model_post_init
    ~ProjectConfig.resolve
    ~ProjectConfig.to_yaml
+
+
 

@@ -6,121 +6,6 @@
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 .. class-signature:: stilt.Mesh
 
 
@@ -131,12 +16,25 @@ Parameters
 
 
 
+Attributes
+----------
+
+.. autosummary::
+   :toctree:
+
+   ~Mesh.bounds
+   ~Mesh.hash
+   ~Mesh.index
+   ~Mesh.is_longlat
+   ~Mesh.min_cell_width
+
+
+
 Methods
 -------
 
 .. autosummary::
    :toctree:
-
 
    ~Mesh.from_file
    ~Mesh.from_geodataframe
@@ -148,17 +46,4 @@ Methods
    ~Mesh.to_grid
 
 
-Attributes
-----------
-
-.. autosummary::
-
-   ~Mesh.bounds
-   ~Mesh.hash
-   ~Mesh.index
-   ~Mesh.is_longlat
-   ~Mesh.min_cell_width
-   ~Mesh.ids
-   ~Mesh.geometries
-   ~Mesh.crs
 

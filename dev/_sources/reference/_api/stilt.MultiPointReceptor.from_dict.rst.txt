@@ -1,6 +1,0 @@
-stilt.MultiPointReceptor.from\_dict
-===================================
-
-.. currentmodule:: stilt
-
-.. automethod:: MultiPointReceptor.from_dict

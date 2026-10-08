@@ -6,19 +6,6 @@
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 .. class-signature:: stilt.meteorology.VariogramFit
 
 
@@ -27,11 +14,14 @@
 
 
 
-Attributes
-----------
+
+Methods
+-------
 
 .. autosummary::
+   :toctree:
 
-   ~VariogramFit.sigma
-   ~VariogramFit.length
+   ~VariogramFit.__call__
+
+
 

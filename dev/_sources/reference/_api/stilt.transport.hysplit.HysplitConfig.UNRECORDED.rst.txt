@@ -1,0 +1,6 @@
+stilt.transport.hysplit.HysplitConfig.UNRECORDED
+================================================
+
+.. currentmodule:: stilt.transport.hysplit
+
+.. autoattribute:: HysplitConfig.UNRECORDED

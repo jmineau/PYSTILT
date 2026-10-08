@@ -6,115 +6,28 @@
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 .. class-signature:: stilt.Grid
+
 
 Parameters
 ----------
 
 .. config-model:: stilt.Grid
+
+
+
+Attributes
+----------
+
+.. autosummary::
+   :toctree:
+
+   ~Grid.axes
+   ~Grid.cells
+   ~Grid.dims
+   ~Grid.index
+   ~Grid.is_longlat
+
 
 
 Methods
@@ -123,6 +36,7 @@ Methods
 .. autosummary::
    :toctree:
 
-
    ~Grid.to_xarray
+
+
 

@@ -1,0 +1,6 @@
+stilt.Receptor.location\_id
+===========================
+
+.. currentmodule:: stilt
+
+.. autoproperty:: Receptor.location_id

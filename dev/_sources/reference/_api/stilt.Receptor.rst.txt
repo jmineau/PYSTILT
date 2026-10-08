@@ -6,117 +6,6 @@
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 .. class-signature:: stilt.Receptor
 
 
@@ -127,12 +16,25 @@ Parameters
 
 
 
+Attributes
+----------
+
+.. autosummary::
+   :toctree:
+
+   ~Receptor.geometry
+   ~Receptor.id
+   ~Receptor.location_id
+   ~Receptor.plot
+   ~Receptor.points
+
+
+
 Methods
 -------
 
 .. autosummary::
    :toctree:
-
 
    ~Receptor.coords
    ~Receptor.from_dict
@@ -142,18 +44,4 @@ Methods
    ~Receptor.to_json
 
 
-Attributes
-----------
-
-.. autosummary::
-
-   ~Receptor.geometry
-   ~Receptor.id
-   ~Receptor.location_id
-   ~Receptor.plot
-   ~Receptor.points
-   ~Receptor.kind
-   ~Receptor.time
-   ~Receptor.altitude_ref
-   ~Receptor.attrs
 

@@ -6,115 +6,24 @@
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 .. class-signature:: stilt.transport.hysplit.MetConfig
+
 
 Parameters
 ----------
 
 .. config-model:: stilt.transport.hysplit.MetConfig
+
+
+
+Attributes
+----------
+
+.. autosummary::
+   :toctree:
+
+   ~MetConfig.download_options
+
 
 
 Methods
@@ -123,8 +32,10 @@ Methods
 .. autosummary::
    :toctree:
 
-
    ~MetConfig.crop
+   ~MetConfig.model_post_init
    ~MetConfig.settings
    ~MetConfig.source
+
+
 

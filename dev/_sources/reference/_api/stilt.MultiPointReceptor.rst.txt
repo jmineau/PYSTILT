@@ -6,129 +6,6 @@
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 .. class-signature:: stilt.MultiPointReceptor
 
 
@@ -139,36 +16,31 @@ Parameters
 
 
 
+Attributes
+----------
+
+.. autosummary::
+   :toctree:
+
+   ~MultiPointReceptor.location_id
+
+
+
 Methods
 -------
 
 .. autosummary::
    :toctree:
 
-
    ~MultiPointReceptor.coords
-   ~MultiPointReceptor.from_dict
-   ~MultiPointReceptor.from_json
-   ~MultiPointReceptor.from_points
-   ~MultiPointReceptor.to_dict
-   ~MultiPointReceptor.to_json
 
 
-Attributes
-----------
 
-.. autosummary::
 
-   ~MultiPointReceptor.geometry
-   ~MultiPointReceptor.id
-   ~MultiPointReceptor.location_id
-   ~MultiPointReceptor.plot
-   ~MultiPointReceptor.points
-   ~MultiPointReceptor.kind
-   ~MultiPointReceptor.longitudes
-   ~MultiPointReceptor.latitudes
-   ~MultiPointReceptor.altitudes
-   ~MultiPointReceptor.time
-   ~MultiPointReceptor.altitude_ref
-   ~MultiPointReceptor.attrs
+Inherited
+---------
+
+
+From :class:`~.Receptor`: :py:obj:`~.Receptor.from_dict`, :py:obj:`~.Receptor.from_json`, :py:obj:`~.Receptor.from_points`, :py:obj:`~.Receptor.geometry`, :py:obj:`~.Receptor.id`, :py:obj:`~.Receptor.plot`, :py:obj:`~.Receptor.points`, :py:obj:`~.Receptor.to_dict`, :py:obj:`~.Receptor.to_json`
+
 

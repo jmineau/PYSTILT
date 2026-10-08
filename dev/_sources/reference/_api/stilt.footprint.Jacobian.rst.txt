@@ -6,51 +6,12 @@
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 .. class-signature:: stilt.footprint.Jacobian
 
 
 .. class-parameters:: stilt.footprint.Jacobian
+
+
 
 
 
@@ -60,21 +21,8 @@ Methods
 .. autosummary::
    :toctree:
 
-
-   ~Jacobian.count
-   ~Jacobian.index
    ~Jacobian.to_frame
    ~Jacobian.to_xarray
 
 
-Attributes
-----------
-
-.. autosummary::
-
-   ~Jacobian.columns
-   ~Jacobian.data
-   ~Jacobian.empty
-   ~Jacobian.missing
-   ~Jacobian.receptors
 

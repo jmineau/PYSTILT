@@ -6,31 +6,20 @@
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 .. class-signature:: stilt.transport.hysplit.Met
 
 
 .. class-parameters:: stilt.transport.hysplit.Met
+
+
+
+Attributes
+----------
+
+.. autosummary::
+   :toctree:
+
+   ~Met.crop_dir
 
 
 
@@ -40,16 +29,8 @@ Methods
 .. autosummary::
    :toctree:
 
-
    ~Met.files_for
    ~Met.readable
 
 
-Attributes
-----------
-
-.. autosummary::
-
-   ~Met.crop_dir
-   ~Met.directory
 

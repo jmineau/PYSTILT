@@ -6,129 +6,6 @@
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 .. class-signature:: stilt.PointReceptor
 
 
@@ -139,36 +16,31 @@ Parameters
 
 
 
+Attributes
+----------
+
+.. autosummary::
+   :toctree:
+
+   ~PointReceptor.location_id
+
+
+
 Methods
 -------
 
 .. autosummary::
    :toctree:
 
-
    ~PointReceptor.coords
-   ~PointReceptor.from_dict
-   ~PointReceptor.from_json
-   ~PointReceptor.from_points
-   ~PointReceptor.to_dict
-   ~PointReceptor.to_json
 
 
-Attributes
-----------
 
-.. autosummary::
 
-   ~PointReceptor.geometry
-   ~PointReceptor.id
-   ~PointReceptor.location_id
-   ~PointReceptor.plot
-   ~PointReceptor.points
-   ~PointReceptor.kind
-   ~PointReceptor.longitude
-   ~PointReceptor.latitude
-   ~PointReceptor.altitude
-   ~PointReceptor.time
-   ~PointReceptor.altitude_ref
-   ~PointReceptor.attrs
+Inherited
+---------
+
+
+From :class:`~.Receptor`: :py:obj:`~.Receptor.from_dict`, :py:obj:`~.Receptor.from_json`, :py:obj:`~.Receptor.from_points`, :py:obj:`~.Receptor.geometry`, :py:obj:`~.Receptor.id`, :py:obj:`~.Receptor.plot`, :py:obj:`~.Receptor.points`, :py:obj:`~.Receptor.to_dict`, :py:obj:`~.Receptor.to_json`
+
 

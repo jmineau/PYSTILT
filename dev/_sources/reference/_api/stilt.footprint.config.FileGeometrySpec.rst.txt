@@ -6,82 +6,17 @@
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 .. class-signature:: stilt.footprint.config.FileGeometrySpec
+
 
 Parameters
 ----------
 
 .. config-model:: stilt.footprint.config.FileGeometrySpec
+
+
+
+
+
 
 

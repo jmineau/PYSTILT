@@ -6,89 +6,12 @@
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 .. class-signature:: stilt.transforms.AveragingKernel
 
 
 .. class-parameters:: stilt.transforms.AveragingKernel
+
+
 
 
 
@@ -98,19 +21,8 @@ Methods
 .. autosummary::
    :toctree:
 
-
    ~AveragingKernel.apply
    ~AveragingKernel.kernel
 
 
-Attributes
-----------
-
-.. autosummary::
-
-   ~AveragingKernel.kind
-   ~AveragingKernel.levels
-   ~AveragingKernel.values
-   ~AveragingKernel.table
-   ~AveragingKernel.coordinate
 

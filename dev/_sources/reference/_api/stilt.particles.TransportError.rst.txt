@@ -6,47 +6,6 @@
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 .. class-signature:: stilt.particles.TransportError
 
 
@@ -54,19 +13,15 @@
 
 
 
-
 Attributes
 ----------
 
 .. autosummary::
+   :toctree:
 
-   ~TransportError.background
-   ~TransportError.realizations
    ~TransportError.sd
-   ~TransportError.variance
-   ~TransportError.noise
-   ~TransportError.enhancement
-   ~TransportError.enhancement_perturbed
-   ~TransportError.levels
-   ~TransportError.length_scale
+
+
+
+
 

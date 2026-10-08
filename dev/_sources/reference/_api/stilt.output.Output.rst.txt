@@ -6,95 +6,12 @@
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 .. class-signature:: stilt.output.Output
 
 
 .. class-parameters:: stilt.output.Output
+
+
 
 
 
@@ -103,7 +20,6 @@ Methods
 
 .. autosummary::
    :toctree:
-
 
    ~Output.clear_failure
    ~Output.complete
@@ -126,10 +42,4 @@ Methods
    ~Output.write_particles
 
 
-Attributes
-----------
-
-.. autosummary::
-
-   ~Output.directory
 

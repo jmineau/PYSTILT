@@ -1,0 +1,6 @@
+stilt.Grid.index
+================
+
+.. currentmodule:: stilt
+
+.. autoproperty:: Grid.index
