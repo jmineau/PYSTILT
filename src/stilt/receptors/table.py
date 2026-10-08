@@ -231,14 +231,17 @@ def receptor_rows(frame: pd.DataFrame) -> pd.DataFrame:
     # A receptor id names its result files: one id, one receptor.
     repeated = np.flatnonzero(pd.Index(group_ids).duplicated(keep=False))
     if len(repeated):
+        # Build every repeated group's receptor in one call, each group on
+        # its own (keyed by its code, not its id), in code order.
+        rows = np.isin(codes, repeated)
+        built = receptors_from_rows(out.loc[rows].assign(receptor=codes[rows]))
+        receptor_of = dict(zip(repeated.tolist(), built, strict=True))
         by_id: dict[str, list[int]] = {}
-        for code in repeated:
-            by_id.setdefault(str(group_ids[code]), []).append(int(code))
+        for code in repeated.tolist():
+            by_id.setdefault(str(group_ids[code]), []).append(code)
         drop: list[int] = []
         for group in by_id.values():
-            check_distinct_ids(
-                [receptors_from_rows(out.loc[codes == code])[0] for code in group]
-            )
+            check_distinct_ids([receptor_of[code] for code in group])
             drop.extend(group[1:])  # the same receptor listed again
         out = out.loc[~np.isin(codes, drop)]
     return out
