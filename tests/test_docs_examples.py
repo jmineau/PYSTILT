@@ -82,6 +82,8 @@ CONFIGS = [
     (name, data)
     for name, data in YAML
     if not any(s in yaml.safe_dump(data) for s in _NOT_A_CONFIG)
+    # A settings folder's _settings.yaml, on the output layout page.
+    and not {"hash", "settings"} <= data.keys()
 ]
 EXECUTION = [
     (name, data["execution"])

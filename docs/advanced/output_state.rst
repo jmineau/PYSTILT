@@ -43,6 +43,9 @@ it. ``project.add_receptors()`` appends new receptors to
 Settings name the folders
 -------------------------
 
+:doc:`../reference/layout` lists what each ``_settings.yaml`` and result
+file holds.
+
 Each variant resolves into two records of settings (:mod:`stilt.identity`).
 Its run settings hold everything that changes the particles: the HYSPLIT
 parameters, the content of the meteorology, and the transport model's

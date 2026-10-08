@@ -204,8 +204,8 @@ def read_footprint(
                 foot = ds["foot"].load()
         foot.attrs.pop("grid_mapping", None)
         return foot
-    # One file alone: pq.read_table would add the settings= and date=
-    # folder names of an output directory as columns.
+    # One file alone, without the settings= and date= columns that reading
+    # an output directory as a dataset adds from the folder names.
     with readable(path) as source:
         table = pq.ParquetFile(source).read()
     stored = (table.schema.metadata or {}).get(b"stilt:footprint")

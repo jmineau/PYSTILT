@@ -7,7 +7,7 @@ A transport model run gives one table: a row per particle per output step.
 Everything after the run reads it: the footprint, the near-field
 correction, the transforms, the plots, and the particle files in the output
 directory. ``sim.particles`` and :func:`stilt.run_trajectories` return it as
-a pandas DataFrame.
+a pandas DataFrame. :doc:`layout` says how a particle file stores it.
 
 Every table has five columns, :data:`PARTICLE_SCHEMA`:
 
