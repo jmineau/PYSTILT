@@ -52,13 +52,13 @@ REFERENCE_VARSIWANT = [
 ]
 
 #: STILT-R's names for the particle columns PYSTILT names otherwise.
-STILT_R_NAMES = {"particle": "indx", "lon": "long", "lat": "lati"}
+STILT_R_NAMES = {"particle": "indx", "age": "time", "lon": "long", "lat": "lati"}
 #: PYSTILT's names for STILT-R's particle columns.
 PYSTILT_NAMES = {r: py for py, r in STILT_R_NAMES.items()}
 
 # Trajectory columns present when hnf_plume=True, in PYSTILT's names
 _TRAJ_COLS_WITH_HNF: tuple[str, ...] = (
-    "time",
+    "age",
     "particle",
     "lon",
     "lat",
@@ -74,7 +74,7 @@ _TRAJ_COLS_WITH_HNF: tuple[str, ...] = (
 
 # Trajectory columns present when hnf_plume=False (no foot_no_hnf_dilution column)
 _TRAJ_COLS_NO_HNF: tuple[str, ...] = (
-    "time",
+    "age",
     "particle",
     "lon",
     "lat",

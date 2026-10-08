@@ -107,13 +107,13 @@ def test_pwf_fit_absorbs_first_step_particle_scatter(met_dir, tmp_path):
     """
     _, particles = _column_trajectory(met_dir, tmp_path, "pwf_scatter", numpar=1000)
 
-    xhgt = release_coordinate(particles, "xhgt").to_numpy()
+    release_height = release_coordinate(particles, "release_height").to_numpy()
     raw_pres = release_coordinate(particles, "pres").to_numpy()
 
     # Establish the premise: raw pressure really is non-monotone in height.
-    ascending = np.argsort(xhgt)
+    ascending = np.argsort(release_height)
     inversions = int((np.diff(raw_pres[ascending]) > 0).sum())
-    assert inversions > len(xhgt) // 20
+    assert inversions > len(release_height) // 20
 
     levels = np.sort(raw_pres)[::-1]
     mids = (levels[:-1] + levels[1:]) / 2.0

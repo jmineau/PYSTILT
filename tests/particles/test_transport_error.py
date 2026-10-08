@@ -19,14 +19,14 @@ def _column(n_levels=4, per_level=200, spread=1.0, seed=0, level_spacing=500.0):
     """Column particles: each particle's foot sum ~ N(10, spread²); one row each."""
     rng = np.random.default_rng(seed)
     n = n_levels * per_level
-    xhgt = np.repeat(np.arange(n_levels) * level_spacing + 250.0, per_level)
+    release_height = np.repeat(np.arange(n_levels) * level_spacing + 250.0, per_level)
     return pd.DataFrame(
         {
             "particle": np.arange(1, n + 1),
-            "time": np.zeros(n),
+            "age": np.zeros(n),
             "lon": np.full(n, -111.0),
             "lat": np.full(n, 41.0),
-            "xhgt": xhgt,
+            "release_height": release_height,
             "foot": 10.0 + spread * rng.standard_normal(n),
             "datetime": pd.to_datetime(["2023-01-01"] * n),
         }
@@ -95,7 +95,7 @@ def test_level_statistics_are_numpy_means_and_variances():
     result = transport_error(main, errs, FLUX, percentile=0.9, noise_splits=0)
 
     def stats(p, level):
-        v = p.loc[p["xhgt"] == 250.0 + 500.0 * level, "foot"].to_numpy()
+        v = p.loc[p["release_height"] == 250.0 + 500.0 * level, "foot"].to_numpy()
         return v.mean(), v[v <= np.quantile(v, 0.9)].var()
 
     for level, row in result.levels.iterrows():
@@ -108,8 +108,8 @@ def test_level_statistics_are_numpy_means_and_variances():
 
 
 def test_point_receptor_particles_are_one_level():
-    main = _column(n_levels=1, spread=1.0, seed=5).drop(columns="xhgt")
-    err = _column(n_levels=1, spread=2.0, seed=6).drop(columns="xhgt")
+    main = _column(n_levels=1, spread=1.0, seed=5).drop(columns="release_height")
+    err = _column(n_levels=1, spread=2.0, seed=6).drop(columns="release_height")
 
     result = transport_error(main, err, FLUX)
 
@@ -122,7 +122,9 @@ def test_point_receptor_particles_are_one_level():
 
 def test_continuous_release_heights_are_binned():
     main = _column(n_levels=4, per_level=100, seed=7)
-    main["xhgt"] = np.linspace(0.0, 2000.0, len(main))  # every particle distinct
+    main["release_height"] = np.linspace(
+        0.0, 2000.0, len(main)
+    )  # every particle distinct
     err = main.copy()
 
     result = transport_error(main, err, FLUX, levels=5)
@@ -187,8 +189,8 @@ def test_rejects_bad_arguments():
 
 
 def test_less_spread_gives_a_negative_variance_and_zero_sd():
-    main = _column(n_levels=1, spread=2.0, seed=10).drop(columns="xhgt")
-    err = _column(n_levels=1, spread=1.0, seed=11).drop(columns="xhgt")
+    main = _column(n_levels=1, spread=2.0, seed=10).drop(columns="release_height")
+    err = _column(n_levels=1, spread=1.0, seed=11).drop(columns="release_height")
 
     result = transport_error(main, err, FLUX)
 

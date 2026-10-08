@@ -159,7 +159,7 @@ class ParticlesPlotAccessor:
 
     def map(
         self,
-        color_by: str = "time",
+        color_by: str = "age",
         receptor: Receptor | None = None,
         ax: Axes | None = None,
         cmap: str = "viridis_r",
@@ -174,7 +174,7 @@ class ParticlesPlotAccessor:
 
         Parameters
         ----------
-        color_by : {"time", "zagl", "foot"}, default "time"
+        color_by : {"age", "zagl", "foot"}, default "age"
             Particle variable to color by.
         receptor : Receptor, optional
             Mark this receptor on the map.
@@ -203,7 +203,7 @@ class ParticlesPlotAccessor:
         lats: np.ndarray = p["lat"].to_numpy(dtype=float)
 
         _color_labels = {
-            "time": "Time (min)",
+            "age": "Minutes since release",
             "zagl": "Altitude AGL (m)",
             "foot": "Footprint influence",
         }
@@ -489,7 +489,7 @@ class SimulationPlotAccessor:
         log: bool = True,
         foot_cmap: str = "YlOrRd",
         particles_cmap: str = "viridis_r",
-        particles_color_by: str = "time",
+        particles_color_by: str = "age",
         particles_s: float = 1.0,
         particles_alpha: float = 0.3,
         show_grid: bool = True,
@@ -514,7 +514,7 @@ class SimulationPlotAccessor:
             Colormap of the footprint.
         particles_cmap : str, default "viridis_r"
             Colormap of the particles.
-        particles_color_by : {"time", "zagl", "foot"}, default "time"
+        particles_color_by : {"age", "zagl", "foot"}, default "age"
             Particle variable to color by.
         particles_s : float, default 1.0
             Particle marker size.

@@ -95,8 +95,8 @@ output step:
 
 .. code-block:: python
 
-   particles = project.particles(july, columns=["time", "lon", "lat", "zagl"])
-   path = particles.groupby(["receptor", "time"])[["lon", "lat", "zagl"]].mean()
+   particles = project.particles(july, columns=["age", "lon", "lat", "zagl"])
+   path = particles.groupby(["receptor", "age"])[["lon", "lat", "zagl"]].mean()
    one = path.loc[rid].sort_index(ascending=False)   # from the release backwards
 
 A mean path hides how the particles spread, which is what the footprint

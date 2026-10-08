@@ -230,7 +230,7 @@ def test_particles_that_leave_the_met_domain_complete_the_run(
     sim = project.simulation(*_sim_id(receptor))
     assert sim.is_complete
     assert sim.failure is None
-    hours = sim.particles["time"].abs().max() / 60
+    hours = sim.particles["age"].abs().max() / 60
     assert hours < 24  # every particle left the met's domain first
 
 
@@ -724,8 +724,8 @@ def test_forward_run(tmp_path, met_dir, wbb_grid):
     particles = sim.particles
     assert len(particles) > 0
     # HYSPLIT reports elapsed minutes signed by run direction
-    assert (particles["time"] >= 0).all()
-    assert particles["time"].max() > 0
+    assert (particles["age"] >= 0).all()
+    assert particles["age"].max() > 0
     assert "foot_no_hnf_dilution" in particles.columns
 
     start, stop = receptor.time, receptor.time + pd.Timedelta(hours=3)

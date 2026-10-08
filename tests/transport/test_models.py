@@ -225,7 +225,7 @@ def test_a_model_in_its_own_package_runs_from_a_fresh_interpreter(tmp_path):
                     n = config.nparticles
                     particles = pd.DataFrame({
                         "particle": list(range(1, n + 1)) * 2,
-                        "time": [0] * n + [-60] * n,
+                        "age": [0] * n + [-60] * n,
                         "lon": [receptor.longitude] * 2 * n,
                         "lat": [receptor.latitude] * 2 * n,
                         "zagl": [receptor.altitude] * 2 * n,

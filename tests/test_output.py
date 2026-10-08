@@ -148,7 +148,7 @@ def test_particles_store_time_and_index_as_int32(tmp_path):
 
     path = write_one(Output(tmp_path / "output"))
     schema = pq.read_schema(path)
-    assert str(schema.field("time").type) == "int32"
+    assert str(schema.field("age").type) == "int32"
     assert str(schema.field("particle").type) == "int32"
     assert "datetime" not in schema.names
     assert str(schema.field("lon").type) == "double"
@@ -198,7 +198,7 @@ def test_particle_file_without_a_receptor_column_still_reads(tmp_path):
 def test_particles_reject_fractional_time(tmp_path):
     receptor = receptor_at()
     traj = fake_particles(receptor)
-    traj.loc[0, "time"] = -1.5
+    traj.loc[0, "age"] = -1.5
     with pytest.raises(ValueError, match="whole numbers"):
         Output(tmp_path / "output").write_particles(VARIANT, receptor, traj, [])
 

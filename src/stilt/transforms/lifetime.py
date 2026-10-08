@@ -19,8 +19,8 @@ class FirstOrderLifetime(BaseModel):
     """
     Transform that decays each particle's ``foot`` by ``exp(-age / lifetime)``.
 
-    ``age`` is the particle's travel time since release, from the ``time``
-    column (minutes), and the lifetime is the species' e-folding lifetime.
+    ``age`` is the particle's time since release, its ``age`` column
+    (minutes), and the lifetime is the species' e-folding lifetime.
     """
 
     model_config = ConfigDict(frozen=True)
@@ -35,12 +35,12 @@ class FirstOrderLifetime(BaseModel):
         directory: str | Path | None = None,
     ) -> pd.DataFrame:
         """Return the particles with ``foot`` decayed by age."""
-        if "time" not in particles.columns:
+        if "age" not in particles.columns:
             raise ValueError(
-                "Particle DataFrame has no 'time' column, required for "
+                "Particle DataFrame has no 'age' column, required for "
                 "first_order_lifetime."
             )
-        age_hours = np.abs(particles["time"].to_numpy(dtype=float)) / 60.0
+        age_hours = np.abs(particles["age"].to_numpy(dtype=float)) / 60.0
         out = particles.copy()
         out["foot"] = out["foot"] * np.exp(-age_hours / self.lifetime_hours)
         return out

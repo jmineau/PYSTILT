@@ -30,7 +30,7 @@ _NO_POINT = ColumnReceptor(
 def _particles_basic() -> pd.DataFrame:
     return pd.DataFrame(
         {
-            "time": [-60, -120],
+            "age": [-60, -120],
             "particle": [1, 1],
             "lon": [-111.9, -112.0],
             "lat": [40.7, 40.6],
@@ -50,11 +50,11 @@ def _particles_release_rows(
     longs: list[float],
     lats: list[float],
     zagl: list[float] | None = None,
-    time: float = -1,
+    age: float = -1,
 ) -> pd.DataFrame:
     return pd.DataFrame(
         {
-            "time": [time] * len(indices),
+            "age": [age] * len(indices),
             "particle": indices,
             "lon": longs,
             "lat": lats,
@@ -113,7 +113,7 @@ def test_parquet_roundtrip_preserves_naive_utc_from_tz_aware_receptor(tmp_path):
     assert receptor.time == aware_receptor.time
     assert loaded["datetime"].dt.tz is None
     expected = pd.Timestamp("2023-01-01 12:00") + pd.to_timedelta(
-        traj["time"].to_numpy(), unit="min"
+        traj["age"].to_numpy(), unit="min"
     )
     np.testing.assert_array_equal(loaded["datetime"].to_numpy(), expected.to_numpy())
 
@@ -174,14 +174,14 @@ def test_write_particles_is_atomic_on_failure(point_receptor, tmp_path, monkeypa
 
 
 def test_correct_near_field_requires_columns():
-    p = pd.DataFrame({"time": [-60], "particle": [1], "foot": [1e-5]})
+    p = pd.DataFrame({"age": [-60], "particle": [1], "foot": [1e-5]})
     with pytest.raises(ValueError, match="needs the particle columns"):
         correct_near_field(p, point_at(5.0), 0.5)
 
 
 def test_correct_near_field_adds_reference_column():
     out = correct_near_field(
-        _particles_basic().drop(columns=["zagl"]).assign(xhgt=[5.0, 5.0]),
+        _particles_basic().drop(columns=["zagl"]).assign(release_height=[5.0, 5.0]),
         _NO_POINT,
         0.5,
     )
@@ -191,7 +191,7 @@ def test_correct_near_field_adds_reference_column():
 
 def test_correct_near_field_reads_veght_above_one_as_meters():
     """A veght above 1 is meters above ground, as HYSPLIT reads it (#167)."""
-    p = _particles_basic().drop(columns=["zagl"]).assign(xhgt=[5.0, 5.0])
+    p = _particles_basic().drop(columns=["zagl"]).assign(release_height=[5.0, 5.0])
     # The plume is about 32 m deep after one hour and 70 m after two.
     as_fraction = correct_near_field(p, _NO_POINT, 0.5)  # below 250 m
     as_meters = correct_near_field(p, _NO_POINT, 50.0)  # below 50 m
@@ -203,8 +203,10 @@ def test_correct_near_field_reads_veght_above_one_as_meters():
 
 def test_correct_near_field_grows_outward_from_release_when_forward():
     """A forward run accumulates sigma from the release point, not the far end."""
-    backward = _particles_basic().drop(columns=["zagl"]).assign(xhgt=[5.0, 5.0])
-    forward = backward.assign(time=-backward["time"])
+    backward = (
+        _particles_basic().drop(columns=["zagl"]).assign(release_height=[5.0, 5.0])
+    )
+    forward = backward.assign(age=-backward["age"])
 
     back_out = correct_near_field(backward, _NO_POINT, 0.5)
     fwd_out = correct_near_field(forward, _NO_POINT, 0.5)
@@ -215,11 +217,13 @@ def test_correct_near_field_grows_outward_from_release_when_forward():
     assert fwd_out["foot"].iloc[0] > fwd_out["foot"].iloc[1]
 
 
-def test_finished_particles_column_receptor_assigns_xhgt(column_receptor, tmp_path):
+def test_finished_particles_column_receptor_assigns_release_height(
+    column_receptor, tmp_path
+):
     particles = _particles_basic().assign(particle=[1, 2])
     traj = finished(particles, column_receptor, _params(tmp_path, hnf_plume=False))
-    assert "xhgt" in traj.columns
-    assert traj["xhgt"].tolist() == pytest.approx([16.25, 38.75])
+    assert "release_height" in traj.columns
+    assert traj["release_height"].tolist() == pytest.approx([16.25, 38.75])
 
 
 def test_finished_particles_column_receptor_spans_column_monotonically(tmp_path):
@@ -243,11 +247,11 @@ def test_finished_particles_column_receptor_spans_column_monotonically(tmp_path)
         ((i - 0.5) * (receptor.top - receptor.bottom) / 12) + receptor.bottom
         for i in range(1, 13)
     ]
-    assert traj["xhgt"].tolist() == pytest.approx(expected)
-    assert traj["xhgt"].is_monotonic_increasing
+    assert traj["release_height"].tolist() == pytest.approx(expected)
+    assert traj["release_height"].is_monotonic_increasing
 
 
-def test_finished_particles_multipoint_receptor_assigns_xhgt_from_release_locations(
+def test_finished_particles_multipoint_receptor_assigns_release_height_from_release_locations(
     tmp_path,
 ):
     receptor = MultiPointReceptor(
@@ -305,8 +309,8 @@ def test_finished_particles_multipoint_receptor_assigns_xhgt_from_release_locati
         particles, receptor, HysplitConfig(n_hours=-24, numpar=12, hnf_plume=False)
     )
 
-    assert "xhgt" in traj.columns
-    assert traj["xhgt"].tolist() == pytest.approx(
+    assert "release_height" in traj.columns
+    assert traj["release_height"].tolist() == pytest.approx(
         [
             100.0,
             100.0,
@@ -365,7 +369,7 @@ def test_finished_particles_multipoint_nondivisible_particle_blocks_follow_relea
         particles, receptor, HysplitConfig(n_hours=-24, numpar=10, hnf_plume=False)
     )
 
-    assert traj["xhgt"].tolist() == pytest.approx(
+    assert traj["release_height"].tolist() == pytest.approx(
         [100.0, 100.0, 100.0, 100.0, 500.0, 500.0, 500.0, 500.0, 900.0, 900.0]
     )
 
@@ -412,7 +416,7 @@ def test_multipoint_close_points_are_matched_on_height_not_position():
         ],
     )
     data = _finish(particles, receptor)
-    assert data["xhgt"].tolist() == [
+    assert data["release_height"].tolist() == [
         300.0,
         300.0,
         600.0,
@@ -441,21 +445,23 @@ def test_multipoint_release_time_rows_are_used_when_present():
         longs=[receptor.longitudes[k] for k in true_level],
         lats=[40.77] * 4,
         zagl=[5000.0] * 4,  # deliberately useless: position must decide
-        time=0,
+        age=0,
     )
     later = _particles_release_rows(
         indices=[1, 2, 3, 4],
         longs=[receptor.longitudes[k] + 0.007 for k in true_level],
         lats=[40.77] * 4,
         zagl=[5000.0] * 4,
-        time=-1,
+        age=-1,
     )
     data = _finish(pd.concat([later, t0], ignore_index=True), receptor)
-    by_particle = data.drop_duplicates("particle").set_index("particle")["xhgt"]
+    by_particle = data.drop_duplicates("particle").set_index("particle")[
+        "release_height"
+    ]
     assert by_particle.loc[[1, 2, 3, 4]].tolist() == [300.0, 600.0, 900.0, 1200.0]
 
 
-def test_multipoint_xhgt_is_constant_along_each_trajectory():
+def test_multipoint_release_height_is_constant_along_each_trajectory():
     receptor = _slant(n=2)
     rows = [
         _particles_release_rows(
@@ -463,13 +469,15 @@ def test_multipoint_xhgt_is_constant_along_each_trajectory():
             list(receptor.longitudes),
             [40.77] * 2,
             zagl=[310.0 + 40 * step, 590.0 - 40 * step],
-            time=-(step + 1),
+            age=-(step + 1),
         )
         for step in range(3)
     ]
     data = _finish(pd.concat(rows, ignore_index=True), receptor)
-    assert (data.groupby("particle")["xhgt"].nunique() == 1).all()
-    assert data.drop_duplicates("particle").set_index("particle")["xhgt"].to_dict() == {
+    assert (data.groupby("particle")["release_height"].nunique() == 1).all()
+    assert data.drop_duplicates("particle").set_index("particle")[
+        "release_height"
+    ].to_dict() == {
         1: 300.0,
         2: 600.0,
     }
@@ -488,7 +496,7 @@ def test_multipoint_msl_receptor_matches_on_height_above_sea_level():
     )
     particles["zsfc"] = [1500.0, 1500.0]  # 905+1500=2405, 292+1500=1792
     data = _finish(particles, receptor)
-    assert data["xhgt"].tolist() == [2400.0, 1800.0]
+    assert data["release_height"].tolist() == [2400.0, 1800.0]
 
 
 def test_multipoint_same_altitude_close_points_warn():
@@ -516,7 +524,7 @@ def test_multipoint_same_altitude_wide_points_do_not_warn(recwarn):
         [1, 2], [-111.995, -111.795], [40.5] * 2, zagl=[500.0, 500.0]
     )
     data = _finish(particles, receptor)
-    assert data["xhgt"].tolist() == [500.0, 500.0]
+    assert data["release_height"].tolist() == [500.0, 500.0]
     assert not [w for w in recwarn if "reliably matched" in str(w.message)]
 
 
@@ -528,7 +536,7 @@ def test_multipoint_release_time_rows_silence_the_warning(recwarn):
         altitudes=[500.0, 500.0],
     )
     particles = _particles_release_rows(
-        [1, 2], [-111.85, -111.848], [40.77] * 2, zagl=[500.0, 500.0], time=0
+        [1, 2], [-111.85, -111.848], [40.77] * 2, zagl=[500.0, 500.0], age=0
     )
     _finish(particles, receptor)
     assert not [w for w in recwarn if "reliably matched" in str(w.message)]
@@ -543,7 +551,7 @@ def test_finished_particles_with_hnf_plume(point_receptor, tmp_path):
 
 
 def test_correct_near_field_raises_without_a_release_height():
-    """A receptor other than a point, and no xhgt column, raises ValueError."""
+    """A receptor other than a point, and no release_height column, raises ValueError."""
     p = _particles_basic()
 
     with pytest.raises(ValueError, match="release height"):
@@ -568,7 +576,7 @@ def _particles_two_lengths() -> pd.DataFrame:
     """Two particles: particle 1 reaches -120 min, particle 2 only -30 min."""
     return pd.DataFrame(
         {
-            "time": [-60, -120, -30],
+            "age": [-60, -120, -30],
             "particle": [1, 1, 2],
             "lon": [-111.9, -112.0, -111.8],
             "lat": [40.7, 40.6, 40.75],
@@ -593,14 +601,14 @@ def test_endpoints_returns_far_end_per_particle(point_receptor, tmp_path):
     particles = finished(_particles_two_lengths(), point_receptor, _params(tmp_path))
     # As read_particles gives them.
     particles["datetime"] = point_receptor.time + pd.to_timedelta(
-        particles["time"], unit="min"
+        particles["age"], unit="min"
     )
 
     ep = particles.stilt.endpoints().sort_values("particle").reset_index(drop=True)
     assert list(ep.columns) == list(particles.columns)
     # Both particles kept, each at its far end (largest |time|): p1 at -120, p2 at -30.
     assert ep["particle"].tolist() == [1, 2]
-    assert ep["time"].tolist() == [-120, -30]
+    assert ep["age"].tolist() == [-120, -30]
     assert ep.loc[0, ["lon", "lat", "zagl"]].tolist() == [-112.0, 40.6, 20.0]
     assert ep.loc[1, ["lon", "lat", "zagl"]].tolist() == [-111.8, 40.75, 15.0]
     assert ep["datetime"].tolist() == [
@@ -618,7 +626,7 @@ def test_calc_footprint_regenerates_a_footprint_on_a_new_grid(tmp_path):
     n = 20
     particles = pd.DataFrame(
         {
-            "time": [-60] * n + [-120] * n,
+            "age": [-60] * n + [-120] * n,
             "particle": list(range(1, n + 1)) * 2,
             "lon": rng.uniform(-113.9, -113.1, n * 2),
             "lat": rng.uniform(39.1, 39.9, n * 2),
@@ -684,14 +692,14 @@ def test_a_footprint_needs_the_particle_columns(point_receptor):
 
     grid = Grid(xmin=-113.0, xmax=-111.0, ymin=40.0, ymax=41.0, xres=0.1, yres=0.1)
     particles = pd.DataFrame(
-        {"particle": [1], "time": [-1], "lon": [-112.0], "lat": [40.5], "zagl": [5.0]}
+        {"particle": [1], "age": [-1], "lon": [-112.0], "lat": [40.5], "zagl": [5.0]}
     )
     with pytest.raises(ValueError, match="no 'foot' column"):
         calc_footprint(particles, point_receptor, grid)
 
 
 def test_a_column_release_row_says_which_slab_a_particle_stands_for():
-    """With t = 0 rows, xhgt is the centre of the slab the release falls in, not the indx order."""
+    """With t = 0 rows, release_height is the centre of the slab the release falls in, not the indx order."""
     from stilt.particles import add_release_heights
 
     column = ColumnReceptor(
@@ -701,19 +709,21 @@ def test_a_column_release_row_says_which_slab_a_particle_stands_for():
     rows = pd.DataFrame(
         {
             "particle": [1, 2, 3, 4] * 2,
-            "time": [0] * 4 + [-1] * 4,
+            "age": [0] * 4 + [-1] * 4,
             "lon": [-111.85] * 8,
             "lat": [40.77] * 8,
             "zagl": released + [z + 3.0 for z in released],
         }
     )
     with_release = add_release_heights(rows, column)
-    by_particle = with_release.drop_duplicates("particle").set_index("particle")["xhgt"]
+    by_particle = with_release.drop_duplicates("particle").set_index("particle")[
+        "release_height"
+    ]
     assert by_particle.to_dict() == {1: 875.0, 2: 125.0, 3: 625.0, 4: 375.0}
 
     # Without the release rows, particle indx is in slab indx.
-    first_step = add_release_heights(rows[rows.time == -1], column)
-    assert first_step["xhgt"].tolist() == [125.0, 375.0, 625.0, 875.0]
+    first_step = add_release_heights(rows[rows.age == -1], column)
+    assert first_step["release_height"].tolist() == [125.0, 375.0, 625.0, 875.0]
 
 
 def test_hnf_correction_invariants():
@@ -742,7 +752,7 @@ def test_hnf_correction_invariants():
     )
     particles = pd.DataFrame(
         {
-            "time": np.concatenate(
+            "age": np.concatenate(
                 [
                     rng.uniform(-0.5, -0.1, n // 2),  # short time → small plume
                     rng.uniform(-6.0, -5.0, n // 2),  # long time → large plume
@@ -770,7 +780,7 @@ def test_hnf_correction_invariants():
 
     # Invariant 2: identity path — particles where plume >= pbl_mixing
     # are unchanged.  Reconstruct plume = r_zagl + sigma to find them.
-    abs_time_s = np.abs(particles["time"] * 60)
+    abs_time_s = np.abs(particles["age"] * 60)
     tlgr = particles["tlgr"]
     sigma = (
         particles["samt"]

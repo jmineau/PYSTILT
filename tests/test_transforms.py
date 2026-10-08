@@ -65,13 +65,13 @@ MISSING_KIND = "no_such_pkg_for_stilt_tests.transforms.MyKernel"
 
 
 def _make_particles(n: int = 10, heights: list[float] | None = None) -> pd.DataFrame:
-    """Minimal particle DataFrame with xhgt, foot, indx columns."""
+    """Minimal particle DataFrame with release_height, foot, indx columns."""
     if heights is None:
         heights = [float(i * 200) for i in range(1, n + 1)]
     return pd.DataFrame(
         {
             "particle": list(range(1, n + 1)),
-            "xhgt": heights,
+            "release_height": heights,
             "foot": [1.0] * n,
             "lon": [-111.9] * n,
             "lat": [40.7] * n,
@@ -85,7 +85,7 @@ def _aged_particles() -> pd.DataFrame:
     return pd.DataFrame(
         {
             "particle": [1, 2, 3],
-            "time": [0.0, -60.0, -120.0],
+            "age": [0.0, -60.0, -120.0],
             "foot": [1.0, 1.0, 1.0],
         }
     )
@@ -136,7 +136,7 @@ def test_ak_pressure_coordinate_uses_release_row_for_whole_trajectory():
     p = pd.DataFrame(
         {
             "particle": [1, 1, 1, 2, 2, 2],
-            "time": [-1.0, -2.0, -3.0, -3.0, -1.0, -2.0],
+            "age": [-1.0, -2.0, -3.0, -3.0, -1.0, -2.0],
             "pres": [900.0, 850.0, 800.0, 600.0, 700.0, 650.0],
             "foot": [1.0] * 6,
         }
@@ -149,9 +149,9 @@ def test_ak_pressure_coordinate_uses_release_row_for_whole_trajectory():
 
 
 def test_ak_missing_coordinate_column_raises():
-    p = _make_particles().drop(columns=["xhgt"])
+    p = _make_particles().drop(columns=["release_height"])
     kernel = AveragingKernel(levels=[0.0, 1000.0], values=[0.5, 0.5])
-    with pytest.raises(ValueError, match="xhgt"):
+    with pytest.raises(ValueError, match="release_height"):
         kernel.apply(p)
 
 
@@ -204,8 +204,8 @@ def _column_particles(
         pd.DataFrame(
             {
                 "particle": np.arange(1, n + 1),
-                "time": -(step + 1.0),
-                "xhgt": z,
+                "age": -(step + 1.0),
+                "release_height": z,
                 "zagl": z + 10.0 * step,
                 "pres": pres * (1.0 - 0.001 * step),
                 "foot": 1.0,
@@ -268,7 +268,7 @@ def test_pwf_taller_column_covers_more_mass():
 def test_pwf_weights_decrease_with_height():
     # Equal height steps span less air mass higher up.
     result = PressureWeighting().apply(_column_particles(20))
-    pwf = result.sort_values("xhgt")["pwf"].to_numpy()
+    pwf = result.sort_values("release_height")["pwf"].to_numpy()
     assert (np.diff(pwf[1:]) < 0).all()
 
 
@@ -299,7 +299,7 @@ def test_pwf_uses_release_row_not_drifted_rows():
 
     # One weight per particle, broadcast along its whole trajectory.
     assert (result.groupby("particle")["foot"].nunique() == 1).all()
-    release = p.loc[p["time"] == -1.0].set_index("particle")["pres"]
+    release = p.loc[p["age"] == -1.0].set_index("particle")["pres"]
     got = result.drop_duplicates("particle").set_index("particle")["xpres"]
     assert got.to_numpy() == pytest.approx(release.to_numpy(), rel=1e-6)
 
@@ -319,8 +319,8 @@ def test_pwf_elevated_column_bottom_assigns_air_below_to_lowest_particle():
     # A column starting at 500 m still measures the air beneath it; the lowest
     # particle carries that sub-column.
     result = PressureWeighting().apply(_column_particles(20, z_bottom=500.0))
-    lowest = result.sort_values("xhgt")["pwf"].iloc[0]
-    second = result.sort_values("xhgt")["pwf"].iloc[1]
+    lowest = result.sort_values("release_height")["pwf"].iloc[0]
+    second = result.sort_values("release_height")["pwf"].iloc[1]
     assert lowest > second
 
 
@@ -343,9 +343,9 @@ def test_pwf_rejects_single_release_height():
         PressureWeighting().apply(p)
 
 
-def test_pwf_rejects_single_release_height_with_xhgt():
+def test_pwf_rejects_single_release_height_with_release_height():
     p = _column_particles(5)
-    p["xhgt"] = 100.0
+    p["release_height"] = 100.0
     with pytest.raises(ValueError, match="range of heights"):
         PressureWeighting().apply(p)
 
@@ -362,16 +362,18 @@ def _multipoint_particles(
     With ``zsfc`` the heights are above sea level, each point over its own
     terrain, and pressure follows the isothermal atmosphere in MSL height.
     """
-    xhgt = np.repeat(heights, per_point)
-    terrain = np.zeros_like(xhgt) if zsfc is None else np.repeat(zsfc, per_point)
-    zagl = xhgt - terrain
+    release_height = np.repeat(heights, per_point)
+    terrain = (
+        np.zeros_like(release_height) if zsfc is None else np.repeat(zsfc, per_point)
+    )
+    zagl = release_height - terrain
     frame = pd.DataFrame(
         {
-            "particle": np.arange(1, len(xhgt) + 1),
-            "time": -1.0,
-            "xhgt": xhgt,
+            "particle": np.arange(1, len(release_height) + 1),
+            "age": -1.0,
+            "release_height": release_height,
             "zagl": zagl,
-            "pres": P_SFC * np.exp(-xhgt / SCALE_HEIGHT),
+            "pres": P_SFC * np.exp(-release_height / SCALE_HEIGHT),
             "foot": 1.0,
         }
     )
@@ -397,7 +399,7 @@ def test_pwf_multipoint_shares_each_point_among_its_particles():
     result = PressureWeighting().apply(p)
 
     assert (result["pwf"] > 0).all()
-    per_point = result.groupby("xhgt")["pwf"]
+    per_point = result.groupby("release_height")["pwf"]
     # Every particle of a point carries the same weight ...
     assert (per_point.nunique() == 1).all()
     # ... and together they carry the point's slab.
@@ -425,7 +427,7 @@ def _msl_column_particles(n: int, station: float, z_top: float = 3000.0):
     """A column above a station, with release heights above sea level."""
     agl = _column_particles(n, z_top=z_top)
     msl = agl.copy()
-    msl["xhgt"] = agl["xhgt"] + station
+    msl["release_height"] = agl["release_height"] + station
     msl["zsfc"] = station
     # Pressure follows MSL height; the station's surface pressure is lower.
     for frame in (agl, msl):
@@ -459,10 +461,12 @@ def test_pwf_msl_slant_across_terrain_closes_at_ground_under_lowest_point():
     xpres, pwf = particle_pwf(p, altitude_ref="msl")
 
     assert xpres.to_numpy() == pytest.approx(
-        P_SFC * np.exp(-p["xhgt"].to_numpy() / SCALE_HEIGHT), rel=1e-9
+        P_SFC * np.exp(-p["release_height"].to_numpy() / SCALE_HEIGHT), rel=1e-9
     )
     per_point = (
-        pd.Series(pwf.to_numpy(), index=p["xhgt"].to_numpy()).groupby(level=0).sum()
+        pd.Series(pwf.to_numpy(), index=p["release_height"].to_numpy())
+        .groupby(level=0)
+        .sum()
     )
     assert per_point.to_numpy() == pytest.approx(
         _expected_level_pwf(heights, z_ground=terrain[0]), rel=1e-9
@@ -607,7 +611,7 @@ def test_first_order_lifetime_decays_by_transport_age():
 
 
 def test_first_order_lifetime_requires_transport_time_column():
-    p = _aged_particles().drop(columns=["time"])
+    p = _aged_particles().drop(columns=["age"])
     with pytest.raises(ValueError, match="time"):
         FirstOrderLifetime(lifetime_hours=1.0).apply(p)
 
@@ -663,7 +667,7 @@ def test_load_transform_averaging_kernel():
     assert isinstance(t, AveragingKernel)
     assert t.levels == [0.0, 1000.0]
     assert t.values == [0.2, 0.8]
-    assert t.coordinate == "xhgt"
+    assert t.coordinate == "release_height"
 
 
 def test_load_transform_pressure_weighting():
@@ -773,13 +777,13 @@ def test_dump_transform_builtin_contents():
         "kind": "averaging_kernel",
         "levels": [0.0, 1000.0],
         "values": [0.2, 0.8],
-        "coordinate": "xhgt",
+        "coordinate": "release_height",
     }
     assert dump_transform(PressureWeighting()) == {"kind": "pressure_weighting"}
     assert dump_transform(AveragingKernel(table="kernels.parquet")) == {
         "kind": "averaging_kernel",
         "table": "kernels.parquet",
-        "coordinate": "xhgt",
+        "coordinate": "release_height",
     }
 
 

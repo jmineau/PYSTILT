@@ -87,7 +87,7 @@ keys, with no directory. `met` is that config, its `directory` and
 `subgrid_dir` absolute when it has them, and `window` the `(start, end)`
 the run covers; the model finds its own met from them. `run` returns a `ModelRun`: the particle table (the
 columns of `stilt.particles.PARTICLE_SCHEMA`, `foot`, and what the
-transforms read, with a release row at `time = 0` when the model can write
+transforms read, with a release row at `age = 0` when the model can write
 one; see `docs/reference/particles.rst`), its log as text, and the met
 files it read. A failed run raises `SimulationError` with its log. PYSTILT
 adds the release heights and the near-field correction itself

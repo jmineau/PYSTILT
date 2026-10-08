@@ -233,10 +233,10 @@ class Simulation:
         """
         The particle table, one row per particle per output step.
 
-        The columns are the variables in ``varsiwant`` (``particle``, ``time`` in
-        minutes since release, ``lon``, ``lat``, ``zagl``, ``foot``, ...),
-        plus ``datetime`` (UTC) and ``xhgt`` (release height, for column and
-        multipoint receptors). Read from the output directory on first
+        The columns are the variables in ``varsiwant``, under the particle
+        table's names (``particle``, ``age`` in minutes since release,
+        ``lon``, ``lat``, ``zagl``, ``foot``, ...), plus ``datetime`` (UTC)
+        and ``release_height`` (for column and multipoint receptors). Read from the output directory on first
         access and kept. Check
         :attr:`has_particles` first when the run may not have finished.
 

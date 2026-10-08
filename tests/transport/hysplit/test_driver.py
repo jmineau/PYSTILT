@@ -221,7 +221,7 @@ def test_read_particle_dat_parses_the_columns(tmp_path):
     df = read_particle_dat(dat, VARS)
     assert len(df) == 2
     # HYSPLIT's codes indx, long, lati are the table's particle, lon, lat.
-    assert list(df.columns) == ["time", "particle", "lon", "lat", "zagl", "foot"]
+    assert list(df.columns) == ["age", "particle", "lon", "lat", "zagl", "foot"]
     assert df["particle"].iloc[0] == 1
     assert dat.exists()  # the worker removes the working directory, or keeps it
 
@@ -240,7 +240,7 @@ def test_read_particle_dat_of_an_empty_file_is_an_empty_table(tmp_path):
 
     df = read_particle_dat(dat, VARS)
     assert df.empty
-    assert list(df.columns) == ["time", "particle", "lon", "lat", "zagl", "foot"]
+    assert list(df.columns) == ["age", "particle", "lon", "lat", "zagl", "foot"]
 
 
 # ---------------------------------------------------------------------------
@@ -386,7 +386,7 @@ def test_a_run_whose_particles_left_the_domain_early_is_complete(
 
     run = run_model("hysplit", point_receptor, _config(), met, tmp_path / "run")
 
-    assert run.particles["time"].min() == -13 * 60
+    assert run.particles["age"].min() == -13 * 60
 
 
 def test_run_keeps_a_run_that_reaches_the_end_past_a_damaged_met_file(
@@ -398,7 +398,7 @@ def test_run_keeps_a_run_that_reaches_the_end_past_a_damaged_met_file(
         rows=_ending_at(24 * 60),
     )
 
-    assert _run(tmp_path, point_receptor).particles["time"].min() == -24 * 60
+    assert _run(tmp_path, point_receptor).particles["age"].min() == -24 * 60
 
 
 def test_run_leaves_an_empty_particle_file_to_the_caller(
@@ -419,7 +419,7 @@ def test_run_leaves_particles_that_stop_early_to_the_caller(
     """Particles that all left the met's domain before the end are a run."""
     _fake_hysplit(monkeypatch, log="", rows=_ending_at(13 * 60))
 
-    assert _run(tmp_path, point_receptor).particles["time"].min() == -13 * 60
+    assert _run(tmp_path, point_receptor).particles["age"].min() == -13 * 60
 
 
 def test_run_without_a_particle_file_fails(tmp_path, point_receptor, monkeypatch):

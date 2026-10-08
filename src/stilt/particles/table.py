@@ -32,14 +32,14 @@ if TYPE_CHECKING:
 
 #: The columns every particle table has, as a particle file stores them:
 #: what a transport model's run must return. ``particle`` is the particle number
-#: (1 to ``numpar``), ``time`` the minutes since release (negative for a
+#: (1 to ``numpar``), ``age`` the minutes since release (negative for a
 #: backward run), ``lon`` and ``lat`` the position in degrees, and ``zagl``
 #: the height above ground in metres. The reference page on the particle
 #: table says what the other columns are.
 PARTICLE_SCHEMA = pa.schema(
     [
         ("particle", pa.int32()),
-        ("time", pa.int32()),
+        ("age", pa.int32()),
         ("lon", pa.float64()),
         ("lat", pa.float64()),
         ("zagl", pa.float64()),
@@ -47,7 +47,7 @@ PARTICLE_SCHEMA = pa.schema(
 )
 
 #: Particle columns stored as int32 rather than float64.
-_INT_COLUMNS = ("time", "particle")
+_INT_COLUMNS = ("age", "particle")
 
 #: The column a footprint is made from: each particle's sensitivity to
 #: surface fluxes over one output step.
@@ -152,7 +152,7 @@ def read_particles(
     Read a particle file.
 
     It needs nothing but the file: the receptor time in its metadata gives
-    the ``datetime`` column back. ``time`` and ``particle`` come back as
+    the ``datetime`` column back. ``age`` and ``particle`` come back as
     float64, as HYSPLIT writes them. :func:`particles_metadata` reads the
     receptor and settings.
 
@@ -188,11 +188,11 @@ def read_particles(
             data[name] = data[name].astype("float64")
     if "datetime" in data.columns:
         data["datetime"] = pd.to_datetime(data["datetime"])
-    elif want_datetime and "time" in data.columns:
+    elif want_datetime and "age" in data.columns:
         meta = pf.schema_arrow.metadata or {}
         receptor = Receptor.from_json(meta[b"stilt:receptor"])
         data["datetime"] = pd.Timestamp(receptor.time) + pd.to_timedelta(
-            data["time"].to_numpy(), unit="min"
+            data["age"].to_numpy(), unit="min"
         )
     return data
 
@@ -203,9 +203,9 @@ def particles_from_table(table: pa.Table, datetime: bool = True) -> pd.DataFrame
 
     The table is what :meth:`stilt.output.Output.table` reads: a
     ``receptor`` column, the stored particle columns, and ``date``. The
-    result has ``receptor`` first, ``time`` and ``particle`` as float64, and
+    result has ``receptor`` first, ``age`` and ``particle`` as float64, and
     ``datetime`` rebuilt from each receptor's time (unless *datetime* is
-    false, or there is no ``time``); ``date`` is dropped.
+    false, or there is no ``age``); ``date`` is dropped.
     """
     data = table.unify_dictionaries().to_pandas()
     data = data.drop(columns=["date"], errors="ignore")
@@ -215,11 +215,11 @@ def particles_from_table(table: pa.Table, datetime: bool = True) -> pd.DataFrame
     for name in _INT_COLUMNS:
         if name in data.columns:
             data[name] = data[name].astype("float64")
-    if datetime and "time" in data.columns:
+    if datetime and "age" in data.columns:
         times = {r: parse_receptor_id(r)[0] for r in data["receptor"].unique()}
         receptor_time = pd.to_datetime(data["receptor"].map(times))
         data["datetime"] = receptor_time + pd.to_timedelta(
-            data["time"].to_numpy(), unit="min"
+            data["age"].to_numpy(), unit="min"
         )
     return data
 
@@ -235,8 +235,8 @@ def write_particles(
     """
     Write a particle table to a Parquet file that :func:`read_particles` reads alone.
 
-    ``time`` and ``particle`` are stored as int32, and ``datetime`` is left out
-    since it is the receptor time plus ``time``. A ``receptor`` column holds
+    ``age`` and ``particle`` are stored as int32, and ``datetime`` is left out
+    since it is the receptor time plus ``age``. A ``receptor`` column holds
     the receptor id, so a scan of many files can tell receptors apart. The
     receptor, the run's settings, and the met files go in the file's
     metadata, so the file reads alone.
@@ -265,7 +265,7 @@ def write_particles(
     Raises
     ------
     ValueError
-        If ``time`` or ``particle`` holds a value that is not a whole number.
+        If ``age`` or ``particle`` holds a value that is not a whole number.
     """
     data = particles.drop(columns=["datetime", "receptor"], errors="ignore")
     for name in _INT_COLUMNS:
@@ -305,12 +305,12 @@ _MIN_RELIABLE_SPACING_M = 1000.0
 
 def add_release_heights(particles: pd.DataFrame, receptor: Receptor) -> pd.DataFrame:
     """
-    Return *particles* with each particle's release height ``xhgt``, for a column or multipoint receptor.
+    Return *particles* with each particle's ``release_height``, for a column or multipoint receptor.
 
-    The release row (``time = 0``) says where each particle started. For a
-    multipoint receptor that is one of its points, and ``xhgt`` is that
+    The release row (``age = 0``) says where each particle started. For a
+    multipoint receptor that is one of its points, and ``release_height`` is that
     point's altitude. For a column receptor it is inside one of the
-    ``numpar`` slabs the column is split into, and ``xhgt`` is that slab's
+    ``numpar`` slabs the column is split into, and ``release_height`` is that slab's
     centre: the slab is what the particle stands for, not the random
     height inside it. A model that writes no release row, such as the
     bundled HYSPLIT, falls back to matching: a column's particles are
@@ -320,15 +320,19 @@ def add_release_heights(particles: pd.DataFrame, receptor: Receptor) -> pd.DataF
     A point receptor's particles are returned as they are.
     """
     if isinstance(receptor, ColumnReceptor):
-        return particles.assign(xhgt=_column_release_heights(particles, receptor))
+        return particles.assign(
+            release_height=_column_release_heights(particles, receptor)
+        )
     if isinstance(receptor, MultiPointReceptor):
-        return particles.assign(xhgt=_multipoint_release_heights(particles, receptor))
+        return particles.assign(
+            release_height=_multipoint_release_heights(particles, receptor)
+        )
     return particles
 
 
 def _release_rows(p: pd.DataFrame) -> pd.DataFrame | None:
-    """Return each particle's release row (``time = 0``), or ``None`` when the model wrote none."""
-    released = p.loc[p["time"] == 0].drop_duplicates(subset="particle")
+    """Return each particle's release row (``age = 0``), or ``None`` when the model wrote none."""
+    released = p.loc[p["age"] == 0].drop_duplicates(subset="particle")
     if released.empty or len(released) != p["particle"].nunique():
         return None
     return released
@@ -386,7 +390,7 @@ def _multipoint_release_heights(
        points are too close together for that to be reliable.
     """
     first = (
-        p.assign(_age=p["time"].abs())
+        p.assign(_age=p["age"].abs())
         .sort_values("_age", kind="stable")
         .drop_duplicates(subset="particle")
     )
@@ -416,7 +420,7 @@ def _multipoint_release_heights(
                     f"MultiPointReceptor release points are as close as "
                     f"{spacing:.0f} m and cannot be separated by altitude, and this "
                     "model writes no t=0 row, so particles cannot be "
-                    "reliably matched to their release points; 'xhgt' may be wrong. "
+                    "reliably matched to their release points; 'release_height' may be wrong. "
                     "Use a HYSPLIT build that writes release-time rows "
                     "(HysplitConfig.exe_dir) or space the points more than "
                     f"{_MIN_RELIABLE_SPACING_M:.0f} m apart.",
@@ -447,7 +451,7 @@ def correct_near_field(
     value, so the two differ when ``veght`` is above 1.
 
     Needs the columns :data:`HNF_PLUME_COLUMNS`, and the release height:
-    ``xhgt`` (:func:`add_release_heights`) or the altitude of a point
+    ``release_height`` (:func:`add_release_heights`) or the altitude of a point
     receptor.
 
     Parameters
@@ -483,7 +487,7 @@ def correct_near_field(
     p = particles.copy()
     p["foot_no_hnf_dilution"] = p["foot"]
 
-    abs_time_s = np.abs(p["time"] * 60)
+    abs_time_s = np.abs(p["age"] * 60)
     p["sigma"] = (
         p["samt"]
         * np.sqrt(2)
@@ -496,11 +500,11 @@ def correct_near_field(
     )
     p["pbl_mixing"] = veght * p["mlht"] if veght <= 1 else veght
 
-    start_h = p["xhgt"] if "xhgt" in p.columns else r_zagl
+    start_h = p["release_height"] if "release_height" in p.columns else r_zagl
     if start_h is None:
         raise ValueError(
             "The near-field correction needs each particle's release height: "
-            "add xhgt first (add_release_heights)."
+            "add release_height first (add_release_heights)."
         )
     # The plume grows outward from the release point, so the cumsum must walk
     # each particle track in order of elapsed time since release. That is

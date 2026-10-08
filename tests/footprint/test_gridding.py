@@ -28,7 +28,7 @@ def _particles_in_domain(n: int = 30, seed: int = 42) -> pd.DataFrame:
     indx = list(range(1, n + 1)) * 2
     return pd.DataFrame(
         {
-            "time": times,
+            "age": times,
             "particle": indx,
             "lon": rng.uniform(-113.9, -113.1, n * 2),
             "lat": rng.uniform(39.1, 39.9, n * 2),
@@ -47,7 +47,7 @@ def _interior_particles(n: int = 40, seed: int = 55) -> pd.DataFrame:
     rng = np.random.default_rng(seed)
     return pd.DataFrame(
         {
-            "time": [-60.0] * n,
+            "age": [-60.0] * n,
             "particle": [float(i + 1) for i in range(n)],
             "lon": rng.uniform(-113.8, -113.2, n),
             "lat": rng.uniform(39.2, 39.8, n),
@@ -66,7 +66,7 @@ def _first_hour_particles(n: int = 20, seed: int = 0) -> pd.DataFrame:
     rng = np.random.default_rng(seed)
     return pd.DataFrame(
         {
-            "time": np.repeat([-20.0, -40.0, -59.0], n),
+            "age": np.repeat([-20.0, -40.0, -59.0], n),
             "particle": np.tile(np.arange(1, n + 1), 3),
             "lon": rng.uniform(-112.2, -111.7, 3 * n),
             "lat": rng.uniform(40.6, 40.9, 3 * n),
@@ -223,14 +223,14 @@ def test_interpolation_times_match_r_stilt_schedule():
 def test_interpolate_early_timesteps_preserves_window_foot_sums():
     particles = pd.DataFrame(
         {
-            "time": [-5.0, -50.0, -120.0, -5.0, -50.0, -120.0],
+            "age": [-5.0, -50.0, -120.0, -5.0, -50.0, -120.0],
             "particle": [1, 1, 1, 2, 2, 2],
             "lon": [-113.0, -114.0, -115.0, -112.0, -113.5, -115.0],
             "lat": [39.0, 40.0, 41.0, 39.5, 40.5, 41.5],
             "foot": [1.0, 2.0, 4.0, 3.0, 5.0, 7.0],
         }
     )
-    original_atime = np.abs(particles["time"])
+    original_atime = np.abs(particles["age"])
     original_sums = [
         particles.loc[original_atime <= 10, "foot"].sum(),
         particles.loc[(original_atime > 10) & (original_atime <= 20), "foot"].sum(),
@@ -242,7 +242,7 @@ def test_interpolate_early_timesteps_preserves_window_foot_sums():
     )
 
     assert len(interpolated) > len(particles)
-    atime = np.abs(interpolated["time"])
+    atime = np.abs(interpolated["age"])
     interpolated_sums = [
         interpolated.loc[atime <= 10, "foot"].sum(),
         interpolated.loc[(atime > 10) & (atime <= 20), "foot"].sum(),
@@ -255,7 +255,7 @@ def test_interpolate_early_timesteps_preserves_window_foot_sums():
 def test_interpolate_early_timesteps_matches_r_na_omit_with_extra_columns():
     particles = pd.DataFrame(
         {
-            "time": [-5.0, -50.0, -120.0, -5.0, -50.0, -120.0],
+            "age": [-5.0, -50.0, -120.0, -5.0, -50.0, -120.0],
             "particle": [1, 1, 1, 2, 2, 2],
             "lon": [-113.0, -114.0, -115.0, -112.0, -113.5, -115.0],
             "lat": [39.0, 40.0, 41.0, 39.5, 40.5, 41.5],
@@ -269,7 +269,7 @@ def test_interpolate_early_timesteps_matches_r_na_omit_with_extra_columns():
     )
 
     expected = particles.sort_values(
-        ["particle", "time"], ascending=[True, False], kind="stable"
+        ["particle", "age"], ascending=[True, False], kind="stable"
     ).reset_index(drop=True)
     pd.testing.assert_frame_equal(interpolated, expected, check_dtype=False)
 
@@ -408,7 +408,7 @@ def test_calc_footprint_smooth_zero_assigns_exact_cells(point_receptor):
     foot_val = 1e-4
     particles = pd.DataFrame(
         {
-            "time": [-60.0] * n,
+            "age": [-60.0] * n,
             "particle": [float(i + 1) for i in range(n)],
             "lon": [-113.85] * n,
             "lat": [39.05] * n,
@@ -463,7 +463,7 @@ def test_concentration_reconstruction_from_known_footprint(point_receptor):
 
     particles = pd.DataFrame(
         {
-            "time": [-60.0] * n_total,
+            "age": [-60.0] * n_total,
             "particle": [float(i + 1) for i in range(n_total)],
             "lon": [-113.85] * n_a + [-113.35] * n_b,
             "lat": [39.05] * n_a + [39.55] * n_b,
@@ -614,7 +614,7 @@ def test_compute_kernel_bandwidths_single_particle_returns_zero_sigma():
         {
             "particle": [1.0, 1.0],
             "rtime": [-1.0, -2.0],
-            "time": [-1.0, -2.0],
+            "age": [-1.0, -2.0],
             "lon": [-112.0, -112.0],
             "lat": [40.5, 40.5],
             "foot": [1e-3, 1e-3],
@@ -631,7 +631,7 @@ def test_compute_kernel_bandwidths_two_coincident_particles_returns_zero_sigma()
         {
             "particle": [1.0, 1.0, 2.0, 2.0],
             "rtime": [-1.0, -2.0, -1.0, -2.0],
-            "time": [-1.0, -2.0, -1.0, -2.0],
+            "age": [-1.0, -2.0, -1.0, -2.0],
             "lon": [-112.0] * 4,
             "lat": [40.5] * 4,
             "foot": [1e-3] * 4,

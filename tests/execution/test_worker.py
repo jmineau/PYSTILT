@@ -105,7 +105,7 @@ def fsim(receptor, met_config, params, output) -> Simulation:
 def _particles(receptor) -> pd.DataFrame:
     data = pd.DataFrame(
         {
-            "time": [-60.0],
+            "age": [-60.0],
             "particle": [1.0],
             "lon": [-111.9],
             "lat": [40.7],
@@ -114,7 +114,7 @@ def _particles(receptor) -> pd.DataFrame:
         }
     )
     data["datetime"] = pd.Timestamp(receptor.time) + pd.to_timedelta(
-        data["time"], unit="min"
+        data["age"], unit="min"
     )
     return data
 
@@ -882,7 +882,7 @@ class ToyModel:
     def run(self, receptor, config, met, window, workdir=None, timeout=None):
         particles = pd.DataFrame({
             "particle": [1, 2, 1, 2],
-            "time": [0, 0, -60, -60],
+            "age": [0, 0, -60, -60],
             "lon": receptor.longitude,
             "lat": receptor.latitude,
             "zagl": receptor.altitude,
@@ -965,7 +965,7 @@ class BatchedToy:
                 {
                     "receptor": str(r.id),
                     "particle": [1, 2, 1, 2],
-                    "time": [0, 0, config.n_hours * 60, config.n_hours * 60],
+                    "age": [0, 0, config.n_hours * 60, config.n_hours * 60],
                     "lon": r.longitude,
                     "lat": r.latitude,
                     "zagl": r.altitude,
