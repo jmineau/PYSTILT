@@ -39,7 +39,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../../_static/documentation_options.js?v=923dd212"></script>
+    <script src="../../../_static/documentation_options.js?v=6c6a0a8a"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -58,7 +58,7 @@
     <link rel="search" title="Search" href="../../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev266+gdc9b38568" />
+  <meta name="docsearch:version" content="0.1.0a23.dev274+g77e4c0843" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -524,9 +524,10 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Any</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">uuid</span><span class="w"> </span><span class="kn">import</span> <span class="n">uuid4</span>
 
+<span class="kn">import</span><span class="w"> </span><span class="nn">pyarrow</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pa</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">yaml</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">stilt._paths</span><span class="w"> </span><span class="kn">import</span> <span class="n">absolute</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">stilt._paths</span><span class="w"> </span><span class="kn">import</span> <span class="n">absolute</span><span class="p">,</span> <span class="n">write_parquet</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">stilt.execution.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">ExecutionConfig</span>
 
 <span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
@@ -543,6 +544,11 @@
 
 <span class="c1">#: Times a Slurm task requeues itself before it stops for good.</span>
 <span class="n">MAX_REQUEUES</span> <span class="o">=</span> <span class="mi">10</span>
+
+<span class="c1">#: Seconds :func:`run` waits to list the results once more when some look</span>
+<span class="c1">#: unfinished after a job array ends. On a network filesystem the</span>
+<span class="c1">#: submitting node can see a compute node&#39;s new files up to a minute late.</span>
+<span class="n">RELIST_SECONDS</span> <span class="o">=</span> <span class="mi">60</span>
 
 <span class="c1">#: Slurm job states of a task that has not ended.</span>
 <span class="n">_ACTIVE</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">(</span>
@@ -685,6 +691,11 @@
     <span class="k">return</span> <span class="n">project</span><span class="o">.</span><span class="n">status</span><span class="p">(</span><span class="n">sims</span><span class="p">[</span><span class="n">sims</span><span class="p">[</span><span class="s2">&quot;receptor&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">receptor_ids</span><span class="p">)])</span>
 
 
+<span class="k">def</span><span class="w"> </span><span class="nf">_unfinished</span><span class="p">(</span><span class="n">table</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Whether a status table has simulations that did not finish (pending or interrupted).&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="nb">bool</span><span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="s2">&quot;state&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">([</span><span class="s2">&quot;pending&quot;</span><span class="p">,</span> <span class="s2">&quot;interrupted&quot;</span><span class="p">])</span><span class="o">.</span><span class="n">any</span><span class="p">())</span>
+
+
 <div class="viewcode-block" id="run">
 <a class="viewcode-back" href="../../../reference/_api/stilt.execution.run.html#stilt.execution.run">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span>
@@ -704,7 +715,9 @@
 <span class="sd">    footprint of every variant that has a grid. With ``backend: local`` the</span>
 <span class="sd">    receptors run in this process (``cpus`` at a time). With</span>
 <span class="sd">    ``backend: slurm`` they are submitted as one job array (:func:`submit`)</span>
-<span class="sd">    and this waits for it.</span>
+<span class="sd">    and this waits for it. When some simulations look unfinished after the</span>
+<span class="sd">    job ends, their results are listed once more :data:`RELIST_SECONDS`</span>
+<span class="sd">    later, since a network filesystem can show this node new files late.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -760,6 +773,16 @@
     <span class="k">elif</span> <span class="n">execution</span><span class="o">.</span><span class="n">backend</span> <span class="o">==</span> <span class="s2">&quot;slurm&quot;</span> <span class="ow">and</span> <span class="n">task</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">job_id</span><span class="p">,</span> <span class="n">cluster</span> <span class="o">=</span> <span class="n">_submit</span><span class="p">(</span><span class="n">project</span><span class="p">,</span> <span class="n">todo</span><span class="p">,</span> <span class="n">execution</span><span class="p">,</span> <span class="n">skip_existing</span><span class="p">,</span> <span class="n">compute_root</span><span class="p">)</span>
         <span class="n">wait</span><span class="p">(</span><span class="n">job_id</span><span class="p">,</span> <span class="n">cluster</span><span class="o">=</span><span class="n">cluster</span><span class="p">)</span>
+        <span class="n">table</span> <span class="o">=</span> <span class="n">_status</span><span class="p">(</span><span class="n">project</span><span class="p">,</span> <span class="n">todo</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">_unfinished</span><span class="p">(</span><span class="n">table</span><span class="p">):</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+                <span class="s2">&quot;Some simulations look unfinished; listing again in </span><span class="si">%d</span><span class="s2"> s, in &quot;</span>
+                <span class="s2">&quot;case this node sees the compute nodes&#39; files late.&quot;</span><span class="p">,</span>
+                <span class="n">RELIST_SECONDS</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">RELIST_SECONDS</span><span class="p">)</span>
+            <span class="n">table</span> <span class="o">=</span> <span class="n">_status</span><span class="p">(</span><span class="n">project</span><span class="p">,</span> <span class="n">todo</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">table</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;run(</span><span class="si">%s</span><span class="s2">): </span><span class="si">%d</span><span class="s2"> receptors&quot;</span><span class="p">,</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">project</span><span class="o">.</span><span class="n">variants</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">todo</span><span class="p">))</span>
         <span class="c1"># In this process, so Ctrl-C and SIGTERM stop the workers cleanly</span>
@@ -799,10 +822,12 @@
 <span class="sd">    The receptors with missing results are split among up to ``n_workers``</span>
 <span class="sd">    tasks of one job array, and this returns once it is submitted. The</span>
 <span class="sd">    submission is a folder ``_slurm/&lt;date_time&gt;_&lt;id&gt;/`` in the project:</span>
-<span class="sd">    ``receptors.txt`` lists the receptors to run, ``execution.yaml`` holds</span>
-<span class="sd">    the execution settings, ``job.sh`` is the script given to ``sbatch``,</span>
-<span class="sd">    and ``&lt;task&gt;.log`` is each task&#39;s log. Task ``i`` runs</span>
-<span class="sd">    ``stilt run &lt;project&gt; --receptors receptors.txt --task i/N``. A task</span>
+<span class="sd">    ``receptors.txt`` lists the receptors to run, ``receptors.parquet``</span>
+<span class="sd">    holds their checked rows from ``receptors.csv``, ``execution.yaml``</span>
+<span class="sd">    holds the execution settings, ``job.sh`` is the script given to</span>
+<span class="sd">    ``sbatch``, and ``&lt;task&gt;.log`` is each task&#39;s log. Task ``i`` runs</span>
+<span class="sd">    ``stilt run &lt;project&gt; --receptors receptors.parquet --task i/N``, so it</span>
+<span class="sd">    does not read and check all of ``receptors.csv`` again. A task</span>
 <span class="sd">    that is preempted or nears its time limit requeues itself and skips</span>
 <span class="sd">    what it finished (see :func:`run`).</span>
 
@@ -862,7 +887,7 @@
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Return the ``sbatch`` script of a job array whose tasks each run a share of the receptors.</span>
 
-<span class="sd">    Task ``i`` runs ``stilt run &lt;project&gt; --receptors &lt;folder&gt;/receptors.txt</span>
+<span class="sd">    Task ``i`` runs ``stilt run &lt;project&gt; --receptors &lt;folder&gt;/receptors.parquet</span>
 <span class="sd">    --task i/n_tasks --execution &lt;folder&gt;/execution.yaml`` with the Python</span>
 <span class="sd">    that called this. The ``#SBATCH`` lines come from *execution*: its</span>
 <span class="sd">    resources, ``--requeue``, ``--signal=B:USR1@120`` (see :func:`run`),</span>
@@ -895,7 +920,7 @@
         <span class="s2">&quot;run&quot;</span><span class="p">,</span>
         <span class="nb">str</span><span class="p">(</span><span class="n">project</span><span class="o">.</span><span class="n">directory</span><span class="p">),</span>
         <span class="s2">&quot;--receptors&quot;</span><span class="p">,</span>
-        <span class="nb">str</span><span class="p">(</span><span class="n">folder</span> <span class="o">/</span> <span class="s2">&quot;receptors.txt&quot;</span><span class="p">),</span>
+        <span class="nb">str</span><span class="p">(</span><span class="n">folder</span> <span class="o">/</span> <span class="s2">&quot;receptors.parquet&quot;</span><span class="p">),</span>
         <span class="s2">&quot;--task&quot;</span><span class="p">,</span>
         <span class="sa">f</span><span class="s2">&quot;$SLURM_ARRAY_TASK_ID/</span><span class="si">{</span><span class="n">n_tasks</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
         <span class="s2">&quot;--execution&quot;</span><span class="p">,</span>
@@ -947,6 +972,11 @@
     <span class="n">folder</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">directory</span> <span class="o">/</span> <span class="s2">&quot;_slurm&quot;</span> <span class="o">/</span> <span class="n">stamp</span>
     <span class="n">folder</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
     <span class="p">(</span><span class="n">folder</span> <span class="o">/</span> <span class="s2">&quot;receptors.txt&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">pending</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="c1"># The checked rows, in the order the tasks split them (task_share).</span>
+    <span class="n">rows</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">_rows_of</span><span class="p">(</span><span class="n">pending</span><span class="p">)</span>
+    <span class="n">write_parquet</span><span class="p">(</span>
+        <span class="n">pa</span><span class="o">.</span><span class="n">Table</span><span class="o">.</span><span class="n">from_pandas</span><span class="p">(</span><span class="n">rows</span><span class="p">,</span> <span class="n">preserve_index</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span> <span class="n">folder</span> <span class="o">/</span> <span class="s2">&quot;receptors.parquet&quot;</span>
+    <span class="p">)</span>
     <span class="p">(</span><span class="n">folder</span> <span class="o">/</span> <span class="s2">&quot;execution.yaml&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span>
         <span class="n">yaml</span><span class="o">.</span><span class="n">safe_dump</span><span class="p">(</span><span class="n">execution</span><span class="o">.</span><span class="n">model_dump</span><span class="p">(</span><span class="n">exclude_unset</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span> <span class="n">sort_keys</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
     <span class="p">)</span>
@@ -1127,8 +1157,7 @@
         <span class="k">finally</span><span class="p">:</span>
             <span class="n">notice</span><span class="o">.</span><span class="n">armed</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="n">table</span> <span class="o">=</span> <span class="n">_status</span><span class="p">(</span><span class="n">project</span><span class="p">,</span> <span class="n">pending</span><span class="p">)</span>
-        <span class="n">unfinished</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="s2">&quot;state&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">([</span><span class="s2">&quot;pending&quot;</span><span class="p">,</span> <span class="s2">&quot;interrupted&quot;</span><span class="p">])</span><span class="o">.</span><span class="n">any</span><span class="p">())</span>
-        <span class="k">if</span> <span class="n">unfinished</span> <span class="ow">and</span> <span class="p">(</span><span class="n">notice</span> <span class="ow">or</span> <span class="n">_preempted</span><span class="p">()):</span>
+        <span class="k">if</span> <span class="n">_unfinished</span><span class="p">(</span><span class="n">table</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">notice</span> <span class="ow">or</span> <span class="n">_preempted</span><span class="p">()):</span>
             <span class="n">_requeue</span><span class="p">()</span>
     <span class="k">return</span> <span class="n">table</span>
 
@@ -1186,6 +1215,7 @@
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
     <span class="s2">&quot;MAX_REQUEUES&quot;</span><span class="p">,</span>
     <span class="s2">&quot;NOTICE_SECONDS&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;RELIST_SECONDS&quot;</span><span class="p">,</span>
     <span class="s2">&quot;job_script&quot;</span><span class="p">,</span>
     <span class="s2">&quot;resolve_compute_root&quot;</span><span class="p">,</span>
     <span class="s2">&quot;run&quot;</span><span class="p">,</span>

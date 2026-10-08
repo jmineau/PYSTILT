@@ -39,7 +39,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../../_static/documentation_options.js?v=923dd212"></script>
+    <script src="../../../_static/documentation_options.js?v=6c6a0a8a"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -58,7 +58,7 @@
     <link rel="search" title="Search" href="../../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev266+gdc9b38568" />
+  <meta name="docsearch:version" content="0.1.0a23.dev274+g77e4c0843" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -732,14 +732,17 @@
     <span class="c1"># A receptor id names its result files: one id, one receptor.</span>
     <span class="n">repeated</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">flatnonzero</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">Index</span><span class="p">(</span><span class="n">group_ids</span><span class="p">)</span><span class="o">.</span><span class="n">duplicated</span><span class="p">(</span><span class="n">keep</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">repeated</span><span class="p">):</span>
+        <span class="c1"># Build every repeated group&#39;s receptor in one call, each group on</span>
+        <span class="c1"># its own (keyed by its code, not its id), in code order.</span>
+        <span class="n">rows</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">codes</span><span class="p">,</span> <span class="n">repeated</span><span class="p">)</span>
+        <span class="n">built</span> <span class="o">=</span> <span class="n">receptors_from_rows</span><span class="p">(</span><span class="n">out</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">rows</span><span class="p">]</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span><span class="n">receptor</span><span class="o">=</span><span class="n">codes</span><span class="p">[</span><span class="n">rows</span><span class="p">]))</span>
+        <span class="n">receptor_of</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">repeated</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">built</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
         <span class="n">by_id</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
-        <span class="k">for</span> <span class="n">code</span> <span class="ow">in</span> <span class="n">repeated</span><span class="p">:</span>
-            <span class="n">by_id</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">group_ids</span><span class="p">[</span><span class="n">code</span><span class="p">]),</span> <span class="p">[])</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">code</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">code</span> <span class="ow">in</span> <span class="n">repeated</span><span class="o">.</span><span class="n">tolist</span><span class="p">():</span>
+            <span class="n">by_id</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">group_ids</span><span class="p">[</span><span class="n">code</span><span class="p">]),</span> <span class="p">[])</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">code</span><span class="p">)</span>
         <span class="n">drop</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">group</span> <span class="ow">in</span> <span class="n">by_id</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
-            <span class="n">check_distinct_ids</span><span class="p">(</span>
-                <span class="p">[</span><span class="n">receptors_from_rows</span><span class="p">(</span><span class="n">out</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">codes</span> <span class="o">==</span> <span class="n">code</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">code</span> <span class="ow">in</span> <span class="n">group</span><span class="p">]</span>
-            <span class="p">)</span>
+            <span class="n">check_distinct_ids</span><span class="p">([</span><span class="n">receptor_of</span><span class="p">[</span><span class="n">code</span><span class="p">]</span> <span class="k">for</span> <span class="n">code</span> <span class="ow">in</span> <span class="n">group</span><span class="p">])</span>
             <span class="n">drop</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">group</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>  <span class="c1"># the same receptor listed again</span>
         <span class="n">out</span> <span class="o">=</span> <span class="n">out</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="o">~</span><span class="n">np</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">codes</span><span class="p">,</span> <span class="n">drop</span><span class="p">)]</span>
     <span class="k">return</span> <span class="n">out</span>

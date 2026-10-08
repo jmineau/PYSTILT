@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=923dd212"></script>
+    <script src="../_static/documentation_options.js?v=6c6a0a8a"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
     <link rel="prev" title="Running" href="running.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev266+gdc9b38568" />
+  <meta name="docsearch:version" content="0.1.0a23.dev274+g77e4c0843" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -660,7 +660,9 @@ every task fails at once, look in the tasks’ logs (below) first. Use
 <code class="docutils literal notranslate"><span class="pre">--no-skip</span></code> to force everything to run again.</p>
 <p>From Python, <code class="docutils literal notranslate"><span class="pre">project.run()</span></code> submits the job array, waits until every
 task has ended (it asks <code class="docutils literal notranslate"><span class="pre">sacct</span></code>), and returns the status table of the
-simulations it submitted. <code class="docutils literal notranslate"><span class="pre">project.submit()</span></code> submits and returns the
+simulations it submitted. When some look unfinished then, it lists the
+output again a minute later, since a network filesystem can show the
+submitting node new files late. <code class="docutils literal notranslate"><span class="pre">project.submit()</span></code> submits and returns the
 Slurm job id at once:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">job_id</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">submit</span><span class="p">()</span>    <span class="c1"># None when nothing needs to run</span>
 </pre></div>
@@ -676,17 +678,20 @@ earlier one’s logs:</p>
   _slurm/&lt;date_time&gt;_&lt;id&gt;/
     job.sh            # the script given to sbatch
     receptors.txt     # the receptors submitted, one per line
+    receptors.parquet # their rows of receptors.csv, already checked
     execution.yaml    # the execution settings of this submission
     &lt;task&gt;.log        # each task&#39;s progress lines and errors
 </pre></div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">job.sh</span></code> is a plain <code class="docutils literal notranslate"><span class="pre">sbatch</span></code> script. Task <code class="docutils literal notranslate"><span class="pre">i</span></code> of <code class="docutils literal notranslate"><span class="pre">N</span></code> runs</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>-m<span class="w"> </span>stilt<span class="w"> </span>run<span class="w"> </span>my_project<span class="w"> </span>--receptors<span class="w"> </span>.../receptors.txt<span class="w"> </span><span class="se">\</span>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>-m<span class="w"> </span>stilt<span class="w"> </span>run<span class="w"> </span>my_project<span class="w"> </span>--receptors<span class="w"> </span>.../receptors.parquet<span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>--task<span class="w"> </span><span class="nv">$SLURM_ARRAY_TASK_ID</span>/N<span class="w"> </span>--execution<span class="w"> </span>.../execution.yaml<span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>--output<span class="w"> </span>/path/to/output
 </pre></div>
 </div>
-<p>with the Python that submitted it. To rerun one task by hand, on a compute
+<p>with the Python that submitted it. A task reads its receptors from
+<code class="docutils literal notranslate"><span class="pre">receptors.parquet</span></code>, so it does not read and check all of
+<code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code> again. To rerun one task by hand, on a compute
 node, run that line with the task’s number in place of
 <code class="docutils literal notranslate"><span class="pre">$SLURM_ARRAY_TASK_ID</span></code>.</p>
 <p>If a task fails, look in its <code class="docutils literal notranslate"><span class="pre">&lt;task&gt;.log</span></code> for problems with the task

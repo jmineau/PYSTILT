@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../_static/documentation_options.js?v=923dd212"></script>
+    <script src="../../_static/documentation_options.js?v=6c6a0a8a"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
     <link rel="prev" title="stilt.execution.run" href="stilt.execution.run.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev266+gdc9b38568" />
+  <meta name="docsearch:version" content="0.1.0a23.dev274+g77e4c0843" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -832,10 +832,12 @@
 <p>The receptors with missing results are split among up to <code class="docutils literal notranslate"><span class="pre">n_workers</span></code>
 tasks of one job array, and this returns once it is submitted. The
 submission is a folder <code class="docutils literal notranslate"><span class="pre">_slurm/&lt;date_time&gt;_&lt;id&gt;/</span></code> in the project:
-<code class="docutils literal notranslate"><span class="pre">receptors.txt</span></code> lists the receptors to run, <code class="docutils literal notranslate"><span class="pre">execution.yaml</span></code> holds
-the execution settings, <code class="docutils literal notranslate"><span class="pre">job.sh</span></code> is the script given to <code class="docutils literal notranslate"><span class="pre">sbatch</span></code>,
-and <code class="docutils literal notranslate"><span class="pre">&lt;task&gt;.log</span></code> is each task’s log. Task <code class="docutils literal notranslate"><span class="pre">i</span></code> runs
-<code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">run</span> <span class="pre">&lt;project&gt;</span> <span class="pre">--receptors</span> <span class="pre">receptors.txt</span> <span class="pre">--task</span> <span class="pre">i/N</span></code>. A task
+<code class="docutils literal notranslate"><span class="pre">receptors.txt</span></code> lists the receptors to run, <code class="docutils literal notranslate"><span class="pre">receptors.parquet</span></code>
+holds their checked rows from <code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code>, <code class="docutils literal notranslate"><span class="pre">execution.yaml</span></code>
+holds the execution settings, <code class="docutils literal notranslate"><span class="pre">job.sh</span></code> is the script given to
+<code class="docutils literal notranslate"><span class="pre">sbatch</span></code>, and <code class="docutils literal notranslate"><span class="pre">&lt;task&gt;.log</span></code> is each task’s log. Task <code class="docutils literal notranslate"><span class="pre">i</span></code> runs
+<code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">run</span> <span class="pre">&lt;project&gt;</span> <span class="pre">--receptors</span> <span class="pre">receptors.parquet</span> <span class="pre">--task</span> <span class="pre">i/N</span></code>, so it
+does not read and check all of <code class="docutils literal notranslate"><span class="pre">receptors.csv</span></code> again. A task
 that is preempted or nears its time limit requeues itself and skips
 what it finished (see <a class="reference internal" href="stilt.execution.run.html#stilt.execution.run" title="stilt.execution.run"><code class="xref py py-func docutils literal notranslate"><span class="pre">run()</span></code></a>).</p>
 <dl class="field-list simple">

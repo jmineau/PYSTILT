@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../_static/documentation_options.js?v=923dd212"></script>
+    <script src="../_static/documentation_options.js?v=6c6a0a8a"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
     <link rel="prev" title="stilt.meteorology.VariogramFit" href="_api/stilt.meteorology.VariogramFit.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev266+gdc9b38568" />
+  <meta name="docsearch:version" content="0.1.0a23.dev274+g77e4c0843" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -850,7 +850,8 @@ process or in a process pool.</p></li>
 (<a class="reference internal" href="_api/stilt.execution.task_share.html#stilt.execution.task_share" title="stilt.execution.task_share"><code class="xref py py-func docutils literal notranslate"><span class="pre">task_share()</span></code></a>) with <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">run</span> <span class="pre">--task</span></code>. A local
 run happens in this process. A program that starts the tasks itself, on
 another scheduler, writes <a class="reference internal" href="_api/stilt.execution.pending.html#stilt.execution.pending" title="stilt.execution.pending"><code class="xref py py-func docutils literal notranslate"><span class="pre">pending()</span></code></a> to the
-<code class="docutils literal notranslate"><span class="pre">receptors.txt</span></code> each task reads; <a class="reference internal" href="_api/stilt.execution.wait.html#stilt.execution.wait" title="stilt.execution.wait"><code class="xref py py-func docutils literal notranslate"><span class="pre">wait()</span></code></a> waits for a
+<code class="docutils literal notranslate"><span class="pre">receptors.txt</span></code> each task reads (<code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">run</span> <span class="pre">--receptors</span></code>);
+<a class="reference internal" href="_api/stilt.execution.wait.html#stilt.execution.wait" title="stilt.execution.wait"><code class="xref py py-func docutils literal notranslate"><span class="pre">wait()</span></code></a> waits for a
 Slurm job array by its id.</p>
 <section id="running">
 <h2>Running<a class="headerlink" href="#running" title="Link to this heading">#</a></h2>

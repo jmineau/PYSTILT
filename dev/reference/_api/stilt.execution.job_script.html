@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../_static/documentation_options.js?v=923dd212"></script>
+    <script src="../../_static/documentation_options.js?v=6c6a0a8a"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
     <link rel="prev" title="stilt.execution.worker.run_receptors" href="stilt.execution.worker.run_receptors.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev266+gdc9b38568" />
+  <meta name="docsearch:version" content="0.1.0a23.dev274+g77e4c0843" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -829,7 +829,7 @@
 <dt class="sig sig-object py" id="stilt.execution.job_script">
 <span class="sig-prename descclassname"><span class="pre">stilt.execution.</span></span><span class="sig-name descname"><span class="pre">job_script</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">project</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">execution</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">folder</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_tasks</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">skip_existing</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">compute_root</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/stilt/execution/runner.html#job_script"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#stilt.execution.job_script" title="Link to this definition">#</a></dt>
 <dd><p>Return the <code class="docutils literal notranslate"><span class="pre">sbatch</span></code> script of a job array whose tasks each run a share of the receptors.</p>
-<p>Task <code class="docutils literal notranslate"><span class="pre">i</span></code> runs <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">run</span> <span class="pre">&lt;project&gt;</span> <span class="pre">--receptors</span> <span class="pre">&lt;folder&gt;/receptors.txt</span>
+<p>Task <code class="docutils literal notranslate"><span class="pre">i</span></code> runs <code class="docutils literal notranslate"><span class="pre">stilt</span> <span class="pre">run</span> <span class="pre">&lt;project&gt;</span> <span class="pre">--receptors</span> <span class="pre">&lt;folder&gt;/receptors.parquet</span>
 <span class="pre">--task</span> <span class="pre">i/n_tasks</span> <span class="pre">--execution</span> <span class="pre">&lt;folder&gt;/execution.yaml</span></code> with the Python
 that called this. The <code class="docutils literal notranslate"><span class="pre">#SBATCH</span></code> lines come from <em>execution</em>: its
 resources, <code class="docutils literal notranslate"><span class="pre">--requeue</span></code>, <code class="docutils literal notranslate"><span class="pre">--signal=B:USR1&#64;120</span></code> (see <a class="reference internal" href="stilt.execution.run.html#stilt.execution.run" title="stilt.execution.run"><code class="xref py py-func docutils literal notranslate"><span class="pre">run()</span></code></a>),

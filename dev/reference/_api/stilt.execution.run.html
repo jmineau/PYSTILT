@@ -40,7 +40,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=64cc4de3f052d77215f0" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=64cc4de3f052d77215f0" />
 
-    <script src="../../_static/documentation_options.js?v=923dd212"></script>
+    <script src="../../_static/documentation_options.js?v=6c6a0a8a"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -61,7 +61,7 @@
     <link rel="prev" title="Execution" href="../execution.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.1.0a23.dev266+gdc9b38568" />
+  <meta name="docsearch:version" content="0.1.0a23.dev274+g77e4c0843" />
   
     
     <script src="../../_static/searchtools.js"></script>
@@ -834,7 +834,9 @@ distinct set of transport settings whose particles are missing, then the
 footprint of every variant that has a grid. With <code class="docutils literal notranslate"><span class="pre">backend:</span> <span class="pre">local</span></code> the
 receptors run in this process (<code class="docutils literal notranslate"><span class="pre">cpus</span></code> at a time). With
 <code class="docutils literal notranslate"><span class="pre">backend:</span> <span class="pre">slurm</span></code> they are submitted as one job array (<a class="reference internal" href="stilt.execution.submit.html#stilt.execution.submit" title="stilt.execution.submit"><code class="xref py py-func docutils literal notranslate"><span class="pre">submit()</span></code></a>)
-and this waits for it.</p>
+and this waits for it. When some simulations look unfinished after the
+job ends, their results are listed once more <code class="xref py py-data docutils literal notranslate"><span class="pre">RELIST_SECONDS</span></code>
+later, since a network filesystem can show this node new files late.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
