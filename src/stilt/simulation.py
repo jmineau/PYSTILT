@@ -142,7 +142,7 @@ class Simulation:
         The directory, under ``scratch/`` in the output directory, holds
         the transport model's files as the run left them: for HYSPLIT,
         CONTROL, SETUP.CFG, and its own output. It exists only after a
-        failed run, or after any run with ``keep_scratch`` set.
+        failed run, or after any run with ``keep_workdir`` set.
         """
         return self.output.kept_workdir(
             self.variant, self.receptor.id, self.realization

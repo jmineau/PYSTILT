@@ -480,7 +480,7 @@ def test_error_variant(tmp_path, wbb_receptor, traj_only_config):
     """A variant with WINDERR fields is its own HYSPLIT run with perturbed winds."""
     config = _with(
         traj_only_config,
-        execution={"keep_scratch": True},
+        execution={"keep_workdir": True},
         variants={"hrrr": {}, "hrrr-err": _XYERR},
     )
     model = Project.init(tmp_path / "error", config=config, receptors=[wbb_receptor])

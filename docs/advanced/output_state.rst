@@ -89,7 +89,7 @@ given, else ``PYSTILT_COMPUTE_ROOT``, else ``$TMPDIR/pystilt/<project
 name>``. After a successful run the particle file and the log are written
 to the output directory and the workdir is removed. After a failure the
 workdir is copied to ``scratch/`` in the output directory first, so
-CONTROL, SETUP.CFG, and MESSAGE survive the job. ``keep_scratch: true``
+CONTROL, SETUP.CFG, and MESSAGE survive the job. ``keep_workdir: true``
 under ``execution:`` in ``config.yaml`` keeps every run's workdir.
 
 Files are written through a temporary name and renamed into place, so a

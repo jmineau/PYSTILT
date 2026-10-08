@@ -246,7 +246,7 @@ class ReferenceScenario:
             "hnf_plume": self.hnf_plume,
             "varsiwant": REFERENCE_VARSIWANT,
             # The fidelity tests read SETUP.CFG afterwards.
-            "execution": {"keep_scratch": True},
+            "execution": {"keep_workdir": True},
             "variants": {REFERENCE_MET: {}},
             **self.make_footprint_config().model_dump(),
         }

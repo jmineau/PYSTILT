@@ -133,7 +133,7 @@ def run_particles(
     sim: Simulation,
     *,
     workdir: Path,
-    keep_scratch: bool = False,
+    keep_workdir: bool = False,
     timeout: int | None = None,
 ) -> pd.DataFrame:
     """
@@ -142,7 +142,7 @@ def run_particles(
     The transport model the variant names runs in *workdir*
     (:func:`stilt.transport.run_model`), with the variant's met. Its log is written to the output
     directory whether the run succeeds or fails. The working directory is
-    then removed, unless the run failed or *keep_scratch* is set, in which
+    then removed, unless the run failed or *keep_workdir* is set, in which
     case it is copied under the output directory's ``scratch/`` first.
 
     Parameters
@@ -151,7 +151,7 @@ def run_particles(
         What to run.
     workdir : Path
         Directory to run in. Created here.
-    keep_scratch : bool, default False
+    keep_workdir : bool, default False
         Keep the working directory of a successful run too.
     timeout : int, optional
         Time limit for the transport model run, in seconds.
@@ -209,7 +209,7 @@ def run_particles(
             # An empty directory is not kept: a run that failed before
             # writing anything, such as on missing meteorology, has nothing
             # to look at.
-            if (keep_scratch or not succeeded) and any(workdir.iterdir()):
+            if (keep_workdir or not succeeded) and any(workdir.iterdir()):
                 output.keep_workdir(sim.variant, rid, workdir, sim.realization)
             shutil.rmtree(workdir, ignore_errors=True)
 
@@ -362,7 +362,7 @@ def run_receptor(
         Directory the workdirs are made in, one per simulation, as
         :func:`~stilt.execution.runner.resolve_compute_root` returns it.
     execution : ExecutionConfig, optional
-        Execution settings, for ``timeout`` and ``keep_scratch``. Defaults
+        Execution settings, for ``timeout`` and ``keep_workdir``. Defaults
         to the project's.
     skip_existing : bool, default True
         Keep particles and footprints that already exist.
@@ -483,7 +483,7 @@ def _run_group(
             particles = run_particles(
                 first,
                 workdir=compute_root / str(first),
-                keep_scratch=execution.keep_scratch,
+                keep_workdir=execution.keep_workdir,
                 timeout=execution.timeout,
             )
         except Exception as error:
@@ -612,7 +612,7 @@ def run_receptors(
         :func:`~stilt.execution.runner.resolve_compute_root` returns it.
     execution : ExecutionConfig, optional
         Execution settings: ``cpus`` is the number of worker processes (1
-        runs in this process), and ``timeout`` and ``keep_scratch`` apply
+        runs in this process), and ``timeout`` and ``keep_workdir`` apply
         to each run. Defaults to the project's.
     skip_existing : bool, default True
         Keep particles and footprints that already exist.

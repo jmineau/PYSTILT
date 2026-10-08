@@ -140,7 +140,7 @@ folder of its input and output files. A successful run's workdir is
 removed. A failed run's is kept under ``scratch/`` in the output directory,
 and ``sim.kept_workdir`` is where. For HYSPLIT it holds ``CONTROL``,
 ``SETUP.CFG``, and ``MESSAGE``, enough to rerun ``hycs_std`` by hand. Set
-``keep_scratch: true`` under ``execution:`` to keep every run's workdir.
+``keep_workdir: true`` under ``execution:`` to keep every run's workdir.
 
 A run cut off partway leaves its log, which starts with a line saying when
 and on which node it started. ``status()`` calls a simulation

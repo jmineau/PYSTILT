@@ -1025,7 +1025,7 @@ def test_run_without_skip_runs_every_receptor_once(tmp_path, ran):
 def test_run_takes_execution_settings_in_place_of_the_configs(tmp_path, ran):
     project = _project(tmp_path, [_receptor(12)], execution={"cpus": 3})
 
-    override = ExecutionConfig(cpus=8, timeout=600, keep_scratch=True)
+    override = ExecutionConfig(cpus=8, timeout=600, keep_workdir=True)
     project.run(execution=override)
 
     # The whole override reaches the workers, not only its cpus.
