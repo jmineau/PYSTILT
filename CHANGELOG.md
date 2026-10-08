@@ -164,6 +164,14 @@ layout; `docs/migration/` covers moving from STILT-R, X-STILT, and stiltctl.
   time; listed as one grid per file, as STILT-R does, NOAA's HYSPLIT
   builds read at most 12 and the bundled one 99. The particles are the
   same.
+- A run whose met files are damaged, or do not hold every hour it needs,
+  fails before HYSPLIT starts, as `MET_COVERAGE`, naming the file or the
+  hours (#189). A file can keep its name and still be cut after a whole
+  hour, hold an hour written partway, or have records lost to null bytes.
+  HYSPLIT then stopped the particles early, and when some had left the
+  met's domain first, the run counted as complete. Each file is checked
+  once in a process with arlmet's `File.check()`, so arlmet 0.1.0b3 is
+  needed.
 - The near-field correction (`hnf_plume`) reads a `veght` above 1 as
   meters above ground, as HYSPLIT does (#167). It multiplied it by the
   mixed-layer height, as STILT-R does. Nothing changes for a `veght` of 1

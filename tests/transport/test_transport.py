@@ -92,6 +92,9 @@ def test_hysplit_model_reads_the_met_in_place_and_records_the_source(
     window = run_window(point_receptor.time, params.n_hours)
     source = Met("met", met).files_for(window, hour_after=True)
     cropped = [tmp_path / "crops" / path.name for path in source]
+    for path, crop in zip(source, cropped, strict=True):
+        crop.parent.mkdir(exist_ok=True)
+        crop.write_bytes(path.read_bytes())
     # A cropped met hands HYSPLIT its crops in place of the source files.
     monkeypatch.setattr(Met, "readable", lambda self, files: cropped)
 

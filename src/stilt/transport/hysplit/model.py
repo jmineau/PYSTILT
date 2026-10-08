@@ -136,14 +136,19 @@ class HysplitModel:
             Particles that all left the met's domain before the end of the
             run are kept.
         MeteorologyError
-            Before HYSPLIT runs, when a met file the run needs is missing.
+            Before HYSPLIT runs, when a met file the run needs is missing or
+            damaged, or the files do not hold every time the run covers
+            (:meth:`Met.check`).
         """
         if workdir is None:
             with tempfile.TemporaryDirectory(prefix="stilt-") as tmp:
                 return self.run(receptor, config, met, window, Path(tmp), timeout)
         files = Met("met", met)
-        source = files.files_for(window, hour_after=config.n_hours < 0)
-        write_inputs(workdir, receptor, config, files.readable(source))
+        hour_after = config.n_hours < 0
+        source = files.files_for(window, hour_after=hour_after)
+        readable = files.readable(source)
+        files.check(readable, window, hour_after=hour_after)
+        write_inputs(workdir, receptor, config, readable)
         try:
             run_hycs_std(workdir, timeout)
             path = workdir / PARTICLE_STILT_FILE

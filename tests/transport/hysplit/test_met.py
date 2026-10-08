@@ -828,3 +828,114 @@ def test_a_relative_directory_with_a_variable_is_expanded(tmp_path, monkeypatch)
 
     assert Met("hrrr", _local(Path("$MET_ROOT/hrrr"))).directory == tmp_path / "hrrr"
     assert Met("hrrr", _local(Path("hrrr"))).directory == tmp_path / "hrrr"
+
+
+# ---------------------------------------------------------------------------
+# Checking the files a run reads
+# ---------------------------------------------------------------------------
+
+
+def _six_hour_files(tmp_path: Path, held: dict[str, str], **kwargs) -> list[Path]:
+    """Write a 6 h file per name in *held*, holding the hours from its name's hour to the given last hour."""
+    files = []
+    for name, last in held.items():
+        first = pd.Timestamp(dt.datetime.strptime(name, "%Y%m%d_%H"))
+        hours = pd.date_range(first, pd.Timestamp(last), freq="h")
+        files.append(write_arl_file(tmp_path / name, times=hours, **kwargs))
+    return files
+
+
+#: 8 h back from 10:00, so the run needs 02:00 to 11:00 (the hour after).
+_WINDOW = run_window(dt.datetime(2023, 1, 1, 10), -8)
+
+
+def test_check_passes_files_that_hold_every_hour_the_run_needs(tmp_path):
+    files = _six_hour_files(
+        tmp_path, {"20230101_00": "2023-01-01 05:00", "20230101_06": "2023-01-01 11:00"}
+    )
+    _make_met(tmp_path, "%Y%m%d_%H", "6h").check(files, _WINDOW, hour_after=True)
+
+
+def test_check_fails_a_file_cut_after_a_whole_hour(tmp_path):
+    """A file that ends early looks whole to arlmet; the gap after it does not (#189)."""
+    files = _six_hour_files(
+        tmp_path, {"20230101_00": "2023-01-01 03:00", "20230101_06": "2023-01-01 11:00"}
+    )
+    met = _make_met(tmp_path, "%Y%m%d_%H", "6h")
+    with pytest.raises(
+        MeteorologyError,
+        match="no time step between 2023-01-01 03:00 and 2023-01-01 06:00",
+    ) as info:
+        met.check(files, _WINDOW, hour_after=True)
+    assert info.value.reason == "MET_COVERAGE"
+
+
+def test_check_fails_files_that_end_before_the_run_does(tmp_path):
+    files = _six_hour_files(
+        tmp_path, {"20230101_00": "2023-01-01 05:00", "20230101_06": "2023-01-01 09:00"}
+    )
+    met = _make_met(tmp_path, "%Y%m%d_%H", "6h")
+    with pytest.raises(
+        MeteorologyError,
+        match="hold 2023-01-01 00:00 to 2023-01-01 09:00. The run needs "
+        "2023-01-01 02:00 to 2023-01-01 11:00",
+    ):
+        met.check(files, _WINDOW, hour_after=True)
+
+
+def test_check_names_a_damaged_file(tmp_path):
+    """A time step written partway opens cleanly; arlmet's check finds it."""
+    files = _six_hour_files(
+        tmp_path,
+        {"20230101_00": "2023-01-01 05:00", "20230101_06": "2023-01-01 11:00"},
+    )
+    damaged = write_arl_file(
+        tmp_path / "20230101_06",
+        times=pd.date_range("2023-01-01 06:00", "2023-01-01 11:00", freq="h"),
+        partial=True,
+    )
+    met = _make_met(tmp_path, "%Y%m%d_%H", "6h")
+    with pytest.raises(
+        MeteorologyError,
+        match=f"met file {damaged} is damaged: 2023-01-01 11:00 has 1 of the 2 data "
+        "records",
+    ):
+        met.check(files, _WINDOW, hour_after=True)
+
+
+def test_check_names_a_file_that_does_not_open(tmp_path):
+    files = _six_hour_files(
+        tmp_path, {"20230101_00": "2023-01-01 05:00", "20230101_06": "2023-01-01 11:00"}
+    )
+    files[1].write_bytes(files[1].read_bytes()[:-10])  # cut inside a record
+    met = _make_met(tmp_path, "%Y%m%d_%H", "6h")
+    with pytest.raises(MeteorologyError, match="is damaged: .*not a whole number"):
+        met.check(files, _WINDOW, hour_after=True)
+
+
+def test_check_reads_each_file_once_until_it_changes(tmp_path, monkeypatch):
+    """A check reads every record's header, so a process checks a file once, however many runs read it."""
+    import arlmet
+
+    opened: list[str] = []
+    real_file = arlmet.File
+
+    def counting_file(path, *args, **kwargs):
+        if kwargs.get("mode", "r") == "r":  # not write_arl_file making its bytes
+            opened.append(Path(path).name)
+        return real_file(path, *args, **kwargs)
+
+    monkeypatch.setattr(arlmet, "File", counting_file)
+    files = _six_hour_files(
+        tmp_path, {"20230101_00": "2023-01-01 05:00", "20230101_06": "2023-01-01 11:00"}
+    )
+    met = _make_met(tmp_path, "%Y%m%d_%H", "6h")
+    met.check(files, _WINDOW, hour_after=True)
+    met.check(files, _WINDOW, hour_after=True)
+    assert opened == ["20230101_00", "20230101_06"]
+
+    # Rewritten with fewer hours, the file is read again.
+    _six_hour_files(tmp_path, {"20230101_06": "2023-01-01 09:00"})
+    with pytest.raises(MeteorologyError, match="to 2023-01-01 09:00"):
+        met.check(files, _WINDOW, hour_after=True)
+    assert opened == ["20230101_00", "20230101_06", "20230101_06"]

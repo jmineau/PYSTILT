@@ -5,11 +5,13 @@ HYSPLIT's meteorology: the met config (:class:`MetConfig`), and finding, downloa
 from __future__ import annotations
 
 import fnmatch
+import functools
 import inspect
 import logging
 import os
 from collections.abc import Iterator
 from functools import cached_property
+from itertools import pairwise
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, Self
 
@@ -312,6 +314,15 @@ class Met:
             )
         return self._archive
 
+    @cached_property
+    def _file_freq(self) -> str | None:
+        """Return the period of one local file as a pandas frequency, or None for a download."""
+        if self.config.download is not None or self.config.file_tres is None:
+            return None
+        # pandas-stubs' to_offset takes no Timedelta (pandas does)
+        # pyrefly: ignore[no-matching-overload]
+        return to_offset(pd.to_timedelta(self.config.file_tres)).freqstr
+
     def _bbox(self) -> tuple[float, float, float, float]:
         """Return the crop box, ``(west, south, east, north)``."""
         crop = self.config.crop()
@@ -406,12 +417,13 @@ class Met:
             return self._download(window, hour_after)
 
         # Local files
-        file_format, file_tres = self.config.file_format, self.config.file_tres
+        file_format, file_tres, tres = (
+            self.config.file_format,
+            self.config.file_tres,
+            self._file_freq,
+        )
         # MetConfig requires both when there is no download.
-        assert file_format is not None and file_tres is not None
-        # pandas-stubs' to_offset takes no Timedelta (pandas does)
-        # pyrefly: ignore[no-matching-overload]
-        tres = to_offset(pd.to_timedelta(file_tres)).freqstr
+        assert file_format is not None and tres is not None
         earlier, later = _cover(window, hour_after, tres)
         met_times = pd.date_range(earlier.floor(tres), later, freq=tres)
         patterns = list(dict.fromkeys(t.strftime(file_format) for t in met_times))
@@ -437,6 +449,66 @@ class Met:
                 f"covers {earlier:%Y-%m-%d %H:%M} to {later:%Y-%m-%d %H:%M}."
             )
         return self._dedupe_matched_files(files)
+
+    def check(
+        self, files: list[Path], window: tuple[Any, Any], *, hour_after: bool = False
+    ) -> None:
+        """
+        Raise unless *files* are whole and hold every time step *window* needs.
+
+        A met file can be damaged and keep its name: a time step written
+        partway, a missing time step, or records lost to null bytes.
+        HYSPLIT then stops its particles where the damage starts, and when
+        some of them have left the met's domain first, its log does not say
+        why. Each file is checked once in a process
+        (:meth:`arlmet.File.check`), and together their time steps must
+        reach from the first time the run needs to the last, with no gap
+        wider than their spacing. That also finds a file cut after a whole
+        time step, which looks whole to arlmet.
+
+        Parameters
+        ----------
+        files : list of Path
+            The files the transport model will read (:meth:`readable`).
+        window : tuple of datetime-like
+            The time the run covers (:func:`run_window`).
+        hour_after : bool, default False
+            Also need the hour after the window, as :meth:`files_for` does.
+
+        Raises
+        ------
+        MeteorologyError
+            Naming the damaged file and its first problem, or the times the
+            files do not hold.
+        """
+        held: set[pd.Timestamp] = set()
+        for path in files:
+            times, problems = _inspect(path)
+            if problems:
+                more = f" ({len(problems) - 1} more)" if len(problems) > 1 else ""
+                raise MeteorologyError(
+                    f"The met file {path} is damaged: {problems[0]}{more}"
+                )
+            held.update(times)
+
+        earlier, later = _cover(window, hour_after, self._file_freq)
+        needs = f"The run needs {earlier:%Y-%m-%d %H:%M} to {later:%Y-%m-%d %H:%M}."
+        steps = sorted(held)
+        if not steps or steps[0] > earlier or steps[-1] < later:
+            holds = (
+                f"{steps[0]:%Y-%m-%d %H:%M} to {steps[-1]:%Y-%m-%d %H:%M}"
+                if steps
+                else "no time steps"
+            )
+            raise MeteorologyError(f"The met files hold {holds}. {needs}")
+        pairs = list(pairwise(steps))
+        spacing = min((b - a for a, b in pairs), default=pd.Timedelta(0))
+        for a, b in pairs:
+            if b - a > spacing and a < later and b > earlier:
+                raise MeteorologyError(
+                    f"The met files hold no time step between "
+                    f"{a:%Y-%m-%d %H:%M} and {b:%Y-%m-%d %H:%M}. {needs}"
+                )
 
     def readable(self, files: list[Path]) -> list[Path]:
         """
@@ -501,6 +573,34 @@ _REMOVED = {
         "hours with no file."
     ),
 }
+
+
+def _inspect(path: Path) -> tuple[tuple[pd.Timestamp, ...], tuple[str, ...]]:
+    """Return the time steps of the ARL file at *path* and what is wrong with it, read once per version of the file."""
+    stat = path.stat()
+    return _inspect_file(str(path), stat.st_size, stat.st_mtime_ns)
+
+
+@functools.lru_cache(maxsize=4096)
+def _inspect_file(
+    path: str, size: int, mtime_ns: int
+) -> tuple[tuple[pd.Timestamp, ...], tuple[str, ...]]:
+    """
+    Open the ARL file at *path* and check it (:meth:`arlmet.File.check`).
+
+    *size* and *mtime_ns* are only part of the cache key, so a file
+    rewritten in place is read again. A check reads every record's header,
+    seconds for a large file read from disk, so a process checks each file
+    once, however many runs read it.
+    """
+    del size, mtime_ns
+    from arlmet import ARLFormatError, File
+
+    try:
+        with File(path) as met:
+            return tuple(met.times), tuple(met.check())
+    except ARLFormatError as exc:
+        return (), (str(exc),)
 
 
 def _arl_candidates(directory: Path) -> Iterator[Path]:
